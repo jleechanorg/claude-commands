@@ -1,19 +1,14 @@
 #!/bin/bash
 # A script to push changes to GitHub and then deploy to GCP.
-# It requires a commit message as the first argument.
-
-# Check if a commit message was provided
-if [ -z "$1" ]; then
-  echo "ERROR: Please provide a commit message."
-  echo "Usage: fupdate \"Your commit message\""
-  exit 1
-fi
+# A commit message is optional.
 
 echo "--- Starting GitHub Push Step ---"
-~/bin/push.sh "$1" && \
+# The "$@" passes all arguments from this script directly to push.sh
+# If no arguments are given, none are passed, and push.sh uses its default.
+~/worldarchitect.ai/push.sh "$@" && \
 
 echo ""
 echo "--- Starting GCP Deploy Step ---"
-~/bin/deploy.sh
+~/worldarchitect.ai/deploy.sh
 
 echo "Full update finished."
