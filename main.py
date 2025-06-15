@@ -19,7 +19,7 @@ def home():
         model = genai.GenerativeModel('gemini-2.5-pro-preview-06-05')
         
         app.logger.info("Making request to Gemini 2.5 Pro...")
-        response = model.generate_content("whats the weather today in my current location")
+        response = model.generate_content("whats the weather today in my Los angeles, CA")
         gemini_response = response.text
         app.logger.info("Successfully received response from Gemini.")
 
