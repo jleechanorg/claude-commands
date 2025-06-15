@@ -5,29 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title }}</title>
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f0f2f5; text-align: center; }
-        .card { background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 800px; text-align: left;}
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 20px; background-color: #f0f2f5; text-align: center; }
+        .card { background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 800px; text-align: left; margin-bottom: 20px; }
         h1 { color: #333; text-align: center;}
-        /* NEW: Style for the preformatted text tag */
         pre {
-            white-space: pre-wrap;       /* Since CSS 2.1 */
-            white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
-            white-space: -pre-wrap;      /* Opera 4-6 */
-            white-space: -o-pre-wrap;    /* Opera 7 */
-            word-wrap: break-word;       /* Internet Explorer 5.5+ */
+            white-space: pre-wrap;
+            word-wrap: break-word;
             background-color: #eee;
             border: 1px solid #ddd;
             padding: 15px;
             font-family: monospace;
             font-size: 0.9rem;
         }
+        .info-box {
+            margin-top: 20px;
+            font-family: monospace;
+            color: #666;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+        .info-box p { margin: 5px 0; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>World Architecture AI Debug</h1>
-        <!-- NEW: Use a <pre> tag to display the output -->
+        <h1>World Architecture AI</h1>
+        <!-- Add a label for the prompt -->
+        <p><strong>Gemini Prompt:</strong></p>
+        <pre>{{ prompt_text }}</pre>
+
+        <!-- Add a label for the response -->
+        <p><strong>Gemini Response:</strong></p>
         <pre>{{ gemini_weather }}</pre>
+
+        <div class="info-box">
+            <p>API call latency (0.00s if cached): {{ latency_seconds }} seconds.</p>
+        </div>
     </div>
 </body>
 </html>
