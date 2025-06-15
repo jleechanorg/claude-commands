@@ -11,6 +11,7 @@ gcloud run deploy worldarchitecture-webapp \
   --image gcr.io/worldarchitecture-ai/webapp-image \
   --platform managed \
   --region us-central1 \
+  --memory=1Gi \
   --set-secrets=GEMINI_API_KEY=gemini-api-key:latest \
   --allow-unauthenticated
 
