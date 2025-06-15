@@ -11,7 +11,7 @@ def home():
     pacific_time = utc_time.astimezone(pytz.timezone('US/Pacific'))
     template_data = {
         'server_time': pacific_time.strftime('%Y-%m-%d %H:%M:%S %Z'),
-        'page_title': 'World Architecture AI'
+        'page_title': 'World Architecture AI (jlc)'
     }
     return render_template('index.html', **template_data)
 
