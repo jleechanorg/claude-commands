@@ -1,7 +1,7 @@
 import os
 import google.generativeai as genai
 from flask import Flask, render_template
-import traceback # <-- Import the traceback module
+import traceback
 
 app = Flask(__name__)
 
@@ -14,17 +14,21 @@ def home():
             raise ValueError("GEMINI_API_KEY not set in environment.")
         
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-pro')
+        
+        # *** THE FIX: Using the correct Gemini 2.5 Pro Preview model name ***
+        model = genai.GenerativeModel('gemini-2.5-pro-preview-06-05')
+        
+        app.logger.info("Making request to Gemini 2.5 Pro...")
         response = model.generate_content("whats the weather today")
         gemini_response = response.text
+        app.logger.info("Successfully received response from Gemini.")
 
     except Exception as e:
-        # *** NEW: Capture the full formatted stack trace as a string ***
         gemini_response = traceback.format_exc()
         app.logger.error(f"Full traceback:\n{gemini_response}")
 
     template_data = {
-        'page_title': 'World Architecture AI - Debugging',
+        'page_title': 'World Architecture AI - Gemini 2.5 Pro',
         'gemini_weather': gemini_response
     }
     return render_template('index.html', **template_data)
