@@ -1,1 +1,29 @@
-<!DOCTYPE html><html lang="en"><head><title>{{ page_title }}</title><style>body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f0f2f5; }.card { background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; }h1 { color: #333; }p { color: #555; font-size: 1.2rem; }strong { color: #0056b3; }</style></head><body><div class="card"><h1>Welcome to Your Dynamic GCP Website!</h1><p>This page was generated on the server at:</p><p><strong>{{ server_time }}</strong></p></div></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f0f2f5; text-align: center; }
+        .card { background-color: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 600px; }
+        h1 { color: #333; }
+        .gemini-response { margin-top: 20px; font-size: 1.2rem; color: #0056b3; }
+        .gemini-response strong { display: block; margin-bottom: 10px; color: #333; }
+        .error { color: red; }
+        .footer { margin-top: 30px; font-size: 0.9rem; color: #888; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>World Architecture AI</h1>
+        <div class="gemini-response">
+            <strong>Powered by Gemini, the weather is:</strong>
+            <p>{{ gemini_weather }}</p>
+        </div>
+        <div class="footer">
+            This page content is generated dynamically with Python and the Gemini API, hosted on Google Cloud Run.
+        </div>
+    </div>
+</body>
+</html>
