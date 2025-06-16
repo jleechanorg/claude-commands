@@ -1,47 +1,48 @@
 #!/bin/bash
-# A smart deploy script.
-# Deploys the current directory if it contains a Dockerfile.
-# Otherwise, it prompts for a choice from all found projects.
+set -e
 
-TARGET_DIR=""
+# This script deploys a subdirectory to Cloud Run.
+# It must be run from the repository root.
+# Usage: ./deploy.sh <directory-name>
+# Example: ./deploy.sh mvp_site
 
-# Check for a Dockerfile in the current directory first.
-if [ -f "Dockerfile" ]; then
-    echo "==> Dockerfile found. Defaulting to current directory."
-    TARGET_DIR="."
-else
-    # If no Dockerfile here, find all potential projects.
-    echo "==> No Dockerfile here. Searching for deployable apps..."
-    PROJECTS=($(find . -maxdepth 2 -name "Dockerfile" -exec dirname {} \; | sort))
+# --- Configuration ---
+REGION="us-central1"
+PROJECT_ID=$(gcloud config get-value project)
 
-    if [ ${#PROJECTS[@]} -eq 0 ]; then
-        echo "ERROR: No projects with a Dockerfile found in this repository."
-        exit 1
-    fi
-
-    echo "Please choose a project to deploy:"
-    select PROJECT_CHOICE in "${PROJECTS[@]}"; do
-        if [ -n "$PROJECT_CHOICE" ]; then
-            TARGET_DIR="$PROJECT_CHOICE"
-            break
-        else
-            echo "Invalid selection. Please try again."
-        fi
-    done
+# --- Input Validation ---
+if [ -z "$1" ]; then
+    echo "Error: No directory specified."
+    echo "Usage: -bash <directory-name>"
+    exit 1
 fi
 
-echo ""
-echo ">>> Building container image from directory '$TARGET_DIR'..."
-gcloud builds submit "$TARGET_DIR" --tag gcr.io/worldarchitecture-ai/webapp-image && \
+DEPLOY_DIR=$1
+SERVICE_NAME=$(basename "$DEPLOY_DIR")-app # e.g., mvp_site-app
 
-echo ""
-echo ">>> Deploying image to Cloud Run..."
-gcloud run deploy worldarchitecture-webapp \
-  --image gcr.io/worldarchitecture-ai/webapp-image \
-  --platform managed \
-  --region us-central1 \
-  --memory=1Gi \
-  --set-secrets=GEMINI_API_KEY=gemini-api-key:latest \
-  --allow-unauthenticated
+if [ ! -d "$DEPLOY_DIR" ]; then
+    echo "Error: Directory '$DEPLOY_DIR' does not exist."
+    exit 1
+fi
 
-echo "Deployment script finished."
+if [ ! -f "$DEPLOY_DIR/Dockerfile" ]; then
+    echo "Error: No Dockerfile found in '$DEPLOY_DIR'."
+    exit 1
+fi
+
+echo "--- Preparing to deploy '' from directory '' ---"
+
+# --- Build Step ---
+# We submit the build from the subdirectory to ensure the correct context.
+echo "Building container image from '$DEPLOY_DIR'..."
+(cd "$DEPLOY_DIR" && gcloud builds submit --tag gcr.io/$PROJECT_ID/$SERVICE_NAME)
+
+# --- Deploy Step ---
+echo "Deploying '' to Cloud Run..."
+gcloud run deploy $SERVICE_NAME \
+    --image gcr.io/$PROJECT_ID/$SERVICE_NAME \
+    --platform managed \
+    --region $REGION \
+    --allow-unauthenticated
+
+echo "--- Deployment of '' complete. ---"
