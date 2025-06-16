@@ -1,12 +1,12 @@
 #!/bin/bash
-# A script to push changes to GitHub and then deploy from the CURRENT directory.
+# A script to push changes to GitHub and then deploy.
+# The deploy script is now smart enough to figure out what to do.
 # A commit message is optional.
 
 # All arguments passed to this script will be forwarded to push.sh
 COMMIT_MSG="$@"
 
 echo "--- Starting GitHub Push Step ---"
-# The push script still lives in the root of the repo
 ~/worldarchitect.ai/push.sh "$COMMIT_MSG" && \
 
 echo ""
