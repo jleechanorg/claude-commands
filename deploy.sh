@@ -19,7 +19,7 @@ fi
 # --- Configuration ---
 SERVICE_NAME=$(basename $(realpath "$TARGET_DIR") | tr '_' '-')-app
 PROJECT_ID=$(gcloud config get-value project)
-REGION="$(gcloud config get-value run/region 2>/dev/null || echo 'us-central1')"
+# The REGION is no longer needed here; gcloud will use the configured default.
 
 echo "--- Preparing to deploy service '$SERVICE_NAME' ---"
 
@@ -29,10 +29,10 @@ echo "Building container image from '$TARGET_DIR'..."
 
 # --- Deploy Step ---
 echo "Deploying to Cloud Run..."
+# The --region flag is no longer needed; it will use your default.
 gcloud run deploy "$SERVICE_NAME" \
     --image "gcr.io/$PROJECT_ID/$SERVICE_NAME" \
     --platform managed \
-    --region "$REGION" \
     --allow-unauthenticated \
     --set-secrets="GEMINI_API_KEY=gemini-api-key:latest"
 
