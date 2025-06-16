@@ -5,28 +5,30 @@ set -e
 TARGET_DIR=""
 ENVIRONMENT="dev" # Default environment
 
-# Intelligent argument parsing
-if [ -z "$1" ]; then
-    # No arguments: Show menu
-    echo "No directory specified. Please choose an app to deploy:"
-elif [ -d "$1" ]; then
-    # First argument is a directory
-    TARGET_DIR="$1"
-    # Check if the second argument is the environment
-    if [[ "$2" == "stable" ]]; then
-        ENVIRONMENT="stable"
-    fi
-else
-    # First argument is NOT a directory, assume it's the environment
+# --- THIS IS THE NEW CONTEXT-AWARE LOGIC ---
+# First, check if the CURRENT directory has a Dockerfile.
+if [ -f "./Dockerfile" ]; then
+    # If so, we've found our target.
+    TARGET_DIR="."
+    # Check if an argument was provided, and if so, assume it's the environment.
     if [[ "$1" == "stable" ]]; then
         ENVIRONMENT="stable"
     fi
-    # After checking for environment, show menu because no directory was given
-    echo "No directory specified. Please choose an app to deploy:"
+else
+    # The current directory is not a deployable app.
+    # Check if the first argument is a valid directory.
+    if [ -d "$1" ]; then
+        TARGET_DIR="$1"
+        # Check if the second argument is the environment.
+        if [[ "$2" == "stable" ]]; then
+            ENVIRONMENT="stable"
+        fi
+    fi
 fi
 
-# If TARGET_DIR is still empty, run the interactive menu
+# If TARGET_DIR is still empty after all checks, show the interactive menu.
 if [ -z "$TARGET_DIR" ]; then
+    echo "No app auto-detected. Please choose an app to deploy:"
     apps=($(find . -maxdepth 2 -type f -name "Dockerfile" -printf "%h\n" | sed 's|./||' | sort))
     if [ ${#apps[@]} -eq 0 ]; then
         echo "No apps with a Dockerfile found."
@@ -35,12 +37,17 @@ if [ -z "$TARGET_DIR" ]; then
     select app in "${apps[@]}"; do
         if [[ -n $app ]]; then
             TARGET_DIR=$app
+            # After selection, check if an argument was passed for the environment
+            if [[ "$1" == "stable" ]]; then
+                ENVIRONMENT="stable"
+            fi
             break
         else
             echo "Invalid selection. Please try again."
         fi
     done
 fi
+
 
 # --- Final Check & Configuration ---
 echo "--- Deployment Details ---"
