@@ -1,56 +1,52 @@
 #!/bin/bash
 set -e
 
-# This script deploys a subdirectory to Cloud Run.
-# It can be run from the repository root with an argument, or from within an app directory.
-# Usage: ./deploy.sh <directory-name> OR (from an app dir) ./deploy.sh
+# This script deploys an application to Cloud Run.
+# It is context-aware and can be run in two ways:
+# 1. From the repo root with a directory argument: ./deploy.sh mvp_site
+# 2. From inside an application's directory: cd mvp_site; ../deploy.sh
+
+# --- Determine the target directory ---
+TARGET_DIR=""
+if [ -n "$1" ]; then
+    # Case 1: An argument is provided.
+    TARGET_DIR="$1"
+    echo "Deploying specified directory: '$TARGET_DIR'"
+else
+    # Case 2: No argument is provided, use the current directory.
+    TARGET_DIR="."
+    echo "No directory specified. Deploying current directory..."
+fi
+
+# --- Validate the target directory ---
+if [ ! -f "$TARGET_DIR/Dockerfile" ]; then
+    echo "Error: No Dockerfile found in '$TARGET_DIR'. Cannot deploy."
+    exit 1
+fi
 
 # --- Configuration ---
-REGION="us-central1"
+# Get the absolute path of the target dir and then its base name for the service.
+# This handles cases like '.' correctly.
+SERVICE_NAME=$(basename $(realpath "$TARGET_DIR"))
+# Sanitize the name for Cloud Run (replace _ with -)
+SERVICE_NAME=$(echo "$SERVICE_NAME" | tr '_' '-')-app
 PROJECT_ID=$(gcloud config get-value project)
+REGION="us-central1"
 
-# --- Context-Aware Logic ---
-if [ -n "$1" ]; then
-    # If an argument is provided, use it as the deploy directory.
-    DEPLOY_DIR="$1"
-    BUILD_CONTEXT="$1"
-    echo "Deploying specified directory: $DEPLOY_DIR"
-else
-    # If no argument, check for a Dockerfile in the current directory.
-    if [ ! -f "Dockerfile" ]; then
-        echo "Error: No directory specified and no Dockerfile found in current directory."
-        echo "Usage: -bash <directory-name> OR run this script from a directory with a Dockerfile."
-        exit 1
-    fi
-    DEPLOY_DIR=$(basename "$PWD")
-    BUILD_CONTEXT="." # Build from the current directory
-    echo "No directory specified. Deploying current directory: $DEPLOY_DIR"
-fi
-
-SERVICE_NAME=$(echo "$DEPLOY_DIR" | tr '_' '-')-app
-
-if [ ! -d "$DEPLOY_DIR" ] && [ "$BUILD_CONTEXT" != "." ]; then
-    echo "Error: Directory '$DEPLOY_DIR' does not exist."
-    exit 1
-fi
-
-if [ ! -f "$DEPLOY_DIR/Dockerfile" ]; then
-    echo "Error: No Dockerfile found in '$DEPLOY_DIR'."
-    exit 1
-fi
-
-echo "--- Preparing to deploy service '' from context '' ---"
+echo "--- Preparing to deploy service '$SERVICE_NAME' ---"
 
 # --- Build Step ---
-echo "Building container image..."
-gcloud builds submit "$BUILD_CONTEXT" --tag gcr.io/$PROJECT_ID/$SERVICE_NAME
+# Use a subshell to temporarily change to the target directory.
+# This provides the correct and simplest build context (.) to gcloud builds submit.
+echo "Building container image from '$TARGET_DIR'..."
+(cd "$TARGET_DIR" && gcloud builds submit . --tag "gcr.io/$PROJECT_ID/$SERVICE_NAME")
 
 # --- Deploy Step ---
 echo "Deploying to Cloud Run..."
-gcloud run deploy $SERVICE_NAME \
-    --image gcr.io/$PROJECT_ID/$SERVICE_NAME \
+gcloud run deploy "$SERVICE_NAME" \
+    --image "gcr.io/$PROJECT_ID/$SERVICE_NAME" \
     --platform managed \
-    --region $REGION \
+    --region "$REGION" \
     --allow-unauthenticated
 
-echo "--- Deployment of '' complete. ---"
+echo "--- Deployment of '$SERVICE_NAME' complete. ---"
