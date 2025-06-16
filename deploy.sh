@@ -1,31 +1,65 @@
 #!/bin/bash
 set -e
 
-# --- Argument Parsing ---
-if [ -z "$1" ]; then
-    echo "Usage: ./deploy.sh <directory> [environment]"
-    echo "  <directory>: The directory of the app to deploy (e.g., mvp_site)."
-    echo "  [environment]: Optional. 'stable' for production. Defaults to 'dev'."
-    exit 1
+# --- Argument Parsing & Directory Logic ---
+TARGET_DIR=""
+ENVIRONMENT="dev" # Default environment
+
+# --- THIS IS THE NEW CONTEXT-AWARE LOGIC ---
+# First, check if the CURRENT directory has a Dockerfile.
+if [ -f "./Dockerfile" ]; then
+    # If so, we've found our target.
+    TARGET_DIR="."
+    # Check if an argument was provided, and if so, assume it's the environment.
+    if [[ "$1" == "stable" ]]; then
+        ENVIRONMENT="stable"
+    fi
+else
+    # The current directory is not a deployable app.
+    # Check if the first argument is a valid directory.
+    if [ -d "$1" ]; then
+        TARGET_DIR="$1"
+        # Check if the second argument is the environment.
+        if [[ "$2" == "stable" ]]; then
+            ENVIRONMENT="stable"
+        fi
+    fi
 fi
 
-TARGET_DIR="$1"
-# --- THIS IS THE NEW LOGIC ---
-# If the second argument ($2) is not provided, use "dev" as the default.
-ENVIRONMENT="${2:-dev}" 
+# If TARGET_DIR is still empty after all checks, show the interactive menu.
+if [ -z "$TARGET_DIR" ]; then
+    echo "No app auto-detected. Please choose an app to deploy:"
+    apps=($(find . -maxdepth 2 -type f -name "Dockerfile" -printf "%h\n" | sed 's|./||' | sort))
+    if [ ${#apps[@]} -eq 0 ]; then
+        echo "No apps with a Dockerfile found."
+        exit 1
+    fi
+    select app in "${apps[@]}"; do
+        if [[ -n $app ]]; then
+            TARGET_DIR=$app
+            # After selection, check if an argument was passed for the environment
+            if [[ "$1" == "stable" ]]; then
+                ENVIRONMENT="stable"
+            fi
+            break
+        else
+            echo "Invalid selection. Please try again."
+        fi
+    done
+fi
 
+
+# --- Final Check & Configuration ---
 echo "--- Deployment Details ---"
 echo "Target Directory: $TARGET_DIR"
 echo "Environment:      $ENVIRONMENT"
 echo "--------------------------"
-
 
 if [ ! -f "$TARGET_DIR/Dockerfile" ]; then
     echo "Error: No Dockerfile found in '$TARGET_DIR'."
     exit 1
 fi
 
-# --- Configuration ---
 BASE_SERVICE_NAME=$(basename $(realpath "$TARGET_DIR") | tr '_' '-')-app
 SERVICE_NAME="$BASE_SERVICE_NAME-$ENVIRONMENT"
 PROJECT_ID=$(gcloud config get-value project)
@@ -35,9 +69,7 @@ echo "--- Preparing to deploy service '$SERVICE_NAME' to project '$PROJECT_ID' -
 # --- Build Step ---
 IMAGE_TAG="gcr.io/$PROJECT_ID/$BASE_SERVICE_NAME:$ENVIRONMENT-latest"
 echo "Building container image from '$TARGET_DIR' with tag '$IMAGE_TAG'..."
-# Note: I'm keeping the --no-cache flag for now to ensure we resolve the 503 error.
-# We can remove it later for faster builds once the app is stable.
-(cd "$TARGET_DIR" && gcloud builds submit . --tag "$IMAGE_TAG" --no-cache)
+(cd "$TARGET_DIR" && gcloud builds submit . --tag "$IMAGE_TAG")
 
 # --- Deploy Step ---
 echo "Deploying to Cloud Run as service '$SERVICE_NAME'..."
