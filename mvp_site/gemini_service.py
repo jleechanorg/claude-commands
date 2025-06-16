@@ -27,9 +27,9 @@ def continue_story(user_input, mode, story_context):
             break
 
     if mode == 'character':
-        prompt_template = "Character does {user_input}. The last thing that happened was: {last_gemini_response}. Continue the story."
+        prompt_template = "Character does {user_input}. \n\n context: {last_gemini_response}. Continue the story."
     elif mode == 'god':
-        prompt_template = "God does {user_input}. The last thing that happened was: {last_gemini_response}. Continue the story."
+        prompt_template = "{user_input}. \n\n context: {last_gemini_response}"
     else:
         raise ValueError("Invalid interaction mode specified.")
 
