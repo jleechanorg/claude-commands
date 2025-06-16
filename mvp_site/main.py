@@ -1,13 +1,17 @@
 import os
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS  # Import the CORS extension
 import firebase_admin
 from firebase_admin import auth
 
 def create_app():
-    # Correctly set the static folder path relative to the app's root
     app = Flask(__name__, static_folder='static', static_url_path='')
     
+    # Initialize CORS. This will allow requests from any origin
+    # for all routes starting with /api/
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
+
     firebase_admin.initialize_app()
     app.logger.info("Firebase App initialized successfully.")
 
@@ -34,6 +38,7 @@ def create_app():
     def get_campaigns(user_id):
         return jsonify(firestore_service.get_campaigns_for_user(user_id))
 
+    # ... (rest of the API routes are unchanged) ...
     @app.route('/api/campaigns/<campaign_id>', methods=['GET'])
     @check_token
     def get_campaign(user_id, campaign_id):
@@ -69,9 +74,6 @@ def create_app():
             app.logger.error(f"Error during interaction: {e}")
             return jsonify({'success': False, 'error': 'Interaction failed.'}), 500
 
-    # --- Frontend Route Catch-all ---
-    # This route will match anything not matched by the static file handler or API routes.
-    # It ensures that deep-linked frontend routes like /game/some-id serve the main app.
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_frontend(path):
