@@ -1,10 +1,13 @@
 import datetime
 from firebase_admin import firestore
 
-db = firestore.client()
+def get_db():
+    """Returns the Firestore client."""
+    return firestore.client()
 
 def create_campaign(user_id, title, initial_prompt, opening_story):
     """Creates a new campaign document in Firestore."""
+    db = get_db()
     campaign_ref = db.collection('users').document(user_id).collection('campaigns').document()
     
     campaign_data = {
@@ -15,7 +18,6 @@ def create_campaign(user_id, title, initial_prompt, opening_story):
     }
     campaign_ref.set(campaign_data)
 
-    # Add the first story entry (from Gemini)
     story_entry = {
         'actor': 'gemini',
         'text': opening_story,
