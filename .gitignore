@@ -1,0 +1,14 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Service account keys
+key.json
+
+# IDE / OS specific
+.vscode/
+.idea/
+.DS_Store
