@@ -12,7 +12,6 @@ _model = None
 def get_model():
     """
     Initializes and returns the Gemini model.
-    This function is now fully robust with its own try/except block.
     """
     global _model
     if _model is None:
@@ -34,7 +33,12 @@ def get_model():
 def get_initial_story(prompt):
     """Generates the initial story opening from a user's prompt."""
     model = get_model()
-    response = model.generate_content(prompt)
+    logging.info(f"--- Trying initial prompt: {prompt[:200]}... ---") # Log initial prompt
+    try:
+        response = model.generate_content(prompt)
+    except Exception as e:
+        logging.error(f"--- FAILED to generate initial content: {e} ---")
+        raise
     return response.text
 
 @log_exceptions
@@ -55,7 +59,9 @@ def continue_story(user_input, mode, story_context):
         raise ValueError("Invalid interaction mode specified.")
 
     full_prompt = prompt_template.format(user_input=user_input, last_gemini_response=last_gemini_response)
-    logging.info("--- Trying prompt {full_prompt} ---")
+    
+    # --- THIS IS THE CORRECTED LOGGING ---
+    logging.info(f"--- Trying continue_story prompt: {full_prompt[:300]}... ---")
     try:
         response = model.generate_content(full_prompt)
     except Exception as e:
