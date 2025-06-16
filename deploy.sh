@@ -62,7 +62,7 @@ echo "--- Preparing to deploy service '$SERVICE_NAME' to project '$PROJECT_ID' -
 # --- Build Step ---
 IMAGE_TAG="gcr.io/$PROJECT_ID/$BASE_SERVICE_NAME:$ENVIRONMENT-latest"
 echo "Building container image from '$TARGET_DIR' with tag '$IMAGE_TAG'..."
-(cd "$TARGET_DIR" && gcloud builds submit . --tag "$IMAGE_TAG" --no-cache)
+(cd "$TARGET_DIR" && gcloud builds submit . --tag "$IMAGE_TAG")
 
 # --- Deploy Step ---
 echo "Deploying to Cloud Run as service '$SERVICE_NAME'..."
