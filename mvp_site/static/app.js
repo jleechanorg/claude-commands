@@ -10,7 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const showView = (viewName) => { Object.values(views).forEach(v => v.style.display = 'none'); if(views[viewName]) views[viewName].style.display = 'block'; };
     const scrollToBottom = (element) => { element.scrollTop = element.scrollHeight; };
 
-    const handleRouteChange = () => { /* ... no change ... */ };
+    // FIX: Changed from const to let
+    let handleRouteChange = () => {};
     handleRouteChange = () => {
         if (!firebase.auth().currentUser) { showView('auth'); return; }
         const path = window.location.pathname;
@@ -30,15 +31,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const appendToStory = (actor, text) => {
         const storyContainer = document.getElementById('story-content');
         const entryEl = document.createElement('p');
-        // CHANGED: "gemini" is now "Story", "user" is now "You"
         const label = actor === 'gemini' ? 'Story' : 'You';
         entryEl.innerHTML = `<strong>${label}:</strong> ${text}`;
         storyContainer.appendChild(entryEl);
-        // NOTE: Auto-scrolling is now handled conditionally elsewhere
     };
 
     // --- Data Fetching and Rendering ---
-    const renderCampaignList = async () => { /* ... no change ... */ };
+    // FIX: Changed from const to let
+    let renderCampaignList = async () => {};
+    let resumeCampaign = async (campaignId) => {};
+
     renderCampaignList = async () => {
         showSpinner();
         try {
@@ -60,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
         finally { hideSpinner(); }
     };
 
-    const resumeCampaign = async (campaignId) => {
+    resumeCampaign = async (campaignId) => {
         showSpinner();
         try {
             const { data } = await fetchApi(`/api/campaigns/${campaignId}`);
@@ -69,7 +71,6 @@ document.addEventListener('DOMContentLoaded', () => {
             storyContainer.innerHTML = '';
             data.story.forEach(entry => appendToStory(entry.actor, entry.text));
             showView('game');
-            // CHANGED: Scroll to bottom only when resuming a campaign
             scrollToBottom(storyContainer);
         } catch (error) {
             console.error('Failed to resume campaign:', error);
@@ -87,7 +88,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const prompt = document.getElementById('campaign-prompt').value;
         const title = document.getElementById('campaign-title').value;
         try {
-            // CHANGED: Navigate directly to new campaign on creation
             const { data } = await fetchApi('/api/campaigns', { method: 'POST', body: JSON.stringify({ prompt, title }) });
             history.pushState({ campaignId: data.campaign_id }, '', `/game/${data.campaign_id}`);
             handleRouteChange();
@@ -98,8 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('interaction-form').addEventListener('submit', async (e) => { /* ... no change from before, it already doesn't scroll ... */ });
-    document.getElementById('interaction-form').onsubmit = async (e) => {
+    document.getElementById('interaction-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const userInputEl = document.getElementById('user-input');
         let userInput = userInputEl.value.trim();
@@ -126,9 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
             userInputEl.disabled = false;
             userInputEl.focus();
         }
-    };
+    });
     
-    // Existing navigation and auth listeners
     document.getElementById('go-to-new-campaign').onclick = () => { history.pushState({}, '', '/new-campaign'); handleRouteChange(); };
     document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };
     window.addEventListener('popstate', handleRouteChange);
