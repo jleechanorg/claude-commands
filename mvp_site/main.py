@@ -26,12 +26,11 @@ def create_app():
             return f(*args, **kwargs)
         return wrap
 
-    # --- API Routes (prefixed with /api/) ---
+    # --- API Routes ---
     @app.route('/api/campaigns', methods=['GET'])
     @check_token
     def get_campaigns(user_id):
-        campaigns = firestore_service.get_campaigns_for_user(user_id)
-        return jsonify(campaigns)
+        return jsonify(firestore_service.get_campaigns_for_user(user_id))
 
     @app.route('/api/campaigns/<campaign_id>', methods=['GET'])
     @check_token
@@ -48,6 +47,7 @@ def create_app():
         try:
             opening_story = gemini_service.get_initial_story(prompt)
             campaign_id = firestore_service.create_campaign(user_id, title, prompt, opening_story)
+            # CHANGED: Return campaign_id to the frontend
             return jsonify({'success': True, 'campaign_id': campaign_id}), 201
         except Exception as e:
             app.logger.error(f"Error creating campaign: {e}")
@@ -68,8 +68,6 @@ def create_app():
             app.logger.error(f"Error during interaction: {e}")
             return jsonify({'success': False, 'error': 'Interaction failed.'}), 500
 
-    # --- Frontend Route Catch-all ---
-    # This route will match anything not matched by the API routes above.
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve(path):

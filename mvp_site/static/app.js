@@ -1,30 +1,18 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- State and Constants ---
-    const views = {
-        auth: document.getElementById('auth-view'),
-        dashboard: document.getElementById('dashboard-view'),
-        newCampaign: document.getElementById('new-campaign-view'),
-        game: document.getElementById('game-view'),
-    };
+    const views = { auth: document.getElementById('auth-view'), dashboard: document.getElementById('dashboard-view'), newCampaign: document.getElementById('new-campaign-view'), game: document.getElementById('game-view') };
     const loadingOverlay = document.getElementById('loading-overlay');
     let currentCampaignId = null;
 
     // --- Core UI & Navigation Logic ---
     const showSpinner = () => loadingOverlay.style.display = 'flex';
     const hideSpinner = () => loadingOverlay.style.display = 'none';
+    const showView = (viewName) => { Object.values(views).forEach(v => v.style.display = 'none'); if(views[viewName]) views[viewName].style.display = 'block'; };
+    const scrollToBottom = (element) => { element.scrollTop = element.scrollHeight; };
 
-    const showView = (viewName) => {
-        Object.values(views).forEach(view => view.style.display = 'none');
-        if (views[viewName]) {
-            views[viewName].style.display = 'block';
-        }
-    };
-
-    const handleRouteChange = () => {
-        if (!firebase.auth().currentUser) {
-            showView('auth');
-            return;
-        }
+    const handleRouteChange = () => { /* ... no change ... */ };
+    handleRouteChange = () => {
+        if (!firebase.auth().currentUser) { showView('auth'); return; }
         const path = window.location.pathname;
         const campaignIdMatch = path.match(/^\/game\/([a-zA-Z0-9]+)/);
         if (campaignIdMatch) {
@@ -38,53 +26,41 @@ document.addEventListener('DOMContentLoaded', () => {
             showView('dashboard');
         }
     };
-
+    
     const appendToStory = (actor, text) => {
         const storyContainer = document.getElementById('story-content');
         const entryEl = document.createElement('p');
-        entryEl.innerHTML = `<strong>${actor}:</strong> ${text}`;
+        // CHANGED: "gemini" is now "Story", "user" is now "You"
+        const label = actor === 'gemini' ? 'Story' : 'You';
+        entryEl.innerHTML = `<strong>${label}:</strong> ${text}`;
         storyContainer.appendChild(entryEl);
-        storyContainer.scrollTop = storyContainer.scrollHeight;
+        // NOTE: Auto-scrolling is now handled conditionally elsewhere
     };
 
     // --- Data Fetching and Rendering ---
-    // FIX: Changed from const to let to allow reassignment
-    let renderCampaignList = async () => {};
-    let resumeCampaign = async (campaignId) => {};
-
+    const renderCampaignList = async () => { /* ... no change ... */ };
     renderCampaignList = async () => {
         showSpinner();
         try {
             const { data: campaigns } = await fetchApi('/api/campaigns');
             const listEl = document.getElementById('campaign-list');
             listEl.innerHTML = '';
-            if (campaigns.length === 0) {
-                listEl.innerHTML = '<p>You have no campaigns. Start a new one!</p>';
-                return;
-            }
+            if (campaigns.length === 0) { listEl.innerHTML = '<p>You have no campaigns. Start a new one!</p>'; }
             campaigns.forEach(campaign => {
                 const campaignEl = document.createElement('div');
                 campaignEl.className = 'list-group-item list-group-item-action';
-                campaignEl.innerHTML = `
-                    <div class="d-flex w-100 justify-content-between">
-                        <h5 class="mb-1">${campaign.title}</h5>
-                        <small>Last played: ${new Date(campaign.last_played).toLocaleString()}</small>
-                    </div>
-                    <p class="mb-1">${campaign.initial_prompt.substring(0, 100)}...</p>`;
+                campaignEl.innerHTML = `<div class="d-flex w-100 justify-content-between"><h5 class="mb-1">${campaign.title}</h5><small>Last played: ${new Date(campaign.last_played).toLocaleString()}</small></div><p class="mb-1">${campaign.initial_prompt.substring(0, 100)}...</p>`;
                 campaignEl.onclick = () => {
                     history.pushState({ campaignId: campaign.id }, '', `/game/${campaign.id}`);
                     handleRouteChange();
                 };
                 listEl.appendChild(campaignEl);
             });
-        } catch (error) {
-            console.error("Error fetching campaigns:", error);
-        } finally {
-            hideSpinner();
-        }
+        } catch (error) { console.error("Error fetching campaigns:", error); }
+        finally { hideSpinner(); }
     };
 
-    resumeCampaign = async (campaignId) => {
+    const resumeCampaign = async (campaignId) => {
         showSpinner();
         try {
             const { data } = await fetchApi(`/api/campaigns/${campaignId}`);
@@ -93,6 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
             storyContainer.innerHTML = '';
             data.story.forEach(entry => appendToStory(entry.actor, entry.text));
             showView('game');
+            // CHANGED: Scroll to bottom only when resuming a campaign
+            scrollToBottom(storyContainer);
         } catch (error) {
             console.error('Failed to resume campaign:', error);
             history.pushState({}, '', '/');
@@ -101,25 +79,17 @@ document.addEventListener('DOMContentLoaded', () => {
             hideSpinner();
         }
     };
-
+    
     // --- Event Listeners ---
-    document.getElementById('go-to-new-campaign').onclick = () => {
-        history.pushState({}, '', '/new-campaign');
-        handleRouteChange();
-    };
-    document.getElementById('back-to-dashboard').onclick = () => {
-        history.pushState({}, '', '/');
-        handleRouteChange();
-    };
-
     document.getElementById('new-campaign-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         showSpinner();
         const prompt = document.getElementById('campaign-prompt').value;
         const title = document.getElementById('campaign-title').value;
         try {
-            await fetchApi('/api/campaigns', { method: 'POST', body: JSON.stringify({ prompt, title }) });
-            history.pushState({}, '', '/');
+            // CHANGED: Navigate directly to new campaign on creation
+            const { data } = await fetchApi('/api/campaigns', { method: 'POST', body: JSON.stringify({ prompt, title }) });
+            history.pushState({ campaignId: data.campaign_id }, '', `/game/${data.campaign_id}`);
             handleRouteChange();
         } catch (error) {
             console.error("Error creating campaign:", error);
@@ -128,27 +98,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('interaction-form').addEventListener('submit', async (e) => {
+    document.getElementById('interaction-form').addEventListener('submit', async (e) => { /* ... no change from before, it already doesn't scroll ... */ });
+    document.getElementById('interaction-form').onsubmit = async (e) => {
         e.preventDefault();
         const userInputEl = document.getElementById('user-input');
-        const userInput = userInputEl.value;
+        let userInput = userInputEl.value.trim();
         if (!userInput || !currentCampaignId) return;
-
         const mode = document.querySelector('input[name="interactionMode"]:checked').value;
         const localSpinner = document.getElementById('loading-spinner');
         const timerInfo = document.getElementById('timer-info');
-
         localSpinner.style.display = 'block';
         userInputEl.disabled = true;
         timerInfo.textContent = '';
-        
         appendToStory('user', userInput);
         userInputEl.value = '';
-
         try {
             const { data, duration } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
-                method: 'POST',
-                body: JSON.stringify({ input: userInput, mode }),
+                method: 'POST', body: JSON.stringify({ input: userInput, mode }),
             });
             appendToStory('gemini', data.response);
             timerInfo.textContent = `Response time: ${duration}s`;
@@ -160,11 +126,11 @@ document.addEventListener('DOMContentLoaded', () => {
             userInputEl.disabled = false;
             userInputEl.focus();
         }
-    });
-
-    // Listen for browser back/forward button clicks
+    };
+    
+    // Existing navigation and auth listeners
+    document.getElementById('go-to-new-campaign').onclick = () => { history.pushState({}, '', '/new-campaign'); handleRouteChange(); };
+    document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };
     window.addEventListener('popstate', handleRouteChange);
-
-    // Initial route handling
     firebase.auth().onAuthStateChanged(user => handleRouteChange());
 });
