@@ -18,7 +18,11 @@
         <div id="dashboard-view" style="display:none;">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2>My Campaigns</h2>
-                <button id="go-to-new-campaign" class="btn btn-primary">Start New Campaign</button>
+                <div>
+                    <button id="go-to-new-campaign" class="btn btn-primary">Start New Campaign</button>
+                    <!-- ADDED SIGN OUT BUTTON HERE -->
+                    <button id="signOutBtnDashboard" class="btn btn-danger ms-2">Sign Out</button>
+                </div>
             </div>
             <div id="campaign-list" class="list-group"></div>
         </div>
@@ -42,7 +46,6 @@
             <div id="story-content" class="p-3 border rounded bg-light" style="max-height: 60vh; overflow-y: auto;"></div>
             <div id="pagination-controls" class="mt-2 text-center"></div>
             <div id="timer-info" class="mt-2 text-muted text-center small"></div>
-            <!-- Interaction form will go here -->
         </div>
 
     </div>

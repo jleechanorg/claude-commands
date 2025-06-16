@@ -9,16 +9,29 @@ document.addEventListener('DOMContentLoaded', () => {
     measurementId: "G-EFX5VFZ7CV"
   };
   try { firebase.initializeApp(firebaseConfig); } catch (e) { console.error("Error initializing Firebase:", e); return; }
+  
   const auth = firebase.auth();
   const provider = new firebase.auth.GoogleAuthProvider();
+
   const authContainer = document.getElementById('auth-container');
+  // Get the new button
+  const signOutBtnDashboard = document.getElementById('signOutBtnDashboard');
+
   const signIn = () => auth.signInWithPopup(provider).catch(e => console.error("Sign-in error:", e));
   const signOut = () => auth.signOut().catch(e => console.error("Sign-out error:", e));
+
+  // Attach the signOut function to the new button's click event
+  if (signOutBtnDashboard) {
+      signOutBtnDashboard.onclick = signOut;
+  }
+
   auth.onAuthStateChanged(user => {
     if (user) {
-      authContainer.innerHTML = `<p>Welcome, ${user.displayName}! <button class="btn btn-sm btn-danger" id="signOutBtn">Sign Out</button></p>`;
-      document.getElementById('signOutBtn').onclick = signOut;
+      // User is signed in, so the sign-in button should not be displayed.
+      // We keep the container for layout purposes but ensure it's empty.
+      authContainer.innerHTML = '';
     } else {
+      // User is signed out, show the sign-in button.
       authContainer.innerHTML = '<button class="btn btn-primary" id="signInBtn">Sign in with Google</button>';
       document.getElementById('signInBtn').onclick = signIn;
     }
