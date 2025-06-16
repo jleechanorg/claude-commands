@@ -18,7 +18,8 @@ if [ -z "$1" ]; then
 fi
 
 DEPLOY_DIR=$1
-SERVICE_NAME=$(basename "$DEPLOY_DIR")-app # e.g., mvp_site-app
+# FIX: Sanitize the directory name by replacing underscores with dashes for the service name.
+SERVICE_NAME=$(basename "$DEPLOY_DIR" | tr '_' '-')-app
 
 if [ ! -d "$DEPLOY_DIR" ]; then
     echo "Error: Directory '$DEPLOY_DIR' does not exist."
@@ -33,7 +34,6 @@ fi
 echo "--- Preparing to deploy '' from directory '' ---"
 
 # --- Build Step ---
-# We submit the build from the subdirectory to ensure the correct context.
 echo "Building container image from '$DEPLOY_DIR'..."
 (cd "$DEPLOY_DIR" && gcloud builds submit --tag gcr.io/$PROJECT_ID/$SERVICE_NAME)
 
