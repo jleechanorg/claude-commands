@@ -55,5 +55,9 @@ def continue_story(user_input, mode, story_context):
         raise ValueError("Invalid interaction mode specified.")
 
     full_prompt = prompt_template.format(user_input=user_input, last_gemini_response=last_gemini_response)
-    response = model.generate_content(full_prompt)
+    try:
+        response = model.generate_content(full_prompt)
+    except Exception as e:
+        logging.error(f"--- FAILED to generate content: {e} ---")
+        raise
     return response.text
