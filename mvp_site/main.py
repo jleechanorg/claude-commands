@@ -4,7 +4,7 @@ from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import firebase_admin
 from firebase_admin import auth
-import traceback # Import traceback
+import traceback
 
 def create_app():
     app = Flask(__name__, static_folder='static', static_url_path='')
@@ -18,14 +18,19 @@ def create_app():
 
     def check_token(f):
         @wraps(f)
-        def wrap(*args,**kwargs):
-            if not request.headers.get('Authorization'): return {'message': 'No token provided'}, 401
+        def wrap(*args, **kwargs):
+            # --- THIS IS THE NEW BYPASS LOGIC ---
+            if app.config['TESTING'] and request.headers.get('X-Test-Bypass-Auth') == 'true':
+                kwargs['user_id'] = request.headers.get('X-Test-User-ID', 'test-user') # Use a provided test user ID
+                return f(*args, **kwargs)
+            # --- END OF NEW LOGIC ---
+
+            if not request.headers.get('Authorization'): return jsonify({'message': 'No token provided'}), 401
             try:
                 id_token = request.headers['Authorization'].split(' ').pop()
                 decoded_token = auth.verify_id_token(id_token)
                 kwargs['user_id'] = decoded_token['uid']
             except Exception as e:
-                # Return the full traceback in the error response
                 return jsonify({'success': False, 'error': f"Auth failed: {e}", 'traceback': traceback.format_exc()}), 401
             return f(*args, **kwargs)
         return wrap
