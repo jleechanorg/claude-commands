@@ -1,14 +1,17 @@
 #!/bin/bash
-DEPLOY_DIR=$1
-COMMIT_MSG="${*:2}"
-if [ -z "$DEPLOY_DIR" ]; then
-  echo "ERROR: Please provide the target directory to deploy as the first argument."
-  echo "Usage: ./fupdate.sh <directory> [optional commit message]"
-  exit 1
-fi
+# A script to push changes to GitHub and then deploy from the CURRENT directory.
+# A commit message is optional.
+
+# All arguments passed to this script will be forwarded to push.sh
+COMMIT_MSG="$@"
+
 echo "--- Starting GitHub Push Step ---"
-./push.sh "$COMMIT_MSG" && \
+# The push script still lives in the root of the repo
+~/worldarchitect.ai/push.sh "$COMMIT_MSG" && \
+
 echo ""
-echo "--- Starting GCP Deploy Step for '$DEPLOY_DIR' ---"
-./deploy.sh "$DEPLOY_DIR"
+echo "--- Starting GCP Deploy Step ---"
+# The deploy script also lives in the root of the repo
+~/worldarchitect.ai/deploy.sh
+
 echo "Full update finished."
