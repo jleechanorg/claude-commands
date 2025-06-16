@@ -10,9 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const showView = (viewName) => { Object.values(views).forEach(v => v.style.display = 'none'); if(views[viewName]) views[viewName].style.display = 'block'; };
     const scrollToBottom = (element) => { element.scrollTop = element.scrollHeight; };
 
-    // FIX: Changed from const to let
-    let handleRouteChange = () => {};
-    handleRouteChange = () => {
+    let handleRouteChange = () => {
         if (!firebase.auth().currentUser) { showView('auth'); return; }
         const path = window.location.pathname;
         const campaignIdMatch = path.match(/^\/game\/([a-zA-Z0-9]+)/);
@@ -37,11 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Data Fetching and Rendering ---
-    // FIX: Changed from const to let
-    let renderCampaignList = async () => {};
-    let resumeCampaign = async (campaignId) => {};
-
-    renderCampaignList = async () => {
+    let renderCampaignList = async () => {
         showSpinner();
         try {
             const { data: campaigns } = await fetchApi('/api/campaigns');
@@ -62,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
         finally { hideSpinner(); }
     };
 
-    resumeCampaign = async (campaignId) => {
+    let resumeCampaign = async (campaignId) => {
         showSpinner();
         try {
             const { data } = await fetchApi(`/api/campaigns/${campaignId}`);
@@ -71,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
             storyContainer.innerHTML = '';
             data.story.forEach(entry => appendToStory(entry.actor, entry.text));
             showView('game');
+            // ADDED BACK: Scroll to bottom after successfully loading the campaign.
             scrollToBottom(storyContainer);
         } catch (error) {
             console.error('Failed to resume campaign:', error);
