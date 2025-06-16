@@ -10,24 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const showView = (viewName) => { Object.values(views).forEach(v => v.style.display = 'none'); if(views[viewName]) views[viewName].style.display = 'block'; };
     const scrollToBottom = (element) => { element.scrollTop = element.scrollHeight; };
 
-    // --- NEW: Function to display errors prominently ---
-    const showError = (error) => {
-        // Construct a detailed error message from the error object
-        const errorMessage = `
-            <div class="alert alert-danger mt-3">
-                <h4 class="alert-heading">An Error Occurred!</h4>
-                <p><strong>Error:</strong> ${error.message || 'Unknown error'}</p>
-                <hr>
-                <p class="mb-0"><strong>Traceback:</strong></p>
-                <pre style="white-space: pre-wrap;">${error.traceback || 'No traceback available.'}</pre>
-            </div>
-        `;
-        // For simplicity, we can alert this or append it to a specific error div
-        // Let's create an error container in the most used views.
-        // For now, an alert is the most direct way to show the user.
-        alert(`Error: ${error.message}\n\nTraceback:\n${error.traceback}`);
-    };
-
     let handleRouteChange = () => {
         if (!firebase.auth().currentUser) { showView('auth'); return; }
         const path = window.location.pathname;
@@ -70,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
                 listEl.appendChild(campaignEl);
             });
-        } catch (error) { showError(error); }
+        } catch (error) { console.error("Error fetching campaigns:", error); }
         finally { hideSpinner(); }
     };
 
@@ -85,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             showView('game');
             scrollToBottom(storyContainer);
         } catch (error) {
-            showError(error);
+            console.error('Failed to resume campaign:', error);
             history.pushState({}, '', '/');
             handleRouteChange();
         } finally {
@@ -97,14 +79,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('new-campaign-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         showSpinner();
+        const prompt = document.getElementById('campaign-prompt').value;
+        const title = document.getElementById('campaign-title').value;
         try {
-            const prompt = document.getElementById('campaign-prompt').value;
-            const title = document.getElementById('campaign-title').value;
             const { data } = await fetchApi('/api/campaigns', { method: 'POST', body: JSON.stringify({ prompt, title }) });
             history.pushState({ campaignId: data.campaign_id }, '', `/game/${data.campaign_id}`);
             handleRouteChange();
         } catch (error) {
-            showError(error);
+            console.error("Error creating campaign:", error);
+            alert('Failed to start a new campaign.');
             hideSpinner();
         }
     });
@@ -114,23 +97,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const userInputEl = document.getElementById('user-input');
         let userInput = userInputEl.value.trim();
         if (!userInput || !currentCampaignId) return;
-        
+        const mode = document.querySelector('input[name="interactionMode"]:checked').value;
         const localSpinner = document.getElementById('loading-spinner');
+        const timerInfo = document.getElementById('timer-info');
         localSpinner.style.display = 'block';
         userInputEl.disabled = true;
-
+        timerInfo.textContent = '';
         appendToStory('user', userInput);
         userInputEl.value = '';
         try {
-            const mode = document.querySelector('input[name="interactionMode"]:checked').value;
-            const { data } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
+            const { data, duration } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
                 method: 'POST', body: JSON.stringify({ input: userInput, mode }),
             });
             appendToStory('gemini', data.response);
+            timerInfo.textContent = `Response time: ${duration}s`;
         } catch (error) {
-            showError(error);
-            // Also display a system message in the chat itself
-            appendToStory('system', `An error occurred. Check the alert for details.`);
+            console.error("Interaction failed:", error);
+            appendToStory('system', 'Sorry, an error occurred. Please try again.');
         } finally {
             localSpinner.style.display = 'none';
             userInputEl.disabled = false;
