@@ -8,26 +8,27 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- ADDED: Full page loading overlay -->
+    <div id="loading-overlay">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
     <div class="container mt-5">
         <h1 class="text-center">WorldArchitect.AI</h1>
-
-        <!-- View 1: Auth View -->
+        <!-- ... (rest of the views are unchanged) ... -->
         <div id="auth-view" class="text-center mt-4"><div id="auth-container"></div></div>
-
-        <!-- View 2: Dashboard -->
         <div id="dashboard-view" style="display:none;">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2>My Campaigns</h2>
                 <div>
                     <button id="go-to-new-campaign" class="btn btn-primary">Start New Campaign</button>
-                    <!-- ADDED SIGN OUT BUTTON HERE -->
                     <button id="signOutBtnDashboard" class="btn btn-danger ms-2">Sign Out</button>
                 </div>
             </div>
             <div id="campaign-list" class="list-group"></div>
         </div>
-
-        <!-- View 3: New Campaign -->
         <div id="new-campaign-view" style="display:none;">
             <h2 class="text-center">Start a New Campaign</h2>
             <form id="new-campaign-form" class="mt-3">
@@ -36,18 +37,31 @@
                 <button type="submit" class="btn btn-success">Begin Adventure!</button>
             </form>
         </div>
-
-        <!-- View 4: Game -->
         <div id="game-view" style="display:none;">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2 id="game-title"></h2>
                 <button id="back-to-dashboard" class="btn btn-secondary">Back to Dashboard</button>
             </div>
             <div id="story-content" class="p-3 border rounded bg-light" style="max-height: 60vh; overflow-y: auto;"></div>
-            <div id="pagination-controls" class="mt-2 text-center"></div>
             <div id="timer-info" class="mt-2 text-muted text-center small"></div>
+            <form id="interaction-form" class="mt-3">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="user-input" placeholder="What do you do?" required>
+                    <button class="btn btn-outline-secondary" type="submit">Send</button>
+                </div>
+                <div class="form-check form-check-inline mt-2">
+                    <input class="form-check-input" type="radio" name="interactionMode" id="char-mode" value="character" checked>
+                    <label class="form-check-label" for="char-mode">Character Mode</label>
+                </div>
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="radio" name="interactionMode" id="god-mode" value="god">
+                    <label class="form-check-label" for="god-mode">God Mode</label>
+                </div>
+            </form>
+            <div id="loading-spinner" class="text-center mt-3" style="display: none;">
+                <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
+            </div>
         </div>
-
     </div>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
