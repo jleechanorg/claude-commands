@@ -1,8 +1,11 @@
 body { background-color: #f8f9fa; }
 #auth-container button { cursor: pointer; }
-#story-content p { white-space: pre-wrap; margin-bottom: 1rem; }
 
-/* Added for loading overlay */
+#story-content p {
+    white-space: pre-wrap;
+    margin-bottom: 1rem;
+}
+
 #loading-overlay {
     position: fixed;
     top: 0;
@@ -14,11 +17,32 @@ body { background-color: #f8f9fa; }
     justify-content: center;
     align-items: center;
     z-index: 9999;
-    display: none; /* Hidden by default */
+    display: none;
 }
 
 #loading-overlay .spinner-border {
     width: 3rem;
     height: 3rem;
     color: white;
+}
+
+#game-view {
+    display: flex;
+    flex-direction: column;
+    height: 85vh; 
+}
+
+#story-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    min-height: 0;
+    border: 1px solid #dee2e6;
+    border-radius: .25rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+}
+
+/* ADDED: Style for the new textarea */
+#interaction-form textarea {
+    resize: vertical; /* Allow vertical resizing only */
 }
