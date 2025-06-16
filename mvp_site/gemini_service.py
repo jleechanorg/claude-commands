@@ -1,23 +1,20 @@
 import os
 import google.generativeai as genai
-import logging
+from decorators import log_exceptions # Import the decorator
 
-# Configure basic logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
-
+# Configure the library
+# The model can be initialized here as it doesn't make an API call on its own.
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-pro-preview-06-05')
 
+@log_exceptions
 def get_initial_story(prompt):
     """Generates the initial story opening from a user's prompt."""
     full_prompt = f"You are a master storyteller. Start a new, exciting, and engaging fantasy RPG campaign based on this user's prompt: '{prompt}'. Describe the opening scene and setting in detail, and end by asking the player character, 'What do you do?'"
-    
-    logging.info(f"GEMINI PROMPT (Initial):\n---\n{full_prompt}\n---")
     response = model.generate_content(full_prompt)
-    logging.info(f"GEMINI RESPONSE (Initial):\n---\n{response.text}\n---")
-    
     return response.text
 
+@log_exceptions
 def continue_story(user_input, mode, story_context):
     """Generates the next part of the story based on context."""
     last_gemini_response = ""
@@ -34,9 +31,5 @@ def continue_story(user_input, mode, story_context):
         raise ValueError("Invalid interaction mode specified.")
 
     full_prompt = prompt_template.format(user_input=user_input, last_gemini_response=last_gemini_response)
-    
-    logging.info(f"GEMINI PROMPT (Continue):\n---\n{full_prompt}\n---")
     response = model.generate_content(full_prompt)
-    logging.info(f"GEMINI RESPONSE (Continue):\n---\n{response.text}\n---")
-
     return response.text
