@@ -15,8 +15,7 @@ def create_app():
     def check_token(f):
         @wraps(f)
         def wrap(*args,**kwargs):
-            if not request.headers.get('Authorization'):
-                return {'message': 'No token provided'}, 401
+            if not request.headers.get('Authorization'): return {'message': 'No token provided'}, 401
             try:
                 id_token = request.headers['Authorization'].split(' ').pop()
                 decoded_token = auth.verify_id_token(id_token)
@@ -27,6 +26,7 @@ def create_app():
             return f(*args, **kwargs)
         return wrap
 
+    # --- API Routes (prefixed with /api/) ---
     @app.route('/api/campaigns', methods=['GET'])
     @check_token
     def get_campaigns(user_id):
@@ -37,16 +37,14 @@ def create_app():
     @check_token
     def get_campaign(user_id, campaign_id):
         campaign, story = firestore_service.get_campaign_by_id(user_id, campaign_id)
-        if not campaign:
-            return jsonify({'error': 'Campaign not found'}), 404
+        if not campaign: return jsonify({'error': 'Campaign not found'}), 404
         return jsonify({'campaign': campaign, 'story': story})
 
     @app.route('/api/campaigns', methods=['POST'])
     @check_token
     def create_campaign(user_id):
         data = request.get_json()
-        prompt = data.get('prompt', 'A classic fantasy adventure.')
-        title = data.get('title', 'My New Campaign')
+        prompt, title = data.get('prompt'), data.get('title')
         try:
             opening_story = gemini_service.get_initial_story(prompt)
             campaign_id = firestore_service.create_campaign(user_id, title, prompt, opening_story)
@@ -59,28 +57,26 @@ def create_app():
     @check_token
     def handle_interaction(user_id, campaign_id):
         data = request.get_json()
-        user_input = data.get('input')
-        mode = data.get('mode', 'character')
-        
+        user_input, mode = data.get('input'), data.get('mode', 'character')
         try:
             _, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
             firestore_service.add_story_entry(user_id, campaign_id, 'user', user_input, mode)
-            
             gemini_response = gemini_service.continue_story(user_input, mode, story_context)
             firestore_service.add_story_entry(user_id, campaign_id, 'gemini', gemini_response)
-            
             return jsonify({'success': True, 'response': gemini_response})
         except Exception as e:
             app.logger.error(f"Error during interaction: {e}")
             return jsonify({'success': False, 'error': 'Interaction failed.'}), 500
 
-    @app.route('/')
-    def serve_index():
-        return send_from_directory('static', 'index.html')
-
+    # --- Frontend Route Catch-all ---
+    # This route will match anything not matched by the API routes above.
+    @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
-    def serve_static(path):
-        return send_from_directory('static', path)
+    def serve(path):
+        if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+            return send_from_directory(app.static_folder, path)
+        else:
+            return send_from_directory(app.static_folder, 'index.html')
 
     return app
 
