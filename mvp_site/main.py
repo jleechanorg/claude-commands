@@ -5,7 +5,9 @@ import firebase_admin
 from firebase_admin import auth
 
 def create_app():
-    app = Flask(__name__, static_folder='static')
+    # Correctly set the static folder path relative to the app's root
+    app = Flask(__name__, static_folder='static', static_url_path='')
+    
     firebase_admin.initialize_app()
     app.logger.info("Firebase App initialized successfully.")
 
@@ -26,7 +28,7 @@ def create_app():
             return f(*args, **kwargs)
         return wrap
 
-    # --- API Routes ---
+    # --- API Routes (all prefixed with /api/) ---
     @app.route('/api/campaigns', methods=['GET'])
     @check_token
     def get_campaigns(user_id):
@@ -47,7 +49,6 @@ def create_app():
         try:
             opening_story = gemini_service.get_initial_story(prompt)
             campaign_id = firestore_service.create_campaign(user_id, title, prompt, opening_story)
-            # CHANGED: Return campaign_id to the frontend
             return jsonify({'success': True, 'campaign_id': campaign_id}), 201
         except Exception as e:
             app.logger.error(f"Error creating campaign: {e}")
@@ -68,13 +69,13 @@ def create_app():
             app.logger.error(f"Error during interaction: {e}")
             return jsonify({'success': False, 'error': 'Interaction failed.'}), 500
 
+    # --- Frontend Route Catch-all ---
+    # This route will match anything not matched by the static file handler or API routes.
+    # It ensures that deep-linked frontend routes like /game/some-id serve the main app.
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
-    def serve(path):
-        if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
-            return send_from_directory(app.static_folder, path)
-        else:
-            return send_from_directory(app.static_folder, 'index.html')
+    def serve_frontend(path):
+        return send_from_directory(app.static_folder, 'index.html')
 
     return app
 
