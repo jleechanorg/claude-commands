@@ -10,7 +10,20 @@
 <body>
     <div class="container mt-5">
         <h1 class="text-center">WorldArchitect.AI</h1>
+
+        <!-- View 1: Auth View -->
         <div id="auth-view" class="text-center mt-4"><div id="auth-container"></div></div>
+
+        <!-- View 2: Dashboard -->
+        <div id="dashboard-view" style="display:none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2>My Campaigns</h2>
+                <button id="go-to-new-campaign" class="btn btn-primary">Start New Campaign</button>
+            </div>
+            <div id="campaign-list" class="list-group"></div>
+        </div>
+
+        <!-- View 3: New Campaign -->
         <div id="new-campaign-view" style="display:none;">
             <h2 class="text-center">Start a New Campaign</h2>
             <form id="new-campaign-form" class="mt-3">
@@ -19,7 +32,19 @@
                 <button type="submit" class="btn btn-success">Begin Adventure!</button>
             </form>
         </div>
-        <div id="game-view" style="display:none;"><div id="story-content" class="p-3 border rounded bg-light"></div></div>
+
+        <!-- View 4: Game -->
+        <div id="game-view" style="display:none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 id="game-title"></h2>
+                <button id="back-to-dashboard" class="btn btn-secondary">Back to Dashboard</button>
+            </div>
+            <div id="story-content" class="p-3 border rounded bg-light" style="max-height: 60vh; overflow-y: auto;"></div>
+            <div id="pagination-controls" class="mt-2 text-center"></div>
+            <div id="timer-info" class="mt-2 text-muted text-center small"></div>
+            <!-- Interaction form will go here -->
+        </div>
+
     </div>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
