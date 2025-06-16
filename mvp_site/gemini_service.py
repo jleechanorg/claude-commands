@@ -1,17 +1,18 @@
 import os
 import google.generativeai as genai
-from decorators import log_exceptions # Import the decorator
+import logging
+from decorators import log_exceptions
 
-# Configure the library
-# The model can be initialized here as it doesn't make an API call on its own.
+# Configure basic logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.5-pro-preview-06-05')
 
 @log_exceptions
 def get_initial_story(prompt):
-    """Generates the initial story opening from a user's prompt."pwd
-    citing, and engaging fantasy RPG campaign based on this user's prompt: '{prompt}'. Describe the opening scene and setting in detail, and end by asking the player character, 'What do you do?'"
-    response = model.generate_content(full_prompt)
+    """Generates the initial story opening from a user's prompt."""
+    response = model.generate_content(prompt)
     return response.text
 
 @log_exceptions
