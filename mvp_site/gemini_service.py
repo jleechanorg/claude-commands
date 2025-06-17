@@ -9,7 +9,7 @@ import sys
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- MODULE-LEVEL CONSTANTS ---
-MODEL_NAME = 'gemini-2.5-flash-preview-05-20'
+MODEL_NAME = 'gemini-1.5-flash-latest'
 MAX_TOKENS = 8192
 TEMPERATURE = 0.9
 TARGET_WORD_COUNT = 400
@@ -37,30 +37,6 @@ def get_client():
         logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
-def _call_gemini_api(prompt_contents):
-    """Calls the Gemini API with a given prompt and returns the response."""
-    client = get_client()
-
-    most_recent_prompt = ""
-    if prompt_contents:
-        most_recent_prompt = str(prompt_contents[-1].get('parts', [''])[0])
-    
-    logging.info(
-        f"--- Calling Gemini API with {len(prompt_contents)} turns. "
-        f"Latest prompt: {most_recent_prompt[:200]}... ---"
-    )
-    
-    response = client.models.generate_content(
-        model=MODEL_NAME,
-        contents=prompt_contents,
-        config=types.GenerateContentConfig(
-            max_output_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE,
-            safety_settings=SAFETY_SETTINGS
-        )
-    )
-    return response
-
 def _get_text_from_response(response):
     """Safely extracts text from a Gemini response object."""
     try:
@@ -77,14 +53,27 @@ def _get_text_from_response(response):
 @log_exceptions
 def get_initial_story(prompt):
     """Generates the initial story opening."""
+    client = get_client()
     full_prompt = f"{prompt}\n\n(Please keep the response to about {TARGET_WORD_COUNT} words.)"
-    response = _call_gemini_api([{'role': 'user', 'parts': [full_prompt]}])
+    logging.info(f"--- Calling Gemini API for initial story. Prompt: {full_prompt[:200]}... ---")
+
+    # --- THIS IS THE FIX ---
+    # For a simple initial prompt, pass the string directly in the contents list.
+    response = client.models.generate_content(
+        model=MODEL_NAME,
+        contents=[full_prompt], # Correct, simple format
+        config=types.GenerateContentConfig(
+            max_output_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+            safety_settings=SAFETY_SETTINGS
+        )
+    )
     return _get_text_from_response(response)
 
 @log_exceptions
 def continue_story(user_input, mode, story_context):
     """Generates the next part of the story using a limited chat history."""
-    
+    client = get_client()
     recent_context = story_context[-HISTORY_TURN_LIMIT:]
     
     history = []
@@ -92,7 +81,6 @@ def continue_story(user_input, mode, story_context):
         actor = 'user' if entry.get('actor') == 'user' else 'model'
         history.append({'role': actor, 'parts': [entry.get('text')]})
 
-    # --- THIS IS THE FIX: Corrected spelling of 'character' ---
     if mode == 'character':
         prompt_text = f"Acting as the main character {user_input}. Continue the story in about {TARGET_WORD_COUNT} words."
     else: # god mode
@@ -100,7 +88,19 @@ def continue_story(user_input, mode, story_context):
 
     history.append({'role': 'user', 'parts': [prompt_text]})
     
-    response = _call_gemini_api(history)
+    logging.info(f"--- Calling Gemini API with {len(history)} turns. Latest prompt: {prompt_text[:200]}... ---")
+
+    # --- THIS IS THE FIX ---
+    # For a multi-turn chat, pass the structured history list.
+    response = client.models.generate_content(
+        model=MODEL_NAME,
+        contents=history, # Correct, multi-turn format
+        config=types.GenerateContentConfig(
+            max_output_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+            safety_settings=SAFETY_SETTINGS
+        )
+    )
     return _get_text_from_response(response)
 
 # --- Main block for rapid, direct testing ---
@@ -125,11 +125,10 @@ if __name__ == "__main__":
     print("--- END OF RESPONSE ---\n")
     
     print("\n--- Test Case 2: continue_story with history limit ---")
-    mock_history = [{'actor': 'gemini', 'text': f'This is turn {i}.'} for i in range(100)]
-    mock_history.append({'actor': 'user', 'text': 'This is the user turn.'})
+    mock_history = [{'actor': 'gemini', 'text': 'The old lighthouse stood on a jagged cliff, its light long extinguished.'}]
     
-    next_input = "A storm rolls in."
-    print(f"Using follow-up input: '{next_input}' on a history of {len(mock_history)} turns.")
+    next_input = "A lone ship, tossed by a sudden squall, sees a faint light from the abandoned tower."
+    print(f"Using follow-up input: '{next_input}'")
     
     continue_response = continue_story(next_input, 'god', mock_history)
     print("\n--- LIVE RESPONSE ---")
