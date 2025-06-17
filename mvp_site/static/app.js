@@ -4,11 +4,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingOverlay = document.getElementById('loading-overlay');
     let currentCampaignId = null;
 
+    // Helper function for scrolling
+    const scrollToBottom = (element) => { 
+        console.log(`Scrolling element: ${element.id}, current scrollHeight: ${element.scrollHeight}, clientHeight: ${element.clientHeight}`);
+        element.scrollTop = element.scrollHeight; 
+    };
+
     // --- Core UI & Navigation Logic ---
     const showSpinner = () => loadingOverlay.style.display = 'flex';
     const hideSpinner = () => loadingOverlay.style.display = 'none';
     const showView = (viewName) => { Object.values(views).forEach(v => v.style.display = 'none'); if(views[viewName]) views[viewName].style.display = 'block'; };
-    const scrollToBottom = (element) => { element.scrollTop = element.scrollHeight; };
+    // The duplicate scrollToBottom function definition below needs to be removed.
+    // Keeping only the first one, which has the console.log for debugging.
+    // If there were other reasons for the duplication (e.g., performance), it would be specified.
+    // For now, removing the redundant line to ensure clean code.
 
     let handleRouteChange = () => {
         if (!firebase.auth().currentUser) { showView('auth'); return; }
@@ -70,8 +79,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const storyContainer = document.getElementById('story-content');
             storyContainer.innerHTML = '';
             data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode)); // Pass existing mode if available
+            
+            // Add a slight delay to allow rendering before scrolling
+            console.log("Attempting to scroll after content append, with a slight delay.");
+            setTimeout(() => scrollToBottom(storyContainer), 100); // 100ms delay
+            
             showView('game');
-            scrollToBottom(storyContainer);
+            // Removed redundant scrollToBottom call here (was: scrollToBottom(storyContainer);)
         } catch (error) {
             console.error('Failed to resume campaign:', error);
             history.pushState({}, '', '/');
