@@ -5,17 +5,14 @@ import logging
 from decorators import log_exceptions
 import sys
 
-# Configure basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# --- MODULE-LEVEL CONSTANTS ---
+# --- CONSTANTS ---
 MODEL_NAME = 'gemini-2.5-flash-preview-05-20'
-# High token limit to act as a safety net against runaway generation.
 MAX_TOKENS = 8192 
 TEMPERATURE = 0.9
-# --- NEW: Target word count for prompt engineering ---
 TARGET_WORD_COUNT = 400
-
+HISTORY_TURN_LIMIT = 50
 SAFETY_SETTINGS = [
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
@@ -70,30 +67,38 @@ def _get_text_from_response(response):
 @log_exceptions
 def get_initial_story(prompt):
     """Generates the initial story opening."""
-    # Use the TARGET_WORD_COUNT constant in the prompt.
     full_prompt = f"{prompt}\n\n(Please keep the response to about {TARGET_WORD_COUNT} words.)"
     response = _call_gemini_api([full_prompt])
     return _get_text_from_response(response)
 
+# --- THIS IS THE ONLY FUNCTION THAT HAS BEEN CHANGED ---
 @log_exceptions
 def continue_story(user_input, mode, story_context):
-    """Generates the next part of the story."""
-    last_gemini_response = ""
-    for entry in reversed(story_context):
-        if entry.get('actor') == 'gemini':
-            last_gemini_response = entry.get('text', '')
-            break
-
-    # Use the TARGET_WORD_COUNT constant in the prompt templates.
-    if mode == 'character':
-        prompt_template = "Acting as the main charter {user_input}. \n\n context: {last_gemini_response}. Continue the story in about " + str(TARGET_WORD_COUNT) + " words."
-    elif mode == 'god':
-        prompt_template = "{user_input} \n\n context: {last_gemini_response}. Continue the story in about " + str(TARGET_WORD_COUNT) + " words."
-    else:
-        raise ValueError("Invalid interaction mode specified.")
-
-    full_prompt = prompt_template.format(user_input=user_input, last_gemini_response=last_gemini_response)
+    """Generates the next part of the story by concatenating the chat history."""
     
+    # 1. Take only the most recent turns from the full story context.
+    recent_context = story_context[-HISTORY_TURN_LIMIT:]
+    
+    # 2. Build a single context string from the history.
+    history_parts = []
+    for entry in recent_context:
+        actor_label = "Story" if entry.get('actor') == 'gemini' else "You"
+        history_parts.append(f"{actor_label}: {entry.get('text')}")
+    
+    context_string = "\n\n".join(history_parts)
+
+    # 3. Create the final prompt for the current user turn.
+    if mode == 'character':
+        prompt_template = "Acting as the main character {user_input}. Continue the story in about {word_count} words."
+    else: # god mode
+        prompt_template = "{user_input}. Continue the story in about {word_count} words."
+
+    current_prompt_text = prompt_template.format(user_input=user_input, word_count=TARGET_WORD_COUNT)
+
+    # 4. Combine the context and the current prompt into one large string.
+    full_prompt = f"CONTEXT:\n{context_string}\n\nYOUR TURN:\n{current_prompt_text}"
+    
+    # 5. Call the API helper with the single, concatenated prompt string.
     response = _call_gemini_api([full_prompt])
     return _get_text_from_response(response)
 
@@ -110,7 +115,7 @@ if __name__ == "__main__":
         print("\nERROR: 'local_api_key.txt' not found.")
         sys.exit(1)
         
-    get_client()
+    get_client() # Initialize client
     
     print("\n--- Test Case 1: get_initial_story ---")
     test_prompt = "start a story about a haunted lighthouse"
