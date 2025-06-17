@@ -8,7 +8,6 @@ from decorators import log_exceptions
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- MODULE-LEVEL CONSTANTS ---
-# These are now separate, as they will be combined into a config object at the call site.
 MODEL_NAME = 'gemini-2.5-pro-preview-06-05'
 MAX_TOKENS = 600
 TEMPERATURE = 0.9
@@ -34,6 +33,23 @@ def get_client():
         logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
+# --- NEW: Helper function to centralize the API call ---
+def _call_gemini_api(prompt_contents):
+    """Calls the Gemini API with a given prompt and returns the response."""
+    client = get_client()
+    logging.info(f"--- Calling Gemini API with prompt: {str(prompt_contents)[:300]}... ---")
+    
+    response = client.models.generate_content(
+        model=MODEL_NAME,
+        contents=prompt_contents,
+        config=types.GenerateContentConfig(
+            max_output_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+            safety_settings=SAFETY_SETTINGS
+        )
+    )
+    return response
+
 def _get_text_from_response(response):
     """Safely extracts text from a Gemini response object."""
     try:
@@ -50,27 +66,14 @@ def _get_text_from_response(response):
 
 @log_exceptions
 def get_initial_story(prompt):
-    """Generates the initial story opening using the new SDK."""
-    client = get_client()
-    logging.info(f"--- Trying initial prompt: {prompt[:200]}... ---")
-    
-    # --- THIS IS THE FIX ---
-    # All configuration is passed within a single 'config' object.
-    response = client.models.generate_content(
-        model=MODEL_NAME,
-        contents=[prompt],
-        config=types.GenerateContentConfig(
-            max_output_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE,
-            safety_settings=SAFETY_SETTINGS
-        )
-    )
+    """Generates the initial story opening."""
+    # REFACTORED: Use the new helper function
+    response = _call_gemini_api([prompt])
     return _get_text_from_response(response)
 
 @log_exceptions
 def continue_story(user_input, mode, story_context):
-    """Generates the next part of the story using the new SDK."""
-    client = get_client()
+    """Generates the next part of the story."""
     last_gemini_response = ""
     for entry in reversed(story_context):
         if entry.get('actor') == 'gemini':
@@ -85,17 +88,7 @@ def continue_story(user_input, mode, story_context):
         raise ValueError("Invalid interaction mode specified.")
 
     full_prompt = prompt_template.format(user_input=user_input, last_gemini_response=last_gemini_response)
-    logging.info(f"--- Trying continue_story prompt: {full_prompt[:300]}... ---")
     
-    # --- THIS IS THE FIX ---
-    # All configuration is passed within a single 'config' object.
-    response = client.models.generate_content(
-        model=MODEL_NAME,
-        contents=[full_prompt],
-        config=types.GenerateContentConfig(
-            max_output_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE,
-            safety_settings=SAFETY_SETTINGS
-        )
-    )
+    # REFACTORED: Use the new helper function
+    response = _call_gemini_api([full_prompt])
     return _get_text_from_response(response)
