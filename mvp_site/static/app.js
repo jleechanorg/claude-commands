@@ -65,7 +65,6 @@ document.addEventListener('DOMContentLoaded', () => {
             storyContainer.innerHTML = '';
             data.story.forEach(entry => appendToStory(entry.actor, entry.text));
             showView('game');
-            // ADDED BACK: Scroll to bottom after successfully loading the campaign.
             scrollToBottom(storyContainer);
         } catch (error) {
             console.error('Failed to resume campaign:', error);

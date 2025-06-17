@@ -1,25 +1,51 @@
 import os
 import google.generativeai as genai
 import logging
+from decorators import log_exceptions
 
 # Configure basic logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-2.5-pro-preview-06-05')
+# Defer model initialization to a global variable
+_model = None
 
+def get_model():
+    """
+    Initializes and returns the Gemini model.
+    """
+    global _model
+    if _model is None:
+        try:
+            logging.info("--- Initializing Gemini Model for the first time ---")
+            api_key = os.environ.get("GEMINI_API_KEY")
+            if not api_key:
+                raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found in the deployed container!")
+            
+            genai.configure(api_key=api_key)
+            _model = genai.GenerativeModel('gemini-2.5-pro-preview-06-05')
+            logging.info("--- Gemini Model Initialized Successfully ---")
+        except Exception as e:
+            logging.error(f"--- FAILED to initialize Gemini Model: {e} ---")
+            raise
+    return _model
+
+@log_exceptions
 def get_initial_story(prompt):
     """Generates the initial story opening from a user's prompt."""
-    full_prompt = f"You are a master storyteller. Start a new, exciting, and engaging fantasy RPG campaign based on this user's prompt: '{prompt}'. Describe the opening scene and setting in detail, and end by asking the player character, 'What do you do?'"
-    
-    logging.info(f"GEMINI PROMPT (Initial):\n---\n{full_prompt}\n---")
-    response = model.generate_content(full_prompt)
-    logging.info(f"GEMINI RESPONSE (Initial):\n---\n{response.text}\n---")
-    
+    model = get_model()
+    logging.info(f"--- Trying initial prompt: {prompt[:200]}... ---") # Log initial prompt
+    try:
+        response = model.generate_content(prompt)
+    except Exception as e:
+        logging.error(f"--- FAILED to generate initial content: {e} ---")
+        raise
+    logging.info(f"--- Succeeded initial prompt: {prompt[:200]}... ---")
     return response.text
 
+@log_exceptions
 def continue_story(user_input, mode, story_context):
     """Generates the next part of the story based on context."""
+    model = get_model()
     last_gemini_response = ""
     for entry in reversed(story_context):
         if entry.get('actor') == 'gemini':
@@ -27,16 +53,19 @@ def continue_story(user_input, mode, story_context):
             break
 
     if mode == 'character':
-        prompt_template = "Character does {user_input}. The last thing that happened was: {last_gemini_response}. Continue the story."
+        prompt_template = "Acting as the main charter {user_input}. \n\n context: {last_gemini_response}. Continue the story."
     elif mode == 'god':
-        prompt_template = "God does {user_input}. The last thing that happened was: {last_gemini_response}. Continue the story."
+        prompt_template = "{user_input} \n\n context: {last_gemini_response}"
     else:
         raise ValueError("Invalid interaction mode specified.")
 
     full_prompt = prompt_template.format(user_input=user_input, last_gemini_response=last_gemini_response)
     
-    logging.info(f"GEMINI PROMPT (Continue):\n---\n{full_prompt}\n---")
-    response = model.generate_content(full_prompt)
-    logging.info(f"GEMINI RESPONSE (Continue):\n---\n{response.text}\n---")
-
+    # --- THIS IS THE CORRECTED LOGGING ---
+    logging.info(f"--- Trying continue_story prompt: {full_prompt[:300]}... ---")
+    try:
+        response = model.generate_content(full_prompt)
+    except Exception as e:
+        logging.error(f"--- FAILED to generate content: {e} ---")
+        raise
     return response.text

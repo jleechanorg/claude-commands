@@ -1,10 +1,14 @@
 import datetime
 from firebase_admin import firestore
+from decorators import log_exceptions # Import the decorator
+
+# No need for a separate logger instance here anymore, the decorator handles it.
 
 def get_db():
     """Returns the Firestore client."""
     return firestore.client()
 
+@log_exceptions
 def get_campaigns_for_user(user_id):
     """Retrieves all campaigns for a given user, ordered by most recently played."""
     db = get_db()
@@ -15,13 +19,13 @@ def get_campaigns_for_user(user_id):
     for campaign in campaigns_query.stream():
         campaign_data = campaign.to_dict()
         campaign_data['id'] = campaign.id
-        # Ensure datetime objects are serializable
         campaign_data['created_at'] = campaign_data['created_at'].isoformat()
         campaign_data['last_played'] = campaign_data['last_played'].isoformat()
         campaign_list.append(campaign_data)
     
     return campaign_list
 
+@log_exceptions
 def get_campaign_by_id(user_id, campaign_id):
     """Retrieves a single campaign and its full story."""
     db = get_db()
@@ -42,6 +46,7 @@ def get_campaign_by_id(user_id, campaign_id):
 
     return campaign_doc.to_dict(), story
 
+@log_exceptions
 def add_story_entry(user_id, campaign_id, actor, text, mode=None):
     """Adds a new entry to a campaign's story and updates the last_played timestamp."""
     db = get_db()
@@ -59,7 +64,7 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None):
     story_ref.add(entry_data)
     campaign_doc_ref.update({'last_played': datetime.datetime.now(datetime.timezone.utc)})
 
-
+@log_exceptions
 def create_campaign(user_id, title, initial_prompt, opening_story):
     """Creates a new campaign document in Firestore."""
     db = get_db()

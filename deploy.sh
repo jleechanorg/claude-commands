@@ -77,7 +77,8 @@ gcloud run deploy "$SERVICE_NAME" \
     --image "$IMAGE_TAG" \
     --platform managed \
     --allow-unauthenticated \
-    --set-secrets="GEMINI_API_KEY=gemini-api-key:latest"
+    --set-secrets="GEMINI_API_KEY=gemini-api-key:latest" \
+    --memory=2Gi
 
 echo "--- Deployment of '$SERVICE_NAME' complete. ---"
 gcloud run services describe "$SERVICE_NAME" --platform managed --format 'value(status.url)'
