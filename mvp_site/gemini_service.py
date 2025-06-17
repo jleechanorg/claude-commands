@@ -9,13 +9,12 @@ import sys
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- MODULE-LEVEL CONSTANTS ---
-# MODEL_NAME = 'gemini-2.5-pro-preview-06-05'
-MODEL_NAME = 'gemini-2.5-flash-preview-05-20'
-# High token limit to act as a safety net against runaway generation.
+MODEL_NAME = 'gemini-1.5-flash-latest'
 MAX_TOKENS = 8192 
 TEMPERATURE = 0.9
-# --- NEW: Target word count for prompt engineering ---
 TARGET_WORD_COUNT = 400
+# --- NEW: Limit the number of turns sent as history ---
+HISTORY_TURN_LIMIT = 50
 
 SAFETY_SETTINGS = [
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
@@ -42,7 +41,7 @@ def get_client():
 def _call_gemini_api(prompt_contents):
     """Calls the Gemini API with a given prompt and returns the response."""
     client = get_client()
-    logging.info(f"--- Calling Gemini API with prompt: {str(prompt_contents)[:300]}... ---")
+    logging.info(f"--- Calling Gemini API with prompt history of {len(prompt_contents)} turns... ---")
     
     response = client.models.generate_content(
         model=MODEL_NAME,
@@ -71,31 +70,31 @@ def _get_text_from_response(response):
 @log_exceptions
 def get_initial_story(prompt):
     """Generates the initial story opening."""
-    # Use the TARGET_WORD_COUNT constant in the prompt.
     full_prompt = f"{prompt}\n\n(Please keep the response to about {TARGET_WORD_COUNT} words.)"
     response = _call_gemini_api([full_prompt])
     return _get_text_from_response(response)
 
 @log_exceptions
 def continue_story(user_input, mode, story_context):
-    """Generates the next part of the story."""
-    last_gemini_response = ""
-    for entry in reversed(story_context):
-        if entry.get('actor') == 'gemini':
-            last_gemini_response = entry.get('text', '')
-            break
-
-    # Use the TARGET_WORD_COUNT constant in the prompt templates.
-    if mode == 'character':
-        prompt_template = "Acting as the main charter {user_input}. \n\n context: {last_gemini_response}. Continue the story in about " + str(TARGET_WORD_COUNT) + " words."
-    elif mode == 'god':
-        prompt_template = "{user_input} \n\n context: {last_gemini_response}. Continue the story in about " + str(TARGET_WORD_COUNT) + " words."
-    else:
-        raise ValueError("Invalid interaction mode specified.")
-
-    full_prompt = prompt_template.format(user_input=user_input, last_gemini_response=last_gemini_response)
+    """Generates the next part of the story using a limited chat history."""
     
-    response = _call_gemini_api([full_prompt])
+    # --- THIS IS THE FIX: Get the most recent entries from the story context ---
+    recent_context = story_context[-HISTORY_TURN_LIMIT:]
+    
+    history = []
+    # Loop over the recent history, not the full history
+    for entry in recent_context:
+        actor = 'user' if entry.get('actor') == 'user' else 'model'
+        history.append({'role': actor, 'parts': [entry.get('text')]})
+
+    if mode == 'character':
+        prompt_text = f"Acting as the main charter {user_input}. Continue the story in about {TARGET_WORD_COUNT} words."
+    else: # god mode
+        prompt_text = f"{user_input}. Continue the story in about {TARGET_WORD_COUNT} words."
+
+    history.append({'role': 'user', 'parts': [prompt_text]})
+    
+    response = _call_gemini_api(history)
     return _get_text_from_response(response)
 
 # --- Main block for rapid, direct testing ---
@@ -111,12 +110,23 @@ if __name__ == "__main__":
         print("\nERROR: 'local_api_key.txt' not found.")
         sys.exit(1)
         
-    test_prompt = "start a pirate story"
-    print(f"\nUsing test prompt: '{test_prompt}'")
-    
-    print("\n--- Calling get_initial_story() ---")
-    live_response = get_initial_story(test_prompt)
-    
+    print("\n--- Test Case 1: get_initial_story ---")
+    test_prompt = "start a story about a haunted lighthouse"
+    print(f"Using test prompt: '{test_prompt}'")
+    initial_response = get_initial_story(test_prompt)
     print("\n--- LIVE RESPONSE ---")
-    print(live_response)
+    print(initial_response)
+    print("--- END OF RESPONSE ---\n")
+    
+    print("\n--- Test Case 2: continue_story with history limit ---")
+    # Create a mock history with MORE than our limit to test the slicing
+    mock_history = [{'actor': 'gemini', 'text': f'This is turn {i}.'} for i in range(100)]
+    mock_history.append({'actor': 'user', 'text': 'This is the user turn.'})
+    
+    next_input = "A storm rolls in."
+    print(f"Using follow-up input: '{next_input}' on a history of {len(mock_history)} turns.")
+    
+    continue_response = continue_story(next_input, 'god', mock_history)
+    print("\n--- LIVE RESPONSE ---")
+    print(continue_response)
     print("--- END OF RESPONSE ---\n")
