@@ -35,8 +35,7 @@ def get_client():
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
-        genai.configure(api_key=api_key)
-        _client = genai.Client()
+        _client = genai.Client(api_key=api_key)
         logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
