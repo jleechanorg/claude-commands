@@ -24,27 +24,21 @@ SAFETY_SETTINGS = [
 # --- END CONSTANTS ---
 
 _client = None
-_is_configured = False
 
-def _configure_once():
-    """Configures the API key for the genai library."""
-    global _is_configured
-    if not _is_configured:
-        logging.info("--- Configuring Gemini API for the first time ---")
+def get_client():
+    """Initializes and returns a singleton Gemini client using the new SDK pattern."""
+    global _client
+    if _client is None:
+        logging.info("--- Initializing Gemini Client for the first time ---")
+        # --- THIS IS THE FIX ---
+        # The new SDK takes the API key directly in the Client constructor.
+        # It does not use genai.configure().
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
-        genai.configure(api_key=api_key)
-        _is_configured = True
-        logging.info("--- Gemini API Configured Successfully ---")
-
-def get_client():
-    """Initializes and returns a singleton Gemini client."""
-    global _client
-    _configure_once()
-    if _client is None:
-        logging.info("--- Initializing Gemini Client for the first time ---")
-        _client = genai.Client()
+        
+        _client = genai.Client(api_key=api_key)
+        logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
 def _get_text_from_response(response):
