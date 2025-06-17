@@ -8,13 +8,10 @@ from decorators import log_exceptions
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- MODULE-LEVEL CONSTANTS ---
+# These are now separate, as they will be combined into a config object at the call site.
 MODEL_NAME = 'gemini-2.5-pro-preview-06-05'
-
-GENERATION_CONFIG = types.GenerationConfig(
-    max_output_tokens=600,
-    temperature=0.9
-)
-
+MAX_TOKENS = 600
+TEMPERATURE = 0.9
 SAFETY_SETTINGS = [
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
@@ -26,17 +23,13 @@ SAFETY_SETTINGS = [
 _client = None
 
 def get_client():
-    """Initializes and returns a singleton Gemini client using the new SDK pattern."""
+    """Initializes and returns a singleton Gemini client."""
     global _client
     if _client is None:
         logging.info("--- Initializing Gemini Client for the first time ---")
-        # --- THIS IS THE FIX ---
-        # The new SDK takes the API key directly in the Client constructor.
-        # It does not use genai.configure().
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
-        
         _client = genai.Client(api_key=api_key)
         logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
@@ -61,11 +54,16 @@ def get_initial_story(prompt):
     client = get_client()
     logging.info(f"--- Trying initial prompt: {prompt[:200]}... ---")
     
+    # --- THIS IS THE FIX ---
+    # All configuration is passed within a single 'config' object.
     response = client.models.generate_content(
         model=MODEL_NAME,
         contents=[prompt],
-        generation_config=GENERATION_CONFIG,
-        safety_settings=SAFETY_SETTINGS
+        config=types.GenerateContentConfig(
+            max_output_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+            safety_settings=SAFETY_SETTINGS
+        )
     )
     return _get_text_from_response(response)
 
@@ -89,10 +87,15 @@ def continue_story(user_input, mode, story_context):
     full_prompt = prompt_template.format(user_input=user_input, last_gemini_response=last_gemini_response)
     logging.info(f"--- Trying continue_story prompt: {full_prompt[:300]}... ---")
     
+    # --- THIS IS THE FIX ---
+    # All configuration is passed within a single 'config' object.
     response = client.models.generate_content(
         model=MODEL_NAME,
         contents=[full_prompt],
-        generation_config=GENERATION_CONFIG,
-        safety_settings=SAFETY_SETTINGS
+        config=types.GenerateContentConfig(
+            max_output_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+            safety_settings=SAFETY_SETTINGS
+        )
     )
     return _get_text_from_response(response)
