@@ -3,10 +3,12 @@ from google import genai
 from google.genai import types
 import logging
 from decorators import log_exceptions
+import sys  # Import sys for the main block
 
+# Configure basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# --- CONSTANTS ---
+# --- MODULE-LEVEL CONSTANTS ---
 MODEL_NAME = 'gemini-2.5-pro-preview-06-05'
 MAX_TOKENS = 600
 TEMPERATURE = 0.9
@@ -21,38 +23,35 @@ SAFETY_SETTINGS = [
 _client = None
 
 def get_client():
+    """Initializes and returns a singleton Gemini client."""
     global _client
     if _client is None:
         logging.info("--- Initializing Gemini Client ---")
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
-            raise ValueError("CRITICAL: GEMINI_API_KEY not found!")
+            raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
         _client = genai.Client(api_key=api_key)
-        logging.info("--- Gemini Client Initialized ---")
+        logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
 def _call_gemini_api(prompt_contents):
+    """Calls the Gemini API with a given prompt and returns the response."""
     client = get_client()
     logging.info(f"--- Calling Gemini API with prompt: {str(prompt_contents)[:300]}... ---")
     
-    # --- THIS IS THE FIX ---
-    # `tool_config` is a valid parameter, but it must be passed INSIDE the
-    # GenerateContentConfig object, not as a top-level argument.
-    tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode='none'))
-
     response = client.models.generate_content(
         model=MODEL_NAME,
         contents=prompt_contents,
         config=types.GenerateContentConfig(
             max_output_tokens=MAX_TOKENS,
             temperature=TEMPERATURE,
-            safety_settings=SAFETY_SETTINGS,
-            tool_config=tool_config  # Correctly placed inside 'config'
+            safety_settings=SAFETY_SETTINGS
         )
     )
     return response
 
 def _get_text_from_response(response):
+    """Safely extracts text from a Gemini response object."""
     try:
         return response.text
     except ValueError as e:
@@ -65,11 +64,13 @@ def _get_text_from_response(response):
 
 @log_exceptions
 def get_initial_story(prompt):
+    """Generates the initial story opening."""
     response = _call_gemini_api([prompt])
     return _get_text_from_response(response)
 
 @log_exceptions
 def continue_story(user_input, mode, story_context):
+    """Generates the next part of the story."""
     last_gemini_response = ""
     for entry in reversed(story_context):
         if entry.get('actor') == 'gemini':
@@ -87,3 +88,31 @@ def continue_story(user_input, mode, story_context):
     
     response = _call_gemini_api([full_prompt])
     return _get_text_from_response(response)
+
+# --- NEW: Main block for rapid, direct testing ---
+if __name__ == "__main__":
+    print("--- Running gemini_service.py in direct test mode ---")
+    
+    # 1. Load the API key from our local file
+    try:
+        with open('local_api_key.txt', 'r') as f:
+            api_key = f.read().strip()
+        os.environ["GEMINI_API_KEY"] = api_key
+        print("Successfully loaded API key from local_api_key.txt")
+    except FileNotFoundError:
+        print("\nERROR: 'local_api_key.txt' not found.")
+        print("Please create it by running this command in the mvp_site directory:")
+        print("gcloud secrets versions access latest --secret=\"gemini-api-key\" > local_api_key.txt")
+        sys.exit(1)
+        
+    # 2. Define a test prompt
+    test_prompt = "start a pirate story"
+    print(f"\nUsing test prompt: '{test_prompt}'")
+    
+    # 3. Call the function and print the live result
+    print("\n--- Calling get_initial_story() ---")
+    live_response = get_initial_story(test_prompt)
+    
+    print("\n--- LIVE RESPONSE ---")
+    print(live_response)
+    print("--- END OF RESPONSE ---\n")
