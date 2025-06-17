@@ -50,16 +50,14 @@ def _get_text_from_response(response):
 
 @log_exceptions
 def get_initial_story(prompt):
-    """Generates the initial story opening."""
+    """Generates the initial story opening using the new Client pattern."""
     client = get_client()
-    # --- THIS IS THE FIX ---
-    # 1. Instantiate the model directly.
-    model = genai.GenerativeModel(MODEL_NAME)
     full_prompt = f"{prompt}\n\n(Please keep the response to about {TARGET_WORD_COUNT} words.)"
-    logging.info(f"--- Calling model.generate_content for initial story. Prompt: {full_prompt[:200]}... ---")
+    logging.info(f"--- Calling client.generate_content for initial story. Prompt: {full_prompt[:200]}... ---")
 
-    # 2. Call generate_content on the model instance.
-    response = model.generate_content(
+    # The new pattern uses client.generate_content directly for one-shot requests.
+    response = client.generate_content(
+        model=MODEL_NAME,
         contents=[full_prompt],
         generation_config=types.GenerationConfig(
             max_output_tokens=MAX_TOKENS,
@@ -73,9 +71,6 @@ def get_initial_story(prompt):
 def continue_story(user_input, mode, story_context):
     """Generates the next part of the story using a stateful ChatSession."""
     client = get_client()
-    # --- THIS IS THE FIX ---
-    # 1. Instantiate the model directly.
-    model = genai.GenerativeModel(MODEL_NAME)
     recent_context = story_context[-HISTORY_TURN_LIMIT:]
     
     history = []
@@ -83,8 +78,8 @@ def continue_story(user_input, mode, story_context):
         actor = 'user' if entry.get('actor') == 'user' else 'model'
         history.append({'role': actor, 'parts': [entry.get('text')]})
 
-    # 2. Start a chat session from the model object.
-    chat_session = model.start_chat(history=history)
+    # The new pattern uses client.start_chat to manage conversation history.
+    chat_session = client.start_chat(model=MODEL_NAME, history=history)
 
     if mode == 'character':
         prompt_text = f"Acting as the main character {user_input}. Continue the story in about {TARGET_WORD_COUNT} words."
@@ -93,7 +88,6 @@ def continue_story(user_input, mode, story_context):
     
     logging.info(f"--- Sending message to chat session. Prompt: {prompt_text[:200]}... ---")
 
-    # 3. Use the chat session's send_message method.
     response = chat_session.send_message(
         content=prompt_text,
         generation_config=types.GenerationConfig(
