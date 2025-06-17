@@ -1,14 +1,31 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- State and Constants ---
-    const views = { auth: document.getElementById('auth-view'), dashboard: document.getElementById('dashboard-view'), newCampaign: document.getElementById('new-campaign-view'), game: document.getElementById('game-view') };
+    const views = { 
+        auth: document.getElementById('auth-view'), 
+        dashboard: document.getElementById('dashboard-view'), 
+        newCampaign: document.getElementById('new-campaign-view'), 
+        game: document.getElementById('game-view') 
+    };
     const loadingOverlay = document.getElementById('loading-overlay');
     let currentCampaignId = null;
+
+    // Helper function for scrolling
+    const scrollToBottom = (element) => { 
+        console.log(`Scrolling element: ${element.id}, current scrollHeight: ${element.scrollHeight}, clientHeight: ${element.clientHeight}`);
+        element.scrollTop = element.scrollHeight; 
+    };
 
     // --- Core UI & Navigation Logic ---
     const showSpinner = () => loadingOverlay.style.display = 'flex';
     const hideSpinner = () => loadingOverlay.style.display = 'none';
-    const showView = (viewName) => { Object.values(views).forEach(v => v.style.display = 'none'); if(views[viewName]) views[viewName].style.display = 'block'; };
-    const scrollToBottom = (element) => { element.scrollTop = element.scrollHeight; };
+    
+    // MODIFIED: Use CSS classes to control view visibility
+    const showView = (viewName) => {
+        Object.values(views).forEach(v => v.classList.remove('active-view')); // Remove from all views
+        if(views[viewName]) {
+            views[viewName].classList.add('active-view'); // Add to the target view
+        }
+    };
 
     let handleRouteChange = () => {
         if (!firebase.auth().currentUser) { showView('auth'); return; }
@@ -26,10 +43,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    const appendToStory = (actor, text) => {
+    const appendToStory = (actor, text, mode = null) => {
         const storyContainer = document.getElementById('story-content');
         const entryEl = document.createElement('p');
-        const label = actor === 'gemini' ? 'Story' : 'You';
+        let label = '';
+        if (actor === 'gemini') {
+            label = 'Story';
+        } else { // actor is 'user'
+            label = mode === 'character' ? 'Main Character' : (mode === 'god' ? 'God' : 'You');
+        }
+        
         entryEl.innerHTML = `<strong>${label}:</strong> ${text}`;
         storyContainer.appendChild(entryEl);
     };
@@ -63,9 +86,13 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('game-title').innerText = data.campaign.title;
             const storyContainer = document.getElementById('story-content');
             storyContainer.innerHTML = '';
-            data.story.forEach(entry => appendToStory(entry.actor, entry.text));
+            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode)); // Pass existing mode if available
+            
+            // Add a slight delay to allow rendering before scrolling
+            console.log("Attempting to scroll after content append, with a slight delay.");
+            setTimeout(() => scrollToBottom(storyContainer), 100); // 100ms delay
+            
             showView('game');
-            scrollToBottom(storyContainer);
         } catch (error) {
             console.error('Failed to resume campaign:', error);
             history.pushState({}, '', '/');
@@ -103,7 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localSpinner.style.display = 'block';
         userInputEl.disabled = true;
         timerInfo.textContent = '';
-        appendToStory('user', userInput);
+        appendToStory('user', userInput, mode); // Pass the selected mode here
         userInputEl.value = '';
         try {
             const { data, duration } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
