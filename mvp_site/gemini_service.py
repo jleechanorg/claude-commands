@@ -33,15 +33,17 @@ def get_client():
         logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
-# --- NEW: Helper function to centralize the API call ---
 def _call_gemini_api(prompt_contents):
     """Calls the Gemini API with a given prompt and returns the response."""
     client = get_client()
     logging.info(f"--- Calling Gemini API with prompt: {str(prompt_contents)[:300]}... ---")
     
+    tool_config = {'function_calling_config': {'mode': 'none'}}
+
     response = client.models.generate_content(
         model=MODEL_NAME,
         contents=prompt_contents,
+        tool_config=tool_config,
         config=types.GenerateContentConfig(
             max_output_tokens=MAX_TOKENS,
             temperature=TEMPERATURE,
@@ -50,24 +52,33 @@ def _call_gemini_api(prompt_contents):
     )
     return response
 
+# --- THIS IS THE FIX ---
 def _get_text_from_response(response):
-    """Safely extracts text from a Gemini response object."""
+    """
+    Safely extracts text from a Gemini response object with robust, transparent logging.
+    """
     try:
+        # The happy path: if response.text exists and is not None, return it.
         return response.text
-    except ValueError:
-        logging.warning("--- Gemini Response Blocked ---")
-        try:
-            logging.warning(f"Prompt Feedback: {response.prompt_feedback}")
-            if response.candidates and response.candidates[0].safety_ratings:
-                logging.warning(f"Safety Ratings: {response.candidates[0].safety_ratings}")
-        except Exception as e:
-            logging.error(f"Error while logging safety feedback: {e}")
-        return "The response was blocked by the content safety filter. Please modify your prompt and try again."
+    except ValueError as e:
+        # This is the most likely error, often for safety blocks.
+        # Log the ACTUAL error message from the exception first.
+        logging.warning(f"ValueError while extracting text: {e}")
+    except Exception as e:
+        # Catch any other unexpected errors during text extraction.
+        logging.error(f"Unexpected error in _get_text_from_response: {e}")
+    
+    # If we reach here, it means .text failed or was empty.
+    # Log the full response object for complete debugging visibility.
+    logging.warning(f"--- Response did not contain valid text. Full response object: {response} ---")
+    
+    # Return a helpful, accurate message to the user.
+    return "[System Message: The model's response could not be processed. Please check the logs for details.]"
+
 
 @log_exceptions
 def get_initial_story(prompt):
     """Generates the initial story opening."""
-    # REFACTORED: Use the new helper function
     response = _call_gemini_api([prompt])
     return _get_text_from_response(response)
 
@@ -89,6 +100,5 @@ def continue_story(user_input, mode, story_context):
 
     full_prompt = prompt_template.format(user_input=user_input, last_gemini_response=last_gemini_response)
     
-    # REFACTORED: Use the new helper function
     response = _call_gemini_api([full_prompt])
     return _get_text_from_response(response)
