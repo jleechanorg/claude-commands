@@ -103,6 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // --- Event Listeners ---
+    // RE-ADDED: New Campaign Form Submission Listener
     document.getElementById('new-campaign-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         showSpinner();
@@ -119,34 +120,53 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('interaction-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const userInputEl = document.getElementById('user-input');
-        let userInput = userInputEl.value.trim();
-        if (!userInput || !currentCampaignId) return;
-        const mode = document.querySelector('input[name="interactionMode"]:checked').value;
-        const localSpinner = document.getElementById('loading-spinner');
-        const timerInfo = document.getElementById('timer-info');
-        localSpinner.style.display = 'block';
-        userInputEl.disabled = true;
-        timerInfo.textContent = '';
-        appendToStory('user', userInput, mode); // Pass the selected mode here
-        userInputEl.value = '';
-        try {
-            const { data, duration } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
-                method: 'POST', body: JSON.stringify({ input: userInput, mode }),
-            });
-            appendToStory('gemini', data.response);
-            timerInfo.textContent = `Response time: ${duration}s`;
-        } catch (error) {
-            console.error("Interaction failed:", error);
-            appendToStory('system', 'Sorry, an error occurred. Please try again.');
-        } finally {
-            localSpinner.style.display = 'none';
-            userInputEl.disabled = false;
-            userInputEl.focus();
-        }
-    });
+
+    const interactionForm = document.getElementById('interaction-form');
+    const userInputEl = document.getElementById('user-input');
+
+    // NEW: Listen for Enter key press on the textarea
+    if (userInputEl) {
+        userInputEl.addEventListener('keydown', (e) => {
+            // Check for Enter key (keyCode 13 or key property 'Enter')
+            // And ensure Shift or Ctrl/Cmd are NOT pressed (to allow multiline input with Shift+Enter)
+            if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault(); // Prevent default newline behavior
+                if (interactionForm) {
+                    interactionForm.dispatchEvent(new Event('submit', { cancelable: true })); // Trigger form submission
+                }
+            }
+        });
+    }
+
+    if (interactionForm) { // Ensure the form exists before adding listener
+        interactionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            let userInput = userInputEl.value.trim();
+            if (!userInput || !currentCampaignId) return;
+            const mode = document.querySelector('input[name="interactionMode"]:checked').value;
+            const localSpinner = document.getElementById('loading-spinner');
+            const timerInfo = document.getElementById('timer-info');
+            localSpinner.style.display = 'block';
+            userInputEl.disabled = true;
+            timerInfo.textContent = '';
+            appendToStory('user', userInput, mode); // Pass the selected mode here
+            userInputEl.value = ''; // Clear input after appending
+            try {
+                const { data, duration } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
+                    method: 'POST', body: JSON.stringify({ input: userInput, mode }),
+                });
+                appendToStory('gemini', data.response);
+                timerInfo.textContent = `Response time: ${duration}s`;
+            } catch (error) {
+                console.error("Interaction failed:", error);
+                appendToStory('system', 'Sorry, an error occurred. Please try again.');
+            } finally {
+                localSpinner.style.display = 'none';
+                userInputEl.disabled = false;
+                userInputEl.focus();
+            }
+        });
+    }
     
     document.getElementById('go-to-new-campaign').onclick = () => { history.pushState({}, '', '/new-campaign'); handleRouteChange(); };
     document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };

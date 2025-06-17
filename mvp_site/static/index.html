@@ -13,7 +13,6 @@
     </div>
     <div class="container mt-5">
         <h1 class="text-center">WorldArchitect.AI</h1>
-        <!-- Removed style="display:none;" from here and other views -->
         <div id="auth-view" class="text-center mt-4">
             <div id="auth-container"></div>
         </div>
@@ -44,7 +43,8 @@
             <div id="timer-info" class="mt-2 text-muted text-center small"></div>
             <form id="interaction-form" class="mt-3">
                 <div class="input-group">
-                    <textarea class="form-control" id="user-input" placeholder="What do you do?" rows="5" required></textarea>
+                    <!-- MODIFIED: Changed rows from 5 to 2 -->
+                    <textarea class="form-control" id="user-input" placeholder="What do you do?" rows="2" required></textarea>
                     <button class="btn btn-primary" type="submit">Send</button>
                 </div>
                 <div class="form-check form-check-inline mt-2">
