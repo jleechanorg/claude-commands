@@ -26,8 +26,20 @@ body { background-color: #f8f9fa; }
     color: white;
 }
 
-/* --- CRITICAL: Ensure these rules for game-view are active and not overridden --- */
+/* --- NEW: Default hide all views, then show only the active one --- */
+#auth-view, 
+#dashboard-view, 
+#new-campaign-view, 
 #game-view {
+    display: none; /* Hidden by default */
+}
+
+.active-view {
+    display: block; /* Show the active view */
+}
+
+/* --- IMPORTANT: Apply flex display specifically when #game-view is active --- */
+#game-view.active-view {
     display: flex; /* This is the key: must be flex to use flex-direction and flex-grow */
     flex-direction: column; /* Stacks children vertically */
     height: 85vh; /* Gives the flex container a defined height */
@@ -37,7 +49,7 @@ body { background-color: #f8f9fa; }
 #story-content {
     flex-grow: 1; /* Allows this item to take up all available vertical space in its flex parent */
     overflow-y: auto; /* Enables vertical scrolling for overflow */
-    min-height: 0; /* Prevents flex item from overflowing its parent even with flex-grow: 1 */
+    min-height: 0; /* Prevents flex item from ignoring height constraints and overflowing its parent */
     border: 1px solid #dee2e6;
     border-radius: .25rem;
     padding: 1rem;
