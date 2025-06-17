@@ -1,23 +1,25 @@
 import os
-from google import genai  # Using the user-specified import style
+from google import genai
+from google.genai import types
 import logging
 from decorators import log_exceptions
 
 # Configure basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# --- MODULE-LEVEL CONSTANTS (Client SDK Syntax) ---
+# --- MODULE-LEVEL CONSTANTS ---
 MODEL_NAME = 'gemini-2.5-pro-preview-06-05'
 
-# Using genai.types, accessed from the new import
-GENERATION_CONFIG = genai.types.GenerationConfig(max_output_tokens=600)
+GENERATION_CONFIG = types.GenerationConfig(
+    max_output_tokens=600,
+    temperature=0.9
+)
 
-# Using genai.types, accessed from the new import
 SAFETY_SETTINGS = [
-    genai.types.SafetySetting(category=genai.types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=genai.types.HarmBlockThreshold.BLOCK_NONE),
-    genai.types.SafetySetting(category=genai.types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=genai.types.HarmBlockThreshold.BLOCK_NONE),
-    genai.types.SafetySetting(category=genai.types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold=genai.types.HarmBlockThreshold.BLOCK_NONE),
-    genai.types.SafetySetting(category=genai.types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold=genai.types.HarmBlockThreshold.BLOCK_NONE),
+    types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
+    types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
+    types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
+    types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
 ]
 # --- END CONSTANTS ---
 
@@ -25,7 +27,7 @@ _client = None
 _is_configured = False
 
 def _configure_once():
-    """Ensures genai is configured only once using our API key."""
+    """Configures the API key for the genai library."""
     global _is_configured
     if not _is_configured:
         logging.info("--- Configuring Gemini API for the first time ---")
@@ -61,7 +63,7 @@ def _get_text_from_response(response):
 
 @log_exceptions
 def get_initial_story(prompt):
-    """Generates the initial story opening using the client.models pattern."""
+    """Generates the initial story opening using the new SDK."""
     client = get_client()
     logging.info(f"--- Trying initial prompt: {prompt[:200]}... ---")
     
@@ -75,7 +77,7 @@ def get_initial_story(prompt):
 
 @log_exceptions
 def continue_story(user_input, mode, story_context):
-    """Generates the next part of the story using the client.models pattern."""
+    """Generates the next part of the story using the new SDK."""
     client = get_client()
     last_gemini_response = ""
     for entry in reversed(story_context):
