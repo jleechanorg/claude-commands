@@ -8,7 +8,7 @@ import sys
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- CONSTANTS ---
-MODEL_NAME = 'gemini-1.5-flash-latest'
+MODEL_NAME = 'gemini-2.5-flash-preview-05-20'
 MAX_TOKENS = 8192
 TEMPERATURE = 0.9
 TARGET_WORD_COUNT = 400
@@ -24,19 +24,58 @@ SAFETY_SETTINGS = [
 _client = None
 
 def get_client():
-    """Initializes and returns a singleton Gemini client."""
+    """Initializes and returns a singleton Gemini client.
+
+    Returns:
+        genai.Client: An initialized Gemini API client instance.
+    """
     global _client
     if _client is None:
         logging.info("--- Initializing Gemini Client ---")
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
-        _client = genai.Client(api_key=api_key)
+        genai.configure(api_key=api_key)
+        _client = genai.Client()
         logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
+def _call_gemini_api(prompt_contents):
+    """
+    Generic helper to call the Gemini API's generate_content method.
+
+    Args:
+        prompt_contents (list): The `contents` to send to the API. This can be
+            a simple list of strings or a structured list of history dicts.
+            Example (simple): ["Tell me a story."]
+            Example (history): [{"role": "user", "parts": [...]}, {"role": "model", ...}]
+
+    Returns:
+        genai.types.GenerateContentResponse: The raw response from the API.
+    """
+    model = genai.GenerativeModel(MODEL_NAME)
+    logging.info(f"--- Calling Gemini API with {len(prompt_contents)} turn(s). ---")
+    
+    response = model.generate_content(
+        contents=prompt_contents,
+        generation_config=types.GenerationConfig(
+            max_output_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE
+        ),
+        safety_settings=SAFETY_SETTINGS
+    )
+    return response
+
 def _get_text_from_response(response):
-    """Safely extracts text from a Gemini response object."""
+    """Safely extracts text from a Gemini response object.
+
+    Args:
+        response (genai.types.GenerateContentResponse): The response object from the API.
+            Example: A live response object from _call_gemini_api().
+
+    Returns:
+        str: The generated text, or a system error message.
+    """
     try:
         if response.text:
             return response.text
@@ -50,27 +89,34 @@ def _get_text_from_response(response):
 
 @log_exceptions
 def get_initial_story(prompt):
-    """Generates the initial story opening using the new Client pattern."""
-    client = get_client()
-    full_prompt = f"{prompt}\n\n(Please keep the response to about {TARGET_WORD_COUNT} words.)"
-    logging.info(f"--- Calling client.generate_content for initial story. Prompt: {full_prompt[:200]}... ---")
+    """Generates the initial story opening.
 
-    # The new pattern uses client.generate_content directly for one-shot requests.
-    response = client.generate_content(
-        model=MODEL_NAME,
-        contents=[full_prompt],
-        generation_config=types.GenerationConfig(
-            max_output_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE
-        ),
-        safety_settings=SAFETY_SETTINGS
-    )
+    Args:
+        prompt (str): The user's initial prompt.
+            Example: "A story about a brave knight."
+
+    Returns:
+        str: The opening story text.
+    """
+    full_prompt = f"{prompt}\n\n(Please keep the response to about {TARGET_WORD_COUNT} words.)"
+    response = _call_gemini_api([full_prompt])
     return _get_text_from_response(response)
 
 @log_exceptions
 def continue_story(user_input, mode, story_context):
-    """Generates the next part of the story using a stateful ChatSession."""
-    client = get_client()
+    """Generates the next part of the story using chat history.
+
+    Args:
+        user_input (str): The user's action for this turn.
+            Example: "I face the dragon."
+        mode (str): The interaction mode, 'character' or 'god'.
+            Example: "character"
+        story_context (list[dict]): The conversation history.
+            Example: [{'actor': 'user', 'text': '...'}, {'actor': 'gemini', ...}]
+
+    Returns:
+        str: The next part of the story.
+    """
     recent_context = story_context[-HISTORY_TURN_LIMIT:]
     
     history = []
@@ -78,24 +124,14 @@ def continue_story(user_input, mode, story_context):
         actor = 'user' if entry.get('actor') == 'user' else 'model'
         history.append({'role': actor, 'parts': [entry.get('text')]})
 
-    # The new pattern uses client.start_chat to manage conversation history.
-    chat_session = client.start_chat(model=MODEL_NAME, history=history)
-
     if mode == 'character':
         prompt_text = f"Acting as the main character {user_input}. Continue the story in about {TARGET_WORD_COUNT} words."
     else: # god mode
         prompt_text = f"{user_input}. Continue the story in about {TARGET_WORD_COUNT} words."
-    
-    logging.info(f"--- Sending message to chat session. Prompt: {prompt_text[:200]}... ---")
 
-    response = chat_session.send_message(
-        content=prompt_text,
-        generation_config=types.GenerationConfig(
-            max_output_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE
-        ),
-        safety_settings=SAFETY_SETTINGS
-    )
+    history.append({'role': 'user', 'parts': [prompt_text]})
+    
+    response = _call_gemini_api(history)
     return _get_text_from_response(response)
 
 # --- Main block for rapid, direct testing ---
@@ -111,6 +147,8 @@ if __name__ == "__main__":
         print("\nERROR: 'local_api_key.txt' not found.")
         sys.exit(1)
         
+    get_client()
+    
     print("\n--- Test Case 1: get_initial_story ---")
     test_prompt = "start a story about a haunted lighthouse"
     print(f"Using test prompt: '{test_prompt}'")
