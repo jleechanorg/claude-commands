@@ -10,8 +10,12 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # --- MODULE-LEVEL CONSTANTS ---
 MODEL_NAME = 'gemini-2.5-pro-preview-06-05'
-MAX_TOKENS = 10000
+# High token limit to act as a safety net against runaway generation.
+MAX_TOKENS = 8192 
 TEMPERATURE = 0.9
+# --- NEW: Target word count for prompt engineering ---
+TARGET_WORD_COUNT = 400
+
 SAFETY_SETTINGS = [
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
@@ -39,8 +43,6 @@ def _call_gemini_api(prompt_contents):
     client = get_client()
     logging.info(f"--- Calling Gemini API with prompt: {str(prompt_contents)[:300]}... ---")
     
-    # --- THIS IS THE FIX ---
-    # To disable Automatic Function Calling, we pass an empty list to the 'tools' parameter.
     response = client.models.generate_content(
         model=MODEL_NAME,
         contents=prompt_contents,
@@ -68,7 +70,9 @@ def _get_text_from_response(response):
 @log_exceptions
 def get_initial_story(prompt):
     """Generates the initial story opening."""
-    response = _call_gemini_api([prompt])
+    # Use the TARGET_WORD_COUNT constant in the prompt.
+    full_prompt = f"{prompt}\n\n(Please keep the response to about {TARGET_WORD_COUNT} words.)"
+    response = _call_gemini_api([full_prompt])
     return _get_text_from_response(response)
 
 @log_exceptions
@@ -80,10 +84,11 @@ def continue_story(user_input, mode, story_context):
             last_gemini_response = entry.get('text', '')
             break
 
+    # Use the TARGET_WORD_COUNT constant in the prompt templates.
     if mode == 'character':
-        prompt_template = "Acting as the main charter {user_input}. \n\n context: {last_gemini_response}. Continue the story."
+        prompt_template = "Acting as the main charter {user_input}. \n\n context: {last_gemini_response}. Continue the story in about " + str(TARGET_WORD_COUNT) + " words."
     elif mode == 'god':
-        prompt_template = "{user_input} \n\n context: {last_gemini_response}"
+        prompt_template = "{user_input} \n\n context: {last_gemini_response}. Continue the story in about " + str(TARGET_WORD_COUNT) + " words."
     else:
         raise ValueError("Invalid interaction mode specified.")
 
