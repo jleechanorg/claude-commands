@@ -1,6 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- State and Constants ---
-    const views = { auth: document.getElementById('auth-view'), dashboard: document.getElementById('dashboard-view'), newCampaign: document.getElementById('new-campaign-view'), game: document.getElementById('game-view') };
+    const views = { 
+        auth: document.getElementById('auth-view'), 
+        dashboard: document.getElementById('dashboard-view'), 
+        newCampaign: document.getElementById('new-campaign-view'), 
+        game: document.getElementById('game-view') 
+    };
     const loadingOverlay = document.getElementById('loading-overlay');
     let currentCampaignId = null;
 
@@ -13,11 +18,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Core UI & Navigation Logic ---
     const showSpinner = () => loadingOverlay.style.display = 'flex';
     const hideSpinner = () => loadingOverlay.style.display = 'none';
-    const showView = (viewName) => { Object.values(views).forEach(v => v.style.display = 'none'); if(views[viewName]) views[viewName].style.display = 'block'; };
-    // The duplicate scrollToBottom function definition below needs to be removed.
-    // Keeping only the first one, which has the console.log for debugging.
-    // If there were other reasons for the duplication (e.g., performance), it would be specified.
-    // For now, removing the redundant line to ensure clean code.
+    
+    // MODIFIED: Use CSS classes to control view visibility
+    const showView = (viewName) => {
+        Object.values(views).forEach(v => v.classList.remove('active-view')); // Remove from all views
+        if(views[viewName]) {
+            views[viewName].classList.add('active-view'); // Add to the target view
+        }
+    };
 
     let handleRouteChange = () => {
         if (!firebase.auth().currentUser) { showView('auth'); return; }
@@ -85,7 +93,6 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => scrollToBottom(storyContainer), 100); // 100ms delay
             
             showView('game');
-            // Removed redundant scrollToBottom call here (was: scrollToBottom(storyContainer);)
         } catch (error) {
             console.error('Failed to resume campaign:', error);
             history.pushState({}, '', '/');
