@@ -9,11 +9,10 @@ import sys
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- MODULE-LEVEL CONSTANTS ---
-MODEL_NAME = 'gemini-1.5-flash-latest'
-MAX_TOKENS = 8192 
+MODEL_NAME = 'gemini-2.5-flash-preview-05-20'
+MAX_TOKENS = 8192
 TEMPERATURE = 0.9
 TARGET_WORD_COUNT = 400
-# --- NEW: Limit the number of turns sent as history ---
 HISTORY_TURN_LIMIT = 50
 
 SAFETY_SETTINGS = [
@@ -41,7 +40,15 @@ def get_client():
 def _call_gemini_api(prompt_contents):
     """Calls the Gemini API with a given prompt and returns the response."""
     client = get_client()
-    logging.info(f"--- Calling Gemini API with prompt history of {len(prompt_contents)} turns... ---")
+
+    most_recent_prompt = ""
+    if prompt_contents:
+        most_recent_prompt = str(prompt_contents[-1].get('parts', [''])[0])
+    
+    logging.info(
+        f"--- Calling Gemini API with {len(prompt_contents)} turns. "
+        f"Latest prompt: {most_recent_prompt[:200]}... ---"
+    )
     
     response = client.models.generate_content(
         model=MODEL_NAME,
@@ -71,24 +78,23 @@ def _get_text_from_response(response):
 def get_initial_story(prompt):
     """Generates the initial story opening."""
     full_prompt = f"{prompt}\n\n(Please keep the response to about {TARGET_WORD_COUNT} words.)"
-    response = _call_gemini_api([full_prompt])
+    response = _call_gemini_api([{'role': 'user', 'parts': [full_prompt]}])
     return _get_text_from_response(response)
 
 @log_exceptions
 def continue_story(user_input, mode, story_context):
     """Generates the next part of the story using a limited chat history."""
     
-    # --- THIS IS THE FIX: Get the most recent entries from the story context ---
     recent_context = story_context[-HISTORY_TURN_LIMIT:]
     
     history = []
-    # Loop over the recent history, not the full history
     for entry in recent_context:
         actor = 'user' if entry.get('actor') == 'user' else 'model'
         history.append({'role': actor, 'parts': [entry.get('text')]})
 
+    # --- THIS IS THE FIX: Corrected spelling of 'character' ---
     if mode == 'character':
-        prompt_text = f"Acting as the main charter {user_input}. Continue the story in about {TARGET_WORD_COUNT} words."
+        prompt_text = f"Acting as the main character {user_input}. Continue the story in about {TARGET_WORD_COUNT} words."
     else: # god mode
         prompt_text = f"{user_input}. Continue the story in about {TARGET_WORD_COUNT} words."
 
@@ -119,7 +125,6 @@ if __name__ == "__main__":
     print("--- END OF RESPONSE ---\n")
     
     print("\n--- Test Case 2: continue_story with history limit ---")
-    # Create a mock history with MORE than our limit to test the slicing
     mock_history = [{'actor': 'gemini', 'text': f'This is turn {i}.'} for i in range(100)]
     mock_history.append({'actor': 'user', 'text': 'This is the user turn.'})
     
