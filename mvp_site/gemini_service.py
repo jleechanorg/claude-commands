@@ -39,6 +39,7 @@ def get_initial_story(prompt):
     except Exception as e:
         logging.error(f"--- FAILED to generate initial content: {e} ---")
         raise
+    logging.info(f"--- Succeeded initial prompt: {prompt[:200]}... ---")
     return response.text
 
 @log_exceptions
@@ -54,7 +55,7 @@ def continue_story(user_input, mode, story_context):
     if mode == 'character':
         prompt_template = "Character does {user_input}. \n\n context: {last_gemini_response}. Continue the story."
     elif mode == 'god':
-        prompt_template = "{user_input}. \n\n context: {last_gemini_response}"
+        prompt_template = "{user_input}"
     else:
         raise ValueError("Invalid interaction mode specified.")
 
