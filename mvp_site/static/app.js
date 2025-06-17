@@ -103,6 +103,24 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // --- Event Listeners ---
+    // RE-ADDED: New Campaign Form Submission Listener
+    document.getElementById('new-campaign-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        showSpinner();
+        const prompt = document.getElementById('campaign-prompt').value;
+        const title = document.getElementById('campaign-title').value;
+        try {
+            const { data } = await fetchApi('/api/campaigns', { method: 'POST', body: JSON.stringify({ prompt, title }) });
+            history.pushState({ campaignId: data.campaign_id }, '', `/game/${data.campaign_id}`);
+            handleRouteChange();
+        } catch (error) {
+            console.error("Error creating campaign:", error);
+            alert('Failed to start a new campaign.');
+            hideSpinner();
+        }
+    });
+
+
     const interactionForm = document.getElementById('interaction-form');
     const userInputEl = document.getElementById('user-input');
 
