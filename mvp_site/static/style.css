@@ -26,7 +26,7 @@ body { background-color: #f8f9fa; }
     color: white;
 }
 
-/* --- NEW: Default hide all views, then show only the active one --- */
+/* --- Corrected Specificity: Default hide all views --- */
 #auth-view, 
 #dashboard-view, 
 #new-campaign-view, 
@@ -34,11 +34,14 @@ body { background-color: #f8f9fa; }
     display: none; /* Hidden by default */
 }
 
-.active-view {
-    display: block; /* Show the active view */
+/* --- NEW / MODIFIED: Show the active views with higher specificity --- */
+#auth-view.active-view, 
+#dashboard-view.active-view, 
+#new-campaign-view.active-view {
+    display: block; /* Show these views when they have the active-view class */
 }
 
-/* --- IMPORTANT: Apply flex display specifically when #game-view is active --- */
+/* --- IMPORTANT: Apply flex display specifically when #game-view is active and has the class --- */
 #game-view.active-view {
     display: flex; /* This is the key: must be flex to use flex-direction and flex-grow */
     flex-direction: column; /* Stacks children vertically */
