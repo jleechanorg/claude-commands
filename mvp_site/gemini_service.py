@@ -5,14 +5,17 @@ import logging
 from decorators import log_exceptions
 import sys
 
+# Configure basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# --- CONSTANTS ---
+# --- MODULE-LEVEL CONSTANTS ---
 MODEL_NAME = 'gemini-2.5-flash-preview-05-20'
-MAX_TOKENS = 8192
+# High token limit to act as a safety net against runaway generation.
+MAX_TOKENS = 8192 
 TEMPERATURE = 0.9
+# --- NEW: Target word count for prompt engineering ---
 TARGET_WORD_COUNT = 400
-HISTORY_TURN_LIMIT = 50
+
 SAFETY_SETTINGS = [
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
@@ -24,11 +27,7 @@ SAFETY_SETTINGS = [
 _client = None
 
 def get_client():
-    """Initializes and returns a singleton Gemini client.
-
-    Returns:
-        genai.Client: An initialized Gemini API client instance.
-    """
+    """Initializes and returns a singleton Gemini client."""
     global _client
     if _client is None:
         logging.info("--- Initializing Gemini Client ---")
@@ -40,41 +39,23 @@ def get_client():
     return _client
 
 def _call_gemini_api(prompt_contents):
-    """
-    Generic helper to call the Gemini API's generate_content method.
-
-    Args:
-        prompt_contents (list): The `contents` to send to the API. This can be
-            a simple list of strings or a structured list of history dicts.
-            Example (simple): ["Tell me a story."]
-            Example (history): [{"role": "user", "parts": [...]}, {"role": "model", ...}]
-
-    Returns:
-        genai.types.GenerateContentResponse: The raw response from the API.
-    """
-    model = genai.GenerativeModel(MODEL_NAME)
-    logging.info(f"--- Calling Gemini API with {len(prompt_contents)} turn(s). ---")
+    """Calls the Gemini API with a given prompt and returns the response."""
+    client = get_client()
+    logging.info(f"--- Calling Gemini API with prompt: {str(prompt_contents)[:300]}... ---")
     
-    response = model.generate_content(
+    response = client.models.generate_content(
+        model=MODEL_NAME,
         contents=prompt_contents,
-        generation_config=types.GenerationConfig(
+        config=types.GenerateContentConfig(
             max_output_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE
-        ),
-        safety_settings=SAFETY_SETTINGS
+            temperature=TEMPERATURE,
+            safety_settings=SAFETY_SETTINGS
+        )
     )
     return response
 
 def _get_text_from_response(response):
-    """Safely extracts text from a Gemini response object.
-
-    Args:
-        response (genai.types.GenerateContentResponse): The response object from the API.
-            Example: A live response object from _call_gemini_api().
-
-    Returns:
-        str: The generated text, or a system error message.
-    """
+    """Safely extracts text from a Gemini response object."""
     try:
         if response.text:
             return response.text
@@ -88,49 +69,32 @@ def _get_text_from_response(response):
 
 @log_exceptions
 def get_initial_story(prompt):
-    """Generates the initial story opening.
-
-    Args:
-        prompt (str): The user's initial prompt.
-            Example: "A story about a brave knight."
-
-    Returns:
-        str: The opening story text.
-    """
+    """Generates the initial story opening."""
+    # Use the TARGET_WORD_COUNT constant in the prompt.
     full_prompt = f"{prompt}\n\n(Please keep the response to about {TARGET_WORD_COUNT} words.)"
     response = _call_gemini_api([full_prompt])
     return _get_text_from_response(response)
 
 @log_exceptions
 def continue_story(user_input, mode, story_context):
-    """Generates the next part of the story using chat history.
+    """Generates the next part of the story."""
+    last_gemini_response = ""
+    for entry in reversed(story_context):
+        if entry.get('actor') == 'gemini':
+            last_gemini_response = entry.get('text', '')
+            break
 
-    Args:
-        user_input (str): The user's action for this turn.
-            Example: "I face the dragon."
-        mode (str): The interaction mode, 'character' or 'god'.
-            Example: "character"
-        story_context (list[dict]): The conversation history.
-            Example: [{'actor': 'user', 'text': '...'}, {'actor': 'gemini', ...}]
-
-    Returns:
-        str: The next part of the story.
-    """
-    recent_context = story_context[-HISTORY_TURN_LIMIT:]
-    
-    history = []
-    for entry in recent_context:
-        actor = 'user' if entry.get('actor') == 'user' else 'model'
-        history.append({'role': actor, 'parts': [entry.get('text')]})
-
+    # Use the TARGET_WORD_COUNT constant in the prompt templates.
     if mode == 'character':
-        prompt_text = f"Acting as the main character {user_input}. Continue the story in about {TARGET_WORD_COUNT} words."
-    else: # god mode
-        prompt_text = f"{user_input}. Continue the story in about {TARGET_WORD_COUNT} words."
+        prompt_template = "Acting as the main charter {user_input}. \n\n context: {last_gemini_response}. Continue the story in about " + str(TARGET_WORD_COUNT) + " words."
+    elif mode == 'god':
+        prompt_template = "{user_input} \n\n context: {last_gemini_response}. Continue the story in about " + str(TARGET_WORD_COUNT) + " words."
+    else:
+        raise ValueError("Invalid interaction mode specified.")
 
-    history.append({'role': 'user', 'parts': [prompt_text]})
+    full_prompt = prompt_template.format(user_input=user_input, last_gemini_response=last_gemini_response)
     
-    response = _call_gemini_api(history)
+    response = _call_gemini_api([full_prompt])
     return _get_text_from_response(response)
 
 # --- Main block for rapid, direct testing ---
