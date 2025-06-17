@@ -26,10 +26,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    const appendToStory = (actor, text) => {
+    const appendToStory = (actor, text, mode = null) => {
         const storyContainer = document.getElementById('story-content');
         const entryEl = document.createElement('p');
-        const label = actor === 'gemini' ? 'Story' : 'You';
+        let label = '';
+        if (actor === 'gemini') {
+            label = 'Story';
+        } else { // actor is 'user'
+            label = mode === 'character' ? 'Main Character' : (mode === 'god' ? 'God' : 'You');
+        }
+        
         entryEl.innerHTML = `<strong>${label}:</strong> ${text}`;
         storyContainer.appendChild(entryEl);
     };
@@ -63,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('game-title').innerText = data.campaign.title;
             const storyContainer = document.getElementById('story-content');
             storyContainer.innerHTML = '';
-            data.story.forEach(entry => appendToStory(entry.actor, entry.text));
+            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode)); // Pass existing mode if available
             showView('game');
             scrollToBottom(storyContainer);
         } catch (error) {
@@ -103,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localSpinner.style.display = 'block';
         userInputEl.disabled = true;
         timerInfo.textContent = '';
-        appendToStory('user', userInput);
+        appendToStory('user', userInput, mode); // Pass the selected mode here
         userInputEl.value = '';
         try {
             const { data, duration } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
