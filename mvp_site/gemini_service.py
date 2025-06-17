@@ -5,16 +5,14 @@ import logging
 from decorators import log_exceptions
 import sys
 
-# Configure basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# --- MODULE-LEVEL CONSTANTS ---
+# --- CONSTANTS ---
 MODEL_NAME = 'gemini-1.5-flash-latest'
 MAX_TOKENS = 8192
 TEMPERATURE = 0.9
 TARGET_WORD_COUNT = 400
 HISTORY_TURN_LIMIT = 50
-
 SAFETY_SETTINGS = [
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
@@ -54,26 +52,30 @@ def _get_text_from_response(response):
 def get_initial_story(prompt):
     """Generates the initial story opening."""
     client = get_client()
-    full_prompt = f"{prompt}\n\n(Please keep the response to about {TARGET_WORD_COUNT} words.)"
-    logging.info(f"--- Calling Gemini API for initial story. Prompt: {full_prompt[:200]}... ---")
-
     # --- THIS IS THE FIX ---
-    # For a simple initial prompt, pass the string directly in the contents list.
-    response = client.models.generate_content(
-        model=MODEL_NAME,
-        contents=[full_prompt], # Correct, simple format
-        config=types.GenerateContentConfig(
+    # 1. Instantiate the model directly.
+    model = genai.GenerativeModel(MODEL_NAME)
+    full_prompt = f"{prompt}\n\n(Please keep the response to about {TARGET_WORD_COUNT} words.)"
+    logging.info(f"--- Calling model.generate_content for initial story. Prompt: {full_prompt[:200]}... ---")
+
+    # 2. Call generate_content on the model instance.
+    response = model.generate_content(
+        contents=[full_prompt],
+        generation_config=types.GenerationConfig(
             max_output_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE,
-            safety_settings=SAFETY_SETTINGS
-        )
+            temperature=TEMPERATURE
+        ),
+        safety_settings=SAFETY_SETTINGS
     )
     return _get_text_from_response(response)
 
 @log_exceptions
 def continue_story(user_input, mode, story_context):
-    """Generates the next part of the story using a limited chat history."""
+    """Generates the next part of the story using a stateful ChatSession."""
     client = get_client()
+    # --- THIS IS THE FIX ---
+    # 1. Instantiate the model directly.
+    model = genai.GenerativeModel(MODEL_NAME)
     recent_context = story_context[-HISTORY_TURN_LIMIT:]
     
     history = []
@@ -81,25 +83,24 @@ def continue_story(user_input, mode, story_context):
         actor = 'user' if entry.get('actor') == 'user' else 'model'
         history.append({'role': actor, 'parts': [entry.get('text')]})
 
+    # 2. Start a chat session from the model object.
+    chat_session = model.start_chat(history=history)
+
     if mode == 'character':
         prompt_text = f"Acting as the main character {user_input}. Continue the story in about {TARGET_WORD_COUNT} words."
     else: # god mode
         prompt_text = f"{user_input}. Continue the story in about {TARGET_WORD_COUNT} words."
-
-    history.append({'role': 'user', 'parts': [prompt_text]})
     
-    logging.info(f"--- Calling Gemini API with {len(history)} turns. Latest prompt: {prompt_text[:200]}... ---")
+    logging.info(f"--- Sending message to chat session. Prompt: {prompt_text[:200]}... ---")
 
-    # --- THIS IS THE FIX ---
-    # For a multi-turn chat, pass the structured history list.
-    response = client.models.generate_content(
-        model=MODEL_NAME,
-        contents=history, # Correct, multi-turn format
-        config=types.GenerateContentConfig(
+    # 3. Use the chat session's send_message method.
+    response = chat_session.send_message(
+        content=prompt_text,
+        generation_config=types.GenerationConfig(
             max_output_tokens=MAX_TOKENS,
-            temperature=TEMPERATURE,
-            safety_settings=SAFETY_SETTINGS
-        )
+            temperature=TEMPERATURE
+        ),
+        safety_settings=SAFETY_SETTINGS
     )
     return _get_text_from_response(response)
 
