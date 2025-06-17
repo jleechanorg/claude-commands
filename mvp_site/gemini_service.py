@@ -104,7 +104,7 @@ def continue_story(user_input, mode, story_context):
 
 # --- Main block for rapid, direct testing ---
 if __name__ == "__main__":
-    print("--- Running gemini_service.py in direct test mode ---")
+    print("--- Running gemini_service.py in chained conversation test mode ---")
     
     try:
         with open('local_api_key.txt', 'r') as f:
@@ -117,21 +117,36 @@ if __name__ == "__main__":
         
     get_client() # Initialize client
     
-    print("\n--- Test Case 1: get_initial_story ---")
-    test_prompt = "start a story about a haunted lighthouse"
-    print(f"Using test prompt: '{test_prompt}'")
-    initial_response = get_initial_story(test_prompt)
-    print("\n--- LIVE RESPONSE ---")
-    print(initial_response)
-    print("--- END OF RESPONSE ---\n")
+    # --- Turn 1: Initial Story ---
+    print("\n--- Turn 1: get_initial_story ---")
+    turn_1_prompt = "start a story about a haunted lighthouse"
+    print(f"Using prompt: '{turn_1_prompt}'")
+    turn_1_response = get_initial_story(turn_1_prompt)
+    print("\n--- LIVE RESPONSE 1 ---")
+    print(turn_1_response)
+    print("--- END OF RESPONSE 1 ---\n")
     
-    print("\n--- Test Case 2: continue_story with history limit ---")
-    mock_history = [{'actor': 'gemini', 'text': 'The old lighthouse stood on a jagged cliff, its light long extinguished.'}]
+    # Create the initial history from the real response
+    history = [{'actor': 'user', 'text': turn_1_prompt}, {'actor': 'gemini', 'text': turn_1_response}]
+
+    # --- Turn 2: Continue Story ---
+    print("\n--- Turn 2: continue_story ---")
+    turn_2_prompt = "A lone ship, tossed by the raging sea, sees a faint, flickering light from the abandoned tower."
+    print(f"Using prompt: '{turn_2_prompt}'")
+    turn_2_response = continue_story(turn_2_prompt, 'god', history)
+    print("\n--- LIVE RESPONSE 2 ---")
+    print(turn_2_response)
+    print("--- END OF RESPONSE 2 ---\n")
     
-    next_input = "A lone ship, tossed by a sudden squall, sees a faint light from the abandoned tower."
-    print(f"Using follow-up input: '{next_input}'")
-    
-    continue_response = continue_story(next_input, 'god', mock_history)
-    print("\n--- LIVE RESPONSE ---")
-    print(continue_response)
-    print("--- END OF RESPONSE ---\n")
+    # Update the history with the real response from turn 2
+    history.append({'actor': 'user', 'text': turn_2_prompt})
+    history.append({'actor': 'gemini', 'text': turn_2_response})
+
+    # --- Turn 3: Continue Story Again ---
+    print("\n--- Turn 3: continue_story ---")
+    turn_3_prompt = "The ship's captain, a grizzled old sailor named Silas, decides to steer towards the light, ignoring the warnings of his crew."
+    print(f"Using prompt: '{turn_3_prompt}'")
+    turn_3_response = continue_story(turn_3_prompt, 'god', history)
+    print("\n--- LIVE RESPONSE 3 ---")
+    print(turn_3_response)
+    print("--- END OF RESPONSE 3 ---\n")
