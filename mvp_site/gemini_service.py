@@ -9,7 +9,8 @@ import sys
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- MODULE-LEVEL CONSTANTS ---
-MODEL_NAME = 'gemini-2.5-pro-preview-06-05'
+# MODEL_NAME = 'gemini-2.5-pro-preview-06-05'
+MODEL_NAME = 'gemini-2.5-flash-preview-05-20'
 # High token limit to act as a safety net against runaway generation.
 MAX_TOKENS = 8192 
 TEMPERATURE = 0.9
