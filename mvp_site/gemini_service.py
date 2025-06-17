@@ -3,14 +3,14 @@ from google import genai
 from google.genai import types
 import logging
 from decorators import log_exceptions
-import sys  # Import sys for the main block
+import sys
 
 # Configure basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # --- MODULE-LEVEL CONSTANTS ---
 MODEL_NAME = 'gemini-2.5-pro-preview-06-05'
-MAX_TOKENS = 600
+MAX_TOKENS = 10000
 TEMPERATURE = 0.9
 SAFETY_SETTINGS = [
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
@@ -39,6 +39,8 @@ def _call_gemini_api(prompt_contents):
     client = get_client()
     logging.info(f"--- Calling Gemini API with prompt: {str(prompt_contents)[:300]}... ---")
     
+    # --- THIS IS THE FIX ---
+    # To disable Automatic Function Calling, we pass an empty list to the 'tools' parameter.
     response = client.models.generate_content(
         model=MODEL_NAME,
         contents=prompt_contents,
@@ -53,14 +55,15 @@ def _call_gemini_api(prompt_contents):
 def _get_text_from_response(response):
     """Safely extracts text from a Gemini response object."""
     try:
-        return response.text
+        if response.text:
+            return response.text
     except ValueError as e:
         logging.warning(f"ValueError while extracting text: {e}")
     except Exception as e:
         logging.error(f"Unexpected error in _get_text_from_response: {e}")
     
     logging.warning(f"--- Response did not contain valid text. Full response object: {response} ---")
-    return "[System Message: The model's response could not be processed. Please check the logs for details.]"
+    return "[System Message: The model returned a non-text response. Please check the logs for details.]"
 
 @log_exceptions
 def get_initial_story(prompt):
@@ -89,11 +92,10 @@ def continue_story(user_input, mode, story_context):
     response = _call_gemini_api([full_prompt])
     return _get_text_from_response(response)
 
-# --- NEW: Main block for rapid, direct testing ---
+# --- Main block for rapid, direct testing ---
 if __name__ == "__main__":
     print("--- Running gemini_service.py in direct test mode ---")
     
-    # 1. Load the API key from our local file
     try:
         with open('local_api_key.txt', 'r') as f:
             api_key = f.read().strip()
@@ -101,15 +103,11 @@ if __name__ == "__main__":
         print("Successfully loaded API key from local_api_key.txt")
     except FileNotFoundError:
         print("\nERROR: 'local_api_key.txt' not found.")
-        print("Please create it by running this command in the mvp_site directory:")
-        print("gcloud secrets versions access latest --secret=\"gemini-api-key\" > local_api_key.txt")
         sys.exit(1)
         
-    # 2. Define a test prompt
     test_prompt = "start a pirate story"
     print(f"\nUsing test prompt: '{test_prompt}'")
     
-    # 3. Call the function and print the live result
     print("\n--- Calling get_initial_story() ---")
     live_response = get_initial_story(test_prompt)
     
