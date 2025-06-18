@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 MODEL_NAME = 'gemini-2.5-flash-preview-05-20'
 MAX_TOKENS = 8192 
 TEMPERATURE = 0.9
-TARGET_WORD_COUNT = 400
+TARGET_WORD_COUNT = 200
 HISTORY_TURN_LIMIT = 50
 SAFETY_SETTINGS = [
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
