@@ -13,6 +13,8 @@ MAX_TOKENS = 8192
 TEMPERATURE = 0.9
 TARGET_WORD_COUNT = 200
 HISTORY_TURN_LIMIT = 50
+MAX_INPUT_TOKENS = 200000 
+SAFE_CHAR_LIMIT = MAX_INPUT_TOKENS * 4
 SAFETY_SETTINGS = [
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
@@ -109,6 +111,28 @@ def _get_text_from_response(response):
     logging.warning(f"--- Response did not contain valid text. Full response object: {response} ---")
     return "[System Message: The model returned a non-text response. Please check the logs for details.]"
 
+def _truncate_context(story_context):
+    """
+    Truncates the story context first by HISTORY_TURN_LIMIT, and then
+    further by character count if it still exceeds the safety limit.
+    """
+    # 1. Apply the turn limit first.
+    context = list(story_context[-HISTORY_TURN_LIMIT:])
+    
+    # 2. Check character count and truncate further if needed.
+    def calculate_total_chars(ctx):
+        return sum(len(entry.get('text', '')) for entry in ctx)
+
+    total_chars = calculate_total_chars(context)
+    
+    while total_chars > SAFE_CHAR_LIMIT and len(context) > 1:
+        # Remove the oldest entry (at the beginning of the list)
+        context.pop(0)
+        total_chars = calculate_total_chars(context)
+        logging.warning(f"Context exceeded safe char limit after turn limit. Truncating. New char count: {total_chars}")
+        
+    return context
+
 @log_exceptions
 def get_initial_story(prompt, selected_prompts=None):
     """Generates the initial story opening, using system_instruction parameter, including default ruleset."""
@@ -167,7 +191,7 @@ def continue_story(user_input, mode, story_context, selected_prompts=None):
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
 
-    recent_context = story_context[-HISTORY_TURN_LIMIT:]
+    recent_context = _truncate_context(story_context)
     
     # Build a single context string from the history (User's preferred method)
     history_parts = []
