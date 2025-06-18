@@ -60,8 +60,14 @@ def create_app():
         try:
             data = request.get_json()
             prompt, title = data.get('prompt'), data.get('title')
-            opening_story = gemini_service.get_initial_story(prompt)
-            campaign_id = firestore_service.create_campaign(user_id, title, prompt, opening_story)
+            selected_prompts = data.get('selected_prompts', []) 
+            
+            # Pass selected_prompts to gemini_service for initial story
+            opening_story = gemini_service.get_initial_story(prompt, selected_prompts=selected_prompts)
+            
+            # MODIFIED: Save selected_prompts in Firestore for persistence
+            campaign_id = firestore_service.create_campaign(user_id, title, prompt, opening_story, selected_prompts)
+            
             return jsonify({'success': True, 'campaign_id': campaign_id}), 201
         except Exception as e:
             return jsonify({'success': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
@@ -72,9 +78,19 @@ def create_app():
         try:
             data = request.get_json()
             user_input, mode = data.get('input'), data.get('mode', 'character')
-            _, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
+            
+            # MODIFIED: Retrieve campaign to get selected_prompts
+            campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
+            if not campaign:
+                return jsonify({'error': 'Campaign not found'}), 404
+            
+            selected_prompts = campaign.get('selected_prompts', []) # Retrieve selected prompts
+            
             firestore_service.add_story_entry(user_id, campaign_id, 'user', user_input, mode)
-            gemini_response = gemini_service.continue_story(user_input, mode, story_context)
+            
+            # MODIFIED: Pass selected_prompts to continue_story
+            gemini_response = gemini_service.continue_story(user_input, mode, story_context, selected_prompts)
+            
             firestore_service.add_story_entry(user_id, campaign_id, 'gemini', gemini_response)
             return jsonify({'success': True, 'response': gemini_response})
         except Exception as e:
