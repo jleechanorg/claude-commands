@@ -9,11 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingOverlay = document.getElementById('loading-overlay');
     let currentCampaignId = null;
 
-    // Helper function for scrolling
-    const scrollToBottom = (element) => { 
-        element.scrollTop = element.scrollHeight; 
-    };
-
     // --- Core UI & Navigation Logic ---
     const showSpinner = () => loadingOverlay.style.display = 'flex';
     const hideSpinner = () => loadingOverlay.style.display = 'none';
@@ -84,9 +79,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const storyContainer = document.getElementById('story-content');
             storyContainer.innerHTML = '';
             data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode));
-            setTimeout(() => scrollToBottom(storyContainer), 100);
+            storyContainer.scrollTop = storyContainer.scrollHeight;
             showView('game');
+            // Show both buttons now
             document.getElementById('shareStoryBtn').style.display = 'block';
+            document.getElementById('downloadStoryBtn').style.display = 'block';
         } catch (error) {
             console.error('Failed to resume campaign:', error);
             history.pushState({}, '', '/');
@@ -117,7 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // THIS IS THE BLOCK THAT WAS WRONGLY DELETED AND IS NOW RESTORED
     const interactionForm = document.getElementById('interaction-form');
     const userInputEl = document.getElementById('user-input');
 
@@ -139,18 +135,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!userInput || !currentCampaignId) return;
             const mode = document.querySelector('input[name="interactionMode"]:checked').value;
             const localSpinner = document.getElementById('loading-spinner');
-            const timerInfo = document.getElementById('timer-info');
             localSpinner.style.display = 'block';
             userInputEl.disabled = true;
-            timerInfo.textContent = '';
             appendToStory('user', userInput, mode);
             userInputEl.value = '';
             try {
-                const { data, duration } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
+                const { data } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
                     method: 'POST', body: JSON.stringify({ input: userInput, mode }),
                 });
                 appendToStory('gemini', data.response);
-                timerInfo.textContent = `Response time: ${duration}s`;
             } catch (error) {
                 console.error("Interaction failed:", error);
                 appendToStory('system', 'Sorry, an error occurred. Please try again.');
@@ -158,10 +151,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 localSpinner.style.display = 'none';
                 userInputEl.disabled = false;
                 userInputEl.focus();
+                document.getElementById('timer-info').textContent = '';
             }
         });
     }
-    // END OF RESTORED BLOCK
 
     document.getElementById('go-to-new-campaign').onclick = () => { history.pushState({}, '', '/new-campaign'); handleRouteChange(); };
     document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };
@@ -170,20 +163,18 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// --- Share Story Functionality (MODIFIED FOR PHASE 3) ---
+// --- Share & Download Functionality ---
 
-/**
- * NEW: Triggers a file download by calling the backend export endpoint.
- * @param {string} format - The desired file format ('txt', 'pdf', 'docx').
- */
+function getFormattedStoryText() {
+    const storyContent = document.getElementById('story-content');
+    if (!storyContent) return '';
+    const paragraphs = storyContent.querySelectorAll('p');
+    return Array.from(paragraphs).map(p => p.innerText.trim()).join('\\n\\n');
+}
+
 async function downloadFile(format) {
-    // currentCampaignId is a global variable from the top scope
-    if (!currentCampaignId) {
-        alert("No active campaign selected.");
-        return;
-    }
-    const loadingOverlay = document.getElementById('loading-overlay');
-    loadingOverlay.style.display = 'flex';
+    if (!currentCampaignId) return;
+    showSpinner();
     try {
         const user = firebase.auth().currentUser;
         if (!user) throw new Error('User not authenticated');
@@ -193,9 +184,7 @@ async function downloadFile(format) {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        if (!response.ok) {
-            throw new Error(`Failed to download file: ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`Download failed: ${response.statusText}`);
 
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -212,76 +201,56 @@ async function downloadFile(format) {
                 filename = matches[1].replace(/['"]/g, '');
             }
         }
-
         a.download = filename;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-
     } catch (error) {
         console.error("Download failed:", error);
-        alert("Could not download the story. Please check the console for details.");
+        alert("Could not download the story.");
     } finally {
-        loadingOverlay.style.display = 'none';
+        hideSpinner();
         const modalElement = document.getElementById('downloadOptionsModal');
         const modal = bootstrap.Modal.getInstance(modalElement);
-        if (modal) {
-            modal.hide();
-        }
+        if (modal) modal.hide();
     }
 }
 
-
-/**
- * MODIFIED: Handles the click on the Share button.
- * Uses the Web Share API on mobile, opens a download modal on desktop.
- */
 async function handleShareStory() {
-    // Mobile devices with share API
-    if (navigator.share) {
-        const storyText = getFormattedStoryText(); // Need to define this helper function
-        const storyTitle = document.getElementById('game-title').innerText || "My WorldArchitect.AI Story";
-        if (!storyText) {
-            alert('The story is empty. Nothing to share.');
-            return;
-        }
-        try {
-            await navigator.share({ title: storyTitle, text: storyText });
-        } catch (error) {
-            console.error('Error sharing story:', error);
-        }
-    } else {
-        // Desktop devices: show the download options modal
-        const downloadModal = new bootstrap.Modal(document.getElementById('downloadOptionsModal'));
-        downloadModal.show();
+    if (!navigator.share) {
+        alert("Share feature is only available on supported devices, like mobile phones.");
+        return;
+    }
+    const storyText = getFormattedStoryText();
+    const storyTitle = document.getElementById('game-title').innerText || "My WorldArchitect.AI Story";
+    if (!storyText) {
+        alert('The story is empty. Nothing to share.');
+        return;
+    }
+    try {
+        await navigator.share({ title: storyTitle, text: storyText });
+    } catch (error) {
+        console.error('Error sharing story:', error);
     }
 }
 
-// This helper function was missing in the previous turn, it's restored here.
-function getFormattedStoryText() {
-    const storyContent = document.getElementById('story-content');
-    if (!storyContent) return '';
-    const paragraphs = storyContent.querySelectorAll('p');
-    return Array.from(paragraphs).map(p => p.innerText.trim()).join('\\n\\n');
+function handleDownloadClick() {
+    const downloadModal = new bootstrap.Modal(document.getElementById('downloadOptionsModal'));
+    downloadModal.show();
 }
 
-
-// Attach event listeners safely
-function addShareButtonListener() {
-    const shareButton = document.getElementById('shareStoryBtn');
-    if (shareButton) {
-        shareButton.addEventListener('click', handleShareStory);
-    }
-    
-    // Add listeners for the new modal buttons
+// Attach all event listeners
+function addActionListeners() {
+    document.getElementById('shareStoryBtn')?.addEventListener('click', handleShareStory);
+    document.getElementById('downloadStoryBtn')?.addEventListener('click', handleDownloadClick);
     document.getElementById('download-txt-btn')?.addEventListener('click', () => downloadFile('txt'));
     document.getElementById('download-pdf-btn')?.addEventListener('click', () => downloadFile('pdf'));
     document.getElementById('download-docx-btn')?.addEventListener('click', () => downloadFile('docx'));
 }
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', addShareButtonListener);
+    document.addEventListener('DOMContentLoaded', addActionListeners);
 } else {
-    addShareButtonListener();
+    addActionListeners();
 }
