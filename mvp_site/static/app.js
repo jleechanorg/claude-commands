@@ -84,8 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('game-title').innerText = data.campaign.title;
             const storyContainer = document.getElementById('story-content');
             storyContainer.innerHTML = '';
-            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode)); // Pass existing mode if available
-
+            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode));
+            
             // Add a slight delay to allow rendering before scrolling
             console.log("Attempting to scroll after content append, with a slight delay.");
             setTimeout(() => scrollToBottom(storyContainer), 100); // 100ms delay
@@ -168,100 +168,92 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    document.getElementById('go-to-new-campaign').onclick = () => { history.pushState({}, '', '/new-campaign'); handleRouteChange(); };
-    document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };
-    window.addEventListener('popstate', handleRouteChange);
-    firebase.auth().onAuthStateChanged(user => handleRouteChange());
-});
+    // --- Share & Download Functionality ---
+    function getFormattedStoryText() {
+        const storyContent = document.getElementById('story-content');
+        if (!storyContent) return '';
+        const paragraphs = storyContent.querySelectorAll('p');
+        return Array.from(paragraphs).map(p => p.innerText.trim()).join('\\n\\n');
+    }
 
-// --- Share & Download Functionality ---
+    async function downloadFile(format) {
+        if (!currentCampaignId) return;
+        showSpinner();
+        try {
+            const user = firebase.auth().currentUser;
+            if (!user) throw new Error('User not authenticated');
+            const token = await user.getIdToken();
 
-function getFormattedStoryText() {
-    const storyContent = document.getElementById('story-content');
-    if (!storyContent) return '';
-    const paragraphs = storyContent.querySelectorAll('p');
-    return Array.from(paragraphs).map(p => p.innerText.trim()).join('\\n\\n');
-}
+            const response = await fetch(`/api/campaigns/${currentCampaignId}/export?format=${format}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
 
-async function downloadFile(format) {
-    if (!currentCampaignId) return;
-    document.getElementById('loading-overlay').style.display = 'flex';
-    try {
-        const user = firebase.auth().currentUser;
-        if (!user) throw new Error('User not authenticated');
-        const token = await user.getIdToken();
+            if (!response.ok) throw new Error(`Download failed: ${response.statusText}`);
 
-        const response = await fetch(`/api/campaigns/${currentCampaignId}/export?format=${format}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (!response.ok) throw new Error(`Download failed: ${response.statusText}`);
-
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        
-        const disposition = response.headers.get('content-disposition');
-        let filename = `story.${format}`;
-        if (disposition && disposition.indexOf('attachment') !== -1) {
-            const filenameRegex = /filename[^;=\\n]*=((['"]).*?\\2|[^;\\n]*)/;
-            const matches = filenameRegex.exec(disposition);
-            if (matches != null && matches[1]) {
-                filename = matches[1].replace(/['"]/g, '');
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            
+            const disposition = response.headers.get('content-disposition');
+            let filename = `story.${format}`;
+            if (disposition && disposition.indexOf('attachment') !== -1) {
+                const filenameRegex = /filename[^;=\\n]*=((['"]).*?\\2|[^;\\n]*)/;
+                const matches = filenameRegex.exec(disposition);
+                if (matches != null && matches[1]) {
+                    filename = matches[1].replace(/['"]/g, '');
+                }
             }
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error("Download failed:", error);
+            alert("Could not download the story.");
+        } finally {
+            hideSpinner();
+            const modalElement = document.getElementById('downloadOptionsModal');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) modal.hide();
         }
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-    } catch (error) {
-        console.error("Download failed:", error);
-        alert("Could not download the story.");
-    } finally {
-        document.getElementById('loading-overlay').style.display = 'none';
-        const modalElement = document.getElementById('downloadOptionsModal');
-        const modal = bootstrap.Modal.getInstance(modalElement);
-        if (modal) modal.hide();
     }
-}
 
-async function handleShareStory() {
-    if (!navigator.share) {
-        alert("Share feature is only available on supported devices, like mobile phones.");
-        return;
+    async function handleShareStory() {
+        if (!navigator.share) {
+            alert("Share feature is only available on supported devices, like mobile phones.");
+            return;
+        }
+        const storyText = getFormattedStoryText();
+        const storyTitle = document.getElementById('game-title').innerText || "My WorldArchitect.AI Story";
+        if (!storyText) {
+            alert('The story is empty. Nothing to share.');
+            return;
+        }
+        try {
+            await navigator.share({ title: storyTitle, text: storyText });
+        } catch (error) {
+            console.error('Error sharing story:', error);
+        }
     }
-    const storyText = getFormattedStoryText();
-    const storyTitle = document.getElementById('game-title').innerText || "My WorldArchitect.AI Story";
-    if (!storyText) {
-        alert('The story is empty. Nothing to share.');
-        return;
-    }
-    try {
-        await navigator.share({ title: storyTitle, text: storyText });
-    } catch (error) {
-        console.error('Error sharing story:', error);
-    }
-}
 
-function handleDownloadClick() {
-    const downloadModal = new bootstrap.Modal(document.getElementById('downloadOptionsModal'));
-    downloadModal.show();
-}
+    function handleDownloadClick() {
+        const downloadModal = new bootstrap.Modal(document.getElementById('downloadOptionsModal'));
+        downloadModal.show();
+    }
 
-// Attach all event listeners
-function addActionListeners() {
+    // Attach all action event listeners
     document.getElementById('shareStoryBtn')?.addEventListener('click', handleShareStory);
     document.getElementById('downloadStoryBtn')?.addEventListener('click', handleDownloadClick);
     document.getElementById('download-txt-btn')?.addEventListener('click', () => downloadFile('txt'));
     document.getElementById('download-pdf-btn')?.addEventListener('click', () => downloadFile('pdf'));
     document.getElementById('download-docx-btn')?.addEventListener('click', () => downloadFile('docx'));
-}
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', addActionListeners);
-} else {
-    addActionListeners();
-}
+    
+    // Main navigation listeners
+    document.getElementById('go-to-new-campaign').onclick = () => { history.pushState({}, '', '/new-campaign'); handleRouteChange(); };
+    document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };
+    window.addEventListener('popstate', handleRouteChange);
+    firebase.auth().onAuthStateChanged(user => handleRouteChange());
+});
