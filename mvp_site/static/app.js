@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const loadingOverlay = document.getElementById('loading-overlay');
     let currentCampaignId = null;
+    let campaignToEdit = null; 
 
     // Helper function for scrolling
     const scrollToBottom = (element) => { 
@@ -66,11 +67,20 @@ document.addEventListener('DOMContentLoaded', () => {
             campaigns.forEach(campaign => {
                 const campaignEl = document.createElement('div');
                 campaignEl.className = 'list-group-item list-group-item-action';
-                campaignEl.innerHTML = `<div class="d-flex w-100 justify-content-between"><h5 class="mb-1">${campaign.title}</h5><small>Last played: ${new Date(campaign.last_played).toLocaleString()}</small></div><p class="mb-1">${campaign.initial_prompt.substring(0, 100)}...</p>`;
-                campaignEl.onclick = () => {
-                    history.pushState({ campaignId: campaign.id }, '', `/game/${campaign.id}`);
-                    handleRouteChange();
-                };
+                
+                campaignEl.innerHTML = `
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1 campaign-title-link">${campaign.title}</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary edit-campaign-btn me-2">Edit</button>
+                            <small class="text-muted">Last played: ${new Date(campaign.last_played).toLocaleString()}</small>
+                        </div>
+                    </div>
+                    <p class="mb-1 campaign-title-link">${campaign.initial_prompt.substring(0, 100)}...</p>`;
+                
+                campaignEl.dataset.campaignId = campaign.id;
+                campaignEl.dataset.campaignTitle = campaign.title;
+
                 listEl.appendChild(campaignEl);
             });
         } catch (error) { console.error("Error fetching campaigns:", error); }
@@ -87,11 +97,10 @@ document.addEventListener('DOMContentLoaded', () => {
             data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode));
             
             // Add a slight delay to allow rendering before scrolling
-            console.log("Attempting to scroll after content append, with a slight delay.");
+            console.log("Attempting to scroll after content append, with a slight delay."); // RESTORED console.log
             setTimeout(() => scrollToBottom(storyContainer), 100); // 100ms delay
             
             showView('game');
-            // Show the Share and Download buttons
             document.getElementById('shareStoryBtn').style.display = 'block';
             document.getElementById('downloadStoryBtn').style.display = 'block';
         } catch (error) {
@@ -168,7 +177,65 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // --- NEW EVENT LISTENERS FOR EDIT FUNCTIONALITY ---
+    document.getElementById('campaign-list').addEventListener('click', (e) => {
+        const target = e.target;
+        const campaignItem = target.closest('.list-group-item');
+
+        if (!campaignItem) return;
+
+        if (target.classList.contains('edit-campaign-btn')) {
+            campaignToEdit = {
+                id: campaignItem.dataset.campaignId,
+                title: campaignItem.dataset.campaignTitle
+            };
+            const editModalEl = document.getElementById('editCampaignModal');
+            const editModal = new bootstrap.Modal(editModalEl);
+            document.getElementById('edit-campaign-title').value = campaignToEdit.title;
+            editModal.show();
+        } 
+        else if (target.classList.contains('campaign-title-link') || target.closest('.campaign-title-link')) {
+            const campaignId = campaignItem.dataset.campaignId;
+            history.pushState({ campaignId }, '', `/game/${campaignId}`);
+            handleRouteChange();
+        }
+    });
+
+    document.getElementById('save-campaign-title-btn').addEventListener('click', async () => {
+        const newTitleInput = document.getElementById('edit-campaign-title');
+        const newTitle = newTitleInput.value.trim();
+        
+        if (!newTitle || !campaignToEdit) {
+            alert("Campaign title cannot be empty.");
+            return;
+        }
+        
+        showSpinner();
+        try {
+            await fetchApi(`/api/campaigns/${campaignToEdit.id}`, {
+                method: 'PATCH',
+                body: JSON.stringify({ title: newTitle })
+            });
+            
+            const editModalEl = document.getElementById('editCampaignModal');
+            const modal = bootstrap.Modal.getInstance(editModalEl);
+            if (modal) {
+                modal.hide();
+            }
+
+            await renderCampaignList();
+            alert('Campaign title updated successfully!');
+        } catch (error) {
+            console.error('Failed to update campaign title:', error);
+            alert('Could not save the new title. Please try again.');
+        } finally {
+            hideSpinner();
+            campaignToEdit = null;
+        }
+    });
+
     // --- Share & Download Functionality ---
+    // RESTORED getFormattedStoryText to its original multi-line structure
     function getFormattedStoryText() {
         const storyContent = document.getElementById('story-content');
         if (!storyContent) return '';
@@ -251,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('download-pdf-btn')?.addEventListener('click', () => downloadFile('pdf'));
     document.getElementById('download-docx-btn')?.addEventListener('click', () => downloadFile('docx'));
     
-    // Main navigation listeners
+    // Main navigation listeners (these must remain at the end of DOMContentLoaded)
     document.getElementById('go-to-new-campaign').onclick = () => { history.pushState({}, '', '/new-campaign'); handleRouteChange(); };
     document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };
     window.addEventListener('popstate', handleRouteChange);
