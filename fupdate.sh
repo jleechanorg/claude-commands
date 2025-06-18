@@ -1,26 +1,33 @@
 #!/bin/bash
 set -e
 
-# This script is a wrapper that performs git operations and then calls the main deploy.sh script.
-
 # --- Preparation ---
-# Find the repository root, regardless of where the script is called from.
+# Find the repository root for git operations
 REPO_ROOT=$(git rev-parse --show-toplevel)
-cd "$REPO_ROOT" # Ensure all operations run from the root
+# IMPORTANT: Store the directory where the script was initially called
+INITIAL_DIR=$(pwd)
 
-# --- Git Push Step ---
-echo "--- Starting GitHub Push Step ---"
+# --- Argument Parsing & Context Awareness ---
 COMMIT_MSG=""
-# Loop through all arguments to find the commit message and environment
+# Capture all arguments to pass them through later
+ALL_ARGS=("$@")
+
+# Find the commit message within the arguments
 for arg in "$@"; do
-    if [[ "$arg" != "stable" ]] && [[ "$arg" != "dev" ]] && [[ ! -d "$arg" ]]; then
+    # A simple assumption: if it's not a known environment name, it's a commit message.
+    # This is not perfect but works for your use case.
+    if [[ "$arg" != "stable" ]] && [[ "$arg" != "dev" ]]; then
         COMMIT_MSG="$arg"
     fi
 done
 
-# Use a default commit message if none was found
+# --- Git Push Step (Run from Repo Root) ---
+cd "$REPO_ROOT"
+echo "--- Starting GitHub Push Step ---"
+
+# Use a default commit message if none was provided
 if [ -z "$COMMIT_MSG" ]; then
-    COMMIT_MSG="commit at this time $(date '+%Y-%m-%d %H:%M:%S %Z')"
+    COMMIT_MSG="commit from $(basename "$INITIAL_DIR") at $(date '+%Y-%m-%d %H:%M:%S %Z')"
 fi
 
 echo "Staging all changes..."
@@ -32,11 +39,16 @@ git push
 echo "Push complete."
 
 
-# --- GCP Deploy Step ---
+# --- GCP Deploy Step (Run from the original directory) ---
 echo ""
 echo "--- Starting GCP Deploy Step ---"
 
-# Pass all original arguments directly to the deploy.sh script
-./deploy.sh "$@"
+# Go back to the directory where the user ran the command
+cd "$INITIAL_DIR"
+
+# Call deploy.sh. It will now correctly auto-detect the Dockerfile
+# because it is being run from the correct directory.
+# We also pass the original arguments in case they are needed (e.g., for environment).
+"$REPO_ROOT/deploy.sh" "${ALL_ARGS[@]}"
 
 echo "Full update finished."
