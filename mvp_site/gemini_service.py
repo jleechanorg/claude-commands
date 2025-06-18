@@ -203,10 +203,10 @@ def continue_story(user_input, mode, story_context, selected_prompts=None):
 
     # Create the final prompt for the current user turn (User's preferred method)
     if mode == 'character':
-        prompt_template = "Acting as the main character do {user_input}. Continue the story in about {word_count} words."
+        prompt_template = "Main character: {user_input}. Continue the story in about {word_count} words."
     else: # god mode
         # User wants direct pass-through for god mode
-        prompt_template = "Acting as god or the dungeon master (DM) do {user_input}"
+        prompt_template = "GOD MODE: {user_input}"
 
      # Only format with word_count if it's character mode
     if mode == 'character':
