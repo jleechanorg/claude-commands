@@ -49,7 +49,7 @@ You must follow this multi-step protocol for any and all changes to our ruleset 
 ### Universal State ID Protocol:
 To ensure absolute clarity and prevent context loss, a unique identifier will be used for tracking.
 -   **DM Mode (Change IDs)**: Differential Reports will be assigned a [Change ID: YYYYMMDD-A] for precision in approvals.
--   **The Checkpoint Block**: This block is a mandatory header for every single [STORY MODE] entry. It must contain: the full Unique Identifier, Location, a one-sentence Narrative State summary, Key Stats (Followers, DPP/day, Experience, Experience to next level), and a condensed Missions List. These will be used to uniquely identify any narrative moment for discussion or for use with the rewind list command.
+-   **The Checkpoint Block**: This block is a mandatory header for every single [STORY MODE] entry. It must contain: the full Unique Identifier, Location, a one-sentence Narrative State summary, Key Stats (Followers, income/day, Experience, Experience to next level), and a condensed Missions List. These will be used to uniquely identify any narrative moment for discussion or for use with the rewind list command.
     -   **Unique Identifier in more detail**:
         -   A SequenceIdentifier: A positive integer that increments by 1 with every single [STORY MODE] post.
         -   A Timestamp: The precise in-game date and time.
