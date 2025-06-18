@@ -2,7 +2,6 @@ import datetime
 from firebase_admin import firestore
 from decorators import log_exceptions
 
-# Define a safe maximum size for a text field in Firestore, just under the 1 MiB limit.
 MAX_TEXT_BYTES = 1000000
 
 def get_db():
@@ -28,7 +27,10 @@ def get_campaigns_for_user(user_id):
 
 @log_exceptions
 def get_campaign_by_id(user_id, campaign_id):
-    """Retrieves a single campaign and its full story."""
+    """
+    Retrieves a single campaign and its full story, gracefully handling both
+    old documents (without a 'part' field) and new ones (with a 'part' field).
+    """
     db = get_db()
     campaign_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
     
@@ -36,52 +38,68 @@ def get_campaign_by_id(user_id, campaign_id):
     if not campaign_doc.exists:
         return None, None
 
-    story_ref = campaign_ref.collection('story').order_by('timestamp').order_by('part')
-    story_docs = story_ref.stream()
-    
-    story = []
-    for doc in story_docs:
-        doc_data = doc.to_dict()
-        doc_data['timestamp'] = doc_data['timestamp'].isoformat()
-        story.append(doc_data)
+    story_ref = campaign_ref.collection('story')
 
-    return campaign_doc.to_dict(), story
+    # --- NEW RESILIENT FETCH LOGIC ---
+    # Query 1: Fetch new-style documents that have the 'part' field.
+    # The composite index on (timestamp, part) will be used here.
+    new_data_query = story_ref.order_by('timestamp').order_by('part')
+    new_docs = new_data_query.stream()
+
+    # Query 2: Fetch old-style documents that are missing the 'part' field.
+    # Firestore allows using '!=' or '==' with None to check for field existence.
+    # This query uses the automatic index on 'timestamp'.
+    old_data_query = story_ref.where('part', '==', None).order_by('timestamp')
+    old_docs = old_data_query.stream()
+
+    # Combine the results from both queries
+    all_story_entries = []
+    for doc in new_docs:
+        doc_data = doc.to_dict()
+        doc_data['timestamp'] = doc_data['timestamp'] # Keep as datetime object for sorting
+        all_story_entries.append(doc_data)
+        
+    for doc in old_docs:
+        doc_data = doc.to_dict()
+        doc_data['timestamp'] = doc_data['timestamp']
+        all_story_entries.append(doc_data)
+
+    # Sort the combined list in memory to ensure perfect chronological order
+    # This is necessary because we made two separate queries.
+    all_story_entries.sort(key=lambda x: x['timestamp'])
+
+    # Convert timestamps to ISO format for JSON serialization AFTER sorting is complete
+    for entry in all_story_entries:
+        entry['timestamp'] = entry['timestamp'].isoformat()
+
+    return campaign_doc.to_dict(), all_story_entries
+
 
 @log_exceptions
 def add_story_entry(user_id, campaign_id, actor, text, mode=None):
     """
     Adds a new entry to a campaign's story. If the text is too large,
-    it splits it into multiple documents (chunks). Refactored for DRYness.
+    it splits it into multiple documents (chunks).
     """
     db = get_db()
     story_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
     
     text_bytes = text.encode('utf-8')
-    
-    # Prepare chunks. If text is small, this will be a list with one item.
     chunks = [text_bytes[i:i + MAX_TEXT_BYTES] for i in range(0, len(text_bytes), MAX_TEXT_BYTES)]
     
-    # Create the base data dictionary that is common to all parts.
     base_entry_data = {'actor': actor}
     if mode:
         base_entry_data['mode'] = mode
         
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     
-    # A single loop now handles both single and multi-part entries.
     for i, chunk in enumerate(chunks):
-        # Create a copy to avoid modifying the base dictionary in the loop
         entry_data = base_entry_data.copy()
-        
-        # Add the data specific to this chunk
         entry_data['text'] = chunk.decode('utf-8')
         entry_data['timestamp'] = timestamp
         entry_data['part'] = i + 1
-        
-        # Add the new entry to the story sub-collection
         story_ref.collection('story').add(entry_data)
         
-    # Update the last_played timestamp on the parent campaign document once.
     story_ref.update({'last_played': timestamp})
 
 @log_exceptions
