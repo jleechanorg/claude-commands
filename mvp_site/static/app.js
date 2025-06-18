@@ -9,9 +9,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingOverlay = document.getElementById('loading-overlay');
     let currentCampaignId = null;
 
-    // --- RESTORED HELPER FUNCTION ---
     // Helper function for scrolling
     const scrollToBottom = (element) => { 
+        console.log(`Scrolling element: ${element.id}, current scrollHeight: ${element.scrollHeight}, clientHeight: ${element.clientHeight}`);
         element.scrollTop = element.scrollHeight; 
     };
 
@@ -48,12 +48,12 @@ document.addEventListener('DOMContentLoaded', () => {
         let label = '';
         if (actor === 'gemini') {
             label = 'Story';
-        } else {
+        } else { // actor is 'user'
             label = mode === 'character' ? 'Main Character' : (mode === 'god' ? 'God' : 'You');
         }
         entryEl.innerHTML = `<strong>${label}:</strong> ${text}`;
         storyContainer.appendChild(entryEl);
-        scrollToBottom(storyContainer); // Also good to scroll when appending new content
+        scrollToBottom(storyContainer); // Scroll on new content
     };
 
     // --- Data Fetching and Rendering ---
@@ -86,10 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const storyContainer = document.getElementById('story-content');
             storyContainer.innerHTML = '';
             data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode));
-            // Call the restored helper function
-            scrollToBottom(storyContainer);
+            
             showView('game');
-            // Show both buttons
+            // Show the Share and Download buttons
             document.getElementById('shareStoryBtn').style.display = 'block';
             document.getElementById('downloadStoryBtn').style.display = 'block';
         } catch (error) {
@@ -143,15 +142,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!userInput || !currentCampaignId) return;
             const mode = document.querySelector('input[name="interactionMode"]:checked').value;
             const localSpinner = document.getElementById('loading-spinner');
+            const timerInfo = document.getElementById('timer-info');
             localSpinner.style.display = 'block';
             userInputEl.disabled = true;
+            timerInfo.textContent = '';
             appendToStory('user', userInput, mode);
             userInputEl.value = '';
             try {
-                const { data } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
+                const { data, duration } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
                     method: 'POST', body: JSON.stringify({ input: userInput, mode }),
                 });
                 appendToStory('gemini', data.response);
+                timerInfo.textContent = `Response time: ${duration}s`;
             } catch (error) {
                 console.error("Interaction failed:", error);
                 appendToStory('system', 'Sorry, an error occurred. Please try again.');
@@ -159,17 +161,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 localSpinner.style.display = 'none';
                 userInputEl.disabled = false;
                 userInputEl.focus();
-                document.getElementById('timer-info').textContent = '';
             }
         });
     }
-
+    
     document.getElementById('go-to-new-campaign').onclick = () => { history.pushState({}, '', '/new-campaign'); handleRouteChange(); };
     document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };
     window.addEventListener('popstate', handleRouteChange);
     firebase.auth().onAuthStateChanged(user => handleRouteChange());
 });
-
 
 // --- Share & Download Functionality ---
 
