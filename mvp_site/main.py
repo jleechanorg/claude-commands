@@ -37,14 +37,24 @@ def create_app():
     @app.route('/api/campaigns', methods=['GET'])
     @check_token
     def get_campaigns(user_id):
-        return jsonify(firestore_service.get_campaigns_for_user(user_id))
+        # --- RESTORED TRY-EXCEPT BLOCK ---
+        try:
+            return jsonify(firestore_service.get_campaigns_for_user(user_id))
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
+        # --- END RESTORED BLOCK ---
 
     @app.route('/api/campaigns/<campaign_id>', methods=['GET'])
     @check_token
     def get_campaign(user_id, campaign_id):
-        campaign, story = firestore_service.get_campaign_by_id(user_id, campaign_id)
-        if not campaign: return jsonify({'error': 'Campaign not found'}), 404
-        return jsonify({'campaign': campaign, 'story': story})
+        # --- RESTORED TRY-EXCEPT BLOCK ---
+        try:
+            campaign, story = firestore_service.get_campaign_by_id(user_id, campaign_id)
+            if not campaign: return jsonify({'error': 'Campaign not found'}), 404
+            return jsonify({'campaign': campaign, 'story': story})
+        except Exception as e:
+            return jsonify({'success': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
+        # --- END RESTORED BLOCK ---
 
     @app.route('/api/campaigns', methods=['POST'])
     @check_token
@@ -56,7 +66,6 @@ def create_app():
         campaign_id = firestore_service.create_campaign(user_id, title, prompt, opening_story, selected_prompts)
         return jsonify({'success': True, 'campaign_id': campaign_id}), 201
         
-    # --- NEWLY ADDED ENDPOINT ---
     @app.route('/api/campaigns/<campaign_id>', methods=['PATCH'])
     @check_token
     def update_campaign(user_id, campaign_id):
@@ -122,10 +131,7 @@ def create_app():
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_frontend(path):
-        folder = app.static_folder
-        if not os.path.exists(os.path.join(folder, path)):
-            return send_from_directory(folder, 'index.html')
-        return send_from_directory(folder, path)
+        return send_from_directory(app.static_folder, 'index.html')
 
     return app
 
