@@ -93,6 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => scrollToBottom(storyContainer), 100); // 100ms delay
             
             showView('game');
+            
+            // --- NEWLY ADDED LINE ---
+            document.getElementById('shareStoryBtn').style.display = 'block';
+            
         } catch (error) {
             console.error('Failed to resume campaign:', error);
             history.pushState({}, '', '/');
@@ -181,3 +185,62 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('popstate', handleRouteChange);
     firebase.auth().onAuthStateChanged(user => handleRouteChange());
 });
+
+// --- NEWLY ADDED CODE BLOCK ---
+// --- Share Story Functionality ---
+function getFormattedStoryText() {
+    const storyContent = document.getElementById('story-content');
+    if (!storyContent) return '';
+    const paragraphs = storyContent.querySelectorAll('p');
+    return Array.from(paragraphs).map(p => p.innerText.trim()).join('\\n\\n');
+}
+
+function downloadStoryAsText() {
+    const storyText = getFormattedStoryText();
+    const campaignTitle = (document.getElementById('game-title').innerText || 'my-story').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const filename = `${campaignTitle}.txt`;
+    if (!storyText) {
+        alert('The story is empty. Nothing to download.');
+        return;
+    }
+    const blob = new Blob([storyText], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+async function handleShareStory() {
+    const storyText = getFormattedStoryText();
+    const storyTitle = document.getElementById('game-title').innerText || "My WorldArchitect.AI Story";
+    if (!storyText) {
+        alert('The story is empty. Nothing to share.');
+        return;
+    }
+    if (navigator.share) {
+        try {
+            await navigator.share({ title: storyTitle, text: storyText });
+        } catch (error) {
+            console.error('Error sharing story:', error);
+        }
+    } else {
+        downloadStoryAsText();
+    }
+}
+
+function addShareButtonListener() {
+    const shareButton = document.getElementById('shareStoryBtn');
+    if (shareButton) {
+        shareButton.addEventListener('click', handleShareStory);
+    }
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', addShareButtonListener);
+} else {
+    addShareButtonListener();
+}
+// --- END OF NEWLY ADDED CODE BLOCK ---
