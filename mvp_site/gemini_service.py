@@ -78,10 +78,11 @@ def get_client():
         logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
-def _call_gemini_api(prompt_contents, current_prompt_text, system_instruction_text=None):
+def _call_gemini_api(prompt_contents, current_prompt_text_for_logging=None, system_instruction_text=None):
     """Calls the Gemini API with a given prompt and returns the response."""
     client = get_client()
-    logging.info(f"--- Calling Gemini API with current prompt: {str(current_prompt_text)[:1000]}... ---")
+    if current_prompt_text_for_logging:
+        logging.info(f"--- Calling Gemini API with current prompt: {str(current_prompt_text)[:1000]}... ---")
     logging.info(f"--- Calling Gemini API with full prompt: {str(prompt_contents)[:1000]}... ---")
     
     generation_config_params = {
