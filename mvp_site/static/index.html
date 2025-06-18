@@ -29,7 +29,7 @@
         <div id="new-campaign-view">
             <h2 class="text-center">Start a New Campaign</h2>
             <form id="new-campaign-form" class="mt-3">
-                <div class="mb-3"><label for="campaign-title" class="form-label">Campaign Title</label><input type="text" class="form-control" id="campaign-title" value="My Fun Adventure" required></div>
+                <div class="mb-3"><label for="campaign-title" class="form-label">Campaign Title</label><input type="text" class="form-control" id="campaign-title" value="My Epic Adventure" required></div>
                 <div class="mb-3"><label for="campaign-prompt" class="form-label">Describe your world...</label><textarea class="form-control" id="campaign-prompt" rows="3">A brave knight in a land of dragons.</textarea></div>
                 
                 <div class="mb-3">
@@ -73,9 +73,12 @@
                 </div>
             </form>
             
-            <div class="text-center mt-3">
-                <button id="shareStoryBtn" class="btn btn-info" style="display: none;">Share or Download Story</button>
+            <!-- MODIFIED CODE BLOCK: Replaced single button with two -->
+            <div class="text-center mt-3 d-grid gap-2 d-sm-flex justify-content-sm-center">
+                <button id="shareStoryBtn" class="btn btn-info" style="display: none;">Share Story</button>
+                <button id="downloadStoryBtn" class="btn btn-secondary" style="display: none;">Download Story</button>
             </div>
+            <!-- END OF MODIFIED CODE BLOCK -->
             
             <div id="loading-spinner" class="text-center mt-3" style="display: none;">
                 <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
@@ -83,7 +86,7 @@
         </div>
     </div>
 
-    <!-- NEWLY ADDED CODE BLOCK: Download Options Modal -->
+    <!-- Download Options Modal (No changes here) -->
     <div class="modal fade" id="downloadOptionsModal" tabindex="-1" aria-labelledby="downloadModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -105,7 +108,6 @@
             </div>
         </div>
     </div>
-    <!-- END OF NEWLY ADDED CODE BLOCK -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
