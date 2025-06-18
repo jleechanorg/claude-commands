@@ -78,10 +78,12 @@ def get_client():
         logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
-def _call_gemini_api(prompt_contents, system_instruction_text=None):
+def _call_gemini_api(prompt_contents, current_prompt_text_for_logging=None, system_instruction_text=None):
     """Calls the Gemini API with a given prompt and returns the response."""
     client = get_client()
-    logging.info(f"--- Calling Gemini API with prompt: {str(prompt_contents)[:300]}... ---")
+    if current_prompt_text_for_logging:
+        logging.info(f"--- Calling Gemini API with current prompt: {str(current_prompt_text_for_logging)[:1000]}... ---")
+    logging.info(f"--- Calling Gemini API with full prompt: {str(prompt_contents)[:1000]}... ---")
     
     generation_config_params = {
         "max_output_tokens": MAX_TOKENS,
@@ -157,11 +159,9 @@ def get_initial_story(prompt, selected_prompts=None):
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
     
-    full_prompt = f"{prompt}\n\n(Please keep the response to about {TARGET_WORD_COUNT} words.)"
+    contents = [types.Content(role="user", parts=[types.Part(text=prompt)])]
     
-    contents = [types.Content(role="user", parts=[types.Part(text=full_prompt)])]
-    
-    response = _call_gemini_api(contents, system_instruction_text=system_instruction_final)
+    response = _call_gemini_api(contents, current_prompt_text_for_logging=prompt, system_instruction_text=system_instruction_final)
     return _get_text_from_response(response)
 
 @log_exceptions
@@ -216,7 +216,7 @@ def continue_story(user_input, mode, story_context, selected_prompts=None):
 
     full_prompt = f"CONTEXT:\n{context_string}\n\nYOUR TURN:\n{current_prompt_text}"
     
-    response = _call_gemini_api([full_prompt], system_instruction_text=system_instruction_final) 
+    response = _call_gemini_api([full_prompt], current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
     return _get_text_from_response(response)
 
 # --- Main block for rapid, direct testing ---
