@@ -30,7 +30,8 @@ def _load_instruction_file(instruction_type):
     global _loaded_instructions_cache
     if instruction_type not in _loaded_instructions_cache:
         file_name = ""
-        header_title = ""
+        # The header_title is now mainly for internal logging or if we decide to re-add headers within content later
+        header_title = "" 
         if instruction_type == "narrative":
             file_name = "narrative_system_instruction.md"
             header_title = "NARRATIVE INSTRUCTIONS"
@@ -56,8 +57,7 @@ def _load_instruction_file(instruction_type):
         except Exception as e:
             logging.error(f"Error loading system instruction file {file_path}: {e}")
         
-        # Store with header for direct use in prompt
-        # We only add headers here if we intend to prepend, for system_instruction, it's the raw content
+        # Store raw content, without headers, as per system_instruction parameter requirement
         _loaded_instructions_cache[instruction_type] = content 
         
     return _loaded_instructions_cache.get(instruction_type, "")
@@ -81,14 +81,15 @@ def _call_gemini_api(prompt_contents, system_instruction_text=None):
     client = get_client()
     logging.info(f"--- Calling Gemini API with prompt: {str(prompt_contents)[:300]}... ---")
     
-    # NEW: Conditionally add system_instruction to GenerateContentConfig
     generation_config_params = {
         "max_output_tokens": MAX_TOKENS,
         "temperature": TEMPERATURE,
         "safety_settings": SAFETY_SETTINGS
     }
+    # NEW: Conditionally add system_instruction to GenerateContentConfig
     if system_instruction_text:
-        generation_config_params["system_instruction"] = types.Part(text=system_instruction_text) # Correctly wrap for system_instruction
+        # Wrap system_instruction_text in types.Part for GenerateContentConfig
+        generation_config_params["system_instruction"] = types.Part(text=system_instruction_text)
 
     response = client.models.generate_content(
         model=MODEL_NAME,
@@ -114,21 +115,24 @@ def _get_text_from_response(response):
 def get_initial_story(prompt, selected_prompts=None):
     """Generates the initial story opening, using system_instruction parameter."""
     if selected_prompts is None:
-        selected_prompts = []
+        selected_prompts = [] 
         logging.warning("No specific system prompts selected for initial story. Using none.")
 
     system_instruction_parts = []
     # Load raw content for each selected prompt type, without headers here
-    for p_type in ['narrative', 'mechanics', 'calibration']: # Consistent order
+    for p_type in ['narrative', 'mechanics', 'calibration']: 
         if p_type in selected_prompts:
             content = _load_instruction_file(p_type)
             if content:
+                # Add headers for human readability if combining, though system_instruction takes raw text
+                # For `system_instruction` param, we typically send raw text.
+                # The headers were for when we prepended to user prompt.
+                # If these headers are desired by model, they should be *within* the .md files.
+                # For now, pass raw content from files.
                 system_instruction_parts.append(content)
 
-    # Combine all selected instructions into one string for the system_instruction parameter
     system_instruction_final = "\n\n".join(system_instruction_parts)
     
-    # User prompt itself (without system_prefix)
     full_prompt = f"{prompt}\n\n(Please keep the response to about {TARGET_WORD_COUNT} words.)"
     
     contents = [types.Content(role="user", parts=[types.Part(text=full_prompt)])]
@@ -138,13 +142,26 @@ def get_initial_story(prompt, selected_prompts=None):
     return _get_text_from_response(response)
 
 @log_exceptions
-def continue_story(user_input, mode, story_context):
-    """Generates the next part of the story by concatenating the chat history."""
+def continue_story(user_input, mode, story_context, selected_prompts=None):
+    """Generates the next part of the story, passing selected system instructions."""
     
-    # Take only the most recent turns from the full story context.
+    # NEW: Load system instructions for continue_story calls
+    if selected_prompts is None:
+        selected_prompts = [] 
+        logging.warning("No specific system prompts selected for continue_story. Using none.")
+
+    system_instruction_parts = []
+    for p_type in ['narrative', 'mechanics', 'calibration']: 
+        if p_type in selected_prompts:
+            content = _load_instruction_file(p_type)
+            if content:
+                system_instruction_parts.append(content)
+
+    system_instruction_final = "\n\n".join(system_instruction_parts)
+
     recent_context = story_context[-HISTORY_TURN_LIMIT:]
     
-    # Build a single context string from the history
+    # Build a single context string from the history (User's preferred method)
     history_parts = []
     for entry in recent_context:
         actor_label = "Story" if entry.get('actor') == 'gemini' else "You"
@@ -152,7 +169,7 @@ def continue_story(user_input, mode, story_context):
     
     context_string = "\n\n".join(history_parts)
 
-    # Create the final prompt for the current user turn
+    # Create the final prompt for the current user turn (User's preferred method)
     if mode == 'character':
         prompt_template = "Acting as the main character {user_input}. Continue the story in about {word_count} words."
     else: # god mode
@@ -160,12 +177,10 @@ def continue_story(user_input, mode, story_context):
 
     current_prompt_text = prompt_template.format(user_input=user_input, word_count=TARGET_WORD_COUNT)
 
-    # Combine the context and the current prompt into one large string.
     full_prompt = f"CONTEXT:\n{context_string}\n\nYOUR TURN:\n{current_prompt_text}"
     
-    # Call the API helper with the single, concatenated prompt string.
-    # Note: continue_story does NOT use system_instruction as it's set in the initial call
-    response = _call_gemini_api([full_prompt]) 
+    # Pass contents and system_instruction_final to _call_gemini_api
+    response = _call_gemini_api([full_prompt], system_instruction_text=system_instruction_final) 
     return _get_text_from_response(response)
 
 # --- Main block for rapid, direct testing ---
@@ -202,7 +217,8 @@ if __name__ == "__main__":
     print("\\n--- Turn 2: continue_story ---")
     turn_2_prompt = "A lone ship, tossed by the raging sea, sees a faint, flickering light from the abandoned tower."
     print(f"Using prompt: '{turn_2_prompt}'")
-    turn_2_response = continue_story(turn_2_prompt, 'god', history)
+    # MODIFIED: Pass selected_prompts in test harness too
+    turn_2_response = continue_story(turn_2_prompt, 'god', history, selected_prompts=test_selected_prompts)
     print("\\n--- LIVE RESPONSE 2 ---")
     print(turn_2_response)
     print("--- END OF RESPONSE 2 ---\\n")
@@ -215,7 +231,8 @@ if __name__ == "__main__":
     print("\\n--- Turn 3: continue_story ---")
     turn_3_prompt = "The ship's captain, a grizzled old sailor named Silas, decides to steer towards the light, ignoring the warnings of his crew."
     print(f"Using prompt: '{turn_3_prompt}'")
-    turn_3_response = continue_story(turn_3_prompt, 'god', history)
+    # MODIFIED: Pass selected_prompts in test harness too
+    turn_3_response = continue_story(turn_3_prompt, 'god', history, selected_prompts=test_selected_prompts)
     print("\\n--- LIVE RESPONSE 3 ---")
     print(turn_3_response)
     print("--- END OF RESPONSE 3 ---\\n")

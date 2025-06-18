@@ -117,19 +117,31 @@ class TestGeminiService(unittest.TestCase):
 
 
     @patch('gemini_service.get_client')
-    def test_continue_story_character_mode(self, mock_get_client):
+    @patch('gemini_service._load_instruction_file') # Patch for continue_story
+    def test_continue_story_character_mode(self, mock_load_instruction_file, mock_get_client):
         """
         Tests the continue_story function in 'character' mode.
-        Reverted to expecting concatenated history string.
+        Reverted to expecting concatenated history string, now passes system_instruction.
         """
+        # Configure the mock for _load_instruction_file for continue_story
+        def side_effect_for_loader(instruction_type):
+            if instruction_type == "narrative":
+                return MOCK_NARRATIVE_CONTENT
+            elif instruction_type == "mechanics":
+                return MOCK_MECHANICS_CONTENT
+            return "" # Return empty string for other types or unmocked calls
+
+        mock_load_instruction_file.side_effect = side_effect_for_loader
+
         mock_client = MagicMock()
         mock_client.models.generate_content.return_value.text = "The story continues..."
         mock_get_client.return_value = mock_client
 
         user_input = "I inspect the strange orb."
         story_context = [{'actor': 'gemini', 'text': 'You see a strange orb on a pedestal.'}]
+        selected_prompts = ['narrative', 'mechanics'] # Example selected prompts for continue_story
         
-        result = gemini_service.continue_story(user_input, "character", story_context)
+        result = gemini_service.continue_story(user_input, "character", story_context, selected_prompts)
 
         self.assertEqual(result, "The story continues...")
         mock_client.models.generate_content.assert_called_once()
@@ -144,25 +156,38 @@ class TestGeminiService(unittest.TestCase):
         self.assertIn("CONTEXT:\n", full_prompt_sent)
         self.assertIn("YOUR TURN:\n", full_prompt_sent)
         
-        # Verify NO system_instruction parameter is passed for continue_story
+        # Verify system_instruction parameter is passed and contains combined content
         self.assertIn('config', call_args.kwargs)
-        self.assertNotIn('system_instruction', call_args.kwargs['config'])
+        self.assertIn('system_instruction', call_args.kwargs['config'])
+        
+        expected_system_instruction = f"{MOCK_NARRATIVE_CONTENT}\n\n{MOCK_MECHANICS_CONTENT}"
+        self.assertEqual(call_args.kwargs['config']['system_instruction'].text, expected_system_instruction)
 
 
     @patch('gemini_service.get_client')
-    def test_continue_story_god_mode(self, mock_get_client):
+    @patch('gemini_service._load_instruction_file') # Patch for continue_story
+    def test_continue_story_god_mode(self, mock_load_instruction_file, mock_get_client):
         """
         Tests the continue_story function in 'god' mode.
-        Reverted to expecting concatenated history string.
+        Reverted to expecting concatenated history string, now passes system_instruction.
         """
+        # Configure the mock for _load_instruction_file for continue_story
+        def side_effect_for_loader(instruction_type):
+            if instruction_type == "narrative":
+                return MOCK_NARRATIVE_CONTENT
+            return ""
+
+        mock_load_instruction_file.side_effect = side_effect_for_loader
+
         mock_client = MagicMock()
         mock_client.models.generate_content.return_value.text = "An earthquake shakes the room."
         mock_get_client.return_value = mock_client
 
         user_input = "A dragon suddenly appears."
         story_context = [{'actor': 'gemini', 'text': 'The room is quiet.'}]
+        selected_prompts = ['narrative'] # Example selected prompts for continue_story
         
-        result = gemini_service.continue_story(user_input, "god", story_context)
+        result = gemini_service.continue_story(user_input, "god", story_context, selected_prompts)
         self.assertEqual(result, "An earthquake shakes the room.")
         mock_client.models.generate_content.assert_called_once()
         
@@ -176,10 +201,12 @@ class TestGeminiService(unittest.TestCase):
         self.assertIn("CONTEXT:\n", full_prompt_sent)
         self.assertIn("YOUR TURN:\n", full_prompt_sent)
 
-        # Verify NO system_instruction parameter is passed for continue_story
+        # Verify system_instruction parameter is passed and contains combined content
         self.assertIn('config', call_args.kwargs)
-        self.assertNotIn('system_instruction', call_args.kwargs['config'])
-
+        self.assertIn('system_instruction', call_args.kwargs['config'])
+        
+        expected_system_instruction = MOCK_NARRATIVE_CONTENT
+        self.assertEqual(call_args.kwargs['config']['system_instruction'].text, expected_system_instruction)
 
 if __name__ == '__main__':
     unittest.main()

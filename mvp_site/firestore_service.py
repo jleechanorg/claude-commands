@@ -65,7 +65,7 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None):
     campaign_doc_ref.update({'last_played': datetime.datetime.now(datetime.timezone.utc)})
 
 @log_exceptions
-def create_campaign(user_id, title, initial_prompt, opening_story):
+def create_campaign(user_id, title, initial_prompt, opening_story, selected_prompts=None):
     """Creates a new campaign document in Firestore."""
     db = get_db()
     campaign_ref = db.collection('users').document(user_id).collection('campaigns').document()
@@ -74,7 +74,8 @@ def create_campaign(user_id, title, initial_prompt, opening_story):
         'title': title,
         'initial_prompt': initial_prompt,
         'created_at': datetime.datetime.now(datetime.timezone.utc),
-        'last_played': datetime.datetime.now(datetime.timezone.utc)
+        'last_played': datetime.datetime.now(datetime.timezone.utc),
+        'selected_prompts': selected_prompts if selected_prompts is not None else [] # Store selected prompts
     }
     campaign_ref.set(campaign_data)
     add_story_entry(user_id, campaign_ref.id, 'gemini', opening_story)
