@@ -10,6 +10,7 @@ def get_db():
 
 @log_exceptions
 def get_campaigns_for_user(user_id):
+    """Retrieves all campaigns for a given user, ordered by most recently played."""
     db = get_db()
     campaigns_ref = db.collection('users').document(user_id).collection('campaigns')
     campaigns_query = campaigns_ref.order_by('last_played', direction=firestore.Query.DESCENDING)
@@ -26,6 +27,10 @@ def get_campaigns_for_user(user_id):
 
 @log_exceptions
 def get_campaign_by_id(user_id, campaign_id):
+    """
+    Retrieves a single campaign and its full story using a robust, single query
+    and in-memory sort to handle all data types.
+    """
     db = get_db()
     campaign_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
     
@@ -33,12 +38,20 @@ def get_campaign_by_id(user_id, campaign_id):
     if not campaign_doc.exists:
         return None, None
 
+    # --- SIMPLIFIED FETCH LOGIC ---
+    # 1. Fetch ALL documents, ordered only by the field that always exists: timestamp.
     story_ref = campaign_ref.collection('story').order_by('timestamp')
     story_docs = story_ref.stream()
 
+    # 2. Convert to a list of dictionaries
     all_story_entries = [doc.to_dict() for doc in story_docs]
+
+    # 3. Sort the list in Python, which is more powerful than a Firestore query.
+    # We sort by timestamp first, and then by the 'part' number.
+    # If 'part' is missing (for old docs), we treat it as 1.
     all_story_entries.sort(key=lambda x: (x['timestamp'], x.get('part', 1)))
 
+    # 4. Convert timestamps to ISO format for JSON serialization AFTER sorting.
     for entry in all_story_entries:
         entry['timestamp'] = entry['timestamp'].isoformat()
 
@@ -49,30 +62,23 @@ def get_campaign_by_id(user_id, campaign_id):
 def add_story_entry(user_id, campaign_id, actor, text, mode=None):
     db = get_db()
     story_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
-    
     text_bytes = text.encode('utf-8')
     chunks = [text_bytes[i:i + MAX_TEXT_BYTES] for i in range(0, len(text_bytes), MAX_TEXT_BYTES)]
-    
     base_entry_data = {'actor': actor}
-    if mode:
-        base_entry_data['mode'] = mode
-        
+    if mode: base_entry_data['mode'] = mode
     timestamp = datetime.datetime.now(datetime.timezone.utc)
-    
     for i, chunk in enumerate(chunks):
         entry_data = base_entry_data.copy()
         entry_data['text'] = chunk.decode('utf-8')
         entry_data['timestamp'] = timestamp
         entry_data['part'] = i + 1
         story_ref.collection('story').add(entry_data)
-        
     story_ref.update({'last_played': timestamp})
 
 @log_exceptions
 def create_campaign(user_id, title, initial_prompt, opening_story, selected_prompts=None):
     db = get_db()
     campaign_ref = db.collection('users').document(user_id).collection('campaigns').document()
-    
     campaign_data = {
         'title': title,
         'initial_prompt': initial_prompt,
