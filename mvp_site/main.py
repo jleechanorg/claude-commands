@@ -1,10 +1,11 @@
 import os
 from functools import wraps
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 import firebase_admin
 from firebase_admin import auth
 import traceback
+import document_generator # NEW IMPORT
 
 def create_app():
     app = Flask(__name__, static_folder='static', static_url_path='')
@@ -20,7 +21,7 @@ def create_app():
         @wraps(f)
         def wrap(*args, **kwargs):
             # --- THIS IS THE NEW BYPASS LOGIC ---
-            if app.config['TESTING'] and request.headers.get('X-Test-Bypass-Auth') == 'true':
+            if app.config.get('TESTING') and request.headers.get('X-Test-Bypass-Auth') == 'true':
                 kwargs['user_id'] = request.headers.get('X-Test-User-ID', 'test-user') # Use a provided test user ID
                 return f(*args, **kwargs)
             # --- END OF NEW LOGIC ---
@@ -62,10 +63,8 @@ def create_app():
             prompt, title = data.get('prompt'), data.get('title')
             selected_prompts = data.get('selected_prompts', []) 
             
-            # Pass selected_prompts to gemini_service for initial story
             opening_story = gemini_service.get_initial_story(prompt, selected_prompts=selected_prompts)
             
-            # MODIFIED: Save selected_prompts in Firestore for persistence
             campaign_id = firestore_service.create_campaign(user_id, title, prompt, opening_story, selected_prompts)
             
             return jsonify({'success': True, 'campaign_id': campaign_id}), 201
@@ -79,22 +78,62 @@ def create_app():
             data = request.get_json()
             user_input, mode = data.get('input'), data.get('mode', 'character')
             
-            # MODIFIED: Retrieve campaign to get selected_prompts
             campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
             if not campaign:
                 return jsonify({'error': 'Campaign not found'}), 404
             
-            selected_prompts = campaign.get('selected_prompts', []) # Retrieve selected prompts
+            selected_prompts = campaign.get('selected_prompts', [])
             
             firestore_service.add_story_entry(user_id, campaign_id, 'user', user_input, mode)
             
-            # MODIFIED: Pass selected_prompts to continue_story
             gemini_response = gemini_service.continue_story(user_input, mode, story_context, selected_prompts)
             
             firestore_service.add_story_entry(user_id, campaign_id, 'gemini', gemini_response)
             return jsonify({'success': True, 'response': gemini_response})
         except Exception as e:
             return jsonify({'success': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
+
+    # --- NEWLY ADDED CODE BLOCK ---
+    @app.route('/api/campaigns/<campaign_id>/export', methods=['GET'])
+    @check_token
+    def export_campaign(user_id, campaign_id):
+        file_format = request.args.get('format', 'txt').lower()
+        campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
+        if not campaign:
+            return jsonify({'error': 'Campaign not found'}), 404
+
+        campaign_title = campaign.get('title', 'My Story')
+        story_text = document_generator.get_story_text_from_context(story_context)
+        
+        file_path = None
+        mimetype = 'text/plain'
+        
+        try:
+            if file_format == 'pdf':
+                file_path = document_generator.generate_pdf(story_text, campaign_title)
+                mimetype = 'application/pdf'
+            elif file_format == 'docx':
+                file_path = document_generator.generate_docx(story_text, campaign_title)
+                mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            else: # Default to .txt
+                file_path = f"{campaign_title.replace(' ', '_')}.txt"
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(story_text)
+                mimetype = 'text/plain'
+
+            if not file_path:
+                return jsonify({'error': 'Unsupported format'}), 400
+
+            return send_file(file_path, as_attachment=True, mimetype=mimetype)
+            
+        except Exception as e:
+            traceback.print_exc()
+            return jsonify({'error': 'Failed to generate file', 'details': str(e)}), 500
+        finally:
+            # Clean up the created file after sending it
+            if file_path and os.path.exists(file_path):
+                os.remove(file_path)
+    # --- END OF NEWLY ADDED CODE BLOCK ---
 
     # --- Frontend Serving ---
     @app.route('/', defaults={'path': ''})
