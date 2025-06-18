@@ -9,6 +9,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingOverlay = document.getElementById('loading-overlay');
     let currentCampaignId = null;
 
+    // --- RESTORED HELPER FUNCTION ---
+    // Helper function for scrolling
+    const scrollToBottom = (element) => { 
+        element.scrollTop = element.scrollHeight; 
+    };
+
     // --- Core UI & Navigation Logic ---
     const showSpinner = () => loadingOverlay.style.display = 'flex';
     const hideSpinner = () => loadingOverlay.style.display = 'none';
@@ -47,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         entryEl.innerHTML = `<strong>${label}:</strong> ${text}`;
         storyContainer.appendChild(entryEl);
+        scrollToBottom(storyContainer); // Also good to scroll when appending new content
     };
 
     // --- Data Fetching and Rendering ---
@@ -79,9 +86,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const storyContainer = document.getElementById('story-content');
             storyContainer.innerHTML = '';
             data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode));
-            storyContainer.scrollTop = storyContainer.scrollHeight;
+            // Call the restored helper function
+            scrollToBottom(storyContainer);
             showView('game');
-            // Show both buttons now
+            // Show both buttons
             document.getElementById('shareStoryBtn').style.display = 'block';
             document.getElementById('downloadStoryBtn').style.display = 'block';
         } catch (error) {
@@ -174,7 +182,7 @@ function getFormattedStoryText() {
 
 async function downloadFile(format) {
     if (!currentCampaignId) return;
-    showSpinner();
+    document.getElementById('loading-overlay').style.display = 'flex';
     try {
         const user = firebase.auth().currentUser;
         if (!user) throw new Error('User not authenticated');
@@ -210,7 +218,7 @@ async function downloadFile(format) {
         console.error("Download failed:", error);
         alert("Could not download the story.");
     } finally {
-        hideSpinner();
+        document.getElementById('loading-overlay').style.display = 'none';
         const modalElement = document.getElementById('downloadOptionsModal');
         const modal = bootstrap.Modal.getInstance(modalElement);
         if (modal) modal.hide();
