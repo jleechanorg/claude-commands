@@ -103,14 +103,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // --- Event Listeners ---
-    // RE-ADDED: New Campaign Form Submission Listener
+    // MODIFIED: New Campaign Form Submission Listener to read checkboxes
     document.getElementById('new-campaign-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         showSpinner();
         const prompt = document.getElementById('campaign-prompt').value;
         const title = document.getElementById('campaign-title').value;
+        
+        // NEW: Read selected system prompts
+        const selectedPrompts = Array.from(document.querySelectorAll('input[name="selectedPrompts"]:checked'))
+                                     .map(checkbox => checkbox.value);
+
         try {
-            const { data } = await fetchApi('/api/campaigns', { method: 'POST', body: JSON.stringify({ prompt, title }) });
+            const { data } = await fetchApi('/api/campaigns', { 
+                method: 'POST', 
+                body: JSON.stringify({ prompt, title, selected_prompts: selectedPrompts }) 
+            });
             history.pushState({ campaignId: data.campaign_id }, '', `/game/${data.campaign_id}`);
             handleRouteChange();
         } catch (error) {
