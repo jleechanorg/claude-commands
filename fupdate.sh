@@ -2,30 +2,32 @@
 set -e
 
 # --- Preparation ---
+# Find the repository root for git operations
 REPO_ROOT=$(git rev-parse --show-toplevel)
-cd "$REPO_ROOT"
+# IMPORTANT: Store the directory where the script was initially called
+INITIAL_DIR=$(pwd)
 
-# --- Argument Parsing for fupdate ---
+# --- Argument Parsing & Context Awareness ---
 COMMIT_MSG=""
-DEPLOY_ARGS=() # Array to hold arguments for deploy.sh
+# Capture all arguments to pass them through later
+ALL_ARGS=("$@")
 
-# Loop through all arguments to separate commit message from deploy arguments
+# Find the commit message within the arguments
 for arg in "$@"; do
-    # If the argument is a directory or a known environment, it's for deploy.sh
-    if [ -d "$arg" ] || [[ "$arg" == "stable" ]] || [[ "$arg" == "dev" ]]; then
-        DEPLOY_ARGS+=("$arg")
-    else
-        # Otherwise, assume it's part of the commit message
+    # A simple assumption: if it's not a known environment name, it's a commit message.
+    # This is not perfect but works for your use case.
+    if [[ "$arg" != "stable" ]] && [[ "$arg" != "dev" ]]; then
         COMMIT_MSG="$arg"
     fi
 done
 
-# --- Git Push Step ---
+# --- Git Push Step (Run from Repo Root) ---
+cd "$REPO_ROOT"
 echo "--- Starting GitHub Push Step ---"
 
-# Use a default commit message if none was found
+# Use a default commit message if none was provided
 if [ -z "$COMMIT_MSG" ]; then
-    COMMIT_MSG="commit at this time $(date '+%Y-%m-%d %H:%M:%S %Z')"
+    COMMIT_MSG="commit from $(basename "$INITIAL_DIR") at $(date '+%Y-%m-%d %H:%M:%S %Z')"
 fi
 
 echo "Staging all changes..."
@@ -37,12 +39,16 @@ git push
 echo "Push complete."
 
 
-# --- GCP Deploy Step ---
+# --- GCP Deploy Step (Run from the original directory) ---
 echo ""
 echo "--- Starting GCP Deploy Step ---"
 
-# Pass only the filtered deployment arguments to the deploy.sh script
-# The "${DEPLOY_ARGS[@]}" syntax correctly handles spaces and quotes in arguments
-./deploy.sh "${DEPLOY_ARGS[@]}"
+# Go back to the directory where the user ran the command
+cd "$INITIAL_DIR"
+
+# Call deploy.sh. It will now correctly auto-detect the Dockerfile
+# because it is being run from the correct directory.
+# We also pass the original arguments in case they are needed (e.g., for environment).
+"$REPO_ROOT/deploy.sh" "${ALL_ARGS[@]}"
 
 echo "Full update finished."
