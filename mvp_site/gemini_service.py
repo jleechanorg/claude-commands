@@ -161,7 +161,7 @@ def get_initial_story(prompt, selected_prompts=None):
     
     contents = [types.Content(role="user", parts=[types.Part(text=prompt)])]
     
-    response = _call_gemini_api(contents, prompt, system_instruction_text=system_instruction_final)
+    response = _call_gemini_api(contents, current_prompt_text_for_logging=prompt, system_instruction_text=system_instruction_final)
     return _get_text_from_response(response)
 
 @log_exceptions
@@ -216,7 +216,7 @@ def continue_story(user_input, mode, story_context, selected_prompts=None):
 
     full_prompt = f"CONTEXT:\n{context_string}\n\nYOUR TURN:\n{current_prompt_text}"
     
-    response = _call_gemini_api([full_prompt], current_prompt_text, system_instruction_text=system_instruction_final) 
+    response = _call_gemini_api([full_prompt], current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
     return _get_text_from_response(response)
 
 # --- Main block for rapid, direct testing ---
