@@ -1,8 +1,9 @@
 import datetime
 from firebase_admin import firestore
-from decorators import log_exceptions # Import the decorator
+from decorators import log_exceptions
 
-# No need for a separate logger instance here anymore, the decorator handles it.
+# Define a safe maximum size for a text field in Firestore, just under the 1 MiB limit.
+MAX_TEXT_BYTES = 1000000
 
 def get_db():
     """Returns the Firestore client."""
@@ -35,7 +36,7 @@ def get_campaign_by_id(user_id, campaign_id):
     if not campaign_doc.exists:
         return None, None
 
-    story_ref = campaign_ref.collection('story').order_by('timestamp', direction=firestore.Query.ASCENDING)
+    story_ref = campaign_ref.collection('story').order_by('timestamp').order_by('part')
     story_docs = story_ref.stream()
     
     story = []
@@ -48,21 +49,40 @@ def get_campaign_by_id(user_id, campaign_id):
 
 @log_exceptions
 def add_story_entry(user_id, campaign_id, actor, text, mode=None):
-    """Adds a new entry to a campaign's story and updates the last_played timestamp."""
+    """
+    Adds a new entry to a campaign's story. If the text is too large,
+    it splits it into multiple documents (chunks). Refactored for DRYness.
+    """
     db = get_db()
-    campaign_doc_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
-    story_ref = campaign_doc_ref.collection('story')
+    story_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
     
-    entry_data = {
-        'actor': actor,
-        'text': text,
-        'timestamp': datetime.datetime.now(datetime.timezone.utc)
-    }
+    text_bytes = text.encode('utf-8')
+    
+    # Prepare chunks. If text is small, this will be a list with one item.
+    chunks = [text_bytes[i:i + MAX_TEXT_BYTES] for i in range(0, len(text_bytes), MAX_TEXT_BYTES)]
+    
+    # Create the base data dictionary that is common to all parts.
+    base_entry_data = {'actor': actor}
     if mode:
-        entry_data['mode'] = mode
+        base_entry_data['mode'] = mode
         
-    story_ref.add(entry_data)
-    campaign_doc_ref.update({'last_played': datetime.datetime.now(datetime.timezone.utc)})
+    timestamp = datetime.datetime.now(datetime.timezone.utc)
+    
+    # A single loop now handles both single and multi-part entries.
+    for i, chunk in enumerate(chunks):
+        # Create a copy to avoid modifying the base dictionary in the loop
+        entry_data = base_entry_data.copy()
+        
+        # Add the data specific to this chunk
+        entry_data['text'] = chunk.decode('utf-8')
+        entry_data['timestamp'] = timestamp
+        entry_data['part'] = i + 1
+        
+        # Add the new entry to the story sub-collection
+        story_ref.collection('story').add(entry_data)
+        
+    # Update the last_played timestamp on the parent campaign document once.
+    story_ref.update({'last_played': timestamp})
 
 @log_exceptions
 def create_campaign(user_id, title, initial_prompt, opening_story, selected_prompts=None):
@@ -75,7 +95,7 @@ def create_campaign(user_id, title, initial_prompt, opening_story, selected_prom
         'initial_prompt': initial_prompt,
         'created_at': datetime.datetime.now(datetime.timezone.utc),
         'last_played': datetime.datetime.now(datetime.timezone.utc),
-        'selected_prompts': selected_prompts if selected_prompts is not None else [] # Store selected prompts
+        'selected_prompts': selected_prompts if selected_prompts is not None else []
     }
     campaign_ref.set(campaign_data)
     add_story_entry(user_id, campaign_ref.id, 'gemini', opening_story)
