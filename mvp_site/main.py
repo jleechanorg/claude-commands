@@ -60,7 +60,11 @@ def create_app():
         try:
             data = request.get_json()
             prompt, title = data.get('prompt'), data.get('title')
-            opening_story = gemini_service.get_initial_story(prompt)
+            # NEW: Get selected_prompts from the request, default to empty list
+            selected_prompts = data.get('selected_prompts', []) 
+            
+            # Pass selected_prompts to gemini_service
+            opening_story = gemini_service.get_initial_story(prompt, selected_prompts=selected_prompts)
             campaign_id = firestore_service.create_campaign(user_id, title, prompt, opening_story)
             return jsonify({'success': True, 'campaign_id': campaign_id}), 201
         except Exception as e:
