@@ -78,10 +78,26 @@ def get_client():
         logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
+# Inside gemini_service.py, replace your existing _call_gemini_api function with this:
+
 def _call_gemini_api(prompt_contents, system_instruction_text=None):
     """Calls the Gemini API with a given prompt and returns the response."""
     client = get_client()
-    logging.info(f"--- Calling Gemini API with prompt: {str(prompt_contents)[:300]}... ---")
+
+    # Extract the latest prompt explicitly, handling potential missing data
+    latest_prompt_text = "N/A (Prompt contents empty or malformed)"
+    if prompt_contents and isinstance(prompt_contents, list) and len(prompt_contents) > 0:
+        last_content = prompt_contents[-1]
+        # Check if last_content has 'parts' and it's not empty, and the first part has 'text'
+        if hasattr(last_content, 'parts') and last_content.parts and len(last_content.parts) > 0 and hasattr(last_content.parts[0], 'text'):
+            latest_prompt_text = last_content.parts[0].text
+    
+    # Log the latest prompt explicitly, first
+    logging.info(f"--- Latest Prompt: {latest_prompt_text[:300]}{'...' if len(latest_prompt_text) > 300 else ''} ---")
+    
+    # Log the full prompt contents (truncated)
+    full_prompt_str = str(prompt_contents)
+    logging.info(f"--- Full Prompt Contents: {full_prompt_str[:500]}{'...' if len(full_prompt_str) > 500 else ''} ---")
     
     generation_config_params = {
         "max_output_tokens": MAX_TOKENS,
