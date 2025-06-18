@@ -66,15 +66,15 @@ class TestGeminiService(unittest.TestCase):
         self.assertIn("(Please keep the response to about", call_args.kwargs['contents'][0].parts[0].text)
         
         # Verify system_instruction parameter is used and contains combined content
-        self.assertIn('config', call_args.kwargs)
-        self.assertIn('system_instruction', call_args.kwargs['config'])
+        self.assertIn('config', call_args.kwargs) 
+        self.assertTrue(hasattr(call_args.kwargs['config'], 'system_instruction')) # Check if attribute exists
         
         # Construct expected combined system instruction for assertion
         expected_system_instruction = f"{MOCK_NARRATIVE_CONTENT}\n\n{MOCK_CALIBRATION_CONTENT}"
-        self.assertEqual(call_args.kwargs['config']['system_instruction'].text, expected_system_instruction)
+        self.assertEqual(call_args.kwargs['config'].system_instruction.text, expected_system_instruction)
 
         # Verify unselected prompt content is NOT in system_instruction
-        self.assertNotIn(MOCK_MECHANICS_CONTENT, call_args.kwargs['config']['system_instruction'].text)
+        self.assertNotIn(MOCK_MECHANICS_CONTENT, call_args.kwargs['config'].system_instruction.text)
         
         # Crucially, verify that the system instruction is NOT in the user prompt content
         full_user_prompt = call_args.kwargs['contents'][0].parts[0].text
@@ -89,7 +89,7 @@ class TestGeminiService(unittest.TestCase):
     def test_get_initial_story_no_selected_prompts(self, mock_load_instruction_file, mock_get_client):
         """
         Tests get_initial_story when no specific prompts are selected (default behavior).
-        Ensures no system_instruction parameter is passed or it's empty.
+        Ensures system_instruction is None.
         """
         mock_client = MagicMock()
         mock_client.models.generate_content.return_value.text = "A simple story begins."
@@ -108,12 +108,11 @@ class TestGeminiService(unittest.TestCase):
         self.assertIn(test_prompt, call_args.kwargs['contents'][0].parts[0].text)
         self.assertIn("(Please keep the response to about", call_args.kwargs['contents'][0].parts[0].text)
         
-        # Verify no system_instruction parameter is present in config, or it's empty
-        self.assertIn('config', call_args.kwargs)
-        self.assertNotIn('system_instruction', call_args.kwargs['config'])
-        # Or if it was added as None/empty part, check that
-        if 'system_instruction' in call_args.kwargs['config']:
-            self.assertEqual(call_args.kwargs['config']['system_instruction'].text, "")
+        # Corrected Assertion: Check if system_instruction is None
+        self.assertIn('config', call_args.kwargs) # Config should still exist
+        # When no system instruction is provided (empty string passed to _call_gemini_api),
+        # the system_instruction attribute on config is None by the SDK's design.
+        self.assertIsNone(call_args.kwargs['config'].system_instruction)
 
 
     @patch('gemini_service.get_client')
@@ -151,17 +150,17 @@ class TestGeminiService(unittest.TestCase):
         
         full_prompt_sent = call_args.kwargs['contents'][0] 
         
-        self.assertIn("You: " + user_input, full_prompt_sent) 
-        self.assertIn("Acting as the main character " + user_input, full_prompt_sent) 
+        self.assertIn("Acting as the main character " + user_input + ".", full_prompt_sent) 
+        self.assertIn("Story: You see a strange orb on a pedestal.", full_prompt_sent)
         self.assertIn("CONTEXT:\n", full_prompt_sent)
         self.assertIn("YOUR TURN:\n", full_prompt_sent)
         
         # Verify system_instruction parameter is passed and contains combined content
         self.assertIn('config', call_args.kwargs)
-        self.assertIn('system_instruction', call_args.kwargs['config'])
+        self.assertTrue(hasattr(call_args.kwargs['config'], 'system_instruction'))
         
         expected_system_instruction = f"{MOCK_NARRATIVE_CONTENT}\n\n{MOCK_MECHANICS_CONTENT}"
-        self.assertEqual(call_args.kwargs['config']['system_instruction'].text, expected_system_instruction)
+        self.assertEqual(call_args.kwargs['config'].system_instruction.text, expected_system_instruction)
 
 
     @patch('gemini_service.get_client')
@@ -203,10 +202,10 @@ class TestGeminiService(unittest.TestCase):
 
         # Verify system_instruction parameter is passed and contains combined content
         self.assertIn('config', call_args.kwargs)
-        self.assertIn('system_instruction', call_args.kwargs['config'])
+        self.assertTrue(hasattr(call_args.kwargs['config'], 'system_instruction'))
         
         expected_system_instruction = MOCK_NARRATIVE_CONTENT
-        self.assertEqual(call_args.kwargs['config']['system_instruction'].text, expected_system_instruction)
+        self.assertEqual(call_args.kwargs['config'].system_instruction.text, expected_system_instruction)
 
 if __name__ == '__main__':
     unittest.main()
