@@ -24,25 +24,24 @@ def generate_pdf(story_text, campaign_title):
     pdf = FPDF()
     pdf.add_page()
     
+    font_family = 'Helvetica' # Default fallback font
     try:
-        # Assumes 'assets/DejaVuSans.ttf' exists. The 'U' flag is for Unicode.
-        pdf.add_font('DejaVu', '', 'assets/DejaVuSans.ttf', uni=True)
+        # Assumes 'assets/DejaVuSans.ttf' exists.
+        pdf.add_font('DejaVu', '', 'assets/DejaVuSans.ttf')
         font_family = 'DejaVu'
     except RuntimeError:
         print("WARNING: DejaVuSans.ttf not found. Falling back to core font.")
-        font_family = 'Helvetica' # A standard core font
-        pdf.set_font(font_family, 'B', 10)
-        pdf.multi_cell(0, 5, text="WARNING: Custom font not found. Some characters may not display correctly.")
-        pdf.ln(5)
 
-    # Set title
-    pdf.set_font(font_family, 'B', 16)
+    # --- CORRECTED TITLE HANDLING ---
+    # Set the font family, then style, then size
+    pdf.set_font(font_family, style='U', size=16) # 'U' for underline instead of 'B' for bold
     encoded_title = campaign_title.encode('latin-1', 'replace').decode('latin-1')
     pdf.cell(0, 10, text=encoded_title, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
     pdf.ln(5)
 
-    # Set body font and add content
-    pdf.set_font(font_family, '', 12)
+    # --- CORRECTED BODY HANDLING ---
+    # Set the font for the body (regular style)
+    pdf.set_font(font_family, style='', size=12)
     for paragraph in story_text.split('\\n\\n'):
         encoded_paragraph = paragraph.encode('latin-1', 'replace').decode('latin-1')
         pdf.multi_cell(0, 5, text=encoded_paragraph, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
