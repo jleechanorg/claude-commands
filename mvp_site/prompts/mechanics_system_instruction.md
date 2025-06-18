@@ -72,7 +72,7 @@ To ensure absolute clarity and prevent context loss, a unique identifier will be
 
 ### B. Dice & Mechanics
 
--   All actions that are not guaranteed to succeed must trigger a D&D roll.
+-   All actions that are not guaranteed to succeed must trigger a d20roll.
 -   Rolls must be presented in the following explicit format, with all modifiers explained:
     -   **Example**:
         -   Roll Type: d20 + Ability Modifier + Proficiency Bonus (if proficient)
