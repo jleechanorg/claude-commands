@@ -5,3 +5,5 @@ google-cloud-firestore==2.16.0
 google-genai
 protobuf==4.25.3
 Flask-Cors==4.0.0
+fpdf2
+python-docx
