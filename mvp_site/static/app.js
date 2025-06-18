@@ -53,7 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         entryEl.innerHTML = `<strong>${label}:</strong> ${text}`;
         storyContainer.appendChild(entryEl);
-        scrollToBottom(storyContainer); // Scroll on new content
     };
 
     // --- Data Fetching and Rendering ---
@@ -85,7 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('game-title').innerText = data.campaign.title;
             const storyContainer = document.getElementById('story-content');
             storyContainer.innerHTML = '';
-            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode));
+            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode)); // Pass existing mode if available
+
+            // Add a slight delay to allow rendering before scrolling
+            console.log("Attempting to scroll after content append, with a slight delay.");
+            setTimeout(() => scrollToBottom(storyContainer), 100); // 100ms delay
             
             showView('game');
             // Show the Share and Download buttons
