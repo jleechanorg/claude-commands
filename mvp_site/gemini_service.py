@@ -181,9 +181,14 @@ def continue_story(user_input, mode, story_context, selected_prompts=None):
     if mode == 'character':
         prompt_template = "Acting as the main character {user_input}. Continue the story in about {word_count} words."
     else: # god mode
-        prompt_template = "{user_input}. Continue the story in about {word_count} words."
+        # User wants direct pass-through for god mode
+        prompt_template = "{user_input}"
 
-    current_prompt_text = prompt_template.format(user_input=user_input, word_count=TARGET_WORD_COUNT)
+     # Only format with word_count if it's character mode
+    if mode == 'character':
+        current_prompt_text = prompt_template.format(user_input=user_input, word_count=TARGET_WORD_COUNT)
+    else: # god mode
+        current_prompt_text = prompt_template.format(user_input=user_input)
 
     full_prompt = f"CONTEXT:\n{context_string}\n\nYOUR TURN:\n{current_prompt_text}"
     

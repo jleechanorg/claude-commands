@@ -63,3 +63,12 @@ body { background-color: #f8f9fa; }
 #interaction-form textarea {
     resize: vertical; /* Allow vertical resizing only */
 }
+
+/* --- NEWLY ADDED CODE BLOCK --- */
+/* Share Story Button Style */
+#shareStoryBtn {
+    max-width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+}
+/* --- END OF NEWLY ADDED CODE BLOCK --- */

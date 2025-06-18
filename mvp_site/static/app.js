@@ -19,11 +19,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const showSpinner = () => loadingOverlay.style.display = 'flex';
     const hideSpinner = () => loadingOverlay.style.display = 'none';
     
-    // MODIFIED: Use CSS classes to control view visibility
     const showView = (viewName) => {
-        Object.values(views).forEach(v => v.classList.remove('active-view')); // Remove from all views
+        Object.values(views).forEach(v => v.classList.remove('active-view'));
         if(views[viewName]) {
-            views[viewName].classList.add('active-view'); // Add to the target view
+            views[viewName].classList.add('active-view');
         }
     };
 
@@ -52,7 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else { // actor is 'user'
             label = mode === 'character' ? 'Main Character' : (mode === 'god' ? 'God' : 'You');
         }
-        
         entryEl.innerHTML = `<strong>${label}:</strong> ${text}`;
         storyContainer.appendChild(entryEl);
     };
@@ -86,13 +84,16 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('game-title').innerText = data.campaign.title;
             const storyContainer = document.getElementById('story-content');
             storyContainer.innerHTML = '';
-            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode)); // Pass existing mode if available
+            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode));
             
             // Add a slight delay to allow rendering before scrolling
             console.log("Attempting to scroll after content append, with a slight delay.");
             setTimeout(() => scrollToBottom(storyContainer), 100); // 100ms delay
             
             showView('game');
+            // Show the Share and Download buttons
+            document.getElementById('shareStoryBtn').style.display = 'block';
+            document.getElementById('downloadStoryBtn').style.display = 'block';
         } catch (error) {
             console.error('Failed to resume campaign:', error);
             history.pushState({}, '', '/');
@@ -103,17 +104,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     // --- Event Listeners ---
-    // MODIFIED: New Campaign Form Submission Listener to read checkboxes
     document.getElementById('new-campaign-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         showSpinner();
         const prompt = document.getElementById('campaign-prompt').value;
         const title = document.getElementById('campaign-title').value;
-        
-        // NEW: Read selected system prompts
-        const selectedPrompts = Array.from(document.querySelectorAll('input[name="selectedPrompts"]:checked'))
-                                     .map(checkbox => checkbox.value);
-
+        const selectedPrompts = Array.from(document.querySelectorAll('input[name="selectedPrompts"]:checked')).map(checkbox => checkbox.value);
         try {
             const { data } = await fetchApi('/api/campaigns', { 
                 method: 'POST', 
@@ -128,25 +124,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-
     const interactionForm = document.getElementById('interaction-form');
     const userInputEl = document.getElementById('user-input');
 
-    // NEW: Listen for Enter key press on the textarea
     if (userInputEl) {
         userInputEl.addEventListener('keydown', (e) => {
-            // Check for Enter key (keyCode 13 or key property 'Enter')
-            // And ensure Shift or Ctrl/Cmd are NOT pressed (to allow multiline input with Shift+Enter)
             if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
-                e.preventDefault(); // Prevent default newline behavior
+                e.preventDefault();
                 if (interactionForm) {
-                    interactionForm.dispatchEvent(new Event('submit', { cancelable: true })); // Trigger form submission
+                    interactionForm.dispatchEvent(new Event('submit', { cancelable: true }));
                 }
             }
         });
     }
 
-    if (interactionForm) { // Ensure the form exists before adding listener
+    if (interactionForm) {
         interactionForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             let userInput = userInputEl.value.trim();
@@ -157,8 +149,8 @@ document.addEventListener('DOMContentLoaded', () => {
             localSpinner.style.display = 'block';
             userInputEl.disabled = true;
             timerInfo.textContent = '';
-            appendToStory('user', userInput, mode); // Pass the selected mode here
-            userInputEl.value = ''; // Clear input after appending
+            appendToStory('user', userInput, mode);
+            userInputEl.value = '';
             try {
                 const { data, duration } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
                     method: 'POST', body: JSON.stringify({ input: userInput, mode }),
@@ -176,6 +168,90 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // --- Share & Download Functionality ---
+    function getFormattedStoryText() {
+        const storyContent = document.getElementById('story-content');
+        if (!storyContent) return '';
+        const paragraphs = storyContent.querySelectorAll('p');
+        return Array.from(paragraphs).map(p => p.innerText.trim()).join('\\n\\n');
+    }
+
+    async function downloadFile(format) {
+        if (!currentCampaignId) return;
+        showSpinner();
+        try {
+            const user = firebase.auth().currentUser;
+            if (!user) throw new Error('User not authenticated');
+            const token = await user.getIdToken();
+
+            const response = await fetch(`/api/campaigns/${currentCampaignId}/export?format=${format}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) throw new Error(`Download failed: ${response.statusText}`);
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            
+            const disposition = response.headers.get('content-disposition');
+            let filename = `story.${format}`;
+            if (disposition && disposition.indexOf('attachment') !== -1) {
+                const filenameRegex = /filename[^;=\\n]*=((['"]).*?\\2|[^;\\n]*)/;
+                const matches = filenameRegex.exec(disposition);
+                if (matches != null && matches[1]) {
+                    filename = matches[1].replace(/['"]/g, '');
+                }
+            }
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error("Download failed:", error);
+            alert("Could not download the story.");
+        } finally {
+            hideSpinner();
+            const modalElement = document.getElementById('downloadOptionsModal');
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) modal.hide();
+        }
+    }
+
+    async function handleShareStory() {
+        if (!navigator.share) {
+            alert("Share feature is only available on supported devices, like mobile phones.");
+            return;
+        }
+        const storyText = getFormattedStoryText();
+        const storyTitle = document.getElementById('game-title').innerText || "My WorldArchitect.AI Story";
+        if (!storyText) {
+            alert('The story is empty. Nothing to share.');
+            return;
+        }
+        try {
+            await navigator.share({ title: storyTitle, text: storyText });
+        } catch (error) {
+            console.error('Error sharing story:', error);
+        }
+    }
+
+    function handleDownloadClick() {
+        const downloadModal = new bootstrap.Modal(document.getElementById('downloadOptionsModal'));
+        downloadModal.show();
+    }
+
+    // Attach all action event listeners
+    document.getElementById('shareStoryBtn')?.addEventListener('click', handleShareStory);
+    document.getElementById('downloadStoryBtn')?.addEventListener('click', handleDownloadClick);
+    document.getElementById('download-txt-btn')?.addEventListener('click', () => downloadFile('txt'));
+    document.getElementById('download-pdf-btn')?.addEventListener('click', () => downloadFile('pdf'));
+    document.getElementById('download-docx-btn')?.addEventListener('click', () => downloadFile('docx'));
+    
+    // Main navigation listeners
     document.getElementById('go-to-new-campaign').onclick = () => { history.pushState({}, '', '/new-campaign'); handleRouteChange(); };
     document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };
     window.addEventListener('popstate', handleRouteChange);
