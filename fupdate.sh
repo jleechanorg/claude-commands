@@ -1,22 +1,27 @@
 #!/bin/bash
 set -e
 
-# This script is a wrapper that performs git operations and then calls the main deploy.sh script.
-
 # --- Preparation ---
-# Find the repository root, regardless of where the script is called from.
 REPO_ROOT=$(git rev-parse --show-toplevel)
-cd "$REPO_ROOT" # Ensure all operations run from the root
+cd "$REPO_ROOT"
 
-# --- Git Push Step ---
-echo "--- Starting GitHub Push Step ---"
+# --- Argument Parsing for fupdate ---
 COMMIT_MSG=""
-# Loop through all arguments to find the commit message and environment
+DEPLOY_ARGS=() # Array to hold arguments for deploy.sh
+
+# Loop through all arguments to separate commit message from deploy arguments
 for arg in "$@"; do
-    if [[ "$arg" != "stable" ]] && [[ "$arg" != "dev" ]] && [[ ! -d "$arg" ]]; then
+    # If the argument is a directory or a known environment, it's for deploy.sh
+    if [ -d "$arg" ] || [[ "$arg" == "stable" ]] || [[ "$arg" == "dev" ]]; then
+        DEPLOY_ARGS+=("$arg")
+    else
+        # Otherwise, assume it's part of the commit message
         COMMIT_MSG="$arg"
     fi
 done
+
+# --- Git Push Step ---
+echo "--- Starting GitHub Push Step ---"
 
 # Use a default commit message if none was found
 if [ -z "$COMMIT_MSG" ]; then
@@ -36,7 +41,8 @@ echo "Push complete."
 echo ""
 echo "--- Starting GCP Deploy Step ---"
 
-# Pass all original arguments directly to the deploy.sh script
-./deploy.sh "$@"
+# Pass only the filtered deployment arguments to the deploy.sh script
+# The "${DEPLOY_ARGS[@]}" syntax correctly handles spaces and quotes in arguments
+./deploy.sh "${DEPLOY_ARGS[@]}"
 
 echo "Full update finished."
