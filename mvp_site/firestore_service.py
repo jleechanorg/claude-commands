@@ -5,10 +5,12 @@ from decorators import log_exceptions
 MAX_TEXT_BYTES = 1000000
 
 def get_db():
+    """Returns the Firestore client."""
     return firestore.client()
 
 @log_exceptions
 def get_campaigns_for_user(user_id):
+    """Retrieves all campaigns for a given user, ordered by most recently played."""
     db = get_db()
     campaigns_ref = db.collection('users').document(user_id).collection('campaigns')
     campaigns_query = campaigns_ref.order_by('last_played', direction=firestore.Query.DESCENDING)
@@ -87,3 +89,12 @@ def create_campaign(user_id, title, initial_prompt, opening_story, selected_prom
     campaign_ref.set(campaign_data)
     add_story_entry(user_id, campaign_ref.id, 'gemini', opening_story)
     return campaign_ref.id
+
+# --- NEWLY ADDED FUNCTION ---
+@log_exceptions
+def update_campaign_title(user_id, campaign_id, new_title):
+    """Updates the title of a specific campaign."""
+    db = get_db()
+    campaign_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
+    campaign_ref.update({'title': new_title})
+    return True

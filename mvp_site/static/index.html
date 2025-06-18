@@ -29,7 +29,7 @@
         <div id="new-campaign-view">
             <h2 class="text-center">Start a New Campaign</h2>
             <form id="new-campaign-form" class="mt-3">
-                <div class="mb-3"><label for="campaign-title" class="form-label">Campaign Title</label><input type="text" class="form-control" id="campaign-title" value="My Legendary Adventure" required></div>
+                <div class="mb-3"><label for="campaign-title" class="form-label">Campaign Title</label><input type="text" class="form-control" id="campaign-title" value="My Epic Adventure" required></div>
                 <div class="mb-3"><label for="campaign-prompt" class="form-label">Describe your world...</label><textarea class="form-control" id="campaign-prompt" rows="3">A brave knight in a land of dragons.</textarea></div>
                 
                 <div class="mb-3">
@@ -73,12 +73,10 @@
                 </div>
             </form>
             
-            <!-- MODIFIED CODE BLOCK: Using flexbox for button alignment -->
             <div class="d-flex justify-content-center gap-2 mt-3">
                 <button id="shareStoryBtn" class="btn btn-info" style="display: none;">Share Story</button>
                 <button id="downloadStoryBtn" class="btn btn-secondary" style="display: none;">Download Story</button>
             </div>
-            <!-- END OF MODIFIED CODE BLOCK -->
             
             <div id="loading-spinner" class="text-center mt-3" style="display: none;">
                 <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
@@ -104,6 +102,30 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Campaign Modal -->
+    <div class="modal fade" id="editCampaignModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Edit Campaign Title</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-campaign-form">
+                        <div class="mb-3">
+                            <label for="edit-campaign-title" class="form-label">Campaign Title:</label>
+                            <input type="text" class="form-control" id="edit-campaign-title" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="save-campaign-title-btn">Save Changes</button>
                 </div>
             </div>
         </div>
