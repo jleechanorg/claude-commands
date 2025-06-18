@@ -1,5 +1,5 @@
 import os
-from fpdf import FPDF
+from fpdf import FPDF, XPos, YPos
 from docx import Document
 
 def get_story_text_from_context(story_context):
@@ -24,21 +24,30 @@ def generate_pdf(story_text, campaign_title):
     pdf = FPDF()
     pdf.add_page()
     
+    try:
+        # Assumes 'assets/DejaVuSans.ttf' exists. The 'U' flag is for Unicode.
+        pdf.add_font('DejaVu', '', 'assets/DejaVuSans.ttf', uni=True)
+        font_family = 'DejaVu'
+    except RuntimeError:
+        print("WARNING: DejaVuSans.ttf not found. Falling back to core font.")
+        font_family = 'Helvetica' # A standard core font
+        pdf.set_font(font_family, 'B', 10)
+        pdf.multi_cell(0, 5, text="WARNING: Custom font not found. Some characters may not display correctly.")
+        pdf.ln(5)
+
     # Set title
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, txt=campaign_title, ln=True, align='C')
-    pdf.ln(10) # Add a little space after the title
+    pdf.set_font(font_family, 'B', 16)
+    encoded_title = campaign_title.encode('latin-1', 'replace').decode('latin-1')
+    pdf.cell(0, 10, text=encoded_title, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align='C')
+    pdf.ln(5)
 
-    # Set font for the body and add content
-    pdf.set_font("Arial", size=12)
-    # The 'multi_cell' handles word wrapping automatically.
-    # We split by our double newline to preserve paragraph breaks.
+    # Set body font and add content
+    pdf.set_font(font_family, '', 12)
     for paragraph in story_text.split('\\n\\n'):
-        pdf.multi_cell(0, 5, txt=paragraph)
-        pdf.ln(5) # Add a space between paragraphs
+        encoded_paragraph = paragraph.encode('latin-1', 'replace').decode('latin-1')
+        pdf.multi_cell(0, 5, text=encoded_paragraph, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.ln(3)
 
-    # In a real cloud environment, you'd use a temporary directory like /tmp
-    # For now, we'll create it in the local directory.
     file_path = f"{campaign_title.replace(' ', '_')}.pdf"
     pdf.output(file_path)
     return file_path
@@ -46,15 +55,9 @@ def generate_pdf(story_text, campaign_title):
 def generate_docx(story_text, campaign_title):
     """Generates a DOCX file from story text and returns its path."""
     document = Document()
-    
-    # Add title
     document.add_heading(campaign_title, level=1)
-
-    # Add story content paragraph by paragraph
     for paragraph in story_text.split('\\n\\n'):
         document.add_paragraph(paragraph)
-        
-    # Define a temporary file path
     file_path = f"{campaign_title.replace(' ', '_')}.docx"
     document.save(file_path)
     return file_path
