@@ -54,6 +54,5 @@ If the user prefixes a command with DM Note:, you are to handle that single comm
 
 ### B. World Generation
 
--   The world will be Baldur's Gate-like in a D&D campaign setting.
 -   For a custom scenario, your initial world generation will include 5 noble houses, 20 factions, and 3 siblings.
 -   Major antagonist or rival factions are secret by default.
