@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 MODEL_NAME = 'gemini-2.5-flash-preview-05-20'
 MAX_TOKENS = 8192 
 TEMPERATURE = 0.9
-TARGET_WORD_COUNT = 200
+TARGET_WORD_COUNT = 400
 HISTORY_TURN_LIMIT = 50
 SAFETY_SETTINGS = [
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
@@ -30,8 +30,7 @@ def _load_instruction_file(instruction_type):
     global _loaded_instructions_cache
     if instruction_type not in _loaded_instructions_cache:
         file_name = ""
-        # The header_title is now mainly for internal logging or if we decide to re-add headers within content later
-        header_title = "" 
+        header_title = "" # Not used for system_instruction parameter, but kept for consistency/future
         if instruction_type == "narrative":
             file_name = "narrative_system_instruction.md"
             header_title = "NARRATIVE INSTRUCTIONS"
@@ -41,6 +40,9 @@ def _load_instruction_file(instruction_type):
         elif instruction_type == "calibration":
             file_name = "calibration_instruction.md"
             header_title = "CALIBRATION PROTOCOL INSTRUCTIONS"
+        elif instruction_type == "destiny_ruleset": # NEW TYPE
+            file_name = "destiny_ruleset.md"
+            header_title = "DEFAULT RULESET" # Optional header for internal understanding
         else:
             logging.warning(f"Unknown instruction type requested: {instruction_type}")
             _loaded_instructions_cache[instruction_type] = ""
@@ -57,7 +59,6 @@ def _load_instruction_file(instruction_type):
         except Exception as e:
             logging.error(f"Error loading system instruction file {file_path}: {e}")
         
-        # Store raw content, without headers, as per system_instruction parameter requirement
         _loaded_instructions_cache[instruction_type] = content 
         
     return _loaded_instructions_cache.get(instruction_type, "")
@@ -75,7 +76,6 @@ def get_client():
         logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
-# MODIFIED: _call_gemini_api now accepts system_instruction_text
 def _call_gemini_api(prompt_contents, system_instruction_text=None):
     """Calls the Gemini API with a given prompt and returns the response."""
     client = get_client()
@@ -86,9 +86,7 @@ def _call_gemini_api(prompt_contents, system_instruction_text=None):
         "temperature": TEMPERATURE,
         "safety_settings": SAFETY_SETTINGS
     }
-    # NEW: Conditionally add system_instruction to GenerateContentConfig
     if system_instruction_text:
-        # Wrap system_instruction_text in types.Part for GenerateContentConfig
         generation_config_params["system_instruction"] = types.Part(text=system_instruction_text)
 
     response = client.models.generate_content(
@@ -113,23 +111,25 @@ def _get_text_from_response(response):
 
 @log_exceptions
 def get_initial_story(prompt, selected_prompts=None):
-    """Generates the initial story opening, using system_instruction parameter."""
+    """Generates the initial story opening, using system_instruction parameter, including default ruleset."""
     if selected_prompts is None:
         selected_prompts = [] 
         logging.warning("No specific system prompts selected for initial story. Using none.")
 
     system_instruction_parts = []
-    # Load raw content for each selected prompt type, without headers here
+    # Consistent order for instructions
+    # Narrative, Mechanics, Calibration (from checkboxes)
     for p_type in ['narrative', 'mechanics', 'calibration']: 
         if p_type in selected_prompts:
             content = _load_instruction_file(p_type)
             if content:
-                # Add headers for human readability if combining, though system_instruction takes raw text
-                # For `system_instruction` param, we typically send raw text.
-                # The headers were for when we prepended to user prompt.
-                # If these headers are desired by model, they should be *within* the .md files.
-                # For now, pass raw content from files.
                 system_instruction_parts.append(content)
+    
+    # NEW: Always include the destiny_ruleset as a default system instruction
+    destiny_ruleset_content = _load_instruction_file('destiny_ruleset')
+    if destiny_ruleset_content:
+        system_instruction_parts.append(destiny_ruleset_content)
+
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
     
@@ -137,25 +137,33 @@ def get_initial_story(prompt, selected_prompts=None):
     
     contents = [types.Content(role="user", parts=[types.Part(text=full_prompt)])]
     
-    # Pass system_instruction_final to _call_gemini_api
     response = _call_gemini_api(contents, system_instruction_text=system_instruction_final)
     return _get_text_from_response(response)
 
 @log_exceptions
 def continue_story(user_input, mode, story_context, selected_prompts=None):
-    """Generates the next part of the story, passing selected system instructions."""
+    """Generates the next part of the story, passing selected system instructions (excluding calibration), including default ruleset."""
     
-    # NEW: Load system instructions for continue_story calls
     if selected_prompts is None:
         selected_prompts = [] 
         logging.warning("No specific system prompts selected for continue_story. Using none.")
 
     system_instruction_parts = []
-    for p_type in ['narrative', 'mechanics', 'calibration']: 
-        if p_type in selected_prompts:
-            content = _load_instruction_file(p_type)
-            if content:
-                system_instruction_parts.append(content)
+    # Filter out 'calibration' for continue_story calls
+    # NEW: Also ensure consistent order for continue_story
+    filtered_prompts = [p_type for p_type in selected_prompts if p_type in ['narrative', 'mechanics']]
+
+    # Load content for narrative and mechanics
+    for p_type in filtered_prompts: 
+        content = _load_instruction_file(p_type)
+        if content:
+            system_instruction_parts.append(content)
+    
+    # NEW: Always include the destiny_ruleset for continue_story too
+    destiny_ruleset_content = _load_instruction_file('destiny_ruleset')
+    if destiny_ruleset_content:
+        system_instruction_parts.append(destiny_ruleset_content)
+
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
 
@@ -179,7 +187,6 @@ def continue_story(user_input, mode, story_context, selected_prompts=None):
 
     full_prompt = f"CONTEXT:\n{context_string}\n\nYOUR TURN:\n{current_prompt_text}"
     
-    # Pass contents and system_instruction_final to _call_gemini_api
     response = _call_gemini_api([full_prompt], system_instruction_text=system_instruction_final) 
     return _get_text_from_response(response)
 
@@ -217,7 +224,6 @@ if __name__ == "__main__":
     print("\\n--- Turn 2: continue_story ---")
     turn_2_prompt = "A lone ship, tossed by the raging sea, sees a faint, flickering light from the abandoned tower."
     print(f"Using prompt: '{turn_2_prompt}'")
-    # MODIFIED: Pass selected_prompts in test harness too
     turn_2_response = continue_story(turn_2_prompt, 'god', history, selected_prompts=test_selected_prompts)
     print("\\n--- LIVE RESPONSE 2 ---")
     print(turn_2_response)
@@ -231,7 +237,6 @@ if __name__ == "__main__":
     print("\\n--- Turn 3: continue_story ---")
     turn_3_prompt = "The ship's captain, a grizzled old sailor named Silas, decides to steer towards the light, ignoring the warnings of his crew."
     print(f"Using prompt: '{turn_3_prompt}'")
-    # MODIFIED: Pass selected_prompts in test harness too
     turn_3_response = continue_story(turn_3_prompt, 'god', history, selected_prompts=test_selected_prompts)
     print("\\n--- LIVE RESPONSE 3 ---")
     print(turn_3_response)
