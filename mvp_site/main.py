@@ -8,7 +8,7 @@ import traceback
 import document_generator
 
 def create_app():
-    app = Flask(__name__, static_folder='static', static_url_path='')
+    app = Flask(__name__, static_folder='static')
     CORS(app, resources={r"/api/*": {"origins": "*"}})
 
     if not firebase_admin._apps:
