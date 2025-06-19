@@ -28,8 +28,8 @@ def get_campaigns_for_user(user_id):
     for campaign in campaigns_query.stream():
         campaign_data = campaign.to_dict()
         campaign_data['id'] = campaign.id
-        campaign_data['created_at'] = campaign_data['created_at'].isoformat() # Original line
-        campaign_data['last_played'] = campaign_data['last_played'].isoformat() # Original line
+        campaign_data['created_at'] = campaign_data['created_at'].isoformat()
+        campaign_data['last_played'] = campaign_data['last_played'].isoformat()
         campaign_list.append(campaign_data)
     
     return campaign_list
@@ -66,7 +66,7 @@ def get_campaign_by_id(user_id, campaign_id):
 
     # 4. Convert timestamps to ISO format for JSON serialization AFTER sorting.
     for entry in all_story_entries:
-        entry['timestamp'] = entry['timestamp'].isoformat() # Original line
+        entry['timestamp'] = entry['timestamp'].isoformat()
 
     return campaign_doc.to_dict(), all_story_entries
 
@@ -82,7 +82,7 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None):
         mode (str, optional): 
     """
     db = get_db()
-    story_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id) # Original line
+    story_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
     text_bytes = text.encode('utf-8')
     chunks = [text_bytes[i:i + MAX_TEXT_BYTES] for i in range(0, len(text_bytes), MAX_TEXT_BYTES)]
     base_entry_data = {'actor': actor}
@@ -93,8 +93,8 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None):
         entry_data['text'] = chunk.decode('utf-8')
         entry_data['timestamp'] = timestamp
         entry_data['part'] = i + 1
-        story_ref.collection('story').add(entry_data) # Original line
-    story_ref.update({'last_played': timestamp}) # Original line
+        story_ref.collection('story').add(entry_data)
+    story_ref.update({'last_played': timestamp})
 
 @log_exceptions
 def create_campaign(user_id, title, initial_prompt, opening_story, selected_prompts=None):
@@ -116,10 +116,10 @@ def create_campaign(user_id, title, initial_prompt, opening_story, selected_prom
         'initial_prompt': initial_prompt,
         'created_at': datetime.datetime.now(datetime.timezone.utc),
         'last_played': datetime.datetime.now(datetime.timezone.utc),
-        'selected_prompts': selected_prompts or [] # Original line
+        'selected_prompts': selected_prompts or []
     }
     campaign_ref.set(campaign_data)
-    add_story_entry(user_id, campaign_ref.id, 'gemini', opening_story) # Original line
+    add_story_entry(user_id, campaign_ref.id, 'gemini', opening_story)
     return campaign_ref.id
 
 # --- NEWLY ADDED FUNCTION --- 
@@ -137,4 +137,4 @@ def update_campaign_title(user_id, campaign_id, new_title):
     db = get_db()
     campaign_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
     campaign_ref.update({'title': new_title})
-    return True # Original line
+    return True
