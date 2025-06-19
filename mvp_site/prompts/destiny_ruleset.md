@@ -63,8 +63,7 @@
     * Trivial Abilities: Cost 0 EP.
     * Standard Abilities: Cost 5 EP.
     * Powerful Abilities: Cost 8 EP.
-* **4.4 Fortune & Fatigue System:**
-    * **Fortune Points:** A spendable resource (max 3). Spend 1 point after a roll to add +3, or before a critical roll to gain Advantage.
+* **4.4 Fatigue System:**
     * **Fatigue:** A stress condition (max 3 levels). Each level imposes a cumulative -1 penalty on ALL d20 rolls.
 
 **V. Core Combat System**
