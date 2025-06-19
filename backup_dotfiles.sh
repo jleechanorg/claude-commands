@@ -1,0 +1,76 @@
+#!/bin/bash
+
+# This script backs up specified dotfiles to a directory within this Git repository,
+# then commits and pushes those changes if any modifications or new files are detected
+# in the backup directory.
+
+# Ensure we are in the script's directory (which should be the repo root)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR" || { echo "Failed to cd to script directory $SCRIPT_DIR"; exit 1; }
+
+echo "Current working directory: $(pwd)"
+
+# Define the backup destination directory within this repo
+BACKUP_DIR="./dotfiles_backup" # Relative to the repo root
+
+# Create the backup directory if it doesn't exist
+mkdir -p "$BACKUP_DIR"
+
+# --- List of dotfiles to back up ---
+# Format: "Source Path in Home Dir" "Destination Filename in BACKUP_DIR"
+declare -A DOTFILES_TO_BACKUP=(
+    ["$HOME/.bashrc"]="bashrc_cloudworkstation.txt"
+    ["$HOME/.gitconfig"]="gitconfig_cloudworkstation.txt" # Example
+    # Add more files here if needed:
+    # ["$HOME/.vimrc"]="vimrc_cloudworkstation.txt"
+)
+# --- End of list ---
+
+echo "Starting dotfile backup process..."
+
+# Copy all specified dotfiles first
+for source_path in "${!DOTFILES_TO_BACKUP[@]}"; do
+    dest_filename="${DOTFILES_TO_BACKUP[$source_path]}"
+    dest_path="$BACKUP_DIR/$dest_filename"
+
+    if [ -f "$source_path" ]; then
+        echo "Copying $source_path to $dest_path"
+        cp "$source_path" "$dest_path"
+    else
+        echo "Warning: Source file $source_path not found. Skipping."
+    fi
+done
+
+# Now, check if the backup directory has any changes (modified, new, or deleted files)
+# that Git would commit.
+# Stage all changes within the BACKUP_DIR first to correctly detect untracked files as changes.
+git add "$BACKUP_DIR/"
+
+# Check if there are any staged changes specifically within BACKUP_DIR
+# `git diff --cached --quiet -- "$BACKUP_DIR/"` checks staged changes.
+# `git diff --quiet HEAD -- "$BACKUP_DIR/"` checks working tree vs HEAD (for already tracked files).
+# A simpler way after `git add` is to check `git status --porcelain "$BACKUP_DIR/"`.
+if [ -n "$(git status --porcelain "$BACKUP_DIR/")" ]; then
+    echo "Dotfile changes detected in $BACKUP_DIR. Committing and pushing..."
+    # The files in BACKUP_DIR are already staged due to the `git add` above.
+    # We might want to add the script itself if it changed, though that's usually a manual commit.
+    
+    git commit -m "Automated backup of dotfiles from Cloud Workstation: $(date +'%Y-%m-%d %H:%M:%S')"
+    
+    # Specify the remote and branch if necessary, default is usually 'origin main' or 'origin master'
+    git push 
+    
+    if [ $? -eq 0 ]; then
+        echo "Push successful."
+    else
+        echo "Error during git push."
+    fi
+else
+    echo "No changes detected in $BACKUP_DIR to back up. Nothing to commit or push."
+    # If there were no changes in BACKUP_DIR, we might want to unstage them if `git add` was broad
+    # However, since we did `git add "$BACKUP_DIR/"`, only things within it were staged.
+    # If you did `git add .` before this check, you'd need `git reset HEAD "$BACKUP_DIR/"` here.
+fi
+
+echo "Dotfile backup script finished."
+exit 0
