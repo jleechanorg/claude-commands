@@ -5,26 +5,20 @@ from decorators import log_exceptions
 MAX_TEXT_BYTES = 1000000
 
 def get_db():
-    """[Summary of what get_db does]
-
-    [More detailed explanation if needed]
-
+    """
     Returns:
-        [return_type]: Description of the return value.
+        google.cloud.firestore_v1.client.Client:
     """
     return firestore.client()
 
 @log_exceptions
 def get_campaigns_for_user(user_id):
-    """[Summary of what get_campaigns_for_user does]
-
-    [More detailed explanation if needed]
-
+    """
     Args:
-        user_id (str): Description of user_id.
+        user_id (str):
 
     Returns:
-        list: Description of the return value.
+        list: 
     """
     db = get_db()
     campaigns_ref = db.collection('users').document(user_id).collection('campaigns')
@@ -42,16 +36,13 @@ def get_campaigns_for_user(user_id):
 
 @log_exceptions
 def get_campaign_by_id(user_id, campaign_id):
-    """[Summary of what get_campaign_by_id does]
-
-    [More detailed explanation if needed]
-
+    """
     Args:
-        user_id (str): Description of user_id.
-        campaign_id (str): Description of campaign_id.
+        user_id (str): 
+        campaign_id (str): 
 
     Returns:
-        tuple: Description of the return value (e.g., (dict or None, list or None)).
+        tuple: 
     """
     db = get_db()
     campaign_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
@@ -82,16 +73,13 @@ def get_campaign_by_id(user_id, campaign_id):
 
 @log_exceptions
 def add_story_entry(user_id, campaign_id, actor, text, mode=None):
-    """[Summary of what add_story_entry does]
-
-    [More detailed explanation if needed]
-
+    """
     Args:
-        user_id (str): Description of user_id.
-        campaign_id (str): Description of campaign_id.
-        actor (str): Description of actor.
-        text (str): Description of text.
-        mode (str, optional): Description of mode. Defaults to None.
+        user_id (str): 
+        campaign_id (str): 
+        actor (str): 
+        text (str): 
+        mode (str, optional): 
     """
     db = get_db()
     story_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id) # Original line
@@ -110,19 +98,16 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None):
 
 @log_exceptions
 def create_campaign(user_id, title, initial_prompt, opening_story, selected_prompts=None):
-    """[Summary of what create_campaign does]
-
-    [More detailed explanation if needed]
-
+    """
     Args:
-        user_id (str): Description of user_id.
-        title (str): Description of title.
-        initial_prompt (str): Description of initial_prompt.
-        opening_story (str): Description of opening_story.
-        selected_prompts (list, optional): Description of selected_prompts. Defaults to None.
+        user_id (str): 
+        title (str): 
+        initial_prompt (str): 
+        opening_story (str): 
+        selected_prompts (list, optional): 
 
     Returns:
-        str: Description of the return value (e.g., ID of the new campaign).
+        str: 
     """
     db = get_db()
     campaign_ref = db.collection('users').document(user_id).collection('campaigns').document()
@@ -137,20 +122,17 @@ def create_campaign(user_id, title, initial_prompt, opening_story, selected_prom
     add_story_entry(user_id, campaign_ref.id, 'gemini', opening_story) # Original line
     return campaign_ref.id
 
-# --- NEWLY ADDED FUNCTION --- (This function was in the snapshot you provided as "NEWLY ADDED")
+# --- NEWLY ADDED FUNCTION --- 
 @log_exceptions
 def update_campaign_title(user_id, campaign_id, new_title):
-    """[Summary of what update_campaign_title does]
-
-    [More detailed explanation if needed]
-
+    """
     Args:
-        user_id (str): Description of user_id.
-        campaign_id (str): Description of campaign_id.
-        new_title (str): Description of new_title.
+        user_id (str): 
+        campaign_id (str): 
+        new_title (str): 
 
     Returns:
-        bool: Description of the return value.
+        bool: 
     """
     db = get_db()
     campaign_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)

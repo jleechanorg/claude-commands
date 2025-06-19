@@ -5,8 +5,6 @@ from docx import Document
 def get_story_text_from_context(story_context):
     """[Summary of what get_story_text_from_context does]
 
-    [More detailed explanation if needed]
-
     Args:
         story_context (list): Description of story_context. 
                               Example: [{'actor': str, 'text': str, 'mode': Optional[str]}]
@@ -31,8 +29,6 @@ def get_story_text_from_context(story_context):
 
 def generate_pdf(story_text, campaign_title):
     """[Summary of what generate_pdf does]
-
-    [More detailed explanation if needed]
 
     Args:
         story_text (str): Description of story_text.
@@ -73,8 +69,6 @@ def generate_pdf(story_text, campaign_title):
 
 def generate_docx(story_text, campaign_title):
     """[Summary of what generate_docx does]
-
-    [More detailed explanation if needed]
 
     Args:
         story_text (str): Description of story_text.
