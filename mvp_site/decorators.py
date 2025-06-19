@@ -3,15 +3,33 @@ import logging
 import traceback
 
 # Get a logger instance for this module
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__) # Assuming this was meant to be __name__ for module-level logger
 
 def log_exceptions(func):
-    """
-    A decorator that wraps a function in a try-except block
+    """A decorator that wraps a function in a try-except block
     and logs any exceptions with a full stack trace.
+
+    Args:
+        func (callable): The function to be decorated.
+
+    Returns:
+        callable: The wrapper function that includes exception logging.
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
+        """Wrapper function that executes the decorated function and logs exceptions.
+
+        Args:
+            *args: Variable length argument list for the decorated function.
+            **kwargs: Arbitrary keyword arguments for the decorated function.
+
+        Raises:
+            Exception: Re-raises any exception caught from the decorated function
+                       after logging it.
+
+        Returns:
+            Any: The result of the decorated function's execution.
+        """
         try:
             # Attempt to execute the decorated function
             return func(*args, **kwargs)
