@@ -5,27 +5,12 @@ from decorators import log_exceptions
 MAX_TEXT_BYTES = 1000000
 
 def get_db():
-    """[Summary of what get_db does]
-
-    [More detailed explanation if needed]
-
-    Returns:
-        google.cloud.firestore_v1.client.Client:
-    """
+    """Returns the Firestore client."""
     return firestore.client()
 
 @log_exceptions
 def get_campaigns_for_user(user_id):
-    """[Summary of what get_campaigns_for_user does]
-
-    [More detailed explanation if needed]
-
-    Args:
-        user_id (str):
-
-    Returns:
-        list: 
-    """
+    """Retrieves all campaigns for a given user, ordered by most recently played."""
     db = get_db()
     campaigns_ref = db.collection('users').document(user_id).collection('campaigns')
     campaigns_query = campaigns_ref.order_by('last_played', direction=firestore.Query.DESCENDING)
@@ -42,16 +27,9 @@ def get_campaigns_for_user(user_id):
 
 @log_exceptions
 def get_campaign_by_id(user_id, campaign_id):
-    """[Summary of what get_campaign_by_id does]
-
-    [More detailed explanation if needed]
-
-    Args:
-        user_id (str): 
-        campaign_id (str): 
-
-    Returns:
-        tuple: 
+    """
+    Retrieves a single campaign and its full story using a robust, single query
+    and in-memory sort to handle all data types.
     """
     db = get_db()
     campaign_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
@@ -82,17 +60,6 @@ def get_campaign_by_id(user_id, campaign_id):
 
 @log_exceptions
 def add_story_entry(user_id, campaign_id, actor, text, mode=None):
-    """[Summary of what add_story_entry does]
-
-    [More detailed explanation if needed]
-
-    Args:
-        user_id (str): 
-        campaign_id (str): 
-        actor (str): 
-        text (str): 
-        mode (str, optional): 
-    """
     db = get_db()
     story_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
     text_bytes = text.encode('utf-8')
@@ -110,20 +77,6 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None):
 
 @log_exceptions
 def create_campaign(user_id, title, initial_prompt, opening_story, selected_prompts=None):
-    """[Summary of what create_campaign does]
-
-    [More detailed explanation if needed]
-
-    Args:
-        user_id (str): 
-        title (str): 
-        initial_prompt (str): 
-        opening_story (str): 
-        selected_prompts (list, optional): 
-
-    Returns:
-        str: 
-    """
     db = get_db()
     campaign_ref = db.collection('users').document(user_id).collection('campaigns').document()
     campaign_data = {
@@ -137,21 +90,10 @@ def create_campaign(user_id, title, initial_prompt, opening_story, selected_prom
     add_story_entry(user_id, campaign_ref.id, 'gemini', opening_story)
     return campaign_ref.id
 
-# --- NEWLY ADDED FUNCTION --- 
+# --- NEWLY ADDED FUNCTION ---
 @log_exceptions
 def update_campaign_title(user_id, campaign_id, new_title):
-    """[Summary of what update_campaign_title does]
-
-    [More detailed explanation if needed]
-
-    Args:
-        user_id (str): 
-        campaign_id (str): 
-        new_title (str): 
-
-    Returns:
-        bool: 
-    """
+    """Updates the title of a specific campaign."""
     db = get_db()
     campaign_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
     campaign_ref.update({'title': new_title})
