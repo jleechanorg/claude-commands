@@ -118,3 +118,4 @@ fi
 alias wa='cd ~/projects/worldarchitect.ai'
 alias push="git commit -a -m \"a\" && git push"
 export GOOGLE_CLOUD_PROJECT="worldarchitecture-ai"
+alias deploy='~/projects/worldarchitect.ai/deploy.sh "$@"'
