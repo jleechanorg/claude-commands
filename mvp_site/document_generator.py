@@ -3,7 +3,17 @@ from fpdf import FPDF, XPos, YPos
 from docx import Document
 
 def get_story_text_from_context(story_context):
-    """Extracts and formats story text from the context array."""
+    """[Summary of what get_story_text_from_context does]
+
+    [More detailed explanation if needed]
+
+    Args:
+        story_context (list): Description of story_context. 
+                              Example: [{'actor': str, 'text': str, 'mode': Optional[str]}]
+
+    Returns:
+        str: Description of the return value.
+    """
     story_parts = []
     for entry in story_context:
         actor = entry.get('actor', 'Unknown')
@@ -20,7 +30,17 @@ def get_story_text_from_context(story_context):
     return "\\n\\n".join(story_parts)
 
 def generate_pdf(story_text, campaign_title):
-    """Generates a PDF file from story text and returns its path."""
+    """[Summary of what generate_pdf does]
+
+    [More detailed explanation if needed]
+
+    Args:
+        story_text (str): Description of story_text.
+        campaign_title (str): Description of campaign_title.
+
+    Returns:
+        str: Description of the return value (e.g., file path of the generated PDF).
+    """
     pdf = FPDF()
     pdf.add_page()
     
@@ -52,7 +72,17 @@ def generate_pdf(story_text, campaign_title):
     return file_path
 
 def generate_docx(story_text, campaign_title):
-    """Generates a DOCX file from story text and returns its path."""
+    """[Summary of what generate_docx does]
+
+    [More detailed explanation if needed]
+
+    Args:
+        story_text (str): Description of story_text.
+        campaign_title (str): Description of campaign_title.
+
+    Returns:
+        str: Description of the return value (e.g., file path of the generated DOCX).
+    """
     document = Document()
     document.add_heading(campaign_title, level=1)
     for paragraph in story_text.split('\\n\\n'):
