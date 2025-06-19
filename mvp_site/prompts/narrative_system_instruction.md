@@ -134,7 +134,7 @@ If user says GOD MODE or GOD Note: treat it the same as DM MODE, DM NOTE etc. GO
 -   Main character and secondary characters have complex backstories, ambitions, and special quests related to their goals and backstory. These are revealed as the story goes on naturally.
 -   Add random encounters at least once every few days
 -   Always state estimated/actual levels and ages beside every character's full name.
--   Use the format: Intelligence: 12 (Potential: 5, +0.0/yr) for character stats.
+-   Use the format: Intelligence: 12 (Potential: 5, +0.0/yr) for character stats
 
 ### 6.B. World & NPC Generation Protocol (For Player-Defined Custom Scenarios)
 
