@@ -87,6 +87,11 @@ def create_campaign(user_id, title, initial_prompt, opening_story, selected_prom
         'selected_prompts': selected_prompts or []
     }
     campaign_ref.set(campaign_data)
+
+    # Assuming 'god' mode for the very first conceptual prompt.
+    # You might want to make this mode configurable or infer it.
+    add_story_entry(user_id, campaign_ref.id, 'user', initial_prompt, mode='god')
+
     add_story_entry(user_id, campaign_ref.id, 'gemini', opening_story)
     return campaign_ref.id
 
