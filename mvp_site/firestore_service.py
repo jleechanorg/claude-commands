@@ -5,7 +5,10 @@ from decorators import log_exceptions
 MAX_TEXT_BYTES = 1000000
 
 def get_db():
-    """
+    """[Summary of what get_db does]
+
+    [More detailed explanation if needed]
+
     Returns:
         google.cloud.firestore_v1.client.Client:
     """
@@ -13,7 +16,10 @@ def get_db():
 
 @log_exceptions
 def get_campaigns_for_user(user_id):
-    """
+    """[Summary of what get_campaigns_for_user does]
+
+    [More detailed explanation if needed]
+
     Args:
         user_id (str):
 
@@ -36,7 +42,10 @@ def get_campaigns_for_user(user_id):
 
 @log_exceptions
 def get_campaign_by_id(user_id, campaign_id):
-    """
+    """[Summary of what get_campaign_by_id does]
+
+    [More detailed explanation if needed]
+
     Args:
         user_id (str): 
         campaign_id (str): 
@@ -73,7 +82,10 @@ def get_campaign_by_id(user_id, campaign_id):
 
 @log_exceptions
 def add_story_entry(user_id, campaign_id, actor, text, mode=None):
-    """
+    """[Summary of what add_story_entry does]
+
+    [More detailed explanation if needed]
+
     Args:
         user_id (str): 
         campaign_id (str): 
@@ -98,7 +110,10 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None):
 
 @log_exceptions
 def create_campaign(user_id, title, initial_prompt, opening_story, selected_prompts=None):
-    """
+    """[Summary of what create_campaign does]
+
+    [More detailed explanation if needed]
+
     Args:
         user_id (str): 
         title (str): 
@@ -125,7 +140,10 @@ def create_campaign(user_id, title, initial_prompt, opening_story, selected_prom
 # --- NEWLY ADDED FUNCTION --- 
 @log_exceptions
 def update_campaign_title(user_id, campaign_id, new_title):
-    """
+    """[Summary of what update_campaign_title does]
+
+    [More detailed explanation if needed]
+
     Args:
         user_id (str): 
         campaign_id (str): 
