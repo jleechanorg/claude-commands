@@ -7,3 +7,4 @@ protobuf==4.25.3
 Flask-Cors==4.0.0
 fpdf2
 python-docx
+google-cloud-secret-manager
