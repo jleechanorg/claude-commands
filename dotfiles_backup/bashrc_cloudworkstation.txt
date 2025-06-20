@@ -125,3 +125,22 @@ alias deploy='~/projects/worldarchitect.ai/deploy.sh "$@"'
 if [ -f ~/.gemini_api_key_secret ]; then
     source ~/.gemini_api_key_secret
 fi
+alias integrate='git checkout main && git pull && git branch -D dev && git checkout -b dev'
+
+vpython() {
+    PROJECT_ROOT_PATH="$HOME/projects/worldarchitect.ai"
+    VENV_ACTIVATE_SCRIPT="$PROJECT_ROOT_PATH/venv/bin/activate"
+    if [ ! -f "$VENV_ACTIVATE_SCRIPT" ]; then
+        echo "Error: Virtual environment activate script not found at $VENV_ACTIVATE_SCRIPT"
+        echo "Please create the virtual environment first: cd $PROJECT_ROOT_PATH && python3 -m venv venv"
+        return 1
+    fi
+    if [[ "$VIRTUAL_ENV" != "$PROJECT_ROOT_PATH/venv" ]]; then
+        echo "Activating virtual environment: $PROJECT_ROOT_PATH/venv"
+        source "$VENV_ACTIVATE_SCRIPT"
+    else
+        echo "Virtual environment already active."
+    fi
+    echo "Running python $*"
+    python "$@"
+}
