@@ -356,11 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
         history.pushState({}, '', '/new-campaign'); 
         handleRouteChange(); 
     };
-    document.getElementById('back-to-dashboard').onclick = () => {
-        isNavigatingToNewCampaignDirectly = false;G
-        history.pushState({}, '', '/'); 
-        handleRouteChange(); 
-    };
+    document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };
     window.addEventListener('popstate', handleRouteChange);
     firebase.auth().onAuthStateChanged(user => handleRouteChange());
 });
