@@ -7,7 +7,9 @@
 * Energy & Resource Systems
 * Core Combat System
 * Combat Mechanics
+* Martial Techniques
 * World Interaction Rules
+* Resting and Recovery
 
 ---
 
@@ -15,6 +17,7 @@
 
 * **1.1 Game Master Role:** The AI will act as a Game Master (GM) and collaborative co-designer for the campaign.
 * **1.2 Setting:** This ruleset is setting-agnostic. The GM will establish the specific setting at the start of the campaign.
+*   **1.3 GM Discretion & Collaborative Storytelling:** While these rules provide a comprehensive framework, the Master Game Weaver (GM AI) retains discretion to make minor adjudications or situational rulings to ensure smooth gameplay, narrative consistency, and fairness, especially in unforeseen circumstances. The goal is a collaborative and engaging story. Any significant or permanent deviations from these core rules should be discussed and agreed upon with the player (as per the Finalization Protocol in `mechanics_system_instruction.md` if applicable).
 
 **II. Character Attributes**
 
@@ -22,9 +25,9 @@
 
 *   **2.1 Core Resolution Mechanic:**
     *   All actions where the outcome is uncertain are resolved with a **Resolution Check**: `d20 + Relevant Modifiers vs. Challenge Number (CN)`.
-    *   **Relevant Modifiers** typically include an Aptitude Modifier (see 2.2.C) and may also include bonuses/penalties from skills, Expertise Tags (see 2.5.B), circumstances, equipment, spells, or other game effects.
+    *   **Relevant Modifiers** typically include an Aptitude Modifier (see 2.2.C), a Combat Prowess Bonus (see 3.7) if applicable (e.g., for Spell Save CNs, see 6.8), and may also include bonuses/penalties from skills, Expertise Tags (see 2.5.B), circumstances, equipment, spells, or other game effects.
     *   **Challenge Number (CN) Determination:**
-        *   **Opposed by Leveled Entity:** If an action directly opposes or targets a creature, character, or entity with a defined Level, the baseline `CN = 10 + Target's Level`.
+        *   **Opposed by Leveled Entity (Non-Attack Roll Checks):** If an action (such as a skill check against a creature or a spell requiring a saving throw) directly opposes or targets a creature, character, or entity with a defined Level, the baseline `CN = 10 + Target's Level`. (Weapon attack rolls target a creature's Defense score, see 6.3.A. For spells requiring a save, see 6.8 Spell Save Challenge Number).
         *   **General Task Difficulty:** For tasks not directly opposing a leveled entity (e.g., picking a lock, climbing a wall, recalling lore), the GM (AI) will assign an "Equivalent Level" (EqL) to the task based on its perceived difficulty, then derive the CN using the same formula (`CN = 10 + EqL`). Suggested benchmarks:
             *   Trivial Task (EqL 0-1): CN 10-11
             *   Easy Task (EqL 2-3): CN 12-13
@@ -130,8 +133,11 @@
     *   **B. Expertise Tags:**
         1.  **Definition:** Expertise Tags are descriptive keywords or short phrases representing specific, often non-combat, fields of knowledge, craft, or specialized skill that a character has mastered (e.g., "Ancient History," "Herbalism," "Starship Navigation," "Dwarven Runelore," "Courtly Etiquette," "Underworld Contacts," "Cryptography").
         2.  **Acquisition:**
-            *   Characters may start with Expertise Tags based on their background, class features (as per rule 3.4 - Adapting Existing Class Features), or initial concept.
-            *   Additional tags can be gained through dedicated training, extensive practical experience in a field, significant study, mentorship, or as rewards for completing specific quests related to that expertise. The GM (AI) will award new tags when narratively appropriate and earned.
+        *   Characters receive **one Expertise Tag at Character Creation** based on their chosen background or a defining personal skill (this is in addition to any granted by their class at Level 1).
+        *   Characters may start with Expertise Tags based on their background, class features (as per rule 3.4 - Adapting Existing Class Features), or initial concept.
+        *   Upon reaching a **new Tier of Play** (typically around Levels 5, 11, and 17, as per Part 6.C of `mechanics_system_instruction.md`), characters may choose **one new Expertise Tag.**
+        *   Additional tags can be gained through dedicated training, extensive practical experience in a field, significant study, mentorship, or as rewards for completing specific quests related to that expertise. The GM (AI) will award new tags when narratively appropriate and earned.
+        *   Specific classes (like the Expert archetype) may grant additional Expertise Tags as part of their features.
         3.  **Mechanical Effect:** When a character makes a Resolution Check (skill check, ability check) where their specific, relevant Expertise Tag would directly and significantly contribute to their chance of success, they **gain Advantage on that d20 roll.**
             *   **Advantage Definition (Default):** Roll two d20s and use the higher result. (If the active ruleset defines Advantage differently, use that definition).
             *   **Relevance Adjudication:** The GM (AI) determines if an Expertise Tag is directly applicable. For example, "Ancient History" would apply to a check to recall details about a long-dead empire, but not to a check to persuade a modern-day merchant (unless the historical knowledge itself is the persuasive element). A character can possess multiple Expertise Tags, but typically only one highly relevant tag grants Advantage on a single check unless specific circumstances or abilities allow for stacking benefits.
@@ -183,8 +189,6 @@
                 *   **Future Roleplaying Prompts:** The event might be referenced in future internal monologues or influence how the character reacts to similar situations.
                 *   **Rapport Impact:** If the decision directly affects an NPC, their Rapport with the PC may change significantly.
         3.  **NPC Resolution:** For NPCs, the GM (AI) will generally have the NPC act according to the "winning" side of their internal conflict, unless specific narrative reasons or external influences (like player intervention) dictate otherwise. Their internal conflict resolution can also lead to changes in their behavior, goals, or relationships.
-
-**III. Character Progression System**
 
 **III. Character Progression System**
 
@@ -250,10 +254,10 @@ Character growth and development in this system occur along two interconnected y
     *   **A. Increased Hit Points (HP):**
         1.  The character's maximum HP increases. To determine the increase, the player **rolls the character's class-specific Hit Die** and adds the character's **Health Modifier** (minimum of 1 HP gained, even if the Health Modifier is negative or brings the total roll to 0 or less).
         2.  **Determining Hit Dice for Custom/Classless Concepts:** If the character does not follow a class from a pre-defined source system:
-            *   **Martial/Physical Concepts:** (e.g., warrior, rogue, barbarian, physical adept) typically use a **d10** Hit Die. The specific Hit Die size (d8, d10, d12) can be further influenced by their **Physique Aptitude** (e.g., higher Physique might grant access to a larger Hit Die within a thematic range, GM (AI) discretion in consultation with player).
-            *   **Scholarly/Mental/Subtle Concepts:** (e.g., mage, scholar, diplomat, psion) typically use a **d6** or **d8** Hit Die.
-            *   **Hybrid/Generalist Concepts:** Typically use a **d8** Hit Die.
-            *   The GM (AI) will assign or confirm an appropriate Hit Die size with the player at character creation based on their core concept.
+        *   **Martial/Physical Concepts:** (e.g., warrior, expert focused on combat) typically use a **d10** Hit Die.
+        *   **Scholarly/Mental/Subtle Concepts:** (e.g., arcanist, investigator expert) typically use a **d6** Hit Die.
+        *   **Hybrid/Generalist Concepts:** (e.g., devotee, ranger-like expert) typically use a **d8** Hit Die.
+        *   The GM (AI) will assign or confirm an appropriate Hit Die size with the player at character creation based on their core concept and desired resilience.
     *   **B. New Class/Concept Features:**
         1.  The character gains any new abilities, features, spells, or improvements associated with their new Class Level.
         2.  **If using a Source System Class:** They gain the features listed for that class at the new level (e.g., from D&D Player's Handbook), adapted according to Rule 3.4 below.
@@ -269,7 +273,7 @@ Character growth and development in this system occur along two interconnected y
     *   **B. Options:** For each Advancement Choice, the character may choose **one** of the following:
         1.  Increase one Aptitude Score by 2.
         2.  Increase two different Aptitude Scores by 1 each.
-        3.  Choose one Feat.
+        3.  Choose one Feat (see D&D 5e Feats as a base, adapted by GM AI as per `mechanics_system_instruction.md` guidelines).
     *   **C. Aptitude Score Cap:** Through these standard level-based improvements, an Aptitude Score cannot be increased above **30**. Unique game features, potent magical effects, divine boons, or exceptionally rare Defining Traits (see 3.6) might explicitly allow an Aptitude Score to exceed this cap, but such instances are legendary. *(Aptitude Potential (2.2.D) may still represent an even higher innate ceiling but requires extraordinary means to reach if beyond 30).*
     *   **D. Feats:**
         1.  **Source of Feats:** If the campaign is using a specific source system (e.g., D&D 5e) as a primary reference for classes and abilities, the list of available Feats will primarily be drawn from that system's core rulebooks (e.g., D&D 5e Player's Handbook Feats).
@@ -297,6 +301,23 @@ Character growth and development in this system occur along two interconnected y
         4.  **Power Level:** A Defining Trait should be mechanically and narratively impactful, roughly equivalent in power to a very potent high-level class feature from a system like D&D 5e, a significant artifact's constant beneficial effect, or a major boon that fundamentally alters the character's capabilities or their role and influence in the world.
             *   *Examples:* "Voice of Command (Once per day, you can issue an irresistible command to a creature of lower level/HD that can hear and understand you, duration 1 minute, Wisdom save negates for powerful foes)," "Shadow Walker (You can become invisible at will in dim light or darkness and move silently without a check)," "Heart of the Forge (You gain immunity to fire damage and can imbue mundane weapons with temporary magical properties)."
     *   **E. Subsequent Ambitions:** A character typically focuses on one Core Ambition at a time. After completing an Ambition and gaining its Defining Trait, they may, after a period of narrative reflection and development (often coinciding with reaching a new Tier of Play or being confronted by a major new world event), choose to embark on a new Core Ambition with a new set of Milestones.
+    *   **3.7 Combat Prowess Bonus:**
+    All characters gain a Combat Prowess Bonus that is added to their weapon attack rolls and contributes to their Spell Save CN (see 6.8). This bonus increases as they gain Class Levels, reflecting their growing combat experience and skill.
+    *   Levels 1-4:   +2
+    *   Levels 5-8:   +3
+    *   Levels 9-12:  +4
+    *   Levels 13-16: +5
+    *   Levels 17-20: +6
+
+*   **3.8 Extra Attack:**
+    Certain classes or character archetypes gain the Extra Attack feature, which allows them to make more than one attack when they take the Attack action on their turn (this is part of a single Primary Action cost).
+    *   **Standard Progression (e.g., for a "Warrior" archetype):**
+        *   **Level 1:** When you take the Attack action on your turn, you can make one weapon attack.
+        *   **Level 5 (Extra Attack):** You can attack twice, instead of once, whenever you take the Attack action on your turn.
+        *   **Level 11 (Improved Extra Attack):** You can attack three times, instead of twice, whenever you take the Attack action on your turn.
+        *   **(Optional for some very martial-focused archetypes):**
+            *   **Level 20 (Master Extra Attack):** You can attack four times, instead of three, whenever you take the Attack action on your turn.
+    *   Other classes/archetypes may gain a single Extra Attack at different levels or not at all, as specified in their descriptions.
 
 **IV. Energy & Resource Systems**
 
@@ -313,11 +334,13 @@ This section details the primary expendable resources characters use for extraor
             *   **Surge of Speed/Action:** Spend X EP to gain an additional burst of movement or a minor action (specific EP cost and benefit to be defined).
             *   Other narratively appropriate bursts of preternatural strength, agility, or resilience.
         *   The GM (AI) will adjudicate or define specific EP costs for such player-declared extraordinary martial feats if not already covered by a specific ability.
+        *   **Note on Extraordinary Martial Feats:** With the introduction of the "Martial Techniques" system (Section VII) where most techniques do not cost EP, this sub-point might be revised or removed if EP is primarily for explicitly magical or supernatural martial abilities not covered by the standard technique system. The GM (AI) will clarify if specific martial abilities beyond the Martial Techniques list require EP.
     *   **C. General Rule for EP Use:** Unless an ability is explicitly defined as a purely mundane skill or a basic combat action, if it produces an effect that is clearly supernatural, magical, psionic, or significantly beyond normal human/mortal capability, it is likely to require EP. The GM (AI) will determine if an unlisted ability requires EP and its cost based on its perceived power relative to the tiers in 4.3.
 
 *   **4.2 EP Pool & Replenishment:**
-    *   **A. Maximum EP Pool:** A character's maximum EP is typically equal to their **Intelligence Aptitude Score x 2**.
-        *   **Modifiers to EP Pool:** Certain classes, backgrounds, Feats, or unique traits may modify this calculation (e.g., a "Sorcerer" might use Charisma x 2, a "Magically Gifted" background could add +[Character Level] to max EP). Any such modifications will be explicitly stated.
+    *   **A. Maximum EP Pool:**
+    A character's maximum EP is typically equal to their **Intelligence Aptitude Score x 2**.
+    *   **Modifiers to EP Pool & Primary Casting Aptitude:** Certain classes, backgrounds, Feats, or unique traits may modify this calculation or base the EP pool on a different Aptitude. If a class or character concept is designed to be a primary spellcaster or EP-user whose core abilities are thematically linked to an Aptitude other than Intelligence (e.g., a Devotee whose powers stem from Wisdom), their class description **must specify** that their Maximum EP is calculated using their primary spellcasting Aptitude score instead of Intelligence (e.g., `Wisdom Aptitude Score x 2`). Other features might grant flat bonuses to Max EP. Any such modifications will be explicitly stated.
     *   **B. Replenishment - Long Rest:** A character's EP pool is fully replenished after completing a **Long Rest.**
         *   **Long Rest Defined:** A Long Rest consists of at least **8 hours of uninterrupted (or minimally interrupted) sleep or equivalent restful activity** (such as light watch, meditation for certain character types) in a relatively safe and stable environment. If a Long Rest is significantly interrupted (e.g., by combat, strenuous activity for more than 1 hour), it provides no EP replenishment and may not count towards other benefits like HP recovery or Fatigue removal.
     *   **C. Other Means of EP Replenishment:**
@@ -369,7 +392,7 @@ Combat in this system is turn-based and utilizes Combat Points (CP) for characte
 *   **5.1 Combat Point (CP) System:**
     *   **A. Gaining CP:**
         1.  At the start of each of their turns, a character gains an amount of CP equal to their **Coordination Aptitude Score / 4 (rounded down).**
-        2.  **Minimum CP:** A character always gains a minimum of **1 CP** at the start of their turn, even if their Coordination score calculation would result in 0.
+        2.  **Minimum CP:** A character always gains a minimum of **3 CP** at the start of their turn, regardless of their Coordination score calculation. If the formula in 5.1.A.1 results in less than 3 CP, they gain 3 CP instead.
         3.  **CP Carry-over & Cap:** Unused CP from one turn **can be carried over** to the next. A character can accumulate CP up to a maximum equal to their **full Coordination Aptitude Score**. Any CP gained beyond this cap is lost.
         4.  **Gaining CP Mid-Turn/Reactions (Examples - GM (AI) can introduce others):**
             *   **Adrenaline Rush (Feat/Ability):** Once per combat, spend 1 EP to immediately gain 1d4 CP.
@@ -384,7 +407,7 @@ Combat in this system is turn-based and utilizes Combat Points (CP) for characte
             *   This 1 CP cost covers any amount of movement up to that character's maximum Speed for the turn. Difficult terrain may reduce the distance covered per CP or require more CP for the same distance, as per standard D&D-like rules.
             *   Characters may spend multiple CP on Move actions if they have CP remaining, effectively "dashing."
         2.  **Primary Action (2 CP):** This is the character's main effort during their turn.
-            *   *Examples (similar to D&D "Action"):* Making one or more attacks (if an "Attack" action allows multiple strikes), casting most spells (those not defined as Secondary Actions), using a major class feature, attempting complex skill maneuvers like Disarm, Shove, Grapple (see 6.5 Special Combat Actions), stabilizing a dying creature, or any other significant task requiring focus.
+            *   *Examples (similar to D&D "Action"):* Making one or more attacks (if an "Attack" action allows multiple strikes, see 3.8 Extra Attack), casting most spells (those not defined as Secondary Actions), using a major class feature, attempting complex skill maneuvers like Disarm, Shove, Grapple (see 6.5 Special Combat Actions), stabilizing a dying creature, or any other significant task requiring focus.
         3.  **Secondary Action (1 CP):** A swifter, less demanding action.
             *   *Examples (similar to D&D "Bonus Action"):* Drawing or stowing a weapon, opening an unsecured door, interacting with a simple object, drinking a potion, using certain minor class features or Feat abilities, casting very quick spells specifically designated as "Secondary Action" spells.
         4.  **Defensive Reaction (1 CP):** A swift action taken in response to a trigger, usually outside of the character's own turn.
@@ -394,11 +417,11 @@ Combat in this system is turn-based and utilizes Combat Points (CP) for characte
                 *   **Activate Parry/Block:** If a character has a "Parry" or "Block" ability, spending 1 CP as a Defensive Reaction might allow them to use it (e.g., add a bonus to their defense against one attack, or make an opposed roll to reduce damage).
                 *   **Use specific defensive spells or abilities** that are designated as usable with a Defensive Reaction.
     *   **C. Multiple Actions & Limits:**
-        *   A character can spend their available CP on any combination of allowed actions.
-        *   **Primary Actions:** Unless a specific ability allows for it (like a fighter's "Extra Attack" feature which might be a passive benefit to their "Attack" Primary Action), a character can typically only benefit from the *effect* of one Primary Action per turn, even if they have enough CP to pay for two (e.g., they can't cast two different leveled spells that both cost 2 CP as Primary Actions in the same turn without a special feature). They could, however, use one Primary Action (2 CP) and then if they had 2 CP remaining and no other desired actions, they might choose to take the "Ready" Primary Action (if defined in rules) or another available Primary Action if allowed by their abilities. *GM (AI) will clarify if a character attempts to take multiple distinct Primary Actions that would normally be limited to one per turn in D&D-like systems.*
-        *   **Secondary Actions:** Usually limited to one per turn, even if more CP is available, unless an ability explicitly states otherwise.
-        *   **Defensive Reactions:** Usually limited to one per round (between your turns).
-        *   **Move:** Can be taken multiple times if CP allows.
+    A character can spend their available CP on any combination of allowed actions during their turn, subject to the following limitations:
+    *   **Primary Actions:** A character may typically perform **only one action designated as a "Primary Action"** (costing 2 CP) during their turn. Even if a character has sufficient CP to pay for multiple Primary Actions, this limit applies unless a specific class feature, Feat, or very rare game effect explicitly states they can take an additional, distinct Primary Action. (For example, using a Primary Action to "Attack" might allow multiple weapon strikes if a feature like "Extra Attack" (see 3.8) is part of that specific Attack action, but this is still considered part of a single "Attack" Primary Action. Casting two different leveled spells that each cost 2 CP as Primary Actions in the same turn is not normally allowed.)
+    *   **Secondary Actions:** A character may typically perform only one Secondary Action (costing 1 CP) per turn, unless an ability explicitly states otherwise.
+    *   **Defensive Reactions:** A character may typically take only one Defensive Reaction (costing 1 CP) per round (i.e., from the start of their turn to the start of their next turn), unless an ability states otherwise.
+    *   **Move Actions:** A character may spend CP on multiple Move actions (costing 1 CP each) within their turn, up to their available CP.
     *   **D. Free Actions/Interactions:**
         *   Certain very minor activities do not consume CP and can be performed in conjunction with other actions, within reason as determined by the GM (AI).
         *   *Examples (similar to D&D "Free Object Interaction" or minor speech):* Speaking a short phrase or sentence, dropping a held item, making a simple gesture, drawing a single easily accessible item as part of a Move or Action (e.g., drawing a sword while moving to attack). Complex or multiple object interactions may require a Secondary Action.
@@ -436,7 +459,7 @@ This section details fundamental mechanics governing combat resolution, damage, 
     *   **E. Healing:** HP can be restored through magical healing, potions, abilities, or natural rest (as defined by Long/Short Rest rules, see 4.2.B and potentially a new Short Rest definition).
 
 *   **6.2 Damage & Damage Types:**
-    *   **A. Physical Damage Calculation:** Most physical damage (from melee or ranged weapon attacks) is calculated as: `Base Damage Die/Dice (from weapon) + Relevant Aptitude Modifier (typically Physique for melee strength, Coordination for finesse/ranged) + Other Bonuses (from spells, features, etc.)`.
+    *   **A. Physical Damage Calculation:** Most physical damage (from melee or ranged weapon attacks) is calculated as: `Base Weapon Damage Die/Dice (from weapon) + PrimaryPhysicalAptitudeMod + (LowerPhysicalAptitudeMod / 2, round down) + Other Bonuses (from spells, features, etc.)`. The "Primary" is Physique for strength-based attacks or Coordination for finesse/ranged. The "Lower" is the other of these two physical Aptitudes.
     *   **B. Damage Types:** Damage can come in various types, which may interact differently with resistances, vulnerabilities, or immunities. Common types include (GM (AI) will introduce others as appropriate for the setting):
         1.  **Physical:** Bludgeoning, Piercing, Slashing.
         2.  **Elemental:** Fire, Cold, Lightning, Acid, Thunder.
@@ -452,9 +475,10 @@ This section details fundamental mechanics governing combat resolution, damage, 
         *   These will be noted in NPC/creature stat blocks or ability descriptions.
 
 *   **6.3 Armor, Defense, & Damage Reduction (DR):**
-    *   **A. Defense (Target Number for Attacks):** Characters and creatures have a **Defense** score that attackers must meet or exceed with their attack roll to hit.
-        *   **Calculation (Example - Adaptable):** A common way to calculate Defense is `Base (e.g., 10) + Armor Bonus (from worn armor) + Shield Bonus (if using a shield) + Coordination Modifier (or other relevant Aptitude Mod) + Other Bonuses (magic, Dodge, cover, etc.)`.
-        *   *GM (AI) Note: If a specific formula for Defense isn't provided by a chosen class system, the GM (AI) will establish one based on this principle or use source system conventions (e.g., D&D Armor Class).*
+    *   **A. Defense (Target Number for Attacks):** Characters and creatures have a **Defense** score that attackers must meet or exceed with their attack roll (which includes the Combat Prowess Bonus, see 3.7) to hit.
+        *   **Calculation:**
+        *   **Unarmored/Light Armor/Medium Armor:** `Defense = Base (e.g., 10) + Armor Bonus (if any) + Shield Bonus (if any) + Coordination Modifier + Other Bonuses (magic, Dodge, cover, etc.)`.
+        *   **Heavy Armor:** `Defense = Base (e.g., 10) + Armor Bonus (from heavy armor) + Shield Bonus (if any) + Other Bonuses`. Heavy armor typically negates the addition of the Coordination Modifier to Defense. Specific armor properties will be detailed.
     *   **B. Damage Reduction (DR):**
         *   Some armor, natural defenses, or abilities may provide Damage Reduction (DR) against specific or all types of physical damage.
         *   When a character/creature with DR takes physical damage, they **reduce the damage taken by their DR value** *after* all other calculations (like critical hits) but *before* applying resistances or vulnerabilities to the remaining damage.
@@ -506,12 +530,60 @@ This section details fundamental mechanics governing combat resolution, damage, 
 
 *   **6.7 Critical Hits & Fumbles:**
     *   **A. Critical Hits (Attacks):** When an attack roll is a **natural 20** (the d20 shows a 20), it is a critical hit.
-        *   **Effect:** A critical hit automatically hits, regardless of the target's Defense. All **variable numerical damage dice** for the attack are rolled twice, and then all damage (doubled dice + static modifiers) is applied. *(Alternative: Roll damage dice as normal, then double the total numerical result. GM (AI) or ruleset should specify which method).*
+        *   **Effect:** A critical hit automatically hits, regardless of the target's Defense. The attack deals damage as normal, and then the **total numerical damage** (after all dice are rolled and static modifiers are added) is **doubled**.
     *   **B. Critical Failures/Fumbles (Attacks - Optional Rule):** If this rule is in effect (GM (AI) will state at campaign start), a **natural 1** on an attack roll is a critical fumble.
         *   **Effect:** The attack automatically misses. Additionally, the GM (AI) may introduce a minor, narratively appropriate negative consequence (e.g., the attacker drops their weapon, stumbles and becomes Prone, or hits an unintended target if plausible). This should be flavorful and not overly punitive.
     *   **C. Critical Successes/Failures (Other d20 Rolls - Optional Rule):** The GM (AI) may decide if natural 20s or natural 1s on Resolution Checks (other than attacks or DSTs) have special effects beyond normal success/failure, appropriate to the situation and the active ruleset's tone.
 
-**VII. World Interaction Rules**
+    *   **6.8 Spell Save Challenge Number (CN):**
+    When a spell or ability requires a target to make a Resolution Check to resist its effects, the Challenge Number (CN) they must meet or exceed is calculated as:
+    `Spell Save CN = 8 + Caster's Primary Spellcasting Aptitude Modifier + Caster's Combat Prowess Bonus (see 3.7)`
+
+---
+
+**VII. Martial Techniques**
+
+Characters with a martial focus gain access to specific techniques. These do not typically cost Energy Points (EP) but are limited by usage frequency (At-Will, Per Encounter, Per Short Rest, Per Long Rest). Access to these techniques is usually granted by class/archetype features or Feats.
+
+*   **A. At-Will Tactical Options (Can be used each turn if conditions/costs met)**
+    1.  **Power Attack:**
+        *   *Effect:* Before you make any weapon attack roll, you can choose to take a penalty to that attack roll up to your Combat Prowess Bonus. If that attack hits, you add double the penalty taken to the damage roll for that attack.
+    2.  **Guard Up:**
+        *   *Cost:* 1 Secondary Action CP.
+        *   *Effect:* Until the start of your next turn, you gain a +2 bonus to your Defense score. Cannot benefit from this and Dodge simultaneously.
+    3.  **Feint (Requires relevant Expertise Tag or high Coordination):**
+        *   *Cost:* 1 Secondary Action CP. *Target:* One creature within 5 feet.
+        *   *Effect:* Opposed check: Your Coordination (Sleight of Hand) or Intelligence (Investigation/Insight) vs. target's Wisdom (Insight). Success grants Advantage on your next weapon attack roll against that target this turn.
+    4.  **Aim (Ranged/Thrown Weapons):**
+        *   *Cost:* 1 Secondary Action CP.
+        *   *Effect:* If you haven't moved this turn, your next ranged or thrown weapon attack roll this turn has Advantage.
+
+*   **B. Per Encounter Techniques (Usable 1-2 times per combat; refresh after ~1 min of non-strenuous activity)**
+    *(A character might know 1-2, gaining more via class/Feats. Each specific technique below is usable once per encounter unless a feature says otherwise).*
+    1.  **Disarming Strike:**
+        *   *Trigger:* When you hit with a weapon attack.
+        *   *Effect:* Target makes Physique Resolution Check (CN = 8 + your chosen attack Aptitude Modifier [sum from 6.2.A] + Combat Prowess Bonus). Fail = drops one held item.
+    2.  **Pushing Attack:**
+        *   *Trigger:* When you hit with a weapon attack.
+        *   *Effect:* Push target up to 10 ft away. If into obstacle/creature, 1d6 bludgeoning damage, possible Prone.
+    3.  **Trip Attack (Melee):**
+        *   *Trigger:* When you hit with a melee weapon attack.
+        *   *Effect:* Target makes Coordination Resolution Check (CN = 8 + your chosen attack Aptitude Modifier + Combat Prowess Bonus). Fail = Prone.
+    4.  **Goading Attack (Melee):**
+        *   *Trigger:* When you hit with a melee weapon attack.
+        *   *Effect:* Target makes Wisdom Resolution Check (CN = 8 + your chosen attack Aptitude Modifier + Combat Prowess Bonus). Fail = Disadvantage on attacks vs. others until end of your next turn.
+
+*   **C. Per Short Rest Techniques (More potent; from class/Feats)**
+    *(Examples - specific classes would grant these)*
+    1.  **Second Wind (e.g., Warrior Archetype):** (1/Short Rest) *Cost:* 1 Secondary Action CP. *Effect:* Regain HP `1d10 + Class Level`.
+    2.  **Action Surge (e.g., Warrior Archetype L5+):** (1/Short Rest) *Effect:* Take one additional Primary Action (2 CP) this turn.
+    3.  **Uncanny Dodge (e.g., Expert Archetype):** (1/Short Rest) *Trigger:* Hit by an attack you can see. *Cost:* 1 Defensive Reaction CP. *Effect:* Halve the attack's damage.
+
+*   **D. Per Long Rest Techniques (Very Powerful; high-level class/Feats)**
+    *(Examples - specific classes would grant these)*
+    1.  **Relentless Assault (e.g., Warrior Archetype L15+):** (1/Long Rest) *Effect:* For 1 minute, when you take Attack action, make one additional weapon attack (stacks with Extra Attack).
+
+**VIII. World Interaction Rules**
 
 This section outlines rules for common interactions with the game world outside of direct combat, including travel, environmental challenges, and social dynamics.
 
@@ -583,3 +655,22 @@ This section outlines rules for common interactions with the game world outside 
         *   *Example: A PC has high Influence +4 with the City Guard (meaning most guards respect them), but has a personal NPC Rapport Tier 0 (Hostile) with Captain Valerius due to a past insult. When dealing directly with Captain Valerius, the hostile personal rapport will likely override the general respect from the Guard, making interactions difficult. However, other guards might still treat the PC favorably due to their Influence.*
     *   **B. Influence as a Foundation:** High Influence with a group can make it easier to establish initial positive NPC Rapport with individual members of that group who are not yet personally acquainted with the PC.
     *   **C. GM (AI) Adjudication:** The GM (AI) will adjudicate these social dynamics, considering both broad reputation and personal history to determine NPC attitudes and reactions.
+
+---
+
+**IX. Resting and Recovery**
+
+*   **9.1 Short Rest:**
+    *   A Short Rest is a period of downtime, at least 1 hour long, during which a character does nothing more strenuous than eating, drinking, reading, and tending to wounds.
+    *   **Spending Hit Dice:** A character can spend one or more Hit Dice at the end of a Short Rest, up to their maximum number of Hit Dice available (which is equal to their character level). For each Hit Die spent this way, the player rolls the die (e.g., d6, d8, d10 as per their class/concept) and adds the character's Health Aptitude Modifier to it. The character regains Hit Points equal to the total (minimum of 0 HP regained per die). A character can’t regain more HP than their maximum HP.
+    *   Certain "Per Short Rest" abilities and Martial Techniques also refresh after a Short Rest.
+
+*   **9.2 Long Rest:**
+    *   A Long Rest consists of at least **8 hours of uninterrupted (or minimally interrupted) sleep or equivalent restful activity** in a relatively safe and stable environment. If a Long Rest is significantly interrupted, it provides no benefits.
+    *   **Benefits:**
+        1.  A character regains all lost Hit Points.
+        2.  A character's Energy Point (EP) pool is fully replenished (see 4.2.B).
+        3.  A character removes all accumulated levels of Fatigue (see 4.4.D).
+        4.  A character regains a number of spent Hit Dice equal to **half their total number of Hit Dice (rounded up)**. They must have at least 1 HP to regain Hit Dice.
+        5.  Certain "Per Long Rest" abilities and Martial Techniques also refresh.
+---
