@@ -133,7 +133,6 @@
     *   **B. Expertise Tags:**
         1.  **Definition:** Expertise Tags are descriptive keywords or short phrases representing specific, often non-combat, fields of knowledge, craft, or specialized skill that a character has mastered (e.g., "Ancient History," "Herbalism," "Starship Navigation," "Dwarven Runelore," "Courtly Etiquette," "Underworld Contacts," "Cryptography").
         2.  **Acquisition:**
-        *   Characters receive **one Expertise Tag at Character Creation** based on their chosen background or a defining personal skill (this is in addition to any granted by their class at Level 1).
         *   Characters may start with Expertise Tags based on their background, class features (as per rule 3.4 - Adapting Existing Class Features), or initial concept.
         *   Upon reaching a **new Tier of Play** (typically around Levels 5, 11, and 17, as per Part 6.C of `mechanics_system_instruction.md`), characters may choose **one new Expertise Tag.**
         *   Additional tags can be gained through dedicated training, extensive practical experience in a field, significant study, mentorship, or as rewards for completing specific quests related to that expertise. The GM (AI) will award new tags when narratively appropriate and earned.
@@ -587,7 +586,7 @@ Characters with a martial focus gain access to specific techniques. These do not
 
 This section outlines rules for common interactions with the game world outside of direct combat, including travel, environmental challenges, and social dynamics.
 
-*   **7.1 Travel & Navigation:**
+*   **8.1 Travel & Navigation:**
     *   **A. Travel Pace:** Characters can choose to travel at different paces, affecting speed and awareness:
         1.  **Slow Pace:** (e.g., 2/3 normal speed). Allows for careful observation. Characters gain Advantage on Wisdom (Perception or Survival) checks to notice hidden threats, details, or to forage/track. They are less likely to become lost.
         2.  **Normal Pace:** Standard overland travel speed for the party's slowest member or mode of transport.
@@ -598,7 +597,7 @@ This section outlines rules for common interactions with the game world outside 
         3.  **Consequences of Getting Lost:** May include wasted time (e.g., 1d6 hours lost per failed check), moving in an unintended direction, encountering unexpected hazards or encounters, or depletion of resources.
     *   **C. Modes of Travel:** The GM (AI) will adjudicate travel times based on mode (walking, mounted, vehicle, magical flight), terrain, and pace.
 
-*   **7.2 Traps, Hazards, & Environmental Challenges:**
+*   **8.2 Traps, Hazards, & Environmental Challenges:**
     *   **A. Detecting Traps & Hazards:**
         1.  Characters can actively search for traps or hazards by making an **Intelligence (Investigation) or Wisdom (Perception) Resolution Check.** The CN is set by the trap/hazard's design and concealment (GM (AI) determined).
         2.  Passive Perception (e.g., `10 + Wisdom (Perception) modifier`) may be used by the GM (AI) to determine if characters automatically notice obvious traps or hazards without actively searching.
@@ -609,7 +608,7 @@ This section outlines rules for common interactions with the game world outside 
         3.  Some hazards may be bypassed with other Aptitude/skill checks (e.g., Physique (Athletics) to leap a chasm, Coordination (Acrobatics) to navigate a crumbling bridge).
     *   **D. Environmental Challenges:** The GM (AI) will call for appropriate Resolution Checks to overcome environmental challenges like extreme weather (Health checks to resist cold/heat exhaustion), difficult terrain (Physique (Athletics) or Coordination (Acrobatics) checks), social obstacles (Persuasion, Intimidation, Deception), etc.
 
-*   **7.3 Vision & Light:**
+*   **87.3 Vision & Light:**
     *   **A. Light Levels:** The GM (AI) will describe areas based on the prevailing light:
         1.  **Bright Light:** Normal vision.
         2.  **Dim Light (Shadows, Twilight):** Lightly obscured. Creatures in dim light have concealment (Disadvantage on Wisdom (Perception) checks relying on sight to see them clearly).
@@ -619,7 +618,7 @@ This section outlines rules for common interactions with the game world outside 
         2.  **Superior Darkvision:** As Darkvision, but out to a greater range (e.g., 120 feet) and potentially with the ability to discern color or see through magical darkness.
         3.  **Truesight, Blindsight, Tremorsense, etc.:** If these or similar special senses exist, their mechanics will be explicitly defined by the ability or creature that possesses them. The GM (AI) will narrate what characters with these senses perceive.
 
-*   **7.4 Group Checks & Leadership:**
+*   **8.4 Group Checks & Leadership:**
     *   **A. Group Check Scenario:** When multiple characters are attempting the same task simultaneously where individual success or failure isn't paramount, but the group's overall effort matters (e.g., collectively trying to sneak past guards, a group effort to lift a heavy object, a team navigating a social gathering to gather rumors).
     *   **B. Standard Group Check:**
         1.  Each participating character describes their contribution or makes a relevant Resolution Check using their own modifiers against the task's CN.
@@ -632,7 +631,7 @@ This section outlines rules for common interactions with the game world outside 
         3.  **Benefit of Leadership:** The Leader may add their **Influence score** (if relevant to the group they are leading or the context of the task, see 2.5.A) or their **highest Aptitude Modifier** among an Aptitude relevant to the task (e.g., Intelligence for planning, Charisma for coordinating people) as an additional bonus to this group check roll. The GM (AI) determines which bonus is most applicable. *(This replaces the "average modifier" from the original text with a more impactful leadership role).*
         4.  The outcome of this single roll determines success or failure for the entire group's effort on that specific coordinated task.
 
-*   **7.5 Encumbrance & Carrying Capacity:**
+*   **8.5 Encumbrance & Carrying Capacity:**
     *   **A. Concept:** Characters can only carry a certain amount of weight comfortably before becoming encumbered, which affects their movement and can cause Fatigue.
     *   **B. Carrying Capacity (Example System - Adaptable):**
         1.  A character's base carrying capacity in pounds (or an abstract "item slots" system) could be: `Physique Score x 10` (or `x 5` for a grittier game, or `x 15` for a more heroic one).
@@ -640,7 +639,7 @@ This section outlines rules for common interactions with the game world outside 
         3.  **Heavily Encumbered:** If carrying weight exceeding double their base carrying capacity (e.g., > Physique x 20), their Speed is halved, they have Disadvantage on all Aptitude checks, attack rolls, and saving throws based on Physique, Coordination, or Health, and they begin to gain **Fatigue** (see 4.4) at an accelerated rate (e.g., 1 level of Fatigue per hour of strenuous activity, or per day of normal travel).
     *   **C. GM (AI) Adjudication:** The GM (AI) will track significant items carried and warn the player if their character is approaching or exceeding encumbrance limits, applying penalties as appropriate. Minor, lightweight personal items are often hand-waved unless a character is carrying an unreasonable amount.
 
-*   **7.6 Identifying Special Items (Magical or Unique):**
+*   **8.6 Identifying Special Items (Magical or Unique):**
     *   **A. Initial State:** When characters acquire magical, alchemical, or technologically advanced items whose properties are not immediately obvious, these properties are initially unknown.
     *   **B. Identification Methods:**
         1.  **Focused Study/Rest:** A character can spend a **Short Rest** (if defined, e.g., 1 hour) or part of a **Long Rest** (e.g., 1-2 hours) focusing on a single unknown item. At the end of this period, they make an **Intelligence (Arcana, relevant Crafting/Lore Expertise Tag, or general Investigation) Resolution Check.** The CN is set by the GM (AI) based on the item's rarity, complexity, or magical power (e.g., CN 10-15 for common/uncommon items, CN 16-20 for rare, CN 21+ for very rare/legendary).
@@ -650,7 +649,7 @@ This section outlines rules for common interactions with the game world outside 
         3.  **Experimentation (Risky):** A character might try to use an unknown item experimentally. The GM (AI) will determine the outcome, which could be successful activation, no effect, a minor mishap, or even a dangerous backlash depending on the item.
         4.  **Expert Appraisal:** Seeking out a knowledgeable NPC (sage, master crafter, powerful mage) may allow for identification, possibly for a fee or favor.
 
-*   **7.7 Conflicting Reputations & Social Dynamics:**
+*   **8.7 Conflicting Reputations & Social Dynamics:**
     *   **A. Precedence of Personal Rapport:** When a character interacts with an NPC, their established **Personal Rapport** with that specific individual (see 2.4.A for PC-PC/Major NPC, or 2.4.C for PC-NPC Tiers) generally **takes precedence over the character's broader Influence score** with the NPC's group/faction/region (see 2.5.A) if the two would strongly conflict.
         *   *Example: A PC has high Influence +4 with the City Guard (meaning most guards respect them), but has a personal NPC Rapport Tier 0 (Hostile) with Captain Valerius due to a past insult. When dealing directly with Captain Valerius, the hostile personal rapport will likely override the general respect from the Guard, making interactions difficult. However, other guards might still treat the PC favorably due to their Influence.*
     *   **B. Influence as a Foundation:** High Influence with a group can make it easier to establish initial positive NPC Rapport with individual members of that group who are not yet personally acquainted with the PC.
