@@ -1,0 +1,5 @@
+[user]
+	email = jleechan@gmail.com
+	name = Jeff
+[push]
+	autoSetupRemote = true
