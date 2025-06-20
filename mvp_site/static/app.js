@@ -62,7 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const campaignIdMatch = path.match(/^\/game\/([a-zA-Z0-9]+)/);
         if (campaignIdMatch) {
             currentCampaignId = campaignIdMatch[1];
-            isNavigatingToNewCampaignDirectly = false;
             resumeCampaign(currentCampaignId);
         } else if (path === '/new-campaign') {
             if (isNavigatingToNewCampaignDirectly) { 
@@ -72,7 +71,6 @@ document.addEventListener('DOMContentLoaded', () => {
             showView('newCampaign');
         } else {
             currentCampaignId = null;
-            isNavigatingToNewCampaignDirectly = false; 
             renderCampaignList();
             showView('dashboard');
         }
