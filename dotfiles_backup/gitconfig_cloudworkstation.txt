@@ -1,5 +1,3 @@
 [user]
+	name = Your Name
 	email = jleechan@gmail.com
-	name = Jeff
-[push]
-	autoSetupRemote = true
