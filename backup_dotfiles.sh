@@ -19,8 +19,8 @@ mkdir -p "$BACKUP_DIR"
 # --- List of dotfiles to back up ---
 # Format: "Source Path in Home Dir" "Destination Filename in BACKUP_DIR"
 declare -A DOTFILES_TO_BACKUP=(
-    ["$HOME/.bashrc"]="bashrc.txt"
-    ["$HOME/.gitconfig"]="gitconfig_cloudworkstation.txt" # Example
+    ["$HOME/.bashrc"]="bashrc_pc.txt"
+    ["$HOME/.gitconfig"]="gitconfig_pc.txt" # Example
     # Add more files here if needed:
     # ["$HOME/.vimrc"]="vimrc_cloudworkstation.txt"
 )
