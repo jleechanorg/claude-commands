@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 MODEL_NAME = 'gemini-2.5-flash-preview-05-20'
 MAX_TOKENS = 8192 
 TEMPERATURE = 0.9
-TARGET_WORD_COUNT = 200
+TARGET_WORD_COUNT = 300
 HISTORY_TURN_LIMIT = 500
 MAX_INPUT_TOKENS = 200000 
 SAFE_CHAR_LIMIT = MAX_INPUT_TOKENS * 4
@@ -203,7 +203,8 @@ def continue_story(user_input, mode, story_context, selected_prompts=None):
 
     # Create the final prompt for the current user turn (User's preferred method)
     if mode == 'character':
-        prompt_template = "Main character: {user_input}. Continue the story in about {word_count} words."
+        prompt_template = "Main character: {user_input}. Continue the story. Return to me about {word_count} words " \
+        "but if your response was supposed to be longer then return in multiple parts of {word_count} words each."
     else: # god mode
         # User wants direct pass-through for god mode
         prompt_template = "GOD MODE: {user_input}"
