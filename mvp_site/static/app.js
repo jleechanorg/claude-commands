@@ -59,11 +59,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const campaignIdMatch = path.match(/^\/game\/([a-zA-Z0-9]+)/);
         if (campaignIdMatch) {
             currentCampaignId = campaignIdMatch[1];
+            isNavigatingToNewCampaignDirectly = false;
             resumeCampaign(currentCampaignId);
         } else if (path === '/new-campaign') {
+            if (isNavigatingToNewCampaignDirectly) { 
+                resetNewCampaignForm();
+                isNavigatingToNewCampaignDirectly = false; // Reset the flag after use
+            }
             showView('newCampaign');
         } else {
             currentCampaignId = null;
+            isNavigatingToNewCampaignDirectly = false; 
             renderCampaignList();
             showView('dashboard');
         }
@@ -261,7 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Share & Download Functionality ---
-    // RESTORED getFormattedStoryText to its original multi-line structure
     function getFormattedStoryText() {
         const storyContent = document.getElementById('story-content');
         if (!storyContent) return '';
@@ -345,8 +350,16 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('download-docx-btn')?.addEventListener('click', () => downloadFile('docx'));
     
     // Main navigation listeners (these must remain at the end of DOMContentLoaded)
-    document.getElementById('go-to-new-campaign').onclick = () => { history.pushState({}, '', '/new-campaign'); handleRouteChange(); };
-    document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };
+    document.getElementById('go-to-new-campaign').onclick = () => {
+        isNavigatingToNewCampaignDirectly = true;
+        history.pushState({}, '', '/new-campaign'); 
+        handleRouteChange(); 
+    };
+    document.getElementById('back-to-dashboard').onclick = () => {
+        isNavigatingToNewCampaignDirectly = false;G
+        history.pushState({}, '', '/'); 
+        handleRouteChange(); 
+    };
     window.addEventListener('popstate', handleRouteChange);
     firebase.auth().onAuthStateChanged(user => handleRouteChange());
 });
