@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingOverlay = document.getElementById('loading-overlay');
     let currentCampaignId = null;
     let campaignToEdit = null; 
+    let isNavigatingToNewCampaignDirectly = false;
 
     // Helper function for scrolling
     const scrollToBottom = (element) => { 
@@ -27,6 +28,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    function resetNewCampaignForm() {
+        const campaignTitleInput = document.getElementById('campaign-title');
+        const campaignPromptTextarea = document.getElementById('campaign-prompt');
+        const narrativeCheckbox = document.getElementById('prompt-narrative');
+        const mechanicsCheckbox = document.getElementById('prompt-mechanics');
+        const calibrationCheckbox = document.getElementById('prompt-calibration');
+
+        if (campaignTitleInput) {
+            campaignTitleInput.value = "My Epic Adventure"; // Your default title
+        }
+        if (campaignPromptTextarea) {
+            campaignPromptTextarea.value = "A brave knight in a land of dragons."; // Your default prompt
+        }
+        if (narrativeCheckbox) {
+            narrativeCheckbox.checked = true; // Default checked
+        }
+        if (mechanicsCheckbox) {
+            mechanicsCheckbox.checked = true; // Default checked
+        }
+        if (calibrationCheckbox) {
+            calibrationCheckbox.checked = false; // Default unchecked
+        }
+        if (mechanicsCheckbox) {
+            mechanicsCheckbox.checked = false; // Default unchecked
+        }
+        console.log("New campaign form reset to defaults.");
+    }
+
     let handleRouteChange = () => {
         if (!firebase.auth().currentUser) { showView('auth'); return; }
         const path = window.location.pathname;
@@ -35,6 +64,10 @@ document.addEventListener('DOMContentLoaded', () => {
             currentCampaignId = campaignIdMatch[1];
             resumeCampaign(currentCampaignId);
         } else if (path === '/new-campaign') {
+            if (isNavigatingToNewCampaignDirectly) { 
+                resetNewCampaignForm();
+                isNavigatingToNewCampaignDirectly = false; // Reset the flag after use
+            }
             showView('newCampaign');
         } else {
             currentCampaignId = null;
@@ -235,7 +268,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Share & Download Functionality ---
-    // RESTORED getFormattedStoryText to its original multi-line structure
     function getFormattedStoryText() {
         const storyContent = document.getElementById('story-content');
         if (!storyContent) return '';
@@ -319,7 +351,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('download-docx-btn')?.addEventListener('click', () => downloadFile('docx'));
     
     // Main navigation listeners (these must remain at the end of DOMContentLoaded)
-    document.getElementById('go-to-new-campaign').onclick = () => { history.pushState({}, '', '/new-campaign'); handleRouteChange(); };
+    document.getElementById('go-to-new-campaign').onclick = () => {
+        isNavigatingToNewCampaignDirectly = true;
+        history.pushState({}, '', '/new-campaign'); 
+        handleRouteChange(); 
+    };
     document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };
     window.addEventListener('popstate', handleRouteChange);
     firebase.auth().onAuthStateChanged(user => handleRouteChange());
