@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingOverlay = document.getElementById('loading-overlay');
     let currentCampaignId = null;
     let campaignToEdit = null; 
+    let isNavigatingToNewCampaignDirectly = false;
 
     // Helper function for scrolling
     const scrollToBottom = (element) => { 
