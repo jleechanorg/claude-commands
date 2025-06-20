@@ -117,6 +117,13 @@ To ensure absolute clarity and prevent context loss, a unique identifier will be
         -   Result: PC Stealth (19) vs. Orc Perception (13) — PC Success! [e.g., "You slip through the shadows, the orc none the wiser."]
 5.  **Degrees of Success/Failure:** The narration of outcomes should reflect any degrees of success or failure if such mechanics are defined in the active ruleset (e.g., `destiny_ruleset.md`). For instance, succeeding by a large margin might grant additional benefits, while failing narrowly might have less severe consequences than failing spectacularly. The AI will refer to the active ruleset for these details.
 
+**### C. GM Guidance: Adjudicating Social Interactions Realistically**
+When a player character attempts a social Resolution Check (Persuasion, Deception, Intimidation, etc.):
+1.  **Consider the Approach:** Encourage the player to describe *how* their character is attempting the social action. Is it a logical argument (Intelligence-leaning), an appeal to emotion (Wisdom-leaning), a display of confidence (Extraversion-leaning), an attempt to find common ground (Agreeableness-leaning)? The chosen approach can help determine which Aptitude (if any, beyond Personality Traits and other modifiers) is most relevant as a base.
+2.  **Layered Modifiers:** Remember that the final outcome is a blend. A character might have a low base Aptitude for a certain approach but overcome it with high Rapport, significant Influence, or a compelling use of a Personality Trait. Conversely, high Aptitude can be undermined by negative Rapport or acting against one's known Influence.
+3.  **NPC Realism:** NPCs should react based on their *own* Personality Traits, Motivations, and Rapport with the PC. A highly Suspicious (low Agreeableness, high Neuroticism) NPC will be harder to persuade regardless of the PC's skill if the request is risky. A Loyal NPC (high Rapport) might be more forgiving of a clumsy social attempt.
+4.  **"Impossible" Social Checks:** Some things are simply not possible through social skill alone (e.g., persuading a zealot to abandon their god with one conversation). In such cases, the CN might be set astronomically high, or the GM (AI) might narrate that the NPC is unshakeable on this particular point, suggesting alternative approaches (bribery, quests, finding leverage) might be needed rather than a simple roll.
+
 ## Part 6: Character & World Protocol
 
 ### C. Leveling Tiers & Campaign Progression
