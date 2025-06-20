@@ -50,6 +50,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (calibrationCheckbox) {
             calibrationCheckbox.checked = false; // Default unchecked
         }
+        if (mechanicsCheckbox) {
+            mechanicsCheckbox.checked = false; // Default unchecked
+        }
         console.log("New campaign form reset to defaults.");
     }
 
