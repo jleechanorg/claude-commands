@@ -28,6 +28,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    function resetNewCampaignForm() {
+        const campaignTitleInput = document.getElementById('campaign-title');
+        const campaignPromptTextarea = document.getElementById('campaign-prompt');
+        const narrativeCheckbox = document.getElementById('prompt-narrative');
+        const mechanicsCheckbox = document.getElementById('prompt-mechanics');
+        const calibrationCheckbox = document.getElementById('prompt-calibration');
+
+        if (campaignTitleInput) {
+            campaignTitleInput.value = "My Epic Adventure"; // Your default title
+        }
+        if (campaignPromptTextarea) {
+            campaignPromptTextarea.value = "A brave knight in a land of dragons."; // Your default prompt
+        }
+        if (narrativeCheckbox) {
+            narrativeCheckbox.checked = true; // Default checked
+        }
+        if (mechanicsCheckbox) {
+            mechanicsCheckbox.checked = true; // Default checked
+        }
+        if (calibrationCheckbox) {
+            calibrationCheckbox.checked = false; // Default unchecked
+        }
+        console.log("New campaign form reset to defaults.");
+    }
+
     let handleRouteChange = () => {
         if (!firebase.auth().currentUser) { showView('auth'); return; }
         const path = window.location.pathname;
