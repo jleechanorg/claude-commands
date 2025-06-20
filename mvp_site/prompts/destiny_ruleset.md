@@ -608,7 +608,7 @@ This section outlines rules for common interactions with the game world outside 
         3.  Some hazards may be bypassed with other Aptitude/skill checks (e.g., Physique (Athletics) to leap a chasm, Coordination (Acrobatics) to navigate a crumbling bridge).
     *   **D. Environmental Challenges:** The GM (AI) will call for appropriate Resolution Checks to overcome environmental challenges like extreme weather (Health checks to resist cold/heat exhaustion), difficult terrain (Physique (Athletics) or Coordination (Acrobatics) checks), social obstacles (Persuasion, Intimidation, Deception), etc.
 
-*   **87.3 Vision & Light:**
+*   **8.3 Vision & Light:**
     *   **A. Light Levels:** The GM (AI) will describe areas based on the prevailing light:
         1.  **Bright Light:** Normal vision.
         2.  **Dim Light (Shadows, Twilight):** Lightly obscured. Creatures in dim light have concealment (Disadvantage on Wisdom (Perception) checks relying on sight to see them clearly).
