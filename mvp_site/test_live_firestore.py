@@ -1,8 +1,12 @@
 import unittest
 import os
+import sys
 import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
+
+# Add the project root to the Python path to resolve imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import firestore_service
 
@@ -88,6 +92,46 @@ class TestLiveFirestoreFetching(unittest.TestCase):
         self.assertIn("New data, entry 2", story[1]['text'])
         self.assertIn("New data, entry 3, part 1", story[2]['text'])
         self.assertIn("New data, entry 3, part 2", story[3]['text'])
+
+        print("--- Test Finished Successfully ---")
+
+    def test_sequence_id_generation_and_sorting(self):
+        """
+        Calls the REAL firestore_service function and verifies that sequence IDs
+        are generated correctly after sorting.
+        """
+        print("\\n--- Running Test: test_sequence_id_generation_and_sorting ---")
+        
+        # Initial state check
+        _campaign, story = firestore_service.get_campaign_by_id(self.user_id, self.campaign_id)
+        self.assertIsNotNone(story)
+        initial_count = len(story)
+        self.assertEqual(story[-1].get('sequence_id'), initial_count, "Initial sequence IDs should be correct.")
+
+        # Turn 1
+        print("--- Adding Turn 1 ---")
+        firestore_service.add_story_entry(self.user_id, self.campaign_id, 'user', 'First new entry.')
+        _campaign, story = firestore_service.get_campaign_by_id(self.user_id, self.campaign_id)
+        self.assertIsNotNone(story)
+        self.assertEqual(len(story), initial_count + 1)
+        self.assertEqual(story[-1].get('sequence_id'), initial_count + 1, "Sequence ID should increment after Turn 1.")
+        self.assertIn("First new entry", story[-1]['text'])
+
+        # Turn 2
+        print("--- Adding Turn 2 ---")
+        firestore_service.add_story_entry(self.user_id, self.campaign_id, 'gemini', 'Second new entry.')
+        _campaign, story = firestore_service.get_campaign_by_id(self.user_id, self.campaign_id)
+        self.assertIsNotNone(story)
+        self.assertEqual(len(story), initial_count + 2)
+        self.assertEqual(story[-1].get('sequence_id'), initial_count + 2, "Sequence ID should increment after Turn 2.")
+
+        # Turn 3
+        print("--- Adding Turn 3 ---")
+        firestore_service.add_story_entry(self.user_id, self.campaign_id, 'user', 'Third new entry.')
+        _campaign, story = firestore_service.get_campaign_by_id(self.user_id, self.campaign_id)
+        self.assertIsNotNone(story)
+        self.assertEqual(len(story), initial_count + 3)
+        self.assertEqual(story[-1].get('sequence_id'), initial_count + 3, "Sequence ID should increment after Turn 3.")
 
         print("--- Test Finished Successfully ---")
 

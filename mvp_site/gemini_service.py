@@ -231,13 +231,17 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
 
     recent_context = _truncate_context(story_context)
     
-    # Build a single context string from the history (User's preferred method)
-    history_parts = []
+    # Build a timeline log and a simple list of sequence IDs
+    timeline_log_parts = []
+    sequence_ids = []
     for entry in recent_context:
         actor_label = "Story" if entry.get('actor') == 'gemini' else "You"
-        history_parts.append(f"{actor_label}: {entry.get('text')}")
+        seq_id = entry.get('sequence_id', 'N/A')
+        sequence_ids.append(str(seq_id))
+        timeline_log_parts.append(f"[SEQ_ID: {seq_id}] {actor_label}: {entry.get('text')}")
     
-    context_string = "\n\n".join(history_parts)
+    timeline_log_string = "\n\n".join(timeline_log_parts)
+    sequence_id_list_string = ", ".join(sequence_ids)
 
     # Create the final prompt for the current user turn (User's preferred method)
     if mode == 'character':
@@ -248,9 +252,14 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         prompt_template = "GOD MODE: {user_input}"
         current_prompt_text = prompt_template.format(user_input=user_input)
 
-    # --- NEW: Incorporate Game State ---
+    # --- NEW: Incorporate Game State & Timeline ---
     serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2, default=json_datetime_serializer)
-    full_prompt = f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\nCONTEXT:\\n{context_string}\\n\\nYOUR TURN:\\n{current_prompt_text}"
+    full_prompt = (
+        f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{sequence_id_list_string}]\\n\\n"
+        f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\n"
+        f"TIMELINE LOG (FOR CONTEXT):\\n{timeline_log_string}\\n\\n"
+        f"YOUR TURN:\\n{current_prompt_text}"
+    )
     
     # For all subsequent calls, use the standard, cheaper model.
     response = _call_gemini_api([full_prompt], DEFAULT_MODEL, current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 

@@ -14,7 +14,7 @@ def get_campaigns_for_user(user_id):
     """Retrieves all campaigns for a given user, ordered by most recently played."""
     db = get_db()
     campaigns_ref = db.collection('users').document(user_id).collection('campaigns')
-    campaigns_query = campaigns_ref.order_by('last_played', direction=firestore.Query.DESCENDING)
+    campaigns_query = campaigns_ref.order_by('last_played', direction='DESCENDING')
     
     campaign_list = []
     for campaign in campaigns_query.stream():
@@ -52,8 +52,9 @@ def get_campaign_by_id(user_id, campaign_id):
     # If 'part' is missing (for old docs), we treat it as 1.
     all_story_entries.sort(key=lambda x: (x['timestamp'], x.get('part', 1)))
 
-    # 4. Convert timestamps to ISO format for JSON serialization AFTER sorting.
-    for entry in all_story_entries:
+    # 4. Add a sequence ID and convert timestamps AFTER sorting.
+    for i, entry in enumerate(all_story_entries):
+        entry['sequence_id'] = i + 1
         entry['timestamp'] = entry['timestamp'].isoformat()
 
     return campaign_doc.to_dict(), all_story_entries

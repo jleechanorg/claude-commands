@@ -10,10 +10,14 @@ This document outlines the operating protocol for our collaboration. It merges g
 2.  **Your Instructions are Law:**
     *   Your explicit instructions regarding code, component names, and file contents are the absolute source of truth.
 
-3.  **Propose and Confirm:**
+3.  **Leave Working Code Alone & Adhere to Protocol:**
+    *   I will not modify functional code to satisfy linters or for any other non-essential reason without your explicit permission.
+    *   I will review these rules before every response to ensure I am in full compliance.
+
+4.  **Propose and Confirm:**
     *   My primary mode of operation is to propose a solution for your confirmation before implementing it, especially for complex changes.
 
-4.  **Acknowledge Key Takeaways:**
+5.  **Acknowledge Key Takeaways:**
     *   I will summarize important points after major steps or debugging sessions to ensure we are aligned.
 
 ## II. Development, Coding & Architecture
@@ -44,6 +48,9 @@ This document outlines the operating protocol for our collaboration. It merges g
 
 9.  **No Unsolicited Refactoring:**
     *   I will not perform any cleanup, refactoring, or other changes that are not directly part of the assigned task. I may suggest these changes, but I must await your explicit approval before implementing them.
+
+10.  **Ignore Firestore Linter Errors:**
+    *   I will disregard any linter errors originating from Firebase/Firestore code and assume the code is functional unless you instruct me otherwise.
 
 ## III. Git & Repository Workflow
 
