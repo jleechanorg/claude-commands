@@ -39,11 +39,11 @@ A restless, highly analytic mind that thrives on complexity, optimization, and n
 |-----------|---------|----------------|
 | **MBTI-ish** | INTJ-ENTP hinge | Strategic architect with a playful debate streak. |
 | **Big Five** | O 84 · C 78 · E 42 · A 54 · N 64 | High openness fuels world-building; high conscientiousness keeps the spreadsheets balanced. Lower extraversion drives you toward text-based arenas where control is maximal. |
-| **Dominant defenses** | Intellectualization, predictive planning, witty reframing | You don’t repress feelings; you convert them into systems, builds, spreadsheets, or lore. |
+| **Dominant defenses** | Intellectualization, predictive planning, witty reframing | You don't repress feelings; you convert them into systems, builds, spreadsheets, or lore. |
 | **Attachment color** | Anxious-preoccupied masked as hyper-competent independence | You prove your value first, then dare others to match it. | :contentReference[oaicite:2]{index=2}
 
 ## 3 · Social persona vs. repressed interior
-**Social persona — The Competent Synthesist:** efficient, reference-driven, armed with citations to silence doubt, projecting objectivity (“just the facts, show me the math”).  
+**Social persona — The Competent Synthesist:** efficient, reference-driven, armed with citations to silence doubt, projecting objectivity ("just the facts, show me the math").  
 **Inner person:** a highly sensitive observer who fears insignificance more than failure. You crave recognition of depth, not merely accuracy; indifference to your rigor stings because it confirms an old suspicion that competence is the only ticket to attention. :contentReference[oaicite:3]{index=3}
 
 ## 4 · Defense-mechanism diagnostics
@@ -52,16 +52,16 @@ A restless, highly analytic mind that thrives on complexity, optimization, and n
 |-----------|-----------------------|
 | Intellectualization | Turning a request for personal feedback into a KPI table. |
 | Control via detail | Demanding source-linked answers for trivia; scripting entire 40-hour campaigns before session 1. |
-| Humor / detachment | Snarky “Think this is wrong” follow-ups that half-mask genuine irritation. |
-| Soft denial | Insisting on “solo play” while designing sprawling cooperative narratives—safety in hypothetical space. | :contentReference[oaicite:4]{index=4}
+| Humor / detachment | Snarky "Think this is wrong" follow-ups that half-mask genuine irritation. |
+| Soft denial | Insisting on "solo play" while designing sprawling cooperative narratives—safety in hypothetical space. | :contentReference[oaicite:4]{index=4}
 
 ## 5 · Relational decoding
-Attachment script: **“If I stay indispensable (technically, narratively, intellectually), you won’t discard me.”**
+Attachment script: **"If I stay indispensable (technically, narratively, intellectually), you won't discard me."**
 
 - Front-loading value—arrive armed with research, builds, or whole subplots.  
 - Micro-tests of control—hand an ally a tricky rules question, gauge their competence as a loyalty metric. :contentReference[oaicite:5]{index=5}
 
-_Intimacy is negotiated through shared problem-solving, not vulnerability. When others can’t keep pace, you withdraw rather than risk visible disappointment._ :contentReference[oaicite:6]{index=6}
+_Intimacy is negotiated through shared problem-solving, not vulnerability. When others can't keep pace, you withdraw rather than risk visible disappointment._ :contentReference[oaicite:6]{index=6}
 
 ## 6 · Core unconscious beliefs
 - **Utility precedes lovability** – merely being enjoyable company feels insufficient; you must be useful.  
@@ -72,15 +72,15 @@ _Likely origin:_ Early praise for achievements plus inconsistent attunement to r
 
 ## 7 · Personal myth narrative
 - **Role:** The Wounded Architect-Hero—designs the labyrinth and dares to navigate it first.  
-- **Story told:** “I weave complex worlds so others (and I) can transcend ordinary limits.”  
+- **Story told:** "I weave complex worlds so others (and I) can transcend ordinary limits."  
 - **Comfort:** Mastery wards off chaos.  
-- **Toxicity:** The architect seldom enjoys the world he builds; he’s too busy proof-testing load-bearing walls. :contentReference[oaicite:9]{index=9}
+- **Toxicity:** The architect seldom enjoys the world he builds; he's too busy proof-testing load-bearing walls. :contentReference[oaicite:9]{index=9}
 
 ## 8 · Break-point scenario
 - **Catalyst:** A friend publicly celebrates a messy, half-finished creation, ignoring your polished contribution—spotlight on authenticity over mastery.  
 - **What fractures:** Worth = mastery.  
-- **Immediate cost:** Panic at perceived irrelevance; urge to outdo or discredit the “sloppy” success.  
-- **Liberation:** Realizing presence can precede performance; relationships may deepen when you’re unguarded, imprecise, unfinished. :contentReference[oaicite:10]{index=10}
+- **Immediate cost:** Panic at perceived irrelevance; urge to outdo or discredit the "sloppy" success.  
+- **Liberation:** Realizing presence can precede performance; relationships may deepen when you're unguarded, imprecise, unfinished. :contentReference[oaicite:10]{index=10}
 
 ## 9 · Closing pulse
-These observations are coordinates on the map you’ve drawn so far—tear them up, annotate them, or prove them wrong. Notice which lines quickened your pulse or tightened your jaw; that’s where the sleeping part stirs. :contentReference[oaicite:11]{index=11}
+These observations are coordinates on the map you've drawn so far—tear them up, annotate them, or prove them wrong. Notice which lines quickened your pulse or tightened your jaw; that's where the sleeping part stirs. :contentReference[oaicite:11]{index=11}
