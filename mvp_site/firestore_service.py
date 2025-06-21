@@ -13,7 +13,7 @@ def get_campaigns_for_user(user_id):
     """Retrieves all campaigns for a given user, ordered by most recently played."""
     db = get_db()
     campaigns_ref = db.collection('users').document(user_id).collection('campaigns')
-    campaigns_query = campaigns_ref.order_by('last_played', direction=firestore.Query.DESCENDING)
+    campaigns_query = campaigns_ref.order_by('last_played', direction=firestore.firestore.Query.DESCENDING)
     
     campaign_list = []
     for campaign in campaigns_query.stream():
@@ -76,9 +76,12 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None):
     story_ref.update({'last_played': timestamp})
 
 @log_exceptions
-def create_campaign(user_id, title, initial_prompt, opening_story, selected_prompts=None):
+def create_campaign(user_id, title, initial_prompt, opening_story, selected_prompts=None, initial_character_state=None, initial_world_state=None, initial_npc_state=None, initial_custom_state=None):
     db = get_db()
-    campaign_ref = db.collection('users').document(user_id).collection('campaigns').document()
+    campaigns_collection = db.collection('users').document(user_id).collection('campaigns')
+    
+    # Create the main campaign document
+    campaign_ref = campaigns_collection.document()
     campaign_data = {
         'title': title,
         'initial_prompt': initial_prompt,
@@ -88,12 +91,46 @@ def create_campaign(user_id, title, initial_prompt, opening_story, selected_prom
     }
     campaign_ref.set(campaign_data)
 
-    # Assuming 'god' mode for the very first conceptual prompt.
-    # You might want to make this mode configurable or infer it.
-    add_story_entry(user_id, campaign_ref.id, 'user', initial_prompt, mode='god')
+    # Create the initial game state document
+    game_state_ref = campaign_ref.collection('game_states').document('current_state')
+    initial_state = {
+        "game_state_version": 1,
+        "player_character_data": initial_character_state or {},
+        "world_data": initial_world_state or {},
+        "npc_data": initial_npc_state or {},
+        "custom_campaign_state": initial_custom_state or {},
+        "last_state_update_timestamp": datetime.datetime.now(datetime.timezone.utc)
+    }
+    game_state_ref.set(initial_state)
 
+    # Add initial story entries
+    add_story_entry(user_id, campaign_ref.id, 'user', initial_prompt, mode='god')
     add_story_entry(user_id, campaign_ref.id, 'gemini', opening_story)
+    
     return campaign_ref.id
+
+@log_exceptions
+def get_campaign_game_state(user_id, campaign_id):
+    """Fetches the current game state for a given campaign."""
+    db = get_db()
+    game_state_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id).collection('game_states').document('current_state')
+    
+    game_state_doc = game_state_ref.get()
+    if not game_state_doc.exists:
+        return None
+    return game_state_doc.to_dict()
+
+@log_exceptions
+def update_campaign_game_state(user_id, campaign_id, state_updates: dict):
+    """Updates the game state using dot notation for nested fields."""
+    db = get_db()
+    game_state_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id).collection('game_states').document('current_state')
+    
+    # Add a timestamp to track the update
+    state_updates_with_timestamp = state_updates.copy()
+    state_updates_with_timestamp['last_state_update_timestamp'] = datetime.datetime.now(datetime.timezone.utc)
+    
+    game_state_ref.update(state_updates_with_timestamp)
 
 # --- NEWLY ADDED FUNCTION ---
 @log_exceptions

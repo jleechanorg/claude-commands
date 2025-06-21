@@ -6,6 +6,7 @@ import firebase_admin
 from firebase_admin import auth
 import traceback
 import document_generator
+import logging
 
 def create_app():
     app = Flask(__name__, static_folder='static')
@@ -62,8 +63,19 @@ def create_app():
         data = request.get_json()
         prompt, title = data.get('prompt'), data.get('title')
         selected_prompts = data.get('selected_prompts', [])
+        
+        # V1: Use sensible default initial states
+        initial_character_state = {"name": "Adventurer", "level": 1, "hp_max": 20, "hp_current": 20}
+        initial_world_state = {"current_date_time_text": "Day 1, First Light"}
+        initial_npc_state = {}
+        initial_custom_state = {}
+
         opening_story = gemini_service.get_initial_story(prompt, selected_prompts=selected_prompts)
-        campaign_id = firestore_service.create_campaign(user_id, title, prompt, opening_story, selected_prompts)
+        
+        campaign_id = firestore_service.create_campaign(
+            user_id, title, prompt, opening_story, selected_prompts,
+            initial_character_state, initial_world_state, initial_npc_state, initial_custom_state
+        )
         return jsonify({'success': True, 'campaign_id': campaign_id}), 201
         
     @app.route('/api/campaigns/<campaign_id>', methods=['PATCH'])
@@ -86,12 +98,36 @@ def create_app():
     def handle_interaction(user_id, campaign_id):
         data = request.get_json()
         user_input, mode = data.get('input'), data.get('mode', 'character')
+        
+        # Fetch campaign metadata and story context
         campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
         if not campaign: return jsonify({'error': 'Campaign not found'}), 404
-        selected_prompts = campaign.get('selected_prompts', [])
+        
+        # --- NEW STATE MANAGEMENT WORKFLOW ---
+        # 1. Read current game state
+        current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
+        if not current_game_state:
+            # Handle case where state might not exist for some reason (e.g., older campaigns)
+            # For V1, we can log a warning and proceed with an empty state.
+            logging.warning(f"Game state not found for campaign {campaign_id}. Proceeding with empty state.")
+            current_game_state = {}
+
+        # 2. Add user's action to the story log
         firestore_service.add_story_entry(user_id, campaign_id, 'user', user_input, mode)
-        gemini_response = gemini_service.continue_story(user_input, mode, story_context, selected_prompts)
+        
+        # 3. Process: Get AI response, passing in the current state
+        selected_prompts = campaign.get('selected_prompts', [])
+        gemini_response = gemini_service.continue_story(user_input, mode, story_context, current_game_state, selected_prompts)
+        
+        # 4. Write: Add AI response to story log and update state
         firestore_service.add_story_entry(user_id, campaign_id, 'gemini', gemini_response)
+
+        # 5. Parse and apply state changes from AI response
+        proposed_changes = gemini_service.parse_llm_response_for_state_changes(gemini_response)
+        if proposed_changes:
+            logging.info(f"Applying state changes for campaign {campaign_id}: {proposed_changes}")
+            firestore_service.update_campaign_game_state(user_id, campaign_id, proposed_changes)
+            
         return jsonify({'success': True, 'response': gemini_response})
 
     @app.route('/api/campaigns/<campaign_id>/export', methods=['GET'])
@@ -131,6 +167,8 @@ def create_app():
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_frontend(path):
+        if not app.static_folder or not os.path.isdir(app.static_folder):
+            return "Static folder not found or not a directory.", 404
         return send_from_directory(app.static_folder, 'index.html')
 
     return app
