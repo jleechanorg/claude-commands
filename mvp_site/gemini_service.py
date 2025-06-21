@@ -191,8 +191,8 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False):
     contents = [types.Content(role="user", parts=[types.Part(text=prompt)])]
     
     # --- DYNAMIC MODEL SELECTION ---
-    # Use the more powerful model only when the massive SRD context is needed.
-    model_to_use = LARGE_CONTEXT_MODEL if include_srd else DEFAULT_MODEL
+    # Use the more powerful model at the beginning of the game.
+    model_to_use = LARGE_CONTEXT_MODEL
     logging.info(f"Using model: {model_to_use} for initial story generation.")
 
     response = _call_gemini_api(contents, model_to_use, current_prompt_text_for_logging=prompt, system_instruction_text=system_instruction_final)
