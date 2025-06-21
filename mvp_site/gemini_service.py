@@ -155,12 +155,22 @@ def _truncate_context(story_context):
 
 @log_exceptions
 def get_initial_story(prompt, selected_prompts=None, include_srd=False):
-    """Generates the initial story opening, using system_instruction parameter, including default ruleset."""
+    """Generates the initial story part, including character, narrative, and mechanics instructions."""
+
     if selected_prompts is None:
-        selected_prompts = [] 
-        logging.warning("No specific system prompts selected for initial story. Using none.")
+        selected_prompts = [constants.PROMPT_TYPE_NARRATIVE, constants.PROMPT_TYPE_MECHANICS]
 
     system_instruction_parts = []
+
+    # NEW: Always prepend the character template to all system instructions.
+    character_template_content = _load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE)
+    if character_template_content:
+        system_instruction_parts.append(character_template_content)
+
+    # Load calibration instructions first
+    calibration_content = _load_instruction_file(constants.PROMPT_TYPE_CALIBRATION)
+    if calibration_content:
+        system_instruction_parts.append(calibration_content)
 
     # NEW: Conditionally add the SRD first
     if include_srd:
@@ -207,6 +217,12 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         logging.warning("No specific system prompts selected for continue_story. Using none.")
 
     system_instruction_parts = []
+
+    # NEW: Always prepend the character template to all system instructions.
+    character_template_content = _load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE)
+    if character_template_content:
+        system_instruction_parts.append(character_template_content)
+
     # Filter out 'calibration' for continue_story calls
     # NEW: Also ensure consistent order for continue_story
     filtered_prompts = [p_type for p_type in selected_prompts if p_type in [constants.PROMPT_TYPE_NARRATIVE, constants.PROMPT_TYPE_MECHANICS]]
