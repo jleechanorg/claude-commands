@@ -48,6 +48,9 @@ def _load_instruction_file(instruction_type):
         elif instruction_type == "destiny_ruleset": # NEW TYPE
             file_name = "destiny_ruleset.md"
             header_title = "DEFAULT RULESET" # Optional header for internal understanding
+        elif instruction_type == "game_state": # NEW TYPE
+            file_name = "game_state_instruction.md"
+            header_title = "GAME STATE PROTOCOL"
         else:
             logging.warning(f"Unknown instruction type requested: {instruction_type}")
             _loaded_instructions_cache[instruction_type] = ""
@@ -159,6 +162,10 @@ def get_initial_story(prompt, selected_prompts=None):
     if destiny_ruleset_content:
         system_instruction_parts.append(destiny_ruleset_content)
 
+    # NEW: Always include the game_state instructions
+    game_state_content = _load_instruction_file('game_state')
+    if game_state_content:
+        system_instruction_parts.append(game_state_content)
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
     
@@ -191,6 +198,10 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     if destiny_ruleset_content:
         system_instruction_parts.append(destiny_ruleset_content)
 
+    # NEW: Always include the game_state instructions
+    game_state_content = _load_instruction_file('game_state')
+    if game_state_content:
+        system_instruction_parts.append(game_state_content)
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
 
