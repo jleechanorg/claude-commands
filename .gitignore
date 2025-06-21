@@ -12,3 +12,6 @@ key.json
 .vscode/
 .idea/
 .DS_Store
+
+# World Architect AI
+serviceAccountKey.json
