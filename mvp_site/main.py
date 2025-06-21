@@ -8,6 +8,7 @@ import traceback
 import document_generator
 import logging
 from game_state import GameState, MigrationStatus
+import constants
 
 # --- CONSTANTS ---
 # API Configuration
@@ -18,12 +19,10 @@ HEADER_AUTH = 'Authorization'
 HEADER_TEST_BYPASS = 'X-Test-Bypass-Auth'
 HEADER_TEST_USER_ID = 'X-Test-User-ID'
 
-# Request/Response Data Keys
+# Request/Response Data Keys (specific to main.py)
 KEY_PROMPT = 'prompt'
-KEY_TITLE = 'title'
 KEY_SELECTED_PROMPTS = 'selected_prompts'
 KEY_USER_INPUT = 'input'
-KEY_MODE = 'mode'
 KEY_CAMPAIGN_ID = 'campaign_id'
 KEY_SUCCESS = 'success'
 KEY_ERROR = 'error'
@@ -33,21 +32,10 @@ KEY_CAMPAIGN = 'campaign'
 KEY_STORY = 'story'
 KEY_DETAILS = 'details'
 KEY_RESPONSE = 'response'
-KEY_FORMAT = 'format'
 
 # Roles & Modes
-ACTOR_USER = 'user'
-ACTOR_GEMINI = 'gemini'
-MODE_CHARACTER = 'character'
 DEFAULT_TEST_USER = 'test-user'
 
-# Export Formats
-FORMAT_PDF = 'pdf'
-FORMAT_DOCX = 'docx'
-FORMAT_TXT = 'txt'
-MIMETYPE_PDF = 'application/pdf'
-MIMETYPE_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-MIMETYPE_TXT = 'text/plain'
 # --- END CONSTANTS ---
 
 def create_app():
@@ -103,7 +91,7 @@ def create_app():
     @check_token
     def create_campaign_route(user_id):
         data = request.get_json()
-        prompt, title = data.get(KEY_PROMPT), data.get(KEY_TITLE)
+        prompt, title = data.get(KEY_PROMPT), data.get(constants.KEY_TITLE)
         selected_prompts = data.get(KEY_SELECTED_PROMPTS, [])
         
         # Create a blank initial game state. It will be populated by the LLM.
@@ -130,7 +118,7 @@ def create_app():
     @check_token
     def update_campaign(user_id, campaign_id):
         data = request.get_json()
-        new_title = data.get(KEY_TITLE)
+        new_title = data.get(constants.KEY_TITLE)
         if not new_title:
             return jsonify({KEY_ERROR: 'New title is required'}), 400
         
@@ -145,7 +133,7 @@ def create_app():
     @check_token
     def handle_interaction(user_id, campaign_id):
         data = request.get_json()
-        user_input, mode = data.get(KEY_USER_INPUT), data.get(KEY_MODE, MODE_CHARACTER)
+        user_input, mode = data.get(KEY_USER_INPUT), data.get(constants.KEY_MODE, constants.MODE_CHARACTER)
         
         # Fetch campaign metadata and story context
         campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
@@ -186,14 +174,14 @@ def create_app():
             logging.info(f"-> Status is {current_game_state.migration_status.value}. Skipping scan.")
 
         # 2. Add user's action to the story log
-        firestore_service.add_story_entry(user_id, campaign_id, ACTOR_USER, user_input, mode)
+        firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
         
         # 3. Process: Get AI response, passing in the current state
         selected_prompts = campaign.get(KEY_SELECTED_PROMPTS, [])
         gemini_response = gemini_service.continue_story(user_input, mode, story_context, current_game_state, selected_prompts)
         
         # 4. Write: Add AI response to story log and update state
-        firestore_service.add_story_entry(user_id, campaign_id, ACTOR_GEMINI, gemini_response)
+        firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response)
 
         # 5. Parse and apply state changes from AI response
         proposed_changes = gemini_service.parse_llm_response_for_state_changes(gemini_response)
@@ -206,26 +194,26 @@ def create_app():
     @app.route('/api/campaigns/<campaign_id>/export', methods=['GET'])
     @check_token
     def export_campaign(user_id, campaign_id):
-        file_format = request.args.get(KEY_FORMAT, FORMAT_TXT).lower()
+        file_format = request.args.get(constants.KEY_FORMAT, constants.FORMAT_TXT).lower()
         campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
         if not campaign:
             return jsonify({KEY_ERROR: 'Campaign not found'}), 404
-        campaign_title = campaign.get(KEY_TITLE, 'My Story')
+        campaign_title = campaign.get(constants.KEY_TITLE, 'My Story')
         story_text = document_generator.get_story_text_from_context(story_context)
         file_path = None
-        mimetype = MIMETYPE_TXT
+        mimetype = constants.MIMETYPE_TXT
         try:
-            if file_format == FORMAT_PDF:
+            if file_format == constants.FORMAT_PDF:
                 file_path = document_generator.generate_pdf(story_text, campaign_title)
-                mimetype = MIMETYPE_PDF
-            elif file_format == FORMAT_DOCX:
+                mimetype = constants.MIMETYPE_PDF
+            elif file_format == constants.FORMAT_DOCX:
                 file_path = document_generator.generate_docx(story_text, campaign_title)
-                mimetype = MIMETYPE_DOCX
+                mimetype = constants.MIMETYPE_DOCX
             else:
                 file_path = f"{campaign_title.replace(' ', '_')}.txt"
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(story_text)
-                mimetype = MIMETYPE_TXT
+                mimetype = constants.MIMETYPE_TXT
             if not file_path:
                 return jsonify({KEY_ERROR: 'Unsupported format'}), 400
             return send_file(file_path, as_attachment=True, mimetype=mimetype)

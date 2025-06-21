@@ -1,6 +1,7 @@
 import os
 from fpdf import FPDF, XPos, YPos
 from docx import Document
+import constants
 
 # --- CONSTANTS ---
 # File Paths and Configuration
@@ -21,17 +22,11 @@ BODY_LINE_HEIGHT = 5
 PARAGRAPH_SPACING = 3
 TITLE_SPACING = 5
 
-# Document Content
-ACTOR_GEMINI = 'gemini'
-ACTOR_USER = 'user'
-MODE_GOD = 'god'
+# Document Content Labels
 LABEL_GEMINI = 'Story'
 LABEL_GOD = 'God'
 LABEL_USER = 'Main Character'
 UNKNOWN_ACTOR = 'Unknown'
-KEY_ACTOR = 'actor'
-KEY_TEXT = 'text'
-KEY_MODE = 'mode'
 
 # Document Generation
 DOCX_HEADING_LEVEL = 1
@@ -42,14 +37,14 @@ def get_story_text_from_context(story_context):
     """Extracts and formats story text from the context array."""
     story_parts = []
     for entry in story_context:
-        actor = entry.get(KEY_ACTOR, UNKNOWN_ACTOR)
-        text = entry.get(KEY_TEXT, '')
-        mode = entry.get(KEY_MODE)
+        actor = entry.get(constants.KEY_ACTOR, UNKNOWN_ACTOR)
+        text = entry.get(constants.KEY_TEXT, '')
+        mode = entry.get(constants.KEY_MODE)
 
-        if actor == ACTOR_GEMINI:
+        if actor == constants.ACTOR_GEMINI:
             label = LABEL_GEMINI
         else: # user
-            label = LABEL_GOD if mode == MODE_GOD else LABEL_USER
+            label = LABEL_GOD if mode == constants.MODE_GOD else LABEL_USER
         
         story_parts.append(f"{label}:\\n{text}")
     
