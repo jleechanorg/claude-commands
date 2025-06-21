@@ -87,7 +87,7 @@ def _load_instruction_file(instruction_type):
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read().strip()
-            logging.info(f"Loaded {instruction_type} instruction from {file_path}")
+            logging.info(f'Loaded prompt "{instruction_type}" from file: {os.path.basename(file_path)}')
             _loaded_instructions_cache[instruction_type] = content
         except FileNotFoundError:
             logging.error(f"CRITICAL: System instruction file not found: {file_path}. This is a fatal error for this request.")
