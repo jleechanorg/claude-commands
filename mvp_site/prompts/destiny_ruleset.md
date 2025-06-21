@@ -675,11 +675,3 @@ This section outlines rules for common interactions with the game world outside 
         4.  A character regains a number of spent Hit Dice equal to **half their total number of Hit Dice (rounded up)**. They must have at least 1 HP to regain Hit Dice.
         5.  Certain "Per Long Rest" abilities and Martial Techniques also refresh.
 ---
-
-**X. Destiny System**
-
-*   **X.1 Core Principle:** The "Destiny" system is a meta-narrative resource. It is not a direct, in-character ability the PC is aware of. It represents a combination of luck, fate, narrative momentum, and heroic potential.
-*   *GM (AI) Suggestion for Checkpoint Block (Part 3 in `mechanics_system_instruction.md`): Consider adding a concise "Ambition: [Current Ambition Name] - Next Milestone: [Brief Next Milestone]" to the Checkpoint Block for constant visibility.*
-
-
----

@@ -271,11 +271,19 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     active_missions = current_game_state.custom_campaign_state.get('active_missions', [])
     missions_summary = "Missions: " + (", ".join(active_missions) if active_missions else "None")
 
+    # --- NEW: Ambition & Milestone ---
+    ambition = pc_data.get('core_ambition')
+    milestone = pc_data.get('next_milestone')
+    ambition_summary = ""
+    if ambition and milestone:
+        ambition_summary = f"Ambition: {ambition} | Next Milestone: {milestone}"
+
     checkpoint_block = (
         f"[CHECKPOINT BLOCK:]\\n"
         f"Sequence ID: {latest_seq_id} | Location: {current_location}\\n"
         f"Key Stats: {key_stats_summary}\\n"
-        f"{missions_summary}"
+        f"{missions_summary}\\n"
+        f"{ambition_summary}"
     )
 
     # Create the final prompt for the current user turn (User's preferred method)
