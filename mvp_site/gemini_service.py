@@ -158,14 +158,16 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False):
     """Generates the initial story part, including character, narrative, and mechanics instructions."""
 
     if selected_prompts is None:
-        selected_prompts = [constants.PROMPT_TYPE_NARRATIVE, constants.PROMPT_TYPE_MECHANICS]
+        selected_prompts = [] 
+        logging.warning("No specific system prompts selected for initial story. Using none.")
 
     system_instruction_parts = []
 
-    # NEW: Always prepend the character template to all system instructions.
-    character_template_content = _load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE)
-    if character_template_content:
-        system_instruction_parts.append(character_template_content)
+    # Conditionally add the character template if narrative instructions are selected.
+    if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
+        character_template_content = _load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE)
+        if character_template_content:
+            system_instruction_parts.append(character_template_content)
 
     # Load calibration instructions first
     calibration_content = _load_instruction_file(constants.PROMPT_TYPE_CALIBRATION)
@@ -218,10 +220,11 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
 
     system_instruction_parts = []
 
-    # NEW: Always prepend the character template to all system instructions.
-    character_template_content = _load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE)
-    if character_template_content:
-        system_instruction_parts.append(character_template_content)
+    # Conditionally add the character template if narrative instructions are selected.
+    if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
+        character_template_content = _load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE)
+        if character_template_content:
+            system_instruction_parts.append(character_template_content)
 
     # Filter out 'calibration' for continue_story calls
     # NEW: Also ensure consistent order for continue_story

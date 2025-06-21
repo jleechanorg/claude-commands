@@ -52,4 +52,6 @@ PROMPT_TYPE_SRD = "srd"
 PROMPT_TYPE_CHARACTER_TEMPLATE = "character_template"
 
 # --- Firestore Document Keys & Fields ---
-# ... existing code ...
+# Used for document fields in Firestore.
+FIELD_ACTOR = "actor"
+FIELD_TEXT = "text"
