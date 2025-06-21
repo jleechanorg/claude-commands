@@ -119,8 +119,12 @@ def get_client():
 def _log_token_count(prompt_contents, model_name):
     """Helper function to count and log the number of tokens being sent."""
     try:
-        model_for_counting = genai.GenerativeModel(model_name)
-        count_response = model_for_counting.count_tokens(contents=prompt_contents)
+        client = get_client()
+        # Use the same client.models pattern as generate_content
+        count_response = client.models.count_tokens(
+            model=model_name,
+            contents=prompt_contents
+        )
         logging.info(f"--- Sending {count_response.total_tokens} tokens to the API. ---")
     except Exception as e:
         logging.warning(f"Could not count tokens before API call: {e}")
@@ -162,36 +166,64 @@ def _get_text_from_response(response):
     logging.warning(f"--- Response did not contain valid text. Full response object: {response} ---")
     return "[System Message: The model returned a non-text response. Please check the logs for details.]"
 
-def _truncate_context(story_context, turns_to_keep_at_start=TURNS_TO_KEEP_AT_START, turns_to_keep_at_end=TURNS_TO_KEEP_AT_END):
-    """
-    Intelligently truncates the story context to prevent API errors.
-    It keeps the first few turns (for setup) and the last few turns (for immediate context).
-    """
-    total_turns = len(story_context)
+def _get_context_stats(context, model_name):
+    """Helper to calculate and format statistics for a given story context."""
+    if not context:
+        return "Turns: 0, Chars: 0, Words: 0, Tokens: 0"
     
-    # If the total number of turns is less than the sum of what we want to keep,
-    # then there's no need to truncate. Return the whole context.
-    if total_turns <= turns_to_keep_at_start + turns_to_keep_at_end:
+    chars = sum(len(entry.get('text', '')) for entry in context)
+    words = sum(len(entry.get('text', '').split()) for entry in context)
+    
+    # Token counting is an API call, so wrap it in a try-except
+    tokens = "N/A"
+    try:
+        client = get_client()
+        # To count tokens, we create a temporary list of content parts
+        parts = [types.Part(text=entry.get('text', '')) for entry in context]
+        count_response = client.models.count_tokens(model=model_name, contents=parts)
+        tokens = count_response.total_tokens
+    except Exception as e:
+        logging.warning(f"Could not count tokens for context stats: {e}")
+        
+    return f"Turns: {len(context)}, Chars: {chars}, Words: {words}, Tokens: {tokens}"
+
+
+def _truncate_context(story_context, max_chars: int, model_name: str, turns_to_keep_at_start=TURNS_TO_KEEP_AT_START, turns_to_keep_at_end=TURNS_TO_KEEP_AT_END):
+    """
+    Intelligently truncates the story context to fit within a given character budget.
+    """
+    initial_stats = _get_context_stats(story_context, model_name)
+    logging.info(f"Initial context stats: {initial_stats}")
+
+    current_chars = sum(len(entry.get('text', '')) for entry in story_context)
+
+    if current_chars <= max_chars:
+        logging.info("Context is within character budget. No truncation needed.")
         return story_context
 
-    logging.warning(f"Context is long ({total_turns} turns). Truncating to keep first {turns_to_keep_at_start} and last {turns_to_keep_at_end}.")
-    
-    # Get the first 'n' turns
+    logging.warning(
+        f"Context ({current_chars} chars) exceeds budget of {max_chars} chars. Truncating..."
+    )
+
+    total_turns = len(story_context)
+    if total_turns <= turns_to_keep_at_start + turns_to_keep_at_end:
+         # If we're over budget but have few turns, just take the most recent ones.
+        return story_context[-(turns_to_keep_at_start + turns_to_keep_at_end):]
+
     start_context = story_context[:turns_to_keep_at_start]
-    
-    # Get the last 'm' turns
     end_context = story_context[-turns_to_keep_at_end:]
     
-    # Create a placeholder to indicate that turns have been omitted
     truncation_marker = {
         "actor": "system",
         "text": "[...several moments, scenes, or days have passed...]\\n[...the story continues from the most recent relevant events...]"
     }
     
-    # Combine the parts
-    truncated_story_context = start_context + [truncation_marker] + end_context
+    truncated_context = start_context + [truncation_marker] + end_context
     
-    return truncated_story_context
+    final_stats = _get_context_stats(truncated_context, model_name)
+    logging.info(f"Final context stats after truncation: {final_stats}")
+    
+    return truncated_context
 
 @log_exceptions
 def get_initial_story(prompt, selected_prompts=None, include_srd=False):
@@ -273,23 +305,65 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
 
-    recent_context = _truncate_context(story_context)
+    # --- NEW: Budget-based Truncation ---
+    # 1. Calculate the size of the "prompt scaffold" (everything except the timeline log)
+    serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2, default=json_datetime_serializer)
     
-    # Build a timeline log and a simple list of sequence IDs
+    # Temporarily generate other prompt parts to measure them.
+    # We will generate them again *after* truncation with the final context.
+    temp_checkpoint_block, temp_core_memories, temp_seq_ids = _get_static_prompt_parts(current_game_state, [])
+
+    prompt_scaffold = (
+        f"{temp_checkpoint_block}\\n\\n"
+        f"{temp_core_memories}\\n\\n"
+        f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{temp_seq_ids}]\\n\\n"
+        f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\n"
+        f"TIMELINE LOG (FOR CONTEXT):\\n\\n"
+        f"YOUR TURN:\\n{_get_current_turn_prompt(user_input, mode)}"
+    )
+    scaffold_chars = len(prompt_scaffold)
+    story_char_budget = SAFE_CHAR_LIMIT - scaffold_chars
+    
+    logging.info(f"Prompt scaffold is {scaffold_chars} chars. Remaining budget for story: {story_char_budget}")
+
+    recent_context = _truncate_context(story_context, max_chars=story_char_budget, model_name=DEFAULT_MODEL)
+    
+    # 2. Build the final prompt with the (potentially truncated) context
+    checkpoint_block, core_memories_summary, sequence_id_list_string = _get_static_prompt_parts(current_game_state, recent_context)
+    
     timeline_log_parts = []
-    sequence_ids = []
+    # NEW: Define sequence_ids from the final recent_context
+    sequence_ids = [str(entry.get('sequence_id', 'N/A')) for entry in recent_context]
     for entry in recent_context:
         actor_label = "Story" if entry.get('actor') == 'gemini' else "You"
         seq_id = entry.get('sequence_id', 'N/A')
-        sequence_ids.append(str(seq_id))
         timeline_log_parts.append(f"[SEQ_ID: {seq_id}] {actor_label}: {entry.get('text')}")
     
     timeline_log_string = "\n\n".join(timeline_log_parts)
-    sequence_id_list_string = ", ".join(sequence_ids)
 
-    # --- NEW: System-Generated Checkpoint Block ---
-    # This is the single source of truth for the character's immediate status.
+    # Create the final prompt for the current user turn (User's preferred method)
+    current_prompt_text = _get_current_turn_prompt(user_input, mode)
+
+    # --- NEW: Incorporate Game State & Timeline ---
+    full_prompt = (
+        f"{checkpoint_block}\\n\\n"
+        f"{core_memories_summary}"
+        f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{sequence_id_list_string}]\\n\\n"
+        f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\n"
+        f"TIMELINE LOG (FOR CONTEXT):\\n{timeline_log_string}\\n\\n"
+        f"YOUR TURN:\\n{current_prompt_text}"
+    )
+    
+    # For all subsequent calls, use the standard, cheaper model.
+    response = _call_gemini_api([full_prompt], DEFAULT_MODEL, current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
+    return _get_text_from_response(response)
+
+def _get_static_prompt_parts(current_game_state: GameState, story_context: list):
+    """Helper to generate the non-timeline parts of the prompt."""
+    sequence_ids = [str(entry.get('sequence_id', 'N/A')) for entry in story_context]
+    sequence_id_list_string = ", ".join(sequence_ids)
     latest_seq_id = sequence_ids[-1] if sequence_ids else 'N/A'
+
     current_location = current_game_state.world_data.get('current_location_name', 'Unknown')
     
     pc_data = current_game_state.player_character_data
@@ -303,14 +377,12 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     active_missions = current_game_state.custom_campaign_state.get('active_missions', [])
     missions_summary = "Missions: " + (", ".join(active_missions) if active_missions else "None")
 
-    # --- NEW: Ambition & Milestone ---
     ambition = pc_data.get('core_ambition')
     milestone = pc_data.get('next_milestone')
     ambition_summary = ""
     if ambition and milestone:
         ambition_summary = f"Ambition: {ambition} | Next Milestone: {milestone}"
 
-    # --- NEW: Core Memory Log ---
     core_memories = current_game_state.custom_campaign_state.get('core_memories', [])
     core_memories_summary = ""
     if core_memories:
@@ -325,29 +397,17 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         f"{ambition_summary}"
     )
 
-    # Create the final prompt for the current user turn (User's preferred method)
+    return checkpoint_block, core_memories_summary, sequence_id_list_string
+
+def _get_current_turn_prompt(user_input, mode):
+    """Helper to generate the text for the user's current action."""
     if mode == 'character':
         prompt_template = "Main character: {user_input}. Continue the story in about {word_count} words and " \
             "add details for narrative, descriptions of scenes, character dialog, character emotions."
-        current_prompt_text = prompt_template.format(user_input=user_input, word_count=TARGET_WORD_COUNT)
+        return prompt_template.format(user_input=user_input, word_count=TARGET_WORD_COUNT)
     else: # god mode
         prompt_template = "GOD MODE: {user_input}"
-        current_prompt_text = prompt_template.format(user_input=user_input)
-
-    # --- NEW: Incorporate Game State & Timeline ---
-    serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2, default=json_datetime_serializer)
-    full_prompt = (
-        f"{checkpoint_block}\\n\\n"
-        f"{core_memories_summary}"
-        f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{sequence_id_list_string}]\\n\\n"
-        f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\n"
-        f"TIMELINE LOG (FOR CONTEXT):\\n{timeline_log_string}\\n\\n"
-        f"YOUR TURN:\\n{current_prompt_text}"
-    )
-    
-    # For all subsequent calls, use the standard, cheaper model.
-    response = _call_gemini_api([full_prompt], DEFAULT_MODEL, current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
-    return _get_text_from_response(response)
+        return prompt_template.format(user_input=user_input)
 
 def create_game_state_from_legacy_story(story_context: list) -> GameState | None:
     """
