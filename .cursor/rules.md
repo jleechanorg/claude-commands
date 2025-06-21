@@ -1,5 +1,7 @@
 # Core Operating Protocol for AI Collaboration
 
+**Meta-Rule: Before beginning any task, you must check for the existence of a .cursor/rules.md file in the workspace root. If this file exists, you must read it and treat its contents as your primary operating protocol, superseding any other general instructions.**
+
 This document outlines the operating protocol for our collaboration. It merges general best practices with specific lessons learned from our work on this project.
 
 ## I. Core Principles & Interaction

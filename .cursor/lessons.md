@@ -51,4 +51,8 @@ This document is a persistent repository for reusable knowledge, best practices,
 *   **Incident:** Application crashed with `ModuleNotFoundError: No module named 'mvp_site'`.
 *   **Root Cause:** Using an absolute import (`from mvp_site import constants`) in a script that was being run directly from within the `mvp_site` subdirectory. This execution context prevents Python from recognizing `mvp_site` as a package in its search path.
 *   **Lesson:** When a Python script is intended to be run directly (e.g., `python my_script.py`), any imports of other modules within the same directory must be relative (e.g., `import my_module`), not absolute from a parent directory that isn't a recognized package in the current execution context.
-*   **Action:** When working on scripts inside a subdirectory of the project, use relative imports for local modules. 
+*   **Action:** When working on scripts inside a subdirectory of the project, use relative imports for local modules.
+
+*   **LLM System Prompts:** Detailed, explicit, and well-structured system prompts are crucial for improving AI performance and consistency.
+*   **Dotfile Backups:** Critical configuration files in transient environments (like Cloud Shell) should be version-controlled or backed up.
+*   **Workspace-Specific Rules:** Always check for a `.cursor/rules.md` file at the start of any interaction. If it exists, its contents supersede any general operating instructions. This file is the definitive source of truth for project-specific protocols. 
