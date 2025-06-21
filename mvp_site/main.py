@@ -65,10 +65,10 @@ def create_app():
         prompt, title = data.get('prompt'), data.get('title')
         selected_prompts = data.get('selected_prompts', [])
         
-        # V1: Use sensible default initial states
+        # Create a blank initial game state. It will be populated by the LLM.
         initial_game_state = GameState(
-            player_character_data={"name": "Adventurer", "level": 1, "hp_max": 20, "hp_current": 20},
-            world_data={"current_date_time_text": "Day 1, First Light"},
+            player_character_data={},
+            world_data={},
             npc_data={},
             custom_campaign_state={}
         )
