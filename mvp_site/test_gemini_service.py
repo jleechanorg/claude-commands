@@ -52,31 +52,7 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
 
     @patch('gemini_service.get_client')
     @patch('gemini_service._load_instruction_file')
-    def test_get_initial_story_no_selected_prompts(self, mock_load_instruction_file, mock_get_client):
-        """Tests that get_initial_story loads only default prompts when none are selected."""
-        # --- Arrange ---
-        mock_content_map = { "destiny_ruleset": "Destiny", "game_state": "GameState" }
-        mock_load_instruction_file.side_effect = lambda type: mock_content_map.get(type, "")
-        
-        mock_client = MagicMock()
-        mock_client.models.generate_content.return_value.text = "Success"
-        mock_get_client.return_value = mock_client
-        
-        expected_system_instruction = "Destiny\n\nGameState"
-
-        # --- Act ---
-        gemini_service.get_initial_story("test prompt", selected_prompts=[], include_srd=False)
-
-        # --- Assert ---
-        # We need to get the arguments from the final call to the mocked method
-        call_args = mock_get_client.return_value.models.generate_content.call_args
-        actual_system_instruction = call_args.kwargs['config'].system_instruction.text
-        
-        self.assertEqual(actual_system_instruction, expected_system_instruction)
-
-    @patch('gemini_service.get_client')
-    @patch('gemini_service._load_instruction_file')
-    def test_all_checkboxes_selected_scenario(self, mock_load_instruction_file, mock_get_client):
+    def test_all_checkboxes_scenario(self, mock_load_instruction_file, mock_get_client):
         """
         Tests that if all checkboxes are selected, all corresponding prompts
         are loaded in the correct order.
@@ -127,6 +103,29 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         # --- Assert ---
         mock_client.models.generate_content.assert_called_once()
         call_args = mock_client.models.generate_content.call_args
+        actual_system_instruction = call_args.kwargs['config'].system_instruction.text
+        
+        self.assertEqual(actual_system_instruction, expected_system_instruction)
+
+    @patch('gemini_service.get_client')
+    @patch('gemini_service._load_instruction_file')
+    def test_get_initial_story_no_selected_prompts(self, mock_load_instruction_file, mock_get_client):
+        """Tests that get_initial_story loads only default prompts when none are selected."""
+        # --- Arrange ---
+        mock_content_map = { "destiny_ruleset": "Destiny", "game_state": "GameState" }
+        mock_load_instruction_file.side_effect = lambda type: mock_content_map.get(type, "")
+        
+        mock_client = MagicMock()
+        mock_client.models.generate_content.return_value.text = "Success"
+        mock_get_client.return_value = mock_client
+        
+        expected_system_instruction = "Destiny\n\nGameState"
+
+        # --- Act ---
+        gemini_service.get_initial_story("test prompt", selected_prompts=[], include_srd=False)
+
+        # --- Assert ---
+        call_args = mock_get_client.return_value.models.generate_content.call_args
         actual_system_instruction = call_args.kwargs['config'].system_instruction.text
         
         self.assertEqual(actual_system_instruction, expected_system_instruction)

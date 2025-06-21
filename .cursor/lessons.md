@@ -55,4 +55,28 @@ This document is a persistent repository for reusable knowledge, best practices,
 
 *   **LLM System Prompts:** Detailed, explicit, and well-structured system prompts are crucial for improving AI performance and consistency.
 *   **Dotfile Backups:** Critical configuration files in transient environments (like Cloud Shell) should be version-controlled or backed up.
+*   **Safe File Edits:** To avoid accidental deletions or unwanted changes, I must treat file edits like a formal code review. I will first determine the exact `diff` I intend to create. After using my tools to generate the change, I will compare the actual result to my intended `diff`. If they do not match perfectly, I will stop, report the discrepancy, and re-plan the edit instead of proceeding with a faulty change. This ensures that I am always performing surgical and additive changes, never destructive ones.
+
+## VII. 5 Whys Analysis Log
+
+*This section will be used to document the root cause analysis of any significant failures.*
+
+*   **Root Cause:** Failure to explicitly sanitize data for serialization. The `json` library cannot handle Python `datetime` objects by default.
+*   **Lesson:** Always pass data destined for JSON serialization through a handler that can manage common non-serializable types like `datetime`.
+
+*   **Incident:** Multiple failed attempts to call the Gemini API, resulting in "non-text response" errors and linter failures.
+*   **Root Cause:** Using outdated patterns from the legacy `google-generativeai` Python SDK instead of the current `google-genai` SDK. The API signature for client initialization and content generation changed significantly.
+*   **Lesson:** The project uses the modern `google-genai` SDK. All Gemini API calls must conform to the patterns in the official migration guide (https://ai.google.dev/gemini-api/docs/migrate). Specifically, use `genai.Client()` for initialization and `client.models.generate_content()` for requests, not `genai.GenerativeModel()`.
+
+*   **Incident:** Application crashed with a `404 Not Found` error when checking a new campaign for legacy data.
+*   **Root Cause:** A function (`update_campaign_game_state`) used the Firestore `.update()` method, which fails if the target document does not exist. The code path for a "new campaign with no legacy data" tried to update a document that had not yet been created.
+*   **Lesson:** Functions that modify database records should be designed to be idempotent or act as an "upsert" (update or insert) when there's a possibility of acting on a non-existent resource. For Firestore, this means preferring `.set(data, merge=True)` over `.update(data)` in such cases.
+
+*   **Incident:** Application crashed with `ModuleNotFoundError: No module named 'mvp_site'`.
+*   **Root Cause:** Using an absolute import (`from mvp_site import constants`) in a script that was being run directly from within the `mvp_site` subdirectory. This execution context prevents Python from recognizing `mvp_site` as a package in its search path.
+*   **Lesson:** When a Python script is intended to be run directly (e.g., `python my_script.py`), any imports of other modules within the same directory must be relative (e.g., `import my_module`), not absolute from a parent directory that isn't a recognized package in the current execution context.
+*   **Action:** When working on scripts inside a subdirectory of the project, use relative imports for local modules.
+
+*   **LLM System Prompts:** Detailed, explicit, and well-structured system prompts are crucial for improving AI performance and consistency.
+*   **Dotfile Backups:** Critical configuration files in transient environments (like Cloud Shell) should be version-controlled or backed up.
 *   **Workspace-Specific Rules:** Always check for a `.cursor/rules.md` file at the start of any interaction. If it exists, its contents supersede any general operating instructions. This file is the definitive source of truth for project-specific protocols. 
