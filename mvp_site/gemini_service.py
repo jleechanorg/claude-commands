@@ -56,32 +56,45 @@ _loaded_instructions_cache = {}
 def _load_instruction_file(instruction_type):
     """
     Loads a prompt instruction file from the 'prompts' directory.
-    Uses a dictionary lookup for clarity and maintainability.
-    Caches loaded files to avoid redundant disk I/O.
+    This function is now strict: it will raise an exception if a file
+    cannot be found, ensuring the application does not continue with
+    incomplete instructions.
     """
+    # This mapping allows us to use short, simple constants in the code
+    # while still loading the descriptively named files.
+    filename_map = {
+        constants.PROMPT_TYPE_NARRATIVE: "narrative_system_instruction.md",
+        constants.PROMPT_TYPE_MECHANICS: "mechanics_system_instruction.md",
+        constants.PROMPT_TYPE_CALIBRATION: "calibration_instruction.md",
+        constants.PROMPT_TYPE_DESTINY: "destiny_ruleset.md",
+        constants.PROMPT_TYPE_GAME_STATE: "game_state_instruction.md",
+        constants.PROMPT_TYPE_SRD: "5e_SRD_All.md",
+        constants.PROMPT_TYPE_CHARACTER_TEMPLATE: "character_template.md",
+    }
+
     global _loaded_instructions_cache
     if instruction_type not in _loaded_instructions_cache:
-        file_name = PROMPT_FILENAMES.get(instruction_type)
+        file_name = filename_map.get(instruction_type)
         
         if not file_name:
-            logging.warning(f"Unknown instruction type requested: {instruction_type}")
-            _loaded_instructions_cache[instruction_type] = ""
-            return ""
+            logging.error(f"FATAL: Unknown instruction type requested: {instruction_type}")
+            raise ValueError(f"Unknown instruction type requested: {instruction_type}")
 
         file_path = os.path.join(os.path.dirname(__file__), 'prompts', file_name)
-        content = ""
+        
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read().strip()
             logging.info(f"Loaded {instruction_type} instruction from {file_path}")
+            _loaded_instructions_cache[instruction_type] = content
         except FileNotFoundError:
-            logging.warning(f"System instruction file not found: {file_path}. Proceeding without these instructions.")
+            logging.error(f"CRITICAL: System instruction file not found: {file_path}. This is a fatal error for this request.")
+            raise
         except Exception as e:
-            logging.error(f"Error loading system instruction file {file_path}: {e}")
+            logging.error(f"CRITICAL: Error loading system instruction file {file_path}: {e}")
+            raise
         
-        _loaded_instructions_cache[instruction_type] = content 
-        
-    return _loaded_instructions_cache.get(instruction_type, "")
+    return _loaded_instructions_cache[instruction_type]
 
 
 def get_client():
@@ -165,38 +178,26 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False):
 
     # Conditionally add the character template if narrative instructions are selected.
     if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
-        character_template_content = _load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE)
-        if character_template_content:
-            system_instruction_parts.append(character_template_content)
+        system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE))
 
-    # Load calibration instructions first
-    calibration_content = _load_instruction_file(constants.PROMPT_TYPE_CALIBRATION)
-    if calibration_content:
-        system_instruction_parts.append(calibration_content)
+    # Load calibration instructions
+    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CALIBRATION))
 
-    # NEW: Conditionally add the SRD first
+    # Conditionally add the SRD
     if include_srd:
-        srd_content = _load_instruction_file(constants.PROMPT_TYPE_SRD)
-        if srd_content:
-            system_instruction_parts.append(srd_content)
+        system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_SRD))
 
     # Consistent order for instructions
     # Narrative, Mechanics, Calibration (from checkboxes)
     for p_type in [constants.PROMPT_TYPE_NARRATIVE, constants.PROMPT_TYPE_MECHANICS, constants.PROMPT_TYPE_CALIBRATION]: 
         if p_type in selected_prompts:
-            content = _load_instruction_file(p_type)
-            if content:
-                system_instruction_parts.append(content)
+            system_instruction_parts.append(_load_instruction_file(p_type))
     
     # NEW: Always include the destiny_ruleset as a default system instruction
-    destiny_ruleset_content = _load_instruction_file(constants.PROMPT_TYPE_DESTINY)
-    if destiny_ruleset_content:
-        system_instruction_parts.append(destiny_ruleset_content)
+    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DESTINY))
 
     # NEW: Always include the game_state instructions
-    game_state_content = _load_instruction_file(constants.PROMPT_TYPE_GAME_STATE)
-    if game_state_content:
-        system_instruction_parts.append(game_state_content)
+    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
     
@@ -222,9 +223,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
 
     # Conditionally add the character template if narrative instructions are selected.
     if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
-        character_template_content = _load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE)
-        if character_template_content:
-            system_instruction_parts.append(character_template_content)
+        system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE))
 
     # Filter out 'calibration' for continue_story calls
     # NEW: Also ensure consistent order for continue_story
@@ -232,19 +231,13 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
 
     # Load content for narrative and mechanics
     for p_type in filtered_prompts: 
-        content = _load_instruction_file(p_type)
-        if content:
-            system_instruction_parts.append(content)
+        system_instruction_parts.append(_load_instruction_file(p_type))
     
     # NEW: Always include the destiny_ruleset for continue_story too
-    destiny_ruleset_content = _load_instruction_file(constants.PROMPT_TYPE_DESTINY)
-    if destiny_ruleset_content:
-        system_instruction_parts.append(destiny_ruleset_content)
+    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DESTINY))
 
     # NEW: Always include the game_state instructions
-    game_state_content = _load_instruction_file(constants.PROMPT_TYPE_GAME_STATE)
-    if game_state_content:
-        system_instruction_parts.append(game_state_content)
+    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
 

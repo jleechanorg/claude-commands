@@ -50,8 +50,3 @@ PROMPT_TYPE_DESTINY = "destiny_ruleset"
 PROMPT_TYPE_GAME_STATE = "game_state"
 PROMPT_TYPE_SRD = "srd"
 PROMPT_TYPE_CHARACTER_TEMPLATE = "character_template"
-
-# --- Firestore Document Keys & Fields ---
-# Used for document fields in Firestore.
-FIELD_ACTOR = "actor"
-FIELD_TEXT = "text"
