@@ -435,6 +435,14 @@ Combat in this system is turn-based. On your turn, you can move a distance up to
             5.  **Actions & Abilities:** Adapt its attack routines, special abilities, and spells to use this ruleset's mechanics (e.g., targeting Defense, using Resolution Checks for saves).
     *   **B. AI-Generated Original Enemies:**
         *   If the GM (AI) creates an original enemy, it will assign its Level, Aptitude Scores, HP, action economy, special abilities, and general tactics based on its intended narrative role, the current **Tier of Play** (see `mechanics_system_instruction.md` 6.C), and the guidelines for **Appropriate Challenge Level** (see `narrative_system_instruction.md` 6.B.3.c). The goal is to create a thematic and suitably challenging encounter.
+    *   **C. Gaining Insight into Enemy Tactics:**
+        1.  A character can attempt to discern an enemy's likely strategy, weaknesses, or immediate intentions by making an **Intelligence (Tactics/Insight) Resolution Check.**
+        2.  **Determining CN:**
+            *   This can be against a **CN based on the enemy's cunning, Level, or tactical training** (e.g., CN = 10 + Enemy's Intelligence Modifier + Enemy's Level/2).
+            *   Alternatively, it can be an **opposed Intelligence (Tactics/Insight) check** if the enemy is actively trying to be deceptive or unpredictable. The GM (AI) will choose the most appropriate method.
+        3.  **Information Revealed:**
+            *   **Success:** Reveals key aspects of the enemy's likely strategy or immediate plans (e.g., "They seem to be favoring defensive formations and waiting for an opening," "Their leader is clearly directing fire towards the party's spellcaster," "They appear to be attempting a flanking maneuver on your left."). The level of detail revealed increases with the character's Intelligence and the degree of success on the check.
+            *   **Success by 5 or more (Degree of Success):** May reveal an additional crucial detail, a specific vulnerability, or a more nuanced understanding of their overall battle plan (e.g., "...and their archers seem to be using special arrows designed to pierce heavy armor," or "...it seems their berserkers are formidable but tire quickly if they don't fell a foe.").
 
 **VI. Combat Mechanics**
 
