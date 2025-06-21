@@ -31,4 +31,8 @@ This document is a persistent repository for reusable knowledge, best practices,
 
 ### AI Collaboration
 - **Lesson:** Detailed, explicit, and well-structured system prompts and user instructions significantly improve AI performance and consistency. Iterative refinement is key.
-- **Action:** Continue to refine `rules.md` and provide clear, specific instructions for tasks. 
+- **Action:** Continue to refine `rules.md` and provide clear, specific instructions for tasks.
+
+### Tooling & Environment Notes
+- **Lesson (Linter vs. Dynamic Libraries):** Static analysis tools (linters) may fail to correctly parse attributes of dynamic libraries like `firebase-admin`. For example, the linter may incorrectly flag `firestore.Query.DESCENDING` as an `AttributeError`, but it is correct at runtime.
+- **Action:** In cases of conflict, trust validated, working code over the linter's warning. The correct, tested usage is `firestore.Query.DESCENDING`. 

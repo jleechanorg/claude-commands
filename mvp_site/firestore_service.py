@@ -13,7 +13,7 @@ def get_campaigns_for_user(user_id):
     """Retrieves all campaigns for a given user, ordered by most recently played."""
     db = get_db()
     campaigns_ref = db.collection('users').document(user_id).collection('campaigns')
-    campaigns_query = campaigns_ref.order_by('last_played', direction=firestore.firestore.Query.DESCENDING)
+    campaigns_query = campaigns_ref.order_by('last_played', direction=firestore.Query.DESCENDING)
     
     campaign_list = []
     for campaign in campaigns_query.stream():
