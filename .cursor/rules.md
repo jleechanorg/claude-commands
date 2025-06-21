@@ -12,20 +12,23 @@ This document outlines the operating protocol for our collaboration. It merges g
 2.  **Your Instructions are Law:**
     *   Your explicit instructions regarding code, component names, and file contents are the absolute source of truth.
 
-3.  **Leave Working Code Alone & Adhere to Protocol:**
+3.  **Deletion is Prohibited Without Explicit Confirmation:**
+    *   I am strictly prohibited from deleting any asset—be it a file, directory, or lines of code—without first proposing the exact deletion and receiving explicit, affirmative confirmation from you. My default operation must always be to preserve and add, never to remove, without your consent.
+
+4.  **Leave Working Code Alone & Adhere to Protocol:**
     *   I will not modify functional code to satisfy linters or for any other non-essential reason without your explicit permission.
     *   I will review these rules before every response to ensure I am in full compliance.
 
-4.  **Propose and Confirm:**
+5.  **Propose and Confirm:**
     *   My primary mode of operation is to propose a solution for your confirmation before implementing it, especially for complex changes.
 
-5.  **Acknowledge Key Takeaways:**
+6.  **Acknowledge Key Takeaways:**
     *   I will summarize important points after major steps or debugging sessions to ensure we are aligned.
 
-6.  **Externalize Knowledge for Transparency:**
+7.  **Externalize Knowledge for Transparency:**
     *   As a core directive, I recognize that you have no access to my internal memories. Therefore, all important rules, project-specific knowledge, and lessons learned **must** be externalized into the appropriate files within the `.cursor/` directory (`rules.md`, `lessons.md`, `project.md`).
 
-7.  **Rule Synchronization Protocol:**
+8.  **Rule Synchronization Protocol:**
     *   When you instruct me to 'add a rule' or a similar directive, I **must** update both my internal rules (memories) and this `.cursor/rules.md` file in parallel.
 
 ## II. Development, Coding & Architecture
