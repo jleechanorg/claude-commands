@@ -20,6 +20,20 @@ def deep_merge(source, destination):
     - Other values from source overwrite values in destination.
     """
     for key, value in source.items():
+        if key.endswith('.append'):
+            base_key_path = key[:-len('.append')]
+            target = destination
+            try:
+                for part in base_key_path.split('.'):
+                    target = target[part]
+                if isinstance(target, list):
+                    target.append(value)
+                else:
+                    logging.warning(f"Cannot use .append on a non-list: {base_key_path}")
+            except (KeyError, TypeError):
+                logging.warning(f"Invalid path for .append: {base_key_path}")
+            continue
+
         if value == '__DELETE__':
             if key in destination:
                 del destination[key]
@@ -79,6 +93,13 @@ def parse_set_command(payload_str: str) -> dict:
         
         # Build the nested dictionary structure from the key path
         keys = key_path.split('.')
+        
+        # If the key path ends with .append, don't treat it as a nested key.
+        if keys[-1] == 'append':
+            # Rejoin the key and handle it as a special case in deep_merge
+            proposed_changes[key_path] = value
+            continue
+
         d = proposed_changes
         for key in keys[:-1]:
             if key not in d or not isinstance(d[key], dict):

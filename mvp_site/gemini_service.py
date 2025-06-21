@@ -299,6 +299,13 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     if ambition and milestone:
         ambition_summary = f"Ambition: {ambition} | Next Milestone: {milestone}"
 
+    # --- NEW: Core Memory Log ---
+    core_memories = current_game_state.custom_campaign_state.get('core_memories', [])
+    core_memories_summary = ""
+    if core_memories:
+        core_memories_list = "\\n".join([f"- {item}" for item in core_memories])
+        core_memories_summary = f"CORE MEMORY LOG (SUMMARY OF KEY EVENTS):\\n{core_memories_list}\\n\\n"
+
     checkpoint_block = (
         f"[CHECKPOINT BLOCK:]\\n"
         f"Sequence ID: {latest_seq_id} | Location: {current_location}\\n"
@@ -320,6 +327,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2, default=json_datetime_serializer)
     full_prompt = (
         f"{checkpoint_block}\\n\\n"
+        f"{core_memories_summary}"
         f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{sequence_id_list_string}]\\n\\n"
         f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\n"
         f"TIMELINE LOG (FOR CONTEXT):\\n{timeline_log_string}\\n\\n"

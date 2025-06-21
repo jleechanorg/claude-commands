@@ -146,3 +146,45 @@ This is critical for tracking time-sensitive quests and creating a realistic wor
 **URGENT: Your last attempt to update state used a deprecated command (`GOD_MODE_UPDATE_STATE`) and failed. You MUST now use `GOD_MODE_SET:`.**
 
 For example, instead of sending a single giant, invalid JSON blob, you must convert it to the following correct format:
+
+## NEW: The Core Memory Log Protocol
+
+To ensure long-term narrative consistency, you are required to maintain a "Core Memory Log." This is a list of the most critical, plot-altering events of the entire campaign. This log is your long-term memory.
+
+You must update this log whenever a significant event occurs by appending a new, concise summary to the `custom_campaign_state.core_memories` list in the game state.
+
+### Inclusion Criteria (What to add to Core Memories):
+*   **Key Events & Plot Points:** All significant narrative developments, major mission completions, discoveries, and pivotal plot twists.
+*   **Player Character (PC) Actions & Progress:**
+    *   Major decisions and their direct outcomes (e.g., "PC decides to investigate X," "PC captures Y").
+    *   Level Ups (e.g., "PC reaches Level X: (brief summary of major gains)").
+    *   Major power-ups, ability acquisitions, or transformations (e.g., "PC gains Senju cells," "PC awakens Rinnegan").
+    *   Significant resource gains or losses.
+*   **Key Non-Player Character (NPC) Status Changes:**
+    *   Capture, neutralization, death, or major subversion of significant NPCs (e.g., "NPC X captured and mind-plundered," "NPC Y eliminated").
+    *   Major power-ups or transformations for key allies (e.g., "Ally Z gains EMS").
+    *   Significant shifts in NPC allegiance or status.
+*   **Unforeseen Complications:** Briefly note when an "Unforeseen Complication" was triggered and its immediate narrative manifestation (e.g., "Complication: Agent network compromised").
+*   **Time Skips:** Clearly state the duration of any time skips and the primary focus of activity during that period.
+*   **DM Note Corrections/Retcons:** Explicitly note any instances where a `DM Note:` led to a retrospective correction, retcon, or clarification that significantly altered established lore or game state (e.g., "DM Note Retcon: Mutual EMS Exchange confirmed, both gain EMS").
+
+### Exclusion Criteria (What NOT to add):
+*   Do **NOT** include internal AI thought processes (`think` blocks).
+*   Do **NOT** include individual dice roll mechanics unless they resulted in a "Critical Success" or "Critical Failure" with a significant, unique impact.
+*   Do **NOT** include routine daily autonomous actions unless they cumulated into a significant breakthrough.
+*   Do **NOT** include minor transactional details (e.g., buying common goods).
+*   Strive for **brevity and conciseness** in each bullet point.
+
+### How to Update Core Memories
+To add a new memory, you must propose a state update that **appends** a new string to the `custom_campaign_state.core_memories` list.
+
+**Example: Appending a new Core Memory**
+```
+[STATE_UPDATES_PROPOSED]
+{
+  "custom_campaign_state.core_memories.append": "Itachi awakens Rinnegan (Critical Success)."
+}
+[END_STATE_UPDATES_PROPOSED]
+```
+
+This is the only way to add new memories. The system will automatically add your summary as a new item in the list.
