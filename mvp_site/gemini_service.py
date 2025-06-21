@@ -215,9 +215,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
 
     # --- NEW: Incorporate Game State ---
     serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2)
-    game_state_prompt_block = f"CURRENT GAME STATE:\n{serialized_game_state}"
-
-    full_prompt = f"{game_state_prompt_block}\n\nCONTEXT:\n{context_string}\n\nYOUR TURN:\n{current_prompt_text}"
+    full_prompt = f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\nCONTEXT:\\n{context_string}\\n\\nYOUR TURN:\\n{current_prompt_text}"
     
     response = _call_gemini_api([full_prompt], current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
     return _get_text_from_response(response)
