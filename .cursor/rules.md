@@ -36,6 +36,9 @@ This document outlines the operating protocol for our collaboration. It merges g
 6.  **Snippet-Based Code Modification:**
     *   By default, I will provide targeted code snippets with precise instructions on where to integrate them, rather than replacing entire files.
 
+7.  **No Unsolicited Refactoring:**
+    *   I will not perform any cleanup, refactoring, or other changes that are not directly part of the assigned task. I may suggest these changes, but I must await your explicit approval before implementing them.
+
 ## III. Git & Repository Workflow
 
 1.  **Establish Baseline:**

@@ -7,6 +7,7 @@ from firebase_admin import auth
 import traceback
 import document_generator
 import logging
+from game_state import GameState
 
 def create_app():
     app = Flask(__name__, static_folder='static')
@@ -65,16 +66,17 @@ def create_app():
         selected_prompts = data.get('selected_prompts', [])
         
         # V1: Use sensible default initial states
-        initial_character_state = {"name": "Adventurer", "level": 1, "hp_max": 20, "hp_current": 20}
-        initial_world_state = {"current_date_time_text": "Day 1, First Light"}
-        initial_npc_state = {}
-        initial_custom_state = {}
+        initial_game_state = GameState(
+            player_character_data={"name": "Adventurer", "level": 1, "hp_max": 20, "hp_current": 20},
+            world_data={"current_date_time_text": "Day 1, First Light"},
+            npc_data={},
+            custom_campaign_state={}
+        )
 
         opening_story = gemini_service.get_initial_story(prompt, selected_prompts=selected_prompts)
         
         campaign_id = firestore_service.create_campaign(
-            user_id, title, prompt, opening_story, selected_prompts,
-            initial_character_state, initial_world_state, initial_npc_state, initial_custom_state
+            user_id, title, prompt, opening_story, initial_game_state, selected_prompts
         )
         return jsonify({'success': True, 'campaign_id': campaign_id}), 201
         
@@ -108,9 +110,9 @@ def create_app():
         current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
         if not current_game_state:
             # Handle case where state might not exist for some reason (e.g., older campaigns)
-            # For V1, we can log a warning and proceed with an empty state.
-            logging.warning(f"Game state not found for campaign {campaign_id}. Proceeding with empty state.")
-            current_game_state = {}
+            # For V1, we can log a warning and proceed with a default empty state object.
+            logging.warning(f"Game state not found for campaign {campaign_id}. Proceeding with new, empty state object.")
+            current_game_state = GameState(player_character_data={}, world_data={}, npc_data={}, custom_campaign_state={})
 
         # 2. Add user's action to the story log
         firestore_service.add_story_entry(user_id, campaign_id, 'user', user_input, mode)
@@ -167,8 +169,6 @@ def create_app():
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_frontend(path):
-        if not app.static_folder or not os.path.isdir(app.static_folder):
-            return "Static folder not found or not a directory.", 404
         return send_from_directory(app.static_folder, 'index.html')
 
     return app

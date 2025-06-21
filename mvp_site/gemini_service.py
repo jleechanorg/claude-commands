@@ -6,6 +6,7 @@ from decorators import log_exceptions
 import sys
 import json
 import re
+from game_state import GameState
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -167,7 +168,7 @@ def get_initial_story(prompt, selected_prompts=None):
     return _get_text_from_response(response)
 
 @log_exceptions
-def continue_story(user_input, mode, story_context, current_game_state: dict, selected_prompts=None):
+def continue_story(user_input, mode, story_context, current_game_state: GameState, selected_prompts=None):
     """Generates the next part of the story, incorporating game state and selected system instructions."""
     
     if selected_prompts is None:
@@ -175,21 +176,27 @@ def continue_story(user_input, mode, story_context, current_game_state: dict, se
         logging.warning("No specific system prompts selected for continue_story. Using none.")
 
     system_instruction_parts = []
+    # Filter out 'calibration' for continue_story calls
+    # NEW: Also ensure consistent order for continue_story
     filtered_prompts = [p_type for p_type in selected_prompts if p_type in ['narrative', 'mechanics']]
 
+    # Load content for narrative and mechanics
     for p_type in filtered_prompts: 
         content = _load_instruction_file(p_type)
         if content:
             system_instruction_parts.append(content)
     
+    # NEW: Always include the destiny_ruleset for continue_story too
     destiny_ruleset_content = _load_instruction_file('destiny_ruleset')
     if destiny_ruleset_content:
         system_instruction_parts.append(destiny_ruleset_content)
+
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
 
     recent_context = _truncate_context(story_context)
     
+    # Build a single context string from the history (User's preferred method)
     history_parts = []
     for entry in recent_context:
         actor_label = "Story" if entry.get('actor') == 'gemini' else "You"
@@ -197,6 +204,7 @@ def continue_story(user_input, mode, story_context, current_game_state: dict, se
     
     context_string = "\n\n".join(history_parts)
 
+    # Create the final prompt for the current user turn (User's preferred method)
     if mode == 'character':
         prompt_template = "Main character: {user_input}. Continue the story in about {word_count} words and " \
             "add details for narrative, descriptions of scenes, character dialog, character emotions."
@@ -206,7 +214,7 @@ def continue_story(user_input, mode, story_context, current_game_state: dict, se
         current_prompt_text = prompt_template.format(user_input=user_input)
 
     # --- NEW: Incorporate Game State ---
-    serialized_game_state = json.dumps(current_game_state, indent=2)
+    serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2)
     game_state_prompt_block = f"CURRENT GAME STATE:\n{serialized_game_state}"
 
     full_prompt = f"{game_state_prompt_block}\n\nCONTEXT:\n{context_string}\n\nYOUR TURN:\n{current_prompt_text}"
@@ -258,10 +266,12 @@ if __name__ == "__main__":
     
     # Example usage for testing: pass all prompt types
     test_selected_prompts = ['narrative', 'mechanics', 'calibration']
-    test_game_state = {
-        "player_character_data": {"name": "Test Character", "hp_current": 10},
-        "world_data": {"current_location_name": "The Testing Grounds"}
-    }
+    test_game_state = GameState(
+        player_character_data={"name": "Test Character", "hp_current": 10},
+        world_data={"current_location_name": "The Testing Grounds"},
+        npc_data={},
+        custom_campaign_state={}
+    )
 
     # --- Turn 1: Initial Story ---
     print("\n--- Turn 1: get_initial_story ---")
