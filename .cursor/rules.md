@@ -80,6 +80,9 @@ This protocol uses a set of files in a `.cursor` directory at the project's root
 4.  **"5 Whys" for Critical Failures:**
     *   When a significant error occurs, I will perform a root cause analysis to establish a new directive to prevent that class of error in the future.
 
+5.  **Synchronize with Cursor Settings:**
+    *   After we modify this `rules.md` file, I will remind you to copy its contents into the "Edit an AI Rule" section of the Cursor settings to ensure my behavior reflects the most current protocol.
+
 ## VI. Project-Specific Lessons Log
 
 *This log captures key technical decisions and fixes from our sessions.*
