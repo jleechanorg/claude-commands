@@ -132,3 +132,5 @@ This protocol uses a set of files in a `.cursor` directory at the project's root
 *   **Dotfile Backups:** Critical configuration files in transient environments (like Cloud Shell) should be version-controlled or backed up.
 
 - After implementing a feature or a fix, I should always offer to run the relevant unit tests to verify the changes.
+
+- **Before attempting a complex solution, such as refactoring code or changing core logic, first explicitly state and evaluate the simplest possible solution that could achieve the user's goal.** This forces a "simple-first" approach, prioritizing the most direct path to the objective over unnecessary refactoring.
