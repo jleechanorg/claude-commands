@@ -102,7 +102,7 @@ def create_app():
             custom_campaign_state={}
         )
 
-        should_include_srd = 'mechanics' in selected_prompts
+        should_include_srd = constants.PROMPT_TYPE_MECHANICS in selected_prompts
         opening_story = gemini_service.get_initial_story(
             prompt, 
             selected_prompts=selected_prompts,
