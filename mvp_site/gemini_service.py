@@ -6,15 +6,22 @@ from decorators import log_exceptions
 import sys
 import json
 import re
+import datetime
 from game_state import GameState
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def json_datetime_serializer(obj):
+    """JSON serializer for datetime objects."""
+    if isinstance(obj, (datetime.datetime, datetime.date)):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 # --- CONSTANTS ---
 MODEL_NAME = 'gemini-2.5-flash-preview-05-20'
 MAX_TOKENS = 8192 
 TEMPERATURE = 0.9
-TARGET_WORD_COUNT = 600
+TARGET_WORD_COUNT = 400
 HISTORY_TURN_LIMIT = 500
 MAX_INPUT_TOKENS = 200000 
 SAFE_CHAR_LIMIT = MAX_INPUT_TOKENS * 4
@@ -225,7 +232,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         current_prompt_text = prompt_template.format(user_input=user_input)
 
     # --- NEW: Incorporate Game State ---
-    serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2)
+    serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2, default=json_datetime_serializer)
     full_prompt = f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\nCONTEXT:\\n{context_string}\\n\\nYOUR TURN:\\n{current_prompt_text}"
     
     response = _call_gemini_api([full_prompt], current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 

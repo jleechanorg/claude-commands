@@ -169,6 +169,9 @@ def create_app():
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_frontend(path):
+        if not app.static_folder:
+            # This should never happen in our configuration, but it satisfies the linter.
+            return jsonify({'error': 'Static folder not configured'}), 500
         return send_from_directory(app.static_folder, 'index.html')
 
     return app
