@@ -9,6 +9,7 @@ import document_generator
 import logging
 from game_state import GameState, MigrationStatus
 import constants
+import json
 
 def deep_merge(source, destination):
     """
@@ -23,6 +24,24 @@ def deep_merge(source, destination):
         else:
             destination[key] = value
     return destination
+
+def format_state_changes(changes: dict) -> str:
+    """Formats a dictionary of state changes into a readable, multi-line string."""
+    if not changes:
+        return "No state changes."
+
+    log_lines = ["State changes applied:"]
+
+    def recurse_items(d, prefix=""):
+        for key, value in d.items():
+            path = f"{prefix}.{key}" if prefix else key
+            if isinstance(value, dict):
+                recurse_items(value, prefix=path)
+            else:
+                log_lines.append(f"  - {path}: {json.dumps(value)}")
+
+    recurse_items(changes)
+    return "\\n".join(log_lines)
 
 # --- CONSTANTS ---
 # API Configuration
@@ -200,7 +219,9 @@ def create_app():
         # 5. Parse and apply state changes from AI response
         proposed_changes = gemini_service.parse_llm_response_for_state_changes(gemini_response)
         if proposed_changes:
-            logging.info(f"Applying state changes for campaign {campaign_id}: {proposed_changes}")
+            log_message = format_state_changes(proposed_changes)
+            logging.info(f"For campaign {campaign_id}:\\n{log_message}")
+            
             # --- FIX: DEEP MERGE STATE UPDATES ---
             # Get the full current state as a dictionary
             game_state_dict = current_game_state.to_dict()
