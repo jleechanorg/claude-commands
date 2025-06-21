@@ -19,7 +19,11 @@ def json_datetime_serializer(obj):
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 # --- CONSTANTS ---
-MODEL_NAME = 'gemini-2.5-flash-preview-05-20'
+# Use flash for standard, cheaper operations.
+DEFAULT_MODEL = 'gemini-2.5-flash'
+# Use pro for the single, large-context operation (initial SRD load).
+LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'
+
 MAX_TOKENS = 8192 
 TEMPERATURE = 0.9
 TARGET_WORD_COUNT = 400
@@ -92,7 +96,7 @@ def get_client():
         logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
-def _call_gemini_api(prompt_contents, current_prompt_text_for_logging=None, system_instruction_text=None):
+def _call_gemini_api(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None):
     """Calls the Gemini API with a given prompt and returns the response."""
     client = get_client()
     if current_prompt_text_for_logging:
@@ -108,7 +112,7 @@ def _call_gemini_api(prompt_contents, current_prompt_text_for_logging=None, syst
         generation_config_params["system_instruction"] = types.Part(text=system_instruction_text)
 
     response = client.models.generate_content(
-        model=MODEL_NAME,
+        model=model_name,
         contents=prompt_contents,
         config=types.GenerateContentConfig(**generation_config_params)
     )
@@ -186,7 +190,12 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False):
     
     contents = [types.Content(role="user", parts=[types.Part(text=prompt)])]
     
-    response = _call_gemini_api(contents, current_prompt_text_for_logging=prompt, system_instruction_text=system_instruction_final)
+    # --- DYNAMIC MODEL SELECTION ---
+    # Use the more powerful model at the beginning of the game.
+    model_to_use = LARGE_CONTEXT_MODEL
+    logging.info(f"Using model: {model_to_use} for initial story generation.")
+
+    response = _call_gemini_api(contents, model_to_use, current_prompt_text_for_logging=prompt, system_instruction_text=system_instruction_final)
     return _get_text_from_response(response)
 
 @log_exceptions
@@ -243,7 +252,8 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2, default=json_datetime_serializer)
     full_prompt = f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\nCONTEXT:\\n{context_string}\\n\\nYOUR TURN:\\n{current_prompt_text}"
     
-    response = _call_gemini_api([full_prompt], current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
+    # For all subsequent calls, use the standard, cheaper model.
+    response = _call_gemini_api([full_prompt], DEFAULT_MODEL, current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
     return _get_text_from_response(response)
 
 def create_game_state_from_legacy_story(story_context: list) -> GameState | None:
