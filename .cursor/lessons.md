@@ -46,4 +46,9 @@ This document is a persistent repository for reusable knowledge, best practices,
 
 *   **Incident:** Application crashed with a `404 Not Found` error when checking a new campaign for legacy data.
 *   **Root Cause:** A function (`update_campaign_game_state`) used the Firestore `.update()` method, which fails if the target document does not exist. The code path for a "new campaign with no legacy data" tried to update a document that had not yet been created.
-*   **Lesson:** Functions that modify database records should be designed to be idempotent or act as an "upsert" (update or insert) when there's a possibility of acting on a non-existent resource. For Firestore, this means preferring `.set(data, merge=True)` over `.update(data)` in such cases. 
+*   **Lesson:** Functions that modify database records should be designed to be idempotent or act as an "upsert" (update or insert) when there's a possibility of acting on a non-existent resource. For Firestore, this means preferring `.set(data, merge=True)` over `.update(data)` in such cases.
+
+*   **Incident:** Application crashed with `ModuleNotFoundError: No module named 'mvp_site'`.
+*   **Root Cause:** Using an absolute import (`from mvp_site import constants`) in a script that was being run directly from within the `mvp_site` subdirectory. This execution context prevents Python from recognizing `mvp_site` as a package in its search path.
+*   **Lesson:** When a Python script is intended to be run directly (e.g., `python my_script.py`), any imports of other modules within the same directory must be relative (e.g., `import my_module`), not absolute from a parent directory that isn't a recognized package in the current execution context.
+*   **Action:** When working on scripts inside a subdirectory of the project, use relative imports for local modules. 
