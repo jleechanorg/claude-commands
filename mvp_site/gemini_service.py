@@ -255,6 +255,37 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     timeline_log_string = "\n\n".join(timeline_log_parts)
     sequence_id_list_string = ", ".join(sequence_ids)
 
+    # --- NEW: System-Generated Checkpoint Block ---
+    # This is the single source of truth for the character's immediate status.
+    latest_seq_id = sequence_ids[-1] if sequence_ids else 'N/A'
+    current_location = current_game_state.world_data.get('current_location_name', 'Unknown')
+    
+    pc_data = current_game_state.player_character_data
+    key_stats_parts = [
+        f"XP {pc_data.get('experience', 0)}/{pc_data.get('experience_to_next_level', 'N/A')}",
+        f"HP: {pc_data.get('hp_current', 'N/A')}/{pc_data.get('hp_max', 'N/A')}",
+        f"Gold: {pc_data.get('gold', 0)} GP"
+    ]
+    key_stats_summary = " | ".join(key_stats_parts)
+
+    active_missions = current_game_state.custom_campaign_state.get('active_missions', [])
+    missions_summary = "Missions: " + (", ".join(active_missions) if active_missions else "None")
+
+    # --- NEW: Ambition & Milestone ---
+    ambition = pc_data.get('core_ambition')
+    milestone = pc_data.get('next_milestone')
+    ambition_summary = ""
+    if ambition and milestone:
+        ambition_summary = f"Ambition: {ambition} | Next Milestone: {milestone}"
+
+    checkpoint_block = (
+        f"[CHECKPOINT BLOCK:]\\n"
+        f"Sequence ID: {latest_seq_id} | Location: {current_location}\\n"
+        f"Key Stats: {key_stats_summary}\\n"
+        f"{missions_summary}\\n"
+        f"{ambition_summary}"
+    )
+
     # Create the final prompt for the current user turn (User's preferred method)
     if mode == 'character':
         prompt_template = "Main character: {user_input}. Continue the story in about {word_count} words and " \
@@ -267,6 +298,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # --- NEW: Incorporate Game State & Timeline ---
     serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2, default=json_datetime_serializer)
     full_prompt = (
+        f"{checkpoint_block}\\n\\n"
         f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{sequence_id_list_string}]\\n\\n"
         f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\n"
         f"TIMELINE LOG (FOR CONTEXT):\\n{timeline_log_string}\\n\\n"

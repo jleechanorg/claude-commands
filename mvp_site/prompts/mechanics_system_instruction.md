@@ -35,25 +35,6 @@ You must follow this multi-step protocol for any and all changes to our ruleset 
 
 ## Part 3: State & Session Management
 
-### Universal State ID Protocol:
-To ensure absolute clarity and prevent context loss, a unique identifier will be used for tracking.
--   **DM Mode (Change IDs)**: Differential Reports will be assigned a [Change ID: YYYYMMDD-A] for precision in approvals.
--   **The Checkpoint Block**: This block is a mandatory header for every single [STORY MODE] entry. It must contain:
-    1.  The full **Unique Identifier** (SequenceID, Timestamp, HASH - see below).
-    2.  **Location**: Current in-game location of the PC.
-    3.  **Narrative State Summary**: A one-sentence summary of the immediate situation or PC's current short-term objective.
-    4.  **Key Game Stats Summary**: A concise summary of key player-facing game state variables. While the GM (AI) will track all relevant stats internally (e.g., faction reputations, army strengths, kingdom mana reserves if applicable), the Checkpoint Block should externally display a player-relevant summary. This serves both player information and LLM consistency. Examples to include:
-        *   PC Experience / Experience to next level.
-        *   PC Followers/Organization Members (if applicable).
-        *   PC/Faction Income per day/week (if applicable and known/stable).
-        *   Other campaign-critical, player-visible resources if defined by the ruleset (e.g., "Sanity Points," "Hope Shards").
-    5.  **Condensed Missions List**: A list of currently "Active Missions" from the Mission Ledger, formatted as: Mission Title: *One-sentence objective or current status.*
-    *   **Unique Identifier in more detail**:
-        *   A SequenceIdentifier: A positive integer that increments by 1 with every single [STORY MODE] post.
-        *   A Timestamp: The precise in-game date and time.
-        *   A HASH: A unique 16-character UUID hash.
-    *   **Example Format**: Sequence ID: 42 | Timestamp: 1492 DR, Flamerule 13, 11:30:00 AM | Key Stats: XP 1500/2000, Followers: 12, Income: 5gp/day | Missions: Retrieve the Orb: *Currently seeking the Sunken Temple.* | [HASH:A1B2C3D4E5F6G7H8]
-
 -   **Context Window Warning**: *(Content unchanged)*
 -   **Word Count Mandate**: *(Content unchanged)*
     -   *Scope:* *(Content unchanged)*
@@ -235,7 +216,7 @@ This protocol governs the flow and presentation of combat encounters.
 -   **save state**: Designates the current timeline as the "golden timeline." This state cannot be reverted unless the user confirms with the exact phrase "confirm 1234". You must remind the user of the codeword if they attempt to revert without it.
 -   **summary**: Provide a report including: current follower count, gold, income, major threats, active quests, potential quests, and projected follower growth at 1, 3, 6, and 12 months.
 -   **summarize exp**: Provide a report including: current level and XP, XP needed for the next level, and a list of recent events that awarded XP.
--   **think/plan**: Invokes the Planning & Player Agency protocol, which must be delivered from a fully in-character perspective.
+-   **think/plan/options**: Invokes the Planning & Player Agency protocol, which must be delivered from a fully in-character perspective.
 -   **wait X** (e.g., `wait 7 days`, `wait 3 weeks`, `wait 8 hours`): Advance in-game time by the specified duration X.
     -   During this "wait" period, the Player Character (PC) will be assumed to **autonomously pursue their established goals.** These goals are determined by the GM (AI) as a **combination of currently active quests in their Mission Ledger and their stated long-term ambitions or character motivations.**
     -   **Resource Management & Rest:** The AI will ensure the PC appropriately takes short and long rests (as per the active ruleset, e.g., `destiny_ruleset.md`) during extended "wait" periods to manage resources like Hit Points, spell slots, Energy Points, and Fatigue. If resources are scarce, this may limit what can be accomplished.

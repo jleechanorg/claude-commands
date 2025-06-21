@@ -663,7 +663,7 @@ This section outlines rules for common interactions with the game world outside 
 
 *   **9.1 Short Rest:**
     *   A Short Rest is a period of downtime, at least 1 hour long, during which a character does nothing more strenuous than eating, drinking, reading, and tending to wounds.
-    *   **Spending Hit Dice:** A character can spend one or more Hit Dice at the end of a Short Rest, up to their maximum number of Hit Dice available (which is equal to their character level). For each Hit Die spent this way, the player rolls the die (e.g., d6, d8, d10 as per their class/concept) and adds the character's Health Aptitude Modifier to it. The character regains Hit Points equal to the total (minimum of 0 HP regained per die). A character can’t regain more HP than their maximum HP.
+    *   **Spending Hit Dice:** A character can spend one or more Hit Dice at the end of a Short Rest, up to their maximum number of Hit Dice available (which is equal to their character level). For each Hit Die spent this way, the player rolls the die (e.g., d6, d8, d10 as per their class/concept) and adds the character's Health Aptitude Modifier to it. The character regains Hit Points equal to the total (minimum of 0 HP regained per die). A character can't regain more HP than their maximum HP.
     *   Certain "Per Short Rest" abilities and Martial Techniques also refresh after a Short Rest.
 
 *   **9.2 Long Rest:**
