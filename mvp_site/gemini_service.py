@@ -186,9 +186,6 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False):
     if constants.PROMPT_TYPE_MECHANICS in selected_prompts:
         system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_SHEET))
 
-    # Load calibration instructions
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CALIBRATION))
-
     # Conditionally add the SRD
     if include_srd:
         system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_SRD))
