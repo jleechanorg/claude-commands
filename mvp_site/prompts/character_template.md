@@ -1,6 +1,6 @@
-push# Character Profile Template & Standard
+# Character Profile Template & Standard
 
-This document defines the standard for all major Non-Player Character (NPC) personalities. The AI must ensure that character behavior, dialogue, and decisions are consistent with every field defined below.
+This document defines the standard for the Player Character (PC) and all major Non-Player Character (NPC) personalities. The AI must ensure that character behavior, dialogue, and decisions are consistent with every field defined below.
 
 ## I. Core Identity
 - **Name:**

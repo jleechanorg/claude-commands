@@ -181,6 +181,9 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False):
     # Conditionally add the character template if narrative instructions are selected.
     if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
         system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE))
+
+    # Conditionally add the character sheet if mechanics instructions are selected.
+    if constants.PROMPT_TYPE_MECHANICS in selected_prompts:
         system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_SHEET))
 
     # Load calibration instructions
@@ -227,6 +230,9 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # Conditionally add the character template if narrative instructions are selected.
     if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
         system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE))
+
+    # Conditionally add the character sheet if mechanics instructions are selected.
+    if constants.PROMPT_TYPE_MECHANICS in selected_prompts:
         system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_SHEET))
 
     # Filter out 'calibration' for continue_story calls
