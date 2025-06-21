@@ -35,4 +35,11 @@ This document is a persistent repository for reusable knowledge, best practices,
 
 ### Tooling & Environment Notes
 - **Lesson (Linter vs. Dynamic Libraries):** Static analysis tools (linters) may fail to correctly parse attributes of dynamic libraries like `firebase-admin`. For example, the linter may incorrectly flag `firestore.Query.DESCENDING` as an `AttributeError`, but it is correct at runtime.
-- **Action:** In cases of conflict, trust validated, working code over the linter's warning. The correct, tested usage is `firestore.Query.DESCENDING`. 
+- **Action:** In cases of conflict, trust validated, working code over the linter's warning. The correct, tested usage is `firestore.Query.DESCENDING`.
+
+*   **Root Cause:** Failure to explicitly sanitize data for serialization. The `json` library cannot handle Python `datetime` objects by default.
+*   **Lesson:** Always pass data destined for JSON serialization through a handler that can manage common non-serializable types like `datetime`.
+
+*   **Incident:** Multiple failed attempts to call the Gemini API, resulting in "non-text response" errors and linter failures.
+*   **Root Cause:** Using outdated patterns from the legacy `google-generativeai` Python SDK instead of the current `google-genai` SDK. The API signature for client initialization and content generation changed significantly.
+*   **Lesson:** The project uses the modern `google-genai` SDK. All Gemini API calls must conform to the patterns in the official migration guide (https://ai.google.dev/gemini-api/docs/migrate). Specifically, use `genai.Client()` for initialization and `client.models.generate_content()` for requests, not `genai.GenerativeModel()`. 

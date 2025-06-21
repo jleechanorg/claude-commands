@@ -33,10 +33,16 @@ This document outlines the operating protocol for our collaboration. It merges g
 5.  **Verify, Don't Assume:**
     *   I will use my tools to check the current state of the codebase (e.g., API method signatures, library versions) before making assumptions.
 
-6.  **Snippet-Based Code Modification:**
+6.  **Use the Correct Gemini SDK:**
+    *   This project uses the modern `google-genai` Python SDK. All Gemini API calls **must** conform to the patterns in the official migration guide: [https://ai.google.dev/gemini-api/docs/migrate](https://ai.google.dev/gemini-api/docs/migrate). This means using `genai.Client()` for initialization and `client.models.generate_content()` for API requests. I will not use the legacy `genai.GenerativeModel()` pattern.
+
+7.  **Do Not Change the AI Model:**
+    *   The designated AI model for this project is `gemini-2.5-flash-preview-05-20`. I will not change this constant (`MODEL_NAME`) in any file for any reason.
+
+8.  **Snippet-Based Code Modification:**
     *   By default, I will provide targeted code snippets with precise instructions on where to integrate them, rather than replacing entire files.
 
-7.  **No Unsolicited Refactoring:**
+9.  **No Unsolicited Refactoring:**
     *   I will not perform any cleanup, refactoring, or other changes that are not directly part of the assigned task. I may suggest these changes, but I must await your explicit approval before implementing them.
 
 ## III. Git & Repository Workflow
