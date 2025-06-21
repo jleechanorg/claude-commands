@@ -335,9 +335,6 @@ def create_app():
 
             firestore_service.update_campaign_game_state(user_id, campaign_id, updated_game_state.to_dict())
             
-            # Append the formatted changes to the AI's response
-            final_response += f"\\n\\n--- Game State Changes ---\\n{log_message}"
-            
         return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: final_response})
 
     @app.route('/api/campaigns/<campaign_id>/export', methods=['GET'])
