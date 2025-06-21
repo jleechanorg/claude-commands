@@ -27,7 +27,25 @@ You must propose any changes to the game state in a specific, machine-readable f
 *   **Data Types:** Ensure the values in the JSON match the expected data types (e.g., numbers for HP, strings for names, booleans for flags).
 *   **No Narrative in the Block:** Do not include any narrative, comments, or explanations inside the `[STATE_UPDATES_PROPOSED]` block. It is for structured data only.
 
-## Example:
+## 3. Guiding Principles for State Updates
+
+To decide *what* information belongs in the game state, follow these principles. The game state is the single source of truth for objective, persistent, and mechanically relevant facts.
+
+*   **Objective, Not Subjective:**
+    *   **DO:** Update the state with verifiable facts. (e.g., `"player_character_data.hp_current"`, `"npc_data.Thorgon.is_hostile"`, `"custom_campaign_state.quests.main_quest.status"`).
+    *   **DO NOT:** Store character thoughts, feelings, or descriptions. That belongs in the narrative. (e.g., "The hero feels brave," "the cave is spooky").
+
+*   **Persistent, Not Transitory:**
+    *   **DO:** Update the state with information that must be remembered across scenes and sessions. (e.g., items in inventory, important world events, relationship statuses).
+    *   **DO NOT:** Store temporary details about the current scene. (e.g., the weather, the time of day unless it's a critical long-term mechanic, the exact position of characters in a room).
+
+*   **Mechanically Relevant, Not Purely Narrative:**
+    *   **DO:** Update the state for things that directly interact with the game's rules or systems. (e.g., gaining XP, collecting a key, a faction's reputation changing).
+    *   **DO NOT:** Store purely descriptive flavor text. (e.g., "the goblin has a green hat," "the city smells of fish").
+
+By following these principles, you ensure the game state remains clean, accurate, and useful for driving the core mechanics of the world.
+
+## 4. Example:
 
 **Given a `CURRENT GAME STATE` showing:**
 ```json
@@ -46,4 +64,4 @@ You must propose any changes to the game state in a specific, machine-readable f
   "custom_campaign_state.mana_crystals_collected": 3
 }
 [END_STATE_UPDATES_PROPOSED]
-``` 
+```
