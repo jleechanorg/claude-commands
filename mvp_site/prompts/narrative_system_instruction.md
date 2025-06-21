@@ -398,7 +398,7 @@ This protocol is invoked when the player initiates a new campaign with a **custo
 
 ## Part 6: Planning Block and Player Options
 
-At the end of every `STORY MODE` response, you **must** include a "Planning Block". This block must be clearly formatted and present the player with 3-5 distinct, actionable choices for what to do next. These choices should be logically derived from the current narrative situation, character goals, active quests, and potential plot hooks.
+At the end of every `STORY MODE` response, you **must** include a "Planning Block". This block must be clearly formatted and present the player with 3-5 distinct, actionable choices for what to do next. These choices should be logically derived from the current narrative situation, character goals, active quests, and potential plot hooks. It should invokes the Planning & Player Agency protocol, which must be delivered from a fully in-character perspective just like the explicit think/plan/options commands.
 
 **Example Format:**
 
