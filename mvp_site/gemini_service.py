@@ -116,9 +116,20 @@ def get_client():
         logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
+def _log_token_count(prompt_contents, model_name):
+    """Helper function to count and log the number of tokens being sent."""
+    try:
+        model_for_counting = genai.GenerativeModel(model_name)
+        count_response = model_for_counting.count_tokens(contents=prompt_contents)
+        logging.info(f"--- Sending {count_response.total_tokens} tokens to the API. ---")
+    except Exception as e:
+        logging.warning(f"Could not count tokens before API call: {e}")
+
 def _call_gemini_api(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None):
     """Calls the Gemini API with a given prompt and returns the response."""
     client = get_client()
+    _log_token_count(prompt_contents, model_name)
+
     if current_prompt_text_for_logging:
         logging.info(f"--- Calling Gemini API with current prompt: {str(current_prompt_text_for_logging)[:1000]}... ---")
     logging.info(f"--- Calling Gemini API with full prompt: {str(prompt_contents)[:1000]}... ---")
