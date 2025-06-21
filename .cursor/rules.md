@@ -130,3 +130,5 @@ This protocol uses a set of files in a `.cursor` directory at the project's root
 *   **Shell Config (`.bashrc`):** Changes to shell configs require sourcing the file (e.g., `source ~/.bashrc`) or starting a new session to take effect.
 *   **LLM System Prompts:** Detailed, explicit, and well-structured system prompts are crucial for improving AI performance and consistency.
 *   **Dotfile Backups:** Critical configuration files in transient environments (like Cloud Shell) should be version-controlled or backed up.
+
+- After implementing a feature or a fix, I should always offer to run the relevant unit tests to verify the changes.
