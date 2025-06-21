@@ -141,3 +141,18 @@ Your correction MUST use the following format:
 5.  To delete a key, use the special value `__DELETE__`. Example: `player_character_data.temporary_effects.poison = "__DELETE__"`
 6.  To add a new item to a list (like inventory or quests), use `.append` as the final part of the key path. The value should be the full JSON object for the new item.
 7.  NEVER output the full game state. Only output the key-value pairs that need to be changed.
+
+**URGENT: Your last attempt to update state used a deprecated command (`GOD_MODE_UPDATE_STATE`) and failed. You MUST now use `GOD_MODE_SET:`.**
+
+For example, instead of sending a single giant, invalid JSON blob, you must convert it to the following correct format:
+
+**CORRECT USAGE:**
+`GOD_MODE_SET:`
+`game_state_version = 2`
+`player_character_data.inventory.shadowfell_maps.content_read = true`
+`player_character_data.resources.xp_current = 8010`
+`world_data.npcs.man_tibbet.current_status = "Transported by Kaelen's team"`
+`(and so on for every other field that needs to be updated)`
+`...`
+
+You must now reissue your complete state correction using this new, line-by-line format. This is the only way to proceed.

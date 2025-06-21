@@ -214,34 +214,10 @@ def create_app():
         user_input, mode = data.get(KEY_USER_INPUT), data.get(constants.KEY_MODE, constants.MODE_CHARACTER)
         
         # --- Special command handling ---
-        GOD_MODE_UPDATE_COMMAND = "GOD_MODE_UPDATE_STATE:"
         GOD_MODE_SET_COMMAND = "GOD_MODE_SET:"
         GOD_ASK_STATE_COMMAND = "GOD_ASK_STATE"
 
         user_input_stripped = user_input.strip()
-
-        if user_input_stripped.startswith(GOD_MODE_UPDATE_COMMAND):
-            json_payload_str = user_input_stripped[len(GOD_MODE_UPDATE_COMMAND):].strip()
-            try:
-                # The payload is expected to be the entire, complete game state object.
-                new_game_state_dict = json.loads(json_payload_str)
-                # We validate it by trying to load it into our GameState class.
-                new_game_state = GameState.from_dict(new_game_state_dict)
-            except json.JSONDecodeError as e:
-                logging.error(f"Invalid JSON in GOD_MODE_UPDATE_STATE command for campaign {campaign_id}: {e}")
-                return jsonify({KEY_SUCCESS: False, KEY_ERROR: 'Invalid JSON provided in update command.', KEY_DETAILS: str(e)}), 400
-            except Exception as e:
-                logging.error(f"Error creating GameState from GOD_MODE_UPDATE_STATE payload: {e}")
-                return jsonify({KEY_SUCCESS: False, KEY_ERROR: 'Valid JSON, but data does not match GameState structure.', KEY_DETAILS: str(e)}), 400
-
-            logging.info(f"Received GOD_MODE_UPDATE_STATE for campaign {campaign_id}. The entire game state will be overwritten.")
-            
-            # This performs a full overwrite of the game state.
-            firestore_service.update_campaign_game_state(user_id, campaign_id, new_game_state.to_dict())
-            
-            firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
-            
-            return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: Game state has been completely overwritten via GOD_MODE_UPDATE_STATE command.]"})
 
         if user_input_stripped.startswith(GOD_MODE_SET_COMMAND):
             payload_str = user_input_stripped[len(GOD_MODE_SET_COMMAND):]
