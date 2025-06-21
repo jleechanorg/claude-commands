@@ -172,13 +172,8 @@ def create_app():
         prompt, title = data.get(KEY_PROMPT), data.get(constants.KEY_TITLE)
         selected_prompts = data.get(KEY_SELECTED_PROMPTS, [])
         
-        # Create a blank initial game state. It will be populated by the LLM.
-        initial_game_state = GameState(
-            player_character_data={},
-            world_data={},
-            npc_data={},
-            custom_campaign_state={}
-        )
+        # Create a blank initial game state.
+        initial_game_state = GameState().to_dict()
 
         should_include_srd = constants.PROMPT_TYPE_MECHANICS in selected_prompts
         opening_story = gemini_service.get_initial_story(
@@ -229,8 +224,8 @@ def create_app():
                 logging.warning(f"GOD_MODE_SET command for campaign {campaign_id} resulted in no valid changes.")
                 return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: The GOD_MODE_SET command was received, but contained no valid instructions or was empty.]"})
 
-            current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
-            if not current_game_state:
+            current_game_state_dict = firestore_service.get_campaign_game_state(user_id, campaign_id)
+            if not current_game_state_dict:
                 return jsonify({KEY_ERROR: 'Campaign game state not found, cannot apply manual update.'}), 404
 
             # --- NEW: Enhanced logging ---
@@ -238,11 +233,9 @@ def create_app():
             logging.info(f"Received GOD_MODE_SET for campaign {campaign_id}. Raw payload:\\n---\\n{payload_str}\\n---")
             logging.info(f"Applying PARSED state changes for campaign {campaign_id}:\\n{log_message}")
 
-            game_state_dict = current_game_state.to_dict()
-            updated_state_dict = deep_merge(proposed_changes, game_state_dict)
-            updated_game_state = GameState.from_dict(updated_state_dict)
+            updated_state_dict = deep_merge(proposed_changes, current_game_state_dict)
             
-            firestore_service.update_campaign_game_state(user_id, campaign_id, updated_game_state.to_dict())
+            firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state_dict)
             
             firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
             
@@ -250,12 +243,11 @@ def create_app():
             return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: f"[System Message: Game state has been manually updated via GOD_MODE_SET command.]\\n\\n{log_message}"})
 
         if user_input_stripped == GOD_ASK_STATE_COMMAND:
-            current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
-            if not current_game_state:
+            current_game_state_dict = firestore_service.get_campaign_game_state(user_id, campaign_id)
+            if not current_game_state_dict:
                 return jsonify({KEY_ERROR: 'Campaign game state not found.'}), 404
             
-            game_state_dict = current_game_state.to_dict()
-            game_state_json = json.dumps(game_state_dict, indent=2, default=json_default_serializer)
+            game_state_json = json.dumps(current_game_state_dict, indent=2, default=json_default_serializer)
             
             firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
             
@@ -269,11 +261,13 @@ def create_app():
         
         # --- NEW STATE MANAGEMENT WORKFLOW ---
         # 1. Read current game state
-        current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
-        if not current_game_state:
+        current_game_state_dict = firestore_service.get_campaign_game_state(user_id, campaign_id)
+        if not current_game_state_dict:
             # If no game state exists at all, create a fresh one.
-            # The migration logic below will handle checking for legacy data.
-            current_game_state = GameState(player_character_data={}, world_data={}, npc_data={}, custom_campaign_state={})
+            current_game_state_dict = GameState().to_dict()
+
+        # Instantiate a GameState object from the dictionary for use in this turn
+        current_game_state = GameState.from_dict(current_game_state_dict)
 
         # --- ONE-TIME LEGACY MIGRATION ---
         logging.info(f"Evaluating campaign {campaign_id} for legacy migration. Current status: {current_game_state.migration_status.value}")
@@ -281,17 +275,22 @@ def create_app():
             logging.info(f"-> Status is NOT_CHECKED. Performing scan.")
             # The story context here still has datetime objects, which is fine for the parser.
             if story_context:
-                legacy_state = gemini_service.create_game_state_from_legacy_story(story_context)
+                legacy_state_dict = gemini_service.create_game_state_from_legacy_story(story_context)
             else:
-                legacy_state = None
+                legacy_state_dict = None
             
-            if legacy_state:
+            if legacy_state_dict:
                 logging.info(f"-> SUCCESS: Found and parsed legacy state for campaign {campaign_id}. Migrating.")
-                legacy_state.migration_status = MigrationStatus.MIGRATED
-                # Overwrite the current_game_state variable with the migrated one
-                current_game_state = legacy_state
+                # Instantiate a new GameState object from the migrated dict
+                legacy_game_state = GameState.from_dict(legacy_state_dict)
+                legacy_game_state.migration_status = MigrationStatus.MIGRATED
+                
+                # Overwrite the current_game_state object and its dictionary representation
+                current_game_state = legacy_game_state
+                current_game_state_dict = legacy_game_state.to_dict()
+                
                 # Save the newly migrated state to Firestore.
-                firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state.to_dict())
+                firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state_dict)
             else:
                 logging.info(f"-> FAILED: No legacy state found for campaign {campaign_id}. Marking as checked.")
                 # Mark as checked and update Firestore so we don't check again.
@@ -318,6 +317,19 @@ def create_app():
         final_response = gemini_response
         
         if proposed_changes:
+            # --- NEW: Track last story mode sequence ID ---
+            if mode == constants.MODE_CHARACTER:
+                # The new sequence ID will be the length of the old context plus the two
+                # new entries (user and AI).
+                last_story_id = len(story_context) + 2
+                story_id_update = {
+                    "custom_campaign_state": {
+                        "last_story_mode_sequence_id": last_story_id
+                    }
+                }
+                # Merge this update with the changes from the LLM
+                proposed_changes = deep_merge(story_id_update, proposed_changes)
+
             # --- NEW: Enhanced Logging for normal gameplay ---
             logging.info(f"AI proposed changes for campaign {campaign_id}:\\n{json.dumps(proposed_changes, indent=2, default=json_default_serializer)}")
 
@@ -325,15 +337,11 @@ def create_app():
             logging.info(f"Applying formatted state changes for campaign {campaign_id}:\\n{log_message}")
             
             # --- FIX: DEEP MERGE STATE UPDATES ---
-            game_state_dict = current_game_state.to_dict()
-            
-            updated_state_dict = deep_merge(proposed_changes, game_state_dict)
+            updated_state_dict = deep_merge(proposed_changes, current_game_state.to_dict())
 
             logging.info(f"New complete game state for campaign {campaign_id}:\\n{json.dumps(updated_state_dict, indent=2, default=json_default_serializer)}")
             
-            updated_game_state = GameState.from_dict(updated_state_dict)
-
-            firestore_service.update_campaign_game_state(user_id, campaign_id, updated_game_state.to_dict())
+            firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state_dict)
             
         return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: final_response})
 

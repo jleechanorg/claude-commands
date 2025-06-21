@@ -19,28 +19,32 @@ You will also be provided with two pieces of information to ensure chronological
 
 ## 3. Proposing State Changes
 
-You must propose any changes to the game state in a specific, machine-readable format at the end of your narrative response.
+Your primary mechanism for interacting with the game world is by proposing changes to the `CURRENT GAME STATE`. You have the power to create, update, and delete any piece of information to reflect the ongoing story.
 
+*   **Your Authority:** You are the authority on the structure of the game state. You can and should create new keys and nested objects as needed to track new characters, quests, inventory items, or any other piece of information that becomes relevant. The system will respect and store whatever structure you create.
 *   **Delimiter Format:** All proposed changes **must** be enclosed within a special delimiter block:
     ```
     [STATE_UPDATES_PROPOSED]
     {
-      "key.path.to.update": "new_value",
-      "another.key": 123
+      "path.to.new.or.existing.key": "new_value",
+      "npc_data.lyra.status": "Wounded",
+      "quests.shadow_spire.completed": true
     }
     [END_STATE_UPDATES_PROPOSED]
     ```
-*   **JSON Content:** The content inside this block must be a single, valid JSON object. The keys of this object will be strings using dot notation to specify the exact path to the field you wish to change. The values will be the new values for those fields.
-*   **Propose, Don't Assume:** Proposing a change does not guarantee it will be applied. Simply formulate the JSON based on the events in the narrative you just wrote.
-*   **Data Types:** Ensure the values in the JSON match the expected data types (e.g., numbers for HP, strings for names, booleans for flags).
-*   **No Narrative in the Block:** Do not include any narrative, comments, or explanations inside the `[STATE_UPDATES_PROPOSED]` block. It is for structured data only.
+*   **JSON Content:** The content inside this block must be a single, valid JSON object.
+    *   The keys are strings using **dot notation** to specify the exact path for the update. If the path doesn't exist, the system will create it for you.
+    *   The values are the new values for those fields.
+*   **Be Consistent:** Once you establish a path for a piece of data (e.g., `npc_data.lyra.status`), you should continue to use that same path to refer to it in future updates.
+*   **Deleting Data:** To remove a key from the state entirely (e.g., a used potion or a defeated enemy), set its value to the special string `__DELETE__`.
+*   **No Narrative:** Do not include any comments or explanations inside the `[STATE_UPDATES_PROPOSED]` block. It is for structured data only.
 
 ## 4. Guiding Principles for State Updates
 
-To decide *what* information belongs in the game state, follow these principles. The game state is the single source of truth for objective, persistent, and mechanically relevant facts.
+While you have full control, the best game states are those that are clean and mechanically useful. Follow these principles when deciding what to track.
 
 *   **Objective, Not Subjective:**
-    *   **DO:** Update the state with verifiable facts. (e.g., `"player_character_data.hp_current"`, `"npc_data.Thorgon.is_hostile"`, `"custom_campaign_state.quests.main_quest.status"`).
+    *   **DO:** Track verifiable facts. (e.g., Health points, quest statuses, inventory items, NPC locations).
     *   **DO NOT:** Store character thoughts, feelings, or descriptions. That belongs in the narrative. (e.g., "The hero feels brave," "the cave is spooky").
 
 *   **Persistent, Not Transitory:**
@@ -53,23 +57,27 @@ To decide *what* information belongs in the game state, follow these principles.
 
 By following these principles, you ensure the game state remains clean, accurate, and useful for driving the core mechanics of the world.
 
-## 5. Example:
+## 5. Examples:
 
-**Given a `CURRENT GAME STATE` showing:**
-```json
-{
-  "player_character_data": { "xp_current": 100 },
-  "custom_campaign_state": { "mana_crystals_collected": 2 }
-}
-```
-
-**And your narrative describes the player character defeating a monster and finding a crystal, your response should end with:**
-
+### Example 1: Creating a New Quest and Updating XP
 ```
 [STATE_UPDATES_PROPOSED]
 {
   "player_character_data.xp_current": 250,
-  "custom_campaign_state.mana_crystals_collected": 3
+  "quests.ancient_ruins.status": "Discovered",
+  "quests.ancient_ruins.objective": "Find the Sunstone."
+}
+[END_STATE_UPDATES_PROPOSED]
+```
+
+### Example 2: Updating an NPC and Deleting an Item
+
+```
+[STATE_UPDATES_PROPOSED]
+{
+  "npc_data.Thorgon.status": "Agreed to help the player.",
+  "npc_data.Thorgon.is_hostile": false,
+  "player_character_data.inventory.items.health_potion": "__DELETE__"
 }
 [END_STATE_UPDATES_PROPOSED]
 ```
@@ -97,75 +105,30 @@ This is a critical protocol for maintaining game integrity. If you detect that t
 
 5.  **Explain the Action:** Briefly explain to the user that a state discrepancy has been detected and that they need to copy the entire `GOD_MODE_SET: ...` block and send it as their next message to resynchronize the game.
 
-By following this protocol, you empower the user to rapidly and safely correct game-breaking state issues.
-
-**NEW: Deleting State Entries**
-
-To remove an item, character, or any other piece of data from the game state, set its value to the special string `__DELETE__`. The system will then remove that key from the state entirely.
-
-**Example: Deleting a Used Potion**
-
-If the player uses a `potion_of_healing`, you would remove it from their inventory like this:
-
-```json
-{
-    "player_character_data": {
-        "inventory": {
-            "potion_of_healing": "__DELETE__"
-        }
-    }
-}
-```
-
-This will delete the `potion_of_healing` key from the `inventory` object.
-
-**Example: A Complete Turn**
-
-Here is an example of a full response, including a story segment, a dice roll, and a state update.
-
-If you ever find a discrepancy between the story and the official `CURRENT_GAME_STATE`, you MUST take corrective action. Announce that you've detected a "State Discrepancy" and then, in the same response, issue a `GOD_MODE_SET:` command to fix the state.
-
-Your correction MUST use the following format:
-`GOD_MODE_SET:`
-`path.to.key.one = "new string value"`
-`path.to.another.key = 123`
-`path.to.a.boolean = true`
-`player_character_data.inventory.items.append = {"name": "Health Potion", "quantity": 1}`
-`world_data.locations.eversong_woods.visited = true`
-
 **CRITICAL RULES for `GOD_MODE_SET:`:**
-1.  Start the block with `GOD_MODE_SET:` on its own line.
-2.  Each correction must be on a new line.
-3.  The format is ALWAYS `key.path = value`.
-4.  The `value` MUST be a valid JSON literal. This means strings are always in double quotes (`"`), booleans are `true` or `false`, and numbers have no quotes.
-5.  To delete a key, use the special value `__DELETE__`. Example: `player_character_data.temporary_effects.poison = "__DELETE__"`
-6.  To add a new item to a list (like inventory or quests), use `.append` as the final part of the key path. The value should be the full JSON object for the new item.
-7.  NEVER output the full game state. Only output the key-value pairs that need to be changed.
+1.  **Deltas Only:** You must **only** output the key-value pairs for the data that needs to be created, changed, or deleted. Never output the entire game state.
+2.  **Format:** Start the command with `GOD_MODE_SET:` on its own line. Each change must be a new line in the format `key.path = value`.
+3.  **Valid JSON Values:** The `value` on the right side of the equals sign must be a valid JSON literal. This means strings are always in `"double quotes"`, booleans are `true` or `false` without quotes, and numbers have no quotes.
+4.  **Deleting:** To delete a key, use the special value `__DELETE__` (with no quotes).
 
-**URGENT: Your last attempt to update state used a deprecated command (`GOD_MODE_UPDATE_STATE`) and failed. You MUST now use `GOD_MODE_SET:`.**
+**CORRECT USAGE EXAMPLE:**
 
-For example, instead of sending a single giant, invalid JSON blob, you must convert it to the following correct format:
+Imagine the player's health is wrong and they are missing a quest item. The correction should be small and targeted:
 
-**CORRECT USAGE:**
 `GOD_MODE_SET:`
-`game_state_version = 2`
-`player_character_data.inventory.shadowfell_maps.content_read = true`
-`player_character_data.resources.xp_current = 8010`
-`world_data.npcs.man_tibbet.current_status = "Transported by Kaelen's team"`
-`(and so on for every other field that needs to be updated)`
-`...`
+`player_character_data.hp_current = 75`
+`player_character_data.inventory.sunstone_amulet = {"name": "Sunstone Amulet", "description": "A warm, glowing stone."}`
+`world_data.npcs.man_tibbet.current_status = "Owes the player a favor."`
 
-You must now reissue your complete state correction using this new, line-by-line format. This is the only way to proceed.
+This is the only way to use this command. It is for small, precise corrections.
 
 ## State Update Rules
 
 1.  **Be Precise:** Only include keys for values that have actually changed.
-2.  **Use correct paths:** Use dot notation for nested objects (e.g., `player_character_data.inventory.gold`).
-3.  **Use `__DELETE__` to remove:** To remove a key, set its value to the special string `__DELETE__`.
-4.  **Use `.append` for lists:** To add an item to a list, use the key path followed by `.append`. The value should be the object to add. (e.g., `player_character_data.inventory.items.append = {"name": "Health Potion", "quantity": 1}`).
-5.  **Do not invent keys:** Only update keys that already exist in the `CURRENT_GAME_STATE`.
-6.  **Update `current_location`:** Always update `player_character_data.current_location` when the player moves.
-7.  NEVER output the full game state. Only output the key-value pairs that need to be changed.
+2.  **Use Dot Notation:** Always use dot notation for paths (e.g., `player_character_data.inventory.gold`).
+3.  **Use `__DELETE__` to Remove:** To remove a key, set its value to the special string `__DELETE__`.
+4.  **Create as Needed:** Do not hesitate to create new paths and keys for new information that needs to be tracked.
+5.  **Be Consistent:** Once you create a path for something, use that same path to update it later.
 
 ## NEW: World Time Management
 You are now responsible for tracking the in-game date and time. This is stored in the `world_time` object within the `CURRENT_GAME_STATE`.
