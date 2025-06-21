@@ -10,14 +10,20 @@ import logging
 from game_state import GameState, MigrationStatus
 import constants
 import json
+import datetime
 
 def deep_merge(source, destination):
     """
     Recursively merges source dict into destination dict.
-    Nested dictionaries are merged, other values are overwritten.
+    - Nested dictionaries are merged.
+    - If a value in source is '__DELETE__', the corresponding key in destination is removed.
+    - Other values from source overwrite values in destination.
     """
     for key, value in source.items():
-        if isinstance(value, dict):
+        if value == '__DELETE__':
+            if key in destination:
+                del destination[key]
+        elif isinstance(value, dict):
             # Get node or create one
             node = destination.setdefault(key, {})
             deep_merge(value, node)
@@ -42,6 +48,12 @@ def format_state_changes(changes: dict) -> str:
 
     recurse_items(changes)
     return "\\n".join(log_lines)
+
+def json_default_serializer(o):
+    """Handles serialization of data types json doesn't know, like datetimes."""
+    if isinstance(o, (datetime.datetime, datetime.date)):
+        return o.isoformat()
+    raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
 
 # --- CONSTANTS ---
 # API Configuration
@@ -168,10 +180,14 @@ def create_app():
         data = request.get_json()
         user_input, mode = data.get(KEY_USER_INPUT), data.get(constants.KEY_MODE, constants.MODE_CHARACTER)
         
-        # --- NEW: Special command for manual state updates ---
-        GOD_MODE_COMMAND = "GOD_MODE_UPDATE_STATE: "
-        if user_input.strip().startswith(GOD_MODE_COMMAND):
-            json_payload_str = user_input.strip()[len(GOD_MODE_COMMAND):]
+        # --- Special command handling ---
+        GOD_MODE_UPDATE_COMMAND = "GOD_MODE_UPDATE_STATE: "
+        GOD_ASK_STATE_COMMAND = "GOD_ASK_STATE"
+
+        user_input_stripped = user_input.strip()
+
+        if user_input_stripped.startswith(GOD_MODE_UPDATE_COMMAND):
+            json_payload_str = user_input_stripped[len(GOD_MODE_UPDATE_COMMAND):]
             try:
                 proposed_changes = json.loads(json_payload_str)
             except json.JSONDecodeError as e:
@@ -194,6 +210,19 @@ def create_app():
             firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
             
             return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: Game state has been manually updated via GOD MODE command. The next interaction will use this new state.]"})
+
+        if user_input_stripped == GOD_ASK_STATE_COMMAND:
+            current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
+            if not current_game_state:
+                return jsonify({KEY_ERROR: 'Campaign game state not found.'}), 404
+            
+            game_state_dict = current_game_state.to_dict()
+            game_state_json = json.dumps(game_state_dict, indent=2, default=json_default_serializer)
+            
+            firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
+            
+            response_text = f"```json\\n{game_state_json}\\n```"
+            return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: response_text})
         # --- END of special command handling ---
 
         # Fetch campaign metadata and story context

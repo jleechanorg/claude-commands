@@ -92,3 +92,27 @@ This is a critical protocol for maintaining game integrity. If you detect that t
 5.  **Explain the Action:** Briefly explain to the user that a state discrepancy has been detected and that they need to copy the entire `GOD_MODE_UPDATE_STATE: ...` command and send it as their next message to resynchronize the game.
 
 By following this protocol, you empower the user to rapidly correct game-breaking state issues, ensuring the long-term stability and consistency of the campaign.
+
+**NEW: Deleting State Entries**
+
+To remove an item, character, or any other piece of data from the game state, set its value to the special string `__DELETE__`. The system will then remove that key from the state entirely.
+
+**Example: Deleting a Used Potion**
+
+If the player uses a `potion_of_healing`, you would remove it from their inventory like this:
+
+```json
+{
+    "player_character_data": {
+        "inventory": {
+            "potion_of_healing": "__DELETE__"
+        }
+    }
+}
+```
+
+This will delete the `potion_of_healing` key from the `inventory` object.
+
+**Example: A Complete Turn**
+
+Here is an example of a full response, including a story segment, a dice roll, and a state update.
