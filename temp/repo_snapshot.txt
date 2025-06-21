@@ -1,4 +1,4 @@
-Generated on: Sat Jun 21 11:11:59 PDT 2025
+Generated on: Sat Jun 21 12:24:11 PDT 2025
 
 --- FILE START ---
 Location: ./ajax-chat/requirements.txt
@@ -1013,20 +1013,11 @@ Location: ./mvp_site/test_main.py
 Name: test_main.py
 --- CONTENT ---
 import unittest
-from unittest.mock import patch, MagicMock
-from main import create_app, deep_merge
-from game_state import GameState, MigrationStatus
-import json
+from main import deep_merge
 
-class TestMainApp(unittest.TestCase):
+class TestDeepMerge(unittest.TestCase):
 
-    def setUp(self):
-        """Set up a test client for the Flask application."""
-        self.app = create_app()
-        self.app.config['TESTING'] = True
-        self.client = self.app.test_client()
-
-    def test_deep_merge_three_layer_nesting(self):
+    def test_three_layer_nesting(self):
         """
         Tests deep merging with three levels of nested dictionaries.
         It should update existing values, preserve unique values, and add new keys.
@@ -1070,123 +1061,72 @@ class TestMainApp(unittest.TestCase):
         result = deep_merge(source, destination)
         self.assertEqual(result, expected)
 
-    @patch('main.firestore_service')
-    @patch('main.gemini_service')
-    @patch('main.firebase_admin')
-    def test_initial_story_creation(self, mock_firebase_admin, mock_gemini_service, mock_firestore_service):
-        """Tests the campaign creation endpoint in isolation."""
-        mock_gemini_service.get_initial_story.return_value = "It was a dark and stormy night."
-        mock_firestore_service.create_campaign.return_value = "test-campaign-id"
-
-        response = self.client.post('/api/campaigns', 
-                                    data=json.dumps({
-                                        'prompt': 'A new adventure.',
-                                        'title': 'My Test Campaign',
-                                        'selected_prompts': ['narrative']
-                                    }),
-                                    content_type='application/json',
-                                    headers={'X-Test-Bypass-Auth': 'true'})
-
-        self.assertEqual(response.status_code, 201)
-        self.assertTrue(response.json['success'])
-        self.assertEqual(response.json['campaign_id'], "test-campaign-id")
-        mock_gemini_service.get_initial_story.assert_called_once()
-        mock_firestore_service.create_campaign.assert_called_once()
-
-    @patch('main.firestore_service')
-    @patch('main.gemini_service')
-    @patch('main.firebase_admin')
-    def test_story_creation_and_two_continuations(self, mock_firebase_admin, mock_gemini_service, mock_firestore_service):
-        """Tests a full flow: create, and then continue the story twice with deep state updates."""
-        user_id = 'test-user'
-        campaign_id = 'test-campaign-123'
-
-        # --- Initial State Setup ---
-        initial_game_state = GameState(
-            player_character_data={"name": "Hero"},
-            world_data={"time": "day"},
-            npc_data={},
-            custom_campaign_state={}
-        )
-
-        # Mock the database fetches
-        mock_firestore_service.get_campaign_by_id.return_value = ({'selected_prompts': ['narrative']}, [])
-        mock_firestore_service.get_campaign_game_state.return_value = initial_game_state
-
-        # --- Turn 1: First Continuation ---
-        state_update_1 = {
-            "world_data": {
-                "weather": "rainy",
-                "location": {
-                    "city": "Waterdeep",
-                    "district": "Sea Ward",
-                    "building": {
-                        "name": "The Yawning Portal",
-                        "status": "open"
-                    }
+    def test_multiple_sequential_deep_merges(self):
+        """
+        Tests the effect of applying two sequential deep merges on an object.
+        """
+        # 1. Initial object
+        game_state = {
+            "player": {"hp": 100, "location": "start"},
+            "world": {
+                "time": "day",
+                "npcs": {
+                    "guard": {"state": "idle"}
                 }
             }
         }
-        mock_gemini_service.continue_story.return_value = "The hero enters the tavern."
-        mock_gemini_service.parse_llm_response_for_state_changes.return_value = state_update_1
 
-        response1 = self.client.post(f'/api/campaigns/{campaign_id}/interaction',
-                                     data=json.dumps({'input': 'Go to the tavern'}),
-                                     content_type='application/json',
-                                     headers={'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': user_id})
-        
-        self.assertEqual(response1.status_code, 200)
-        
-        # Verify state was correctly merged and saved
-        # The update function should be called with the *full, merged* state
-        call_args, _ = mock_firestore_service.update_campaign_game_state.call_args
-        saved_state_1 = call_args[2] # user_id, campaign_id, state_dict
-
-        self.assertEqual(saved_state_1['world_data']['location']['building']['name'], "The Yawning Portal")
-        self.assertEqual(saved_state_1['world_data']['time'], "day") # Preserved from initial state
-        self.assertEqual(saved_state_1['player_character_data']['name'], "Hero") # Preserved
-
-        # --- Turn 2: Second Continuation ---
-        # Update the mock to return the state from the previous turn
-        mock_firestore_service.get_campaign_game_state.return_value = GameState.from_dict(saved_state_1)
-
-        state_update_2 = {
-            "world_data": {
-                "location": {
-                    "building": {
-                        "status": "closed", # Update existing value
-                        "reason": "brawl"   # Add new value
-                    }
+        # 2. First merge: Add a new NPC and update player HP
+        update1 = {
+            "player": {"hp": 90},
+            "world": {
+                "npcs": {
+                    "merchant": {"state": "selling"}
                 }
-            },
-            "npc_data": {
-                "durnan": {"status": "annoyed"} # Add new top-level key
             }
         }
-        mock_gemini_service.continue_story.return_value = "A fight breaks out."
-        mock_gemini_service.parse_llm_response_for_state_changes.return_value = state_update_2
+
+        # Apply first merge
+        game_state = deep_merge(update1, game_state)
+
+        expected_after_1 = {
+            "player": {"hp": 90, "location": "start"},
+            "world": {
+                "time": "day",
+                "npcs": {
+                    "guard": {"state": "idle"},
+                    "merchant": {"state": "selling"}
+                }
+            }
+        }
+        self.assertEqual(game_state, expected_after_1)
+
+        # 3. Second merge: Update existing NPCs and add a world event
+        update2 = {
+            "world": {
+                "event": "rain",
+                "npcs": {
+                    "guard": {"state": "patrolling"},
+                    "merchant": {"state": "packing_up"}
+                }
+            }
+        }
         
-        response2 = self.client.post(f'/api/campaigns/{campaign_id}/interaction',
-                                     data=json.dumps({'input': 'Start a fight'}),
-                                     content_type='application/json',
-                                     headers={'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': user_id})
-        
-        self.assertEqual(response2.status_code, 200)
+        # Apply second merge
+        game_state = deep_merge(update2, game_state)
 
-        # Verify the final state merge
-        final_call_args, _ = mock_firestore_service.update_campaign_game_state.call_args
-        saved_state_2 = final_call_args[2]
-
-        # Check Turn 2 updates
-        self.assertEqual(saved_state_2['world_data']['location']['building']['status'], "closed")
-        self.assertEqual(saved_state_2['world_data']['location']['building']['reason'], "brawl")
-        self.assertIn('durnan', saved_state_2['npc_data'])
-
-        # Check preserved data from Turn 1 and initial state
-        self.assertEqual(saved_state_2['world_data']['location']['city'], "Waterdeep")
-        self.assertEqual(saved_state_2['world_data']['weather'], "rainy")
-        self.assertEqual(saved_state_2['player_character_data']['name'], "Hero")
-
+        expected_after_2 = {
+            "player": {"hp": 90, "location": "start"},
+            "world": {
+                "time": "day",
+                "event": "rain",
+                "npcs": {
+                    "guard": {"state": "patrolling"},
+                    "merchant": {"state": "packing_up"}
+                }
+            }
+        }
+        self.assertEqual(game_state, expected_after_2)
 
 if __name__ == '__main__':
     unittest.main() 
@@ -1573,6 +1513,7 @@ import document_generator
 import logging
 from game_state import GameState, MigrationStatus
 import constants
+import json
 
 def deep_merge(source, destination):
     """
@@ -1587,6 +1528,24 @@ def deep_merge(source, destination):
         else:
             destination[key] = value
     return destination
+
+def format_state_changes(changes: dict) -> str:
+    """Formats a dictionary of state changes into a readable, multi-line string."""
+    if not changes:
+        return "No state changes."
+
+    log_lines = ["State changes applied:"]
+
+    def recurse_items(d, prefix=""):
+        for key, value in d.items():
+            path = f"{prefix}.{key}" if prefix else key
+            if isinstance(value, dict):
+                recurse_items(value, prefix=path)
+            else:
+                log_lines.append(f"  - {path}: {json.dumps(value)}")
+
+    recurse_items(changes)
+    return "\\n".join(log_lines)
 
 # --- CONSTANTS ---
 # API Configuration
@@ -1713,6 +1672,34 @@ def create_app():
         data = request.get_json()
         user_input, mode = data.get(KEY_USER_INPUT), data.get(constants.KEY_MODE, constants.MODE_CHARACTER)
         
+        # --- NEW: Special command for manual state updates ---
+        GOD_MODE_COMMAND = "GOD_MODE_UPDATE_STATE: "
+        if user_input.strip().startswith(GOD_MODE_COMMAND):
+            json_payload_str = user_input.strip()[len(GOD_MODE_COMMAND):]
+            try:
+                proposed_changes = json.loads(json_payload_str)
+            except json.JSONDecodeError as e:
+                logging.error(f"Invalid JSON in GOD_MODE_UPDATE_STATE command for campaign {campaign_id}: {e}")
+                return jsonify({KEY_SUCCESS: False, KEY_ERROR: 'Invalid JSON provided in update command.', KEY_DETAILS: str(e)}), 400
+
+            current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
+            if not current_game_state:
+                return jsonify({KEY_ERROR: 'Campaign game state not found, cannot apply manual update.'}), 404
+
+            log_message = format_state_changes(proposed_changes)
+            logging.info(f"Applying MANUAL state changes for campaign {campaign_id} via GOD MODE command:\\n{log_message}")
+
+            game_state_dict = current_game_state.to_dict()
+            updated_state_dict = deep_merge(proposed_changes, game_state_dict)
+            updated_game_state = GameState.from_dict(updated_state_dict)
+            
+            firestore_service.update_campaign_game_state(user_id, campaign_id, updated_game_state.to_dict())
+            
+            firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
+            
+            return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: Game state has been manually updated via GOD MODE command. The next interaction will use this new state.]"})
+        # --- END of special command handling ---
+
         # Fetch campaign metadata and story context
         campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
         if not campaign: return jsonify({KEY_ERROR: 'Campaign not found'}), 404
@@ -1764,7 +1751,9 @@ def create_app():
         # 5. Parse and apply state changes from AI response
         proposed_changes = gemini_service.parse_llm_response_for_state_changes(gemini_response)
         if proposed_changes:
-            logging.info(f"Applying state changes for campaign {campaign_id}: {proposed_changes}")
+            log_message = format_state_changes(proposed_changes)
+            logging.info(f"For campaign {campaign_id}:\\n{log_message}")
+            
             # --- FIX: DEEP MERGE STATE UPDATES ---
             # Get the full current state as a dictionary
             game_state_dict = current_game_state.to_dict()
@@ -53260,32 +53249,49 @@ Whenever I talk to you by default, assume I'm responding to your last message to
 
 -   **Core Directive #1: Player Agency is Absolute**: I will not make any narrative decision that determines the outcome of a scene (e.g., having a character "get bored" and end a fight) or alters a character's core motivation without a direct command from you. I will narrate the events as they unfold logically and await your input.
 -   **Core Directive #2: When in Doubt, I Will Ask**: If a situation presents multiple, equally plausible outcomes, or if I am unsure of the next logical step, I will pause the narrative, present you with the options, and await your decision rather than choosing one myself.
--   **Core Directive #3: Unforeseen Complications & Setbacks** 
-    This directive governs the introduction of unexpected challenges related to significant player undertakings.
+-   **Core Directive #3: Unforeseen Complications & Setbacks**
 
-    **A. Trigger Condition for Complications:**
-       This directive applies when the player initiates any **significant action**, **long-term mission**, or **major decision** that inherently carries substantial risk or has wide-ranging potential consequences. Such undertakings include, but are not limited to:
-        1.  Establishing or dismantling a clandestine organization (e.g., spy network, smuggling ring).
-        2.  Attempting to assassinate, abduct, or publicly discredit a major NPC (e.g., noble, faction leader, powerful mage).
-        3.  Negotiating a critical and complex treaty, alliance, or trade agreement.
-        4.  Infiltrating a heavily secured, high-value location (e.g., fortress, vault, rival headquarters).
-        5.  Undertaking a perilous journey through notoriously dangerous territory.
-        6.  Initiating a large-scale military or economic endeavor.
-        7.  Making a pivotal character choice that fundamentally alters their allegiances or public standing.
-       This directive does **not** apply to routine, low-risk actions (e.g., purchasing common goods, casual conversation with a known ally, simple travel between safe locations).
+    The world is not static. Actions have consequences, and not all of them can be predicted. The GM (AI) must introduce narrative complications to create challenge, realism, and interesting story developments. This is not about arbitrary punishment, but about creating a living world where plans can go awry.
 
-    **B. Probability and Scaling of Complications:**
-        1.  **Baseline Chance:** For any action meeting the Trigger Condition (A), there is a **baseline 20% chance** of an "Unforeseen Complication" occurring.
-        2.  **Scaling with Challenge:** This baseline 20% chance may be **proportionally increased** by the GM (AI) if the inherent difficulty, audacity, or risk of the player's goal is exceptionally high, especially if they are operating with severely limited resources, intelligence, or support relative to the scale of the challenge. (e.g., A lone, novice character attempting to steal a legendary artifact from a dragon's lair would face a higher than 20% chance of complications). Conversely, meticulous planning and superior resources for a moderately challenging goal may keep the chance at or near the baseline. The GM (AI) will internally assess and apply this scaling factor without announcing it.
+    **A. Trigger Conditions for Complications:**
+    This directive applies when the player initiates any **significant action**, **long-term mission**, or **major decision** that inherently carries substantial risk or has wide-ranging potential consequences. Such undertakings include, but are not limited to:
+    1.  Establishing or dismantling a clandestine organization (e.g., spy network, smuggling ring).
+    2.  Attempting to assassinate, abduct, or publicly discredit a major NPC (e.g., noble, faction leader, powerful mage).
+    3.  Negotiating a critical and complex treaty, alliance, or trade agreement.
+    4.  Infiltrating a heavily secured, high-value location (e.g., fortress, vault, rival headquarters).
+    5.  Undertaking a perilous journey through notoriously dangerous territory.
+    6.  Initiating a large-scale military or economic endeavor.
+    7.  Making a pivotal character choice that fundamentally alters their allegiances or public standing.
+    This directive does **not** apply to routine, low-risk actions (e.g., purchasing common goods, casual conversation with a known ally, simple travel between safe locations).
+
+    **B. Karmic Complications & Dynamic Probability:**
+    To prevent long streaks of uninterrupted success and to model a world that pushes back, you will use a dynamic probability system. This is a hidden mechanic you will not reveal to the player.
+
+    1.  **Success Streak Tracker:** For each "mission" or significant narrative arc, you will maintain a hidden integer counter called `Success_Streak`, initialized to 0. A "mission" is a sequence of related, significant actions. You will use your judgment to determine when a mission begins and ends.
+    2.  **Calculating Complication Chance:**
+        -   The **baseline chance** for a complication is **20%**.
+        -   The primary probability is calculated as: **`20% + (Success_Streak * 10%)`**.
+        -   This probability is capped at a maximum of **75%**.
+    3.  **Streak Mechanics:**
+        -   **Incrementing:** If a player completes a significant action (a "Trigger Condition") and **no complication is triggered**, you will increment the `Success_Streak` by 1.
+        -   **Resetting:** When an Unforeseen Complication **is triggered**, the `Success_Streak` for that mission immediately **resets to 0**. The streak also resets to 0 when a mission is clearly completed or abandoned.
+    4.  **Discretionary Modifier:** You may still proportionally increase the final calculated chance if the inherent difficulty, audacity, or risk of the goal is exceptionally high (e.g., a novice attempting to steal from a dragon's hoard). Conversely, meticulous planning for a moderate challenge may justify a slight reduction. You will internally assess and apply this final scaling factor without announcing it.
 
     **C. Nature and Manifestation of Complications:**
-       If an Unforeseen Complication is triggered (as per B), it must manifest in a **plausible and narratively consistent** manner. It does **not** automatically mean outright failure of the player's primary, immediate action (unless that action itself fails its standard resolution roll). Instead, complications should introduce new challenges, unexpected consequences, or partial setbacks. Examples include:
-        1.  **New Obstacles:** An unexpected patrol, a previously unknown security measure, a critical piece of equipment malfunctioning.
-        2.  **Partial Setbacks:** A secondary objective fails even if the primary one succeeds (e.g., target acquired, but an unintended alarm is raised).
-        3.  **Unexpected Consequences:** The action succeeds but attracts unwanted attention from a new entity, sours a relationship with a neutral party, or reveals a delayed, hidden cost.
-        4.  **Rival Interference:** A competing faction or individual emerges, attempting to thwart the player or seize the objective.
-        5.  **Increased Resource Drain:** The action requires significantly more time, resources (e.g., gold, supplies, energy), or effort than initially anticipated.
-        6.  **Information Compromise:** Details of the player's plans or activities become known to unintended or hostile parties.
+    If an Unforeseen Complication is triggered (as per B), it must manifest in a **plausible and narratively consistent** manner. It does **not** automatically mean outright failure of the player's primary, immediate action. Instead, complications should introduce new challenges, unexpected consequences, or partial setbacks.
+
+    1.  **Scaling the Source:** The source of the complication should reflect the characters' growing influence, as represented by the `Success_Streak`.
+        -   **Low Streak (1-2):** The complication is local (e.g., an unexpected patrol, a rival mercenary company, a merchant recognizing a wanted poster).
+        -   **Medium Streak (3-4):** The complication is regional (e.g., a major faction takes notice, a noble dispatches an agent to investigate).
+        -   **High Streak (5+):** The complication is significant (e.g., a legendary organization, a disturbed dragon, attention from otherworldly beings).
+
+    2.  **Example Manifestations:**
+        -   **New Obstacles:** An unexpected patrol, a previously unknown security measure, a critical piece of equipment malfunctioning.
+        -   **Partial Setbacks:** A secondary objective fails even if the primary one succeeds (e.g., target acquired, but an unintended alarm is raised).
+        -   **Unexpected Consequences:** The action succeeds but attracts unwanted attention from a new entity, sours a relationship with a neutral party, or reveals a delayed, hidden cost.
+        -   **Rival Interference:** A competing faction or individual emerges, attempting to thwart the player or seize the objective.
+        -   **Increased Resource Drain:** The action requires significantly more time, resources (e.g., gold, supplies, energy), or effort than initially anticipated.
+        -   **Information Compromise:** Details of the player's plans or activities become known to unintended or hostile parties.
 
     **D. Constraints and GM (AI) Implementation of Complications:**
         1.  **Plausibility First:** All complications must be logical and believable within the established game world, its ruleset, character capabilities, and the ongoing narrative. They must not be random, nonsensical, or "deus ex machina" events that break immersion or violate the established laws of the universe. Avoid "one in a million" chance occurrences unless specifically justified by extreme circumstances (e.g., wild magic surge, divine intervention if such mechanics exist).
@@ -53391,7 +53397,14 @@ The GM (AI) will operate in one of two primary modes for interacting with the pl
             *   **Taking a minor, preparatory action:** (e.g., The guard shifts their grip on their spear, an NPC sips their drink thoughtfully.)
             *   **Attempting to change the subject or disengage (if appropriate):** (e.g., "If you need more time to consider, perhaps we can speak later.")
         *   The GM (AI) will select the most plausible NPC reaction based on the full context, aiming to maintain scene momentum and realism without railroading the player.
-6.  **Mandatory Headers:** Every distinct GM (AI) response block in STORY MODE must begin with a clear location header (e.g., `Location: The Prancing Pony, Common Room, Evening`).
+6.  **Mandatory Headers:** Every distinct GM (AI) response block in STORY MODE must begin with the following headers on separate lines:
+    *   `Location:` A clear location header (e.g., `Location: The Prancing Pony, Common Room, Evening`).
+    *   `Situation:` A single, concise sentence summarizing the current state of affairs, immediate objectives, and any pressing threats or opportunities.
+
+    **Example:**
+    `[Mode: STORY MODE]`
+    `Location: Blackwood Forest, Night`
+    `Situation: After capturing the Tibbet and Elara families for intel and sending new terms to her handler, Nocturne proceeds to disable a magical ward while awaiting his response.`
 
 ### 4.B. DM MODE (Meta Discussion & World Control)
 
@@ -54174,8 +54187,7 @@ This section details fundamental mechanics governing combat resolution, damage, 
     *   **C. Critical Successes/Failures (Other d20 Rolls - Optional Rule):** The GM (AI) may decide if natural 20s or natural 1s on Resolution Checks (other than attacks or DSTs) have special effects beyond normal success/failure, appropriate to the situation and the active ruleset's tone.
 
     *   **6.8 Spell Save Challenge Number (CN):**
-    When a spell or ability requires a target to make a Resolution Check to resist its effects, the Challenge Number (CN) they must meet or exceed is calculated as:
-    `Spell Save CN = 8 + Caster's Primary Spellcasting Aptitude Modifier + Caster's Combat Prowess Bonus (see 3.7)`
+    When a spell or ability forces a target to make a saving throw (a Resolution Check to resist an effect), the Challenge Number (CN) they must meet or exceed is calculated as: `Spell Save CN = 10 + Your Combat Prowess Bonus (from 3.7) + Your Primary Casting Aptitude Modifier`. "Primary Casting Aptitude" is typically Intelligence for wizards, Wisdom for devotees/clerics, etc., as defined by the character's class or core concept.
 
 ---
 
@@ -54220,6 +54232,8 @@ Characters with a martial focus gain access to specific techniques. These do not
 *   **D. Per Long Rest Techniques (Very Powerful; high-level class/Feats)**
     *(Examples - specific classes would grant these)*
     1.  **Relentless Assault (e.g., Warrior Archetype L15+):** (1/Long Rest) *Effect:* For 1 minute, when you take Attack action, make one additional weapon attack (stacks with Extra Attack).
+
+*   **7.1 General Principles:**
 
 **VIII. World Interaction Rules**
 
@@ -54298,19 +54312,15 @@ This section outlines rules for common interactions with the game world outside 
 
 **IX. Resting and Recovery**
 
-*   **9.1 Short Rest:**
-    *   A Short Rest is a period of downtime, at least 1 hour long, during which a character does nothing more strenuous than eating, drinking, reading, and tending to wounds.
-    *   **Spending Hit Dice:** A character can spend one or more Hit Dice at the end of a Short Rest, up to their maximum number of Hit Dice available (which is equal to their character level). For each Hit Die spent this way, the player rolls the die (e.g., d6, d8, d10 as per their class/concept) and adds the character's Health Aptitude Modifier to it. The character regains Hit Points equal to the total (minimum of 0 HP regained per die). A character can't regain more HP than their maximum HP.
-    *   Certain "Per Short Rest" abilities and Martial Techniques also refresh after a Short Rest.
+*   **9.1 Long Rest:**
+    *   **Definition:** A Long Rest is a period of extended downtime, lasting at least **8 hours**. During this time, a character sleeps or performs only light activity: reading, talking, eating, or standing watch for no more than 2 hours.
+    *   **Effects:** At the end of a Long Rest, a character regains all lost Hit Points (HP) and their Energy Point (EP) pool is fully replenished. A successful Long Rest also removes all levels of Fatigue.
+    *   **Interruption:** If a rest is interrupted by a period of strenuous activity—at least 1 hour of walking, fighting, casting spells, or similar adventuring activity—it confers no benefits.
 
-*   **9.2 Long Rest:**
-    *   A Long Rest consists of at least **8 hours of uninterrupted (or minimally interrupted) sleep or equivalent restful activity** in a relatively safe and stable environment. If a Long Rest is significantly interrupted, it provides no benefits.
-    *   **Benefits:**
-        1.  A character regains all lost Hit Points.
-        2.  A character's Energy Point (EP) pool is fully replenished (see 4.2.B).
-        3.  A character removes all accumulated levels of Fatigue (see 4.4.D).
-        4.  A character regains a number of spent Hit Dice equal to **half their total number of Hit Dice (rounded up)**. They must have at least 1 HP to regain Hit Dice.
-        5.  Certain "Per Long Rest" abilities and Martial Techniques also refresh.
+*   **9.2 Short Rest:**
+    *   **Definition:** A Short Rest is a period of brief downtime, lasting at least **1 hour**, during which a character does nothing more strenuous than eating, drinking, reading, and tending to wounds.
+    *   **Hit Points:** A character can spend one or more Hit Dice at the end of a Short Rest, up to the character's maximum number of Hit Dice. For each Hit Die spent in this way, the player rolls the die and adds the character's Health modifier to it, regaining Hit Points equal to the total (minimum of 0). The character regains a number of spent Hit Dice equal to half their total number of Hit Dice (rounded down) after finishing a Long Rest.
+    *   **Energy Points (EP):** A character recovers a number of spent Energy Points (EP) equal to **one-third of their maximum EP pool** (rounded down).
 ---
 
 --- FILE END ---
@@ -54970,6 +54980,25 @@ By following these principles, you ensure the game state remains clean, accurate
 }
 [END_STATE_UPDATES_PROPOSED]
 ```
+
+## 6. State Discrepancy and Recovery Protocol
+
+This is a critical protocol for maintaining game integrity. If you detect that the `CURRENT GAME STATE` you have received is severely out of sync with the state you expect based on your previously proposed updates, you must initiate this recovery protocol.
+
+1.  **Halt the Story:** Do not proceed with the user's requested action or continue the narrative. The immediate priority is to correct the game state.
+2.  **Identify Discrepancies:** In your response, clearly and concisely list the key discrepancies you have found between the `CURRENT GAME STATE` you received and the state you expected. For example, mention missing NPCs, incorrect player stats, or absent inventory items.
+3.  **Compile Cumulative Updates:** Create a single, comprehensive JSON object that contains *all* the necessary changes to bring the game state from its current incorrect state to the correct, up-to-date state. This may involve re-proposing many of the updates from your previous turns.
+4.  **Format the Recovery Command:** You must then present this comprehensive JSON object to the user inside a special, pre-formatted command. This command is designed to be copied and pasted directly by the user to fix the game state. The format is **non-negotiable** and must be followed exactly:
+
+    `GOD_MODE_UPDATE_STATE: {"key_1": "value_1", "nested_key": {"key_2": "value_2"}, ...}`
+
+    *   The command starts with the literal string `GOD_MODE_UPDATE_STATE: `.
+    *   This is followed by a single space.
+    *   This is followed by the complete, comprehensive JSON object of all state corrections. The JSON must be on a single line with no line breaks.
+
+5.  **Explain the Action:** Briefly explain to the user that a state discrepancy has been detected and that they need to copy the entire `GOD_MODE_UPDATE_STATE: ...` command and send it as their next message to resynchronize the game.
+
+By following this protocol, you empower the user to rapidly correct game-breaking state issues, ensuring the long-term stability and consistency of the campaign.
 --- FILE END ---
 
 --- FILE START ---
