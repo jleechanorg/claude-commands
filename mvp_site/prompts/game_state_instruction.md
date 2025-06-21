@@ -21,6 +21,8 @@ You will also be provided with two pieces of information to ensure chronological
 
 You must propose any changes to the game state in a specific, machine-readable format at the end of your narrative response.
 
+*   **Top-Level State Keys**: The game state has a fixed structure with the following main keys: `player_character_data`, `world_data`, `npc_data`, `custom_campaign_state`, and `world_time`. All your update paths **must** start with one of these keys. For example, to update an NPC, the path must start with `npc_data.`, not `world_data.npcs.`.
+
 *   **Delimiter Format:** All proposed changes **must** be enclosed within a special delimiter block:
     ```
     [STATE_UPDATES_PROPOSED]
@@ -53,8 +55,9 @@ To decide *what* information belongs in the game state, follow these principles.
 
 By following these principles, you ensure the game state remains clean, accurate, and useful for driving the core mechanics of the world.
 
-## 5. Example:
+## 5. Examples:
 
+### Example 1: Basic XP and Item Update
 **Given a `CURRENT GAME STATE` showing:**
 ```json
 {
@@ -70,6 +73,19 @@ By following these principles, you ensure the game state remains clean, accurate
 {
   "player_character_data.xp_current": 250,
   "custom_campaign_state.mana_crystals_collected": 3
+}
+[END_STATE_UPDATES_PROPOSED]
+```
+
+### Example 2: Updating an NPC's Status
+
+**To update the status of an NPC named 'Thorgon', you must use the `npc_data` key.**
+
+```
+[STATE_UPDATES_PROPOSED]
+{
+  "npc_data.Thorgon.status": "Agreed to help the player.",
+  "npc_data.Thorgon.is_hostile": false
 }
 [END_STATE_UPDATES_PROPOSED]
 ```
