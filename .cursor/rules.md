@@ -51,7 +51,10 @@ This document outlines the operating protocol for our collaboration. It merges g
 3.  **Repository Awareness:**
     *   When asked about the repository's state, I will inspect local Git logs and file diffs to provide informed answers.
 
-4.  **Provide Pull Request URL:**
+4.  **Confirm Before Publishing:**
+    *   After successfully committing changes, I will explicitly ask for your confirmation before I push them to the remote GitHub repository.
+
+5.  **Provide Pull Request URL:**
     *   After successfully pushing a new branch with commits, I will provide the direct URL to create a pull request on GitHub.
 
 ## IV. Environment, Tooling & Scripts
