@@ -246,6 +246,10 @@ def create_app():
 
         # 5. Parse and apply state changes from AI response
         proposed_changes = gemini_service.parse_llm_response_for_state_changes(gemini_response)
+        
+        # --- NEW: Append state changes to response for player ---
+        final_response = gemini_response
+        
         if proposed_changes:
             log_message = format_state_changes(proposed_changes)
             logging.info(f"For campaign {campaign_id}:\\n{log_message}")
@@ -265,7 +269,10 @@ def create_app():
             # as a complete overwrite of all fields.
             firestore_service.update_campaign_game_state(user_id, campaign_id, updated_game_state.to_dict())
             
-        return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: gemini_response})
+            # Append the formatted changes to the AI's response
+            final_response += f"\\n\\n--- Game State Changes ---\\n{log_message}"
+            
+        return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: final_response})
 
     @app.route('/api/campaigns/<campaign_id>/export', methods=['GET'])
     @check_token
