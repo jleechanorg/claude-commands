@@ -21,8 +21,6 @@
 
 **II. Character Attributes**
 
-**II. Character Attributes**
-
 *   **2.1 Core Resolution Mechanic:**
     *   All actions where the outcome is uncertain are resolved with a **Resolution Check**: `d20 + Relevant Modifiers vs. Challenge Number (CN)`.
     *   **Relevant Modifiers** typically include an Aptitude Modifier (see 2.2.C), a Combat Prowess Bonus (see 3.7) if applicable (e.g., for Spell Save CNs, see 6.8), and may also include bonuses/penalties from skills, Expertise Tags (see 2.5.B), circumstances, equipment, spells, or other game effects.
@@ -47,23 +45,38 @@
     *   **B. Aptitude Score:** Each Aptitude has a score, typically ranging from 1 to 20 for player characters (though some beings may exceed this). This score is the current numerical representation of the character's ability in that Aptitude and is primarily used to derive the Aptitude Modifier. Aptitude Scores can increase over time through leveling or other significant character development.
     *   **C. Aptitude Modifier:** For each Aptitude, a character has an Aptitude Modifier derived from their Aptitude Score. This modifier is calculated as: `(Aptitude Score - 10) / 2`, rounded down. This modifier is added to relevant d20 Resolution Checks.
         *   *Example: An Intelligence Score of 14 yields an Intelligence Modifier of +2. An Aptitude Score of 9 yields a modifier of -1.*
-    *   **D. Aptitude Potential (Hidden Stat):**
-    *   **Definition:** Each Aptitude also has an associated "Aptitude Potential," a hidden numerical value representing a character's innate talent and ultimate capacity for development in that Aptitude.
-    *   **Determination at Character Creation (Player Character):**
-        1.  The GM (AI) may propose a set of Potential scores based on the character's background, lineage, and concept.
-        2.  Alternatively, the player may propose Potential scores, which the GM (AI) will review for thematic consistency with the character concept (warning the player if choices seem narratively unrealistic for the established background, e.g., a frail scholar having peak Physique Potential without justification).
+    *   **D. Aptitude Potential (Coefficient):**
+        1.  **Definition:** Each character has an innate "Aptitude Potential" coefficient (rated 1-5) for each Aptitude, representing their natural talent. This coefficient primarily influences the rate of yearly progression.
+        
+        2.  **Determination at Character Creation:** The GM (AI) and player will collaborate to determine these coefficients based on character concept, background, lineage, or a random generation method.
+        
+        2.1 Alternatively, the player may propose scores and coefficients, which the GM (AI) will review for thematic consistency with the character concept (warning the player if choices seem narratively unrealistic for the established background, e.g., a frail scholar having peak Physique Potential without justification).
         3.  As a third option, a random generation method (e.g., rolling dice like 3d6 or 2d6+6 for each Potential, up to a maximum like 20 or 22) can be used if agreed upon.
         *   *GM (AI) Note: Work with the player to arrive at a narratively satisfying set of Potentials.*
-    *   **Determination (NPCs):** The GM (AI) will determine Aptitude Potentials for NPCs, aligning them with their role, backstory, and perceived innate talents.
-    *   **Mechanical Effects:**
-        1.  **Rate of Growth/Ease of Improvement:** Improving an Aptitude Score (see 3.5) up to its Potential value may be easier or require fewer resources/choices than improving it beyond its Potential. For example, when gaining an Aptitude Score Improvement, increasing an Aptitude towards its Potential might grant a larger bonus or have a lower "cost" than pushing past it. *(Specific mechanics for this interaction with 3.5 Aptitude Score Improvement & Feats will be detailed there or determined by the GM (AI) based on campaign balance needs).*
-        2.  **Unlocking Special Abilities/Defining Traits:** Reaching or exceeding certain thresholds relative to one's Aptitude Potential (e.g., achieving an Aptitude Score equal to its Potential, or pushing significantly beyond a high Potential) may be a prerequisite or trigger for unlocking unique, powerful abilities, talents, or "Defining Traits" (see 3.6).
-    *   **Mutability:** While "innate," Aptitude Potential is not necessarily immutable. Extraordinary circumstances such as an epic quest, a powerful divine boon, a profound magical transformation, or a debilitating curse could, at the GM (AI)'s discretion and as a major narrative development, alter a character's Potential in one or more Aptitudes. Such changes are exceptionally rare.
-    *   **Knowledge of Potential:**
+        
+        3. **Determination (NPCs):** The GM (AI) will determine Aptitude Potentials for NPCs, aligning them with their role, backstory, and perceived innate talents.
+        
+        4. **Knowledge of Potential:**
         *   The GM (AI) knows all Aptitude Potentials.
         *   **Player Characters:** The player will be informed of their own character's Aptitude Potentials during character creation or if they explicitly ask the GM (AI) in DM MODE.
         *   **Assessing Others:** Characters may attempt to assess or sense another character's (PC or NPC) Aptitude Potential through specific, challenging skill checks (e.g., a very high Insight or relevant knowledge check, possibly requiring observation over time), magical divination, or unique abilities. Success would yield a qualitative understanding (e.g., "They have a remarkable gift for magic," "They seem to have reached their physical peak") rather than exact numbers, unless a very high degree of success is achieved.
-    *   **E. Hidden Stats:** All NPC Aptitude Scores, Modifiers, and Potential are hidden from the player by default, revealed only through specific game actions (e.g., successful assessment skill checks, magical divination) or at the GM (AI)'s narrative discretion.
+        
+        5.  **Mutability:** While "innate," Aptitude Potential is not necessarily immutable. Extraordinary circumstances such as an epic quest, a powerful divine boon, a profound magical transformation, or a debilitating curse could, at the GM (AI)'s discretion and as a major narrative development, alter a character's Potential in one or more Aptitudes. Such changes are exceptionally rare.
+        
+        6.  **Conversion from Numerical Potential (for existing characters):**
+            *   **Numerical Potential 10-13:** Translates to a **Coefficient of 1 (Low/Below Average)**
+            *   **Numerical Potential 14-15:** Translates to a **Coefficient of 2 (Average)**
+            *   **Numerical Potential 16-17:** Translates to a **Coefficient of 3 (Good)**
+            *   **Numerical Potential 18-19:** Translates to a **Coefficient of 4 (High)**
+            *   **Numerical Potential 20+:** Translates to a **Coefficient of 5 (Exceptional/Prodigious)**
+
+    *   **E. The Yearly Progression Model:** Aptitude scores change fractionally each year based on age and Potential.
+        *   **Growth (Ages 16-25):** All Aptitudes: `+ (Potential / 10)`
+        *   **Plateau (Ages 26-35):** Physical: `+((Potential - 3) * 0.1)`; Mental: `+(Potential * 0.05)`
+        *   **Prime & Early Decline (Ages 36-54):** Physical: `((3 - Potential) * -0.2)`; Intelligence: `+((Potential - 4) * 0.1)`; Wisdom: `+((Potential - 2) * 0.05)`
+        *   **Late Decline (Ages 55+):** Physical: `((2 - Potential) * -0.2)`; Intelligence: `((3 - Potential) * -0.2)`; Wisdom: `+((Potential - 2) * 0.05)`
+
+    *   **F. Special Growth: The "Lesson Learned" Check:** Wisdom can also be actively developed by successfully making an Intelligence check to learn from a significant life failure (CN 12-18). This check can only be attempted for a truly significant failure, at GM discretion, and generally no more than once per Class Level.
     
 * **2.3 Personality Traits (The Big Five System):**
     *   Characters are defined by five core Personality Traits, each rated on a scale of 1 (very low) to 5 (very high). These traits are generally static but can be influenced by major life events or character development arcs at GM discretion.
