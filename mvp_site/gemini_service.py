@@ -24,7 +24,7 @@ DEFAULT_MODEL = 'gemini-2.5-flash'
 # Use pro for the single, large-context operation (initial SRD load).
 LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'
 
-MAX_TOKENS = 8192 
+MAX_TOKENS = 50000 
 TEMPERATURE = 0.9
 TARGET_WORD_COUNT = 300
 HISTORY_TURN_LIMIT = 500

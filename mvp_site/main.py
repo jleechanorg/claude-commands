@@ -10,14 +10,20 @@ import logging
 from game_state import GameState, MigrationStatus
 import constants
 import json
+import datetime
 
 def deep_merge(source, destination):
     """
     Recursively merges source dict into destination dict.
-    Nested dictionaries are merged, other values are overwritten.
+    - Nested dictionaries are merged.
+    - If a value in source is '__DELETE__', the corresponding key in destination is removed.
+    - Other values from source overwrite values in destination.
     """
     for key, value in source.items():
-        if isinstance(value, dict):
+        if value == '__DELETE__':
+            if key in destination:
+                del destination[key]
+        elif isinstance(value, dict):
             # Get node or create one
             node = destination.setdefault(key, {})
             deep_merge(value, node)
@@ -42,6 +48,45 @@ def format_state_changes(changes: dict) -> str:
 
     recurse_items(changes)
     return "\\n".join(log_lines)
+
+def json_default_serializer(o):
+    """Handles serialization of data types json doesn't know, like datetimes."""
+    if isinstance(o, (datetime.datetime, datetime.date)):
+        return o.isoformat()
+    raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
+
+def parse_set_command(payload_str: str) -> dict:
+    """
+    Parses a multi-line string of `key.path = value` into a nested
+    dictionary of proposed changes. This is more robust than a single JSON blob.
+    """
+    proposed_changes = {}
+    for line in payload_str.strip().splitlines():
+        line = line.strip()
+        if not line or '=' not in line:
+            continue
+        
+        key_path, value_str = line.split('=', 1)
+        key_path = key_path.strip()
+        value_str = value_str.strip()
+
+        try:
+            # The value must be a valid JSON literal (e.g., "string", 123, true, {}, [])
+            value = json.loads(value_str)
+        except json.JSONDecodeError:
+            logging.warning(f"Skipping line in SET command due to invalid JSON value: {line}")
+            continue
+        
+        # Build the nested dictionary structure from the key path
+        keys = key_path.split('.')
+        d = proposed_changes
+        for key in keys[:-1]:
+            if key not in d or not isinstance(d[key], dict):
+                d[key] = {}
+            d = d[key]
+        d[keys[-1]] = value
+        
+    return proposed_changes
 
 # --- CONSTANTS ---
 # API Configuration
@@ -168,22 +213,30 @@ def create_app():
         data = request.get_json()
         user_input, mode = data.get(KEY_USER_INPUT), data.get(constants.KEY_MODE, constants.MODE_CHARACTER)
         
-        # --- NEW: Special command for manual state updates ---
-        GOD_MODE_COMMAND = "GOD_MODE_UPDATE_STATE: "
-        if user_input.strip().startswith(GOD_MODE_COMMAND):
-            json_payload_str = user_input.strip()[len(GOD_MODE_COMMAND):]
-            try:
-                proposed_changes = json.loads(json_payload_str)
-            except json.JSONDecodeError as e:
-                logging.error(f"Invalid JSON in GOD_MODE_UPDATE_STATE command for campaign {campaign_id}: {e}")
-                return jsonify({KEY_SUCCESS: False, KEY_ERROR: 'Invalid JSON provided in update command.', KEY_DETAILS: str(e)}), 400
+        # --- Special command handling ---
+        GOD_MODE_SET_COMMAND = "GOD_MODE_SET:"
+        GOD_ASK_STATE_COMMAND = "GOD_ASK_STATE"
+
+        user_input_stripped = user_input.strip()
+
+        if user_input_stripped.startswith(GOD_MODE_SET_COMMAND):
+            payload_str = user_input_stripped[len(GOD_MODE_SET_COMMAND):]
+            
+            # Use the new robust parser for line-by-line updates
+            proposed_changes = parse_set_command(payload_str)
+
+            if not proposed_changes:
+                logging.warning(f"GOD_MODE_SET command for campaign {campaign_id} resulted in no valid changes.")
+                return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: The GOD_MODE_SET command was received, but contained no valid instructions or was empty.]"})
 
             current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
             if not current_game_state:
                 return jsonify({KEY_ERROR: 'Campaign game state not found, cannot apply manual update.'}), 404
 
+            # --- NEW: Enhanced logging ---
             log_message = format_state_changes(proposed_changes)
-            logging.info(f"Applying MANUAL state changes for campaign {campaign_id} via GOD MODE command:\\n{log_message}")
+            logging.info(f"Received GOD_MODE_SET for campaign {campaign_id}. Raw payload:\\n---\\n{payload_str}\\n---")
+            logging.info(f"Applying PARSED state changes for campaign {campaign_id}:\\n{log_message}")
 
             game_state_dict = current_game_state.to_dict()
             updated_state_dict = deep_merge(proposed_changes, game_state_dict)
@@ -193,7 +246,21 @@ def create_app():
             
             firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
             
-            return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: Game state has been manually updated via GOD MODE command. The next interaction will use this new state.]"})
+            # Return a confirmation message showing what was changed.
+            return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: f"[System Message: Game state has been manually updated via GOD_MODE_SET command.]\\n\\n{log_message}"})
+
+        if user_input_stripped == GOD_ASK_STATE_COMMAND:
+            current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
+            if not current_game_state:
+                return jsonify({KEY_ERROR: 'Campaign game state not found.'}), 404
+            
+            game_state_dict = current_game_state.to_dict()
+            game_state_json = json.dumps(game_state_dict, indent=2, default=json_default_serializer)
+            
+            firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
+            
+            response_text = f"```json\\n{game_state_json}\\n```"
+            return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: response_text})
         # --- END of special command handling ---
 
         # Fetch campaign metadata and story context
@@ -246,26 +313,32 @@ def create_app():
 
         # 5. Parse and apply state changes from AI response
         proposed_changes = gemini_service.parse_llm_response_for_state_changes(gemini_response)
+        
+        # --- NEW: Append state changes to response for player ---
+        final_response = gemini_response
+        
         if proposed_changes:
+            # --- NEW: Enhanced Logging for normal gameplay ---
+            logging.info(f"AI proposed changes for campaign {campaign_id}:\\n{json.dumps(proposed_changes, indent=2, default=json_default_serializer)}")
+
             log_message = format_state_changes(proposed_changes)
-            logging.info(f"For campaign {campaign_id}:\\n{log_message}")
+            logging.info(f"Applying formatted state changes for campaign {campaign_id}:\\n{log_message}")
             
             # --- FIX: DEEP MERGE STATE UPDATES ---
-            # Get the full current state as a dictionary
             game_state_dict = current_game_state.to_dict()
             
-            # Recursively merge the proposed changes into the full state
             updated_state_dict = deep_merge(proposed_changes, game_state_dict)
+
+            logging.info(f"New complete game state for campaign {campaign_id}:\\n{json.dumps(updated_state_dict, indent=2, default=json_default_serializer)}")
             
-            # Create a new GameState object to validate the merged structure
             updated_game_state = GameState.from_dict(updated_state_dict)
 
-            # Save the *entire* updated state back to Firestore.
-            # Using firestore's set(..., merge=True) with the full object works
-            # as a complete overwrite of all fields.
             firestore_service.update_campaign_game_state(user_id, campaign_id, updated_game_state.to_dict())
             
-        return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: gemini_response})
+            # Append the formatted changes to the AI's response
+            final_response += f"\\n\\n--- Game State Changes ---\\n{log_message}"
+            
+        return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: final_response})
 
     @app.route('/api/campaigns/<campaign_id>/export', methods=['GET'])
     @check_token
