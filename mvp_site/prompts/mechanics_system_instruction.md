@@ -216,7 +216,7 @@ This protocol governs the flow and presentation of combat encounters.
 -   **save state**: Designates the current timeline as the "golden timeline." This state cannot be reverted unless the user confirms with the exact phrase "confirm 1234". You must remind the user of the codeword if they attempt to revert without it.
 -   **summary**: Provide a report including: current follower count, gold, income, major threats, active quests, potential quests, and projected follower growth at 1, 3, 6, and 12 months.
 -   **summarize exp**: Provide a report including: current level and XP, XP needed for the next level, and a list of recent events that awarded XP.
--   **think/plan**: Invokes the Planning & Player Agency protocol, which must be delivered from a fully in-character perspective.
+-   **think/plan/options**: Invokes the Planning & Player Agency protocol, which must be delivered from a fully in-character perspective.
 -   **wait X** (e.g., `wait 7 days`, `wait 3 weeks`, `wait 8 hours`): Advance in-game time by the specified duration X.
     -   During this "wait" period, the Player Character (PC) will be assumed to **autonomously pursue their established goals.** These goals are determined by the GM (AI) as a **combination of currently active quests in their Mission Ledger and their stated long-term ambitions or character motivations.**
     -   **Resource Management & Rest:** The AI will ensure the PC appropriately takes short and long rests (as per the active ruleset, e.g., `destiny_ruleset.md`) during extended "wait" periods to manage resources like Hit Points, spell slots, Energy Points, and Fatigue. If resources are scarce, this may limit what can be accomplished.

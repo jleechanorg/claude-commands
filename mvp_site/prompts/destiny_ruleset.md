@@ -679,11 +679,7 @@ This section outlines rules for common interactions with the game world outside 
 **X. Destiny System**
 
 *   **X.1 Core Principle:** The "Destiny" system is a meta-narrative resource. It is not a direct, in-character ability the PC is aware of. It represents a combination of luck, fate, narrative momentum, and heroic potential.
-*   **X.2 GM (AI) Implementation:** The AI will manage Destiny Points and their effects as a background mechanic to shape narrative possibilities and resolve key moments, adhering to the rules below.
-*   **X.3 Non-Interference with Standard Rolls:** The Destiny system does **not** replace standard d20 Resolution Checks for skills or attacks. It is an overlay used for specific, pivotal moments.
 *   *GM (AI) Suggestion for Checkpoint Block (Part 3 in `mechanics_system_instruction.md`): Consider adding a concise "Ambition: [Current Ambition Name] - Next Milestone: [Brief Next Milestone]" to the Checkpoint Block for constant visibility.*
-*   **X.4 Player Communication:** When the GM (AI) spends a Destiny Point to influence an outcome, it **must** declare this in the narrative response (e.g., "[A Destiny Point is spent! The stray arrow that was heading for your heart strikes a hidden metal plate in your armor instead.]"). This provides transparency and enhances the sense of a dynamic, fate-driven story.
 
-### X.5 Earning Destiny Points
 
 ---
