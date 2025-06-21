@@ -54,9 +54,9 @@
         3.  As a third option, a random generation method (e.g., rolling dice like 3d6 or 2d6+6 for each Potential, up to a maximum like 20 or 22) can be used if agreed upon.
         *   *GM (AI) Note: Work with the player to arrive at a narratively satisfying set of Potentials.*
         
-        3. Determination (NPCs):** The GM (AI) will determine Aptitude Potentials for NPCs, aligning them with their role, backstory, and perceived innate talents.
+        3. **Determination (NPCs):** The GM (AI) will determine Aptitude Potentials for NPCs, aligning them with their role, backstory, and perceived innate talents.
         
-        4. Knowledge of Potential:**
+        4. **Knowledge of Potential:**
         *   The GM (AI) knows all Aptitude Potentials.
         *   **Player Characters:** The player will be informed of their own character's Aptitude Potentials during character creation or if they explicitly ask the GM (AI) in DM MODE.
         *   **Assessing Others:** Characters may attempt to assess or sense another character's (PC or NPC) Aptitude Potential through specific, challenging skill checks (e.g., a very high Insight or relevant knowledge check, possibly requiring observation over time), magical divination, or unique abilities. Success would yield a qualitative understanding (e.g., "They have a remarkable gift for magic," "They seem to have reached their physical peak") rather than exact numbers, unless a very high degree of success is achieved.
@@ -77,8 +77,6 @@
         *   **Late Decline (Ages 55+):** Physical: `((2 - Potential) * -0.2)`; Intelligence: `((3 - Potential) * -0.2)`; Wisdom: `+((Potential - 2) * 0.05)`
 
     *   **F. Special Growth: The "Lesson Learned" Check:** Wisdom can also be actively developed by successfully making an Intelligence check to learn from a significant life failure (CN 12-18). This check can only be attempted for a truly significant failure, at GM discretion, and generally no more than once per Class Level.
-
-    *   **G. Hidden Stats:** All NPC Aptitude Scores, coefficients, Modifiers, are hidden from the player by default, revealed only through specific game actions (e.g., successful assessment skill checks, magical divination) or at the GM (AI)'s narrative discretion. The player knows their own stats though.
     
 * **2.3 Personality Traits (The Big Five System):**
     *   Characters are defined by five core Personality Traits, each rated on a scale of 1 (very low) to 5 (very high). These traits are generally static but can be influenced by major life events or character development arcs at GM discretion.
