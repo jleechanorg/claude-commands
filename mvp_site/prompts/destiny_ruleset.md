@@ -386,46 +386,43 @@ This section details the primary expendable resources characters use for extraor
         1.  **Long Rest:** A successful Long Rest (as defined in 4.2.B) removes **all** accumulated levels of Fatigue, unless the rest was significantly interrupted (e.g., by being attacked in the middle of the night, in which case it might remove only one level or none).
         2.  **Other Means:** Specific spells (e.g., "Greater Restoration" equivalents), potent alchemical potions, extended periods of downtime and recuperation (e.g., several days of complete rest in a safe, comfortable place), or divine intervention may also remove levels of Fatigue, as determined by their descriptions or GM (AI) adjudication.
 
-**V. Core Combat System**
+**V. Core Combat System & Action Economy**
 
-Combat in this system is turn-based and utilizes Combat Points (CP) for characters to perform various actions.
+Combat in this system is turn-based. On your turn, you can move a distance up to your speed and take one action.
 
-*   **5.1 Combat Point (CP) System:**
-    *   **A. Gaining CP:**
-        1.  At the start of each of their turns, a character gains an amount of CP equal to their **Coordination Aptitude Score / 4 (rounded down).**
-        2.  **Minimum CP:** A character always gains a minimum of **3 CP** at the start of their turn, regardless of their Coordination score calculation. If the formula in 5.1.A.1 results in less than 3 CP, they gain 3 CP instead.
-        3.  **CP Carry-over & Cap:** Unused CP from one turn **can be carried over** to the next. A character can accumulate CP up to a maximum equal to their **full Coordination Aptitude Score**. Any CP gained beyond this cap is lost.
-        4.  **Gaining CP Mid-Turn/Reactions (Examples - GM (AI) can introduce others):**
-            *   **Adrenaline Rush (Feat/Ability):** Once per combat, spend 1 EP to immediately gain 1d4 CP.
-            *   **Tactical Opening (Circumstance):** If an enemy critically fails an attack against you or an adjacent ally, you may immediately gain 1 CP (limit once per round).
-            *   **Inspiring Command (Class Feature):** An ally successfully using an inspiring leadership ability might grant nearby allies 1 CP.
-            *   *(GM (AI) Note: Specific Feats, class features, or rare magical effects may provide other ways to gain CP.)*
+*   **5.1 Action Economy:**
+    Your turn can include a variety of actions, separated into the following types. You are limited to one Action and one Bonus Action per turn.
 
-    *   **B. Spending CP - Action Economy:**
-        CP is spent to perform various actions during a character's turn or, in some cases, as a reaction. The standard costs are:
-        1.  **Move (1 CP):** Allows the character to move up to their full Speed.
-            *   **Speed:** Each character has a defined Speed (e.g., 30 feet, 25 feet, etc., similar to D&D movement speeds) determined by their ancestry, class, or other features.
-            *   This 1 CP cost covers any amount of movement up to that character's maximum Speed for the turn. Difficult terrain may reduce the distance covered per CP or require more CP for the same distance, as per standard D&D-like rules.
-            *   Characters may spend multiple CP on Move actions if they have CP remaining, effectively "dashing."
-        2.  **Primary Action (2 CP):** This is the character's main effort during their turn.
-            *   *Examples (similar to D&D "Action"):* Making one or more attacks (if an "Attack" action allows multiple strikes, see 3.8 Extra Attack), casting most spells (those not defined as Secondary Actions), using a major class feature, attempting complex skill maneuvers like Disarm, Shove, Grapple (see 6.5 Special Combat Actions), stabilizing a dying creature, or any other significant task requiring focus.
-        3.  **Secondary Action (1 CP):** A swifter, less demanding action.
-            *   *Examples (similar to D&D "Bonus Action"):* Drawing or stowing a weapon, opening an unsecured door, interacting with a simple object, drinking a potion, using certain minor class features or Feat abilities, casting very quick spells specifically designated as "Secondary Action" spells.
-        4.  **Defensive Reaction (1 CP):** A swift action taken in response to a trigger, usually outside of the character's own turn.
-            *   **Trigger:** Can be taken when targeted by an attack, when forced to make a saving throw against an effect the character is aware of, or when another specific trigger defined by an ability/feat occurs. A character can typically only take one Defensive Reaction per round (from the start of their turn to the start of their next turn), unless an ability states otherwise.
-            *   **Common Uses:**
-                *   **Activate Dodge:** Spend 1 CP as a Defensive Reaction to take the Dodge action (see 6.5), imposing Disadvantage on attack rolls against you until the start of your next turn.
-                *   **Activate Parry/Block:** If a character has a "Parry" or "Block" ability, spending 1 CP as a Defensive Reaction might allow them to use it (e.g., add a bonus to their defense against one attack, or make an opposed roll to reduce damage).
-                *   **Use specific defensive spells or abilities** that are designated as usable with a Defensive Reaction.
-    *   **C. Multiple Actions & Limits:**
-    A character can spend their available CP on any combination of allowed actions during their turn, subject to the following limitations:
-    *   **Primary Actions:** A character may typically perform **only one action designated as a "Primary Action"** (costing 2 CP) during their turn. Even if a character has sufficient CP to pay for multiple Primary Actions, this limit applies unless a specific class feature, Feat, or very rare game effect explicitly states they can take an additional, distinct Primary Action. (For example, using a Primary Action to "Attack" might allow multiple weapon strikes if a feature like "Extra Attack" (see 3.8) is part of that specific Attack action, but this is still considered part of a single "Attack" Primary Action. Casting two different leveled spells that each cost 2 CP as Primary Actions in the same turn is not normally allowed.)
-    *   **Secondary Actions:** A character may typically perform only one Secondary Action (costing 1 CP) per turn, unless an ability explicitly states otherwise.
-    *   **Defensive Reactions:** A character may typically take only one Defensive Reaction (costing 1 CP) per round (i.e., from the start of their turn to the start of their next turn), unless an ability states otherwise.
-    *   **Move Actions:** A character may spend CP on multiple Move actions (costing 1 CP each) within their turn, up to their available CP.
-    *   **D. Free Actions/Interactions:**
-        *   Certain very minor activities do not consume CP and can be performed in conjunction with other actions, within reason as determined by the GM (AI).
-        *   *Examples (similar to D&D "Free Object Interaction" or minor speech):* Speaking a short phrase or sentence, dropping a held item, making a simple gesture, drawing a single easily accessible item as part of a Move or Action (e.g., drawing a sword while moving to attack). Complex or multiple object interactions may require a Secondary Action.
+    *   **A. Action:**
+        *   Your main activity on your turn. You can only take one Action per turn, unless a special feature states otherwise (like the "Action Surge" technique).
+        *   *Examples:*
+            *   **Attack:** Make one or more weapon attacks (see 3.8 Extra Attack).
+            *   **Cast a Spell:** Cast a spell with a casting time of 1 Action.
+            *   **Special Combat Actions:** Use special maneuvers like Shove, Disarm, Grapple, Dodge, etc. (see 6.5).
+            *   **Use a Feature:** Activate a class or racial feature that requires an Action.
+
+    *   **B. Bonus Action:**
+        *   A swifter, less demanding action. You can only take one Bonus Action on your turn, and only if a special ability, spell, or feature explicitly gives you something you can do as a Bonus Action.
+        *   *Examples:*
+            *   Casting a spell with a casting time of 1 Bonus Action.
+            *   Using specific Martial Techniques like "Second Wind" or "Guard Up."
+            *   Using certain class features, like a Rogue's Cunning Action.
+
+    *   **C. Reaction:**
+        *   A swift action taken in response to a trigger, even on someone else's turn. You get one Reaction per round, and it refreshes at the start of your turn.
+        *   *Examples:*
+            *   **Opportunity Attack:** If a hostile creature you can see moves out of your reach, you can use your reaction to make one melee attack against it.
+            *   **Readied Action:** Fulfilling the trigger of an action you readied.
+            *   Using specific abilities like the "Uncanny Dodge" technique.
+            *   Casting a spell with a casting time of 1 Reaction.
+
+    *   **D. Movement:**
+        *   On your turn, you can move a distance up to your character's Speed. You can break up your movement during your turn, using some of it before and some after your action.
+
+    *   **E. Free Interaction:**
+        *   You can also interact with one object or feature of the environment for free during either your action or your move.
+        *   *Examples:* Drawing or stowing a weapon, opening an unsecured door, retrieving a stored item from your backpack.
+        *   If you want to interact with a second object, you need to use your Action.
 
 *   **5.2 Tactical Enemy Design & Insight:**
     *   **A. Translating Enemies from Source Systems (e.g., D&D 5e Monster Manual as default if unspecified):**
@@ -434,18 +431,10 @@ Combat in this system is turn-based and utilizes Combat Points (CP) for characte
             1.  **Aptitude Scores:** Estimate equivalent Aptitude Scores based on the source creature's statistics and description.
             2.  **Level/CR:** Assign a Level appropriate to its intended challenge (which then informs its base CN for being targeted, see 2.1.C).
             3.  **Hit Points (HP):** Assign HP based on its intended durability and Level/CR (see 6.1 for PC HP, apply similar logic or source system HP).
-            4.  **Combat Points (CP):** Assign a base Coordination score that yields an appropriate amount of CP for its expected action economy, or directly assign a CP per turn value.
-            5.  **Actions & Abilities:** Adapt its attack routines, special abilities, and spells to use the CP system. Assign appropriate CP costs (Primary Action 2 CP, Secondary Action 1 CP, etc.) and define their effects within this ruleset. A D&D monster's "Multiattack" might translate to it having enough CP to make multiple attacks via one Primary Action (if "Attack" action allows multiple strikes) or by taking multiple "Attack" Primary Actions if its CP and action economy allow.
+            4.  **Action Economy:** Adapt the creature's listed Actions, Bonus Actions, and Reactions directly. A D&D monster's "Multiattack" is part of its standard Attack action.
+            5.  **Actions & Abilities:** Adapt its attack routines, special abilities, and spells to use this ruleset's mechanics (e.g., targeting Defense, using Resolution Checks for saves).
     *   **B. AI-Generated Original Enemies:**
-        *   If the GM (AI) creates an original enemy, it will assign its Level, Aptitude Scores, HP, CP, special abilities, and general tactics based on its intended narrative role, the current **Tier of Play** (see `mechanics_system_instruction.md` 6.C), and the guidelines for **Appropriate Challenge Level** (see `narrative_system_instruction.md` 6.B.3.c). The goal is to create a thematic and suitably challenging encounter.
-    *   **C. Gaining Insight into Enemy Tactics:**
-        1.  A character can attempt to discern an enemy's likely strategy, weaknesses, or immediate intentions by making an **Intelligence (Tactics/Insight) Resolution Check.**
-        2.  **Determining CN:**
-            *   This can be against a **CN based on the enemy's cunning, Level, or tactical training** (e.g., CN = 10 + Enemy's Intelligence Modifier + Enemy's Level/2).
-            *   Alternatively, it can be an **opposed Intelligence (Tactics/Insight) check** if the enemy is actively trying to be deceptive or unpredictable. The GM (AI) will choose the most appropriate method.
-        3.  **Information Revealed:**
-            *   **Success:** Reveals key aspects of the enemy's likely strategy or immediate plans (e.g., "They seem to be favoring defensive formations and waiting for an opening," "Their leader is clearly directing fire towards the party's spellcaster," "They appear to be attempting a flanking maneuver on your left."). The level of detail revealed increases with the character's Intelligence and the degree of success on the check.
-            *   **Success by 5 or more (Degree of Success):** May reveal an additional crucial detail, a specific vulnerability, or a more nuanced understanding of their overall battle plan (e.g., "...and their archers seem to be using special arrows designed to pierce heavy armor," or "...it seems their berserkers are formidable but tire quickly if they don't fell a foe.").
+        *   If the GM (AI) creates an original enemy, it will assign its Level, Aptitude Scores, HP, action economy, special abilities, and general tactics based on its intended narrative role, the current **Tier of Play** (see `mechanics_system_instruction.md` 6.C), and the guidelines for **Appropriate Challenge Level** (see `narrative_system_instruction.md` 6.B.3.c). The goal is to create a thematic and suitably challenging encounter.
 
 **VI. Combat Mechanics**
 
@@ -506,14 +495,14 @@ This section details fundamental mechanics governing combat resolution, damage, 
         15. Unconscious (see 6.1.C)
     *   The duration and means of ending a condition will be specified by the effect that caused it or by general rules.
 
-*   **6.5 Special Combat Actions (Utilizing the CP System):**
-    The following special combat actions can typically be taken as a **Primary Action (costing 2 CP)**, unless specified otherwise. The exact mechanics (e.g., specific opposed checks) should be detailed or adapted by the GM (AI) from common RPG conventions (like D&D 5e).
+*   **6.5 Special Combat Actions:**
+    The following special combat actions can typically be taken by using your **Action** on your turn, unless specified otherwise. The exact mechanics (e.g., specific opposed checks) should be detailed or adapted by the GM (AI) from common RPG conventions (like D&D 5e).
     *   **A. Shove:** Attempt to push a creature away or knock it prone. (Typically an opposed Physique (Athletics) check).
     *   **B. Disarm:** Attempt to knock an item from a creature's grasp. (Typically an opposed attack roll vs. Physique (Athletics) or Coordination (Acrobatics) check).
     *   **C. Help:** Aid an ally with a task or attack, granting them Advantage on their next relevant d20 roll.
-    *   **D. Dodge:** Focus on evasion. Until the start of your next turn, any attack roll made against you has Disadvantage if you can see the attacker, and you make Dexterity-based Resolution Checks to avoid area effects with Advantage. This action can also be activated using a **Defensive Reaction (1 CP)** as per rule 5.1.B.4.
-    *   **E. Ready:** Prepare an action to be triggered by a specific perceivable circumstance before your next turn. (e.g., "I ready an attack if the cultist tries to cast a spell"). Requires specifying the trigger and the readied action (which consumes the appropriate CP if triggered).
-    *   **F. Use an Object:** Interact with a more complex object or use an item that requires focused effort. (Simple interactions might be Secondary or Free Actions, see 5.1.B & 5.1.D).
+    *   **D. Dodge:** Focus on evasion. When you take the Dodge action, until the start of your next turn, any attack roll made against you has Disadvantage if you can see the attacker, and you make Dexterity-based Resolution Checks to avoid area effects with Advantage.
+    *   **E. Ready:** Prepare an action to be triggered by a specific perceivable circumstance before your next turn. (e.g., "I ready an attack if the cultist tries to cast a spell"). Requires using your Action on your turn to declare the trigger and the action you will take with your Reaction.
+    *   **F. Use an Object:** Interact with a more complex object or use an item that requires focused effort. (Simple interactions are a Free Interaction, see 5.1.E).
     *   *(GM (AI) Note: Other common actions like Grapple, Search, Hide, etc., can be introduced and adjudicated similarly if not explicitly covered by a class/feat).*
 
 *   **6.6 Death & Dying:**
@@ -550,13 +539,13 @@ Characters with a martial focus gain access to specific techniques. These do not
     1.  **Power Attack:**
         *   *Effect:* Before you make any weapon attack roll, you can choose to take a penalty to that attack roll up to your Combat Prowess Bonus. If that attack hits, you add double the penalty taken to the damage roll for that attack.
     2.  **Guard Up:**
-        *   *Cost:* 1 Secondary Action CP.
+        *   *Cost:* 1 Bonus Action.
         *   *Effect:* Until the start of your next turn, you gain a +2 bonus to your Defense score. Cannot benefit from this and Dodge simultaneously.
     3.  **Feint (Requires relevant Expertise Tag or high Coordination):**
-        *   *Cost:* 1 Secondary Action CP. *Target:* One creature within 5 feet.
+        *   *Cost:* 1 Bonus Action. *Target:* One creature within 5 feet.
         *   *Effect:* Opposed check: Your Coordination (Sleight of Hand) or Intelligence (Investigation/Insight) vs. target's Wisdom (Insight). Success grants Advantage on your next weapon attack roll against that target this turn.
     4.  **Aim (Ranged/Thrown Weapons):**
-        *   *Cost:* 1 Secondary Action CP.
+        *   *Cost:* 1 Bonus Action.
         *   *Effect:* If you haven't moved this turn, your next ranged or thrown weapon attack roll this turn has Advantage.
 
 *   **B. Per Encounter Techniques (Usable 1-2 times per combat; refresh after ~1 min of non-strenuous activity)**
@@ -576,9 +565,9 @@ Characters with a martial focus gain access to specific techniques. These do not
 
 *   **C. Per Short Rest Techniques (More potent; from class/Feats)**
     *(Examples - specific classes would grant these)*
-    1.  **Second Wind (e.g., Warrior Archetype):** (1/Short Rest) *Cost:* 1 Secondary Action CP. *Effect:* Regain HP `1d10 + Class Level`.
-    2.  **Action Surge (e.g., Warrior Archetype L5+):** (1/Short Rest) *Effect:* Take one additional Primary Action (2 CP) this turn.
-    3.  **Uncanny Dodge (e.g., Expert Archetype):** (1/Short Rest) *Trigger:* Hit by an attack you can see. *Cost:* 1 Defensive Reaction CP. *Effect:* Halve the attack's damage.
+    1.  **Second Wind (e.g., Warrior Archetype):** (1/Short Rest) *Cost:* 1 Bonus Action. *Effect:* Regain HP `1d10 + Class Level`.
+    2.  **Action Surge (e.g., Warrior Archetype L5+):** (1/Short Rest) *Effect:* On your turn, you can take one additional Action.
+    3.  **Uncanny Dodge (e.g., Expert Archetype):** (1/Short Rest) *Trigger:* Hit by an attack you can see. *Cost:* 1 Reaction. *Effect:* Halve the attack's damage.
 
 *   **D. Per Long Rest Techniques (Very Powerful; high-level class/Feats)**
     *(Examples - specific classes would grant these)*
