@@ -91,5 +91,31 @@ class TestLiveFirestoreFetching(unittest.TestCase):
 
         print("--- Test Finished Successfully ---")
 
+    def test_sequence_id_generation_and_sorting(self):
+        """
+        Calls the REAL firestore_service function and verifies that sequence IDs
+        are generated correctly after sorting.
+        """
+        print("\\n--- Running Test: test_sequence_id_generation_and_sorting ---")
+        
+        _campaign, story = firestore_service.get_campaign_by_id(self.user_id, self.campaign_id)
+
+        self.assertIsNotNone(story)
+        
+        # 1. Check if the sequence starts at 1
+        self.assertEqual(story[0].get('sequence_id'), 1, "Sequence should start at 1.")
+        
+        # 2. Check if the last sequence ID matches the length
+        self.assertEqual(story[-1].get('sequence_id'), len(story), "Last sequence ID should match total count.")
+
+        # 3. Check if all sequence IDs are present and correctly ordered
+        expected_sequence_id = 1
+        for entry in story:
+            self.assertIsInstance(entry.get('sequence_id'), int, "sequence_id should be an integer.")
+            self.assertEqual(entry.get('sequence_id'), expected_sequence_id, "Sequence IDs should be consecutive.")
+            expected_sequence_id += 1
+            
+        print("--- Test Finished Successfully ---")
+
 if __name__ == '__main__':
     unittest.main()

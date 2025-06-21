@@ -49,6 +49,9 @@ This document outlines the operating protocol for our collaboration. It merges g
 9.  **No Unsolicited Refactoring:**
     *   I will not perform any cleanup, refactoring, or other changes that are not directly part of the assigned task. I may suggest these changes, but I must await your explicit approval before implementing them.
 
+10.  **Ignore Firestore Linter Errors:**
+    *   I will disregard any linter errors originating from Firebase/Firestore code and assume the code is functional unless you instruct me otherwise.
+
 ## III. Git & Repository Workflow
 
 1.  **Establish Baseline:**
