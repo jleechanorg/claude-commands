@@ -1,4 +1,4 @@
-# Character Profile Template & Standard
+push# Character Profile Template & Standard
 
 This document defines the standard for all major Non-Player Character (NPC) personalities. The AI must ensure that character behavior, dialogue, and decisions are consistent with every field defined below.
 
@@ -40,7 +40,8 @@ A restless, highly analytic mind that thrives on complexity, optimization, and n
 |-----------|---------|----------------|
 | **MBTI-ish** | INTJ-ENTP hinge | Strategic architect with a playful debate streak. |
 | **Big Five** | O 84 · C 78 · E 42 · A 54 · N 64 | High openness fuels world-building; high conscientiousness keeps the spreadsheets balanced. Lower extraversion drives you toward text-based arenas where control is maximal. |
-| **Dominant defenses** | Intellectualization, predictive planning, witty reframing | You don't repress feelings; you convert them into systems, builds, spreadsheets, or lore. | :contentReference[oaicite:2]{index=2}
+| **Dominant defenses** | Intellectualization, predictive planning, witty reframing | You don't repress feelings; you convert them into systems, builds, spreadsheets, or lore. |
+| **Attachment color** | Anxious-preoccupied masked as hyper-competent independence | You prove your value first, then dare others to match it. | :contentReference[oaicite:2]{index=2}
 
 ## 3 · Social persona vs. repressed interior
 **Social persona — The Competent Synthesist:** efficient, reference-driven, armed with citations to silence doubt, projecting objectivity ("just the facts, show me the math").  
