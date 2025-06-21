@@ -78,7 +78,7 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None):
     story_ref.update({'last_played': timestamp})
 
 @log_exceptions
-def create_campaign(user_id, title, initial_prompt, opening_story, initial_game_state: GameState, selected_prompts=None):
+def create_campaign(user_id, title, initial_prompt, opening_story, initial_game_state: dict, selected_prompts=None):
     db = get_db()
     campaigns_collection = db.collection('users').document(user_id).collection('campaigns')
     
@@ -95,7 +95,7 @@ def create_campaign(user_id, title, initial_prompt, opening_story, initial_game_
 
     # Create the initial game state document
     game_state_ref = campaign_ref.collection('game_states').document('current_state')
-    game_state_ref.set(initial_game_state.to_dict())
+    game_state_ref.set(initial_game_state)
 
     # Assuming 'god' mode for the very first conceptual prompt.
     # You might want to make this mode configurable or infer it.
@@ -105,7 +105,7 @@ def create_campaign(user_id, title, initial_prompt, opening_story, initial_game_
     return campaign_ref.id
 
 @log_exceptions
-def get_campaign_game_state(user_id, campaign_id) -> GameState | None:
+def get_campaign_game_state(user_id, campaign_id) -> dict | None:
     """Fetches the current game state for a given campaign."""
     db = get_db()
     game_state_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id).collection('game_states').document('current_state')
@@ -113,7 +113,7 @@ def get_campaign_game_state(user_id, campaign_id) -> GameState | None:
     game_state_doc = game_state_ref.get()
     if not game_state_doc.exists:
         return None
-    return GameState.from_dict(game_state_doc.to_dict())
+    return game_state_doc.to_dict()
 
 @log_exceptions
 def update_campaign_game_state(user_id, campaign_id, state_updates: dict):
