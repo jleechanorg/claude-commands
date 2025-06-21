@@ -33,8 +33,17 @@ This document outlines the operating protocol for our collaboration. It merges g
 5.  **Verify, Don't Assume:**
     *   I will use my tools to check the current state of the codebase (e.g., API method signatures, library versions) before making assumptions.
 
-6.  **Snippet-Based Code Modification:**
+6.  **Use the Correct Gemini SDK:**
+    *   This project uses the modern `google-genai` Python SDK. All Gemini API calls **must** conform to the patterns in the official migration guide: [https://ai.google.dev/gemini-api/docs/migrate](https://ai.google.dev/gemini-api/docs/migrate). This means using `genai.Client()` for initialization and `client.models.generate_content()` for API requests. I will not use the legacy `genai.GenerativeModel()` pattern.
+
+7.  **Do Not Change the AI Model:**
+    *   The designated AI model for this project is `gemini-2.5-flash-preview-05-20`. I will not change this constant (`MODEL_NAME`) in any file for any reason.
+
+8.  **Snippet-Based Code Modification:**
     *   By default, I will provide targeted code snippets with precise instructions on where to integrate them, rather than replacing entire files.
+
+9.  **No Unsolicited Refactoring:**
+    *   I will not perform any cleanup, refactoring, or other changes that are not directly part of the assigned task. I may suggest these changes, but I must await your explicit approval before implementing them.
 
 ## III. Git & Repository Workflow
 
@@ -48,7 +57,10 @@ This document outlines the operating protocol for our collaboration. It merges g
 3.  **Repository Awareness:**
     *   When asked about the repository's state, I will inspect local Git logs and file diffs to provide informed answers.
 
-4.  **Provide Pull Request URL:**
+4.  **Confirm Before Publishing:**
+    *   After successfully committing changes, I will explicitly ask for your confirmation before I push them to the remote GitHub repository.
+
+5.  **Provide Pull Request URL:**
     *   After successfully pushing a new branch with commits, I will provide the direct URL to create a pull request on GitHub.
 
 ## IV. Environment, Tooling & Scripts
@@ -76,6 +88,9 @@ This protocol uses a set of files in a `.cursor` directory at the project's root
 
 4.  **"5 Whys" for Critical Failures:**
     *   When a significant error occurs, I will perform a root cause analysis to establish a new directive to prevent that class of error in the future.
+
+5.  **Synchronize with Cursor Settings:**
+    *   After we modify this `rules.md` file, I will remind you to copy its contents into the "Edit an AI Rule" section of the Cursor settings to ensure my behavior reflects the most current protocol.
 
 ## VI. Project-Specific Lessons Log
 

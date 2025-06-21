@@ -4,14 +4,24 @@ from google.genai import types
 import logging
 from decorators import log_exceptions
 import sys
+import json
+import re
+import datetime
+from game_state import GameState
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def json_datetime_serializer(obj):
+    """JSON serializer for datetime objects."""
+    if isinstance(obj, (datetime.datetime, datetime.date)):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 # --- CONSTANTS ---
 MODEL_NAME = 'gemini-2.5-flash-preview-05-20'
 MAX_TOKENS = 8192 
 TEMPERATURE = 0.9
-TARGET_WORD_COUNT = 600
+TARGET_WORD_COUNT = 400
 HISTORY_TURN_LIMIT = 500
 MAX_INPUT_TOKENS = 200000 
 SAFE_CHAR_LIMIT = MAX_INPUT_TOKENS * 4
@@ -45,6 +55,9 @@ def _load_instruction_file(instruction_type):
         elif instruction_type == "destiny_ruleset": # NEW TYPE
             file_name = "destiny_ruleset.md"
             header_title = "DEFAULT RULESET" # Optional header for internal understanding
+        elif instruction_type == "game_state": # NEW TYPE
+            file_name = "game_state_instruction.md"
+            header_title = "GAME STATE PROTOCOL"
         else:
             logging.warning(f"Unknown instruction type requested: {instruction_type}")
             _loaded_instructions_cache[instruction_type] = ""
@@ -156,6 +169,10 @@ def get_initial_story(prompt, selected_prompts=None):
     if destiny_ruleset_content:
         system_instruction_parts.append(destiny_ruleset_content)
 
+    # NEW: Always include the game_state instructions
+    game_state_content = _load_instruction_file('game_state')
+    if game_state_content:
+        system_instruction_parts.append(game_state_content)
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
     
@@ -165,8 +182,8 @@ def get_initial_story(prompt, selected_prompts=None):
     return _get_text_from_response(response)
 
 @log_exceptions
-def continue_story(user_input, mode, story_context, selected_prompts=None):
-    """Generates the next part of the story, passing selected system instructions (excluding calibration), including default ruleset."""
+def continue_story(user_input, mode, story_context, current_game_state: GameState, selected_prompts=None):
+    """Generates the next part of the story, incorporating game state and selected system instructions."""
     
     if selected_prompts is None:
         selected_prompts = [] 
@@ -188,6 +205,10 @@ def continue_story(user_input, mode, story_context, selected_prompts=None):
     if destiny_ruleset_content:
         system_instruction_parts.append(destiny_ruleset_content)
 
+    # NEW: Always include the game_state instructions
+    game_state_content = _load_instruction_file('game_state')
+    if game_state_content:
+        system_instruction_parts.append(game_state_content)
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
 
@@ -205,20 +226,44 @@ def continue_story(user_input, mode, story_context, selected_prompts=None):
     if mode == 'character':
         prompt_template = "Main character: {user_input}. Continue the story in about {word_count} words and " \
             "add details for narrative, descriptions of scenes, character dialog, character emotions."
-    else: # god mode
-        # User wants direct pass-through for god mode
-        prompt_template = "GOD MODE: {user_input}"
-
-     # Only format with word_count if it's character mode
-    if mode == 'character':
         current_prompt_text = prompt_template.format(user_input=user_input, word_count=TARGET_WORD_COUNT)
     else: # god mode
+        prompt_template = "GOD MODE: {user_input}"
         current_prompt_text = prompt_template.format(user_input=user_input)
 
-    full_prompt = f"CONTEXT:\n{context_string}\n\nYOUR TURN:\n{current_prompt_text}"
+    # --- NEW: Incorporate Game State ---
+    serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2, default=json_datetime_serializer)
+    full_prompt = f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\nCONTEXT:\\n{context_string}\\n\\nYOUR TURN:\\n{current_prompt_text}"
     
     response = _call_gemini_api([full_prompt], current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
     return _get_text_from_response(response)
+
+@log_exceptions
+def parse_llm_response_for_state_changes(llm_text_response: str) -> dict:
+    """
+    Parses the raw text response from the LLM to find and extract a
+    JSON block containing proposed state changes.
+    """
+    # Regex to find the content between the delimiters, capturing the JSON inside.
+    # re.DOTALL (s) flag allows '.' to match newlines.
+    match = re.search(r'\[STATE_UPDATES_PROPOSED\](.*?)\[END_STATE_UPDATES_PROPOSED\]', llm_text_response, re.DOTALL)
+    
+    if not match:
+        return {}
+
+    json_string = match.group(1).strip()
+    
+    try:
+        proposed_changes = json.loads(json_string)
+        if isinstance(proposed_changes, dict):
+            return proposed_changes
+        else:
+            logging.warning(f"Parsed state changes is not a dictionary: {proposed_changes}")
+            return {}
+    except json.JSONDecodeError as e:
+        logging.error(f"Failed to parse JSON from state update block: {e}")
+        logging.error(f"Invalid JSON string was: {json_string}")
+        return {}
 
 # --- Main block for rapid, direct testing ---
 if __name__ == "__main__":
@@ -230,44 +275,50 @@ if __name__ == "__main__":
         os.environ["GEMINI_API_KEY"] = api_key
         print("Successfully loaded API key from local_api_key.txt")
     except FileNotFoundError:
-        print("\\nERROR: 'local_api_key.txt' not found.")
+        print("\nERROR: 'local_api_key.txt' not found.")
         sys.exit(1)
         
     get_client() # Initialize client
     
     # Example usage for testing: pass all prompt types
     test_selected_prompts = ['narrative', 'mechanics', 'calibration']
+    test_game_state = GameState(
+        player_character_data={"name": "Test Character", "hp_current": 10},
+        world_data={"current_location_name": "The Testing Grounds"},
+        npc_data={},
+        custom_campaign_state={}
+    )
 
     # --- Turn 1: Initial Story ---
-    print("\\n--- Turn 1: get_initial_story ---")
+    print("\n--- Turn 1: get_initial_story ---")
     turn_1_prompt = "start a story about a haunted lighthouse"
     print(f"Using prompt: '{turn_1_prompt}' with selected prompts: {test_selected_prompts}")
     turn_1_response = get_initial_story(turn_1_prompt, selected_prompts=test_selected_prompts)
-    print("\\n--- LIVE RESPONSE 1 ---")
+    print("\n--- LIVE RESPONSE 1 ---")
     print(turn_1_response)
-    print("--- END OF RESPONSE 1 ---\\n")
+    print("--- END OF RESPONSE 1 ---\n")
     
     # Create the initial history from the real response
     history = [{'actor': 'user', 'text': turn_1_prompt}, {'actor': 'gemini', 'text': turn_1_response}]
 
     # --- Turn 2: Continue Story ---
-    print("\\n--- Turn 2: continue_story ---")
+    print("\n--- Turn 2: continue_story ---")
     turn_2_prompt = "A lone ship, tossed by the raging sea, sees a faint, flickering light from the abandoned tower."
     print(f"Using prompt: '{turn_2_prompt}'")
-    turn_2_response = continue_story(turn_2_prompt, 'god', history, selected_prompts=test_selected_prompts)
-    print("\\n--- LIVE RESPONSE 2 ---")
+    turn_2_response = continue_story(turn_2_prompt, 'god', history, test_game_state, selected_prompts=test_selected_prompts)
+    print("\n--- LIVE RESPONSE 2 ---")
     print(turn_2_response)
-    print("--- END OF RESPONSE 2 ---\\n")
+    print("--- END OF RESPONSE 2 ---\n")
     
     # Update the history with the real response from turn 2
     history.append({'actor': 'user', 'text': turn_2_prompt})
     history.append({'actor': 'gemini', 'text': turn_2_response})
 
     # --- Turn 3: Continue Story Again ---
-    print("\\n--- Turn 3: continue_story ---")
+    print("\n--- Turn 3: continue_story ---")
     turn_3_prompt = "The ship's captain, a grizzled old sailor named Silas, decides to steer towards the light, ignoring the warnings of his crew."
     print(f"Using prompt: '{turn_3_prompt}'")
-    turn_3_response = continue_story(turn_3_prompt, 'god', history, selected_prompts=test_selected_prompts)
-    print("\\n--- LIVE RESPONSE 3 ---")
+    turn_3_response = continue_story(turn_3_prompt, 'god', history, test_game_state, selected_prompts=test_selected_prompts)
+    print("\n--- LIVE RESPONSE 3 ---")
     print(turn_3_response)
-    print("--- END OF RESPONSE 3 ---\\n")
+    print("--- END OF RESPONSE 3 ---\n")
