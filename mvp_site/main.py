@@ -10,6 +10,20 @@ import logging
 from game_state import GameState, MigrationStatus
 import constants
 
+def deep_merge(source, destination):
+    """
+    Recursively merges source dict into destination dict.
+    Nested dictionaries are merged, other values are overwritten.
+    """
+    for key, value in source.items():
+        if isinstance(value, dict):
+            # Get node or create one
+            node = destination.setdefault(key, {})
+            deep_merge(value, node)
+        else:
+            destination[key] = value
+    return destination
+
 # --- CONSTANTS ---
 # API Configuration
 CORS_RESOURCES = {r"/api/*": {"origins": "*"}}
@@ -187,7 +201,20 @@ def create_app():
         proposed_changes = gemini_service.parse_llm_response_for_state_changes(gemini_response)
         if proposed_changes:
             logging.info(f"Applying state changes for campaign {campaign_id}: {proposed_changes}")
-            firestore_service.update_campaign_game_state(user_id, campaign_id, proposed_changes)
+            # --- FIX: DEEP MERGE STATE UPDATES ---
+            # Get the full current state as a dictionary
+            game_state_dict = current_game_state.to_dict()
+            
+            # Recursively merge the proposed changes into the full state
+            updated_state_dict = deep_merge(proposed_changes, game_state_dict)
+            
+            # Create a new GameState object to validate the merged structure
+            updated_game_state = GameState.from_dict(updated_state_dict)
+
+            # Save the *entire* updated state back to Firestore.
+            # Using firestore's set(..., merge=True) with the full object works
+            # as a complete overwrite of all fields.
+            firestore_service.update_campaign_game_state(user_id, campaign_id, updated_game_state.to_dict())
             
         return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: gemini_response})
 
