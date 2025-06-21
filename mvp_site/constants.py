@@ -3,6 +3,8 @@ Shared constants used across multiple services in the application.
 This prevents cyclical dependencies and keeps key values consistent.
 """
 
+import os
+
 # --- ACTORS ---
 # Used to identify the source of a story entry
 ACTOR_USER = 'user'
@@ -50,3 +52,17 @@ PROMPT_TYPE_DESTINY = "destiny_ruleset"
 PROMPT_TYPE_GAME_STATE = "game_state"
 PROMPT_TYPE_SRD = "srd"
 PROMPT_TYPE_CHARACTER_TEMPLATE = "character_template"
+PROMPT_TYPE_CHARACTER_SHEET = "character_sheet"
+
+# --- PROMPT PATHS ---
+PROMPTS_DIR = "prompts"
+NARRATIVE_SYSTEM_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "narrative_system_instruction.md")
+MECHANICS_SYSTEM_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "mechanics_system_instruction.md")
+CHARACTER_TEMPLATE_PATH = os.path.join(PROMPTS_DIR, "character_template.md")
+CHARACTER_SHEET_TEMPLATE_PATH = os.path.join(PROMPTS_DIR, "character_sheet_template.md")
+GAME_STATE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "game_state_instruction.md")
+CALIBRATION_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "calibration_instruction.md")
+
+# Game mechanics
+DESTINY_RULESET_PATH = os.path.join(PROMPTS_DIR, "destiny_ruleset.md")
+SRD_PATH = os.path.join(PROMPTS_DIR, "5e_SRD_All.md")

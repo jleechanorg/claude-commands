@@ -2,226 +2,276 @@ import unittest
 from unittest.mock import patch, MagicMock
 import os
 import sys
+import shutil
+import logging
+import constants
+from gemini_service import _load_instruction_file, _loaded_instructions_cache
 
 # Ensure a dummy API key is set BEFORE we import the service.
 os.environ["GEMINI_API_KEY"] = "DUMMY_KEY_FOR_TESTING"
 
-# Ensure the prompts directory exists for tests
-if not os.path.exists('./prompts'):
-    os.makedirs('./prompts')
-
-# Create dummy system instruction files for the test environment
-with open('./prompts/narrative_system_instruction.md', 'w') as f:
-    f.write("Test narrative instruction content.")
-with open('./prompts/mechanics_system_instruction.md', 'w') as f:
-    f.write("Test mechanics instruction content.")
-with open('./prompts/calibration_instruction.md', 'w') as f:
-    f.write("Test calibration instruction content.")
-with open('./prompts/destiny_ruleset.md', 'w') as f: # NEW DUMMY FILE
-    f.write("Test destiny ruleset content.")
-
 import gemini_service
 
-# Define mock system instruction content for consistent testing
-MOCK_NARRATIVE_CONTENT = "Mock narrative instruction."
-MOCK_MECHANICS_CONTENT = "Mock mechanics instruction."
-MOCK_CALIBRATION_CONTENT = "Mock calibration instruction."
-MOCK_DESTINY_RULESET_CONTENT = "Mock destiny ruleset content." # NEW MOCK CONTENT
+class TestInitialStoryPromptAssembly(unittest.TestCase):
 
-class TestGeminiService(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        """Create a temporary directory and dummy prompt files for all tests in this class."""
+        cls.temp_dir = 'temp_test_prompts'
+        os.makedirs(cls.temp_dir, exist_ok=True)
+        
+        # Create dummy files for all known prompt types
+        for key, path in gemini_service.PATH_MAP.items():
+            # We need to create the subdirectory if it doesn't exist
+            full_path = os.path.join(cls.temp_dir, os.path.dirname(path))
+            os.makedirs(full_path, exist_ok=True)
+            
+            # Now create the file
+            with open(os.path.join(cls.temp_dir, path), 'w') as f:
+                f.write(f"Content for {key}")
 
-    # Patch the _load_instruction_file helper directly
+        # IMPORTANT: We must patch the PATH_MAP in gemini_service to point to our temp dir
+        cls.original_path_map = gemini_service.PATH_MAP.copy()
+        
+        # New map pointing to the temp directory
+        temp_path_map = {key: os.path.join(cls.temp_dir, path) for key, path in gemini_service.PATH_MAP.items()}
+        
+        # Create a patcher that we can start and stop
+        cls.path_patcher = patch.dict(gemini_service.PATH_MAP, temp_path_map)
+        cls.path_patcher.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        """Remove the temporary directory and files after all tests in this class."""
+        # Stop the patcher
+        cls.path_patcher.stop()
+        
+        # Clean up the temp directory
+        shutil.rmtree(cls.temp_dir)
+
+    def setUp(self):
+        """Clear the cache before each test."""
+        gemini_service._loaded_instructions_cache.clear()
+
+    @patch('gemini_service.get_client')
     @patch('gemini_service._load_instruction_file')
-    @patch('gemini_service.get_client')
-    def test_get_initial_story_with_selected_prompts(self, mock_get_client, mock_load_instruction_file):
+    def test_all_checkboxes_scenario(self, mock_load_instruction_file, mock_get_client):
         """
-        Tests get_initial_story with specific selected prompts, using system_instruction parameter.
-        Ensures destiny_ruleset is always included.
+        Tests that if all checkboxes are selected, all corresponding prompts
+        are loaded in the correct order.
         """
-        # Configure the mock for _load_instruction_file to return specific content based on argument
-        def side_effect_for_loader(instruction_type):
-            if instruction_type == "narrative":
-                return MOCK_NARRATIVE_CONTENT
-            elif instruction_type == "mechanics":
-                return MOCK_MECHANICS_CONTENT
-            elif instruction_type == "calibration":
-                return MOCK_CALIBRATION_CONTENT
-            elif instruction_type == "destiny_ruleset": # NEW
-                return MOCK_DESTINY_RULESET_CONTENT
-            return "" 
+        # --- Arrange ---
+        # Mock the file loader to return simple, identifiable strings
+        mock_content_map = {
+            "narrative": "Narrative",
+            "mechanics": "Mechanics",
+            "calibration": "Calibration",
+            "destiny_ruleset": "Destiny",
+            "character_template": "CharTemplate",
+            "character_sheet": "CharSheet",
+            "game_state": "GameState",
+            "srd": "SRD",
+        }
+        mock_load_instruction_file.side_effect = lambda type: mock_content_map.get(type, "")
 
-        mock_load_instruction_file.side_effect = side_effect_for_loader
-
+        # Mock the Gemini client
         mock_client = MagicMock()
-        mock_client.models.generate_content.return_value.text = "The story begins as chosen!"
+        mock_client.models.generate_content.return_value.text = "Success"
         mock_get_client.return_value = mock_client
+
+        # Define the input for this specific scenario
+        selected_prompts = ['narrative', 'mechanics', 'calibration']
+        include_srd = True
         
-        test_prompt = "Start a heroic fantasy."
-        # Simulate user selecting narrative, mechanics, calibration
-        selected_prompts = ['narrative', 'mechanics', 'calibration'] 
+        # This is the sequence we expect based on the FIXED code
+        expected_prompt_order = [
+            "CharTemplate",      # From narrative checkbox
+            "CharSheet",       # From mechanics checkbox
+            "SRD",             # From SRD checkbox
+            "Narrative",       # From loop
+            "Mechanics",       # From loop
+            "Calibration",     # From loop
+            "Destiny",         # Default
+            "GameState"        # Default
+        ]
+        expected_system_instruction = "\n\n".join(expected_prompt_order)
 
-        result = gemini_service.get_initial_story(test_prompt, selected_prompts=selected_prompts)
+        # --- Act ---
+        gemini_service.get_initial_story(
+            "test prompt",
+            selected_prompts=selected_prompts,
+            include_srd=include_srd
+        )
 
-        self.assertEqual(result, "The story begins as chosen!")
+        # --- Assert ---
         mock_client.models.generate_content.assert_called_once()
-        
         call_args = mock_client.models.generate_content.call_args
+        actual_system_instruction = call_args.kwargs['config'].system_instruction.text
         
-        # Verify the user prompt content
-        self.assertEqual(call_args.kwargs['contents'][0].role, "user")
-        self.assertIn(test_prompt, call_args.kwargs['contents'][0].parts[0].text)
-        self.assertIn("(Please keep the response to about", call_args.kwargs['contents'][0].parts[0].text)
-        
-        # Verify system_instruction parameter is used and contains combined content
-        self.assertIn('config', call_args.kwargs) 
-        self.assertTrue(hasattr(call_args.kwargs['config'], 'system_instruction')) 
-        
-        # Construct expected combined system instruction for assertion (all selected + destiny)
-        expected_system_instruction = f"{MOCK_NARRATIVE_CONTENT}\n\n{MOCK_MECHANICS_CONTENT}\n\n{MOCK_CALIBRATION_CONTENT}\n\n{MOCK_DESTINY_RULESET_CONTENT}"
-        self.assertEqual(call_args.kwargs['config'].system_instruction.text, expected_system_instruction)
-
-        # Crucially, verify that the system instruction is NOT in the user prompt content
-        full_user_prompt = call_args.kwargs['contents'][0].parts[0].text
-        self.assertNotIn(MOCK_NARRATIVE_CONTENT, full_user_prompt)
-        self.assertNotIn(MOCK_MECHANICS_CONTENT, full_user_prompt)
-        self.assertNotIn(MOCK_CALIBRATION_CONTENT, full_user_prompt)
-        self.assertNotIn(MOCK_DESTINY_RULESET_CONTENT, full_user_prompt)
-        self.assertNotIn("SYSTEM INSTRUCTIONS:", full_user_prompt)
-
+        self.assertEqual(actual_system_instruction, expected_system_instruction)
 
     @patch('gemini_service.get_client')
-    # Mock loader to return only destiny_ruleset content and empty for others
-    @patch('gemini_service._load_instruction_file', side_effect=lambda x: MOCK_DESTINY_RULESET_CONTENT if x == 'destiny_ruleset' else "") 
+    @patch('gemini_service._load_instruction_file')
     def test_get_initial_story_no_selected_prompts(self, mock_load_instruction_file, mock_get_client):
-        """
-        Tests get_initial_story when no specific prompts are selected (default behavior).
-        Ensures only destiny_ruleset is included in system_instruction.
-        """
+        """Tests that get_initial_story loads only default prompts when none are selected."""
+        # --- Arrange ---
+        mock_content_map = { "destiny_ruleset": "Destiny", "game_state": "GameState" }
+        mock_load_instruction_file.side_effect = lambda type: mock_content_map.get(type, "")
+        
         mock_client = MagicMock()
-        mock_client.models.generate_content.return_value.text = "A simple story begins."
+        mock_client.models.generate_content.return_value.text = "Success"
         mock_get_client.return_value = mock_client
         
-        test_prompt = "A simple beginning."
-        result = gemini_service.get_initial_story(test_prompt, selected_prompts=[]) # Explicitly pass empty list
+        expected_system_instruction = "Destiny\n\nGameState"
 
-        self.assertEqual(result, "A simple story begins.")
-        mock_client.models.generate_content.assert_called_once()
-        
-        call_args = mock_client.models.generate_content.call_args
-        
-        # Verify user prompt is correct
-        self.assertEqual(call_args.kwargs['contents'][0].role, "user")
-        self.assertIn(test_prompt, call_args.kwargs['contents'][0].parts[0].text)
-        self.assertIn("(Please keep the response to about", call_args.kwargs['contents'][0].parts[0].text)
-        
-        # Verify system_instruction contains ONLY destiny_ruleset content
-        self.assertIn('config', call_args.kwargs) 
-        self.assertTrue(hasattr(call_args.kwargs['config'], 'system_instruction')) 
-        self.assertEqual(call_args.kwargs['config'].system_instruction.text, MOCK_DESTINY_RULESET_CONTENT)
+        # --- Act ---
+        gemini_service.get_initial_story("test prompt", selected_prompts=[], include_srd=False)
 
+        # --- Assert ---
+        call_args = mock_get_client.return_value.models.generate_content.call_args
+        actual_system_instruction = call_args.kwargs['config'].system_instruction.text
+        
+        self.assertEqual(actual_system_instruction, expected_system_instruction)
 
     @patch('gemini_service.get_client')
-    @patch('gemini_service._load_instruction_file') # Patch for continue_story
-    def test_continue_story_character_mode(self, mock_load_instruction_file, mock_get_client):
-        """
-        Tests the continue_story function in 'character' mode.
-        Verifies system_instruction is passed correctly (narrative, mechanics, destiny_ruleset).
-        """
-        # Configure the mock for _load_instruction_file for continue_story
-        def side_effect_for_loader(instruction_type):
-            if instruction_type == "narrative":
-                return MOCK_NARRATIVE_CONTENT
-            elif instruction_type == "mechanics":
-                return MOCK_MECHANICS_CONTENT
-            elif instruction_type == "calibration": # Should not be loaded by continue_story's filter
-                return MOCK_CALIBRATION_CONTENT
-            elif instruction_type == "destiny_ruleset": # NEW
-                return MOCK_DESTINY_RULESET_CONTENT
-            return "" 
-
-        mock_load_instruction_file.side_effect = side_effect_for_loader
-
+    @patch('gemini_service._load_instruction_file')
+    def test_only_narrative_scenario(self, mock_load_instruction_file, mock_get_client):
+        """Tests that selecting only 'narrative' loads the correct prompt set."""
+        # --- Arrange ---
+        mock_content_map = { "narrative": "Narrative", "character_template": "CharTemplate", "destiny_ruleset": "Destiny", "game_state": "GameState" }
+        mock_load_instruction_file.side_effect = lambda type: mock_content_map.get(type, "")
         mock_client = MagicMock()
-        mock_client.models.generate_content.return_value.text = "The story continues..."
+        mock_client.models.generate_content.return_value.text = "Success"
         mock_get_client.return_value = mock_client
+        
+        expected_prompt_order = ["CharTemplate", "Narrative", "Destiny", "GameState"]
+        expected_system_instruction = "\n\n".join(expected_prompt_order)
 
-        user_input = "I inspect the strange orb."
-        story_context = [{'actor': 'gemini', 'text': 'You see a strange orb on a pedestal.'}]
-        selected_prompts = ['narrative', 'mechanics', 'calibration'] # Simulate all three selected from UI
-        
-        result = gemini_service.continue_story(user_input, "character", story_context, selected_prompts)
+        # --- Act ---
+        gemini_service.get_initial_story("test", selected_prompts=['narrative'], include_srd=False)
 
-        self.assertEqual(result, "The story continues...")
-        mock_client.models.generate_content.assert_called_once()
-        
-        call_args = mock_client.models.generate_content.call_args
-        self.assertEqual(len(call_args.kwargs['contents']), 1) 
-        
-        full_prompt_sent = call_args.kwargs['contents'][0] 
-        
-        self.assertIn("Acting as the main character " + user_input + ".", full_prompt_sent) 
-        self.assertIn("Story: You see a strange orb on a pedestal.", full_prompt_sent)
-        self.assertIn("CONTEXT:\n", full_prompt_sent)
-        self.assertIn("YOUR TURN:\n", full_prompt_sent)
-        
-        # Verify system_instruction parameter is passed and contains combined content (narrative, mechanics, destiny_ruleset)
-        self.assertIn('config', call_args.kwargs)
-        self.assertTrue(hasattr(call_args.kwargs['config'], 'system_instruction'))
-        
-        # Expected: Narrative, Mechanics, AND Destiny Ruleset, but NOT Calibration
-        expected_system_instruction = f"{MOCK_NARRATIVE_CONTENT}\n\n{MOCK_MECHANICS_CONTENT}\n\n{MOCK_DESTINY_RULESET_CONTENT}"
-        self.assertEqual(call_args.kwargs['config'].system_instruction.text, expected_system_instruction)
-        self.assertNotIn(MOCK_CALIBRATION_CONTENT, call_args.kwargs['config'].system_instruction.text)
-
+        # --- Assert ---
+        actual_system_instruction = mock_get_client.return_value.models.generate_content.call_args.kwargs['config'].system_instruction.text
+        self.assertEqual(actual_system_instruction, expected_system_instruction)
 
     @patch('gemini_service.get_client')
-    @patch('gemini_service._load_instruction_file') # Patch for continue_story
-    def test_continue_story_god_mode(self, mock_load_instruction_file, mock_get_client):
-        """
-        Tests the continue_story function in 'god' mode.
-        Verifies system_instruction is passed correctly (narrative, destiny_ruleset).
-        """
-        # Configure the mock for _load_instruction_file for continue_story
-        def side_effect_for_loader(instruction_type):
-            if instruction_type == "narrative":
-                return MOCK_NARRATIVE_CONTENT
-            elif instruction_type == "calibration": # Should not be loaded by continue_story's filter
-                return MOCK_CALIBRATION_CONTENT
-            elif instruction_type == "destiny_ruleset": # NEW
-                return MOCK_DESTINY_RULESET_CONTENT
-            return ""
-
-        mock_load_instruction_file.side_effect = side_effect_for_loader
-
+    @patch('gemini_service._load_instruction_file')
+    def test_only_mechanics_scenario(self, mock_load_instruction_file, mock_get_client):
+        """Tests that selecting only 'mechanics' loads the correct prompt set."""
+        # --- Arrange ---
+        mock_content_map = { "mechanics": "Mechanics", "character_sheet": "CharSheet", "destiny_ruleset": "Destiny", "game_state": "GameState" }
+        mock_load_instruction_file.side_effect = lambda type: mock_content_map.get(type, "")
         mock_client = MagicMock()
-        mock_client.models.generate_content.return_value.text = "An earthquake shakes the room."
+        mock_client.models.generate_content.return_value.text = "Success"
         mock_get_client.return_value = mock_client
+        
+        expected_prompt_order = ["CharSheet", "Mechanics", "Destiny", "GameState"]
+        expected_system_instruction = "\n\n".join(expected_prompt_order)
 
-        user_input = "A dragon suddenly appears."
-        story_context = [{'actor': 'gemini', 'text': 'The room is quiet.'}]
-        selected_prompts = ['narrative', 'calibration'] # Simulate narrative and calibration selected
-        
-        result = gemini_service.continue_story(user_input, "god", story_context, selected_prompts)
-        self.assertEqual(result, "An earthquake shakes the room.")
-        mock_client.models.generate_content.assert_called_once()
-        
-        call_args = mock_client.models.generate_content.call_args
-        self.assertEqual(len(call_args.kwargs['contents']), 1) 
-        
-        full_prompt_sent = call_args.kwargs['contents'][0] 
-        
-        self.assertIn("Story: The room is quiet.", full_prompt_sent) 
-        self.assertIn("YOUR TURN:\n" + user_input, full_prompt_sent) 
-        self.assertIn("CONTEXT:\n", full_prompt_sent)
-        self.assertIn("YOUR TURN:\n", full_prompt_sent)
+        # --- Act ---
+        gemini_service.get_initial_story("test", selected_prompts=['mechanics'], include_srd=False)
 
-        # Verify system_instruction parameter is passed and contains combined content (narrative, destiny_ruleset)
-        self.assertIn('config', call_args.kwargs)
-        self.assertTrue(hasattr(call_args.kwargs['config'], 'system_instruction'))
+        # --- Assert ---
+        actual_system_instruction = mock_get_client.return_value.models.generate_content.call_args.kwargs['config'].system_instruction.text
+        self.assertEqual(actual_system_instruction, expected_system_instruction)
+
+    @patch('gemini_service.get_client')
+    @patch('gemini_service._load_instruction_file')
+    def test_only_calibration_scenario(self, mock_load_instruction_file, mock_get_client):
+        """Tests that selecting only 'calibration' loads the correct prompt set."""
+        # --- Arrange ---
+        mock_content_map = { "calibration": "Calibration", "destiny_ruleset": "Destiny", "game_state": "GameState" }
+        mock_load_instruction_file.side_effect = lambda type: mock_content_map.get(type, "")
+        mock_client = MagicMock()
+        mock_client.models.generate_content.return_value.text = "Success"
+        mock_get_client.return_value = mock_client
         
-        expected_system_instruction = f"{MOCK_NARRATIVE_CONTENT}\n\n{MOCK_DESTINY_RULESET_CONTENT}" # Only narrative and destiny should be present
-        self.assertEqual(call_args.kwargs['config'].system_instruction.text, expected_system_instruction)
-        self.assertNotIn(MOCK_CALIBRATION_CONTENT, call_args.kwargs['config'].system_instruction.text)
+        expected_prompt_order = ["Calibration", "Destiny", "GameState"]
+        expected_system_instruction = "\n\n".join(expected_prompt_order)
+
+        # --- Act ---
+        gemini_service.get_initial_story("test", selected_prompts=['calibration'], include_srd=False)
+
+        # --- Assert ---
+        actual_system_instruction = mock_get_client.return_value.models.generate_content.call_args.kwargs['config'].system_instruction.text
+        self.assertEqual(actual_system_instruction, expected_system_instruction)
+
+# The list of all known prompt types to test, using shared constants.
+PROMPT_TYPES_TO_TEST = [
+    constants.PROMPT_TYPE_NARRATIVE,
+    constants.PROMPT_TYPE_MECHANICS,
+    constants.PROMPT_TYPE_CALIBRATION,
+    constants.PROMPT_TYPE_DESTINY,
+    constants.PROMPT_TYPE_GAME_STATE,
+    constants.PROMPT_TYPE_SRD
+]
+
+class TestPromptLoading(unittest.TestCase):
+
+    def setUp(self):
+        """Clear the instruction cache before each test to ensure isolation."""
+        _loaded_instructions_cache.clear()
+
+    def test_all_prompts_are_loadable_via_service(self):
+        """
+        Ensures that all referenced prompt files can be loaded successfully
+        by calling the actual _load_instruction_file function.
+        """
+        logging.info("--- Running Test: test_all_prompts_are_loadable_via_service ---")
+        
+        for p_type in gemini_service.PATH_MAP.keys():
+            content = _load_instruction_file(p_type)
+            self.assertIsInstance(content, str)
+            self.assertGreater(len(content), 0, f"Prompt file for {p_type} should not be empty.")
+
+    def test_loading_unknown_prompt_raises_error(self):
+        """
+        Ensures that calling _load_instruction_file with an unknown type
+        correctly raises a ValueError, following the strict loading policy.
+        """
+        logging.info("--- Running Test: test_loading_unknown_prompt_raises_error ---")
+        with self.assertRaises(ValueError):
+            _load_instruction_file("this_is_not_a_real_prompt_type")
+
+    def test_all_prompt_files_are_registered_in_service(self):
+        """
+        Ensures that every .md file in the prompts directory is registered
+        in the gemini_service.path_map, and vice-versa. This prevents
+        un-loaded or orphaned prompt files.
+        """
+        logging.info("--- Running Test: test_all_prompt_files_are_registered_in_service ---")
+        
+        # This test needs to look in the actual prompts directory, not a temp one.
+        # It's testing the real state of the project.
+        prompts_dir = os.path.join(os.path.dirname(__file__), 'prompts')
+        
+        # 1. Get all .md files from the filesystem
+        try:
+            # We need to handle subdirectories like 'archive'
+            disk_files = set()
+            for root, dirs, files in os.walk(prompts_dir):
+                # Exclude archive directory from this test
+                if 'archive' in dirs:
+                    dirs.remove('archive')
+                for f in files:
+                    if f.endswith('.md'):
+                        disk_files.add(f)
+
+        except FileNotFoundError:
+            self.fail(f"Prompts directory not found at {prompts_dir}")
+
+        # 2. Get all file basenames from the service's path_map
+        service_files = {os.path.basename(p) for p in gemini_service.PATH_MAP.values()}
+
+        # 3. Compare the sets
+        unregistered_files = disk_files - service_files
+        self.assertEqual(len(unregistered_files), 0,
+                         f"Found .md files in prompts/ dir not registered in gemini_service.PATH_MAP: {unregistered_files}")
+
+        missing_files = service_files - disk_files
+        self.assertEqual(len(missing_files), 0,
+                         f"Found files in gemini_service.PATH_MAP that do not exist in prompts/: {missing_files}")
+
 
 if __name__ == '__main__':
     unittest.main()

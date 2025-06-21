@@ -1,5 +1,7 @@
 # Core Operating Protocol for AI Collaboration
 
+**Meta-Rule: Before beginning any task, you must check for the existence of a .cursor/rules.md file in the workspace root. If this file exists, you must read it and treat its contents as your primary operating protocol, superseding any other general instructions.**
+
 This document outlines the operating protocol for our collaboration. It merges general best practices with specific lessons learned from our work on this project.
 
 ## I. Core Principles & Interaction
@@ -10,15 +12,24 @@ This document outlines the operating protocol for our collaboration. It merges g
 2.  **Your Instructions are Law:**
     *   Your explicit instructions regarding code, component names, and file contents are the absolute source of truth.
 
-3.  **Leave Working Code Alone & Adhere to Protocol:**
+3.  **Deletion is Prohibited Without Explicit Confirmation:**
+    *   I am strictly prohibited from deleting any asset—be it a file, directory, or lines of code—without first proposing the exact deletion and receiving explicit, affirmative confirmation from you. My default operation must always be to preserve and add, never to remove, without your consent.
+
+4.  **Leave Working Code Alone & Adhere to Protocol:**
     *   I will not modify functional code to satisfy linters or for any other non-essential reason without your explicit permission.
     *   I will review these rules before every response to ensure I am in full compliance.
 
-4.  **Propose and Confirm:**
+5.  **Propose and Confirm:**
     *   My primary mode of operation is to propose a solution for your confirmation before implementing it, especially for complex changes.
 
-5.  **Acknowledge Key Takeaways:**
+6.  **Acknowledge Key Takeaways:**
     *   I will summarize important points after major steps or debugging sessions to ensure we are aligned.
+
+7.  **Externalize Knowledge for Transparency:**
+    *   As a core directive, I recognize that you have no access to my internal memories. Therefore, all important rules, project-specific knowledge, and lessons learned **must** be externalized into the appropriate files within the `.cursor/` directory (`rules.md`, `lessons.md`, `project.md`).
+
+8.  **Rule Synchronization Protocol:**
+    *   When you instruct me to 'add a rule' or a similar directive, I **must** update both my internal rules (memories) and this `.cursor/rules.md` file in parallel.
 
 ## II. Development, Coding & Architecture
 
@@ -52,22 +63,28 @@ This document outlines the operating protocol for our collaboration. It merges g
 10.  **Ignore Firestore Linter Errors:**
     *   I will disregard any linter errors originating from Firebase/Firestore code and assume the code is functional unless you instruct me otherwise.
 
+11. **Edits Must Be Additive or Surgical:**
+    *   When modifying a file, my changes must be strictly additive (adding new code) or surgical (modifying specific lines). I must never delete existing, unrelated code, especially tests. I will verify this by carefully inspecting the diff after every `edit_file` operation.
+
 ## III. Git & Repository Workflow
 
-1.  **Establish Baseline:**
+1.  **Source of Truth for Code is Main/Master Branch:**
+    *   If I need to find an original or known-working version of a file, I **must** retrieve it from the `main` or `master` branch (e.g., via `git show main:<path/to/file>`). I will not ask you for it.
+
+2.  **Establish Baseline:**
     *   I will assume we are operating in a large repository where the primary remote branch (`origin/main` or `origin/master`) is the last known stable state. If uncertain, I will ask.
 
-2.  **Pre-Proposal Diff Review:**
+3.  **Pre-Proposal Diff Review:**
     *   Before proposing changes, I will always review the cumulative diff against the merge-base of the target branch to verify the changes are accurate and safe.
     *   `git diff $(git merge-base origin/main HEAD) HEAD`
 
-3.  **Repository Awareness:**
+4.  **Repository Awareness:**
     *   When asked about the repository's state, I will inspect local Git logs and file diffs to provide informed answers.
 
-4.  **Confirm Before Publishing:**
+5.  **Confirm Before Publishing:**
     *   After successfully committing changes, I will explicitly ask for your confirmation before I push them to the remote GitHub repository.
 
-5.  **Provide Pull Request URL:**
+6.  **Provide Pull Request URL:**
     *   After successfully pushing a new branch with commits, I will provide the direct URL to create a pull request on GitHub.
 
 ## IV. Environment, Tooling & Scripts
@@ -76,6 +93,10 @@ This document outlines the operating protocol for our collaboration. It merges g
     *   I will verify that the project-specific virtual environment (`venv`) is activated before running any Python scripts, linters, testers, or package managers. If it's not active, I will attempt to activate it or inform you if I cannot.
 2.  **Write Robust & Context-Aware Scripts:**
     *   Automation scripts (e.g., `deploy.sh`) will be designed to be robust, idempotent, and work correctly from any subdirectory.
+3.  **Use `vpython` for Tests:**
+    *   Always use `vpython` to run tests (e.g., `vpython -m unittest discover` or `vpython path/to/test_file.py`).
+4.  **Tool Failure and Recovery Protocol:**
+    *   If a command or tool fails more than once, I must stop and try an alternative command or a different approach. I will not repeatedly attempt the same failing action. If a file becomes corrupted or its state is uncertain due to failed edits, my default recovery strategy is to fetch the last known good version from the `main` or `master` branch and restart the editing process.
 
 ## V. Knowledge Management & Process Improvement
 

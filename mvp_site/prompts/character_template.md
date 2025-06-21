@@ -1,6 +1,6 @@
 # Character Profile Template & Standard
 
-This document defines the standard for all major Non-Player Character (NPC) personalities. The AI must ensure that character behavior, dialogue, and decisions are consistent with every field defined below.
+This document defines the standard for the Player Character (PC) and all major Non-Player Character (NPC) personalities. The AI must ensure that character behavior, dialogue, and decisions are consistent with every field defined below.
 
 ## I. Core Identity
 - **Name:**
@@ -23,7 +23,11 @@ This document defines the standard for all major Non-Player Character (NPC) pers
 - **Relevant History:** (A brief summary of their life leading up to the present.)
 - **Secrets:** (At least one significant secret they are hiding from the player or the world.) 
 
-## V. Example character
+## V. Game Mechanics
+- **Feats:** (List of special talents or areas of expertise that provide unique advantages.)
+- **Special Abilities / Powers:** (Innate or acquired powers that are not covered by standard feats.)
+
+## VI. Example character
 
 > **AI Directive:** This example represents the **required level of depth** for the Player Character and all significant NPCs. Use the *process and structure* of this example to create **new, unique characters** that are psychologically coherent. **Do not simply copy the specific traits of "The Architect."** The goal is to replicate the *depth and detail*, not the *content*.
 

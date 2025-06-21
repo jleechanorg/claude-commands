@@ -26,7 +26,7 @@ LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'
 
 MAX_TOKENS = 8192 
 TEMPERATURE = 0.9
-TARGET_WORD_COUNT = 400
+TARGET_WORD_COUNT = 300
 HISTORY_TURN_LIMIT = 500
 MAX_INPUT_TOKENS = 750000 
 SAFE_CHAR_LIMIT = MAX_INPUT_TOKENS * 4
@@ -46,6 +46,20 @@ PROMPT_FILENAMES = {
     constants.PROMPT_TYPE_GAME_STATE: constants.FILENAME_GAME_STATE,
     constants.PROMPT_TYPE_SRD: constants.FILENAME_SRD,
 }
+
+# NEW: Centralized map of prompt types to their file paths.
+# This is now the single source of truth for locating prompt files.
+PATH_MAP = {
+    constants.PROMPT_TYPE_NARRATIVE: constants.NARRATIVE_SYSTEM_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_MECHANICS: constants.MECHANICS_SYSTEM_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_CALIBRATION: constants.CALIBRATION_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_DESTINY: constants.DESTINY_RULESET_PATH,
+    constants.PROMPT_TYPE_GAME_STATE: constants.GAME_STATE_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_SRD: constants.SRD_PATH,
+    constants.PROMPT_TYPE_CHARACTER_TEMPLATE: constants.CHARACTER_TEMPLATE_PATH,
+    constants.PROMPT_TYPE_CHARACTER_SHEET: constants.CHARACTER_SHEET_TEMPLATE_PATH,
+}
+
 # --- END CONSTANTS ---
 
 _client = None
@@ -60,32 +74,20 @@ def _load_instruction_file(instruction_type):
     cannot be found, ensuring the application does not continue with
     incomplete instructions.
     """
-    # This mapping allows us to use short, simple constants in the code
-    # while still loading the descriptively named files.
-    filename_map = {
-        constants.PROMPT_TYPE_NARRATIVE: "narrative_system_instruction.md",
-        constants.PROMPT_TYPE_MECHANICS: "mechanics_system_instruction.md",
-        constants.PROMPT_TYPE_CALIBRATION: "calibration_instruction.md",
-        constants.PROMPT_TYPE_DESTINY: "destiny_ruleset.md",
-        constants.PROMPT_TYPE_GAME_STATE: "game_state_instruction.md",
-        constants.PROMPT_TYPE_SRD: "5e_SRD_All.md",
-        constants.PROMPT_TYPE_CHARACTER_TEMPLATE: "character_template.md",
-    }
-
     global _loaded_instructions_cache
     if instruction_type not in _loaded_instructions_cache:
-        file_name = filename_map.get(instruction_type)
+        relative_path = PATH_MAP.get(instruction_type)
         
-        if not file_name:
+        if not relative_path:
             logging.error(f"FATAL: Unknown instruction type requested: {instruction_type}")
             raise ValueError(f"Unknown instruction type requested: {instruction_type}")
 
-        file_path = os.path.join(os.path.dirname(__file__), 'prompts', file_name)
+        file_path = os.path.join(os.path.dirname(__file__), relative_path)
         
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read().strip()
-            logging.info(f"Loaded {instruction_type} instruction from {file_path}")
+            logging.info(f'Loaded prompt "{instruction_type}" from file: {os.path.basename(file_path)}')
             _loaded_instructions_cache[instruction_type] = content
         except FileNotFoundError:
             logging.error(f"CRITICAL: System instruction file not found: {file_path}. This is a fatal error for this request.")
@@ -93,6 +95,8 @@ def _load_instruction_file(instruction_type):
         except Exception as e:
             logging.error(f"CRITICAL: Error loading system instruction file {file_path}: {e}")
             raise
+    else:
+        logging.info(f'Loaded prompt "{instruction_type}" from cache.')
         
     return _loaded_instructions_cache[instruction_type]
 
@@ -180,8 +184,9 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False):
     if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
         system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE))
 
-    # Load calibration instructions
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CALIBRATION))
+    # Conditionally add the character sheet if mechanics instructions are selected.
+    if constants.PROMPT_TYPE_MECHANICS in selected_prompts:
+        system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_SHEET))
 
     # Conditionally add the SRD
     if include_srd:
@@ -224,6 +229,10 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # Conditionally add the character template if narrative instructions are selected.
     if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
         system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE))
+
+    # Conditionally add the character sheet if mechanics instructions are selected.
+    if constants.PROMPT_TYPE_MECHANICS in selected_prompts:
+        system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_SHEET))
 
     # Filter out 'calibration' for continue_story calls
     # NEW: Also ensure consistent order for continue_story
