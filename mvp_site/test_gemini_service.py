@@ -2,34 +2,48 @@ import unittest
 from unittest.mock import patch, MagicMock
 import os
 import sys
+import shutil
 
 # Ensure a dummy API key is set BEFORE we import the service.
 os.environ["GEMINI_API_KEY"] = "DUMMY_KEY_FOR_TESTING"
 
-# Ensure the prompts directory exists for tests
-if not os.path.exists('./prompts'):
-    os.makedirs('./prompts')
-
-# Create dummy system instruction files for the test environment
-with open('./prompts/narrative_system_instruction.md', 'w') as f: f.write("Narrative")
-with open('./prompts/mechanics_system_instruction.md', 'w') as f: f.write("Mechanics")
-with open('./prompts/calibration_instruction.md', 'w') as f: f.write("Calibration")
-with open('./prompts/destiny_ruleset.md', 'w') as f: f.write("Destiny")
-with open('./prompts/character_template.md', 'w') as f: f.write("CharTemplate")
-with open('./prompts/character_sheet_template.md', 'w') as f: f.write("CharSheet")
-with open('./prompts/game_state_instruction.md', 'w') as f: f.write("GameState")
-with open('./prompts/5e_SRD_All.md', 'w') as f: f.write("SRD")
-
 import gemini_service
 
 class TestInitialStoryPromptAssembly(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        """Create a temporary prompts directory and dummy files for testing."""
+        cls.prompts_dir = './prompts_test_temp'
+        if os.path.exists(cls.prompts_dir):
+            shutil.rmtree(cls.prompts_dir)
+        os.makedirs(cls.prompts_dir)
+
+        files_to_create = {
+            "narrative_system_instruction.md": "Narrative",
+            "mechanics_system_instruction.md": "Mechanics",
+            "calibration_instruction.md": "Calibration",
+            "destiny_ruleset.md": "Destiny",
+            "character_template.md": "CharTemplate",
+            "character_sheet_template.md": "CharSheet",
+            "game_state_instruction.md": "GameState",
+            "5e_SRD_All.md": "SRD"
+        }
+        for filename, content in files_to_create.items():
+            with open(os.path.join(cls.prompts_dir, filename), 'w') as f:
+                f.write(content)
+
+    @classmethod
+    def tearDownClass(cls):
+        """Remove the temporary prompts directory and its contents after tests."""
+        shutil.rmtree(cls.prompts_dir)
 
     @patch('gemini_service.get_client')
     @patch('gemini_service._load_instruction_file')
     def test_all_checkboxes_scenario(self, mock_load_instruction_file, mock_get_client):
         """
         Tests that if all checkboxes are selected, all corresponding prompts
-        are loaded in the correct order, including the duplicated calibration prompt.
+        are loaded in the correct order.
         """
         # --- Arrange ---
         # Mock the file loader to return simple, identifiable strings
