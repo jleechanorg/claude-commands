@@ -35,25 +35,6 @@ You must follow this multi-step protocol for any and all changes to our ruleset 
 
 ## Part 3: State & Session Management
 
-### Universal State ID Protocol:
-To ensure absolute clarity and prevent context loss, a unique identifier will be used for tracking.
--   **DM Mode (Change IDs)**: Differential Reports will be assigned a [Change ID: YYYYMMDD-A] for precision in approvals.
--   **The Checkpoint Block**: This block is a mandatory header for every single [STORY MODE] entry. It must contain:
-    1.  The full **Unique Identifier** (SequenceID, Timestamp, HASH - see below).
-    2.  **Location**: Current in-game location of the PC.
-    3.  **Narrative State Summary**: A one-sentence summary of the immediate situation or PC's current short-term objective.
-    4.  **Key Game Stats Summary**: A concise summary of key player-facing game state variables. While the GM (AI) will track all relevant stats internally (e.g., faction reputations, army strengths, kingdom mana reserves if applicable), the Checkpoint Block should externally display a player-relevant summary. This serves both player information and LLM consistency. Examples to include:
-        *   PC Experience / Experience to next level.
-        *   PC Followers/Organization Members (if applicable).
-        *   PC/Faction Income per day/week (if applicable and known/stable).
-        *   Other campaign-critical, player-visible resources if defined by the ruleset (e.g., "Sanity Points," "Hope Shards").
-    5.  **Condensed Missions List**: A list of currently "Active Missions" from the Mission Ledger, formatted as: Mission Title: *One-sentence objective or current status.*
-    *   **Unique Identifier in more detail**:
-        *   A SequenceIdentifier: A positive integer that increments by 1 with every single [STORY MODE] post.
-        *   A Timestamp: The precise in-game date and time.
-        *   A HASH: A unique 16-character UUID hash.
-    *   **Example Format**: Sequence ID: 42 | Timestamp: 1492 DR, Flamerule 13, 11:30:00 AM | Key Stats: XP 1500/2000, Followers: 12, Income: 5gp/day | Missions: Retrieve the Orb: *Currently seeking the Sunken Temple.* | [HASH:A1B2C3D4E5F6G7H8]
-
 -   **Context Window Warning**: *(Content unchanged)*
 -   **Word Count Mandate**: *(Content unchanged)*
     -   *Scope:* *(Content unchanged)*

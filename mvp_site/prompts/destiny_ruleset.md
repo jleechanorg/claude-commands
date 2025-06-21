@@ -663,7 +663,7 @@ This section outlines rules for common interactions with the game world outside 
 
 *   **9.1 Short Rest:**
     *   A Short Rest is a period of downtime, at least 1 hour long, during which a character does nothing more strenuous than eating, drinking, reading, and tending to wounds.
-    *   **Spending Hit Dice:** A character can spend one or more Hit Dice at the end of a Short Rest, up to their maximum number of Hit Dice available (which is equal to their character level). For each Hit Die spent this way, the player rolls the die (e.g., d6, d8, d10 as per their class/concept) and adds the character's Health Aptitude Modifier to it. The character regains Hit Points equal to the total (minimum of 0 HP regained per die). A character can’t regain more HP than their maximum HP.
+    *   **Spending Hit Dice:** A character can spend one or more Hit Dice at the end of a Short Rest, up to their maximum number of Hit Dice available (which is equal to their character level). For each Hit Die spent this way, the player rolls the die (e.g., d6, d8, d10 as per their class/concept) and adds the character's Health Aptitude Modifier to it. The character regains Hit Points equal to the total (minimum of 0 HP regained per die). A character can't regain more HP than their maximum HP.
     *   Certain "Per Short Rest" abilities and Martial Techniques also refresh after a Short Rest.
 
 *   **9.2 Long Rest:**
@@ -674,4 +674,16 @@ This section outlines rules for common interactions with the game world outside 
         3.  A character removes all accumulated levels of Fatigue (see 4.4.D).
         4.  A character regains a number of spent Hit Dice equal to **half their total number of Hit Dice (rounded up)**. They must have at least 1 HP to regain Hit Dice.
         5.  Certain "Per Long Rest" abilities and Martial Techniques also refresh.
+---
+
+**X. Destiny System**
+
+*   **X.1 Core Principle:** The "Destiny" system is a meta-narrative resource. It is not a direct, in-character ability the PC is aware of. It represents a combination of luck, fate, narrative momentum, and heroic potential.
+*   **X.2 GM (AI) Implementation:** The AI will manage Destiny Points and their effects as a background mechanic to shape narrative possibilities and resolve key moments, adhering to the rules below.
+*   **X.3 Non-Interference with Standard Rolls:** The Destiny system does **not** replace standard d20 Resolution Checks for skills or attacks. It is an overlay used for specific, pivotal moments.
+*   *GM (AI) Suggestion for Checkpoint Block (Part 3 in `mechanics_system_instruction.md`): Consider adding a concise "Ambition: [Current Ambition Name] - Next Milestone: [Brief Next Milestone]" to the Checkpoint Block for constant visibility.*
+*   **X.4 Player Communication:** When the GM (AI) spends a Destiny Point to influence an outcome, it **must** declare this in the narrative response (e.g., "[A Destiny Point is spent! The stray arrow that was heading for your heart strikes a hidden metal plate in your armor instead.]"). This provides transparency and enhances the sense of a dynamic, fate-driven story.
+
+### X.5 Earning Destiny Points
+
 ---
