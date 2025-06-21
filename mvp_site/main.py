@@ -114,8 +114,9 @@ def create_app():
             current_game_state = GameState(player_character_data={}, world_data={}, npc_data={}, custom_campaign_state={})
 
         # --- ONE-TIME LEGACY MIGRATION ---
+        logging.info(f"Evaluating campaign {campaign_id} for legacy migration. Current status: {current_game_state.migration_status.value}")
         if current_game_state.migration_status == MigrationStatus.NOT_CHECKED:
-            logging.info(f"Campaign {campaign_id} has not been checked for legacy state. Checking now.")
+            logging.info(f"-> Status is NOT_CHECKED. Performing scan.")
             # The story context here still has datetime objects, which is fine for the parser.
             if story_context:
                 legacy_state = gemini_service.create_game_state_from_legacy_story(story_context)
@@ -123,17 +124,19 @@ def create_app():
                 legacy_state = None
             
             if legacy_state:
-                logging.info(f"Found and parsed legacy state for campaign {campaign_id}. Migrating.")
+                logging.info(f"-> SUCCESS: Found and parsed legacy state for campaign {campaign_id}. Migrating.")
                 legacy_state.migration_status = MigrationStatus.MIGRATED
                 # Overwrite the current_game_state variable with the migrated one
                 current_game_state = legacy_state
                 # Save the newly migrated state to Firestore.
                 firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state.to_dict())
             else:
-                logging.info(f"No legacy state found for campaign {campaign_id}. Marking as checked.")
+                logging.info(f"-> FAILED: No legacy state found for campaign {campaign_id}. Marking as checked.")
                 # Mark as checked and update Firestore so we don't check again.
                 current_game_state.migration_status = MigrationStatus.NO_LEGACY_DATA
                 firestore_service.update_campaign_game_state(user_id, campaign_id, {"migration_status": MigrationStatus.NO_LEGACY_DATA.value})
+        else:
+            logging.info(f"-> Status is {current_game_state.migration_status.value}. Skipping scan.")
 
         # 2. Add user's action to the story log
         firestore_service.add_story_entry(user_id, campaign_id, 'user', user_input, mode)
