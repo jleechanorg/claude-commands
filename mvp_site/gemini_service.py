@@ -23,7 +23,7 @@ MAX_TOKENS = 8192
 TEMPERATURE = 0.9
 TARGET_WORD_COUNT = 400
 HISTORY_TURN_LIMIT = 500
-MAX_INPUT_TOKENS = 200000 
+MAX_INPUT_TOKENS = 750000 
 SAFE_CHAR_LIMIT = MAX_INPUT_TOKENS * 4
 SAFETY_SETTINGS = [
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
@@ -58,6 +58,9 @@ def _load_instruction_file(instruction_type):
         elif instruction_type == "game_state": # NEW TYPE
             file_name = "game_state_instruction.md"
             header_title = "GAME STATE PROTOCOL"
+        elif instruction_type == "srd": # NEW TYPE
+            file_name = "5e_SRD_All.md"
+            header_title = "SYSTEM REFERENCE DOCUMENT"
         else:
             logging.warning(f"Unknown instruction type requested: {instruction_type}")
             _loaded_instructions_cache[instruction_type] = ""
@@ -149,13 +152,20 @@ def _truncate_context(story_context):
     return context
 
 @log_exceptions
-def get_initial_story(prompt, selected_prompts=None):
+def get_initial_story(prompt, selected_prompts=None, include_srd=False):
     """Generates the initial story opening, using system_instruction parameter, including default ruleset."""
     if selected_prompts is None:
         selected_prompts = [] 
         logging.warning("No specific system prompts selected for initial story. Using none.")
 
     system_instruction_parts = []
+
+    # NEW: Conditionally add the SRD first
+    if include_srd:
+        srd_content = _load_instruction_file('srd')
+        if srd_content:
+            system_instruction_parts.append(srd_content)
+
     # Consistent order for instructions
     # Narrative, Mechanics, Calibration (from checkboxes)
     for p_type in ['narrative', 'mechanics', 'calibration']: 
