@@ -95,6 +95,8 @@ This document outlines the operating protocol for our collaboration. It merges g
     *   Automation scripts (e.g., `deploy.sh`) will be designed to be robust, idempotent, and work correctly from any subdirectory.
 3.  **Use `vpython` for Tests:**
     *   Always use `vpython` to run tests (e.g., `vpython -m unittest discover` or `vpython path/to/test_file.py`).
+4.  **Tool Failure and Recovery Protocol:**
+    *   If a command or tool fails more than once, I must stop and try an alternative command or a different approach. I will not repeatedly attempt the same failing action. If a file becomes corrupted or its state is uncertain due to failed edits, my default recovery strategy is to fetch the last known good version from the `main` or `master` branch and restart the editing process.
 
 ## V. Knowledge Management & Process Improvement
 
