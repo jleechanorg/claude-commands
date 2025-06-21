@@ -420,9 +420,9 @@ Combat in this system is turn-based. On your turn, you can move a distance up to
         *   On your turn, you can move a distance up to your character's Speed. You can break up your movement during your turn, using some of it before and some after your action.
 
     *   **E. Free Interaction:**
-        *   You can also interact with one object or feature of the environment for free during either your action or your move.
-        *   *Examples:* Drawing or stowing a weapon, opening an unsecured door, retrieving a stored item from your backpack.
-        *   If you want to interact with a second object, you need to use your Action.
+        *   You can perform minor activities in conjunction with your move and Action. You can interact with one object or feature of the environment for free.
+        *   *Examples:* Speaking a short phrase, drawing or stowing a weapon, opening an unsecured door, retrieving a stored item from your backpack, dropping a held item, making a simple gesture.
+        *   If you want to interact with a second object, you need to use your Action. More complex interactions may also require your Action at the GM's discretion.
 
 *   **5.2 Tactical Enemy Design & Insight:**
     *   **A. Translating Enemies from Source Systems (e.g., D&D 5e Monster Manual as default if unspecified):**
