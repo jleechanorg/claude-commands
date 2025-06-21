@@ -73,7 +73,12 @@ def create_app():
             custom_campaign_state={}
         )
 
-        opening_story = gemini_service.get_initial_story(prompt, selected_prompts=selected_prompts)
+        should_include_srd = 'mechanics' in selected_prompts
+        opening_story = gemini_service.get_initial_story(
+            prompt, 
+            selected_prompts=selected_prompts,
+            include_srd=should_include_srd
+        )
         
         campaign_id = firestore_service.create_campaign(
             user_id, title, prompt, opening_story, initial_game_state, selected_prompts
