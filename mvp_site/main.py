@@ -317,6 +317,19 @@ def create_app():
         final_response = gemini_response
         
         if proposed_changes:
+            # --- NEW: Track last story mode sequence ID ---
+            if mode == constants.MODE_CHARACTER:
+                # The new sequence ID will be the length of the old context plus the two
+                # new entries (user and AI).
+                last_story_id = len(story_context) + 2
+                story_id_update = {
+                    "custom_campaign_state": {
+                        "last_story_mode_sequence_id": last_story_id
+                    }
+                }
+                # Merge this update with the changes from the LLM
+                proposed_changes = deep_merge(story_id_update, proposed_changes)
+
             # --- NEW: Enhanced Logging for normal gameplay ---
             logging.info(f"AI proposed changes for campaign {campaign_id}:\\n{json.dumps(proposed_changes, indent=2, default=json_default_serializer)}")
 
