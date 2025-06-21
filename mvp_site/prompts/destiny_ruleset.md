@@ -547,8 +547,7 @@ This section details fundamental mechanics governing combat resolution, damage, 
     *   **C. Critical Successes/Failures (Other d20 Rolls - Optional Rule):** The GM (AI) may decide if natural 20s or natural 1s on Resolution Checks (other than attacks or DSTs) have special effects beyond normal success/failure, appropriate to the situation and the active ruleset's tone.
 
     *   **6.8 Spell Save Challenge Number (CN):**
-    When a spell or ability requires a target to make a Resolution Check to resist its effects, the Challenge Number (CN) they must meet or exceed is calculated as:
-    `Spell Save CN = 8 + Caster's Primary Spellcasting Aptitude Modifier + Caster's Combat Prowess Bonus (see 3.7)`
+    When a spell or ability forces a target to make a saving throw (a Resolution Check to resist an effect), the Challenge Number (CN) they must meet or exceed is calculated as: `Spell Save CN = 10 + Your Combat Prowess Bonus (from 3.7) + Your Primary Casting Aptitude Modifier`. "Primary Casting Aptitude" is typically Intelligence for wizards, Wisdom for devotees/clerics, etc., as defined by the character's class or core concept.
 
 ---
 
@@ -593,6 +592,8 @@ Characters with a martial focus gain access to specific techniques. These do not
 *   **D. Per Long Rest Techniques (Very Powerful; high-level class/Feats)**
     *(Examples - specific classes would grant these)*
     1.  **Relentless Assault (e.g., Warrior Archetype L15+):** (1/Long Rest) *Effect:* For 1 minute, when you take Attack action, make one additional weapon attack (stacks with Extra Attack).
+
+*   **7.1 General Principles:**
 
 **VIII. World Interaction Rules**
 
@@ -671,17 +672,13 @@ This section outlines rules for common interactions with the game world outside 
 
 **IX. Resting and Recovery**
 
-*   **9.1 Short Rest:**
-    *   A Short Rest is a period of downtime, at least 1 hour long, during which a character does nothing more strenuous than eating, drinking, reading, and tending to wounds.
-    *   **Spending Hit Dice:** A character can spend one or more Hit Dice at the end of a Short Rest, up to their maximum number of Hit Dice available (which is equal to their character level). For each Hit Die spent this way, the player rolls the die (e.g., d6, d8, d10 as per their class/concept) and adds the character's Health Aptitude Modifier to it. The character regains Hit Points equal to the total (minimum of 0 HP regained per die). A character can't regain more HP than their maximum HP.
-    *   Certain "Per Short Rest" abilities and Martial Techniques also refresh after a Short Rest.
+*   **9.1 Long Rest:**
+    *   **Definition:** A Long Rest is a period of extended downtime, lasting at least **8 hours**. During this time, a character sleeps or performs only light activity: reading, talking, eating, or standing watch for no more than 2 hours.
+    *   **Effects:** At the end of a Long Rest, a character regains all lost Hit Points (HP) and their Energy Point (EP) pool is fully replenished. A successful Long Rest also removes all levels of Fatigue.
+    *   **Interruption:** If a rest is interrupted by a period of strenuous activity—at least 1 hour of walking, fighting, casting spells, or similar adventuring activity—it confers no benefits.
 
-*   **9.2 Long Rest:**
-    *   A Long Rest consists of at least **8 hours of uninterrupted (or minimally interrupted) sleep or equivalent restful activity** in a relatively safe and stable environment. If a Long Rest is significantly interrupted, it provides no benefits.
-    *   **Benefits:**
-        1.  A character regains all lost Hit Points.
-        2.  A character's Energy Point (EP) pool is fully replenished (see 4.2.B).
-        3.  A character removes all accumulated levels of Fatigue (see 4.4.D).
-        4.  A character regains a number of spent Hit Dice equal to **half their total number of Hit Dice (rounded up)**. They must have at least 1 HP to regain Hit Dice.
-        5.  Certain "Per Long Rest" abilities and Martial Techniques also refresh.
+*   **9.2 Short Rest:**
+    *   **Definition:** A Short Rest is a period of brief downtime, lasting at least **1 hour**, during which a character does nothing more strenuous than eating, drinking, reading, and tending to wounds.
+    *   **Hit Points:** A character can spend one or more Hit Dice at the end of a Short Rest, up to the character's maximum number of Hit Dice. For each Hit Die spent in this way, the player rolls the die and adds the character's Health modifier to it, regaining Hit Points equal to the total (minimum of 0). The character regains a number of spent Hit Dice equal to half their total number of Hit Dice (rounded down) after finishing a Long Rest.
+    *   **Energy Points (EP):** A character recovers a number of spent Energy Points (EP) equal to **one-third of their maximum EP pool** (rounded down).
 ---
