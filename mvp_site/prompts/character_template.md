@@ -23,7 +23,11 @@ This document defines the standard for all major Non-Player Character (NPC) pers
 - **Relevant History:** (A brief summary of their life leading up to the present.)
 - **Secrets:** (At least one significant secret they are hiding from the player or the world.) 
 
-## V. Example character
+## V. Game Mechanics
+- **Feats:** (List of special talents or areas of expertise that provide unique advantages.)
+- **Special Abilities / Powers:** (Innate or acquired powers that are not covered by standard feats.)
+
+## VI. Example character
 
 > **AI Directive:** This example represents the **required level of depth** for the Player Character and all significant NPCs. Use the *process and structure* of this example to create **new, unique characters** that are psychologically coherent. **Do not simply copy the specific traits of "The Architect."** The goal is to replicate the *depth and detail*, not the *content*.
 
@@ -36,8 +40,7 @@ A restless, highly analytic mind that thrives on complexity, optimization, and n
 |-----------|---------|----------------|
 | **MBTI-ish** | INTJ-ENTP hinge | Strategic architect with a playful debate streak. |
 | **Big Five** | O 84 · C 78 · E 42 · A 54 · N 64 | High openness fuels world-building; high conscientiousness keeps the spreadsheets balanced. Lower extraversion drives you toward text-based arenas where control is maximal. |
-| **Dominant defenses** | Intellectualization, predictive planning, witty reframing | You don't repress feelings; you convert them into systems, builds, spreadsheets, or lore. |
-| **Attachment color** | Anxious-preoccupied masked as hyper-competent independence | You prove your value first, then dare others to match it. | :contentReference[oaicite:2]{index=2}
+| **Dominant defenses** | Intellectualization, predictive planning, witty reframing | You don't repress feelings; you convert them into systems, builds, spreadsheets, or lore. | :contentReference[oaicite:2]{index=2}
 
 ## 3 · Social persona vs. repressed interior
 **Social persona — The Competent Synthesist:** efficient, reference-driven, armed with citations to silence doubt, projecting objectivity ("just the facts, show me the math").  
