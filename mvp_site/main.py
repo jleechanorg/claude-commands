@@ -168,6 +168,34 @@ def create_app():
         data = request.get_json()
         user_input, mode = data.get(KEY_USER_INPUT), data.get(constants.KEY_MODE, constants.MODE_CHARACTER)
         
+        # --- NEW: Special command for manual state updates ---
+        GOD_MODE_COMMAND = "GOD_MODE_UPDATE_STATE: "
+        if user_input.strip().startswith(GOD_MODE_COMMAND):
+            json_payload_str = user_input.strip()[len(GOD_MODE_COMMAND):]
+            try:
+                proposed_changes = json.loads(json_payload_str)
+            except json.JSONDecodeError as e:
+                logging.error(f"Invalid JSON in GOD_MODE_UPDATE_STATE command for campaign {campaign_id}: {e}")
+                return jsonify({KEY_SUCCESS: False, KEY_ERROR: 'Invalid JSON provided in update command.', KEY_DETAILS: str(e)}), 400
+
+            current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
+            if not current_game_state:
+                return jsonify({KEY_ERROR: 'Campaign game state not found, cannot apply manual update.'}), 404
+
+            log_message = format_state_changes(proposed_changes)
+            logging.info(f"Applying MANUAL state changes for campaign {campaign_id} via GOD MODE command:\\n{log_message}")
+
+            game_state_dict = current_game_state.to_dict()
+            updated_state_dict = deep_merge(proposed_changes, game_state_dict)
+            updated_game_state = GameState.from_dict(updated_state_dict)
+            
+            firestore_service.update_campaign_game_state(user_id, campaign_id, updated_game_state.to_dict())
+            
+            firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
+            
+            return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: Game state has been manually updated via GOD MODE command. The next interaction will use this new state.]"})
+        # --- END of special command handling ---
+
         # Fetch campaign metadata and story context
         campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
         if not campaign: return jsonify({KEY_ERROR: 'Campaign not found'}), 404
