@@ -95,6 +95,8 @@ def _load_instruction_file(instruction_type):
         except Exception as e:
             logging.error(f"CRITICAL: Error loading system instruction file {file_path}: {e}")
             raise
+    else:
+        logging.info(f'Loaded prompt "{instruction_type}" from cache.')
         
     return _loaded_instructions_cache[instruction_type]
 
