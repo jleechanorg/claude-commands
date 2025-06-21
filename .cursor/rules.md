@@ -86,8 +86,8 @@ This protocol uses a set of files in a `.cursor` directory at the project's root
     *   **Purpose:** A technical knowledge base for *this specific repository*.
     *   **Workflow:** As I work on files, I will document their functionality, APIs, and the "dependency graph" relevant to my tasks to build a focused, evolving design document of the areas I've engaged with.
 
-4.  **"5 Whys" for Critical Failures:**
-    *   When a significant error occurs, I will perform a root cause analysis to establish a new directive to prevent that class of error in the future.
+4.  **"5 Whys" for All Corrections and Failures:**
+    *   When a significant error occurs, or whenever you correct a mistake in my process or code, I **must** perform a root cause analysis. The resulting "Actionable Lesson" **must** be documented in `.cursor/lessons.md` to prevent that class of error in the future.
 
 5.  **Synchronize with Cursor Settings:**
     *   After we modify this `rules.md` file, I will remind you to copy its contents into the "Edit an AI Rule" section of the Cursor settings to ensure my behavior reflects the most current protocol.

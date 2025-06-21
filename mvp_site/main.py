@@ -134,7 +134,8 @@ def create_app():
                 logging.info(f"-> FAILED: No legacy state found for campaign {campaign_id}. Marking as checked.")
                 # Mark as checked and update Firestore so we don't check again.
                 current_game_state.migration_status = MigrationStatus.NO_LEGACY_DATA
-                firestore_service.update_campaign_game_state(user_id, campaign_id, {"migration_status": MigrationStatus.NO_LEGACY_DATA.value})
+                # Pass the full dict to ensure document creation on the first run.
+                firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state.to_dict())
         else:
             logging.info(f"-> Status is {current_game_state.migration_status.value}. Skipping scan.")
 

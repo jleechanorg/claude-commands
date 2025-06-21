@@ -42,4 +42,8 @@ This document is a persistent repository for reusable knowledge, best practices,
 
 *   **Incident:** Multiple failed attempts to call the Gemini API, resulting in "non-text response" errors and linter failures.
 *   **Root Cause:** Using outdated patterns from the legacy `google-generativeai` Python SDK instead of the current `google-genai` SDK. The API signature for client initialization and content generation changed significantly.
-*   **Lesson:** The project uses the modern `google-genai` SDK. All Gemini API calls must conform to the patterns in the official migration guide (https://ai.google.dev/gemini-api/docs/migrate). Specifically, use `genai.Client()` for initialization and `client.models.generate_content()` for requests, not `genai.GenerativeModel()`. 
+*   **Lesson:** The project uses the modern `google-genai` SDK. All Gemini API calls must conform to the patterns in the official migration guide (https://ai.google.dev/gemini-api/docs/migrate). Specifically, use `genai.Client()` for initialization and `client.models.generate_content()` for requests, not `genai.GenerativeModel()`.
+
+*   **Incident:** Application crashed with a `404 Not Found` error when checking a new campaign for legacy data.
+*   **Root Cause:** A function (`update_campaign_game_state`) used the Firestore `.update()` method, which fails if the target document does not exist. The code path for a "new campaign with no legacy data" tried to update a document that had not yet been created.
+*   **Lesson:** Functions that modify database records should be designed to be idempotent or act as an "upsert" (update or insert) when there's a possibility of acting on a non-existent resource. For Firestore, this means preferring `.set(data, merge=True)` over `.update(data)` in such cases. 

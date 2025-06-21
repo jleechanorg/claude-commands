@@ -124,7 +124,9 @@ def update_campaign_game_state(user_id, campaign_id, state_updates: dict):
     state_updates_with_timestamp = state_updates.copy()
     state_updates_with_timestamp['last_state_update_timestamp'] = datetime.datetime.now(datetime.timezone.utc)
     
-    game_state_ref.update(state_updates_with_timestamp)
+    # Use set with merge=True to handle both creation and updates (upsert).
+    # This fixes the bug where an update was called on a non-existent document.
+    game_state_ref.set(state_updates_with_timestamp, merge=True)
 
 # --- NEWLY ADDED FUNCTION ---
 @log_exceptions
