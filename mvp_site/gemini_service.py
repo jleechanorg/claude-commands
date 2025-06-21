@@ -30,6 +30,11 @@ TARGET_WORD_COUNT = 300
 HISTORY_TURN_LIMIT = 2000
 MAX_INPUT_TOKENS = 750000 
 SAFE_CHAR_LIMIT = MAX_INPUT_TOKENS * 4
+
+# NEW: Constants for context truncation
+TURNS_TO_KEEP_AT_START = 50
+TURNS_TO_KEEP_AT_END = 50
+
 SAFETY_SETTINGS = [
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
@@ -148,27 +153,36 @@ def _get_text_from_response(response):
     logging.warning(f"--- Response did not contain valid text. Full response object: {response} ---")
     return "[System Message: The model returned a non-text response. Please check the logs for details.]"
 
-def _truncate_context(story_context):
+def _truncate_context(story_context, turns_to_keep_at_start=TURNS_TO_KEEP_AT_START, turns_to_keep_at_end=TURNS_TO_KEEP_AT_END):
     """
-    Truncates the story context first by HISTORY_TURN_LIMIT, and then
-    further by character count if it still exceeds the safety limit.
+    Intelligently truncates the story context to prevent API errors.
+    It keeps the first few turns (for setup) and the last few turns (for immediate context).
     """
-    # 1. Apply the turn limit first.
-    context = list(story_context[-HISTORY_TURN_LIMIT:])
+    total_turns = len(story_context)
     
-    # 2. Check character count and truncate further if needed.
-    def calculate_total_chars(ctx):
-        return sum(len(entry.get('text', '')) for entry in ctx)
+    # If the total number of turns is less than the sum of what we want to keep,
+    # then there's no need to truncate. Return the whole context.
+    if total_turns <= turns_to_keep_at_start + turns_to_keep_at_end:
+        return story_context
 
-    total_chars = calculate_total_chars(context)
+    logging.warning(f"Context is long ({total_turns} turns). Truncating to keep first {turns_to_keep_at_start} and last {turns_to_keep_at_end}.")
     
-    while total_chars > SAFE_CHAR_LIMIT and len(context) > 1:
-        # Remove the oldest entry (at the beginning of the list)
-        context.pop(0)
-        total_chars = calculate_total_chars(context)
-        logging.warning(f"Context exceeded safe char limit after turn limit. Truncating. New char count: {total_chars}")
-        
-    return context
+    # Get the first 'n' turns
+    start_context = story_context[:turns_to_keep_at_start]
+    
+    # Get the last 'm' turns
+    end_context = story_context[-turns_to_keep_at_end:]
+    
+    # Create a placeholder to indicate that turns have been omitted
+    truncation_marker = {
+        "actor": "system",
+        "text": "[...several moments, scenes, or days have passed...]\\n[...the story continues from the most recent relevant events...]"
+    }
+    
+    # Combine the parts
+    truncated_story_context = start_context + [truncation_marker] + end_context
+    
+    return truncated_story_context
 
 @log_exceptions
 def get_initial_story(prompt, selected_prompts=None, include_srd=False):
