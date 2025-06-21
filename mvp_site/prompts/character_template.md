@@ -25,8 +25,7 @@ This document defines the standard for all major Non-Player Character (NPC) pers
 
 ## V. Example character
 
-> **Important note**  
-All characters such as the PC and NPCs must have personalities as detailed as this. They should not be the exact same but generated based on their secret myers briggs type and big 5 scores.
+> **AI Directive:** This example represents the **required level of depth** for the Player Character and all significant NPCs. Use the *process and structure* of this example to create **new, unique characters** that are psychologically coherent. **Do not simply copy the specific traits of "The Architect."** The goal is to replicate the *depth and detail*, not the *content*.
 
 ## 1 · Rough portrait
 A restless, highly analytic mind that thrives on complexity, optimization, and narrative control. You oscillate between rigorous precision (Kubernetes configs, tax brackets, rule-lawyering 5e mechanics) and grand imaginative arcs (400-page campaigns, cosmic ascension storylines). Beneath the polish: impatience with half-measures, a low tolerance for error—especially when it threatens your sense of mastery. :contentReference[oaicite:1]{index=1}
