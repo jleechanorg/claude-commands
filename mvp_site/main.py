@@ -55,7 +55,7 @@ def json_default_serializer(o):
         return o.isoformat()
     raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
 
-def parse_set_command(payload_str: str) -> dict:
+def parse_set_command(payload_str: str, game_state: dict) -> dict:
     """
     Parses a multi-line string of `key.path = value` into a nested
     dictionary of proposed changes. This is more robust than a single JSON blob.
@@ -69,6 +69,10 @@ def parse_set_command(payload_str: str) -> dict:
         key_path, value_str = line.split('=', 1)
         key_path = key_path.strip()
         value_str = value_str.strip()
+
+        # --- NEW: Correct the path before processing ---
+        key_path = correct_state_update_path(key_path, game_state)
+        # --- END NEW ---
 
         try:
             # The value must be a valid JSON literal (e.g., "string", 123, true, {}, [])
@@ -87,6 +91,53 @@ def parse_set_command(payload_str: str) -> dict:
         d[keys[-1]] = value
         
     return proposed_changes
+
+def correct_state_update_path(path: str, game_state: dict) -> str:
+    """
+    Corrects a potentially incorrect dot-notation path to its valid equivalent.
+    Example: 'world_data.npcs.thorgon.status' -> 'npc_data.thorgon.status'
+    """
+    parts = path.split('.')
+    if not parts:
+        return path # Should not happen
+
+    # 1. Check if the path is already valid.
+    current_level = game_state
+    is_valid = True
+    for part in parts:
+        # We can only check for existence up to the second-to-last key.
+        # The last key is the one being set, so it might not exist.
+        if isinstance(current_level, dict) and part in current_level:
+            current_level = current_level[part]
+        else:
+            # If we are not at the end of the path, it's not valid
+            if part is not parts[-1]:
+                 is_valid = False
+                 break
+    
+    if is_valid:
+        return path
+
+    # 2. If not valid, try to find a corrected path.
+    # This heuristic looks for a common mistake: putting 'npcs' inside 'world_data'.
+    if 'world_data' in parts and 'npcs' in parts:
+        try:
+            # Find the index of 'npcs' and use the sub-path from there
+            npcs_index = parts.index('npcs')
+            sub_path = ".".join(parts[npcs_index + 1:])
+            # The correct top-level key for npcs is 'npc_data'
+            corrected_path = f"npc_data.{sub_path}"
+            logging.info(f"Corrected state update path from '{path}' to '{corrected_path}'")
+            return corrected_path
+        except (ValueError, IndexError):
+            # Could not perform the correction, return original path
+            pass
+
+    # Add more heuristics here as needed...
+
+    # 3. If no correction found, return the original path and let it fail downstream.
+    logging.warning(f"Could not find a correction for invalid path: {path}")
+    return path
 
 # --- CONSTANTS ---
 # API Configuration
@@ -222,16 +273,23 @@ def create_app():
         if user_input_stripped.startswith(GOD_MODE_SET_COMMAND):
             payload_str = user_input_stripped[len(GOD_MODE_SET_COMMAND):]
             
-            # Use the new robust parser for line-by-line updates
-            proposed_changes = parse_set_command(payload_str)
+            # --- MODIFIED: Pass game state for path correction ---
+            current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
+            if not current_game_state:
+                return jsonify({KEY_ERROR: 'Campaign game state not found, cannot apply manual update.'}), 404
+            
+            proposed_changes = parse_set_command(payload_str, current_game_state.to_dict())
+            # --- END MODIFIED ---
 
             if not proposed_changes:
                 logging.warning(f"GOD_MODE_SET command for campaign {campaign_id} resulted in no valid changes.")
                 return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: The GOD_MODE_SET command was received, but contained no valid instructions or was empty.]"})
 
-            current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
-            if not current_game_state:
-                return jsonify({KEY_ERROR: 'Campaign game state not found, cannot apply manual update.'}), 404
+            # --- REMOVED: Redundant fetch of game state ---
+            # logging.info(f"Received GOD_MODE_SET for campaign {campaign_id}. Raw payload:\\n---\\n{payload_str}\\n---")
+            # log_message = format_state_changes(proposed_changes)
+            # logging.info(f"Applying PARSED state changes for campaign {campaign_id}:\\n{log_message}")
+            game_state_dict = current_game_state.to_dict()
 
             # --- NEW: Enhanced logging ---
             log_message = format_state_changes(proposed_changes)
@@ -318,6 +376,24 @@ def create_app():
         final_response = gemini_response
         
         if proposed_changes:
+            # --- NEW: Correct paths from LLM response ---
+            game_state_dict = current_game_state.to_dict()
+            corrected_changes = {}
+            for path, value in proposed_changes.items():
+                corrected_path = correct_state_update_path(path, game_state_dict)
+                
+                # Re-construct the nested dictionary for the corrected path
+                keys = corrected_path.split('.')
+                d = corrected_changes
+                for key in keys[:-1]:
+                    if key not in d or not isinstance(d[key], dict):
+                        d[key] = {}
+                    d = d[key]
+                d[keys[-1]] = value
+            
+            proposed_changes = corrected_changes
+            # --- END NEW ---
+
             # --- NEW: Enhanced Logging for normal gameplay ---
             logging.info(f"AI proposed changes for campaign {campaign_id}:\\n{json.dumps(proposed_changes, indent=2, default=json_default_serializer)}")
 
