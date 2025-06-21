@@ -8,6 +8,7 @@ import json
 import re
 import datetime
 from game_state import GameState
+import constants
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -31,6 +32,16 @@ SAFETY_SETTINGS = [
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
 ]
+
+# NEW: Mapping from instruction type to filename using shared constants
+PROMPT_FILENAMES = {
+    constants.PROMPT_TYPE_NARRATIVE: constants.FILENAME_NARRATIVE,
+    constants.PROMPT_TYPE_MECHANICS: constants.FILENAME_MECHANICS,
+    constants.PROMPT_TYPE_CALIBRATION: constants.FILENAME_CALIBRATION,
+    constants.PROMPT_TYPE_DESTINY: constants.FILENAME_DESTINY,
+    constants.PROMPT_TYPE_GAME_STATE: constants.FILENAME_GAME_STATE,
+    constants.PROMPT_TYPE_SRD: constants.FILENAME_SRD,
+}
 # --- END CONSTANTS ---
 
 _client = None
@@ -39,29 +50,16 @@ _client = None
 _loaded_instructions_cache = {} 
 
 def _load_instruction_file(instruction_type):
+    """
+    Loads a prompt instruction file from the 'prompts' directory.
+    Uses a dictionary lookup for clarity and maintainability.
+    Caches loaded files to avoid redundant disk I/O.
+    """
     global _loaded_instructions_cache
     if instruction_type not in _loaded_instructions_cache:
-        file_name = ""
-        header_title = "" # Not used for system_instruction parameter, but kept for consistency/future
-        if instruction_type == "narrative":
-            file_name = "narrative_system_instruction.md"
-            header_title = "NARRATIVE INSTRUCTIONS"
-        elif instruction_type == "mechanics":
-            file_name = "mechanics_system_instruction.md"
-            header_title = "MECHANICS AND PROTOCOL INSTRUCTIONS"
-        elif instruction_type == "calibration":
-            file_name = "calibration_instruction.md"
-            header_title = "CALIBRATION PROTOCOL INSTRUCTIONS"
-        elif instruction_type == "destiny_ruleset": # NEW TYPE
-            file_name = "destiny_ruleset.md"
-            header_title = "DEFAULT RULESET" # Optional header for internal understanding
-        elif instruction_type == "game_state": # NEW TYPE
-            file_name = "game_state_instruction.md"
-            header_title = "GAME STATE PROTOCOL"
-        elif instruction_type == "srd": # NEW TYPE
-            file_name = "5e_SRD_All.md"
-            header_title = "SYSTEM REFERENCE DOCUMENT"
-        else:
+        file_name = PROMPT_FILENAMES.get(instruction_type)
+        
+        if not file_name:
             logging.warning(f"Unknown instruction type requested: {instruction_type}")
             _loaded_instructions_cache[instruction_type] = ""
             return ""
@@ -69,7 +67,7 @@ def _load_instruction_file(instruction_type):
         file_path = os.path.join(os.path.dirname(__file__), 'prompts', file_name)
         content = ""
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read().strip()
             logging.info(f"Loaded {instruction_type} instruction from {file_path}")
         except FileNotFoundError:
@@ -162,25 +160,25 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False):
 
     # NEW: Conditionally add the SRD first
     if include_srd:
-        srd_content = _load_instruction_file('srd')
+        srd_content = _load_instruction_file(constants.PROMPT_TYPE_SRD)
         if srd_content:
             system_instruction_parts.append(srd_content)
 
     # Consistent order for instructions
     # Narrative, Mechanics, Calibration (from checkboxes)
-    for p_type in ['narrative', 'mechanics', 'calibration']: 
+    for p_type in [constants.PROMPT_TYPE_NARRATIVE, constants.PROMPT_TYPE_MECHANICS, constants.PROMPT_TYPE_CALIBRATION]: 
         if p_type in selected_prompts:
             content = _load_instruction_file(p_type)
             if content:
                 system_instruction_parts.append(content)
     
     # NEW: Always include the destiny_ruleset as a default system instruction
-    destiny_ruleset_content = _load_instruction_file('destiny_ruleset')
+    destiny_ruleset_content = _load_instruction_file(constants.PROMPT_TYPE_DESTINY)
     if destiny_ruleset_content:
         system_instruction_parts.append(destiny_ruleset_content)
 
     # NEW: Always include the game_state instructions
-    game_state_content = _load_instruction_file('game_state')
+    game_state_content = _load_instruction_file(constants.PROMPT_TYPE_GAME_STATE)
     if game_state_content:
         system_instruction_parts.append(game_state_content)
 
@@ -202,7 +200,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     system_instruction_parts = []
     # Filter out 'calibration' for continue_story calls
     # NEW: Also ensure consistent order for continue_story
-    filtered_prompts = [p_type for p_type in selected_prompts if p_type in ['narrative', 'mechanics']]
+    filtered_prompts = [p_type for p_type in selected_prompts if p_type in [constants.PROMPT_TYPE_NARRATIVE, constants.PROMPT_TYPE_MECHANICS]]
 
     # Load content for narrative and mechanics
     for p_type in filtered_prompts: 
@@ -211,12 +209,12 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
             system_instruction_parts.append(content)
     
     # NEW: Always include the destiny_ruleset for continue_story too
-    destiny_ruleset_content = _load_instruction_file('destiny_ruleset')
+    destiny_ruleset_content = _load_instruction_file(constants.PROMPT_TYPE_DESTINY)
     if destiny_ruleset_content:
         system_instruction_parts.append(destiny_ruleset_content)
 
     # NEW: Always include the game_state instructions
-    game_state_content = _load_instruction_file('game_state')
+    game_state_content = _load_instruction_file(constants.PROMPT_TYPE_GAME_STATE)
     if game_state_content:
         system_instruction_parts.append(game_state_content)
 
