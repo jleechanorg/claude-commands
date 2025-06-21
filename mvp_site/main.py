@@ -8,10 +8,39 @@ import traceback
 import document_generator
 import logging
 from game_state import GameState, MigrationStatus
+import constants
+
+# --- CONSTANTS ---
+# API Configuration
+CORS_RESOURCES = {r"/api/*": {"origins": "*"}}
+
+# Request Headers
+HEADER_AUTH = 'Authorization'
+HEADER_TEST_BYPASS = 'X-Test-Bypass-Auth'
+HEADER_TEST_USER_ID = 'X-Test-User-ID'
+
+# Request/Response Data Keys (specific to main.py)
+KEY_PROMPT = 'prompt'
+KEY_SELECTED_PROMPTS = 'selected_prompts'
+KEY_USER_INPUT = 'input'
+KEY_CAMPAIGN_ID = 'campaign_id'
+KEY_SUCCESS = 'success'
+KEY_ERROR = 'error'
+KEY_TRACEBACK = 'traceback'
+KEY_MESSAGE = 'message'
+KEY_CAMPAIGN = 'campaign'
+KEY_STORY = 'story'
+KEY_DETAILS = 'details'
+KEY_RESPONSE = 'response'
+
+# Roles & Modes
+DEFAULT_TEST_USER = 'test-user'
+
+# --- END CONSTANTS ---
 
 def create_app():
     app = Flask(__name__, static_folder='static')
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    CORS(app, resources=CORS_RESOURCES)
 
     if not firebase_admin._apps:
         firebase_admin.initialize_app()
@@ -22,16 +51,16 @@ def create_app():
     def check_token(f):
         @wraps(f)
         def wrap(*args, **kwargs):
-            if app.config.get('TESTING') and request.headers.get('X-Test-Bypass-Auth') == 'true':
-                kwargs['user_id'] = request.headers.get('X-Test-User-ID', 'test-user')
+            if app.config.get('TESTING') and request.headers.get(HEADER_TEST_BYPASS) == 'true':
+                kwargs['user_id'] = request.headers.get(HEADER_TEST_USER_ID, DEFAULT_TEST_USER)
                 return f(*args, **kwargs)
-            if not request.headers.get('Authorization'): return jsonify({'message': 'No token provided'}), 401
+            if not request.headers.get(HEADER_AUTH): return jsonify({KEY_MESSAGE: 'No token provided'}), 401
             try:
-                id_token = request.headers['Authorization'].split(' ').pop()
+                id_token = request.headers[HEADER_AUTH].split(' ').pop()
                 decoded_token = auth.verify_id_token(id_token)
                 kwargs['user_id'] = decoded_token['uid']
             except Exception as e:
-                return jsonify({'success': False, 'error': f"Auth failed: {e}", 'traceback': traceback.format_exc()}), 401
+                return jsonify({KEY_SUCCESS: False, KEY_ERROR: f"Auth failed: {e}", KEY_TRACEBACK: traceback.format_exc()}), 401
             return f(*args, **kwargs)
         return wrap
 
@@ -43,7 +72,7 @@ def create_app():
         try:
             return jsonify(firestore_service.get_campaigns_for_user(user_id))
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
+            return jsonify({KEY_SUCCESS: False, KEY_ERROR: str(e), KEY_TRACEBACK: traceback.format_exc()}), 500
         # --- END RESTORED BLOCK ---
 
     @app.route('/api/campaigns/<campaign_id>', methods=['GET'])
@@ -52,18 +81,18 @@ def create_app():
         # --- RESTORED TRY-EXCEPT BLOCK ---
         try:
             campaign, story = firestore_service.get_campaign_by_id(user_id, campaign_id)
-            if not campaign: return jsonify({'error': 'Campaign not found'}), 404
-            return jsonify({'campaign': campaign, 'story': story})
+            if not campaign: return jsonify({KEY_ERROR: 'Campaign not found'}), 404
+            return jsonify({KEY_CAMPAIGN: campaign, KEY_STORY: story})
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e), 'traceback': traceback.format_exc()}), 500
+            return jsonify({KEY_SUCCESS: False, KEY_ERROR: str(e), KEY_TRACEBACK: traceback.format_exc()}), 500
         # --- END RESTORED BLOCK ---
 
     @app.route('/api/campaigns', methods=['POST'])
     @check_token
     def create_campaign_route(user_id):
         data = request.get_json()
-        prompt, title = data.get('prompt'), data.get('title')
-        selected_prompts = data.get('selected_prompts', [])
+        prompt, title = data.get(KEY_PROMPT), data.get(constants.KEY_TITLE)
+        selected_prompts = data.get(KEY_SELECTED_PROMPTS, [])
         
         # Create a blank initial game state. It will be populated by the LLM.
         initial_game_state = GameState(
@@ -83,32 +112,32 @@ def create_app():
         campaign_id = firestore_service.create_campaign(
             user_id, title, prompt, opening_story, initial_game_state, selected_prompts
         )
-        return jsonify({'success': True, 'campaign_id': campaign_id}), 201
+        return jsonify({KEY_SUCCESS: True, KEY_CAMPAIGN_ID: campaign_id}), 201
         
     @app.route('/api/campaigns/<campaign_id>', methods=['PATCH'])
     @check_token
     def update_campaign(user_id, campaign_id):
         data = request.get_json()
-        new_title = data.get('title')
+        new_title = data.get(constants.KEY_TITLE)
         if not new_title:
-            return jsonify({'error': 'New title is required'}), 400
+            return jsonify({KEY_ERROR: 'New title is required'}), 400
         
         try:
             firestore_service.update_campaign_title(user_id, campaign_id, new_title)
-            return jsonify({'success': True, 'message': 'Campaign title updated successfully.'})
+            return jsonify({KEY_SUCCESS: True, KEY_MESSAGE: 'Campaign title updated successfully.'})
         except Exception as e:
             traceback.print_exc()
-            return jsonify({'error': 'Failed to update campaign', 'details': str(e)}), 500
+            return jsonify({KEY_ERROR: 'Failed to update campaign', KEY_DETAILS: str(e)}), 500
 
     @app.route('/api/campaigns/<campaign_id>/interaction', methods=['POST'])
     @check_token
     def handle_interaction(user_id, campaign_id):
         data = request.get_json()
-        user_input, mode = data.get('input'), data.get('mode', 'character')
+        user_input, mode = data.get(KEY_USER_INPUT), data.get(constants.KEY_MODE, constants.MODE_CHARACTER)
         
         # Fetch campaign metadata and story context
         campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
-        if not campaign: return jsonify({'error': 'Campaign not found'}), 404
+        if not campaign: return jsonify({KEY_ERROR: 'Campaign not found'}), 404
         
         # --- NEW STATE MANAGEMENT WORKFLOW ---
         # 1. Read current game state
@@ -145,14 +174,14 @@ def create_app():
             logging.info(f"-> Status is {current_game_state.migration_status.value}. Skipping scan.")
 
         # 2. Add user's action to the story log
-        firestore_service.add_story_entry(user_id, campaign_id, 'user', user_input, mode)
+        firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
         
         # 3. Process: Get AI response, passing in the current state
-        selected_prompts = campaign.get('selected_prompts', [])
+        selected_prompts = campaign.get(KEY_SELECTED_PROMPTS, [])
         gemini_response = gemini_service.continue_story(user_input, mode, story_context, current_game_state, selected_prompts)
         
         # 4. Write: Add AI response to story log and update state
-        firestore_service.add_story_entry(user_id, campaign_id, 'gemini', gemini_response)
+        firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response)
 
         # 5. Parse and apply state changes from AI response
         proposed_changes = gemini_service.parse_llm_response_for_state_changes(gemini_response)
@@ -160,37 +189,37 @@ def create_app():
             logging.info(f"Applying state changes for campaign {campaign_id}: {proposed_changes}")
             firestore_service.update_campaign_game_state(user_id, campaign_id, proposed_changes)
             
-        return jsonify({'success': True, 'response': gemini_response})
+        return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: gemini_response})
 
     @app.route('/api/campaigns/<campaign_id>/export', methods=['GET'])
     @check_token
     def export_campaign(user_id, campaign_id):
-        file_format = request.args.get('format', 'txt').lower()
+        file_format = request.args.get(constants.KEY_FORMAT, constants.FORMAT_TXT).lower()
         campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
         if not campaign:
-            return jsonify({'error': 'Campaign not found'}), 404
-        campaign_title = campaign.get('title', 'My Story')
+            return jsonify({KEY_ERROR: 'Campaign not found'}), 404
+        campaign_title = campaign.get(constants.KEY_TITLE, 'My Story')
         story_text = document_generator.get_story_text_from_context(story_context)
         file_path = None
-        mimetype = 'text/plain'
+        mimetype = constants.MIMETYPE_TXT
         try:
-            if file_format == 'pdf':
+            if file_format == constants.FORMAT_PDF:
                 file_path = document_generator.generate_pdf(story_text, campaign_title)
-                mimetype = 'application/pdf'
-            elif file_format == 'docx':
+                mimetype = constants.MIMETYPE_PDF
+            elif file_format == constants.FORMAT_DOCX:
                 file_path = document_generator.generate_docx(story_text, campaign_title)
-                mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                mimetype = constants.MIMETYPE_DOCX
             else:
                 file_path = f"{campaign_title.replace(' ', '_')}.txt"
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(story_text)
-                mimetype = 'text/plain'
+                mimetype = constants.MIMETYPE_TXT
             if not file_path:
-                return jsonify({'error': 'Unsupported format'}), 400
+                return jsonify({KEY_ERROR: 'Unsupported format'}), 400
             return send_file(file_path, as_attachment=True, mimetype=mimetype)
         except Exception as e:
             traceback.print_exc()
-            return jsonify({'error': 'Failed to generate file', 'details': str(e)}), 500
+            return jsonify({KEY_ERROR: 'Failed to generate file', KEY_DETAILS: str(e)}), 500
         finally:
             if file_path and os.path.exists(file_path):
                 os.remove(file_path)
@@ -201,7 +230,7 @@ def create_app():
     def serve_frontend(path):
         if not app.static_folder:
             # This should never happen in our configuration, but it satisfies the linter.
-            return jsonify({'error': 'Static folder not configured'}), 500
+            return jsonify({KEY_ERROR: 'Static folder not configured'}), 500
         return send_from_directory(app.static_folder, 'index.html')
 
     return app
