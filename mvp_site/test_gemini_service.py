@@ -19,6 +19,10 @@ with open('./prompts/calibration_instruction.md', 'w') as f:
     f.write("Test calibration instruction content.")
 with open('./prompts/destiny_ruleset.md', 'w') as f: # NEW DUMMY FILE
     f.write("Test destiny ruleset content.")
+with open('./prompts/character_template.md', 'w') as f:
+    f.write("Test character template content.")
+with open('./prompts/character_sheet_template.md', 'w') as f:
+    f.write("Test character sheet content.")
 
 import gemini_service
 
@@ -27,6 +31,8 @@ MOCK_NARRATIVE_CONTENT = "Mock narrative instruction."
 MOCK_MECHANICS_CONTENT = "Mock mechanics instruction."
 MOCK_CALIBRATION_CONTENT = "Mock calibration instruction."
 MOCK_DESTINY_RULESET_CONTENT = "Mock destiny ruleset content." # NEW MOCK CONTENT
+MOCK_CHARACTER_TEMPLATE_CONTENT = "Mock character template content."
+MOCK_CHARACTER_SHEET_CONTENT = "Mock character sheet content."
 
 class TestGeminiService(unittest.TestCase):
 
@@ -48,6 +54,10 @@ class TestGeminiService(unittest.TestCase):
                 return MOCK_CALIBRATION_CONTENT
             elif instruction_type == "destiny_ruleset": # NEW
                 return MOCK_DESTINY_RULESET_CONTENT
+            elif instruction_type == "character_template":
+                return MOCK_CHARACTER_TEMPLATE_CONTENT
+            elif instruction_type == "character_sheet":
+                return MOCK_CHARACTER_SHEET_CONTENT
             return "" 
 
         mock_load_instruction_file.side_effect = side_effect_for_loader
@@ -77,7 +87,15 @@ class TestGeminiService(unittest.TestCase):
         self.assertTrue(hasattr(call_args.kwargs['config'], 'system_instruction')) 
         
         # Construct expected combined system instruction for assertion (all selected + destiny)
-        expected_system_instruction = f"{MOCK_NARRATIVE_CONTENT}\n\n{MOCK_MECHANICS_CONTENT}\n\n{MOCK_CALIBRATION_CONTENT}\n\n{MOCK_DESTINY_RULESET_CONTENT}"
+        expected_system_instruction_parts = [
+            MOCK_CHARACTER_TEMPLATE_CONTENT,
+            MOCK_CHARACTER_SHEET_CONTENT,
+            MOCK_CALIBRATION_CONTENT,
+            MOCK_NARRATIVE_CONTENT,
+            MOCK_MECHANICS_CONTENT,
+            MOCK_DESTINY_RULESET_CONTENT
+        ]
+        expected_system_instruction = "\n\n".join(expected_system_instruction_parts)
         self.assertEqual(call_args.kwargs['config'].system_instruction.text, expected_system_instruction)
 
         # Crucially, verify that the system instruction is NOT in the user prompt content
@@ -137,6 +155,10 @@ class TestGeminiService(unittest.TestCase):
                 return MOCK_CALIBRATION_CONTENT
             elif instruction_type == "destiny_ruleset": # NEW
                 return MOCK_DESTINY_RULESET_CONTENT
+            elif instruction_type == "character_template":
+                return MOCK_CHARACTER_TEMPLATE_CONTENT
+            elif instruction_type == "character_sheet":
+                return MOCK_CHARACTER_SHEET_CONTENT
             return "" 
 
         mock_load_instruction_file.side_effect = side_effect_for_loader
@@ -189,6 +211,10 @@ class TestGeminiService(unittest.TestCase):
                 return MOCK_CALIBRATION_CONTENT
             elif instruction_type == "destiny_ruleset": # NEW
                 return MOCK_DESTINY_RULESET_CONTENT
+            elif instruction_type == "character_template":
+                return MOCK_CHARACTER_TEMPLATE_CONTENT
+            elif instruction_type == "character_sheet":
+                return MOCK_CHARACTER_SHEET_CONTENT
             return ""
 
         mock_load_instruction_file.side_effect = side_effect_for_loader

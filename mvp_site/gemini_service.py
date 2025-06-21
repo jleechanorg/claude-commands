@@ -46,6 +46,20 @@ PROMPT_FILENAMES = {
     constants.PROMPT_TYPE_GAME_STATE: constants.FILENAME_GAME_STATE,
     constants.PROMPT_TYPE_SRD: constants.FILENAME_SRD,
 }
+
+# NEW: Centralized map of prompt types to their file paths.
+# This is now the single source of truth for locating prompt files.
+PATH_MAP = {
+    constants.PROMPT_TYPE_NARRATIVE: constants.NARRATIVE_SYSTEM_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_MECHANICS: constants.MECHANICS_SYSTEM_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_CALIBRATION: constants.CALIBRATION_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_DESTINY: constants.DESTINY_RULESET_PATH,
+    constants.PROMPT_TYPE_GAME_STATE: constants.GAME_STATE_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_SRD: constants.SRD_PATH,
+    constants.PROMPT_TYPE_CHARACTER_TEMPLATE: constants.CHARACTER_TEMPLATE_PATH,
+    constants.PROMPT_TYPE_CHARACTER_SHEET: constants.CHARACTER_SHEET_TEMPLATE_PATH,
+}
+
 # --- END CONSTANTS ---
 
 _client = None
@@ -60,22 +74,9 @@ def _load_instruction_file(instruction_type):
     cannot be found, ensuring the application does not continue with
     incomplete instructions.
     """
-    # This mapping allows us to use short, simple constants in the code
-    # while still loading the descriptively named files.
-    path_map = {
-        constants.PROMPT_TYPE_NARRATIVE: constants.NARRATIVE_SYSTEM_INSTRUCTION_PATH,
-        constants.PROMPT_TYPE_MECHANICS: constants.MECHANICS_SYSTEM_INSTRUCTION_PATH,
-        constants.PROMPT_TYPE_CALIBRATION: constants.CALIBRATION_INSTRUCTION_PATH,
-        constants.PROMPT_TYPE_DESTINY: constants.DESTINY_RULESET_PATH,
-        constants.PROMPT_TYPE_GAME_STATE: constants.GAME_STATE_INSTRUCTION_PATH,
-        constants.PROMPT_TYPE_SRD: constants.SRD_PATH,
-        constants.PROMPT_TYPE_CHARACTER_TEMPLATE: constants.CHARACTER_TEMPLATE_PATH,
-        constants.PROMPT_TYPE_CHARACTER_SHEET: constants.CHARACTER_SHEET_TEMPLATE_PATH,
-    }
-
     global _loaded_instructions_cache
     if instruction_type not in _loaded_instructions_cache:
-        relative_path = path_map.get(instruction_type)
+        relative_path = PATH_MAP.get(instruction_type)
         
         if not relative_path:
             logging.error(f"FATAL: Unknown instruction type requested: {instruction_type}")
