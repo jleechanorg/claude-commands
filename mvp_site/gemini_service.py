@@ -62,26 +62,26 @@ def _load_instruction_file(instruction_type):
     """
     # This mapping allows us to use short, simple constants in the code
     # while still loading the descriptively named files.
-    filename_map = {
-        constants.PROMPT_TYPE_NARRATIVE: "narrative_system_instruction.md",
-        constants.PROMPT_TYPE_MECHANICS: "mechanics_system_instruction.md",
-        constants.PROMPT_TYPE_CALIBRATION: "calibration_instruction.md",
-        constants.PROMPT_TYPE_DESTINY: "destiny_ruleset.md",
-        constants.PROMPT_TYPE_GAME_STATE: "game_state_instruction.md",
-        constants.PROMPT_TYPE_SRD: "5e_SRD_All.md",
-        constants.PROMPT_TYPE_CHARACTER_TEMPLATE: "character_template.md",
-        constants.PROMPT_TYPE_CHARACTER_SHEET: "character_sheet_template.md",
+    path_map = {
+        constants.PROMPT_TYPE_NARRATIVE: constants.NARRATIVE_SYSTEM_INSTRUCTION_PATH,
+        constants.PROMPT_TYPE_MECHANICS: constants.MECHANICS_SYSTEM_INSTRUCTION_PATH,
+        constants.PROMPT_TYPE_CALIBRATION: constants.CALIBRATION_INSTRUCTION_PATH,
+        constants.PROMPT_TYPE_DESTINY: constants.DESTINY_RULESET_PATH,
+        constants.PROMPT_TYPE_GAME_STATE: constants.GAME_STATE_INSTRUCTION_PATH,
+        constants.PROMPT_TYPE_SRD: constants.SRD_PATH,
+        constants.PROMPT_TYPE_CHARACTER_TEMPLATE: constants.CHARACTER_TEMPLATE_PATH,
+        constants.PROMPT_TYPE_CHARACTER_SHEET: constants.CHARACTER_SHEET_TEMPLATE_PATH,
     }
 
     global _loaded_instructions_cache
     if instruction_type not in _loaded_instructions_cache:
-        file_name = filename_map.get(instruction_type)
+        relative_path = path_map.get(instruction_type)
         
-        if not file_name:
+        if not relative_path:
             logging.error(f"FATAL: Unknown instruction type requested: {instruction_type}")
             raise ValueError(f"Unknown instruction type requested: {instruction_type}")
 
-        file_path = os.path.join(os.path.dirname(__file__), 'prompts', file_name)
+        file_path = os.path.join(os.path.dirname(__file__), relative_path)
         
         try:
             with open(file_path, 'r', encoding='utf-8') as f:

@@ -61,6 +61,8 @@ MECHANICS_SYSTEM_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "mechanics_system_
 CHARACTER_TEMPLATE_PATH = os.path.join(PROMPTS_DIR, "character_template.md")
 CHARACTER_SHEET_TEMPLATE_PATH = os.path.join(PROMPTS_DIR, "character_sheet_template.md")
 GAME_STATE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "game_state_instruction.md")
+CALIBRATION_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "calibration_instruction.md")
 
 # Game mechanics
 DESTINY_RULESET_PATH = os.path.join(PROMPTS_DIR, "destiny_ruleset.md")
+SRD_PATH = os.path.join(PROMPTS_DIR, "5e_SRD_All.md")
