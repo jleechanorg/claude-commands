@@ -1,4 +1,4 @@
-Generated on: Sat Jun 21 11:06:18 PDT 2025
+Generated on: Sat Jun 21 11:11:59 PDT 2025
 
 --- FILE START ---
 Location: ./ajax-chat/requirements.txt
@@ -1009,6 +1009,190 @@ def log_exceptions(func):
 --- FILE END ---
 
 --- FILE START ---
+Location: ./mvp_site/test_main.py
+Name: test_main.py
+--- CONTENT ---
+import unittest
+from unittest.mock import patch, MagicMock
+from main import create_app, deep_merge
+from game_state import GameState, MigrationStatus
+import json
+
+class TestMainApp(unittest.TestCase):
+
+    def setUp(self):
+        """Set up a test client for the Flask application."""
+        self.app = create_app()
+        self.app.config['TESTING'] = True
+        self.client = self.app.test_client()
+
+    def test_deep_merge_three_layer_nesting(self):
+        """
+        Tests deep merging with three levels of nested dictionaries.
+        It should update existing values, preserve unique values, and add new keys.
+        """
+        destination = {
+            "level1_a": {
+                "level2_a": {
+                    "level3_a": "original_a",
+                    "level3_b": "original_b"
+                },
+                "level2_b": "original_2b"
+            },
+            "level1_b": "original_1b"
+        }
+
+        source = {
+            "level1_a": {
+                "level2_a": {
+                    "level3_b": "updated_b",
+                    "level3_c": "new_c"
+                },
+                "level2_c": "new_2c"
+            },
+            "level1_c": "new_1c"
+        }
+
+        expected = {
+            "level1_a": {
+                "level2_a": {
+                    "level3_a": "original_a",
+                    "level3_b": "updated_b",
+                    "level3_c": "new_c"
+                },
+                "level2_b": "original_2b",
+                "level2_c": "new_2c"
+            },
+            "level1_b": "original_1b",
+            "level1_c": "new_1c"
+        }
+
+        result = deep_merge(source, destination)
+        self.assertEqual(result, expected)
+
+    @patch('main.firestore_service')
+    @patch('main.gemini_service')
+    @patch('main.firebase_admin')
+    def test_initial_story_creation(self, mock_firebase_admin, mock_gemini_service, mock_firestore_service):
+        """Tests the campaign creation endpoint in isolation."""
+        mock_gemini_service.get_initial_story.return_value = "It was a dark and stormy night."
+        mock_firestore_service.create_campaign.return_value = "test-campaign-id"
+
+        response = self.client.post('/api/campaigns', 
+                                    data=json.dumps({
+                                        'prompt': 'A new adventure.',
+                                        'title': 'My Test Campaign',
+                                        'selected_prompts': ['narrative']
+                                    }),
+                                    content_type='application/json',
+                                    headers={'X-Test-Bypass-Auth': 'true'})
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.json['success'])
+        self.assertEqual(response.json['campaign_id'], "test-campaign-id")
+        mock_gemini_service.get_initial_story.assert_called_once()
+        mock_firestore_service.create_campaign.assert_called_once()
+
+    @patch('main.firestore_service')
+    @patch('main.gemini_service')
+    @patch('main.firebase_admin')
+    def test_story_creation_and_two_continuations(self, mock_firebase_admin, mock_gemini_service, mock_firestore_service):
+        """Tests a full flow: create, and then continue the story twice with deep state updates."""
+        user_id = 'test-user'
+        campaign_id = 'test-campaign-123'
+
+        # --- Initial State Setup ---
+        initial_game_state = GameState(
+            player_character_data={"name": "Hero"},
+            world_data={"time": "day"},
+            npc_data={},
+            custom_campaign_state={}
+        )
+
+        # Mock the database fetches
+        mock_firestore_service.get_campaign_by_id.return_value = ({'selected_prompts': ['narrative']}, [])
+        mock_firestore_service.get_campaign_game_state.return_value = initial_game_state
+
+        # --- Turn 1: First Continuation ---
+        state_update_1 = {
+            "world_data": {
+                "weather": "rainy",
+                "location": {
+                    "city": "Waterdeep",
+                    "district": "Sea Ward",
+                    "building": {
+                        "name": "The Yawning Portal",
+                        "status": "open"
+                    }
+                }
+            }
+        }
+        mock_gemini_service.continue_story.return_value = "The hero enters the tavern."
+        mock_gemini_service.parse_llm_response_for_state_changes.return_value = state_update_1
+
+        response1 = self.client.post(f'/api/campaigns/{campaign_id}/interaction',
+                                     data=json.dumps({'input': 'Go to the tavern'}),
+                                     content_type='application/json',
+                                     headers={'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': user_id})
+        
+        self.assertEqual(response1.status_code, 200)
+        
+        # Verify state was correctly merged and saved
+        # The update function should be called with the *full, merged* state
+        call_args, _ = mock_firestore_service.update_campaign_game_state.call_args
+        saved_state_1 = call_args[2] # user_id, campaign_id, state_dict
+
+        self.assertEqual(saved_state_1['world_data']['location']['building']['name'], "The Yawning Portal")
+        self.assertEqual(saved_state_1['world_data']['time'], "day") # Preserved from initial state
+        self.assertEqual(saved_state_1['player_character_data']['name'], "Hero") # Preserved
+
+        # --- Turn 2: Second Continuation ---
+        # Update the mock to return the state from the previous turn
+        mock_firestore_service.get_campaign_game_state.return_value = GameState.from_dict(saved_state_1)
+
+        state_update_2 = {
+            "world_data": {
+                "location": {
+                    "building": {
+                        "status": "closed", # Update existing value
+                        "reason": "brawl"   # Add new value
+                    }
+                }
+            },
+            "npc_data": {
+                "durnan": {"status": "annoyed"} # Add new top-level key
+            }
+        }
+        mock_gemini_service.continue_story.return_value = "A fight breaks out."
+        mock_gemini_service.parse_llm_response_for_state_changes.return_value = state_update_2
+        
+        response2 = self.client.post(f'/api/campaigns/{campaign_id}/interaction',
+                                     data=json.dumps({'input': 'Start a fight'}),
+                                     content_type='application/json',
+                                     headers={'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': user_id})
+        
+        self.assertEqual(response2.status_code, 200)
+
+        # Verify the final state merge
+        final_call_args, _ = mock_firestore_service.update_campaign_game_state.call_args
+        saved_state_2 = final_call_args[2]
+
+        # Check Turn 2 updates
+        self.assertEqual(saved_state_2['world_data']['location']['building']['status'], "closed")
+        self.assertEqual(saved_state_2['world_data']['location']['building']['reason'], "brawl")
+        self.assertIn('durnan', saved_state_2['npc_data'])
+
+        # Check preserved data from Turn 1 and initial state
+        self.assertEqual(saved_state_2['world_data']['location']['city'], "Waterdeep")
+        self.assertEqual(saved_state_2['world_data']['weather'], "rainy")
+        self.assertEqual(saved_state_2['player_character_data']['name'], "Hero")
+
+
+if __name__ == '__main__':
+    unittest.main() 
+--- FILE END ---
+
+--- FILE START ---
 Location: ./mvp_site/document_generator.py
 Name: document_generator.py
 --- CONTENT ---
@@ -1390,6 +1574,20 @@ import logging
 from game_state import GameState, MigrationStatus
 import constants
 
+def deep_merge(source, destination):
+    """
+    Recursively merges source dict into destination dict.
+    Nested dictionaries are merged, other values are overwritten.
+    """
+    for key, value in source.items():
+        if isinstance(value, dict):
+            # Get node or create one
+            node = destination.setdefault(key, {})
+            deep_merge(value, node)
+        else:
+            destination[key] = value
+    return destination
+
 # --- CONSTANTS ---
 # API Configuration
 CORS_RESOURCES = {r"/api/*": {"origins": "*"}}
@@ -1567,7 +1765,20 @@ def create_app():
         proposed_changes = gemini_service.parse_llm_response_for_state_changes(gemini_response)
         if proposed_changes:
             logging.info(f"Applying state changes for campaign {campaign_id}: {proposed_changes}")
-            firestore_service.update_campaign_game_state(user_id, campaign_id, proposed_changes)
+            # --- FIX: DEEP MERGE STATE UPDATES ---
+            # Get the full current state as a dictionary
+            game_state_dict = current_game_state.to_dict()
+            
+            # Recursively merge the proposed changes into the full state
+            updated_state_dict = deep_merge(proposed_changes, game_state_dict)
+            
+            # Create a new GameState object to validate the merged structure
+            updated_game_state = GameState.from_dict(updated_state_dict)
+
+            # Save the *entire* updated state back to Firestore.
+            # Using firestore's set(..., merge=True) with the full object works
+            # as a complete overwrite of all fields.
+            firestore_service.update_campaign_game_state(user_id, campaign_id, updated_game_state.to_dict())
             
         return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: gemini_response})
 
@@ -55427,6 +55638,8 @@ This protocol uses a set of files in a `.cursor` directory at the project's root
 *   **Shell Config (`.bashrc`):** Changes to shell configs require sourcing the file (e.g., `source ~/.bashrc`) or starting a new session to take effect.
 *   **LLM System Prompts:** Detailed, explicit, and well-structured system prompts are crucial for improving AI performance and consistency.
 *   **Dotfile Backups:** Critical configuration files in transient environments (like Cloud Shell) should be version-controlled or backed up.
+
+- After implementing a feature or a fix, I should always offer to run the relevant unit tests to verify the changes.
 --- FILE END ---
 
 --- FILE START ---
