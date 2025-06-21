@@ -70,6 +70,7 @@ def _load_instruction_file(instruction_type):
         constants.PROMPT_TYPE_GAME_STATE: "game_state_instruction.md",
         constants.PROMPT_TYPE_SRD: "5e_SRD_All.md",
         constants.PROMPT_TYPE_CHARACTER_TEMPLATE: "character_template.md",
+        constants.PROMPT_TYPE_CHARACTER_SHEET: "character_sheet_template.md",
     }
 
     global _loaded_instructions_cache
@@ -179,6 +180,7 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False):
     # Conditionally add the character template if narrative instructions are selected.
     if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
         system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE))
+        system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_SHEET))
 
     # Load calibration instructions
     system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CALIBRATION))
@@ -224,6 +226,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # Conditionally add the character template if narrative instructions are selected.
     if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
         system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE))
+        system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_SHEET))
 
     # Filter out 'calibration' for continue_story calls
     # NEW: Also ensure consistent order for continue_story
