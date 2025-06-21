@@ -25,8 +25,6 @@ This document defines the standard for all major Non-Player Character (NPC) pers
 
 ## V. Example character
 
-# Existential Profile
-
 > **Important note**  
 All characters such as the PC and NPCs must have personalities as detailed as this. They should not be the exact same but generated based on their secret myers briggs type and big 5 scores.
 
