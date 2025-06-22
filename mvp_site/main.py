@@ -5,7 +5,7 @@ from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory, send_file, Response
 from flask_cors import CORS
 import firebase_admin
-from firebase_admin import auth
+from firebase_admin import auth, firestore
 import traceback
 import document_generator
 import logging
@@ -19,7 +19,6 @@ from firestore_service import update_state_with_changes
 import mimetypes
 from werkzeug.utils import secure_filename
 from werkzeug.http import dump_options_header
-from google.cloud.firestore_v1.base_document import Sentinel
 
 # --- CONSTANTS ---
 # API Configuration
@@ -92,8 +91,9 @@ def json_default_serializer(o):
     """Handles serialization of data types json doesn't know, like datetimes."""
     if isinstance(o, (datetime.datetime, datetime.date)):
         return o.isoformat()
-    if isinstance(o, Sentinel):
-        return None  # Sentinel values can be treated as null
+    # Check for Firestore's special DELETE_FIELD sentinel.
+    if o == firestore.DELETE_FIELD:
+        return None  # Or another appropriate serializable value like a special string
     raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
 
 def parse_set_command(payload_str: str) -> dict:
