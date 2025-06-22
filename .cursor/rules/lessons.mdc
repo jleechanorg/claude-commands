@@ -1,4 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
 # Lessons Learned & Best Practices
+
+**Meta-Rule:** Any instruction to "add a lesson," "add to lessons," or a similar directive refers specifically to this file: `.cursor/rules/lessons.mdc`.
 
 This document is a persistent repository for reusable knowledge, best practices, and crucial insights.
 
@@ -129,3 +136,16 @@ This document is a persistent repository for reusable knowledge, best practices,
 5.  **Include Authentication:** If the backend endpoint is protected, the frontend `fetch` call must include the necessary authorization token in its headers.
 
 By strictly adhering to this pattern, the backend has full control over the final filename, and the frontend correctly respects it, preventing truncation and other errors. 
+
+## Lesson: Robust PDF Generation with `fpdf`
+
+**Problem:** PDF file downloads were causing the Flask server to crash with a `net::ERR_CONNECTION_REFUSED` error, while TXT and DOCX downloads worked.
+
+**Solution:** The crash was caused by the `fpdf` library's handling of fonts and character encoding.
+
+1.  **Unicode Support is Opt-In:** The `fpdf` library requires explicit configuration for UTF-8 support. When adding a font that will be used for Unicode characters, the `uni=True` parameter is mandatory.
+    *   **Code:** `pdf.add_font('DejaVu', '', font_path, uni=True)`
+2.  **Avoid Manual, Restrictive Encoding:** Do not manually encode text into a limited character set like `latin-1`. This is a common source of `UnicodeEncodeError` and can corrupt text. Rely on the library's built-in Unicode support.
+    *   **Incorrect:** `paragraph.encode('latin-1', 'replace').decode('latin-1')`
+    *   **Correct:** Simply pass the raw string: `pdf.multi_cell(..., text=paragraph)`
+3.  **Robust Font Loading:** A missing font file can cause a runtime error that crashes the server. Wrap font loading in a `try...except` block to gracefully fall back to a default, safe font if the custom font is not found. 
