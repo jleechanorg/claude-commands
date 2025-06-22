@@ -18,7 +18,11 @@ def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
     - Otherwise, the value from changes overwrites the value in the state.
     """
     logging.info(f"--- update_state_with_changes: applying changes:\\n{json.dumps(changes, indent=2, default=str)}")
-    for key, value in changes.items():
+    
+    # Create a copy to avoid modifying the original dictionary while iterating
+    changes_copy = changes.copy()
+
+    for key, value in changes_copy.items():
         logging.info(f"update_state: Processing key: '{key}'")
 
         # Handle list appends robustly
@@ -35,9 +39,16 @@ def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
             else:
                 state_to_update[key].append(items_to_append)
             logging.info(f"update_state: List for key '{key}' is now: {state_to_update[key]}")
+            
+            # Since we've handled the append, we replace the {'append':...} dict 
+            # with the final list in the `changes` dict to prevent it from being 
+            # processed again as a normal dictionary overwrite.
+            changes[key] = state_to_update[key]
 
+
+    for key, value in changes.items():
         # Recurse into nested dictionaries
-        elif isinstance(value, dict) and key in state_to_update and isinstance(state_to_update.get(key), dict):
+        if isinstance(value, dict) and key in state_to_update and isinstance(state_to_update.get(key), dict):
             logging.info(f"update_state: Recursing into dict for key '{key}'.")
             update_state_with_changes(state_to_update[key], value)
         
@@ -191,7 +202,7 @@ def update_campaign_game_state(user_id, campaign_id, game_state_update: dict):
         raise ValueError("User ID and Campaign ID are required.")
 
     db = get_db()
-    game_state_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
+    game_state_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id).collection('game_states').document('current_state')
 
     try:
         # NOTE: This function now expects a COMPLETE game state dictionary.

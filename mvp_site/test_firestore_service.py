@@ -31,42 +31,101 @@ class TestFirestoreService(unittest.TestCase):
         # Check that the `update` method was called with the correct payload
         mock_campaign_ref.collection.return_value.document.return_value.update.assert_called_once_with({'title': new_title})
 
-class TestDeepMerge(unittest.TestCase):
-    def test_simple_merge(self):
-        d = {'a': 1, 'b': 2}
-        u = {'b': 3, 'c': 4}
+class TestUpdateStateWithChanges(unittest.TestCase):
+    def test_simple_overwrite(self):
+        state = {'a': 1, 'b': 2}
+        changes = {'b': 3, 'c': 4}
         expected = {'a': 1, 'b': 3, 'c': 4}
-        self.assertEqual(firestore_service.deep_merge(d, u), expected)
+        # The function modifies the dict in place, so we check the original
+        firestore_service.update_state_with_changes(state, changes)
+        self.assertEqual(state, expected)
 
-    def test_nested_merge(self):
-        d = {'a': {'b': 1}}
-        u = {'a': {'c': 2}}
+    def test_nested_overwrite(self):
+        state = {'a': {'b': 1}}
+        changes = {'a': {'c': 2}}
         expected = {'a': {'b': 1, 'c': 2}}
-        self.assertEqual(firestore_service.deep_merge(d, u), expected)
+        firestore_service.update_state_with_changes(state, changes)
+        self.assertEqual(state, expected)
 
-    def test_overwrite_nested(self):
-        d = {'a': {'b': 1}}
-        u = {'a': {'b': 2}}
-        expected = {'a': {'b': 2}}
-        self.assertEqual(firestore_service.deep_merge(d, u), expected)
+    # --- Comprehensive Append Tests ---
 
-    def test_add_new_nested_dict(self):
-        d = {'a': 1}
-        u = {'b': {'c': 2}}
-        expected = {'a': 1, 'b': {'c': 2}}
-        self.assertEqual(firestore_service.deep_merge(d, u), expected)
+    def test_append_single_item_to_existing_list(self):
+        """Should append a single string to a list that already exists."""
+        state = {'memories': ['memory A']}
+        changes = {'memories': {'append': 'memory B'}}
+        expected = {'memories': ['memory A', 'memory B']}
+        firestore_service.update_state_with_changes(state, changes)
+        self.assertEqual(state, expected)
 
-    def test_merge_into_empty(self):
-        d = {}
-        u = {'a': 1, 'b': {'c': 2}}
-        expected = {'a': 1, 'b': {'c': 2}}
-        self.assertEqual(firestore_service.deep_merge(d, u), expected)
+    def test_append_list_of_items_to_existing_list(self):
+        """Should extend an existing list with a list of new items."""
+        state = {'memories': ['memory A']}
+        changes = {'memories': {'append': ['memory B', 'memory C']}}
+        expected = {'memories': ['memory A', 'memory B', 'memory C']}
+        firestore_service.update_state_with_changes(state, changes)
+        self.assertEqual(state, expected)
 
-    def test_merge_from_empty(self):
-        d = {'a': 1}
-        u = {}
-        expected = {'a': 1}
-        self.assertEqual(firestore_service.deep_merge(d, u), expected)
+    def test_append_single_item_to_new_key(self):
+        """Should create a new list when appending to a key that doesn't exist."""
+        state = {'other_data': 123}
+        changes = {'memories': {'append': 'memory A'}}
+        expected = {'other_data': 123, 'memories': ['memory A']}
+        firestore_service.update_state_with_changes(state, changes)
+        self.assertEqual(state, expected)
+
+    def test_append_list_to_new_key(self):
+        """Should create a new list with multiple items for a key that doesn't exist."""
+        state = {'other_data': 123}
+        changes = {'memories': {'append': ['memory A', 'memory B']}}
+        expected = {'other_data': 123, 'memories': ['memory A', 'memory B']}
+        firestore_service.update_state_with_changes(state, changes)
+        self.assertEqual(state, expected)
+
+    def test_append_does_not_interfere_with_other_updates(self):
+        """Should correctly append to one key while overwriting another."""
+        state = {'memories': ['memory A'], 'status': 'old'}
+        changes = {
+            'memories': {'append': 'memory B'},
+            'status': 'new'
+        }
+        expected = {'memories': ['memory A', 'memory B'], 'status': 'new'}
+        firestore_service.update_state_with_changes(state, changes)
+        self.assertEqual(state, expected)
+        
+    def test_append_to_non_list_key_replaces_it(self):
+        """Should replace a non-list value with a new list containing the appended item."""
+        state = {'memories': 'this is not a list'}
+        changes = {'memories': {'append': 'memory A'}}
+        expected = {'memories': ['memory A']}
+        firestore_service.update_state_with_changes(state, changes)
+        self.assertEqual(state, expected)
+
+    def test_complex_nested_append_and_overwrite(self):
+        """Should handle appends and overwrites at different levels of nesting."""
+        state = {
+            'world_data': {
+                'events': ['event A'],
+                'timestamp': {'year': 1}
+            },
+            'player': {'inventory': ['sword']}
+        }
+        changes = {
+            'world_data': {
+                'events': {'append': 'event B'},
+                'timestamp': {'year': 2}
+            },
+            'player': { 'inventory': {'append': 'shield'}, 'xp': 100 }
+        }
+        expected = {
+            'world_data': {
+                'events': ['event A', 'event B'],
+                'timestamp': {'year': 2}
+            },
+            'player': {'inventory': ['sword', 'shield'], 'xp': 100}
+        }
+        firestore_service.update_state_with_changes(state, changes)
+        self.assertEqual(state, expected)
+
 
 if __name__ == '__main__':
-    unittest.main() 
+    unittest.main()
