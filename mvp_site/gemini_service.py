@@ -143,7 +143,7 @@ def _call_gemini_api(prompt_contents, model_name, current_prompt_text_for_loggin
 
     if current_prompt_text_for_logging:
         logging.info(f"--- Calling Gemini API with current prompt: {str(current_prompt_text_for_logging)[:1000]}... ---")
-    logging.info(f"--- Calling Gemini API with full prompt: {str(prompt_contents)[:1000]}... ---")
+    logging.info(f"--- Calling Gemini API with prompt of length: {len(prompt_contents)} ---")
     
     generation_config_params = {
         "max_output_tokens": MAX_TOKENS,
@@ -517,29 +517,47 @@ def create_game_state_from_legacy_story(story_context: list) -> GameState | None
 @log_exceptions
 def parse_llm_response_for_state_changes(llm_text_response: str) -> dict:
     """
-    Parses the raw text response from the LLM to find and extract a
-    JSON block containing proposed state changes.
+    Parses the full text response from the LLM to find and extract the JSON object
+    containing proposed state changes. It is robust to multiple state update blocks,
+    parsing the last valid one it finds.
     """
-    # Regex to find the content between the delimiters, capturing the JSON inside.
-    # re.DOTALL (s) flag allows '.' to match newlines.
-    match = re.search(r'\[STATE_UPDATES_PROPOSED\](.*?)\[END_STATE_UPDATES_PROPOSED\]', llm_text_response, re.DOTALL)
-    
-    if not match:
+    # Use re.findall to get all occurrences of the state update block.
+    # This handles cases where the AI might generate multiple blocks in its thought process.
+    matches = re.findall(r'\[STATE_UPDATES_PROPOSED\](.*?)\[END_STATE_UPDATES_PROPOSED\]', llm_text_response, re.DOTALL)
+
+    if not matches:
+        logging.info("No state update block found in the LLM response.")
         return {}
 
-    json_string = match.group(1).strip()
-    
-    try:
-        proposed_changes = json.loads(json_string)
-        if isinstance(proposed_changes, dict):
-            return proposed_changes
-        else:
-            logging.warning(f"Parsed state changes is not a dictionary: {proposed_changes}")
-            return {}
-    except json.JSONDecodeError as e:
-        logging.error(f"Failed to parse JSON from state update block: {e}")
-        logging.error(f"Invalid JSON string was: {json_string}")
-        return {}
+    # Iterate through the found blocks in reverse order, taking the last valid one.
+    for json_string in reversed(matches):
+        json_string = json_string.strip()
+        
+        if not json_string:
+            continue # Skip empty blocks
+
+        # Handle optional markdown code block from the LLM
+        if json_string.startswith("```json"):
+            json_string = json_string[7:]
+        if json_string.endswith("```"):
+            json_string = json_string[:-3]
+        
+        json_string = json_string.strip()
+
+        try:
+            proposed_changes = json.loads(json_string)
+            
+            if isinstance(proposed_changes, dict):
+                logging.info("Successfully parsed a valid state update block.")
+                return proposed_changes
+            else:
+                logging.warning(f"Found a state update block, but parsed JSON was not a dictionary. Type: {type(proposed_changes)}. Content: {proposed_changes}")
+        except json.JSONDecodeError:
+            logging.warning(f"Found a state update block, but it contained invalid JSON. Content: `{json_string}`")
+            continue # Try the next block
+
+    logging.warning("Found state update block(s), but none contained valid JSON.")
+    return {}
 
 # --- Main block for rapid, direct testing ---
 if __name__ == "__main__":

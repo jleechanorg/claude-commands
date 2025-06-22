@@ -11,103 +11,8 @@ from game_state import GameState, MigrationStatus
 import constants
 import json
 import datetime
-
-def deep_merge(source, destination):
-    """
-    Recursively merges source dict into destination dict.
-    - Nested dictionaries are merged.
-    - If a value in source is '__DELETE__', the corresponding key in destination is removed.
-    - Other values from source overwrite values in destination.
-    """
-    for key, value in source.items():
-        if key.endswith('.append'):
-            base_key_path = key[:-len('.append')]
-            target = destination
-            try:
-                for part in base_key_path.split('.'):
-                    target = target[part]
-                if isinstance(target, list):
-                    target.append(value)
-                else:
-                    logging.warning(f"Cannot use .append on a non-list: {base_key_path}")
-            except (KeyError, TypeError):
-                logging.warning(f"Invalid path for .append: {base_key_path}")
-            continue
-
-        if value == '__DELETE__':
-            if key in destination:
-                del destination[key]
-        elif isinstance(value, dict):
-            # Get node or create one
-            node = destination.setdefault(key, {})
-            deep_merge(value, node)
-        else:
-            destination[key] = value
-    return destination
-
-def format_state_changes(changes: dict) -> str:
-    """Formats a dictionary of state changes into a readable, multi-line string."""
-    if not changes:
-        return "No state changes."
-
-    log_lines = ["State changes applied:"]
-
-    def recurse_items(d, prefix=""):
-        for key, value in d.items():
-            path = f"{prefix}.{key}" if prefix else key
-            if isinstance(value, dict):
-                recurse_items(value, prefix=path)
-            else:
-                log_lines.append(f"  - {path}: {json.dumps(value)}")
-
-    recurse_items(changes)
-    return "\\n".join(log_lines)
-
-def json_default_serializer(o):
-    """Handles serialization of data types json doesn't know, like datetimes."""
-    if isinstance(o, (datetime.datetime, datetime.date)):
-        return o.isoformat()
-    raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
-
-def parse_set_command(payload_str: str) -> dict:
-    """
-    Parses a multi-line string of `key.path = value` into a nested
-    dictionary of proposed changes. This is more robust than a single JSON blob.
-    """
-    proposed_changes = {}
-    for line in payload_str.strip().splitlines():
-        line = line.strip()
-        if not line or '=' not in line:
-            continue
-        
-        key_path, value_str = line.split('=', 1)
-        key_path = key_path.strip()
-        value_str = value_str.strip()
-
-        try:
-            # The value must be a valid JSON literal (e.g., "string", 123, true, {}, [])
-            value = json.loads(value_str)
-        except json.JSONDecodeError:
-            logging.warning(f"Skipping line in SET command due to invalid JSON value: {line}")
-            continue
-        
-        # Build the nested dictionary structure from the key path
-        keys = key_path.split('.')
-        
-        # If the key path ends with .append, don't treat it as a nested key.
-        if keys[-1] == 'append':
-            # Rejoin the key and handle it as a special case in deep_merge
-            proposed_changes[key_path] = value
-            continue
-
-        d = proposed_changes
-        for key in keys[:-1]:
-            if key not in d or not isinstance(d[key], dict):
-                d[key] = {}
-            d = d[key]
-        d[keys[-1]] = value
-        
-    return proposed_changes
+import collections
+from firestore_service import update_state_with_changes
 
 # --- CONSTANTS ---
 # API Configuration
@@ -136,6 +41,73 @@ KEY_RESPONSE = 'response'
 DEFAULT_TEST_USER = 'test-user'
 
 # --- END CONSTANTS ---
+
+def format_state_changes(changes: dict) -> str:
+    """Formats a dictionary of state changes into a readable, multi-line string."""
+    if not changes:
+        return "No state changes."
+
+    log_lines = ["State changes applied:"]
+
+    def recurse_items(d, prefix=""):
+        for key, value in d.items():
+            path = f"{prefix}.{key}" if prefix else key
+            if isinstance(value, dict):
+                recurse_items(value, prefix=path)
+            else:
+                log_lines.append(f"  - {path}: {json.dumps(value)}")
+
+    recurse_items(changes)
+    return "\\n".join(log_lines)
+
+def json_default_serializer(o):
+    """Handles serialization of data types json doesn't know, like datetimes."""
+    if isinstance(o, (datetime.datetime, datetime.date)):
+        return o.isoformat()
+    raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
+
+def parse_set_command(payload_str: str) -> dict:
+    """
+    Parses a multi-line string of `key.path = value` into a nested
+    dictionary of proposed changes. Handles multiple .append operations correctly.
+    """
+    proposed_changes = {}
+    append_ops = collections.defaultdict(list)
+
+    for line in payload_str.strip().splitlines():
+        line = line.strip()
+        if not line or '=' not in line:
+            continue
+        
+        key_path, value_str = line.split('=', 1)
+        key_path = key_path.strip()
+        value_str = value_str.strip()
+
+        try:
+            value = json.loads(value_str)
+        except json.JSONDecodeError:
+            logging.warning(f"Skipping line in SET command due to invalid JSON value: {line}")
+            continue
+        
+        if key_path.endswith('.append'):
+            base_key = key_path[:-len('.append')]
+            append_ops[base_key].append(value)
+            continue
+
+        keys = key_path.split('.')
+        d = proposed_changes
+        for key in keys[:-1]:
+            d = d.setdefault(key, {})
+        d[keys[-1]] = value
+        
+    for base_key, values_to_append in append_ops.items():
+        keys = base_key.split('.')
+        d = proposed_changes
+        for key in keys:
+            d = d.setdefault(key, {})
+        d['append'] = values_to_append
+
+    return proposed_changes
 
 def create_app():
     app = Flask(__name__, static_folder='static')
@@ -238,31 +210,30 @@ def create_app():
 
         if user_input_stripped.startswith(GOD_MODE_SET_COMMAND):
             payload_str = user_input_stripped[len(GOD_MODE_SET_COMMAND):]
+            logging.info(f"--- GOD_MODE_SET received for campaign {campaign_id} ---")
+            logging.info(f"GOD_MODE_SET raw payload:\\n---\\n{payload_str}\\n---")
             
-            # Use the new robust parser for line-by-line updates
             proposed_changes = parse_set_command(payload_str)
+            logging.info(f"GOD_MODE_SET parsed changes to be merged:\\n{json.dumps(proposed_changes, indent=2, default=json_default_serializer)}")
 
             if not proposed_changes:
-                logging.warning(f"GOD_MODE_SET command for campaign {campaign_id} resulted in no valid changes.")
+                logging.warning(f"GOD_MODE_SET command resulted in no valid changes.")
                 return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: The GOD_MODE_SET command was received, but contained no valid instructions or was empty.]"})
 
-            current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
-            if not current_game_state:
-                return jsonify({KEY_ERROR: 'Campaign game state not found, cannot apply manual update.'}), 404
+            current_game_state_doc = firestore_service.get_campaign_game_state(user_id, campaign_id)
+            if not current_game_state_doc:
+                return jsonify({KEY_SUCCESS: False, KEY_ERROR: "Game state not found for this campaign."}), 404
 
-            # --- NEW: Enhanced logging ---
-            log_message = format_state_changes(proposed_changes)
-            logging.info(f"Received GOD_MODE_SET for campaign {campaign_id}. Raw payload:\\n---\\n{payload_str}\\n---")
-            logging.info(f"Applying PARSED state changes for campaign {campaign_id}:\\n{log_message}")
+            current_state_dict = current_game_state_doc.to_dict()
+            logging.info(f"GOD_MODE_SET state BEFORE update:\\n{json.dumps(current_state_dict, indent=2, default=json_default_serializer)}")
+            
+            updated_state = update_state_with_changes(current_state_dict, proposed_changes)
+            logging.info(f"GOD_MODE_SET state AFTER update:\\n{json.dumps(updated_state, indent=2, default=json_default_serializer)}")
+            
+            firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
+            logging.info(f"--- GOD_MODE_SET for campaign {campaign_id} complete ---")
 
-            updated_state_dict = deep_merge(proposed_changes, current_game_state.to_dict())
-            
-            firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state_dict)
-            
-            firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
-            
-            # Return a confirmation message showing what was changed.
-            return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: f"[System Message: Game state has been manually updated via GOD_MODE_SET command.]\\n\\n{log_message}"})
+            return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: Game state has been forcefully updated.]"})
 
         if user_input_stripped == GOD_ASK_STATE_COMMAND:
             current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
@@ -285,21 +256,16 @@ def create_app():
                     raise ValueError("Payload is not a JSON object.")
                 
                 # Fetch the current state as a dictionary
-                legacy_state_dict = firestore_service.get_campaign_game_state(user_id, campaign_id)
-                if not legacy_state_dict:
+                current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
+                if not current_game_state:
                      return jsonify({KEY_ERROR: 'Game state not found for GOD_MODE_UPDATE_STATE'}), 404
 
-                # This is the critical fix: If we get a GameState object back, use its dict representation.
-                # If we get a dict (from older versions or direct DB access), use it as is.
-                if isinstance(legacy_state_dict, GameState):
-                    current_state_dict = legacy_state_dict.to_dict()
-                else:
-                    current_state_dict = legacy_state_dict # It's already a dict
+                current_state_dict = current_game_state.to_dict()
 
-                # Perform a deep merge
-                updated_state_dict = deep_merge(state_changes, current_state_dict)
+                # Perform an update
+                updated_state_dict = update_state_with_changes(current_state_dict, state_changes)
                 
-                # Convert back to GameState object *after* the merge to validate and use its methods
+                # Convert back to GameState object *after* the update to validate and use its methods
                 final_game_state = GameState.from_dict(updated_state_dict)
 
                 firestore_service.update_campaign_game_state(user_id, campaign_id, final_game_state.to_dict())
@@ -388,7 +354,7 @@ def create_app():
                     }
                 }
                 # Merge this update with the changes from the LLM
-                proposed_changes = deep_merge(story_id_update, proposed_changes)
+                proposed_changes = update_state_with_changes(story_id_update, proposed_changes)
 
             # --- NEW: Enhanced Logging for normal gameplay ---
             logging.info(f"AI proposed changes for campaign {campaign_id}:\\n{json.dumps(proposed_changes, indent=2, default=json_default_serializer)}")
@@ -396,8 +362,8 @@ def create_app():
             log_message = format_state_changes(proposed_changes)
             logging.info(f"Applying formatted state changes for campaign {campaign_id}:\\n{log_message}")
             
-            # --- FIX: DEEP MERGE STATE UPDATES ---
-            updated_state_dict = deep_merge(proposed_changes, current_game_state.to_dict())
+            # --- FIX: UPDATE STATE WITH CHANGES ---
+            updated_state_dict = update_state_with_changes(current_game_state.to_dict(), proposed_changes)
 
             logging.info(f"New complete game state for campaign {campaign_id}:\\n{json.dumps(updated_state_dict, indent=2, default=json_default_serializer)}")
             

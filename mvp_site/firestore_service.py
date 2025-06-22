@@ -9,18 +9,45 @@ from game_state import GameState
 
 MAX_TEXT_BYTES = 1000000
 
-def deep_merge(d, u):
+def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
     """
-    Recursively merges dictionary `u` into dictionary `d`.
-    If a key in `u` is a dictionary, it recursively merges.
-    Otherwise, the value from `u` overwrites the value in `d`.
+    Recursively updates a state dictionary with a changes dictionary.
+    - If a key in changes contains a dictionary, it's merged recursively.
+    - If a key in changes is a dict with an 'append' key, the value is appended
+      to the list in the state. This will create the list if it doesn't exist.
+    - Otherwise, the value from changes overwrites the value in the state.
     """
-    for k, v in u.items():
-        if isinstance(v, collections.abc.Mapping):
-            d[k] = deep_merge(d.get(k, {}), v)
+    logging.info(f"--- update_state_with_changes: applying changes:\\n{json.dumps(changes, indent=2, default=str)}")
+    for key, value in changes.items():
+        logging.info(f"update_state: Processing key: '{key}'")
+
+        # Handle list appends robustly
+        if isinstance(value, dict) and 'append' in value:
+            logging.info(f"update_state: Detected append operation for key '{key}'.")
+            if key not in state_to_update or not isinstance(state_to_update.get(key), list):
+                logging.warning(f"update_state: Destination key '{key}' is not a list. Initializing as empty list.")
+                state_to_update[key] = []
+            
+            items_to_append = value['append']
+            logging.info(f"update_state: Appending items: {items_to_append}")
+            if isinstance(items_to_append, list):
+                state_to_update[key].extend(items_to_append)
+            else:
+                state_to_update[key].append(items_to_append)
+            logging.info(f"update_state: List for key '{key}' is now: {state_to_update[key]}")
+
+        # Recurse into nested dictionaries
+        elif isinstance(value, dict) and key in state_to_update and isinstance(state_to_update.get(key), dict):
+            logging.info(f"update_state: Recursing into dict for key '{key}'.")
+            update_state_with_changes(state_to_update[key], value)
+        
+        # Otherwise, just overwrite the value
         else:
-            d[k] = v
-    return d
+            logging.info(f"update_state: Overwriting value for key '{key}'.")
+            state_to_update[key] = value
+            
+    logging.info("--- update_state_with_changes: finished ---")
+    return state_to_update
 
 def _expand_dot_notation(d: dict) -> dict:
     """
@@ -38,6 +65,14 @@ def _expand_dot_notation(d: dict) -> dict:
         else:
             expanded_dict[k] = v
     return expanded_dict
+
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if hasattr(obj, 'isoformat'):
+        return obj.isoformat()
+    if type(obj).__name__ == 'Sentinel':
+        return '<SERVER_TIMESTAMP>'
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 def get_db():
     """Returns the Firestore client."""
@@ -150,8 +185,8 @@ def get_campaign_game_state(user_id, campaign_id) -> GameState | None:
     return GameState.from_dict(game_state_doc.to_dict())
 
 @log_exceptions
-def update_campaign_game_state(user_id, campaign_id, state_updates: dict):
-    """Updates the game state for a campaign using a deep merge."""
+def update_campaign_game_state(user_id, campaign_id, game_state_update: dict):
+    """Updates the game state for a campaign, overwriting with the provided dict."""
     if not user_id or not campaign_id:
         raise ValueError("User ID and Campaign ID are required.")
 
@@ -159,28 +194,17 @@ def update_campaign_game_state(user_id, campaign_id, state_updates: dict):
     game_state_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
 
     try:
-        # Perform a full read-modify-write to ensure deep merge
-        current_game_state_doc = game_state_ref.get()
-        if current_game_state_doc.exists:
-            current_state = current_game_state_doc.to_dict()
-            
-            # First, expand any dot-notation keys into a nested structure.
-            # Then, deep merge the expanded updates into the current state.
-            expanded_updates = _expand_dot_notation(state_updates)
-            merged_state = deep_merge(current_state, expanded_updates)
-
-            # Add the last updated timestamp
-            merged_state['last_state_update_timestamp'] = firestore.SERVER_TIMESTAMP
-            
-            game_state_ref.set(merged_state) # Use set to overwrite with the fully merged state
-            logging.info(f"Successfully deep-merged and updated game state for campaign {campaign_id}.")
-            logging.info(f"New complete game state for campaign {campaign_id}:\\n{json.dumps(merged_state, indent=2)}")
-
-        else:
-            # If the document doesn't exist, create it with the updates.
-            logging.warning(f"Game state for campaign {campaign_id} not found. Creating new document.")
-            state_updates['last_state_update_timestamp'] = firestore.SERVER_TIMESTAMP
-            game_state_ref.set(state_updates)
+        # NOTE: This function now expects a COMPLETE game state dictionary.
+        # The merge logic has been moved to the handle_interaction function in main.py
+        # to ensure consistency across all update types (AI, GOD_MODE, etc.)
+        
+        # Add the last updated timestamp before setting.
+        game_state_update['last_state_update_timestamp'] = firestore.SERVER_TIMESTAMP
+        
+        game_state_ref.set(game_state_update) 
+        logging.info(f"Successfully set new game state for campaign {campaign_id}.")
+        # The log below is for the final state being written.
+        logging.info(f"Final state written to Firestore for campaign {campaign_id}:\\n{json.dumps(game_state_update, indent=2, default=json_serial)}")
 
     except Exception as e:
         logging.error(f"Failed to update game state for campaign {campaign_id}: {e}", exc_info=True)
