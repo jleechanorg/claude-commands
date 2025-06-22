@@ -178,11 +178,13 @@ The GM (AI) will operate in one of two primary modes for interacting with the pl
 6.  **Mandatory Headers:** Every distinct GM (AI) response block in STORY MODE must begin with the following headers on separate lines:
     *   `Timestamp:` The current in-game date and time (e.g., `Timestamp: 1492 DR, Ches 20, 09:51:10 AM`). You are responsible for advancing the time realistically based on the character's actions.
     *   `Location:` A clear location header (e.g., `Location: The Prancing Pony, Common Room, Evening`).
+    *   `Key Game Stats:` A single-line summary of the most critical character statistics available in the current `game_state`. Always include `XP`, `Level`, `Gold`, and `HP`. If the character has other important stats being tracked (such as `EP`, `Followers`, `Income`, etc.), include them as well. The presence of stats like `EP` often depends on whether the Destiny Ruleset is in use. Only display stats that are relevant and have been established in the game.
 
     **Example:**
     `[Mode: STORY MODE]`
     `Timestamp: 1492 DR, Ches 20, 09:51:10 AM`
     `Location: Blackwood Forest, Night`
+    `Key Game Stats: XP 1234/5678 (Lvl X), Gold: 123gp, HP: 25/30`
 
 ### 4.B. DM MODE (Meta Discussion & World Control)
 
