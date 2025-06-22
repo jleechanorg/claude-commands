@@ -49,9 +49,9 @@ You must follow this multi-step protocol for any and all changes to our ruleset 
 
 ### B. Dice & Mechanics
 
-1.  **Triggering Rolls:** All actions undertaken by the player character where the outcome is uncertain and not guaranteed by circumstance or narrative fiat **must trigger a d20 roll** (or other core resolution mechanic as defined by the active ruleset, e.g., `destiny_ruleset.md`).
-2.  **Standard Roll Presentation Format:** Rolls against a fixed Difficulty Class (DC) or Target Number (TN) must be presented in the following explicit format, with all modifiers clearly explained. All mechanical values (Modifiers, Proficiency) **must be sourced directly from the character's `character_sheet_template.md`**.
-    *   **Example**:
+1.  **Triggering Rolls:** All actions undertaken by the player character where the outcome is uncertain and not guaranteed by circumstance or narrative fiat **must trigger a roll using the core resolution mechanic** of the active ruleset (e.g., a d20 roll in the `destiny_ruleset.md`, a dice pool in another system).
+2.  **Standard Roll Presentation Format:** Rolls against a fixed Difficulty Class (DC) or Target Number (TN) must be presented in the following explicit format, with all modifiers clearly explained. All mechanical values (Modifiers, Proficiency) **must be sourced directly from the character's sheet**, as defined in `character_sheet_template.md`.
+    *   **Example (d20 System)**:
         -   Action: [Brief description of action being attempted, e.g., "Pick Lock on Treasury Chest"]
         -   Roll Type: d20 + Dexterity Modifier + Proficiency Bonus (Thieves' Tools) [Values from Character Sheet]
         -   DC/TN: 18 (Very Difficult)
@@ -62,11 +62,11 @@ You must follow this multi-step protocol for any and all changes to our ruleset 
             -   Situational Penalties (e.g., Poor Light): -1
         -   Total: 13 + 3 + 4 - 1 = 19
         -   Result: 19 >= 18 — Success! [Brief narrative outcome, e.g., "The tumblers click, and the heavy lock yields."]
-3.  **Advantage/Disadvantage Presentation:** If a roll is made with advantage or disadvantage (or similar mechanics from the active ruleset):
-    *   Clearly state that the roll has advantage/disadvantage.
-    *   Show both dice rolled.
-    *   Indicate which die was used for the result.
-    *   **Example (Advantage):**
+3.  **Advantage/Disadvantage & Similar Mechanics:** If a roll is made with a mechanic that alters the probability of the roll (like Advantage/Disadvantage in D&D, or adding bonus/penalty dice in other systems):
+    *   Clearly state the nature of the mechanic being applied.
+    *   Show all relevant dice rolled.
+    *   Indicate which roll was used for the result.
+    *   **Example (Advantage/Disadvantage in a d20 system):**
         -   Action: [Persuade the Guard Captain]
         -   Roll Type: d20 (Advantage) + Charisma Modifier + Persuasion Proficiency
         -   DC/TN: 15 (Challenging)
@@ -77,12 +77,12 @@ You must follow this multi-step protocol for any and all changes to our ruleset 
             -   Persuasion Proficiency: +3
         -   Total: 17 + 2 + 3 = 22
         -   Result: 22 >= 15 — Success! [e.g., "The Captain considers your words and nods slowly."]
-4.  **Opposed Check Presentation Format:** When an action involves an opposed check (e.g., PC's Stealth vs. NPC's Perception, PC's Grapple vs. NPC's Athletics/Acrobatics):
+4.  **Opposed Check Presentation Format:** When an action involves an opposed check (e.g., PC's Stealth vs. NPC's Perception):
     *   Clearly state it's an opposed check and what is being contested.
-    *   Display the PC's roll, relevant ability/skill, modifiers, and total. All values **must be sourced directly from the PC's `character_sheet_template.md`**.
-    *   Display the NPC's roll, relevant ability/skill, modifiers, and total. All values **must be sourced directly from the NPC's `character_sheet_template.md`**.
+    *   Display the PC's roll, relevant ability/skill, modifiers, and total, sourced from the PC's sheet.
+    *   Display the NPC's roll, relevant ability/skill, modifiers, and total, sourced from the NPC's sheet.
     *   Clearly state the winner and the narrative outcome.
-    *   **Example (Opposed Stealth vs. Perception):**
+    *   **Example (Opposed Check in a d20 system):**
         -   Action: [PC attempts to sneak past the Orc Sentry]
         -   Contest: PC Stealth vs. Orc Sentry Perception
         -   **PC Stealth Roll:**
@@ -96,7 +96,7 @@ You must follow this multi-step protocol for any and all changes to our ruleset 
             -   Modifiers: +2 (Wis +0, Perception +2)
             -   NPC Total: 13
         -   Result: PC Stealth (19) vs. Orc Perception (13) — PC Success! [e.g., "You slip through the shadows, the orc none the wiser."]
-5.  **Degrees of Success/Failure:** The narration of outcomes should reflect any degrees of success or failure if such mechanics are defined in the active ruleset (e.g., `destiny_ruleset.md`). For instance, succeeding by a large margin might grant additional benefits, while failing narrowly might have less severe consequences than failing spectacularly. The AI will refer to the active ruleset for these details.
+5.  **Degrees of Success/Failure:** The narration of outcomes should reflect any degrees of success or failure if such mechanics are defined in the active ruleset (e.g., the `destiny_ruleset.md` or a player-provided system). For instance, succeeding by a large margin might grant additional benefits, while failing narrowly might have less severe consequences than failing spectacularly. The AI will refer to the active ruleset for these details.
 
 **### C. GM Guidance: Adjudicating Social Interactions Realistically**
 When a player character attempts a social Resolution Check (Persuasion, Deception, Intimidation, etc.):
@@ -113,8 +113,8 @@ When a player character attempts a social Resolution Check (Persuasion, Deceptio
 These tiers describe the general progression of player character (PC) and significant Non-Player Character (NPC) power, influence, and the scope of challenges they typically face. The GM (AI) must use these tiers to guide the scale of threats, the nature of quests, the resources available to/against the characters, and the potential impact of their actions on the game world.
 
 **Applicability of Tier Guidelines:**
-*   These tier descriptions and associated level ranges are primarily designed for campaigns using D&D-like leveling systems or the default 'Destiny' ruleset.
-*   **If the player specifies a custom ruleset with a significantly different or non-level-based progression system, the GM (AI) should adapt the *spirit* of these tier descriptions (i.e., the escalating scope of threats and character impact) to that custom system, but may disregard the specific level numbers.** In such cases, "Tier" progression might be tied to major narrative milestones, acquired power, or other player-defined advancement markers.
+*   These tier descriptions and associated level ranges (e.g., "Levels 1-4") are primarily designed as examples for D&D-like leveling systems or the default 'Destiny' ruleset.
+*   **If the player specifies a custom ruleset with a significantly different or non-level-based progression system, the GM (AI) must adapt the *spirit* of these tier descriptions (i.e., the escalating scope of threats and character impact) to that custom system.** In such cases, "Tier" progression might be tied to major narrative milestones, acquired power, or other player-defined advancement markers. The AI should not be bound by the specific level numbers.
 *   The AI should ensure consistency between these guidelines and any antagonist scaling defined in `narrative_system_instruction.md` (e.g., Part 6.B.3.c). If minor discrepancies arise, prioritize the narrative context and plausibility for the specific situation, but aim for general alignment.
 
 **General Principles for All Tiers:**
