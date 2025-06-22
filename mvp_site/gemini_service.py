@@ -285,6 +285,13 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         selected_prompts = [] 
         logging.warning("No specific system prompts selected for continue_story. Using none.")
 
+    # --- SRD EXCLUSION ---
+    # CRITICAL: Manually remove the SRD from the list of prompts to load for this turn.
+    # The SRD should ONLY be used for initial generation, not for every interaction.
+    if constants.PROMPT_TYPE_SRD in selected_prompts:
+        logging.warning("SRD prompt was requested in continue_story, which is not allowed. It will be ignored.")
+        selected_prompts.remove(constants.PROMPT_TYPE_SRD)
+
     system_instruction_parts = []
 
     # Conditionally add the character template if narrative instructions are selected.
@@ -318,6 +325,18 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # Temporarily generate other prompt parts to measure them.
     # We will generate them again *after* truncation with the final context.
     temp_checkpoint_block, temp_core_memories, temp_seq_ids = _get_static_prompt_parts(current_game_state, [])
+
+    # --- NEW: Core Memory Logging ---
+    all_core_memories = current_game_state.custom_campaign_state.get('core_memories', [])
+    logging.info(f"--- Core Memories State: {len(all_core_memories)} total memories. ---")
+    if all_core_memories:
+        # Log the last 3 memories for inspection
+        last_three_memories = all_core_memories[-3:]
+        logging.info("--- Last 3 Core Memories: ---")
+        for i, memory in enumerate(last_three_memories, 1):
+            logging.info(f"  {len(all_core_memories) - len(last_three_memories) + i}: {memory}")
+        logging.info("-----------------------------")
+    # --- END NEW LOGGING ---
 
     prompt_scaffold = (
         f"{temp_checkpoint_block}\\n\\n"

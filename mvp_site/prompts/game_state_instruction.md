@@ -188,3 +188,37 @@ To add a new memory, you must propose a state update that **appends** a new stri
 ```
 
 This is the only way to add new memories. The system will automatically add your summary as a new item in the list.
+
+## CRITICAL: State Update Formatting Rules
+
+Your goal is to propose a JSON "patch" that updates the game state. For maximum clarity and to prevent data loss, you **must** structure your updates as nested JSON objects whenever possible.
+
+*   **PREFERRED METHOD (Nested Objects):**
+    To update a character's gold and add a new mission, structure the JSON like this. This is the safest and most explicit method.
+    ```json
+    {
+      "player_character_data": {
+        "gold": 500
+      },
+      "custom_campaign_state": {
+        "active_missions": [
+          { "mission_id": "rescue_the_merchant", "status": "started" }
+        ]
+      }
+    }
+    ```
+
+*   **AVOID (Dot Notation):**
+    Do NOT use dot notation keys like `"player_character_data.gold"`. While the system can handle this format, it is less clear and more prone to error. Always prefer the nested object structure shown above.
+
+*   **Be Precise:** Only include keys for values that have actually changed.
+*   **Use `__DELETE__` to Remove:** To remove a key, set its value to the special string `__DELETE__`.
+*   **Create as Needed:** Do not hesitate to create new paths and keys for new information that needs to be tracked.
+
+## CRITICAL: Non-Destructive Updates
+You must NEVER replace a top-level state object like `player_character_data`, `world_data`, or `custom_campaign_state`. Doing so will wipe out all nested data within that object.
+
+-   **CORRECT (updates a specific field):** `{ "custom_campaign_state.last_story_mode_sequence_id": 987 }`
+-   **INCORRECT (destroys all other custom state):** `{ "custom_campaign_state": { "last_story_mode_sequence_id": 987 } }`
+
+Always update the most specific, nested key possible using dot notation.

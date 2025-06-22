@@ -1,0 +1,65 @@
+Virtual environment already active.
+Running python main.py
+Development server running: http://localhost:8080
+ * Serving Flask app 'main'
+ * Debug mode: on
+2025-06-21 18:31:16,729 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8080
+ * Running on http://192.168.179.240:8080
+2025-06-21 18:31:16,729 - INFO - [33mPress CTRL+C to quit[0m
+2025-06-21 18:31:16,729 - INFO -  * Restarting with stat
+2025-06-21 18:31:17,247 - WARNING -  * Debugger is active!
+2025-06-21 18:31:17,249 - INFO -  * Debugger PIN: 938-041-397
+2025-06-21 18:32:23,077 - INFO - 127.0.0.1 - - [21/Jun/2025 18:32:23] "[36mGET / HTTP/1.1[0m" 304 -
+2025-06-21 18:32:23,102 - INFO - 127.0.0.1 - - [21/Jun/2025 18:32:23] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-06-21 18:32:23,327 - INFO - 127.0.0.1 - - [21/Jun/2025 18:32:23] "[36mGET /static/auth.js HTTP/1.1[0m" 304 -
+2025-06-21 18:32:23,414 - INFO - 127.0.0.1 - - [21/Jun/2025 18:32:23] "[36mGET /static/api.js HTTP/1.1[0m" 304 -
+2025-06-21 18:32:23,415 - INFO - 127.0.0.1 - - [21/Jun/2025 18:32:23] "[36mGET /static/app.js HTTP/1.1[0m" 304 -
+2025-06-21 18:32:23,792 - INFO - 127.0.0.1 - - [21/Jun/2025 18:32:23] "[36mGET /favicon.ico HTTP/1.1[0m" 304 -
+2025-06-21 18:32:24,752 - INFO - 127.0.0.1 - - [21/Jun/2025 18:32:24] "GET /api/campaigns HTTP/1.1" 200 -
+2025-06-21 18:32:28,533 - INFO - 127.0.0.1 - - [21/Jun/2025 18:32:28] "[36mGET /favicon.ico HTTP/1.1[0m" 304 -
+2025-06-21 18:32:29,131 - INFO - 127.0.0.1 - - [21/Jun/2025 18:32:29] "GET /api/campaigns/dD7y8NE1LqxnZAKjmkZn HTTP/1.1" 200 -
+2025-06-21 18:32:37,953 - INFO - Evaluating campaign dD7y8NE1LqxnZAKjmkZn for legacy migration. Current status: NOT_CHECKED
+2025-06-21 18:32:37,953 - INFO - -> Status is NOT_CHECKED. Performing scan.
+2025-06-21 18:32:37,953 - INFO - Attempting to find and parse legacy game state from story context...
+2025-06-21 18:32:37,953 - INFO - Found a potential legacy game state block. Parsing...
+2025-06-21 18:32:37,954 - INFO - Successfully parsed legacy state. Location: Aizen's Cosmic Throne, Gold: None
+2025-06-21 18:32:37,954 - INFO - -> SUCCESS: Found and parsed legacy state for campaign dD7y8NE1LqxnZAKjmkZn. Migrating.
+2025-06-21 18:32:37,956 - INFO - 127.0.0.1 - - [21/Jun/2025 18:32:37] "[35m[1mPOST /api/campaigns/dD7y8NE1LqxnZAKjmkZn/interaction HTTP/1.1[0m" 500 -
+Traceback (most recent call last):
+  File "/home/jleechan/projects/worldarchitect.ai/venv/lib/python3.12/site-packages/flask/app.py", line 1478, in __call__
+    return self.wsgi_app(environ, start_response)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jleechan/projects/worldarchitect.ai/venv/lib/python3.12/site-packages/flask/app.py", line 1458, in wsgi_app
+    response = self.handle_exception(e)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jleechan/projects/worldarchitect.ai/venv/lib/python3.12/site-packages/flask_cors/extension.py", line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/jleechan/projects/worldarchitect.ai/venv/lib/python3.12/site-packages/flask/app.py", line 1455, in wsgi_app
+    response = self.full_dispatch_request()
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jleechan/projects/worldarchitect.ai/venv/lib/python3.12/site-packages/flask/app.py", line 869, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jleechan/projects/worldarchitect.ai/venv/lib/python3.12/site-packages/flask_cors/extension.py", line 176, in wrapped_function
+    return cors_after_request(app.make_response(f(*args, **kwargs)))
+                                                ^^^^^^^^^^^^^^^^^^^^
+  File "/home/jleechan/projects/worldarchitect.ai/venv/lib/python3.12/site-packages/flask/app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jleechan/projects/worldarchitect.ai/venv/lib/python3.12/site-packages/flask/app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jleechan/projects/worldarchitect.ai/mvp_site/main.py", line 163, in wrap
+    return f(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^
+  File "/home/jleechan/projects/worldarchitect.ai/mvp_site/main.py", line 303, in handle_interaction
+    legacy_game_state = GameState.from_dict(legacy_state_dict)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/jleechan/projects/worldarchitect.ai/mvp_site/game_state.py", line 57, in from_dict
+    return cls(**source)
+          ^^^^^^^^^^^^^
+TypeError: game_state.GameState() argument after ** must be a mapping, not GameState
+Development server running: http://localhost:8080

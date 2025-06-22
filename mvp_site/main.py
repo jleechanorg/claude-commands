@@ -232,6 +232,7 @@ def create_app():
         # --- Special command handling ---
         GOD_MODE_SET_COMMAND = "GOD_MODE_SET:"
         GOD_ASK_STATE_COMMAND = "GOD_ASK_STATE"
+        GOD_MODE_UPDATE_STATE_COMMAND = "GOD_MODE_UPDATE_STATE:"
 
         user_input_stripped = user_input.strip()
 
@@ -274,8 +275,45 @@ def create_app():
             
             response_text = f"```json\\n{game_state_json}\\n```"
             return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: response_text})
-        # --- END of special command handling ---
-        
+
+        # Special command handling for direct state updates
+        if user_input.strip().startswith(GOD_MODE_UPDATE_STATE_COMMAND):
+            json_payload = user_input.strip()[len(GOD_MODE_UPDATE_STATE_COMMAND):]
+            try:
+                state_changes = json.loads(json_payload)
+                if not isinstance(state_changes, dict):
+                    raise ValueError("Payload is not a JSON object.")
+                
+                # Fetch the current state as a dictionary
+                legacy_state_dict = firestore_service.get_campaign_game_state(user_id, campaign_id)
+                if not legacy_state_dict:
+                     return jsonify({KEY_ERROR: 'Game state not found for GOD_MODE_UPDATE_STATE'}), 404
+
+                # This is the critical fix: If we get a GameState object back, use its dict representation.
+                # If we get a dict (from older versions or direct DB access), use it as is.
+                if isinstance(legacy_state_dict, GameState):
+                    current_state_dict = legacy_state_dict.to_dict()
+                else:
+                    current_state_dict = legacy_state_dict # It's already a dict
+
+                # Perform a deep merge
+                updated_state_dict = deep_merge(state_changes, current_state_dict)
+                
+                # Convert back to GameState object *after* the merge to validate and use its methods
+                final_game_state = GameState.from_dict(updated_state_dict)
+
+                firestore_service.update_campaign_game_state(user_id, campaign_id, final_game_state.to_dict())
+
+                log_message = format_state_changes(state_changes)
+                return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: f"[System Message: The following state changes were applied via GOD MODE]\\n{log_message}"})
+
+            except json.JSONDecodeError:
+                return jsonify({KEY_ERROR: 'Invalid JSON payload for GOD_MODE_UPDATE_STATE command.'}), 400
+            except ValueError as e:
+                return jsonify({KEY_ERROR: f'Error in GOD_MODE_UPDATE_STATE payload: {e}'}), 400
+            except Exception as e:
+                return jsonify({KEY_ERROR: f'An unexpected error occurred during GOD_MODE_UPDATE_STATE: {e}'}), 500
+
         # Fetch campaign metadata and story context
         campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
         if not campaign: return jsonify({KEY_ERROR: 'Campaign not found'}), 404
@@ -299,8 +337,13 @@ def create_app():
             
             if legacy_state_dict:
                 logging.info(f"-> SUCCESS: Found and parsed legacy state for campaign {campaign_id}. Migrating.")
-                # Instantiate a new GameState object from the migrated dict
-                legacy_game_state = GameState.from_dict(legacy_state_dict)
+                # This is the fix. Check if we already have a GameState object.
+                if isinstance(legacy_state_dict, GameState):
+                    legacy_game_state = legacy_state_dict
+                else:
+                    # If not, create one from the dictionary.
+                    legacy_game_state = GameState.from_dict(legacy_state_dict)
+                
                 legacy_game_state.migration_status = MigrationStatus.MIGRATED
                 
                 # Overwrite the current_game_state object and its dictionary representation

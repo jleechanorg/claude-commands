@@ -1,9 +1,43 @@
+import collections.abc
 import datetime
-from firebase_admin import firestore
+import json
+import logging
+
 from decorators import log_exceptions
+from firebase_admin import firestore
 from game_state import GameState
 
 MAX_TEXT_BYTES = 1000000
+
+def deep_merge(d, u):
+    """
+    Recursively merges dictionary `u` into dictionary `d`.
+    If a key in `u` is a dictionary, it recursively merges.
+    Otherwise, the value from `u` overwrites the value in `d`.
+    """
+    for k, v in u.items():
+        if isinstance(v, collections.abc.Mapping):
+            d[k] = deep_merge(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d
+
+def _expand_dot_notation(d: dict) -> dict:
+    """
+    Expands a dictionary with dot-notation keys into a nested dictionary.
+    Example: {'a.b': 1, 'c': 2} -> {'a': {'b': 1}, 'c': 2}
+    """
+    expanded_dict = {}
+    for k, v in d.items():
+        if '.' in k:
+            keys = k.split('.')
+            d_ref = expanded_dict
+            for part in keys[:-1]:
+                d_ref = d_ref.setdefault(part, {})
+            d_ref[keys[-1]] = v
+        else:
+            expanded_dict[k] = v
+    return expanded_dict
 
 def get_db():
     """Returns the Firestore client."""
@@ -117,17 +151,40 @@ def get_campaign_game_state(user_id, campaign_id) -> GameState | None:
 
 @log_exceptions
 def update_campaign_game_state(user_id, campaign_id, state_updates: dict):
-    """Updates the game state using dot notation for nested fields."""
+    """Updates the game state for a campaign using a deep merge."""
+    if not user_id or not campaign_id:
+        raise ValueError("User ID and Campaign ID are required.")
+
     db = get_db()
-    game_state_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id).collection('game_states').document('current_state')
-    
-    # Add a timestamp to track the update
-    state_updates_with_timestamp = state_updates.copy()
-    state_updates_with_timestamp['last_state_update_timestamp'] = datetime.datetime.now(datetime.timezone.utc)
-    
-    # Use set with merge=True to handle both creation and updates (upsert).
-    # This fixes the bug where an update was called on a non-existent document.
-    game_state_ref.set(state_updates_with_timestamp, merge=True)
+    game_state_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
+
+    try:
+        # Perform a full read-modify-write to ensure deep merge
+        current_game_state_doc = game_state_ref.get()
+        if current_game_state_doc.exists:
+            current_state = current_game_state_doc.to_dict()
+            
+            # First, expand any dot-notation keys into a nested structure.
+            # Then, deep merge the expanded updates into the current state.
+            expanded_updates = _expand_dot_notation(state_updates)
+            merged_state = deep_merge(current_state, expanded_updates)
+
+            # Add the last updated timestamp
+            merged_state['last_state_update_timestamp'] = firestore.SERVER_TIMESTAMP
+            
+            game_state_ref.set(merged_state) # Use set to overwrite with the fully merged state
+            logging.info(f"Successfully deep-merged and updated game state for campaign {campaign_id}.")
+            logging.info(f"New complete game state for campaign {campaign_id}:\\n{json.dumps(merged_state, indent=2)}")
+
+        else:
+            # If the document doesn't exist, create it with the updates.
+            logging.warning(f"Game state for campaign {campaign_id} not found. Creating new document.")
+            state_updates['last_state_update_timestamp'] = firestore.SERVER_TIMESTAMP
+            game_state_ref.set(state_updates)
+
+    except Exception as e:
+        logging.error(f"Failed to update game state for campaign {campaign_id}: {e}", exc_info=True)
+        raise
 
 # --- NEWLY ADDED FUNCTION ---
 @log_exceptions

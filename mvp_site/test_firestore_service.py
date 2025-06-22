@@ -31,5 +31,42 @@ class TestFirestoreService(unittest.TestCase):
         # Check that the `update` method was called with the correct payload
         mock_campaign_ref.collection.return_value.document.return_value.update.assert_called_once_with({'title': new_title})
 
+class TestDeepMerge(unittest.TestCase):
+    def test_simple_merge(self):
+        d = {'a': 1, 'b': 2}
+        u = {'b': 3, 'c': 4}
+        expected = {'a': 1, 'b': 3, 'c': 4}
+        self.assertEqual(firestore_service.deep_merge(d, u), expected)
+
+    def test_nested_merge(self):
+        d = {'a': {'b': 1}}
+        u = {'a': {'c': 2}}
+        expected = {'a': {'b': 1, 'c': 2}}
+        self.assertEqual(firestore_service.deep_merge(d, u), expected)
+
+    def test_overwrite_nested(self):
+        d = {'a': {'b': 1}}
+        u = {'a': {'b': 2}}
+        expected = {'a': {'b': 2}}
+        self.assertEqual(firestore_service.deep_merge(d, u), expected)
+
+    def test_add_new_nested_dict(self):
+        d = {'a': 1}
+        u = {'b': {'c': 2}}
+        expected = {'a': 1, 'b': {'c': 2}}
+        self.assertEqual(firestore_service.deep_merge(d, u), expected)
+
+    def test_merge_into_empty(self):
+        d = {}
+        u = {'a': 1, 'b': {'c': 2}}
+        expected = {'a': 1, 'b': {'c': 2}}
+        self.assertEqual(firestore_service.deep_merge(d, u), expected)
+
+    def test_merge_from_empty(self):
+        d = {'a': 1}
+        u = {}
+        expected = {'a': 1}
+        self.assertEqual(firestore_service.deep_merge(d, u), expected)
+
 if __name__ == '__main__':
     unittest.main() 
