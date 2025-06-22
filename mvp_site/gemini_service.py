@@ -70,6 +70,11 @@ _client = None
 # Store loaded instruction content in a dictionary for easy access
 _loaded_instructions_cache = {} 
 
+def _clear_client():
+    """FOR TESTING ONLY: Clears the cached Gemini client."""
+    global _client
+    _client = None
+
 def _load_instruction_file(instruction_type):
     """
     Loads a prompt instruction file from the 'prompts' directory.
@@ -107,13 +112,14 @@ def _load_instruction_file(instruction_type):
 def get_client():
     """Initializes and returns a singleton Gemini client."""
     global _client
-    if _client is None:
-        logging.info("--- Initializing Gemini Client ---")
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
-        _client = genai.Client(api_key=api_key)
-        logging.info("--- Gemini Client Initialized Successfully ---")
+    # FOR DEBUGGING: Always re-initialize to pick up new keys from env.
+    # if _client is None:
+    logging.info("--- Initializing Gemini Client ---")
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
+    _client = genai.Client(api_key=api_key)
+    logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
 def _log_token_count(prompt_contents, model_name):
