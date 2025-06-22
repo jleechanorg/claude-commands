@@ -173,6 +173,58 @@ def _get_text_from_response(response):
     logging.warning(f"--- Response did not contain valid text. Full response object: {response} ---")
     return "[System Message: The model returned a non-text response. Please check the logs for details.]"
 
+def _load_personality_profile_file(type_name: str, profile_part: str) -> str:
+    """Loads a specific part (portrait or growth) of a personality profile."""
+    filename = f"{type_name.upper()}_{profile_part}.md"
+    # Note: This assumes a flat structure in the 'personalities' directory.
+    # This path is relative to the location of gemini_service.py
+    file_path = os.path.join(os.path.dirname(__file__), 'prompts', 'personalities', filename)
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        logging.warning(f"Personality profile file not found: {file_path}")
+        return ""
+    except Exception as e:
+        logging.error(f"Error loading personality profile file {file_path}: {e}")
+        return ""
+
+def _get_active_character_profiles(current_game_state: GameState) -> str:
+    """
+    Gets the personality profiles for the player character and all NPCs
+    currently present in the game state.
+    """
+    active_types = set()
+    
+    # Get player character type
+    pc_type = current_game_state.player_character_data.get('details', {}).get('type')
+    if pc_type:
+        active_types.add(pc_type)
+        
+    # Get NPC types
+    if current_game_state.npc_data:
+        for npc_name, npc_data in current_game_state.npc_data.items():
+            npc_type = npc_data.get('details', {}).get('type')
+            if npc_type:
+                active_types.add(npc_type)
+            
+    if not active_types:
+        return ""
+        
+    logging.info(f"Loading personality profiles for active types: {', '.join(active_types)}")
+    
+    profile_content_parts = ["### ACTIVE CHARACTER PERSONALITY PROFILES REFERENCE"]
+    
+    for p_type in sorted(list(active_types)):
+        portrait = _load_personality_profile_file(p_type, "portrait")
+        growth = _load_personality_profile_file(p_type, "growth")
+        if portrait:
+            profile_content_parts.append(f"--- START {p_type.upper()} Portrait ---\\n{portrait}\\n--- END {p_type.upper()} Portrait ---")
+        if growth:
+            profile_content_parts.append(f"--- START {p_type.upper()} Growth ---\\n{growth}\\n--- END {p_type.upper()} Growth ---")
+            
+    return "\\n\\n".join(profile_content_parts)
+
 def _get_context_stats(context, model_name, current_game_state: GameState):
     """Helper to calculate and format statistics for a given story context."""
     if not context:
@@ -255,76 +307,80 @@ def _parse_initial_story_response(response_text: str) -> tuple[str, dict]:
         profile = data.get('character_profile', {})
         return story, profile
     except (json.JSONDecodeError, AttributeError) as e:
-        logging.error(f"Failed to parse initial story JSON response: {e}")
-        logging.error(f"Raw response was:\\n{response_text}")
-        # Fallback for non-JSON responses
+        logging.error(f"Could not parse initial story JSON: {e}\\nFull text: {response_text}")
+        # Return the raw text as the story and an empty profile
         return response_text, {}
 
 @log_exceptions
-def get_initial_story(prompt, selected_prompts=None, include_srd=False):
+def get_initial_story(prompt, selected_prompts=None, include_srd=False, personality_profiles=None):
     """
-    Generates the initial story and a structured character profile.
-    Returns the story text and the profile as a dictionary.
+    Generates the initial story for a new campaign based on a user prompt.
+    This is a high-stakes, single-shot generation that establishes the world.
     """
     if selected_prompts is None:
         selected_prompts = []
 
-    system_instruction_parts = []
+    # Determine which model to use. If SRD is included, use the Pro model.
+    model_name = LARGE_CONTEXT_MODEL if include_srd else DEFAULT_MODEL
+    logging.info(f"Using model: {model_name} for initial story generation.")
 
-    # Conditionally add the character template if narrative instructions are selected.
-    if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
-        system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE))
+    # --- Construct the System Instruction ---
+    # Always include the core narrative and character template instructions.
+    system_instruction_parts = [
+        _load_instruction_file(constants.PROMPT_TYPE_NARRATIVE),
+        _load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE)
+    ]
+    # Add any other selected instructions.
+    if selected_prompts:
+        for prompt_type in selected_prompts:
+            # These are already included, SRD is handled separately.
+            if prompt_type not in [constants.PROMPT_TYPE_NARRATIVE, constants.PROMPT_TYPE_CHARACTER_TEMPLATE, constants.PROMPT_TYPE_SRD]:
+                system_instruction_parts.append(_load_instruction_file(prompt_type))
+    
+    system_instruction_text = "\\n\\n".join(system_instruction_parts)
 
-    # Conditionally add the character sheet if mechanics instructions are selected.
-    if constants.PROMPT_TYPE_MECHANICS in selected_prompts:
-        system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_SHEET))
+    # --- Construct the User Prompt ---
+    user_prompt_parts = [f"## Player's Initial Request:\\n{prompt}"]
 
-    # Conditionally add the SRD
+    if personality_profiles:
+        user_prompt_parts.append(f"\\n\\n## 16 PERSONALITY PROFILES REFERENCE:\\n{personality_profiles}")
+
     if include_srd:
-        system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_SRD))
+        srd_content = _load_instruction_file(constants.PROMPT_TYPE_SRD)
+        user_prompt_parts.append(f"\\n\\n## D&D 5e System Reference Document (SRD):\\n{srd_content}")
 
-    # Consistent order for instructions
-    # Narrative, Mechanics, Calibration (from checkboxes)
-    for p_type in [constants.PROMPT_TYPE_NARRATIVE, constants.PROMPT_TYPE_MECHANICS, constants.PROMPT_TYPE_CALIBRATION]: 
-        if p_type in selected_prompts:
-            system_instruction_parts.append(_load_instruction_file(p_type))
+    user_prompt = "".join(user_prompt_parts)
     
-    # NEW: Always include the destiny_ruleset as a default system instruction
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DESTINY))
+    prompt_contents = [user_prompt]
 
-    # NEW: Always include the game_state instructions
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+    # Use the more robust _call_gemini_api function
+    response = _call_gemini_api(
+        prompt_contents,
+        model_name,
+        current_prompt_text_for_logging=prompt,
+        system_instruction_text=system_instruction_text
+    )
 
-    system_instruction_final = "\n\n".join(system_instruction_parts)
-    
-    contents = [types.Content(role="user", parts=[types.Part(text=prompt)])]
-    
-    # --- DYNAMIC MODEL SELECTION ---
-    # Use the more powerful model at the beginning of the game.
-    model_to_use = LARGE_CONTEXT_MODEL
-    logging.info(f"Using model: {model_to_use} for initial story generation.")
-
-    response = _call_gemini_api(contents, model_to_use, current_prompt_text_for_logging=prompt, system_instruction_text=system_instruction_final)
     response_text = _get_text_from_response(response)
     
+    # After getting the response, parse it into story and profile
     return _parse_initial_story_response(response_text)
 
 @log_exceptions
 def continue_story(user_input, mode, story_context, current_game_state: GameState, selected_prompts=None):
-    """Generates the next part of the story, incorporating game state and selected system instructions."""
-    
+    """
+    Takes the current story context and user input, and returns the next part of the story.
+    """
     if selected_prompts is None:
-        selected_prompts = [] 
-        logging.warning("No specific system prompts selected for continue_story. Using none.")
+        selected_prompts = []
 
-    # --- SRD EXCLUSION ---
-    # CRITICAL: Manually remove the SRD from the list of prompts to load for this turn.
-    # The SRD should ONLY be used for initial generation, not for every interaction.
-    if constants.PROMPT_TYPE_SRD in selected_prompts:
-        logging.warning("SRD prompt was requested in continue_story, which is not allowed. It will be ignored.")
-        selected_prompts.remove(constants.PROMPT_TYPE_SRD)
-
+    # --- Construct the System Instruction ---
     system_instruction_parts = []
+    
+    # NEW: Get and add active personality profiles
+    active_profiles_content = _get_active_character_profiles(current_game_state)
+    if active_profiles_content:
+        system_instruction_parts.append(active_profiles_content)
 
     # Conditionally add the character template if narrative instructions are selected.
     if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:

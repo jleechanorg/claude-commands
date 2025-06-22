@@ -195,13 +195,30 @@ def create_app():
         # Create a blank initial game state.
         initial_game_state = GameState().to_dict()
 
+        # Load all personality profiles for initial seeding
+        personality_profiles_content = ""
+        personalities_dir = os.path.join(os.path.dirname(__file__), 'prompts', 'personalities')
+        if os.path.exists(personalities_dir):
+            for filename in sorted(os.listdir(personalities_dir)):
+                if filename.endswith('.md'):
+                    try:
+                        with open(os.path.join(personalities_dir, filename), 'r', encoding='utf-8') as f:
+                            # Add a header for each file to clearly separate them
+                            type_name = filename.replace('.md', '').replace('_', ' ').title()
+                            personality_profiles_content += f"\\n\\n--- START {type_name} ---\\n\\n"
+                            personality_profiles_content += f.read()
+                            personality_profiles_content += f"\\n\\n--- END {type_name} ---\\n\\n"
+                    except Exception as e:
+                        logging.error(f"Error loading personality file {filename}: {e}")
+
         should_include_srd = constants.PROMPT_TYPE_MECHANICS in selected_prompts
         
         # 1. Get both the story and the structured character profile
         opening_story, character_profile = gemini_service.get_initial_story(
             prompt, 
             selected_prompts=selected_prompts,
-            include_srd=should_include_srd
+            include_srd=should_include_srd,
+            personality_profiles=personality_profiles_content
         )
 
         # 2. If a profile was returned, merge it into the initial game state
