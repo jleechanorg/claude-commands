@@ -94,3 +94,11 @@ def generate_docx(story_text, campaign_title):
     file_path = f"{campaign_title.replace(' ', '_')}.docx"
     document.save(file_path)
     return file_path
+
+def generate_txt(story_text, campaign_title):
+    """Generates a TXT file from story text and returns its path."""
+    file_path = f"{campaign_title.replace(' ', '_')}.txt"
+    with open(file_path, 'w', encoding='utf-8') as f:
+        # Replace the literal '\\n' with actual newlines for the text file
+        f.write(story_text.replace('\\\\n', '\\n'))
+    return file_path

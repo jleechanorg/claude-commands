@@ -402,24 +402,39 @@ def create_app():
     @check_token
     def export_campaign(user_id, campaign_id):
         try:
+            export_format = request.args.get('format', 'txt').lower()
+            
             campaign_data, story_log = firestore_service.get_campaign_by_id(user_id, campaign_id)
             if not campaign_data:
-                return jsonify({'error': 'Campaign not found'}), 404
+                return jsonify({KEY_ERROR: 'Campaign not found'}), 404
 
-            # Include the game state in the export
             game_state_doc = firestore_service.get_campaign_game_state(user_id, campaign_id)
             game_state = game_state_doc.to_dict() if game_state_doc else {}
-            
-            # Run final cleanup on game state before exporting
-            game_state, _ = _cleanup_legacy_state(game_state)
 
-            file_path = document_generator.create_campaign_document(campaign_data, story_log, game_state)
-            return send_file(file_path, as_attachment=True)
+            campaign_title = campaign_data.get('title', 'Untitled Campaign')
+            story_text = document_generator.get_story_text_from_context(story_log)
+            
+            file_path = None
+            if export_format == 'pdf':
+                file_path = document_generator.generate_pdf(story_text, campaign_title)
+            elif export_format == 'docx':
+                file_path = document_generator.generate_docx(story_text, campaign_title)
+            elif export_format == 'txt':
+                file_path = document_generator.generate_txt(story_text, campaign_title)
+            else:
+                return jsonify({KEY_ERROR: f"Unsupported format: {export_format}"}), 400
+
+            if file_path and os.path.exists(file_path):
+                response = send_file(file_path, as_attachment=True)
+                os.remove(file_path) # Clean up the file after sending
+                return response
+            else:
+                return jsonify({KEY_ERROR: 'Failed to create export file.'}), 500
 
         except Exception as e:
             logging.error(f"Export failed: {e}")
             traceback.print_exc()
-            return jsonify({'error': 'Failed to export campaign'}), 500
+            return jsonify({KEY_ERROR: 'An unexpected error occurred during export.', KEY_DETAILS: str(e)}), 500
 
     # --- Frontend Serving ---
     @app.route('/', defaults={'path': ''})
