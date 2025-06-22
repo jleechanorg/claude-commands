@@ -9,50 +9,61 @@ from game_state import GameState
 
 MAX_TEXT_BYTES = 1000000
 
+def _perform_append(target_list: list, items_to_append, key_name: str, deduplicate: bool = False):
+    """
+    Safely appends one or more items to a target list, with an option to prevent duplicates.
+    This function modifies the target_list in place.
+    """
+    if not isinstance(items_to_append, list):
+        items_to_append = [items_to_append]  # Standardize to list
+
+    newly_added_items = []
+    for item in items_to_append:
+        # If deduplication is on, skip items already in the list
+        if deduplicate and item in target_list:
+            continue
+        target_list.append(item)
+        newly_added_items.append(item)
+
+    if newly_added_items:
+        logging.info(f"APPEND/SAFEGUARD: Added {len(newly_added_items)} new items to '{key_name}'.")
+    else:
+        logging.info(f"APPEND/SAFEGUARD: No new items were added to '{key_name}' (duplicates may have been found).")
+
 def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
     """
     Recursively updates a state dictionary with a changes dictionary.
-    - If a key in changes contains a dictionary, it's merged recursively.
-    - If a key in changes is a dict with an 'append' key, the value is appended
-      to the list in the state. This will create the list if it doesn't exist.
-    - Otherwise, the value from changes overwrites the value in the state.
+    - Handles explicit appends via {'append': ...} syntax.
+    - Safeguards 'core_memories' from being overwritten, converting attempts into a safe append.
+    - Merges nested dictionaries recursively.
+    - Overwrites all other values.
     """
     logging.info(f"--- update_state_with_changes: applying changes:\\n{json.dumps(changes, indent=2, default=str)}")
     
-    # Create a copy to avoid modifying the original dictionary while iterating
-    changes_copy = changes.copy()
-
-    for key, value in changes_copy.items():
+    for key, value in changes.items():
         logging.info(f"update_state: Processing key: '{key}'")
 
-        # Handle list appends robustly
+        # Case 1: Explicit append syntax {'append': ...}
         if isinstance(value, dict) and 'append' in value:
-            logging.info(f"update_state: Detected append operation for key '{key}'.")
-            if key not in state_to_update or not isinstance(state_to_update.get(key), list):
-                logging.warning(f"update_state: Destination key '{key}' is not a list. Initializing as empty list.")
+            logging.info(f"update_state: Detected explicit append for '{key}'.")
+            if not isinstance(state_to_update.get(key), list):
                 state_to_update[key] = []
-            
-            items_to_append = value['append']
-            logging.info(f"update_state: Appending items: {items_to_append}")
-            if isinstance(items_to_append, list):
-                state_to_update[key].extend(items_to_append)
-            else:
-                state_to_update[key].append(items_to_append)
-            logging.info(f"update_state: List for key '{key}' is now: {state_to_update[key]}")
-            
-            # Since we've handled the append, we replace the {'append':...} dict 
-            # with the final list in the `changes` dict to prevent it from being 
-            # processed again as a normal dictionary overwrite.
-            changes[key] = state_to_update[key]
+            _perform_append(state_to_update[key], value['append'], key, deduplicate=(key == 'core_memories'))
+        
+        # Case 2: Smart safeguard for direct 'core_memories' overwrite
+        elif key == 'core_memories':
+            logging.warning("CRITICAL SAFEGUARD: Intercepted direct overwrite on 'core_memories'. Converting to safe, deduplicated append.")
+            if not isinstance(state_to_update.get(key), list):
+                state_to_update[key] = []
+            # The helper function is designed to handle non-lists, so we call it directly.
+            _perform_append(state_to_update[key], value, key, deduplicate=True)
 
-
-    for key, value in changes.items():
-        # Recurse into nested dictionaries
-        if isinstance(value, dict) and key in state_to_update and isinstance(state_to_update.get(key), dict):
+        # Case 3: Recursive merge for nested dictionaries
+        elif isinstance(value, dict) and key in state_to_update and isinstance(state_to_update.get(key), dict):
             logging.info(f"update_state: Recursing into dict for key '{key}'.")
             update_state_with_changes(state_to_update[key], value)
-        
-        # Otherwise, just overwrite the value
+
+        # Case 4: Simple overwrite for everything else
         else:
             logging.info(f"update_state: Overwriting value for key '{key}'.")
             state_to_update[key] = value

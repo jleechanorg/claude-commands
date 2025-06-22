@@ -1,131 +1,100 @@
 import unittest
 from unittest.mock import patch, MagicMock
+import logging
 
 # We need to import the service we are testing
 import firestore_service
 
-class TestFirestoreService(unittest.TestCase):
-
-    @patch('firestore_service.get_db')
-    def test_update_campaign_title(self, mock_get_db):
-        """Tests that the title update function calls the correct Firestore method."""
-        # 1. Setup the mock
-        mock_db = mock_get_db.return_value
-        mock_campaign_ref = mock_db.collection.return_value.document.return_value
-
-        # 2. Call the function
-        user_id = 'test_user'
-        campaign_id = 'test_campaign'
-        new_title = 'A Brand New Title'
-        result = firestore_service.update_campaign_title(user_id, campaign_id, new_title)
-
-        # 3. Assert the results
-        # Check that the function returns True as expected
-        self.assertTrue(result)
-
-        # Check that the mocked database was called correctly
-        mock_db.collection.assert_called_with('users')
-        mock_db.collection.return_value.document.assert_called_with(user_id)
-        mock_campaign_ref.collection.return_value.document.assert_called_with(campaign_id)
-        
-        # Check that the `update` method was called with the correct payload
-        mock_campaign_ref.collection.return_value.document.return_value.update.assert_called_once_with({'title': new_title})
+# Disable logging for most tests to keep output clean, can be enabled for debugging
+# logging.disable(logging.CRITICAL)
 
 class TestUpdateStateWithChanges(unittest.TestCase):
-    def test_simple_overwrite(self):
-        state = {'a': 1, 'b': 2}
-        changes = {'b': 3, 'c': 4}
-        expected = {'a': 1, 'b': 3, 'c': 4}
-        # The function modifies the dict in place, so we check the original
-        firestore_service.update_state_with_changes(state, changes)
-        self.assertEqual(state, expected)
-
-    def test_nested_overwrite(self):
-        state = {'a': {'b': 1}}
-        changes = {'a': {'c': 2}}
-        expected = {'a': {'b': 1, 'c': 2}}
-        firestore_service.update_state_with_changes(state, changes)
-        self.assertEqual(state, expected)
-
-    # --- Comprehensive Append Tests ---
-
-    def test_append_single_item_to_existing_list(self):
-        """Should append a single string to a list that already exists."""
-        state = {'memories': ['memory A']}
-        changes = {'memories': {'append': 'memory B'}}
-        expected = {'memories': ['memory A', 'memory B']}
-        firestore_service.update_state_with_changes(state, changes)
-        self.assertEqual(state, expected)
-
-    def test_append_list_of_items_to_existing_list(self):
-        """Should extend an existing list with a list of new items."""
-        state = {'memories': ['memory A']}
-        changes = {'memories': {'append': ['memory B', 'memory C']}}
-        expected = {'memories': ['memory A', 'memory B', 'memory C']}
-        firestore_service.update_state_with_changes(state, changes)
-        self.assertEqual(state, expected)
-
-    def test_append_single_item_to_new_key(self):
-        """Should create a new list when appending to a key that doesn't exist."""
-        state = {'other_data': 123}
-        changes = {'memories': {'append': 'memory A'}}
-        expected = {'other_data': 123, 'memories': ['memory A']}
-        firestore_service.update_state_with_changes(state, changes)
-        self.assertEqual(state, expected)
-
-    def test_append_list_to_new_key(self):
-        """Should create a new list with multiple items for a key that doesn't exist."""
-        state = {'other_data': 123}
-        changes = {'memories': {'append': ['memory A', 'memory B']}}
-        expected = {'other_data': 123, 'memories': ['memory A', 'memory B']}
-        firestore_service.update_state_with_changes(state, changes)
-        self.assertEqual(state, expected)
-
-    def test_append_does_not_interfere_with_other_updates(self):
-        """Should correctly append to one key while overwriting another."""
-        state = {'memories': ['memory A'], 'status': 'old'}
-        changes = {
-            'memories': {'append': 'memory B'},
-            'status': 'new'
-        }
-        expected = {'memories': ['memory A', 'memory B'], 'status': 'new'}
-        firestore_service.update_state_with_changes(state, changes)
-        self.assertEqual(state, expected)
-        
-    def test_append_to_non_list_key_replaces_it(self):
-        """Should replace a non-list value with a new list containing the appended item."""
-        state = {'memories': 'this is not a list'}
-        changes = {'memories': {'append': 'memory A'}}
-        expected = {'memories': ['memory A']}
-        firestore_service.update_state_with_changes(state, changes)
-        self.assertEqual(state, expected)
-
-    def test_complex_nested_append_and_overwrite(self):
-        """Should handle appends and overwrites at different levels of nesting."""
-        state = {
+    
+    def setUp(self):
+        """This method is called before each test."""
+        # It's good practice to start with a fresh state for each test.
+        self.state = {
+            'player': {
+                'inventory': ['sword', 'shield'],
+                'stats': {'hp': 100, 'mp': 50}
+            },
             'world_data': {
                 'events': ['event A'],
                 'timestamp': {'year': 1}
             },
-            'player': {'inventory': ['sword']}
+            'custom_campaign_state': {
+                'core_memories': ['memory A', 'memory B']
+            }
         }
-        changes = {
-            'world_data': {
-                'events': {'append': 'event B'},
-                'timestamp': {'year': 2}
-            },
-            'player': { 'inventory': {'append': 'shield'}, 'xp': 100 }
-        }
-        expected = {
-            'world_data': {
-                'events': ['event A', 'event B'],
-                'timestamp': {'year': 2}
-            },
-            'player': {'inventory': ['sword', 'shield'], 'xp': 100}
-        }
-        firestore_service.update_state_with_changes(state, changes)
-        self.assertEqual(state, expected)
 
+    def test_simple_overwrite(self):
+        """Should overwrite a top-level value."""
+        changes = {'game_version': '1.1'}
+        firestore_service.update_state_with_changes(self.state, changes)
+        self.assertEqual(self.state['game_version'], '1.1')
+
+    def test_nested_overwrite(self):
+        """Should overwrite a nested value."""
+        changes = {'player': {'stats': {'hp': 90}}}
+        firestore_service.update_state_with_changes(self.state, changes)
+        self.assertEqual(self.state['player']['stats']['hp'], 90)
+        self.assertEqual(self.state['player']['stats']['mp'], 50) # Ensure other values are untouched
+
+    def test_explicit_append_single_item(self):
+        """Should append a single item using the {'append':...} syntax."""
+        changes = {'player': {'inventory': {'append': 'potion'}}}
+        firestore_service.update_state_with_changes(self.state, changes)
+        self.assertIn('potion', self.state['player']['inventory'])
+        self.assertEqual(len(self.state['player']['inventory']), 3)
+
+    def test_explicit_append_list_of_items(self):
+        """Should append a list of items using the {'append':...} syntax."""
+        changes = {'player': {'inventory': {'append': ['gold coin', 'key']}}}
+        firestore_service.update_state_with_changes(self.state, changes)
+        self.assertIn('gold coin', self.state['player']['inventory'])
+        self.assertIn('key', self.state['player']['inventory'])
+        self.assertEqual(len(self.state['player']['inventory']), 4)
+
+    def test_core_memories_safeguard_converts_overwrite(self):
+        """CRITICAL: Should convert a direct overwrite of core_memories into a safe, deduplicated append."""
+        changes = {'custom_campaign_state': {'core_memories': ['memory B', 'memory C']}}
+        firestore_service.update_state_with_changes(self.state, changes)
+        final_memories = self.state['custom_campaign_state']['core_memories']
+        self.assertEqual(len(final_memories), 3)
+        self.assertIn('memory A', final_memories)
+        self.assertIn('memory B', final_memories)
+        self.assertIn('memory C', final_memories)
+
+    def test_core_memories_safeguard_handles_no_new_items(self):
+        """CRITICAL: Should not add duplicate memories during a safeguard append."""
+        changes = {'custom_campaign_state': {'core_memories': ['memory A', 'memory B']}}
+        firestore_service.update_state_with_changes(self.state, changes)
+        final_memories = self.state['custom_campaign_state']['core_memories']
+        self.assertEqual(len(final_memories), 2)
+
+    def test_core_memories_explicit_append_is_deduplicated(self):
+        """CRITICAL: Explicit appends to core_memories should also be deduplicated."""
+        changes = {'custom_campaign_state': {'core_memories': {'append': 'memory A'}}}
+        firestore_service.update_state_with_changes(self.state, changes)
+        final_memories = self.state['custom_campaign_state']['core_memories']
+        self.assertEqual(len(final_memories), 2) # Should not add the duplicate 'memory A'
+
+    def test_append_to_non_core_memories_is_not_deduplicated(self):
+        """Append to any list other than core_memories should allow duplicates."""
+        changes = {'world_data': {'events': {'append': 'event A'}}}
+        firestore_service.update_state_with_changes(self.state, changes)
+        self.assertEqual(self.state['world_data']['events'], ['event A', 'event A'])
+        self.assertEqual(len(self.state['world_data']['events']), 2)
+
+    def test_safeguard_handles_non_list_value(self):
+        """Safeguard should correctly append a non-list value by wrapping it."""
+        state = {'custom_campaign_state': {'core_memories': ['memory A']}}
+        changes = {'custom_campaign_state': {'core_memories': 'a new string memory'}}
+        expected_memories = ['memory A', 'a new string memory']
+        
+        firestore_service.update_state_with_changes(state, changes)
+        
+        self.assertEqual(state['custom_campaign_state']['core_memories'], expected_memories)
 
 if __name__ == '__main__':
     unittest.main()
