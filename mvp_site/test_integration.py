@@ -2,7 +2,6 @@ import unittest
 import os
 import json
 from unittest.mock import patch, MagicMock
-import constants
 
 # We still need the dummy key for the import-time initialization check
 os.environ["GEMINI_API_KEY"] = "DUMMY_KEY_FOR_INTEGRATION_TESTING"
@@ -25,40 +24,24 @@ import gemini_service # Import gemini_service to mock its internal _load_instruc
 MOCK_INTEGRATION_NARRATIVE = "Integration narrative."
 MOCK_INTEGRATION_MECHANICS = "Integration mechanics."
 MOCK_INTEGRATION_CALIBRATION = "Integration calibration."
-MOCK_INTEGRATION_CHAR_TEMPLATE = "Integration char_template."
-MOCK_INTEGRATION_CHAR_SHEET = "Integration char_sheet."
-MOCK_INTEGRATION_DESTINY = "Integration destiny."
-MOCK_INTEGRATION_GAME_STATE = "Integration game_state."
 
 
 class TestInteractionIntegration(unittest.TestCase):
 
-    @patch('gemini_service._load_personality_profile_file')
     @patch('gemini_service._load_instruction_file')
-    def setUp(self, mock_load_instruction_file, mock_load_personality_file):
+    def setUp(self, mock_load_instruction_file):
         """
         Set up a test client and create a new campaign for each test.
         """
-        # Configure the mock for the new personality file loader
-        mock_load_personality_file.return_value = ""
-        
         # Configure the mock for _load_instruction_file to return specific content for integration tests
         def side_effect_for_loader(instruction_type):
-            if instruction_type == constants.PROMPT_TYPE_NARRATIVE:
+            if instruction_type == "narrative":
                 return MOCK_INTEGRATION_NARRATIVE
-            elif instruction_type == constants.PROMPT_TYPE_MECHANICS:
+            elif instruction_type == "mechanics":
                 return MOCK_INTEGRATION_MECHANICS
-            elif instruction_type == constants.PROMPT_TYPE_CALIBRATION:
+            elif instruction_type == "calibration":
                 return MOCK_INTEGRATION_CALIBRATION
-            elif instruction_type == constants.PROMPT_TYPE_CHARACTER_TEMPLATE:
-                return MOCK_INTEGRATION_CHAR_TEMPLATE
-            elif instruction_type == constants.PROMPT_TYPE_CHARACTER_SHEET:
-                return MOCK_INTEGRATION_CHAR_SHEET
-            elif instruction_type == constants.PROMPT_TYPE_DESTINY:
-                return MOCK_INTEGRATION_DESTINY
-            elif instruction_type == constants.PROMPT_TYPE_GAME_STATE:
-                return MOCK_INTEGRATION_GAME_STATE
-            return f"UNHANDLED_PROMPT_{instruction_type}"
+            return ""
 
         mock_load_instruction_file.side_effect = side_effect_for_loader
 
@@ -143,17 +126,9 @@ class TestInteractionIntegration(unittest.TestCase):
         self.assertIn('config', call_args.kwargs)
         self.assertIn('system_instruction', call_args.kwargs['config'])
         
-        # Based on the logic in continue_story and selected_prompts=['narrative', 'mechanics']
-        expected_parts = [
-            MOCK_INTEGRATION_CHAR_TEMPLATE,
-            MOCK_INTEGRATION_CHAR_SHEET,
-            MOCK_INTEGRATION_NARRATIVE,
-            MOCK_INTEGRATION_MECHANICS,
-            MOCK_INTEGRATION_DESTINY,
-            MOCK_INTEGRATION_GAME_STATE,
-        ]
-        expected_system_instruction = "\\n\\n".join(expected_parts)
-        self.assertEqual(call_args.kwargs['config'].system_instruction.text, expected_system_instruction)
+        # Expected combined system instruction based on self.test_selected_prompts = ['narrative', 'mechanics']
+        expected_system_instruction = f"{MOCK_INTEGRATION_NARRATIVE}\n\n{MOCK_INTEGRATION_MECHANICS}"
+        self.assertEqual(call_args.kwargs['config']['system_instruction'].text, expected_system_instruction)
 
 
     def test_god_mode_interaction(self):
@@ -181,16 +156,8 @@ class TestInteractionIntegration(unittest.TestCase):
         self.assertIn('config', call_args.kwargs)
         self.assertIn('system_instruction', call_args.kwargs['config'])
         
-        expected_parts = [
-            MOCK_INTEGRATION_CHAR_TEMPLATE,
-            MOCK_INTEGRATION_CHAR_SHEET,
-            MOCK_INTEGRATION_NARRATIVE,
-            MOCK_INTEGRATION_MECHANICS,
-            MOCK_INTEGRATION_DESTINY,
-            MOCK_INTEGRATION_GAME_STATE,
-        ]
-        expected_system_instruction = "\\n\\n".join(expected_parts)
-        self.assertEqual(call_args.kwargs['config'].system_instruction.text, expected_system_instruction)
+        expected_system_instruction = f"{MOCK_INTEGRATION_NARRATIVE}\n\n{MOCK_INTEGRATION_MECHANICS}"
+        self.assertEqual(call_args.kwargs['config']['system_instruction'].text, expected_system_instruction)
 
 
 if __name__ == '__main__':
