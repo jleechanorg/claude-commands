@@ -24,7 +24,11 @@ KEY_MODE = 'mode'
 KEY_TEXT = 'text'
 KEY_TITLE = 'title'
 KEY_FORMAT = 'format'
+KEY_USER_INPUT = "user_input"
+KEY_SELECTED_PROMPTS = "selected_prompts"
 
+# --- NEW: Character attribute keys ---
+KEY_MBTI = "mbti"
 
 # --- EXPORT FORMATS ---
 FORMAT_PDF = 'pdf'

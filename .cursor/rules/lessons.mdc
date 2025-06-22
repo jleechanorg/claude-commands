@@ -68,6 +68,10 @@ This document is a persistent repository for reusable knowledge, best practices,
 
 *This section will be used to document the root cause analysis of any significant failures.*
 
+*   **Incident:** A `TypeError: Object of type Sentinel is not JSON serializable` was crashing the application. My initial fixes and tests were incorrect and failed to solve the problem, leading to multiple rounds of failed attempts.
+*   **Root Cause:** I incorrectly assumed the `Sentinel` object was `firestore.DELETE_FIELD` based on visual inspection of the code. The actual cause was the non-serializable `firestore.SERVER_TIMESTAMP` object being added to the game state. My focus on `DELETE_FIELD` led me to write flawed tests that did not replicate the real-world conditions, causing further confusion.
+*   **Lesson:** Do not fixate on an initial hypothesis. When a fix fails, re-evaluate the root cause from the beginning. A test that fails while the application works is a sign that the *test is wrong*, not the application. The test must accurately reflect the conditions that cause the bug in the live environment.
+
 *   **Root Cause:** Failure to explicitly sanitize data for serialization. The `json` library cannot handle Python `datetime` objects by default.
 *   **Lesson:** Always pass data destined for JSON serialization through a handler that can manage common non-serializable types like `datetime`.
 

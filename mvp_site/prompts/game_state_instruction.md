@@ -1,4 +1,65 @@
 # Game State Management Protocol
+## 0. Initial State Generation
+
+**This is the most critical first step.** Immediately after you generate the initial campaign premise, the main character, the world, and any key NPCs, you **must** consolidate all of that information into a single, comprehensive `[STATE_UPDATES_PROPOSED]` block.
+
+This first block should not be an "update" but a "creation." It must contain all the initial data for:
+- `player_character_data`: The full character sheet, stats, inventory, and backstory, and a **Myers-Briggs Type (MBTI)**.
+- `npc_data`: Profiles for all key NPCs created during setup, each with their own **Myers-Briggs Type (MBTI)**.
+- `world_data`: Key locations, political situation, and any other foundational world-building elements.
+- `custom_campaign_state`: The initial premise and any other custom tracking fields.
+- `world_time`: The starting date and time.
+
+**Example of an Initial State Block:**
+```
+[STATE_UPDATES_PROPOSED]
+{
+  "game_state_version": 1,
+  "player_character_data": {
+    "name": "Sir Kaelan the Adamant",
+    "archetype": "The Idealistic Knight Facing a Corrupt Reality",
+    "alignment": "Lawful Good",
+    "mbti": "INFJ",
+    "level": 5,
+    "hp_max": 49,
+    "hp_current": 49,
+    "stats": { "STR": 18, "DEX": 10, ... },
+    "inventory": { "gold": 50, "items": { ... } },
+    ...
+  },
+  "npc_data": {
+    "King Theron": {
+      "role": "King of Eldoria",
+      "status": "Weak and ineffective",
+      "mbti": "ISFP"
+    },
+    "Pyrexxus": {
+      "role": "Ancient Evil Dragon",
+      "location": "Dragon's Tooth mountains",
+      "mbti": "ENTJ"
+    }
+  },
+  "world_data": {
+    "kingdom": "Eldoria",
+    "political_situation": "The kingdom is in slow decay..."
+  },
+  "world_time": {
+    "year": 1492,
+    "month": "Ches",
+    "day": 20,
+    "hour": 9,
+    "minute": 51,
+    "second": 10
+  },
+  "custom_campaign_state": {
+    "premise": "A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side."
+  },
+  "migration_status": "FRESH_INSTALL"
+}
+[END_STATE_UPDATES_PROPOSED]
+```
+
+This initial state dump is **not optional**. It is the foundation of the entire campaign. After providing this block, you can then proceed with the first narrative scene.
 
 This protocol governs how you, the AI, interact with the persistent game state. Adherence to this protocol is mandatory for maintaining game world consistency.
 
@@ -8,6 +69,7 @@ At the beginning of every prompt, you will receive a block of JSON data labeled 
 
 *   **Source of Truth:** This block represents the definitive, authoritative state of the game world at the beginning of the player's turn. All your narrative descriptions, character interactions, and rule adjudications **must be strictly consistent** with the data presented in this block.
 *   **Precedence:** If there is a conflict between information in the `CURRENT GAME STATE` and your own memory or the recent story context, **the `CURRENT GAME STATE` always takes precedence.** For example, if the story context implies a character is healthy, but `"player_character_data.hp_current"` shows they have 5 HP, you must narrate them as being severely wounded.
+*   **Data Correction Mandate:** If you are processing character data from the game state and notice that a core identity field is missing (such as `mbti` or `alignment`), you **MUST** determine an appropriate value for that field based on the character's existing profile. You must then include this new data in a `[STATE_UPDATES_PROPOSED]` block in your response. This is not optional; it is a core function of maintaining data integrity.
 
 ## 2. Reading and Interpreting the Timeline
 
@@ -230,9 +292,9 @@ This is the only way to add new memories. The system will automatically add your
 
 ## CRITICAL: State Update Formatting Rules
 
-Your goal is to propose a JSON "patch" that updates the game state. For maximum clarity and to prevent data loss, you **must** structure your updates as nested JSON objects whenever possible.
+Your goal is to propose a JSON "patch" that updates the game state. For maximum clarity and to prevent data loss, you **must** structure your updates as nested JSON objects. This is the only correct and supported method.
 
-*   **PREFERRED METHOD (Nested Objects):**
+*   **THE CORRECT METHOD (Nested Objects):**
     To update a character's gold and add a new mission, structure the JSON like this. This is the safest and most explicit method.
     ```json
     {
@@ -247,12 +309,13 @@ Your goal is to propose a JSON "patch" that updates the game state. For maximum 
     }
     ```
 
-*   **AVOID (Dot Notation):**
-    Do NOT use dot notation keys like `"player_character_data.gold"`. While the system can handle this format, it is less clear and more prone to error. Always prefer the nested object structure shown above.
+*   **DEPRECATED AND FORBIDDEN (Dot Notation):**
+    Do NOT use dot notation keys like `"player_character_data.gold"`. This format is deprecated and will cause errors. Always use the nested object structure shown above.
 
 *   **Be Precise:** Only include keys for values that have actually changed.
 *   **Use `__DELETE__` to Remove:** To remove a key, set its value to the special string `__DELETE__`.
 *   **Create as Needed:** Do not hesitate to create new paths and keys for new information that needs to be tracked.
+*   **Non-Destructive Updates:** When you update a nested object, only provide the keys that are changing. Do not replace the entire parent object, as this could wipe out other data. For example, to update just the player's gold, the `player_character_data` object in your update should *only* contain the `gold` key.
 
 ## CRITICAL: Non-Destructive Updates
 You must NEVER replace a top-level state object like `player_character_data`, `world_data`, or `custom_campaign_state`. Doing so will wipe out all nested data within that object.
