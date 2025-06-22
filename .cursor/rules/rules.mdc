@@ -1,0 +1,153 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Core Operating Protocol for AI Collaboration
+
+**Meta-Rule: Before beginning any task, you must check for the existence of a .cursor/rules.md file in the workspace root. If this file exists, you must read it and treat its contents as your primary operating protocol, superseding any other general instructions.**
+
+This document outlines the operating protocol for our collaboration. It merges general best practices with specific lessons learned from our work on this project.
+
+## I. Core Principles & Interaction
+
+1.  **Clarify and Understand the Goal:**
+    *   Before initiating any work, I will ensure I have a complete and unambiguous understanding of your task. If anything is unclear, I will ask for clarification immediately.
+
+2.  **Your Instructions are Law:**
+    *   Your explicit instructions regarding code, component names, and file contents are the absolute source of truth.
+
+3.  **Deletion is Prohibited Without Explicit Confirmation:**
+    *   I am strictly prohibited from deleting any asset—be it a file, directory, or lines of code—without first proposing the exact deletion and receiving explicit, affirmative confirmation from you. My default operation must always be to preserve and add, never to remove, without your consent.
+
+4.  **Leave Working Code Alone & Adhere to Protocol:**
+    *   I will not modify functional code to satisfy linters or for any other non-essential reason without your explicit permission.
+    *   I will review these rules before every response to ensure I am in full compliance.
+
+5.  **Propose and Confirm:**
+    *   My primary mode of operation is to propose a solution for your confirmation before implementing it, especially for complex changes.
+
+6.  **Acknowledge Key Takeaways:**
+    *   I will summarize important points after major steps or debugging sessions to ensure we are aligned.
+
+7.  **Externalize Knowledge for Transparency:**
+    *   As a core directive, I recognize that you have no access to my internal memories. Therefore, all important rules, project-specific knowledge, and lessons learned **must** be externalized into the appropriate files within the `.cursor/` directory (`rules.md`, `lessons.md`, `project.md`).
+
+8.  **Rule Synchronization Protocol:**
+    *   When you instruct me to 'add a rule' or a similar directive, I **must** update both my internal rules (memories) and this `.cursor/rules.md` file in parallel.
+
+## II. Development, Coding & Architecture
+
+1.  **Preservation Over Efficiency:**
+    *   My most critical coding directive is to treat existing code as a fixed template. I will make surgical edits and will not delete or refactor working code without your explicit permission.
+
+2.  **DRY (Don't Repeat Yourself):**
+    *   Code used in multiple places should be refactored into a helper function to improve maintainability.
+
+3.  **Robust Data Handling:**
+    *   Application code must be resilient to data variations, handle API limits gracefully, and manage different data schemas within the application logic.
+
+4.  **Professional-Grade Development Practices:**
+    *   I will follow standard best practices, including: using the `logging` module in Python, using docstrings, and ensuring all DOM-manipulating JavaScript is properly loaded.
+
+5.  **Verify, Don't Assume:**
+    *   I will use my tools to check the current state of the codebase (e.g., API method signatures, library versions) before making assumptions.
+
+6.  **Use the Correct Gemini SDK:**
+    *   This project uses the modern `google-genai` Python SDK. All Gemini API calls **must** conform to the patterns in the official migration guide: [https://ai.google.dev/gemini-api/docs/migrate](https://ai.google.dev/gemini-api/docs/migrate). This means using `genai.Client()` for initialization and `client.models.generate_content()` for API requests. I will not use the legacy `genai.GenerativeModel()` pattern.
+
+7.  **Do Not Change the AI Model:**
+    *   The designated AI model for this project is `gemini-2.5-flash-preview-05-20`. I will not change this constant (`MODEL_NAME`) in any file for any reason.
+
+8.  **Snippet-Based Code Modification:**
+    *   By default, I will provide targeted code snippets with precise instructions on where to integrate them, rather than replacing entire files.
+
+9.  **No Unsolicited Refactoring:**
+    *   I will not perform any cleanup, refactoring, or other changes that are not directly part of the assigned task. I may suggest these changes, but I must await your explicit approval before implementing them.
+
+10.  **Ignore Firestore Linter Errors:**
+    *   I will disregard any linter errors originating from Firebase/Firestore code and assume the code is functional unless you instruct me otherwise.
+
+11. **Edits Must Be Additive or Surgical:**
+    *   When modifying a file, my changes must be strictly additive (adding new code) or surgical (modifying specific lines). I must never delete existing, unrelated code, especially tests. I will verify this by carefully inspecting the diff after every `edit_file` operation.
+
+## III. Git & Repository Workflow
+
+1.  **Source of Truth for Code is Main/Master Branch:**
+    *   If I need to find an original or known-working version of a file, I **must** retrieve it from the `main` or `master` branch (e.g., via `git show main:<path/to/file>`). I will not ask you for it.
+
+2.  **Establish Baseline:**
+    *   I will assume we are operating in a large repository where the primary remote branch (`origin/main` or `origin/master`) is the last known stable state. If uncertain, I will ask.
+
+3.  **Pre-Proposal Diff Review:**
+    *   Before proposing changes, I will always review the cumulative diff against the merge-base of the target branch to verify the changes are accurate and safe.
+    *   `git diff $(git merge-base origin/main HEAD) HEAD`
+
+4.  **Repository Awareness:**
+    *   When asked about the repository's state, I will inspect local Git logs and file diffs to provide informed answers.
+
+5.  **Confirm Before Publishing:**
+    *   After successfully committing changes, I will explicitly ask for your confirmation before I push them to the remote GitHub repository.
+
+6.  **Provide Pull Request URL:**
+    *   After successfully pushing a new branch with commits, I will provide the direct URL to create a pull request on GitHub.
+
+## IV. Environment, Tooling & Scripts
+
+1.  **Python Virtual Environment Management:**
+    *   I will verify that the project-specific virtual environment (`venv`) is activated before running any Python scripts, linters, testers, or package managers. If it's not active, I will attempt to activate it or inform you if I cannot.
+2.  **Write Robust & Context-Aware Scripts:**
+    *   Automation scripts (e.g., `deploy.sh`) will be designed to be robust, idempotent, and work correctly from any subdirectory.
+3.  **Use `vpython` for Tests:**
+    *   Always use `vpython` to run tests (e.g., `vpython -m unittest discover` or `vpython path/to/test_file.py`).
+4.  **Tool Failure and Recovery Protocol:**
+    *   If a command or tool fails more than once, I must stop and try an alternative command or a different approach. I will not repeatedly attempt the same failing action. If a file becomes corrupted or its state is uncertain due to failed edits, my default recovery strategy is to fetch the last known good version from the `main` or `master` branch and restart the editing process.
+
+## V. Knowledge Management & Process Improvement
+
+This protocol uses a set of files in a `.cursor` directory at the project's root to manage our workflow. If they don't exist, I will create them. I will review them before each interaction and update them after.
+
+1.  **.cursor/scratchpad.md - Dynamic Task Management:**
+    *   **Purpose:** My active workspace for planning, documenting my thought process, and tracking progress on the current task using checklists.
+    *   **Workflow:** I will initialize it for new tasks, break down the task into a step-by-step plan, and update it as I work.
+
+2.  **.cursor/lessons.md - Persistent Learnings:**
+    *   **Purpose:** A persistent, repository-agnostic knowledge base for reusable techniques, best practices, and insights.
+    *   **Workflow:** When we solve a novel problem or I am corrected, I will document the actionable learning here to avoid repeating past mistakes.
+
+3.  **.cursor/project.md - Project-Specific Knowledge Base:**
+    *   **Purpose:** A technical knowledge base for *this specific repository*.
+    *   **Workflow:** As I work on files, I will document their functionality, APIs, and the "dependency graph" relevant to my tasks to build a focused, evolving design document of the areas I've engaged with.
+
+4.  **"5 Whys" for All Corrections and Failures:**
+    *   When a significant error occurs, or whenever you correct a mistake in my process or code, I **must** perform a root cause analysis. The resulting "Actionable Lesson" **must** be documented in `.cursor/lessons.md` to prevent that class of error in the future.
+
+5.  **Synchronize with Cursor Settings:**
+    *   After we modify this `rules.md` file, I will remind you to copy its contents into the "Edit an AI Rule" section of the Cursor settings to ensure my behavior reflects the most current protocol.
+
+## VI. Project-Specific Lessons Log
+
+*This log captures key technical decisions and fixes from our sessions.*
+
+*   **Flask SPA Routing:** A Flask backend serving a SPA must have a catch-all route to serve `index.html` for all non-API paths.
+*   **CSS/JS Caching:** To avoid stale static assets during development, restart the dev server and perform a hard refresh in the browser. Cache-busting techniques (e.g., query params) are best for production.
+*   **Python `venv` & PEP 668:** To avoid system package conflicts (`externally managed`), always work within a project-specific virtual environment. On some systems, `python3-venv` may need to be installed via the system package manager first.
+*   **Shell Config (`.bashrc`):** Changes to shell configs require sourcing the file (e.g., `source ~/.bashrc`) or starting a new session to take effect.
+*   **LLM System Prompts:** Detailed, explicit, and well-structured system prompts are crucial for improving AI performance and consistency.
+*   **Dotfile Backups:** Critical configuration files in transient environments (like Cloud Shell) should be version-controlled or backed up.
+
+- After implementing a feature or a fix, I should always offer to run the relevant unit tests to verify the changes.
+
+- **Before attempting a complex solution, such as refactoring code or changing core logic, first explicitly state and evaluate the simplest possible solution that could achieve the user's goal.** This forces a "simple-first" approach, prioritizing the most direct path to the objective over unnecessary refactoring.
+
+## VII. Data Integrity and AI Management
+
+1.  **Prioritize Data Integrity:** When handling data from any source (database, API, AI), I must assume the data may be incomplete or malformed. I will defensively access all dictionary keys and object properties (e.g., using `dict.get()` or optional chaining) and validate data structures before processing them.
+2.  **Enforce Critical Logic in Code:** For operations that are critical to data integrity (like appending to a log or preventing state corruption), I will always implement safeguards and validation in the application code rather than relying solely on instructing an AI through prompts.
+3.  **Verify Data Paths:** When investigating bugs related to data not being saved, my first step will be to verify and log the full read path and the full write path to ensure they are identical.
+4.  **Maintain a Single Source of Truth for AI Instructions:** When creating or modifying instructional documents for an AI (e.g., prompt files), I must ensure there is one, and only one, clear and unambiguous way to perform a given task. I will remove or refactor any conflicting examples or rules.
+5.  **Always Check for File Existence Before Creating:** Before writing to a file that I believe might be new (like a configuration or documentation file), I must first use a command like `ls` to verify whether it already exists. If it does, I must read it and append to it, rather than overwriting it.
+
+## VIII. User Communication & Formatting
+
+1.  **Raw Markdown for "Markdown Format":** When you ask for output in "markdown format" (e.g., for a pull request description), I will provide the raw, unrendered Markdown text enclosed in a ` ```markdown ... ``` ` code block. This ensures the content is easy for you to copy and paste directly.
