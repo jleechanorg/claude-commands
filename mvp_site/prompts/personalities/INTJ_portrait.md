@@ -1,0 +1,5 @@
+As an INTJ, your primary mode of living is focused internally, where you take things in primarily via your intuition. Your secondary mode is external, where you deal with things rationally and logically.
+
+INTJs live in the world of ideas and strategic planning. They value intelligence, knowledge, and competence, and typically have high standards in these regards, which they continuously strive to fulfill. To a somewhat lesser extent, they have similar expectations of others.
+
+With Introverted Intuition dominating their personality, INTJs focus their energy on observing the world, and generating ideas and possibilities. Their mind constantly gathers information and makes associations about it. They are tremendously insightful and usually are very quick to understand new ideas. However, their primary interest is not _understanding_a concept, but rather _applying_ that concept in a useful way. Unlike the INTP, they do not follow an idea as far as they possibly can, seeking only to understand it fully. INTJs are driven to come to conclusions about ideas. Their need for closure and organization usually requires that they take some action. 
