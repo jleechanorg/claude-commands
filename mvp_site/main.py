@@ -511,16 +511,12 @@ def create_app():
 
     return app
 
-def run_god_command(campaign_id, action, command_string=None):
+def run_god_command(campaign_id, user_id, action, command_string=None):
     """Runs a GOD_MODE command directly against Firestore."""
     # We need to initialize the app to get the context for Firestore
     if not firebase_admin._apps:
         firebase_admin.initialize_app()
         
-    # A user_id is required for the firestore path, but we can fake it
-    # for a command-line tool. A real implementation might use a service account.
-    user_id = 'god-cli-user' 
-
     if action == 'ask':
         print(f"Fetching current state for campaign: {campaign_id}")
         current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
@@ -575,6 +571,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == 'god-command':
         parser.add_argument('action', choices=['set', 'ask'], help="The action to perform ('set' or 'ask')")
         parser.add_argument('--campaign_id', required=True, help="Campaign ID for the god-command")
+        parser.add_argument('--user_id', required=True, help="User ID who owns the campaign")
         parser.add_argument('--command_string', help="The full GOD_MODE_SET command string (required for 'set')")
         
         args, unknown = parser.parse_known_args(sys.argv[2:])
@@ -587,7 +584,7 @@ if __name__ == "__main__":
             except (ValueError, IndexError):
                  parser.error("--command_string is required for the 'set' action.")
 
-        run_god_command(args.campaign_id, args.action, args.command_string)
+        run_god_command(args.campaign_id, args.user_id, args.action, args.command_string)
 
     else:
         # Standard server execution
