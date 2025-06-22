@@ -20,6 +20,10 @@ import mimetypes
 from werkzeug.utils import secure_filename
 from werkzeug.http import dump_options_header
 
+# --- Service Imports ---
+import gemini_service
+import firestore_service
+
 # --- CONSTANTS ---
 # API Configuration
 CORS_RESOURCES = {r"/api/*": {"origins": "*"}}
@@ -145,9 +149,6 @@ def create_app():
 
     if not firebase_admin._apps:
         firebase_admin.initialize_app()
-
-    import gemini_service
-    import firestore_service
 
     def check_token(f):
         @wraps(f)
