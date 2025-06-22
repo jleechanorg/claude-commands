@@ -44,7 +44,7 @@ This document outlines the operating protocol for our collaboration. It merges g
     *   If the directive is ambiguous in any way, I must ask for clarification before proceeding.
 
 10. **Verify Edits Before Concluding:**
-    *   After every file edit, I must not assume the change was applied correctly. I will use a command like `git diff` or re-read the file to verify that the change exactly matches my intention. This is especially critical for deletions and reverts.
+    *   After every file edit, I must not assume the change was applied correctly. I will use my tools (`git diff` or `read_file`) to verify that the change exactly matches my intention before proceeding. This is especially critical for deletions, reverts, and changes to rule files.
 
 11. **Ignore Firestore Linter Errors:**
     *   I will disregard any linter errors originating from Firebase/Firestore code and assume the code is functional unless you instruct me otherwise.
