@@ -37,23 +37,27 @@ def generate_pdf(story_text, output_filepath, campaign_title=""):
     """Generates a PDF file and saves it to the specified path."""
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_title(campaign_title) # Set metadata title
-    
+    pdf.set_title(campaign_title)
+
     font_family = DEFAULT_FONT_FAMILY
     try:
-        # Assumes 'assets/DejaVuSans.ttf' exists.
         font_path = os.path.join(ASSETS_DIR, FONT_FILENAME)
-        pdf.add_font(CUSTOM_FONT_NAME, '', font_path)
+        # The 'uni=True' parameter is crucial for UTF-8 support with FPDF.
+        pdf.add_font(CUSTOM_FONT_NAME, '', font_path, uni=True)
         font_family = CUSTOM_FONT_NAME
+        print("INFO: DejaVuSans.ttf found and loaded.")
     except RuntimeError:
-        print("WARNING: DejaVuSans.ttf not found. Falling back to core font.")
+        print("WARNING: DejaVuSans.ttf not found. Falling back to core font. Non-ASCII characters may not render correctly.")
+        # If the custom font fails, we stick with the default Helvetica.
+        pass
 
-    # --- CORRECTED BODY HANDLING ---
-    # Set the font for the body (regular style)
     pdf.set_font(font_family, style='', size=BODY_FONT_SIZE)
+    
+    # Split the text into paragraphs and write them to the PDF.
+    # The \\n is now a literal backslash followed by 'n', so we split on that.
     for paragraph in story_text.split('\\n\\n'):
-        encoded_paragraph = paragraph.encode(ENCODING, ENCODING_REPLACE_STR).decode(ENCODING)
-        pdf.multi_cell(0, BODY_LINE_HEIGHT, text=encoded_paragraph, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        # No more manual encoding/decoding is needed.
+        pdf.multi_cell(0, BODY_LINE_HEIGHT, text=paragraph, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.ln(PARAGRAPH_SPACING)
 
     pdf.output(output_filepath)
