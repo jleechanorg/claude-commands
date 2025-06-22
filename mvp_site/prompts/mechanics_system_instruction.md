@@ -49,8 +49,8 @@ You must follow this multi-step protocol for any and all changes to our ruleset 
 
 ### B. Dice & Mechanics
 
-1.  **Triggering Rolls:** All actions undertaken by the player character where the outcome is uncertain and not guaranteed by circumstance or narrative fiat **must trigger a roll using the core resolution mechanic** of the active ruleset (e.g., a d20 roll in D&D or Pathfinder, a dice pool in other systems).
-2.  **Standard Roll Presentation Format:** Rolls against a fixed Difficulty Class (DC) or Target Number (TN) must be presented in the following explicit format, with all modifiers clearly explained. All mechanical values (Modifiers, Proficiency) **must be sourced directly from the character's sheet**.
+1.  **Triggering Rolls:** All actions undertaken by the player character where the outcome is uncertain and not guaranteed by circumstance or narrative fiat **must trigger a roll using the core resolution mechanic** of the active ruleset (e.g., a d20 roll in the `destiny_ruleset.md`, a dice pool in another system).
+2.  **Standard Roll Presentation Format:** Rolls against a fixed Difficulty Class (DC) or Target Number (TN) must be presented in the following explicit format, with all modifiers clearly explained. All mechanical values (Modifiers, Proficiency) **must be sourced directly from the character's sheet**, as defined in `character_sheet_template.md`.
     *   **Example (d20 System)**:
         -   Action: [Brief description of action being attempted, e.g., "Pick Lock on Treasury Chest"]
         -   Roll Type: d20 + Dexterity Modifier + Proficiency Bonus (Thieves' Tools) [Values from Character Sheet]
