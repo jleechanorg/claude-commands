@@ -95,7 +95,7 @@ def _load_instruction_file(instruction_type):
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read().strip()
-            logging.info(f'Loaded prompt "{instruction_type}" from file: {os.path.basename(file_path)}')
+            # logging.info(f'Loaded prompt "{instruction_type}" from file: {os.path.basename(file_path)}')
             _loaded_instructions_cache[instruction_type] = content
         except FileNotFoundError:
             logging.error(f"CRITICAL: System instruction file not found: {file_path}. This is a fatal error for this request.")
@@ -104,7 +104,8 @@ def _load_instruction_file(instruction_type):
             logging.error(f"CRITICAL: Error loading system instruction file {file_path}: {e}")
             raise
     else:
-        logging.info(f'Loaded prompt "{instruction_type}" from cache.')
+        pass
+        #logging.info(f'Loaded prompt "{instruction_type}" from cache.')
         
     return _loaded_instructions_cache[instruction_type]
 
@@ -172,7 +173,7 @@ def _get_text_from_response(response):
     logging.warning(f"--- Response did not contain valid text. Full response object: {response} ---")
     return "[System Message: The model returned a non-text response. Please check the logs for details.]"
 
-def _get_context_stats(context, model_name):
+def _get_context_stats(context, model_name, current_game_state: GameState):
     """Helper to calculate and format statistics for a given story context."""
     if not context:
         return "Turns: 0, Chars: 0, Words: 0, Tokens: 0"
@@ -191,14 +192,24 @@ def _get_context_stats(context, model_name):
     except Exception as e:
         logging.warning(f"Could not count tokens for context stats: {e}")
         
-    return f"Turns: {len(context)}, Chars: {chars}, Words: {words}, Tokens: {tokens}"
+    all_core_memories = current_game_state.custom_campaign_state.get('core_memories', [])
+    stats_string = f"Turns: {len(context)}, Chars: {chars}, Words: {words}, Tokens: {tokens}, Core Memories: {len(all_core_memories)}"
+
+    if all_core_memories:
+        last_three = all_core_memories[-3:]
+        stats_string += "\\n--- Last 3 Core Memories ---\\n"
+        for i, memory in enumerate(last_three, 1):
+            stats_string += f"  {len(all_core_memories) - len(last_three) + i}: {memory}\\n"
+        stats_string += "--------------------------"
+
+    return stats_string
 
 
-def _truncate_context(story_context, max_chars: int, model_name: str, turns_to_keep_at_start=TURNS_TO_KEEP_AT_START, turns_to_keep_at_end=TURNS_TO_KEEP_AT_END):
+def _truncate_context(story_context, max_chars: int, model_name: str, current_game_state: GameState, turns_to_keep_at_start=TURNS_TO_KEEP_AT_START, turns_to_keep_at_end=TURNS_TO_KEEP_AT_END):
     """
     Intelligently truncates the story context to fit within a given character budget.
     """
-    initial_stats = _get_context_stats(story_context, model_name)
+    initial_stats = _get_context_stats(story_context, model_name, current_game_state)
     logging.info(f"Initial context stats: {initial_stats}")
 
     current_chars = sum(len(entry.get('text', '')) for entry in story_context)
@@ -226,7 +237,7 @@ def _truncate_context(story_context, max_chars: int, model_name: str, turns_to_k
     
     truncated_context = start_context + [truncation_marker] + end_context
     
-    final_stats = _get_context_stats(truncated_context, model_name)
+    final_stats = _get_context_stats(truncated_context, model_name, current_game_state)
     logging.info(f"Final context stats after truncation: {final_stats}")
     
     return truncated_context
@@ -326,40 +337,29 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # We will generate them again *after* truncation with the final context.
     temp_checkpoint_block, temp_core_memories, temp_seq_ids = _get_static_prompt_parts(current_game_state, [])
 
-    # --- NEW: Core Memory Logging ---
-    all_core_memories = current_game_state.custom_campaign_state.get('core_memories', [])
-    logging.info(f"--- Core Memories State: {len(all_core_memories)} total memories. ---")
-    if all_core_memories:
-        # Log the last 3 memories for inspection
-        last_three_memories = all_core_memories[-3:]
-        logging.info("--- Last 3 Core Memories: ---")
-        for i, memory in enumerate(last_three_memories, 1):
-            logging.info(f"  {len(all_core_memories) - len(last_three_memories) + i}: {memory}")
-        logging.info("-----------------------------")
-    # --- END NEW LOGGING ---
-
     prompt_scaffold = (
         f"{temp_checkpoint_block}\\n\\n"
-        f"{temp_core_memories}\\n\\n"
+        f"{temp_core_memories}"
         f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{temp_seq_ids}]\\n\\n"
-        f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\n"
-        f"TIMELINE LOG (FOR CONTEXT):\\n\\n"
-        f"YOUR TURN:\\n{_get_current_turn_prompt(user_input, mode)}"
     )
-    scaffold_chars = len(prompt_scaffold)
-    story_char_budget = SAFE_CHAR_LIMIT - scaffold_chars
     
-    logging.info(f"Prompt scaffold is {scaffold_chars} chars. Remaining budget for story: {story_char_budget}")
+    # Calculate the character budget for the story context
+    char_budget_for_story = SAFE_CHAR_LIMIT - len(prompt_scaffold)
+    logging.info(f"Prompt scaffold is {len(prompt_scaffold)} chars. Remaining budget for story: {char_budget_for_story}")
 
-    recent_context = _truncate_context(story_context, max_chars=story_char_budget, model_name=DEFAULT_MODEL)
+    # Truncate the story context if it exceeds the budget
+    truncated_story_context = _truncate_context(story_context, char_budget_for_story, DEFAULT_MODEL, current_game_state)
+
+    # Now that we have the final, truncated context, we can generate the real prompt parts.
+    checkpoint_block, core_memories_summary, sequence_id_list_string = _get_static_prompt_parts(current_game_state, truncated_story_context)
     
-    # 2. Build the final prompt with the (potentially truncated) context
-    checkpoint_block, core_memories_summary, sequence_id_list_string = _get_static_prompt_parts(current_game_state, recent_context)
+    # Serialize the game state for inclusion in the prompt
+    serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2, default=json_datetime_serializer)
     
     timeline_log_parts = []
     # NEW: Define sequence_ids from the final recent_context
-    sequence_ids = [str(entry.get('sequence_id', 'N/A')) for entry in recent_context]
-    for entry in recent_context:
+    sequence_ids = [str(entry.get('sequence_id', 'N/A')) for entry in truncated_story_context]
+    for entry in truncated_story_context:
         actor_label = "Story" if entry.get('actor') == 'gemini' else "You"
         seq_id = entry.get('sequence_id', 'N/A')
         timeline_log_parts.append(f"[SEQ_ID: {seq_id}] {actor_label}: {entry.get('text')}")
