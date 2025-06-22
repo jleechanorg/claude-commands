@@ -1,4 +1,4 @@
-ENFJ personal growth\nBe your best self\nPortraits\nCareers\nRelationships\nCompatibility\nGrowth\nTypeBots©\nTheory\nCarl Jung\nKids\nCart\nTests\nPersonal Growth for an ENFJ\nby Robert G. Heyward\nWhat does\nSuccess\nmean to an ENFJ?\nENFJs are motivated by external human
+### Growth for an ENFJ\n\nENFJ personal growth\nBe your best self\nPortraits\nCareers\nRelationships\nCompatibility\nGrowth\nTypeBots©\nTheory\nCarl Jung\nKids\nCart\nTests\nPersonal Growth for an ENFJ\nby Robert G. Heyward\nWhat does\nSuccess\nmean to an ENFJ?\nENFJs are motivated by external human
 situations, primarily by other people; their talents, their needs, their
 aspirations and their cares forming the world in which an ENFJ lives. They
 thrive when able to "make things right" for others, to enable and empower their
@@ -139,30 +139,4 @@ others have fulfilled their own life as well.\nAllowing your ENFJ strengths to f
       the sense of these background qualities permeate your drive to life will give
       you purpose and meaning. Allow yourself to feel the meanings and purposes of
       the world, let them become a valuable gift which can be expressed in your
-      dealings with others and in the things you strive for.\nTen rules to live by to achieve ENFJ success\nFeed your strengths!\nMake sure you have opportunities to involve yourself with others in situations where
-          your input is valued.\nFace your weaknesses!\nRealize and accept that some traits are strengths and some are weaknesses. By
-          facing your weaknesses, you can overcome them and they will have less power
-          over you.\nExpress your feelings.\nUnderstand that your feelings are as important as anyone else' in the overall situation.
-          Without your feelings and needs being valued, the best result is not realised,
-          so value and speak to your own feelings as much as you value those of others.\nMake decisions.\nDon't be afraid to have an opinion. You need to know show others the qualities
-          and potentials you can see are worthy of action.\nSmile at criticism.\nTry to see why disagreement and discord indicate the differences between people,
-          and use conflict as an opportunity to make your value judgements useful for growth,
-          because that's exactly what it is. Try not to feel responsible for another's
-          criticism, but try to hear it and understand the feelings and images it
-          engenders within you. Then you may see a path not only to agreement but to a
-          shared and truly valuable end.\nBe aware of others.\nRemember that there are 15 other personality types out there who see things
-         differently than you see them. Most of your problems with other people are
-         easier to deal with if you try to understand the other person's perspective.\nBe aware of yourself.\nDon't stint your own needs for the sake of others too much. Realise you are an
-         important focus. If you do not fulfill your own needs, how will you continue to be
-         effective and how will others know you are true to your beliefs?\nBe gentle in your expectations.\nNot everyone cares about the same things you care about, and not everyone
-         can meet your high level appreciation for social rules and norms. Many of the other
-         types won't want to be as close to you as you want to be with them, through no
-         fault of yours. Be gentle with yourself when that happens, and taper your expectations,
-         but don't let it ruin your wonderful engagement in other's lives. Just remember
-         to respect different needs and personal space.\nAssume the best.\nDon't distress yourself by feeling that your values are lost upon others - they
-         are not. Perhaps your thoughts and ideas need to sit with some before they can be
-         appreciated, while others will get you immediately.
-         Let the situation resolve
-         itself and never stop believing that love is the true answer.\nWhen in doubt, ask questions.\nDon't assume that the lack of feedback
-         is the same thing as negative feedback. If you need feedback and don't have
-         any, ask for it. There's no shame in that.\nMore resources\nENFJ\nProfile\nENFJ\nCareers\nENFJ\nRelationships\nType\nTheory\nx
+      dealings with others and in the things you strive for.

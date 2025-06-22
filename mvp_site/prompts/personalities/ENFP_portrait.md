@@ -1,13 +1,4 @@
-Be your best self\nPortraits\nCareers\nRelationships\nCompatibility\nGrowth\nTypeBots©\nTheory\nCarl Jung\nKids\nCart\nTests\nPortrait of an ENFP — The Inspirer\nPrint version\nENFP packet\nℹ️\n×\nType packets consolidate portrait, career, relationship, personal growth and theory writings about a single type into one document.\n×\nGet all ENFP pages in one document for $5?\nMore info\nAdd to cart\nENFP - (E)xtraverted i(N)tuitive (F)eeling (P)erceiving\nDominant\nExtraverted Intuition\nwith secondary\nIntroverted Feeling\nHello, ENFP, the spirited wanderer and champion of boundless imagination! In a world painted with endless hues of meaning, you 
-dance to the rhythm of your own heart, forever exploring the vast landscapes of ideas and dreams.\nEternal Optimist:\nYour optimistic soul is a beacon of light, casting away shadows with the power of positive thinking. 
-The glass is not just half full; it's a canvas waiting to be filled with the palette of infinite possibilities. 
-Your enthusiasm is contagious, inspiring those around you to believe in the magic of potential.\nCreative Visionary:\nImagination is your playground, and you, ENFP, are the master storyteller. Whether penning tales, creating art, or 
-dreaming up innovative solutions, your creative prowess knows no bounds.\nChampion of Authenticity:\nAuthenticity is your language, and you speak it fluently. You wear your uniqueness proudly, inviting others to 
-do the same. In a world often bound by conventions, your authenticity is a refreshing breeze.\nPeople Catalyst:\nYour genuine interest in people transforms every interaction into an adventure. You are the catalyst that sparks 
-connections and fosters a sense of belonging. Your ability to see the beauty in diversity weaves a rich tapestry of relationships, 
-where each thread contributes to the vibrant whole.\nAdventurous Explorer:\nLife, to you, is a grand adventure waiting to unfold. You thrive on spontaneity, embracing the thrill of the unknown. 
-New experiences fuel your spirit, and you infuse every moment with the excitement of discovery, turning the ordinary into the extraordinary.\nENFP, Shine your Light: Your boundless energy, creative fire, and unwavering belief in the extraordinary make you a beacon of inspiration. 
-Embrace your unique journey, and continue illuminating the world with the kaleidoscope of your ideas.\nYour browser does not support the video tag.\nRoza's War: Diary of a Soviet Sniper\nDetailed description of ENFP\nAs an ENFP, your primary mode of living is focused externally, where you
+### Portrait for an ENFP\n\nENFP\nAs an ENFP, your primary mode of living is focused externally, where you
 take things in primarily via your intuition.  Your secondary mode is internal,
 where you deal with things according to how you feel about them, or how they
 fit in with your personal value system.\nENFPs are warm, enthusiastic people, typically very bright and full of
@@ -87,5 +78,4 @@ extends to others as well as to themselves.\nENFPs are charming, ingenious, risk
 capabilities ranging across a broad spectrum.  They have many gifts which
 they will use to fulfill themselves and those near them, if they are able to
 remain centered and 
-master the ability of following through.\nAdvertisment\n*Read about the ENFP's Jungian type,\nExtraverted Intuition\n, or
-   the ENFP's child type,\nExtraverted Intuiting Perceiving\n.\nJungian functions\nDominant:\nExtraverted Intuition\nSecondary:\nIntroverted Feeling\nTertiary:\nExtraverted Thinking\nShadow:\nIntroverted Sensing\nMore resources\nENFP\nCareers\nENFP\nRelationships\nENFP\nGrowth\nType\nTheory\nBack to top ↑\nx
+master the ability of following through.\nAdvertisment

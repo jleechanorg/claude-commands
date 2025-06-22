@@ -1,4 +1,4 @@
-ESFJ personal growth\nBe your best self\nPortraits\nCareers\nRelationships\nCompatibility\nGrowth\nTypeBots©\nTheory\nCarl Jung\nKids\nCart\nTests\nPersonal Growth for an ESFJ\nby Robert G. Heyward\nWhat does\nSuccess\nmean to an ESFJ?\nThe ESFJ is called the "Caregiver", and for good reason. Caring is the
+### Growth for an ESFJ\n\nESFJ personal growth\nBe your best self\nPortraits\nCareers\nRelationships\nCompatibility\nGrowth\nTypeBots©\nTheory\nCarl Jung\nKids\nCart\nTests\nPersonal Growth for an ESFJ\nby Robert G. Heyward\nWhat does\nSuccess\nmean to an ESFJ?\nThe ESFJ is called the "Caregiver", and for good reason. Caring is the
 very nature of their personality; a personality driven by feeling judgements
 and supported by a strong sense of the world around them. The ESFJ not only
 sees how situations affect themselves and others, they are concerned about it.
@@ -168,39 +168,4 @@ Sensation more fully:\nTake care to try and
      making or enacting, what thoughts are they having? Don't pass judgment, or
      compare their situation to your own.\nTry to identify the
      personality type of everyone that you come into contact with for any
-     length of time.\nTen rules to live by to achieve ESFJ success\nFeed your strengths!\nLet your talent for caring and
-        giving spill out into the world around you, show your gifts to the world. Allow
-        yourself to take opportunities to nurture and develop situations in your home
-        and work environments which bring value for yourself and others. Find work or a
-        hobby which allows you to realise these strengths.\nFace your weaknesses!\nRealize and accept that some
-        things are never going to be how you would like them to be. Understand that
-        other peoples need to deal with the world regardless of how it seems. Facing
-        and dealing with discord or differences in others doesn't mean that you have to
-        change who you are; it means that you are giving yourself opportunities to
-        grow. By facing your weaknesses, you honour your true self and that of others.\nDoscover the world of others.\nDon't let
-        yourself fall into the trap of thinking you always know what is right for
-        others. Open your heart to the possibility of understanding that their true
-        needs are something that must be discovered through a recognition that their view
-        of the world might be very different, yet just as valid as your own.\nDon't be too hasty.\nTry to let things settle before
-        you make a judgement, allowing others to discover the best for themselves while
-        you try to see all the variables and contingencies in a situation.\nLook carefully at the world.\nRemember,
-        things are not always what they seem on the surface. You might need to look
-        deeper to discover the truth, particularly when it seems you are sure of your
-        first quick judgement. There are layers of meaning and truth beneath
-        everything.\nLet others take some of the load.\nBy letting
-        others make their own judgements, you are not letting things get out of
-        control, but are validating their own need to be a part of your life. Remember,
-        it is better to guide another to see your point of view than keeping them out
-        of the picture.\nBe accountable to others.\nRemember that
-        they need to understand you and your needs too. Express your doubts and
-        difficulties as well as your reasons and let them become partners to your
-        goals.\nDon't hem yourself in.\nStaying in your comfort zone is self defeating in the end. Try to make
-        every day one where you get out and discover a little something different about
-        the world and others. This will broaden your horizons and bring new ideas and
-        opportunities into focus.\nAssume the best and seek for it.\nDon't wait for
-        others to live up to your expectations. Every person has a goldmine of worth in
-        them, just as every situation can be turned to some good. If you let yourself
-        believe this, you will find yourself discovering ways to make it true for you.\nWhen in doubt, ask for help!\nDon't let your fears leave you on the
-        horns of a dilemma or lead you into disaster. If you are uncertain of something
-        or someone then get input from others who have greater experience in dealing
-        with this difficulty.\nMore resources\nESFJ\nProfile\nESFJ\nCareers\nESFJ\nRelationships\nType\nTheory\nx
+     length of time.

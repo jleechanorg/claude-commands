@@ -1,4 +1,4 @@
-ENFP personal growth\nBe your best self\nPortraits\nCareers\nRelationships\nCompatibility\nGrowth\nTypeBots©\nTheory\nCarl Jung\nKids\nCart\nTests\nPersonal Growth for an ENFP\nWhat does\nSuccess\nmean to an ENFP?\nENFPs are motivated in everything
+### Growth for an ENFP\n\nENFP personal growth\nBe your best self\nPortraits\nCareers\nRelationships\nCompatibility\nGrowth\nTypeBots©\nTheory\nCarl Jung\nKids\nCart\nTests\nPersonal Growth for an ENFP\nWhat does\nSuccess\nmean to an ENFP?\nENFPs are motivated in everything
   they do by a desire to understand the world around them.
   They are constantly searching about, mentally
   and physically, for input that will help them to better understand the Big
@@ -120,22 +120,4 @@ ENFP personal growth\nBe your best self\nPortraits\nCareers\nRelationships\nComp
       what the person is actually saying, without respect to yourself.\nPeriodically make lists of goals and
       accomplishments.  Revisit your goals and
       accomplishments often to maintain a sense of direction.\nSpend time alone regularly for the
-      purpose of thinking through issues in your life.\nTen rules to live by to achieve ENFP success\nFeed your strengths!\nMake sure you have opportunities to have new experiences to feel your quest of
-        understanding the world.\nFace your weaknesses!\nRealize and accept that some traits are strengths and some are weaknesses. By
-        facing your weaknesses, you can overcome them and they will have less power
-      over you.\nExpress your feelings.\nDon't let anger get bottled up inside you.  If
-        you have strong feelings, sort them out and express them, or they may become
-        destructive!\nMake decisions.\nDon't be afraid to have an opinion. You need to know how you feel about things
-        in order to be effective.\nSmile at criticism.\nTry to see disagreement and discord as an opportunity for growth, because that's
-        exactly what it is.  Try not to become
-        overly defensive towards criticism; try to hear it and judge it objectively.\nBe aware of others.\nRemember that there are 15 other personality types out there who see things
-        differently than you see them. Most of your problems with other people are
-        easier to deal with if you try to understand the other person's perspective.\nBe aware of yourself.\nDon't stint your own needs for the sake of others too much. Realise you are an
-        important focus. If you do not fulfill your own
-        needs, how will continue to be effective and how will others know you are true
-        to your beliefs?\nBe accountable for yourself.\nDon't waste mental energy finding blame in other's behaviour, or in identifying
-        yourself as a victim.  You have more
-        control over your life than any other person has.\nAssume the best.\nDon't distress yourself by assuming the worst.
-        Remember that a positive attitude creates positive situations.\nWhen in doubt, ask questions!\nDon't assume that the lack of feedback
-        is the same thing as negative feedback. If you need feedback and don't have
-        any, ask for it. There's no shame in asking.\nMore resources\nENFP\nProfile\nENFP\nCareers\nENFP\nRelationships\nType\nTheory\nx
+      purpose of thinking through issues in your life.

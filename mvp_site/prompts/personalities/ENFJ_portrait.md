@@ -1,6 +1,4 @@
-Be your best self\nPortraits\nCareers\nRelationships\nCompatibility\nGrowth\nTypeBots©\nTheory\nCarl Jung\nKids\nCart\nTests\nPortrait of an ENFJ — The Giver\nPrint version\nENFJ packet\nℹ️\n×\nType packets consolidate portrait, career, relationship, personal growth and theory writings about a single type into one document.\n×\nGet all ENFJ pages in one document for $5?\nMore info\nAdd to cart\n(E)xtraverted i(N)tuitive (F)eeling (J)udging\nDominant\nExtraverted Feeling\nwith 
-  secondary\nIntroverted Intuition\nHello, ENFJ, magnetic guide and guardian of hearts. In the grand theater of humanity, you take center stage, orchestrating harmonies of connection and infusing every interaction with the warmth of your caring spirit.\nCharismatic Visionary:\nYou exude charisma and vision, effortlessly drawing people into your orbit with your magnetic charm. You are a
-  natural leader, urging those in your circle toward a shared vision of unity and understanding.\nNurturing Luminary:\nYour nurturing spirit fuels and nourishes the growth of those around you.\nMaster of Empathy:\nYour empathetic nature allows you to tune in to how others are feeling, and foster a sense of belonging.\nChampion of Harmony:\nHarmony is your anthem, and you seek to create a world where everyone coexists peacefully.\nEloquent Communicator:\nYou articulate your thoughts with eloquence, weaving narratives that captivate and inspire connection.\nENFJ, Shine Your Light:\nYour charismatic leadership, nurturing spirit, and empathetic grace make you a beacon of inspiration. Embrace the power of your influence, ENFJ, and continue illuminating the world with the brilliance of your caring heart.\nYour browser does not support the video tag.\nRoza's War: Diary of a Soviet Sniper\nDetailed description of ENFJ\nAs an ENFJ, you're primary mode of living is focused externally, where you 
+### Portrait for an ENFJ\n\nENFJ\nAs an ENFJ, you're primary mode of living is focused externally, where you 
 deal with things according to how you feel about them, or how they fit
 into your value system.  Your secondary mode is internal, where
 you take things in primarily via your intuition.\nENFJs are people-focused individuals.  They live in the world of people
@@ -79,5 +77,4 @@ with richly developed insights into what makes other people tick.  This special
 ability to see growth potential in others combined with a genuine drive to
 help people makes the ENFJ a truly valued individual.  As giving and caring as
 the ENFJ is, they need to remember to value their own needs as well as the
-needs of others.\n*Read about the ENFJ's Jungian type,\nExtraverted Feeling\n, or
-   the ENFJ's child type,\nExtraverted Feeling Judging\n.\nJungian functions\nDominant:\nExtraverted Feeling\nSecondary:\nIntroverted Intuition\nTertiary:\nExtraverted Sensing\nShadow:\nIntroverted Thinking\nMore resources\nENFJ\nCareers\nENFJ\nRelationships\nENFJ\nGrowth\nType\nTheory\nBack to top ↑\nx
+needs of others.

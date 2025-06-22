@@ -1,4 +1,4 @@
-ENTJ personal growth\nBe your best self\nPortraits\nCareers\nRelationships\nCompatibility\nGrowth\nTypeBots©\nTheory\nCarl Jung\nKids\nCart\nTests\nPersonal Growth for an ENTJ\nby Robert G. Heyward\nWhat does\nSuccess\nmean to an ENTJ?\nENTJ people are realists, in the most basic sense of the word. Not only because their thinking is based upon a clear view of how things actually are in the world around them, but also because their ideas and strategies are structured around those unambiguous, "down to earth", commonsense beliefs which sum up the obvious and undeniable in life. But while ENTJs might be pragmatic about the immediate situation before them, they are scarcely satisfied with it until it can be made more productive, useful or valuable. The ENTJ's reasoning on such matters is always clear and generally unemotional. If action can improve an item or a situation then it ought to be taken, and the ENTJ will always be found in the midst of such action, organizing, planning and leading the way forward until the best result possible has been realized. This makes success for an ENTJ something that can be clearly seen, a real world result which can be measured. And whether measured in dollars, bricks, bread or just happy people, the successful ENTJ knows the result is due to their belief that it is just plain commonsense to try and make the best of every situation and get the most out if it for the most people.\nAllowing your ENTJ strengths to flourish\nAs an ENTJ, you have gifts that are specific to your personality type
+### Growth for an ENTJ\n\nENTJ personal growth\nBe your best self\nPortraits\nCareers\nRelationships\nCompatibility\nGrowth\nTypeBots©\nTheory\nCarl Jung\nKids\nCart\nTests\nPersonal Growth for an ENTJ\nby Robert G. Heyward\nWhat does\nSuccess\nmean to an ENTJ?\nENTJ people are realists, in the most basic sense of the word. Not only because their thinking is based upon a clear view of how things actually are in the world around them, but also because their ideas and strategies are structured around those unambiguous, "down to earth", commonsense beliefs which sum up the obvious and undeniable in life. But while ENTJs might be pragmatic about the immediate situation before them, they are scarcely satisfied with it until it can be made more productive, useful or valuable. The ENTJ's reasoning on such matters is always clear and generally unemotional. If action can improve an item or a situation then it ought to be taken, and the ENTJ will always be found in the midst of such action, organizing, planning and leading the way forward until the best result possible has been realized. This makes success for an ENTJ something that can be clearly seen, a real world result which can be measured. And whether measured in dollars, bricks, bread or just happy people, the successful ENTJ knows the result is due to their belief that it is just plain commonsense to try and make the best of every situation and get the most out if it for the most people.\nAllowing your ENTJ strengths to flourish\nAs an ENTJ, you have gifts that are specific to your personality type
     that aren't natural strengths for other types. By recognizing your special
     gifts and encouraging their growth and development, you will more readily see
     your place in the world, and be more content with your role.\nNearly all ENTJs will recognize the following characteristics in themselves.  They should embrace and nourish these strengths.\nAble to cut straight to the chase in any situation and not be sidetracked by non-essential issues\nA propensity for leadership which follows naturally from their ability to control and manage real time/real world situations\nA talent for factual analysis unbiased by prejudice or emotion.\nA "can do" approach to life which makes the working environment a positive place for them\nA strong regard for positive social and economic institutions, structure and government\nSecond to none time and space management skills, everything is organized and in its place\nAble to constantly synthesize and adapt new ideas and concepts into strategies for business, social, financial or environmental development\nENTJs who have a well-developed Introverted Intuitive function to complement their dominant Extraverted Thinking will enjoy these special gifts:\nA talent for creating great benefits through the addressing of social justice issues\nThe ability to recognize and mediate their potentials in accord with the expectations of others\nAn approach to life which includes an awareness of the differences between their needs and those of others\nAble to know when to stop and take stock of life and recognize the qualities of the moment\nA talent for showing others the way to get past difficulties in their outer life\nPotential problem areas\nWith any gift of strength, there is an associated weakness. Without
@@ -98,38 +98,4 @@ apply Introverted Intuition.\nWhen confronted by a situation which requires an i
        Try to let these immediate impressions have their moment and recognize them as
        true possibilities which ought to be examined more closely. Understand that
        they are not baseless images and ideas but rely upon valid sources of
-       information which you simply screen out of your life by habit.\nTen rules to live by to achieve ENTJ success\nFeed your strengths!\nGive yourself every opportunity to show
-        others your appreciation of a situation and how you could see it through to a
-        good outcome. Take charge where you can make it count.\nFace your weaknesses!\nUnderstand you have limits too. Your
-        careful world view is not the whole deal. How things look and feel may not
-        concern you, but they concern many others. Try and allow such things to be and
-        learn from them.\nTake time to find out how others really think.\nYou need to
-        drive past your thoughts with others and let their appreciations of a situation
-        reach you at a deeper level. It will then be possible for you to take account
-        of their needs as real world objectives which if included in your ideas will
-        bring greater harmony and quality to life and relationships.\nTake time to let the whole situation speak to you.\nDon't dismiss those abstract and seemingly hard to understand or bothersome aesthetic
-        and feeling judgments coming from others or from inside yourself. Drop
-        everything for a while, stop thinking and worrying and just relax into those
-        ideas and let them speak to you. Perhaps they can be accommodated, perhaps
-        something is hiding in there which offers a new way.\nWhen you get upset, you lose.\nYour energy and rational understandings
-        are strong assets, but can be very harmful if they turn against you and leave
-        you with nothing but emotions you cannot deal with. Remember that others cannot
-        always be expected to fall into your ways of seeing, and when your drive to
-        make them do so fails you will suffer feelings of resentment and even
-        abandonment. You cannot deal with the world like this. Moderate your ideas,
-        allow others their spaces, and you will grow.\nRespect your need for intellectual compatibility.\nDon't expect yourself to be a
-        "touchy-feely" or "warm-fuzzy" person. Realize that your
-        most ardent bonds with others will start with the head, rather than the heart.
-        Be aware of other's emotional needs, and express your genuine love and respect
-        for them in terms that are real to YOU. Be yourself.\nBe accountable for yourself.\nDon't blame the problems in your life
-        on other people. Look inwardly for solutions. No one has more control over your
-        life than you have.\nBe humble.\nJudge yourself at least as harshly as
-        you judge others.\nTake a positive approach to differences.\nDon't distress yourself and others by dwelling on what seem to be their limitations.
-        They need you to guide them and you need them to see things through. Try to
-        recognize who can perform the most ably within certain fields outside your own
-        competence. Let the feelings of others become a strength
-        rather than a hindrance to you.\nDon't get obsessed!\nRecognize the value that personal world
-        has to you, your friends, your family, your own inner\nselnse\nof self worth and life. Take pride in just being a good person and don't allow
-        external situations to control you. Try to relax and let the moment belong to
-        the best things you can find in others and yourself. Nothing out there is more
-        important than your own happiness.\nMore resources\nENTJ\nProfile\nENTJ\nCareers\nENTJ\nRelationships\nType\nTheory\nx
+       information which you simply screen out of your life by habit.

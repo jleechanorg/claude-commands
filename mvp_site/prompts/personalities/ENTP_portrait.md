@@ -1,14 +1,4 @@
-Portrait of an ENTP\nBe your best self\nPortraits\nCareers\nRelationships\nCompatibility\nGrowth\nTypeBots©\nTheory\nCarl Jung\nKids\nCart\nTests\nPortrait of an ENTP — The Visionary\n(E)xtraverted i(N)tuitive (T)hinking (P)erceiving\nDominant\nExtraverted Intuition\nwith secondary\nIntroverted Thinking\nPrint version\nENTP packet\nℹ️\n×\nType packets consolidate portrait, career, relationship, personal growth and theory writings about a single type into one document.\n×\nGet all ENTP pages in one document for $5?\nMore info\nAdd to cart\nHello, ENTP, ingenious maverick and purveyor of intellectual play. In the symphony of ideas, you dance with creativity, 
-crafting a vibrant tapestry of possibilities that captivates minds and opens new realms of thought.\nInnovative Explorer:\nYour mind is a playground of ideas, and you explore its vast expanse with unbridled curiosity. 
-As an innovative explorer, you revel in the thrill of intellectual discovery, always seeking to push the boundaries of what's known and 
-embrace the unknown.\nPlayful Inventor:\nYour mind is a workshop 
-where ideas are transformed into ingenious solutions and playful innovations. Your inventive spirit sparks joy and curiosity, 
-inviting others to join in the intellectual fun.\nEloquent Visionary:\nYour visionary spirit sees possibilities that others may overlook, and your ability to articulate ideas 
-with eloquence makes you a compelling voice in the realm of intellectual discourse.\nCharming Trailblazer:\nYour magnetic personality draws people into listening to your ideas, and your ability to express your thoughts
- with charm and wit makes people listen to what you have to say.\nVersatile Maverick:\nVersatility is your strength, and you adapt effortlessly to the ever-changing landscape of ideas in the world
-around you. Your ability to wear different intellectual hats allows you to navigate diverse realms of thought, bringing a refreshing and 
-dynamic perspective to every conversation.\nENTP, Shine with Play:\nYour inventive mind, playful spirit, and intellectual versatility make you a luminary in the tapestry of ideas. 
-Embrace the joy of intellectual play, and continue illuminating the world with the brilliance of your inventive and charismatic nature.\nYour browser does not support the video tag.\nRoza's War: Diary of a Soviet Sniper\nDetailed description of ENTP\nAs an ENTP, your primary mode of living is focused externally, where you
+### Portrait for an ENTP\n\nENTP\nAs an ENTP, your primary mode of living is focused externally, where you
 take things in primarily via your intuition.  Your secondary mode is internal,
 where you deal with things rationally and logically.\nWith Extraverted Intuition dominating their personality, the ENTP's
 primary interest in life is understanding the world and sussing out
@@ -75,5 +65,4 @@ and become excited about concepts, challenges and difficulties.  When
 presented with a problem, they're good at improvising and quickly come
 up with a creative solution.  Creative, clever, fun,
 curious, and theoretical, ENTPs have a broad range of possibilities in 
-their lives.\n*Read about the ENTP's Jungian type,\nExtraverted Intuition\n, or
-   the ENTP's child type,\nExtraverted Intuiting Perceiving\n.\nJungian functions\nDominant:\nExtraverted Intuition\nSecondary:\nIntroverted Thinking\nTertiary:\nExtraverted Feeling\nShadow:\nIntroverted Sensing\nMore resources\nENTP\nCareers\nENTP\nRelationships\nENTP\nGrowth\nType\nTheory\nBack to Top ↑\nx
+their lives.

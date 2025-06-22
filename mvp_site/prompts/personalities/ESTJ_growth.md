@@ -1,4 +1,4 @@
-ESTJ personal growth\nBe your best self\nPortraits\nCareers\nRelationships\nCompatibility\nGrowth\nTypeBots©\nTheory\nCarl Jung\nKids\nCart\nTests\nPersonal Growth for an ESTJ\nWhat does\nSuccess\nmean to an ESTJ?\nPeople with the ESTJ personality type have a high value for social order 
+### Growth for an ESTJ\n\nESTJ personal growth\nBe your best self\nPortraits\nCareers\nRelationships\nCompatibility\nGrowth\nTypeBots©\nTheory\nCarl Jung\nKids\nCart\nTests\nPersonal Growth for an ESTJ\nWhat does\nSuccess\nmean to an ESTJ?\nPeople with the ESTJ personality type have a high value for social order 
 and structure.  Throughout his or her life, the ESTJ develops a set of 
 judgement standards that
 they use to order events and impressions that exist in the world.
@@ -156,26 +156,4 @@ and develop the use of their highest introverted function, Introverted Sensing.\
         wandering way.  Try to have patience with this, and remember that everyone
         has something to offer.\nRemember that you have the most to learn from those people who are
         very different from you.  They have something to offer you, no matter how
-        difficult it may be for you to see it at first.\nTen rules to live by to achieve ESTJ success\nFeed your strengths!\nYou have been given the great ability to create logical, ethical principles
-         that transcend personal experience.  Allow these principles to be as good as
-         they can be by creating them with consideration for all available data.\nFace your weaknesses!\nSee your weaknesses for what they are, and seek to overcome them.  Especially,
-         resist the tendency to judge too quickly, and remember the importance of
-         considering other people's feelings.\nTalk through the facts.\nor write them down.  You need to step through the facts in order to define
-         good principles to live by.  Verbalizing them or putting them down on paper
-         may be a valuable tool for you.\nTake in everything.\nDon't dismiss ideas prematurely because you think you already know the answer.
-         Seek first to understand, and then to be understood.\nWhen you get angry, you lose.\nYour passion for your principles is admirable, but becomes destructive when
-         you fall into the "Anger Trap."  Remember that Anger is destructive to personal
-         relationships, and can be extremely hurtful to others.  Work through your 
-         anger before you unleash it upon others.  Disagreements and disappointments 
-         can only be handled effectively in a non-personal and dispassionate manner.\nBe yourself in relationships.\nDon't expect yourself to be a "touchy-feely" or "warm fuzzy" person.  Realize 
-         that your most ardent bonds start with the head, rather than the heart.  You
-         expect your actions to speak for themselves to your loved ones.  This may not 
-         be enough for some.  Be aware of other's emotional needs, and express your
-         genuine love and respect for them in terms that are real to YOU.  
-         Be  yourself.\nBe accountable for yourself.\nDon't blame the problems in your life on other people.  Look inwardly for 
-         solutions.  No one has more control over your life than you have.\nBe humble.\nJudge yourself at least as harshly as you judge others.\nResist the urge to control others.\nYou can't force others to adhere to your ways of thinking.  You may think that 
-         you know what's best for others, but you really only know how they can best
-         act according to your ideas of what is right.  Just as you are entitled to
-         live as you see fit, so are they.  Instead of judging and controlling others,
-         focus on using your judgement to create better impartial principles.\nSpend some time alone.\nEncourage the development of your introverted side.  You'll find many tangible benefits to becoming
-         a more well-rounded person.\nMore resources\nESTJ\nProfile\nESTJ\nCareers\nESTJ\nRelationships\nType\nTheory\nx
+        difficult it may be for you to see it at first.

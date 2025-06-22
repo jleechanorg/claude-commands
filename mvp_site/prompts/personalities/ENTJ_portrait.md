@@ -1,17 +1,4 @@
-Portrait of an ENTJ\nBe your best self\nPortraits\nCareers\nRelationships\nCompatibility\nGrowth\nTypeBots©\nTheory\nCarl Jung\nKids\nCart\nTests\nPortrait of an ENTJ —The Executive\nPrint version\nENTJ packet\nℹ️\n×\nType packets consolidate portrait, career, relationship, personal growth and theory writings about a single type into one document.\n×\nGet all ENTJ pages in one document for $5?\nMore info\nAdd to cart\n(E)xtraverted i(N)tuitive (T)hinking (J)udging\nDominant\nExtraverted Thinking\nwith secondary\nIntroverted Intuition\nGreetings, ENTJ, the visionary leader and mastermind orchestrator. In the grand theater of ambitions, you stand as a stalwart director, 
-guiding with unwavering determination and strategic brilliance to shape the world according to your vision.\nStrategic Architect:\nYour mind is a fortress of strategies, where ideas are meticulously crafted into grand designs. As a strategic 
-architect, you navigate the complexities of the world with a visionary mindset, building structures of success and progress that endure the 
-test of time.\nDecisive Commander:\nDecisiveness is your sword, and you wield it with unyielding resolve. In the face of uncertainty, your ability to 
-make swift decisions is a beacon that steers the ship through turbulent waters. Others find inspiration in your leadership, knowing you 
-chart a course with purpose and direction.\nVisionary Pioneer:\nVision is your guide, and you shape it with foresight and precision. Your visionary spirit propels you to explore 
-uncharted territories, uncovering opportunities that others may overlook. Your ability to see beyond the present paves the way for 
-innovation and progress.\nEfficient Executor:\nExecution is your strength, and you turn plans into reality with efficiency. Your pragmatic approach ensures 
-that strategies are not only conceived but also implemented with precision. Your ability to transform ideas into tangible outcomes is the 
-hallmark of your leadership.\nConfident Trailblazer:\nConfidence is your armor, and you lead with a self-assured stride, fearlessly navigating challenges and forging paths
-where others might hesitate. Your confidence instills trust and inspires 
-others to rally behind your vision.\nENTJ, Shine with Leadership:\nYour strategic mind, decisive leadership, and visionary spirit make you a luminary in the tapestry of 
-ambitions. Embrace the power of your leadership and continue illuminating the world with the brilliance of your determined and 
-forward-thinking nature.\nYour browser does not support the video tag.\nRoza's War: Diary of a Soviet Sniper\nDetailed description of ENTJ\nAs an ENTJ, your primary mode of living is focused externally, where you
+### Portrait for an ENTJ\n\nENTJ\nAs an ENTJ, your primary mode of living is focused externally, where you
 deal with things rationally and logically.  Your secondary mode
 is internal, where you take things in primarily via your intuition.\nENTJs are natural born leaders.  They live in a world of possibilities where they see all
 sorts challenges to be surmounted, and they want to be the ones responsible
@@ -85,5 +72,4 @@ of personal power, if they don't forget to remain balanced in their lives.
 They are assertive, innovative, long-range thinkers with an excellent ability 
 to translate theories and possibilities into solid plans of action.  They
 are usually tremendously forceful personalities, and have the tools to
-accomplish whatever goals they set out for.\n*Read about the ENTJ's Jungian type,\nExtraverted Thinking\n, or
-   the ENTJ's child type,\nExtraverted Thinking Judging\n.\nJungian functions\nDominant:\nExtraverted Thinking\nSecondary:\nIntroverted Intuition\nTertiary:\nExtraverted Sensing\nShadow:\nIntroverted Feeling\nMore resources\nENTJ\nCareers\nENTJ\nRelationships\nENTJ\nGrowth\nType\nTheory\nBack to top ↑\nx
+accomplish whatever goals they set out for.

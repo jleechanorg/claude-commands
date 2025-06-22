@@ -1,16 +1,4 @@
-Portrait of an ESFJ\nBe your best self\nPortraits\nCareers\nRelationships\nCompatibility\nGrowth\nTypeBots©\nTheory\nCarl Jung\nKids\nCart\nTests\nPortrait of an ESFJ — The Caregiver\nPrint version\nESFJ packet\nℹ️\n×\nType packets consolidate portrait, career, relationship, personal growth and theory writings about a single type into one document.\n×\nGet all ESFJ pages in one document for $5?\nMore info\nAdd to cart\n(E)xtraverted (S)ensing (F)eeling (J)udging\nDominant\nExtraverted Feeling\nwith secondary\nIntroverted Sensing\nWelcome, ESFJ, the heart and soul of the social tapestry! You, ESFJ, embody the spirit of warmth, empathy, and unwavering support. 
-Your innate ability to connect with others creates a vibrant and harmonious atmosphere wherever you go.\nSocial Maestro:\nAs an ESFJ, you are the maestro orchestrating the symphony of social interactions. 
-Your genuine interest in people, coupled with your incredible social intuition, allows you to navigate the intricate dance of relationships effortlessly.\nEmpathy in Abundance:\nYour empathetic nature knows no bounds. You possess a unique gift for understanding the 
-emotions of those around you, offering a comforting embrace to friends and strangers alike. Your ability to 
-provide a listening ear and a compassionate heart makes you a true emotional anchor for others.\nService with a Smile:\nThe joy you derive from helping others is infectious. Whether it's organizing events, 
-lending a helping hand, or offering words of encouragement, you find fulfillment in selfless service. Your 
-altruistic spirit brings sunshine to the lives of those fortunate enough to know you.\nDetail-Oriented Dynamo:\nYour attention to detail is unparalleled. From organizing events to remembering birthdays, you 
-effortlessly juggle the intricate details that make life special. Your meticulous approach ensures that every gathering is 
-infused with thoughtfulness and consideration.\nThe Glue of Relationships:\nIn your world, relationships are the heartbeat of life. You thrive in the company of loved ones, 
-creating a close-knit community where everyone feels valued and understood. Your dedication to fostering strong bonds makes 
-you the glue that holds relationships together.\nESFJ, Embrace Your Radiance: Your vibrant spirit, genuine kindness, and unwavering support make you an invaluable presence 
-in the lives of those fortunate to call you a friend. Embrace your radiance, ESFJ, and continue to illuminate the world 
-with the warmth of your heart.\nAdvertisement\n`\nDetailed description of ESFJ\nAs an ESFJ, your primary mode of living is focused externally, where you
+### Portrait for an ESFJ\n\nESFJ\nAs an ESFJ, your primary mode of living is focused externally, where you
 deal with things according to how you feel about them, or how they fit
 in with your personal value system.  Your secondary mode is internal,
 where you take things in via your five senses in a literal, concrete fashion.\nESFJs are people persons - they love people, and are warmly interested
@@ -98,5 +86,4 @@ when you get to know them), and female ESFJs will
 be very feminine.\nESFJs at their best are warm, sympathetic, helpful, cooperative, tactful,
 down-to-earth, practical, thorough, consistent, organized, enthusiastic,
 and energetic.  They enjoy tradition and security, and will seek stable
-lives that are rich in contact with friends and family.\n*Read about the ESFJ's Jungian type,\nExtraverted Feeling\n, or
-   the ESFJ's child type,\nExtraverted Feeling Judging\n.\nJungian functions\nDominant:\nExtraverted Feeling\nSecondary:\nIntroverted Sensing\nTertiary:\nExtraverted Intuition\nShadow:\nIntroverted Thinking\nMore resources\nESFJ\nCareers\nESFJ\nRelationships\nESFJ\nGrowth\nType\nTheory\nBack to top ↑\nx
+lives that are rich in contact with friends and family.
