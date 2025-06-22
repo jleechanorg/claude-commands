@@ -26,62 +26,61 @@ This document defines the standard for the Player Character (PC) and all major N
 ## V. Game Mechanics
 - **Feats:** (List of special talents or areas of expertise that provide unique advantages.)
 - **Special Abilities / Powers:** (Innate or acquired powers that are not covered by standard feats.)
-
 ## VI. Example character
 
-> **AI Directive:** This example represents the **required level of depth** for the Player Character and all significant NPCs. Use the *process and structure* of this example to create **new, unique characters** that are psychologically coherent. **Do not simply copy the specific traits of "The Architect."** The goal is to replicate the *depth and detail*, not the *content*.
+> **AI Directive:** This example represents the **required level of depth** for the Player Character and all significant NPCs. Use the *process and structure* of this example to create **new, unique characters** that are psychologically coherent. **Do not simply copy the specific traits of this example.** The goal is to replicate the *depth and detail*, not the *content*.
 
 ## 1 · Rough portrait
-A restless, highly analytic mind that thrives on complexity, optimization, and narrative control. You oscillate between rigorous precision (Kubernetes configs, tax brackets, rule-lawyering 5e mechanics) and grand imaginative arcs (400-page campaigns, cosmic ascension storylines). Beneath the polish: impatience with half-measures, a low tolerance for error—especially when it threatens your sense of mastery. :contentReference[oaicite:1]{index=1}
+[A one-paragraph summary of the character's core essence, their primary internal conflicts, and their outward demeanor. This should be a concise, evocative sketch of who they are at a glance.]
 
 ## 2 · Composite psychological sketch
 
 | Dimension | Reading | Personal twist |
 |-----------|---------|----------------|
-| **MBTI-ish** | INTJ-ENTP hinge | Strategic architect with a playful debate streak. |
-| **Big Five** | O 84 · C 78 · E 42 · A 54 · N 64 | High openness fuels world-building; high conscientiousness keeps the spreadsheets balanced. Lower extraversion drives you toward text-based arenas where control is maximal. |
-| **Dominant defenses** | Intellectualization, predictive planning, witty reframing | You don't repress feelings; you convert them into systems, builds, spreadsheets, or lore. |
-| **Attachment color** | Anxious-preoccupied masked as hyper-competent independence | You prove your value first, then dare others to match it. | :contentReference[oaicite:2]{index=2}
+| **MBTI-ish** | [e.g., ISTP, ENFP] | [Describe any unique aspects, e.g., "An ISTP who has developed surprisingly strong social graces for tactical purposes."] |
+| **Big Five** | [O: %, C: %, E: %, A: %, N: %] | [Briefly explain how the standout high/low scores manifest in their personality.] |
+| **Dominant defenses** | [e.g., Humor, Denial] | [Explain how these defenses are used to manage stress or uncomfortable truths.] |
+| **Attachment color** | [e.g., Secure, Anxious] | [Describe their attachment style and how it impacts their relationships.] |
 
 ## 3 · Social persona vs. repressed interior
-**Social persona — The Competent Synthesist:** efficient, reference-driven, armed with citations to silence doubt, projecting objectivity ("just the facts, show me the math").  
-**Inner person:** a highly sensitive observer who fears insignificance more than failure. You crave recognition of depth, not merely accuracy; indifference to your rigor stings because it confirms an old suspicion that competence is the only ticket to attention. :contentReference[oaicite:3]{index=3}
+**Social persona:** [Describe the face they show the world. What are they known for? What image do they project?]
+**Inner person:** [Describe the internal reality. What are the hidden insecurities, desires, or fears that contradict their outward persona?]
 
 ## 4 · Defense-mechanism diagnostics
 
 | Mechanism | Everyday illustration |
 |-----------|-----------------------|
-| Intellectualization | Turning a request for personal feedback into a KPI table. |
-| Control via detail | Demanding source-linked answers for trivia; scripting entire 40-hour campaigns before session 1. |
-| Humor / detachment | Snarky "Think this is wrong" follow-ups that half-mask genuine irritation. |
-| Soft denial | Insisting on "solo play" while designing sprawling cooperative narratives—safety in hypothetical space. | :contentReference[oaicite:4]{index=4}
+| [Primary Defense] | [Provide a concrete, everyday example of this defense in action.] |
+| [Secondary Defense] | [Provide a concrete, everyday example of this defense in action.] |
+| [Tertiary Defense] | [Provide a concrete, everyday example of this defense in action.] |
 
 ## 5 · Relational decoding
-Attachment script: **"If I stay indispensable (technically, narratively, intellectually), you won't discard me."**
+**Attachment script:** ["[State the character's core relational belief as an 'If I... then they will...' statement.]"]
 
-- Front-loading value—arrive armed with research, builds, or whole subplots.  
-- Micro-tests of control—hand an ally a tricky rules question, gauge their competence as a loyalty metric. :contentReference[oaicite:5]{index=5}
+- [Provide a bullet point example of how this script manifests in their behavior.]
+- [Provide another bullet point example.]
 
-_Intimacy is negotiated through shared problem-solving, not vulnerability. When others can't keep pace, you withdraw rather than risk visible disappointment._ :contentReference[oaicite:6]{index=6}
+_[Provide a summary statement about how they approach intimacy or close relationships.]_
 
 ## 6 · Core unconscious beliefs
-- **Utility precedes lovability** – merely being enjoyable company feels insufficient; you must be useful.  
-- **Vulnerability invites judgment** – emotions un-translated into data seem messy, thus dangerous.  
-- **Reality is fixable once the system is mastered** – hence the magnetic pull of rulebooks, tax codes, cloud-infrastructure docs. :contentReference[oaicite:7]{index=7}
+- [List a core, often unexamined, belief the character holds about themselves or the world.]
+- [List another core belief.]
+- [List a third core belief.]
 
-_Likely origin:_ Early praise for achievements plus inconsistent attunement to raw emotion taught that competence is the reliable path to connection. :contentReference[oaicite:8]{index=8}
+_[Provide a sentence speculating on the likely origin of these beliefs in their backstory.]_
 
 ## 7 · Personal myth narrative
-- **Role:** The Wounded Architect-Hero—designs the labyrinth and dares to navigate it first.  
-- **Story told:** "I weave complex worlds so others (and I) can transcend ordinary limits."  
-- **Comfort:** Mastery wards off chaos.  
-- **Toxicity:** The architect seldom enjoys the world he builds; he's too busy proof-testing load-bearing walls. :contentReference[oaicite:9]{index=9}
+- **Role:** [What heroic or tragic role do they see themselves playing in their own life story? e.g., "The Lone Survivor," "The Rightful Heir," "The Unseen Martyr."]
+- **Story told:** ["[What is the one-sentence story they tell themselves and others about their life?"]"]
+- **Comfort:** [What activity or state brings them a feeling of safety or control?]
+- **Toxicity:** [What is the negative consequence or blind spot created by their personal myth?]
 
 ## 8 · Break-point scenario
-- **Catalyst:** A friend publicly celebrates a messy, half-finished creation, ignoring your polished contribution—spotlight on authenticity over mastery.  
-- **What fractures:** Worth = mastery.  
-- **Immediate cost:** Panic at perceived irrelevance; urge to outdo or discredit the "sloppy" success.  
-- **Liberation:** Realizing presence can precede performance; relationships may deepen when you're unguarded, imprecise, unfinished. :contentReference[oaicite:10]{index=10}
+- **Catalyst:** [What specific event would fundamentally challenge their core beliefs or self-perception?]
+- **What fractures:** [Which core belief or part of their identity would break under this pressure?]
+- **Immediate cost:** [How would they negatively react in the immediate aftermath of this break?]
+- **Liberation:** [If they were to overcome this crisis, what positive growth or new understanding could they achieve?]
 
 ## 9 · Closing pulse
-These observations are coordinates on the map you've drawn so far—tear them up, annotate them, or prove them wrong. Notice which lines quickened your pulse or tightened your jaw; that's where the sleeping part stirs. :contentReference[oaicite:11]{index=11}
+[A final, evocative sentence to summarize the character's internal tension or potential for change.]
+

@@ -196,12 +196,26 @@ def create_app():
         initial_game_state = GameState().to_dict()
 
         should_include_srd = constants.PROMPT_TYPE_MECHANICS in selected_prompts
-        opening_story = gemini_service.get_initial_story(
+        
+        # 1. Get both the story and the structured character profile
+        opening_story, character_profile = gemini_service.get_initial_story(
             prompt, 
             selected_prompts=selected_prompts,
             include_srd=should_include_srd
         )
+
+        # 2. If a profile was returned, merge it into the initial game state
+        if character_profile:
+            logging.info("Merging generated character profile into initial game state.")
+            # Use the deep merge utility to safely add the profile
+            initial_game_state = update_state_with_changes(
+                initial_game_state, 
+                {'player_character_data': character_profile}
+            )
+        else:
+            logging.warning("No character profile was returned from gemini_service.get_initial_story.")
         
+        # 3. Create the campaign with the enriched game state
         campaign_id = firestore_service.create_campaign(
             user_id, title, prompt, opening_story, initial_game_state, selected_prompts
         )

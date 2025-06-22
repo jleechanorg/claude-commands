@@ -242,13 +242,32 @@ def _truncate_context(story_context, max_chars: int, model_name: str, current_ga
     
     return truncated_context
 
+def _parse_initial_story_response(response_text: str) -> tuple[str, dict]:
+    """
+    Parses the JSON response from the initial story generation.
+    Returns the story text and the character profile dictionary.
+    """
+    try:
+        # Clean up the response text by removing markdown code block fences
+        cleaned_text = re.sub(r'```json\n|```', '', response_text).strip()
+        data = json.loads(cleaned_text)
+        story = data.get('initial_story', '[Error: Initial story not found in response.]')
+        profile = data.get('character_profile', {})
+        return story, profile
+    except (json.JSONDecodeError, AttributeError) as e:
+        logging.error(f"Failed to parse initial story JSON response: {e}")
+        logging.error(f"Raw response was:\\n{response_text}")
+        # Fallback for non-JSON responses
+        return response_text, {}
+
 @log_exceptions
 def get_initial_story(prompt, selected_prompts=None, include_srd=False):
-    """Generates the initial story part, including character, narrative, and mechanics instructions."""
-
+    """
+    Generates the initial story and a structured character profile.
+    Returns the story text and the profile as a dictionary.
+    """
     if selected_prompts is None:
-        selected_prompts = [] 
-        logging.warning("No specific system prompts selected for initial story. Using none.")
+        selected_prompts = []
 
     system_instruction_parts = []
 
@@ -286,7 +305,9 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False):
     logging.info(f"Using model: {model_to_use} for initial story generation.")
 
     response = _call_gemini_api(contents, model_to_use, current_prompt_text_for_logging=prompt, system_instruction_text=system_instruction_final)
-    return _get_text_from_response(response)
+    response_text = _get_text_from_response(response)
+    
+    return _parse_initial_story_response(response_text)
 
 @log_exceptions
 def continue_story(user_input, mode, story_context, current_game_state: GameState, selected_prompts=None):
