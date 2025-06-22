@@ -1,12 +1,55 @@
 import unittest
 from unittest.mock import patch, MagicMock
 import logging
+import datetime
 
 # We need to import the service we are testing
 import firestore_service
 
 # Disable logging for most tests to keep output clean, can be enabled for debugging
 # logging.disable(logging.CRITICAL)
+
+# Mock firebase_admin before importing the service
+mock_firestore = MagicMock()
+# Configure the mock to have the sentinel values using MagicMock for identity checks
+mock_firestore.DELETE_FIELD = MagicMock(name="DELETE_FIELD")
+mock_firestore.SERVER_TIMESTAMP = MagicMock(name="SERVER_TIMESTAMP")
+
+import sys
+sys.modules['firebase_admin.firestore'] = mock_firestore
+
+# Now import the service, which will use the mock
+from firestore_service import json_default_serializer, update_state_with_changes
+
+# Create sentinel mock objects for use in the tests.
+DELETE_SENTINEL = MagicMock(name="DELETE_FIELD")
+TIMESTAMP_SENTINEL = MagicMock(name="SERVER_TIMESTAMP")
+
+@patch('firestore_service.firestore.SERVER_TIMESTAMP', TIMESTAMP_SENTINEL)
+@patch('firestore_service.firestore.DELETE_FIELD', DELETE_SENTINEL)
+class TestJsonDefaultSerializer(unittest.TestCase):
+
+    def test_datetime_serialization(self):
+        """Tests that datetime objects are serialized to ISO 8601 strings."""
+        now = datetime.datetime(2025, 6, 22, 12, 30, 0)
+        self.assertEqual(json_default_serializer(now), "2025-06-22T12:30:00")
+
+    def test_delete_field_sentinel(self):
+        """Tests that the DELETE_FIELD sentinel is serialized to None."""
+        # The serializer will now correctly see the patched DELETE_SENTINEL
+        self.assertIsNone(json_default_serializer(DELETE_SENTINEL))
+
+    def test_server_timestamp_sentinel(self):
+        """Tests that the SERVER_TIMESTAMP sentinel is serialized to a specific string."""
+        # The serializer will now correctly see the patched TIMESTAMP_SENTINEL
+        self.assertEqual(json_default_serializer(TIMESTAMP_SENTINEL), "<SERVER_TIMESTAMP>")
+
+    def test_unserializable_object(self):
+        """Tests that a generic object raises a TypeError."""
+        class Unserializable:
+            pass
+        with self.assertRaises(TypeError):
+            json_default_serializer(Unserializable())
 
 class TestUpdateStateWithChanges(unittest.TestCase):
     
