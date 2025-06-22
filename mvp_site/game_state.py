@@ -24,7 +24,6 @@ class GameState:
         self.world_data = kwargs.get("world_data", {})
         self.npc_data = kwargs.get("npc_data", {})
         self.custom_campaign_state = kwargs.get("custom_campaign_state", {})
-        self.world_time = kwargs.get("world_time", {"year": 2024, "month": "January", "day": 1, "hour": 9, "minute": 0, "second": 0})
         self.last_state_update_timestamp = kwargs.get("last_state_update_timestamp", datetime.datetime.now(datetime.timezone.utc))
         
         migration_status_value = kwargs.get("migration_status", MigrationStatus.NOT_CHECKED.value)

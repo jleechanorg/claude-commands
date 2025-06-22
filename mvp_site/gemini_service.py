@@ -143,8 +143,11 @@ def _call_gemini_api(prompt_contents, model_name, current_prompt_text_for_loggin
 
     if current_prompt_text_for_logging:
         logging.info(f"--- Calling Gemini API with current prompt: {str(current_prompt_text_for_logging)[:1000]}... ---")
-    logging.info(f"--- Calling Gemini API with prompt of length: {len(prompt_contents)} ---")
-    
+
+    # Calculate total character count for logging
+    total_chars = sum(len(p) for p in prompt_contents if isinstance(p, str))
+    logging.info(f"--- Calling Gemini API with prompt of total characters: {total_chars} ---")
+
     generation_config_params = {
         "max_output_tokens": MAX_TOKENS,
         "temperature": TEMPERATURE,
