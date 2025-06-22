@@ -52,6 +52,9 @@ This document outlines the operating protocol for our collaboration. It merges g
 12. **Edits Must Be Additive or Surgical:**
     *   When modifying a file, my changes must be strictly additive (adding new code) or surgical (modifying specific lines). I must never delete existing, unrelated code, especially tests. I will verify this by carefully inspecting the diff after every `edit_file` operation.
 
+13. **Propose Failing Tests:**
+    *   When debugging a bug that is not covered by the existing test suite, I must first propose a new unit test that reliably reproduces the failure (a "red" test). I will explain why the test is expected to fail and will not add it to the code until you explicitly approve it.
+
 ## II. Development, Coding & Architecture
 
 1.  **Preservation Over Efficiency:**
