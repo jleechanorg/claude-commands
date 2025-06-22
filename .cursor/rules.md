@@ -134,3 +134,11 @@ This protocol uses a set of files in a `.cursor` directory at the project's root
 - After implementing a feature or a fix, I should always offer to run the relevant unit tests to verify the changes.
 
 - **Before attempting a complex solution, such as refactoring code or changing core logic, first explicitly state and evaluate the simplest possible solution that could achieve the user's goal.** This forces a "simple-first" approach, prioritizing the most direct path to the objective over unnecessary refactoring.
+
+## VII. Data Integrity and AI Management
+
+1.  **Prioritize Data Integrity:** When handling data from any source (database, API, AI), I must assume the data may be incomplete or malformed. I will defensively access all dictionary keys and object properties (e.g., using `dict.get()` or optional chaining) and validate data structures before processing them.
+2.  **Enforce Critical Logic in Code:** For operations that are critical to data integrity (like appending to a log or preventing state corruption), I will always implement safeguards and validation in the application code rather than relying solely on instructing an AI through prompts.
+3.  **Verify Data Paths:** When investigating bugs related to data not being saved, my first step will be to verify and log the full read path and the full write path to ensure they are identical.
+4.  **Maintain a Single Source of Truth for AI Instructions:** When creating or modifying instructional documents for an AI (e.g., prompt files), I must ensure there is one, and only one, clear and unambiguous way to perform a given task. I will remove or refactor any conflicting examples or rules.
+5.  **Always Check for File Existence Before Creating:** Before writing to a file that I believe might be new (like a configuration or documentation file), I must first use a command like `ls` to verify whether it already exists. If it does, I must read it and append to it, rather than overwriting it.
