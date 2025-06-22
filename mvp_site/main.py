@@ -2,7 +2,7 @@ import os
 import io
 import uuid
 from functools import wraps
-from flask import Flask, request, jsonify, send_from_directory, send_file, Response
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 import firebase_admin
 from firebase_admin import auth
@@ -12,13 +12,12 @@ import logging
 from game_state import GameState, MigrationStatus
 import constants
 import json
-import datetime
 import collections
-import urllib.parse
-from firestore_service import update_state_with_changes
-import mimetypes
-from werkzeug.utils import secure_filename
-from werkzeug.http import dump_options_header
+from firestore_service import update_state_with_changes, json_default_serializer
+
+# --- Service Imports ---
+import gemini_service
+import firestore_service
 
 # --- CONSTANTS ---
 # API Configuration
@@ -87,12 +86,6 @@ def format_state_changes(changes: dict) -> str:
     recurse_items(changes)
     return "\\n".join(log_lines)
 
-def json_default_serializer(o):
-    """Handles serialization of data types json doesn't know, like datetimes."""
-    if isinstance(o, (datetime.datetime, datetime.date)):
-        return o.isoformat()
-    raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
-
 def parse_set_command(payload_str: str) -> dict:
     """
     Parses a multi-line string of `key.path = value` into a nested
@@ -142,9 +135,6 @@ def create_app():
 
     if not firebase_admin._apps:
         firebase_admin.initialize_app()
-
-    import gemini_service
-    import firestore_service
 
     def check_token(f):
         @wraps(f)
@@ -235,15 +225,21 @@ def create_app():
 
         user_input_stripped = user_input.strip()
 
-        # --- One-time legacy state cleanup on any interaction ---
+        # --- Game State Loading and Legacy Cleanup ---
         current_game_state_doc = firestore_service.get_campaign_game_state(user_id, campaign_id)
-        if not current_game_state_doc:
-            return jsonify({KEY_SUCCESS: False, KEY_ERROR: "Game state not found for this campaign."}), 404
         
-        current_state_dict = current_game_state_doc.to_dict()
-        current_state_dict, was_cleaned = _cleanup_legacy_state(current_state_dict)
+        # This is the key fix: ensure current_game_state is always a valid GameState object.
+        if current_game_state_doc:
+            current_game_state = GameState.from_dict(current_game_state_doc.to_dict())
+        else:
+            current_game_state = GameState()
+        
+        # Perform cleanup on a dictionary copy
+        cleaned_state_dict, was_cleaned = _cleanup_legacy_state(current_game_state.to_dict())
         if was_cleaned:
-            firestore_service.update_campaign_game_state(user_id, campaign_id, current_state_dict)
+            # If cleaned, update the main object from the cleaned dictionary
+            current_game_state = GameState.from_dict(cleaned_state_dict)
+            firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state.to_dict())
             logging.info("Legacy state cleanup complete.")
         # --- End cleanup ---
 
@@ -259,8 +255,8 @@ def create_app():
                 logging.warning(f"GOD_MODE_SET command resulted in no valid changes.")
                 return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: The GOD_MODE_SET command was received, but contained no valid instructions or was empty.]"})
 
-            # No need to re-fetch state, it's already loaded and cleaned above.
-            current_state_dict_before_update = current_state_dict.copy()
+            # The loaded current_game_state object is guaranteed to be valid here
+            current_state_dict_before_update = current_game_state.to_dict()
             logging.info(f"GOD_MODE_SET state BEFORE update:\\n{json.dumps(current_state_dict_before_update, indent=2, default=json_default_serializer)}")
             
             updated_state = update_state_with_changes(current_state_dict_before_update, proposed_changes)
@@ -272,8 +268,8 @@ def create_app():
             return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: Game state has been forcefully updated.]"})
 
         if user_input_stripped == GOD_ASK_STATE_COMMAND:
-            # No need to re-fetch state, it's already loaded and cleaned.
-            game_state_json = json.dumps(current_state_dict, indent=2, default=json_default_serializer)
+            # The loaded current_game_state object is guaranteed to be valid here
+            game_state_json = json.dumps(current_game_state.to_dict(), indent=2, default=json_default_serializer)
             
             firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
             
@@ -317,13 +313,6 @@ def create_app():
         campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
         if not campaign: return jsonify({KEY_ERROR: 'Campaign not found'}), 404
         
-        # --- NEW STATE MANAGEMENT WORKFLOW ---
-        # 1. Read current game state
-        current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
-        if not current_game_state:
-            # If no game state exists at all, create a fresh one.
-            current_game_state = GameState()
-
         # --- ONE-TIME LEGACY MIGRATION ---
         logging.info(f"Evaluating campaign {campaign_id} for legacy migration. Current status: {current_game_state.migration_status.value}")
         if current_game_state.migration_status == MigrationStatus.NOT_CHECKED:
