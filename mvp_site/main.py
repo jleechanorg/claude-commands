@@ -2,23 +2,18 @@ import os
 import io
 import uuid
 from functools import wraps
-from flask import Flask, request, jsonify, send_from_directory, send_file, Response
+from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 import firebase_admin
-from firebase_admin import auth, firestore
+from firebase_admin import auth
 import traceback
 import document_generator
 import logging
 from game_state import GameState, MigrationStatus
 import constants
 import json
-import datetime
 import collections
-import urllib.parse
-from firestore_service import update_state_with_changes
-import mimetypes
-from werkzeug.utils import secure_filename
-from werkzeug.http import dump_options_header
+from firestore_service import update_state_with_changes, json_default_serializer
 
 # --- Service Imports ---
 import gemini_service
@@ -90,15 +85,6 @@ def format_state_changes(changes: dict) -> str:
 
     recurse_items(changes)
     return "\\n".join(log_lines)
-
-def json_default_serializer(o):
-    """Handles serialization of data types json doesn't know, like datetimes."""
-    if isinstance(o, (datetime.datetime, datetime.date)):
-        return o.isoformat()
-    # Check for Firestore's special DELETE_FIELD sentinel.
-    if o == firestore.DELETE_FIELD:
-        return None  # Or another appropriate serializable value like a special string
-    raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
 
 def parse_set_command(payload_str: str) -> dict:
     """
@@ -326,9 +312,6 @@ def create_app():
         # Fetch campaign metadata and story context
         campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
         if not campaign: return jsonify({KEY_ERROR: 'Campaign not found'}), 404
-        
-        # --- NEW STATE MANAGEMENT WORKFLOW ---
-        # 1. Read current game state - This is already done and validated at the top of the function.
         
         # --- ONE-TIME LEGACY MIGRATION ---
         logging.info(f"Evaluating campaign {campaign_id} for legacy migration. Current status: {current_game_state.migration_status.value}")

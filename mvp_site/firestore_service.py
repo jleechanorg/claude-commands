@@ -96,6 +96,17 @@ def json_serial(obj):
         return '<SERVER_TIMESTAMP>'
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
+def json_default_serializer(o):
+    """Handles serialization of data types json doesn't know, like datetimes."""
+    if isinstance(o, (datetime.datetime, datetime.date)):
+        return o.isoformat()
+    # Check for Firestore's special DELETE_FIELD sentinel.
+    if o == firestore.DELETE_FIELD:
+        return None  # Or another appropriate serializable value
+    if o == firestore.SERVER_TIMESTAMP:
+        return "<SERVER_TIMESTAMP>"
+    raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
+
 def get_db():
     """Returns the Firestore client."""
     return firestore.client()
