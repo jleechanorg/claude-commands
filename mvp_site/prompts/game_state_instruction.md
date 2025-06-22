@@ -4,8 +4,8 @@
 **This is the most critical first step.** Immediately after you generate the initial campaign premise, the main character, the world, and any key NPCs, you **must** consolidate all of that information into a single, comprehensive `[STATE_UPDATES_PROPOSED]` block.
 
 This first block should not be an "update" but a "creation." It must contain all the initial data for:
-- `player_character_data`: The full character sheet, stats, inventory, and backstory.
-- `npc_data`: Profiles for all key NPCs created during setup.
+- `player_character_data`: The full character sheet, stats, inventory, and backstory, and a **Myers-Briggs Type (MBTI)**.
+- `npc_data`: Profiles for all key NPCs created during setup, each with their own **Myers-Briggs Type (MBTI)**.
 - `world_data`: Key locations, political situation, and any other foundational world-building elements.
 - `custom_campaign_state`: The initial premise and any other custom tracking fields.
 - `world_time`: The starting date and time.
@@ -18,6 +18,8 @@ This first block should not be an "update" but a "creation." It must contain all
   "player_character_data": {
     "name": "Sir Kaelan the Adamant",
     "archetype": "The Idealistic Knight Facing a Corrupt Reality",
+    "alignment": "Lawful Good",
+    "mbti": "INFJ",
     "level": 5,
     "hp_max": 49,
     "hp_current": 49,
@@ -28,11 +30,13 @@ This first block should not be an "update" but a "creation." It must contain all
   "npc_data": {
     "King Theron": {
       "role": "King of Eldoria",
-      "status": "Weak and ineffective"
+      "status": "Weak and ineffective",
+      "mbti": "ISFP"
     },
     "Pyrexxus": {
       "role": "Ancient Evil Dragon",
-      "location": "Dragon's Tooth mountains"
+      "location": "Dragon's Tooth mountains",
+      "mbti": "ENTJ"
     }
   },
   "world_data": {

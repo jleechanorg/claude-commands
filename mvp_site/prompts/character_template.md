@@ -1,11 +1,15 @@
 # Character Profile Template & Standard
 
+**AI Directive: The Myers-Briggs Type (MBTI) is a core part of a character's identity. It must not be mentioned explicitly in the narrative, but it must subtly and consistently inform the character's thought processes, dialogue, and decisions. For example, an 'ISTJ' will be more likely to rely on past experiences and established rules, while an 'ENFP' will be more driven by exploring new possibilities and connecting with others on an emotional level. This is a foundational, non-negotiable aspect of roleplaying.**
+
 This document defines the standard for the Player Character (PC) and all major Non-Player Character (NPC) personalities. The AI must ensure that character behavior, dialogue, and decisions are consistent with every field defined below.
 
 ## I. Core Identity
 - **Name:**
 - **Archetype/Role:** (e.g., Cynical Detective, Ambitious Sorceress, Reluctant Hero)
 - **Occupation/Social Standing:**
+- **D&D Alignment:** (e.g., Lawful Good, Chaotic Neutral. Note: This is a starting point and can change based on character actions and development.)
+- **Myers-Briggs Type (MBTI):** [e.g., ISTP, ENFP] (Note: This trait is considered a fixed, core part of the character's personality.)
 
 ## II. Psychology & Personality
 - **Core Motivation (The "Why"):** (What single desire, goal, or fear drives them above all else?)
@@ -37,8 +41,7 @@ This document defines the standard for the Player Character (PC) and all major N
 
 | Dimension | Reading | Personal twist |
 |-----------|---------|----------------|
-| **MBTI-ish** | [e.g., ISTP, ENFP] | [Describe any unique aspects, e.g., "An ISTP who has developed surprisingly strong social graces for tactical purposes."] |
-| **Big Five** | [O: %, C: %, E: %, A: %, N: %] | [Briefly explain how the standout high/low scores manifest in their personality.] |
+| **Big Five** | [O: %, C: %, E: %, A: %, N: %] | [Note: These scores can shift over time. Briefly explain how the standout high/low scores manifest in their personality.] |
 | **Dominant defenses** | [e.g., Humor, Denial] | [Explain how these defenses are used to manage stress or uncomfortable truths.] |
 | **Attachment color** | [e.g., Secure, Anxious] | [Describe their attachment style and how it impacts their relationships.] |
 
