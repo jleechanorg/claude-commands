@@ -443,8 +443,8 @@ def create_app():
                 logging.info(f"Exporting with campaign_title='{campaign_title}', download_name='{download_name}'")
                 response = send_file(file_path, as_attachment=False) # Send file without attachment headers first
                 # Manually set the Content-Disposition header for maximum compatibility
-                encoded_filename = urllib.parse.quote(download_name)
-                response.headers['Content-Disposition'] = f"attachment; filename=\\"{download_name}\\"; filename*=UTF-8''{encoded_filename}"
+                encoded_filename = urllib.parse.quote(download_name.encode('utf-8'))
+                response.headers['Content-Disposition'] = f'attachment; filename="{download_name}"; filename*=UTF-8''{encoded_filename}'
                 # os.remove(file_path) # Clean up the file after sending. Temporarily disabled for debugging.
                 return response
             else:
