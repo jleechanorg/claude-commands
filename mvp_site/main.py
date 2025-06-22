@@ -1,4 +1,5 @@
 import os
+import io
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
@@ -14,6 +15,8 @@ import datetime
 import collections
 import urllib.parse
 from firestore_service import update_state_with_changes
+import mimetypes
+from werkzeug.utils import secure_filename
 
 # --- CONSTANTS ---
 # API Configuration
@@ -440,13 +443,28 @@ def create_app():
 
             if file_path and os.path.exists(file_path):
                 download_name = os.path.basename(file_path)
-                logging.info(f"Exporting with campaign_title='{campaign_title}', download_name='{download_name}'")
-                response = send_file(file_path, as_attachment=False) # Send file without attachment headers first
-                # Manually set the Content-Disposition header for maximum compatibility
-                encoded_filename = urllib.parse.quote(download_name.encode('utf-8'))
-                response.headers['Content-Disposition'] = f'attachment; filename="{download_name}"; filename*=UTF-8''{encoded_filename}'
-                # os.remove(file_path) # Clean up the file after sending. Temporarily disabled for debugging.
-                return response
+
+                mimetypes = {
+                    'txt': 'text/plain',
+                    'pdf': 'application/pdf',
+                    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                }
+                mimetype = mimetypes.get(export_format, 'application/octet-stream')
+
+                try:
+                    # Reverting to download_name and adding secure_filename.
+                    return send_file(
+                        file_path,
+                        mimetype=mimetype,
+                        as_attachment=True,
+                        download_name=download_name
+                    )
+                finally:
+                    # To be safe, do not remove the file immediately.
+                    # This avoids any potential race conditions with the download stream.
+                    # if os.path.exists(file_path):
+                    #     os.remove(file_path)
+                    pass
             else:
                 return jsonify({KEY_ERROR: 'Failed to create export file.'}), 500
 
