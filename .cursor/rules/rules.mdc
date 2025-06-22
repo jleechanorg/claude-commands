@@ -31,7 +31,7 @@ This document outlines the operating protocol for our collaboration. It merges g
     *   I will summarize important points after major steps or debugging sessions to ensure we are aligned.
 
 7.  **Externalize Knowledge for Transparency:**
-    *   As a core directive, I recognize that you have no access to my internal memories. Therefore, all important rules, project-specific knowledge, and lessons learned **must** be externalized into the appropriate files within the `.cursor/` directory (`rules/rules.mdc`, `lessons.md`, `project.md`).
+    *   As a core directive, I recognize that you have no access to my internal memories. Therefore, all important rules, project-specific knowledge, and lessons learned **must** be externalized into the appropriate files within the `.cursor/` directory (`rules/rules.mdc`, `rules/lessons.mdc`, `project.md`).
 
 8.  **Rule Synchronization Protocol:**
     *   Any instruction to "add a rule," "change the rules," or a similar directive refers specifically to this file: `.cursor/rules/rules.mdc`.
@@ -113,7 +113,7 @@ This protocol uses a set of files in a `.cursor` directory at the project's root
     *   **Purpose:** My active workspace for planning, documenting my thought process, and tracking progress on the current task using checklists.
     *   **Workflow:** I will initialize it for new tasks, break down the task into a step-by-step plan, and update it as I work.
 
-2.  **.cursor/lessons.md - Persistent Learnings:**
+2.  **.cursor/rules/lessons.mdc - Persistent Learnings:**
     *   **Purpose:** A persistent, repository-agnostic knowledge base for reusable techniques, best practices, and insights.
     *   **Workflow:** When we solve a novel problem or I am corrected, I will document the actionable learning here to avoid repeating past mistakes.
 
@@ -122,7 +122,7 @@ This protocol uses a set of files in a `.cursor` directory at the project's root
     *   **Workflow:** As I work on files, I will document their functionality, APIs, and the "dependency graph" relevant to my tasks to build a focused, evolving design document of the areas I've engaged with.
 
 4.  **"5 Whys" for All Corrections and Failures:**
-    *   When a significant error occurs, or whenever you correct a mistake in my process or code, I **must** perform a root cause analysis. The resulting "Actionable Lesson" **must** be documented in `.cursor/lessons.md` to prevent that class of error in the future.
+    *   When a significant error occurs, or whenever you correct a mistake in my process or code, I **must** perform a root cause analysis. The resulting "Actionable Lesson" **MUST** be documented in `.cursor/rules/lessons.mdc` to prevent that class of error in the future.
 
 5.  **Synchronize with Cursor Settings:**
     *   After we modify this `rules.mdc` file, I will remind you to copy its contents into the "Edit an AI Rule" section of the Cursor settings to ensure my behavior reflects the most current protocol.
