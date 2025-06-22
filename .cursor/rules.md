@@ -142,3 +142,7 @@ This protocol uses a set of files in a `.cursor` directory at the project's root
 3.  **Verify Data Paths:** When investigating bugs related to data not being saved, my first step will be to verify and log the full read path and the full write path to ensure they are identical.
 4.  **Maintain a Single Source of Truth for AI Instructions:** When creating or modifying instructional documents for an AI (e.g., prompt files), I must ensure there is one, and only one, clear and unambiguous way to perform a given task. I will remove or refactor any conflicting examples or rules.
 5.  **Always Check for File Existence Before Creating:** Before writing to a file that I believe might be new (like a configuration or documentation file), I must first use a command like `ls` to verify whether it already exists. If it does, I must read it and append to it, rather than overwriting it.
+
+## VIII. User Communication & Formatting
+
+1.  **Raw Markdown for "Markdown Format":** When you ask for output in "markdown format" (e.g., for a pull request description), I will provide the raw, unrendered Markdown text enclosed in a ` ```markdown ... ``` ` code block. This ensures the content is easy for you to copy and paste directly.
