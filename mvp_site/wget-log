@@ -1,0 +1,16 @@
+--2025-06-22 02:37:43--  https://github.com/ericchiang/pup/releases/download/v0.4.0/pup_v0.4.0_linux_amd64.zip
+Resolving github.com (github.com)... 140.82.116.3
+Connecting to github.com (github.com)|140.82.116.3|:443... connected.
+HTTP request sent, awaiting response... 302 Found
+Location: https://objects.githubusercontent.com/github-production-release-asset-2e65be/23527160/aeab6e98-5057-11e6-803b-64a206c2d735?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20250622%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250622T093744Z&X-Amz-Expires=1800&X-Amz-Signature=c49d5b0a6fd6fd373b5b13a18da0569da7cf40eff28109fc0f9353df58a47983&X-Amz-SignedHeaders=host&response-content-disposition=attachment%3B%20filename%3Dpup_v0.4.0_linux_amd64.zip&response-content-type=application%2Foctet-stream [following]
+--2025-06-22 02:37:44--  https://objects.githubusercontent.com/github-production-release-asset-2e65be/23527160/aeab6e98-5057-11e6-803b-64a206c2d735?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=releaseassetproduction%2F20250622%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20250622T093744Z&X-Amz-Expires=1800&X-Amz-Signature=c49d5b0a6fd6fd373b5b13a18da0569da7cf40eff28109fc0f9353df58a47983&X-Amz-SignedHeaders=host&response-content-disposition=attachment%3B%20filename%3Dpup_v0.4.0_linux_amd64.zip&response-content-type=application%2Foctet-stream
+Resolving objects.githubusercontent.com (objects.githubusercontent.com)... 185.199.108.133, 185.199.109.133, 185.199.111.133, ...
+Connecting to objects.githubusercontent.com (objects.githubusercontent.com)|185.199.108.133|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 1718186 (1.6M) [application/octet-stream]
+Saving to: ‘pup_v0.4.0_linux_amd64.zip’
+
+          pup_v0.4.   0%[                  ]       0  --.-KB/s               pup_v0.4.0_linux_am 100%[=================>]   1.64M  --.-KB/s    in 0.09s   
+
+2025-06-22 02:37:44 (18.3 MB/s) - ‘pup_v0.4.0_linux_amd64.zip’ saved [1718186/1718186]
+

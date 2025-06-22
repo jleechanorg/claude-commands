@@ -136,6 +136,30 @@ def parse_set_command(payload_str: str) -> dict:
 
     return proposed_changes
 
+def _load_all_personality_profiles() -> str:
+    """
+    Loads all personality profile markdown files from the prompts/personalities
+    directory, concatenates them into a single string with headers.
+    """
+    personality_profiles_content = ""
+    personalities_dir = os.path.join(os.path.dirname(__file__), 'prompts', 'personalities')
+    if not os.path.exists(personalities_dir):
+        logging.warning("Personalities directory not found. Skipping profile loading.")
+        return ""
+        
+    for filename in sorted(os.listdir(personalities_dir)):
+        if filename.endswith('.md'):
+            try:
+                with open(os.path.join(personalities_dir, filename), 'r', encoding='utf-8') as f:
+                    # Add a header for each file to clearly separate them
+                    type_name = filename.replace('.md', '').replace('_', ' ').title()
+                    personality_profiles_content += f"\\n\\n--- START {type_name} ---\\n\\n"
+                    personality_profiles_content += f.read()
+                    personality_profiles_content += f"\\n\\n--- END {type_name} ---\\n\\n"
+            except Exception as e:
+                logging.error(f"Error loading personality file {filename}: {e}")
+    return personality_profiles_content
+
 def create_app():
     app = Flask(__name__, static_folder='static')
     CORS(app, resources=CORS_RESOURCES)
@@ -196,21 +220,8 @@ def create_app():
         initial_game_state = GameState().to_dict()
 
         # Load all personality profiles for initial seeding
-        personality_profiles_content = ""
-        personalities_dir = os.path.join(os.path.dirname(__file__), 'prompts', 'personalities')
-        if os.path.exists(personalities_dir):
-            for filename in sorted(os.listdir(personalities_dir)):
-                if filename.endswith('.md'):
-                    try:
-                        with open(os.path.join(personalities_dir, filename), 'r', encoding='utf-8') as f:
-                            # Add a header for each file to clearly separate them
-                            type_name = filename.replace('.md', '').replace('_', ' ').title()
-                            personality_profiles_content += f"\\n\\n--- START {type_name} ---\\n\\n"
-                            personality_profiles_content += f.read()
-                            personality_profiles_content += f"\\n\\n--- END {type_name} ---\\n\\n"
-                    except Exception as e:
-                        logging.error(f"Error loading personality file {filename}: {e}")
-
+        personality_profiles_content = _load_all_personality_profiles()
+        
         should_include_srd = constants.PROMPT_TYPE_MECHANICS in selected_prompts
         
         # 1. Get both the story and the structured character profile
