@@ -1,3 +1,4 @@
+# Diagnostic edit to test file system access.
 import os
 import io
 import uuid
@@ -47,33 +48,35 @@ DEFAULT_TEST_USER = 'test-user'
 
 # --- END CONSTANTS ---
 
-def _cleanup_legacy_state(state_dict: dict) -> tuple[dict, bool]:
+def _cleanup_legacy_state(state_dict: dict) -> tuple[dict, bool, int]:
     """
     Removes legacy data structures from a game state dictionary.
     Specifically, it removes top-level keys with '.' in them and the old 'world_time' key.
-    Returns the cleaned dictionary and a boolean indicating if changes were made.
+    Returns the cleaned dictionary, a boolean indicating if changes were made, and the number of keys removed.
     """
     keys_to_delete = [key for key in state_dict.keys() if '.' in key]
     if 'world_time' in state_dict:
         keys_to_delete.append('world_time')
     
-    if not keys_to_delete:
-        return state_dict, False
+    num_deleted = len(keys_to_delete)
 
-    logging.info(f"Performing one-time cleanup. Deleting legacy keys: {keys_to_delete}")
+    if not keys_to_delete:
+        return state_dict, False, 0
+
+    logging.info(f"Performing one-time cleanup. Deleting {num_deleted} legacy keys: {keys_to_delete}")
     cleaned_state = state_dict.copy()
     for key in keys_to_delete:
         if key in cleaned_state:
              del cleaned_state[key]
     
-    return cleaned_state, True
+    return cleaned_state, True, num_deleted
 
-def format_state_changes(changes: dict) -> str:
-    """Formats a dictionary of state changes into a readable, multi-line string."""
+def format_state_changes(changes: dict, for_html: bool = False) -> str:
+    """Formats a dictionary of state changes into a readable string, counting the number of leaf-node changes."""
     if not changes:
         return "No state changes."
 
-    log_lines = ["State changes applied:"]
+    log_lines = []
 
     def recurse_items(d, prefix=""):
         for key, value in d.items():
@@ -81,10 +84,24 @@ def format_state_changes(changes: dict) -> str:
             if isinstance(value, dict):
                 recurse_items(value, prefix=path)
             else:
-                log_lines.append(f"  - {path}: {json.dumps(value)}")
+                log_lines.append(f"{path}: {json.dumps(value)}")
 
     recurse_items(changes)
-    return "\\n".join(log_lines)
+    
+    count = len(log_lines)
+    if count == 0:
+        return "No effective state changes were made."
+
+    header = f"Game state updated ({count} {'entry' if count == 1 else 'entries'}):"
+    
+    if for_html:
+        # Create an HTML list for the chat response
+        items_html = "".join([f"<li><code>{line}</code></li>" for line in log_lines])
+        return f"{header}<ul>{items_html}</ul>"
+    else:
+        # Create a plain text list for server logs
+        items_text = "\\n".join([f"  - {line}" for line in log_lines])
+        return f"{header}\\n{items_text}"
 
 def parse_set_command(payload_str: str) -> dict:
     """
@@ -234,14 +251,30 @@ def create_app():
         else:
             current_game_state = GameState()
         
+        game_state_dict = current_game_state.to_dict()
+
         # Perform cleanup on a dictionary copy
-        cleaned_state_dict, was_cleaned = _cleanup_legacy_state(current_game_state.to_dict())
+        cleaned_state_dict, was_cleaned, num_cleaned = _cleanup_legacy_state(current_game_state.to_dict())
         if was_cleaned:
             # If cleaned, update the main object from the cleaned dictionary
             current_game_state = GameState.from_dict(cleaned_state_dict)
             firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state.to_dict())
-            logging.info("Legacy state cleanup complete.")
+            logging.info(f"Legacy state cleanup complete. Removed {num_cleaned} entries.")
         # --- End cleanup ---
+
+        # --- Retroactive MBTI Assignment Logging ---
+        game_state_dict = current_game_state.to_dict()
+        pc_data = game_state_dict.get('player_character_data', {})
+        if constants.KEY_MBTI not in pc_data:
+            pc_name = pc_data.get('name', 'Player Character')
+            logging.info(f"RETROACTIVE_ASSIGNMENT: Character '{pc_name}' is missing an MBTI type. The AI will be prompted to assign one.")
+
+        npc_data = game_state_dict.get('npc_data', {})
+        for npc_id, npc_info in npc_data.items():
+            if constants.KEY_MBTI not in npc_info:
+                npc_name = npc_info.get('name', npc_id)
+                logging.info(f"RETROACTIVE_ASSIGNMENT: NPC '{npc_name}' is missing an MBTI type. The AI will be prompted to assign one.")
+        # --- END Retroactive MBTI ---
 
         if user_input_stripped.startswith(GOD_MODE_SET_COMMAND):
             payload_str = user_input_stripped[len(GOD_MODE_SET_COMMAND):]
@@ -263,9 +296,16 @@ def create_app():
             logging.info(f"GOD_MODE_SET state AFTER update:\\n{json.dumps(updated_state, indent=2, default=json_default_serializer)}")
             
             firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
+            
+            # --- Log the formatted changes for both server and chat ---
+            log_message_for_log = format_state_changes(proposed_changes, for_html=False)
+            logging.info(f"GOD_MODE_SET changes applied for campaign {campaign_id}:\\n{log_message_for_log}")
+            
+            log_message_for_chat = format_state_changes(proposed_changes, for_html=True)
+            
             logging.info(f"--- GOD_MODE_SET for campaign {campaign_id} complete ---")
 
-            return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: Game state has been forcefully updated.]"})
+            return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: f"[System Message]<br>{log_message_for_chat}"})
 
         if user_input_stripped == GOD_ASK_STATE_COMMAND:
             # The loaded current_game_state object is guaranteed to be valid here
@@ -299,7 +339,7 @@ def create_app():
 
                 firestore_service.update_campaign_game_state(user_id, campaign_id, final_game_state.to_dict())
 
-                log_message = format_state_changes(state_changes)
+                log_message = format_state_changes(state_changes, for_html=False)
                 return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: f"[System Message: The following state changes were applied via GOD MODE]\\n{log_message}"})
 
             except json.JSONDecodeError:
@@ -381,7 +421,7 @@ def create_app():
             # --- NEW: Enhanced Logging for normal gameplay ---
             logging.info(f"AI proposed changes for campaign {campaign_id}:\\n{json.dumps(proposed_changes, indent=2, default=json_default_serializer)}")
 
-            log_message = format_state_changes(proposed_changes)
+            log_message = format_state_changes(proposed_changes, for_html=False)
             logging.info(f"Applying formatted state changes for campaign {campaign_id}:\\n{log_message}")
             
             # --- FIX: UPDATE STATE WITH CHANGES ---
@@ -472,9 +512,88 @@ def create_app():
 
     return app
 
-app = create_app()
+def run_god_command(campaign_id, user_id, action, command_string=None):
+    """Runs a GOD_MODE command directly against Firestore."""
+    # We need to initialize the app to get the context for Firestore
+    if not firebase_admin._apps:
+        firebase_admin.initialize_app()
+        
+    if action == 'ask':
+        print(f"Fetching current state for campaign: {campaign_id}")
+        current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
+        if not current_game_state:
+            print("No game state found for this campaign.")
+            return
+        
+        # Pretty-print the JSON to the console
+        state_json = json.dumps(current_game_state.to_dict(), indent=2, default=json_default_serializer)
+        print(state_json)
+        return
+
+    elif action == 'set':
+        if not command_string:
+            print("Error: The 'set' action requires a --command_string.")
+            return
+
+        if not command_string.strip().startswith("GOD_MODE_SET:"):
+            print("Error: Command string must start with GOD_MODE_SET:")
+            return
+
+        payload_str = command_string.strip()[len("GOD_MODE_SET:"):].strip()
+        proposed_changes = parse_set_command(payload_str)
+        
+        if not proposed_changes:
+            print("Command contained no valid changes.")
+            return
+
+        print(f"Applying changes to campaign: {campaign_id}")
+        
+        current_game_state_doc = firestore_service.get_campaign_game_state(user_id, campaign_id)
+        current_state_dict = current_game_state_doc.to_dict() if current_game_state_doc else GameState().to_dict()
+
+        updated_state = update_state_with_changes(current_state_dict, proposed_changes)
+        firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
+        
+        log_message = format_state_changes(proposed_changes, for_html=False)
+        print(f"Update successful:\\n{log_message}")
+
+    else:
+        print(f"Error: Unknown god-command action '{action}'. Use 'set' or 'ask'.")
+
 
 if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 8080))
-    print(f"Development server running: http://localhost:{port}")
-    app.run(host='0.0.0.0', port=port, debug=True)
+    import argparse
+    import sys
+
+    parser = argparse.ArgumentParser(description="World Architect AI Server & Tools")
+    parser.add_argument('command', nargs='?', default='serve', help="Command to run ('serve' or 'god-command')")
+    
+    # Manual parsing for god-command to handle multi-line strings
+    if len(sys.argv) > 1 and sys.argv[1] == 'god-command':
+        parser.add_argument('action', choices=['set', 'ask'], help="The action to perform ('set' or 'ask')")
+        parser.add_argument('--campaign_id', required=True, help="Campaign ID for the god-command")
+        parser.add_argument('--user_id', required=True, help="User ID who owns the campaign")
+        parser.add_argument('--command_string', help="The full GOD_MODE_SET command string (required for 'set')")
+        
+        args, unknown = parser.parse_known_args(sys.argv[2:])
+        
+        if args.action == 'set' and not args.command_string:
+             # Manually reconstruct the command string if it was not passed with the flag
+            try:
+                command_string_index = sys.argv.index('--command_string')
+                args.command_string = " ".join(sys.argv[command_string_index + 1:])
+            except (ValueError, IndexError):
+                 parser.error("--command_string is required for the 'set' action.")
+
+        run_god_command(args.campaign_id, args.user_id, args.action, args.command_string)
+
+    else:
+        # Standard server execution
+        args = parser.parse_args()
+        if args.command == 'serve':
+            app = create_app()
+            port = int(os.environ.get('PORT', 8080))
+            print(f"Development server running: http://localhost:{port}")
+            app.run(host='0.0.0.0', port=port, debug=True)
+        else:
+            parser.error(f"Unknown command: {args.command}")

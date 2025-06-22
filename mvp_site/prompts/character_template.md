@@ -1,11 +1,15 @@
 # Character Profile Template & Standard
 
+**AI Directive: Myers-Briggs Type (MBTI) and D&D Alignment are core parts of a character's identity. They are for your internal guidance only and must NEVER be mentioned explicitly in the narrative. They must, however, subtly and consistently inform the character's thought processes, dialogue, and decisions. For example, a 'Lawful Good ISTJ' will be more likely to rely on past experiences and established rules to achieve a just outcome. This is a foundational, non-negotiable aspect of roleplaying. Big Five personality traits also guide behavior but ARE part of the game's mechanics and can be referenced when resolving checks and rolls.**
+
 This document defines the standard for the Player Character (PC) and all major Non-Player Character (NPC) personalities. The AI must ensure that character behavior, dialogue, and decisions are consistent with every field defined below.
 
 ## I. Core Identity
 - **Name:**
 - **Archetype/Role:** (e.g., Cynical Detective, Ambitious Sorceress, Reluctant Hero)
 - **Occupation/Social Standing:**
+- **D&D Alignment:** (e.g., Lawful Good, Chaotic Neutral. Secret internal guidance only. This is a starting point and can change based on character actions and development.)
+- **Myers-Briggs Type (MBTI):** [e.g., ISTP, ENFP] (Secret internal guidance only. This trait is considered a fixed, core part of the character's personality.)
 
 ## II. Psychology & Personality
 - **Core Motivation (The "Why"):** (What single desire, goal, or fear drives them above all else?)
@@ -37,8 +41,7 @@ This document defines the standard for the Player Character (PC) and all major N
 
 | Dimension | Reading | Personal twist |
 |-----------|---------|----------------|
-| **MBTI-ish** | [e.g., ISTP, ENFP] | [Describe any unique aspects, e.g., "An ISTP who has developed surprisingly strong social graces for tactical purposes."] |
-| **Big Five** | [O: %, C: %, E: %, A: %, N: %] | [Briefly explain how the standout high/low scores manifest in their personality.] |
+| **Big Five** | [O: %, C: %, E: %, A: %, N: %] | [Note: These scores can shift over time and may be referenced during mechanical checks (e.g., 'Your high Agreeableness helps you in this negotiation'), but should not be stated in general narrative.] |
 | **Dominant defenses** | [e.g., Humor, Denial] | [Explain how these defenses are used to manage stress or uncomfortable truths.] |
 | **Attachment color** | [e.g., Secure, Anxious] | [Describe their attachment style and how it impacts their relationships.] |
 

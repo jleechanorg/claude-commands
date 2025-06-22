@@ -123,28 +123,39 @@ def get_client():
     logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
-def _log_token_count(prompt_contents, model_name):
-    """Helper function to count and log the number of tokens being sent."""
+def _log_token_count(model_name, user_prompt_contents, system_instruction_text=None):
+    """Helper function to count and log the number of tokens being sent, with a breakdown."""
     try:
         client = get_client()
-        # Use the same client.models pattern as generate_content
-        count_response = client.models.count_tokens(
-            model=model_name,
-            contents=prompt_contents
-        )
-        logging.info(f"--- Sending {count_response.total_tokens} tokens to the API. ---")
+        
+        # Count user prompt tokens
+        user_prompt_tokens = client.models.count_tokens(model=model_name, contents=user_prompt_contents).total_tokens
+        
+        # Count system instruction tokens if they exist
+        system_tokens = 0
+        if system_instruction_text:
+            system_tokens = client.models.count_tokens(model=model_name, contents=[system_instruction_text]).total_tokens
+
+        total_tokens = user_prompt_tokens + system_tokens
+        logging.info(f"--- Sending {total_tokens} tokens to the API. (Prompt: {user_prompt_tokens}, System: {system_tokens}) ---")
+
     except Exception as e:
         logging.warning(f"Could not count tokens before API call: {e}")
 
 def _call_gemini_api(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None):
     """Calls the Gemini API with a given prompt and returns the response."""
     client = get_client()
-    _log_token_count(prompt_contents, model_name)
+    _log_token_count(model_name, prompt_contents, system_instruction_text)
 
     if current_prompt_text_for_logging:
         logging.info(f"--- Calling Gemini API with current prompt: {str(current_prompt_text_for_logging)[:1000]}... ---")
-    logging.info(f"--- Calling Gemini API with prompt of length: {len(prompt_contents)} ---")
-    
+
+    # The character count log is less useful now, so we can remove it or keep it. Let's keep for now.
+    total_chars = sum(len(p) for p in prompt_contents if isinstance(p, str))
+    if system_instruction_text:
+        total_chars += len(system_instruction_text)
+    logging.info(f"--- Calling Gemini API with prompt of total characters: {total_chars} ---")
+
     generation_config_params = {
         "max_output_tokens": MAX_TOKENS,
         "temperature": TEMPERATURE,
@@ -400,7 +411,12 @@ def _get_static_prompt_parts(current_game_state: GameState, story_context: list)
     key_stats_summary = " | ".join(key_stats_parts)
 
     active_missions = current_game_state.custom_campaign_state.get('active_missions', [])
-    missions_summary = "Missions: " + (", ".join(active_missions) if active_missions else "None")
+    if active_missions:
+        # Handle both old style (list of strings) and new style (list of dicts)
+        mission_names = [m.get('name', m) if isinstance(m, dict) else m for m in active_missions]
+        missions_summary = "Missions: " + (", ".join(mission_names) if mission_names else "None")
+    else:
+        missions_summary = "Missions: None"
 
     ambition = pc_data.get('core_ambition')
     milestone = pc_data.get('next_milestone')

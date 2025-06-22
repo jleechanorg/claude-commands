@@ -1,0 +1,50 @@
+# Add directories or file patterns to ignore during indexing (e.g. foo/ or *.csv)
+# --- General ---
+# Comments and metadata
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Dependencies ---
+# For Node.js, Python, etc.
+node_modules/
+bower_components/
+jspm_packages/
+venv/
+.venv/
+env/
+
+# --- Build & Output Artifacts ---
+# Compiled code, bundled assets, etc.
+dist/
+build/
+out/
+target/
+bin/
+obj/
+
+# --- Logs ---
+# Log files
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Environment Files ---
+# Sensitive environment variables
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# --- Caches ---
+# Package manager caches
+.pnpm-store/
+.yarn/cache
+.npm/
+
+# --- Test Reports ---
+coverage/
+.nyc_output/

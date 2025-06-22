@@ -46,22 +46,22 @@ def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
         # Case 1: Explicit append syntax {'append': ...}
         if isinstance(value, dict) and 'append' in value:
             logging.info(f"update_state: Detected explicit append for '{key}'.")
-            if not isinstance(state_to_update.get(key), list):
+            if key not in state_to_update or not isinstance(state_to_update.get(key), list):
                 state_to_update[key] = []
             _perform_append(state_to_update[key], value['append'], key, deduplicate=(key == 'core_memories'))
         
         # Case 2: Smart safeguard for direct 'core_memories' overwrite
         elif key == 'core_memories':
             logging.warning("CRITICAL SAFEGUARD: Intercepted direct overwrite on 'core_memories'. Converting to safe, deduplicated append.")
-            if not isinstance(state_to_update.get(key), list):
+            if key not in state_to_update or not isinstance(state_to_update.get(key), list):
                 state_to_update[key] = []
             # The helper function is designed to handle non-lists, so we call it directly.
             _perform_append(state_to_update[key], value, key, deduplicate=True)
 
         # Case 3: Recursive merge for nested dictionaries
-        elif isinstance(value, dict) and key in state_to_update and isinstance(state_to_update.get(key), dict):
+        elif isinstance(value, dict) and isinstance(state_to_update.get(key), collections.abc.Mapping):
             logging.info(f"update_state: Recursing into dict for key '{key}'.")
-            update_state_with_changes(state_to_update[key], value)
+            state_to_update[key] = update_state_with_changes(state_to_update[key], value)
 
         # Case 4: Simple overwrite for everything else
         else:
