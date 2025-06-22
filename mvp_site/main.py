@@ -1,7 +1,8 @@
 import os
 import io
+import uuid
 from functools import wraps
-from flask import Flask, request, jsonify, send_from_directory, send_file
+from flask import Flask, request, jsonify, send_from_directory, send_file, Response
 from flask_cors import CORS
 import firebase_admin
 from firebase_admin import auth
@@ -17,6 +18,7 @@ import urllib.parse
 from firestore_service import update_state_with_changes
 import mimetypes
 from werkzeug.utils import secure_filename
+from werkzeug.http import dump_options_header
 
 # --- CONSTANTS ---
 # API Configuration
@@ -402,6 +404,7 @@ def create_app():
             
         return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: final_response})
 
+
     @app.route('/api/campaigns/<campaign_id>/export', methods=['GET'])
     @check_token
     def export_campaign(user_id, campaign_id):
@@ -412,59 +415,54 @@ def create_app():
             if not campaign_data:
                 return jsonify({KEY_ERROR: 'Campaign not found'}), 404
 
-            game_state_doc = firestore_service.get_campaign_game_state(user_id, campaign_id)
-            game_state = game_state_doc.to_dict() if game_state_doc else {}
-
             campaign_title = campaign_data.get('title', 'Untitled Campaign')
+            desired_download_name = f"{campaign_title}.{export_format}"
 
-            # Centralized story text formatting
+            temp_dir = '/tmp/campaign_exports'
+            os.makedirs(temp_dir, exist_ok=True)
+            safe_file_path = os.path.join(temp_dir, f"{uuid.uuid4()}.{export_format}")
+            
             story_parts = []
             for entry in story_log:
                 actor = entry.get(constants.KEY_ACTOR, document_generator.UNKNOWN_ACTOR)
                 text = entry.get(constants.KEY_TEXT, '')
                 mode = entry.get(constants.KEY_MODE)
-
                 if actor == constants.ACTOR_GEMINI:
                     label = document_generator.LABEL_GEMINI
-                else: # user
+                else:
                     label = document_generator.LABEL_GOD if mode == constants.MODE_GOD else document_generator.LABEL_USER
                 story_parts.append(f"{label}:\\n{text}")
             story_text = "\\n\\n".join(story_parts)
             
-            file_path = None
             if export_format == 'pdf':
-                file_path = document_generator.generate_pdf(story_text, campaign_title)
+                document_generator.generate_pdf(story_text, safe_file_path, campaign_title)
             elif export_format == 'docx':
-                file_path = document_generator.generate_docx(story_text, campaign_title)
+                document_generator.generate_docx(story_text, safe_file_path, campaign_title)
             elif export_format == 'txt':
-                file_path = document_generator.generate_txt(story_text, campaign_title)
+                document_generator.generate_txt(story_text, safe_file_path, campaign_title)
             else:
                 return jsonify({KEY_ERROR: f"Unsupported format: {export_format}"}), 400
 
-            if file_path and os.path.exists(file_path):
-                download_name = os.path.basename(file_path)
+            if os.path.exists(safe_file_path):
+                logging.info(f"Exporting file '{safe_file_path}' with download_name='{desired_download_name}'")
+                
+                # Use the standard send_file call, which should now work correctly
+                # with the fixed JavaScript client.
+                response = send_file(
+                    safe_file_path,
+                    download_name=desired_download_name,
+                    as_attachment=True
+                )
 
-                mimetypes = {
-                    'txt': 'text/plain',
-                    'pdf': 'application/pdf',
-                    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-                }
-                mimetype = mimetypes.get(export_format, 'application/octet-stream')
+                @response.call_on_close
+                def cleanup():
+                    try:
+                        os.remove(safe_file_path)
+                        logging.info(f"Cleaned up temporary file: {safe_file_path}")
+                    except Exception as e:
+                        logging.error(f"Error cleaning up file {safe_file_path}: {e}")
 
-                try:
-                    # Reverting to download_name and adding secure_filename.
-                    return send_file(
-                        file_path,
-                        mimetype=mimetype,
-                        as_attachment=True,
-                        download_name=download_name
-                    )
-                finally:
-                    # To be safe, do not remove the file immediately.
-                    # This avoids any potential race conditions with the download stream.
-                    # if os.path.exists(file_path):
-                    #     os.remove(file_path)
-                    pass
+                return response
             else:
                 return jsonify({KEY_ERROR: 'Failed to create export file.'}), 500
 
@@ -472,6 +470,7 @@ def create_app():
             logging.error(f"Export failed: {e}")
             traceback.print_exc()
             return jsonify({KEY_ERROR: 'An unexpected error occurred during export.', KEY_DETAILS: str(e)}), 500
+
 
     # --- Frontend Serving ---
     @app.route('/', defaults={'path': ''})

@@ -33,10 +33,11 @@ DOCX_HEADING_LEVEL = 1
 # --- END CONSTANTS ---
 
 
-def generate_pdf(story_text, campaign_title):
-    """Generates a PDF file from story text and returns its path."""
+def generate_pdf(story_text, output_filepath, campaign_title=""):
+    """Generates a PDF file and saves it to the specified path."""
     pdf = FPDF()
     pdf.add_page()
+    pdf.set_title(campaign_title) # Set metadata title
     
     font_family = DEFAULT_FONT_FAMILY
     try:
@@ -47,13 +48,6 @@ def generate_pdf(story_text, campaign_title):
     except RuntimeError:
         print("WARNING: DejaVuSans.ttf not found. Falling back to core font.")
 
-    # --- CORRECTED TITLE HANDLING ---
-    # Set the font family, then style, then size
-    pdf.set_font(font_family, style=PDF_TITLE_STYLE, size=TITLE_FONT_SIZE) # 'U' for underline instead of 'B' for bold
-    encoded_title = campaign_title.encode(ENCODING, ENCODING_REPLACE_STR).decode(ENCODING)
-    pdf.cell(0, TITLE_LINE_HEIGHT, text=encoded_title, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align=TITLE_ALIGNMENT)
-    pdf.ln(TITLE_SPACING)
-
     # --- CORRECTED BODY HANDLING ---
     # Set the font for the body (regular style)
     pdf.set_font(font_family, style='', size=BODY_FONT_SIZE)
@@ -62,27 +56,18 @@ def generate_pdf(story_text, campaign_title):
         pdf.multi_cell(0, BODY_LINE_HEIGHT, text=encoded_paragraph, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.ln(PARAGRAPH_SPACING)
 
-    file_path = f"{campaign_title.replace(' ', '_')}.pdf"
-    pdf.output(file_path)
-    return file_path
+    pdf.output(output_filepath)
 
 
-def generate_docx(story_text, campaign_title):
-    """Generates a DOCX file from story text and returns its path."""
+def generate_docx(story_text, output_filepath, campaign_title=""):
+    """Generates a DOCX file and saves it to the specified path."""
     document = Document()
-    document.add_heading(campaign_title, level=DOCX_HEADING_LEVEL)
+    document.core_properties.title = campaign_title # Set metadata title
     for paragraph in story_text.split('\\n\\n'):
         document.add_paragraph(paragraph)
-    file_path = f"{campaign_title.replace(' ', '_')}.docx"
-    document.save(file_path)
-    return file_path
+    document.save(output_filepath)
 
-def generate_txt(story_text, campaign_title):
-    """Generates a TXT file from story text and returns its path."""
-    file_path = f"{campaign_title.replace(' ', '_')}.txt"
-    with open(file_path, 'w', encoding='utf-8') as f:
-        # Add the title at the top of the file, followed by two newlines
-        f.write(f"{campaign_title}\\n\\n")
-        # Replace the literal '\\n' with actual newlines for the text file
+def generate_txt(story_text, output_filepath, campaign_title=""):
+    """Generates a TXT file and saves it to the specified path."""
+    with open(output_filepath, 'w', encoding='utf-8') as f:
         f.write(story_text.replace('\\\\n', '\\n'))
-    return file_path
