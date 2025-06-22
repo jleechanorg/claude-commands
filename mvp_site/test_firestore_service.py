@@ -83,6 +83,29 @@ class TestUpdateStateWithChanges(unittest.TestCase):
         self.assertEqual(self.state['player']['stats']['hp'], 90)
         self.assertEqual(self.state['player']['stats']['mp'], 50) # Ensure other values are untouched
 
+    def test_deep_merge_preserves_unrelated_keys(self):
+        """A deep merge should not delete sibling keys in a nested object."""
+        state = {
+            'player': {
+                'stats': {
+                    'str': 10,
+                    'dex': 10
+                }
+            }
+        }
+        changes = {
+            'player': {
+                'stats': {
+                    'dex': 15
+                }
+            }
+        }
+        updated_state = firestore_service.update_state_with_changes(state, changes)
+        # This will fail in the old buggy version because 'str' will be missing
+        self.assertIn('str', updated_state['player']['stats'])
+        self.assertEqual(updated_state['player']['stats']['str'], 10)
+        self.assertEqual(updated_state['player']['stats']['dex'], 15)
+
     def test_explicit_append_single_item(self):
         """Should append a single item using the {'append':...} syntax."""
         changes = {'player': {'inventory': {'append': 'potion'}}}
