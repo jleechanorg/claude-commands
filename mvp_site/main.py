@@ -12,6 +12,7 @@ import constants
 import json
 import datetime
 import collections
+import urllib.parse
 from firestore_service import update_state_with_changes
 
 # --- CONSTANTS ---
@@ -412,7 +413,20 @@ def create_app():
             game_state = game_state_doc.to_dict() if game_state_doc else {}
 
             campaign_title = campaign_data.get('title', 'Untitled Campaign')
-            story_text = document_generator.get_story_text_from_context(story_log)
+
+            # Centralized story text formatting
+            story_parts = []
+            for entry in story_log:
+                actor = entry.get(constants.KEY_ACTOR, document_generator.UNKNOWN_ACTOR)
+                text = entry.get(constants.KEY_TEXT, '')
+                mode = entry.get(constants.KEY_MODE)
+
+                if actor == constants.ACTOR_GEMINI:
+                    label = document_generator.LABEL_GEMINI
+                else: # user
+                    label = document_generator.LABEL_GOD if mode == constants.MODE_GOD else document_generator.LABEL_USER
+                story_parts.append(f"{label}:\\n{text}")
+            story_text = "\\n\\n".join(story_parts)
             
             file_path = None
             if export_format == 'pdf':
@@ -425,8 +439,13 @@ def create_app():
                 return jsonify({KEY_ERROR: f"Unsupported format: {export_format}"}), 400
 
             if file_path and os.path.exists(file_path):
-                response = send_file(file_path, as_attachment=True)
-                os.remove(file_path) # Clean up the file after sending
+                download_name = os.path.basename(file_path)
+                logging.info(f"Exporting with campaign_title='{campaign_title}', download_name='{download_name}'")
+                response = send_file(file_path, as_attachment=False) # Send file without attachment headers first
+                # Manually set the Content-Disposition header for maximum compatibility
+                encoded_filename = urllib.parse.quote(download_name)
+                response.headers['Content-Disposition'] = f"attachment; filename=\\"{download_name}\\"; filename*=UTF-8''{encoded_filename}"
+                # os.remove(file_path) # Clean up the file after sending. Temporarily disabled for debugging.
                 return response
             else:
                 return jsonify({KEY_ERROR: 'Failed to create export file.'}), 500

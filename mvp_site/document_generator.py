@@ -13,7 +13,7 @@ ENCODING = 'latin-1'
 ENCODING_REPLACE_STR = 'replace'
 
 # PDF Styling
-TITLE_STYLE = 'U'
+PDF_TITLE_STYLE = 'U'
 TITLE_FONT_SIZE = 16
 TITLE_LINE_HEIGHT = 10
 TITLE_ALIGNMENT = 'C'
@@ -33,24 +33,6 @@ DOCX_HEADING_LEVEL = 1
 # --- END CONSTANTS ---
 
 
-def get_story_text_from_context(story_context):
-    """Extracts and formats story text from the context array."""
-    story_parts = []
-    for entry in story_context:
-        actor = entry.get(constants.KEY_ACTOR, UNKNOWN_ACTOR)
-        text = entry.get(constants.KEY_TEXT, '')
-        mode = entry.get(constants.KEY_MODE)
-
-        if actor == constants.ACTOR_GEMINI:
-            label = LABEL_GEMINI
-        else: # user
-            label = LABEL_GOD if mode == constants.MODE_GOD else LABEL_USER
-        
-        story_parts.append(f"{label}:\\n{text}")
-    
-    return "\\n\\n".join(story_parts)
-
-
 def generate_pdf(story_text, campaign_title):
     """Generates a PDF file from story text and returns its path."""
     pdf = FPDF()
@@ -67,7 +49,7 @@ def generate_pdf(story_text, campaign_title):
 
     # --- CORRECTED TITLE HANDLING ---
     # Set the font family, then style, then size
-    pdf.set_font(font_family, style=TITLE_STYLE, size=TITLE_FONT_SIZE) # 'U' for underline instead of 'B' for bold
+    pdf.set_font(font_family, style=PDF_TITLE_STYLE, size=TITLE_FONT_SIZE) # 'U' for underline instead of 'B' for bold
     encoded_title = campaign_title.encode(ENCODING, ENCODING_REPLACE_STR).decode(ENCODING)
     pdf.cell(0, TITLE_LINE_HEIGHT, text=encoded_title, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align=TITLE_ALIGNMENT)
     pdf.ln(TITLE_SPACING)
