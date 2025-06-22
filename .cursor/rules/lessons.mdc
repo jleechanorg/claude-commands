@@ -1,4 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
 # Lessons Learned & Best Practices
+
+**Meta-Rule:** Any instruction to "add a lesson," "add to lessons," or a similar directive refers specifically to this file: `.cursor/rules/lessons.mdc`.
 
 This document is a persistent repository for reusable knowledge, best practices, and crucial insights.
 
