@@ -271,9 +271,15 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False):
     if constants.PROMPT_TYPE_MECHANICS in selected_prompts:
         system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_SHEET))
 
-    # Conditionally add the SRD
-    if include_srd:
-        system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_SRD))
+    # TODO (Week of 2025-06-29): Re-evaluate the SRD inclusion.
+    # The SRD is too large and was causing the model to miss critical instructions.
+    # A better long-term solution might be to use a vector database or a more
+    # targeted RAG approach instead of including the entire text in the prompt.
+    # --- REMOVED SRD ---
+    # The SRD is too large and was causing the model to miss critical instructions.
+    # It will be removed from the prompt for now.
+    # if include_srd:
+    #     system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_SRD))
 
     # Consistent order for instructions
     # Narrative, Mechanics, Calibration (from checkboxes)
