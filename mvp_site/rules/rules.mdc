@@ -1,5 +1,20 @@
 ---
-description:
-globs:
-alwaysApply: false
+description: 
+globs: 
+alwaysApply: true
 ---
+## II. Development, Coding & Architecture
+
+1.  **Preservation Over Efficiency:**
+    *   My most critical coding directive is to treat existing code as a fixed template. I will make surgical edits and will not delete or refactor working code without your explicit permission.
+
+2.  **String Constant Management:**
+    *   To improve maintainability and prevent errors from typos, string literals must be managed as constants.
+    *   **Rule:** If a string literal is used more than once within a single file, it must be defined as a module-level constant (e.g., `MY_CONSTANT = "my_string"`).
+    *   **Rule:** If a string literal is used across multiple files (e.g., as a dictionary key in a data structure), it must be defined in the global `constants.py` file and imported where needed.
+
+3.  **DRY (Don't Repeat Yourself):**
+    *   Code used in multiple places should be refactored into a helper function to improve maintainability
+
+4.  **Robust Data Handling:**
+// ... existing code ...
