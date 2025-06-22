@@ -13,7 +13,7 @@ ENCODING = 'latin-1'
 ENCODING_REPLACE_STR = 'replace'
 
 # PDF Styling
-TITLE_STYLE = 'U'
+PDF_TITLE_STYLE = 'U'
 TITLE_FONT_SIZE = 16
 TITLE_LINE_HEIGHT = 10
 TITLE_ALIGNMENT = 'C'
@@ -33,64 +33,45 @@ DOCX_HEADING_LEVEL = 1
 # --- END CONSTANTS ---
 
 
-def get_story_text_from_context(story_context):
-    """Extracts and formats story text from the context array."""
-    story_parts = []
-    for entry in story_context:
-        actor = entry.get(constants.KEY_ACTOR, UNKNOWN_ACTOR)
-        text = entry.get(constants.KEY_TEXT, '')
-        mode = entry.get(constants.KEY_MODE)
-
-        if actor == constants.ACTOR_GEMINI:
-            label = LABEL_GEMINI
-        else: # user
-            label = LABEL_GOD if mode == constants.MODE_GOD else LABEL_USER
-        
-        story_parts.append(f"{label}:\\n{text}")
-    
-    return "\\n\\n".join(story_parts)
-
-
-def generate_pdf(story_text, campaign_title):
-    """Generates a PDF file from story text and returns its path."""
+def generate_pdf(story_text, output_filepath, campaign_title=""):
+    """Generates a PDF file and saves it to the specified path."""
     pdf = FPDF()
     pdf.add_page()
-    
+    pdf.set_title(campaign_title)
+
     font_family = DEFAULT_FONT_FAMILY
     try:
-        # Assumes 'assets/DejaVuSans.ttf' exists.
         font_path = os.path.join(ASSETS_DIR, FONT_FILENAME)
-        pdf.add_font(CUSTOM_FONT_NAME, '', font_path)
+        # The 'uni=True' parameter is crucial for UTF-8 support with FPDF.
+        pdf.add_font(CUSTOM_FONT_NAME, '', font_path, uni=True)
         font_family = CUSTOM_FONT_NAME
+        print("INFO: DejaVuSans.ttf found and loaded.")
     except RuntimeError:
-        print("WARNING: DejaVuSans.ttf not found. Falling back to core font.")
+        print("WARNING: DejaVuSans.ttf not found. Falling back to core font. Non-ASCII characters may not render correctly.")
+        # If the custom font fails, we stick with the default Helvetica.
+        pass
 
-    # --- CORRECTED TITLE HANDLING ---
-    # Set the font family, then style, then size
-    pdf.set_font(font_family, style=TITLE_STYLE, size=TITLE_FONT_SIZE) # 'U' for underline instead of 'B' for bold
-    encoded_title = campaign_title.encode(ENCODING, ENCODING_REPLACE_STR).decode(ENCODING)
-    pdf.cell(0, TITLE_LINE_HEIGHT, text=encoded_title, new_x=XPos.LMARGIN, new_y=YPos.NEXT, align=TITLE_ALIGNMENT)
-    pdf.ln(TITLE_SPACING)
-
-    # --- CORRECTED BODY HANDLING ---
-    # Set the font for the body (regular style)
     pdf.set_font(font_family, style='', size=BODY_FONT_SIZE)
+    
+    # Split the text into paragraphs and write them to the PDF.
+    # The \\n is now a literal backslash followed by 'n', so we split on that.
     for paragraph in story_text.split('\\n\\n'):
-        encoded_paragraph = paragraph.encode(ENCODING, ENCODING_REPLACE_STR).decode(ENCODING)
-        pdf.multi_cell(0, BODY_LINE_HEIGHT, text=encoded_paragraph, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        # No more manual encoding/decoding is needed.
+        pdf.multi_cell(0, BODY_LINE_HEIGHT, text=paragraph, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.ln(PARAGRAPH_SPACING)
 
-    file_path = f"{campaign_title.replace(' ', '_')}.pdf"
-    pdf.output(file_path)
-    return file_path
+    pdf.output(output_filepath)
 
 
-def generate_docx(story_text, campaign_title):
-    """Generates a DOCX file from story text and returns its path."""
+def generate_docx(story_text, output_filepath, campaign_title=""):
+    """Generates a DOCX file and saves it to the specified path."""
     document = Document()
-    document.add_heading(campaign_title, level=DOCX_HEADING_LEVEL)
+    document.core_properties.title = campaign_title # Set metadata title
     for paragraph in story_text.split('\\n\\n'):
         document.add_paragraph(paragraph)
-    file_path = f"{campaign_title.replace(' ', '_')}.docx"
-    document.save(file_path)
-    return file_path
+    document.save(output_filepath)
+
+def generate_txt(story_text, output_filepath, campaign_title=""):
+    """Generates a TXT file and saves it to the specified path."""
+    with open(output_filepath, 'w', encoding='utf-8') as f:
+        f.write(story_text.replace('\\\\n', '\\n'))

@@ -283,43 +283,45 @@ document.addEventListener('DOMContentLoaded', () => {
         showSpinner();
         try {
             const user = firebase.auth().currentUser;
-            if (!user) throw new Error('User not authenticated');
+            if (!user) throw new Error('User not authenticated for download.');
             const token = await user.getIdToken();
 
             const response = await fetch(`/api/campaigns/${currentCampaignId}/export?format=${format}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             });
 
-            if (!response.ok) throw new Error(`Download failed: ${response.statusText}`);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Could not download story.' }));
+                throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            }
+
+            const disposition = response.headers.get('Content-Disposition');
+            let filename = `story_export.${format}`;
+            if (disposition && disposition.indexOf('attachment') !== -1) {
+                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                const matches = filenameRegex.exec(disposition);
+                if (matches != null && matches[1]) {
+                    filename = matches[1].replace(/['"]/g, '');
+                }
+            }
 
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.style.display = 'none';
             a.href = url;
-            
-            const disposition = response.headers.get('content-disposition');
-            let filename = `story.${format}`;
-            if (disposition && disposition.indexOf('attachment') !== -1) {
-                const filenameRegex = /filename[^;=\\n]*=((['"]).*?\\2|[^;\\n]*)/;
-                const matches = filenameRegex.exec(disposition);
-                if (matches != null && matches[1]) {
-                    filename = matches[1].replace(/['"]/g, '');
-                }
-            }
             a.download = filename;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            a.remove();
         } catch (error) {
-            console.error("Download failed:", error);
-            alert("Could not download the story.");
+            console.error('Download failed:', error);
+            alert(`Download failed: ${error.message}`);
         } finally {
             hideSpinner();
-            const modalElement = document.getElementById('downloadOptionsModal');
-            const modal = bootstrap.Modal.getInstance(modalElement);
-            if (modal) modal.hide();
         }
     }
 
