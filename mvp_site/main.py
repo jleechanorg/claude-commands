@@ -234,6 +234,22 @@ def create_app():
         else:
             current_game_state = GameState()
         
+        game_state_dict = current_game_state.to_dict()
+
+        # --- NEW: Retroactive MBTI Assignment Logging ---
+        pc_data = game_state_dict.get('player_character_data', {})
+        if constants.KEY_MBTI not in pc_data:
+            pc_name = pc_data.get('name', 'Player Character')
+            logging.info(f"RETROACTIVE_ASSIGNMENT: Character '{pc_name}' is missing an MBTI type. The AI will be prompted to assign one.")
+
+        # Check NPCs
+        npc_data = game_state_dict.get('npc_data', {})
+        for npc_id, npc_info in npc_data.items():
+            if constants.KEY_MBTI not in npc_info:
+                npc_name = npc_info.get('name', npc_id)
+                logging.info(f"RETROACTIVE_ASSIGNMENT: NPC '{npc_name}' is missing an MBTI type. The AI will be prompted to assign one.")
+        # --- END NEW BLOCK ---
+
         # Perform cleanup on a dictionary copy
         cleaned_state_dict, was_cleaned = _cleanup_legacy_state(current_game_state.to_dict())
         if was_cleaned:
