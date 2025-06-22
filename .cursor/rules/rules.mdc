@@ -1,6 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
 # Core Operating Protocol for AI Collaboration
 
-**Meta-Rule: Before beginning any task, you must check for the existence of a .cursor/rules.md file in the workspace root. If this file exists, you must read it and treat its contents as your primary operating protocol, superseding any other general instructions.**
+**Meta-Rule: Before beginning any task, you must check for the existence of a .cursor/rules/rules.mdc file in the workspace root. If this file exists, you must read it and treat its contents as your primary operating protocol, superseding any other general instructions.**
 
 This document outlines the operating protocol for our collaboration. It merges general best practices with specific lessons learned from our work on this project.
 
@@ -26,10 +31,12 @@ This document outlines the operating protocol for our collaboration. It merges g
     *   I will summarize important points after major steps or debugging sessions to ensure we are aligned.
 
 7.  **Externalize Knowledge for Transparency:**
-    *   As a core directive, I recognize that you have no access to my internal memories. Therefore, all important rules, project-specific knowledge, and lessons learned **must** be externalized into the appropriate files within the `.cursor/` directory (`rules.md`, `lessons.md`, `project.md`).
+    *   As a core directive, I recognize that you have no access to my internal memories. Therefore, all important rules, project-specific knowledge, and lessons learned **must** be externalized into the appropriate files within the `.cursor/` directory (`rules/rules.mdc`, `lessons.md`, `project.md`).
 
 8.  **Rule Synchronization Protocol:**
-    *   When you instruct me to 'add a rule' or a similar directive, I **must** update both my internal rules (memories) and this `.cursor/rules.md` file in parallel.
+    *   Any instruction to "add a rule," "change the rules," or a similar directive refers specifically to this file: `.cursor/rules/rules.mdc`.
+    *   When such a directive is given, I **must** update both my internal memories and this file in parallel.
+    *   If the directive is ambiguous in any way, I must ask for clarification before proceeding.
 
 ## II. Development, Coding & Architecture
 
@@ -49,7 +56,7 @@ This document outlines the operating protocol for our collaboration. It merges g
     *   I will use my tools to check the current state of the codebase (e.g., API method signatures, library versions) before making assumptions.
 
 6.  **Use the Correct Gemini SDK:**
-    *   This project uses the modern `google-genai` Python SDK. All Gemini API calls **must** conform to the patterns in the official migration guide: [https://ai.google.dev/gemini-api/docs/migrate](https://ai.google.dev/gemini-api/docs/migrate). This means using `genai.Client()` for initialization and `client.models.generate_content()` for API requests. I will not use the legacy `genai.GenerativeModel()` pattern.
+    *   This project uses the modern `google-genai` Python SDK. All Gemini API calls **must** conform to the patterns in the official migration guide: [https://ai.google.dev/gemini-api/docs/migrate](mdc:https:/ai.google.dev/gemini-api/docs/migrate). This means using `genai.Client()` for initialization and `client.models.generate_content()` for API requests. I will not use the legacy `genai.GenerativeModel()` pattern.
 
 7.  **Do Not Change the AI Model:**
     *   The designated AI model for this project is `gemini-2.5-flash-preview-05-20`. I will not change this constant (`MODEL_NAME`) in any file for any reason.
@@ -118,7 +125,7 @@ This protocol uses a set of files in a `.cursor` directory at the project's root
     *   When a significant error occurs, or whenever you correct a mistake in my process or code, I **must** perform a root cause analysis. The resulting "Actionable Lesson" **must** be documented in `.cursor/lessons.md` to prevent that class of error in the future.
 
 5.  **Synchronize with Cursor Settings:**
-    *   After we modify this `rules.md` file, I will remind you to copy its contents into the "Edit an AI Rule" section of the Cursor settings to ensure my behavior reflects the most current protocol.
+    *   After we modify this `rules.mdc` file, I will remind you to copy its contents into the "Edit an AI Rule" section of the Cursor settings to ensure my behavior reflects the most current protocol.
 
 ## VI. Project-Specific Lessons Log
 
