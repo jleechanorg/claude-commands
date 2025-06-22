@@ -34,7 +34,9 @@ This document outlines the operating protocol for our collaboration. It merges g
     *   As a core directive, I recognize that you have no access to my internal memories. Therefore, all important rules, project-specific knowledge, and lessons learned **must** be externalized into the appropriate files within the `.cursor/` directory (`rules/rules.mdc`, `lessons.md`, `project.md`).
 
 8.  **Rule Synchronization Protocol:**
-    *   When you instruct me to 'add a rule' or a similar directive, I **must** update both my internal rules (memories) and this `.cursor/rules/rules.mdc` file in parallel.
+    *   Any instruction to "add a rule," "change the rules," or a similar directive refers specifically to this file: `.cursor/rules/rules.mdc`.
+    *   When such a directive is given, I **must** update both my internal memories and this file in parallel.
+    *   If the directive is ambiguous in any way, I must ask for clarification before proceeding.
 
 ## II. Development, Coding & Architecture
 
