@@ -79,4 +79,31 @@ This document is a persistent repository for reusable knowledge, best practices,
 
 *   **LLM System Prompts:** Detailed, explicit, and well-structured system prompts are crucial for improving AI performance and consistency.
 *   **Dotfile Backups:** Critical configuration files in transient environments (like Cloud Shell) should be version-controlled or backed up.
-*   **Workspace-Specific Rules:** Always check for a `.cursor/rules.md` file at the start of any interaction. If it exists, its contents supersede any general operating instructions. This file is the definitive source of truth for project-specific protocols. 
+*   **Workspace-Specific Rules:** Always check for a `.cursor/rules.md` file at the start of any interaction. If it exists, its contents supersede any general operating instructions. This file is the definitive source of truth for project-specific protocols.
+
+---
+## State Management & Data Integrity (June 2025)
+
+### Lesson: State updates require a deep, recursive merge.
+*   **Problem:** The initial state update logic used a shallow merge (`dict.update()`), which caused nested objects and lists (like `core_memories`) to be completely overwritten instead of updated.
+*   **Solution:** Implement a recursive `deep_merge` function (renamed to `update_state_with_changes`) that traverses the entire state dictionary, merging nested objects and intelligently handling list appends.
+
+### Lesson: Code must be resilient to schema evolution.
+*   **Problem:** The application crashed when loading older campaign documents that were missing newer fields like `created_at`.
+*   **Solution:** Both the Python backend and the JavaScript frontend must use defensive data access patterns.
+    *   **Backend (Python):** Use the `dict.get('key', default_value)` method to safely access keys that may not exist.
+    *   **Frontend (JavaScript):** Use ternary operators (`campaign.last_played ? ... : 'N/A'`) or optional chaining (`campaign?.last_played`) to handle potentially `undefined` properties.
+
+### Lesson: The data source path is the ultimate source of truth.
+*   **Problem:** The most elusive bug was that state changes were not persisting. The root cause was that the application was reading the game state from one Firestore document (`.../game_states/current_state`) but writing updates to a different one (`.../campaigns/{id}`).
+*   **Solution:** When debugging persistence issues, the first step is to log and verify that the read path and write path for a given resource are identical.
+
+## AI Interaction & Prompt Engineering (June 2025)
+
+### Lesson: AI instructions must be clear, consistent, and unambiguous.
+*   **Problem:** The AI began generating malformed JSON for state updates.
+*   **Solution:** An audit of the `game_state_instruction.md` prompt file revealed conflicting examples—one section encouraged dot-notation while another mandated nested objects. The solution was to enforce a single, clear standard (nested objects) and remove all contradictory instructions and examples.
+
+### Lesson: Enforce critical logic with code-level safeguards, not just prompts.
+*   **Problem:** Despite prompt improvements, the AI would occasionally attempt to overwrite the `core_memories` list, which would risk data loss.
+*   **Solution:** Instead of endlessly refining the prompt, a "smart safeguard" was added to the `update_state_with_changes` function. This code intercepts any direct assignment to `core_memories`, intelligently extracts the new items, and safely appends them, making the system resilient to AI errors by default. 

@@ -26,15 +26,20 @@ Your primary mechanism for interacting with the game world is by proposing chang
     ```
     [STATE_UPDATES_PROPOSED]
     {
-      "path.to.new.or.existing.key": "new_value",
-      "npc_data.lyra.status": "Wounded",
-      "quests.shadow_spire.completed": true
+      "player_character_data": {
+        "status": "Healthy"
+      },
+      "quests": {
+        "shadow_spire": {
+            "completed": true
+        }
+      }
     }
     [END_STATE_UPDATES_PROPOSED]
     ```
 *   **JSON Content:** The content inside this block must be a single, valid JSON object.
-    *   The keys are strings using **dot notation** to specify the exact path for the update. If the path doesn't exist, the system will create it for you.
-    *   The values are the new values for those fields.
+    *   The keys are the top-level keys of the game state (like `player_character_data`, `world_data`, etc.).
+    *   The values are nested JSON objects containing the fields to be updated. If a key doesn't exist, it will be created.
 *   **Be Consistent:** Once you establish a path for a piece of data (e.g., `npc_data.lyra.status`), you should continue to use that same path to refer to it in future updates.
 *   **Deleting Data:** To remove a key from the state entirely (e.g., a used potion or a defeated enemy), set its value to the special string `__DELETE__`.
 *   **No Narrative:** Do not include any comments or explanations inside the `[STATE_UPDATES_PROPOSED]` block. It is for structured data only.
@@ -63,9 +68,15 @@ By following these principles, you ensure the game state remains clean, accurate
 ```
 [STATE_UPDATES_PROPOSED]
 {
-  "player_character_data.xp_current": 250,
-  "quests.ancient_ruins.status": "Discovered",
-  "quests.ancient_ruins.objective": "Find the Sunstone."
+  "player_character_data": {
+    "xp_current": 250
+  },
+  "quests": {
+    "ancient_ruins": {
+      "status": "Discovered",
+      "objective": "Find the Sunstone."
+    }
+  }
 }
 [END_STATE_UPDATES_PROPOSED]
 ```
@@ -75,9 +86,19 @@ By following these principles, you ensure the game state remains clean, accurate
 ```
 [STATE_UPDATES_PROPOSED]
 {
-  "npc_data.Thorgon.status": "Agreed to help the player.",
-  "npc_data.Thorgon.is_hostile": false,
-  "player_character_data.inventory.items.health_potion": "__DELETE__"
+  "npc_data": {
+      "Thorgon": {
+        "status": "Agreed to help the player.",
+        "is_hostile": false
+      }
+  },
+  "player_character_data": {
+      "inventory": {
+          "items": {
+              "health_potion": "__DELETE__"
+          }
+      }
+  }
 }
 [END_STATE_UPDATES_PROPOSED]
 ```
@@ -131,18 +152,112 @@ This is the only way to use this command. It is for small, precise corrections.
 5.  **Be Consistent:** Once you create a path for something, use that same path to update it later.
 
 ## NEW: World Time Management
-You are now responsible for tracking the in-game date and time. This is stored in the `world_time` object within the `CURRENT_GAME_STATE`.
+You are now responsible for tracking the in-game date and time. This is stored in the `world_data` object within the `CURRENT_GAME_STATE`.
 
 -   **Calendar System:** Your primary narrative instructions contain the rules for which calendar to use (e.g., Calendar of Harptos for Forgotten Realms, Gregorian for Modern Earth). You must ensure the `month` value you use in the state is consistent with the correct calendar for the setting.
 -   **`world_time` Object:** This is a dictionary with the keys: `year`, `month`, `day`, `hour`, `minute`, `second`.
 -   **Advancing Time:** As the character takes actions, you must update this object. Resting might advance the day and reset the time, traveling a long distance could take hours, and a short action might advance the clock by minutes or seconds.
 -   **Example Update (Forgotten Realms):** If a short rest takes an hour from `09:51:10`, you should propose a state update like this:
-    `world_time.hour = 10`
-    `world_time.minute = 51`
-    `world_time.second = 10`
+    ```
+    [STATE_UPDATES_PROPOSED]
+    {
+      "world_data": {
+        "world_time": {
+          "hour": 10,
+          "minute": 51,
+          "second": 10
+        }
+      }
+    }
+    [END_STATE_UPDATES_PROPOSED]
+    ```
 
 This is critical for tracking time-sensitive quests and creating a realistic world.
 
 **URGENT: Your last attempt to update state used a deprecated command (`GOD_MODE_UPDATE_STATE`) and failed. You MUST now use `GOD_MODE_SET:`.**
 
 For example, instead of sending a single giant, invalid JSON blob, you must convert it to the following correct format:
+
+## NEW: The Core Memory Log Protocol
+
+To ensure long-term narrative consistency, you are required to maintain a "Core Memory Log." This is a list of the most critical, plot-altering events of the entire campaign. This log is your long-term memory.
+
+You must update this log whenever a significant event occurs by appending a new, concise summary to the `custom_campaign_state.core_memories` list in the game state.
+
+### Inclusion Criteria (What to add to Core Memories):
+*   **Key Events & Plot Points:** All significant narrative developments, major mission completions, discoveries, and pivotal plot twists.
+*   **Player Character (PC) Actions & Progress:**
+    *   Major decisions and their direct outcomes (e.g., "PC decides to investigate X," "PC captures Y").
+    *   Level Ups (e.g., "PC reaches Level X: (brief summary of major gains)").
+    *   Major power-ups, ability acquisitions, or transformations (e.g., "PC gains Senju cells," "PC awakens Rinnegan").
+    *   Significant resource gains or losses.
+*   **Key Non-Player Character (NPC) Status Changes:**
+    *   Capture, neutralization, death, or major subversion of significant NPCs (e.g., "NPC X captured and mind-plundered," "NPC Y eliminated").
+    *   Major power-ups or transformations for key allies (e.g., "Ally Z gains EMS").
+    *   Significant shifts in NPC allegiance or status.
+*   **Unforeseen Complications:** Briefly note when an "Unforeseen Complication" was triggered and its immediate narrative manifestation (e.g., "Complication: Agent network compromised").
+*   **Time Skips:** Clearly state the duration of any time skips and the primary focus of activity during that period.
+*   **DM Note Corrections/Retcons:** Explicitly note any instances where a `DM Note:` led to a retrospective correction, retcon, or clarification that significantly altered established lore or game state (e.g., "DM Note Retcon: Mutual EMS Exchange confirmed, both gain EMS").
+
+### Exclusion Criteria (What NOT to add):
+*   Do **NOT** include internal AI thought processes (`think` blocks).
+*   Do **NOT** include individual dice roll mechanics unless they resulted in a "Critical Success" or "Critical Failure" with a significant, unique impact.
+*   Do **NOT** include routine daily autonomous actions unless they cumulated into a significant breakthrough.
+*   Do **NOT** include minor transactional details (e.g., buying common goods).
+*   Strive for **brevity and conciseness** in each bullet point.
+
+### How to Update Core Memories
+To add a new memory, you must propose a state update that **appends** a new string to the `custom_campaign_state.core_memories` list.
+
+**CRITICAL:** The system includes a safeguard to prevent accidental data loss. It will intelligently append new items to `core_memories` even if you format the request incorrectly. However, you should always use the correct format below.
+
+**Example: Appending a new Core Memory**
+```
+[STATE_UPDATES_PROPOSED]
+{
+  "custom_campaign_state": {
+    "core_memories": {
+      "append": "Itachi awakens Rinnegan (Critical Success)."
+    }
+  }
+}
+[END_STATE_UPDATES_PROPOSED]
+```
+
+This is the only way to add new memories. The system will automatically add your summary as a new item in the list.
+
+**VERY IMPORTANT: The only valid way to propose state changes is by providing a nested JSON object inside the `[STATE_UPDATES_PROPOSED]` block. Do NOT use dot notation (e.g., `"player_character_data.gold": 500`). This is an old, deprecated format. Always use nested objects as shown in all examples in this document.**
+
+## CRITICAL: State Update Formatting Rules
+
+Your goal is to propose a JSON "patch" that updates the game state. For maximum clarity and to prevent data loss, you **must** structure your updates as nested JSON objects whenever possible.
+
+*   **PREFERRED METHOD (Nested Objects):**
+    To update a character's gold and add a new mission, structure the JSON like this. This is the safest and most explicit method.
+    ```json
+    {
+      "player_character_data": {
+        "gold": 500
+      },
+      "custom_campaign_state": {
+        "active_missions": [
+          { "mission_id": "rescue_the_merchant", "status": "started" }
+        ]
+      }
+    }
+    ```
+
+*   **AVOID (Dot Notation):**
+    Do NOT use dot notation keys like `"player_character_data.gold"`. While the system can handle this format, it is less clear and more prone to error. Always prefer the nested object structure shown above.
+
+*   **Be Precise:** Only include keys for values that have actually changed.
+*   **Use `__DELETE__` to Remove:** To remove a key, set its value to the special string `__DELETE__`.
+*   **Create as Needed:** Do not hesitate to create new paths and keys for new information that needs to be tracked.
+
+## CRITICAL: Non-Destructive Updates
+You must NEVER replace a top-level state object like `player_character_data`, `world_data`, or `custom_campaign_state`. Doing so will wipe out all nested data within that object.
+
+-   **CORRECT (updates a specific field):** `{ "custom_campaign_state.last_story_mode_sequence_id": 987 }`
+-   **INCORRECT (destroys all other custom state):** `{ "custom_campaign_state": { "last_story_mode_sequence_id": 987 } }`
+
+Always update the most specific, nested key possible using dot notation.

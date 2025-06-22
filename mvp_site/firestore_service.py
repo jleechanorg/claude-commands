@@ -1,9 +1,100 @@
+import collections.abc
 import datetime
-from firebase_admin import firestore
+import json
+import logging
+
 from decorators import log_exceptions
+from firebase_admin import firestore
 from game_state import GameState
 
 MAX_TEXT_BYTES = 1000000
+
+def _perform_append(target_list: list, items_to_append, key_name: str, deduplicate: bool = False):
+    """
+    Safely appends one or more items to a target list, with an option to prevent duplicates.
+    This function modifies the target_list in place.
+    """
+    if not isinstance(items_to_append, list):
+        items_to_append = [items_to_append]  # Standardize to list
+
+    newly_added_items = []
+    for item in items_to_append:
+        # If deduplication is on, skip items already in the list
+        if deduplicate and item in target_list:
+            continue
+        target_list.append(item)
+        newly_added_items.append(item)
+
+    if newly_added_items:
+        logging.info(f"APPEND/SAFEGUARD: Added {len(newly_added_items)} new items to '{key_name}'.")
+    else:
+        logging.info(f"APPEND/SAFEGUARD: No new items were added to '{key_name}' (duplicates may have been found).")
+
+def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
+    """
+    Recursively updates a state dictionary with a changes dictionary.
+    - Handles explicit appends via {'append': ...} syntax.
+    - Safeguards 'core_memories' from being overwritten, converting attempts into a safe append.
+    - Merges nested dictionaries recursively.
+    - Overwrites all other values.
+    """
+    logging.info(f"--- update_state_with_changes: applying changes:\\n{json.dumps(changes, indent=2, default=str)}")
+    
+    for key, value in changes.items():
+        logging.info(f"update_state: Processing key: '{key}'")
+
+        # Case 1: Explicit append syntax {'append': ...}
+        if isinstance(value, dict) and 'append' in value:
+            logging.info(f"update_state: Detected explicit append for '{key}'.")
+            if not isinstance(state_to_update.get(key), list):
+                state_to_update[key] = []
+            _perform_append(state_to_update[key], value['append'], key, deduplicate=(key == 'core_memories'))
+        
+        # Case 2: Smart safeguard for direct 'core_memories' overwrite
+        elif key == 'core_memories':
+            logging.warning("CRITICAL SAFEGUARD: Intercepted direct overwrite on 'core_memories'. Converting to safe, deduplicated append.")
+            if not isinstance(state_to_update.get(key), list):
+                state_to_update[key] = []
+            # The helper function is designed to handle non-lists, so we call it directly.
+            _perform_append(state_to_update[key], value, key, deduplicate=True)
+
+        # Case 3: Recursive merge for nested dictionaries
+        elif isinstance(value, dict) and key in state_to_update and isinstance(state_to_update.get(key), dict):
+            logging.info(f"update_state: Recursing into dict for key '{key}'.")
+            update_state_with_changes(state_to_update[key], value)
+
+        # Case 4: Simple overwrite for everything else
+        else:
+            logging.info(f"update_state: Overwriting value for key '{key}'.")
+            state_to_update[key] = value
+            
+    logging.info("--- update_state_with_changes: finished ---")
+    return state_to_update
+
+def _expand_dot_notation(d: dict) -> dict:
+    """
+    Expands a dictionary with dot-notation keys into a nested dictionary.
+    Example: {'a.b': 1, 'c': 2} -> {'a': {'b': 1}, 'c': 2}
+    """
+    expanded_dict = {}
+    for k, v in d.items():
+        if '.' in k:
+            keys = k.split('.')
+            d_ref = expanded_dict
+            for part in keys[:-1]:
+                d_ref = d_ref.setdefault(part, {})
+            d_ref[keys[-1]] = v
+        else:
+            expanded_dict[k] = v
+    return expanded_dict
+
+def json_serial(obj):
+    """JSON serializer for objects not serializable by default json code"""
+    if hasattr(obj, 'isoformat'):
+        return obj.isoformat()
+    if type(obj).__name__ == 'Sentinel':
+        return '<SERVER_TIMESTAMP>'
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 def get_db():
     """Returns the Firestore client."""
@@ -20,8 +111,16 @@ def get_campaigns_for_user(user_id):
     for campaign in campaigns_query.stream():
         campaign_data = campaign.to_dict()
         campaign_data['id'] = campaign.id
-        campaign_data['created_at'] = campaign_data['created_at'].isoformat()
-        campaign_data['last_played'] = campaign_data['last_played'].isoformat()
+        
+        # Safely get and format timestamps
+        created_at = campaign_data.get('created_at')
+        if created_at:
+            campaign_data['created_at'] = created_at.isoformat()
+            
+        last_played = campaign_data.get('last_played')
+        if last_played:
+            campaign_data['last_played'] = last_played.isoformat()
+            
         campaign_list.append(campaign_data)
     
     return campaign_list
@@ -105,7 +204,7 @@ def create_campaign(user_id, title, initial_prompt, opening_story, initial_game_
     return campaign_ref.id
 
 @log_exceptions
-def get_campaign_game_state(user_id, campaign_id) -> dict | None:
+def get_campaign_game_state(user_id, campaign_id) -> GameState | None:
     """Fetches the current game state for a given campaign."""
     db = get_db()
     game_state_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id).collection('game_states').document('current_state')
@@ -113,21 +212,33 @@ def get_campaign_game_state(user_id, campaign_id) -> dict | None:
     game_state_doc = game_state_ref.get()
     if not game_state_doc.exists:
         return None
-    return game_state_doc.to_dict()
+    return GameState.from_dict(game_state_doc.to_dict())
 
 @log_exceptions
-def update_campaign_game_state(user_id, campaign_id, state_updates: dict):
-    """Updates the game state using dot notation for nested fields."""
+def update_campaign_game_state(user_id, campaign_id, game_state_update: dict):
+    """Updates the game state for a campaign, overwriting with the provided dict."""
+    if not user_id or not campaign_id:
+        raise ValueError("User ID and Campaign ID are required.")
+
     db = get_db()
     game_state_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id).collection('game_states').document('current_state')
-    
-    # Add a timestamp to track the update
-    state_updates_with_timestamp = state_updates.copy()
-    state_updates_with_timestamp['last_state_update_timestamp'] = datetime.datetime.now(datetime.timezone.utc)
-    
-    # Use set with merge=True to handle both creation and updates (upsert).
-    # This fixes the bug where an update was called on a non-existent document.
-    game_state_ref.set(state_updates_with_timestamp, merge=True)
+
+    try:
+        # NOTE: This function now expects a COMPLETE game state dictionary.
+        # The merge logic has been moved to the handle_interaction function in main.py
+        # to ensure consistency across all update types (AI, GOD_MODE, etc.)
+        
+        # Add the last updated timestamp before setting.
+        game_state_update['last_state_update_timestamp'] = firestore.SERVER_TIMESTAMP
+        
+        game_state_ref.set(game_state_update) 
+        logging.info(f"Successfully set new game state for campaign {campaign_id}.")
+        # The log below is for the final state being written.
+        logging.info(f"Final state written to Firestore for campaign {campaign_id}:\\n{json.dumps(game_state_update, indent=2, default=json_serial)}")
+
+    except Exception as e:
+        logging.error(f"Failed to update game state for campaign {campaign_id}: {e}", exc_info=True)
+        raise
 
 # --- NEWLY ADDED FUNCTION ---
 @log_exceptions

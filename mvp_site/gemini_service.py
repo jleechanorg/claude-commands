@@ -27,9 +27,12 @@ LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'
 MAX_TOKENS = 50000 
 TEMPERATURE = 0.9
 TARGET_WORD_COUNT = 300
-HISTORY_TURN_LIMIT = 2000
 MAX_INPUT_TOKENS = 750000 
 SAFE_CHAR_LIMIT = MAX_INPUT_TOKENS * 4
+
+TURNS_TO_KEEP_AT_START = 25
+TURNS_TO_KEEP_AT_END = 75
+
 SAFETY_SETTINGS = [
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold=types.HarmBlockThreshold.BLOCK_NONE),
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
@@ -67,6 +70,11 @@ _client = None
 # Store loaded instruction content in a dictionary for easy access
 _loaded_instructions_cache = {} 
 
+def _clear_client():
+    """FOR TESTING ONLY: Clears the cached Gemini client."""
+    global _client
+    _client = None
+
 def _load_instruction_file(instruction_type):
     """
     Loads a prompt instruction file from the 'prompts' directory.
@@ -87,7 +95,7 @@ def _load_instruction_file(instruction_type):
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read().strip()
-            logging.info(f'Loaded prompt "{instruction_type}" from file: {os.path.basename(file_path)}')
+            # logging.info(f'Loaded prompt "{instruction_type}" from file: {os.path.basename(file_path)}')
             _loaded_instructions_cache[instruction_type] = content
         except FileNotFoundError:
             logging.error(f"CRITICAL: System instruction file not found: {file_path}. This is a fatal error for this request.")
@@ -96,7 +104,8 @@ def _load_instruction_file(instruction_type):
             logging.error(f"CRITICAL: Error loading system instruction file {file_path}: {e}")
             raise
     else:
-        logging.info(f'Loaded prompt "{instruction_type}" from cache.')
+        pass
+        #logging.info(f'Loaded prompt "{instruction_type}" from cache.')
         
     return _loaded_instructions_cache[instruction_type]
 
@@ -104,21 +113,37 @@ def _load_instruction_file(instruction_type):
 def get_client():
     """Initializes and returns a singleton Gemini client."""
     global _client
-    if _client is None:
-        logging.info("--- Initializing Gemini Client ---")
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
-        _client = genai.Client(api_key=api_key)
-        logging.info("--- Gemini Client Initialized Successfully ---")
+    # FOR DEBUGGING: Always re-initialize to pick up new keys from env.
+    # if _client is None:
+    logging.info("--- Initializing Gemini Client ---")
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
+    _client = genai.Client(api_key=api_key)
+    logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
+
+def _log_token_count(prompt_contents, model_name):
+    """Helper function to count and log the number of tokens being sent."""
+    try:
+        client = get_client()
+        # Use the same client.models pattern as generate_content
+        count_response = client.models.count_tokens(
+            model=model_name,
+            contents=prompt_contents
+        )
+        logging.info(f"--- Sending {count_response.total_tokens} tokens to the API. ---")
+    except Exception as e:
+        logging.warning(f"Could not count tokens before API call: {e}")
 
 def _call_gemini_api(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None):
     """Calls the Gemini API with a given prompt and returns the response."""
     client = get_client()
+    _log_token_count(prompt_contents, model_name)
+
     if current_prompt_text_for_logging:
         logging.info(f"--- Calling Gemini API with current prompt: {str(current_prompt_text_for_logging)[:1000]}... ---")
-    logging.info(f"--- Calling Gemini API with full prompt: {str(prompt_contents)[:1000]}... ---")
+    logging.info(f"--- Calling Gemini API with prompt of length: {len(prompt_contents)} ---")
     
     generation_config_params = {
         "max_output_tokens": MAX_TOKENS,
@@ -148,27 +173,74 @@ def _get_text_from_response(response):
     logging.warning(f"--- Response did not contain valid text. Full response object: {response} ---")
     return "[System Message: The model returned a non-text response. Please check the logs for details.]"
 
-def _truncate_context(story_context):
-    """
-    Truncates the story context first by HISTORY_TURN_LIMIT, and then
-    further by character count if it still exceeds the safety limit.
-    """
-    # 1. Apply the turn limit first.
-    context = list(story_context[-HISTORY_TURN_LIMIT:])
+def _get_context_stats(context, model_name, current_game_state: GameState):
+    """Helper to calculate and format statistics for a given story context."""
+    if not context:
+        return "Turns: 0, Chars: 0, Words: 0, Tokens: 0"
     
-    # 2. Check character count and truncate further if needed.
-    def calculate_total_chars(ctx):
-        return sum(len(entry.get('text', '')) for entry in ctx)
-
-    total_chars = calculate_total_chars(context)
+    chars = sum(len(entry.get('text', '')) for entry in context)
+    words = sum(len(entry.get('text', '').split()) for entry in context)
     
-    while total_chars > SAFE_CHAR_LIMIT and len(context) > 1:
-        # Remove the oldest entry (at the beginning of the list)
-        context.pop(0)
-        total_chars = calculate_total_chars(context)
-        logging.warning(f"Context exceeded safe char limit after turn limit. Truncating. New char count: {total_chars}")
+    # Token counting is an API call, so wrap it in a try-except
+    tokens = "N/A"
+    try:
+        client = get_client()
+        # To count tokens, we create a temporary list of content parts
+        parts = [types.Part(text=entry.get('text', '')) for entry in context]
+        count_response = client.models.count_tokens(model=model_name, contents=parts)
+        tokens = count_response.total_tokens
+    except Exception as e:
+        logging.warning(f"Could not count tokens for context stats: {e}")
         
-    return context
+    all_core_memories = current_game_state.custom_campaign_state.get('core_memories', [])
+    stats_string = f"Turns: {len(context)}, Chars: {chars}, Words: {words}, Tokens: {tokens}, Core Memories: {len(all_core_memories)}"
+
+    if all_core_memories:
+        last_three = all_core_memories[-3:]
+        stats_string += "\\n--- Last 3 Core Memories ---\\n"
+        for i, memory in enumerate(last_three, 1):
+            stats_string += f"  {len(all_core_memories) - len(last_three) + i}: {memory}\\n"
+        stats_string += "--------------------------"
+
+    return stats_string
+
+
+def _truncate_context(story_context, max_chars: int, model_name: str, current_game_state: GameState, turns_to_keep_at_start=TURNS_TO_KEEP_AT_START, turns_to_keep_at_end=TURNS_TO_KEEP_AT_END):
+    """
+    Intelligently truncates the story context to fit within a given character budget.
+    """
+    initial_stats = _get_context_stats(story_context, model_name, current_game_state)
+    logging.info(f"Initial context stats: {initial_stats}")
+
+    current_chars = sum(len(entry.get('text', '')) for entry in story_context)
+
+    if current_chars <= max_chars:
+        logging.info("Context is within character budget. No truncation needed.")
+        return story_context
+
+    logging.warning(
+        f"Context ({current_chars} chars) exceeds budget of {max_chars} chars. Truncating..."
+    )
+
+    total_turns = len(story_context)
+    if total_turns <= turns_to_keep_at_start + turns_to_keep_at_end:
+         # If we're over budget but have few turns, just take the most recent ones.
+        return story_context[-(turns_to_keep_at_start + turns_to_keep_at_end):]
+
+    start_context = story_context[:turns_to_keep_at_start]
+    end_context = story_context[-turns_to_keep_at_end:]
+    
+    truncation_marker = {
+        "actor": "system",
+        "text": "[...several moments, scenes, or days have passed...]\\n[...the story continues from the most recent relevant events...]"
+    }
+    
+    truncated_context = start_context + [truncation_marker] + end_context
+    
+    final_stats = _get_context_stats(truncated_context, model_name, current_game_state)
+    logging.info(f"Final context stats after truncation: {final_stats}")
+    
+    return truncated_context
 
 @log_exceptions
 def get_initial_story(prompt, selected_prompts=None, include_srd=False):
@@ -224,6 +296,13 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         selected_prompts = [] 
         logging.warning("No specific system prompts selected for continue_story. Using none.")
 
+    # --- SRD EXCLUSION ---
+    # CRITICAL: Manually remove the SRD from the list of prompts to load for this turn.
+    # The SRD should ONLY be used for initial generation, not for every interaction.
+    if constants.PROMPT_TYPE_SRD in selected_prompts:
+        logging.warning("SRD prompt was requested in continue_story, which is not allowed. It will be ignored.")
+        selected_prompts.remove(constants.PROMPT_TYPE_SRD)
+
     system_instruction_parts = []
 
     # Conditionally add the character template if narrative instructions are selected.
@@ -250,23 +329,66 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
 
-    recent_context = _truncate_context(story_context)
+    # --- NEW: Budget-based Truncation ---
+    # 1. Calculate the size of the "prompt scaffold" (everything except the timeline log)
+    serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2, default=json_datetime_serializer)
     
-    # Build a timeline log and a simple list of sequence IDs
+    # Temporarily generate other prompt parts to measure them.
+    # We will generate them again *after* truncation with the final context.
+    temp_checkpoint_block, temp_core_memories, temp_seq_ids = _get_static_prompt_parts(current_game_state, [])
+
+    prompt_scaffold = (
+        f"{temp_checkpoint_block}\\n\\n"
+        f"{temp_core_memories}"
+        f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{temp_seq_ids}]\\n\\n"
+    )
+    
+    # Calculate the character budget for the story context
+    char_budget_for_story = SAFE_CHAR_LIMIT - len(prompt_scaffold)
+    logging.info(f"Prompt scaffold is {len(prompt_scaffold)} chars. Remaining budget for story: {char_budget_for_story}")
+
+    # Truncate the story context if it exceeds the budget
+    truncated_story_context = _truncate_context(story_context, char_budget_for_story, DEFAULT_MODEL, current_game_state)
+
+    # Now that we have the final, truncated context, we can generate the real prompt parts.
+    checkpoint_block, core_memories_summary, sequence_id_list_string = _get_static_prompt_parts(current_game_state, truncated_story_context)
+    
+    # Serialize the game state for inclusion in the prompt
+    serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2, default=json_datetime_serializer)
+    
     timeline_log_parts = []
-    sequence_ids = []
-    for entry in recent_context:
+    # NEW: Define sequence_ids from the final recent_context
+    sequence_ids = [str(entry.get('sequence_id', 'N/A')) for entry in truncated_story_context]
+    for entry in truncated_story_context:
         actor_label = "Story" if entry.get('actor') == 'gemini' else "You"
         seq_id = entry.get('sequence_id', 'N/A')
-        sequence_ids.append(str(seq_id))
         timeline_log_parts.append(f"[SEQ_ID: {seq_id}] {actor_label}: {entry.get('text')}")
     
     timeline_log_string = "\n\n".join(timeline_log_parts)
-    sequence_id_list_string = ", ".join(sequence_ids)
 
-    # --- NEW: System-Generated Checkpoint Block ---
-    # This is the single source of truth for the character's immediate status.
+    # Create the final prompt for the current user turn (User's preferred method)
+    current_prompt_text = _get_current_turn_prompt(user_input, mode)
+
+    # --- NEW: Incorporate Game State & Timeline ---
+    full_prompt = (
+        f"{checkpoint_block}\\n\\n"
+        f"{core_memories_summary}"
+        f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{sequence_id_list_string}]\\n\\n"
+        f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\n"
+        f"TIMELINE LOG (FOR CONTEXT):\\n{timeline_log_string}\\n\\n"
+        f"YOUR TURN:\\n{current_prompt_text}"
+    )
+    
+    # For all subsequent calls, use the standard, cheaper model.
+    response = _call_gemini_api([full_prompt], DEFAULT_MODEL, current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
+    return _get_text_from_response(response)
+
+def _get_static_prompt_parts(current_game_state: GameState, story_context: list):
+    """Helper to generate the non-timeline parts of the prompt."""
+    sequence_ids = [str(entry.get('sequence_id', 'N/A')) for entry in story_context]
+    sequence_id_list_string = ", ".join(sequence_ids)
     latest_seq_id = sequence_ids[-1] if sequence_ids else 'N/A'
+
     current_location = current_game_state.world_data.get('current_location_name', 'Unknown')
     
     pc_data = current_game_state.player_character_data
@@ -280,12 +402,17 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     active_missions = current_game_state.custom_campaign_state.get('active_missions', [])
     missions_summary = "Missions: " + (", ".join(active_missions) if active_missions else "None")
 
-    # --- NEW: Ambition & Milestone ---
     ambition = pc_data.get('core_ambition')
     milestone = pc_data.get('next_milestone')
     ambition_summary = ""
     if ambition and milestone:
         ambition_summary = f"Ambition: {ambition} | Next Milestone: {milestone}"
+
+    core_memories = current_game_state.custom_campaign_state.get('core_memories', [])
+    core_memories_summary = ""
+    if core_memories:
+        core_memories_list = "\\n".join([f"- {item}" for item in core_memories])
+        core_memories_summary = f"CORE MEMORY LOG (SUMMARY OF KEY EVENTS):\\n{core_memories_list}\\n\\n"
 
     checkpoint_block = (
         f"[CHECKPOINT BLOCK:]\\n"
@@ -295,28 +422,17 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         f"{ambition_summary}"
     )
 
-    # Create the final prompt for the current user turn (User's preferred method)
+    return checkpoint_block, core_memories_summary, sequence_id_list_string
+
+def _get_current_turn_prompt(user_input, mode):
+    """Helper to generate the text for the user's current action."""
     if mode == 'character':
         prompt_template = "Main character: {user_input}. Continue the story in about {word_count} words and " \
             "add details for narrative, descriptions of scenes, character dialog, character emotions."
-        current_prompt_text = prompt_template.format(user_input=user_input, word_count=TARGET_WORD_COUNT)
+        return prompt_template.format(user_input=user_input, word_count=TARGET_WORD_COUNT)
     else: # god mode
         prompt_template = "GOD MODE: {user_input}"
-        current_prompt_text = prompt_template.format(user_input=user_input)
-
-    # --- NEW: Incorporate Game State & Timeline ---
-    serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2, default=json_datetime_serializer)
-    full_prompt = (
-        f"{checkpoint_block}\\n\\n"
-        f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{sequence_id_list_string}]\\n\\n"
-        f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\n"
-        f"TIMELINE LOG (FOR CONTEXT):\\n{timeline_log_string}\\n\\n"
-        f"YOUR TURN:\\n{current_prompt_text}"
-    )
-    
-    # For all subsequent calls, use the standard, cheaper model.
-    response = _call_gemini_api([full_prompt], DEFAULT_MODEL, current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
-    return _get_text_from_response(response)
+        return prompt_template.format(user_input=user_input)
 
 def create_game_state_from_legacy_story(story_context: list) -> GameState | None:
     """
@@ -401,29 +517,47 @@ def create_game_state_from_legacy_story(story_context: list) -> GameState | None
 @log_exceptions
 def parse_llm_response_for_state_changes(llm_text_response: str) -> dict:
     """
-    Parses the raw text response from the LLM to find and extract a
-    JSON block containing proposed state changes.
+    Parses the full text response from the LLM to find and extract the JSON object
+    containing proposed state changes. It is robust to multiple state update blocks,
+    parsing the last valid one it finds.
     """
-    # Regex to find the content between the delimiters, capturing the JSON inside.
-    # re.DOTALL (s) flag allows '.' to match newlines.
-    match = re.search(r'\[STATE_UPDATES_PROPOSED\](.*?)\[END_STATE_UPDATES_PROPOSED\]', llm_text_response, re.DOTALL)
-    
-    if not match:
+    # Use re.findall to get all occurrences of the state update block.
+    # This handles cases where the AI might generate multiple blocks in its thought process.
+    matches = re.findall(r'\[STATE_UPDATES_PROPOSED\](.*?)\[END_STATE_UPDATES_PROPOSED\]', llm_text_response, re.DOTALL)
+
+    if not matches:
+        logging.info("No state update block found in the LLM response.")
         return {}
 
-    json_string = match.group(1).strip()
-    
-    try:
-        proposed_changes = json.loads(json_string)
-        if isinstance(proposed_changes, dict):
-            return proposed_changes
-        else:
-            logging.warning(f"Parsed state changes is not a dictionary: {proposed_changes}")
-            return {}
-    except json.JSONDecodeError as e:
-        logging.error(f"Failed to parse JSON from state update block: {e}")
-        logging.error(f"Invalid JSON string was: {json_string}")
-        return {}
+    # Iterate through the found blocks in reverse order, taking the last valid one.
+    for json_string in reversed(matches):
+        json_string = json_string.strip()
+        
+        if not json_string:
+            continue # Skip empty blocks
+
+        # Handle optional markdown code block from the LLM
+        if json_string.startswith("```json"):
+            json_string = json_string[7:]
+        if json_string.endswith("```"):
+            json_string = json_string[:-3]
+        
+        json_string = json_string.strip()
+
+        try:
+            proposed_changes = json.loads(json_string)
+            
+            if isinstance(proposed_changes, dict):
+                logging.info("Successfully parsed a valid state update block.")
+                return proposed_changes
+            else:
+                logging.warning(f"Found a state update block, but parsed JSON was not a dictionary. Type: {type(proposed_changes)}. Content: {proposed_changes}")
+        except json.JSONDecodeError:
+            logging.warning(f"Found a state update block, but it contained invalid JSON. Content: `{json_string}`")
+            continue # Try the next block
+
+    logging.warning("Found state update block(s), but none contained valid JSON.")
+    return {}
 
 # --- Main block for rapid, direct testing ---
 if __name__ == "__main__":

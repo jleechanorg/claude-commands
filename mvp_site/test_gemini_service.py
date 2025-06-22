@@ -196,6 +196,120 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         actual_system_instruction = mock_get_client.return_value.models.generate_content.call_args.kwargs['config'].system_instruction.text
         self.assertEqual(actual_system_instruction, expected_system_instruction)
 
+class TestStaticPromptParts(unittest.TestCase):
+    def test_core_memories_formatting_with_memories(self):
+        """
+        Tests that core memories are correctly formatted into a summary string when they exist.
+        """
+        # --- Arrange ---
+        mock_game_state = MagicMock()
+        mock_game_state.custom_campaign_state = {
+            'core_memories': [
+                "Defeated the goblin king.",
+                "Found the ancient amulet."
+            ]
+        }
+        mock_game_state.world_data = {}
+        mock_game_state.player_character_data = {}
+
+        expected_summary = (
+            "CORE MEMORY LOG (SUMMARY OF KEY EVENTS):\\n"
+            "- Defeated the goblin king.\\n"
+            "- Found the ancient amulet.\\n\\n"
+        )
+
+        # --- Act ---
+        _, core_memories_summary, _ = gemini_service._get_static_prompt_parts(mock_game_state, [])
+
+        # --- Assert ---
+        self.assertEqual(core_memories_summary, expected_summary)
+
+    def test_core_memories_formatting_no_memories(self):
+        """
+        Tests that an empty string is returned when there are no core memories.
+        """
+        # --- Arrange ---
+        mock_game_state = MagicMock()
+        mock_game_state.custom_campaign_state = {'core_memories': []}
+        mock_game_state.world_data = {}
+        mock_game_state.player_character_data = {}
+
+        # --- Act ---
+        _, core_memories_summary, _ = gemini_service._get_static_prompt_parts(mock_game_state, [])
+
+        # --- Assert ---
+        self.assertEqual(core_memories_summary, "")
+
+class TestContextTruncation(unittest.TestCase):
+    @patch('gemini_service._get_context_stats')
+    def test_context_just_under_limit_no_truncation(self, mock_get_stats):
+        """
+        Tests that if the context is under the char limit, it's returned unmodified.
+        """
+        # --- Arrange ---
+        mock_get_stats.return_value = "Stats: N/A" # Mock the stats function
+        # Create a story context with a known character count
+        story_context = [
+            {'text': 'a' * 100}, # 100 chars
+            {'text': 'b' * 100}, # 100 chars
+            {'text': 'c' * 100}  # 100 chars
+        ] # Total 300 chars
+        
+        # Set a budget that is slightly larger than the context
+        char_budget = 301
+        
+        # --- Act ---
+        # We are testing _truncate_context directly
+        truncated_context = gemini_service._truncate_context(
+            story_context,
+            max_chars=char_budget,
+            model_name='test-model' # model name is needed for logging stats
+        )
+        
+        # --- Assert ---
+        # The context should be unchanged
+        self.assertEqual(len(truncated_context), 3)
+        self.assertEqual(story_context, truncated_context)
+
+    @patch('gemini_service._get_context_stats')
+    def test_context_over_limit_is_truncated(self, mock_get_stats):
+        """
+        Tests that if the context is over the char limit, it's truncated
+        by keeping a few turns from the start and end.
+        """
+        # --- Arrange ---
+        mock_get_stats.return_value = "Stats: N/A" # Mock the stats function
+        # Create a long story context (e.g., 200 turns)
+        story_context = [{'text': f'Turn {i}'} for i in range(200)]
+        
+        # Set a very small budget to force truncation
+        char_budget = 10
+        
+        # Get the configured number of turns to keep from the constants
+        turns_start = gemini_service.TURNS_TO_KEEP_AT_START
+        turns_end = gemini_service.TURNS_TO_KEEP_AT_END
+
+        # --- Act ---
+        truncated_context = gemini_service._truncate_context(
+            story_context,
+            max_chars=char_budget,
+            model_name='test-model'
+        )
+        
+        # --- Assert ---
+        # The total length should be start_turns + end_turns + 1 (for the marker)
+        self.assertEqual(len(truncated_context), turns_start + turns_end + 1)
+        
+        # Check if the first part is correct
+        self.assertEqual(truncated_context[0], story_context[0])
+        self.assertEqual(truncated_context[turns_start - 1], story_context[turns_start - 1])
+        
+        # Check if the marker is present
+        self.assertEqual(truncated_context[turns_start]['actor'], 'system')
+        
+        # Check if the last part is correct
+        self.assertEqual(truncated_context[-1], story_context[-1])
+
 # The list of all known prompt types to test, using shared constants.
 PROMPT_TYPES_TO_TEST = [
     constants.PROMPT_TYPE_NARRATIVE,
