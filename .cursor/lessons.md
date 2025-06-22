@@ -106,4 +106,26 @@ This document is a persistent repository for reusable knowledge, best practices,
 
 ### Lesson: Enforce critical logic with code-level safeguards, not just prompts.
 *   **Problem:** Despite prompt improvements, the AI would occasionally attempt to overwrite the `core_memories` list, which would risk data loss.
-*   **Solution:** Instead of endlessly refining the prompt, a "smart safeguard" was added to the `update_state_with_changes` function. This code intercepts any direct assignment to `core_memories`, intelligently extracts the new items, and safely appends them, making the system resilient to AI errors by default. 
+*   **Solution:** Instead of endlessly refining the prompt, a "smart safeguard" was added to the `update_state_with_changes` function. This code intercepts any direct assignment to `core_memories`, intelligently extracts the new items, and safely appends them, making the system resilient to AI errors by default.
+
+## Lesson: Architecting Robust File Downloads
+
+**Problem:** A file download feature was failing in multiple, confusing ways: truncated filenames, mangled Unicode characters, and failed requests. The root cause was a combination of backend header issues and incomplete frontend logic.
+
+**Solution:** A robust file download requires a clear separation of concerns between the backend and frontend.
+
+### Backend Responsibilities (e.g., Flask)
+
+1.  **Decouple Filesystem Name from Download Name:** The filename on the server's disk should be temporary and safe. A UUID is ideal (`uuid.uuid4().ext`). The user-facing filename should be derived from the data's title and sent separately.
+2.  **Use `send_file` Correctly:** The standard `send_file(path, download_name="user_facing_name.ext", as_attachment=True)` is the correct tool. It handles setting the `Content-Disposition` header.
+3.  **Clean Up Temporary Files:** The backend is responsible for generating the temporary file and must clean it up. Using Flask's `@response.call_on_close` decorator is a reliable way to remove the file after the download stream is finished.
+
+### Frontend Responsibilities (e.g., JavaScript `fetch`)
+
+1.  **Initiate Download and Expect a Header:** The frontend code initiates the `fetch` request to the download endpoint.
+2.  **Read `Content-Disposition`:** It is not enough to just get the file data (the "blob"). The JavaScript **must** read the `Content-Disposition` header from the response.
+3.  **Extract the Filename:** The script must parse the `Content-Disposition` header to extract the `filename=` value. This is the source of truth for the downloaded file's name.
+4.  **Assemble the Download Link:** The script creates a blob URL from the response data (`URL.createObjectURL(blob)`), creates a temporary `<a>` element, sets its `href` to the blob URL, and critically, sets its `download` attribute to the filename extracted from the header.
+5.  **Include Authentication:** If the backend endpoint is protected, the frontend `fetch` call must include the necessary authorization token in its headers.
+
+By strictly adhering to this pattern, the backend has full control over the final filename, and the frontend correctly respects it, preventing truncation and other errors. 
