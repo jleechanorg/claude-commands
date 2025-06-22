@@ -111,8 +111,16 @@ def get_campaigns_for_user(user_id):
     for campaign in campaigns_query.stream():
         campaign_data = campaign.to_dict()
         campaign_data['id'] = campaign.id
-        campaign_data['created_at'] = campaign_data['created_at'].isoformat()
-        campaign_data['last_played'] = campaign_data['last_played'].isoformat()
+        
+        # Safely get and format timestamps
+        created_at = campaign_data.get('created_at')
+        if created_at:
+            campaign_data['created_at'] = created_at.isoformat()
+            
+        last_played = campaign_data.get('last_played')
+        if last_played:
+            campaign_data['last_played'] = last_played.isoformat()
+            
         campaign_list.append(campaign_data)
     
     return campaign_list

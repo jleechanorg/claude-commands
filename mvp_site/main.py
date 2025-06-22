@@ -42,6 +42,27 @@ DEFAULT_TEST_USER = 'test-user'
 
 # --- END CONSTANTS ---
 
+def _cleanup_legacy_state(state_dict: dict) -> tuple[dict, bool]:
+    """
+    Removes legacy data structures from a game state dictionary.
+    Specifically, it removes top-level keys with '.' in them and the old 'world_time' key.
+    Returns the cleaned dictionary and a boolean indicating if changes were made.
+    """
+    keys_to_delete = [key for key in state_dict.keys() if '.' in key]
+    if 'world_time' in state_dict:
+        keys_to_delete.append('world_time')
+    
+    if not keys_to_delete:
+        return state_dict, False
+
+    logging.info(f"Performing one-time cleanup. Deleting legacy keys: {keys_to_delete}")
+    cleaned_state = state_dict.copy()
+    for key in keys_to_delete:
+        if key in cleaned_state:
+             del cleaned_state[key]
+    
+    return cleaned_state, True
+
 def format_state_changes(changes: dict) -> str:
     """Formats a dictionary of state changes into a readable, multi-line string."""
     if not changes:
@@ -208,6 +229,18 @@ def create_app():
 
         user_input_stripped = user_input.strip()
 
+        # --- One-time legacy state cleanup on any interaction ---
+        current_game_state_doc = firestore_service.get_campaign_game_state(user_id, campaign_id)
+        if not current_game_state_doc:
+            return jsonify({KEY_SUCCESS: False, KEY_ERROR: "Game state not found for this campaign."}), 404
+        
+        current_state_dict = current_game_state_doc.to_dict()
+        current_state_dict, was_cleaned = _cleanup_legacy_state(current_state_dict)
+        if was_cleaned:
+            firestore_service.update_campaign_game_state(user_id, campaign_id, current_state_dict)
+            logging.info("Legacy state cleanup complete.")
+        # --- End cleanup ---
+
         if user_input_stripped.startswith(GOD_MODE_SET_COMMAND):
             payload_str = user_input_stripped[len(GOD_MODE_SET_COMMAND):]
             logging.info(f"--- GOD_MODE_SET received for campaign {campaign_id} ---")
@@ -220,14 +253,11 @@ def create_app():
                 logging.warning(f"GOD_MODE_SET command resulted in no valid changes.")
                 return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: The GOD_MODE_SET command was received, but contained no valid instructions or was empty.]"})
 
-            current_game_state_doc = firestore_service.get_campaign_game_state(user_id, campaign_id)
-            if not current_game_state_doc:
-                return jsonify({KEY_SUCCESS: False, KEY_ERROR: "Game state not found for this campaign."}), 404
-
-            current_state_dict = current_game_state_doc.to_dict()
-            logging.info(f"GOD_MODE_SET state BEFORE update:\\n{json.dumps(current_state_dict, indent=2, default=json_default_serializer)}")
+            # No need to re-fetch state, it's already loaded and cleaned above.
+            current_state_dict_before_update = current_state_dict.copy()
+            logging.info(f"GOD_MODE_SET state BEFORE update:\\n{json.dumps(current_state_dict_before_update, indent=2, default=json_default_serializer)}")
             
-            updated_state = update_state_with_changes(current_state_dict, proposed_changes)
+            updated_state = update_state_with_changes(current_state_dict_before_update, proposed_changes)
             logging.info(f"GOD_MODE_SET state AFTER update:\\n{json.dumps(updated_state, indent=2, default=json_default_serializer)}")
             
             firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
@@ -236,11 +266,8 @@ def create_app():
             return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: Game state has been forcefully updated.]"})
 
         if user_input_stripped == GOD_ASK_STATE_COMMAND:
-            current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
-            if not current_game_state:
-                return jsonify({KEY_ERROR: 'Campaign game state not found.'}), 404
-            
-            game_state_json = json.dumps(current_game_state.to_dict(), indent=2, default=json_default_serializer)
+            # No need to re-fetch state, it's already loaded and cleaned.
+            game_state_json = json.dumps(current_state_dict, indent=2, default=json_default_serializer)
             
             firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
             
@@ -374,44 +401,34 @@ def create_app():
     @app.route('/api/campaigns/<campaign_id>/export', methods=['GET'])
     @check_token
     def export_campaign(user_id, campaign_id):
-        file_format = request.args.get(constants.KEY_FORMAT, constants.FORMAT_TXT).lower()
-        campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
-        if not campaign:
-            return jsonify({KEY_ERROR: 'Campaign not found'}), 404
-        campaign_title = campaign.get(constants.KEY_TITLE, 'My Story')
-        story_text = document_generator.get_story_text_from_context(story_context)
-        file_path = None
-        mimetype = constants.MIMETYPE_TXT
         try:
-            if file_format == constants.FORMAT_PDF:
-                file_path = document_generator.generate_pdf(story_text, campaign_title)
-                mimetype = constants.MIMETYPE_PDF
-            elif file_format == constants.FORMAT_DOCX:
-                file_path = document_generator.generate_docx(story_text, campaign_title)
-                mimetype = constants.MIMETYPE_DOCX
-            else:
-                file_path = f"{campaign_title.replace(' ', '_')}.txt"
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(story_text)
-                mimetype = constants.MIMETYPE_TXT
-            if not file_path:
-                return jsonify({KEY_ERROR: 'Unsupported format'}), 400
-            return send_file(file_path, as_attachment=True, mimetype=mimetype)
+            campaign_data, story_log = firestore_service.get_campaign_by_id(user_id, campaign_id)
+            if not campaign_data:
+                return jsonify({'error': 'Campaign not found'}), 404
+
+            # Include the game state in the export
+            game_state_doc = firestore_service.get_campaign_game_state(user_id, campaign_id)
+            game_state = game_state_doc.to_dict() if game_state_doc else {}
+            
+            # Run final cleanup on game state before exporting
+            game_state, _ = _cleanup_legacy_state(game_state)
+
+            file_path = document_generator.create_campaign_document(campaign_data, story_log, game_state)
+            return send_file(file_path, as_attachment=True)
+
         except Exception as e:
+            logging.error(f"Export failed: {e}")
             traceback.print_exc()
-            return jsonify({KEY_ERROR: 'Failed to generate file', KEY_DETAILS: str(e)}), 500
-        finally:
-            if file_path and os.path.exists(file_path):
-                os.remove(file_path)
+            return jsonify({'error': 'Failed to export campaign'}), 500
 
     # --- Frontend Serving ---
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_frontend(path):
-        if not app.static_folder:
-            # This should never happen in our configuration, but it satisfies the linter.
-            return jsonify({KEY_ERROR: 'Static folder not configured'}), 500
-        return send_from_directory(app.static_folder, 'index.html')
+        if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+            return send_from_directory(app.static_folder, path)
+        else:
+            return send_from_directory(app.static_folder, 'index.html')
 
     return app
 

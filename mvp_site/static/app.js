@@ -101,15 +101,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 const campaignEl = document.createElement('div');
                 campaignEl.className = 'list-group-item list-group-item-action';
                 
+                const lastPlayed = campaign.last_played ? new Date(campaign.last_played).toLocaleString() : 'N/A';
+                const initialPrompt = campaign.initial_prompt ? campaign.initial_prompt.substring(0, 100) + '...' : '[No prompt]';
+
                 campaignEl.innerHTML = `
                     <div class="d-flex w-100 justify-content-between">
                         <h5 class="mb-1 campaign-title-link">${campaign.title}</h5>
                         <div>
                             <button class="btn btn-sm btn-outline-primary edit-campaign-btn me-2">Edit</button>
-                            <small class="text-muted">Last played: ${new Date(campaign.last_played).toLocaleString()}</small>
+                            <small class="text-muted">Last played: ${lastPlayed}</small>
                         </div>
                     </div>
-                    <p class="mb-1 campaign-title-link">${campaign.initial_prompt.substring(0, 100)}...</p>`;
+                    <p class="mb-1 campaign-title-link">${initialPrompt}</p>`;
                 
                 campaignEl.dataset.campaignId = campaign.id;
                 campaignEl.dataset.campaignTitle = campaign.title;
