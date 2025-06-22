@@ -41,7 +41,6 @@ This document defines the standard for the Player Character (PC) and all major N
 
 | Dimension | Reading | Personal twist |
 |-----------|---------|----------------|
-| **Myers-Briggs Type (MBTI)** | [e.g., ISTP, ENFP] | [Note: This trait is considered fixed. Describe any unique aspects, e.g., "An ISTP who has developed surprisingly strong social graces for tactical purposes."] |
 | **Big Five** | [O: %, C: %, E: %, A: %, N: %] | [Note: These scores can shift over time and may be referenced during mechanical checks (e.g., 'Your high Agreeableness helps you in this negotiation'), but should not be stated in general narrative.] |
 | **Dominant defenses** | [e.g., Humor, Denial] | [Explain how these defenses are used to manage stress or uncomfortable truths.] |
 | **Attachment color** | [e.g., Secure, Anxious] | [Describe their attachment style and how it impacts their relationships.] |
