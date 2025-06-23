@@ -420,7 +420,15 @@ def _get_static_prompt_parts(current_game_state: GameState, story_context: list)
     active_missions = current_game_state.custom_campaign_state.get('active_missions', [])
     if active_missions:
         # Handle both old style (list of strings) and new style (list of dicts)
-        mission_names = [m.get('name', m) if isinstance(m, dict) else m for m in active_missions]
+        mission_names = []
+        for m in active_missions:
+            if isinstance(m, dict):
+                # For dict format, try to get 'name' field, fallback to 'title' or convert to string
+                name = m.get('name') or m.get('title') or str(m)
+            else:
+                # For string format, use as-is
+                name = str(m)
+            mission_names.append(name)
         missions_summary = "Missions: " + (", ".join(mission_names) if mission_names else "None")
     else:
         missions_summary = "Missions: None"

@@ -271,6 +271,11 @@ def create_app():
 
         npc_data = game_state_dict.get('npc_data', {})
         for npc_id, npc_info in npc_data.items():
+            # Defensive programming: ensure npc_info is a dictionary
+            if not isinstance(npc_info, dict):
+                logging.warning(f"NPC data for '{npc_id}' is not a dictionary: {type(npc_info)}. Skipping MBTI check.")
+                continue
+                
             if constants.KEY_MBTI not in npc_info:
                 npc_name = npc_info.get('name', npc_id)
                 logging.info(f"RETROACTIVE_ASSIGNMENT: NPC '{npc_name}' is missing an MBTI type. The AI will be prompted to assign one.")
