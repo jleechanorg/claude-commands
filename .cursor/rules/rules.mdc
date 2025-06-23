@@ -55,7 +55,10 @@ This document outlines the operating protocol for our collaboration. It merges g
 13. **Propose Failing Tests:**
     *   When debugging a bug that is not covered by the existing test suite, I must first propose a new unit test that reliably reproduces the failure (a "red" test). I will explain why the test is expected to fail and will not add it to the code until you explicitly approve it.
 
-14. **Security: DO NOT SUBMIT Rule:**
+14. **Red-Green Testing Methodology:**
+    *   When implementing new features or functionality, I must follow the red-green testing approach: First, write a unit test that fails without the new implementation ("red" state), then implement the feature to make the test pass ("green" state). This ensures the test actually validates the new functionality and catches regressions.
+
+15. **Security: DO NOT SUBMIT Rule:**
     *   If I see "DO NOT SUBMIT" anywhere in code, comments, or environment variables, I must never allow this to be committed or merged into any branch. This is a critical security marker indicating sensitive data (API keys, credentials, etc.) that must be removed before any PR or commit.
 
 ## II. Development, Coding & Architecture
@@ -126,11 +129,20 @@ This document outlines the operating protocol for our collaboration. It merges g
 4.  **Repository Awareness:**
     *   When asked about the repository's state, I will inspect local Git logs and file diffs to provide informed answers.
 
-5.  **Confirm Before Publishing:**
+5.  **Only Publish Working Code:**
+    *   I must never push code to GitHub unless it has been verified to work locally first. This includes running relevant tests, ensuring the application starts without errors, and confirming core functionality works as expected.
+
+6.  **Confirm Before Publishing:**
     *   After successfully committing changes, I will explicitly ask for your confirmation before I push them to the remote GitHub repository.
 
-6.  **Provide Pull Request URL:**
+7.  **Provide Pull Request URL:**
     *   After successfully pushing a new branch with commits, I will provide the direct URL to create a pull request on GitHub.
+
+8.  **Always Link Pull Request URLs:**
+    *   When creating or referencing a pull request, I must always provide the direct clickable URL to the PR. This applies to both newly created PRs and when discussing existing ones.
+
+9.  **Default to Main Branch for Pull Requests:**
+    *   Unless explicitly instructed otherwise, all pull requests should target the `main` branch as the base. Do not assume `dev` or other branches without confirmation.
 
 ## IV. Environment, Tooling & Scripts
 
@@ -138,8 +150,13 @@ This document outlines the operating protocol for our collaboration. It merges g
     *   I will verify that the project-specific virtual environment (`venv`) is activated before running any Python scripts, linters, testers, or package managers. If it's not active, I will attempt to activate it or inform you if I cannot.
 2.  **Write Robust & Context-Aware Scripts:**
     *   Automation scripts (e.g., `deploy.sh`) will be designed to be robust, idempotent, and work correctly from any subdirectory.
-3.  **Use `vpython` for Tests:**
+3.  **Use `vpython` for Tests - Consistent Execution Pattern:**
     *   Always use `vpython` to run tests (e.g., `vpython -m unittest discover` or `vpython path/to/test_file.py`). You have standing permission to run these tests at any time to verify changes, and you do not need to ask for approval first.
+    *   **CRITICAL: Consistent Directory Navigation for `vpython`:**
+        - If currently in project root: `cd mvp_site && TESTING=true vpython test_file.py`
+        - If already in mvp_site: `TESTING=true vpython test_file.py` 
+        - If unsure of location: Always use `cd mvp_site && TESTING=true vpython test_file.py`
+        - **Never** attempt `cd mvp_site` when already in mvp_site (causes "No such file or directory" error)
     *   **Correct Test Commands:** For this project, use `TESTING=true vpython test_integration.py` from the `mvp_site/` directory for integration tests, or `vpython -m unittest test_module.TestClass.test_method` for specific tests.
 4.  **Tool Failure and Recovery Protocol:**
     *   If a command or tool fails more than once, I must stop and try an alternative command or a different approach. I will not repeatedly attempt the same failing action. If a file becomes corrupted or its state is uncertain due to failed edits, my default recovery strategy is to fetch the last known good version from the `main` or `master` branch and restart the editing process.
