@@ -23,6 +23,8 @@ def json_datetime_serializer(obj):
 DEFAULT_MODEL = 'gemini-2.5-flash'
 # Use pro for the single, large-context operation (initial SRD load).
 LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'
+# Use fastest model for testing
+TEST_MODEL = 'gemini-1.5-flash'
 
 MAX_TOKENS = 50000 
 TEMPERATURE = 0.9
@@ -303,7 +305,7 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False):
     
     # --- DYNAMIC MODEL SELECTION ---
     # Use the more powerful model at the beginning of the game.
-    model_to_use = LARGE_CONTEXT_MODEL
+    model_to_use = TEST_MODEL if os.environ.get('TESTING') else LARGE_CONTEXT_MODEL
     logging.info(f"Using model: {model_to_use} for initial story generation.")
 
     response = _call_gemini_api(contents, model_to_use, current_prompt_text_for_logging=prompt, system_instruction_text=system_instruction_final)
@@ -401,7 +403,8 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     )
     
     # For all subsequent calls, use the standard, cheaper model.
-    response = _call_gemini_api([full_prompt], DEFAULT_MODEL, current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
+    test_model = TEST_MODEL if os.environ.get('TESTING') else DEFAULT_MODEL
+    response = _call_gemini_api([full_prompt], test_model, current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
     return _get_text_from_response(response)
 
 def _get_static_prompt_parts(current_game_state: GameState, story_context: list):

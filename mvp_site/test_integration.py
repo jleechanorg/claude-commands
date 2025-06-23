@@ -18,6 +18,7 @@ logging.basicConfig(level=logging.WARNING)
 
 # We still need the dummy key for the import-time initialization check
 os.environ["GEMINI_API_KEY"] = "AIzaSyAfngmuVONpJPEbXpEZ1LwJnpDi2Vrdwb8" # DO NOT SUBMIT
+os.environ["TESTING"] = "true"  # Enable fast model for tests
 
 # Create dummy prompts directory and files for integration tests to prevent FileNotFoundError during import
 if not os.path.exists('./prompts'):
@@ -43,33 +44,36 @@ TEST_SELECTED_PROMPTS = ['narrative']  # Use only one prompt type instead of mul
 
 class TestInteractionIntegration(unittest.TestCase):
 
-    def setUp(self):
-        """
-        Set up a test client and a new campaign for each test.
-        This ensures test isolation.
-        """
-        # A dummy key is required for the gemini service to load
-        os.environ["GEMINI_API_KEY"] = "AIzaSyAfngmuVONpJPEbXpEZ1LwJnpDi2Vrdwb8" # DO NOT SUBMIT
-        self.app = create_app()
-        self.app.config['TESTING'] = True
-        self.client = self.app.test_client()
-        self.user_id = 'test-integration-user'
+    @classmethod
+    def setUpClass(cls):
+        """Create one campaign for all tests to share."""
+        cls.app = create_app()
+        cls.app.config['TESTING'] = True
+        cls.client = cls.app.test_client()
+        cls.user_id = 'test-integration-user'
         
         # Ensure the real Gemini API key is set; fall back to local file if possible.
         if not os.environ.get("GEMINI_API_KEY") and os.path.exists(os.path.join(project_root, "mvp_site", "local_api_key.txt")):
             with open(os.path.join(project_root, "mvp_site", "local_api_key.txt"), "r") as key_file:
                 os.environ["GEMINI_API_KEY"] = key_file.read().strip()
 
-        # Create a new campaign for each test
-        create_response = self.client.post(
+        # Create one shared campaign for all tests
+        create_response = cls.client.post(
             '/api/campaigns',
-            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': cls.user_id},
             data=json.dumps({'prompt': 'Start adventure', 'title': 'Test', 'selected_prompts': TEST_SELECTED_PROMPTS})
         )
-        self.assertEqual(create_response.status_code, 201, "Failed to create campaign in setUp")
+        assert create_response.status_code == 201, "Failed to create shared campaign"
         create_data = create_response.get_json()
-        self.campaign_id = create_data.get('campaign_id')
-        self.assertIsNotNone(self.campaign_id)
+        cls.campaign_id = create_data.get('campaign_id')
+        assert cls.campaign_id is not None
+
+    def setUp(self):
+        """Use shared campaign from setUpClass."""
+        self.app = self.__class__.app
+        self.client = self.__class__.client
+        self.user_id = self.__class__.user_id
+        self.campaign_id = self.__class__.campaign_id
 
     def tearDown(self):
         """Clean up any test data (campaigns, etc.)."""
@@ -106,18 +110,7 @@ class TestInteractionIntegration(unittest.TestCase):
         Milestone 1: Verify that a new campaign generates an initial game state.
         This tests the entire creation pipeline.
         """
-        # We cannot control the model's exact output here; rely on God-command fetch below.
-
-        # Create a new campaign, which will trigger the mocked response
-        response = self.client.post(
-            '/api/campaigns',
-            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
-            data=json.dumps({'prompt': 'A new world', 'title': 'State Test'})
-        )
-        self.assertEqual(response.status_code, 201)
-        campaign_id = response.get_json()['campaign_id']
-
-        # Now, fetch the state directly to verify it was saved correctly
+        # Fetch the state from the shared campaign to verify it was created correctly
         state_json = self._run_god_command('ask')
         game_state = json.loads(state_json)
 
