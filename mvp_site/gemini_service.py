@@ -195,15 +195,15 @@ def _get_context_stats(context, model_name, current_game_state: GameState):
     if not context:
         return "Turns: 0, Chars: 0, Words: 0, Tokens: 0"
     
-    chars = sum(len(entry.get('text', '')) for entry in context)
-    words = sum(len(entry.get('text', '').split()) for entry in context)
+    chars = sum(len(entry.get(constants.KEY_TEXT, '')) for entry in context)
+    words = sum(len(entry.get(constants.KEY_TEXT, '').split()) for entry in context)
     
     # Token counting is an API call, so wrap it in a try-except
     tokens = "N/A"
     try:
         client = get_client()
         # To count tokens, we create a temporary list of content parts
-        parts = [types.Part(text=entry.get('text', '')) for entry in context]
+        parts = [types.Part(text=entry.get(constants.KEY_TEXT, '')) for entry in context]
         count_response = client.models.count_tokens(model=model_name, contents=parts)
         tokens = count_response.total_tokens
     except Exception as e:
@@ -229,7 +229,7 @@ def _truncate_context(story_context, max_chars: int, model_name: str, current_ga
     initial_stats = _get_context_stats(story_context, model_name, current_game_state)
     logging.info(f"Initial context stats: {initial_stats}")
 
-    current_chars = sum(len(entry.get('text', '')) for entry in story_context)
+    current_chars = sum(len(entry.get(constants.KEY_TEXT, '')) for entry in story_context)
 
     if current_chars <= max_chars:
         logging.info("Context is within character budget. No truncation needed.")
@@ -313,7 +313,41 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False):
 
 @log_exceptions
 def continue_story(user_input, mode, story_context, current_game_state: GameState, selected_prompts=None):
-    """Generates the next part of the story, incorporating game state and selected system instructions."""
+    """
+    Continues the story by calling the Gemini API with the current context and game state.
+    
+    Args:
+        user_input: The user's input text
+        mode: The interaction mode (e.g., 'character', 'story')
+        story_context: List of previous story entries
+        current_game_state: Current GameState object
+        selected_prompts: List of selected prompt types
+        
+    Returns:
+        The AI's response text
+    """
+    
+    # --- NEW: Validate checkpoint consistency before generating response ---
+    if story_context:
+        # Get the most recent AI response to validate against current state
+        recent_ai_responses = [entry.get(constants.KEY_TEXT, '') for entry in story_context[-3:] 
+                             if entry.get(constants.KEY_ACTOR) == constants.ACTOR_GEMINI]
+        if recent_ai_responses:
+            latest_narrative = recent_ai_responses[-1]
+            discrepancies = current_game_state.validate_checkpoint_consistency(latest_narrative)
+            
+            if discrepancies:
+                logging.warning(f"CHECKPOINT_VALIDATION: Found {len(discrepancies)} potential discrepancies:")
+                for i, discrepancy in enumerate(discrepancies, 1):
+                    logging.warning(f"  {i}. {discrepancy}")
+                
+                # Add validation prompt to ensure AI addresses inconsistencies
+                validation_instruction = (
+                    "IMPORTANT: State validation detected potential inconsistencies between the game state "
+                    "and recent narrative. Please ensure your response maintains strict consistency with the "
+                    "CURRENT GAME STATE data, especially regarding character health, location, and mission status."
+                )
+                user_input = f"{validation_instruction}\n\n{user_input}"
     
     if selected_prompts is None:
         selected_prompts = [] 
@@ -383,9 +417,9 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # NEW: Define sequence_ids from the final recent_context
     sequence_ids = [str(entry.get('sequence_id', 'N/A')) for entry in truncated_story_context]
     for entry in truncated_story_context:
-        actor_label = "Story" if entry.get('actor') == 'gemini' else "You"
+        actor_label = "Story" if entry.get(constants.KEY_ACTOR) == constants.ACTOR_GEMINI else "You"
         seq_id = entry.get('sequence_id', 'N/A')
-        timeline_log_parts.append(f"[SEQ_ID: {seq_id}] {actor_label}: {entry.get('text')}")
+        timeline_log_parts.append(f"[SEQ_ID: {seq_id}] {actor_label}: {entry.get(constants.KEY_TEXT)}")
     
     timeline_log_string = "\n\n".join(timeline_log_parts)
 
@@ -476,7 +510,7 @@ def create_game_state_from_legacy_story(story_context: list) -> GameState | None
 
     # Iterate backwards to find the most recent state block
     for entry in reversed(search_context):
-        text = entry.get('text', '')
+        text = entry.get(constants.KEY_TEXT, '')
         if text.strip().startswith('[Mode: STORY MODE]'):
             logging.info("Found a potential legacy game state block. Parsing...")
             

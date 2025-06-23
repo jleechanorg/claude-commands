@@ -794,6 +794,71 @@ class TestPerformAppend(unittest.TestCase):
         self.assertEqual(target_list, expected)
 
 
+class TestGameStateValidation(unittest.TestCase):
+    """Test cases for the GameState validation methods."""
+    
+    def test_validate_checkpoint_consistency_hp_mismatch_fails_without_implementation(self):
+        """RED TEST: This should fail without the validate_checkpoint_consistency implementation."""
+        # Create a game state with HP data
+        gs = GameState(
+            player_character_data={
+                "hp_current": 25,
+                "hp_max": 100
+            }
+        )
+        
+        # Narrative that contradicts the HP state
+        narrative = "The hero lies unconscious on the ground, completely drained of life force."
+        
+        # This should detect the discrepancy between narrative (unconscious) and state (25 HP)
+        discrepancies = gs.validate_checkpoint_consistency(narrative)
+        
+        # We expect to find at least one discrepancy
+        self.assertGreater(len(discrepancies), 0, "Should detect HP/consciousness discrepancy")
+        self.assertTrue(any("unconscious" in d.lower() and "hp" in d.lower() for d in discrepancies),
+                       "Should specifically mention unconscious/HP mismatch")
+    
+    def test_validate_checkpoint_consistency_location_mismatch_fails_without_implementation(self):
+        """RED TEST: This should fail without the validate_checkpoint_consistency implementation."""
+        # Create a game state with location data
+        gs = GameState(
+            world_data={
+                "current_location_name": "Tavern"
+            }
+        )
+        
+        # Narrative that contradicts the location
+        narrative = "Standing in the middle of the dark forest, surrounded by ancient trees."
+        
+        # This should detect the location discrepancy
+        discrepancies = gs.validate_checkpoint_consistency(narrative)
+        
+        # We expect to find at least one discrepancy
+        self.assertGreater(len(discrepancies), 0, "Should detect location discrepancy")
+        self.assertTrue(any("location" in d.lower() for d in discrepancies),
+                       "Should specifically mention location mismatch")
+    
+    def test_validate_checkpoint_consistency_mission_completion_fails_without_implementation(self):
+        """RED TEST: This should fail without the validate_checkpoint_consistency implementation."""
+        # Create a game state with active missions
+        gs = GameState(
+            custom_campaign_state={
+                "active_missions": ["Find the lost treasure", "Defeat the dragon"]
+            }
+        )
+        
+        # Narrative that indicates mission completion
+        narrative = "With the dragon finally defeated and the treasure secured, the quest was complete."
+        
+        # This should detect that missions are still marked active despite completion
+        discrepancies = gs.validate_checkpoint_consistency(narrative)
+        
+        # We expect to find at least one discrepancy
+        self.assertGreater(len(discrepancies), 0, "Should detect completed mission still marked active")
+        self.assertTrue(any("mission" in d.lower() or "quest" in d.lower() for d in discrepancies),
+                       "Should specifically mention mission/quest discrepancy")
+
+
 class TestMainStateFunctions(unittest.TestCase):
     """Test cases for state-related functions in main.py."""
     
