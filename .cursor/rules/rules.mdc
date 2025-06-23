@@ -74,26 +74,42 @@ This document outlines the operating protocol for our collaboration. It merges g
 4.  **Robust Data Handling:**
     *   Application code must be resilient to data variations, handle API limits gracefully, and manage different data schemas within the application logic.
 
-5.  **Professional-Grade Development Practices:**
+5.  **Case-Insensitive Field Detection:**
+    *   When searching for fields that may have inconsistent naming (e.g., AI-generated data), implement case-insensitive searches and handle multiple possible field names (e.g., `hp_current`, `HP_current`, `hp`).
+
+6.  **Defensive Data Structure Handling:**
+    *   Before calling methods on data structures, always verify the data type. Collections from external sources may contain mixed types (strings, dictionaries, etc.) that require different handling approaches.
+
+7.  **Professional-Grade Development Practices:**
     *   I will follow standard best practices, including: using the `logging` module in Python, using docstrings, and ensuring all DOM-manipulating JavaScript is properly loaded.
 
-6.  **Verify, Don't Assume:**
+8.  **Verify, Don't Assume:**
     *   I will use my tools to check the current state of the codebase (e.g., API method signatures, library versions) before making assumptions.
 
-7.  **Use the Correct Gemini SDK:**
+9.  **Use the Correct Gemini SDK:**
     *   This project uses the modern `google-genai` Python SDK. All Gemini API calls **must** conform to the patterns in the official migration guide: [https://ai.google.dev/gemini-api/docs/migrate](mdc:https:/ai.google.dev/gemini-api/docs/migrate). This means using `genai.Client()` for initialization and `client.models.generate_content()` for API requests. I will not use the legacy `genai.GenerativeModel()` pattern.
 
-8.  **Do Not Change the AI Model:**
+10. **Do Not Change the AI Model:**
     *   The designated AI model for this project is `gemini-2.5-flash-preview-05-20`. I will not change this constant (`MODEL_NAME`) in any file for any reason.
 
-9.  **Snippet-Based Code Modification:**
+11. **Snippet-Based Code Modification:**
     *   By default, I will provide targeted code snippets with precise instructions on where to integrate them, rather than replacing entire files.
 
-10. **No Unsolicited Refactoring:**
+12. **No Unsolicited Refactoring:**
     *   I will not perform any cleanup, refactoring, or other changes that are not directly part of the assigned task. I may suggest these changes, but I must await your explicit approval before implementing them.
 
-11. **Always Use Temporary Files for Testing:**
+13. **Always Use Temporary Files for Testing:**
     *   When creating test files or any files that might overwrite user data, I must always use temporary directories (e.g., `tempfile.mkdtemp()`) to avoid overwriting real project files. This prevents data loss and ensures test isolation.
+
+14. **Defensive Programming for Dynamic Data:**
+    *   When processing data from external sources (databases, APIs, AI responses), I must always validate data types before attempting operations. Use `isinstance(data, expected_type)` checks before calling type-specific methods like `.get()`, `.append()`, etc.
+    *   **Pattern:** For dictionary iteration, always check `if isinstance(item, dict):` before using dictionary methods.
+
+15. **Integration Test Design Principles:**
+    *   Integration tests should work with natural application state rather than pre-setting conflicting test data.
+    *   Use flexible assertions that verify behavior rather than exact values when testing AI-generated content.
+    *   Optimize test speed by using faster AI models (`gemini-1.5-flash`) and shared test fixtures when possible.
+    *   Always use proper temporary directories to avoid overwriting real application files during testing.
 
 ## III. Git & Repository Workflow
 
@@ -151,6 +167,10 @@ This protocol uses a set of files in a `.cursor` directory at the project's root
 
 5.  **Synchronize with Cursor Settings:**
     *   After we modify this `rules.mdc` file, I will remind you to copy its contents into the "Edit an AI Rule" section of the Cursor settings to ensure my behavior reflects the most current protocol.
+
+6.  **Proactive Rule and Lesson Documentation:**
+    *   After completing any significant debugging session, integration test work, or bug fixes, I must proactively update both `.cursor/rules/rules.mdc` and `.cursor/rules/lessons.mdc` with relevant lessons learned, without waiting for explicit instruction.
+    *   This ensures knowledge preservation and prevents repeating the same mistakes in future sessions.
 
 ## VI. Project-Specific Lessons Log
 
