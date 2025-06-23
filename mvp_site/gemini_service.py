@@ -403,8 +403,8 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     )
     
     # For all subsequent calls, use the standard, cheaper model.
-    test_model = TEST_MODEL if os.environ.get('TESTING') else DEFAULT_MODEL
-    response = _call_gemini_api([full_prompt], test_model, current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
+    chosen_model = TEST_MODEL if os.environ.get('TESTING') else DEFAULT_MODEL
+    response = _call_gemini_api([full_prompt], chosen_model, current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
     return _get_text_from_response(response)
 
 def _get_static_prompt_parts(current_game_state: GameState, story_context: list):
