@@ -4,6 +4,7 @@ Defines the GameState class, which represents the complete state of a campaign.
 import datetime
 from enum import Enum
 from typing import Optional
+import logging
 
 class MigrationStatus(Enum):
     """Enum for the migration status of the game state."""
@@ -56,6 +57,61 @@ class GameState:
         
         # The constructor now directly accepts the dictionary.
         return cls(**source)
+
+    def validate_checkpoint_consistency(self, narrative_text: str) -> list:
+        """
+        Validates that critical checkpoint data in the state matches references in the narrative.
+        Returns a list of discrepancies found.
+        
+        Args:
+            narrative_text: The latest narrative content from the AI
+            
+        Returns:
+            List of discrepancy descriptions, empty if no issues found
+        """
+        discrepancies = []
+        
+        # Check player character HP consistency
+        if 'player_character_data' in self.__dict__:
+            pc_data = self.player_character_data
+            hp_current = pc_data.get('hp_current')
+            hp_max = pc_data.get('hp_max')
+            
+            if hp_current is not None and hp_max is not None:
+                hp_percentage = (hp_current / hp_max) * 100
+                
+                # Check for narrative/state HP mismatches
+                if hp_percentage < 25:  # Critically wounded
+                    if not any(word in narrative_text.lower() for word in ['wounded', 'injured', 'hurt', 'bleeding', 'pain']):
+                        discrepancies.append(f"State shows character critically wounded ({hp_current}/{hp_max} HP) but narrative doesn't reflect injury")
+                elif hp_percentage > 90:  # Healthy
+                    if any(word in narrative_text.lower() for word in ['wounded', 'injured', 'bleeding', 'dying']):
+                        discrepancies.append(f"Narrative describes character as injured but state shows healthy ({hp_current}/{hp_max} HP)")
+        
+        # Check location consistency
+        current_location = self.world_data.get('current_location')
+        if current_location:
+            # Simple check - if location is mentioned in state but narrative talks about being elsewhere
+            location_words = current_location.lower().split()
+            if len(location_words) > 0 and not any(word in narrative_text.lower() for word in location_words):
+                # Only flag if narrative explicitly mentions being in a different place
+                if any(phrase in narrative_text.lower() for phrase in ['you are in', 'you find yourself in', 'you arrive at']):
+                    discrepancies.append(f"State location '{current_location}' may not match narrative location references")
+        
+        # Check active missions consistency
+        active_missions = self.custom_campaign_state.get('active_missions', [])
+        if active_missions:
+            for mission in active_missions:
+                if isinstance(mission, dict):
+                    mission_name = mission.get('name') or mission.get('title') or str(mission)
+                else:
+                    mission_name = str(mission)
+                
+                # If mission is marked as completed in narrative but still active in state
+                if 'complet' in narrative_text.lower() and mission_name.lower() in narrative_text.lower():
+                    discrepancies.append(f"Mission '{mission_name}' may be completed in narrative but still active in state")
+        
+        return discrepancies
 
 def get_initial_game_state():
     """

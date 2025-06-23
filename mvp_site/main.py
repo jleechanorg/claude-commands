@@ -406,6 +406,21 @@ def create_app():
         # 5. Parse and apply state changes from AI response
         proposed_changes = gemini_service.parse_llm_response_for_state_changes(gemini_response)
         
+        # --- NEW: Post-response checkpoint validation ---
+        if proposed_changes:
+            # Apply changes to a temporary state copy for validation
+            temp_state_dict = current_game_state.to_dict()
+            updated_temp_state = update_state_with_changes(temp_state_dict, proposed_changes)
+            temp_game_state = GameState.from_dict(updated_temp_state)
+            
+            # Validate the new response against the updated state
+            post_update_discrepancies = temp_game_state.validate_checkpoint_consistency(gemini_response)
+            
+            if post_update_discrepancies:
+                logging.warning(f"POST_UPDATE_VALIDATION: AI response created {len(post_update_discrepancies)} new discrepancies:")
+                for i, discrepancy in enumerate(post_update_discrepancies, 1):
+                    logging.warning(f"  {i}. {discrepancy}")
+        
         # --- NEW: Append state changes to response for player ---
         final_response = gemini_response
         
