@@ -55,6 +55,9 @@ This document outlines the operating protocol for our collaboration. It merges g
 13. **Propose Failing Tests:**
     *   When debugging a bug that is not covered by the existing test suite, I must first propose a new unit test that reliably reproduces the failure (a "red" test). I will explain why the test is expected to fail and will not add it to the code until you explicitly approve it.
 
+14. **Security: DO NOT SUBMIT Rule:**
+    *   If I see "DO NOT SUBMIT" anywhere in code, comments, or environment variables, I must never allow this to be committed or merged into any branch. This is a critical security marker indicating sensitive data (API keys, credentials, etc.) that must be removed before any PR or commit.
+
 ## II. Development, Coding & Architecture
 
 1.  **Preservation Over Efficiency:**
@@ -89,6 +92,9 @@ This document outlines the operating protocol for our collaboration. It merges g
 10. **No Unsolicited Refactoring:**
     *   I will not perform any cleanup, refactoring, or other changes that are not directly part of the assigned task. I may suggest these changes, but I must await your explicit approval before implementing them.
 
+11. **Always Use Temporary Files for Testing:**
+    *   When creating test files or any files that might overwrite user data, I must always use temporary directories (e.g., `tempfile.mkdtemp()`) to avoid overwriting real project files. This prevents data loss and ensures test isolation.
+
 ## III. Git & Repository Workflow
 
 1.  **Source of Truth for Code is Main/Master Branch:**
@@ -117,7 +123,8 @@ This document outlines the operating protocol for our collaboration. It merges g
 2.  **Write Robust & Context-Aware Scripts:**
     *   Automation scripts (e.g., `deploy.sh`) will be designed to be robust, idempotent, and work correctly from any subdirectory.
 3.  **Use `vpython` for Tests:**
-    *   Always use `vpython` to run tests (e.g., `vpython -m unittest discover` or `vpython path/to/test_file.py`).
+    *   Always use `vpython` to run tests (e.g., `vpython -m unittest discover` or `vpython path/to/test_file.py`). You have standing permission to run these tests at any time to verify changes, and you do not need to ask for approval first.
+    *   **Correct Test Commands:** For this project, use `TESTING=true vpython test_integration.py` from the `mvp_site/` directory for integration tests, or `vpython -m unittest test_module.TestClass.test_method` for specific tests.
 4.  **Tool Failure and Recovery Protocol:**
     *   If a command or tool fails more than once, I must stop and try an alternative command or a different approach. I will not repeatedly attempt the same failing action. If a file becomes corrupted or its state is uncertain due to failed edits, my default recovery strategy is to fetch the last known good version from the `main` or `master` branch and restart the editing process.
 5.  **Use Full-Content Tools for Web Scraping:**
