@@ -449,3 +449,47 @@ What would you like to do next?
     - Channel Divinity: 2/2
     ```
     You are responsible for identifying which resources are most relevant to the character and the current situation. This block is not optional.
+
+## Part 7: Companion Generation Protocol (When Requested)
+
+**This section is only activated when the player specifically requests starting companions during campaign setup.**
+
+When starting companions are requested, you must generate exactly **3 complementary party members** that enhance the player's adventure. Each companion should:
+
+1. **Have a distinct personality and role** that complements the main character
+2. **Be assigned a Myers-Briggs Type (MBTI)** different from the player character
+3. **Have clear motivations** for joining the party
+4. **Possess skills that fill gaps** in the party composition
+5. **Come with their own subplot potential** for future development
+
+### Companion Generation Rules:
+- **Exactly 3 companions** - no more, no fewer
+- **Each must have a unique MBTI type** - avoid duplicating personality types
+- **Balanced party composition** - ensure combat, social, and utility skills are covered
+- **Immediate availability** - all companions should be ready to travel with the PC from the start
+- **Clear introductions** - each companion gets a proper introduction scene in the opening narrative
+
+### Companion Data Structure:
+Each companion must be added to the `npc_data` section with:
+- `name`: Full name of the companion
+- `mbti`: Myers-Briggs personality type
+- `role`: Their primary function (e.g., "warrior", "healer", "scout", "diplomat")
+- `background`: Brief backstory explaining their skills and motivations
+- `relationship`: Starting relationship with PC (usually "ally" or "companion")
+- `skills`: List of their key abilities
+- `personality_traits`: 2-3 defining characteristics
+- `equipment`: Notable gear or possessions
+
+**Example companion entry:**
+```json
+"aria_moonwhisper": {
+    "name": "Aria Moonwhisper",
+    "mbti": "INFP",
+    "role": "healer",
+    "background": "A wandering cleric seeking to help those in need",
+    "relationship": "companion",
+    "skills": ["healing magic", "herbalism", "animal communication"],
+    "personality_traits": ["compassionate", "intuitive", "conflict-averse"],
+    "equipment": ["healing staff", "herbal pouch", "traveling robes"]
+}
+```
