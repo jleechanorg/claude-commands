@@ -167,6 +167,211 @@ class TestGameState(unittest.TestCase):
         # Dynamic attribute setting should not create a duplicate
         self.assertEqual(gs.game_state_version, 5)
         self.assertFalse(hasattr(gs, 'game_state_version_duplicate'))
+    
+    def test_three_layer_nesting_all_types(self):
+        """Test GameState with 3 layers of nesting and all valid Python data types."""
+        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.timezone.utc)
+        
+        complex_data = {
+            "game_state_version": 1,
+            "player_character_data": {
+                "personal_info": {
+                    "basic_stats": {
+                        "name": "TestHero",              # string
+                        "level": 42,                     # int
+                        "experience_ratio": 0.75,        # float
+                        "is_alive": True,                # boolean
+                        "special_abilities": None,        # None
+                        "inventory": ["sword", "potion"], # list
+                        "equipped_gear": {               # nested dict
+                            "weapon": "magic_sword",
+                            "armor": "leather_vest"
+                        }
+                    }
+                }
+            },
+            "world_data": {
+                "locations": {
+                    "current_area": {
+                        "area_name": "Enchanted Forest",
+                        "coordinates": [100, 250],
+                        "temperature": 22.5,
+                        "is_safe": False,
+                        "discovered_secrets": None,
+                        "available_quests": [],
+                        "environmental_effects": {
+                            "weather": "misty",
+                            "visibility": 0.6
+                        }
+                    }
+                }
+            },
+            "npc_data": {
+                "relationships": {
+                    "allies": {
+                        "count": 3,
+                        "trust_levels": [0.8, 0.9, 0.7],
+                        "average_trust": 0.8,
+                        "all_trusted": True,
+                        "special_ally": None,
+                        "names": ["Alice", "Bob", "Charlie"],
+                        "leader_info": {
+                            "name": "Alice",
+                            "rank": "Captain"
+                        }
+                    }
+                }
+            },
+            "custom_campaign_state": {
+                "progression": {
+                    "chapter_data": {
+                        "current_chapter": 5,
+                        "completion_percentage": 67.8,
+                        "all_objectives_complete": False,
+                        "bonus_content": None,
+                        "completed_objectives": ["find_key", "defeat_boss"],
+                        "chapter_metadata": {
+                            "title": "The Dark Tower",
+                            "difficulty": "hard"
+                        }
+                    }
+                }
+            },
+            "last_state_update_timestamp": test_datetime,
+            "migration_status": MigrationStatus.MIGRATED.value
+        }
+        
+        gs = GameState(**complex_data)
+        
+        # Test string values at 3rd level
+        self.assertEqual(gs.player_character_data["personal_info"]["basic_stats"]["name"], "TestHero")
+        self.assertEqual(gs.world_data["locations"]["current_area"]["area_name"], "Enchanted Forest")
+        self.assertEqual(gs.npc_data["relationships"]["allies"]["leader_info"]["name"], "Alice")
+        self.assertEqual(gs.custom_campaign_state["progression"]["chapter_data"]["chapter_metadata"]["title"], "The Dark Tower")
+        
+        # Test integer values at 3rd level
+        self.assertEqual(gs.player_character_data["personal_info"]["basic_stats"]["level"], 42)
+        self.assertEqual(gs.npc_data["relationships"]["allies"]["count"], 3)
+        self.assertEqual(gs.custom_campaign_state["progression"]["chapter_data"]["current_chapter"], 5)
+        
+        # Test float values at 3rd level
+        self.assertEqual(gs.player_character_data["personal_info"]["basic_stats"]["experience_ratio"], 0.75)
+        self.assertEqual(gs.world_data["locations"]["current_area"]["temperature"], 22.5)
+        self.assertEqual(gs.npc_data["relationships"]["allies"]["average_trust"], 0.8)
+        self.assertEqual(gs.custom_campaign_state["progression"]["chapter_data"]["completion_percentage"], 67.8)
+        
+        # Test boolean values at 3rd level
+        self.assertEqual(gs.player_character_data["personal_info"]["basic_stats"]["is_alive"], True)
+        self.assertEqual(gs.world_data["locations"]["current_area"]["is_safe"], False)
+        self.assertEqual(gs.npc_data["relationships"]["allies"]["all_trusted"], True)
+        self.assertEqual(gs.custom_campaign_state["progression"]["chapter_data"]["all_objectives_complete"], False)
+        
+        # Test None values at 3rd level
+        self.assertIsNone(gs.player_character_data["personal_info"]["basic_stats"]["special_abilities"])
+        self.assertIsNone(gs.world_data["locations"]["current_area"]["discovered_secrets"])
+        self.assertIsNone(gs.npc_data["relationships"]["allies"]["special_ally"])
+        self.assertIsNone(gs.custom_campaign_state["progression"]["chapter_data"]["bonus_content"])
+        
+        # Test list values at 3rd level
+        self.assertEqual(gs.player_character_data["personal_info"]["basic_stats"]["inventory"], ["sword", "potion"])
+        self.assertEqual(gs.world_data["locations"]["current_area"]["coordinates"], [100, 250])
+        self.assertEqual(gs.npc_data["relationships"]["allies"]["trust_levels"], [0.8, 0.9, 0.7])
+        self.assertEqual(gs.custom_campaign_state["progression"]["chapter_data"]["completed_objectives"], ["find_key", "defeat_boss"])
+        
+        # Test nested dict values at 3rd level
+        self.assertEqual(gs.player_character_data["personal_info"]["basic_stats"]["equipped_gear"]["weapon"], "magic_sword")
+        self.assertEqual(gs.world_data["locations"]["current_area"]["environmental_effects"]["weather"], "misty")
+        self.assertEqual(gs.npc_data["relationships"]["allies"]["leader_info"]["rank"], "Captain")
+        self.assertEqual(gs.custom_campaign_state["progression"]["chapter_data"]["chapter_metadata"]["difficulty"], "hard")
+        
+        # Test datetime
+        self.assertEqual(gs.last_state_update_timestamp, test_datetime)
+        
+        # Test enum conversion
+        self.assertEqual(gs.migration_status, MigrationStatus.MIGRATED)
+    
+    def test_to_dict_three_layer_nesting_all_types(self):
+        """Test serialization of GameState with 3 layers of nesting and all data types."""
+        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.timezone.utc)
+        
+        gs = GameState(
+            player_character_data={
+                "stats": {
+                    "combat": {
+                        "strength": 18,
+                        "dexterity": 14.5,
+                        "is_veteran": True,
+                        "special_training": None,
+                        "weapon_proficiencies": ["sword", "bow"],
+                        "combat_style": {
+                            "preferred": "aggressive",
+                            "fallback": "defensive"
+                        }
+                    }
+                }
+            },
+            last_state_update_timestamp=test_datetime,
+            migration_status=MigrationStatus.MIGRATED
+        )
+        
+        result = gs.to_dict()
+        
+        # Verify all data types are preserved in serialization
+        combat_data = result["player_character_data"]["stats"]["combat"]
+        self.assertEqual(combat_data["strength"], 18)                    # int
+        self.assertEqual(combat_data["dexterity"], 14.5)                 # float
+        self.assertEqual(combat_data["is_veteran"], True)                # bool
+        self.assertIsNone(combat_data["special_training"])               # None
+        self.assertEqual(combat_data["weapon_proficiencies"], ["sword", "bow"])  # list
+        self.assertEqual(combat_data["combat_style"]["preferred"], "aggressive")  # nested dict
+        
+        # Verify enum is serialized as string
+        self.assertEqual(result["migration_status"], "MIGRATED")
+        
+        # Verify datetime is preserved
+        self.assertEqual(result["last_state_update_timestamp"], test_datetime)
+    
+    def test_from_dict_three_layer_nesting_all_types(self):
+        """Test deserialization from dict with 3 layers of nesting and all data types."""
+        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.timezone.utc)
+        
+        source_dict = {
+            "game_state_version": 2,
+            "world_data": {
+                "regions": {
+                    "northern_kingdoms": {
+                        "population": 50000,
+                        "tax_rate": 0.15,
+                        "is_at_war": False,
+                        "ruler": None,
+                        "major_cities": ["Northgate", "Frostholm"],
+                        "trade_routes": {
+                            "primary": "sea_route",
+                            "secondary": "mountain_pass"
+                        }
+                    }
+                }
+            },
+            "last_state_update_timestamp": test_datetime,
+            "migration_status": "NO_LEGACY_DATA"
+        }
+        
+        gs = GameState.from_dict(source_dict)
+        
+        # Verify all data types are correctly deserialized
+        region_data = gs.world_data["regions"]["northern_kingdoms"]
+        self.assertEqual(region_data["population"], 50000)               # int
+        self.assertEqual(region_data["tax_rate"], 0.15)                  # float
+        self.assertEqual(region_data["is_at_war"], False)                # bool
+        self.assertIsNone(region_data["ruler"])                         # None
+        self.assertEqual(region_data["major_cities"], ["Northgate", "Frostholm"])  # list
+        self.assertEqual(region_data["trade_routes"]["primary"], "sea_route")       # nested dict
+        
+        # Verify enum conversion
+        self.assertEqual(gs.migration_status, MigrationStatus.NO_LEGACY_DATA)
+        
+        # Verify datetime preservation
+        self.assertEqual(gs.last_state_update_timestamp, test_datetime)
 
 
 class TestGetInitialGameState(unittest.TestCase):
@@ -344,6 +549,179 @@ class TestUpdateStateWithChanges(unittest.TestCase):
             }
         }
         self.assertEqual(result, expected)
+    
+    def test_three_layer_nesting_all_data_types(self):
+        """Test update_state_with_changes with 3 layers of nesting and all Python data types."""
+        test_datetime = datetime.datetime(2023, 6, 15, 14, 30, 45, tzinfo=datetime.timezone.utc)
+        
+        state = {
+            "game_data": {
+                "player_info": {
+                    "character_sheet": {
+                        "name": "OldHero",
+                        "level": 1,
+                        "health_ratio": 1.0,
+                        "is_active": True,
+                        "special_items": None,
+                        "skills": ["basic_attack"],
+                        "attributes": {
+                            "strength": 10,
+                            "intelligence": 12
+                        }
+                    }
+                }
+            },
+            "world_state": {
+                "environment": {
+                    "current_location": {
+                        "name": "Starting Village",
+                        "danger_level": 0,
+                        "weather_factor": 0.5,
+                        "is_discovered": True,
+                        "hidden_treasure": None,
+                        "npcs": ["village_elder"],
+                        "connections": {
+                            "north": "forest",
+                            "south": "plains"
+                        }
+                    }
+                }
+            }
+        }
+        
+        changes = {
+            "game_data": {
+                "player_info": {
+                    "character_sheet": {
+                        "name": "UpdatedHero",        # string update
+                        "level": 5,                   # int update
+                        "health_ratio": 0.8,          # float update
+                        "is_active": False,           # bool update
+                        "special_items": ["magic_ring"],  # None -> list
+                        "skills": {"append": ["fireball", "heal"]},  # append to list
+                        "attributes": {
+                            "strength": 15,           # nested int update
+                            "wisdom": 14              # new nested int
+                        }
+                    }
+                }
+            },
+            "world_state": {
+                "environment": {
+                    "current_location": {
+                        "danger_level": 2,            # int update
+                        "weather_factor": 0.3,        # float update
+                        "is_discovered": False,       # bool update (should not happen in practice)
+                        "hidden_treasure": "gold_coins",  # None -> string
+                        "npcs": {"append": ["merchant", "guard"]},  # append to list
+                        "connections": {
+                            "east": "mountain",       # new nested string
+                            "west": None              # new nested None
+                        }
+                    }
+                }
+            },
+            "metadata": {                             # completely new top-level
+                "session_info": {
+                    "start_time": test_datetime,
+                    "session_id": 12345,
+                    "is_tutorial": False,
+                    "notes": None,
+                    "participants": ["player1"],
+                    "settings": {
+                        "difficulty": "normal",
+                        "auto_save": True
+                    }
+                }
+            }
+        }
+        
+        result = update_state_with_changes(state, changes)
+        
+        # Test string updates at 3rd level
+        self.assertEqual(result["game_data"]["player_info"]["character_sheet"]["name"], "UpdatedHero")
+        self.assertEqual(result["world_state"]["environment"]["current_location"]["name"], "Starting Village")  # unchanged
+        self.assertEqual(result["metadata"]["session_info"]["settings"]["difficulty"], "normal")  # new
+        
+        # Test int updates at 3rd level
+        self.assertEqual(result["game_data"]["player_info"]["character_sheet"]["level"], 5)
+        self.assertEqual(result["world_state"]["environment"]["current_location"]["danger_level"], 2)
+        self.assertEqual(result["metadata"]["session_info"]["session_id"], 12345)  # new
+        
+        # Test float updates at 3rd level
+        self.assertEqual(result["game_data"]["player_info"]["character_sheet"]["health_ratio"], 0.8)
+        self.assertEqual(result["world_state"]["environment"]["current_location"]["weather_factor"], 0.3)
+        
+        # Test bool updates at 3rd level
+        self.assertEqual(result["game_data"]["player_info"]["character_sheet"]["is_active"], False)
+        self.assertEqual(result["world_state"]["environment"]["current_location"]["is_discovered"], False)
+        self.assertEqual(result["metadata"]["session_info"]["is_tutorial"], False)  # new
+        
+        # Test None updates at 3rd level
+        self.assertEqual(result["game_data"]["player_info"]["character_sheet"]["special_items"], ["magic_ring"])  # None -> list
+        self.assertEqual(result["world_state"]["environment"]["current_location"]["hidden_treasure"], "gold_coins")  # None -> string
+        self.assertIsNone(result["metadata"]["session_info"]["notes"])  # new None
+        self.assertIsNone(result["world_state"]["environment"]["current_location"]["connections"]["west"])  # new nested None
+        
+        # Test list updates at 3rd level (append operations)
+        self.assertEqual(result["game_data"]["player_info"]["character_sheet"]["skills"], ["basic_attack", "fireball", "heal"])
+        self.assertEqual(result["world_state"]["environment"]["current_location"]["npcs"], ["village_elder", "merchant", "guard"])
+        self.assertEqual(result["metadata"]["session_info"]["participants"], ["player1"])  # new
+        
+        # Test nested dict updates at 3rd level
+        self.assertEqual(result["game_data"]["player_info"]["character_sheet"]["attributes"]["strength"], 15)  # updated
+        self.assertEqual(result["game_data"]["player_info"]["character_sheet"]["attributes"]["intelligence"], 12)  # preserved
+        self.assertEqual(result["game_data"]["player_info"]["character_sheet"]["attributes"]["wisdom"], 14)  # new
+        self.assertEqual(result["world_state"]["environment"]["current_location"]["connections"]["north"], "forest")  # preserved
+        self.assertEqual(result["world_state"]["environment"]["current_location"]["connections"]["east"], "mountain")  # new
+        self.assertEqual(result["metadata"]["session_info"]["settings"]["auto_save"], True)  # new nested
+        
+        # Test datetime at 3rd level
+        self.assertEqual(result["metadata"]["session_info"]["start_time"], test_datetime)
+    
+    def test_three_layer_nesting_edge_cases(self):
+        """Test edge cases with 3-layer nesting including empty structures and type conflicts."""
+        state = {
+            "container1": {
+                "container2": {
+                    "container3": {
+                        "empty_list": [],
+                        "empty_dict": {},
+                        "zero_int": 0,
+                        "zero_float": 0.0,
+                        "false_bool": False,
+                        "empty_string": ""
+                    }
+                }
+            }
+        }
+        
+        changes = {
+            "container1": {
+                "container2": {
+                    "container3": {
+                        "empty_list": {"append": ["first_item"]},  # append to empty list
+                        "empty_dict": {"new_key": "new_value"},    # add to empty dict
+                        "zero_int": 42,                           # update zero
+                        "zero_float": 3.14,                       # update zero
+                        "false_bool": True,                       # update false
+                        "empty_string": "now_has_content",        # update empty string
+                        "completely_new": "brand_new_value"       # add new key
+                    }
+                }
+            }
+        }
+        
+        result = update_state_with_changes(state, changes)
+        
+        # Test updates to "falsy" values
+        self.assertEqual(result["container1"]["container2"]["container3"]["empty_list"], ["first_item"])
+        self.assertEqual(result["container1"]["container2"]["container3"]["empty_dict"], {"new_key": "new_value"})
+        self.assertEqual(result["container1"]["container2"]["container3"]["zero_int"], 42)
+        self.assertEqual(result["container1"]["container2"]["container3"]["zero_float"], 3.14)
+        self.assertEqual(result["container1"]["container2"]["container3"]["false_bool"], True)
+        self.assertEqual(result["container1"]["container2"]["container3"]["empty_string"], "now_has_content")
+        self.assertEqual(result["container1"]["container2"]["container3"]["completely_new"], "brand_new_value")
 
 
 class TestPerformAppend(unittest.TestCase):
@@ -384,6 +762,36 @@ class TestPerformAppend(unittest.TestCase):
         
         # Should remain unchanged
         self.assertEqual(target_list, ["item1", "item2"])
+    
+    def test_append_all_data_types(self):
+        """Test appending various data types to a list."""
+        target_list = ["string"]
+        test_datetime = datetime.datetime(2023, 1, 1, tzinfo=datetime.timezone.utc)
+        
+        items_to_append = [
+            42,                    # int
+            3.14,                  # float
+            True,                  # bool
+            None,                  # None
+            ["nested", "list"],    # list
+            {"nested": "dict"},    # dict
+            test_datetime          # datetime
+        ]
+        
+        _perform_append(target_list, items_to_append, "test_key")
+        
+        expected = [
+            "string",
+            42,
+            3.14,
+            True,
+            None,
+            ["nested", "list"],
+            {"nested": "dict"},
+            test_datetime
+        ]
+        
+        self.assertEqual(target_list, expected)
 
 
 class TestMainStateFunctions(unittest.TestCase):
@@ -533,6 +941,60 @@ class TestMainStateFunctions(unittest.TestCase):
         
         expected = {"key1": "value1", "key2": "value2"}
         self.assertEqual(result, expected)
+    
+    def test_parse_set_command_three_layer_nesting_all_types(self):
+        """Test parsing set commands with 3 layers of nesting and all data types."""
+        test_datetime_str = "2023-06-15T14:30:45+00:00"
+        
+        payload = f'''
+        player.stats.combat.strength = 18
+        player.stats.combat.dexterity = 14.5
+        player.stats.combat.is_veteran = true
+        player.stats.combat.special_training = null
+        player.stats.combat.weapon_proficiencies.append = "sword"
+        player.stats.combat.weapon_proficiencies.append = "bow"
+        world.regions.north.population = 50000
+        world.regions.north.tax_rate = 0.15
+        world.regions.north.is_at_war = false
+        world.regions.north.ruler = null
+        world.regions.north.major_cities.append = "Northgate"
+        world.regions.north.major_cities.append = "Frostholm"
+        metadata.session.start_time = "{test_datetime_str}"
+        metadata.session.session_id = 12345
+        metadata.session.is_tutorial = false
+        metadata.session.notes = null
+        metadata.session.participants.append = "player1"
+        metadata.session.participants.append = "player2"
+        '''
+        
+        result = main.parse_set_command(payload)
+        
+        # Test int values at 3rd level
+        self.assertEqual(result["player"]["stats"]["combat"]["strength"], 18)
+        self.assertEqual(result["world"]["regions"]["north"]["population"], 50000)
+        self.assertEqual(result["metadata"]["session"]["session_id"], 12345)
+        
+        # Test float values at 3rd level
+        self.assertEqual(result["player"]["stats"]["combat"]["dexterity"], 14.5)
+        self.assertEqual(result["world"]["regions"]["north"]["tax_rate"], 0.15)
+        
+        # Test bool values at 3rd level
+        self.assertEqual(result["player"]["stats"]["combat"]["is_veteran"], True)
+        self.assertEqual(result["world"]["regions"]["north"]["is_at_war"], False)
+        self.assertEqual(result["metadata"]["session"]["is_tutorial"], False)
+        
+        # Test None values at 3rd level
+        self.assertIsNone(result["player"]["stats"]["combat"]["special_training"])
+        self.assertIsNone(result["world"]["regions"]["north"]["ruler"])
+        self.assertIsNone(result["metadata"]["session"]["notes"])
+        
+        # Test string values at 3rd level
+        self.assertEqual(result["metadata"]["session"]["start_time"], test_datetime_str)
+        
+        # Test append operations at 3rd level
+        self.assertEqual(result["player"]["stats"]["combat"]["weapon_proficiencies"]["append"], ["sword", "bow"])
+        self.assertEqual(result["world"]["regions"]["north"]["major_cities"]["append"], ["Northgate", "Frostholm"])
+        self.assertEqual(result["metadata"]["session"]["participants"]["append"], ["player1", "player2"])
 
 
 if __name__ == '__main__':
