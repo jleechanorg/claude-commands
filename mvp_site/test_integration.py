@@ -19,7 +19,6 @@ from mvp_site.game_state import GameState
 logging.basicConfig(level=logging.WARNING)
 
 # We still need the dummy key for the import-time initialization check
-os.environ["GEMINI_API_KEY"] = "AIzaSyAfngmuVONpJPEbXpEZ1LwJnpDi2Vrdwb8" # DO NOT SUBMIT
 os.environ["TESTING"] = "true"  # Enable fast model for tests
 
 # Create temporary prompts directory for tests
