@@ -70,6 +70,7 @@ class GameState:
             List of discrepancy descriptions, empty if no issues found
         """
         discrepancies = []
+        narrative_lower = narrative_text.lower()
         
         # Check player character HP consistency
         if 'player_character_data' in self.__dict__:
@@ -78,24 +79,41 @@ class GameState:
             hp_max = pc_data.get('hp_max')
             
             if hp_current is not None and hp_max is not None:
+                # Check for unconscious/death vs HP mismatch
+                if 'unconscious' in narrative_lower or 'lies unconscious' in narrative_lower:
+                    if hp_current > 0:
+                        discrepancies.append(f"Narrative mentions unconsciousness but HP is {hp_current}/{hp_max}")
+                
+                if any(phrase in narrative_lower for phrase in ['completely drained', 'drained of life']):
+                    if hp_current > 5:  # Should be very low if "drained of life"
+                        discrepancies.append(f"Narrative describes being drained of life but HP is {hp_current}/{hp_max}")
+                
                 hp_percentage = (hp_current / hp_max) * 100
                 
                 # Check for narrative/state HP mismatches
                 if hp_percentage < 25:  # Critically wounded
-                    if not any(word in narrative_text.lower() for word in ['wounded', 'injured', 'hurt', 'bleeding', 'pain']):
+                    if not any(word in narrative_lower for word in ['wounded', 'injured', 'hurt', 'bleeding', 'pain', 'unconscious']):
                         discrepancies.append(f"State shows character critically wounded ({hp_current}/{hp_max} HP) but narrative doesn't reflect injury")
                 elif hp_percentage > 90:  # Healthy
-                    if any(word in narrative_text.lower() for word in ['wounded', 'injured', 'bleeding', 'dying']):
+                    if any(word in narrative_lower for word in ['wounded', 'injured', 'bleeding', 'dying', 'unconscious']):
                         discrepancies.append(f"Narrative describes character as injured but state shows healthy ({hp_current}/{hp_max} HP)")
         
         # Check location consistency
-        current_location = self.world_data.get('current_location')
+        current_location = self.world_data.get('current_location_name') or self.world_data.get('current_location')
         if current_location:
-            # Simple check - if location is mentioned in state but narrative talks about being elsewhere
-            location_words = current_location.lower().split()
-            if len(location_words) > 0 and not any(word in narrative_text.lower() for word in location_words):
-                # Only flag if narrative explicitly mentions being in a different place
-                if any(phrase in narrative_text.lower() for phrase in ['you are in', 'you find yourself in', 'you arrive at']):
+            # Check for explicit location mismatches
+            location_lower = current_location.lower()
+            
+            # If narrative mentions being in a specific place that doesn't match state
+            if 'forest' in narrative_lower and 'tavern' in location_lower:
+                discrepancies.append(f"State location '{current_location}' conflicts with narrative mentioning forest")
+            elif 'tavern' in narrative_lower and 'forest' in location_lower:
+                discrepancies.append(f"State location '{current_location}' conflicts with narrative mentioning tavern")
+            
+            # General location mismatch detection
+            if any(phrase in narrative_lower for phrase in ['standing in', 'in the middle of', 'surrounded by']):
+                location_words = location_lower.split()
+                if len(location_words) > 0 and not any(word in narrative_lower for word in location_words):
                     discrepancies.append(f"State location '{current_location}' may not match narrative location references")
         
         # Check active missions consistency
@@ -107,9 +125,19 @@ class GameState:
                 else:
                     mission_name = str(mission)
                 
-                # If mission is marked as completed in narrative but still active in state
-                if 'complet' in narrative_text.lower() and mission_name.lower() in narrative_text.lower():
-                    discrepancies.append(f"Mission '{mission_name}' may be completed in narrative but still active in state")
+                mission_lower = mission_name.lower()
+                
+                # Check for specific mission completion phrases
+                if 'dragon' in mission_lower and any(phrase in narrative_lower for phrase in ['dragon finally defeated', 'dragon defeated']):
+                    discrepancies.append(f"Mission '{mission_name}' appears completed in narrative but still active in state")
+                
+                if 'treasure' in mission_lower and any(phrase in narrative_lower for phrase in ['treasure secured', 'treasure found']):
+                    discrepancies.append(f"Mission '{mission_name}' appears completed in narrative but still active in state")
+                
+                # General completion detection
+                if any(phrase in narrative_lower for phrase in ['quest was complete', 'quest complete', 'mission complete']):
+                    if any(word in mission_lower for word in narrative_lower.split()):
+                        discrepancies.append(f"Mission '{mission_name}' may be completed in narrative but still active in state")
         
         return discrepancies
 
