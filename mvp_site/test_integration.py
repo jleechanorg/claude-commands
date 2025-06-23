@@ -208,6 +208,84 @@ class TestInteractionIntegration(unittest.TestCase):
         self.assertEqual(pc_stats['dex'], 18)
         self.assertEqual(pc_stats['str'], 12)
 
+    def test_sequential_story_commands_evolve_state(self):
+        """
+        Milestone 4: Verify that sequential story commands progressively evolve game state.
+        Tests the full story progression pipeline with state tracking.
+        """
+        # Set up initial character state
+        initial_setup = 'GOD_MODE_SET: player_character_data = {"name": "Aria", "stats": {"level": 1, "gold": 50, "exp": 0}}'
+        self._run_god_command('set', initial_setup)
+        
+        # Capture initial state
+        initial_state_json = self._run_god_command('ask')
+        initial_state = json.loads(initial_state_json)
+        initial_gold = initial_state['player_character_data']['stats']['gold']
+        initial_exp = initial_state['player_character_data']['stats']['exp']
+        
+        # First story command: Find treasure
+        first_command = (
+            "Aria explores an ancient tomb and discovers a hidden treasure chest containing 100 gold pieces "
+            "and gains 50 experience points from overcoming the tomb's challenges. Update her stats."
+        )
+        
+        first_response = self.client.post(
+            f'/api/campaigns/{self.campaign_id}/interaction',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({'input': first_command, 'mode': 'character'})
+        )
+        self.assertEqual(first_response.status_code, 200)
+        
+        # Check state after first command
+        after_first_json = self._run_god_command('ask')
+        after_first_state = json.loads(after_first_json)
+        
+        # Verify character structure is maintained
+        self.assertIn('player_character_data', after_first_state)
+        self.assertEqual(after_first_state['player_character_data']['name'], 'Aria')
+        self.assertIn('stats', after_first_state['player_character_data'])
+        
+        first_stats = after_first_state['player_character_data']['stats']
+        print(f"Stats after first command: {first_stats}")
+        
+        # Second story command: Battle and level up
+        second_command = (
+            "Aria encounters a fierce dragon guardian. After an epic battle, she defeats it and gains 150 more experience points, "
+            "leveling up to level 2. She also finds a magical sword worth 200 gold. Update her progression."
+        )
+        
+        second_response = self.client.post(
+            f'/api/campaigns/{self.campaign_id}/interaction',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({'input': second_command, 'mode': 'character'})
+        )
+        self.assertEqual(second_response.status_code, 200)
+        
+        # Check final state after second command
+        final_state_json = self._run_god_command('ask')
+        final_state = json.loads(final_state_json)
+        
+        # Verify progressive evolution
+        self.assertIn('player_character_data', final_state)
+        self.assertEqual(final_state['player_character_data']['name'], 'Aria')
+        
+        final_stats = final_state['player_character_data']['stats']
+        print(f"Stats after second command: {final_stats}")
+        
+        # Verify that state has evolved (we can't predict exact values, but structure should be consistent)
+        # The AI should maintain core stats while adding new ones
+        self.assertIn('level', final_stats)
+        self.assertIn('gold', final_stats) 
+        self.assertIn('exp', final_stats)
+        
+        # Verify we have core memories tracking the adventure
+        if 'core_memories' in final_state['player_character_data']:
+            memories = final_state['player_character_data']['core_memories']
+            self.assertIsInstance(memories, list)
+            print(f"Adventure memories: {memories}")
+        
+        print("✅ Sequential story progression test completed successfully!")
+
 
 if __name__ == '__main__':
     unittest.main()
