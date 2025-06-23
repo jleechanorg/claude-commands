@@ -198,15 +198,18 @@ def create_app():
         data = request.get_json()
         prompt, title = data.get(KEY_PROMPT), data.get(constants.KEY_TITLE)
         selected_prompts = data.get(KEY_SELECTED_PROMPTS, [])
+        custom_options = data.get('custom_options', [])
         
         # Create a blank initial game state.
         initial_game_state = GameState().to_dict()
 
         should_include_srd = constants.PROMPT_TYPE_MECHANICS in selected_prompts
+        generate_companions = 'companions' in custom_options
         opening_story = gemini_service.get_initial_story(
             prompt, 
             selected_prompts=selected_prompts,
-            include_srd=should_include_srd
+            include_srd=should_include_srd,
+            generate_companions=generate_companions
         )
         
         campaign_id = firestore_service.create_campaign(

@@ -260,7 +260,7 @@ def _truncate_context(story_context, max_chars: int, model_name: str, current_ga
     return truncated_context
 
 @log_exceptions
-def get_initial_story(prompt, selected_prompts=None, include_srd=False):
+def get_initial_story(prompt, selected_prompts=None, include_srd=False, generate_companions=False):
     """Generates the initial story part, including character, narrative, and mechanics instructions."""
 
     if selected_prompts is None:
@@ -298,6 +298,16 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False):
 
     # NEW: Always include the game_state instructions
     system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+
+    # Add companion generation instruction if requested
+    if generate_companions:
+        companion_instruction = (
+            "\n**SPECIAL INSTRUCTION: COMPANION GENERATION ACTIVATED**\n"
+            "You have been specifically requested to generate 3 starting companions for this campaign. "
+            "Follow Part 7: Companion Generation Protocol from the narrative instructions. "
+            "In your opening narrative, introduce all 3 companions and include them in the initial STATE_UPDATES_PROPOSED block.\n\n"
+        )
+        system_instruction_parts.append(companion_instruction)
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
     

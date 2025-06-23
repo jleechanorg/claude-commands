@@ -155,10 +155,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const prompt = document.getElementById('campaign-prompt').value;
         const title = document.getElementById('campaign-title').value;
         const selectedPrompts = Array.from(document.querySelectorAll('input[name="selectedPrompts"]:checked')).map(checkbox => checkbox.value);
+        const customOptions = Array.from(document.querySelectorAll('input[name="customOptions"]:checked')).map(checkbox => checkbox.value);
         try {
             const { data } = await fetchApi('/api/campaigns', { 
                 method: 'POST', 
-                body: JSON.stringify({ prompt, title, selected_prompts: selectedPrompts }) 
+                body: JSON.stringify({ prompt, title, selected_prompts: selectedPrompts, custom_options: customOptions }) 
             });
             history.pushState({ campaignId: data.campaign_id }, '', `/game/${data.campaign_id}`);
             handleRouteChange();
