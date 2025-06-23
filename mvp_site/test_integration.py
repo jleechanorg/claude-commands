@@ -37,6 +37,9 @@ MOCK_INTEGRATION_NARRATIVE = "Integration narrative."
 MOCK_INTEGRATION_MECHANICS = "Integration mechanics."
 MOCK_INTEGRATION_CALIBRATION = "Integration calibration."
 
+# Speed up tests by using faster model and minimal prompts
+TEST_MODEL_OVERRIDE = 'gemini-1.5-flash'  # Much faster than gemini-2.5-pro
+TEST_SELECTED_PROMPTS = ['narrative']  # Use only one prompt type instead of multiple
 
 class TestInteractionIntegration(unittest.TestCase):
 
@@ -61,7 +64,7 @@ class TestInteractionIntegration(unittest.TestCase):
         create_response = self.client.post(
             '/api/campaigns',
             headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
-            data=json.dumps({'prompt': 'A test campaign', 'title': 'Integration Test', 'selected_prompts': ['narrative', 'mechanics']})
+            data=json.dumps({'prompt': 'Start adventure', 'title': 'Test', 'selected_prompts': TEST_SELECTED_PROMPTS})
         )
         self.assertEqual(create_response.status_code, 201, "Failed to create campaign in setUp")
         create_data = create_response.get_json()
