@@ -4,6 +4,7 @@ import os
 import sys
 import shutil
 import logging
+import tempfile
 import constants
 from gemini_service import _load_instruction_file, _loaded_instructions_cache
 
@@ -17,8 +18,8 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Create a temporary directory and dummy prompt files for all tests in this class."""
-        cls.temp_dir = 'temp_test_prompts'
-        os.makedirs(cls.temp_dir, exist_ok=True)
+        cls.temp_dir_obj = tempfile.TemporaryDirectory()
+        cls.temp_dir = cls.temp_dir_obj.name
         
         # Create dummy files for all known prompt types
         for key, path in gemini_service.PATH_MAP.items():
@@ -46,8 +47,9 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         # Stop the patcher
         cls.path_patcher.stop()
         
-        # Clean up the temp directory
-        shutil.rmtree(cls.temp_dir)
+        # The TemporaryDirectory object handles cleanup automatically when it goes out of scope.
+        # No need for shutil.rmtree(cls.temp_dir)
+        cls.temp_dir_obj.cleanup()
 
     def setUp(self):
         """Clear the cache before each test."""
