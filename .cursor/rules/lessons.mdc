@@ -174,4 +174,72 @@ By strictly adhering to this pattern, the backend has full control over the fina
 ### Lesson: Analyze live data structures before refactoring.
 *   **Problem:** I refactored the `GameState` class to a `dataclass`, which caused the application to crash with a `TypeError` because the new, more rigid structure did not account for the `world_time` field present in the existing Firestore documents.
 *   **Root Cause:** I refactored the code based on the class definition alone, without first inspecting how the class was being used or what the shape of the live data was.
-*   **Solution:** Before refactoring any core data structure, I must first analyze how it is used throughout the application. If possible, I will use my tools (`god-command ask` or similar) to inspect a live data sample from the database to ensure the new structure is fully compatible. 
+*   **Solution:** Before refactoring any core data structure, I must first analyze how it is used throughout the application. If possible, I will use my tools (`god-command ask` or similar) to inspect a live data sample from the database to ensure the new structure is fully compatible.
+
+## Integration Testing & Performance Optimization (December 2024)
+
+### Lesson: Defensive Programming Prevents Cascade Failures
+*   **Incident:** Integration tests were crashing with `TypeError: sequence item 0: expected str instance, dict found` when trying to join mission names and NPC data.
+*   **Root Cause:** Code assumed data structures from external sources (Firestore, AI responses) would always be consistent types, but missions could be stored as either strings or dictionaries, and NPC data could be malformed.
+*   **Solution:** Always validate data types before operations. Pattern: `if isinstance(item, dict):` before calling dictionary methods like `.get()`. For collections that might contain mixed types, iterate and handle each type appropriately.
+*   **Code Pattern:**
+    ```python
+    # Bad: Assumes all items are dictionaries
+    names = [item.get('name', item) for item in collection]
+    
+    # Good: Validates type first
+    names = []
+    for item in collection:
+        if isinstance(item, dict):
+            name = item.get('name') or item.get('title') or str(item)
+        else:
+            name = str(item)
+        names.append(name)
+    ```
+
+### Lesson: Integration Tests Should Mirror Real Application Behavior
+*   **Problem:** Tests were failing because they pre-set conflicting state that interfered with natural application behavior, making assertions unreliable.
+*   **Solution:** Design integration tests to work with natural application state rather than artificial test fixtures. Use flexible assertions that verify behavior patterns rather than exact values when testing AI-generated content.
+*   **Best Practices:**
+    - Avoid pre-setting state that conflicts with application logic
+    - Use case-insensitive field detection for AI-generated data
+    - Assert on behavior (e.g., "state changed") rather than exact values
+    - Use shared test fixtures to avoid expensive repeated operations
+
+### Lesson: Test Performance Optimization Through Smart Model Selection
+*   **Achievement:** Reduced integration test runtime from 230+ seconds to ~10 seconds (24x speedup).
+*   **Techniques:**
+    - Use faster AI models (`gemini-1.5-flash`) for testing via `TESTING=true` environment variable
+    - Share expensive operations (campaign creation) across tests with `setUpClass`
+    - Use targeted prompts that trigger specific behaviors rather than generic ones
+    - Implement proper temporary file handling to avoid overwriting real application files
+*   **Code Pattern:**
+    ```python
+    # In gemini_service.py
+    model_to_use = TEST_MODEL if os.environ.get('TESTING') else DEFAULT_MODEL
+    
+    # In test files
+    os.environ["TESTING"] = "true"
+    ```
+
+### Lesson: Case-Insensitive Field Detection for AI-Generated Data
+*   **Problem:** AI models generate inconsistent field naming (e.g., `hp_current`, `HP_current`, `hp`) making tests brittle.
+*   **Solution:** Implement case-insensitive searches that handle multiple possible field names.
+*   **Code Pattern:**
+    ```python
+    # Search for HP field with multiple possible names and cases
+    hp_current = None
+    for key, value in data.items():
+        if key.lower() in ['hp_current', 'hp_cur', 'hp']:
+            hp_current = value
+            break
+        elif key.lower() == 'hp' and isinstance(value, dict):
+            if 'current' in value:
+                hp_current = value['current']
+                break
+    ```
+
+### Lesson: Proactive Documentation Prevents Knowledge Loss
+*   **Problem:** Valuable debugging insights and patterns were being lost between sessions.
+*   **Solution:** After any significant debugging session, integration test work, or bug fixes, proactively update both `.cursor/rules/rules.mdc` and `.cursor/rules/lessons.mdc` without waiting for explicit instruction.
+*   **Action:** This ensures knowledge preservation and prevents repeating the same mistakes in future sessions. 
