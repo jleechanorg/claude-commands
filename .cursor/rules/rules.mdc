@@ -144,6 +144,19 @@ This document outlines the operating protocol for our collaboration. It merges g
 9.  **Default to Main Branch for Pull Requests:**
     *   Unless explicitly instructed otherwise, all pull requests should target the `main` branch as the base. Do not assume `dev` or other branches without confirmation.
 
+10. **Merge Protocol and Branch Management:**
+    *   **CRITICAL**: Always use the `integrate` alias pattern for updating from main: `git checkout main && git pull && git branch -D dev && git checkout -b dev`
+    *   **Main Branch Protection**: Never work directly on `main` - always use a local `dev` branch for protection
+    *   **After Merges**: Always run the integrate pattern to get latest changes and create fresh dev branch
+    *   **PR Creation Process**:
+        1. Create feature branch from latest main using integrate pattern
+        2. Make changes and commit with descriptive messages
+        3. Push branch and create PR with comprehensive description using `gh pr create`
+        4. Provide clickable PR URL for user review
+        5. After merge, immediately run integrate pattern before next PR
+    *   **PR Descriptions**: Always include Summary, Changes, Benefits, and Usage sections
+    *   **Commit Messages**: Use descriptive titles with bullet points and Claude Code attribution
+
 ## IV. Environment, Tooling & Scripts
 
 1.  **Python Virtual Environment Management:**
