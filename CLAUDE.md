@@ -217,9 +217,22 @@ The complete cursor rules from `/home/jleechan/projects/worldarchitect.ai/.curso
 - **Pattern Analysis**: Treat data corruption as systemic, not isolated
 - **Automatic Rule Updates**: Update rules immediately when corrected
 
-### Git Workflow
+### Git Workflow & Merge Protocol
 - **Main Branch Source of Truth**: Use `git show main:<file>` for originals
 - **Working Code Only**: Never push unverified code
 - **Confirm Before Push**: Ask permission before remote operations
+
+### Merge Protocol (NEW)
+- **Integrate Pattern**: Always use `git checkout main && git pull && git branch -D dev && git checkout -b dev`
+- **Main Branch Protection**: Never work directly on main - use local dev branch
+- **PR Creation Process**:
+  1. Create feature branch from latest main using integrate pattern
+  2. Make changes and commit with descriptive messages
+  3. **MANDATORY**: Run `./run_tests.sh` and include test results in PR description
+  4. Push branch and create PR with comprehensive description using `gh pr create`
+  5. Provide clickable PR URL for user review
+  6. After merge, immediately run integrate pattern before next PR
+- **PR Descriptions**: Must include Summary, Changes, Benefits, Usage, and Test Results
+- **Post-Merge**: Always run integrate pattern immediately after each merge
 
 The full detailed rules are maintained in `.cursor/rules/rules.mdc` and should be consulted for complete protocol compliance.

@@ -151,9 +151,10 @@ This document outlines the operating protocol for our collaboration. It merges g
     *   **PR Creation Process**:
         1. Create feature branch from latest main using integrate pattern
         2. Make changes and commit with descriptive messages
-        3. Push branch and create PR with comprehensive description using `gh pr create`
-        4. Provide clickable PR URL for user review
-        5. After merge, immediately run integrate pattern before next PR
+        3. **MANDATORY**: Run `./run_tests.sh` and include test results in PR description
+        4. Push branch and create PR with comprehensive description using `gh pr create`
+        5. Provide clickable PR URL for user review
+        6. After merge, immediately run integrate pattern before next PR
     *   **PR Descriptions**: Always include Summary, Changes, Benefits, and Usage sections
     *   **Commit Messages**: Use descriptive titles with bullet points and Claude Code attribution
 
