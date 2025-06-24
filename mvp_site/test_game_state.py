@@ -102,6 +102,7 @@ class TestGameState(unittest.TestCase):
             "world_data": {},
             "npc_data": {},
             "custom_campaign_state": {},
+            "combat_state": {"in_combat": False},  # Added combat_state field
             "last_state_update_timestamp": custom_time,
             "migration_status": "MIGRATED",  # Should be string value
             "extra_field": "test_value"
