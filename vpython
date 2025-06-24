@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# vpython - Virtual Environment Python Runner
+# Automatically activates the project's virtual environment and runs Python
+
+set -e  # Exit on any error
+
+PROJECT_ROOT_PATH="$(cd "$(dirname "$0")" && pwd)"
+VENV_ACTIVATE_SCRIPT="$PROJECT_ROOT_PATH/venv/bin/activate"
+
+# Check if virtual environment exists
+if [ ! -f "$VENV_ACTIVATE_SCRIPT" ]; then
+    echo "Error: Virtual environment activate script not found at $VENV_ACTIVATE_SCRIPT"
+    echo "Please create the virtual environment first: cd $PROJECT_ROOT_PATH && python3 -m venv venv"
+    exit 1
+fi
+
+# Activate virtual environment if not already active
+if [[ "$VIRTUAL_ENV" != "$PROJECT_ROOT_PATH/venv" ]]; then
+    echo "Activating virtual environment: $PROJECT_ROOT_PATH/venv"
+    source "$VENV_ACTIVATE_SCRIPT"
+else
+    echo "Virtual environment already active."
+fi
+
+# Run python with all provided arguments
+echo "Running python $*"
+exec python "$@" 
