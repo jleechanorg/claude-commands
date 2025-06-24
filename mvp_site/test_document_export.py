@@ -43,10 +43,15 @@ class TestExportEndpoint(unittest.TestCase):
             [{'actor': 'gemini', 'text': 'A story starts.'}]
         )
         
-        dummy_pdf_path = "test_output.pdf"
-        with open(dummy_pdf_path, "w") as f:
-            f.write("dummy pdf content")
-        mock_generate_pdf.return_value = dummy_pdf_path
+        # Mock generate_pdf to create a file at the expected path
+        def mock_pdf_generator(story_text, file_path, title):
+            """Create a dummy PDF file at the expected path."""
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, "w") as f:
+                f.write("dummy pdf content")
+            return file_path
+        
+        mock_generate_pdf.side_effect = mock_pdf_generator
 
         # 2. Make the API Call
         response = self.client.get(
@@ -60,8 +65,8 @@ class TestExportEndpoint(unittest.TestCase):
         mock_get_campaign_by_id.assert_called_once_with(self.user_id, self.campaign_id)
         mock_generate_pdf.assert_called_once()
         
-        # Clean up the dummy file
-        os.remove(dummy_pdf_path)
+        # Clean up any generated files (the mock creates files at UUID paths)
+        # Note: Files are cleaned up automatically by the endpoint after sending
         print("--- Test Finished Successfully ---")
 
 
