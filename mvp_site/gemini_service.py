@@ -589,6 +589,59 @@ def create_game_state_from_legacy_story(story_context: list) -> GameState | None
     return None
 
 @log_exceptions
+def _clean_markdown_from_json(json_string: str) -> str:
+    """
+    Cleans various markdown formatting patterns from JSON strings that LLMs might generate.
+    Handles code blocks, bold formatting, HTML tags, and other common markdown decorations.
+    """
+    # Start with the original string, stripped of leading/trailing whitespace
+    cleaned = json_string.strip()
+    
+    # Remove HTML tags (like <strong>, </strong>) first
+    cleaned = re.sub(r'<[^>]+>', '', cleaned)
+    
+    # Remove lines that are purely markdown decorations or commentary
+    lines = cleaned.split('\n')
+    json_lines = []
+    for line in lines:
+        stripped_line = line.strip()
+        # Skip lines that are just markdown decorations or commentary
+        if (stripped_line and 
+            not re.match(r'^[\*\-_=]+$', stripped_line) and           # Lines of just asterisks/dashes
+            not re.match(r'^\*[^{]*\*$', stripped_line) and           # Lines wrapped in asterisks without JSON
+            not re.match(r'^\*.*\*$', stripped_line) and              # Any line wrapped in single asterisks
+            not re.match(r'^[^{}\[\]]*update[^{}\[\]]*$', stripped_line, re.IGNORECASE)):  # Commentary lines mentioning "update"
+            json_lines.append(line)
+    
+    cleaned = '\n'.join(json_lines)
+    
+    # Handle mixed formatting patterns like **```json...```**
+    # Remove outer bold markers around code blocks
+    if cleaned.startswith("**```") and cleaned.endswith("```**"):
+        cleaned = cleaned[2:-2]  # Remove ** from both ends
+    
+    # Handle markdown code blocks (```json and ```) - do this AFTER line filtering
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[7:]
+    elif cleaned.startswith("```"):
+        cleaned = cleaned[3:]
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]
+    
+    # Remove bold markdown formatting (**text**)
+    # Handle both single-line and multi-line bold wrapping
+    cleaned = re.sub(r'^\*\*\s*', '', cleaned, flags=re.MULTILINE)
+    cleaned = re.sub(r'\s*\*\*$', '', cleaned, flags=re.MULTILINE)
+    
+    # Remove italic markdown formatting (*text*)
+    cleaned = re.sub(r'^\*\s*', '', cleaned, flags=re.MULTILINE)
+    cleaned = re.sub(r'\s*\*$', '', cleaned, flags=re.MULTILINE)
+    
+    # Final cleanup: strip whitespace
+    cleaned = cleaned.strip()
+    
+    return cleaned
+
 def parse_llm_response_for_state_changes(llm_text_response: str) -> dict:
     """
     Parses the full text response from the LLM to find and extract the JSON object
@@ -610,13 +663,8 @@ def parse_llm_response_for_state_changes(llm_text_response: str) -> dict:
         if not json_string:
             continue # Skip empty blocks
 
-        # Handle optional markdown code block from the LLM
-        if json_string.startswith("```json"):
-            json_string = json_string[7:]
-        if json_string.endswith("```"):
-            json_string = json_string[:-3]
-        
-        json_string = json_string.strip()
+        # Clean up markdown formatting from the LLM response
+        json_string = _clean_markdown_from_json(json_string)
 
         try:
             proposed_changes = json.loads(json_string)
