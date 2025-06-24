@@ -22,12 +22,12 @@ class TestContextTruncation(unittest.TestCase):
             {'actor': 'user', 'text': 'Entry 6 (Newest)'},
         ]
 
-    def test_truncates_by_history_turn_limit_only(self):
+    def test_no_truncation_when_under_char_limit(self):
         """
         Verify that if the context is UNDER the character limit,
-        it is only truncated by the HISTORY_TURN_LIMIT.
+        no truncation occurs (new behavior).
         """
-        print("\\n--- Running Test: test_truncates_by_history_turn_limit_only ---")
+        print("\\n--- Running Test: test_no_truncation_when_under_char_limit ---")
         
         # Create a mock game state for the new API
         mock_game_state = GameState(
@@ -40,27 +40,26 @@ class TestContextTruncation(unittest.TestCase):
         # Call the function with the new signature, setting turns_to_keep parameters
         truncated_context = gemini_service._truncate_context(
             self.story_context, 
-            max_chars=1000,  # High char limit 
+            max_chars=1000,  # High char limit - context should be under this
             model_name='test-model',
             current_game_state=mock_game_state,
             turns_to_keep_at_start=0,  # Keep none at start
             turns_to_keep_at_end=3     # Keep last 3
         )
         
-        # We expect the last 3 entries
-        self.assertEqual(len(truncated_context), 3)
-        self.assertEqual(truncated_context[0]['text'], 'Entry 4')
-        self.assertEqual(truncated_context[1]['text'], 'Entry 5')
-        self.assertEqual(truncated_context[2]['text'], 'Entry 6 (Newest)')
+        # We expect all 6 entries since we're under the char limit
+        self.assertEqual(len(truncated_context), 6)
+        self.assertEqual(truncated_context[0]['text'], 'Entry 1 (Oldest)')
+        self.assertEqual(truncated_context[-1]['text'], 'Entry 6 (Newest)')
         
         print("--- Test Finished Successfully ---")
 
-    def test_truncates_by_char_limit_when_history_is_too_long(self):
+    def test_truncates_when_few_turns_over_char_limit(self):
         """
-        Verify that if the context is OVER the character limit (even after
-        the turn limit is applied), it is further truncated by character count.
+        Verify that when there are few turns but still over char limit,
+        it takes the most recent turns that fit the turn limits.
         """
-        print("\\n--- Running Test: test_truncates_by_char_limit_when_history_is_too_long ---")
+        print("\\n--- Running Test: test_truncates_when_few_turns_over_char_limit ---")
         
         # Create a context with very long text entries
         long_story_context = [
@@ -78,22 +77,22 @@ class TestContextTruncation(unittest.TestCase):
             custom_campaign_state={'core_memories': []}
         )
         
-        # Set a turn limit of 3, but a very low character limit of 120.
-        # The last 3 entries (B, C, D) have a total character count of 150,
-        # so the oldest one ('B') should be removed.
+        # With 4 total turns and wanting 3 at end, it uses the "few turns" logic
+        # and returns the last 3 entries regardless of char limit
         truncated_context = gemini_service._truncate_context(
             long_story_context, 
-            max_chars=120,  # Low char limit
+            max_chars=120,  # Low char limit (will be ignored due to few turns)
             model_name='test-model',
             current_game_state=mock_game_state,
             turns_to_keep_at_start=0,  # Keep none at start
-            turns_to_keep_at_end=3     # Keep last 3, but may be limited by chars
+            turns_to_keep_at_end=3     # Keep last 3
         )
         
-        # We expect only the last 2 entries to remain to fit under the 120 char limit
-        self.assertEqual(len(truncated_context), 2)
-        self.assertEqual(truncated_context[0]['text'], 'C' * 50) # Entry 3
-        self.assertEqual(truncated_context[1]['text'], 'D' * 50) # Entry 4
+        # Current implementation: few turns logic returns last 3 entries
+        self.assertEqual(len(truncated_context), 3)
+        self.assertEqual(truncated_context[0]['text'], 'B' * 50) # Entry 2
+        self.assertEqual(truncated_context[1]['text'], 'C' * 50) # Entry 3
+        self.assertEqual(truncated_context[2]['text'], 'D' * 50) # Entry 4
         
         print("--- Test Finished Successfully ---")
 

@@ -83,21 +83,72 @@ for file in "${test_files[@]}"; do
 done
 echo
 
-# Run each test file
-for test_file in "${test_files[@]}"; do
+# Function to run a single test file
+run_test() {
+    local test_file="$1"
+    local temp_dir="$2"
+    
     if [ -f "$test_file" ]; then
-        total_tests=$((total_tests + 1))
         print_status "Running: $test_file"
         
         # Run the test with TESTING environment variable using vpython
-        if TESTING=true vpython "$test_file"; then
+        # Capture output to temporary file for later display
+        local output_file="$temp_dir/${test_file}.output"
+        local status_file="$temp_dir/${test_file}.status"
+        
+        if TESTING=true vpython "$test_file" >"$output_file" 2>&1; then
+            echo "PASS" > "$status_file"
             print_success "$test_file completed successfully"
-            passed_tests=$((passed_tests + 1))
         else
+            echo "FAIL" > "$status_file"
             print_error "$test_file failed"
-            failed_tests=$((failed_tests + 1))
         fi
         echo "----------------------------------------"
+        
+        # Store output for potential display
+        if [ -s "$output_file" ]; then
+            echo "=== Output from $test_file ===" >> "$temp_dir/all_output.log"
+            cat "$output_file" >> "$temp_dir/all_output.log"
+            echo "=== End of $test_file output ===" >> "$temp_dir/all_output.log"
+            echo "" >> "$temp_dir/all_output.log"
+        fi
+    fi
+}
+
+# Create temporary directory for parallel execution
+temp_dir=$(mktemp -d)
+trap "rm -rf $temp_dir" EXIT
+
+print_status "Running tests in parallel (one thread per file)..."
+
+# Run tests in parallel using background processes
+pids=()
+for test_file in "${test_files[@]}"; do
+    if [ -f "$test_file" ]; then
+        total_tests=$((total_tests + 1))
+        run_test "$test_file" "$temp_dir" &
+        pids+=($!)
+    fi
+done
+
+# Wait for all background processes to complete
+print_status "Waiting for all tests to complete..."
+for pid in "${pids[@]}"; do
+    wait "$pid"
+done
+
+# Collect results
+for test_file in "${test_files[@]}"; do
+    if [ -f "$test_file" ]; then
+        status_file="$temp_dir/${test_file}.status"
+        if [ -f "$status_file" ]; then
+            status=$(cat "$status_file")
+            if [ "$status" = "PASS" ]; then
+                passed_tests=$((passed_tests + 1))
+            else
+                failed_tests=$((failed_tests + 1))
+            fi
+        fi
     fi
 done
 
@@ -107,6 +158,25 @@ print_status "Test Summary:"
 echo "  Total tests: $total_tests"
 echo "  Passed: $passed_tests"
 echo "  Failed: $failed_tests"
+
+# Show failed test details if any
+if [ $failed_tests -gt 0 ]; then
+    echo
+    print_warning "Failed test details:"
+    for test_file in "${test_files[@]}"; do
+        if [ -f "$test_file" ]; then
+            status_file="$temp_dir/${test_file}.status"
+            if [ -f "$status_file" ] && [ "$(cat "$status_file")" = "FAIL" ]; then
+                echo "  - $test_file"
+                output_file="$temp_dir/${test_file}.output"
+                if [ -f "$output_file" ] && [ -s "$output_file" ]; then
+                    echo "    Last few lines of output:"
+                    tail -n 10 "$output_file" | sed 's/^/      /'
+                fi
+            fi
+        fi
+    done
+fi
 
 if [ $failed_tests -eq 0 ]; then
     print_success "All tests passed! 🎉"
