@@ -10,27 +10,16 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 import firestore_service
 
-# Check for Firebase credentials and testing environment
-FIREBASE_AVAILABLE = False
-SKIP_REASON = None
-
 try:
-    # Check if we're in testing mode and should skip live tests
-    if os.environ.get('TESTING') == 'true':
-        SKIP_REASON = "Live Firebase tests skipped in TESTING=true environment"
-    elif not os.path.exists("serviceAccountKey.json"):
-        SKIP_REASON = "serviceAccountKey.json not found - live Firebase tests require credentials"
-    else:
-        if not firebase_admin._apps:
-            cred = credentials.Certificate("serviceAccountKey.json")
-            firebase_admin.initialize_app(cred)
-        FIREBASE_AVAILABLE = True
-        print("--- Firebase Admin Initialized Successfully for Live Test ---")
+    if not firebase_admin._apps:
+        cred = credentials.Certificate("serviceAccountKey.json")
+        firebase_admin.initialize_app(cred)
+    print("--- Firebase Admin Initialized Successfully for Live Test ---")
 except Exception as e:
-    SKIP_REASON = f"Firebase initialization failed: {e}"
-
-if SKIP_REASON:
-    print(f"--- Skipping Live Firebase Tests: {SKIP_REASON} ---")
+    print(f"--- FATAL ERROR: Could not initialize Firebase Admin. ---")
+    print(f"Please ensure 'serviceAccountKey.json' is in your root directory.")
+    print(f"Error details: {e}")
+    exit()
 
 class TestLiveFirestoreFetching(unittest.TestCase):
     
@@ -39,8 +28,6 @@ class TestLiveFirestoreFetching(unittest.TestCase):
         This method runs before our test. It connects to the real Firestore
         and creates temporary test data.
         """
-        if not FIREBASE_AVAILABLE:
-            self.skipTest(SKIP_REASON)
         self.db = firestore.client()
         self.user_id = "test_suite_user"
         self.campaign_id = "live_integration_test_campaign"
@@ -90,7 +77,6 @@ class TestLiveFirestoreFetching(unittest.TestCase):
         self.campaign_ref.delete()
         print("--- (tearDown) Cleanup complete. ---")
 
-    @unittest.skipIf(not FIREBASE_AVAILABLE, SKIP_REASON)
     def test_get_campaign_by_id_with_mixed_data(self):
         """
         Calls the REAL firestore_service function and verifies it can
@@ -109,7 +95,6 @@ class TestLiveFirestoreFetching(unittest.TestCase):
 
         print("--- Test Finished Successfully ---")
 
-    @unittest.skipIf(not FIREBASE_AVAILABLE, SKIP_REASON)
     def test_sequence_id_generation_and_sorting(self):
         """
         Calls the REAL firestore_service function and verifies that sequence IDs

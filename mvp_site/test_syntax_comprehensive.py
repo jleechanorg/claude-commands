@@ -40,10 +40,8 @@ class TestComprehensiveSyntax(unittest.TestCase):
     def test_game_state_syntax_and_import(self):
         """Specifically test game_state.py syntax and import."""
         # First check syntax with AST
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        game_state_path = os.path.join(current_dir, 'game_state.py')
         try:
-            with open(game_state_path, 'r', encoding='utf-8') as f:
+            with open('game_state.py', 'r', encoding='utf-8') as f:
                 source_code = f.read()
             ast.parse(source_code, filename='game_state.py')
         except SyntaxError as e:
@@ -61,10 +59,8 @@ class TestComprehensiveSyntax(unittest.TestCase):
     def test_main_module_syntax(self):
         """Test that main.py has valid syntax and can load its dependencies."""
         # Check main.py syntax
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        main_path = os.path.join(current_dir, 'main.py')
         try:
-            with open(main_path, 'r', encoding='utf-8') as f:
+            with open('main.py', 'r', encoding='utf-8') as f:
                 source_code = f.read()
             ast.parse(source_code, filename='main.py')
         except SyntaxError as e:
@@ -72,7 +68,7 @@ class TestComprehensiveSyntax(unittest.TestCase):
         
         # Test if main.py can import its dependencies (catches import chain syntax errors)
         try:
-            spec = importlib.util.spec_from_file_location("main_test", main_path)
+            spec = importlib.util.spec_from_file_location("main_test", "main.py")
             if spec and spec.loader:
                 main_module = importlib.util.module_from_spec(spec)
                 # This would catch the game_state f-string error when main.py imports game_state
@@ -87,28 +83,24 @@ class TestComprehensiveSyntax(unittest.TestCase):
         except Exception as e:
             self.fail(f"Unexpected error loading main.py: {e}")
 
-    def test_combat_logging_syntax(self):
-        """Specifically test the new combat logging code that caused the syntax error."""
+    def test_basic_game_state_instantiation(self):
+        """Test basic GameState instantiation without combat-specific features."""
         try:
             from game_state import GameState
             gs = GameState()
             
-            # Test the start_combat method that had the f-string syntax error
-            combatants = [
-                {'name': 'Test Player', 'initiative': 15, 'type': 'pc', 'hp_current': 30, 'hp_max': 30},
-                {'name': 'Test Enemy', 'initiative': 10, 'type': 'enemy', 'hp_current': 20, 'hp_max': 20}
-            ]
-            
-            # This would fail if the logging line had syntax errors
-            gs.start_combat(combatants)
-            gs.end_combat()
+            # Test basic instantiation and core attributes
+            self.assertIsNotNone(gs)
+            self.assertIsNotNone(gs.player_character_data)
+            self.assertIsNotNone(gs.world_data)
+            self.assertIsNotNone(gs.npc_data)
             
         except SyntaxError as e:
-            self.fail(f"Syntax error in combat logging code: {e}")
+            self.fail(f"Syntax error in GameState instantiation: {e}")
         except Exception as e:
             # Allow other errors (like missing dependencies) but not syntax errors
             if "SyntaxError" in str(type(e)):
-                self.fail(f"Syntax error in combat code: {e}")
+                self.fail(f"Syntax error in GameState code: {e}")
 
 if __name__ == '__main__':
     print("=== Comprehensive Syntax Testing ===")

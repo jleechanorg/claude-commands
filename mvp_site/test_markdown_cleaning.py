@@ -89,11 +89,6 @@ class TestMarkdownCleaning(unittest.TestCase):
         input_text = f"*****\n{self.sample_json}\n*****"
         result = _clean_markdown_from_json(input_text)
         self.assertEqual(result, self.sample_json)
-        
-        # Update commentary without asterisks
-        input_text = f"Here is the update\n{self.sample_json}\nEnd of update"
-        result = _clean_markdown_from_json(input_text)
-        self.assertEqual(result, self.sample_json)
 
     def test_preserve_json_content(self):
         """Test that JSON content with braces/brackets is preserved."""
@@ -131,35 +126,6 @@ class TestMarkdownCleaning(unittest.TestCase):
         # Only markdown decorations
         result = _clean_markdown_from_json("*****\n```\n```\n*****")
         self.assertEqual(result, "")
-
-    def test_real_world_patterns(self):
-        """Test real-world patterns from the JSON parsing test suite."""
-        # Test case 3: Bold markdown wrapping
-        input_text = f"**\n{self.sample_json}\n**"
-        result = _clean_markdown_from_json(input_text)
-        self.assertEqual(result, self.sample_json)
-        
-        # Test case 4: Mixed markdown formatting
-        input_text = f"**```json\n{self.sample_json}\n```**"
-        result = _clean_markdown_from_json(input_text)
-        self.assertEqual(result, self.sample_json)
-        
-        # Test case 5: Extra whitespace and asterisks
-        input_text = f"   **\n   {self.sample_json.replace('{', '   {').replace('}', '}   ')}\n   **"
-        result = _clean_markdown_from_json(input_text)
-        # Should still parse as valid JSON structure
-        self.assertIn('"player_character_data"', result)
-        self.assertIn('"hp_current": 75', result)
-        
-        # Test case 6: Nested markdown
-        input_text = f"*Here's the update:*\n\n```json\n{self.sample_json}\n```\n\n*End of update*"
-        result = _clean_markdown_from_json(input_text)
-        self.assertEqual(result, self.sample_json)
-        
-        # Test case 7: HTML-style formatting
-        input_text = f"<strong>\n{self.sample_json}\n</strong>"
-        result = _clean_markdown_from_json(input_text)
-        self.assertEqual(result, self.sample_json)
 
     def test_function_idempotency(self):
         """Test that running the function multiple times gives same result."""

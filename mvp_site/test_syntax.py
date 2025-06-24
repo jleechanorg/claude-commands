@@ -1,7 +1,24 @@
 import unittest
 import os
+import ast
 
 class TestModuleSyntax(unittest.TestCase):
+    
+    def test_all_python_files_syntax(self):
+        """Test that all Python files have valid syntax - would catch f-string errors."""
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        syntax_errors = []
+        
+        for file in os.listdir(current_dir):
+            if file.endswith('.py') and not file.startswith('test_'):
+                try:
+                    with open(file, 'r', encoding='utf-8') as f:
+                        ast.parse(f.read(), filename=file)
+                except SyntaxError as e:
+                    syntax_errors.append(f"{file}:{e.lineno}: {e.msg}")
+        
+        if syntax_errors:
+            self.fail(f"Syntax errors: {'; '.join(syntax_errors)}")
 
     def test_gemini_service_import(self):
         """
