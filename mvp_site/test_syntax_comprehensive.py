@@ -40,8 +40,10 @@ class TestComprehensiveSyntax(unittest.TestCase):
     def test_game_state_syntax_and_import(self):
         """Specifically test game_state.py syntax and import."""
         # First check syntax with AST
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        game_state_path = os.path.join(current_dir, 'game_state.py')
         try:
-            with open('game_state.py', 'r', encoding='utf-8') as f:
+            with open(game_state_path, 'r', encoding='utf-8') as f:
                 source_code = f.read()
             ast.parse(source_code, filename='game_state.py')
         except SyntaxError as e:
@@ -59,8 +61,10 @@ class TestComprehensiveSyntax(unittest.TestCase):
     def test_main_module_syntax(self):
         """Test that main.py has valid syntax and can load its dependencies."""
         # Check main.py syntax
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        main_path = os.path.join(current_dir, 'main.py')
         try:
-            with open('main.py', 'r', encoding='utf-8') as f:
+            with open(main_path, 'r', encoding='utf-8') as f:
                 source_code = f.read()
             ast.parse(source_code, filename='main.py')
         except SyntaxError as e:
@@ -68,7 +72,7 @@ class TestComprehensiveSyntax(unittest.TestCase):
         
         # Test if main.py can import its dependencies (catches import chain syntax errors)
         try:
-            spec = importlib.util.spec_from_file_location("main_test", "main.py")
+            spec = importlib.util.spec_from_file_location("main_test", main_path)
             if spec and spec.loader:
                 main_module = importlib.util.module_from_spec(spec)
                 # This would catch the game_state f-string error when main.py imports game_state

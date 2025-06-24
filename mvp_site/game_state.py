@@ -3,7 +3,7 @@ Defines the GameState class, which represents the complete state of a campaign.
 """
 import datetime
 from enum import Enum
-from typing import Optional
+from typing import Optional, List
 import logging
 
 class MigrationStatus(Enum):
@@ -25,6 +25,7 @@ class GameState:
         self.world_data = kwargs.get("world_data", {})
         self.npc_data = kwargs.get("npc_data", {})
         self.custom_campaign_state = kwargs.get("custom_campaign_state", {})
+        self.combat_state = kwargs.get("combat_state", {"in_combat": False})
         self.last_state_update_timestamp = kwargs.get("last_state_update_timestamp", datetime.datetime.now(datetime.timezone.utc))
         
         migration_status_value = kwargs.get("migration_status", MigrationStatus.NOT_CHECKED.value)
@@ -140,6 +141,116 @@ class GameState:
                         discrepancies.append(f"Mission '{mission_name}' may be completed in narrative but still active in state")
         
         return discrepancies
+
+    # Combat Management Methods
+    
+    def start_combat(self, combatants_data: List[dict]) -> None:
+        """
+        Initialize combat state with given combatants.
+        
+        Args:
+            combatants_data: List of dicts with keys: name, initiative, type, hp_current, hp_max
+        """
+        logging.info(f"COMBAT STARTED - Participants: {[c['name'] for c in combatants_data]}")
+        
+        # Sort by initiative (highest first)
+        sorted_combatants = sorted(combatants_data, key=lambda x: x['initiative'], reverse=True)
+        
+        self.combat_state = {
+            "in_combat": True,
+            "current_round": 1,
+            "current_turn_index": 0,
+            "initiative_order": [
+                {
+                    "name": c['name'],
+                    "initiative": c['initiative'],
+                    "type": c.get('type', 'unknown')
+                } for c in sorted_combatants
+            ],
+            "combatants": {
+                c['name']: {
+                    "hp_current": c.get('hp_current', 1),
+                    "hp_max": c.get('hp_max', 1),
+                    "status": c.get('status', [])
+                } for c in sorted_combatants
+            },
+            "combat_log": []
+        }
+        
+        initiative_list = [f"{c['name']}({c['initiative']})" for c in sorted_combatants]
+        logging.info(f"COMBAT INITIALIZED - Initiative order: {initiative_list}")
+    
+    def end_combat(self) -> None:
+        """End combat and reset combat state."""
+        if self.combat_state.get("in_combat", False):
+            final_round = self.combat_state.get("current_round", 0)
+            participants = list(self.combat_state.get("combatants", {}).keys())
+            
+            # Clean up defeated enemies before ending combat
+            defeated_enemies = self.cleanup_defeated_enemies()
+            if defeated_enemies:
+                logging.info(f"COMBAT CLEANUP: Defeated enemies removed during combat end: {defeated_enemies}")
+            
+            logging.info(f"COMBAT ENDED - Duration: {final_round} rounds, Participants: {participants}")
+        
+        # Reset combat state
+        self.combat_state = {
+            "in_combat": False,
+            "current_round": 0,
+            "current_turn_index": 0,
+            "initiative_order": [],
+            "combatants": {},
+            "combat_log": []
+        }
+    
+    def cleanup_defeated_enemies(self) -> List[str]:
+        """
+        Identifies and removes defeated enemies from both combat_state and npc_data.
+        Returns a list of defeated enemy names for logging.
+        
+        CRITICAL: This function works regardless of in_combat status to handle
+        cleanup during combat end transitions.
+        """
+        defeated_enemies = []
+        
+        # Check if we have any combatants to clean up
+        combatants = self.combat_state.get("combatants", {})
+        if not combatants:
+            return defeated_enemies
+        
+        # Find defeated enemies (HP <= 0)
+        for name, combat_data in combatants.items():
+            if combat_data.get("hp_current", 0) <= 0:
+                # Check if this is an enemy (not PC, companion, or ally)
+                enemy_type = None
+                for init_entry in self.combat_state.get("initiative_order", []):
+                    if init_entry["name"] == name:
+                        enemy_type = init_entry.get("type", "unknown")
+                        break
+                
+                if enemy_type not in ["pc", "companion", "ally"]:
+                    defeated_enemies.append(name)
+                    logging.info(f"COMBAT CLEANUP: Marking {name} ({enemy_type}) as defeated")
+        
+        # Remove defeated enemies from combat tracking
+        for enemy_name in defeated_enemies:
+            # Remove from combat_state combatants
+            if enemy_name in self.combat_state.get("combatants", {}):
+                del self.combat_state["combatants"][enemy_name]
+                logging.info(f"COMBAT CLEANUP: Removed {enemy_name} from combat_state.combatants")
+            
+            # Remove from initiative order
+            self.combat_state["initiative_order"] = [
+                entry for entry in self.combat_state.get("initiative_order", [])
+                if entry["name"] != enemy_name
+            ]
+            
+            # Remove from NPC data (defeated enemies shouldn't persist)
+            if enemy_name in self.npc_data:
+                del self.npc_data[enemy_name]
+                logging.info(f"COMBAT CLEANUP: Removed {enemy_name} from npc_data")
+        
+        return defeated_enemies
 
 def get_initial_game_state():
     """
