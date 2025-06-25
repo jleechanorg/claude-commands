@@ -26,6 +26,9 @@ LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'
 # Use fastest model for testing
 TEST_MODEL = 'gemini-1.5-flash'
 
+# Use pro model for first 5 user inputs for higher quality world building
+USE_PRO_MODEL_FOR_FIRST_N_INPUTS = 5
+
 MAX_TOKENS = 50000 
 TEMPERATURE = 0.9
 TARGET_WORD_COUNT = 300
@@ -337,6 +340,9 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         The AI's response text
     """
     
+    # Calculate user input count for model selection (count existing user entries + current input)
+    user_input_count = len([entry for entry in (story_context or []) if entry.get(constants.KEY_ACTOR) == constants.ACTOR_USER]) + 1
+    
     # --- NEW: Validate checkpoint consistency before generating response ---
     if story_context:
         # Get the most recent AI response to validate against current state
@@ -447,7 +453,15 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     )
     
     # For all subsequent calls, use the standard, cheaper model.
-    chosen_model = TEST_MODEL if os.environ.get('TESTING') else DEFAULT_MODEL
+    # Use pro model for first 5 user inputs for better world building
+    if os.environ.get('TESTING'):
+        chosen_model = TEST_MODEL
+    elif user_input_count is not None and user_input_count <= USE_PRO_MODEL_FOR_FIRST_N_INPUTS:
+        chosen_model = LARGE_CONTEXT_MODEL
+        logging.info(f"Using pro model for user input {user_input_count}/{USE_PRO_MODEL_FOR_FIRST_N_INPUTS}")
+    else:
+        chosen_model = DEFAULT_MODEL
+    
     response = _call_gemini_api([full_prompt], chosen_model, current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
     return _get_text_from_response(response)
 

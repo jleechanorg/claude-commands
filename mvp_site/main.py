@@ -48,6 +48,21 @@ DEFAULT_TEST_USER = 'test-user'
 
 # --- END CONSTANTS ---
 
+def truncate_game_state_for_logging(game_state_dict, max_lines=20):
+    """
+    Truncates a game state dictionary for logging to improve readability.
+    Only shows the first max_lines lines of the JSON representation.
+    """
+    json_str = json.dumps(game_state_dict, indent=2, default=json_default_serializer)
+    lines = json_str.split('\n')
+    
+    if len(lines) <= max_lines:
+        return json_str
+    
+    truncated_lines = lines[:max_lines]
+    truncated_lines.append(f"... (truncated, showing {max_lines}/{len(lines)} lines)")
+    return '\n'.join(truncated_lines)
+
 def apply_automatic_combat_cleanup(updated_state_dict: dict, proposed_changes: dict) -> dict:
     """
     Automatically cleans up defeated enemies from combat state when combat updates are applied.
@@ -490,7 +505,7 @@ def create_app():
             updated_state_dict = update_state_with_changes(current_game_state.to_dict(), proposed_changes)
             updated_state_dict = apply_automatic_combat_cleanup(updated_state_dict, proposed_changes)
 
-            logging.info(f"New complete game state for campaign {campaign_id}:\\n{json.dumps(updated_state_dict, indent=2, default=json_default_serializer)}")
+            logging.info(f"New complete game state for campaign {campaign_id}:\\n{truncate_game_state_for_logging(updated_state_dict)}")
             
             firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state_dict)
             

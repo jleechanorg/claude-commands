@@ -378,5 +378,203 @@ class TestPromptLoading(unittest.TestCase):
                          f"Found files in gemini_service.PATH_MAP that do not exist in prompts/: {missing_files}")
 
 
+class TestUserInputCountAndModelSelection(unittest.TestCase):
+    """Test user input counting and pro model selection logic in continue_story."""
+    
+    def setUp(self):
+        """Set up test environment."""
+        # Clear the instruction cache before each test
+        gemini_service._loaded_instructions_cache.clear()
+    
+    @patch.dict(os.environ, {'TESTING': ''}, clear=False)  # Ensure TESTING is not set
+    @patch('gemini_service._call_gemini_api')
+    @patch('gemini_service._load_instruction_file')
+    @patch('gemini_service._truncate_context')
+    @patch('gemini_service._get_static_prompt_parts')
+    def test_pro_model_used_for_first_five_inputs(self, mock_get_static, mock_truncate, mock_load_instruction, mock_api_call):
+        """Test that pro model is used for first 5 user inputs."""
+        # Arrange
+        mock_load_instruction.return_value = "Test instruction"
+        mock_api_call.return_value = MagicMock()
+        mock_api_call.return_value.text = "Test response"
+        mock_truncate.return_value = []  # Return empty truncated context
+        mock_get_static.return_value = ("checkpoint", "memories", "seq_ids")
+        
+        from game_state import GameState
+        test_game_state = GameState(
+            player_character_data={},
+            world_data={},
+            npc_data={},
+            custom_campaign_state={}
+        )
+        
+        # Test cases: user input counts 1-5 should use pro model, 6+ should use default
+        test_cases = [
+            ([], 1, gemini_service.LARGE_CONTEXT_MODEL),  # 1st input
+            ([{'actor': 'user', 'text': 'input1'}], 2, gemini_service.LARGE_CONTEXT_MODEL),  # 2nd input
+            ([{'actor': 'user', 'text': 'input1'}, {'actor': 'user', 'text': 'input2'}], 3, gemini_service.LARGE_CONTEXT_MODEL),  # 3rd input
+            ([{'actor': 'user', 'text': f'input{i}'} for i in range(1, 5)], 5, gemini_service.LARGE_CONTEXT_MODEL),  # 5th input
+            ([{'actor': 'user', 'text': f'input{i}'} for i in range(1, 6)], 6, gemini_service.DEFAULT_MODEL),  # 6th input (should use default)
+        ]
+        
+        for story_context, expected_count, expected_model in test_cases:
+            with self.subTest(user_input_count=expected_count):
+                # Act
+                gemini_service.continue_story(
+                    "test input",
+                    "character",
+                    story_context,
+                    test_game_state,
+                    ['narrative']
+                )
+                
+                # Assert
+                mock_api_call.assert_called()
+                call_args = mock_api_call.call_args
+                actual_model = call_args[0][1]  # Second positional argument is the model
+                self.assertEqual(actual_model, expected_model, 
+                               f"Input count {expected_count} should use {expected_model}")
+                
+                mock_api_call.reset_mock()
+    
+    @patch.dict(os.environ, {'TESTING': 'true'})
+    @patch('gemini_service._call_gemini_api')
+    @patch('gemini_service._load_instruction_file')
+    @patch('gemini_service._truncate_context')
+    @patch('gemini_service._get_static_prompt_parts')
+    def test_testing_mode_always_uses_test_model(self, mock_get_static, mock_truncate, mock_load_instruction, mock_api_call):
+        """Test that when TESTING=true, test model is always used regardless of input count."""
+        # Arrange
+        mock_load_instruction.return_value = "Test instruction"
+        mock_api_call.return_value = MagicMock()
+        mock_api_call.return_value.text = "Test response"
+        mock_truncate.return_value = []
+        mock_get_static.return_value = ("checkpoint", "memories", "seq_ids")
+        
+        from game_state import GameState
+        test_game_state = GameState(
+            player_character_data={},
+            world_data={},
+            npc_data={},
+            custom_campaign_state={}
+        )
+        
+        # Test with first input (would normally use pro model)
+        story_context = []
+        
+        # Act
+        gemini_service.continue_story(
+            "test input",
+            "character", 
+            story_context,
+            test_game_state,
+            ['narrative']
+        )
+        
+        # Assert
+        mock_api_call.assert_called()
+        call_args = mock_api_call.call_args
+        actual_model = call_args[0][1]  # Second positional argument is the model
+        self.assertEqual(actual_model, gemini_service.TEST_MODEL)
+    
+    @patch('gemini_service._call_gemini_api')
+    @patch('gemini_service._load_instruction_file')
+    @patch('gemini_service._truncate_context')
+    @patch('gemini_service._get_static_prompt_parts')
+    def test_user_input_count_calculation_ignores_ai_entries(self, mock_get_static, mock_truncate, mock_load_instruction, mock_api_call):
+        """Test that user input count only counts user entries, not AI responses."""
+        # Arrange
+        mock_load_instruction.return_value = "Test instruction"
+        mock_api_call.return_value = MagicMock()
+        mock_api_call.return_value.text = "Test response"
+        mock_truncate.return_value = []
+        mock_get_static.return_value = ("checkpoint", "memories", "seq_ids")
+        
+        from game_state import GameState
+        test_game_state = GameState(
+            player_character_data={},
+            world_data={},
+            npc_data={},
+            custom_campaign_state={}
+        )
+        
+        # Story context with mix of user and AI entries
+        story_context = [
+            {'actor': constants.ACTOR_USER, 'text': 'user input 1'},
+            {'actor': constants.ACTOR_GEMINI, 'text': 'ai response 1'},
+            {'actor': constants.ACTOR_USER, 'text': 'user input 2'}, 
+            {'actor': constants.ACTOR_GEMINI, 'text': 'ai response 2'},
+            {'actor': constants.ACTOR_USER, 'text': 'user input 3'},
+            {'actor': constants.ACTOR_GEMINI, 'text': 'ai response 3'},
+            # Many AI responses shouldn't affect count
+            {'actor': constants.ACTOR_GEMINI, 'text': 'ai response 4'},
+            {'actor': constants.ACTOR_GEMINI, 'text': 'ai response 5'},
+        ]
+        
+        # Act - this should be the 4th user input (3 in context + 1 current)
+        with patch.dict(os.environ, {'TESTING': ''}, clear=False):
+            gemini_service.continue_story(
+                "user input 4",
+                "character",
+                story_context, 
+                test_game_state,
+                ['narrative']
+            )
+        
+        # Assert - should still use pro model since it's only the 4th user input
+        mock_api_call.assert_called()
+        call_args = mock_api_call.call_args
+        actual_model = call_args[0][1]
+        self.assertEqual(actual_model, gemini_service.LARGE_CONTEXT_MODEL,
+                        "Should use pro model for 4th user input despite many AI responses")
+    
+    @patch('gemini_service._call_gemini_api')
+    @patch('gemini_service._load_instruction_file')
+    @patch('gemini_service._truncate_context')
+    @patch('gemini_service._get_static_prompt_parts')
+    def test_user_input_count_handles_empty_context(self, mock_get_static, mock_truncate, mock_load_instruction, mock_api_call):
+        """Test that user input count calculation handles empty/None story context."""
+        # Arrange
+        mock_load_instruction.return_value = "Test instruction"
+        mock_api_call.return_value = MagicMock()
+        mock_api_call.return_value.text = "Test response"
+        mock_truncate.return_value = []
+        mock_get_static.return_value = ("checkpoint", "memories", "seq_ids")
+        
+        from game_state import GameState
+        test_game_state = GameState(
+            player_character_data={},
+            world_data={},
+            npc_data={},
+            custom_campaign_state={}
+        )
+        
+        test_cases = [
+            None,  # None context
+            [],    # Empty context
+        ]
+        
+        for story_context in test_cases:
+            with self.subTest(context=story_context):
+                # Act - should be first user input
+                with patch.dict(os.environ, {'TESTING': ''}, clear=False):
+                    gemini_service.continue_story(
+                        "first input",
+                        "character",
+                        story_context,
+                        test_game_state,
+                        ['narrative']
+                    )
+                
+                # Assert - should use pro model for first input
+                mock_api_call.assert_called()
+                call_args = mock_api_call.call_args
+                actual_model = call_args[0][1]
+                self.assertEqual(actual_model, gemini_service.LARGE_CONTEXT_MODEL,
+                               f"Should use pro model for first input with context: {story_context}")
+                
+                mock_api_call.reset_mock()
+
+
 if __name__ == '__main__':
     unittest.main()
