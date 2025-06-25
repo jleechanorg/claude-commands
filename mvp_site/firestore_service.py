@@ -8,6 +8,22 @@ from firebase_admin import firestore
 from game_state import GameState
 
 MAX_TEXT_BYTES = 1000000
+MAX_LOG_LINES = 20
+
+def _truncate_log_json(data, max_lines=MAX_LOG_LINES):
+    """Truncate JSON logs to max_lines to prevent log spam."""
+    try:
+        json_str = json.dumps(data, indent=2, default=str)
+        lines = json_str.split('\n')
+        if len(lines) <= max_lines:
+            return json_str
+        
+        # Truncate and add indicator
+        truncated_lines = lines[:max_lines-1] + [f"... (truncated, showing {max_lines-1}/{len(lines)} lines)"]
+        return '\n'.join(truncated_lines)
+    except Exception:
+        # Fallback to string representation if JSON fails
+        return str(data)[:500] + "..." if len(str(data)) > 500 else str(data)
 
 def _perform_append(target_list: list, items_to_append, key_name: str, deduplicate: bool = False):
     """
@@ -30,6 +46,65 @@ def _perform_append(target_list: list, items_to_append, key_name: str, deduplica
     else:
         logging.info(f"APPEND/SAFEGUARD: No new items were added to '{key_name}' (duplicates may have been found).")
 
+
+def _initialize_missions_list(state_to_update: dict, key: str) -> None:
+    """Initialize active_missions as empty list if it doesn't exist or is wrong type."""
+    if key not in state_to_update or not isinstance(state_to_update.get(key), list):
+        state_to_update[key] = []
+
+
+def _find_existing_mission_index(missions_list: list, mission_id: str) -> int:
+    """Find the index of an existing mission by mission_id. Returns -1 if not found."""
+    for i, existing_mission in enumerate(missions_list):
+        if isinstance(existing_mission, dict) and existing_mission.get('mission_id') == mission_id:
+            return i
+    return -1
+
+
+def _process_mission_data(state_to_update: dict, key: str, mission_id: str, mission_data: dict) -> None:
+    """Process a single mission, either updating existing or adding new."""
+    # Ensure the mission has an ID
+    if 'mission_id' not in mission_data:
+        mission_data['mission_id'] = mission_id
+    
+    # Check if this mission already exists (by mission_id)
+    existing_mission_index = _find_existing_mission_index(state_to_update[key], mission_id)
+    
+    if existing_mission_index != -1:
+        # Update existing mission
+        logging.info(f"Updating existing mission: {mission_id}")
+        state_to_update[key][existing_mission_index].update(mission_data)
+    else:
+        # Add new mission
+        logging.info(f"Adding new mission: {mission_id}")
+        state_to_update[key].append(mission_data)
+
+
+def _handle_missions_dict_conversion(state_to_update: dict, key: str, missions_dict: dict) -> None:
+    """Convert dictionary format missions to list append format."""
+    for mission_id, mission_data in missions_dict.items():
+        if isinstance(mission_data, dict):
+            _process_mission_data(state_to_update, key, mission_id, mission_data)
+        else:
+            logging.warning(f"Skipping invalid mission data for {mission_id}: not a dictionary")
+
+
+def _handle_active_missions_conversion(state_to_update: dict, key: str, value) -> None:
+    """Handle smart conversion of active_missions from various formats to list."""
+    logging.warning(f"SMART CONVERSION: AI attempted to set 'active_missions' as {type(value).__name__}. Converting to list append.")
+    
+    # Initialize active_missions as empty list if it doesn't exist
+    _initialize_missions_list(state_to_update, key)
+    
+    # Convert based on value type
+    if isinstance(value, dict):
+        # AI is providing missions as a dict like {"main_quest_1": {...}, "side_quest_1": {...}}
+        _handle_missions_dict_conversion(state_to_update, key, value)
+    else:
+        # For other non-list types, log error and skip
+        logging.error(f"Cannot convert {type(value).__name__} to mission list. Skipping.")
+
+
 def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
     """
     Recursively updates a state dictionary with a changes dictionary.
@@ -38,10 +113,9 @@ def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
     - Merges nested dictionaries recursively.
     - Overwrites all other values.
     """
-    logging.info(f"--- update_state_with_changes: applying changes:\\n{json.dumps(changes, indent=2, default=str)}")
+    logging.info(f"--- update_state_with_changes: applying changes:\\n{_truncate_log_json(changes)}")
     
     for key, value in changes.items():
-        logging.info(f"update_state: Processing key: '{key}'")
 
         # Case 1: Explicit append syntax {'append': ...}
         if isinstance(value, dict) and 'append' in value:
@@ -58,28 +132,35 @@ def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
             # The helper function is designed to handle non-lists, so we call it directly.
             _perform_append(state_to_update[key], value, key, deduplicate=True)
 
+        # NEW Case 2b: Smart safeguard for 'active_missions' list
+        elif key == 'active_missions' and not isinstance(value, list):
+            _handle_active_missions_conversion(state_to_update, key, value)
+            continue  # Skip normal processing since we handled it
+
         # Case 3: Recursive merge for nested dictionaries
         elif isinstance(value, dict) and isinstance(state_to_update.get(key), collections.abc.Mapping):
-            logging.info(f"update_state: Recursing into dict for key '{key}'.")
             state_to_update[key] = update_state_with_changes(state_to_update.get(key, {}), value)
         
         # Case 3b: Create new dictionary when incoming value is dict but existing is not
         elif isinstance(value, dict):
-            logging.info(f"update_state: Creating new dict for key '{key}' (existing value was not a dict).")
             state_to_update[key] = update_state_with_changes({}, value)
 
         # Case 4: Handle string updates to existing dictionaries (preserve dict structure)
         elif isinstance(state_to_update.get(key), collections.abc.Mapping):
-            logging.info(f"update_state: Preserving dict structure for key '{key}', adding 'status' field.")
-            # Don't overwrite the entire dictionary with a string
-            # Instead, treat string values as status updates
-            existing_dict = state_to_update[key].copy()
-            existing_dict['status'] = value
-            state_to_update[key] = existing_dict
+            # Special case: __DELETE__ token should delete the key, not update status
+            if value == "__DELETE__":
+                logging.info(f"update_state: Deleting key '{key}' due to __DELETE__ token.")
+                del state_to_update[key]
+            else:
+                logging.info(f"update_state: Preserving dict structure for key '{key}', adding 'status' field.")
+                # Don't overwrite the entire dictionary with a string
+                # Instead, treat string values as status updates
+                existing_dict = state_to_update[key].copy()
+                existing_dict['status'] = value
+                state_to_update[key] = existing_dict
 
         # Case 5: Simple overwrite for everything else
         else:
-            logging.info(f"update_state: Overwriting value for key '{key}'.")
             state_to_update[key] = value
             
     logging.info("--- update_state_with_changes: finished ---")
@@ -259,7 +340,7 @@ def update_campaign_game_state(user_id, campaign_id, game_state_update: dict):
         game_state_ref.set(game_state_update) 
         logging.info(f"Successfully set new game state for campaign {campaign_id}.")
         # The log below is for the final state being written.
-        logging.info(f"Final state written to Firestore for campaign {campaign_id}:\\n{json.dumps(game_state_update, indent=2, default=json_serial)}")
+        logging.info(f"Final state written to Firestore for campaign {campaign_id}:\\n{_truncate_log_json(game_state_update)}")
 
     except Exception as e:
         logging.error(f"Failed to update game state for campaign {campaign_id}: {e}", exc_info=True)

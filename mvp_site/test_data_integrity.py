@@ -18,6 +18,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from game_state import GameState
 # Import the functions we need for testing (avoid Firebase dependencies)
 import collections.abc
+from firestore_service import update_state_with_changes
 
 def _validate_npc_data_integrity_test(npc_data: dict) -> list:
     """Test version of NPC validation that returns issues instead of logging."""
@@ -372,6 +373,96 @@ class TestDataIntegrity(unittest.TestCase):
         # goblin_1 should have preserved hp but updated status
         self.assertEqual(final_state['npc_data']['goblin_1']['hp'], 7)
         self.assertEqual(final_state['npc_data']['goblin_1']['status'], 'defeated')
+
+    def test_string_overwrite_on_npc_dict_is_converted(self):
+        """
+        CRITICAL: Ensures that a string update to an NPC is converted to status field.
+        This tests the smart conversion that preserves NPC data while updating status.
+        """
+        # Initial state with a fully-defined NPC
+        initial_npc_data = {
+            "name": "Grishnak",
+            "hp_current": 15,
+            "hp_max": 15,
+            "role": "Goblin Warband Leader",
+            "status": "hostile"
+        }
+        current_state = {
+            "npc_data": {
+                "Grishnak": initial_npc_data.copy()
+            }
+        }
+        
+        # The AI mistakenly proposes overwriting the entire NPC object with a string
+        malformed_changes = {
+            "npc_data": {
+                "Grishnak": "defeated"
+            }
+        }
+        
+        # Apply the malformed changes using the real function with smart conversion
+        updated_state = update_state_with_changes(current_state, malformed_changes)
+        
+        # VERIFY: The smart conversion should have converted string to status update.
+        # The NPC should still be a dict with the string converted to status field.
+        self.assertIn("Grishnak", updated_state["npc_data"])
+        self.assertIsInstance(updated_state["npc_data"]["Grishnak"], dict, "NPC data should remain a dictionary!")
+        
+        # Check that the original data is preserved
+        npc_data = updated_state["npc_data"]["Grishnak"]
+        self.assertEqual(npc_data["name"], "Grishnak")
+        self.assertEqual(npc_data["hp_current"], 15)
+        self.assertEqual(npc_data["hp_max"], 15)
+        self.assertEqual(npc_data["role"], "Goblin Warband Leader")
+        
+        # Check that the string was converted to status
+        self.assertEqual(npc_data["status"], "defeated", "String should be converted to status field")
+
+    def test_list_overwrite_on_missions_is_converted(self):
+        """
+        CRITICAL: Ensures that dictionary updates to active_missions are converted to list appends.
+        This tests the safeguard that prevents AI from corrupting the mission list.
+        """
+        # Initial state with a valid list of missions
+        initial_missions = [
+            {"mission_id": "quest_1", "title": "Find the Lost Sword"},
+            {"mission_id": "quest_2", "title": "Explore the Dark Cave"}
+        ]
+        current_state = {
+            "custom_campaign_state": {
+                "active_missions": initial_missions.copy()
+            }
+        }
+
+        # The AI mistakenly proposes overwriting the list with a dictionary
+        malformed_changes = {
+            "custom_campaign_state": {
+                "active_missions": {
+                    "rogue_mission": {"title": "This shouldn't be here"}
+                }
+            }
+        }
+
+        # Apply the malformed changes using the real function with smart conversion
+        updated_state = update_state_with_changes(current_state, malformed_changes)
+        
+        # VERIFY: The smart conversion should have converted dict to list append.
+        # The active_missions should still be a list with the new mission added.
+        active_missions = updated_state.get("custom_campaign_state", {}).get("active_missions")
+        self.assertIsInstance(active_missions, list, "active_missions should remain a list after smart conversion!")
+        
+        # Should now have 3 missions: the 2 original plus the converted one
+        self.assertEqual(len(active_missions), 3, "Should have 2 original missions plus 1 converted mission")
+        
+        # Check that the converted mission has proper structure
+        converted_mission = None
+        for mission in active_missions:
+            if mission.get("mission_id") == "rogue_mission":
+                converted_mission = mission
+                break
+        
+        self.assertIsNotNone(converted_mission, "Converted mission should be present")
+        self.assertEqual(converted_mission["title"], "This shouldn't be here")
 
 if __name__ == "__main__":
     # Set up logging to see corruption detection in action

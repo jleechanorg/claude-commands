@@ -174,6 +174,15 @@ grep -r "process.*special_token" *.py
 
 **Lesson**: AI was ignoring state update requirements because game state instructions were loaded LAST after lengthy narrative instructions. Moving them FIRST fixed the core state update failure.
 
+### Data Structure Schema Enforcement 
+**CRITICAL RULE**: When AI systems generate structured data, explicit schemas with mandatory data types must be enforced through prompt engineering:
+- **Schema Definition**: Clearly define expected data structures (lists vs dictionaries, required fields)
+- **Contradictory Instructions**: Remove any conflicting examples or deprecated patterns that confuse the AI
+- **Type Validation**: Add explicit rules forbidding type changes (e.g., "active_missions MUST be a list, never a dictionary")
+- **Example Clarity**: Provide concrete examples of correct vs incorrect formatting
+
+**Lesson**: Fixed critical data corruption where AI was changing `active_missions` from list to dictionary and using incorrect `combat_state` schemas by adding explicit data type rules and removing contradictory dot notation examples.
+
 ### Codebase Exploration Protocol
 **CRITICAL RULE**: When working with any codebase, ALWAYS follow this sequence:
 1. **Run tests FIRST** - before reading any code, run the full test suite to establish baseline understanding of what works/breaks

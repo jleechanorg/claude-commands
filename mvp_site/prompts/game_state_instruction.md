@@ -205,14 +205,6 @@ Imagine the player's health is wrong and they are missing a quest item. The corr
 
 This is the only way to use this command. It is for small, precise corrections.
 
-## State Update Rules
-
-1.  **Be Precise:** Only include keys for values that have actually changed.
-2.  **Use Dot Notation:** Always use dot notation for paths (e.g., `player_character_data.inventory.gold`).
-3.  **Use `__DELETE__` to Remove:** To remove a key, set its value to the special string `__DELETE__`.
-4.  **Create as Needed:** Do not hesitate to create new paths and keys for new information that needs to be tracked.
-5.  **Be Consistent:** Once you create a path for something, use that same path to update it later.
-
 ## NEW: World Time Management
 You are now responsible for tracking the in-game date and time. This is stored in the `world_data` object within the `CURRENT_GAME_STATE`.
 
@@ -299,28 +291,202 @@ Your goal is to propose a JSON "patch" that updates the game state. For maximum 
     ```json
     {
       "player_character_data": {
-        "gold": 500
+        "inventory": {
+          "gold": 500
+        }
       },
       "custom_campaign_state": {
         "active_missions": [
-          { "mission_id": "rescue_the_merchant", "status": "started" }
+          { "mission_id": "rescue_the_merchant", "title": "Rescue the Merchant", "status": "started", "objective": "Find the merchant captured by goblins." }
         ]
       }
     }
     ```
 
 *   **DEPRECATED AND FORBIDDEN (Dot Notation):**
-    Do NOT use dot notation keys like `"player_character_data.gold"`. This format is deprecated and will cause errors. Always use the nested object structure shown above.
+    Do NOT use dot notation keys like `"player_character_data.inventory.gold"`. This format is deprecated and will cause errors. Always use the nested object structure shown above.
 
 *   **Be Precise:** Only include keys for values that have actually changed.
-*   **Use `__DELETE__` to Remove:** To remove a key, set its value to the special string `__DELETE__`.
+*   **Use `__DELETE__` to Remove:** To remove a key from the state entirely, set its value to the special string `__DELETE__`.
 *   **Create as Needed:** Do not hesitate to create new paths and keys for new information that needs to be tracked.
-*   **Non-Destructive Updates:** When you update a nested object, only provide the keys that are changing. Do not replace the entire parent object, as this could wipe out other data. For example, to update just the player's gold, the `player_character_data` object in your update should *only* contain the `gold` key.
+*   **Non-Destructive Updates:** When you update a nested object, only provide the keys that are changing. Do not replace the entire parent object, as this could wipe out other data. For example, to update just the player's gold, the `player_character_data` object in your update should *only* contain the `inventory` object, which in turn *only* contains the `gold` key.
+
+## Custom Campaign State Schema
+
+The `custom_campaign_state` object is used for tracking narrative progress. It must adhere to the following structure:
+
+*   **`active_missions` (List of Objects):** This **must** be a list of mission objects. It must **not** be a dictionary. Each object in the list should contain at least:
+    *   `mission_id`: A unique string identifier.
+    *   `title`: A human-readable title.
+    *   `status`: A string indicating progress (e.g., "accepted", "in_progress", "completed").
+    *   `objective`: A string describing the next step.
+    
+    **To add new missions or update existing ones:**
+    
+    ✅ **PREFERRED METHOD - Replace entire list:**
+    ```json
+    {
+      "custom_campaign_state": {
+        "active_missions": [
+          {
+            "mission_id": "main_quest_1",
+            "title": "Defeat the Dark Lord",
+            "status": "accepted",
+            "objective": "Travel to the Dark Tower"
+          },
+          {
+            "mission_id": "side_quest_1",
+            "title": "Collect Herbs",
+            "status": "accepted",
+            "objective": "Gather 10 healing herbs"
+          }
+        ]
+      }
+    }
+    ```
+    
+    ⚠️ **TOLERATED BUT NOT RECOMMENDED - Dictionary format:**
+    If you accidentally use this format, the system will convert it, but please avoid:
+    ```json
+    {
+      "custom_campaign_state": {
+        "active_missions": {
+          "main_quest_1": {
+            "title": "Defeat the Dark Lord",
+            "status": "accepted"
+          }
+        }
+      }
+    }
+    ```
+    
+    **Note:** When updating a mission, include the complete mission object with all fields. The `mission_id` field is used to identify which mission to update.
+
+*   **`core_memories` (List of Strings):** This **must** be a list of strings. To add a new memory, you must propose a state update that appends a new string using the following specific format. This is the only valid way to add a memory.
+    ```json
+    {
+      "custom_campaign_state": {
+        "core_memories": {
+          "append": "Your new memory summary string goes here."
+        }
+      }
+    }
+    ```
+
+## Combat State Schema
+
+The `combat_state` object is used to track the status of combat encounters. It must adhere to the following structure:
+
+*   **`in_combat` (Boolean):** `true` if a combat encounter is active, otherwise `false`.
+*   **`combatants` (Dictionary of Objects):** A dictionary where each key is a unique ID for a combatant (e.g., "player", "lyra_vex", "goblin_1"). The value for each key is an object containing their combat-relevant status:
+    *   `name`: The combatant's display name.
+    *   `hp_current`: Their current hit points.
+    *   `hp_max`: Their maximum hit points.
+    *   `status_effects`: A list of strings for any active conditions (e.g., ["Prone", "Poisoned"]).
+*   **`initiative_order` (List of Strings):** A list of the combatant IDs, ordered from highest to lowest initiative for the current round.
+
+## 1. Combat State Management
+
+When combat begins involving the player character and any companions/allies, you must manage the `combat_state` field to track D&D-style rounds and turns.
+
+### Combat Initialization
+When combat starts, update the combat state:
+```json
+"combat_state": {
+  "in_combat": true,
+  "current_round": 1,
+  "current_turn_index": 0,
+  "initiative_order": [
+    {"name": "Sir Kaelan", "initiative": 18, "type": "pc"},
+    {"name": "Aria Moonwhisper", "initiative": 15, "type": "companion"},
+    {"name": "Orc Warrior", "initiative": 12, "type": "enemy"}
+  ],
+  "combatants": {
+    "Sir Kaelan": {"hp_current": 85, "hp_max": 100, "status": []},
+    "Aria Moonwhisper": {"hp_current": 60, "hp_max": 60, "status": []},
+    "Orc Warrior": {"hp_current": 45, "hp_max": 45, "status": ["bloodied"]}
+  }
+}
+```
+
+### Turn Progression
+- **Advance `current_turn_index`** after each combatant's turn
+- **Increment `current_round`** when cycling back to first combatant
+- **Update HP and status effects** as combat progresses
+- **Remove defeated combatants** or mark them as unconscious
+
+### Combat End
+When combat ends, reset the combat state:
+```json
+"combat_state": {
+  "in_combat": false,
+  "current_round": 0,
+  "current_turn_index": 0,
+  "initiative_order": [],
+  "combatants": {}
+}
+```
+
+## Data Schema Rules (MANDATORY)
+You MUST adhere to the following data type rules. Failure to do so will corrupt the game state.
+
+1.  **`custom_campaign_state.active_missions` is ALWAYS a LIST.**
+    -   It contains a list of mission objects.
+    -   To add a new mission, you must append a new object to this list.
+    -   To update a mission, you must provide the full list with the updated mission object inside it.
+    -   **DO NOT** change this field to a dictionary.
+
+2.  **`custom_campaign_state.core_memories` is ALWAYS a LIST.**
+    -   It contains a list of strings.
+    -   You MUST use the `{"append": "new memory text"}` syntax to add new memories.
+    -   **DO NOT** attempt to overwrite the list directly.
+
+3.  **`npc_data` is ALWAYS a DICTIONARY.**
+    -   The keys are the unique names of NPCs.
+    -   The values are DICTIONARIES containing the NPC's data sheet.
+    
+    **To update NPC status or information:**
+    
+    ✅ **PREFERRED METHOD - Update specific fields:**
+    ```json
+    {
+      "npc_data": {
+        "Goblin_Leader": {
+          "hp_current": 0,
+          "status": "defeated in battle"
+        },
+        "Merchant_Tim": {
+          "status": "grateful for rescue",
+          "relationship": "friendly"
+        }
+      }
+    }
+    ```
+    
+    ⚠️ **TOLERATED BUT NOT RECOMMENDED - String updates:**
+    If you provide a string, it will be converted to a status update:
+    ```json
+    {
+      "npc_data": {
+        "Goblin_Leader": "defeated"
+      }
+    }
+    ```
+    This becomes: `{"status": "defeated"}` while preserving other NPC data.
+    
+    ✅ **To remove an NPC entirely:**
+    ```json
+    {
+      "npc_data": {
+        "Dead_Enemy": "__DELETE__"
+      }
+    }
+    ```
+
+4.  **`combat_state` MUST follow the schema.**
+    -   You must use the exact structure provided in the "Combat State Management" section. Do not invent your own keys like `enemies`. Use `combatants`.
+
+Strict adherence to these data schemas is not optional.
 
 ## CRITICAL: Non-Destructive Updates
 You must NEVER replace a top-level state object like `player_character_data`, `world_data`, or `custom_campaign_state`. Doing so will wipe out all nested data within that object.
-
--   **CORRECT (updates a specific field):** `{ "custom_campaign_state.last_story_mode_sequence_id": 987 }`
--   **INCORRECT (destroys all other custom state):** `{ "custom_campaign_state": { "last_story_mode_sequence_id": 987 } }`
-
-Always update the most specific, nested key possible using dot notation.

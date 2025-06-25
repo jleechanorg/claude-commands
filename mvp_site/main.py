@@ -14,7 +14,7 @@ from game_state import GameState, MigrationStatus
 import constants
 import json
 import collections
-from firestore_service import update_state_with_changes, json_default_serializer
+from firestore_service import update_state_with_changes, json_default_serializer, _truncate_log_json
 
 # --- Service Imports ---
 import gemini_service
@@ -342,7 +342,7 @@ def create_app():
             logging.info(f"GOD_MODE_SET raw payload:\\n---\\n{payload_str}\\n---")
             
             proposed_changes = parse_set_command(payload_str)
-            logging.info(f"GOD_MODE_SET parsed changes to be merged:\\n{json.dumps(proposed_changes, indent=2, default=json_default_serializer)}")
+            logging.info(f"GOD_MODE_SET parsed changes to be merged:\\n{_truncate_log_json(proposed_changes)}")
 
             if not proposed_changes:
                 logging.warning(f"GOD_MODE_SET command resulted in no valid changes.")
@@ -350,11 +350,11 @@ def create_app():
 
             # The loaded current_game_state object is guaranteed to be valid here
             current_state_dict_before_update = current_game_state.to_dict()
-            logging.info(f"GOD_MODE_SET state BEFORE update:\\n{json.dumps(current_state_dict_before_update, indent=2, default=json_default_serializer)}")
+            logging.info(f"GOD_MODE_SET state BEFORE update:\\n{_truncate_log_json(current_state_dict_before_update)}")
             
             updated_state = update_state_with_changes(current_state_dict_before_update, proposed_changes)
             updated_state = apply_automatic_combat_cleanup(updated_state, proposed_changes)
-            logging.info(f"GOD_MODE_SET state AFTER update:\\n{json.dumps(updated_state, indent=2, default=json_default_serializer)}")
+            logging.info(f"GOD_MODE_SET state AFTER update:\\n{_truncate_log_json(updated_state)}")
             
             firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
             
@@ -370,7 +370,7 @@ def create_app():
 
         if user_input_stripped == GOD_ASK_STATE_COMMAND:
             # The loaded current_game_state object is guaranteed to be valid here
-            game_state_json = json.dumps(current_game_state.to_dict(), indent=2, default=json_default_serializer)
+            game_state_json = _truncate_log_json(current_game_state.to_dict())
             
             firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
             
@@ -496,7 +496,7 @@ def create_app():
                 proposed_changes = update_state_with_changes(story_id_update, proposed_changes)
 
             # --- NEW: Enhanced Logging for normal gameplay ---
-            logging.info(f"AI proposed changes for campaign {campaign_id}:\\n{json.dumps(proposed_changes, indent=2, default=json_default_serializer)}")
+            logging.info(f"AI proposed changes for campaign {campaign_id}:\\n{_truncate_log_json(proposed_changes)}")
 
             log_message = format_state_changes(proposed_changes, for_html=False)
             logging.info(f"Applying formatted state changes for campaign {campaign_id}:\\n{log_message}")

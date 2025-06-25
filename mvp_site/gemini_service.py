@@ -272,6 +272,10 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False, generate
 
     system_instruction_parts = []
 
+    # CRITICAL: Load game_state instructions FIRST for highest priority
+    # This prevents "instruction fatigue" and ensures data structure compliance
+    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+
     # Conditionally add the character template if narrative instructions are selected.
     if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
         system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE))
@@ -298,9 +302,6 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False, generate
     
     # NEW: Always include the destiny_ruleset as a default system instruction
     system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DESTINY))
-
-    # NEW: Always include the game_state instructions
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
 
     # Add companion generation instruction if requested
     if generate_companions:
@@ -378,6 +379,10 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
 
     system_instruction_parts = []
 
+    # CRITICAL: Load game_state instructions FIRST for highest priority
+    # This prevents "instruction fatigue" and ensures data structure compliance
+    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+
     # Conditionally add the character template if narrative instructions are selected.
     if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
         system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE))
@@ -396,9 +401,6 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     
     # NEW: Always include the destiny_ruleset for continue_story too
     system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DESTINY))
-
-    # NEW: Always include the game_state instructions
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
 

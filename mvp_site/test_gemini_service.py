@@ -86,15 +86,16 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         include_srd = True
         
         # This is the sequence we expect based on the FIXED code
+        # CRITICAL: GameState must be FIRST to prevent instruction fatigue
         expected_prompt_order = [
-            "CharTemplate",      # From narrative checkbox
+            "GameState",       # FIRST - highest priority for data structure compliance
+            "CharTemplate",    # From narrative checkbox
             "CharSheet",       # From mechanics checkbox
-            # "SRD",             # REMOVED: SRD is no longer part of the initial prompt
+            # "SRD",           # REMOVED: SRD is no longer part of the initial prompt
             "Narrative",       # From loop
             "Mechanics",       # From loop
             "Calibration",     # From loop
-            "Destiny",         # Default
-            "GameState"        # Default
+            "Destiny"          # Default
         ]
         expected_system_instruction = "\n\n".join(expected_prompt_order)
 
@@ -124,7 +125,7 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         mock_client.models.generate_content.return_value.text = "Success"
         mock_get_client.return_value = mock_client
         
-        expected_system_instruction = "Destiny\n\nGameState"
+        expected_system_instruction = "GameState\n\nDestiny"
 
         # --- Act ---
         gemini_service.get_initial_story("test prompt", selected_prompts=[], include_srd=False)
@@ -146,7 +147,7 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         mock_client.models.generate_content.return_value.text = "Success"
         mock_get_client.return_value = mock_client
         
-        expected_prompt_order = ["CharTemplate", "Narrative", "Destiny", "GameState"]
+        expected_prompt_order = ["GameState", "CharTemplate", "Narrative", "Destiny"]
         expected_system_instruction = "\n\n".join(expected_prompt_order)
 
         # --- Act ---
@@ -167,7 +168,7 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         mock_client.models.generate_content.return_value.text = "Success"
         mock_get_client.return_value = mock_client
         
-        expected_prompt_order = ["CharSheet", "Mechanics", "Destiny", "GameState"]
+        expected_prompt_order = ["GameState", "CharSheet", "Mechanics", "Destiny"]
         expected_system_instruction = "\n\n".join(expected_prompt_order)
 
         # --- Act ---
@@ -188,7 +189,7 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         mock_client.models.generate_content.return_value.text = "Success"
         mock_get_client.return_value = mock_client
         
-        expected_prompt_order = ["Calibration", "Destiny", "GameState"]
+        expected_prompt_order = ["GameState", "Calibration", "Destiny"]
         expected_system_instruction = "\n\n".join(expected_prompt_order)
 
         # --- Act ---
