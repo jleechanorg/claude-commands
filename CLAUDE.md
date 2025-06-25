@@ -232,6 +232,7 @@ The complete cursor rules from `/home/jleechan/projects/worldarchitect.ai/.curso
   4. Push branch and create PR with comprehensive description using `gh pr create`
   5. Provide clickable PR URL for user review
   6. After merge, immediately run integrate pattern before next PR
+  7. **CRITICAL**: Never use 'dev' as a remote branch for PRs - always use descriptive feature branch names
 - **PR Descriptions**: Must include Summary, Changes, Benefits, Usage, and Test Results
 - **Post-Merge**: Always run integrate pattern immediately after each merge
 

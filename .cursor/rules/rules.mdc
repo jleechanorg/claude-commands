@@ -155,6 +155,7 @@ This document outlines the operating protocol for our collaboration. It merges g
         4. Push branch and create PR with comprehensive description using `gh pr create`
         5. Provide clickable PR URL for user review
         6. After merge, immediately run integrate pattern before next PR
+        7. **CRITICAL**: Never use 'dev' as a remote branch for PRs - always use descriptive feature branch names
     *   **PR Descriptions**: Always include Summary, Changes, Benefits, and Usage sections
     *   **Commit Messages**: Use descriptive titles with bullet points and Claude Code attribution
 
