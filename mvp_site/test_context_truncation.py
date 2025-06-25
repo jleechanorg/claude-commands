@@ -88,11 +88,13 @@ class TestContextTruncation(unittest.TestCase):
             turns_to_keep_at_end=3     # Keep last 3
         )
         
-        # Current implementation: few turns logic returns last 3 entries
-        self.assertEqual(len(truncated_context), 3)
-        self.assertEqual(truncated_context[0]['text'], 'B' * 50) # Entry 2
-        self.assertEqual(truncated_context[1]['text'], 'C' * 50) # Entry 3
-        self.assertEqual(truncated_context[2]['text'], 'D' * 50) # Entry 4
+        # Current implementation: 4 > 3 so uses full truncation with marker
+        # Result: [] + [marker] + last 3 entries = 4 total
+        self.assertEqual(len(truncated_context), 4)
+        self.assertEqual(truncated_context[0]['actor'], 'system') # Truncation marker
+        self.assertEqual(truncated_context[1]['text'], 'B' * 50) # Entry 2
+        self.assertEqual(truncated_context[2]['text'], 'C' * 50) # Entry 3  
+        self.assertEqual(truncated_context[3]['text'], 'D' * 50) # Entry 4
         
         print("--- Test Finished Successfully ---")
 

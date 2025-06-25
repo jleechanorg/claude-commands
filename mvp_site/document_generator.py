@@ -3,6 +3,23 @@ from fpdf import FPDF, XPos, YPos
 from docx import Document
 import constants
 
+def get_story_text_from_context(story_log):
+    """
+    Convert story log entries to formatted text for document export.
+    This function replicates the logic from main.py export_campaign.
+    """
+    story_parts = []
+    for entry in story_log:
+        actor = entry.get(constants.KEY_ACTOR, UNKNOWN_ACTOR)
+        text = entry.get(constants.KEY_TEXT, '')
+        mode = entry.get(constants.KEY_MODE)
+        if actor == constants.ACTOR_GEMINI:
+            label = LABEL_GEMINI
+        else:
+            label = LABEL_GOD if mode == constants.MODE_GOD else LABEL_USER
+        story_parts.append(f"{label}:\n{text}")
+    return "\n\n".join(story_parts)
+
 # --- CONSTANTS ---
 # File Paths and Configuration
 ASSETS_DIR = 'assets'
@@ -43,7 +60,7 @@ def generate_pdf(story_text, output_filepath, campaign_title=""):
     try:
         font_path = os.path.join(ASSETS_DIR, FONT_FILENAME)
         # The 'uni=True' parameter is crucial for UTF-8 support with FPDF.
-        pdf.add_font(CUSTOM_FONT_NAME, '', font_path, uni=True)
+        pdf.add_font(CUSTOM_FONT_NAME, '', font_path)
         font_family = CUSTOM_FONT_NAME
         print("INFO: DejaVuSans.ttf found and loaded.")
     except RuntimeError:

@@ -50,7 +50,13 @@ class TestExportEndpoint(unittest.TestCase):
             dummy_pdf_path = temp_file.name
         
         try:
-            mock_generate_pdf.return_value = dummy_pdf_path
+            # Mock generate_pdf to actually create the file at the expected path
+            def mock_pdf_generator(story_text, output_path, campaign_title=""):
+                # Just copy our dummy file to the expected location
+                import shutil
+                shutil.copy2(dummy_pdf_path, output_path)
+                
+            mock_generate_pdf.side_effect = mock_pdf_generator
 
             # 2. Make the API Call
             response = self.client.get(

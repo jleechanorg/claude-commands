@@ -24,8 +24,10 @@ def test_export():
     try:
         if file_format == 'pdf':
             # This is the line we are truly testing
-            file_path = document_generator.generate_pdf(story_text, campaign_title)
-            return send_file(file_path, as_attachment=True, mimetype='application/pdf')
+            import tempfile
+            file_path = tempfile.mktemp(suffix='.pdf')
+            document_generator.generate_pdf(story_text, file_path, campaign_title)
+            return send_file(file_path, as_attachment=True, mimetype='application/pdf', download_name='test_campaign.pdf')
         else:
             return jsonify({'error': 'This test only supports PDF format.'}), 400
     finally:
