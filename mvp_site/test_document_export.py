@@ -1,6 +1,5 @@
 import unittest
 import os
-import json
 import tempfile
 from unittest.mock import patch, MagicMock
 
@@ -55,6 +54,8 @@ class TestExportEndpoint(unittest.TestCase):
                 # Just copy our dummy file to the expected location
                 import shutil
                 shutil.copy2(dummy_pdf_path, output_path)
+                # Use the parameters to avoid unused variable warnings
+                assert story_text and output_path
                 
             mock_generate_pdf.side_effect = mock_pdf_generator
 
