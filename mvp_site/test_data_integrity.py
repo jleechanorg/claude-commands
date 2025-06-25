@@ -47,7 +47,19 @@ def update_state_with_changes_test(state_to_update: dict, changes: dict) -> dict
         
         # Handle recursive merge
         elif isinstance(value, dict) and isinstance(state_to_update.get(key), collections.abc.Mapping):
-            state_to_update[key] = update_state_with_changes_test(state_to_update[key], value)
+            state_to_update[key] = update_state_with_changes_test(state_to_update.get(key, {}), value)
+        
+        # Create new dictionary when incoming value is dict but existing is not
+        elif isinstance(value, dict):
+            state_to_update[key] = update_state_with_changes_test({}, value)
+
+        # Handle string updates to existing dictionaries (preserve dict structure)
+        elif isinstance(state_to_update.get(key), collections.abc.Mapping):
+            # Don't overwrite the entire dictionary with a string
+            # Instead, treat string values as status updates
+            existing_dict = state_to_update[key].copy()
+            existing_dict['status'] = value
+            state_to_update[key] = existing_dict
         
         # Simple overwrite
         else:
@@ -284,6 +296,82 @@ class TestDataIntegrity(unittest.TestCase):
             for npc_id, npc_data in current_state["npc_data"].items():
                 self.assertIsInstance(npc_data, dict,
                     f"After update, NPC '{npc_id}' should be dict, got {type(npc_data)}: {npc_data}")
+
+    def test_npc_string_update_preservation(self):
+        """
+        Test the specific bug where updating an NPC with a string value
+        corrupts the entire NPC dictionary structure.
+        
+        This test ensures that string updates to NPCs are handled intelligently
+        by preserving the dictionary structure and treating strings as status updates.
+        """
+        # Initial state with an NPC
+        initial_state = {
+            'npc_data': {
+                'goblin_skirmisher_1': {
+                    'hp_current': 7,
+                    'hp_max': 7,
+                    'ac': 13,
+                    'status': 'active',
+                    'alignment': 'chaotic evil'
+                }
+            }
+        }
+        
+        # Update the NPC with a simple string (this used to cause corruption)
+        string_update = {
+            'npc_data': {
+                'goblin_skirmisher_1': 'defeated'
+            }
+        }
+        
+        # Apply the update
+        updated_state = update_state_with_changes_test(initial_state, string_update)
+        
+        # Verify the NPC data structure is preserved
+        npc_data = updated_state['npc_data']['goblin_skirmisher_1']
+        self.assertIsInstance(npc_data, dict, 
+                            f"NPC data was corrupted! Expected dict but got {type(npc_data)}: {npc_data}")
+        
+        # Original data should be preserved
+        self.assertEqual(npc_data.get('hp_current'), 7)
+        self.assertEqual(npc_data.get('ac'), 13)
+        self.assertEqual(npc_data.get('alignment'), 'chaotic evil')
+        
+        # String value should be intelligently merged as status
+        self.assertEqual(npc_data.get('status'), 'defeated')
+        
+    def test_multiple_npc_string_updates_isolation(self):
+        """
+        Test that string updates to one NPC don't corrupt other NPCs.
+        """
+        initial_state = {
+            'npc_data': {
+                'goblin_1': {'hp': 7, 'status': 'active'},
+                'goblin_2': {'hp': 5, 'status': 'active'}
+            }
+        }
+        
+        # Update just one NPC with a string
+        changes = {
+            'npc_data': {
+                'goblin_1': 'defeated'
+            }
+        }
+        
+        final_state = update_state_with_changes_test(initial_state, changes)
+        
+        # Both NPCs should remain as dictionaries
+        self.assertIsInstance(final_state['npc_data']['goblin_1'], dict)
+        self.assertIsInstance(final_state['npc_data']['goblin_2'], dict)
+        
+        # goblin_2 should be completely unchanged
+        self.assertEqual(final_state['npc_data']['goblin_2']['hp'], 5)
+        self.assertEqual(final_state['npc_data']['goblin_2']['status'], 'active')
+        
+        # goblin_1 should have preserved hp but updated status
+        self.assertEqual(final_state['npc_data']['goblin_1']['hp'], 7)
+        self.assertEqual(final_state['npc_data']['goblin_1']['status'], 'defeated')
 
 if __name__ == "__main__":
     # Set up logging to see corruption detection in action

@@ -61,9 +61,23 @@ def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
         # Case 3: Recursive merge for nested dictionaries
         elif isinstance(value, dict) and isinstance(state_to_update.get(key), collections.abc.Mapping):
             logging.info(f"update_state: Recursing into dict for key '{key}'.")
-            state_to_update[key] = update_state_with_changes(state_to_update[key], value)
+            state_to_update[key] = update_state_with_changes(state_to_update.get(key, {}), value)
+        
+        # Case 3b: Create new dictionary when incoming value is dict but existing is not
+        elif isinstance(value, dict):
+            logging.info(f"update_state: Creating new dict for key '{key}' (existing value was not a dict).")
+            state_to_update[key] = update_state_with_changes({}, value)
 
-        # Case 4: Simple overwrite for everything else
+        # Case 4: Handle string updates to existing dictionaries (preserve dict structure)
+        elif isinstance(state_to_update.get(key), collections.abc.Mapping):
+            logging.info(f"update_state: Preserving dict structure for key '{key}', adding 'status' field.")
+            # Don't overwrite the entire dictionary with a string
+            # Instead, treat string values as status updates
+            existing_dict = state_to_update[key].copy()
+            existing_dict['status'] = value
+            state_to_update[key] = existing_dict
+
+        # Case 5: Simple overwrite for everything else
         else:
             logging.info(f"update_state: Overwriting value for key '{key}'.")
             state_to_update[key] = value
