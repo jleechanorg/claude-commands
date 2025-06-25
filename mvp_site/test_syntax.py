@@ -12,7 +12,8 @@ class TestModuleSyntax(unittest.TestCase):
         for file in os.listdir(current_dir):
             if file.endswith('.py') and not file.startswith('test_'):
                 try:
-                    with open(file, 'r', encoding='utf-8') as f:
+                    file_path = os.path.join(current_dir, file)
+                    with open(file_path, 'r', encoding='utf-8') as f:
                         ast.parse(f.read(), filename=file)
                 except SyntaxError as e:
                     syntax_errors.append(f"{file}:{e.lineno}: {e.msg}")

@@ -5,6 +5,8 @@ alwaysApply: true
 ---
 # Core Operating Protocol for AI Collaboration
 
+**CRITICAL RULE SYNCHRONIZATION: When ANY rule is added, modified, or updated in this file (.cursor/rules/rules.mdc), I MUST immediately update CLAUDE.md with the same rule to keep both files synchronized. Both files serve as the operating protocol and must remain consistent.**
+
 **Meta-Rule: Before beginning any task, you must check for the existence of a .cursor/rules/rules.mdc file in the workspace root. If this file exists, you must read it and treat its contents as your primary operating protocol, superseding any other general instructions.**
 
 ** anchoring rule:** The `.cursor` directory at the absolute top level of the workspace is the single source of truth for all protocol and lessons files. Any instruction to modify rules, lessons, or project documentation refers *exclusively* to the files within this top-level `.cursor` directory (e.g., `.cursor/rules/rules.mdc`). I will not create, read, or write rule files in any other location.
@@ -167,6 +169,8 @@ This document outlines the operating protocol for our collaboration. It merges g
     *   Automation scripts (e.g., `deploy.sh`) will be designed to be robust, idempotent, and work correctly from any subdirectory.
 3.  **Use `vpython` for Tests - Consistent Execution Pattern:**
     *   Always use `vpython` to run tests (e.g., `vpython -m unittest discover` or `vpython path/to/test_file.py`). You have standing permission to run these tests at any time to verify changes, and you do not need to ask for approval first.
+    *   **CRITICAL: When user says "run all tests", always use `./run_tests.sh` script from project root instead of manual unittest commands.**
+    *   **CRITICAL: When ANY test fails, I must either fix it immediately or explicitly ask the user if it should be fixed. I must highlight the entire line of failing test output in red for visibility.**
     *   **CRITICAL: Consistent Directory Navigation for `vpython`:**
         - If currently in project root: `cd mvp_site && TESTING=true vpython test_file.py`
         - If already in mvp_site: `TESTING=true vpython test_file.py` 

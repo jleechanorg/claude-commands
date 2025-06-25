@@ -49,8 +49,9 @@ class TestPdfGeneration(unittest.TestCase):
         """
         print("\\n--- Running PDF Generation Test ---")
         
-        # Prerequisite check
-        font_path = 'assets/DejaVuSans.ttf'
+        # Prerequisite check - look for font relative to this test file
+        test_dir = os.path.dirname(os.path.abspath(__file__))
+        font_path = os.path.join(test_dir, 'assets', 'DejaVuSans.ttf')
         self.assertTrue(os.path.exists(font_path), f"Font file not found at {font_path}. Please run the curl command to download it.")
 
         # Call our simple test endpoint

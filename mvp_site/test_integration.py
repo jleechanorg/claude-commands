@@ -34,7 +34,6 @@ test_prompt_files = {
     'game_state_instruction.md': "Test game state instruction.",
     'character_template.md': "Test character template.",
     'character_sheet_template.md': "Test character sheet.",
-    '5e_SRD_All.md': "Test SRD content."
 }
 
 for filename, content in test_prompt_files.items():
@@ -75,11 +74,17 @@ class TestInteractionIntegration(unittest.TestCase):
         cls.client = cls.app.test_client()
         cls.user_id = 'test-integration-user'
         
-        # Ensure the real Gemini API key is set; fall back to local file if possible.
-        local_key_path = os.path.join(original_cwd, "mvp_site", "local_api_key.txt")
-        if not os.environ.get("GEMINI_API_KEY") and os.path.exists(local_key_path):
-            with open(local_key_path, "r") as key_file:
-                os.environ["GEMINI_API_KEY"] = key_file.read().strip()
+        # Ensure the real Gemini API key is set; look in home directory first, then project root
+        home_key_path = os.path.expanduser("~/.gemini_api_key.txt")
+        project_key_path = os.path.join(original_cwd, "gemini_api_key.txt")
+        
+        if not os.environ.get("GEMINI_API_KEY"):
+            if os.path.exists(home_key_path):
+                with open(home_key_path, "r") as key_file:
+                    os.environ["GEMINI_API_KEY"] = key_file.read().strip()
+            elif os.path.exists(project_key_path):
+                with open(project_key_path, "r") as key_file:
+                    os.environ["GEMINI_API_KEY"] = key_file.read().strip()
 
         # Create one shared campaign for all tests
         create_response = cls.client.post(

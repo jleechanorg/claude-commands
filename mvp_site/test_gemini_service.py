@@ -72,7 +72,6 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
             "character_template": "CharTemplate",
             "character_sheet": "CharSheet",
             "game_state": "GameState",
-            "srd": "SRD",
         }
         mock_load_instruction_file.side_effect = lambda type: mock_content_map.get(type, "")
 
@@ -83,7 +82,6 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
 
         # Define the input for this specific scenario
         selected_prompts = ['narrative', 'mechanics', 'calibration']
-        include_srd = True
         
         # This is the sequence we expect based on the FIXED code
         # CRITICAL: GameState must be FIRST to prevent instruction fatigue
@@ -91,7 +89,6 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
             "GameState",       # FIRST - highest priority for data structure compliance
             "CharTemplate",    # From narrative checkbox
             "CharSheet",       # From mechanics checkbox
-            # "SRD",           # REMOVED: SRD is no longer part of the initial prompt
             "Narrative",       # From loop
             "Mechanics",       # From loop
             "Calibration",     # From loop
@@ -103,7 +100,6 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         gemini_service.get_initial_story(
             "test prompt",
             selected_prompts=selected_prompts,
-            include_srd=include_srd
         )
 
         # --- Assert ---
@@ -128,7 +124,7 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         expected_system_instruction = "GameState\n\nDestiny"
 
         # --- Act ---
-        gemini_service.get_initial_story("test prompt", selected_prompts=[], include_srd=False)
+        gemini_service.get_initial_story("test prompt", selected_prompts=[])
 
         # --- Assert ---
         call_args = mock_get_client.return_value.models.generate_content.call_args
@@ -151,7 +147,7 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         expected_system_instruction = "\n\n".join(expected_prompt_order)
 
         # --- Act ---
-        gemini_service.get_initial_story("test", selected_prompts=['narrative'], include_srd=False)
+        gemini_service.get_initial_story("test", selected_prompts=['narrative'])
 
         # --- Assert ---
         actual_system_instruction = mock_get_client.return_value.models.generate_content.call_args.kwargs['config'].system_instruction.text
@@ -172,7 +168,7 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         expected_system_instruction = "\n\n".join(expected_prompt_order)
 
         # --- Act ---
-        gemini_service.get_initial_story("test", selected_prompts=['mechanics'], include_srd=False)
+        gemini_service.get_initial_story("test", selected_prompts=['mechanics'])
 
         # --- Assert ---
         actual_system_instruction = mock_get_client.return_value.models.generate_content.call_args.kwargs['config'].system_instruction.text
@@ -193,7 +189,7 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         expected_system_instruction = "\n\n".join(expected_prompt_order)
 
         # --- Act ---
-        gemini_service.get_initial_story("test", selected_prompts=['calibration'], include_srd=False)
+        gemini_service.get_initial_story("test", selected_prompts=['calibration'])
 
         # --- Assert ---
         actual_system_instruction = mock_get_client.return_value.models.generate_content.call_args.kwargs['config'].system_instruction.text
@@ -308,7 +304,6 @@ PROMPT_TYPES_TO_TEST = [
     constants.PROMPT_TYPE_CALIBRATION,
     constants.PROMPT_TYPE_DESTINY,
     constants.PROMPT_TYPE_GAME_STATE,
-    constants.PROMPT_TYPE_SRD
 ]
 
 class TestPromptLoading(unittest.TestCase):

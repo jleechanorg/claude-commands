@@ -15,3 +15,6 @@ key.json
 
 # World Architect AI
 serviceAccountKey.json
+gemini_api_key.txt
+local_api_key.txt
+*_api_key.txt

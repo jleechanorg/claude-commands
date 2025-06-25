@@ -14,7 +14,6 @@ PROMPT_TYPES_TO_TEST = [
     constants.PROMPT_TYPE_CALIBRATION,
     constants.PROMPT_TYPE_DESTINY,
     constants.PROMPT_TYPE_GAME_STATE,
-    constants.PROMPT_TYPE_SRD
 ]
 
 class TestPromptLoading(unittest.TestCase):

@@ -255,12 +255,10 @@ def create_app():
         # Create a blank initial game state.
         initial_game_state = GameState().to_dict()
 
-        should_include_srd = constants.PROMPT_TYPE_MECHANICS in selected_prompts
         generate_companions = 'companions' in custom_options
         opening_story = gemini_service.get_initial_story(
             prompt, 
             selected_prompts=selected_prompts,
-            include_srd=should_include_srd,
             generate_companions=generate_companions
         )
         
@@ -370,7 +368,8 @@ def create_app():
 
         if user_input_stripped == GOD_ASK_STATE_COMMAND:
             # The loaded current_game_state object is guaranteed to be valid here
-            game_state_json = _truncate_log_json(current_game_state.to_dict())
+            game_state_dict = current_game_state.to_dict()
+            game_state_json = json.dumps(game_state_dict, indent=2, default=json_default_serializer)
             
             firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
             

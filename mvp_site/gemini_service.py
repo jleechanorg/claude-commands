@@ -21,7 +21,7 @@ def json_datetime_serializer(obj):
 # --- CONSTANTS ---
 # Use flash for standard, cheaper operations.
 DEFAULT_MODEL = 'gemini-2.5-flash'
-# Use pro for the single, large-context operation (initial SRD load).
+# Use pro for large-context operations.
 LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'
 # Use fastest model for testing
 TEST_MODEL = 'gemini-1.5-flash'
@@ -52,7 +52,6 @@ PROMPT_FILENAMES = {
     constants.PROMPT_TYPE_CALIBRATION: constants.FILENAME_CALIBRATION,
     constants.PROMPT_TYPE_DESTINY: constants.FILENAME_DESTINY,
     constants.PROMPT_TYPE_GAME_STATE: constants.FILENAME_GAME_STATE,
-    constants.PROMPT_TYPE_SRD: constants.FILENAME_SRD,
 }
 
 # NEW: Centralized map of prompt types to their file paths.
@@ -63,7 +62,6 @@ PATH_MAP = {
     constants.PROMPT_TYPE_CALIBRATION: constants.CALIBRATION_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_DESTINY: constants.DESTINY_RULESET_PATH,
     constants.PROMPT_TYPE_GAME_STATE: constants.GAME_STATE_INSTRUCTION_PATH,
-    constants.PROMPT_TYPE_SRD: constants.SRD_PATH,
     constants.PROMPT_TYPE_CHARACTER_TEMPLATE: constants.CHARACTER_TEMPLATE_PATH,
     constants.PROMPT_TYPE_CHARACTER_SHEET: constants.CHARACTER_SHEET_TEMPLATE_PATH,
 }
@@ -263,7 +261,7 @@ def _truncate_context(story_context, max_chars: int, model_name: str, current_ga
     return truncated_context
 
 @log_exceptions
-def get_initial_story(prompt, selected_prompts=None, include_srd=False, generate_companions=False):
+def get_initial_story(prompt, selected_prompts=None, generate_companions=False):
     """Generates the initial story part, including character, narrative, and mechanics instructions."""
 
     if selected_prompts is None:
@@ -284,15 +282,6 @@ def get_initial_story(prompt, selected_prompts=None, include_srd=False, generate
     if constants.PROMPT_TYPE_MECHANICS in selected_prompts:
         system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_SHEET))
 
-    # TODO (Week of 2025-06-29): Re-evaluate the SRD inclusion.
-    # The SRD is too large and was causing the model to miss critical instructions.
-    # A better long-term solution might be to use a vector database or a more
-    # targeted RAG approach instead of including the entire text in the prompt.
-    # --- REMOVED SRD ---
-    # The SRD is too large and was causing the model to miss critical instructions.
-    # It will be removed from the prompt for now.
-    # if include_srd:
-    #     system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_SRD))
 
     # Consistent order for instructions
     # Narrative, Mechanics, Calibration (from checkboxes)
@@ -370,12 +359,6 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         selected_prompts = [] 
         logging.warning("No specific system prompts selected for continue_story. Using none.")
 
-    # --- SRD EXCLUSION ---
-    # CRITICAL: Manually remove the SRD from the list of prompts to load for this turn.
-    # The SRD should ONLY be used for initial generation, not for every interaction.
-    if constants.PROMPT_TYPE_SRD in selected_prompts:
-        logging.warning("SRD prompt was requested in continue_story, which is not allowed. It will be ignored.")
-        selected_prompts.remove(constants.PROMPT_TYPE_SRD)
 
     system_instruction_parts = []
 
@@ -702,12 +685,25 @@ if __name__ == "__main__":
     print("--- Running gemini_service.py in chained conversation test mode ---")
     
     try:
-        with open('local_api_key.txt', 'r') as f:
-            api_key = f.read().strip()
+        # Look for Google API key in home directory first, then project root
+        home_key_path = os.path.expanduser("~/.gemini_api_key.txt")
+        project_key_path = "gemini_api_key.txt"
+        
+        if os.path.exists(home_key_path):
+            with open(home_key_path, 'r') as f:
+                api_key = f.read().strip()
+            print(f"Successfully loaded API key from {home_key_path}")
+        elif os.path.exists(project_key_path):
+            with open(project_key_path, 'r') as f:
+                api_key = f.read().strip()
+            print(f"Successfully loaded API key from {project_key_path}")
+        else:
+            print("\nERROR: API key not found in ~/.gemini_api_key.txt or gemini_api_key.txt")
+            sys.exit(1)
+            
         os.environ["GEMINI_API_KEY"] = api_key
-        print("Successfully loaded API key from local_api_key.txt")
-    except FileNotFoundError:
-        print("\nERROR: 'local_api_key.txt' not found.")
+    except Exception as e:
+        print(f"\nERROR: Failed to load API key: {e}")
         sys.exit(1)
         
     get_client() # Initialize client

@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+**CRITICAL RULE SYNCHRONIZATION: When ANY rule is added, modified, or updated in .cursor/rules/rules.mdc, I MUST immediately update this CLAUDE.md file with the same rule to keep both files synchronized. Both files serve as the operating protocol and must remain consistent.**
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
@@ -18,8 +20,10 @@ WorldArchitect.AI is an AI-powered tabletop RPG platform that serves as a digita
 
 ### Testing
 ```bash
-# Run all tests (must be in mvp_site directory)
-cd mvp_site && TESTING=true vpython -m unittest discover
+# CRITICAL: When user says "run all tests", always use run_tests.sh script from project root
+./run_tests.sh
+
+# CRITICAL: When ANY test fails, either fix it immediately or explicitly ask user if it should be fixed
 
 # Run specific test file
 cd mvp_site && TESTING=true vpython test_integration.py

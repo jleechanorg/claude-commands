@@ -12,12 +12,21 @@ import firestore_service
 
 try:
     if not firebase_admin._apps:
-        cred = credentials.Certificate("serviceAccountKey.json")
+        # Look for Firebase key in project root
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        firebase_key_path = os.path.join(project_root, "serviceAccountKey.json")
+        
+        if not os.path.exists(firebase_key_path):
+            print(f"--- FATAL ERROR: Firebase key not found at {firebase_key_path} ---")
+            print("Please ensure 'serviceAccountKey.json' is in the project root directory.")
+            exit()
+            
+        cred = credentials.Certificate(firebase_key_path)
         firebase_admin.initialize_app(cred)
     print("--- Firebase Admin Initialized Successfully for Live Test ---")
 except Exception as e:
     print(f"--- FATAL ERROR: Could not initialize Firebase Admin. ---")
-    print(f"Please ensure 'serviceAccountKey.json' is in your root directory.")
+    print(f"Please ensure 'serviceAccountKey.json' is in the project root directory.")
     print(f"Error details: {e}")
     exit()
 

@@ -41,7 +41,9 @@ class TestComprehensiveSyntax(unittest.TestCase):
         """Specifically test game_state.py syntax and import."""
         # First check syntax with AST
         try:
-            with open('game_state.py', 'r', encoding='utf-8') as f:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            file_path = os.path.join(current_dir, 'game_state.py')
+            with open(file_path, 'r', encoding='utf-8') as f:
                 source_code = f.read()
             ast.parse(source_code, filename='game_state.py')
         except SyntaxError as e:
@@ -60,7 +62,9 @@ class TestComprehensiveSyntax(unittest.TestCase):
         """Test that main.py has valid syntax and can load its dependencies."""
         # Check main.py syntax
         try:
-            with open('main.py', 'r', encoding='utf-8') as f:
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            file_path = os.path.join(current_dir, 'main.py')
+            with open(file_path, 'r', encoding='utf-8') as f:
                 source_code = f.read()
             ast.parse(source_code, filename='main.py')
         except SyntaxError as e:
