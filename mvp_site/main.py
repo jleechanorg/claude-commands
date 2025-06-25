@@ -48,6 +48,43 @@ DEFAULT_TEST_USER = 'test-user'
 
 # --- END CONSTANTS ---
 
+def apply_automatic_combat_cleanup(updated_state_dict: dict, proposed_changes: dict) -> dict:
+    """
+    Automatically cleans up defeated enemies from combat state when combat updates are applied.
+    
+    This function should be called after any state update that modifies combat_state.
+    It identifies defeated enemies (HP <= 0) and removes them from both combat_state 
+    and npc_data to maintain consistency.
+    
+    Args:
+        updated_state_dict: The state dictionary after applying proposed changes
+        proposed_changes: The original changes dict to check if combat_state was modified
+        
+    Returns:
+        Updated state dictionary with defeated enemies cleaned up
+    """
+    # Create a temporary GameState object to use the cleanup method
+    temp_game_state = GameState.from_dict(updated_state_dict)
+    
+    # Check if we have combatants data to potentially clean up
+    combatants = temp_game_state.combat_state.get("combatants", {})
+    if not combatants:
+        logging.info("COMBAT CLEANUP CHECK: No combatants found, skipping cleanup")
+        return updated_state_dict
+    
+    # CRITICAL FIX: Always attempt cleanup if combatants exist, regardless of in_combat status
+    # This handles the case where combat is ending (in_combat becomes false) but defeated enemies still remain
+    logging.info(f"COMBAT CLEANUP CHECK: Found {len(combatants)} combatants, checking for defeated enemies...")
+    
+    # Perform cleanup 
+    defeated_enemies = temp_game_state.cleanup_defeated_enemies()
+    if defeated_enemies:
+        logging.info(f"AUTOMATIC CLEANUP: Defeated enemies removed: {defeated_enemies}")
+        return temp_game_state.to_dict()
+    else:
+        logging.info("AUTOMATIC CLEANUP: No defeated enemies found to clean up")
+        return updated_state_dict
+
 def _cleanup_legacy_state(state_dict: dict) -> tuple[dict, bool, int]:
     """
     Removes legacy data structures from a game state dictionary.
@@ -301,6 +338,7 @@ def create_app():
             logging.info(f"GOD_MODE_SET state BEFORE update:\\n{json.dumps(current_state_dict_before_update, indent=2, default=json_default_serializer)}")
             
             updated_state = update_state_with_changes(current_state_dict_before_update, proposed_changes)
+            updated_state = apply_automatic_combat_cleanup(updated_state, proposed_changes)
             logging.info(f"GOD_MODE_SET state AFTER update:\\n{json.dumps(updated_state, indent=2, default=json_default_serializer)}")
             
             firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
@@ -341,6 +379,7 @@ def create_app():
 
                 # Perform an update
                 updated_state_dict = update_state_with_changes(current_state_dict, state_changes)
+                updated_state_dict = apply_automatic_combat_cleanup(updated_state_dict, state_changes)
                 
                 # Convert back to GameState object *after* the update to validate and use its methods
                 final_game_state = GameState.from_dict(updated_state_dict)
@@ -449,6 +488,7 @@ def create_app():
             
             # --- FIX: UPDATE STATE WITH CHANGES ---
             updated_state_dict = update_state_with_changes(current_game_state.to_dict(), proposed_changes)
+            updated_state_dict = apply_automatic_combat_cleanup(updated_state_dict, proposed_changes)
 
             logging.info(f"New complete game state for campaign {campaign_id}:\\n{json.dumps(updated_state_dict, indent=2, default=json_default_serializer)}")
             
@@ -575,6 +615,7 @@ def run_god_command(campaign_id, user_id, action, command_string=None):
         current_state_dict = current_game_state_doc.to_dict() if current_game_state_doc else GameState().to_dict()
 
         updated_state = update_state_with_changes(current_state_dict, proposed_changes)
+        updated_state = apply_automatic_combat_cleanup(updated_state, proposed_changes)
         firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
         
         log_message = format_state_changes(proposed_changes, for_html=False)
