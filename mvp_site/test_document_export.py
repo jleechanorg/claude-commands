@@ -1,6 +1,6 @@
 import unittest
 import os
-import json
+import tempfile
 from unittest.mock import patch, MagicMock
 
 # Set a dummy API key to prevent gemini_service from failing on import
@@ -43,32 +43,39 @@ class TestExportEndpoint(unittest.TestCase):
             [{'actor': 'gemini', 'text': 'A story starts.'}]
         )
         
-        # Mock generate_pdf to create a file at the expected path
-        def mock_pdf_generator(story_text, file_path, title):
-            """Create a dummy PDF file at the expected path."""
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            with open(file_path, "w") as f:
-                f.write("dummy pdf content")
-            return file_path
+        # Create a temporary file for testing
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".pdf", delete=False) as temp_file:
+            temp_file.write("dummy pdf content")
+            dummy_pdf_path = temp_file.name
         
-        mock_generate_pdf.side_effect = mock_pdf_generator
+        try:
+            # Mock generate_pdf to actually create the file at the expected path
+            def mock_pdf_generator(story_text, output_path, campaign_title=""):
+                # Just copy our dummy file to the expected location
+                import shutil
+                shutil.copy2(dummy_pdf_path, output_path)
+                # Use the parameters to avoid unused variable warnings
+                assert story_text and output_path
+                
+            mock_generate_pdf.side_effect = mock_pdf_generator
 
-        # 2. Make the API Call
-        response = self.client.get(
-            f'/api/campaigns/{self.campaign_id}/export?format=pdf',
-            headers={'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id}
-        )
+            # 2. Make the API Call
+            response = self.client.get(
+                f'/api/campaigns/{self.campaign_id}/export?format=pdf',
+                headers={'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id}
+            )
 
-        # 3. Assert Results
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.mimetype, 'application/pdf')
-        mock_get_campaign_by_id.assert_called_once_with(self.user_id, self.campaign_id)
-        mock_generate_pdf.assert_called_once()
+            # 3. Assert Results
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.mimetype, 'application/pdf')
+            mock_get_campaign_by_id.assert_called_once_with(self.user_id, self.campaign_id)
+            mock_generate_pdf.assert_called_once()
+        finally:
+            # Clean up the temporary file (always executed, even if test fails)
+            if os.path.exists(dummy_pdf_path):
+                os.remove(dummy_pdf_path)
         
-        # Clean up any generated files (the mock creates files at UUID paths)
-        # Note: Files are cleaned up automatically by the endpoint after sending
         print("--- Test Finished Successfully ---")
-
 
     @patch('main.firestore_service.get_campaign_by_id')
     def test_export_campaign_not_found(self, mock_get_campaign_by_id):
@@ -96,4 +103,4 @@ class TestExportEndpoint(unittest.TestCase):
         patcher.stop()
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main() 

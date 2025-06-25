@@ -18,34 +18,21 @@ def test_export():
     file_format = request.args.get('format', 'pdf').lower()
     
     campaign_title = MOCK_CAMPAIGN_DATA.get('title')
-    # Create story text manually (since get_story_text_from_context doesn't exist)
-    story_text = "Story:\nThe test begins."
+    story_text = document_generator.get_story_text_from_context(MOCK_STORY_CONTEXT)
     
     file_path = None
     try:
         if file_format == 'pdf':
-            # Create output file path
-            import tempfile
-            import uuid
-            temp_dir = tempfile.mkdtemp()
-            file_path = os.path.join(temp_dir, f"{uuid.uuid4()}.pdf")
-            
             # This is the line we are truly testing
+            import tempfile
+            file_path = tempfile.mktemp(suffix='.pdf')
             document_generator.generate_pdf(story_text, file_path, campaign_title)
-            return send_file(file_path, as_attachment=True, mimetype='application/pdf')
+            return send_file(file_path, as_attachment=True, mimetype='application/pdf', download_name='test_campaign.pdf')
         else:
             return jsonify({'error': 'This test only supports PDF format.'}), 400
     finally:
         if file_path and os.path.exists(file_path):
             os.remove(file_path)
-            # Also clean up temp directory
-            import tempfile
-            temp_dir = os.path.dirname(file_path)
-            if temp_dir and os.path.exists(temp_dir):
-                try:
-                    os.rmdir(temp_dir)
-                except OSError:
-                    pass  # Directory may not be empty
 
 # --- Test Class ---
 class TestPdfGeneration(unittest.TestCase):
