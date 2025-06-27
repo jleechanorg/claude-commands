@@ -249,4 +249,9 @@ The complete cursor rules from `/home/jleechan/projects/worldarchitect.ai/.curso
 - **PR Descriptions**: Must include Summary, Changes, Benefits, Usage, and Test Results
 - **Post-Merge**: Always run integrate pattern immediately after each merge
 
+### GitHub CLI Preference for PR Operations
+- **Primary Method**: Use `gh pr checkout <PR_NUMBER>` to apply PR changes locally for testing
+- **Alternative Method**: If GitHub CLI unavailable, use `git fetch origin pull/<PR_NUMBER>/head:<branch_name>` followed by `git checkout <branch_name>`
+- **Benefits**: More convenient and reliable workflow for PR testing, reduces manual errors in branch management
+
 The full detailed rules are maintained in `.cursor/rules/rules.mdc` and should be consulted for complete protocol compliance.

@@ -165,6 +165,12 @@ This document outlines the operating protocol for our collaboration. It merges g
     *   **PR Descriptions**: Always include Summary, Changes, Benefits, and Usage sections
     *   **Commit Messages**: Use descriptive titles with bullet points and Claude Code attribution
 
+11. **GitHub CLI Preference for PR Operations:**
+    *   When the user requests to apply/test a pull request, I must prefer using GitHub CLI commands over manual git operations.
+    *   **Primary method**: Use `gh pr checkout <PR_NUMBER>` to apply PR changes locally for testing
+    *   **Alternative methods**: If GitHub CLI is unavailable, use `git fetch origin pull/<PR_NUMBER>/head:<branch_name>` followed by `git checkout <branch_name>`
+    *   This provides a more convenient and reliable workflow for PR testing and reduces the risk of manual errors in branch management.
+
 ## IV. Environment, Tooling & Scripts
 
 1.  **Python Virtual Environment Management:**
