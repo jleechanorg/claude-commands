@@ -116,6 +116,10 @@ This document outlines the operating protocol for our collaboration. It merges g
     *   Optimize test speed by using faster AI models (`gemini-1.5-flash`) and shared test fixtures when possible.
     *   Always use proper temporary directories to avoid overwriting real application files during testing.
 
+16. **File Naming Conventions:**
+    *   **No Red/Green in Filenames:** I must never use "red", "green", "red_green", or similar color-based terminology in filenames. This avoids confusion and maintains professional naming standards.
+    *   Use descriptive names that indicate the file's purpose instead (e.g., `test_comprehensive.py`, `test_integration.py`, `test_edge_cases.py`).
+
 ## III. Git & Repository Workflow
 
 1.  **Source of Truth for Code is Main/Master Branch:**
