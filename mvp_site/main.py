@@ -78,8 +78,11 @@ def apply_automatic_combat_cleanup(updated_state_dict: dict, proposed_changes: d
     Returns:
         Updated state dictionary with defeated enemies cleaned up
     """
-    # Create a temporary GameState object to use the cleanup method
+    # CRITICAL BUG FIX: Handle case where GameState.from_dict returns None
     temp_game_state = GameState.from_dict(updated_state_dict)
+    if temp_game_state is None:
+        logging.error("COMBAT CLEANUP ERROR: GameState.from_dict returned None, returning original state")
+        return updated_state_dict
     
     # Check if we have combatants data to potentially clean up
     combatants = temp_game_state.combat_state.get("combatants", {})
@@ -87,17 +90,22 @@ def apply_automatic_combat_cleanup(updated_state_dict: dict, proposed_changes: d
         logging.info("COMBAT CLEANUP CHECK: No combatants found, skipping cleanup")
         return updated_state_dict
     
-    # CRITICAL FIX: Always attempt cleanup if combatants exist, regardless of in_combat status
-    # This handles the case where combat is ending (in_combat becomes false) but defeated enemies still remain
-    logging.info(f"COMBAT CLEANUP CHECK: Found {len(combatants)} combatants, checking for defeated enemies...")
+    # CRITICAL FIX: Always attempt cleanup if combatants exist
+    # This handles ALL cases:
+    # 1. Combat ongoing with new defeats
+    # 2. Combat ending with pre-existing defeats
+    # 3. State updates without explicit combat_state changes but with defeated enemies
+    logging.info(f"COMBAT CLEANUP CHECK: Found {len(combatants)} combatants, scanning for defeated enemies...")
     
-    # Perform cleanup 
+    # Perform cleanup - this always runs regardless of proposed_changes content
     defeated_enemies = temp_game_state.cleanup_defeated_enemies()
     if defeated_enemies:
         logging.info(f"AUTOMATIC CLEANUP: Defeated enemies removed: {defeated_enemies}")
+        # Return the updated state dict from the game state that had cleanup applied
         return temp_game_state.to_dict()
     else:
         logging.info("AUTOMATIC CLEANUP: No defeated enemies found to clean up")
+        # Return the original state since no cleanup was needed
         return updated_state_dict
 
 def _cleanup_legacy_state(state_dict: dict) -> tuple[dict, bool, int]:

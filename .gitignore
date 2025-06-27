@@ -18,3 +18,7 @@ serviceAccountKey.json
 gemini_api_key.txt
 local_api_key.txt
 *_api_key.txt
+
+# User data and uploads
+usage_tracking2.json
+uploads/
