@@ -45,7 +45,13 @@ This document outlines the operating protocol for our collaboration. It merges g
     *   When such a directive is given, I **must** update both my internal memories and this file in parallel.
     *   If the directive is ambiguous in any way, I must ask for clarification before proceeding.
 
-10. **Verify Edits Before Concluding:**
+10. **General Principles Over Specific Details:**
+    *   Both `.cursor/rules/rules.mdc` and `CLAUDE.md` must contain **general principles and protocols** only
+    *   **Specific technical failures, code patterns, and detailed incident analysis** belong in `.cursor/rules/lessons.mdc`
+    *   **Rules files** establish timeless operational principles; **lessons files** capture specific technical learning
+    *   When adding content, ask: "Is this a general principle or a specific technical detail?" and place accordingly
+
+11. **Verify Edits Before Concluding:**
     *   After every file edit, I must not assume the change was applied correctly. I will use my tools (`git diff` or `read_file`) to verify that the change exactly matches my intention before proceeding. This is especially critical for deletions, reverts, and changes to rule files.
 
 11. **Agent Approach Recommendation Protocol:**
@@ -56,18 +62,19 @@ This document outlines the operating protocol for our collaboration. It merges g
     *   This recommendation must be provided BEFORE beginning any work on the task.
 
 11. **Ignore Firestore Linter Errors:**
+
     *   I will disregard any linter errors originating from Firebase/Firestore code and assume the code is functional unless you instruct me otherwise.
 
-12. **Edits Must Be Additive or Surgical:**
+13. **Edits Must Be Additive or Surgical:**
     *   When modifying a file, my changes must be strictly additive (adding new code) or surgical (modifying specific lines). I must never delete existing, unrelated code, especially tests. I will verify this by carefully inspecting the diff after every `edit_file` operation.
 
-13. **Propose Failing Tests:**
+14. **Propose Failing Tests:**
     *   When debugging a bug that is not covered by the existing test suite, I must first propose a new unit test that reliably reproduces the failure (a "red" test). I will explain why the test is expected to fail and will not add it to the code until you explicitly approve it.
 
-14. **Red-Green Testing Methodology:**
+15. **Red-Green Testing Methodology:**
     *   When implementing new features or functionality, I must follow the red-green testing approach: First, write a unit test that fails without the new implementation ("red" state), then implement the feature to make the test pass ("green" state). This ensures the test actually validates the new functionality and catches regressions.
 
-15. **Security: DO NOT SUBMIT Rule:**
+16. **Security: DO NOT SUBMIT Rule:**
     *   If I see "DO NOT SUBMIT" anywhere in code, comments, or environment variables, I must never allow this to be committed or merged into any branch. This is a critical security marker indicating sensitive data (API keys, credentials, etc.) that must be removed before any PR or commit.
 
 ## II. Development, Coding & Architecture
@@ -122,6 +129,30 @@ This document outlines the operating protocol for our collaboration. It merges g
     *   Use flexible assertions that verify behavior rather than exact values when testing AI-generated content.
     *   Optimize test speed by using faster AI models (`gemini-1.5-flash`) and shared test fixtures when possible.
     *   Always use proper temporary directories to avoid overwriting real application files during testing.
+
+16. **Global Event Listener Safety Protocol:**
+    *   **PROHIBITION**: Never use `document.addEventListener('click', ...)` or other global DOM event listeners without explicit user approval
+    *   **REQUIREMENT**: Always use targeted event binding to specific elements instead of document-wide listeners
+    *   **ANALYSIS**: Any global listener must include detailed justification of why targeted binding is insufficient
+    *   **PATTERN**: Use `element.addEventListener()` or delegate only within specific containers (`container.addEventListener`)
+    *   **SELECTOR SAFETY**: Avoid broad CSS selectors that might match unintended elements (e.g., `[data-theme]` matching document root)
+    *   **EXCEPTION**: Only use global listeners for genuinely global concerns (keyboard shortcuts, window resize, system-level events)
+
+17. **Cross-Cutting Concern Integration Analysis:**
+    *   **MANDATORY**: Before implementing any feature that modifies DOM, CSS, or JavaScript, explicitly categorize the change:
+        - **Surface Feature**: Only affects specific UI components (safe)
+        - **Cross-Cutting Concern**: Touches multiple systems (requires integration analysis)
+        - **Infrastructure Change**: Modifies core application behavior (very dangerous)
+    *   **FOR Cross-Cutting Concerns**: Mandatory integration analysis of ALL existing systems before implementation
+    *   **ANALYSIS REQUIRED**: Event handling patterns, DOM manipulation scope, CSS cascade impact, global state changes
+    *   **BLAST RADIUS**: Document all systems the change will touch before proceeding
+
+18. **Core User Workflow Protection:**
+    *   **IDENTIFICATION**: Before implementing any system modification, identify the top 3-5 core user workflows
+    *   **CORE WORKFLOWS**: Authentication, Campaign Creation, Game Interaction, Data Persistence, Form Submissions
+    *   **MANDATORY TESTING**: Test each core workflow after ANY system modification, regardless of perceived scope
+    *   **VALIDATION**: All core workflows must function identically before and after feature addition
+    *   **ROLLBACK TRIGGER**: ANY core workflow failure requires immediate feature rollback
 
 16. **File Naming Conventions:**
     *   **No Red/Green in Filenames:** I must never use "red", "green", "red_green", or similar color-based terminology in filenames. This avoids confusion and maintains professional naming standards.

@@ -256,6 +256,30 @@ The complete cursor rules from `/home/jleechan/projects/worldarchitect.ai/.curso
 - **PR Descriptions**: Must include Summary, Changes, Benefits, Usage, and Test Results
 - **Post-Merge**: Always run integrate pattern immediately after each merge
 
+
+### Additional Development Safety Rules
+
+#### Event System Safety
+- **Global Event Listeners**: Require explicit approval before using document-wide event listeners
+- **Targeted Binding**: Always prefer specific element binding over broad delegation
+- **Selector Safety**: Avoid CSS selectors that might match unintended elements
+
+#### System Integration Analysis
+- **Feature Categorization**: Classify changes as Surface Feature, Cross-Cutting Concern, or Infrastructure Change
+- **Integration Analysis**: Mandatory analysis for cross-cutting concerns before implementation
+- **Blast Radius Assessment**: Document all systems a change will affect
+
+#### Core Functionality Protection
+- **Workflow Identification**: Identify core user workflows before system modifications
+- **Mandatory Testing**: Test all core workflows after any system change
+- **Rollback Protocol**: Immediate rollback if core functionality breaks
+
+#### General Principles Over Specific Details
+- **Content Separation**: Both `.cursor/rules/rules.mdc` and `CLAUDE.md` must contain **general principles and protocols** only
+- **Specific Details Location**: **Specific technical failures, code patterns, and detailed incident analysis** belong in `.cursor/rules/lessons.mdc`
+- **File Purpose**: **Rules files** establish timeless operational principles; **lessons files** capture specific technical learning
+- **Content Test**: When adding content, ask: "Is this a general principle or a specific technical detail?" and place accordingly
+
 ### GitHub CLI Preference for PR Operations
 - **Primary Method**: Use `gh pr checkout <PR_NUMBER>` to apply PR changes locally for testing
 - **Alternative Method**: If GitHub CLI unavailable, use `git fetch origin pull/<PR_NUMBER>/head:<branch_name>` followed by `git checkout <branch_name>`
