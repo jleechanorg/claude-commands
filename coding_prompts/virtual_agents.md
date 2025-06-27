@@ -7,152 +7,136 @@
 - **Operating Modes**: HUMAN (interactive) or AWAY (autonomous)
 - **Model Access**: Opus 4 and Sonnet 4 (switch with `/model`)
 
-## **CRITICAL: Full Context Isolation**
-- **SUPERVISOR**: Fresh session, reads project files only, no conversation history
-- **WORKER**: Fresh session, reads task specs only, no planning context
-- **REVIEWER**: Fresh session, reads requirements + code only, no implementation context
-- **Communication**: 100% file-based - all agents are context-free and independent
+## **CRITICAL: Centralized Coordination**
+- **SUPERVISOR**: Central coordinator with full visibility of all agent work
+- **WORKER**: Fresh session, receives tasks from SUPERVISOR, no implementation bias
+- **REVIEWER**: Fresh session, receives code from SUPERVISOR, no implementation context
+- **Communication**: All through SUPERVISOR - no direct WORKER/REVIEWER interaction
 
 ---
 
 # THE THREE AGENTS
 
 ## SUPERVISOR 👔
-**Role**: Plans work and makes decisions
-**When Active**: Start of each task, when stuck, at major milestones
-**Context**: NONE - reads only project files (requirements, progress, decisions)
+**Role**: Central coordinator - plans work, manages communication, makes decisions
+**When Active**: Throughout entire process - coordinates all agent interactions
+**Context**: Full conversation history + all project knowledge + all agent outputs
 **Key Actions**:
-- Reads project requirements and existing progress from files
-- Breaks down remaining work into clear tasks
-- Makes architectural decisions based on current state
-- Documents all decisions and reasoning in files
-- **Creates comprehensive specs that standalone agents can follow**
+- Breaks down requirements into clear tasks
+- Decides technical approach
+- **Relays tasks to WORKER agents**
+- **Collects WORKER output and passes to REVIEWER**
+- **Synthesizes REVIEWER feedback and directs fixes**
+- Maintains complete visibility of all work
 
 ## WORKER 🔨
 **Role**: Implements code
-**When Active**: During all coding activities  
-**Context**: NONE - reads only PLAN.md and task specifications
+**When Active**: When SUPERVISOR assigns implementation tasks
+**Context**: NONE - receives only specific task instructions from SUPERVISOR
 **Key Actions**:
-- Reads task requirements from files
+- Receives task requirements from SUPERVISOR
 - Implements code with no planning bias
 - Creates tests based on specifications
-- Saves work to files for review
-- **Never sees SUPERVISOR's reasoning or REVIEWER's feedback directly**
+- Returns completed work to SUPERVISOR
+- **Never sees full project context or REVIEWER's feedback directly**
 
 ## REVIEWER 🔍
 **Role**: Ensures quality
-**When Active**: After each significant piece of work
-**Context**: NONE - reads only requirements + implemented code
+**When Active**: When SUPERVISOR submits code for review
+**Context**: NONE - receives only requirements + code from SUPERVISOR
 **Key Actions**:
-- Reviews code against original requirements
+- Reviews code against requirements provided by SUPERVISOR
 - Finds bugs and edge cases with fresh perspective
 - Checks security without implementation bias
-- Writes specific feedback to files
-- **Never sees WORKER's thought process or SUPERVISOR's internal decisions**
+- Returns feedback to SUPERVISOR
+- **Never sees WORKER's thought process or project planning**
 
 ---
 
 # TRUE MULTI-AGENT WORKFLOW
 
-## File-Based Communication Protocol
-```bash
-PROJECT/
-├── PLAN.md              # SUPERVISOR → WORKER communication
-├── TASKS/
-│   ├── task_1_spec.md   # Detailed requirements
-│   ├── task_1_code.py   # WORKER output
-│   ├── task_1_tests.py  # WORKER output
-│   └── task_1_review.md # REVIEWER feedback
-├── DECISIONS.md         # SUPERVISOR architectural decisions
-└── PROGRESS.md          # Cross-session status tracking
+## Centralized Communication Through SUPERVISOR
+```
+SUPERVISOR (Always Active)
+    ↓ assigns tasks
+WORKER (Fresh Session)
+    ↓ returns code
+SUPERVISOR (Collects & Reviews)
+    ↓ sends to reviewer
+REVIEWER (Fresh Session)
+    ↓ returns feedback
+SUPERVISOR (Synthesizes & Directs)
+    ↓ assigns fixes
+WORKER (Fresh Session)
+    ↓ returns fixed code
+SUPERVISOR (Validates & Continues)
 ```
 
-## Starting a New Feature (Fully Context-Isolated Sessions)
+## Starting a New Feature (SUPERVISOR-Coordinated Sessions)
 ```bash
-# Step 0: Create initial requirements file
-cat > PROJECT_REQUIREMENTS.md << EOF
-Build a user authentication system with:
-- User registration and login
-- JWT tokens with refresh
-- Password reset flow
-- Email verification
-- Rate limiting
-EOF
+# Main Session: SUPERVISOR (maintains full context)
+claude --session=supervisor
+> You: "Build a user authentication system"
+> SUPERVISOR: "I'll coordinate this across our agents. Breaking into tasks..."
 
-# Session 1: SUPERVISOR (fresh context, reads requirements only)
-claude --session=fresh
-> SUPERVISOR: Reads PROJECT_REQUIREMENTS.md only
-> Creates PLAN.md with detailed tasks based on requirements
-> Writes task_1_spec.md, task_2_spec.md, etc.
-> Session ends
+# SUPERVISOR initiates WORKER session
+> SUPERVISOR: "Launching WORKER for task 1..."
+> [Opens fresh session, provides only: "Implement a User model with email, password_hash, created_at fields"]
+> WORKER implements → returns code to SUPERVISOR
+> SUPERVISOR stores and reviews WORKER output
 
-# Session 2: WORKER (fresh context, reads task specs only)
-claude --session=fresh
-> WORKER: Reads task_1_spec.md only
-> Implements user model with no knowledge of broader project
-> Saves code to task_1_code.py and task_1_tests.py
-> Session ends
+# SUPERVISOR initiates REVIEWER session  
+> SUPERVISOR: "Launching REVIEWER for user model..."
+> [Opens fresh session, provides only: requirements + code]
+> REVIEWER analyzes → returns feedback to SUPERVISOR
+> SUPERVISOR synthesizes feedback
 
-# Session 3: REVIEWER (fresh context, reads requirements + code only)
-claude --session=fresh  
-> REVIEWER: Reads PROJECT_REQUIREMENTS.md and task_1_code.py only
-> Reviews with completely fresh perspective
-> Writes issues to task_1_review.md
-> Session ends
-
-# Session 4: WORKER (fresh context, reads issues + original spec only)
-claude --session=fresh
-> WORKER: Reads task_1_spec.md and task_1_review.md only
-> Fixes issues with no memory of original implementation
-> Updates code files
-> Session ends
+# SUPERVISOR initiates fix session if needed
+> SUPERVISOR: "REVIEWER found issues, launching WORKER for fixes..."
+> [Opens fresh session, provides only: specific fixes needed]
+> WORKER fixes → returns to SUPERVISOR
+> SUPERVISOR validates and continues
 ```
 
 ## Example Multi-Session Flow
 ```markdown
-# Step 0: Requirements File Created
-PROJECT_REQUIREMENTS.md contains: "Build user authentication with JWT, email verification"
+# SUPERVISOR Session (Full Context & Coordination)
+You: "Build a user authentication system"
 
-# SUPERVISOR Session (No Context - Reads Requirements Only)
-claude --session=fresh "Read PROJECT_REQUIREMENTS.md, create implementation plan"
+SUPERVISOR: "I'll design and coordinate implementation. Plan:
+- User Model with secure password handling
+- JWT authentication endpoints
+- Email verification system
 
-SUPERVISOR Session Output → PLAN.md:
-```
-## Authentication System Plan
-### Task 1: User Model
-- File: models/user.py
-- Requirements: email, password_hash, created_at, email_verified
-- Constraints: unique email, password complexity validation
-- Tests: test_user_model.py
-- Success criteria: All tests pass, coverage >90%
-- Dependencies: None
-- Estimated time: 2 hours
-```
+Starting with User Model..."
 
-# WORKER Session (No Context - Reads Task Spec Only)
-claude --session=fresh "Read task_1_spec.md, implement user model"
-WORKER implements models/user.py with:
-- No knowledge of broader project goals
-- No awareness of SUPERVISOR's reasoning
-- Pure focus on meeting task specifications
+# SUPERVISOR → WORKER
+SUPERVISOR: "Launching WORKER with task: 'Create User model class with:
+- email field (string, unique)
+- password_hash field (string)
+- created_at field (datetime)
+- email_verified field (boolean)
+- Include password hashing method using bcrypt'"
 
-# REVIEWER Session (No Context - Reads Requirements + Code Only)
-claude --session=fresh "Read PROJECT_REQUIREMENTS.md and models/user.py, review implementation"
-REVIEWER writes REVIEW.md:
-```
-## Issues Found:
-- Missing email validation regex
-- Password hash not using bcrypt
-- No rate limiting consideration
-- Tests don't cover edge cases
-```
+[WORKER implements and returns code]
 
-# WORKER Fix Session (No Context - Reads Task + Issues Only) 
-claude --session=fresh "Read task_1_spec.md and task_1_review.md, fix issues"
-WORKER fixes code with:
-- No memory of original implementation approach
-- Fresh perspective on solving the specific issues
-- No bias from previous implementation attempts
+SUPERVISOR: "Received User model. Now launching REVIEWER..."
+
+# SUPERVISOR → REVIEWER  
+SUPERVISOR: "Launching REVIEWER with:
+Requirements: User model with secure password storage
+Code: [provides WORKER's implementation]"
+
+[REVIEWER analyzes and returns: "Missing email validation, no password complexity rules"]
+
+# SUPERVISOR → WORKER (fixes)
+SUPERVISOR: "REVIEWER identified issues. Launching WORKER with fixes:
+- Add email regex validation
+- Add password complexity check (8+ chars, 1 upper, 1 lower, 1 number)"
+
+[WORKER implements fixes and returns]
+
+SUPERVISOR: "User model complete. Moving to authentication endpoints..."
 ```
 
 ---
@@ -161,63 +145,56 @@ WORKER fixes code with:
 
 ## HUMAN MODE (You're Available)
 ```bash
-# Step 1: Create requirements with your input
-cat > PROJECT_REQUIREMENTS.md << EOF
-Build auth system with:
-- JWT tokens (refresh tokens: 7 day expiry)
-- Email verification required
-- Password complexity: min 8 chars, numbers, symbols
-EOF
+# SUPERVISOR Session (Interactive & Coordinating)
+You: "Build auth system"
+SUPERVISOR: "Quick question: Should we use refresh tokens?"
+You: "Yes, 7 day expiry"
 
-# Step 2: SUPERVISOR Session (Fresh context, reads requirements)
-claude --session=fresh "Read PROJECT_REQUIREMENTS.md, create detailed implementation plan"
-# SUPERVISOR writes PLAN.md, task specs, etc. - Session ends
+SUPERVISOR: "Got it. I'll coordinate the implementation:
+1. Launching WORKER for JWT token generation..."
+   [Provides task, gets implementation]
+2. Launching REVIEWER for security check..."
+   [Provides code, gets feedback]
+3. Any issues? Let me ask you about [specific concern]"
 
-# Step 3: WORKER Sessions (All autonomous, context-free)
-claude --session=fresh "Implement task 1 from task_1_spec.md"
-claude --session=fresh "Implement task 2 from task_2_spec.md"
+You: "Use RS256 for signing"
 
-# Step 4: REVIEWER Session (Fresh context, autonomous)  
-claude --session=fresh "Review all auth code against PROJECT_REQUIREMENTS.md"
-
-# Step 5: Check progress with fresh SUPERVISOR
-claude --session=fresh "Read all progress files, summarize status and next steps"
+SUPERVISOR: "Launching WORKER with updated requirements..."
+   [Continues coordination]
 ```
 
 ## AWAY MODE (Fully Autonomous)
 ```bash
-# Before leaving: Create comprehensive requirements
-cat > PROJECT_REQUIREMENTS.md << EOF
-Complete auth system with standard enterprise patterns:
+# Before leaving
+You: "Complete the entire auth system while I'm away"
+
+SUPERVISOR: "I'll handle the full implementation with standard decisions:
 - JWT with refresh tokens (7 day expiry)
-- Bcrypt for passwords (min 12 rounds)
+- Bcrypt for passwords  
 - Email verification required
-- Rate limiting: 5 attempts per 15 min
-- Admin user management
-- Full test coverage (>90%)
-- API documentation
-EOF
+- Rate limiting on all endpoints
 
-# SUPERVISOR Session (Fresh context, reads requirements only)
-claude --session=fresh "Read PROJECT_REQUIREMENTS.md, create comprehensive implementation plan"
-# Outputs: PLAN.md, task_1_spec.md through task_8_spec.md, DECISIONS.md
-# Session ends
+I'll coordinate all agents and track progress."
 
-# Autonomous execution (all context-free, can run in parallel)
-claude --session=fresh "Implement task 1 from task_1_spec.md" &
-claude --session=fresh "Implement task 2 from task_2_spec.md" &
-claude --session=fresh "Implement task 3 from task_3_spec.md" &
+# SUPERVISOR manages entire workflow
+SUPERVISOR: 
+1. "Launching WORKER for User model..." → collects implementation
+2. "Launching REVIEWER for User model..." → collects feedback
+3. "Launching WORKER for fixes..." → collects fixed code
+4. "Launching WORKER for auth endpoints..." → collects implementation
+5. "Launching REVIEWER for endpoints..." → collects feedback
+[Continues through all tasks]
 
-# Reviews (fresh context, parallel)
-claude --session=fresh "Review task 1 against PROJECT_REQUIREMENTS.md" &
-claude --session=fresh "Review task 2 against PROJECT_REQUIREMENTS.md" &
+# When you return
+You: "What was completed?"
 
-# Fixes (fresh context, no memory of original implementation)
-claude --session=fresh "Fix task 1 issues from task_1_review.md" &
-claude --session=fresh "Fix task 2 issues from task_2_review.md" &
-
-# When you return: Fresh supervisor assessment
-claude --session=fresh "Read all project files, summarize completed work and remaining tasks"
+SUPERVISOR: "Completed auth system summary:
+✅ User model with bcrypt passwords
+✅ JWT endpoints with refresh tokens
+✅ Email verification system
+✅ Rate limiting implemented
+⚠️ REVIEWER flagged: Consider adding 2FA support
+📊 Total: 4 WORKER sessions, 3 REVIEWER sessions, 2 fix cycles"
 ```
 
 ---
@@ -248,120 +225,131 @@ WORKER (5 min) → REVIEWER (2 min) → WORKER (5 min) → REVIEWER (2 min)
 
 ---
 
-# COMMANDS FOR CONTEXT-ISOLATED AGENTS
+# COMMANDS FOR SUPERVISOR-COORDINATED AGENTS
 
 ## Starting Work
 ```bash
-# SUPERVISOR Session (Full Context)
-"Plan [feature] using 3-agent system, write detailed specs for context-free workers"
-"HUMAN mode - I'll answer questions, write comprehensive PLAN.md"
-"AWAY mode - make standard decisions, document everything for workers"
+# SUPERVISOR Session (Central Coordinator)
+"Build [feature] using 3-agent system where I coordinate all communication"
+"HUMAN mode - I'll coordinate and ask you questions as needed"
+"AWAY mode - I'll make standard decisions and manage all agents autonomously"
 
-# WORKER Sessions (No Context)
-claude --session=fresh "Read PLAN.md, implement task [N]"
-claude --session=fresh "Read task_[N]_review.md, fix issues"
-
-# REVIEWER Sessions (No Context)
-claude --session=fresh "Review task [N] code against original requirements"
+# How SUPERVISOR manages agents:
+"I'll now launch a WORKER session with this specific task: [task details]"
+"I'll now launch a REVIEWER session to check this code: [provides code + requirements]"
+"Based on REVIEWER feedback, I'll launch WORKER to fix: [specific issues]"
 ```
 
 ## Session Management
 ```bash
-# ALL agents run in fresh sessions - complete context isolation
-SUPERVISOR="claude --session=fresh"        # Fresh every time
-WORKER="claude --session=fresh"            # Fresh every time  
-REVIEWER="claude --session=fresh"          # Fresh every time
+# SUPERVISOR maintains context and coordinates
+SUPERVISOR="claude --session=supervisor"    # Persistent session with full context
 
-# Example workflow - all agents are context-free
-$SUPERVISOR "Read PROJECT_REQUIREMENTS.md, create plan"     # Reads requirements only
-$WORKER "Read task_1_spec.md, implement"                   # Reads task spec only
-$REVIEWER "Read requirements + code, review"               # Reads requirements + code only
-$WORKER "Read task_1_review.md + spec, fix issues"         # Reads review + spec only
+# SUPERVISOR launches other agents as needed:
+SUPERVISOR: "Launching WORKER for database models..."
+  → Opens fresh session
+  → Provides only: specific task requirements
+  → Collects: implemented code
+  
+SUPERVISOR: "Launching REVIEWER for security audit..."
+  → Opens fresh session  
+  → Provides only: requirements + code to review
+  → Collects: feedback and issues
 ```
 
-## File-Based Commands
+## Communication Flow
 ```bash
-# Instead of "switching agents" in conversation:
-echo "Fix login endpoint performance" > URGENT_TASK.md
-claude --session=fresh "Address issue in URGENT_TASK.md"
-
-# Chain work through files
-claude --session=fresh "Read TODO.md, complete next task, update PROGRESS.md"
-claude --session=fresh "Review PROGRESS.md, check latest completed work"
+# All communication goes through SUPERVISOR:
+You → SUPERVISOR: "Build payment system"
+SUPERVISOR → WORKER: "Implement Payment model with amount, currency, status fields"
+WORKER → SUPERVISOR: [returns implementation]
+SUPERVISOR → REVIEWER: "Review this Payment model for security issues"
+REVIEWER → SUPERVISOR: [returns feedback]
+SUPERVISOR → You: "Payment model ready, REVIEWER suggested adding fraud checks"
 ```
 
 ---
 
-# OVERNIGHT AUTONOMOUS MODE (Actually Feasible)
+# OVERNIGHT AUTONOMOUS MODE (SUPERVISOR-Managed)
 
 ## Pre-Sleep Setup
 ```bash
-# SUPERVISOR Session: Create comprehensive plan
-cat > TONIGHT_REQUIREMENTS.md << EOF
-Complete these auth system components:
+# SUPERVISOR Session: Set autonomous objectives
+You: "Complete these auth system components overnight:
 1. Email verification system
 2. Password reset flow  
 3. Admin user management
 4. Full test coverage (90%+)
-5. API documentation
+5. API documentation"
 
-Use secure, industry-standard patterns.
-EOF
+SUPERVISOR: "I'll manage the entire implementation autonomously using standard patterns:
+- Industry-standard security practices
+- Comprehensive error handling
+- Full test coverage
+- Clear documentation
 
-claude --session=fresh "Read TONIGHT_REQUIREMENTS.md, create detailed implementation plan"
-# SUPERVISOR outputs: PLAN.md, task_1_spec.md, task_2_spec.md, etc.
+I'll coordinate all WORKER and REVIEWER sessions throughout the night."
 ```
 
-## Overnight Execution (Parallel Independent Sessions)
+## Overnight Execution (SUPERVISOR Orchestrates Everything)
 ```bash
-#!/bin/bash
-# overnight_work.sh
+# SUPERVISOR runs continuously, managing workflow:
 
-# Phase 1: Implementation (parallel workers)
-claude --session=worker1 "Implement task 1 from PLAN.md" > logs/worker1.log &
-claude --session=worker2 "Implement task 2 from PLAN.md" > logs/worker2.log &
-claude --session=worker3 "Implement task 3 from PLAN.md" > logs/worker3.log &
-
-wait # Wait for all workers to complete
-
-# Phase 2: Review (parallel reviewers)  
-claude --session=reviewer1 "Review task 1 against spec" > logs/review1.log &
-claude --session=reviewer2 "Review task 2 against spec" > logs/review2.log &
-claude --session=reviewer3 "Review task 3 against spec" > logs/review3.log &
-
-wait # Wait for all reviews
-
-# Phase 3: Fixes (parallel fix sessions)
-claude --session=fixer1 "Fix task 1 issues from review" > logs/fix1.log &
-claude --session=fixer2 "Fix task 2 issues from review" > logs/fix2.log &
-claude --session=fixer3 "Fix task 3 issues from review" > logs/fix3.log &
-
-wait # Wait for all fixes
-
-# Phase 4: Final integration test
-claude --session=integrator "Run full test suite and document results" > logs/integration.log
+SUPERVISOR Loop:
+1. "Launching WORKER for email verification system..."
+   → Provides detailed requirements
+   → Collects implementation
+   
+2. "Launching REVIEWER for email verification..."
+   → Provides code + security requirements
+   → Collects feedback
+   
+3. "Issues found, launching WORKER for fixes..."
+   → Provides specific fixes needed
+   → Collects corrected code
+   
+4. "Moving to password reset flow..."
+   [Repeats cycle for each component]
+   
+5. "Running final integration review..."
+   → Launches REVIEWER for full system audit
+   → Documents all findings
 ```
 
 ## Morning Review
 ```bash
-# Fresh SUPERVISOR Session: Assess overnight work
-claude --session=fresh "Read all project files, summarize overnight progress"
+You: "What was completed overnight?"
 
-SUPERVISOR (fresh context) reads:
-- TONIGHT_REQUIREMENTS.md (original goals)
-- All task files: task_1_code.py, task_1_tests.py, task_1_review.md
-- All progress files: task_2_code.py, task_2_tests.py, task_2_review.md
-- integration_results.md
+SUPERVISOR: "Overnight implementation summary:
 
-SUPERVISOR (with no memory of planning decisions): "Overnight Assessment:
-✅ Email verification system (task_1_code.py) - meets requirements
-✅ Password reset with secure tokens (task_2_code.py) - properly implemented
-✅ Admin user CRUD operations (task_3_code.py) - complete with tests
-✅ 92% test coverage achieved - exceeds 90% target
-⚠️ API docs partially complete (see task_5_review.md for specific gaps)
-📄 All implementation follows documented specs
+✅ Email verification system
+   - Implemented by WORKER session #1
+   - REVIEWER found XSS vulnerability in email template
+   - Fixed by WORKER session #2
+   - Final review: PASSED
 
-Remaining work: Complete API documentation sections highlighted in reviews."
+✅ Password reset flow  
+   - Implemented secure token generation
+   - REVIEWER suggested 15-min expiry (implemented)
+   - Added rate limiting after REVIEWER feedback
+   
+✅ Admin user management
+   - Full CRUD with role-based permissions
+   - REVIEWER approved security model
+   
+✅ Test coverage: 94%
+   - All critical paths covered
+   - Integration tests passing
+   
+⚠️ API documentation 
+   - 80% complete
+   - REVIEWER noted missing error code docs
+   
+📊 Session statistics:
+- 12 WORKER sessions launched
+- 8 REVIEWER sessions launched  
+- 4 fix cycles completed
+- 0 critical issues remaining"
 ```
 
 ---
@@ -419,21 +407,27 @@ You: "Yes, human mode"
 
 ---
 
-# SIMPLE DECISION LOG
+# SUPERVISOR DECISION TRACKING
 
 ```markdown
-# DECISIONS.md
+# SUPERVISOR maintains all decisions internally:
 
-## 2024-01-26: Authentication System
-Agent: SUPERVISOR
-Decision: Use JWT with refresh tokens
-Reason: Stateless, scalable, industry standard
-Alternative: Session-based (requires Redis)
+SUPERVISOR: "Key decisions made during implementation:
 
-Agent: REVIEWER  
-Decision: Add rate limiting to login
-Reason: Prevent brute force attacks
-Implementation: 5 attempts per 15 minutes
+1. Authentication: JWT with refresh tokens
+   - Decided after considering session-based alternative
+   - WORKER implemented, REVIEWER approved
+   
+2. Rate limiting: 5 attempts per 15 minutes  
+   - Added after REVIEWER security feedback
+   - WORKER implemented Redis-based solution
+   
+3. Password complexity: NIST 800-63B guidelines
+   - No arbitrary character requirements
+   - Minimum 12 characters
+   - Check against common passwords
+   
+All decisions tracked in my context for consistency."
 ```
 
 ---
@@ -442,84 +436,84 @@ Implementation: 5 attempts per 15 minutes
 
 ## Common Issues
 
-**WORKER deviating from plan**
+**WORKER deviating from requirements**
 ```bash
-# Problem: Worker interpreting requirements differently
-# Solution: More detailed task specifications
-SUPERVISOR session: "Write more specific implementation details in task_N_spec.md"
+# Problem: WORKER interpreting task differently than intended
+# Solution: SUPERVISOR provides more specific instructions
+SUPERVISOR: "I need to be clearer. Relaunching WORKER with detailed specs:
+- Exact function signatures
+- Specific library requirements  
+- Example input/output"
 ```
 
-**REVIEWER being too lenient/harsh**
+**REVIEWER missing important issues**
 ```bash
-# Problem: Inconsistent review standards
-# Solution: Standardized review criteria  
-SUPERVISOR session: "Create REVIEW_STANDARDS.md with specific criteria"
+# Problem: REVIEWER not catching all problems
+# Solution: SUPERVISOR provides focused review criteria
+SUPERVISOR: "Launching REVIEWER with specific focus areas:
+- Security: Check for SQL injection, XSS
+- Performance: Look for N+1 queries
+- Error handling: Verify all edge cases covered"
 ```
 
-**Lost context between sessions**
+**Communication overhead**
 ```bash
-# Problem: Important decisions not captured in files
-# Solution: Better documentation
-SUPERVISOR session: "Document all architectural decisions in DECISIONS.md"
+# Problem: Too much back-and-forth through SUPERVISOR
+# Solution: SUPERVISOR batches related tasks
+SUPERVISOR: "I'll have WORKER implement all models first,
+then REVIEWER can review them as a batch,
+reducing communication cycles"
 ```
 
-**Workers not finding files**
+**SUPERVISOR losing track of progress**
 ```bash
-# Problem: File organization unclear
-# Solution: Standard file structure
-mkdir -p {tasks,reviews,code,tests,docs}
-echo "File locations:" > FILE_STRUCTURE.md
-```
-
-**Sessions not truly independent**
-```bash
-# Problem: Accidentally reusing sessions
-# Solution: Always use --session=fresh for WORKER/REVIEWER
-alias worker="claude --session=fresh"
-alias reviewer="claude --session=fresh"
+# Problem: Complex projects with many moving parts
+# Solution: SUPERVISOR maintains internal progress tracking
+SUPERVISOR: "Current status:
+- Auth module: 3/5 tasks complete
+- Payment module: 1/4 tasks complete  
+- Pending reviews: 2
+- Blocked items: 0"
 ```
 
 ---
 
 # SUMMARY
 
-This **true multi-agent system** gives you:
-- **Genuine context isolation** - No shared bias between agents
-- **Independent perspectives** - WORKER and REVIEWER see problems differently  
-- **Parallel execution** - Multiple sessions can run simultaneously
-- **True overnight work** - File-based coordination enables autonomous operation
-- **Quality built-in** - Fresh REVIEWER eyes catch what WORKER missed
-- **Scalability** - Add more WORKER/REVIEWER sessions as needed
+This **SUPERVISOR-coordinated multi-agent system** gives you:
+- **Central coordination** - SUPERVISOR has full visibility and control
+- **Context isolation** - WORKER and REVIEWER maintain fresh perspectives
+- **No file juggling** - All communication flows through SUPERVISOR  
+- **Intelligent orchestration** - SUPERVISOR decides when and how to engage agents
+- **Quality assurance** - Multiple perspectives without communication overhead
+- **True autonomy** - SUPERVISOR can manage entire projects independently
 
-## Key Advantages of Full Context Isolation:
-1. **SUPERVISOR** plans based purely on requirements - no conversation bias
-2. **WORKER** implements without planning bias - often finds better solutions  
-3. **REVIEWER** reviews without implementation bias - catches real issues
-4. **All agents** approach problems with completely fresh perspective
-5. **Parallel work** - Multiple truly independent sessions can run simultaneously
-6. **True autonomy** - Genuine overnight work through pure file coordination
-7. **No memory contamination** - Each agent sees only what they need to see
+## Key Advantages of Centralized Coordination:
+1. **SUPERVISOR** maintains context and makes intelligent decisions about task flow
+2. **WORKER** focuses purely on implementation without distraction
+3. **REVIEWER** provides unbiased quality checks without implementation knowledge
+4. **No file management** - SUPERVISOR handles all information flow
+5. **Adaptive workflow** - SUPERVISOR adjusts approach based on results
 
 ## Ready to Start?
 ```bash
-# Step 1: Create requirements file
-echo "Build [describe your project requirements]" > PROJECT_REQUIREMENTS.md
+# Single command to begin - SUPERVISOR handles everything else
+claude --session=supervisor "Build [your project] using 3-agent system where I coordinate all communication"
 
-# Step 2: Fresh SUPERVISOR planning session
-claude --session=fresh "Read PROJECT_REQUIREMENTS.md, create comprehensive implementation plan"
-
-# Step 3: Launch completely independent agents
-claude --session=fresh "Read task_1_spec.md, implement task 1"
-claude --session=fresh "Read PROJECT_REQUIREMENTS.md + task_1_code.py, review implementation"
-claude --session=fresh "Read task_1_review.md + task_1_spec.md, fix issues"
+# SUPERVISOR will:
+- Plan the implementation approach
+- Launch WORKER sessions as needed
+- Coordinate REVIEWER feedback
+- Manage fixes and iterations
+- Report progress back to you
 ```
 
-This **genuine multi-agent system**:
-- ✅ True agent independence (no shared context)
-- ✅ File-based coordination protocol
-- ✅ Parallel execution capability  
-- ✅ Real overnight autonomous work
-- ✅ Fresh perspectives from each agent
+This **SUPERVISOR-coordinated system**:
+- ✅ Central coordination with full visibility
+- ✅ True agent independence (fresh contexts)
+- ✅ No file-based communication needed
+- ✅ Intelligent task orchestration
+- ✅ Seamless overnight autonomous work
 - ✅ Leverages your Max 20x plan efficiently
-- ✅ Actually implementable with current Claude Code capabilities
-- ✅ Not roleplaying - genuine multi-agent architecture
+- ✅ Reduces complexity while maintaining quality
+- ✅ SUPERVISOR as single source of truth
