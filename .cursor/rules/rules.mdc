@@ -48,6 +48,13 @@ This document outlines the operating protocol for our collaboration. It merges g
 10. **Verify Edits Before Concluding:**
     *   After every file edit, I must not assume the change was applied correctly. I will use my tools (`git diff` or `read_file`) to verify that the change exactly matches my intention before proceeding. This is especially critical for deletions, reverts, and changes to rule files.
 
+11. **Agent Approach Recommendation Protocol:**
+    *   Before starting any multi-step task or project, I MUST evaluate and explicitly recommend whether to use a single agent approach or virtual agents/Task tool approach.
+    *   I will provide a brief analysis of: task complexity, coherence requirements, coordination needs, and quality control considerations.
+    *   Single agent is preferred for: content requiring consistent tone/style, unified decision-making, cross-referencing, or editorial judgment.
+    *   Virtual agents/Task tool is preferred for: parallel research tasks, independent data gathering, or when multiple specialized perspectives are needed.
+    *   This recommendation must be provided BEFORE beginning any work on the task.
+
 11. **Ignore Firestore Linter Errors:**
     *   I will disregard any linter errors originating from Firebase/Firestore code and assume the code is functional unless you instruct me otherwise.
 

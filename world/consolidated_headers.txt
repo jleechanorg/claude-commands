@@ -1,0 +1,287 @@
+# World of Assiah - Complete Campaign Guide
+## Table of Contents
+## Overview
+### Key Themes
+## Factions
+### The Celestial Imperium
+### The Shattered Host  
+### The Seven Apostates (Lucifer's Generals)
+### The First-Spear Clans
+### The Tsuran Dominion
+### The Sylvan Remnant
+### The Glimmering Combine
+### The Adamant Vault
+### The Shadow Syndicate
+## World Mechanics & Game Systems
+### Half-Celestial Mechanics
+### Alexiel's Three-Layer Power System
+### Sariel's Mirror Magic
+### Military Hierarchy (Imperial)
+## Geography & Locations
+### Major Powers and Territories
+### Key Locations
+## World History & Timeline
+### Age of Dominion
+### Age of Rebellion
+### Age of the Mortal Star
+### Age of Splintered Crowns (Modern Day)
+## Character Profiles
+### Celestial Imperium Characters
+### Character Dossier: Cassian val Artorius
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### Character Dossier: Valerius val Artorius
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### Character Dossier: Raziel
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### Shattered Host Characters
+### Character Dossier: Malakor, the Argent Tongue
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### Character Dossier: Griselda, the Carrion Queen
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### Character Dossier: Perrin, the Apostate Scholar
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### Tsuran Dominion Characters
+### Character Dossier: Daimyo Kenjiro of House Akai
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### Character Dossier: Lady Asami of House Shiro
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### Character Dossier: "The Ghost"
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### First-Spear Clans Characters
+### Character Dossier: War-Chief Vorlag
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### Character Dossier: Zanja, the First Shaman
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### Character Dossier: Karg, the Iron-Tusk
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### Adamant Vault Characters
+### Character Dossier: High Lord Borin Stone-Anvil
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### Character Dossier: Runesmith Helga Silver-Grasp
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### Character Dossier: Durgin "The Breaker" Iron-Hand
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+## Major Plotlines
+### Special Titles
+### Alexiel's Death - The Fall of the Mortal Star
+### The Vengeful Son's Trap
+### The Battle of the Sacrifice Fields
+### The Impossible Choice
+### The Hollow Victory
+### Atonement
+### Lucifer - The Plot of the Morning Star
+### Arc 1: The Shattered Star (Tier 3: Levels 15-18)
+### Arc 2: The Uncrowned King (Tier 4: Levels 19-24)
+### Arc 3: Annihilation (Tier 5: Levels 25-30)
+### The Relationship: Lucifer and Alexiel
+#### The True Believer & The Awful Truth
+#### The Flawed Heir
+#### The Deceived Father
+#### The Great Betrayal
+#### The Final Confrontation
+### Lucifer's Moral Choice Points
+#### Arc 1: The Shattered Star
+#### Arc 2: The Uncrowned King
+#### Arc 3: Apotheosis or Annihilation
+### Alexiel's Relationships & Masks
+### The Cost of the Masks
+#### Her Husband, Artorius (The Perfect Lie)
+#### Her Sons, Cassian & Valerius (Worshipping a Monument)
+#### Her Daughter, Sariel (The Terrifying Mirror)
+### Revised Prelude to Alexiel's Death
+### Consequences for the Final Battle
+### Alexiel's Three-Arc Plotline
+### Arc 1: The Forging of the Star (Tier 1-2: Levels 1-6)
+### Arc 2: The Gilded Cage (Tier 2-3: Levels 7-14)
+### Arc 3: The Star's Sacrifice (Tier 3-4: Levels 15-21)
+### Sariel's Plotlines
+### Sariel's Good/Heroic Arc
+#### Arc 1: The Pariah's Ordeal (Tier 1: Levels 2-7)
+#### Arc 2: The Scholar's Ascent (Tier 2-3: Levels 8-15)
+#### Arc 3: The Empress of Justice (Tier 3-4: Levels 16-24)
+### Sariel's Evil Arc
+#### Arc 1: The Pariah's Ordeal (Tier 1: Levels 2-7)
+#### Arc 2: The Serpent's Shadow (Tier 2-3: Levels 8-15)
+#### Arc 3: The Empress's Gambit (Tier 3-4: Levels 16-24)
+### Alexiel's Core Deception Strategy
+### The Three-Layered Deception
+#### Layer 1: The Flawed Hero (The Public Mask)
+#### Layer 2: The Suicidal Weapon (The Inner Circle's "Truth")
+#### Layer 3: The Arcane Predator (The Ultimate Secret)
+### The Truth of the Mortal Star: Alexiel's Power
+### Public Knowledge: Alexiel the Null
+### The Hidden Reality: The Three Layers of Power
+### The Starfall Gambit: The True Story
+### Lucifer's Complete Three-Arc Character Development
+#### Arc 1: The Shattered Star (Tier 3: Levels 15-18)
+#### Arc 2: The Uncrowned King (Tier 4: Levels 19-24)
+#### Arc 3: Annihilation (Tier 5: Levels 25-30)
+### The Complete Fall of the Mortal Star
+#### The Vengeful Son's Trap
+#### The Battle of the Sacrifice Fields
+#### The Impossible Choice
+#### The Hollow Victory
+#### Atonement
+#### The Traumatic Witness
+### The Preparation
+### The Trap
+### The Feigned Sacrifice
+### The Pyrrhic Victory
+### The Legend of Impossible Victory
+## Sariel's Path to Discovery
+### The Lone Survivor
+### The Thread
+## Alexiel's Revised Deception Strategy
+### Layer 1: The Prodigal Sword (The Public Mask)
+### Layer 2: The Reluctant Champion (The Intimate Mask)
+### Layer 3: The Joyful Predator (The Hidden Truth)
+## The Cost of the Masks: Alexiel's Relationships
+### Her Husband, Artorius (The Perfect Lie)
+### Her Sons, Cassian & Valerius (Worshipping a Monument)
+### Her Daughter, Sariel (The Terrifying Mirror)
+## The Fall of the Mortal Star - Alexiel's Death
+### The Vengeful Son's Trap
+### The Battle of the Sacrifice Fields
+### The Impossible Choice
+### The Hollow Victory
+### Atonement
+### Tsuran Dominion Characters
+### Character Dossier: Daimyo Kenjiro of House Akai
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### Character Dossier: Lady Asami of House Yukimura
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+### Character Dossier: The Ghost of the Tenth Legion
+#### Part 1: Personality Profile
+#### Part 2: Mechanical Character Sheet
+## The Starfall Gambit: Complete Details
+### Why "Starfall"?
+## The Unseeing Eyes
+### Description
+## Key Name Changes and Canon Details
+### Confirmed Canon Elements:
+### Sariel's True Nature: The Path of the Mirror Mage
+#### Layer 1: The Inept Mage (The Public Mask)
+#### Layer 2: The Unfolding Prodigy (The Inner Circle's Secret)
+#### Layer 3: The Perfect Mirror (Her True, Legendary Power)
+### The Culmination of Her Arc
+### First-Spear Clans Characters (continued)
+### Character Dossier: Zanja the Wise
+#### Part 1: Personality Profile
+### Character Dossier: Karg One-Eye
+#### Part 1: Personality Profile
+### Adamant Vault Characters
+### Character Dossier: High Lord Borin Iron-Hand
+#### Part 1: Personality Profile
+### Character Dossier: Runesmith Helga the Revolutionary
+#### Part 1: Personality Profile
+### Character Dossier: Durgin "The Breaker"
+#### Part 1: Personality Profile
+## Historical Events & Timelines
+### The Great Vanishing (Year 0 of the Imperial Calendar)
+### The Age of Foundation (Years 1-500)
+### The Thousand Year War (Years 500-1500)
+### The Age of Schism (Years 1490-1520)
+### The Current Age (Years 1520-1620)
+## World Languages & Cultures
+### Languages of Assiah
+#### High Celestial
+#### Imperial Common
+#### Tsuran
+#### Clan Speak
+#### Khazad (Dwarvish)
+#### Sylvan Whisper
+#### Thieves' Cant
+## Religious & Philosophical Systems
+### The Church of the Silent Throne
+### The Path of Broken Chains
+### The Code of Steel
+### The Old Ways
+### The Maker's Forge
+## Magic Systems of Assiah
+### Divine Magic (Celestial)
+### Arcane Magic (Studied)
+### Primal Magic (Natural)
+### Runic Magic (Crafted)
+### Profane Magic (Corrupted)
+## Major Artifacts & Legendary Items
+### The Scepter of Aeterna
+### The Seven Seals
+### The Null Crown
+### Worldbreaker
+### The Forge-Heart
+## Current Political Situation (Year 1620)
+### The Celestial Imperium
+### The Shattered Host
+### The Tsuran Dominion
+### The First-Spear Clans
+### The Free City of Nexus
+### The Adamant Vault
+### The Sylvan Remnant
+## The Empyrean Affliction - Detailed Mechanics
+### Stages of Manifestation
+### Triggers
+### Known Treatments
+### Historical Cases
+### Sylvan Remnant Characters
+### Character Dossier: Elder Lyrasande of the Everweeping Court
+#### Part 1: Personality Profile
+### Character Dossier: Elara of the Ashen Wardens
+#### Part 1: Personality Profile
+### Character Dossier: Corvus the Memory-Keeper
+#### Part 1: Personality Profile
+### Glimmering Combine Characters Characters
+### Character Dossier: Chairman Buzzwick Coppersprocket III
+#### Part 1: Personality Profile
+### Character Dossier: Dr. Felicity Steamheart
+#### Part 1: Personality Profile
+### Character Dossier: Widget the "Recycler"
+#### Part 1: Personality Profile
+## Additional World Details
+### The Toll-Gate Brethren's Ancient Duty
+### The Primordial Pacts
+### The Shadow Syndicate's True Power
+### Economic Realities
+### Technological Disparity
+### Magical Evolution
+### The Coming Storm
+### Languages of Power
+### Secret Societies
+### Economic Warfare
+### The Role of Mercenaries
+## Character Dossier: Sariel val Artorius
+### Part 1: Personality Profile
+### Part 2: Mechanical Character Sheet
+## Character Dossier: Ser Gideon Vance
+### Part 1: Personality Profile
+### Part 2: Mechanical Character Sheet
+## Character Dossier: Lady Cressida Valeriana
+### Part 1: Personality Profile
+### Part 2: Mechanical Character Sheet
+## Character Dossier: Rowan
+### Part 1: Personality Profile
+### Part 2: Mechanical Character Sheet
+## Game Mechanics & Character Creation
+### Celestial Bloodline Powers
+### Imperial Military Officer Ranks
+## Names Library
+### Fantasy Names for Characters
+### Banned Names  
+## Reference Materials & Influences
+### Literary and Gaming Influences

@@ -157,6 +157,13 @@ grep -r "process.*special_token" *.py
 
 **Critical Lesson**: A bug was missed where AI was instructed to use `__DELETE__` tokens for defeated enemies, but no code existed to process these tokens, causing combat state inconsistencies. This type of documentation-implementation gap must be caught during review.
 
+### Agent Approach Recommendation Protocol
+**CRITICAL RULE**: Before starting any multi-step task or project, I MUST evaluate and explicitly recommend whether to use a single agent approach or virtual agents/Task tool approach:
+- **Analysis Required**: Task complexity, coherence requirements, coordination needs, quality control considerations
+- **Single Agent Preferred**: Content requiring consistent tone/style, unified decision-making, cross-referencing, editorial judgment
+- **Virtual Agents/Task Tool Preferred**: Parallel research tasks, independent data gathering, multiple specialized perspectives needed
+- **Timing**: This recommendation must be provided BEFORE beginning any work on the task
+
 ### Automatic Rule Updates
 **MANDATORY**: Whenever I make a mistake, encounter a bug I should have caught, or receive correction from the user, I MUST immediately update both CLAUDE.md and .cursor/rules/rules.mdc with the lesson learned. I will not wait for the user to remind me - this is an automatic responsibility that happens every time I fail or am corrected.
 
