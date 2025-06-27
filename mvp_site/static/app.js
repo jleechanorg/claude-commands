@@ -337,10 +337,35 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('The story is empty. Nothing to share.');
             return;
         }
+        
+        // Check story size and handle large stories
+        const maxShareSize = 30000; // 30KB limit for better compatibility
+        let shareText = storyText;
+        
+        if (storyText.length > maxShareSize) {
+            console.log('Share too large');
+            // Truncate and add continuation message
+            shareText = storyText.substring(0, maxShareSize) + 
+                "...\n\n[Story continues - full version available at WorldArchitect.AI]";
+            
+            // Ask user if they want to share truncated version
+            const userChoice = confirm(
+                `Your story is very long (${Math.round(storyText.length/1000)}KB). ` +
+                "Would you like to share a shortened preview, or cancel and use Download instead?"
+            );
+            
+            if (!userChoice) {
+                alert("Consider using the Download button to save your full story instead.");
+                return;
+            }
+        }
+        
         try {
-            await navigator.share({ title: storyTitle, text: storyText });
+            await navigator.share({ title: storyTitle, text: shareText });
         } catch (error) {
             console.error('Error sharing story:', error);
+            // Fallback suggestion for share failures
+            alert("Share failed. Try using the Download button to save your story, or copy the text manually from the story area.");
         }
     }
 
@@ -356,6 +381,23 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('download-pdf-btn')?.addEventListener('click', () => downloadFile('pdf'));
     document.getElementById('download-docx-btn')?.addEventListener('click', () => downloadFile('docx'));
     
+    // Theme integration
+    window.addEventListener('themeChanged', (e) => {
+        console.log(`Theme changed to: ${e.detail.theme}`);
+    });
+
+    // Show user email in navbar when authenticated
+    firebase.auth().onAuthStateChanged(user => {
+        const userEmailElement = document.getElementById('user-email');
+        if (user && userEmailElement) {
+            userEmailElement.textContent = user.email;
+            userEmailElement.style.display = 'block';
+        } else if (userEmailElement) {
+            userEmailElement.style.display = 'none';
+        }
+        handleRouteChange();
+    });
+
     // Main navigation listeners (these must remain at the end of DOMContentLoaded)
     document.getElementById('go-to-new-campaign').onclick = () => {
         isNavigatingToNewCampaignDirectly = true;
@@ -364,5 +406,4 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };
     window.addEventListener('popstate', handleRouteChange);
-    firebase.auth().onAuthStateChanged(user => handleRouteChange());
 });

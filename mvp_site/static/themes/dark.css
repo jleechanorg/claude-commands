@@ -1,0 +1,24 @@
+/* Dark Theme */
+[data-theme="dark"] {
+  --primary-bg: #121212;
+  --secondary-bg: #1e1e1e;
+  --navbar-bg: #1e1e1e;
+  --story-bg: #2d2d2d;
+  --input-bg: #2d2d2d;
+  --hover-bg: #404040;
+  --overlay-bg: rgba(0, 0, 0, 0.8);
+  
+  --text-primary: #ffffff;
+  --text-secondary: #b3b3b3;
+  --text-on-accent: #ffffff;
+  
+  --accent-color: #4dabf7;
+  --accent-color-alpha: rgba(77, 171, 247, 0.25);
+  
+  --border-color: #404040;
+  
+  --btn-primary-bg: #4dabf7;
+  --btn-secondary-bg: #6c757d;
+  --btn-success-bg: #51cf66;
+  --btn-danger-bg: #ff6b6b;
+}

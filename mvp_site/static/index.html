@@ -6,13 +6,67 @@
     <title>WorldArchitect.AI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
+    
+    <!-- Theme CSS files -->
+    <link rel="stylesheet" href="/static/themes/base.css">
+    <link rel="stylesheet" href="/static/themes/light.css">
+    <link rel="stylesheet" href="/static/themes/dark.css">
+    <link rel="stylesheet" href="/static/themes/fantasy.css">
+    <link rel="stylesheet" href="/static/themes/cyberpunk.css">
+    
+    <style>
+        /* Smooth theme transitions */
+        .theme-transitioning * {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
+        }
+    </style>
 </head>
 <body>
+    <!-- Top Navigation Bar -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">WorldArchitect.AI</span>
+            
+            <div class="navbar-nav ms-auto">
+                <!-- User email (shown when logged in) -->
+                <span class="navbar-text me-3" id="user-email" style="display: none;"></span>
+                
+                <!-- Theme Selector -->
+                <div class="nav-item dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle btn-sm" 
+                            type="button" 
+                            data-bs-toggle="dropdown" 
+                            aria-expanded="false"
+                            title="Change theme">
+                        <span id="current-theme-icon">☀️</span> 
+                        <span class="d-none d-md-inline">Theme</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">Choose Theme</h6></li>
+                        <li><a class="dropdown-item" href="#" data-theme="light" data-theme-menu-item="light">
+                            ☀️ Light
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" data-theme="dark" data-theme-menu-item="dark">
+                            🌙 Dark
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" data-theme="fantasy" data-theme-menu-item="fantasy">
+                            ⚔️ Fantasy
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" data-theme="cyberpunk" data-theme-menu-item="cyberpunk">
+                            🤖 Cyberpunk
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
     <div id="loading-overlay">
         <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
     </div>
-    <div class="container mt-5">
-        <h1 class="text-center">WorldArchitect.AI</h1>
+    
+    <!-- Main Content Container -->
+    <div class="container mt-4">
         <div id="auth-view" class="text-center mt-4">
             <div id="auth-container"></div>
         </div>
@@ -144,6 +198,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="/static/auth.js"></script>
     <script src="/static/api.js"></script>
+    <script src="/static/js/theme-manager.js"></script>
     <script src="/static/app.js"></script>
 </body>
 </html>

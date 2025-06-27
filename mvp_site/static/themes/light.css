@@ -1,0 +1,24 @@
+/* Light Theme */
+[data-theme="light"] {
+  --primary-bg: #f8f9fa;
+  --secondary-bg: #ffffff;
+  --navbar-bg: #ffffff;
+  --story-bg: #f8f9fa;
+  --input-bg: #ffffff;
+  --hover-bg: #f8f9fa;
+  --overlay-bg: rgba(0, 0, 0, 0.5);
+  
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --text-on-accent: #ffffff;
+  
+  --accent-color: #0d6efd;
+  --accent-color-alpha: rgba(13, 110, 253, 0.25);
+  
+  --border-color: #dee2e6;
+  
+  --btn-primary-bg: #0d6efd;
+  --btn-secondary-bg: #6c757d;
+  --btn-success-bg: #198754;
+  --btn-danger-bg: #dc3545;
+}

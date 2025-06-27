@@ -1,5 +1,8 @@
-body { background-color: #f8f9fa; }
-#auth-container button { cursor: pointer; }
+/* Remove: body { background-color: #f8f9fa; } since it's now handled by themes */
+
+#auth-container button { 
+    cursor: pointer; 
+}
 
 #story-content p {
     white-space: pre-wrap;
@@ -12,7 +15,6 @@ body { background-color: #f8f9fa; }
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -26,47 +28,45 @@ body { background-color: #f8f9fa; }
     color: white;
 }
 
-/* --- Corrected Specificity: Default hide all views --- */
+/* View management */
 #auth-view, 
 #dashboard-view, 
 #new-campaign-view, 
 #game-view {
-    display: none; /* Hidden by default */
+    display: none;
 }
 
-/* --- NEW / MODIFIED: Show the active views with higher specificity --- */
 #auth-view.active-view, 
 #dashboard-view.active-view, 
 #new-campaign-view.active-view {
-    display: block; /* Show these views when they have the active-view class */
+    display: block;
 }
 
-/* --- IMPORTANT: Apply flex display specifically when #game-view is active and has the class --- */
 #game-view.active-view {
-    display: flex; /* This is the key: must be flex to use flex-direction and flex-grow */
-    flex-direction: column; /* Stacks children vertically */
-    height: 85vh; /* Gives the flex container a defined height */
+    display: flex;
+    flex-direction: column;
+    height: 85vh;
 }
 
-/* --- CRITICAL: Ensure these rules for story-content are active --- */
 #story-content {
-    flex-grow: 1; /* Allows this item to take up all available vertical space in its flex parent */
-    overflow-y: auto; /* Enables vertical scrolling for overflow */
-    min-height: 0; /* Prevents flex item from ignoring height constraints and overflowing its parent */
-    border: 1px solid #dee2e6;
+    flex-grow: 1;
+    overflow-y: auto;
+    min-height: 0;
+    border: 1px solid;
     border-radius: .25rem;
     padding: 1rem;
-    background-color: #f8f9fa;
 }
 
-/* ADDED: Style for the new textarea */
 #interaction-form textarea {
-    resize: vertical; /* Allow vertical resizing only */
+    resize: vertical;
 }
 
-/* --- NEWLY ADDED CODE BLOCK --- */
-/* Share Story Button Style */
 #shareStoryBtn {
     max-width: 300px;
 }
-/* --- END OF NEWLY ADDED CODE BLOCK --- */
+
+/* Theme-specific active menu item styling */
+.dropdown-item.active {
+    background-color: var(--accent-color);
+    color: var(--text-on-accent);
+}
