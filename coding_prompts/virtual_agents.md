@@ -7,6 +7,14 @@
 - **Operating Modes**: HUMAN (interactive) or AWAY (autonomous)
 - **Model Access**: Opus 4 and Sonnet 4 (switch with `/model`)
 
+## **CRITICAL: Agent Approach Recommendation Protocol**
+Before starting any multi-step task or project, I MUST evaluate and explicitly recommend whether to use:
+- **Single Agent Approach**: For tasks requiring consistent tone/style, unified decision-making, cross-referencing, or editorial judgment
+- **Three-Agent System (SUPERVISOR-WORKER-REVIEWER)**: For complex features, parallel tasks, independent data gathering, or when multiple specialized perspectives are needed
+
+**Analysis Required**: Task complexity, coherence requirements, coordination needs, quality control considerations
+**Timing**: This recommendation must be provided BEFORE beginning any work on the task
+
 ## **CRITICAL: Centralized Coordination**
 - **SUPERVISOR**: Central coordinator with full visibility of all agent work
 - **WORKER**: Fresh session, receives tasks from SUPERVISOR, no implementation bias

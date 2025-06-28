@@ -28,6 +28,12 @@ class GameState:
         self.combat_state = kwargs.get("combat_state", {"in_combat": False})
         self.last_state_update_timestamp = kwargs.get("last_state_update_timestamp", datetime.datetime.now(datetime.timezone.utc))
         
+        # Initialize time pressure structures
+        self.time_sensitive_events = kwargs.get("time_sensitive_events", {})
+        self.npc_agendas = kwargs.get("npc_agendas", {})
+        self.world_resources = kwargs.get("world_resources", {})
+        self.time_pressure_warnings = kwargs.get("time_pressure_warnings", {})
+        
         migration_status_value = kwargs.get("migration_status", MigrationStatus.NOT_CHECKED.value)
         try:
             self.migration_status = MigrationStatus(migration_status_value)

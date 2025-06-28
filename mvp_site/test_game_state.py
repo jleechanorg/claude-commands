@@ -105,7 +105,12 @@ class TestGameState(unittest.TestCase):
             "combat_state": {"in_combat": False},  # Added combat_state field
             "last_state_update_timestamp": custom_time,
             "migration_status": "MIGRATED",  # Should be string value
-            "extra_field": "test_value"
+            "extra_field": "test_value",
+            # Time pressure structures
+            "time_sensitive_events": {},
+            "npc_agendas": {},
+            "world_resources": {},
+            "time_pressure_warnings": {}
         }
         
         self.assertEqual(result, expected)
