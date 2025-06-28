@@ -283,7 +283,7 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None):
     story_ref.update({'last_played': timestamp})
 
 @log_exceptions
-def create_campaign(user_id, title, initial_prompt, opening_story, initial_game_state: dict, selected_prompts=None):
+def create_campaign(user_id, title, initial_prompt, opening_story, initial_game_state: dict, selected_prompts=None, use_default_world=False):
     db = get_db()
     campaigns_collection = db.collection('users').document(user_id).collection('campaigns')
     
@@ -294,7 +294,8 @@ def create_campaign(user_id, title, initial_prompt, opening_story, initial_game_
         'initial_prompt': initial_prompt,
         'created_at': datetime.datetime.now(datetime.timezone.utc),
         'last_played': datetime.datetime.now(datetime.timezone.utc),
-        'selected_prompts': selected_prompts or []
+        'selected_prompts': selected_prompts or [],
+        'use_default_world': use_default_world
     }
     campaign_ref.set(campaign_data)
 

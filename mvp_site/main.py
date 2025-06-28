@@ -264,14 +264,16 @@ def create_app():
         initial_game_state = GameState().to_dict()
 
         generate_companions = 'companions' in custom_options
+        use_default_world = 'defaultWorld' in custom_options
         opening_story = gemini_service.get_initial_story(
             prompt, 
             selected_prompts=selected_prompts,
-            generate_companions=generate_companions
+            generate_companions=generate_companions,
+            use_default_world=use_default_world
         )
         
         campaign_id = firestore_service.create_campaign(
-            user_id, title, prompt, opening_story, initial_game_state, selected_prompts
+            user_id, title, prompt, opening_story, initial_game_state, selected_prompts, use_default_world
         )
         return jsonify({KEY_SUCCESS: True, KEY_CAMPAIGN_ID: campaign_id}), 201
         
@@ -462,7 +464,8 @@ def create_app():
         
         # 3. Process: Get AI response, passing in the current state
         selected_prompts = campaign.get(KEY_SELECTED_PROMPTS, [])
-        gemini_response = gemini_service.continue_story(user_input, mode, story_context, current_game_state, selected_prompts)
+        use_default_world = campaign.get('use_default_world', False)
+        gemini_response = gemini_service.continue_story(user_input, mode, story_context, current_game_state, selected_prompts, use_default_world)
         
         # 4. Write: Add AI response to story log and update state
         firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response)

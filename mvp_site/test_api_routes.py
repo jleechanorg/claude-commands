@@ -317,7 +317,8 @@ class TestCreateCampaignRoute(unittest.TestCase):
         mock_gemini_service.get_initial_story.assert_called_once_with(
             'Create a fantasy adventure',
             selected_prompts=['narrative', 'mechanics'],
-            generate_companions=False
+            generate_companions=False,
+            use_default_world=False
         )
         mock_firestore_service.create_campaign.assert_called_once()
     

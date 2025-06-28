@@ -126,6 +126,28 @@ def get_client():
     logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
+def _add_world_instructions_to_system(system_instruction_parts):
+    """
+    Add world content instructions to system instruction parts if world is enabled.
+    Avoids code duplication between get_initial_story and continue_story.
+    """
+    from world_loader import load_world_content_for_system_instruction
+    
+    world_instruction = (
+        "\n**CRITICAL INSTRUCTION: USE ESTABLISHED WORLD LORE**\n"
+        "This campaign MUST use the Celestial Wars/Assiah world setting provided below. "
+        "DO NOT create new factions, characters, or locations - USE the established ones from the world content. "
+        "ACTIVELY reference characters, factions, and locations from the provided lore. "
+        "The Celestial Wars Alexiel Book takes precedence over World of Assiah documentation for conflicts. "
+        "When introducing NPCs or factions, draw from the established character dossiers and faction information. "
+        "DO NOT invent generic fantasy elements when rich, detailed lore is provided.\n\n"
+    )
+    system_instruction_parts.append(world_instruction)
+    
+    # Load world content directly into system instruction
+    world_content = load_world_content_for_system_instruction()
+    system_instruction_parts.append(world_content)
+
 def _log_token_count(model_name, user_prompt_contents, system_instruction_text=None):
     """Helper function to count and log the number of tokens being sent, with a breakdown."""
     try:
@@ -261,7 +283,7 @@ def _truncate_context(story_context, max_chars: int, model_name: str, current_ga
     return truncated_context
 
 @log_exceptions
-def get_initial_story(prompt, selected_prompts=None, generate_companions=False):
+def get_initial_story(prompt, selected_prompts=None, generate_companions=False, use_default_world=False):
     """Generates the initial story part, including character, narrative, and mechanics instructions."""
 
     if selected_prompts is None:
@@ -302,6 +324,10 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False):
         )
         system_instruction_parts.append(companion_instruction)
 
+    # Add world instructions if requested
+    if use_default_world:
+        _add_world_instructions_to_system(system_instruction_parts)
+
     system_instruction_final = "\n\n".join(system_instruction_parts)
     
     contents = [types.Content(role="user", parts=[types.Part(text=prompt)])]
@@ -315,7 +341,7 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False):
     return _get_text_from_response(response)
 
 @log_exceptions
-def continue_story(user_input, mode, story_context, current_game_state: GameState, selected_prompts=None):
+def continue_story(user_input, mode, story_context, current_game_state: GameState, selected_prompts=None, use_default_world=False):
     """
     Continues the story by calling the Gemini API with the current context and game state.
     
@@ -325,6 +351,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         story_context: List of previous story entries
         current_game_state: Current GameState object
         selected_prompts: List of selected prompt types
+        use_default_world: Whether to include world content in system instructions
         
     Returns:
         The AI's response text
@@ -384,6 +411,10 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     
     # NEW: Always include the destiny_ruleset for continue_story too
     system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DESTINY))
+
+    # Add world instructions if campaign was created with default world enabled
+    if use_default_world:
+        _add_world_instructions_to_system(system_instruction_parts)
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
 
