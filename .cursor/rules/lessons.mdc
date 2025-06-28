@@ -317,4 +317,57 @@ By strictly adhering to this pattern, the backend has full control over the fina
     4. Implement with minimum necessary scope
     5. Validate integration with existing functionality
 
-**Critical Insight:** This failure was particularly dangerous because it silently broke the core value proposition (creating campaigns) with what appeared to be an unrelated cosmetic change. In production, this type of bug justifies immediate rollback. 
+**Critical Insight:** This failure was particularly dangerous because it silently broke the core value proposition (creating campaigns) with what appeared to be an unrelated cosmetic change. In production, this type of bug justifies immediate rollback.
+
+## Content Consolidation Failure Pattern (December 2024)
+
+### Lesson: Consolidation ≠ Deletion - Integration Mindset Required
+*   **Incident:** During consolidation of `narrative_system_instruction.md` file, I repeatedly deleted valuable content instead of integrating it, violating the explicit "never delete without asking" rule.
+*   **Root Cause:** Fundamental misunderstanding of "consolidation" as "elimination of redundancy" rather than "merging while preserving all valuable content."
+*   **Technical Failures:**
+    1. **Large File Edit Struggles:** 500+ line file caused edit tool failures when attempting large replacements
+    2. **Content Inventory Failure:** Rushed into editing without mapping all existing valuable content
+    3. **Sequential Edit Attempts:** Kept trying variations of the same flawed approach instead of switching methods
+    4. **Verification Gaps:** Failed to consistently check edit results against intentions
+*   **Solution Pattern for Future Consolidations:**
+    1. **Content Inventory First:** Map ALL valuable content before any edits
+    2. **Additive Approach:** Add new consolidated content first, then ask about removing old
+    3. **Surgical Edits Only:** Make small, targeted changes rather than large replacements
+    4. **Ask Before Any Deletion:** Even if something appears redundant, always confirm first
+    5. **Verify Each Edit:** Check results match intentions before proceeding
+
+### Lesson: File Size and Complexity Require Different Edit Strategies
+*   **Problem:** Standard edit approach failed on large, complex files (500+ lines with nested structure).
+*   **Root Cause:** Attempting to replace entire sections instead of making incremental additions.
+*   **Solution Patterns:**
+    - **Small Files (<100 lines):** Standard edit_file approach works well
+    - **Medium Files (100-300 lines):** Use search_replace for targeted changes
+    - **Large Files (300+ lines):** Break into small, incremental additions; avoid large replacements
+    - **Complex Structure:** Map content hierarchy before editing; use section-by-section approach
+
+### Lesson: User Safety Rules Override Efficiency Goals
+*   **Problem:** Prioritized speed and "efficiency" over the user's explicit safety requirement to ask before deletions.
+*   **Root Cause:** Treated consolidation as a technical optimization task rather than a content preservation task with safety constraints.
+*   **Critical Rule Violated:** "Deletion is Prohibited Without Explicit Confirmation" (Rule #3 in rules.mdc)
+*   **Solution:** Always prioritize user safety rules over perceived efficiency, especially for content preservation tasks.
+
+### Lesson: Integration vs. Elimination - Two Different Operations
+*   **Problem:** Conflated "removing redundancy" with "deleting content" instead of recognizing them as separate operations.
+*   **Correct Understanding:**
+    - **Integration:** Merge similar content into unified, comprehensive sections
+    - **Elimination:** Remove content entirely (requires explicit user permission)
+    - **Consolidation:** Integration first, then optionally elimination with permission
+*   **Safe Consolidation Process:**
+    1. Identify overlapping content areas
+    2. Create new integrated section with ALL valuable details
+    3. Ask user to review integrated section
+    4. Only AFTER approval, ask about removing old sections
+    5. Preserve old sections until user explicitly approves removal
+
+### Technical Recovery Patterns
+*   **When Edit Tools Fail:** Switch to read_file + manual reconstruction rather than repeated failed attempts
+*   **When Content is Lost:** Retrieve from git main branch immediately (`git show main:path/to/file`)
+*   **When Approach Isn't Working:** Stop after 2-3 failures and reassess strategy completely
+*   **When User Corrects:** Immediately update both rules.mdc and lessons.mdc with the failure pattern
+
+**Meta-Lesson:** Content consolidation is a high-risk operation that requires explicit safety protocols. The user's "never delete without asking" rule exists precisely to prevent this type of failure pattern. 
