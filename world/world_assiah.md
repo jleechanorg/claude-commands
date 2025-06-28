@@ -93,14 +93,34 @@ The scattered remnants of Lucifer's rebellion, broken into competing factions bu
 ### The First-Spear Clans
 Former slaves liberated during Lucifer's rebellion, now forging their own independent nation through strength and warrior tradition. They represent the successful overthrow of oppression but struggle with the transition from revolutionary movement to stable governance.
 
+**Sub-factions:**
+- **The Bloodbound**: Pure martial meritocracy rejecting all 'weakness' from their slave past
+- **The Chainbreakers**: Revolutionary zealots exporting liberation through military force
+- **The Reclaimed**: Cultural preservationists attempting to rebuild pre-enslavement heritage
+
 ### The Tsuran Dominion
 An honor-bound feudal society operating according to rigid codes of conduct and ancestral wisdom. They maintain strict neutrality in the greater conflict while pursuing their own internal power struggles and philosophical debates.
+
+**Sub-factions:**
+- **The House of Swords**: Traditionalist military aristocracy dedicated to ancestral martial codes
+- **The Azure Crane**: Secret society of court spies mastering psychological manipulation through poetry and tea ceremonies
+- **The Contemplative Path**: Mystical order integrating combat meditation and war-philosophy
 
 ### The Sylvan Remnant
 The last of the elder fey courts, retreating deeper into their hidden sanctuaries as the mortal world encroaches. Ancient beings who remember the world before the wars and struggle to find their place in the new order.
 
+**Sub-factions:**
+- **The Twilight Courts**: Moderates seeking careful engagement with the mortal world
+- **The Deep Groves**: Isolationist extremists retreating into ever-smaller enclaves
+- **The Thornguard**: Militant protectors waging guerrilla war against mortal encroachment
+
 ### The Glimmering Combine
 A merchant confederation that has filled the power vacuum through trade networks and economic influence. They profit from the chaos while maintaining careful neutrality, trading with all sides.
+
+**Sub-factions:**
+- **The Ledger Lords**: Banking houses wielding economic warfare through debt and currency manipulation
+- **The Smuggler's Accord**: Shadow-merchants trading forbidden goods and information
+- **The Artisan Guilds**: Craft-monopolists controlling production of critical war materials
 
 **Organizational Structures:**
 - **Wayfaring Shires**: Bound by ancient dark pacts with road-spirits and entities
@@ -109,6 +129,11 @@ A merchant confederation that has filled the power vacuum through trade networks
 
 ### The Adamant Vault
 A fortress-city of scholar-warriors who preserve ancient knowledge and artifacts from the wars. They seek to understand and catalog the powers that shaped the world, believing knowledge is the key to preventing future catastrophes.
+
+**Sub-factions:**
+- **The Stone Keepers**: Warrior-archivists guarding forbidden pre-war knowledge
+- **The Truthseekers**: Radical researchers pursuing dangerous experiments with captured divine essence
+- **The Gatekeepers**: Ultra-conservative faction limiting access to prevent catastrophes
 
 ### The Shadow Syndicate
 Intelligence network masquerading as library (The Athenaeum), based in Nexus
