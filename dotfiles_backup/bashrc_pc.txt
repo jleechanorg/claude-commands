@@ -124,22 +124,36 @@ if [ -f ~/.ssh/agent_env ]; then
     . ~/.ssh/agent_env > /dev/null
 fi
 
+# Claude
+export CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
+
 # Add keys if they are not already added (optional, if you use passphrases and want to add them once per login)
 # Check if specific keys are added, for example id_ed25519
 # if [ "$(ssh-add -l 2>/dev/null | grep -c 'id_ed25519')" -eq 0 ]; then
 #   ssh-add ~/.ssh/id_ed25519
 # fi
 
+# Single command to add and activate
+
+# Auto-navigate to WorldArchitect.AI project
+if [ \"\$PWD\" = \"\$HOME\" ]; then
+    cd ~/projects/worldarchitect.ai
+fi
+
+alias claudep='claude --dangerously-skip-permissions'
+alias csy='cs -y'
 alias wa='cd ~/projects/worldarchitect.ai'
-alias push="git commit -a -m \"a\" && git push"
+alias push="git add . && git commit -a -m \"a\" && git push"
 export GOOGLE_CLOUD_PROJECT="worldarchitecture-ai"
 alias deploy='~/projects/worldarchitect.ai/deploy.sh "$@"'
 alias commit='git commit -a -m "a" && git push'
+alias h='history | grep'
 
 # Load Gemini API Key from a secret file if it exists
 if [ -f ~/.gemini_api_key_secret ]; then
     source ~/.gemini_api_key_secret
 fi
+
 alias integrate='git checkout main && git pull && git branch -D dev && git checkout -b dev'
 
 vpython() {
@@ -159,3 +173,6 @@ vpython() {
     echo "Running python $*"
     python "$@"
 }
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+
+export PATH="$PATH:/home/jleechan/.local/bin"
