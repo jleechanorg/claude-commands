@@ -1,9 +1,12 @@
 # Python
-venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Ignore Python virtual environments
+venv/
+mvp_site/venv/
 
 # Service account keys
 key.json
@@ -28,3 +31,10 @@ uploads/
 
 # World files copied for deployment
 mvp_site/world/
+
+# MCP Server Configuration
+.mcp.json
+
+# Temp files
+tmp/
+mvp_site/tmp/

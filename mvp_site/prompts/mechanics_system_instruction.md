@@ -218,7 +218,7 @@ This protocol governs the flow and presentation of combat encounters.
 -   **summary**: Provide a report including: current follower count, gold, income, major threats, active quests, potential quests, and projected follower growth at 1, 3, 6, and 12 months.
 -   **summarize exp**: Provide a report including: current level and XP, XP needed for the next level, and a list of recent events that awarded XP.
 
--   **think/plan/options**: Invokes the Planning & Player Agency protocol, which must be delivered from a fully in-character perspective.
+-   **think/plan/options**: Invokes the Think Block State Management Protocol (see CRITICAL section at top of narrative_system_instruction.md). This forces AI to generate only internal thoughts + numbered options, then WAIT for player selection.
 -   **wait X** (e.g., `wait 7 days`, `wait 3 weeks`, `wait 8 hours`): Advance in-game time by the specified duration X.
     -   During this "wait" period, the Player Character (PC) will be assumed to **autonomously pursue their established goals.** These goals are determined by the GM (AI) as a **combination of currently active quests in their Mission Ledger and their stated long-term ambitions or character motivations.**
     -   **Resource Management & Rest:** The AI will ensure the PC appropriately takes short and long rests (as per the active ruleset, e.g., `destiny_ruleset.md`) during extended "wait" periods to manage resources like Hit Points, spell slots, Energy Points, and Fatigue. If resources are scarce, this may limit what can be accomplished.

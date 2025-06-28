@@ -276,6 +276,13 @@ if isinstance(item, dict):
     *   **No Red/Green in Filenames:** I must never use "red", "green", "red_green", or similar color-based terminology in filenames. This avoids confusion and maintains professional naming standards.
     *   Use descriptive names that indicate the file's purpose instead (e.g., `test_comprehensive.py`, `test_integration.py`, `test_edge_cases.py`).
 
+20. **Backup and Temporary File Management:**
+    *   **MANDATORY**: All backup files (*.backup, *.orig, *.old) and temporary files (temp_*, *_temp, *_tmp) MUST be placed in the `tmp/` directory within each module
+    *   **Structure**: Each module/directory should have its own `tmp/` subdirectory for organizing backups and temporary files
+    *   **Never Leave Scattered**: Never leave backup or temporary files scattered throughout the codebase - always consolidate into appropriate tmp/ directories
+    *   **Naming Convention**: Use descriptive names that indicate the original file and purpose (e.g., `narrative_system_instruction.md.backup`, `temp_header.txt`)
+    *   **Git Tracking**: Backup files in tmp/ directories may be committed for safety, but temporary working files should generally be excluded via .gitignore
+
 ## III. Git & Repository Workflow
 
 1.  **Source of Truth for Code is Main/Master Branch:**
