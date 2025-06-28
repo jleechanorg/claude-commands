@@ -69,6 +69,20 @@ echo "--- Preparing to deploy service '$SERVICE_NAME' to project '$PROJECT_ID' -
 # --- Build Step ---
 IMAGE_TAG="gcr.io/$PROJECT_ID/$BASE_SERVICE_NAME:$ENVIRONMENT-latest"
 echo "Building container image from '$TARGET_DIR' with tag '$IMAGE_TAG'..."
+
+# Copy world directory into mvp_site for deployment
+echo "DEBUG: TARGET_DIR = '$TARGET_DIR'"
+echo "DEBUG: Current directory = $(pwd)"
+echo "DEBUG: Checking if world directory exists = $([ -d "world" ] && echo "YES" || echo "NO")"
+
+# Handle different possible values of TARGET_DIR
+if [[ "$TARGET_DIR" == *"mvp_site"* ]] && [ -d "world" ]; then
+    echo "Copying world directory into mvp_site..."
+    cp -r world "$TARGET_DIR/"
+    echo "DEBUG: World files copied to $TARGET_DIR/world"
+    ls -la "$TARGET_DIR/world/" | head -5
+fi
+
 (cd "$TARGET_DIR" && gcloud builds submit . --tag "$IMAGE_TAG")
 
 # --- Deploy Step ---

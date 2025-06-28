@@ -22,3 +22,6 @@ local_api_key.txt
 # User data and uploads
 usage_tracking2.json
 uploads/
+
+# World files copied for deployment
+mvp_site/world/

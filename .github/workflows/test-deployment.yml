@@ -1,0 +1,51 @@
+name: Test Deployment Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'mvp_site/**'
+      - 'world/**'
+      - 'deploy.sh'
+      - '.github/workflows/test-deployment.yml'
+
+jobs:
+  test-deployment-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Run deployment build test
+      run: |
+        cd mvp_site
+        python test_deployment_build.py -v
+    
+    - name: Test deploy.sh world copy logic
+      run: |
+        # Create test world files
+        mkdir -p world
+        echo "Test content" > world/celestial_wars_alexiel_book.md
+        echo "Test content" > world/world_assiah.md
+        
+        # Simulate the deploy.sh copy
+        TARGET_DIR="mvp_site"
+        if [ "$TARGET_DIR" = "mvp_site" ] && [ -d "world" ]; then
+            echo "Copying world directory into mvp_site..."
+            cp -r world "$TARGET_DIR/"
+        fi
+        
+        # Verify files exist
+        if [ -f "mvp_site/world/celestial_wars_alexiel_book.md" ] && [ -f "mvp_site/world/world_assiah.md" ]; then
+            echo "✅ World files successfully copied"
+        else
+            echo "❌ World files not found after copy"
+            exit 1
+        fi

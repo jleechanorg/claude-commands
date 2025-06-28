@@ -7,7 +7,12 @@ import os
 import logging
 
 # World file paths - only used in this module
-WORLD_DIR = "../world"
+# In deployment, world files are copied to same directory as the app
+if os.path.exists(os.path.join(os.path.dirname(__file__), "world")):
+    WORLD_DIR = "world"
+else:
+    WORLD_DIR = "../world"
+    
 CELESTIAL_WARS_BOOK_PATH = os.path.join(WORLD_DIR, "celestial_wars_alexiel_book.md")
 WORLD_ASSIAH_PATH = os.path.join(WORLD_DIR, "world_assiah.md")
 
@@ -20,14 +25,24 @@ def load_world_content_for_system_instruction():
         str: Combined world content formatted for system instruction
     """
     try:
+        # If WORLD_DIR is relative (not starting with ../), join with current dir
+        if WORLD_DIR.startswith(".."):
+            book_path = os.path.join(os.path.dirname(__file__), CELESTIAL_WARS_BOOK_PATH)
+            world_path = os.path.join(os.path.dirname(__file__), WORLD_ASSIAH_PATH)
+        else:
+            # WORLD_DIR is "world" - files are in same directory
+            book_path = CELESTIAL_WARS_BOOK_PATH
+            world_path = WORLD_ASSIAH_PATH
+            
+        logging.info(f"Looking for book at: {book_path}")
+        logging.info(f"Looking for world at: {world_path}")
+        
         # Load book content (higher precedence)
-        book_path = os.path.join(os.path.dirname(__file__), CELESTIAL_WARS_BOOK_PATH)
         with open(book_path, 'r', encoding='utf-8') as f:
             book_content = f.read().strip()
         logging.info(f"Loaded Celestial Wars book: {len(book_content)} characters")
         
         # Load world content (lower precedence)
-        world_path = os.path.join(os.path.dirname(__file__), WORLD_ASSIAH_PATH)
         with open(world_path, 'r', encoding='utf-8') as f:
             world_content = f.read().strip()
         logging.info(f"Loaded Assiah world: {len(world_content)} characters")
