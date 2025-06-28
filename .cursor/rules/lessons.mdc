@@ -13,6 +13,11 @@ This document is a persistent repository for reusable knowledge, best practices,
 - **Lesson:** Before proposing changes, always review the cumulative diff against the merge-base of the target branch (`origin/main`) to verify the changes are accurate and safe.
 - **Command:** `git diff $(git merge-base origin/main HEAD) HEAD`
 
+### World Documentation Preservation Rules
+- **CRITICAL RULE:** Never delete `mvp_site/world/celestial_wars_alexiel_book_v1.md` - this file contains important World of Assiah narrative content and character development that must be preserved as reference material.
+- **Purpose:** Maintains historical narrative content for the WorldArchitect.AI project that may be referenced for future world-building work
+- **Action Required:** Always confirm with user before any deletion of world documentation files
+
 ### Python & Virtual Environments
 - **Lesson:** Due to PEP 668, `pip install` into a system Python environment marked "externally managed" will be blocked. Python packages must always be installed into an activated virtual environment (`venv`).
 - **Lesson:** On some Linux systems, the `python3-venv` package must be installed via the system package manager (e.g., `apt`, `yum`) before Python's `venv` module can be used.
