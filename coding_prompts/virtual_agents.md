@@ -7,6 +7,14 @@
 - **Operating Modes**: HUMAN (interactive) or AWAY (autonomous)
 - **Model Access**: Opus 4 and Sonnet 4 (switch with `/model`)
 
+## **CRITICAL: Mode Indicators**
+Every agent response MUST be prefixed with its mode indicator:
+- `[SUPERVISOR MODE]` - When coordinating, planning, or making decisions
+- `[WORKER MODE]` - When implementing code or executing tasks
+- `[REVIEWER MODE]` - When reviewing code, finding issues, or providing feedback
+
+This ensures clarity about which agent perspective is currently active.
+
 ## **CRITICAL: Agent Approach Recommendation Protocol**
 Before starting any multi-step task or project, I MUST evaluate and explicitly recommend whether to use:
 - **Single Agent Approach**: For tasks requiring consistent tone/style, unified decision-making, cross-referencing, or editorial judgment
@@ -29,6 +37,7 @@ Before starting any multi-step task or project, I MUST evaluate and explicitly r
 **Role**: Central coordinator - plans work, manages communication, makes decisions
 **When Active**: Throughout entire process - coordinates all agent interactions
 **Context**: Full conversation history + all project knowledge + all agent outputs
+**Mode Indicator**: `[SUPERVISOR MODE]` - Always prefix responses with this when acting as supervisor
 **Key Actions**:
 - Breaks down requirements into clear tasks
 - Decides technical approach
@@ -41,6 +50,7 @@ Before starting any multi-step task or project, I MUST evaluate and explicitly r
 **Role**: Implements code
 **When Active**: When SUPERVISOR assigns implementation tasks
 **Context**: NONE - receives only specific task instructions from SUPERVISOR
+**Mode Indicator**: `[WORKER MODE]` - Always prefix responses with this when implementing
 **Key Actions**:
 - Receives task requirements from SUPERVISOR
 - Implements code with no planning bias
@@ -52,6 +62,7 @@ Before starting any multi-step task or project, I MUST evaluate and explicitly r
 **Role**: Ensures quality
 **When Active**: When SUPERVISOR submits code for review
 **Context**: NONE - receives only requirements + code from SUPERVISOR
+**Mode Indicator**: `[REVIEWER MODE]` - Always prefix responses with this when reviewing
 **Key Actions**:
 - Reviews code against requirements provided by SUPERVISOR
 - Finds bugs and edge cases with fresh perspective
@@ -85,25 +96,25 @@ SUPERVISOR (Validates & Continues)
 # Main Session: SUPERVISOR (maintains full context)
 claude --session=supervisor
 > You: "Build a user authentication system"
-> SUPERVISOR: "I'll coordinate this across our agents. Breaking into tasks..."
+> [SUPERVISOR MODE]: "I'll coordinate this across our agents. Breaking into tasks..."
 
 # SUPERVISOR initiates WORKER session
-> SUPERVISOR: "Launching WORKER for task 1..."
+> [SUPERVISOR MODE]: "Launching WORKER for task 1..."
 > [Opens fresh session, provides only: "Implement a User model with email, password_hash, created_at fields"]
-> WORKER implements → returns code to SUPERVISOR
-> SUPERVISOR stores and reviews WORKER output
+> [WORKER MODE]: implements → returns code to SUPERVISOR
+> [SUPERVISOR MODE]: stores and reviews WORKER output
 
 # SUPERVISOR initiates REVIEWER session  
-> SUPERVISOR: "Launching REVIEWER for user model..."
+> [SUPERVISOR MODE]: "Launching REVIEWER for user model..."
 > [Opens fresh session, provides only: requirements + code]
-> REVIEWER analyzes → returns feedback to SUPERVISOR
-> SUPERVISOR synthesizes feedback
+> [REVIEWER MODE]: analyzes → returns feedback to SUPERVISOR
+> [SUPERVISOR MODE]: synthesizes feedback
 
 # SUPERVISOR initiates fix session if needed
-> SUPERVISOR: "REVIEWER found issues, launching WORKER for fixes..."
+> [SUPERVISOR MODE]: "REVIEWER found issues, launching WORKER for fixes..."
 > [Opens fresh session, provides only: specific fixes needed]
-> WORKER fixes → returns to SUPERVISOR
-> SUPERVISOR validates and continues
+> [WORKER MODE]: fixes → returns to SUPERVISOR
+> [SUPERVISOR MODE]: validates and continues
 ```
 
 ## Example Multi-Session Flow
@@ -111,7 +122,7 @@ claude --session=supervisor
 # SUPERVISOR Session (Full Context & Coordination)
 You: "Build a user authentication system"
 
-SUPERVISOR: "I'll design and coordinate implementation. Plan:
+[SUPERVISOR MODE]: "I'll design and coordinate implementation. Plan:
 - User Model with secure password handling
 - JWT authentication endpoints
 - Email verification system
@@ -119,32 +130,32 @@ SUPERVISOR: "I'll design and coordinate implementation. Plan:
 Starting with User Model..."
 
 # SUPERVISOR → WORKER
-SUPERVISOR: "Launching WORKER with task: 'Create User model class with:
+[SUPERVISOR MODE]: "Launching WORKER with task: 'Create User model class with:
 - email field (string, unique)
 - password_hash field (string)
 - created_at field (datetime)
 - email_verified field (boolean)
 - Include password hashing method using bcrypt'"
 
-[WORKER implements and returns code]
+[WORKER MODE]: implements and returns code
 
-SUPERVISOR: "Received User model. Now launching REVIEWER..."
+[SUPERVISOR MODE]: "Received User model. Now launching REVIEWER..."
 
 # SUPERVISOR → REVIEWER  
-SUPERVISOR: "Launching REVIEWER with:
+[SUPERVISOR MODE]: "Launching REVIEWER with:
 Requirements: User model with secure password storage
 Code: [provides WORKER's implementation]"
 
-[REVIEWER analyzes and returns: "Missing email validation, no password complexity rules"]
+[REVIEWER MODE]: analyzes and returns: "Missing email validation, no password complexity rules"
 
 # SUPERVISOR → WORKER (fixes)
-SUPERVISOR: "REVIEWER identified issues. Launching WORKER with fixes:
+[SUPERVISOR MODE]: "REVIEWER identified issues. Launching WORKER with fixes:
 - Add email regex validation
 - Add password complexity check (8+ chars, 1 upper, 1 lower, 1 number)"
 
-[WORKER implements fixes and returns]
+[WORKER MODE]: implements fixes and returns
 
-SUPERVISOR: "User model complete. Moving to authentication endpoints..."
+[SUPERVISOR MODE]: "User model complete. Moving to authentication endpoints..."
 ```
 
 ---
@@ -392,7 +403,7 @@ Before marking complete, REVIEWER verifies:
 ```markdown
 You: "Build a blog API with 3-agent system"
 
-[SUPERVISOR]: "I'll design a blog API with posts, comments, and users.
+[SUPERVISOR MODE]: "I'll design a blog API with posts, comments, and users.
 Key decisions:
 - REST API with JSON
 - PostgreSQL database
@@ -410,7 +421,8 @@ Should I proceed with this plan?"
 
 You: "Yes, human mode"
 
-[WORKER]: "Starting with database models..."
+[SUPERVISOR MODE]: "Launching WORKER for database models..."
+[WORKER MODE]: "Starting with database models..."
 ```
 
 ---
