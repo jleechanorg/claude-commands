@@ -1,0 +1,421 @@
+/* ==================================
+   WorldArchitect.AI Animation System
+   Milestone 3: Smooth transitions and micro-interactions
+   ================================== */
+
+/* Core Animation Variables */
+:root {
+  --animation-duration-fast: 0.15s;
+  --animation-duration-normal: 0.3s;
+  --animation-duration-slow: 0.5s;
+  --animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --animation-easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --animation-easing-ease-out: cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* ==================================
+   THEME SWITCHING ANIMATIONS
+   ================================== */
+
+/* Smooth theme transitions for all elements */
+* {
+  transition: 
+    background-color var(--animation-duration-normal) var(--animation-easing),
+    border-color var(--animation-duration-normal) var(--animation-easing),
+    color var(--animation-duration-normal) var(--animation-easing),
+    box-shadow var(--animation-duration-normal) var(--animation-easing);
+}
+
+/* Enhanced theme transition state */
+.theme-transitioning * {
+  transition: 
+    background-color var(--animation-duration-slow) var(--animation-easing) !important,
+    border-color var(--animation-duration-slow) var(--animation-easing) !important,
+    color var(--animation-duration-slow) var(--animation-easing) !important,
+    box-shadow var(--animation-duration-slow) var(--animation-easing) !important;
+}
+
+/* ==================================
+   PAGE NAVIGATION ANIMATIONS
+   ================================== */
+
+/* Smooth view transitions */
+#auth-view,
+#dashboard-view,
+#new-campaign-view,
+#game-view {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: 
+    opacity var(--animation-duration-normal) var(--animation-easing),
+    transform var(--animation-duration-normal) var(--animation-easing);
+}
+
+/* Active view animations */
+#auth-view.active,
+#dashboard-view.active,
+#new-campaign-view.active,
+#game-view.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Loading overlay animations */
+#loading-overlay {
+  opacity: 0;
+  backdrop-filter: blur(0px);
+  transition: 
+    opacity var(--animation-duration-normal) var(--animation-easing),
+    backdrop-filter var(--animation-duration-normal) var(--animation-easing);
+}
+
+#loading-overlay.show {
+  opacity: 1;
+  backdrop-filter: blur(4px);
+}
+
+/* ==================================
+   BUTTON ANIMATIONS
+   ================================== */
+
+/* Enhanced button hover effects */
+.btn {
+  position: relative;
+  overflow: hidden;
+  transform: translateY(0);
+  transition: 
+    transform var(--animation-duration-fast) var(--animation-easing),
+    box-shadow var(--animation-duration-fast) var(--animation-easing),
+    background-color var(--animation-duration-fast) var(--animation-easing);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.btn:active {
+  transform: translateY(0);
+  transition-duration: var(--animation-duration-fast);
+}
+
+/* Button loading animation */
+.btn.loading {
+  position: relative;
+  color: transparent !important;
+}
+
+.btn.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  border-top-color: transparent;
+  animation: btn-spin 0.8s linear infinite;
+}
+
+@keyframes btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==================================
+   FORM ANIMATIONS
+   ================================== */
+
+/* Form control focus animations */
+.form-control {
+  transition: 
+    border-color var(--animation-duration-fast) var(--animation-easing),
+    box-shadow var(--animation-duration-fast) var(--animation-easing),
+    transform var(--animation-duration-fast) var(--animation-easing);
+}
+
+.form-control:focus {
+  transform: scale(1.02);
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+/* Form group focus state */
+.mb-3:focus-within {
+  transform: translateY(-2px);
+  transition: transform var(--animation-duration-fast) var(--animation-easing);
+}
+
+/* ==================================
+   CARD AND LIST ANIMATIONS
+   ================================== */
+
+/* Campaign cards hover effects */
+.list-group-item {
+  transition: 
+    transform var(--animation-duration-fast) var(--animation-easing),
+    box-shadow var(--animation-duration-fast) var(--animation-easing),
+    background-color var(--animation-duration-fast) var(--animation-easing);
+}
+
+.list-group-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Card animations */
+.card {
+  transition: 
+    transform var(--animation-duration-fast) var(--animation-easing),
+    box-shadow var(--animation-duration-fast) var(--animation-easing);
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* ==================================
+   DROPDOWN ANIMATIONS
+   ================================== */
+
+/* Enhanced dropdown animations */
+.dropdown-menu {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+  transition: 
+    opacity var(--animation-duration-fast) var(--animation-easing),
+    transform var(--animation-duration-fast) var(--animation-easing);
+  pointer-events: none;
+}
+
+.dropdown-menu.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* Dropdown item hover effects */
+.dropdown-item {
+  transition: 
+    background-color var(--animation-duration-fast) var(--animation-easing),
+    padding-left var(--animation-duration-fast) var(--animation-easing);
+}
+
+.dropdown-item:hover {
+  padding-left: 1.2rem;
+}
+
+/* ==================================
+   MODAL ANIMATIONS
+   ================================== */
+
+/* Enhanced modal animations */
+.modal.fade .modal-dialog {
+  transform: scale(0.8) translateY(-50px);
+  transition: transform var(--animation-duration-normal) var(--animation-easing-bounce);
+}
+
+.modal.show .modal-dialog {
+  transform: scale(1) translateY(0);
+}
+
+/* Modal backdrop animation */
+.modal-backdrop {
+  transition: opacity var(--animation-duration-normal) var(--animation-easing);
+}
+
+/* ==================================
+   LOADING ANIMATIONS
+   ================================== */
+
+/* Enhanced spinner animation */
+.spinner-border {
+  animation: spinner-grow 0.8s linear infinite;
+}
+
+@keyframes spinner-grow {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.1);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+/* Story content loading animation */
+#story-content {
+  transition: 
+    opacity var(--animation-duration-normal) var(--animation-easing),
+    transform var(--animation-duration-normal) var(--animation-easing);
+}
+
+#story-content.loading {
+  opacity: 0.7;
+  transform: scale(0.98);
+}
+
+/* ==================================
+   MICRO-INTERACTIONS
+   ================================== */
+
+/* Checkbox and radio animations */
+.form-check-input {
+  transition: 
+    transform var(--animation-duration-fast) var(--animation-easing),
+    box-shadow var(--animation-duration-fast) var(--animation-easing);
+}
+
+.form-check-input:checked {
+  transform: scale(1.1);
+}
+
+/* Link hover animations */
+a {
+  transition: 
+    color var(--animation-duration-fast) var(--animation-easing),
+    text-decoration-color var(--animation-duration-fast) var(--animation-easing);
+}
+
+/* Navbar brand animation */
+.navbar-brand {
+  transition: transform var(--animation-duration-fast) var(--animation-easing);
+}
+
+.navbar-brand:hover {
+  transform: scale(1.05);
+}
+
+/* ==================================
+   STAGGER ANIMATIONS FOR LISTS
+   ================================== */
+
+/* Campaign list stagger effect - only on dashboard load */
+.dashboard-view .list-group-item {
+  animation: slideInUp var(--animation-duration-normal) var(--animation-easing);
+  animation-fill-mode: both;
+}
+
+.list-group-item:nth-child(1) { animation-delay: 0.1s; }
+.list-group-item:nth-child(2) { animation-delay: 0.15s; }
+.list-group-item:nth-child(3) { animation-delay: 0.2s; }
+.list-group-item:nth-child(4) { animation-delay: 0.25s; }
+.list-group-item:nth-child(5) { animation-delay: 0.3s; }
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==================================
+   ACCESSIBILITY AND PERFORMANCE
+   ================================== */
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* GPU acceleration for smooth animations */
+.btn,
+.card,
+.list-group-item,
+.form-control,
+.dropdown-menu {
+  will-change: transform;
+}
+
+/* Remove will-change after animations complete */
+.btn:not(:hover),
+.card:not(:hover),
+.list-group-item:not(:hover) {
+  will-change: auto;
+}
+
+/* ==================================
+   THEME-SPECIFIC ENHANCEMENTS
+   ================================== */
+
+/* Fantasy theme sparkle effect */
+[data-theme="fantasy"] .btn:hover::before {
+  content: '✨';
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  font-size: 12px;
+  animation: sparkle 0.6s ease-out;
+  pointer-events: none;
+}
+
+@keyframes sparkle {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2) rotate(180deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.8) rotate(360deg);
+  }
+}
+
+/* Cyberpunk theme glow effect */
+[data-theme="cyberpunk"] .btn:hover {
+  box-shadow: 
+    0 0 20px rgba(0, 255, 255, 0.3),
+    0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ==================================
+   STORY CONTENT ANIMATIONS
+   ================================== */
+
+/* Story text appear animation */
+#story-content p:last-child {
+  animation: typeWriter 0.5s ease-out;
+}
+
+@keyframes typeWriter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Timer info pulse animation */
+#timer-info {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+} 

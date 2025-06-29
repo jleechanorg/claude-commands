@@ -8,7 +8,8 @@ class ThemeManager {
     };
     
     this.currentTheme = 'light';
-    this.modernThemesEnabled = localStorage.getItem('feature_new_themes') === 'true';
+    // Enable modern features by default (user doesn't need console commands)
+    this.modernThemesEnabled = localStorage.getItem('feature_new_themes') !== 'false';
     this.init();
   }
 
