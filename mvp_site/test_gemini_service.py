@@ -55,6 +55,45 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         """Clear the cache before each test."""
         gemini_service._loaded_instructions_cache.clear()
 
+    def _create_realistic_mock_content(self, instruction_type):
+        """Create realistic mock content that can be tested for presence rather than exact matching."""
+        content_map = {
+            "narrative": "# NARRATIVE INSTRUCTIONS\nYou are a skilled storyteller...",
+            "mechanics": "# MECHANICS INSTRUCTIONS\nHandle game mechanics with precision...", 
+            "calibration": "# CALIBRATION INSTRUCTIONS\nBalance gameplay elements...",
+            "destiny_ruleset": "# DESTINY RULESET\nCore game rules and mechanics...",
+            "character_template": "# CHARACTER TEMPLATE\nCharacter creation guidelines...",
+            "character_sheet": "# CHARACTER SHEET\nCharacter stats and attributes...",
+            "game_state": "# GAME STATE INSTRUCTIONS\nManage game state updates...",
+        }
+        return content_map.get(instruction_type, f"# {instruction_type.upper()}\nGeneric content...")
+
+    def _assert_instructions_loaded_in_order(self, actual_system_instruction, expected_instruction_types):
+        """Assert that instructions were loaded in the expected order without exact string matching."""
+        
+        # Check that all expected instruction types are present
+        for instruction_type in expected_instruction_types:
+            expected_content = self._create_realistic_mock_content(instruction_type)
+            self.assertIn(expected_content, actual_system_instruction, 
+                         f"Expected {instruction_type} instructions to be present")
+        
+        # Check order by finding positions of each instruction type
+        positions = {}
+        for instruction_type in expected_instruction_types:
+            expected_content = self._create_realistic_mock_content(instruction_type)
+            position = actual_system_instruction.find(expected_content)
+            self.assertNotEqual(position, -1, f"{instruction_type} instructions not found")
+            positions[instruction_type] = position
+        
+        # Verify order is correct
+        sorted_types = sorted(expected_instruction_types, key=lambda x: positions[x])
+        self.assertEqual(sorted_types, expected_instruction_types, 
+                        f"Instructions not in expected order. Found: {sorted_types}")
+        
+        # Check that background summary instructions are included (but don't check exact content)
+        self.assertIn("BACKGROUND", actual_system_instruction.upper(), 
+                     "Background summary instructions should be included")
+
     @patch('gemini_service.get_client')
     @patch('gemini_service._load_instruction_file')
     def test_all_checkboxes_scenario(self, mock_load_instruction_file, mock_get_client):
@@ -63,17 +102,8 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         are loaded in the correct order.
         """
         # --- Arrange ---
-        # Mock the file loader to return simple, identifiable strings
-        mock_content_map = {
-            "narrative": "Narrative",
-            "mechanics": "Mechanics",
-            "calibration": "Calibration",
-            "destiny_ruleset": "Destiny",
-            "character_template": "CharTemplate",
-            "character_sheet": "CharSheet",
-            "game_state": "GameState",
-        }
-        mock_load_instruction_file.side_effect = lambda type: mock_content_map.get(type, "")
+        # Mock the file loader to return realistic, identifiable content
+        mock_load_instruction_file.side_effect = self._create_realistic_mock_content
 
         # Mock the Gemini client
         mock_client = MagicMock()
@@ -83,18 +113,17 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         # Define the input for this specific scenario
         selected_prompts = ['narrative', 'mechanics', 'calibration']
         
-        # This is the sequence we expect based on the FIXED code
-        # CRITICAL: GameState must be FIRST to prevent instruction fatigue
-        expected_prompt_order = [
-            "GameState",       # FIRST - highest priority for data structure compliance
-            "CharTemplate",    # From narrative checkbox
-            "CharSheet",       # From mechanics checkbox
-            "Narrative",       # From loop
-            "Mechanics",       # From loop
-            "Calibration",     # From loop
-            "Destiny"          # Default
+        # Expected order based on the system logic
+        # GameState must be FIRST to prevent instruction fatigue
+        expected_instruction_order = [
+            "game_state",       # FIRST - highest priority for data structure compliance
+            "character_template",    # From narrative checkbox
+            "character_sheet",       # From mechanics checkbox
+            "narrative",            # From loop
+            "mechanics",            # From loop  
+            "calibration",          # From loop
+            "destiny_ruleset"       # Default
         ]
-        expected_system_instruction = "\n\n".join(expected_prompt_order)
 
         # --- Act ---
         gemini_service.get_initial_story(
@@ -107,21 +136,21 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         call_args = mock_client.models.generate_content.call_args
         actual_system_instruction = call_args.kwargs['config'].system_instruction.text
         
-        self.assertEqual(actual_system_instruction, expected_system_instruction)
+        # Use the new flexible assertion method
+        self._assert_instructions_loaded_in_order(actual_system_instruction, expected_instruction_order)
 
     @patch('gemini_service.get_client')
     @patch('gemini_service._load_instruction_file')
     def test_get_initial_story_no_selected_prompts(self, mock_load_instruction_file, mock_get_client):
         """Tests that get_initial_story loads only default prompts when none are selected."""
         # --- Arrange ---
-        mock_content_map = { "destiny_ruleset": "Destiny", "game_state": "GameState" }
-        mock_load_instruction_file.side_effect = lambda type: mock_content_map.get(type, "")
+        mock_load_instruction_file.side_effect = self._create_realistic_mock_content
         
         mock_client = MagicMock()
         mock_client.models.generate_content.return_value.text = "Success"
         mock_get_client.return_value = mock_client
         
-        expected_system_instruction = "GameState\n\nDestiny"
+        expected_instruction_order = ["game_state", "destiny_ruleset"]
 
         # --- Act ---
         gemini_service.get_initial_story("test prompt", selected_prompts=[])
@@ -130,70 +159,64 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         call_args = mock_get_client.return_value.models.generate_content.call_args
         actual_system_instruction = call_args.kwargs['config'].system_instruction.text
         
-        self.assertEqual(actual_system_instruction, expected_system_instruction)
+        self._assert_instructions_loaded_in_order(actual_system_instruction, expected_instruction_order)
 
     @patch('gemini_service.get_client')
     @patch('gemini_service._load_instruction_file')
     def test_only_narrative_scenario(self, mock_load_instruction_file, mock_get_client):
         """Tests that selecting only 'narrative' loads the correct prompt set."""
         # --- Arrange ---
-        mock_content_map = { "narrative": "Narrative", "character_template": "CharTemplate", "destiny_ruleset": "Destiny", "game_state": "GameState" }
-        mock_load_instruction_file.side_effect = lambda type: mock_content_map.get(type, "")
+        mock_load_instruction_file.side_effect = self._create_realistic_mock_content
         mock_client = MagicMock()
         mock_client.models.generate_content.return_value.text = "Success"
         mock_get_client.return_value = mock_client
         
-        expected_prompt_order = ["GameState", "CharTemplate", "Narrative", "Destiny"]
-        expected_system_instruction = "\n\n".join(expected_prompt_order)
+        expected_instruction_order = ["game_state", "character_template", "narrative", "destiny_ruleset"]
 
         # --- Act ---
         gemini_service.get_initial_story("test", selected_prompts=['narrative'])
 
         # --- Assert ---
         actual_system_instruction = mock_get_client.return_value.models.generate_content.call_args.kwargs['config'].system_instruction.text
-        self.assertEqual(actual_system_instruction, expected_system_instruction)
+        self._assert_instructions_loaded_in_order(actual_system_instruction, expected_instruction_order)
 
     @patch('gemini_service.get_client')
     @patch('gemini_service._load_instruction_file')
     def test_only_mechanics_scenario(self, mock_load_instruction_file, mock_get_client):
         """Tests that selecting only 'mechanics' loads the correct prompt set."""
         # --- Arrange ---
-        mock_content_map = { "mechanics": "Mechanics", "character_sheet": "CharSheet", "destiny_ruleset": "Destiny", "game_state": "GameState" }
-        mock_load_instruction_file.side_effect = lambda type: mock_content_map.get(type, "")
+        mock_load_instruction_file.side_effect = self._create_realistic_mock_content
         mock_client = MagicMock()
         mock_client.models.generate_content.return_value.text = "Success"
         mock_get_client.return_value = mock_client
         
-        expected_prompt_order = ["GameState", "CharSheet", "Mechanics", "Destiny"]
-        expected_system_instruction = "\n\n".join(expected_prompt_order)
+        expected_instruction_order = ["game_state", "character_sheet", "mechanics", "destiny_ruleset"]
 
         # --- Act ---
         gemini_service.get_initial_story("test", selected_prompts=['mechanics'])
 
         # --- Assert ---
         actual_system_instruction = mock_get_client.return_value.models.generate_content.call_args.kwargs['config'].system_instruction.text
-        self.assertEqual(actual_system_instruction, expected_system_instruction)
+        self._assert_instructions_loaded_in_order(actual_system_instruction, expected_instruction_order)
 
     @patch('gemini_service.get_client')
     @patch('gemini_service._load_instruction_file')
     def test_only_calibration_scenario(self, mock_load_instruction_file, mock_get_client):
         """Tests that selecting only 'calibration' loads the correct prompt set."""
         # --- Arrange ---
-        mock_content_map = { "calibration": "Calibration", "destiny_ruleset": "Destiny", "game_state": "GameState" }
-        mock_load_instruction_file.side_effect = lambda type: mock_content_map.get(type, "")
+        mock_load_instruction_file.side_effect = self._create_realistic_mock_content
         mock_client = MagicMock()
         mock_client.models.generate_content.return_value.text = "Success"
         mock_get_client.return_value = mock_client
         
-        expected_prompt_order = ["GameState", "Calibration", "Destiny"]
-        expected_system_instruction = "\n\n".join(expected_prompt_order)
+        expected_instruction_order = ["game_state", "calibration", "destiny_ruleset"]
 
         # --- Act ---
         gemini_service.get_initial_story("test", selected_prompts=['calibration'])
 
         # --- Assert ---
         actual_system_instruction = mock_get_client.return_value.models.generate_content.call_args.kwargs['config'].system_instruction.text
-        self.assertEqual(actual_system_instruction, expected_system_instruction)
+        self._assert_instructions_loaded_in_order(actual_system_instruction, expected_instruction_order)
 
     @patch('gemini_service.get_client')
     @patch('gemini_service._load_instruction_file')
@@ -201,8 +224,7 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
     def test_use_default_world_adds_prefix_to_prompt(self, mock_add_world, mock_load_instruction_file, mock_get_client):
         """Tests that when use_default_world=True, 'Use default setting Assiah.' is prepended to the prompt."""
         # --- Arrange ---
-        mock_content_map = { "narrative": "Narrative", "destiny_ruleset": "Destiny", "game_state": "GameState" }
-        mock_load_instruction_file.side_effect = lambda type: mock_content_map.get(type, "")
+        mock_load_instruction_file.side_effect = self._create_realistic_mock_content
         mock_client = MagicMock()
         mock_client.models.generate_content.return_value.text = "Success"
         mock_get_client.return_value = mock_client
@@ -219,7 +241,11 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         
         # Check that the prompt was modified
         actual_call_args = mock_get_client.return_value.models.generate_content.call_args
-        actual_contents = actual_call_args.args[0]
+        # Get contents from keyword arguments if available, otherwise from positional
+        if 'contents' in actual_call_args.kwargs:
+            actual_contents = actual_call_args.kwargs['contents']
+        else:
+            actual_contents = actual_call_args.args[0]
         actual_prompt_text = actual_contents[0].parts[0].text
         self.assertEqual(actual_prompt_text, expected_modified_prompt)
 

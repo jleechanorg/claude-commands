@@ -324,6 +324,24 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
         )
         system_instruction_parts.append(companion_instruction)
 
+    # Add background summary instruction for initial story
+    background_summary_instruction = (
+        "\n**CRITICAL INSTRUCTION: START WITH BACKGROUND SUMMARY**\n"
+        "Before beginning the actual narrative, you MUST provide a background summary section that orients the player. "
+        "This should be 2-4 paragraphs covering:\n"
+        "1. **World Background:** A brief overview of the setting, key factions, current political situation, and important world elements (without major spoilers)\n"
+        "2. **Character History:** Who the character is, their background, motivations, and current situation (based on the prompt provided)\n"
+        "3. **Current Context:** What brings them to this moment and why their story is beginning now\n\n"
+        "**Requirements:**\n"
+        "- Keep it concise but informative (2-4 paragraphs total)\n"
+        "- NO future plot spoilers or major story reveals\n"
+        "- Focus on established facts the character would know\n"
+        "- End with a transition into the opening scene\n"
+        "- Use a clear header like '**--- BACKGROUND ---**' to separate this from the main narrative\n\n"
+        "After the background summary, proceed with the normal opening scene and narrative.\n\n"
+    )
+    system_instruction_parts.append(background_summary_instruction)
+
     # Add world instructions if requested
     if use_default_world:
         _add_world_instructions_to_system(system_instruction_parts)
