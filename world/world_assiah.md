@@ -69,17 +69,17 @@ The World of Assiah is an epic fantasy setting centered around the aftermath of 
 The surviving remnant of the original divine order, now ruled by the ancient Raziel and struggling to maintain control over a fractured realm. Led by immortal beings with unimaginable power but crippled by their own rigid adherence to ancient laws and customs.
 
 **Sub-factions:**
-- **The Principate Senate**: Traditionalist power base of oldest Empyrean families
-- **The Starfall Command**: Military faction centered around Alexiel's legacy
-- **The Revisionist Scholars**: Secret society questioning official doctrine
+- **The Principate Senate**: This is the traditionalist power base of the Imperium, composed of the oldest Empyrean Bloodline families who believe in stability, protocol, and the preservation of their divine heritage above all. They are masters of political intrigue and see the Empyrean Affliction as a shameful secret to be managed, not a flaw to be corrected. The ancient and inscrutable Raziel guides them, his quiet whispers directing the flow of the entire Imperium.
+- **The Starfall Command**: Centered around the military and the legacy of Alexiel's "Starfall Guard," this faction is comprised of legion commanders, veterans of the great wars, and those who believe the Imperium's only path forward is through martial strength. They are impatient with the Senate's slow deliberations and are fiercely loyal to their commanders. The twin princes Cassian and Valerius are the celebrated, if conflicting, figureheads of this powerful bloc.
+- **The Revisionist Scholars**: A secret society of academics, scribes, and even minor nobles who doubt the official doctrine of the Imperium. They secretly gather forbidden history and question the divinity of the Empyrean Bloodline, seeking answers to the Great Vanishing and the truth of the Empyrean Affliction. Their quiet and fearful leader is Magister Lucian Kantos, the man who knows more of the truth than anyone else still loyal to the Imperium.
 
 ### The Shattered Host  
 The scattered remnants of Lucifer's rebellion, broken into competing factions but still united in their opposition to the Imperium. Each faction interprets Lucifer's revolutionary ideals differently, leading to internal conflicts and competing visions of freedom.
 
 **Major Sub-factions:**
-- **The Obsidian Covenant**: Organized successor-state led by Malakor
-- **The Carrion Court**: Nomadic war-band of beast-kin and cannibals
-- **The Unchained Mind**: Fanatical cells dedicated to pure anti-authoritarian philosophy
+- **The Obsidian Covenant**: One of the most powerful and organized successor-states, the Covenant mimics the structure of the Imperium it despises, with a lavish court and a rigid hierarchy. They preach a sophisticated philosophy of enlightened self-interest and rational freedom, attracting disgruntled nobles, mages, and intellectuals. Its charismatic and manipulative leader is the former Imperial noble Malakor, the Argent Tongue.
+- **The Carrion Court**: A massive, nomadic war-band of beast-kin, mutants, and cannibals who believe in the law of the strong devouring the weak. They are a force of pure, primal chaos, constantly raiding and consuming, with no interest in building or ruling. The terrifying warlord Griselda, the Carrion Queen, rules them through fear and overwhelming strength.
+- **The Unchained Mind**: A small but fanatical faction of zealots dedicated to Lucifer's original, pure anti-authoritarian philosophy. They operate in secret cells, spreading revolutionary texts and seeking to dismantle all power structures, including those of other Host warlords. They are led by the brilliant and uncompromising ideologue Perrin, the Apostate Scholar.
 
 ### The Seven Apostates (Lucifer's Generals)
 1. **Lucifer, the Morning Star**: The visionary leader
@@ -94,49 +94,66 @@ The scattered remnants of Lucifer's rebellion, broken into competing factions bu
 Former slaves liberated during Lucifer's rebellion, now forging their own independent nation through strength and warrior tradition. They represent the successful overthrow of oppression but struggle with the transition from revolutionary movement to stable governance.
 
 **Sub-factions:**
-- **The Bloodbound**: Pure martial meritocracy rejecting all 'weakness' from their slave past
-- **The Chainbreakers**: Revolutionary zealots exporting liberation through military force
-- **The Reclaimed**: Cultural preservationists attempting to rebuild pre-enslavement heritage
+- **The High Council**: The established leadership of the Clans, focused on nation-building, diplomacy, and creating a stable future for their people. This faction is comprised of the elder chieftains and shamans who support a pragmatic and cautious approach to foreign policy. The council is led by the patient and respected War-Chief Vorlag.
+- **The Tusk-Sworn**: A large and popular faction of young, aggressive warriors who believe the Clans have grown soft and that their purpose is to wage eternal war against their former masters. They are charismatic, reckless, and advocate for constant raids and conquest to win glory and resources. Their unofficial champion and spiritual leader is the ferocious beastman Karg, the Iron-Tusk.
+- **The Spirit-Walkers**: The shamanistic heart of the Clans, this faction is concerned with the health of the spirit world and honoring their ancestors. They act as advisors, healers, and seers, often providing a third perspective that is neither as cautious as Vorlag's nor as reckless as Karg's. The most respected and ancient of these is the goblin shaman, Zanja.
 
 ### The Tsuran Dominion
 An honor-bound feudal society operating according to rigid codes of conduct and ancestral wisdom. They maintain strict neutrality in the greater conflict while pursuing their own internal power struggles and philosophical debates.
 
 **Sub-factions:**
-- **The House of Swords**: Traditionalist military aristocracy dedicated to ancestral martial codes
-- **The Azure Crane**: Secret society of court spies mastering psychological manipulation through poetry and tea ceremonies
-- **The Contemplative Path**: Mystical order integrating combat meditation and war-philosophy
+- **The Akai Concord**: The traditionalist faction representing the founding principles of the Dominion, centered around House Akai. They are isolationist, xenophobic, and believe strict adherence to the codes of honor and caste is the only thing preventing Tsuran from becoming as decadent as the Imperium. Daimyo Kenjiro, the founder of the nation, is the unchallengeable leader of this old guard.
+- **The Shiro Alliance**: A progressive and mercantile faction led by House Shiro, who believe that trade, technological advancement, and engagement with the outside world are necessary for the Dominion's survival. They are constantly pushing the boundaries of tradition and law, accumulating wealth and power through secret foreign contacts. The brilliant and ambitious Lady Asami is the public face and driving force of this modernizing movement.
+- **The Shroud-bearers**: The Dominion's secret police and assassins guild, whose existence is officially denied but widely feared. Their loyalty is not to a person or house, but to the abstract ideal of the Dominion itself, and they secretly eliminate any threat—internal or external—that they believe endangers the nation's stability. Their enigmatic, masked leader is known only as The Ghost.
 
-### The Sylvan Remnant
+### The Sylvan Remnant (Elves)
 The last of the elder fey courts, retreating deeper into their hidden sanctuaries as the mortal world encroaches. Ancient beings who remember the world before the wars and struggle to find their place in the new order.
 
 **Sub-factions:**
-- **The Twilight Courts**: Moderates seeking careful engagement with the mortal world
-- **The Deep Groves**: Isolationist extremists retreating into ever-smaller enclaves
-- **The Thornguard**: Militant protectors waging guerrilla war against mortal encroachment
+- **The Stillwood Sentinels**: The largest and most traditionalist elven faction, dedicated to a policy of absolute isolationism. They believe the only path to survival is to remain perfectly hidden within their forest enclave, avoiding all contact with the violent, short-lived races. The ancient archdruid Lianor has been their matriarch and guiding hand for centuries.
+- **The Whisper-Binders**: A secret society of elven spies and lore-keepers who believe that hiding is a slow death. They use their skills to gather intelligence and leak dangerous truths to the outside world, seeking to undermine the Imperium without drawing direct attention to their people. Their enigmatic and calculating spymaster is the elf known as Corvus.
+- **The Ashen-Sworn**: A war band of radicalized elves who have rejected isolationism in favor of vengeance. Traumatized by Imperial atrocities, they have allied themselves with factions of the Shattered Host, adopting their ferocity to wage a guerilla war against the Imperium. They are led by the fierce and bitter warrior Elara.
 
-### The Glimmering Combine
+### The Glimmering Combine (Gnomes)
 A merchant confederation that has filled the power vacuum through trade networks and economic influence. They profit from the chaos while maintaining careful neutrality, trading with all sides.
 
 **Sub-factions:**
-- **The Ledger Lords**: Banking houses wielding economic warfare through debt and currency manipulation
-- **The Smuggler's Accord**: Shadow-merchants trading forbidden goods and information
-- **The Artisan Guilds**: Craft-monopolists controlling production of critical war materials
+- **The Nexus Mercantile**: The public-facing, commercial branch of the Combine, responsible for brokering deals, securing resources, and laundering profits through the markets of Nexus. They are the diplomats and negotiators who manage the dangerous politics of dealing with the great powers. The sharp and unflappable Guildmistress Jinx Fizzlebottom runs this vital operation.
+- **The Department of Unfettered Inquiry**: The heart and soul of the Combine, this is the chaotic collection of workshops, labs, and libraries where the real invention happens. This division is concerned only with the pursuit of knowledge, with little regard for safety, morality, or profitability. Its unofficial and often-singed dean is the brilliant Professor Phileas Cogsworth.
+- **The Acquisitions & Field Testing Unit**: The Combine's secret service, a small team of skilled agents who are sent into the world to "acquire" rare materials, test dangerous prototypes, and sabotage rivals. They are the practical, hands-on problem-solvers of the guild. The most resourceful and reliable of these agents is the rogue known as Pippa "Pip" Quickwhistle.
 
-**Organizational Structures:**
-- **Wayfaring Shires**: Bound by ancient dark pacts with road-spirits and entities
-- **Toll-Gate Brethren**: Mercenary culture with unshakeable contract adherence
-- **Decentralized Network**: Inventors with major Nexus hub
 
-### The Adamant Vault
+### The Adamant Vault (Dwarves)
 A fortress-city of scholar-warriors who preserve ancient knowledge and artifacts from the wars. They seek to understand and catalog the powers that shaped the world, believing knowledge is the key to preventing future catastrophes.
 
 **Sub-factions:**
-- **The Stone Keepers**: Warrior-archivists guarding forbidden pre-war knowledge
-- **The Truthseekers**: Radical researchers pursuing dangerous experiments with captured divine essence
-- **The Gatekeepers**: Ultra-conservative faction limiting access to prevent catastrophes
+- **The Stone-Anvil Syndicate**: The ruling council of clan lords who control the Iron Bank and thus the Vault's immense wealth. They are conservative, pragmatic, and focused entirely on profit and the sanctity of their contracts, believing the Vault's power lies in its economic dominance and political neutrality. The shrewdest and most powerful of them is High Lord Borin Stone-Anvil.
+- **The Lore-Keepers of the Great Vault**: A monastic and scholarly order of runesmiths and archivists dedicated to the preservation of historical truth and sworn oaths. They are less concerned with profit and more with the integrity of their records, acting as the incorruptible conscience and memory of the dwarven race. Their stern and uncompromising leader is Runesmith Helga Silver-Grasp.
+- **The Iron-Hand Movement**: A growing faction of military leaders and younger dwarves who believe the Vault's isolationism is a moral failure. They advocate for using their wealth and military strength to intervene in world affairs and protect the innocent from tyranny. The charismatic and idealistic Durgin "The Breaker" Iron-Hand is the popular leader of this movement.
 
-### The Shadow Syndicate
-Intelligence network masquerading as library (The Athenaeum), based in Nexus
+### The Wayfaring Shires (Halflings)
+Nomadic halfling caravans bound by ancient dark pacts with road-spirits and entities, traveling the dangerous roads between settlements.
+
+**Sub-factions:**
+- **The Sun-Painted Wheel**: The largest and most traditional of the halfling caravan-fleets. They are the primary keepers of the old ways, the secret roads, and the full knowledge of the dark pacts that keep the Shires safe. The wise and burdened matriarch Elder Rosie Meadowlight has guided this caravan for decades.
+- **The Golden Leaf Trading Company**: A more mercantile and outgoing caravan that specializes in trading luxury goods and information with settled communities. They are more willing to take risks and engage with outsiders, acting as the primary news and trade link between the various Shires. Its charming and well-traveled leader is the storyteller Finnan "Finn" Underbough.
+- **The Bramble-Guard**: The loose affiliation of all the Shire's scouts, hunters, and warriors, known as Outriders. They are a grim and pragmatic group tasked with protecting the caravans from physical threats, often operating on the fringes of halfling society. The most respected and cynical of their captains is the archer Bella "Bramble" Hardfoot.
+
+### The Toll-Gate Brethren (Ogres)
+Mercenary ogre clans with an unshakeable culture of contract adherence, controlling key mountain passes and crossroads.
+
+**Sub-factions:**
+- **The Maw-Tooth Company**: The largest and most reputable of the ogre mercenary bands, known for their unbreakable adherence to the letter of a contract. They are the faction that powerful entities like the Adamant Vault and Shadow Syndicate trust for sensitive security jobs. Their cunning and patient chieftain is Gath "The Warden" Maw-Tooth.
+- **The Skull-Smasher Host**: A rebellious and growing faction of young ogres who reject the mercenary life. They believe ogres should be conquerors, not guards, and advocate for forging their own kingdom through strength and violence. Their charismatic and ferocious war-leader is Urka "Skull-Smasher".
+- **The Stone-Speakers**: A small, mysterious sect of ogre shamans who tend to the ancient spirits of the ruins and passes the Brethren guard. They are the keepers of the ogres' oldest traditions and believe their duty is a sacred trust, not just a job for coin. Their cryptic and ancient leader is known only as Old Man Glub.
+
+### The Shadow Syndicate of Nexus
+Intelligence network masquerading as library (The Athenaeum), based in Nexus.
+
+**Sub-factions:**
+- **The Athenaeum**: The invisible center of the Syndicate, an intelligence network that masquerades as a simple library. This faction controls the flow of secrets in Nexus, using information as a weapon to maintain the city's neutrality and the Syndicate's power. Its leader is the mysterious, unseen figure known only as The Curator.
+- **The Smugglers' Guild**: The largest and most powerful criminal organization in Nexus, controlling the docks, the black markets, and the movement of all illicit goods. They are the muscle and the primary source of liquid wealth for the Syndicate. Their charismatic and ruthless leader is Vargo "The Grasp" Korbin.
+- **The Veiled Hand**: The Syndicate's network of spies, assassins, and counter-intelligence agents. They are the ones who enforce the Syndicate's will, eliminate threats, and protect its members from outside intelligence agencies. This secretive and ruthlessly efficient network is run by the paranoid spymaster known as The Silk-Hand.
 
 ---
 
