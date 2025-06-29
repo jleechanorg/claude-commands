@@ -37,3 +37,10 @@
   text-shadow: 0 0 5px currentColor;
   box-shadow: 0 0 10px rgba(255, 0, 128, 0.3);
 }
+
+[data-theme="cyberpunk"] .planning-block-header {
+  background-color: rgba(255, 0, 128, 0.2);
+  border-left-color: #ff0080;
+  color: #00ffff;
+  text-shadow: 0 0 5px #00ffff;
+}

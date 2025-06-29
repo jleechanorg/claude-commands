@@ -34,6 +34,9 @@ class GameState:
         self.world_resources = kwargs.get("world_resources", {})
         self.time_pressure_warnings = kwargs.get("time_pressure_warnings", {})
         
+        # Debug mode flag
+        self.debug_mode = kwargs.get("debug_mode", False)
+        
         migration_status_value = kwargs.get("migration_status", MigrationStatus.NOT_CHECKED.value)
         try:
             self.migration_status = MigrationStatus(migration_status_value)

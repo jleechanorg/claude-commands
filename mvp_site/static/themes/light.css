@@ -22,3 +22,9 @@
   --btn-success-bg: #198754;
   --btn-danger-bg: #dc3545;
 }
+
+[data-theme="light"] .planning-block-header {
+  background-color: rgba(13, 110, 253, 0.1);
+  border-left-color: #0d6efd;
+  color: #0d6efd;
+}

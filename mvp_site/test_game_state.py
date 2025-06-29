@@ -110,7 +110,8 @@ class TestGameState(unittest.TestCase):
             "time_sensitive_events": {},
             "npc_agendas": {},
             "world_resources": {},
-            "time_pressure_warnings": {}
+            "time_pressure_warnings": {},
+            "debug_mode": False  # Added debug_mode field (defaults to False)
         }
         
         self.assertEqual(result, expected)

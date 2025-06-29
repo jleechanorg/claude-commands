@@ -89,7 +89,12 @@ class TestAPIRoutes(unittest.TestCase):
             'title': 'Test Adventure',
             'player': {'name': 'Hero', 'level': 5}
         }
+        # Mock game state
+        from game_state import GameState
+        mock_game_state = GameState(debug_mode=False)
+        
         mock_firestore_service.get_campaign_by_id.return_value = (mock_campaign_data, [])
+        mock_firestore_service.get_campaign_game_state.return_value = mock_game_state
         
         response = self.client.get('/api/campaigns/test-campaign', headers=self.test_headers)
         
@@ -97,6 +102,8 @@ class TestAPIRoutes(unittest.TestCase):
         data = json.loads(response.data)
         self.assertEqual(data['campaign'], mock_campaign_data)
         self.assertIn('story', data)
+        self.assertIn('game_state', data)
+        self.assertFalse(data['game_state'].get('debug_mode', True))  # Should be False by default
         mock_firestore_service.get_campaign_by_id.assert_called_once_with(DEFAULT_TEST_USER, 'test-campaign')
     
     @patch('main.firestore_service')

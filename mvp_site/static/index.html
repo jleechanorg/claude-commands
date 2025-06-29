@@ -61,6 +61,8 @@
         </div>
     </nav>
 
+
+
     <div id="loading-overlay">
         <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
     </div>
@@ -120,7 +122,10 @@
         <div id="game-view">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2 id="game-title"></h2>
-                <button id="back-to-dashboard" class="btn btn-secondary">Back to Dashboard</button>
+                <div class="d-flex align-items-center gap-2">
+                    <div id="debug-indicator">🔍 Debug Mode Active</div>
+                    <button id="back-to-dashboard" class="btn btn-secondary">Back to Dashboard</button>
+                </div>
             </div>
             <div id="story-content" class="p-3 border rounded bg-light"></div>
             <div id="timer-info" class="mt-2 text-muted text-center small"></div>

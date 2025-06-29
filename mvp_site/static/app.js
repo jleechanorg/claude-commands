@@ -76,7 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    const appendToStory = (actor, text, mode = null) => {
+    const appendToStory = (actor, text, mode = null, debugMode = false) => {
         const storyContainer = document.getElementById('story-content');
         const entryEl = document.createElement('p');
         let label = '';
@@ -85,7 +85,27 @@ document.addEventListener('DOMContentLoaded', () => {
         } else { // actor is 'user'
             label = mode === 'character' ? 'Main Character' : (mode === 'god' ? 'God' : 'You');
         }
-        entryEl.innerHTML = `<strong>${label}:</strong> ${text}`;
+        
+        // Process debug content - backend now handles stripping based on debug_mode
+        // Frontend only needs to style debug content when present
+        let processedText = text;
+        if (actor === 'gemini') {
+            // Style STATE_UPDATES_PROPOSED blocks when present (only in debug mode)
+            processedText = text
+                .replace(/\[STATE_UPDATES_PROPOSED\]/g, '<div class="debug-content"><strong>🔧 STATE UPDATES PROPOSED:</strong><br><pre>')
+                .replace(/\[END_STATE_UPDATES_PROPOSED\]/g, '</pre></div>');
+            
+            // Then style other debug content that is present
+            processedText = processedText
+                .replace(/\[DEBUG_START\]/g, '<div class="debug-content"><strong>🔍 DM Notes:</strong> ')
+                .replace(/\[DEBUG_END\]/g, '</div>')
+                .replace(/\[DEBUG_STATE_START\]/g, '<div class="debug-content"><strong>⚙️ State Changes:</strong> ')
+                .replace(/\[DEBUG_STATE_END\]/g, '</div>')
+                .replace(/\[DEBUG_ROLL_START\]/g, '<div class="debug-rolls"><strong>🎲 Dice Roll:</strong> ')
+                .replace(/\[DEBUG_ROLL_END\]/g, '</div>');
+        }
+        
+        entryEl.innerHTML = `<strong>${label}:</strong> ${processedText}`;
         storyContainer.appendChild(entryEl);
     };
 
@@ -130,7 +150,18 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('game-title').innerText = data.campaign.title;
             const storyContainer = document.getElementById('story-content');
             storyContainer.innerHTML = '';
-            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode));
+            
+            // Check if we have game state with debug mode
+            const debugMode = data.game_state?.debug_mode || false;
+            
+            // Update debug indicator
+            const debugIndicator = document.getElementById('debug-indicator');
+            if (debugIndicator) {
+                debugIndicator.style.display = debugMode ? 'block' : 'none';
+            }
+            
+            // Render story with debug mode awareness
+            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode, debugMode));
             
             // Add a slight delay to allow rendering before scrolling
             console.log("Attempting to scroll after content append, with a slight delay."); // RESTORED console.log
@@ -201,8 +232,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { data, duration } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
                     method: 'POST', body: JSON.stringify({ input: userInput, mode }),
                 });
-                appendToStory('gemini', data.response);
+                appendToStory('gemini', data.response, null, data.debug_mode || false);
                 timerInfo.textContent = `Response time: ${duration}s`;
+                
+                // Update debug mode indicator if present
+                const debugIndicator = document.getElementById('debug-indicator');
+                if (debugIndicator) {
+                    debugIndicator.style.display = data.debug_mode ? 'block' : 'none';
+                }
             } catch (error) {
                 console.error("Interaction failed:", error);
                 appendToStory('system', 'Sorry, an error occurred. Please try again.');

@@ -32,3 +32,9 @@
   font-family: 'Serif', Georgia, serif;
   background-image: linear-gradient(45deg, transparent 25%, rgba(139, 69, 19, 0.1) 25%);
 }
+
+[data-theme="fantasy"] .planning-block-header {
+  background-color: rgba(139, 69, 19, 0.2);
+  border-left-color: #8b4513;
+  color: #daa520;
+}

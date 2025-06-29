@@ -415,6 +415,31 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # Add world instructions if campaign was created with default world enabled
     if use_default_world:
         _add_world_instructions_to_system(system_instruction_parts)
+    
+    # ALWAYS add debug mode instructions for AI context and state management
+    # The backend will strip debug content for users when debug_mode is False
+    debug_instruction = (
+        "\n**DEBUG MODE - ALWAYS GENERATE**\n"
+        "You must ALWAYS include the following debug information in your response for game state management:\n"
+        "\n"
+        "1. **DM COMMENTARY**: Wrap any behind-the-scenes DM thoughts, rule considerations, or meta-game commentary in [DEBUG_START] and [DEBUG_END] tags.\n"
+        "\n"
+        "2. **DICE ROLLS**: Show ALL dice rolls throughout your response:\n"
+        "   - **During Narrative**: Show important rolls (skill checks, saving throws, random events) using [DEBUG_ROLL_START] and [DEBUG_ROLL_END] tags\n"
+        "   - **During Combat**: Show ALL combat rolls including attack rolls, damage rolls, initiative, saving throws, and any other dice mechanics\n"
+        "   - Format: [DEBUG_ROLL_START]Rolling Perception check: 1d20+3 = 15+3 = 18 (Success)[DEBUG_ROLL_END]\n"
+        "   - Include both the dice result and the final total with modifiers\n"
+        "\n"
+        "3. **STATE CHANGES**: After your main narrative, include a section wrapped in [DEBUG_STATE_START] and [DEBUG_STATE_END] tags that explains what state changes you're proposing and why.\n"
+        "\n"
+        "**Examples:**\n"
+        "- [DEBUG_START]The player is attempting a stealth approach, so I need to roll for the guards' perception...[DEBUG_END]\n"
+        "- [DEBUG_ROLL_START]Guard Perception: 1d20+2 = 12+2 = 14 vs DC 15 (Failure - guards don't notice)[DEBUG_ROLL_END]\n"
+        "- [DEBUG_STATE_START]Updating player position to 'hidden behind crates' and setting guard alertness to 'unaware'[DEBUG_STATE_END]\n"
+        "\n"
+        "NOTE: This debug information helps maintain game state consistency and will be conditionally shown to players based on their debug mode setting.\n\n"
+    )
+    system_instruction_parts.append(debug_instruction)
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
 

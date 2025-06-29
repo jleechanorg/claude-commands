@@ -283,6 +283,12 @@ if isinstance(item, dict):
     *   **Naming Convention**: Use descriptive names that indicate the original file and purpose (e.g., `narrative_system_instruction.md.backup`, `temp_header.txt`)
     *   **Git Tracking**: Backup files in tmp/ directories may be committed for safety, but temporary working files should generally be excluded via .gitignore
 
+21. **Method Length Guidelines:**
+    *   **CRITICAL**: Keep methods under 500 lines of code for maintainability
+    *   **Extract Helper Methods**: When a method approaches this limit, extract logical sections into well-named helper methods
+    *   **Single Responsibility**: Each method should have a single, clear purpose
+    *   **Refactoring Priority**: When fixing bugs in long methods, prioritize extracting duplicate code into helper methods first
+
 ## III. Git & Repository Workflow
 
 1.  **Source of Truth for Code is Main/Master Branch:**

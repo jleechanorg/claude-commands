@@ -2,6 +2,7 @@
 import os
 import io
 import uuid
+import re
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
@@ -11,6 +12,7 @@ import traceback
 import document_generator
 import logging
 from game_state import GameState, MigrationStatus
+from debug_mode_parser import DebugModeParser
 import constants
 import json
 import collections
@@ -47,6 +49,116 @@ KEY_RESPONSE = 'response'
 DEFAULT_TEST_USER = 'test-user'
 
 # --- END CONSTANTS ---
+
+def strip_debug_content(text):
+    """
+    Strip debug content from AI response text while preserving the rest.
+    Removes content between debug tags: [DEBUG_START/END], [DEBUG_ROLL_START/END], [DEBUG_STATE_START/END]
+    Also removes [STATE_UPDATES_PROPOSED] blocks which are internal state management.
+    
+    Args:
+        text (str): The full AI response with debug content
+        
+    Returns:
+        str: The response with debug content removed
+    """
+    if not text:
+        return text
+        
+    # Use regex for proper pattern matching - same patterns as frontend
+    processed_text = re.sub(r'\[DEBUG_START\][\s\S]*?\[DEBUG_END\]', '', text)
+    processed_text = re.sub(r'\[DEBUG_STATE_START\][\s\S]*?\[DEBUG_STATE_END\]', '', processed_text)
+    processed_text = re.sub(r'\[DEBUG_ROLL_START\][\s\S]*?\[DEBUG_ROLL_END\]', '', processed_text)
+    # Also strip STATE_UPDATES_PROPOSED blocks which are internal state management
+    processed_text = re.sub(r'\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
+    # Handle malformed STATE_UPDATES_PROPOSED blocks (missing opening characters)
+    processed_text = re.sub(r'S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
+    
+    return processed_text
+
+
+def strip_state_updates_only(text):
+    """
+    Strip only STATE_UPDATES_PROPOSED blocks from text, preserving all other debug content.
+    This ensures that internal state management blocks are never shown to users, even in debug mode.
+    
+    Args:
+        text (str): The full AI response text
+        
+    Returns:
+        str: The response with STATE_UPDATES_PROPOSED blocks removed
+    """
+    if not text:
+        return text
+    
+    # Remove only STATE_UPDATES_PROPOSED blocks - these should never be shown to users
+    processed_text = re.sub(r'\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', text)
+    # Also handle malformed blocks where the opening characters might be missing
+    processed_text = re.sub(r'S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
+    return processed_text
+
+
+def strip_other_debug_content(text):
+    """
+    Strip all debug content EXCEPT STATE_UPDATES_PROPOSED blocks from text.
+    Used when debug mode is disabled to hide DM commentary and dice rolls.
+    
+    Args:
+        text (str): The full AI response text
+        
+    Returns:
+        str: The response with debug content (except state updates) removed
+    """
+    if not text:
+        return text
+    
+    # Strip debug content but NOT STATE_UPDATES_PROPOSED (already handled separately)
+    processed_text = re.sub(r'\[DEBUG_START\][\s\S]*?\[DEBUG_END\]', '', text)
+    processed_text = re.sub(r'\[DEBUG_STATE_START\][\s\S]*?\[DEBUG_STATE_END\]', '', processed_text)
+    processed_text = re.sub(r'\[DEBUG_ROLL_START\][\s\S]*?\[DEBUG_ROLL_END\]', '', processed_text)
+    
+    return processed_text
+
+
+def _handle_debug_mode_command(user_input, mode, current_game_state, user_id, campaign_id):
+    """
+    Handle debug mode command parsing and state updates.
+    
+    Args:
+        user_input: The user's input text
+        mode: Current interaction mode ('god' or 'character')
+        current_game_state: The current GameState object
+        user_id: The user's ID
+        campaign_id: The campaign's ID
+        
+    Returns:
+        Flask response if this is a debug command, None otherwise
+    """
+    debug_command, should_update = DebugModeParser.parse_debug_command(user_input, mode)
+    if not debug_command:
+        return None
+        
+    # Update state based on command
+    current_debug_state = getattr(current_game_state, 'debug_mode', False)
+    
+    if debug_command == 'enable':
+        new_debug_state = True
+    else:  # disable
+        new_debug_state = False
+    
+    # Only update if state actually changes
+    if current_debug_state != new_debug_state:
+        current_game_state.debug_mode = new_debug_state
+        firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state.to_dict())
+        logging.info(f"Debug mode {'enabled' if new_debug_state else 'disabled'} for campaign {campaign_id}")
+    
+    # Get appropriate message
+    message = DebugModeParser.get_state_update_message(debug_command, new_debug_state)
+    
+    # Log the user input for history
+    firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
+    
+    return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: message, 'debug_mode': new_debug_state})
 
 def truncate_game_state_for_logging(game_state_dict, max_lines=20):
     """
@@ -247,7 +359,12 @@ def create_app():
         try:
             campaign, story = firestore_service.get_campaign_by_id(user_id, campaign_id)
             if not campaign: return jsonify({KEY_ERROR: 'Campaign not found'}), 404
-            return jsonify({KEY_CAMPAIGN: campaign, KEY_STORY: story})
+            
+            # Include game state for debug mode status
+            game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
+            game_state_dict = game_state.to_dict() if game_state else {}
+            
+            return jsonify({KEY_CAMPAIGN: campaign, KEY_STORY: story, 'game_state': game_state_dict})
         except Exception as e:
             return jsonify({KEY_SUCCESS: False, KEY_ERROR: str(e), KEY_TRACEBACK: traceback.format_exc()}), 500
         # --- END RESTORED BLOCK ---
@@ -325,6 +442,11 @@ def create_app():
             logging.info(f"Legacy state cleanup complete. Removed {num_cleaned} entries.")
         # --- End cleanup ---
 
+        # --- Debug Mode Command Parsing (BEFORE other commands) ---
+        debug_response = _handle_debug_mode_command(user_input, mode, current_game_state, user_id, campaign_id)
+        if debug_response:
+            return debug_response
+        
         # --- Retroactive MBTI Assignment Logging ---
         game_state_dict = current_game_state.to_dict()
         pc_data = game_state_dict.get('player_character_data', {})
@@ -376,6 +498,11 @@ def create_app():
 
             return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: f"[System Message]<br>{log_message_for_chat}"})
 
+        # --- Debug Mode Command Parsing (BEFORE other commands) ---
+        debug_response = _handle_debug_mode_command(user_input, mode, current_game_state, user_id, campaign_id)
+        if debug_response:
+            return debug_response
+        
         if user_input_stripped == GOD_ASK_STATE_COMMAND:
             # The loaded current_game_state object is guaranteed to be valid here
             game_state_dict = current_game_state.to_dict()
@@ -467,6 +594,21 @@ def create_app():
         use_default_world = campaign.get('use_default_world', False)
         gemini_response = gemini_service.continue_story(user_input, mode, story_context, current_game_state, selected_prompts, use_default_world)
         
+        # 3a. Verify debug content generation for monitoring
+        debug_tags_found = {
+            'dm_notes': '[DEBUG_START]' in gemini_response,
+            'dice_rolls': '[DEBUG_ROLL_START]' in gemini_response,
+            'state_changes': '[DEBUG_STATE_START]' in gemini_response
+        }
+        
+        if not any(debug_tags_found.values()):
+            logging.warning(f"AI response missing debug content for campaign {campaign_id}")
+            logging.warning(f"Debug tags found: {debug_tags_found}")
+            logging.warning(f"Response length: {len(gemini_response)} chars")
+        else:
+            # Log which debug content types were included
+            logging.info(f"Debug content generated for campaign {campaign_id}: {debug_tags_found}")
+        
         # 4. Write: Add AI response to story log and update state
         firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response)
 
@@ -489,7 +631,16 @@ def create_app():
                     logging.warning(f"  {i}. {discrepancy}")
         
         # --- NEW: Append state changes to response for player ---
-        final_response = gemini_response
+        # Store the full response with debug content for database and AI context
+        full_response_with_debug = gemini_response
+        
+        # Conditionally strip debug content based on debug mode
+        if hasattr(current_game_state, 'debug_mode') and current_game_state.debug_mode:
+            # User has debug mode enabled - show ALL debug content including STATE_UPDATES_PROPOSED
+            final_response = full_response_with_debug
+        else:
+            # User has debug mode disabled - strip ALL debug content including STATE_UPDATES_PROPOSED
+            final_response = strip_debug_content(full_response_with_debug)
         
         if proposed_changes:
             # --- NEW: Track last story mode sequence ID ---
@@ -519,7 +670,12 @@ def create_app():
             
             firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state_dict)
             
-        return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: final_response})
+        # Include debug mode status in response
+        return jsonify({
+            KEY_SUCCESS: True, 
+            KEY_RESPONSE: final_response,
+            'debug_mode': current_game_state.debug_mode if hasattr(current_game_state, 'debug_mode') else False
+        })
 
 
     @app.route('/api/campaigns/<campaign_id>/export', methods=['GET'])
