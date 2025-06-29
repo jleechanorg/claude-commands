@@ -13,14 +13,48 @@ class ThemeManager {
   }
 
   init() {
+    // Force cleanup any problematic CSS
+    this.forceCleanupProblematicCSS();
+    
     this.loadModernCSS();
     this.loadSavedTheme();
     this.setupEventListeners();
     this.updateThemeIcon();
   }
 
+  forceCleanupProblematicCSS() {
+    // Remove any existing problematic CSS files
+    const problematicFiles = [
+      'globals.css',
+      'components.css', 
+      'bridge.css',
+      'enhanced-components.css'
+    ];
+    
+    problematicFiles.forEach(fileName => {
+      const existing = document.querySelector(`link[href*="${fileName}"]`);
+      if (existing) {
+        existing.remove();
+        console.log(`Removed problematic CSS: ${fileName}`);
+      }
+    });
+    
+    // Remove modern-themes class if it exists
+    document.body.classList.remove('modern-themes');
+    
+    // Clean up any enhanced classes that might be causing conflicts
+    const elementsWithEnhanced = document.querySelectorAll('[class*="-enhanced"]');
+    elementsWithEnhanced.forEach(element => {
+      element.className = element.className.replace(/\b\w+-enhanced\b/g, '').trim();
+    });
+  }
+
   loadModernCSS() {
     if (this.modernThemesEnabled) {
+      // TEMPORARILY DISABLED - CSS conflicts causing layout issues
+      console.log('🎨 Modern theme system temporarily disabled due to layout conflicts');
+      return;
+      
       // Load modern CSS files
       const cssFiles = [
         '/static/styles/globals.css',
@@ -151,6 +185,44 @@ class ThemeManager {
     
     // Reload the page to apply changes
     window.location.reload();
+  }
+
+  // Enhanced Components Integration
+  isEnhancedComponentsEnabled() {
+    return localStorage.getItem('feature_enhanced_components') === 'true';
+  }
+
+  toggleEnhancedComponents() {
+    const isEnabled = this.isEnhancedComponentsEnabled();
+    localStorage.setItem('feature_enhanced_components', !isEnabled ? 'true' : 'false');
+    
+    // Use component enhancer if available, otherwise reload
+    if (window.componentEnhancer) {
+      window.componentEnhancer.toggle();
+    } else {
+      window.location.reload();
+    }
+    
+    console.log(`Enhanced components ${!isEnabled ? 'enabled' : 'disabled'}`);
+    return !isEnabled;
+  }
+
+  enableEnhancedComponents() {
+    localStorage.setItem('feature_enhanced_components', 'true');
+    if (window.componentEnhancer) {
+      window.componentEnhancer.enable();
+    } else {
+      window.location.reload();
+    }
+  }
+
+  disableEnhancedComponents() {
+    localStorage.setItem('feature_enhanced_components', 'false');
+    if (window.componentEnhancer) {
+      window.componentEnhancer.disable();
+    } else {
+      window.location.reload();
+    }
   }
 }
 
