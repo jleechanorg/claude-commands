@@ -1,0 +1,45 @@
+/* CSS Variable Bridge - Maps old variables to new design system */
+/* This ensures backward compatibility during the transition */
+
+:root {
+  /* Map old variables to new ones */
+  --primary-bg: var(--background);
+  --secondary-bg: var(--card);
+  --navbar-bg: var(--background);
+  --story-bg: var(--card);
+  --input-bg: var(--input);
+  --hover-bg: var(--secondary);
+  --overlay-bg: rgba(0, 0, 0, 0.8);
+  
+  --text-primary: var(--foreground);
+  --text-secondary: var(--muted-foreground);
+  --text-on-accent: var(--accent-foreground);
+  
+  --accent-color: var(--primary);
+  --accent-color-alpha: rgba(3, 2, 19, 0.25);
+  
+  --border-color: var(--border);
+  
+  --btn-primary-bg: var(--primary);
+  --btn-secondary-bg: var(--secondary);
+  --btn-success-bg: var(--success);
+  --btn-danger-bg: var(--destructive);
+}
+
+/* Dark theme overrides */
+[data-theme="dark"] {
+  --overlay-bg: rgba(0, 0, 0, 0.8);
+  --accent-color-alpha: rgba(250, 250, 250, 0.25);
+}
+
+/* Fantasy theme adjustments */
+[data-theme="fantasy"] {
+  --story-bg: #ffffff;
+  --accent-color: var(--accent);
+}
+
+/* Cyberpunk theme adjustments */
+[data-theme="cyberpunk"] {
+  --accent-color: var(--accent);
+  --accent-color-alpha: rgba(0, 217, 255, 0.25);
+} 

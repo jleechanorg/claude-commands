@@ -8,13 +8,38 @@ class ThemeManager {
     };
     
     this.currentTheme = 'light';
+    this.modernThemesEnabled = localStorage.getItem('feature_new_themes') === 'true';
     this.init();
   }
 
   init() {
+    this.loadModernCSS();
     this.loadSavedTheme();
     this.setupEventListeners();
     this.updateThemeIcon();
+  }
+
+  loadModernCSS() {
+    if (this.modernThemesEnabled) {
+      // Load modern CSS files
+      const cssFiles = [
+        '/static/styles/globals.css',
+        '/static/styles/components.css',
+        '/static/styles/bridge.css'
+      ];
+
+      cssFiles.forEach(file => {
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = file;
+        document.head.appendChild(link);
+      });
+
+      // Add a class to body to indicate modern themes are active
+      document.body.classList.add('modern-themes');
+      
+      console.log('🎨 Modern theme system activated');
+    }
   }
 
   setTheme(themeName) {
@@ -114,6 +139,18 @@ class ThemeManager {
 
   getAllThemes() {
     return this.themes;
+  }
+
+  isModernThemesEnabled() {
+    return this.modernThemesEnabled;
+  }
+
+  toggleModernThemes() {
+    this.modernThemesEnabled = !this.modernThemesEnabled;
+    localStorage.setItem('feature_new_themes', this.modernThemesEnabled ? 'true' : 'false');
+    
+    // Reload the page to apply changes
+    window.location.reload();
   }
 }
 

@@ -1,0 +1,421 @@
+/* Modern Component Styles with Bootstrap Compatibility */
+/* This file bridges the new design system with existing Bootstrap components */
+
+/* Base Typography Reset with new system */
+body {
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--foreground);
+  background-color: var(--background);
+}
+
+/* Modern Card Component (Bootstrap-compatible) */
+.card {
+  background: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  transition: all var(--transition-base) var(--ease-in-out);
+  overflow: hidden;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Glass morphism variant */
+.card.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: var(--backdrop-blur) var(--backdrop-saturate);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] .card.glass {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-header {
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+
+.card-body {
+  padding: var(--space-6);
+}
+
+.card-footer {
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--border);
+  background: var(--secondary);
+}
+
+/* Modern Button Styles (Bootstrap override) */
+.btn {
+  font-weight: var(--font-medium);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-4);
+  transition: all var(--transition-fast) var(--ease-in-out);
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+.btn:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Primary Button */
+.btn-primary {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.btn-primary:hover {
+  background-color: var(--primary);
+  opacity: 0.9;
+}
+
+/* Secondary Button */
+.btn-secondary {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.btn-secondary:hover {
+  background-color: var(--secondary);
+  opacity: 0.9;
+}
+
+/* Success Button */
+.btn-success {
+  background-color: var(--success);
+  color: var(--success-foreground);
+}
+
+/* Danger Button */
+.btn-danger {
+  background-color: var(--destructive);
+  color: var(--destructive-foreground);
+}
+
+/* Outline Buttons */
+.btn-outline-primary {
+  background-color: transparent;
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  box-shadow: none;
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.btn-outline-secondary {
+  background-color: transparent;
+  color: var(--secondary-foreground);
+  border: 2px solid var(--border);
+  box-shadow: none;
+}
+
+.btn-outline-secondary:hover {
+  background-color: var(--secondary);
+  border-color: var(--secondary);
+}
+
+/* Button Sizes */
+.btn-sm {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.btn-lg {
+  padding: var(--space-3) var(--space-6);
+  font-size: var(--text-lg);
+}
+
+/* Modern Form Controls (Bootstrap override) */
+.form-control {
+  background-color: var(--input);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  transition: all var(--transition-fast) var(--ease-in-out);
+}
+
+.form-control:focus {
+  background-color: var(--background);
+  border-color: var(--ring);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(3, 2, 19, 0.1);
+}
+
+[data-theme="dark"] .form-control:focus {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.form-label {
+  font-weight: var(--font-medium);
+  color: var(--foreground);
+  margin-bottom: var(--space-2);
+}
+
+.form-text {
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+  margin-top: var(--space-1);
+}
+
+/* Modern Select */
+.form-select {
+  background-color: var(--input);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  border-radius: var(--radius);
+  padding: var(--space-2) var(--space-3);
+  transition: all var(--transition-fast) var(--ease-in-out);
+}
+
+/* Modern List Group (Bootstrap override) */
+.list-group {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.list-group-item {
+  background-color: var(--card);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--card-foreground);
+  padding: var(--space-4);
+  transition: all var(--transition-fast) var(--ease-in-out);
+}
+
+.list-group-item:last-child {
+  border-bottom: none;
+}
+
+.list-group-item:hover {
+  background-color: var(--secondary);
+}
+
+.list-group-item.active {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* Modern Modal (Bootstrap override) */
+.modal-content {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-6);
+}
+
+.modal-body {
+  padding: var(--space-6);
+}
+
+.modal-footer {
+  border-top: 1px solid var(--border);
+  padding: var(--space-4) var(--space-6);
+  background-color: var(--secondary);
+}
+
+.modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+/* Modern Navbar (Bootstrap override) */
+.navbar {
+  background-color: var(--background) !important;
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-3) 0;
+}
+
+.navbar.glass {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: var(--backdrop-blur) var(--backdrop-saturate);
+}
+
+[data-theme="dark"] .navbar.glass {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+.navbar-brand {
+  color: var(--foreground) !important;
+  font-weight: var(--font-bold);
+  font-size: var(--text-xl);
+}
+
+.navbar-nav .nav-link {
+  color: var(--muted-foreground) !important;
+  padding: var(--space-2) var(--space-4) !important;
+  border-radius: var(--radius);
+  transition: all var(--transition-fast) var(--ease-in-out);
+}
+
+.navbar-nav .nav-link:hover {
+  color: var(--foreground) !important;
+  background-color: var(--secondary);
+}
+
+/* Modern Dropdown (Bootstrap override) */
+.dropdown-menu {
+  background-color: var(--popover);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.dropdown-item {
+  color: var(--popover-foreground);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast) var(--ease-in-out);
+}
+
+.dropdown-item:hover {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.dropdown-item.active {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* Modern Badge */
+.badge {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+}
+
+.badge.bg-primary {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground);
+}
+
+.badge.bg-secondary {
+  background-color: var(--secondary) !important;
+  color: var(--secondary-foreground);
+}
+
+.badge.bg-success {
+  background-color: var(--success) !important;
+  color: var(--success-foreground);
+}
+
+.badge.bg-danger {
+  background-color: var(--destructive) !important;
+  color: var(--destructive-foreground);
+}
+
+/* Modern Alert */
+.alert {
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  box-shadow: var(--shadow);
+}
+
+.alert-primary {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.alert-success {
+  background-color: var(--success);
+  color: var(--success-foreground);
+}
+
+.alert-danger {
+  background-color: var(--destructive);
+  color: var(--destructive-foreground);
+}
+
+/* Modern Progress */
+.progress {
+  height: var(--space-2);
+  background-color: var(--secondary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar {
+  background-color: var(--primary);
+  transition: width var(--transition-base) var(--ease-in-out);
+}
+
+/* Spinner */
+.spinner-border {
+  border-color: var(--muted);
+  border-right-color: var(--primary);
+}
+
+/* Utility: Text Colors */
+.text-primary { color: var(--primary) !important; }
+.text-secondary { color: var(--secondary-foreground) !important; }
+.text-muted { color: var(--muted-foreground) !important; }
+.text-success { color: var(--success) !important; }
+.text-danger { color: var(--destructive) !important; }
+
+/* Utility: Background Colors */
+.bg-primary { background-color: var(--primary) !important; }
+.bg-secondary { background-color: var(--secondary) !important; }
+.bg-light { background-color: var(--card) !important; }
+.bg-dark { background-color: var(--popover) !important; }
+
+/* Special Effects for Cyberpunk Theme */
+[data-theme="cyberpunk"] .btn-primary {
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+}
+
+[data-theme="cyberpunk"] .btn-primary:hover {
+  box-shadow: 0 0 30px rgba(0, 217, 255, 0.7);
+}
+
+[data-theme="cyberpunk"] .card {
+  border: 1px solid var(--primary);
+  box-shadow: 0 0 20px rgba(0, 217, 255, 0.2);
+}
+
+/* Special Effects for Fantasy Theme */
+[data-theme="fantasy"] .card {
+  background: linear-gradient(135deg, var(--card) 0%, rgba(237, 224, 212, 0.3) 100%);
+}
+
+[data-theme="fantasy"] .btn-primary {
+  background: linear-gradient(135deg, var(--primary) 0%, #6d4c41 100%);
+} 
