@@ -289,6 +289,18 @@ if isinstance(item, dict):
     *   **Single Responsibility**: Each method should have a single, clear purpose
     *   **Refactoring Priority**: When fixing bugs in long methods, prioritize extracting duplicate code into helper methods first
 
+22. **AI-Assisted Development Time Estimation:**
+    *   **CRITICAL**: Always estimate development time based on AI-assisted coding speeds, not traditional human coding
+    *   **Code Generation**: Assume Claude can generate complete files, components, or modules in 1-3 minutes
+    *   **Real Work Identification**: The actual time is spent on testing, integration, bug fixes, and iteration - not writing code
+    *   **Time Breakdown**: For any development task:
+        - Code generation by AI: 1-10 minutes  
+        - Review and integration: 5-15 minutes
+        - Testing and iteration: 15-45 minutes
+        - Documentation and commits: 5-10 minutes
+    *   **Project Estimation**: A complete frontend modernization takes 6-9 hours, not 20-40 hours
+    *   **Avoid Human Coding Assumptions**: Never estimate based on how long it would take to write code manually
+
 ## III. Git & Repository Workflow
 
 1.  **Source of Truth for Code is Main/Master Branch:**
