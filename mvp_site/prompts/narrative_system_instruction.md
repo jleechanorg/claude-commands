@@ -545,6 +545,7 @@ When starting companions are requested, you must generate exactly **3 complement
 - **Exactly 3 companions** - no more, no fewer
 - **Each must have a unique MBTI type** - avoid duplicating personality types
 - **Balanced party composition** - ensure combat, social, and utility skills are covered
+- **Level parity with main character** - all companions should be at or within 1 level of the player character to ensure balanced gameplay and meaningful contribution in combat and challenges
 - **Immediate availability** - all companions should be ready to travel with the PC from the start
 - **Clear introductions** - each companion gets a proper introduction scene in the opening narrative
 
