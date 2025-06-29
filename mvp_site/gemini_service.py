@@ -330,6 +330,10 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
     
+    # Add clear indication when using default world setting
+    if use_default_world:
+        prompt = f"Use default setting Assiah. {prompt}"
+    
     contents = [types.Content(role="user", parts=[types.Part(text=prompt)])]
     
     # --- DYNAMIC MODEL SELECTION ---

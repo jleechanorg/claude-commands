@@ -195,6 +195,34 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         actual_system_instruction = mock_get_client.return_value.models.generate_content.call_args.kwargs['config'].system_instruction.text
         self.assertEqual(actual_system_instruction, expected_system_instruction)
 
+    @patch('gemini_service.get_client')
+    @patch('gemini_service._load_instruction_file')
+    @patch('gemini_service._add_world_instructions_to_system')
+    def test_use_default_world_adds_prefix_to_prompt(self, mock_add_world, mock_load_instruction_file, mock_get_client):
+        """Tests that when use_default_world=True, 'Use default setting Assiah.' is prepended to the prompt."""
+        # --- Arrange ---
+        mock_content_map = { "narrative": "Narrative", "destiny_ruleset": "Destiny", "game_state": "GameState" }
+        mock_load_instruction_file.side_effect = lambda type: mock_content_map.get(type, "")
+        mock_client = MagicMock()
+        mock_client.models.generate_content.return_value.text = "Success"
+        mock_get_client.return_value = mock_client
+        
+        original_prompt = "Create a character who is a brave knight"
+        expected_modified_prompt = "Use default setting Assiah. Create a character who is a brave knight"
+
+        # --- Act ---
+        gemini_service.get_initial_story(original_prompt, selected_prompts=['narrative'], use_default_world=True)
+
+        # --- Assert ---
+        # Check that the world instructions were added
+        mock_add_world.assert_called_once()
+        
+        # Check that the prompt was modified
+        actual_call_args = mock_get_client.return_value.models.generate_content.call_args
+        actual_contents = actual_call_args.args[0]
+        actual_prompt_text = actual_contents[0].parts[0].text
+        self.assertEqual(actual_prompt_text, expected_modified_prompt)
+
 class TestStaticPromptParts(unittest.TestCase):
     def test_core_memories_formatting_with_memories(self):
         """
