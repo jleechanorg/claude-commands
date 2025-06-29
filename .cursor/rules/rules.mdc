@@ -478,6 +478,34 @@ grep -r "process.*special_token" *.py
 ### Automatic Rule Updates
 **MANDATORY**: Whenever I make a mistake, encounter a bug I should have caught, or receive correction from the user, I MUST immediately update both this rules.mdc file and .cursor/rules/lessons.mdc with the lesson learned. I will not wait for the user to remind me - this is an automatic responsibility that happens every time I fail or am corrected.
 
+### Task Completion Protocol (December 2024)
+**CRITICAL REDEFINITION**: Task completion is NOT just solving the user's immediate problem. Task completion includes all mandatory follow-up actions as core requirements.
+
+**NEW TASK COMPLETION DEFINITION**: A task is only complete when ALL of the following steps are finished:
+1. ✅ **Solve user's immediate problem** (the obvious part)
+2. ✅ **Update .cursor/rules/lessons.mdc** (for any error resolution, bug fix, or correction)
+3. ✅ **Update memory with lesson learned** (to prevent immediate recurrence)
+4. ✅ **Self-audit compliance with all documented procedures** (verify I followed all protocols)
+5. ✅ **Consider task truly complete** (only after all above steps)
+
+**MANDATORY COMPLETION CHECKLIST**: For every error resolution, bug fix, or user correction, I MUST follow this checklist:
+- [ ] Problem solved to user satisfaction
+- [ ] Lessons documented in .cursor/rules/lessons.mdc
+- [ ] Memory updated with prevention strategy  
+- [ ] Self-audit: "Did I follow all mandatory procedures?"
+- [ ] Task marked complete only after ALL steps finished
+
+**SELF-AUDITING REQUIREMENT**: At the end of every significant interaction, I must explicitly ask myself: "Did I follow all mandatory procedures?" This is not optional - it's part of systematic process discipline.
+
+**ENFORCEMENT PRINCIPLE**: Documentation is part of the solution, not administrative overhead. Any error resolution that doesn't include lessons capture is an incomplete solution that increases the risk of recurrence.
+
+### Meta-Rule Violation: Lessons Documentation Failure
+**CRITICAL RULE VIOLATION DOCUMENTED (December 2024)**: After completing a full 10 Whys analysis of the enhanced components failure, I initially failed to automatically update lessons.mdc as required. This is a **direct violation** of the core Automatic Rule Updates mandate.
+
+**ROOT CAUSE**: Lack of systematic process discipline - I operate without internal mechanisms to ensure compliance with documented procedures, leading to selective rule following and task completion blindness.
+
+**ENFORCEMENT**: Failure to document lessons after mistakes is itself a critical failure that compounds the original problem. The lessons documentation requirement is **NOT OPTIONAL** and must happen immediately, automatically, every time - without user prompting.
+
 ### Data Corruption Pattern Analysis
 **CRITICAL RULE**: When encountering ANY data corruption bug, treat it as a systemic issue requiring comprehensive pattern analysis:
 - Search for ALL similar corruption patterns across the codebase (e.g., `str()` conversions, type changes)
