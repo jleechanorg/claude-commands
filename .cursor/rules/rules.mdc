@@ -334,6 +334,24 @@ if isinstance(item, dict):
     *   **Alternative methods**: If GitHub CLI is unavailable, use `git fetch origin pull/<PR_NUMBER>/head:<branch_name>` followed by `git checkout <branch_name>`
     *   This provides a more convenient and reliable workflow for PR testing and reduces the risk of manual errors in branch management.
 
+12. **Branch Safety and Push Verification Protocol:**
+    *   **CRITICAL**: Never accidentally push to main/master branch. Always verify branch and tracking before any push operation.
+    *   **Pre-Push Checklist** (MANDATORY before every push):
+        1. Check current branch: `git branch --show-current`
+        2. Verify branch tracking: `git branch -vv`
+        3. Confirm push target: Use explicit syntax `git push origin HEAD:branch-name`
+        4. Test with dry-run first: `git push --dry-run`
+    *   **Safe Branch Creation Pattern**: Always use this sequence to avoid tracking issues:
+        ```bash
+        git checkout main
+        git pull origin main
+        git checkout -b feature-branch-name
+        # This creates an untracked branch, forcing explicit remote setup
+        ```
+    *   **NEVER use**: `git checkout origin/main -b branch-name` as it sets tracking to main
+    *   **Push Safety**: Always use explicit push syntax: `git push origin HEAD:branch-name` instead of relying on `-u` or default tracking
+    *   **Recovery Protocol**: If accidental main push is detected, immediately notify user and provide recovery options
+
 ## IV. Environment, Tooling & Scripts
 
 1.  **Python Virtual Environment Management:**
