@@ -1,0 +1,3 @@
+2025-06-29 20:23:45,071 - TestHarness - INFO - Running test: test_campaign/multi_character/validation_only
+2025-06-29 20:23:45,072 - TestHarness - INFO - Running test: test_campaign/multi_character/pydantic_only
+2025-06-29 20:23:45,072 - TestHarness - INFO - Running test: test_campaign/multi_character/combined

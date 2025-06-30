@@ -1,0 +1,67 @@
+{
+  "test_type": "combined",
+  "timestamp": "2025-06-29T20:28:42.195795",
+  "summary": {
+    "total_tests": 25,
+    "average_success_rate": 0.0,
+    "average_time_ms": 0.14023780822753906,
+    "total_desyncs": 0,
+    "improvements": {
+      "baseline": -100.0,
+      "pydantic": -100.0
+    }
+  },
+  "by_campaign": {
+    "sariel_v2_001": {
+      "success_rate": 0.0,
+      "desync_count": 0,
+      "average_time": 0.47626495361328125
+    },
+    "thornwood_001": {
+      "success_rate": 0.0,
+      "desync_count": 0,
+      "average_time": 0.05841255187988281
+    },
+    "darkmoor_001": {
+      "success_rate": 0.0,
+      "desync_count": 0,
+      "average_time": 0.05626678466796875
+    },
+    "brass_compass_001": {
+      "success_rate": 0.0,
+      "desync_count": 0,
+      "average_time": 0.05588531494140625
+    },
+    "frostholm_001": {
+      "success_rate": 0.0,
+      "desync_count": 0,
+      "average_time": 0.05435943603515625
+    }
+  },
+  "by_scenario": {
+    "multi_character": {
+      "success_rate": 0.0,
+      "desync_count": 0
+    },
+    "split_party": {
+      "success_rate": 0.0,
+      "desync_count": 0
+    },
+    "combat_injured": {
+      "success_rate": 0.0,
+      "desync_count": 0
+    },
+    "hidden_characters": {
+      "success_rate": 0.0,
+      "desync_count": 0
+    },
+    "npc_heavy": {
+      "success_rate": 0.0,
+      "desync_count": 0
+    }
+  },
+  "synergy_metrics": {
+    "validation_overhead_ms": 0.10578155517578125,
+    "beats_both_approaches": false
+  }
+}

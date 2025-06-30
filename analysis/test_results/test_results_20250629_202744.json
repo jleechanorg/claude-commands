@@ -1,0 +1,42 @@
+{
+  "config": {
+    "campaigns": [
+      "sariel_v2_001",
+      "thornwood_001",
+      "darkmoor_001",
+      "brass_compass_001",
+      "frostholm_001"
+    ],
+    "scenarios": [
+      "multi_character",
+      "split_party",
+      "combat_injured",
+      "hidden_characters",
+      "npc_heavy"
+    ],
+    "approaches": [
+      "pydantic_only"
+    ],
+    "api_config": {
+      "model": "gemini-1.5-flash",
+      "temperature": 0.7,
+      "max_tokens": 500,
+      "timeout_seconds": 30
+    },
+    "output_dir": "analysis/test_results",
+    "save_narratives": true
+  },
+  "metrics": {
+    "total_tests": 25,
+    "tests_by_approach": {
+      "validation_only": 0,
+      "pydantic_only": 25,
+      "combined": 0
+    },
+    "total_time_ms": 0.942230224609375,
+    "total_tokens": 2801.5000000000005,
+    "total_cost": 0.05000000000000003
+  },
+  "results": [
+    {
+      "approach": 

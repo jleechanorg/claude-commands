@@ -15,6 +15,28 @@ alwaysApply: true
 
 **MILESTONE PLANNING STRUCTURE: For large projects requiring systematic breakdown, follow the planning structure documented in `coding_prompts/milestone_planning_structure.md`. This ensures proper tracking with Milestones (1-2 weeks), Steps (0.5-2 days), and Sub-bullets (atomic tasks). See examples from Milestones 0.3 and 0.4.**
 
+**PLAN REVIEW PROTOCOL: After creating any plan (milestone, implementation, or design document), ALWAYS follow this two-stage review process:**
+
+1. **Supervisor Double-Check** (with shared context):
+   - Verify completeness against original requirements
+   - Ensure alignment with project goals
+   - Check timeline and dependency logic
+   - Confirm all discussed points are included
+
+2. **Fresh Reviewer Final Check** (without shared context):
+   - Review as if seeing for the first time
+   - Identify missing setup/configuration steps
+   - Question assumptions and implementation choices
+   - Find potential bugs or edge cases
+   - Check security and error handling
+
+3. **Explicit Value Report**: After both reviews, explicitly state:
+   - What Supervisor caught/validated
+   - What additional issues Reviewer found
+   - Whether Reviewer added significant value beyond Supervisor
+
+This ensures plans are both complete (Supervisor) and implementable (Reviewer).
+
 This document outlines the operating protocol for our collaboration. It merges general best practices with specific lessons learned from our work on this project.
 
 ## Project Overview
@@ -136,6 +158,14 @@ if isinstance(item, dict):
 - Always use temporary directories for test file operations
 - Case-insensitive field detection for AI-generated data
 - Flexible assertions for AI content validation
+
+#### Test File Organization
+- **All test files must be placed in the `prototype/tests/` directory**
+- For milestone-specific tests, create subdirectories: `prototype/tests/milestone_X.Y/`
+- Test runners and harnesses belong in `prototype/tests/`
+- Unit tests for specific modules go in `prototype/tests/test_<module>.py`
+- Integration tests go in `prototype/tests/test_integration.py` or similar
+- Never place test files in the root directory
 
 ### Key Constraints
 

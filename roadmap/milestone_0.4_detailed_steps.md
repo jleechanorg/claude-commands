@@ -3,6 +3,18 @@
 ## Overview
 Test three approaches to preventing narrative desynchronization using real campaign data with documented desync issues.
 
+## Key Decision: Entity ID Format
+Using **Sequence IDs** format: `{type}_{name}_{sequence}` (e.g., `pc_sariel_001`, `npc_guard_002`)
+- Rationale: Human-readable, debuggable, sufficient for campaign-scoped uniqueness
+- See `/roadmap/entity_id_comparison.md` for detailed analysis
+
+## Execution Strategy (Updated)
+To prevent timeouts and ensure progress:
+1. **Small focused tasks**: Each sub-bullet completed individually
+2. **Save after each step**: Update `/tmp/` files frequently
+3. **Summaries over full code**: Create outlines first, implement details separately
+4. **Explicit continues**: Stop after major sections for confirmation
+
 ## Detailed Steps with Sub-bullets
 
 ### 1. **Campaign Selection and Historical Analysis** ✅ 
@@ -101,6 +113,47 @@ Test three approaches to preventing narrative desynchronization using real campa
     - ✅ Create recommendation with rationale
     - ✅ Include implementation guide for chosen approach
 
+## Phase 2: Real LLM Validation (Milestone 0.4.1)
+
+### 13. **Environment Setup for Real API** ⬜
+    - ⬜ Create `config.py` for API configuration
+    - ⬜ Set up Google API credentials
+    - ⬜ Configure test models and safety settings
+    - ⬜ Document cost expectations
+    - ⬜ Create setup instructions
+
+### 14. **Build Gemini Service Wrapper** ⬜
+    - ⬜ Create `gemini_client.py` with google.genai SDK
+    - ⬜ Implement authentication and retry logic
+    - ⬜ Add response parsing for structured formats
+    - ⬜ Implement cost tracking and budget limits
+    - ⬜ Add comprehensive error handling
+    - ⬜ Create logging for all API interactions
+
+### 15. **Integrate with Test Framework** ⬜
+    - ⬜ Add `use_real_api` flag to TestHarness
+    - ⬜ Create `_generate_real_narrative()` methods
+    - ⬜ Integrate prompt templates with API calls
+    - ⬜ Keep mock fallback for failures
+    - ⬜ Add timeout and rate limiting
+    - ⬜ Test with single API call first
+
+### 16. **Run Limited Real Tests** ⬜
+    - ⬜ Select subset: 2 campaigns × 3 scenarios
+    - ⬜ Run baseline approach with real API
+    - ⬜ Run Pydantic approach with real API
+    - ⬜ Run combined approach with real API
+    - ⬜ Monitor costs in real-time
+    - ⬜ Total budget limit: $1.00
+
+### 17. **Analyze Real vs Mock Results** ⬜
+    - ⬜ Compare success rates between real and mock
+    - ⬜ Document unexpected LLM behaviors
+    - ⬜ Validate mock accuracy assumptions
+    - ⬜ Calculate actual token usage
+    - ⬜ Analyze response time differences
+    - ⬜ Create `real_llm_validation.md` report
+
 ## Sample Campaign Selection Report
 
 ```markdown
@@ -170,9 +223,18 @@ Error: Merged split party
 
 ## Progress Tracking
 
+### Phase 1 (Completed)
 Total Steps: 12
 Total Sub-bullets: 72 (6 per step)
-Estimated Timeline: 2 weeks
+Timeline: Completed in ~1.5 hours
 
-Week 1: Steps 1-6 (Campaign analysis, infrastructure, framework)
-Week 2: Steps 7-12 (Testing, analysis, recommendation)
+### Phase 2 (Planned)
+Total Steps: 5 (Steps 13-17)
+Total Sub-bullets: 30 (6 per step)
+Estimated Timeline: 3.5 days
+
+Phase 2 Breakdown:
+- Day 1: Environment setup and Gemini wrapper (Steps 13-14)
+- Day 2: Test framework integration (Step 15)
+- Day 3: Run tests and analyze (Steps 16-17)
+- Half day: Final documentation and cleanup

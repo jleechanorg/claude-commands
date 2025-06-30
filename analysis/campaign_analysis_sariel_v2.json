@@ -1,0 +1,59 @@
+{
+  "campaign_id": "sariel_v2_001",
+  "campaign_name": "Sariel v2: The Awakening",
+  "analysis_timestamp": "2025-06-29T19:32:37.849532",
+  "summary": {
+    "total_sessions": 1,
+    "total_turns": 2,
+    "desync_turns": 2,
+    "desync_rate": 1.0,
+    "unique_entities": 4,
+    "processing_time_seconds": 0.0007712841033935547
+  },
+  "pattern_breakdown": {
+    "presence_ambiguity": 1,
+    "combat_entity_missing": 1
+  },
+  "desync_patterns": [
+    {
+      "session": 1,
+      "turn": 1,
+      "pattern_type": "presence_ambiguity",
+      "expected_entities": [
+        "Sariel",
+        "Cassian",
+        "Valerius"
+      ],
+      "found_entities": [],
+      "missing_entities": [
+        "Cassian"
+      ],
+      "narrative_excerpt": "Sariel stood before the throne as Valerius approached.",
+      "timestamp": "2025-06-29T19:32:37.849395"
+    },
+    {
+      "session": 1,
+      "turn": 2,
+      "pattern_type": "combat_entity_missing",
+      "expected_entities": [
+        "Sariel",
+        "Cassian",
+        "Valerius",
+        "Guard"
+      ],
+      "found_entities": [],
+      "missing_entities": [
+        "Cassian",
+        "Valerius"
+      ],
+      "narrative_excerpt": "The guard attacked! Sariel dodged while engaging in combat.",
+      "timestamp": "2025-06-29T19:32:37.849530"
+    }
+  ],
+  "entity_list": [
+    "Cassian",
+    "Guard",
+    "Sariel",
+    "Valerius"
+  ]
+}

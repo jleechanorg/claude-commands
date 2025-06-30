@@ -1,0 +1,59 @@
+{
+  "approach": "validation_only",
+  "timestamp": "2025-06-29T19:14:26.607228",
+  "summary": {
+    "total_tests": 1,
+    "tests_with_desync": 1,
+    "overall_desync_rate": 1.0,
+    "total_entities_expected": 4,
+    "total_entities_missing": 2,
+    "entity_detection_rate": 0.5,
+    "avg_validation_time_ms": 0.0054836273193359375
+  },
+  "by_campaign": {
+    "sariel_v2_real": {
+      "total_scenarios": 1,
+      "scenarios_with_desync": 1,
+      "total_entities": 4,
+      "total_missing": 2,
+      "scenarios": [
+        "Seeking Comfort from Cressida"
+      ]
+    }
+  },
+  "detailed_results": [
+    {
+      "timestamp": "2025-06-29T19:14:26.607202",
+      "narrative_length": 299,
+      "validation_time_ms": 0.0054836273193359375,
+      "entities_expected": 4,
+      "entities_found": 2,
+      "entities_missing": [
+        "Sariel Arcanus",
+        "Cassian Arcanus"
+      ],
+      "desync_detected": true,
+      "details": {
+        "found_entities": [
+          "Lady Cressida Valeriana",
+          "Cressida's Chambers"
+        ],
+        "all_player_characters": [
+          "Sariel Arcanus"
+        ],
+        "all_npcs": [
+          "Cassian Arcanus",
+          "Lady Cressida Valeriana",
+          "Valerius Arcanus"
+        ],
+        "current_location": [
+          "Cressida's Chambers"
+        ]
+      },
+      "desync_rate": 0.5,
+      "campaign_id": "sariel_v2_real",
+      "scenario_name": "Seeking Comfort from Cressida",
+      "approach": "validation_only"
+    }
+  ]
+}
