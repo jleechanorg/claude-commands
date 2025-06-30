@@ -382,6 +382,7 @@ def create_app():
 
         generate_companions = 'companions' in custom_options
         use_default_world = 'defaultWorld' in custom_options
+        
         opening_story = gemini_service.get_initial_story(
             prompt, 
             selected_prompts=selected_prompts,
@@ -392,6 +393,7 @@ def create_app():
         campaign_id = firestore_service.create_campaign(
             user_id, title, prompt, opening_story, initial_game_state, selected_prompts, use_default_world
         )
+        
         return jsonify({KEY_SUCCESS: True, KEY_CAMPAIGN_ID: campaign_id}), 201
         
     @app.route('/api/campaigns/<campaign_id>', methods=['PATCH'])

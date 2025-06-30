@@ -17,6 +17,9 @@
     <!-- Animation System - Milestone 3 -->
     <link rel="stylesheet" href="/static/styles/animations.css">
     
+    <!-- Interactive Features - Milestone 4 -->
+    <link rel="stylesheet" href="/static/styles/interactive-features.css">
+    
     <style>
         /* Smooth theme transitions */
         .theme-transitioning * {
@@ -34,17 +37,26 @@
                 <!-- User email (shown when logged in) -->
                 <span class="navbar-text me-3" id="user-email" style="display: none;"></span>
                 
-                <!-- Theme Selector -->
+                <!-- Interface & Theme Selector -->
                 <div class="nav-item dropdown">
                     <button class="btn btn-outline-secondary dropdown-toggle btn-sm" 
                             type="button" 
                             data-bs-toggle="dropdown" 
                             aria-expanded="false"
-                            title="Change theme">
+                            title="Interface settings">
+                        <span id="current-mode-icon">📰</span>
                         <span id="current-theme-icon">☀️</span> 
-                        <span class="d-none d-md-inline">Theme</span>
+                        <span class="d-none d-md-inline">Settings</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
+                        <li><h6 class="dropdown-header">Interface Mode</h6></li>
+                        <li><a class="dropdown-item" href="#" data-interface-mode="classic" data-interface-mode-item>
+                            📰 Classic Interface
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" data-interface-mode="modern" data-interface-mode-item>
+                            ✨ Modern Interface
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
                         <li><h6 class="dropdown-header">Choose Theme</h6></li>
                         <li><a class="dropdown-item" href="#" data-theme="light" data-theme-menu-item="light">
                             ☀️ Light
@@ -210,8 +222,11 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="/static/auth.js"></script>
     <script src="/static/api.js"></script>
+    <script src="/static/js/interface-manager.js"></script>
     <script src="/static/js/theme-manager.js"></script>
     <script src="/static/js/animation-helpers.js"></script>
+    <script src="/static/js/campaign-wizard.js"></script>
+    <script src="/static/js/enhanced-search.js"></script>
     <!-- Enhanced Components temporarily disabled due to layout conflicts
     <script src="/static/js/component-enhancer.js"></script>
     -->

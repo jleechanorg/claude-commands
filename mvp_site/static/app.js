@@ -29,6 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function resetNewCampaignForm() {
+        // CRITICAL: Don't reset form if wizard is active - this destroys the wizard state
+        if (window.campaignWizard && window.campaignWizard.isEnabled) {
+            console.log("Skipping form reset - wizard is active");
+            return;
+        }
+
         const campaignTitleInput = document.getElementById('campaign-title');
         const campaignPromptTextarea = document.getElementById('campaign-prompt');
         const narrativeCheckbox = document.getElementById('prompt-narrative');
@@ -114,34 +120,79 @@ document.addEventListener('DOMContentLoaded', () => {
         showSpinner();
         try {
             const { data: campaigns } = await fetchApi('/api/campaigns');
-            const listEl = document.getElementById('campaign-list');
-            listEl.innerHTML = '';
-            if (campaigns.length === 0) { listEl.innerHTML = '<p>You have no campaigns. Start a new one!</p>'; }
-            campaigns.forEach(campaign => {
-                const campaignEl = document.createElement('div');
-                campaignEl.className = 'list-group-item list-group-item-action';
+            
+            // RESILIENCE: Cache successful campaign data for offline viewing
+            localStorage.setItem('cachedCampaigns', JSON.stringify(campaigns));
+            localStorage.setItem('lastCampaignUpdate', new Date().toISOString());
+            
+            renderCampaignListUI(campaigns, false);
+        } catch (error) { 
+            console.error("Error fetching campaigns:", error);
+            
+            // RESILIENCE: Try to load from cache if network fails
+            const cachedCampaigns = localStorage.getItem('cachedCampaigns');
+            const lastUpdate = localStorage.getItem('lastCampaignUpdate');
+            
+            if (cachedCampaigns) {
+                const campaigns = JSON.parse(cachedCampaigns);
+                const lastUpdateDate = lastUpdate ? new Date(lastUpdate).toLocaleDateString() : 'unknown';
+                renderCampaignListUI(campaigns, true, lastUpdateDate);
                 
-                const lastPlayed = campaign.last_played ? new Date(campaign.last_played).toLocaleString() : 'N/A';
-                const initialPrompt = campaign.initial_prompt ? campaign.initial_prompt.substring(0, 100) + '...' : '[No prompt]';
-
-                campaignEl.innerHTML = `
-                    <div class="d-flex w-100 justify-content-between">
-                        <h5 class="mb-1 campaign-title-link">${campaign.title}</h5>
-                        <div>
-                            <button class="btn btn-sm btn-outline-primary edit-campaign-btn me-2">Edit</button>
-                            <small class="text-muted">Last played: ${lastPlayed}</small>
-                        </div>
+                // Show user that we're offline but they can still view campaigns
+                const listEl = document.getElementById('campaign-list');
+                const offlineNotice = document.createElement('div');
+                offlineNotice.className = 'alert alert-warning mb-3';
+                offlineNotice.innerHTML = `
+                    📡 <strong>Offline Mode:</strong> Showing cached campaigns from ${lastUpdateDate}. 
+                    Campaign creation and editing require internet connection.
+                `;
+                listEl.insertBefore(offlineNotice, listEl.firstChild);
+            } else {
+                const listEl = document.getElementById('campaign-list');
+                listEl.innerHTML = `
+                    <div class="alert alert-danger">
+                        🌐 <strong>Connection Error:</strong> Could not load campaigns. 
+                        Please check your internet connection and try again.
                     </div>
-                    <p class="mb-1 campaign-title-link">${initialPrompt}</p>`;
-                
-                campaignEl.dataset.campaignId = campaign.id;
-                campaignEl.dataset.campaignTitle = campaign.title;
-
-                listEl.appendChild(campaignEl);
-            });
-        } catch (error) { console.error("Error fetching campaigns:", error); }
+                `;
+            }
+        }
         finally { hideSpinner(); }
     };
+    
+    // RESILIENCE: Separate UI rendering for reuse with cached data
+    function renderCampaignListUI(campaigns, isOffline = false, lastUpdate = null) {
+        const listEl = document.getElementById('campaign-list');
+        listEl.innerHTML = '';
+        
+        if (campaigns.length === 0) { 
+            listEl.innerHTML = '<p>You have no campaigns. Start a new one!</p>'; 
+            return;
+        }
+        
+        campaigns.forEach(campaign => {
+            const campaignEl = document.createElement('div');
+            campaignEl.className = 'list-group-item list-group-item-action';
+            
+            const lastPlayed = campaign.last_played ? new Date(campaign.last_played).toLocaleString() : 'N/A';
+            const initialPrompt = campaign.initial_prompt ? campaign.initial_prompt.substring(0, 100) + '...' : '[No prompt]';
+
+            campaignEl.innerHTML = `
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1 campaign-title-link">${campaign.title}</h5>
+                    <div>
+                        ${!isOffline ? '<button class="btn btn-sm btn-outline-primary edit-campaign-btn me-2">Edit</button>' : ''}
+                        <small class="text-muted">Last played: ${lastPlayed}</small>
+                    </div>
+                </div>
+                <p class="mb-1 campaign-title-link">${initialPrompt}</p>`;
+            
+            campaignEl.dataset.campaignId = campaign.id;
+            campaignEl.dataset.campaignTitle = campaign.title;
+
+            listEl.appendChild(campaignEl);
+        });
+    }
 
     let resumeCampaign = async (campaignId) => {
         showSpinner();
@@ -182,6 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Event Listeners ---
     document.getElementById('new-campaign-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        
         showSpinner();
         const prompt = document.getElementById('campaign-prompt').value;
         const title = document.getElementById('campaign-title').value;
@@ -192,12 +244,45 @@ document.addEventListener('DOMContentLoaded', () => {
                 method: 'POST', 
                 body: JSON.stringify({ prompt, title, selected_prompts: selectedPrompts, custom_options: customOptions }) 
             });
+            
+            // Complete progress bar if wizard is active
+            if (window.campaignWizard && typeof window.campaignWizard.completeProgress === 'function') {
+                window.campaignWizard.completeProgress();
+            }
+            
             history.pushState({ campaignId: data.campaign_id }, '', `/game/${data.campaign_id}`);
             handleRouteChange();
+            
         } catch (error) {
             console.error("Error creating campaign:", error);
-            alert('Failed to start a new campaign.');
             hideSpinner();
+            
+            // RESILIENCE: Better error messaging and recovery options
+            let userMessage = 'Failed to start a new campaign.';
+            let showRetryOption = false;
+            
+            if (error.message.includes('Token used too early') || error.message.includes('clock')) {
+                userMessage = '⏰ Authentication timing issue detected. This usually resolves automatically.';
+                showRetryOption = true;
+            } else if (error.message.includes('401') || error.message.includes('Auth failed')) {
+                userMessage = '🔐 Authentication issue. Please try signing out and back in.';
+            } else if (error.message.includes('Network') || error.message.includes('fetch')) {
+                userMessage = '🌐 Network connection issue. Please check your internet connection.';
+                showRetryOption = true;
+            }
+            
+            if (showRetryOption) {
+                const retry = confirm(`${userMessage}\n\nWould you like to try again?`);
+                if (retry) {
+                    // Retry after a short delay
+                    setTimeout(() => {
+                        document.getElementById('new-campaign-form').dispatchEvent(new Event('submit'));
+                    }, 2000);
+                    return;
+                }
+            }
+            
+            alert(userMessage);
         }
     });
 
@@ -440,6 +525,11 @@ document.addEventListener('DOMContentLoaded', () => {
         isNavigatingToNewCampaignDirectly = true;
         history.pushState({}, '', '/new-campaign'); 
         handleRouteChange(); 
+        
+        // CRITICAL FIX: Enable wizard after navigation completes
+        if (window.campaignWizard) {
+            window.campaignWizard.enable();
+        }
     };
     document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };
     window.addEventListener('popstate', handleRouteChange);

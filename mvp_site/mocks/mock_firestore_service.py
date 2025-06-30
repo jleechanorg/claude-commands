@@ -5,7 +5,7 @@ Provides in-memory database simulation without making actual Firestore calls.
 import datetime
 import copy
 from typing import Dict, Any, List, Optional
-from .test_data_fixtures import SAMPLE_CAMPAIGN, SAMPLE_GAME_STATE, SAMPLE_STORY_CONTEXT
+from .data_fixtures import SAMPLE_CAMPAIGN, SAMPLE_GAME_STATE, SAMPLE_STORY_CONTEXT
 import constants
 
 

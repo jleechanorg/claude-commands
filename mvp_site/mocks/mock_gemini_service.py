@@ -5,7 +5,7 @@ Provides realistic AI responses without making actual API calls.
 import re
 import json
 from typing import Dict, Any, List
-from .test_data_fixtures import SAMPLE_AI_RESPONSES, SAMPLE_STATE_UPDATES
+from .data_fixtures import SAMPLE_AI_RESPONSES, SAMPLE_STATE_UPDATES
 
 
 class MockGeminiResponse:

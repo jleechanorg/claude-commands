@@ -1,6 +1,9 @@
 """
-Test data fixtures for function testing.
+Data fixtures for testing.
 Provides realistic sample data for campaigns, game states, and AI responses.
+
+Note: This is a data fixtures file, not a test file.
+It provides sample data for other tests to use.
 """
 import datetime
 import constants

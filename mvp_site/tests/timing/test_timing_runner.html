@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campaign Wizard Timing Tests</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .test-controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .run-button {
+            background: #28a745 !important;
+            color: white !important;
+            border: 2px solid #28a745 !important;
+            padding: 15px 30px !important;
+            font-size: 18px !important;
+            font-weight: bold !important;
+            border-radius: 8px !important;
+            cursor: pointer !important;
+            margin: 10px 10px 10px 0 !important;
+            display: inline-block !important;
+            text-decoration: none !important;
+            min-width: 150px !important;
+            text-align: center !important;
+        }
+        
+        .run-button:hover {
+            background: #218838;
+        }
+        
+        .run-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .results-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-result {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #ddd;
+        }
+        
+        .test-result.pass {
+            background: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+        
+        .test-result.fail {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+        
+        .test-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .test-details {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .summary {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .summary.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .summary.failure {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+        
+        .code-explanation {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 Campaign Wizard Timing Tests</h1>
+        <p>Enforcing zero artificial delays for optimal user experience</p>
+    </div>
+
+    <div class="test-controls">
+        <h3>Test Controls</h3>
+        <p style="color: #007bff; font-weight: bold; margin-bottom: 15px;">
+            🔽 Click the buttons below to run timing tests 🔽
+        </p>
+        <div style="border: 2px dashed #007bff; padding: 15px; border-radius: 8px; background: #f0f8ff;">
+            <button id="runTests" class="run-button">
+                <span id="buttonText">🚀 Run All Tests</span>
+                <span id="buttonSpinner" class="spinner" style="display: none;"></span>
+            </button>
+            <button id="clearResults" class="run-button" style="background: #6c757d !important; border-color: #6c757d !important;">
+                🗑️ Clear Results
+            </button>
+        </div>
+        
+        <div class="code-explanation">
+            <strong>What these tests enforce:</strong><br>
+            ✅ Form submission happens within 10ms of button click<br>
+            ✅ Progress animation is visual only, never blocks submission<br>
+            ✅ completeProgress() can override animation when backend finishes<br>
+            ✅ No setTimeout delays in critical form submission path<br>
+            ✅ Full workflow from click to backend call under 100ms
+        </div>
+    </div>
+
+    <div id="resultsContainer" class="results-container" style="display: none;">
+        <h3>Test Results</h3>
+        <div id="testSummary"></div>
+        <div id="testResults"></div>
+    </div>
+
+    <script src="test_campaign_wizard_timing.js"></script>
+    <script>
+        let isTestRunning = false;
+
+        document.getElementById('runTests').addEventListener('click', async () => {
+            if (isTestRunning) return;
+            
+            isTestRunning = true;
+            const button = document.getElementById('runTests');
+            const buttonText = document.getElementById('buttonText');
+            const buttonSpinner = document.getElementById('buttonSpinner');
+            
+            // Update button state
+            button.disabled = true;
+            buttonText.textContent = 'Running Tests...';
+            buttonSpinner.style.display = 'inline-block';
+            
+            // Show results container
+            const resultsContainer = document.getElementById('resultsContainer');
+            resultsContainer.style.display = 'block';
+            
+            // Show loading state
+            document.getElementById('testSummary').innerHTML = `
+                <div class="loading">
+                    <div class="spinner" style="margin-right: 10px;"></div>
+                    Running timing tests...
+                </div>
+            `;
+            document.getElementById('testResults').innerHTML = '';
+            
+            try {
+                // Create and run tests
+                const tester = new CampaignWizardTimingTests();
+                
+                // Override console.log to capture output
+                const logs = [];
+                const originalLog = console.log;
+                console.log = function(...args) {
+                    logs.push(args.join(' '));
+                    originalLog.apply(console, args);
+                };
+                
+                // Run tests
+                await tester.runAllTests();
+                
+                // Restore console.log
+                console.log = originalLog;
+                
+                // Display results
+                displayResults(tester.testResults, logs);
+                
+            } catch (error) {
+                console.error('Test execution failed:', error);
+                document.getElementById('testSummary').innerHTML = `
+                    <div class="summary failure">
+                        ❌ Test execution failed: ${error.message}
+                    </div>
+                `;
+            } finally {
+                // Reset button state
+                isTestRunning = false;
+                button.disabled = false;
+                buttonText.textContent = 'Run All Tests';
+                buttonSpinner.style.display = 'none';
+            }
+        });
+
+        document.getElementById('clearResults').addEventListener('click', () => {
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('testSummary').innerHTML = '';
+            document.getElementById('testResults').innerHTML = '';
+        });
+
+        function displayResults(testResults, logs) {
+            const passed = testResults.filter(t => t.status === 'PASS').length;
+            const failed = testResults.filter(t => t.status === 'FAIL').length;
+            const total = testResults.length;
+            const successRate = ((passed / total) * 100).toFixed(1);
+            
+            // Display summary
+            const summaryClass = failed > 0 ? 'failure' : 'success';
+            const summaryEmoji = failed > 0 ? '❌' : '🎉';
+            const summaryMessage = failed > 0 ? 
+                'CRITICAL: Artificial delays detected!' : 
+                'SUCCESS: No artificial delays detected!';
+            
+            document.getElementById('testSummary').innerHTML = `
+                <div class="summary ${summaryClass}">
+                    ${summaryEmoji} ${summaryMessage}<br>
+                    Tests: ${total} | ✅ Passed: ${passed} | ❌ Failed: ${failed} | Success Rate: ${successRate}%
+                </div>
+            `;
+            
+            // Display individual test results
+            let resultsHTML = '';
+            testResults.forEach((test, i) => {
+                const testClass = test.status === 'PASS' ? 'pass' : 'fail';
+                const emoji = test.status === 'PASS' ? '✅' : '❌';
+                
+                resultsHTML += `
+                    <div class="test-result ${testClass}">
+                        <div class="test-name">${i + 1}. ${emoji} ${test.name}</div>
+                        <div class="test-details">${test.details}</div>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('testResults').innerHTML = resultsHTML;
+            
+            // Log console output for debugging
+            if (logs.length > 0) {
+                console.log('=== Test Console Output ===');
+                logs.forEach(log => console.log(log));
+                console.log('===========================');
+            }
+        }
+
+        // Display instructions on load
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🧪 Campaign Wizard Timing Test Runner loaded');
+            console.log('Click "Run All Tests" to verify no artificial delays exist');
+        });
+    </script>
+</body>
+</html> 

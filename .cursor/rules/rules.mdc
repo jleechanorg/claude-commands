@@ -78,23 +78,27 @@ mvp_site/                    # Main application
 
 # CRITICAL: When ANY test fails, either fix it immediately or explicitly ask user if it should be fixed
 
-# Run specific test file
-cd mvp_site && TESTING=true vpython test_integration.py
+# CRITICAL: Always run vpython commands from the PROJECT ROOT directory
+# Run specific test file (from project root)
+TESTING=true vpython mvp_site/test_integration.py
 
-# Run data integrity tests (catches corruption bugs)
-cd mvp_site && TESTING=true vpython test_data_integrity.py
+# Run data integrity tests (catches corruption bugs) - from project root
+TESTING=true vpython mvp_site/test_data_integrity.py
 
-# Run combat integration tests (end-to-end combat flow)
-cd mvp_site && TESTING=true vpython test_combat_integration.py
+# Run combat integration tests (end-to-end combat flow) - from project root
+TESTING=true vpython mvp_site/test_combat_integration.py
 
-# Run specific test method
-cd mvp_site && TESTING=true vpython -m unittest test_module.TestClass.test_method
+# Run specific test method - from project root
+TESTING=true vpython -m unittest mvp_site.test_module.TestClass.test_method
+
+# DEPRECATED: Do NOT use this pattern anymore:
+# cd mvp_site && TESTING=true vpython test_integration.py
 ```
 
 #### Running the Application
 ```bash
-# Development (from mvp_site directory)
-cd mvp_site && vpython main.py
+# Development (from project root)
+vpython mvp_site/main.py
 
 # Production (Docker)
 ./deploy.sh                 # Deploy to dev environment
@@ -193,6 +197,8 @@ if isinstance(item, dict):
 
 15. **Red-Green Testing Methodology:**
     *   When implementing new features or functionality, I must follow the red-green testing approach: First, write a unit test that fails without the new implementation ("red" state), then implement the feature to make the test pass ("green" state). This ensures the test actually validates the new functionality and catches regressions.
+    *   **For UI Features**: Create functional tests that reproduce specific user issues, run tests to confirm they FAIL (red state), then fix implementation to make tests PASS (green state).
+    *   **Critical Mindset**: "I haven't seen it work with my own eyes yet" - Never claim features work based on code alone. Must validate actual user experience.
 
 16. **Security: DO NOT SUBMIT Rule:**
     *   If I see "DO NOT SUBMIT" anywhere in code, comments, or environment variables, I must never allow this to be committed or merged into any branch. This is a critical security marker indicating sensitive data (API keys, credentials, etc.) that must be removed before any PR or commit.
@@ -302,6 +308,24 @@ if isinstance(item, dict):
         - Documentation and commits: 5-10 minutes
     *   **Project Estimation**: A complete frontend modernization takes 6-9 hours, not 20-40 hours
     *   **Avoid Human Coding Assumptions**: Never estimate based on how long it would take to write code manually
+
+23. **Visual Testing and UI Validation Protocol:**
+    *   **MANDATORY**: Before claiming ANY UI feature works, must run comprehensive visual validation
+    *   **The "Show Me" Protocol**: Visual proof is required before marking any UI task complete
+    *   **Screenshot Analysis**: When user provides screenshots showing UI problems, perform systematic visual inspection before responding
+    *   **Red/Green Testing for UI**: All UI features must follow red/green methodology - create failing tests first, then implement fixes
+    *   **Browser Console Validation**: Use visual validation tools (e.g., `VisualValidator.run()`) for immediate UI checks
+    *   **Core Principle**: "Code that looks right can be completely broken" - never assume functionality based on code existence alone
+    *   **Visual Evidence Trumps Code**: User screenshots and visual evidence override all code analysis and assumptions
+
+24. **Screenshot-Based Problem Identification:**
+    *   **CRITICAL ANALYSIS PROTOCOL**: When user provides screenshots of UI issues:
+        1. Systematically analyze for overlapping elements, misaligned components, broken layouts
+        2. Never assume functionality works if visual evidence suggests problems
+        3. Ask specific questions about what user observes rather than making assumptions
+        4. Treat visual evidence as ground truth over code logic
+    *   **PREVENTION**: Screenshots reveal problems that code review cannot catch
+    *   **VALIDATION**: All UI fixes must be verified through visual inspection, not just code changes
 
 ## III. Git & Repository Workflow
 
@@ -578,7 +602,27 @@ grep -r "process.*special_token" *.py
 
 **Lesson**: Failed to catch multiple dependency and API inconsistency bugs because I explored code files individually instead of running tests first. The test suite immediately reveals: current state, expected behavior, dependency issues, and API changes. This systematic approach prevents iterative discovery of issues that should be obvious upfront.
 
-## XI. Deployment
+## XI. API Error Prevention
+
+**CRITICAL RULE: Do Not Print Code or File Content**
+- **NEVER** include actual code text, file content, or long text blocks in responses
+- **API Error Risk**: Large text blocks or code snippets cause "empty message" API errors  
+- **Status Updates Only**: Provide concise status updates about what was changed/fixed
+- **Reference by Line Numbers**: Use file_path:line_number format instead of showing code
+- **Summary Over Details**: Describe what was done, not the actual implementation
+
+**Root Cause**: I cannot control API request/response handling or message filtering. When large content gets filtered out, the final message to Claude API becomes empty, triggering "all messages must have non-empty content" errors.
+
+**Mitigations I Can Control**:
+- Keep all responses concise and avoid large text blocks
+- Use file references (file_path:line_number) instead of printing actual code
+- Provide status updates rather than detailed content reproduction
+- Never include full file contents, code snippets, or extensive quoted material
+- Limit responses to essential information only
+
+**What I Cannot Control**: API request/response handling, message filtering/processing, or the actual API error mechanism itself.
+
+## XII. Deployment
 
 - Multi-environment deployment via `./deploy.sh` script
 - Docker containerization with health checks and 300s timeout

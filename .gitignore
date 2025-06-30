@@ -35,6 +35,22 @@ mvp_site/world/
 # MCP Server Configuration
 .mcp.json
 
+# Node.js / JavaScript
+node_modules/
+mvp_site/node_modules/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# Note: package-lock.json should be committed for reproducible builds
+# yarn.lock should be committed for Yarn projects
+
+# Build outputs
+dist/
+build/
+*.min.js
+*.min.css
+
 # Temp files
 tmp/
 mvp_site/tmp/

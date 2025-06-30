@@ -63,12 +63,15 @@ cd mvp_site
 print_status "Running tests in mvp_site directory..."
 print_status "Setting TESTING=true for faster AI model usage"
 
-# Find all test files
-test_files=(test_*.py)
+# Find all test files in current directory and tests subdirectory, excluding venv
+test_files=()
+while IFS= read -r -d '' file; do
+    test_files+=("$file")
+done < <(find . -name "test_*.py" -type f ! -path "./venv/*" ! -path "./node_modules/*" -print0)
 
 # Check if any test files exist
-if [ ! -e "${test_files[0]}" ]; then
-    print_warning "No test files found matching pattern test_*.py"
+if [ ${#test_files[@]} -eq 0 ]; then
+    print_warning "No test files found matching pattern test_*.py in current directory or tests/ subdirectory"
     exit 0
 fi
 
@@ -91,10 +94,10 @@ run_test() {
     if [ -f "$test_file" ]; then
         print_status "Running: $test_file"
         
-        # Run the test with TESTING environment variable using vpython
-        # Capture output to temporary file for later display
-        local output_file="$temp_dir/${test_file}.output"
-        local status_file="$temp_dir/${test_file}.status"
+        # Create a safe filename for temp files by replacing slashes and dots
+        local safe_filename=$(echo "$test_file" | sed 's|[./]|_|g')
+        local output_file="$temp_dir/${safe_filename}.output"
+        local status_file="$temp_dir/${safe_filename}.status"
         
         if TESTING=true vpython "$test_file" >"$output_file" 2>&1; then
             echo "PASS" > "$status_file"
@@ -140,7 +143,8 @@ done
 # Collect results
 for test_file in "${test_files[@]}"; do
     if [ -f "$test_file" ]; then
-        status_file="$temp_dir/${test_file}.status"
+        safe_filename=$(echo "$test_file" | sed 's|[./]|_|g')
+        status_file="$temp_dir/${safe_filename}.status"
         if [ -f "$status_file" ]; then
             status=$(cat "$status_file")
             if [ "$status" = "PASS" ]; then
@@ -165,10 +169,11 @@ if [ $failed_tests -gt 0 ]; then
     print_warning "Failed test details:"
     for test_file in "${test_files[@]}"; do
         if [ -f "$test_file" ]; then
-            status_file="$temp_dir/${test_file}.status"
+            safe_filename=$(echo "$test_file" | sed 's|[./]|_|g')
+            status_file="$temp_dir/${safe_filename}.status"
             if [ -f "$status_file" ] && [ "$(cat "$status_file")" = "FAIL" ]; then
                 echo "  - $test_file"
-                output_file="$temp_dir/${test_file}.output"
+                output_file="$temp_dir/${safe_filename}.output"
                 if [ -f "$output_file" ] && [ -s "$output_file" ]; then
                     echo "    Last few lines of output:"
                     tail -n 10 "$output_file" | sed 's/^/      /'

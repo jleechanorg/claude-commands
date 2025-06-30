@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Root Cause Red/Green Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #dc3545, #28a745);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .test-controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .run-button {
+            background: #6c757d !important;
+            color: white !important;
+            border: 2px solid #6c757d !important;
+            padding: 15px 30px !important;
+            font-size: 18px !important;
+            font-weight: bold !important;
+            border-radius: 8px !important;
+            cursor: pointer !important;
+            margin: 10px 10px 10px 0 !important;
+            display: inline-block !important;
+            text-decoration: none !important;
+            min-width: 200px !important;
+            text-align: center !important;
+        }
+        
+        .run-button:hover {
+            background: #545b62 !important;
+        }
+        
+        .test-results {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .result-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .result-pass { background-color: #d4edda; color: #155724; }
+        .result-fail { background-color: #f8d7da; color: #721c24; }
+        .result-info { background-color: #d1ecf1; color: #0c5460; }
+        .result-error { background-color: #f8d7da; color: #721c24; font-weight: bold; }
+        .result-success { background-color: #d4edda; color: #155724; font-weight: bold; }
+        
+        .summary {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .summary-fail { background-color: #f8d7da; color: #721c24; }
+        .summary-pass { background-color: #d4edda; color: #155724; }
+        .summary-mixed { background-color: #fff3cd; color: #856404; }
+        
+        .phase-header {
+            background: #e9ecef;
+            padding: 10px;
+            margin: 15px 0 5px 0;
+            border-left: 4px solid #6c757d;
+            font-weight: bold;
+        }
+        
+        .red-phase { border-left-color: #dc3545; }
+        .green-phase { border-left-color: #28a745; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔴➡️🟢 Root Cause Red/Green Test</h1>
+        <p>Testing the ACTUAL root cause: Navigation handler missing wizard.enable() call</p>
+        <p><strong>Expected:</strong> Red test fails (reproduces bug), Green test passes (shows fix)</p>
+    </div>
+
+    <div class="test-controls">
+        <h3>Test Controls</h3>
+        <button class="run-button" onclick="runRootCauseTest()">🧪 Run Root Cause Red/Green Test</button>
+        <button class="run-button" onclick="clearResults()" style="background: #6c757d !important; border-color: #6c757d !important;">🗑️ Clear Results</button>
+    </div>
+
+    <div class="test-results">
+        <h3>Test Results</h3>
+        <div id="test-summary"></div>
+        <div id="test-log"></div>
+    </div>
+
+    <div class="test-results">
+        <h3>Root Cause Explanation</h3>
+        <p><strong>The Real Problem:</strong> The "Start Campaign" button click handler only performed navigation but never called <code>wizard.enable()</code>.</p>
+        
+        <h4>Original (Broken) Navigation Handler:</h4>
+        <pre style="background: #f8d7da; padding: 10px; border-radius: 5px;"><code>document.getElementById('go-to-new-campaign').onclick = () => {
+    isNavigatingToNewCampaignDirectly = true;
+    history.pushState({}, '', '/new-campaign'); 
+    handleRouteChange(); 
+    // ❌ MISSING: No wizard.enable() call!
+};</code></pre>
+
+        <h4>Fixed Navigation Handler:</h4>
+        <pre style="background: #d4edda; padding: 10px; border-radius: 5px;"><code>document.getElementById('go-to-new-campaign').onclick = () => {
+    isNavigatingToNewCampaignDirectly = true;
+    history.pushState({}, '', '/new-campaign'); 
+    handleRouteChange(); 
+    
+    // ✅ THE FIX: Call wizard.enable() after navigation
+    if (window.campaignWizard && window.campaignWizard.isEnabled) {
+        window.campaignWizard.enable();
+    }
+};</code></pre>
+    </div>
+
+    <script src="test_root_cause_red_green.js"></script>
+
+    <script>
+        let testInstance = null;
+        
+        async function runRootCauseTest() {
+            clearResults();
+            
+            // Create test instance
+            testInstance = new RootCauseRedGreenTest();
+            
+            // Run the red/green test
+            const result = await testInstance.runRedGreenTest();
+            
+            // Display results
+            displayResults(testInstance.getResults(), result);
+        }
+        
+        function displayResults(results, overallResult) {
+            const summaryDiv = document.getElementById('test-summary');
+            const logDiv = document.getElementById('test-log');
+            
+            // Display summary
+            let summaryClass = 'summary-mixed';
+            let summaryIcon = '🟡';
+            let summaryText = 'MIXED RESULTS';
+            
+            if (overallResult) {
+                summaryClass = 'summary-pass';
+                summaryIcon = '🟢';
+                summaryText = 'RED/GREEN TEST SUCCESSFUL';
+            }
+            
+            summaryDiv.innerHTML = `
+                <div class="summary ${summaryClass}">
+                    ${summaryIcon} ${summaryText}<br>
+                    Total Assertions: ${results.total} | ✅ Passed: ${results.passed} | ❌ Failed: ${results.failed}
+                </div>
+            `;
+            
+            // Display detailed log with phase separation
+            let currentPhase = '';
+            results.results.forEach(result => {
+                // Add phase headers
+                if (result.message.includes('RED PHASE')) {
+                    const phaseDiv = document.createElement('div');
+                    phaseDiv.className = 'phase-header red-phase';
+                    phaseDiv.textContent = '🔴 RED PHASE: Testing Original (Broken) Code';
+                    logDiv.appendChild(phaseDiv);
+                    currentPhase = 'red';
+                } else if (result.message.includes('GREEN PHASE')) {
+                    const phaseDiv = document.createElement('div');
+                    phaseDiv.className = 'phase-header green-phase';
+                    phaseDiv.textContent = '🟢 GREEN PHASE: Testing Fixed Code';
+                    logDiv.appendChild(phaseDiv);
+                    currentPhase = 'green';
+                }
+                
+                const div = document.createElement('div');
+                div.className = `result-item result-${result.type}`;
+                div.textContent = `[${result.timestamp}] ${result.message}`;
+                logDiv.appendChild(div);
+            });
+        }
+        
+        function clearResults() {
+            document.getElementById('test-summary').innerHTML = '';
+            document.getElementById('test-log').innerHTML = '';
+        }
+        
+        // Auto-load message
+        window.addEventListener('load', () => {
+            console.log('🔴➡️🟢 Root Cause Red/Green Test Runner loaded');
+            console.log('This test reproduces the ACTUAL root cause: Missing wizard.enable() call in navigation handler');
+        });
+    </script>
+</body>
+</html>
