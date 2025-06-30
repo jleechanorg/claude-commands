@@ -104,49 +104,40 @@ class ThemeManager {
 
 ---
 
-## 📅 **MILESTONE 5: Figma Design System Implementation (3-4 hours)**
+## 📅 **MILESTONE 5: Landing Page & Visual Enhancement (13-17 hours)**
 
-### **Step 5.1: Advanced Theme System (60 minutes)** 
-**Goal: Implement Figma's sophisticated color palette**
+**🚨 CRITICAL FINDING**: The MVP has NO landing page or welcome experience. Users see only a basic auth screen with no value proposition. This milestone prioritizes creating the missing "front door" before visual polish.
 
-#### **5.1.1 Figma Color System Implementation (20 minutes)**
-- **Import oklch Color Palette**: Copy complete color system from `figma_frontend/styles/globals.css`
-- **Theme Variants**: Implement all 5 themes with proper gradients
-- **CSS Custom Properties**: Full token system with theme-aware variables
-- **Gradient Utilities**: Theme-specific background and component gradients
+### **Updated Approach: 4 Focused PRs**
 
-```css
-/* Direct from Figma: Advanced color system */
-:root {
-  --background: #ffffff;
-  --foreground: oklch(0.145 0 0);
-  --card: #ffffff;
-  --primary: #030213;
-  /* Complete Figma palette... */
-}
+See detailed implementation plan: `roadmap/milestone_5_final_plan.md`
 
-.fantasy {
-  --background: oklch(0.15 0.05 280);
-  --foreground: oklch(0.98 0.02 60);
-  /* Figma fantasy theme... */
-}
-```
+#### **PR 1: Landing Page Foundation (3-4 hours)**
+- Landing page route and hero section
+- Marketing copy and value proposition  
+- OKLCH color system foundation
+- Animated particles background
+- Mobile-responsive design
 
-#### **5.1.2 Professional Theme Switcher (20 minutes)**
-- **Theme Selection Interface**: Modern dropdown with theme previews
-- **Visual Indicators**: Show color schemes before selection
-- **Smooth Transitions**: 300ms theme change animations
-- **Persistent Storage**: localStorage integration with preference management
+#### **PR 2: Feature Showcase (3-4 hours)**
+- 6-feature grid with icons
+- Professional feature cards
+- "Get Started" CTA section
+- Glassmorphism effects on cards
 
-#### **5.1.3 Dynamic Background System (20 minutes)**
-- **Gradient Backgrounds**: `bg-gradient-to-br` patterns for each theme
-- **Floating Particles**: Animated particle effects for hero sections
-- **Overlay System**: Gradient overlays for better text readability
-- **Theme-Aware Effects**: Background animations that respond to theme changes
+#### **PR 3: Enhanced Auth & Onboarding (4-5 hours)**  
+- Multi-step signup flow
+- Onboarding carousel
+- First-time user detection
+- Smooth transitions
 
----
+#### **PR 4: Dashboard UI Polish (3-4 hours)**
+- Dashboard hero section
+- Glassmorphism on existing components
+- Gradient button system
+- Complete 5-theme system with dark-fantasy
 
-### **Step 5.2: Component System Overhaul (90 minutes)**
+### **Original Detailed Steps (For Reference)**
 **Goal: Implement Figma's professional component library**
 
 #### **5.2.1 Glassmorphism Card System (30 minutes)**
@@ -389,16 +380,79 @@ mvp_site/static/                     # Figma-enhanced frontend
 
 ---
 
-## 🎨 **Key Deliverables**
+## 📅 **MILESTONE 6: Transform Game Playing Experience (8-10 hours)**
 
-1. **🌈 Complete 5-Theme System**: Professional color palette with smooth transitions
-2. **💎 Glassmorphism Components**: Modern cards, buttons, and form elements
-3. **🧙‍♂️ Multi-Step Campaign Wizard**: Visual progress with AI persona selection
-4. **📊 Professional Dashboard**: Hero sections, stats, and beautiful campaign cards
-5. **📱 Mobile-First Responsive**: Flawless experience across all device sizes
-6. **✨ Sophisticated Animations**: Professional micro-interactions and transitions
+**User Impact**: "Wow, this actually feels like playing D&D now!"
 
-**End Result**: WorldArchitect.AI transformed into a visually stunning, professional-grade platform that matches the beautiful Figma designs while maintaining all existing functionality and backend compatibility.
+See detailed plan: `roadmap/milestones_6_7_8_user_focused.md`
+
+### **PR 1: Character Sheet Integration (3-4 hours)**
+- Character sidebar with HP, stats, AC
+- Visual health indicators
+- Quick stat updates
+- Character portraits
+
+### **PR 2: Quick Actions & Dice Rolling (3-4 hours)**
+- Action button bar
+- Visual dice roller with animations
+- Context-aware suggestions
+- Combat tracker
+
+### **PR 3: Story Formatting & Immersion (2-3 hours)**
+- Different styles for narration/dialogue/actions
+- "Game Master is thinking..." animations
+- Chapter breaks and scene transitions
+
+---
+
+## 📅 **MILESTONE 7: Campaign Management & Organization (6-8 hours)**
+
+**User Impact**: "I can finally find and organize all my campaigns!"
+
+### **PR 1: Campaign Organization (3-4 hours)**
+- Folders and categories
+- Search and filter
+- Archive functionality
+- Bulk operations
+
+### **PR 2: Rich Campaign Cards (3-4 hours)**
+- Preview images
+- Progress indicators
+- Quick preview on hover
+- Campaign statistics
+
+---
+
+## 📅 **MILESTONE 8: Smart Features & Shortcuts (6-8 hours)**
+
+**User Impact**: "This app understands how I play!"
+
+### **PR 1: Command Palette & Shortcuts (3-4 hours)**
+- Command palette (Cmd/Ctrl+K)
+- Keyboard shortcuts
+- Quick campaign switcher
+- Power user settings
+
+### **PR 2: Smart Assistance (3-4 hours)**
+- Contextual help
+- Smart suggestions
+- Quick templates
+- Adaptive UI
+
+---
+
+## 🎨 **Key Deliverables (Milestones 0-8)**
+
+1. **✅ Professional Landing Page**: Marketing site with hero and features (M5)
+2. **✅ Complete 5-Theme System**: OKLCH colors with smooth transitions (M5)
+3. **✅ Glassmorphism Components**: Modern cards, buttons, and forms (M5)
+4. **🎮 RPG Game Interface**: Character sheets, dice, and actions (M6)
+5. **📁 Campaign Organization**: Folders, search, and rich previews (M7)
+6. **⚡ Power User Features**: Command palette and smart shortcuts (M8)
+7. **📱 Mobile-First Responsive**: Flawless experience across all devices (M0-8)
+8. **✨ Professional Polish**: Animations, formatting, and attention to detail (M0-8)
+
+**End Result**: WorldArchitect.AI transformed from a functional MVP into a professional-grade TTRPG platform that delights users at every interaction.
 
 ---
 
