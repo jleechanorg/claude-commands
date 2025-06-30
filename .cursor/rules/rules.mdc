@@ -13,6 +13,8 @@ alwaysApply: true
 
 **VIRTUAL AGENTS APPROACH: This project uses a True Multi-Agent Development System as documented in `coding_prompts/virtual_agents.md`. See that file for complete details on the SUPERVISOR-WORKER-REVIEWER pattern and when to use single agent vs three-agent approach.**
 
+**MILESTONE PLANNING STRUCTURE: For large projects requiring systematic breakdown, follow the planning structure documented in `coding_prompts/milestone_planning_structure.md`. This ensures proper tracking with Milestones (1-2 weeks), Steps (0.5-2 days), and Sub-bullets (atomic tasks). See examples from Milestones 0.3 and 0.4.**
+
 This document outlines the operating protocol for our collaboration. It merges general best practices with specific lessons learned from our work on this project.
 
 ## Project Overview
