@@ -10,9 +10,7 @@ class EnhancedSearch {
     this.currentFilters = {
       search: '',
       sortBy: 'lastPlayed',
-      sortOrder: 'desc',
-      theme: 'all',
-      status: 'all'
+      sortOrder: 'desc'
     };
     this.isEnabled = false;
     this.searchDebounce = null;
@@ -106,7 +104,6 @@ class EnhancedSearch {
               <option value="lastPlayed">Last Played</option>
               <option value="created">Date Created</option>
               <option value="title">Title (A-Z)</option>
-              <option value="theme">Theme</option>
             </select>
           </div>
           
@@ -118,26 +115,7 @@ class EnhancedSearch {
             </select>
           </div>
           
-          <div class="filter-group">
-            <label for="theme-filter">Theme:</label>
-            <select class="filter-select" id="theme-filter">
-              <option value="all">All Themes</option>
-              <option value="light">☀️ Light</option>
-              <option value="dark">🌙 Dark</option>
-              <option value="fantasy">⚔️ Fantasy</option>
-              <option value="cyberpunk">🤖 Cyberpunk</option>
-            </select>
-          </div>
-          
-          <div class="filter-group">
-            <label for="status-filter">Status:</label>
-            <select class="filter-select" id="status-filter">
-              <option value="all">All Campaigns</option>
-              <option value="active">Recently Active</option>
-              <option value="new">New (< 1 week)</option>
-              <option value="old">Older (> 1 month)</option>
-            </select>
-          </div>
+
           
           <button type="button" class="btn btn-outline-secondary" id="clear-filters">
             <i class="fas fa-times me-1"></i>Clear
@@ -159,8 +137,6 @@ class EnhancedSearch {
     const searchInput = document.getElementById('campaign-search');
     const sortBy = document.getElementById('sort-by');
     const sortOrder = document.getElementById('sort-order');
-    const themeFilter = document.getElementById('theme-filter');
-    const statusFilter = document.getElementById('status-filter');
     const clearFilters = document.getElementById('clear-filters');
 
     if (!searchInput) return; // Not enabled yet
@@ -184,16 +160,6 @@ class EnhancedSearch {
     sortOrder?.addEventListener('change', (e) => {
       this.currentFilters.sortOrder = e.target.value;
       this.updateSortOrderLabel();
-      this.applyFilters();
-    });
-
-    themeFilter?.addEventListener('change', (e) => {
-      this.currentFilters.theme = e.target.value;
-      this.applyFilters();
-    });
-
-    statusFilter?.addEventListener('change', (e) => {
-      this.currentFilters.status = e.target.value;
       this.applyFilters();
     });
 
@@ -250,8 +216,6 @@ class EnhancedSearch {
         title: titleElement?.textContent || '',
         lastPlayed: this.parseDateFromElement(lastPlayedElement),
         created: this.extractCreatedDate(item),
-        theme: this.extractTheme(item),
-        status: this.calculateStatus(item),
         searchText: this.buildSearchText(item)
       };
     });
@@ -280,32 +244,6 @@ class EnhancedSearch {
     
     // Fallback to current date if not available
     return new Date();
-  }
-
-  extractTheme(element) {
-    // Try to determine theme from classes or data attributes
-    const classList = element.className;
-    if (classList.includes('fantasy')) return 'fantasy';
-    if (classList.includes('cyberpunk')) return 'cyberpunk';
-    if (classList.includes('dark')) return 'dark';
-    return 'light';
-  }
-
-  calculateStatus(element) {
-    const now = new Date();
-    const oneWeek = 7 * 24 * 60 * 60 * 1000;
-    const oneMonth = 30 * 24 * 60 * 60 * 1000;
-    
-    const created = this.extractCreatedDate(element);
-    const timeSinceCreated = now - created;
-    
-    if (timeSinceCreated < oneWeek) {
-      return 'new';
-    } else if (timeSinceCreated > oneMonth) {
-      return 'old';
-    }
-    
-    return 'active';
   }
 
   buildSearchText(element) {
@@ -340,18 +278,6 @@ class EnhancedSearch {
         return false;
       }
       
-      // Theme filter
-      if (this.currentFilters.theme !== 'all' && 
-          campaign.theme !== this.currentFilters.theme) {
-        return false;
-      }
-      
-      // Status filter
-      if (this.currentFilters.status !== 'all' && 
-          campaign.status !== this.currentFilters.status) {
-        return false;
-      }
-      
       return true;
     });
 
@@ -373,9 +299,6 @@ class EnhancedSearch {
           break;
         case 'created':
           comparison = a.created - b.created;
-          break;
-        case 'theme':
-          comparison = a.theme.localeCompare(b.theme);
           break;
         case 'lastPlayed':
         default:
@@ -457,33 +380,6 @@ class EnhancedSearch {
       });
     }
 
-    // Theme tag
-    if (this.currentFilters.theme !== 'all') {
-      const themeNames = {
-        light: '☀️ Light',
-        dark: '🌙 Dark',
-        fantasy: '⚔️ Fantasy',
-        cyberpunk: '🤖 Cyberpunk'
-      };
-      tags.push({
-        label: `Theme: ${themeNames[this.currentFilters.theme]}`,
-        key: 'theme'
-      });
-    }
-
-    // Status tag
-    if (this.currentFilters.status !== 'all') {
-      const statusNames = {
-        active: 'Recently Active',
-        new: 'New',
-        old: 'Older'
-      };
-      tags.push({
-        label: `Status: ${statusNames[this.currentFilters.status]}`,
-        key: 'status'
-      });
-    }
-
     // Render tags
     activeFilters.innerHTML = tags.map(tag => `
       <span class="filter-tag">
@@ -505,15 +401,8 @@ class EnhancedSearch {
     switch (filterKey) {
       case 'search':
         this.currentFilters.search = '';
-        document.getElementById('campaign-search').value = '';
-        break;
-      case 'theme':
-        this.currentFilters.theme = 'all';
-        document.getElementById('theme-filter').value = 'all';
-        break;
-      case 'status':
-        this.currentFilters.status = 'all';
-        document.getElementById('status-filter').value = 'all';
+        const searchInput = document.getElementById('campaign-search');
+        if (searchInput) searchInput.value = '';
         break;
     }
     
@@ -524,23 +413,17 @@ class EnhancedSearch {
     this.currentFilters = {
       search: '',
       sortBy: 'lastPlayed',
-      sortOrder: 'desc',
-      theme: 'all',
-      status: 'all'
+      sortOrder: 'desc'
     };
 
     // Reset form controls
     const searchInput = document.getElementById('campaign-search');
     const sortBy = document.getElementById('sort-by');
     const sortOrder = document.getElementById('sort-order');
-    const themeFilter = document.getElementById('theme-filter');
-    const statusFilter = document.getElementById('status-filter');
 
     if (searchInput) searchInput.value = '';
     if (sortBy) sortBy.value = 'lastPlayed';
     if (sortOrder) sortOrder.value = 'desc';
-    if (themeFilter) themeFilter.value = 'all';
-    if (statusFilter) statusFilter.value = 'all';
 
     this.updateSortOrderLabel();
     this.applyFilters();

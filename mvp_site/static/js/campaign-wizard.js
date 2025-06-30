@@ -279,7 +279,7 @@ class CampaignWizard {
                       <div class="flex-grow-1">
                         <h5 class="card-title">Starting Companions</h5>
                         <p class="card-text">Automatically create complementary party members to join your adventure.</p>
-                        <div class="form-check form-switch">
+                        <div class="form-check">
                           <input class="form-check-input" type="checkbox" id="wizard-companions" checked>
                           <label class="form-check-label" for="wizard-companions">Generate companions</label>
                         </div>
@@ -297,7 +297,7 @@ class CampaignWizard {
                       <div class="flex-grow-1">
                         <h5 class="card-title">Default Fantasy World</h5>
                         <p class="card-text">Use the Celestial Wars/Assiah setting with rich lore and characters.</p>
-                        <div class="form-check form-switch">
+                        <div class="form-check">
                           <input class="form-check-input" type="checkbox" id="wizard-default-world" checked>
                           <label class="form-check-label" for="wizard-default-world">Use default world</label>
                         </div>
