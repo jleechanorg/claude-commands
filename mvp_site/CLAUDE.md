@@ -80,8 +80,10 @@ System instructions are stored in `prompts/` directory with MBTI personality def
 ### Gemini API Usage
 ```python
 # Use modern google-genai SDK patterns
-import google.generativeai as genai
-client = genai.Client()
+# CRITICAL: Always use google.genai (NOT google.generativeai)
+from google import genai
+from google.genai import types
+client = genai.Client(api_key=api_key)
 response = client.models.generate_content(model=MODEL_NAME, contents=prompt)
 ```
 
@@ -119,7 +121,8 @@ mvp_site/                    # Main application
 ## Key Constraints
 
 - **AI Models**: Current models are `DEFAULT_MODEL = 'gemini-2.5-flash'`, `LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'`, `TEST_MODEL = 'gemini-1.5-flash'` - never change without explicit user authorization
-- **SDK**: Must use modern `google-genai` SDK patterns (not legacy `google-generativeai`)
+- **Model Usage**: Use TEST_MODEL (1.5-flash) for general tests to save costs, but use DEFAULT_MODEL (2.5-flash) when testing production features like entity tracking
+- **SDK**: Must use modern `google.genai` SDK patterns (NOT `google.generativeai`) - Always import with `from google import genai`
 - **Virtual Environment**: Always activate `venv` before running Python commands
 - **Test Isolation**: Use temporary directories to avoid overwriting application files
 - **Data Integrity**: Implement defensive programming for external data sources
@@ -202,7 +205,7 @@ The complete cursor rules from `/home/jleechan/projects/worldarchitect.ai/.curso
 ### Development Guidelines
 - **String Constants**: Manage repeated strings as constants
 - **Defensive Data Handling**: Validate types before operations
-- **Use Modern Gemini SDK**: `google-genai` patterns only
+- **Use Modern Gemini SDK**: `google.genai` (NOT `google.generativeai`) - Always use `from google import genai` and `genai.Client()`
 - **AI Model Lock**: Current models are `DEFAULT_MODEL = 'gemini-2.5-flash'`, `LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'`, `TEST_MODEL = 'gemini-1.5-flash'` - never change without explicit user authorization
 - **Temporary Files for Testing**: Use `tempfile.mkdtemp()`
 

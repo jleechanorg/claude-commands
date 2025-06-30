@@ -23,6 +23,6 @@ When using Claude Code (claude.ai/code):
 2. **Tool Usage**: Claude Code has access to file operations, bash commands, and web tools
 3. **Test Execution**: Use `vpython` with the `TESTING=true` environment variable as specified in rules.mdc
 4. **File Paths**: Always use absolute paths when referencing files in responses
-5. **Test File Placement**: Always create test files in `prototype/tests/` directory, never in the root
+5. **Gemini SDK**: Always use `from google import genai` (NOT `google.generativeai`)
 
 The complete operating protocol is in `.cursor/rules/rules.mdc` - refer to that file for all development guidelines.

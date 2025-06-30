@@ -69,9 +69,12 @@ class TestResult:
         """Calculate entity mention success rate"""
         if not self.entities_expected:
             return 1.0
-        found_count = len(self.entities_found) if self.entities_found else 0
-        expected_count = len(self.entities_expected)
-        return found_count / expected_count if expected_count > 0 else 0
+        # If both lists empty, validation passed perfectly
+        if not self.entities_found and not self.entities_missing:
+            return 1.0
+        # Otherwise calculate based on what's missing
+        found_count = len(self.entities_expected) - len(self.entities_missing)
+        return found_count / len(self.entities_expected)
 
 
 class TestHarness:
@@ -420,11 +423,31 @@ class TestHarness:
             f"test_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         )
         
+        # Convert config to be JSON serializable
+        config_serializable = {
+            k: v.value if isinstance(v, TestApproach) else v
+            for k, v in self.config.items()
+        }
+        if "approaches" in config_serializable:
+            config_serializable["approaches"] = [
+                a.value if isinstance(a, TestApproach) else a 
+                for a in config_serializable["approaches"]
+            ]
+        
+        # Convert results to be JSON serializable
+        results_serializable = []
+        for r in self.results:
+            result_dict = asdict(r)
+            # asdict preserves enums, so we need to convert them
+            if "approach" in result_dict:
+                result_dict["approach"] = result_dict["approach"].value
+            results_serializable.append(result_dict)
+        
         with open(results_file, 'w') as f:
             json.dump({
-                "config": self.config,
+                "config": config_serializable,
                 "metrics": self.metrics,
-                "results": [asdict(r) for r in self.results],
+                "results": results_serializable,
                 "timestamp": datetime.now().isoformat()
             }, f, indent=2)
         

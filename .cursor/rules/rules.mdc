@@ -137,8 +137,10 @@ vpython mvp_site/main.py
 #### Gemini API Usage
 ```python
 # Use modern google-genai SDK patterns
-import google.generativeai as genai
-client = genai.Client()
+# CRITICAL: Always use google.genai (NOT google.generativeai)
+from google import genai
+from google.genai import types
+client = genai.Client(api_key=api_key)
 response = client.models.generate_content(model=MODEL_NAME, contents=prompt)
 ```
 
@@ -159,17 +161,19 @@ if isinstance(item, dict):
 - Case-insensitive field detection for AI-generated data
 - Flexible assertions for AI content validation
 
-#### Test File Organization
-- **All test files must be placed in the `prototype/tests/` directory**
-- For milestone-specific tests, create subdirectories: `prototype/tests/milestone_X.Y/`
-- Test runners and harnesses belong in `prototype/tests/`
-- Unit tests for specific modules go in `prototype/tests/test_<module>.py`
-- Integration tests go in `prototype/tests/test_integration.py` or similar
-- Never place test files in the root directory
+#### Prototype Test File Organization
+- **For prototype testing only**: All prototype test files must be placed in the `prototype/tests/` directory
+- For milestone-specific prototype tests, create subdirectories: `prototype/tests/milestone_X.Y/`
+- Prototype test runners and harnesses belong in `prototype/tests/`
+- Unit tests for prototype modules go in `prototype/tests/test_<module>.py`
+- Prototype integration tests go in `prototype/tests/test_integration.py` or similar
+- Never place prototype test files in the root directory
+- **Note**: This applies specifically to tests in the prototype/ subdirectory. Other project areas (like mvp_site) have their own test organization patterns
 
 ### Key Constraints
 
 - **AI Models**: Current models are `DEFAULT_MODEL = 'gemini-2.5-flash'`, `LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'`, `TEST_MODEL = 'gemini-1.5-flash'` - never change without explicit user authorization
+- **Model Usage**: Use TEST_MODEL for general tests, but use DEFAULT_MODEL when testing production features like entity tracking
 - **SDK**: Must use modern `google-genai` SDK patterns (not legacy `google-generativeai`)
 - **Virtual Environment**: Always activate `venv` before running Python commands
 - **Test Isolation**: Use temporary directories to avoid overwriting application files
@@ -262,7 +266,11 @@ if isinstance(item, dict):
     *   I will use my tools to check the current state of the codebase (e.g., API method signatures, library versions) before making assumptions.
 
 9.  **Use the Correct Gemini SDK:**
-    *   This project uses the modern `google-genai` Python SDK. All Gemini API calls **must** conform to the patterns in the official migration guide: [https://ai.google.dev/gemini-api/docs/migrate](mdc:https:/ai.google.dev/gemini-api/docs/migrate). This means using `genai.Client()` for initialization and `client.models.generate_content()` for API requests. I will not use the legacy `genai.GenerativeModel()` pattern.
+    *   This project uses the modern `google.genai` Python SDK (NOT `google.generativeai`). All Gemini API calls **must** use:
+        - Import: `from google import genai` and `from google.genai import types`
+        - Initialization: `client = genai.Client(api_key=api_key)`
+        - API calls: `client.models.generate_content(model=MODEL_NAME, contents=prompt)`
+    *   NEVER use the legacy `google.generativeai` package or `genai.GenerativeModel()` pattern.
 
 10. **Do Not Change the AI Model:**
     *   **AI Models**: Current models are `DEFAULT_MODEL = 'gemini-2.5-flash'`, `LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'`, `TEST_MODEL = 'gemini-1.5-flash'` - never change without explicit user authorization
@@ -424,6 +432,15 @@ if isinstance(item, dict):
     *   **Force Add**: Use `git add -f tmp/*.json` for ignored progress files
     *   **Completion Tracking**: Update roadmap files with ✅ COMPLETED, 🔄 IN PROGRESS (X%), ⬜ NOT STARTED
     *   **Benefits**: Clear audit trail, easy recovery, detailed visibility, accurate estimates
+    *   **Session Progress Tracking**: Whenever saving progress to `tmp/`, also create/update `tmp/current_milestone_{branch_name}.md` where `{branch_name}` is the actual current git branch name. This file should contain:
+        - Session summary (date, branch, primary task)
+        - Completed tasks with commit hashes
+        - Current state summary
+        - Key files created/modified
+        - Next steps for continuation
+        - Context for resumption
+        - Branch status
+    *   **Purpose**: Enable seamless session resumption after interruptions by providing complete context
 
     *   When the user requests to apply/test a pull request, I must prefer using GitHub CLI commands over manual git operations.
     *   **Primary method**: Use `gh pr checkout <PR_NUMBER>` to apply PR changes locally for testing

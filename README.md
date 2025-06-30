@@ -42,6 +42,7 @@ cd mvp_site && vpython main.py
 
 - [Product Specification](product_spec.md) - Complete product overview and features.
 - [Development Guide](mvp_site/CLAUDE.md) - Development setup and patterns for contributors.
+- [Milestone 0.4: Narrative Desync Prevention](docs/milestone_0.4_summary.md) - 0% desynchronization rate achieved with Pydantic structured generation.
 
 ---
 
