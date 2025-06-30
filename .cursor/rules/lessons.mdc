@@ -49,6 +49,47 @@ This document is a persistent repository for reusable knowledge, best practices,
 - **Lesson (Linter vs. Dynamic Libraries):** Static analysis tools (linters) may fail to correctly parse attributes of dynamic libraries like `firebase-admin`. For example, the linter may incorrectly flag `firestore.Query.DESCENDING` as an `AttributeError`, but it is correct at runtime.
 - **Action:** In cases of conflict, trust validated, working code over the linter's warning. The correct, tested usage is `firestore.Query.DESCENDING`.
 
+### Complex Project Management
+- **Lesson (Milestone Progress Tracking):** For complex projects with multiple milestones and sub-bullets, granular progress tracking with one JSON file per sub-bullet enables efficient completion and recovery. This approach enabled completing 40 sub-bullets (Milestone 0.3) in ~3 hours.
+- **Action:** Create `tmp/milestone_X.Y_step_A.B_progress.json` for each sub-bullet with status, files created, and key findings.
+- **Lesson (Atomic Commits):** One sub-bullet = one commit ensures clear project history and enables easy rollback if needed.
+- **Action:** Complete implementation, test locally, create progress file, then commit with descriptive message before moving to next sub-bullet.
+
+### Python Import Resolution
+- **Lesson (CRITICAL - Always Run From Project Root):** Python's import system is context-dependent. Running from subdirectories breaks relative imports. The solution is ALWAYS to run from project root, never to modify imports.
+- **Action:** Before ANY Python command, verify location with `pwd`. Always run: `python3 path/to/file.py` from root, never `cd path && python3 file.py`
+- **Lesson (Package Imports Work):** When a module uses relative imports like `from ..module import`, it's designed as a package. Import it as `import package.module` from project root.
+- **Example Fix:** Instead of fighting `ImportError: attempted relative import beyond top-level package`, run from root: `python3 test_prototype_working.py`
+
+### Validation System Design
+- **Lesson (Multiple Validator Approaches):** Different validation approaches excel in different scenarios - simple token matching is fastest but limited, fuzzy matching balances speed and accuracy, while LLM provides semantic understanding at higher cost.
+- **Action:** Start with FuzzyTokenValidator for most use cases (F1=1.0, 6ms), use LLM only for complex narratives requiring semantic understanding.
+- **Lesson (Baseline Measurement):** Always measure the baseline problem before implementing solutions. The 68% desync rate baseline justified the validation system investment.
+- **Action:** Collect metrics on current error rates before proposing complex solutions.
+
+### Performance Optimization Patterns
+- **Lesson (Caching Impact):** Simple caching can provide 10x+ performance improvements for repeated operations. Entity manifest caching reduced repeated calls from ~5ms to <0.5ms.
+- **Action:** Implement caching for any operation called multiple times with same inputs, especially in real-time systems.
+- **Lesson (Hybrid Cost Reduction):** Selective use of expensive validators (LLM) only when cheaper validators have low confidence can reduce costs by 90% while maintaining accuracy.
+- **Action:** Use confidence thresholds to cascade from cheap to expensive validators: if token_validator.confidence < 0.7, then use llm_validator.
+
+### Documentation Best Practices
+- **Lesson (Comprehensive Documentation):** Creating multiple documentation artifacts (integration guide, usage examples, failure modes, benchmark results) significantly improves adoption and understanding.
+- **Action:** For any complex system, create at minimum: integration guide, usage examples, performance analysis, and failure mode documentation.
+- **Lesson (Visual Performance Data):** ASCII charts and visualizations in markdown make performance characteristics immediately understandable without external tools.
+- **Action:** Include ASCII performance graphs, decision trees, and comparison matrices in technical documentation.
+
+### Git and Version Control
+- **Lesson (Progress Tracking Files Belong in Gitignore):** Progress tracking JSON files should remain in gitignored tmp/ directories, not be committed to version control. They're temporary work artifacts, not permanent project deliverables.
+- **Action:** Use tmp/ directories for progress tracking but never `git add -f` them. If documentation is needed, create ONE summary file instead of 40+ individual tracking files.
+- **Example:** `tmp/milestone_X.Y_progress.json` files should stay local. The progress info belongs in roadmap updates or a single summary document.
+
+### Text Validation and Pattern Matching
+- **Lesson (Word Boundary Matching Prevents False Positives):** When searching for entity names in text, simple substring matching causes false positives (e.g., finding "Gideon" in "Gideonville"). Always use word boundary regex patterns.
+- **Action:** Use `\b` word boundaries in regex: `pattern = r'\b' + re.escape(search_term) + r'\b'` to ensure whole word matches only.
+- **Example:** Changed `if entity_lower in normalized_narrative:` to `if re.search(r'\b' + re.escape(entity_lower) + r'\b', normalized_narrative):` in SimpleTokenValidator.
+- **Impact:** Eliminated false positive matches where character names appeared as substrings in location names or compound words.
+
 *   **Root Cause:** Failure to explicitly sanitize data for serialization. The `json` library cannot handle Python `datetime` objects by default.
 *   **Lesson:** Always pass data destined for JSON serialization through a handler that can manage common non-serializable types like `datetime`.
 

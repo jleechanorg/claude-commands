@@ -1,0 +1,20 @@
+{
+  "metadata": {
+    "total_samples": 100,
+    "analysis_patterns": [
+      "deletion_tokens",
+      "markup_tokens",
+      "state_commands",
+      "json_fragments",
+      "special_punctuation",
+      "ai_directives"
+    ],
+    "source_file": "../data/narrative_samples_20250628_172425.json"
+  },
+  "discovered_tokens": {},
+  "pattern_analysis": {},
+  "recommendations": [
+    "Review prompts/game_state_instruction.md to ensure all documented tokens have corresponding implementation in the codebase."
+  ],
+  "implementation_status": {}
+}

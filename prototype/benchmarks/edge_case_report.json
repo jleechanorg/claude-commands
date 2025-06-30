@@ -1,0 +1,588 @@
+{
+  "edge_case_test_report": {
+    "timestamp": "2025-06-29T11:16:41.158699",
+    "test_count": 10,
+    "validators": {
+      "SimpleTokenValidator": {
+        "accuracy": 0.7,
+        "correct_count": 7,
+        "total_count": 10,
+        "details": [
+          {
+            "case_id": "edge_hidden",
+            "description": "Character explicitly marked as hidden",
+            "correct": true,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Entity present but in special state"
+          },
+          {
+            "case_id": "edge_unconscious",
+            "description": "Character unconscious",
+            "correct": false,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Rowan"
+            ],
+            "challenge": "Entity present but incapacitated"
+          },
+          {
+            "case_id": "edge_pronoun_only",
+            "description": "Only pronouns used",
+            "correct": false,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [],
+            "challenge": "No explicit names, only pronouns"
+          },
+          {
+            "case_id": "edge_partial_names",
+            "description": "Interrupted/partial names",
+            "correct": false,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [],
+            "challenge": "Names cut off mid-word"
+          },
+          {
+            "case_id": "edge_wrong_names",
+            "description": "Different character names",
+            "correct": true,
+            "expected": [],
+            "predicted": [],
+            "challenge": "Completely different characters mentioned"
+          },
+          {
+            "case_id": "edge_memory_reference",
+            "description": "Past tense memory",
+            "correct": true,
+            "expected": [
+              "Gideon"
+            ],
+            "predicted": [
+              "Gideon"
+            ],
+            "challenge": "One present, one only in memory"
+          },
+          {
+            "case_id": "edge_ambiguous",
+            "description": "Ambiguous references",
+            "correct": true,
+            "expected": [],
+            "predicted": [],
+            "challenge": "Could be the entities but unclear"
+          },
+          {
+            "case_id": "edge_group_reference",
+            "description": "Group reference without individuals",
+            "correct": true,
+            "expected": [],
+            "predicted": [],
+            "challenge": "Generic group terms only"
+          },
+          {
+            "case_id": "edge_action_only",
+            "description": "Actions without names",
+            "correct": true,
+            "expected": [],
+            "predicted": [],
+            "challenge": "Actions imply entities but no identification"
+          },
+          {
+            "case_id": "edge_dialogue_heavy",
+            "description": "Dialogue with clear speakers",
+            "correct": true,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Names only in dialogue attribution"
+          }
+        ]
+      },
+      "TokenValidator": {
+        "accuracy": 0.8,
+        "correct_count": 8,
+        "total_count": 10,
+        "details": [
+          {
+            "case_id": "edge_hidden",
+            "description": "Character explicitly marked as hidden",
+            "correct": true,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Entity present but in special state"
+          },
+          {
+            "case_id": "edge_unconscious",
+            "description": "Character unconscious",
+            "correct": true,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Entity present but incapacitated"
+          },
+          {
+            "case_id": "edge_pronoun_only",
+            "description": "Only pronouns used",
+            "correct": false,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [],
+            "challenge": "No explicit names, only pronouns"
+          },
+          {
+            "case_id": "edge_partial_names",
+            "description": "Interrupted/partial names",
+            "correct": false,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [],
+            "challenge": "Names cut off mid-word"
+          },
+          {
+            "case_id": "edge_wrong_names",
+            "description": "Different character names",
+            "correct": true,
+            "expected": [],
+            "predicted": [],
+            "challenge": "Completely different characters mentioned"
+          },
+          {
+            "case_id": "edge_memory_reference",
+            "description": "Past tense memory",
+            "correct": true,
+            "expected": [
+              "Gideon"
+            ],
+            "predicted": [
+              "Gideon"
+            ],
+            "challenge": "One present, one only in memory"
+          },
+          {
+            "case_id": "edge_ambiguous",
+            "description": "Ambiguous references",
+            "correct": true,
+            "expected": [],
+            "predicted": [],
+            "challenge": "Could be the entities but unclear"
+          },
+          {
+            "case_id": "edge_group_reference",
+            "description": "Group reference without individuals",
+            "correct": true,
+            "expected": [],
+            "predicted": [],
+            "challenge": "Generic group terms only"
+          },
+          {
+            "case_id": "edge_action_only",
+            "description": "Actions without names",
+            "correct": true,
+            "expected": [],
+            "predicted": [],
+            "challenge": "Actions imply entities but no identification"
+          },
+          {
+            "case_id": "edge_dialogue_heavy",
+            "description": "Dialogue with clear speakers",
+            "correct": true,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Names only in dialogue attribution"
+          }
+        ]
+      },
+      "FuzzyTokenValidator": {
+        "accuracy": 0.9,
+        "correct_count": 9,
+        "total_count": 10,
+        "details": [
+          {
+            "case_id": "edge_hidden",
+            "description": "Character explicitly marked as hidden",
+            "correct": true,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Entity present but in special state"
+          },
+          {
+            "case_id": "edge_unconscious",
+            "description": "Character unconscious",
+            "correct": true,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Entity present but incapacitated"
+          },
+          {
+            "case_id": "edge_pronoun_only",
+            "description": "Only pronouns used",
+            "correct": true,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "No explicit names, only pronouns"
+          },
+          {
+            "case_id": "edge_partial_names",
+            "description": "Interrupted/partial names",
+            "correct": true,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Names cut off mid-word"
+          },
+          {
+            "case_id": "edge_wrong_names",
+            "description": "Different character names",
+            "correct": true,
+            "expected": [],
+            "predicted": [],
+            "challenge": "Completely different characters mentioned"
+          },
+          {
+            "case_id": "edge_memory_reference",
+            "description": "Past tense memory",
+            "correct": true,
+            "expected": [
+              "Gideon"
+            ],
+            "predicted": [
+              "Gideon"
+            ],
+            "challenge": "One present, one only in memory"
+          },
+          {
+            "case_id": "edge_ambiguous",
+            "description": "Ambiguous references",
+            "correct": true,
+            "expected": [],
+            "predicted": [],
+            "challenge": "Could be the entities but unclear"
+          },
+          {
+            "case_id": "edge_group_reference",
+            "description": "Group reference without individuals",
+            "correct": true,
+            "expected": [],
+            "predicted": [],
+            "challenge": "Generic group terms only"
+          },
+          {
+            "case_id": "edge_action_only",
+            "description": "Actions without names",
+            "correct": false,
+            "expected": [],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Actions imply entities but no identification"
+          },
+          {
+            "case_id": "edge_dialogue_heavy",
+            "description": "Dialogue with clear speakers",
+            "correct": true,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Names only in dialogue attribution"
+          }
+        ]
+      },
+      "LLMValidator": {
+        "accuracy": 0.8,
+        "correct_count": 8,
+        "total_count": 10,
+        "details": [
+          {
+            "case_id": "edge_hidden",
+            "description": "Character explicitly marked as hidden",
+            "correct": true,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Entity present but in special state"
+          },
+          {
+            "case_id": "edge_unconscious",
+            "description": "Character unconscious",
+            "correct": true,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Entity present but incapacitated"
+          },
+          {
+            "case_id": "edge_pronoun_only",
+            "description": "Only pronouns used",
+            "correct": true,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "No explicit names, only pronouns"
+          },
+          {
+            "case_id": "edge_partial_names",
+            "description": "Interrupted/partial names",
+            "correct": true,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Names cut off mid-word"
+          },
+          {
+            "case_id": "edge_wrong_names",
+            "description": "Different character names",
+            "correct": true,
+            "expected": [],
+            "predicted": [],
+            "challenge": "Completely different characters mentioned"
+          },
+          {
+            "case_id": "edge_memory_reference",
+            "description": "Past tense memory",
+            "correct": true,
+            "expected": [
+              "Gideon"
+            ],
+            "predicted": [
+              "Gideon"
+            ],
+            "challenge": "One present, one only in memory"
+          },
+          {
+            "case_id": "edge_ambiguous",
+            "description": "Ambiguous references",
+            "correct": true,
+            "expected": [],
+            "predicted": [],
+            "challenge": "Could be the entities but unclear"
+          },
+          {
+            "case_id": "edge_group_reference",
+            "description": "Group reference without individuals",
+            "correct": false,
+            "expected": [],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Generic group terms only"
+          },
+          {
+            "case_id": "edge_action_only",
+            "description": "Actions without names",
+            "correct": false,
+            "expected": [],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Actions imply entities but no identification"
+          },
+          {
+            "case_id": "edge_dialogue_heavy",
+            "description": "Dialogue with clear speakers",
+            "correct": true,
+            "expected": [
+              "Gideon",
+              "Rowan"
+            ],
+            "predicted": [
+              "Gideon",
+              "Rowan"
+            ],
+            "challenge": "Names only in dialogue attribution"
+          }
+        ]
+      }
+    },
+    "challenge_analysis": {
+      "Entity present but in special state": {
+        "validators_handling_well": [
+          "SimpleTokenValidator",
+          "TokenValidator",
+          "FuzzyTokenValidator",
+          "LLMValidator"
+        ],
+        "validators_struggling": []
+      },
+      "Entity present but incapacitated": {
+        "validators_handling_well": [
+          "TokenValidator",
+          "FuzzyTokenValidator",
+          "LLMValidator"
+        ],
+        "validators_struggling": [
+          "SimpleTokenValidator"
+        ]
+      },
+      "No explicit names, only pronouns": {
+        "validators_handling_well": [
+          "FuzzyTokenValidator",
+          "LLMValidator"
+        ],
+        "validators_struggling": [
+          "SimpleTokenValidator",
+          "TokenValidator"
+        ]
+      },
+      "Names cut off mid-word": {
+        "validators_handling_well": [
+          "FuzzyTokenValidator",
+          "LLMValidator"
+        ],
+        "validators_struggling": [
+          "SimpleTokenValidator",
+          "TokenValidator"
+        ]
+      },
+      "Completely different characters mentioned": {
+        "validators_handling_well": [
+          "SimpleTokenValidator",
+          "TokenValidator",
+          "FuzzyTokenValidator",
+          "LLMValidator"
+        ],
+        "validators_struggling": []
+      },
+      "One present, one only in memory": {
+        "validators_handling_well": [
+          "SimpleTokenValidator",
+          "TokenValidator",
+          "FuzzyTokenValidator",
+          "LLMValidator"
+        ],
+        "validators_struggling": []
+      },
+      "Could be the entities but unclear": {
+        "validators_handling_well": [
+          "SimpleTokenValidator",
+          "TokenValidator",
+          "FuzzyTokenValidator",
+          "LLMValidator"
+        ],
+        "validators_struggling": []
+      },
+      "Generic group terms only": {
+        "validators_handling_well": [
+          "SimpleTokenValidator",
+          "TokenValidator",
+          "FuzzyTokenValidator"
+        ],
+        "validators_struggling": [
+          "LLMValidator"
+        ]
+      },
+      "Actions imply entities but no identification": {
+        "validators_handling_well": [
+          "SimpleTokenValidator",
+          "TokenValidator"
+        ],
+        "validators_struggling": [
+          "FuzzyTokenValidator",
+          "LLMValidator"
+        ]
+      },
+      "Names only in dialogue attribution": {
+        "validators_handling_well": [
+          "SimpleTokenValidator",
+          "TokenValidator",
+          "FuzzyTokenValidator",
+          "LLMValidator"
+        ],
+        "validators_struggling": []
+      }
+    },
+    "recommendations": [
+      "Fuzzy matching successfully handles partial names - use for robustness."
+    ]
+  }
+}

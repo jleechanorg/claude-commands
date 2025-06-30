@@ -38,3 +38,43 @@ mvp_site/world/
 # Temp files
 tmp/
 mvp_site/tmp/
+
+# Phase 0 Data Files
+data/*.json
+data/*.csv
+data/*.log
+data/narrative_samples/
+data/raw/
+data/processed/
+
+# Analysis outputs
+analysis/*.tmp
+analysis/*.cache
+analysis/working/
+
+# Prototype outputs
+prototype/*.pyc
+prototype/__pycache__/
+prototype/benchmarks/*.json
+prototype/benchmarks/benchmark_results/
+prototype/*.prof
+prototype/.pytest_cache/
+
+# Script outputs
+scripts/*.log
+scripts/output/
+scripts/__pycache__/
+scripts/*.pyc
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.hypothesis/
+
+# Temporary files
+*.tmp
+*.bak
+*~
+.cache/

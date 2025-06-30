@@ -1,0 +1,85 @@
+{
+  "accuracy_test_report": {
+    "timestamp": "2025-06-29T11:06:03.837974",
+    "test_count": 5,
+    "validator_metrics": {
+      "SimpleToken": {
+        "true_positives": 2,
+        "false_positives": 0,
+        "true_negatives": 3,
+        "false_negatives": 5,
+        "precision": 1.0,
+        "recall": 0.286,
+        "f1_score": 0.444,
+        "accuracy": 0.5
+      },
+      "Token": {
+        "true_positives": 5,
+        "false_positives": 0,
+        "true_negatives": 3,
+        "false_negatives": 2,
+        "precision": 1.0,
+        "recall": 0.714,
+        "f1_score": 0.833,
+        "accuracy": 0.8
+      },
+      "Fuzzy": {
+        "true_positives": 7,
+        "false_positives": 0,
+        "true_negatives": 3,
+        "false_negatives": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "accuracy": 1.0
+      },
+      "LLM": {
+        "true_positives": 7,
+        "false_positives": 0,
+        "true_negatives": 3,
+        "false_negatives": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "accuracy": 1.0
+      },
+      "Hybrid": {
+        "true_positives": 7,
+        "false_positives": 0,
+        "true_negatives": 3,
+        "false_negatives": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1_score": 1.0,
+        "accuracy": 1.0
+      }
+    },
+    "summary": {
+      "best_f1": "Fuzzy",
+      "best_precision": "SimpleToken",
+      "best_recall": "Fuzzy",
+      "rankings": [
+        [
+          "Fuzzy",
+          1.0
+        ],
+        [
+          "LLM",
+          1.0
+        ],
+        [
+          "Hybrid",
+          1.0
+        ],
+        [
+          "Token",
+          0.833
+        ],
+        [
+          "SimpleToken",
+          0.444
+        ]
+      ]
+    }
+  }
+}

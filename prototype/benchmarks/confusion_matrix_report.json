@@ -1,0 +1,166 @@
+{
+  "confusion_matrix_report": {
+    "timestamp": "2025-06-29T11:13:50.656769",
+    "validators": {
+      "SimpleTokenValidator": {
+        "validator": "SimpleTokenValidator",
+        "matrix": {
+          "entity_present": {
+            "predicted_present": 2,
+            "predicted_absent": 5
+          },
+          "entity_absent": {
+            "predicted_present": 0,
+            "predicted_absent": 3
+          }
+        },
+        "per_entity_analysis": {
+          "Gideon": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 1,
+            "fn": 3,
+            "error_cases": [
+              {
+                "test_id": "test_002",
+                "type": "false_negative",
+                "entity": "Gideon",
+                "narrative_snippet": "Test test_002 - entity was present but not detected"
+              },
+              {
+                "test_id": "test_004",
+                "type": "false_negative",
+                "entity": "Gideon",
+                "narrative_snippet": "Test test_004 - entity was present but not detected"
+              },
+              {
+                "test_id": "test_005",
+                "type": "false_negative",
+                "entity": "Gideon",
+                "narrative_snippet": "Test test_005 - entity was present but not detected"
+              }
+            ]
+          },
+          "Rowan": {
+            "tp": 1,
+            "fp": 0,
+            "tn": 2,
+            "fn": 2,
+            "error_cases": [
+              {
+                "test_id": "test_004",
+                "type": "false_negative",
+                "entity": "Rowan",
+                "narrative_snippet": "Test test_004 - entity was present but not detected"
+              },
+              {
+                "test_id": "test_005",
+                "type": "false_negative",
+                "entity": "Rowan",
+                "narrative_snippet": "Test test_005 - entity was present but not detected"
+              }
+            ]
+          }
+        },
+        "error_patterns": [],
+        "statistics": {
+          "accuracy": 0.5,
+          "sensitivity": 0.286,
+          "specificity": 1.0,
+          "total_predictions": 10
+        }
+      },
+      "TokenValidator": {
+        "validator": "TokenValidator",
+        "matrix": {
+          "entity_present": {
+            "predicted_present": 5,
+            "predicted_absent": 2
+          },
+          "entity_absent": {
+            "predicted_present": 0,
+            "predicted_absent": 3
+          }
+        },
+        "per_entity_analysis": {
+          "Gideon": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 1,
+            "fn": 1,
+            "error_cases": [
+              {
+                "test_id": "test_005",
+                "type": "false_negative",
+                "entity": "Gideon",
+                "narrative_snippet": "Test test_005 - entity was present but not detected"
+              }
+            ]
+          },
+          "Rowan": {
+            "tp": 2,
+            "fp": 0,
+            "tn": 2,
+            "fn": 1,
+            "error_cases": [
+              {
+                "test_id": "test_005",
+                "type": "false_negative",
+                "entity": "Rowan",
+                "narrative_snippet": "Test test_005 - entity was present but not detected"
+              }
+            ]
+          }
+        },
+        "error_patterns": [],
+        "statistics": {
+          "accuracy": 0.8,
+          "sensitivity": 0.714,
+          "specificity": 1.0,
+          "total_predictions": 10
+        }
+      },
+      "FuzzyTokenValidator": {
+        "validator": "FuzzyTokenValidator",
+        "matrix": {
+          "entity_present": {
+            "predicted_present": 7,
+            "predicted_absent": 0
+          },
+          "entity_absent": {
+            "predicted_present": 0,
+            "predicted_absent": 3
+          }
+        },
+        "per_entity_analysis": {
+          "Gideon": {
+            "tp": 4,
+            "fp": 0,
+            "tn": 1,
+            "fn": 0,
+            "error_cases": []
+          },
+          "Rowan": {
+            "tp": 3,
+            "fp": 0,
+            "tn": 2,
+            "fn": 0,
+            "error_cases": []
+          }
+        },
+        "error_patterns": [],
+        "statistics": {
+          "accuracy": 1.0,
+          "sensitivity": 1.0,
+          "specificity": 1.0,
+          "total_predictions": 10
+        }
+      }
+    },
+    "summary": {
+      "most_accurate": "FuzzyTokenValidator",
+      "common_error_patterns": [],
+      "recommendations": []
+    }
+  }
+}

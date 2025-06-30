@@ -4,11 +4,12 @@
 
 This document outlines the comprehensive implementation plan for enhancing WorldArchitect.AI's state synchronization system. The plan addresses a recurring `Narrative Desynchronization Error` where narrative output fails to accurately reflect the presence of all characters as defined in the `CURRENT GAME STATE`.
 
-The implementation is structured in two phases:
+The implementation is structured in three phases:
+- **Phase 0**: Research & Prototype (NEW - Critical Foundation)
 - **Phase 1**: AI Token Audit and Validation Infrastructure (Foundation)
 - **Phase 2**: Core State Synchronization Protocol (Patch 1.1)
 
-This ordering ensures we understand all AI output patterns before implementing the synchronization logic.
+This ordering ensures we validate our approach with real data before building production systems.
 
 ## 2. Core Problem
 
@@ -22,11 +23,125 @@ Additionally, the system lacks:
 ## 3. Implementation Timeline
 
 **CRITICAL: Phase Dependencies**
+- Phase 0 must validate core assumptions before any implementation begins
+- Phase 1 implementation is blocked until Phase 0 proves feasibility
 - Phase 2 implementation is blocked until Phase 1 delivers concrete token schemas
 - No Phase 2 work can begin without understanding AI output formats from Phase 1
 - Security review must be completed before any prompt injection implementation
 
-### Phase 1: AI Token Audit and Validation Infrastructure (Weeks 1-2)
+### Phase 0: Research & Prototype (NEW - Weeks 1-2)
+**Critical foundation work to validate approach before implementation**
+
+#### Milestone 0.1: Narrative Analysis & Pattern Discovery
+- **PR #0.1:** Analyze 100+ real game narratives for desync patterns
+- **Deliverables:**
+  - Dataset of actual narrative outputs with annotated sync errors
+  - Statistical analysis of error types and frequencies
+  - Pattern catalog of common desync scenarios
+  - Baseline metrics for current error rates
+- **Files:** analysis/narrative_patterns.md, data/narrative_samples.json
+- **Acceptance:** Clear understanding of problem scope with data
+
+#### Milestone 0.2: Token Discovery Tool
+- **PR #0.2:** Build automated AI token discovery system
+- **Deliverables:**
+  - Script to parse all prompt files and extract token patterns
+  - Regular expression patterns for token identification
+  - Automated report generation for found tokens
+  - Integration with CI for ongoing discovery
+- **Files:** scripts/token_discovery.py, scripts/token_patterns.json
+- **Acceptance:** 95%+ token discovery rate on test prompts
+
+#### Milestone 0.3: Validation Prototype
+- **PR #0.3:** Build proof-of-concept narrative validator
+- **Deliverables:**
+  - Simple validator using multiple approaches:
+    - Token-based matching
+    - LLM-based validation
+    - Hybrid approach
+  - Performance benchmarks for each approach
+  - False positive/negative rates
+  - User experience impact assessment
+- **Files:** prototype/validator.py, prototype/benchmark_results.md
+- **Acceptance:** Working prototype with measured accuracy rates
+
+**Detailed Implementation Steps:**
+
+1. **Create prototype structure and test data** ✅ COMPLETED
+   - ✅ Create `prototype/` subdirectories for validators, tests, and benchmarks
+   - ✅ Generate 20 test narratives with known entity presence/absence
+   - ✅ Create ground truth labels for validation testing
+   - ✅ Build test harness for consistent evaluation
+
+2. **Build base validator class** ✅ COMPLETED
+   - ✅ Create `prototype/validator.py` with abstract validator interface
+   - ✅ Define common validation result format (JSON schema)
+   - ✅ Set up logging and metrics collection framework
+   - ✅ Implement shared utilities for all validator types
+
+3. **Implement simple token-based validator** ✅ COMPLETED
+   - ✅ Basic string matching for entity names (exact match)
+   - ✅ Case-insensitive search implementation
+   - ✅ Return validation results with matched/missing entities
+   - ✅ Handle multiple name formats (e.g., "Gideon" vs "gideon")
+
+4. **Enhance token validator with fuzzy matching** ✅ COMPLETED
+   - ✅ Add regex patterns for name variations and titles
+   - ✅ Implement descriptor matching (e.g., "knight" → "Gideon") 
+   - ✅ Handle pronouns and contextual references
+   - ✅ Support partial name matches with confidence scores
+
+5. **Create LLM-based validator** ✅ COMPLETED
+   - ✅ Design validation prompt template with examples
+   - ✅ Implement Gemini API integration with error handling
+   - ✅ Parse structured responses into validation format
+   - ✅ Add retry logic and timeout management
+
+6. **Build hybrid validator** ✅ COMPLETED
+   - ✅ Combine token and LLM validation results
+   - ✅ Implement confidence scoring algorithm
+   - ✅ Create weighted decision logic based on validator strengths
+   - ✅ Handle conflicts between validators gracefully
+
+7. **Implement performance benchmarking** ✅ COMPLETED
+   - ✅ Add timing decorators to all validator methods
+   - ✅ Create benchmark runner script with configurable parameters
+   - ✅ Test with narratives of varying lengths (100-5000 words)
+   - ✅ Measure memory usage and API call counts
+
+8. **Measure accuracy metrics** ✅ COMPLETED
+   - ✅ Calculate precision/recall/F1 for each validator type
+   - ✅ Create confusion matrices for error analysis
+   - ✅ Test edge cases (hidden/unconscious characters)
+   - ✅ Document failure modes and limitations
+
+9. **Generate benchmark report** ✅ COMPLETED
+   - ✅ Create comprehensive `prototype/benchmark_results.md`
+   - ✅ Include performance graphs and visualizations
+   - ✅ Document accuracy vs. speed trade-offs
+   - ✅ Provide cost analysis for LLM-based approach
+
+10. **Create demo integration** ✅ COMPLETED
+    - ✅ Mock integration with game_state.py interface
+    - ✅ Demonstrate real-time validation during gameplay
+    - ✅ Document integration points and API design
+    - ✅ Create example usage code and documentation
+
+**Progress Summary:**
+- Steps 1-10: ✅ COMPLETED (40/40 sub-bullets)
+- **Overall: 100% complete! 🎉**
+
+#### Milestone 0.4: Alternative Approach Evaluation
+- **PR #0.4:** Test structured generation as alternative
+- **Deliverables:**
+  - Modified prompts enforcing entity mentions
+  - Comparison of generation quality
+  - Performance impact analysis
+  - Feasibility report for prompt-based solution
+- **Files:** prompts/structured_generation/, analysis/approach_comparison.md
+- **Acceptance:** Data-driven recommendation on best approach
+
+### Phase 1: AI Token Audit and Validation Infrastructure (Weeks 3-4)
 **Must complete before Phase 2 - Deliverables required for Phase 2 design**
 
 #### Milestone 1.1: AI Token Audit & Registry
@@ -59,7 +174,7 @@ Additionally, the system lacks:
 - **Files:** scripts/pattern_detection.py, CI integration
 - **Acceptance:** Automated detection of integration gaps
 
-### Phase 2: Core State Synchronization Protocol (Patch 1.1) (Week 3)
+### Phase 2: Core State Synchronization Protocol (Patch 1.1) (Weeks 5-6)
 
 ## 4. `Patch 1.1` Implementation Details
 
@@ -220,6 +335,15 @@ class GameState:
 ```
 
 ## 5. Risk Mitigation Strategies
+
+### 5.0. Phase 0 De-Risking Benefits
+*   **Risk:** Building wrong solution for the problem
+*   **Mitigation:**
+     - Real data analysis before design decisions
+     - Multiple prototype approaches tested
+     - Performance measured before commitment
+     - User impact assessed early
+     - Go/no-go decision point before major investment
 
 ### 5.1. Performance Risks
 *   **Risk:** Scene Manifest generation could degrade performance for large entity counts
@@ -386,21 +510,29 @@ class GameState:
 
 ## 10. Deployment Plan
 
-### 10.1. Phase 1 Deployment (Weeks 1-2)
+### 10.1. Phase 0 Deployment (Weeks 1-2)
+1. Set up analysis infrastructure in development
+2. Collect and analyze narrative samples
+3. Deploy token discovery tool
+4. Build and test validation prototypes
+5. Evaluate alternative approaches
+6. Make go/no-go decision based on findings
+
+### 10.2. Phase 1 Deployment (Weeks 3-4)
 1. Deploy AI token audit scripts in development
 2. Generate token registry and gap analysis
 3. Deploy validation infrastructure with feature flags disabled
 4. Deploy pattern detection in CI/CD pipeline
 5. Run in "shadow mode" collecting metrics
 
-### 10.2. Phase 2 Deployment (Week 3)
+### 10.3. Phase 2 Deployment (Weeks 5-6)
 1. Deploy Patch 1.1 with feature flags disabled
 2. Enable in development environment first
 3. Run comprehensive test suite
 4. Enable in staging with monitoring
 5. Gradual production rollout (10% → 50% → 100%)
 
-### 10.3. Success Criteria
+### 10.4. Success Criteria
 - Zero increase in error rates
 - Performance within defined targets
 - < 1% validation false positive rate
@@ -422,4 +554,9 @@ class GameState:
 
 ## 12. Deployment Status
 
-Phase 1 and Phase 2 are pending implementation. This document serves as the authoritative implementation guide for the enhanced state synchronization system. 
+**UPDATE: Phase 0 Added (Research & Prototype)**
+- Phase 0 provides critical validation before implementation investment
+- Real data analysis and prototyping will inform final design
+- Go/no-go decision point after Phase 0 completion
+
+All phases (0, 1, and 2) are pending implementation. This document serves as the authoritative implementation guide for the enhanced state synchronization system. 

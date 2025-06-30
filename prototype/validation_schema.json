@@ -1,0 +1,169 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Narrative Validation Result Schema",
+  "description": "Standard format for narrative validation results in WorldArchitect.AI",
+  "type": "object",
+  "required": [
+    "all_entities_present",
+    "entities_found",
+    "entities_missing",
+    "confidence"
+  ],
+  "properties": {
+    "all_entities_present": {
+      "type": "boolean",
+      "description": "Whether all expected entities are present in the narrative"
+    },
+    "entities_found": {
+      "type": "array",
+      "description": "List of entities detected in the narrative",
+      "items": {
+        "type": "string"
+      }
+    },
+    "entities_missing": {
+      "type": "array",
+      "description": "List of expected entities not found in the narrative",
+      "items": {
+        "type": "string"
+      }
+    },
+    "confidence": {
+      "type": "number",
+      "description": "Confidence score of the validation (0.0 to 1.0)",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "entity_references": {
+      "type": "object",
+      "description": "Map of entity names to their references found in text",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "text": {
+              "type": "string",
+              "description": "The text that references the entity"
+            },
+            "type": {
+              "type": "string",
+              "enum": ["name", "title", "descriptor", "pronoun", "action"],
+              "description": "Type of reference"
+            },
+            "position": {
+              "type": "integer",
+              "description": "Character position in narrative"
+            },
+            "confidence": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0
+            }
+          }
+        }
+      }
+    },
+    "entity_states": {
+      "type": "object",
+      "description": "Detected states of entities (e.g., hidden, unconscious)",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "enum": ["conscious", "unconscious", "hidden", "combat", "dead", "absent"]
+        }
+      }
+    },
+    "errors": {
+      "type": "array",
+      "description": "List of errors encountered during validation",
+      "items": {
+        "type": "string"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "description": "List of warnings or ambiguities detected",
+      "items": {
+        "type": "string"
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional validator-specific metadata",
+      "properties": {
+        "validator_name": {
+          "type": "string"
+        },
+        "validator_version": {
+          "type": "string"
+        },
+        "processing_time_ms": {
+          "type": "number"
+        },
+        "narrative_length": {
+          "type": "integer"
+        },
+        "method": {
+          "type": "string",
+          "enum": ["token", "llm", "hybrid"]
+        }
+      }
+    },
+    "validation_details": {
+      "type": "object",
+      "description": "Detailed validation information",
+      "properties": {
+        "token_matches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "entity": {"type": "string"},
+              "matched_text": {"type": "string"},
+              "match_type": {"type": "string"},
+              "score": {"type": "number"}
+            }
+          }
+        },
+        "llm_analysis": {
+          "type": "object",
+          "properties": {
+            "prompt_used": {"type": "string"},
+            "response": {"type": "string"},
+            "parsing_success": {"type": "boolean"}
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "all_entities_present": true,
+      "entities_found": ["Gideon", "Rowan"],
+      "entities_missing": [],
+      "confidence": 0.95,
+      "entity_references": {
+        "Gideon": [
+          {
+            "text": "Gideon",
+            "type": "name",
+            "position": 0,
+            "confidence": 1.0
+          },
+          {
+            "text": "the knight",
+            "type": "descriptor",
+            "position": 45,
+            "confidence": 0.8
+          }
+        ]
+      },
+      "metadata": {
+        "validator_name": "TokenValidator",
+        "processing_time_ms": 12.5
+      }
+    }
+  ]
+}

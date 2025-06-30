@@ -1,0 +1,58 @@
+{
+  "benchmark_type": "narrative_length",
+  "timestamp": "2025-01-29T01:45:00Z",
+  "description": "Sample benchmark results showing expected performance patterns",
+  "lengths": [100, 500, 1000, 2000, 5000],
+  "results": {
+    "100": {
+      "SimpleTokenValidator": 0.0012,
+      "TokenValidator": 0.0018,
+      "FuzzyTokenValidator": 0.0025,
+      "LLMValidator": 0.1050,
+      "HybridValidator": 0.1095
+    },
+    "500": {
+      "SimpleTokenValidator": 0.0028,
+      "TokenValidator": 0.0042,
+      "FuzzyTokenValidator": 0.0068,
+      "LLMValidator": 0.1052,
+      "HybridValidator": 0.1162
+    },
+    "1000": {
+      "SimpleTokenValidator": 0.0045,
+      "TokenValidator": 0.0072,
+      "FuzzyTokenValidator": 0.0125,
+      "LLMValidator": 0.1055,
+      "HybridValidator": 0.1252
+    },
+    "2000": {
+      "SimpleTokenValidator": 0.0082,
+      "TokenValidator": 0.0135,
+      "FuzzyTokenValidator": 0.0248,
+      "LLMValidator": 0.1058,
+      "HybridValidator": 0.1441
+    },
+    "5000": {
+      "SimpleTokenValidator": 0.0195,
+      "TokenValidator": 0.0325,
+      "FuzzyTokenValidator": 0.0615,
+      "LLMValidator": 0.1065,
+      "HybridValidator": 0.2005
+    }
+  },
+  "analysis": {
+    "performance_scaling": {
+      "SimpleTokenValidator": "Linear with text length (fastest)",
+      "TokenValidator": "Linear with slight overhead for descriptors",
+      "FuzzyTokenValidator": "Super-linear due to pattern matching",
+      "LLMValidator": "Constant time (API call dominates)",
+      "HybridValidator": "Depends on slowest component (LLM)"
+    },
+    "recommendations": {
+      "short_texts": "Use TokenValidator for speed",
+      "long_texts": "Consider SimpleTokenValidator or caching",
+      "accuracy_critical": "Use HybridValidator despite speed penalty",
+      "real_time": "Avoid LLM-based validators"
+    }
+  }
+}

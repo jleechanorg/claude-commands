@@ -347,6 +347,28 @@ if isinstance(item, dict):
     *   **Commit Messages**: Use descriptive titles with bullet points and Claude Code attribution
 
 11. **GitHub CLI Preference for PR Operations:**
+    *   Always use GitHub CLI (`gh`) commands for creating and managing pull requests when available
+    *   This ensures proper authentication and streamlined workflow
+
+12. **Milestone Progress Tracking Protocol:**
+    *   **Granular Tracking**: For complex projects with milestones and sub-bullets, create one progress file per sub-bullet
+    *   **Progress Files**: Save to `tmp/milestone_X.Y_step_A.B_progress.json` with milestone, step, sub_bullet, status, timestamp, files_created, key_findings, and next_task
+    *   **Atomic Commits**: One sub-bullet = one commit with descriptive message following the format:
+        ```
+        M{milestone} Step {step}.{sub_bullet}: {Brief description}
+        
+        - {Implementation detail 1}
+        - {Key result or finding}
+        - Saved progress to tmp/milestone_{milestone}_step_{step}.{sub_bullet}_progress.json
+        
+        🤖 Generated with [Claude Code](https://claude.ai/code)
+        Co-Authored-By: Claude <noreply@anthropic.com>
+        ```
+    *   **PR Updates**: Only update PR descriptions when local tests pass and significant milestones are reached
+    *   **Force Add**: Use `git add -f tmp/*.json` for ignored progress files
+    *   **Completion Tracking**: Update roadmap files with ✅ COMPLETED, 🔄 IN PROGRESS (X%), ⬜ NOT STARTED
+    *   **Benefits**: Clear audit trail, easy recovery, detailed visibility, accurate estimates
+
     *   When the user requests to apply/test a pull request, I must prefer using GitHub CLI commands over manual git operations.
     *   **Primary method**: Use `gh pr checkout <PR_NUMBER>` to apply PR changes locally for testing
     *   **Alternative methods**: If GitHub CLI is unavailable, use `git fetch origin pull/<PR_NUMBER>/head:<branch_name>` followed by `git checkout <branch_name>`
@@ -376,16 +398,29 @@ if isinstance(item, dict):
     *   I will verify that the project-specific virtual environment (`venv`) is activated before running any Python scripts, linters, testers, or package managers. If it's not active, I will attempt to activate it or inform you if I cannot.
 2.  **Write Robust & Context-Aware Scripts:**
     *   Automation scripts (e.g., `deploy.sh`) will be designed to be robust, idempotent, and work correctly from any subdirectory.
-3.  **Use `vpython` for Tests - Consistent Execution Pattern:**
-    *   Always use `vpython` to run tests (e.g., `vpython -m unittest discover` or `vpython path/to/test_file.py`). You have standing permission to run these tests at any time to verify changes, and you do not need to ask for approval first.
+3.  **MANDATORY Python Execution Protocol - Always Run From Project Root:**
+    *   **CRITICAL RULE**: ALL Python commands MUST be executed from the project root directory. This is NON-NEGOTIABLE.
+    *   **WHY**: Python's import system requires consistent execution context. Running from subdirectories breaks relative imports and package structures.
+    *   **ENFORCEMENT**: Before ANY Python command, I MUST verify I'm at project root with `pwd`. If not at root, I MUST navigate there first.
+    *   **PROHIBITED**: Never run Python files from subdirectories like `cd prototype && python3 file.py` or `cd mvp_site && python3 test.py`
+    *   **CORRECT PATTERN**: Always use full paths from project root:
+        - `python3 prototype/some_file.py` ✓
+        - `vpython mvp_site/test_file.py` ✓
+        - `TESTING=true vpython mvp_site/test_integration.py` ✓
+    *   **IMPORT PATTERN**: When imports fail, the solution is ALWAYS to run from project root, NOT to modify imports.
+4.  **Use `vpython` for Tests - Consistent Execution Pattern:**
+    *   Always use `vpython` to run tests when available. If `vpython` is not available, use `python3` but ALWAYS from project root.
     *   **CRITICAL: When user says "run all tests", always use `./run_tests.sh` script from project root instead of manual unittest commands.**
     *   **CRITICAL: When ANY test fails, I must either fix it immediately or explicitly ask the user if it should be fixed. I must highlight the entire line of failing test output in red for visibility.**
-    *   **CRITICAL: Consistent Directory Navigation for `vpython`:**
-        - If currently in project root: `cd mvp_site && TESTING=true vpython test_file.py`
-        - If already in mvp_site: `TESTING=true vpython test_file.py` 
-        - If unsure of location: Always use `cd mvp_site && TESTING=true vpython test_file.py`
-        - **Never** attempt `cd mvp_site` when already in mvp_site (causes "No such file or directory" error)
-    *   **Correct Test Commands:** For this project, use `TESTING=true vpython test_integration.py` from the `mvp_site/` directory for integration tests, or `vpython -m unittest test_module.TestClass.test_method` for specific tests.
+    *   **UPDATED Directory Navigation for `vpython`:**
+        - **ALWAYS from project root**: `TESTING=true vpython mvp_site/test_file.py`
+        - **NEVER cd into subdirectories** for Python execution
+        - If unsure of location: Use `pwd` first, then navigate to project root
+        - For prototype tests: `vpython test_prototype_working.py` (from root)
+    *   **Correct Test Commands:** 
+        - Integration tests: `TESTING=true vpython mvp_site/test_integration.py`
+        - Specific tests: `vpython -m unittest mvp_site.test_module.TestClass.test_method`
+        - Prototype tests: `python3 test_prototype_working.py`
 4.  **Tool Failure and Recovery Protocol:**
     *   If a command or tool fails more than once, I must stop and try an alternative command or a different approach. I will not repeatedly attempt the same failing action. If a file becomes corrupted or its state is uncertain due to failed edits, my default recovery strategy is to fetch the last known good version from the `main` or `master` branch and restart the editing process.
 5.  **Use Full-Content Tools for Web Scraping:**

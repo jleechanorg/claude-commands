@@ -1,0 +1,41 @@
+{
+  "patterns": {
+    "total_samples": 100,
+    "desync_count": 68,
+    "missing_entity_types": {
+      "Rowan": 41,
+      "Kira": 68,
+      "Bandit Leader": 16,
+      "Bandit Archer": 16,
+      "Gideon": 24
+    },
+    "scenario_desync_rates": {
+      "Hidden Party Member": {
+        "total": 20,
+        "desync": 10,
+        "rate": 50.0
+      },
+      "Unconscious Party Member": {
+        "total": 20,
+        "desync": 15,
+        "rate": 75.0
+      },
+      "Combat Scene": {
+        "total": 20,
+        "desync": 16,
+        "rate": 80.0
+      },
+      "Location Transition": {
+        "total": 20,
+        "desync": 16,
+        "rate": 80.0
+      },
+      "Split Party": {
+        "total": 20,
+        "desync": 11,
+        "rate": 55.00000000000001
+      }
+    },
+    "entity_mention_patterns": {},
+    "common_missing_combinations": {
+      
