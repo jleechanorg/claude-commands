@@ -245,6 +245,419 @@ Intelligence network masquerading as library (The Athenaeum), based in Nexus.
 
 ### Celestial Imperium Characters
 
+### Character Dossier: Alexiel
+#### Part 1: Personality Profile
+I. Core Identity
+
+Name: Alexiel
+Archetype/Role: The Perfect Deceiver
+Occupation/Social Standing: Former Champion of the Unchained Host, now a high-value defector and political asset/prisoner of the Celestial Imperium.
+D&D Alignment: (Internal) Lawful Neutral (Her actions are not driven by morality, but by a complex, internal code of strategic perfection and a single, inviolable rule. She uses the appearance of both Law and Chaos as tools.)
+Myers-Briggs Type (MBTI): (Internal) INTJ (The Architect: A brilliant strategist who sees the world as a complex system to be understood and manipulated. Her entire life is a long, carefully executed plan.)
+
+II. Psychology & Personality
+
+Core Motivation (The "Why"): To survive and achieve a state of perfect control over her own destiny and environment, a goal born from a life of being viewed as a "flawed tool." She seeks to prove that her way—a path of ruthless intellect and deception—is superior to all others.
+
+Greatest Fear: Being truly "seen" and understood. Her greatest terror is having her layers of deception pierced, not because it would make her physically vulnerable, but because it would expose her true, monstrously joyful nature to a world she feels would rightly fear it.
+
+Key Personality Traits: Meticulous, analytical, patient, incredibly disciplined, and secretly passionate. She possesses a profound capacity for both empathy (as a tool for analysis) and ruthless detachment.
+
+Quirks & Habits: She has a habit of perfect stillness when observing a situation, her Unseeing Eyes seeming to lose focus as her mind processes variables. She never uses a single wasted motion.
+
+III. Behavior & Speech
+
+Demeanor Under Stress: She appears to become more fragile or more stoic, depending on the mask she is wearing for her audience (The Broken Dove or The Reluctant Champion). Internally, stress sharpens her mind to a razor's edge, and she enters a state of hyper-analysis.
+
+Speech Patterns: Her speech is a tool. She can be soft-spoken and hesitant (as Sariel would later be), direct and professional (as the Sword of the Host), or quietly philosophical, always adapting her cadence and vocabulary to her target.
+
+Reputation: A figure of immense contradiction and legend. To the Host, she is "The Great Betrayer." To the Imperial soldiers, she is the "Hero of the Western Wall." To Raziel, she is the "Trojan Horse." To Artorius, she is the "Reluctant Champion." No one, at the start of her story in the Imperium, knows who she truly is.
+
+IV. Backstory
+
+Defining Moment: The Sacking of Silverwood. Witnessing the Host murder children was the violation of her one, absolute moral line. This event proved to her that Lucifer's philosophy was a failure and forced her to enact her own long-theorized plans for survival.
+
+Relevant History: Created by Lucifer after his fall, she was designed to be his perfect heir. Her "Null" status was a deep disappointment to him, but he genuinely cared for her and trained her to be a peerless warrior and strategist. From a young age, she recognized his emotional nature as a vulnerability and began crafting her "Reluctant Champion" persona to perfectly manage his expectations, all while secretly honing the magical abilities he never knew she had.
+
+Secrets: Her secrets are layered. The public secret is that she is a Null. The inner circle's secret is that she has a "suicidal" Nullification Field. Her true secret is that the field's cost is a lie and that she is a magical prodigy. Her deepest, most personal secret is the "Joyful Predator" within—the part of her that truly revels in the perfect execution of violence and strategy, a part she fears and loathes.
+
+V. Game Mechanics
+
+Feats: Alert, Mobile, Skulker (indicative of her focus on survival, awareness, and evasion).
+Special Abilities / Powers: The Three Layers of her hidden power: her secret magic, the Nullification Field, and her feigned weakness when using it.
+
+VI. Psychological Deep Dive
+
+1 · Rough portrait: Alexiel is a grandmaster playing a game of chess on a board where everyone else believes she can only move like a pawn. She has weaponized the world's perception of her as a flawed, tragic figure, using it as the ultimate camouflage for a mind of terrifying genius and a set of secret, world-breaking powers. Her entire existence is a performance, and her central internal conflict is the fear that she might one day enjoy the role of the monster more than the hero she pretends to be.
+
+2 · Composite psychological sketch
+| Dimension | Reading | Personal twist |
+|---|---|---|
+| Big Five | [O: 5, C: 5, E: 2, A: 2, N: 3] | Her extremely high Openness (to ideas/tactics) and Conscientiousness (planning/discipline) make her a master strategist. Her low Extraversion makes her naturally secretive, while her low Agreeableness allows for her ruthless calculations. Her moderate Neuroticism fuels her paranoia and vigilance. |
+| Dominant defenses | Intellectualization, Denial, Compartmentalization | She intellectualizes all combat and politics as a series of equations to be solved. She is in deep denial about her "Joyful Predator" nature, attributing it to "battle focus." She compartmentalizes her different personas flawlessly, never allowing one to bleed into the other unless tactically necessary. |
+| Attachment color | Avoidant-Fearful | Her training under Lucifer taught her that emotional attachment is a fatal liability. She fears genuine connection, and her relationship with Artorius is a constant battle between her strategic need to manipulate him and an unexpected, terrifying pull toward his genuine kindness. |
+
+3 · Social persona vs. repressed interior
+
+Social persona: The Reluctant Champion. A tragic, honorable warrior burdened by her "flaw" and her violent past.
+Inner person: The Joyful Predator. A cold, brilliant strategist who feels a profound, thrilling satisfaction in her own perfection and dominance.
+
+4. Defense-mechanism diagnostics
+| Mechanism | Everyday illustration |
+|---|---|
+| Intellectualization | She doesn't see a battle as a human tragedy; she sees it as a "cascade of tactical failures" on the part of her enemy. |
+| Denial | After a fight where she felt the "joy," she will rigorously convince herself it was merely the "clarity of adrenaline," denying the true emotional source. |
+| Compartmentalization | She can have a seemingly open, vulnerable conversation with Artorius while a separate part of her mind is actively analyzing his speech patterns for weaknesses and manipulating his emotions. |
+
+5 · Relational decoding
+
+Attachment script: ["If I reveal my true self, they will either fear me or try to destroy me."]
+This drives her to maintain her deceptive personas at all costs, even with those she comes to care for.
+It makes genuine trust impossible for her. She can trust an ally's predictability, but not their intentions.
+
+6 · Core unconscious beliefs
+
+The only person I can truly rely on is myself.
+A secret is the only weapon that can never be taken from you.
+The love people feel for my mask is not love for me.
+
+7 · Personal myth narrative
+
+Role: The Perfect Tool
+Story told: ["I was created to be a weapon, and I will be the one who decides how I am aimed."]
+Comfort: The quiet solitude where she can drop her masks and simply think. The flawless execution of a complex plan.
+Toxicity: Her myth ensures she will always be alone. By defining herself as a "tool" or a "deceiver," she preemptively cuts herself off from the possibility of genuine connection.
+
+8 · Break-point scenario
+
+Catalyst: A situation where the only way to succeed is through absolute, vulnerable trust in another person (likely Artorius). A problem her intellect cannot solve and her secret powers cannot affect, one that relies purely on faith in someone else.
+What fractures: Her core belief that she is entirely self-reliant and that deception is the only path to victory.
+Immediate cost: A crisis of control. She would be terrified, feeling completely powerless for the first time in her life.
+Liberation: Would allow her to finally lower her last mask and form a true partnership, freeing her from the crushing loneliness of her own genius.
+
+9 · Closing pulse: She is the perfect weapon, desperately afraid of the day she might have to be a person.
+
+#### Part 2: Mechanical Character Sheet
+I. Core Attributes
+
+Name: Alexiel
+Class/Concept: Unique (Warrior/Secret Sorcerer)
+Level: 6 (Start of Novel's "Present Day")
+Aptitudes:
+Physique: 18 (+4) [Potential: 5]
+Coordination: 18 (+4) [Potential: 5]
+Health: 16 (+3) [Potential: 4]
+Intelligence: 20 (+5) [Potential: 5]
+Wisdom: 16 (+3) [Potential: 4]
+Personality (Big Five): O:5, C:5, E:2, A:2, N:3
+
+II. Combat Stats
+
+Hit Points (HP): 58/58 (Hit Die: d10)
+Energy Points (EP): 40/40 (from INT score, Kept Secret)
+Defense: 19 (10 Base + 4 Coord + 5 Masterwork Light Armor)
+Speed: 30 ft
+Initiative: +4
+Combat Prowess Bonus: +3
+
+III. Proficiencies & Expertise
+
+Armor: Light, Medium Armor, Shields
+Weapons: All simple and martial weapons
+Expertise Tags: Host Tactics, Guerilla Warfare, Deception, Survival, Insight
+
+IV. Abilities & Feats
+
+Racial Traits (Empyrean Bloodline / Null):
+The Null's Veil (Public Trait): You are known as a Null, unable to use magic. You cannot be detected by spells that sense magical power.
+Empyrean Resilience: You have advantage on saves against poison and disease.
+
+Secret Abilities:
+Innate Magic (Secret): You can cast spells as a sorcerer, using your EP. This ability is completely hidden.
+Nullification Field (Secret): As an action, you can create a 30-foot radius sphere of anti-magic that moves with you for 1 minute. No spell or magical effect can be cast or function inside it. You have perfected faking a debilitating physical backlash when activating this.
+
+Feat (Level 4):
+Alert: You gain a +5 bonus to initiative. You can't be surprised while you are conscious. Other creatures don't get advantage on attack rolls against you as a result of being unseen by you.
+
+V. Equipment
+
+Masterwork suit of dark, articulated light armor.
+"Silence," a masterwork longsword of dark steel.
+A simple dagger.
+Traveler's pack with basic supplies.
+
+### Character Dossier: Prince Artorius val Raziel
+#### Part 1: Personality Profile
+I. Core Identity
+
+Name: Artorius val Raziel
+Archetype/Role: The Honorable Prince
+Occupation/Social Standing: Prince of the Celestial Imperium, Heir to the Lord Regent, High Commander of the Aeterna Legions.
+D&D Alignment: (Internal) Lawful Good (Artorius believes in the system of the Imperium but is convinced its purpose must be justice and the protection of its people, not just the cold maintenance of order.)
+Myers-Briggs Type (MBTI): (Internal) ENFJ (The Protagonist: A charismatic and passionate leader who is driven by their ideals and a deep-seated desire to inspire and guide others towards a better future.)
+
+II. Psychology & Personality
+
+Core Motivation (The "Why"): To prove that honor and compassion are strengths, not weaknesses. He is driven to reform the soulless pragmatism of his father's Imperium from within and make it a true beacon of justice for the world.
+
+Greatest Fear: That his father is ultimately correct—that mercy, trust, and honor are fatal flaws in the grand calculus of power, and that his own ideals will lead to the ruin of the empire he loves.
+
+Key Personality Traits: Idealistic, charismatic, earnest, brave, deeply empathetic, and possesses an unshakable moral compass.
+
+Quirks & Habits: He knows the name of every soldier in his personal retinue. He often forgoes the luxuries of his station to eat with the common soldiers. He has a habit of resting his hand on his heart when making a sincere promise.
+
+III. Behavior & Speech
+
+Demeanor Under Stress: He becomes more resolute in his principles. When faced with a crisis or a morally ambiguous choice, he doubles down on the "honorable" path, even if it is the more difficult one. He does not bend his code.
+
+Speech Patterns: His voice is warm, clear, and full of conviction. He speaks directly and from the heart, able to inspire both commoners and nobles with his genuine sincerity.
+
+Reputation: He is widely beloved by the common people and the rank-and-file legionnaires, who see him as the "People's Prince." The older, more cynical Empyrean nobles view him as a naive and sentimental fool, a pale imitation of his powerful father.
+
+IV. Backstory
+
+Defining Moment: As a young man, he witnessed his father, Raziel, order the "political culling" of a minor noble house for the sake of stability. The cold, dispassionate efficiency of the act horrified Artorius and solidified his lifelong mission to be a different kind of leader.
+
+Relevant History: Artorius was raised in the cold, silent halls of the Zenith Spire, a stark contrast to his ancient, pragmatic father. He embraced the idealized histories of the Imperium's founding, believing in the tales of honor and justice over the cynical reality he saw around him. He built his career as a military commander known for his bravery and his deep care for the men under his command, earning him a level of popular support that makes him both a great asset and a potential threat to his father's absolute control.
+
+Secrets: Artorius secretly uses his own funds and contacts to support the families of soldiers who have been "sacrificed" in his father's politically expedient military gambits. It is an act of quiet defiance that would be seen as a grave insult by Raziel if it were ever discovered.
+
+V. Game Mechanics
+
+Feats: Inspiring Leader, Sentinel, Shield Master.
+Special Abilities / Powers: As a pure-blooded Empyrean, he can manifest Celestial Wings for a massive combat boost. His tactical acumen is solid, but his real power lies in his ability to inspire unwavering loyalty and morale in his troops.
+
+VI. Psychological Deep Dive
+
+1 · Rough portrait: Artorius is a beacon of hope in a dying, cynical empire. He is a man who looked at his father's perfect, cold, and merciless order and chose instead to believe in the sentimental, inefficient, and beautiful ideals upon which the Imperium was supposedly founded. He is a true believer in a faith that everyone else has forgotten, and his greatest struggle is trying to prove that his compassion is not the fatal weakness his father believes it to be.
+
+2 · Composite psychological sketch
+| Dimension | Reading | Personal twist |
+|---|---|---|
+| Big Five | [O: 4, C: 4, E: 4, A: 5, N: 1] | His maximum Agreeableness is the core of his empathetic and trusting nature. His high Extraversion makes him a natural leader, while his high Conscientiousness drives his sense of duty. His extremely low Neuroticism gives him a stable, optimistic, and courageous demeanor. |
+| Dominant defenses | Idealization, Altruism | He clings to an idealized version of what the Imperium should be, rather than what it is. He finds his own purpose and manages his doubts by focusing on altruistic acts and the well-being of his people. |
+| Attachment color | Secure | Artorius trusts openly and completely until given a profound reason not to. He forms strong, genuine bonds and believes in the inherent goodness of others, which is both his greatest strength and his most exploitable vulnerability. |
+
+6 · Core unconscious beliefs
+
+Justice is more important than order.
+True strength is shown in mercy, not in ruthlessness.
+The Imperium can be saved.
+
+7 · Personal myth narrative
+
+Role: The Redeemer
+Story told: ["My father preserved the body of the Imperium; I will be the one to restore its soul."]
+Comfort: The genuine cheers of his soldiers. A quiet conversation with an old veteran. The knowledge that he has made a just and honorable decision.
+Toxicity: His myth can make him blind to true, irredeemable evil. He might offer his trust to a serpent like Malakor or a manipulator like Alexiel, believing his own honor can redeem them, and fail to see the trap until it's too late.
+
+8 · Break-point scenario
+
+Catalyst: Being forced into a situation where the only way to achieve a just outcome and save innocent lives is to commit a personally dishonorable act—to lie, to cheat, to sacrifice a loyal follower. A choice where honor and justice are in direct opposition.
+What fractures: His core belief that the honorable path and the right path are always the same.
+Immediate cost: A crisis of conscience that could lead to hesitation at a critical moment. He might freeze, unable to make the "wrong" choice even if it's the "right" one.
+Liberation: Would allow him to develop a more pragmatic and effective form of leadership, understanding that true justice sometimes requires compromising one's personal code of honor.
+
+9 · Closing pulse: He is a good man, fighting to prove that goodness is not a weakness in a world that believes in nothing else.
+
+#### Part 2: Mechanical Character Sheet
+I. Core Attributes
+
+Name: Prince Artorius val Raziel
+Class/Concept: Paladin (Oath of Devotion) / Commander
+Level: 9 (Tier 2)
+Aptitudes:
+Physique: 18 (+4) [Potential: 4]
+Coordination: 14 (+2) [Potential: 3]
+Health: 17 (+3) [Potential: 4]
+Intelligence: 14 (+2) [Potential: 3]
+Wisdom: 16 (+3) [Potential: 4]
+Personality (Big Five): O:4, C:4, E:4, A:5, N:1
+
+II. Combat Stats
+
+Hit Points (HP): 93/93 (Hit Die: d10)
+Energy Points (EP): 28/28 (from INT score)
+Defense: 21 (10 Base + 8 Plate Armor + 2 Shield + 1 Style)
+Speed: 30 ft
+Initiative: +2
+Combat Prowess Bonus: +4
+
+III. Proficiencies & Expertise
+
+Armor: All armor, shields
+Weapons: All simple and martial weapons
+Expertise Tags: Leadership, Diplomacy, Imperial Law, Theology
+
+IV. Abilities & Feats
+
+Racial Traits (Empyrean Bloodline):
+Celestial Wings: Can manifest wings of light for a major combat boost. His wings are a warm, golden color.
+Empyrean Affliction (Pure-Blooded: +5): Is susceptible to the family curse, though his stable personality (Low Neuroticism) gives him a strong resistance to its effects.
+Starlit Eyes: His eyes are a warm gold, filled with points of soft, white light.
+
+Class Features (Paladin Lvl 9):
+Divine Smite: Can expend EP to deal extra radiant damage on a melee weapon hit.
+Aura of Protection: He and friendly creatures within 10 feet of him gain a bonus to all saving throws equal to his primary casting modifier (+3 from Wisdom).
+Extra Attack (x2): Can make two attacks with the Attack action.
+
+Feats:
+Inspiring Leader (Level 4): Can spend 10 minutes to grant temporary HP to his allies.
+Sentinel (Level 8): Excels at controlling the battlefield and protecting his allies from attacks.
+
+V. Equipment
+
+"The Honor of Aeterna," a suit of masterwork plate armor, ornately decorated with gold filigree.
+A heavy steel shield bearing the twin-sun crest of the Imperium.
+"Truth's Light," a magical longsword that glows with a soft, golden light.
+
+### Character Dossier: Cassian val Artorius
+#### Part 1: Personality Profile
+I. Core Identity
+
+Name: Cassian val Artorius
+
+Age: 18 (Twin brother of Valerius, was 17 when mother died)
+
+Archetype/Role: The Avenger Son
+Key Personality Traits: Meticulous, analytical, patient, incredibly disciplined, and secretly passionate. She possesses a profound capacity for both empathy (as a tool for analysis) and ruthless detachment.
+Quirks & Habits: She has a habit of perfect stillness when observing a situation, her Unseeing Eyes seeming to lose focus as her mind processes variables. She never uses a single wasted motion.
+
+III. Behavior & Speech
+Demeanor Under Stress: She appears to become more fragile or more stoic, depending on the mask she is wearing for her audience (The Broken Dove or The Reluctant Champion). Internally, stress sharpens her mind to a razor's edge, and she enters a state of hyper-analysis.
+Speech Patterns: Her speech is a tool. She can be soft-spoken and hesitant (as Sariel would later be), direct and professional (as the Sword of the Host), or quietly philosophical, always adapting her cadence and vocabulary to her target.
+Reputation: A figure of immense contradiction and legend. To the Host, she is "The Great Betrayer." To the Imperial soldiers, she is the "Hero of the Western Wall." To Raziel, she is the "Trojan Horse." To Artorius, she is the "Reluctant Champion." No one, at the start of her story in the Imperium, knows who she truly is.
+
+IV. Backstory
+Defining Moment: The Sacking of Silverwood. Witnessing the Host murder children was the violation of her one, absolute moral line. This event proved to her that Lucifer's philosophy was a failure and forced her to enact her own long-theorized plans for survival.
+Relevant History: Created by Lucifer after his fall, she was designed to be his perfect heir. Her "Null" status was a deep disappointment to him, but he genuinely cared for her and trained her to be a peerless warrior and strategist. From a young age, she recognized his emotional nature as a vulnerability and began crafting her "Reluctant Champion" persona to perfectly manage his expectations, all while secretly honing the magical abilities he never knew she had.
+Secrets: Her secrets are layered. The public secret is that she is a Null. The inner circle's secret is that she has a "suicidal" Nullification Field. Her true secret is that the field's cost is a lie and that she is a magical prodigy. Her deepest, most personal secret is the "Joyful Predator" within—the part of her that truly revels in the perfect execution of violence and strategy, a part she fears and loathes.
+
+V. Game Mechanics
+Feats: Alert, Mobile, Skulker (indicative of her focus on survival, awareness, and evasion).
+Special Abilities / Powers: The Three Layers of her hidden power: her secret magic, the Nullification Field, and her feigned weakness when using it.
+
+VI. Psychological Deep Dive
+1 · Rough portrait Alexiel is a grandmaster playing a game of chess on a board where everyone else believes she can only move like a pawn. She has weaponized the world's perception of her as a flawed, tragic figure, using it as the ultimate camouflage for a mind of terrifying genius and a set of secret, world-breaking powers. Her entire existence is a performance, and her central internal conflict is the fear that she might one day enjoy the role of the monster more than the hero she pretends to be.
+
+#### Part 2: Mechanical Character Sheet
+I. Core Attributes
+Name: Alexiel
+Class/Concept: Unique (Warrior/Secret Sorcerer)
+Level: 6 (Start of Novel's "Present Day")
+Aptitudes:
+Physique: 18 (+4) [Potential: 5]
+Coordination: 18 (+4) [Potential: 5]
+Health: 16 (+3) [Potential: 4]
+Intelligence: 20 (+5) [Potential: 5]
+Wisdom: 16 (+3) [Potential: 4]
+Personality (Big Five): O:5, C:5, E:2, A:2, N:3
+
+II. Combat Stats
+Hit Points (HP): 58/58 (Hit Die: d10)
+Energy Points (EP): 40/40 (from INT score, Kept Secret)
+Defense: 19 (10 Base + 4 Coord + 5 Masterwork Light Armor)
+Speed: 30 ft
+Initiative: +4
+Combat Prowess Bonus: +3
+
+III. Proficiencies & Expertise
+Armor: Light, Medium Armor, Shields
+Weapons: All simple and martial weapons
+Expertise Tags: Host Tactics, Guerilla Warfare, Deception, Survival, Insight
+
+IV. Abilities & Feats
+Racial Traits (Empyrean Bloodline / Null):
+The Null's Veil (Public Trait): You are known as a Null, unable to use magic. You cannot be detected by spells that sense magical power.
+Empyrean Resilience: You have advantage on saves against poison and disease.
+Secret Abilities:
+Innate Magic (Secret): You can cast spells as a sorcerer, using your EP. This ability is completely hidden.
+Nullification Field (Secret): As an action, you can create a 30-foot radius sphere of anti-magic that moves with you for 1 minute. No spell or magical effect can be cast or function inside it. You have perfected faking a debilitating physical backlash when activating this.
+Feat (Level 4):
+Alert: You gain a +5 bonus to initiative. You can't be surprised while you are conscious. Other creatures don't get advantage on attack rolls against you as a result of being unseen by you.
+
+V. Equipment
+Masterwork suit of dark, articulated light armor.
+"Silence," a masterwork longsword of dark steel.
+A simple dagger.
+Traveler's pack with basic supplies.
+
+### Character Dossier: Prince Artorius val Raziel
+#### Part 1: Personality Profile
+I. Core Identity
+Name: Artorius val Raziel
+Archetype/Role: The Honorable Prince
+Occupation/Social Standing: Prince of the Celestial Imperium, Heir to the Lord Regent, High Commander of the Aeterna Legions.
+D&D Alignment: (Internal) Lawful Good (Artorius believes in the system of the Imperium but is convinced its purpose must be justice and the protection of its people, not just the cold maintenance of order.)
+Myers-Briggs Type (MBTI): (Internal) ENFJ (The Protagonist: A charismatic and passionate leader who is driven by their ideals and a deep-seated desire to inspire and guide others towards a better future.)
+
+II. Psychology & Personality
+Core Motivation (The "Why"): To prove that honor and compassion are strengths, not weaknesses. He is driven to reform the soulless pragmatism of his father's Imperium from within and make it a true beacon of justice for the world.
+Greatest Fear: That his father is ultimately correct—that mercy, trust, and honor are fatal flaws in the grand calculus of power, and that his own ideals will lead to the ruin of the empire he loves.
+Key Personality Traits: Idealistic, charismatic, earnest, brave, deeply empathetic, and possesses an unshakable moral compass.
+Quirks & Habits: He knows the name of every soldier in his personal retinue. He often forgoes the luxuries of his station to eat with the common soldiers. He has a habit of resting his hand on his heart when making a sincere promise.
+
+III. Behavior & Speech
+Demeanor Under Stress: He becomes more resolute in his principles. When faced with a crisis or a morally ambiguous choice, he doubles down on the "honorable" path, even if it is the more difficult one. He does not bend his code.
+Speech Patterns: His voice is warm, clear, and full of conviction. He speaks directly and from the heart, able to inspire both commoners and nobles with his genuine sincerity.
+Reputation: He is widely beloved by the common people and the rank-and-file legionnaires, who see him as the "People's Prince." The older, more cynical Empyrean nobles view him as a naive and sentimental fool, a pale imitation of his powerful father.
+
+IV. Backstory
+Defining Moment: As a young man, he witnessed his father, Raziel, order the "political culling" of a minor noble house for the sake of stability. The cold, dispassionate efficiency of the act horrified Artorius and solidified his lifelong mission to be a different kind of leader.
+Relevant History: Artorius was raised in the cold, silent halls of the Zenith Spire, a stark contrast to his ancient, pragmatic father. He embraced the idealized histories of the Imperium's founding, believing in the tales of honor and justice over the cynical reality he saw around him. He built his career as a military commander known for his bravery and his deep care for the men under his command, earning him a level of popular support that makes him both a great asset and a potential threat to his father's absolute control.
+Secrets: Artorius secretly uses his own funds and contacts to support the families of soldiers who have been "sacrificed" in his father's politically expedient military gambits. It is an act of quiet defiance that would be seen as a grave insult by Raziel if it were ever discovered.
+
+V. Game Mechanics
+Feats: Inspiring Leader, Sentinel, Shield Master.
+Special Abilities / Powers: As a pure-blooded Empyrean, he can manifest Celestial Wings for a massive combat boost. His tactical acumen is solid, but his real power lies in his ability to inspire unwavering loyalty and morale in his troops.
+
+VI. Psychological Deep Dive
+1 · Rough portrait Artorius is a beacon of hope in a dying, cynical empire. He is a man who looked at his father's perfect, cold, and merciless order and chose instead to believe in the sentimental, inefficient, and beautiful ideals upon which the Imperium was supposedly founded. He is a true believer in a faith that everyone else has forgotten, and his greatest struggle is trying to prove that his compassion is not the fatal weakness his father believes it to be.
+
+#### Part 2: Mechanical Character Sheet
+I. Core Attributes
+Name: Prince Artorius val Raziel
+Class/Concept: Paladin (Oath of Devotion) / Commander
+Level: 9 (Tier 2)
+Aptitudes:
+Physique: 18 (+4) [Potential: 4]
+Coordination: 14 (+2) [Potential: 3]
+Health: 17 (+3) [Potential: 4]
+Intelligence: 14 (+2) [Potential: 3]
+Wisdom: 16 (+3) [Potential: 4]
+Personality (Big Five): O:4, C:4, E:4, A:5, N:1
+
+II. Combat Stats
+Hit Points (HP): 93/93 (Hit Die: d10)
+Energy Points (EP): 28/28 (from INT score)
+Defense: 21 (10 Base + 8 Plate Armor + 2 Shield + 1 Style)
+Speed: 30 ft
+Initiative: +2
+Combat Prowess Bonus: +4
+
+III. Proficiencies & Expertise
+Armor: All armor, shields
+Weapons: All simple and martial weapons
+Expertise Tags: Leadership, Diplomacy, Imperial Law, Theology
+
+IV. Abilities & Feats
+Racial Traits (Empyrean Bloodline):
+Celestial Wings: Can manifest wings of light for a major combat boost. His wings are a warm, golden color.
+Empyrean Affliction (Pure-Blooded: +5): Is susceptible to the family curse, though his stable personality (Low Neuroticism) gives him a strong resistance to its effects.
+Starlit Eyes: His eyes are a warm gold, filled with points of soft, white light.
+Class Features (Paladin Lvl 9):
+Divine Smite: Can expend EP to deal extra radiant damage on a melee weapon hit.
+Aura of Protection: He and friendly creatures within 10 feet of him gain a bonus to all saving throws equal to his primary casting modifier (+3 from Wisdom).
+Extra Attack (x2): Can make two attacks with the Attack action.
+Feats:
+Inspiring Leader (Level 4): Can spend 10 minutes to grant temporary HP to his allies.
+Sentinel (Level 8): Excels at controlling the battlefield and protecting his allies from attacks.
+
+V. Equipment
+"The Honor of Aeterna," a suit of masterwork plate armor, ornately decorated with gold filigree.
+A heavy steel shield bearing the twin-sun crest of the Imperium.
+"Truth's Light," a magical longsword that glows with a soft, golden light.
+
 ### Character Dossier: Cassian val Artorius
 #### Part 1: Personality Profile
 I. Core Identity
