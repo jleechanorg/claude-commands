@@ -9,6 +9,15 @@ alwaysApply: true
 
 This document is a persistent repository for reusable knowledge, best practices, and crucial insights.
 
+## CRITICAL: ALWAYS USE EXISTING INTEGRATION TEST INFRASTRUCTURE
+
+**LESSON LEARNED**: When asked to create integration tests, ALWAYS look at existing test_integration.py files first. The project already has infrastructure for:
+- Automatic API key discovery from multiple locations
+- Proper test setup and configuration
+- Integration with real APIs
+
+NEVER create manual API key checks or custom infrastructure when the project already has working patterns.
+
 ## 🚨 CRITICAL: MANDATORY TASK COMPLETION PROTOCOL 🚨
 
 ### Automatic Rule Updates (MANDATORY)
