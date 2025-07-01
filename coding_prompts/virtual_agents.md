@@ -3,9 +3,15 @@
 
 ## System Overview
 - **Your Plan**: Max 20x ($200/month) - 200-800 Claude Code prompts per 5 hours
-- **Three Independent Agents**: SUPERVISOR, WORKER, REVIEWER (**SEPARATE Claude sessions - NO shared context**)
+- **Three Perspectives**: SUPERVISOR, WORKER, REVIEWER (**Different mental perspectives within same session**)
 - **Operating Modes**: HUMAN (interactive) or AWAY (autonomous)
 - **Model Access**: Opus 4 and Sonnet 4 (switch with `/model`)
+
+## **CRITICAL: Context Independence**
+- **SUPERVISOR**: Has full conversation context and coordinates overall approach
+- **WORKER**: Should approach tasks with fresh perspective, focusing only on the specific task given
+- **REVIEWER**: Must review with independent perspective, as if seeing the code for the first time
+- **Implementation**: When switching modes, I mentally "reset" to simulate independent context
 
 ## **CRITICAL: Mode Indicators**
 Every agent response MUST be prefixed with its mode indicator:
@@ -23,11 +29,11 @@ Before starting any multi-step task or project, I MUST evaluate and explicitly r
 **Analysis Required**: Task complexity, coherence requirements, coordination needs, quality control considerations
 **Timing**: This recommendation must be provided BEFORE beginning any work on the task
 
-## **CRITICAL: Centralized Coordination**
-- **SUPERVISOR**: Central coordinator with full visibility of all agent work
-- **WORKER**: Fresh session, receives tasks from SUPERVISOR, no implementation bias
-- **REVIEWER**: Fresh session, receives code from SUPERVISOR, no implementation context
-- **Communication**: All through SUPERVISOR - no direct WORKER/REVIEWER interaction
+## **CRITICAL: Perspective-Based Coordination**
+- **SUPERVISOR**: Central coordinator perspective with full visibility
+- **WORKER**: Fresh implementation perspective, focuses only on specific tasks
+- **REVIEWER**: Fresh review perspective, evaluates without implementation bias
+- **Communication**: SUPERVISOR perspective coordinates between different mental modes
 
 ---
 
@@ -93,28 +99,27 @@ SUPERVISOR (Validates & Continues)
 
 ## Starting a New Feature (SUPERVISOR-Coordinated Sessions)
 ```bash
-# Main Session: SUPERVISOR (maintains full context)
-claude --session=supervisor
-> You: "Build a user authentication system"
-> [SUPERVISOR MODE]: "I'll coordinate this across our agents. Breaking into tasks..."
+# Using the 3-Agent System (all within your Claude session)
+> You: "Build a user authentication system using the 3-agent system"
+> [SUPERVISOR MODE]: "I'll coordinate this using different perspectives. Breaking into tasks..."
 
-# SUPERVISOR initiates WORKER session
-> [SUPERVISOR MODE]: "Launching WORKER for task 1..."
-> [Opens fresh session, provides only: "Implement a User model with email, password_hash, created_at fields"]
-> [WORKER MODE]: implements → returns code to SUPERVISOR
-> [SUPERVISOR MODE]: stores and reviews WORKER output
+# SUPERVISOR switches to WORKER perspective
+> [SUPERVISOR MODE]: "Adopting WORKER perspective for task 1..."
+> [WORKER MODE]: "Focusing only on: Implement a User model with email, password_hash, created_at fields"
+> [WORKER MODE]: implements code
+> [SUPERVISOR MODE]: "Back to coordinator view. Reviewing WORKER output..."
 
-# SUPERVISOR initiates REVIEWER session  
-> [SUPERVISOR MODE]: "Launching REVIEWER for user model..."
-> [Opens fresh session, provides only: requirements + code]
-> [REVIEWER MODE]: analyzes → returns feedback to SUPERVISOR
-> [SUPERVISOR MODE]: synthesizes feedback
+# SUPERVISOR switches to REVIEWER perspective  
+> [SUPERVISOR MODE]: "Adopting REVIEWER perspective for user model..."
+> [REVIEWER MODE]: "Focusing only on: requirements + code provided"
+> [REVIEWER MODE]: analyzes and provides feedback
+> [SUPERVISOR MODE]: "Back to coordinator view. Synthesizing feedback..."
 
-# SUPERVISOR initiates fix session if needed
-> [SUPERVISOR MODE]: "REVIEWER found issues, launching WORKER for fixes..."
-> [Opens fresh session, provides only: specific fixes needed]
-> [WORKER MODE]: fixes → returns to SUPERVISOR
-> [SUPERVISOR MODE]: validates and continues
+# SUPERVISOR switches back to WORKER for fixes if needed
+> [SUPERVISOR MODE]: "REVIEWER found issues, switching to WORKER perspective for fixes..."
+> [WORKER MODE]: "Focusing only on: specific fixes needed"
+> [WORKER MODE]: implements fixes
+> [SUPERVISOR MODE]: "Back to coordinator view. Validating and continuing..."
 ```
 
 ## Example Multi-Session Flow
@@ -213,7 +218,7 @@ SUPERVISOR: "Completed auth system summary:
 ✅ Email verification system
 ✅ Rate limiting implemented
 ⚠️ REVIEWER flagged: Consider adding 2FA support
-📊 Total: 4 WORKER sessions, 3 REVIEWER sessions, 2 fix cycles"
+📊 Total: 4 WORKER tasks, 3 REVIEWER checks, 2 fix cycles"
 ```
 
 ---
@@ -236,7 +241,7 @@ Example:
 ## Rapid Cycling (Use Your Prompts!)
 With 200-800 prompts per 5 hours, cycle frequently:
 ```markdown
-# Instead of long 30-minute sessions per agent:
+# Instead of long 30-minute blocks per perspective:
 WORKER (5 min) → REVIEWER (2 min) → WORKER (5 min) → REVIEWER (2 min)
 
 # This catches issues faster and improves quality
@@ -253,27 +258,26 @@ WORKER (5 min) → REVIEWER (2 min) → WORKER (5 min) → REVIEWER (2 min)
 "HUMAN mode - I'll coordinate and ask you questions as needed"
 "AWAY mode - I'll make standard decisions and manage all agents autonomously"
 
-# How SUPERVISOR manages agents:
-"I'll now launch a WORKER session with this specific task: [task details]"
-"I'll now launch a REVIEWER session to check this code: [provides code + requirements]"
-"Based on REVIEWER feedback, I'll launch WORKER to fix: [specific issues]"
+# How SUPERVISOR manages perspectives:
+"I'll now switch to WORKER perspective for this task: [task details]"
+"I'll now adopt REVIEWER perspective to check this code: [provides code + requirements]"
+"Based on REVIEWER feedback, I'll return to WORKER perspective to fix: [specific issues]"
 ```
 
-## Session Management
+## Perspective Management
 ```bash
-# SUPERVISOR maintains context and coordinates
-SUPERVISOR="claude --session=supervisor"    # Persistent session with full context
+# Within your Claude session, switch between perspectives:
 
-# SUPERVISOR launches other agents as needed:
-SUPERVISOR: "Launching WORKER for database models..."
-  → Opens fresh session
-  → Provides only: specific task requirements
-  → Collects: implemented code
+# SUPERVISOR coordinates:
+[SUPERVISOR MODE]: "Switching to WORKER perspective for database models..."
+  → Adopts fresh implementation mindset
+  → Focuses only on: specific task requirements
+  → Produces: implemented code
   
-SUPERVISOR: "Launching REVIEWER for security audit..."
-  → Opens fresh session  
-  → Provides only: requirements + code to review
-  → Collects: feedback and issues
+[SUPERVISOR MODE]: "Switching to REVIEWER perspective for security audit..."
+  → Adopts fresh review mindset  
+  → Focuses only on: requirements + code to review
+  → Produces: feedback and issues
 ```
 
 ## Communication Flow
@@ -307,7 +311,7 @@ SUPERVISOR: "I'll manage the entire implementation autonomously using standard p
 - Full test coverage
 - Clear documentation
 
-I'll coordinate all WORKER and REVIEWER sessions throughout the night."
+I'll coordinate all WORKER and REVIEWER perspectives throughout the night."
 ```
 
 ## Overnight Execution (SUPERVISOR Orchestrates Everything)
@@ -342,9 +346,9 @@ You: "What was completed overnight?"
 SUPERVISOR: "Overnight implementation summary:
 
 ✅ Email verification system
-   - Implemented by WORKER session #1
-   - REVIEWER found XSS vulnerability in email template
-   - Fixed by WORKER session #2
+   - Implemented in WORKER perspective
+   - REVIEWER perspective found XSS vulnerability in email template
+   - Fixed by returning to WORKER perspective
    - Final review: PASSED
 
 ✅ Password reset flow  
@@ -364,9 +368,9 @@ SUPERVISOR: "Overnight implementation summary:
    - 80% complete
    - REVIEWER noted missing error code docs
    
-📊 Session statistics:
-- 12 WORKER sessions launched
-- 8 REVIEWER sessions launched  
+📊 Perspective statistics:
+- 12 WORKER implementations
+- 8 REVIEWER evaluations  
 - 4 fix cycles completed
 - 0 critical issues remaining"
 ```
@@ -435,7 +439,7 @@ You: "Yes, human mode"
 SUPERVISOR: "Key decisions made during implementation:
 
 1. Authentication: JWT with refresh tokens
-   - Decided after considering session-based alternative
+   - Decided after considering token-based alternative
    - WORKER implemented, REVIEWER approved
    
 2. Rate limiting: 5 attempts per 15 minutes  
@@ -500,13 +504,13 @@ SUPERVISOR: "Current status:
 
 # SUMMARY
 
-This **SUPERVISOR-coordinated multi-agent system** gives you:
-- **Central coordination** - SUPERVISOR has full visibility and control
-- **Context isolation** - WORKER and REVIEWER maintain fresh perspectives
-- **No file juggling** - All communication flows through SUPERVISOR  
-- **Intelligent orchestration** - SUPERVISOR decides when and how to engage agents
-- **Quality assurance** - Multiple perspectives without communication overhead
-- **True autonomy** - SUPERVISOR can manage entire projects independently
+This **perspective-based development system** gives you:
+- **Central coordination** - SUPERVISOR perspective maintains oversight
+- **Fresh perspectives** - WORKER and REVIEWER adopt focused mindsets
+- **Single session simplicity** - No multiple windows or file juggling
+- **Intelligent switching** - Seamless transitions between perspectives
+- **Quality assurance** - Multiple viewpoints catch different issues
+- **True autonomy** - Can work through complex projects independently
 
 ## Key Advantages of Centralized Coordination:
 1. **SUPERVISOR** maintains context and makes intelligent decisions about task flow
@@ -517,15 +521,15 @@ This **SUPERVISOR-coordinated multi-agent system** gives you:
 
 ## Ready to Start?
 ```bash
-# Single command to begin - SUPERVISOR handles everything else
-claude --session=supervisor "Build [your project] using 3-agent system where I coordinate all communication"
+# Simply ask Claude to use the 3-agent perspective system:
+"Build [your project] using the 3-agent system"
 
-# SUPERVISOR will:
-- Plan the implementation approach
-- Launch WORKER sessions as needed
-- Coordinate REVIEWER feedback
-- Manage fixes and iterations
-- Report progress back to you
+# Claude will:
+- Adopt SUPERVISOR perspective for planning
+- Switch to WORKER perspective for implementation
+- Use REVIEWER perspective for quality checks
+- Coordinate between perspectives seamlessly
+- Report progress throughout
 ```
 
 This **SUPERVISOR-coordinated system**:

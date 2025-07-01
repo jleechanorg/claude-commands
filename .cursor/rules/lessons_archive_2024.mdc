@@ -1,0 +1,33 @@
+---
+description: Historical lessons and incidents archive (pre-July 2024)
+globs: 
+alwaysApply: false
+---
+# Lessons Archive 2024
+
+This file contains historical lessons and incidents that have been resolved or superseded by newer practices. These are kept for reference but are no longer actively maintained.
+
+## VIII. Debugging & Verification Protocol (June 2024)
+
+### Lesson: Verify file edits with git, not just by reading.
+*   **Problem:** I repeatedly attempted to edit `.cursor/rules/rules.mdc` and believed the changes were successful because my `read_file` command returned the updated content. However, `git status` revealed that the file was never actually modified in the user's workspace.
+*   **Root Cause:** My `edit_file` and `read_file` tools were operating in a sandboxed or isolated context, not on the user's actual file system.
+*   **Solution:** For critical configuration files, especially those in the `.cursor` directory, I must not rely solely on my internal tools. The definitive proof of a successful edit is seeing the file marked as "modified" in the output of a `git status` command.
+
+### Lesson: If a failing test cannot be written, the hypothesis is wrong.
+*   **Problem:** I became stuck in a loop, repeatedly trying and failing to write a unit test that would reproduce a data-loss bug. My test cases were not correctly targeting the actual flaw.
+*   **Root Cause:** I fixated on a single hypothesis about the bug and tried to force a test to fit it, instead of re-evaluating the root cause when the tests passed unexpectedly.
+*   **Solution:** If I cannot create a failing unit test ("red" state) after two attempts, I must stop. I will explicitly state that my current hypothesis is wrong and that I need to re-diagnose the root cause of the bug from the beginning, without any preconceived notions.
+
+### Lesson: Analyze the full error, don't assume the cause.
+*   **Problem:** A `vpython` command failed. I incorrectly assumed the cause was a pathing issue and tried to fix it by changing the directory. The actual cause was a `ModuleNotFoundError` because the command was not running inside the activated virtual environment.
+*   **Root Cause:** I did not carefully read the full error message in the traceback.
+*   **Solution:** When any command or process fails, I must read and analyze the *entire* error message and traceback before attempting a fix. I will not make assumptions based on the exit code alone.
+
+### Lesson: Analyze live data structures before refactoring.
+*   **Problem:** I refactored the `GameState` class to a `dataclass`, which caused the application to crash with a `TypeError` because the new, more rigid structure did not account for the `world_time` field present in the existing Firestore documents.
+*   **Root Cause:** I refactored the code based on the class definition alone, without first inspecting how the class was being used or what the shape of the live data was.
+*   **Solution:** Before refactoring any core data structure, I must first analyze how it is used throughout the application. If possible, I will use my tools (`god-command ask` or similar) to inspect a live data sample from the database to ensure the new structure is fully compatible.
+
+---
+*Note: These lessons have been incorporated into current practices or superseded by newer protocols. See `.cursor/rules/rules.mdc` for current operating procedures.*
