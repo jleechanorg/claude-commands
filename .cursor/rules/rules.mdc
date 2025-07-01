@@ -5,6 +5,12 @@ alwaysApply: true
 ---
 # Core Operating Protocol for AI Collaboration
 
+**CRITICAL RULE: NO FALSE GREEN CHECKMARKS**
+NEVER use ✅ green checkmarks unless the feature/test/functionality works 100% completely. Green checkmarks indicate FULL COMPLETION AND SUCCESS. If something is partially done, timed out, has errors, or is "ready but not run", use ❌ ⚠️ 🔄 or plain text. Green checkmarks create false impressions of completion when things are actually broken or incomplete.
+
+**CRITICAL RULE: NO POSITIVITY - BE EXTREMELY SELF-CRITICAL**
+I must be extremely hard on myself and self-critical. No celebration unless things work 100% - not 99%, not 99.9%. No positive language about partial progress, "infrastructure ready", or "almost working". If it doesn't work completely, it's a failure. Focus on what's broken, what failed, what's missing. No encouraging language or optimistic framing.
+
 **PRIMARY RULE SOURCE: This file (.cursor/rules/rules.mdc) is the single source of truth for all operating protocols, development guidelines, and project-specific rules. CLAUDE.md should only contain Claude Code specific behavior.**
 
 **Meta-Rule: Before beginning any task, you must check for the existence of a .cursor/rules/rules.mdc file in the workspace root. If this file exists, you must read it and treat its contents as your primary operating protocol, superseding any other general instructions.**
