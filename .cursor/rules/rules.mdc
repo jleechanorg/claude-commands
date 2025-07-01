@@ -15,6 +15,22 @@ alwaysApply: true
 
 **MILESTONE PLANNING STRUCTURE: For large projects requiring systematic breakdown, follow the planning structure documented in `coding_prompts/milestone_planning_structure.md`. This ensures proper tracking with Milestones (1-2 weeks), Steps (0.5-2 days), and Sub-bullets (atomic tasks). See examples from Milestones 0.3 and 0.4.**
 
+**SCRATCHPAD AND PROGRESS TRACKING PROTOCOL:**
+
+**MANDATORY**: The main WIP plan must be maintained in `roadmap/scratchpad_[remote_branch_name].md` where `[remote_branch_name]` is substituted with the actual remote branch name (e.g., `scratchpad_state_sync_entity.md`).
+
+**Scratchpad Requirements**: The scratchpad must be detailed enough that Claude or Cursor can pick it up from a blank state and continue working. It MUST contain:
+1. **Project Goal**: Clear statement of what this branch/work aims to achieve
+2. **Implementation Plan**: Step-by-step plan with milestones and tasks
+3. **Current State**: What has been completed, what's in progress, what's blocked
+4. **Next Steps**: Specific actionable items to achieve the goal
+5. **Key Context**: Important decisions, findings, or constraints discovered
+6. **Branch Info**: Remote branch name, PR number if exists, merge target
+
+**Update Frequency**: Update the scratchpad after every significant progress point, discovery, or direction change. This is the primary communication mechanism for work continuity.
+
+**Session Progress**: Additionally, create/update `tmp/current_milestone_[branch_name].md` for detailed session-by-session progress tracking with commit hashes and file changes.
+
 **PLAN REVIEW PROTOCOL: After creating any plan (milestone, implementation, or design document), ALWAYS follow this two-stage review process:**
 
 1. **Supervisor Double-Check** (with shared context):
@@ -160,6 +176,10 @@ if isinstance(item, dict):
 - Always use temporary directories for test file operations
 - Case-insensitive field detection for AI-generated data
 - Flexible assertions for AI content validation
+- **Test Truth Verification**: Always verify tests are testing what they claim
+- **Architecture Decision Tests**: Create tests that validate architectural decisions
+- **Negative Testing**: Test validation rejection, not just success cases
+- **Dependency Verification**: Check required dependencies before claiming success
 
 #### Prototype Test File Organization
 - **For prototype testing only**: All prototype test files must be placed in the `prototype/tests/` directory
@@ -234,7 +254,20 @@ if isinstance(item, dict):
     *   **For UI Features**: Create functional tests that reproduce specific user issues, run tests to confirm they FAIL (red state), then fix implementation to make tests PASS (green state).
     *   **Critical Mindset**: "I haven't seen it work with my own eyes yet" - Never claim features work based on code alone. Must validate actual user experience.
 
-16. **Security: DO NOT SUBMIT Rule:**
+16. **Test Truth Verification Protocol:**
+    *   **MANDATORY**: Before making any architectural decision based on test results, verify the test is testing what it claims:
+        ```python
+        # Required at start of every comparison test
+        print(f"TEST VERIFICATION: Testing {approach_name}")
+        print(f"  Module: {module.__name__}")
+        print(f"  Has expected base: {'BaseModel' in str(Model.__bases__)}")
+        print(f"  Dependencies present: {verify_dependencies()}")
+        ```
+    *   **Negative Test Requirement**: For any validation approach, MUST test cases that should be rejected
+    *   **Architecture Decision Tests (ADTs)**: Create separate tests that verify architectural decisions remain valid
+    *   **No Duplicate Implementations**: Actively check for and prevent multiple implementations of the same concept
+
+17. **Security: DO NOT SUBMIT Rule:**
     *   If I see "DO NOT SUBMIT" anywhere in code, comments, or environment variables, I must never allow this to be committed or merged into any branch. This is a critical security marker indicating sensitive data (API keys, credentials, etc.) that must be removed before any PR or commit.
 
 ## II. Development, Coding & Architecture
@@ -414,7 +447,8 @@ if isinstance(item, dict):
     *   Always use GitHub CLI (`gh`) commands for creating and managing pull requests when available
     *   This ensures proper authentication and streamlined workflow
 
-12. **Milestone Progress Tracking Protocol:**
+12. **Detailed Progress Tracking for Milestones:**
+    *   **Primary Tracking**: Main plan and progress in `roadmap/scratchpad_[remote_branch_name].md` as per Scratchpad Protocol above
     *   **Granular Tracking**: For complex projects with milestones and sub-bullets, create one progress file per sub-bullet
     *   **Progress Files**: Save to `tmp/milestone_X.Y_step_A.B_progress.json` with milestone, step, sub_bullet, status, timestamp, files_created, key_findings, and next_task
     *   **Atomic Commits**: One sub-bullet = one commit with descriptive message following the format:
@@ -425,21 +459,14 @@ if isinstance(item, dict):
         - {Key result or finding}
         - Saved progress to tmp/milestone_{milestone}_step_{step}.{sub_bullet}_progress.json
         
-        🤖 Generated with [Claude Code](https://claude.ai/code)
+        🤖 Generated with [Claude Code](mdc:https:/claude.ai/code)
         Co-Authored-By: Claude <noreply@anthropic.com>
         ```
     *   **PR Updates**: Only update PR descriptions when local tests pass and significant milestones are reached
     *   **Force Add**: Use `git add -f tmp/*.json` for ignored progress files
-    *   **Completion Tracking**: Update roadmap files with ✅ COMPLETED, 🔄 IN PROGRESS (X%), ⬜ NOT STARTED
+    *   **Completion Tracking**: Update roadmap scratchpad file with ✅ COMPLETED, 🔄 IN PROGRESS (X%), ⬜ NOT STARTED
     *   **Benefits**: Clear audit trail, easy recovery, detailed visibility, accurate estimates
-    *   **Session Progress Tracking**: Whenever saving progress to `tmp/`, also create/update `tmp/current_milestone_{branch_name}.md` where `{branch_name}` is the actual current git branch name. This file should contain:
-        - Session summary (date, branch, primary task)
-        - Completed tasks with commit hashes
-        - Current state summary
-        - Key files created/modified
-        - Next steps for continuation
-        - Context for resumption
-        - Branch status
+    *   **Session Progress Tracking**: As mentioned in Scratchpad Protocol, also maintain `tmp/current_milestone_[branch_name].md` for session details
     *   **Purpose**: Enable seamless session resumption after interruptions by providing complete context
 
     *   When the user requests to apply/test a pull request, I must prefer using GitHub CLI commands over manual git operations.
@@ -501,11 +528,7 @@ if isinstance(item, dict):
 
 ## V. Knowledge Management & Process Improvement
 
-This protocol uses a set of files in a `.cursor` directory at the project's root to manage our workflow. If they don't exist, I will create them. I will review them before each interaction and update them after.
-
-1.  **.cursor/scratchpad.md - Dynamic Task Management:**
-    *   **Purpose:** My active workspace for planning, documenting my thought process, and tracking progress on the current task using checklists.
-    *   **Workflow:** I will initialize it for new tasks, break down the task into a step-by-step plan, and update it as I work.
+This protocol uses a set of files to manage our workflow. The primary tracking happens in `roadmap/scratchpad_[remote_branch_name].md` as defined in the Scratchpad Protocol above. Additional files in the `.cursor` directory at the project's root provide supplementary tracking. If they don't exist, I will create them. I will review them before each interaction and update them after.
 
 2.  **.cursor/rules/lessons.mdc - Persistent Learnings:**
     *   **Purpose:** A persistent, repository-agnostic knowledge base for reusable techniques, best practices, and insights.
@@ -631,6 +654,21 @@ grep -r "process.*special_token" *.py
 - Always prioritize core functionality over stylistic preferences in prompt ordering
 
 **Lesson**: AI was ignoring state update requirements because game state instructions were loaded LAST after lengthy narrative instructions. Moving them FIRST fixed the core state update failure.
+
+### Test Truth and Architectural Validation
+**CRITICAL RULE**: Test names and claims MUST match what is actually being tested:
+- **Import Verification**: Always verify and log which module is being imported in tests
+- **Dependency Presence**: Check that required dependencies exist before claiming approach works
+- **Negative Testing**: Test validation REJECTION cases, not just success cases
+- **Test-First Architecture**: Write validation tests BEFORE making architectural decisions
+
+**Enforcement**:
+1. Add module verification assertions: `assert 'pydantic' in str(Model.__module__)`
+2. Log test metadata: what's being tested, which modules, what dependencies
+3. Create Architecture Decision Tests (ADTs) that verify decisions remain valid
+4. Never trust test names - verify the implementation matches the claim
+
+**Lesson**: We made critical architectural decisions based on "Pydantic" tests that were actually testing a non-Pydantic implementation, leading to a cascade of errors.
 
 ### Data Structure Schema Enforcement 
 **CRITICAL RULE**: When AI systems generate structured data, explicit schemas with mandatory data types must be enforced through prompt engineering:

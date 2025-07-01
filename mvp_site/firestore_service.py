@@ -200,6 +200,9 @@ def json_default_serializer(o):
         return None  # Or another appropriate serializable value
     if o == firestore.SERVER_TIMESTAMP:
         return "<SERVER_TIMESTAMP>"
+    # Handle SceneManifest objects from entity tracking
+    if hasattr(o, 'to_dict') and callable(getattr(o, 'to_dict')):
+        return o.to_dict()
     raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
 
 def get_db():

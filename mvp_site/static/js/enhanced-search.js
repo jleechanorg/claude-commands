@@ -10,7 +10,9 @@ class EnhancedSearch {
     this.currentFilters = {
       search: '',
       sortBy: 'lastPlayed',
-      sortOrder: 'desc'
+      sortOrder: 'desc',
+      theme: '',
+      status: ''
     };
     this.isEnabled = false;
     this.searchDebounce = null;
@@ -115,6 +117,26 @@ class EnhancedSearch {
             </select>
           </div>
           
+          <div class="filter-group">
+            <label for="theme-filter">Theme:</label>
+            <select class="filter-select" id="theme-filter">
+              <option value="">All Themes</option>
+              <option value="fantasy">Fantasy</option>
+              <option value="sci-fi">Sci-Fi</option>
+              <option value="mystery">Mystery</option>
+              <option value="horror">Horror</option>
+            </select>
+          </div>
+          
+          <div class="filter-group">
+            <label for="status-filter">Status:</label>
+            <select class="filter-select" id="status-filter">
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+              <option value="paused">Paused</option>
+            </select>
+          </div>
 
           
           <button type="button" class="btn btn-outline-secondary" id="clear-filters">
@@ -137,6 +159,8 @@ class EnhancedSearch {
     const searchInput = document.getElementById('campaign-search');
     const sortBy = document.getElementById('sort-by');
     const sortOrder = document.getElementById('sort-order');
+    const themeFilter = document.getElementById('theme-filter');
+    const statusFilter = document.getElementById('status-filter');
     const clearFilters = document.getElementById('clear-filters');
 
     if (!searchInput) return; // Not enabled yet
@@ -160,6 +184,16 @@ class EnhancedSearch {
     sortOrder?.addEventListener('change', (e) => {
       this.currentFilters.sortOrder = e.target.value;
       this.updateSortOrderLabel();
+      this.applyFilters();
+    });
+
+    themeFilter?.addEventListener('change', (e) => {
+      this.currentFilters.theme = e.target.value;
+      this.applyFilters();
+    });
+
+    statusFilter?.addEventListener('change', (e) => {
+      this.currentFilters.status = e.target.value;
       this.applyFilters();
     });
 
@@ -413,17 +447,23 @@ class EnhancedSearch {
     this.currentFilters = {
       search: '',
       sortBy: 'lastPlayed',
-      sortOrder: 'desc'
+      sortOrder: 'desc',
+      theme: '',
+      status: ''
     };
 
     // Reset form controls
     const searchInput = document.getElementById('campaign-search');
     const sortBy = document.getElementById('sort-by');
     const sortOrder = document.getElementById('sort-order');
+    const themeFilter = document.getElementById('theme-filter');
+    const statusFilter = document.getElementById('status-filter');
 
     if (searchInput) searchInput.value = '';
     if (sortBy) sortBy.value = 'lastPlayed';
     if (sortOrder) sortOrder.value = 'desc';
+    if (themeFilter) themeFilter.value = '';
+    if (statusFilter) statusFilter.value = '';
 
     this.updateSortOrderLabel();
     this.applyFilters();

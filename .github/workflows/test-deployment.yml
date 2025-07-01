@@ -26,7 +26,7 @@ jobs:
     - name: Run deployment build test
       run: |
         cd mvp_site
-        python test_deployment_build.py -v
+        python tests/test_deployment_build.py -v
     
     - name: Test deploy.sh world copy logic
       run: |

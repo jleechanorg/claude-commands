@@ -63,11 +63,11 @@ cd mvp_site
 print_status "Running tests in mvp_site directory..."
 print_status "Setting TESTING=true for faster AI model usage"
 
-# Find all test files in current directory and tests subdirectory, excluding venv
+# Find all test files in tests subdirectory, excluding venv and prototype
 test_files=()
 while IFS= read -r -d '' file; do
     test_files+=("$file")
-done < <(find . -name "test_*.py" -type f ! -path "./venv/*" ! -path "./node_modules/*" -print0)
+done < <(find ./tests -name "test_*.py" -type f ! -path "./venv/*" ! -path "./node_modules/*" ! -path "./prototype/*" -print0)
 
 # Check if any test files exist
 if [ ${#test_files[@]} -eq 0 ]; then

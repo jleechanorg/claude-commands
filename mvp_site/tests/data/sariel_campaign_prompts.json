@@ -1,0 +1,186 @@
+{
+  "campaign": "sariel_v2",
+  "extraction_date": "2025-06-30T09:39:31.232164",
+  "total_prompts": 11,
+  "prompts": [
+    {
+      "prompt_id": "initial_setup",
+      "mode": "god",
+      "input": "Create a new D&D campaign with the following setup:\n            \nPlayer Character: Sariel, a member of House Arcanus\nSetting: A medieval fantasy world with political intrigue\nStarting Location: The throne room of a grand castle\n\nInitialize the campaign with:\n- Player character data for Sariel\n- Initial NPCs including advisors and court members\n- The immediate scenario where Sariel must make important decisions\n\nBegin the narrative with Sariel arriving at court for an important meeting.",
+      "expected_updates": {
+        "player_character_data": {
+          "name": "Sariel"
+        },
+        "npc_data": {},
+        "location": "Throne Room"
+      }
+    },
+    {
+      "prompt_id": "interaction_1",
+      "mode": "main character",
+      "input": "continue",
+      "context": {
+        "location": "Throne Room",
+        "timestamp": "2024-01-15T10:00:00",
+        "expected_entities": [
+          "Sariel"
+        ]
+      },
+      "metadata": {
+        "is_cassian_problem": false,
+        "original_player_input": "continue"
+      }
+    },
+    {
+      "prompt_id": "interaction_2",
+      "mode": "main character",
+      "input": "ask for forgiveness. tell cassian i was scared and helpless",
+      "context": {
+        "location": "Throne Room",
+        "timestamp": "2024-01-15T10:05:00",
+        "expected_entities": [
+          "Sariel",
+          "Cassian"
+        ]
+      },
+      "metadata": {
+        "is_cassian_problem": true,
+        "original_player_input": "ask for forgiveness. tell cassian i was scared and helpless"
+      }
+    },
+    {
+      "prompt_id": "interaction_3",
+      "mode": "main character",
+      "input": "1.  Requesting me to advance the narrative and make a decision for Sariel's action?",
+      "context": {
+        "location": "Throne Room",
+        "timestamp": "2024-01-15T10:10:00",
+        "expected_entities": [
+          "Sariel"
+        ]
+      },
+      "metadata": {
+        "is_cassian_problem": false,
+        "original_player_input": "1.  Requesting me to advance the narrative and make a decision for Sariel's action?"
+      }
+    },
+    {
+      "prompt_id": "interaction_4",
+      "mode": "main character",
+      "input": "2",
+      "context": {
+        "location": "Valerius's Study",
+        "timestamp": "2024-01-15T10:15:00",
+        "expected_entities": [
+          "Sariel",
+          "Valerius"
+        ]
+      },
+      "metadata": {
+        "is_cassian_problem": false,
+        "original_player_input": "2"
+      }
+    },
+    {
+      "prompt_id": "interaction_5",
+      "mode": "main character",
+      "input": "1",
+      "context": {
+        "location": "Valerius's Study",
+        "timestamp": "2024-01-15T10:20:00",
+        "expected_entities": [
+          "Sariel",
+          "Valerius"
+        ]
+      },
+      "metadata": {
+        "is_cassian_problem": false,
+        "original_player_input": "1"
+      }
+    },
+    {
+      "prompt_id": "interaction_6",
+      "mode": "main character",
+      "input": "2",
+      "context": {
+        "location": "Lady Cressida's Chambers",
+        "timestamp": "2024-01-15T10:25:00",
+        "expected_entities": [
+          "Lady Cressida Valeriana",
+          "Sariel"
+        ]
+      },
+      "metadata": {
+        "is_cassian_problem": false,
+        "original_player_input": "2"
+      }
+    },
+    {
+      "prompt_id": "interaction_7",
+      "mode": "main character",
+      "input": "2",
+      "context": {
+        "location": "Lady Cressida's Chambers",
+        "timestamp": "2024-01-15T10:30:00",
+        "expected_entities": [
+          "Lady Cressida Valeriana",
+          "Sariel"
+        ]
+      },
+      "metadata": {
+        "is_cassian_problem": false,
+        "original_player_input": "2"
+      }
+    },
+    {
+      "prompt_id": "interaction_8",
+      "mode": "main character",
+      "input": "1",
+      "context": {
+        "location": "Great Archives",
+        "timestamp": "2024-01-15T10:35:00",
+        "expected_entities": [
+          "Sariel"
+        ]
+      },
+      "metadata": {
+        "is_cassian_problem": false,
+        "original_player_input": "1"
+      }
+    },
+    {
+      "prompt_id": "interaction_9",
+      "mode": "main character",
+      "input": "continue",
+      "context": {
+        "location": "Chamber of Whispers, Great Archives",
+        "timestamp": "2024-01-15T10:40:00",
+        "expected_entities": [
+          "Sariel",
+          "Magister Kantos"
+        ]
+      },
+      "metadata": {
+        "is_cassian_problem": false,
+        "original_player_input": "continue"
+      }
+    },
+    {
+      "prompt_id": "interaction_10",
+      "mode": "main character",
+      "input": "3",
+      "context": {
+        "location": "Chamber of Whispers, Great Archives",
+        "timestamp": "2024-01-15T10:45:00",
+        "expected_entities": [
+          "Sariel",
+          "Magister Kantos"
+        ]
+      },
+      "metadata": {
+        "is_cassian_problem": false,
+        "original_player_input": "3"
+      }
+    }
+  ]
+}

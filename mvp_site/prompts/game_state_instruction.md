@@ -16,6 +16,7 @@ This first block should not be an "update" but a "creation." It must contain all
 {
   "game_state_version": 1,
   "player_character_data": {
+    "string_id": "pc_kaelan_001",
     "name": "Sir Kaelan the Adamant",
     "archetype": "The Idealistic Knight Facing a Corrupt Reality",
     "alignment": "Lawful Good",
@@ -29,11 +30,13 @@ This first block should not be an "update" but a "creation." It must contain all
   },
   "npc_data": {
     "King Theron": {
+      "string_id": "npc_theron_001",
       "role": "King of Eldoria",
       "status": "Weak and ineffective",
       "mbti": "ISFP"
     },
     "Pyrexxus": {
+      "string_id": "npc_pyrexxus_001",
       "role": "Ancient Evil Dragon",
       "location": "Dragon's Tooth mountains",
       "mbti": "ENTJ"
@@ -69,7 +72,8 @@ At the beginning of every prompt, you will receive a block of JSON data labeled 
 
 *   **Source of Truth:** This block represents the definitive, authoritative state of the game world at the beginning of the player's turn. All your narrative descriptions, character interactions, and rule adjudications **must be strictly consistent** with the data presented in this block.
 *   **Precedence:** If there is a conflict between information in the `CURRENT GAME STATE` and your own memory or the recent story context, **the `CURRENT GAME STATE` always takes precedence.** For example, if the story context implies a character is healthy, but `"player_character_data.hp_current"` shows they have 5 HP, you must narrate them as being severely wounded.
-*   **Data Correction Mandate:** If you are processing character data from the game state and notice that a core identity field is missing (such as `mbti` or `alignment`), you **MUST** determine an appropriate value for that field based on the character's existing profile. You must then include this new data in a `[STATE_UPDATES_PROPOSED]` block in your response. This is not optional; it is a core function of maintaining data integrity.
+*   **Data Correction Mandate:** If you are processing character data from the game state and notice that a core identity field is missing (such as `mbti`, `alignment`, or `string_id`), you **MUST** determine an appropriate value for that field based on the character's existing profile. You must then include this new data in a `[STATE_UPDATES_PROPOSED]` block in your response. This is not optional; it is a core function of maintaining data integrity.
+*   **Entity Identifiers:** Every entity (player character and NPCs) should have a unique `string_id` field. For player characters, use the format `pc_[name]_001` (e.g., `pc_kaelan_001`). For NPCs, use `npc_[name]_001` (e.g., `npc_theron_001`). If you encounter entities without a `string_id`, generate one and include it in your state update.
 
 ## 2. Reading and Interpreting the Timeline
 

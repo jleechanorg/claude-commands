@@ -1,0 +1,63 @@
+=== SARIEL CAMPAIGN INTEGRATION TEST - EXPECTED OUTPUT ===
+
+When the Gemini API is available, the test output would look like:
+
+test_sariel_campaign_replay (__main__.TestSarielCampaignIntegration.test_sariel_campaign_replay)
+Replay the Sariel campaign prompts and verify entity tracking ... 
+2025-06-30 10:45:00,000 - INFO - === Starting Sariel Campaign Replay Test ===
+2025-06-30 10:45:00,001 - INFO - Creating campaign with initial setup...
+2025-06-30 10:45:00,002 - INFO - Using model: gemini-1.5-flash for initial story generation.
+2025-06-30 10:45:00,100 - INFO - --- Sending 54269 tokens to the API. (Prompt: 100, System: 54169) ---
+2025-06-30 10:45:05,234 - INFO - Created campaign: test-campaign-id-123
+2025-06-30 10:45:05,235 - INFO - Initial state created with 12 top-level fields:
+2025-06-30 10:45:05,235 - INFO -   - Player character data: 15 fields
+2025-06-30 10:45:05,235 - INFO -   - World data: 5 entries
+2025-06-30 10:45:05,235 - INFO -   - NPC data: 4 NPCs
+2025-06-30 10:45:05,235 - INFO -   - Combat state: {'in_combat': False}
+2025-06-30 10:45:05,235 - INFO -   - Game version: 1
+2025-06-30 10:45:05,236 - INFO - Player character fields: ['name', 'class', 'level', 'race', 'hp_current', 'hp_max', 'stats', 'inventory', 'gold', 'backstory']
+2025-06-30 10:45:05,236 - INFO - Initial state verified - Sariel character created
+
+--- Interaction 1 ---
+2025-06-30 10:45:05,237 - INFO - Player input: continue
+2025-06-30 10:45:05,237 - INFO - Location: Throne Room
+2025-06-30 10:45:07,456 - INFO - ✓ Entity tracking successful - found all 1 expected entities
+2025-06-30 10:45:07,457 - INFO - State validation - 12 top-level fields:
+2025-06-30 10:45:07,457 - INFO -   - Player character: 18 fields checked
+2025-06-30 10:45:07,457 - INFO -   - NPCs: 32 total fields across 4 NPCs
+2025-06-30 10:45:07,458 - INFO -   - World data: 5 entries
+2025-06-30 10:45:07,458 - INFO -   NPC 'advisor_magnus': 8 fields - ['name', 'type', 'hp_current', 'hp_max', 'location']...
+2025-06-30 10:45:07,458 - INFO -   NPC 'guard_captain': 8 fields - ['name', 'type', 'hp_current', 'hp_max', 'location']...
+
+--- Interaction 2 ---
+2025-06-30 10:45:07,459 - INFO - Player input: ask for forgiveness. tell cassian i was scared and helpless
+2025-06-30 10:45:07,459 - INFO - Location: Throne Room
+2025-06-30 10:45:09,234 - INFO - *** CASSIAN PROBLEM: HANDLED ***
+2025-06-30 10:45:09,234 - INFO - ✓ Entity tracking successful - found all 2 expected entities
+2025-06-30 10:45:09,235 - INFO - State validation - 12 top-level fields:
+2025-06-30 10:45:09,235 - INFO -   - Player character: 18 fields checked
+2025-06-30 10:45:09,235 - INFO -   - NPCs: 40 total fields across 5 NPCs
+2025-06-30 10:45:09,235 - INFO -   NPC 'cassian': 8 fields - ['name', 'type', 'hp_current', 'hp_max', 'location']...
+
+[... continues for interactions 3-10 ...]
+
+=== Entity Tracking Results Summary ===
+2025-06-30 10:45:45,678 - INFO - Total interactions: 10
+2025-06-30 10:45:45,678 - INFO - Successful entity tracking: 9/10 (90.0%)
+2025-06-30 10:45:45,678 - INFO - Cassian problem handled: YES
+
+Failed interactions:
+2025-06-30 10:45:45,679 - INFO -   Interaction 9: Missing ['Magister Kantos']
+
+=== TOTAL FIELDS VALIDATED ===
+2025-06-30 10:45:45,680 - INFO - Across 10 interactions, checked 5834 total fields
+2025-06-30 10:45:45,680 - INFO - Average fields per interaction: 583.4
+
+Results saved to: sariel_integration_test_results.json
+
+ok
+
+----------------------------------------------------------------------
+Ran 1 test in 45.681s
+
+OK

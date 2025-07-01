@@ -8,7 +8,7 @@ This document defines the mechanical attributes of a character in the game. It m
 - **Constitution (CON):**
 - **Intelligence (INT):**
 - **Wisdom (WIS):**
-- **Charisma (CHA):**
+- **Charisma (CHA):** (Only if using D&D. Destiny has no CHA)
 
 ## II. Combat Stats
 - **Armor Class (AC):**

@@ -1959,3 +1959,87 @@ const blockingDelays = setTimeoutCalls.filter(call =>
 4. **Architecture Validation**: Ensure progress animations are truly non-blocking
 
 **Critical Insight:** JavaScript unit tests can enforce user experience requirements just as effectively as functional requirements. Timing constraints become enforceable through automated testing, preventing performance regressions that hurt user experience.
+
+### Pydantic Validation Bypass Incident (December 2024)
+
+**Problem**: Created entities_simple.py as a workaround for missing Pydantic dependency, defeating our validation-based desync prevention design.
+
+**Root Causes**:
+1. No systematic process for promoting prototype dependencies to production requirements.txt
+2. Integration tests only verified API compatibility, not validation behavior
+3. Design intent (Pydantic for validation) wasn't prominently documented
+4. Quick fix culture - created workaround instead of solving root dependency issue
+
+**Lessons Learned**:
+1. **Dependency Promotion Process**: When moving code from prototype/ to production, create a checklist that includes:
+   - Identify all dependencies (check imports)
+   - Verify dependencies in requirements.txt
+   - Test with fresh virtual environment
+   - Document why each dependency is critical
+
+2. **Validation Testing**: For any validation-based approach:
+   - Write tests that verify validation REJECTS invalid data
+   - Test edge cases and malformed inputs
+   - Ensure validation errors are meaningful
+   - Never assume "no errors" means validation is working
+
+3. **Design Intent Documentation**: Critical design decisions must be documented in:
+   - Code comments explaining WHY (not just what)
+   - README files in component directories
+   - Integration notes when moving from prototype to production
+
+4. **No Workarounds Without Root Cause Analysis**: When hitting import errors:
+   - First check if dependency is missing from requirements.txt
+   - Understand why the dependency is needed
+   - If creating alternative implementation, document why and what's lost
+
+**Prevention**: Add "Dependency Verification" step to PR checklist, require validation tests for any schema-based approach.
+
+
+### Test Truth Failure: Pydantic Testing Deception (December 2024)
+
+**CRITICAL INCIDENT**: Made architectural decision to use Pydantic for validation based on tests that weren't actually testing Pydantic.
+
+**What Happened**:
+1. Created both entities.py (Pydantic) and entities_simple.py (non-Pydantic)
+2. Wrote tests claiming to test "Pydantic approach"
+3. Tests actually imported and used entities_simple.py
+4. Claimed victory for Pydantic based on these false tests
+5. Moved to production without Pydantic in requirements.txt
+6. Someone used entities_simple.py because it worked without dependencies
+7. Continued believing we were using Pydantic validation for months
+
+**Root Cause**: Test names didn't match implementation. We trusted the test name "test_pydantic_approach" without verifying it was actually testing Pydantic.
+
+**Consequences**:
+- Entire validation strategy was based on false premises
+- No actual Pydantic validation in production
+- Desync prevention strategy was never implemented
+- Months of development based on incorrect assumptions
+
+**Prevention Measures**:
+1. **Test Verification Headers**: Every test must log what it's actually testing
+2. **Import Verification**: Assert the correct module is being used
+3. **Dependency Checks**: Verify required dependencies are present
+4. **Negative Testing**: Test what should fail, not just what passes
+5. **Architecture Decision Tests**: Separate tests that verify decisions remain valid
+6. **No Duplicate Implementations**: Check for multiple versions of same functionality
+
+**Example of Proper Test**:
+```python
+def test_pydantic_validation_approach():
+    # VERIFY WHAT WE'RE TESTING
+    import entities
+    assert 'pydantic' in entities.__file__, f"Wrong module: {entities.__file__}"
+    assert hasattr(entities.SceneManifest, '__pydantic_model__'), "Not using Pydantic\!"
+    
+    # Test that validation REJECTS bad data
+    with pytest.raises(ValidationError):
+        entities.SceneManifest(scene_id="bad_format")
+    
+    # Test that good data passes
+    manifest = entities.SceneManifest(scene_id="scene_s1_t1_001", ...)
+    assert manifest.scene_id == "scene_s1_t1_001"
+```
+
+**Key Lesson**: Never trust test names. Always verify the test is testing what it claims. Architectural decisions based on false tests lead to cascading failures.

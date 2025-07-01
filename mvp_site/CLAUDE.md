@@ -192,6 +192,19 @@ grep -r "process.*special_token" *.py
 - Google Cloud Run with secret management for API keys
 - Automatic context-aware deployment from any directory
 
+## Work Progress Tracking
+
+### Scratchpad Protocol
+**MANDATORY**: The main WIP plan must be maintained in `roadmap/scratchpad_[remote_branch_name].md` (e.g., `scratchpad_state_sync_entity.md`). This file must contain:
+- **Project Goal**: Clear statement of what the branch aims to achieve
+- **Implementation Plan**: Step-by-step plan with milestones
+- **Current State**: What's completed, in progress, or blocked
+- **Next Steps**: Specific actionable items
+- **Key Context**: Important decisions and findings
+- **Branch Info**: Remote branch name, PR number, merge target
+
+Update this file after every significant progress point for work continuity.
+
 ## Cursor Rules Integration
 
 The complete cursor rules from `/home/jleechan/projects/worldarchitect.ai/.cursor/rules/rules.mdc` are integrated as the primary operating protocol for AI collaboration on this project. Key highlights include:
@@ -213,6 +226,8 @@ The complete cursor rules from `/home/jleechan/projects/worldarchitect.ai/.curso
 - **Use `vpython`**: Always run tests with `TESTING=true vpython`
 - **Directory Navigation**: `cd mvp_site && TESTING=true vpython test_file.py`
 - **Red-Green Testing**: Write failing tests first, then implement
+- **Test Truth Verification**: ALWAYS verify tests are testing what they claim - check imports, dependencies, and actual behavior
+- **Architecture Decision Tests**: Create separate tests that validate architectural decisions remain valid
 
 ### Critical Validation Rules
 - **AI Instructions Must Have Implementation**: Verify documented capabilities exist in code

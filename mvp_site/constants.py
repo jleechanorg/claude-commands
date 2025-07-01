@@ -45,6 +45,7 @@ FILENAME_MECHANICS = "mechanics_system_instruction.md"
 FILENAME_CALIBRATION = "calibration_instruction.md"
 FILENAME_DESTINY = "destiny_ruleset.md"
 FILENAME_GAME_STATE = "game_state_instruction.md"
+FILENAME_ENTITY_SCHEMA = "entity_schema_instruction.md"
 
 # --- PROMPT TYPES ---
 # Used as keys/identifiers for loading specific prompt content.
@@ -55,6 +56,7 @@ PROMPT_TYPE_DESTINY = "destiny_ruleset"
 PROMPT_TYPE_GAME_STATE = "game_state"
 PROMPT_TYPE_CHARACTER_TEMPLATE = "character_template"
 PROMPT_TYPE_CHARACTER_SHEET = "character_sheet"
+PROMPT_TYPE_ENTITY_SCHEMA = "entity_schema"
 
 # --- PROMPT PATHS ---
 PROMPTS_DIR = "prompts"
@@ -67,3 +69,6 @@ CALIBRATION_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "calibration_instructio
 
 # Game mechanics
 DESTINY_RULESET_PATH = os.path.join(PROMPTS_DIR, "destiny_ruleset.md")
+
+# Entity management
+ENTITY_SCHEMA_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "entity_schema_instruction.md")

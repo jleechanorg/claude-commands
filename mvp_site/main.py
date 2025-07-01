@@ -676,7 +676,7 @@ def create_app():
         return jsonify({
             KEY_SUCCESS: True, 
             KEY_RESPONSE: final_response,
-            'debug_mode': current_game_state.debug_mode if hasattr(current_game_state, 'debug_mode') else False
+            'debug_mode': current_game_state.debug_mode if hasattr(current_game_state, 'debug_mode') else True
         })
 
 

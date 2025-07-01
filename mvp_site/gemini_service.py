@@ -9,6 +9,14 @@ import re
 import datetime
 from game_state import GameState
 import constants
+from entity_tracking import SceneManifest, create_from_game_state
+from narrative_sync_validator import NarrativeSyncValidator
+from narrative_response_schema import (
+    create_structured_prompt_injection, 
+    parse_structured_response,
+    validate_entity_coverage,
+    NarrativeResponse
+)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -23,7 +31,7 @@ def json_datetime_serializer(obj):
 DEFAULT_MODEL = 'gemini-2.5-flash'
 # Use pro for large-context operations.
 LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'
-# Use fastest model for testing
+# Use 1.5 flash for testing as requested
 TEST_MODEL = 'gemini-1.5-flash'
 
 # Use pro model for first 5 user inputs for higher quality world building
@@ -52,6 +60,7 @@ PROMPT_FILENAMES = {
     constants.PROMPT_TYPE_CALIBRATION: constants.FILENAME_CALIBRATION,
     constants.PROMPT_TYPE_DESTINY: constants.FILENAME_DESTINY,
     constants.PROMPT_TYPE_GAME_STATE: constants.FILENAME_GAME_STATE,
+    constants.PROMPT_TYPE_ENTITY_SCHEMA: constants.FILENAME_ENTITY_SCHEMA,
 }
 
 # NEW: Centralized map of prompt types to their file paths.
@@ -64,6 +73,7 @@ PATH_MAP = {
     constants.PROMPT_TYPE_GAME_STATE: constants.GAME_STATE_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_CHARACTER_TEMPLATE: constants.CHARACTER_TEMPLATE_PATH,
     constants.PROMPT_TYPE_CHARACTER_SHEET: constants.CHARACTER_SHEET_TEMPLATE_PATH,
+    constants.PROMPT_TYPE_ENTITY_SCHEMA: constants.ENTITY_SCHEMA_INSTRUCTION_PATH,
 }
 
 # --- END CONSTANTS ---
@@ -168,7 +178,7 @@ def _log_token_count(model_name, user_prompt_contents, system_instruction_text=N
     except Exception as e:
         logging.warning(f"Could not count tokens before API call: {e}")
 
-def _call_gemini_api(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None):
+def _call_gemini_api(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None, use_json_mode=False):
     """Calls the Gemini API with a given prompt and returns the response."""
     client = get_client()
     # Pass the system instruction text to the token logger
@@ -188,6 +198,11 @@ def _call_gemini_api(prompt_contents, model_name, current_prompt_text_for_loggin
         "temperature": TEMPERATURE,
         "safety_settings": SAFETY_SETTINGS
     }
+    
+    # Configure JSON response mode if requested
+    if use_json_mode:
+        generation_config_params["response_mime_type"] = "application/json"
+        logging.info("--- Using JSON response mode for structured generation ---")
     
     # Pass the system instruction to the generate_content call
     if system_instruction_text:
@@ -295,6 +310,9 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     # CRITICAL: Load game_state instructions FIRST for highest priority
     # This prevents "instruction fatigue" and ensures data structure compliance
     system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+    
+    # Load entity schema instructions for proper entity management
+    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_ENTITY_SCHEMA))
 
     # Conditionally add the character template if narrative instructions are selected.
     if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
@@ -345,6 +363,37 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     # Add world instructions if requested
     if use_default_world:
         _add_world_instructions_to_system(system_instruction_parts)
+
+    # ALWAYS add debug mode instructions for AI context and state management
+    # The backend will strip debug content for users when debug_mode is False
+    debug_instruction = (
+        "\n**DEBUG MODE - ALWAYS GENERATE**\n"
+        "You must ALWAYS include the following debug information in your response for game state management:\n"
+        "\n"
+        "1. **DM COMMENTARY**: Wrap any behind-the-scenes DM thoughts, rule considerations, or meta-game commentary in [DEBUG_START] and [DEBUG_END] tags.\n"
+        "\n"
+        "2. **DICE ROLLS**: Show ALL dice rolls throughout your response:\n"
+        "   - **During Narrative**: Show important rolls (skill checks, saving throws, random events) using [DEBUG_ROLL_START] and [DEBUG_ROLL_END] tags\n"
+        "   - **During Combat**: Show ALL combat rolls including attack rolls, damage rolls, initiative, saving throws, and any other dice mechanics\n"
+        "   - Format: [DEBUG_ROLL_START]Rolling Perception check: 1d20+3 = 15+3 = 18 (Success)[DEBUG_ROLL_END]\n"
+        "   - Include both the dice result and the final total with modifiers\n"
+        "\n"
+        "3. **RESOURCES USED**: Track resources expended during the scene:\n"
+        "   - Format: [DEBUG_RESOURCES_START]Resources: 2 EP used (6/8 remaining), 1 spell slot level 2 (2/3 remaining), short rests: 1/2[DEBUG_RESOURCES_END]\n"
+        "   - Include: Effort Points (EP), spell slots by level, short rests, long rests, hit dice, consumables\n"
+        "   - Show both used and remaining for each resource\n"
+        "\n"
+        "4. **STATE CHANGES**: After your main narrative, include a section wrapped in [DEBUG_STATE_START] and [DEBUG_STATE_END] tags that explains what state changes you're proposing and why.\n"
+        "\n"
+        "**Examples:**\n"
+        "- [DEBUG_START]The player is attempting a stealth approach, so I need to roll for the guards' perception...[DEBUG_END]\n"
+        "- [DEBUG_ROLL_START]Guard Perception: 1d20+2 = 12+2 = 14 vs DC 15 (Failure - guards don't notice)[DEBUG_ROLL_END]\n"
+        "- [DEBUG_RESOURCES_START]Resources: 0 EP used (8/8 remaining), no spell slots used, short rests: 2/2[DEBUG_RESOURCES_END]\n"
+        "- [DEBUG_STATE_START]Updating player position to 'hidden behind crates' and setting guard alertness to 'unaware'[DEBUG_STATE_END]\n"
+        "\n"
+        "NOTE: This debug information helps maintain game state consistency and will be conditionally shown to players based on their debug mode setting.\n\n"
+    )
+    system_instruction_parts.append(debug_instruction)
 
     system_instruction_final = "\n\n".join(system_instruction_parts)
     
@@ -414,6 +463,9 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # CRITICAL: Load game_state instructions FIRST for highest priority
     # This prevents "instruction fatigue" and ensures data structure compliance
     system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+    
+    # Load entity schema instructions for proper entity management
+    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_ENTITY_SCHEMA))
 
     # Conditionally add the character template if narrative instructions are selected.
     if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
@@ -452,11 +504,17 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         "   - Format: [DEBUG_ROLL_START]Rolling Perception check: 1d20+3 = 15+3 = 18 (Success)[DEBUG_ROLL_END]\n"
         "   - Include both the dice result and the final total with modifiers\n"
         "\n"
-        "3. **STATE CHANGES**: After your main narrative, include a section wrapped in [DEBUG_STATE_START] and [DEBUG_STATE_END] tags that explains what state changes you're proposing and why.\n"
+        "3. **RESOURCES USED**: Track resources expended during the scene:\n"
+        "   - Format: [DEBUG_RESOURCES_START]Resources: 2 EP used (6/8 remaining), 1 spell slot level 2 (2/3 remaining), short rests: 1/2[DEBUG_RESOURCES_END]\n"
+        "   - Include: Effort Points (EP), spell slots by level, short rests, long rests, hit dice, consumables\n"
+        "   - Show both used and remaining for each resource\n"
+        "\n"
+        "4. **STATE CHANGES**: After your main narrative, include a section wrapped in [DEBUG_STATE_START] and [DEBUG_STATE_END] tags that explains what state changes you're proposing and why.\n"
         "\n"
         "**Examples:**\n"
         "- [DEBUG_START]The player is attempting a stealth approach, so I need to roll for the guards' perception...[DEBUG_END]\n"
         "- [DEBUG_ROLL_START]Guard Perception: 1d20+2 = 12+2 = 14 vs DC 15 (Failure - guards don't notice)[DEBUG_ROLL_END]\n"
+        "- [DEBUG_RESOURCES_START]Resources: 0 EP used (8/8 remaining), no spell slots used, short rests: 2/2[DEBUG_RESOURCES_END]\n"
         "- [DEBUG_STATE_START]Updating player position to 'hidden behind crates' and setting guard alertness to 'unaware'[DEBUG_STATE_END]\n"
         "\n"
         "NOTE: This debug information helps maintain game state consistency and will be conditionally shown to players based on their debug mode setting.\n\n"
@@ -492,6 +550,35 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # Serialize the game state for inclusion in the prompt
     serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2, default=json_datetime_serializer)
     
+    # --- ENTITY TRACKING: Create scene manifest for entity tracking ---
+    # Extract session and turn numbers from game state
+    session_number = current_game_state.custom_campaign_state.get('session_number', 1)
+    turn_number = len(truncated_story_context) + 1  # Approximate turn count
+    
+    # Create entity manifest from current game state (with basic caching)
+    game_state_dict = current_game_state.to_dict()
+    manifest_cache_key = f"manifest_{session_number}_{turn_number}_{hash(str(sorted(game_state_dict.get('npc_data', {}).items())))}"
+    
+    # Simple in-memory cache for the request duration
+    if not hasattr(current_game_state, '_manifest_cache'):
+        current_game_state._manifest_cache = {}
+    
+    if manifest_cache_key in current_game_state._manifest_cache:
+        entity_manifest = current_game_state._manifest_cache[manifest_cache_key]
+        logging.debug("Using cached entity manifest")
+    else:
+        entity_manifest = create_from_game_state(game_state_dict, session_number, turn_number)
+        current_game_state._manifest_cache[manifest_cache_key] = entity_manifest
+        logging.debug("Created new entity manifest")
+    
+    entity_manifest_text = entity_manifest.to_prompt_format()
+    expected_entities = entity_manifest.get_expected_entities()
+    
+    # Add structured entity tracking instruction
+    entity_tracking_instruction = ""
+    if expected_entities:
+        entity_tracking_instruction = create_structured_prompt_injection(entity_manifest_text, expected_entities)
+    
     timeline_log_parts = []
     # NEW: Define sequence_ids from the final recent_context
     sequence_ids = [str(entry.get('sequence_id', 'N/A')) for entry in truncated_story_context]
@@ -511,6 +598,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         f"{core_memories_summary}"
         f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{sequence_id_list_string}]\\n\\n"
         f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\n"
+        f"{entity_tracking_instruction}"
         f"TIMELINE LOG (FOR CONTEXT):\\n{timeline_log_string}\\n\\n"
         f"YOUR TURN:\\n{current_prompt_text}"
     )
@@ -525,8 +613,65 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     else:
         chosen_model = DEFAULT_MODEL
     
-    response = _call_gemini_api([full_prompt], chosen_model, current_prompt_text_for_logging=current_prompt_text, system_instruction_text=system_instruction_final) 
-    return _get_text_from_response(response)
+    # Use structured JSON output if entity tracking is enabled
+    if expected_entities:
+        # Configure for JSON response
+        response = _call_gemini_api([full_prompt], chosen_model, 
+                                  current_prompt_text_for_logging=current_prompt_text, 
+                                  system_instruction_text=system_instruction_final,
+                                  use_json_mode=True)
+        raw_response_text = _get_text_from_response(response)
+        
+        # Parse structured response
+        response_text, structured_response = parse_structured_response(raw_response_text)
+        
+        # Validate structured response coverage
+        if isinstance(structured_response, NarrativeResponse):
+            coverage_validation = validate_entity_coverage(structured_response, expected_entities)
+            logging.info(f"STRUCTURED_GENERATION: Coverage rate {coverage_validation['coverage_rate']:.2f}, "
+                        f"Schema valid: {coverage_validation['schema_valid']}")
+            
+            if not coverage_validation['schema_valid']:
+                logging.warning(f"STRUCTURED_GENERATION: Missing from schema: {coverage_validation['missing_from_schema']}")
+        else:
+            logging.warning("STRUCTURED_GENERATION: Failed to parse JSON response, falling back to plain text")
+    else:
+        # Standard generation without entity tracking
+        response = _call_gemini_api([full_prompt], chosen_model, 
+                                  current_prompt_text_for_logging=current_prompt_text, 
+                                  system_instruction_text=system_instruction_final)
+        response_text = _get_text_from_response(response)
+    
+    # --- ENTITY TRACKING VALIDATION: Validate narrative against entity manifest ---
+    if expected_entities:
+        validator = NarrativeSyncValidator()
+        validation_result = validator.validate(
+            narrative_text=response_text,
+            expected_entities=expected_entities,
+            location=current_game_state.world_data.get('current_location_name', 'Unknown')
+        )
+        
+        if not validation_result.all_entities_present:
+            logging.warning(f"ENTITY_TRACKING_VALIDATION: Narrative failed entity validation")
+            logging.warning(f"Missing entities: {validation_result.entities_missing}")
+            if validation_result.warnings:
+                for warning in validation_result.warnings:
+                    logging.warning(f"Validation warning: {warning}")
+            
+            # Add validation context to the response for debugging
+            if current_game_state.debug_mode:
+                debug_validation = (
+                    f"\n\n[DEBUG_VALIDATION_START]\n"
+                    f"Entity Tracking Validation Result:\n"
+                    f"- Expected entities: {expected_entities}\n"
+                    f"- Found entities: {validation_result.entities_found}\n"
+                    f"- Missing entities: {validation_result.entities_missing}\n"
+                    f"- Confidence: {validation_result.confidence:.2f}\n"
+                    f"[DEBUG_VALIDATION_END]"
+                )
+                response_text += debug_validation
+    
+    return response_text
 
 def _get_static_prompt_parts(current_game_state: GameState, story_context: list):
     """Helper to generate the non-timeline parts of the prompt."""

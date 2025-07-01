@@ -1,0 +1,229 @@
+{
+  "test_date": "2025-06-30T23:37:08.339042",
+  "campaign_id": "1qWlbuqqV4M82jS1FO8g",
+  "total_interactions": 10,
+  "successful_tracking": 6,
+  "success_rate": 0.6,
+  "cassian_problem_handled": true,
+  "total_fields_checked": 130,
+  "detailed_results": [
+    {
+      "interaction": 1,
+      "input": "continue",
+      "location": "Throne Room",
+      "expected": [
+        "Sariel"
+      ],
+      "found": [
+        "Sariel"
+      ],
+      "missing": [],
+      "extra": [],
+      "success": true,
+      "fields_checked": {
+        "state_fields": 13,
+        "pc_fields": 0,
+        "npc_fields": 0,
+        "total": 13
+      }
+    },
+    {
+      "interaction": 2,
+      "input": "ask for forgiveness. tell cassian i was scared and helpless",
+      "location": "Throne Room",
+      "expected": [
+        "Sariel",
+        "Cassian"
+      ],
+      "found": [
+        "Sariel",
+        "Cassian"
+      ],
+      "missing": [],
+      "extra": [],
+      "success": true,
+      "fields_checked": {
+        "state_fields": 13,
+        "pc_fields": 0,
+        "npc_fields": 0,
+        "total": 13
+      }
+    },
+    {
+      "interaction": 3,
+      "input": "1.  Requesting me to advance the narrative and make a decision for Sariel's action?",
+      "location": "Throne Room",
+      "expected": [
+        "Sariel"
+      ],
+      "found": [
+        "Sariel"
+      ],
+      "missing": [],
+      "extra": [],
+      "success": true,
+      "fields_checked": {
+        "state_fields": 13,
+        "pc_fields": 0,
+        "npc_fields": 0,
+        "total": 13
+      }
+    },
+    {
+      "interaction": 4,
+      "input": "2",
+      "location": "Valerius's Study",
+      "expected": [
+        "Sariel",
+        "Valerius"
+      ],
+      "found": [
+        "Sariel",
+        "Valerius"
+      ],
+      "missing": [],
+      "extra": [],
+      "success": true,
+      "fields_checked": {
+        "state_fields": 13,
+        "pc_fields": 0,
+        "npc_fields": 0,
+        "total": 13
+      }
+    },
+    {
+      "interaction": 5,
+      "input": "1",
+      "location": "Valerius's Study",
+      "expected": [
+        "Sariel",
+        "Valerius"
+      ],
+      "found": [
+        "Sariel",
+        "Valerius"
+      ],
+      "missing": [],
+      "extra": [],
+      "success": true,
+      "fields_checked": {
+        "state_fields": 13,
+        "pc_fields": 0,
+        "npc_fields": 0,
+        "total": 13
+      }
+    },
+    {
+      "interaction": 6,
+      "input": "2",
+      "location": "Lady Cressida's Chambers",
+      "expected": [
+        "Lady Cressida Valeriana",
+        "Sariel"
+      ],
+      "found": [
+        "Sariel"
+      ],
+      "missing": [
+        "Lady Cressida Valeriana"
+      ],
+      "extra": [],
+      "success": false,
+      "fields_checked": {
+        "state_fields": 13,
+        "pc_fields": 0,
+        "npc_fields": 0,
+        "total": 13
+      }
+    },
+    {
+      "interaction": 7,
+      "input": "2",
+      "location": "Lady Cressida's Chambers",
+      "expected": [
+        "Lady Cressida Valeriana",
+        "Sariel"
+      ],
+      "found": [
+        "Sariel"
+      ],
+      "missing": [
+        "Lady Cressida Valeriana"
+      ],
+      "extra": [],
+      "success": false,
+      "fields_checked": {
+        "state_fields": 13,
+        "pc_fields": 0,
+        "npc_fields": 0,
+        "total": 13
+      }
+    },
+    {
+      "interaction": 8,
+      "input": "1",
+      "location": "Great Archives",
+      "expected": [
+        "Sariel"
+      ],
+      "found": [
+        "Sariel"
+      ],
+      "missing": [],
+      "extra": [],
+      "success": true,
+      "fields_checked": {
+        "state_fields": 13,
+        "pc_fields": 0,
+        "npc_fields": 0,
+        "total": 13
+      }
+    },
+    {
+      "interaction": 9,
+      "input": "continue",
+      "location": "Chamber of Whispers, Great Archives",
+      "expected": [
+        "Sariel",
+        "Magister Kantos"
+      ],
+      "found": [
+        "Sariel"
+      ],
+      "missing": [
+        "Magister Kantos"
+      ],
+      "extra": [],
+      "success": false,
+      "fields_checked": {
+        "state_fields": 13,
+        "pc_fields": 0,
+        "npc_fields": 0,
+        "total": 13
+      }
+    },
+    {
+      "interaction": 10,
+      "input": "3",
+      "location": "Chamber of Whispers, Great Archives",
+      "expected": [
+        "Sariel",
+        "Magister Kantos"
+      ],
+      "found": [
+        "Sariel"
+      ],
+      "missing": [
+        "Magister Kantos"
+      ],
+      "extra": [],
+      "success": false,
+      "fields_checked": {
+        "state_fields": 13,
+        "pc_fields": 0,
+        "npc_fields": 0,
+        "total": 13
+      }
+    }
+  ]
+}

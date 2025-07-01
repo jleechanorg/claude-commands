@@ -35,7 +35,7 @@ class GameState:
         self.time_pressure_warnings = kwargs.get("time_pressure_warnings", {})
         
         # Debug mode flag
-        self.debug_mode = kwargs.get("debug_mode", False)
+        self.debug_mode = kwargs.get("debug_mode", True)
         
         migration_status_value = kwargs.get("migration_status", MigrationStatus.NOT_CHECKED.value)
         try:
@@ -52,6 +52,12 @@ class GameState:
         """Serializes the GameState object to a dictionary for Firestore."""
         # Copy all attributes from the instance's __dict__
         data = self.__dict__.copy()
+        
+        # Remove any internal cache attributes that shouldn't be serialized
+        # These are typically prefixed with underscore and added at runtime
+        keys_to_remove = [key for key in data.keys() if key.startswith('_') and key != '__dict__']
+        for key in keys_to_remove:
+            del data[key]
         
         # Convert Enum members to their string values for serialization
         if 'migration_status' in data and isinstance(data['migration_status'], MigrationStatus):

@@ -9,12 +9,16 @@ It uses Selenium to run the browser-based timing tests and reports results.
 import unittest
 import time
 import os
+import sys
 import tempfile
 import shutil
 import http.server
 import socketserver
 import threading
 from pathlib import Path
+
+# Add parent directories to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # Try to import Selenium - skip tests if not available
 try:
