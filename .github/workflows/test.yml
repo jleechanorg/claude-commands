@@ -1,0 +1,97 @@
+name: WorldArchitect Tests
+
+# When to run the tests
+on:
+  push:
+    branches: [ main, dev ]  # Run on pushes to these branches
+  pull_request:
+    branches: [ main ]       # Run on PRs targeting main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Step 1: Get your code
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    # Step 2: Set up Python (same version as your project)
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    # Step 3: Cache dependencies (speeds up future runs)
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    # Step 4: Install dependencies directly (no venv needed in CI)
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r mvp_site/requirements.txt
+    
+    # Step 5: Run tests directly with Python
+    - name: Run test suite
+      run: |
+        # Find all test files in mvp_site/tests directory (excluding prototype)
+        test_files=$(find mvp_site/tests -name "test_*.py" -type f | sort)
+        
+        # Run each test file
+        failed_tests=0
+        total_tests=0
+        failed_list=""
+        
+        for test_file in $test_files; do
+          echo "Running $test_file..."
+          total_tests=$((total_tests + 1))
+          
+          if TESTING=true python "$test_file"; then
+            echo "✅ $test_file passed"
+          else
+            echo "❌ $test_file failed"
+            failed_tests=$((failed_tests + 1))
+            failed_list="$failed_list\n  - $test_file"
+          fi
+          echo "----------------------------------------"
+        done
+        
+        # Summary
+        echo ""
+        echo "========================================"
+        echo "TEST SUMMARY: $((total_tests - failed_tests))/$total_tests tests passed"
+        echo "========================================"
+        
+        if [ $failed_tests -gt 0 ]; then
+          echo ""
+          echo "Failed tests:$failed_list"
+          echo ""
+          echo "Note: Some tests may fail in CI due to:"
+          echo "  - Missing local services (e.g., test server)"
+          echo "  - Integration tests requiring specific setup"
+          echo "  - Timing-sensitive tests"
+          exit 1
+        fi
+      env:
+        TESTING: true
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+    
+    # Step 6: Upload test results (optional)
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()  # Run even if tests fail
+      with:
+        name: test-results
+        path: |
+          mvp_site/test-results/
+          mvp_site/coverage.xml
+          mvp_site/*.log
+        retention-days: 30
+        if-no-files-found: warn
