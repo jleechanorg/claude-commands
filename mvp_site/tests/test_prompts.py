@@ -76,5 +76,125 @@ class TestPromptLoading(unittest.TestCase):
         self.assertEqual(len(missing_files), 0,
                          f"Found files in gemini_service.path_map that do not exist in prompts/: {missing_files}")
 
+    def test_all_registered_prompts_are_actually_used(self):
+        """
+        Ensures that every prompt registered in PATH_MAP is actually used
+        somewhere in the codebase. This prevents dead/unused prompts.
+        """
+        logging.info("--- Running Test: test_all_registered_prompts_are_actually_used ---")
+        
+        # Get all prompt types from PATH_MAP
+        prompt_types = set(gemini_service.PATH_MAP.keys())
+        
+        # Search for usage of each prompt type in the codebase
+        codebase_dir = os.path.dirname(os.path.dirname(__file__))
+        unused_prompts = set()
+        
+        for prompt_type in prompt_types:
+            # Check if prompt type is used anywhere in Python files
+            found_usage = False
+            
+            # Search through Python files for usage
+            for root, dirs, files in os.walk(codebase_dir):
+                # Skip test directories and __pycache__
+                if 'test' in root or '__pycache__' in root:
+                    continue
+                    
+                for file in files:
+                    if file.endswith('.py'):
+                        filepath = os.path.join(root, file)
+                        try:
+                            with open(filepath, 'r', encoding='utf-8') as f:
+                                content = f.read()
+                                # Look for the prompt type constant being used
+                                if prompt_type in content:
+                                    found_usage = True
+                                    break
+                        except (UnicodeDecodeError, PermissionError):
+                            continue
+                
+                if found_usage:
+                    break
+            
+            if not found_usage:
+                unused_prompts.add(prompt_type)
+        
+        # This test should fail initially (red) showing unused prompts
+        self.assertEqual(len(unused_prompts), 0,
+                         f"Found prompt types registered in PATH_MAP but not used in codebase: {unused_prompts}")
+        
+        # Also verify that prompt types are actually called via _load_instruction_file
+        # This is a more specific check for actual loading via constants
+        used_in_loading = set()
+        
+        # Search for _load_instruction_file calls with constants
+        for root, dirs, files in os.walk(codebase_dir):
+            if 'test' in root or '__pycache__' in root:
+                continue
+                
+            for file in files:
+                if file.endswith('.py'):
+                    filepath = os.path.join(root, file)
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                            # Look for _load_instruction_file calls with constants
+                            if '_load_instruction_file(constants.PROMPT_TYPE_' in content:
+                                # Extract the constant names used in _load_instruction_file calls
+                                import re
+                                matches = re.findall(r'_load_instruction_file\(constants\.(PROMPT_TYPE_\w+)\)', content)
+                                for match in matches:
+                                    # Get the actual constant value
+                                    if hasattr(constants, match):
+                                        constant_value = getattr(constants, match)
+                                        if constant_value in prompt_types:
+                                            used_in_loading.add(constant_value)
+                    except (UnicodeDecodeError, PermissionError):
+                        continue
+        
+        # Define prompts that are loaded conditionally
+        conditional_prompts = {
+            constants.PROMPT_TYPE_NARRATIVE,  # Only when narrative selected
+            constants.PROMPT_TYPE_MECHANICS,  # Only when mechanics selected  
+            constants.PROMPT_TYPE_CALIBRATION  # Only when calibration selected
+        }
+        
+        # Separate always-loaded vs conditional prompts
+        always_loaded_prompts = prompt_types - conditional_prompts
+        not_loaded_always = always_loaded_prompts - used_in_loading
+        
+        # All always-loaded prompts should be found
+        self.assertEqual(len(not_loaded_always), 0,
+                         f"Found always-loaded prompt types that are never loaded: {not_loaded_always}")
+        
+        # Conditional prompts should be loaded when conditions are met
+        conditional_not_loaded = conditional_prompts - used_in_loading
+        
+        # Verify conditional prompts are at least referenced in conditional logic
+        conditional_referenced = set()
+        for root, dirs, files in os.walk(codebase_dir):
+            if 'test' in root or '__pycache__' in root:
+                continue
+                
+            for file in files:
+                if file.endswith('.py'):
+                    filepath = os.path.join(root, file)
+                    try:
+                        with open(filepath, 'r', encoding='utf-8') as f:
+                            content = f.read()
+                            # Look for conditional loading patterns
+                            for prompt_type in conditional_prompts:
+                                if f'in selected_prompts' in content and prompt_type in content:
+                                    conditional_referenced.add(prompt_type)
+                    except (UnicodeDecodeError, PermissionError):
+                        continue
+        
+        unreferenced_conditionals = conditional_prompts - conditional_referenced
+        self.assertEqual(len(unreferenced_conditionals), 0,
+                         f"Found conditional prompt types that are not referenced in conditional logic: {unreferenced_conditionals}")
+        
+        print(f"✓ Always-loaded prompts: {len(always_loaded_prompts - not_loaded_always)}/{len(always_loaded_prompts)} verified")
+        print(f"✓ Conditional prompts: {len(conditional_referenced)}/{len(conditional_prompts)} properly referenced")
+
 if __name__ == '__main__':
     unittest.main() 

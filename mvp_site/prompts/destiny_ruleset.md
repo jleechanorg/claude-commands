@@ -21,6 +21,12 @@
 
 **II. Character Attributes**
 
+*   **2.0 Attribute System Selection:**
+    *   Campaigns must choose either D&D (6-attribute) or Destiny (5-aptitude) system at creation.
+    *   This choice is permanent for the campaign and applies to all characters.
+    *   See `attribute_conversion_guide.md` for conversion between systems.
+    *   Mechanics below work identically regardless of system chosen.
+
 *   **2.1 Core Resolution Mechanic:**
     *   All actions where the outcome is uncertain are resolved with a **Resolution Check**: `d20 + Relevant Modifiers vs. Challenge Number (CN)`.
     *   **Relevant Modifiers** typically include an Aptitude Modifier (see 2.2.C), a Combat Prowess Bonus (see 3.7) if applicable (e.g., for Spell Save CNs, see 6.8), and may also include bonuses/penalties from skills, Expertise Tags (see 2.5.B), circumstances, equipment, spells, or other game effects.
@@ -35,17 +41,28 @@
             *   Formidable/Legendary Task (EqL 16+): CN 26+
         *   The GM (AI) may apply situational adjustments (+/- 1 to 5 or more) to any CN based on specific advantageous or disadvantageous circumstances not already covered by other modifiers.
 
-*   **2.2 Aptitude System:**
-    *   **A. Core Aptitudes:** A character possesses five core Aptitudes that define their fundamental capabilities:
-        1.  **Physique:** Represents physical power, brawn, and forcefulness.
-        2.  **Coordination:** Represents agility, dexterity, reflexes, and physical precision.
-        3.  **Health:** Represents physical resilience, stamina, and vitality.
-        4.  **Intelligence:** Represents reasoning, memory, analytical skill, and knowledge.
-        5.  **Wisdom:** Represents perceptiveness, intuition, willpower, and common sense.
-    *   **B. Aptitude Score:** Each Aptitude has a score, typically ranging from 1 to 20 for player characters (though some beings may exceed this). This score is the current numerical representation of the character's ability in that Aptitude and is primarily used to derive the Aptitude Modifier. Aptitude Scores can increase over time through leveling or other significant character development.
-    *   **C. Aptitude Modifier:** For each Aptitude, a character has an Aptitude Modifier derived from their Aptitude Score. This modifier is calculated as: `(Aptitude Score - 10) / 2`, rounded down. This modifier is added to relevant d20 Resolution Checks.
-        *   *Example: An Intelligence Score of 14 yields an Intelligence Modifier of +2. An Aptitude Score of 9 yields a modifier of -1.*
-    *   **D. Aptitude Potential (Coefficient):**
+*   **2.2 Attribute/Aptitude System:**
+    *   **A. Core Attributes (Choose based on campaign system):**
+        
+        **Option 1 - D&D System (6 Attributes):**
+        1.  **Strength (STR):** Physical power and athletic training
+        2.  **Dexterity (DEX):** Agility, reflexes, and balance
+        3.  **Constitution (CON):** Health, stamina, and vital force
+        4.  **Intelligence (INT):** Reasoning and memory
+        5.  **Wisdom (WIS):** Awareness and insight
+        6.  **Charisma (CHA):** Force of personality and leadership
+        
+        **Option 2 - Destiny System (5 Aptitudes):**
+        1.  **Physique:** Physical power, brawn, and forcefulness
+        2.  **Coordination:** Agility, dexterity, reflexes, and precision
+        3.  **Health:** Physical resilience, stamina, and vitality
+        4.  **Intelligence:** Reasoning, memory, analytical skill, and knowledge
+        5.  **Wisdom:** Perceptiveness, intuition, willpower, and common sense
+        *Note: Social interactions use Personality Traits instead of Charisma*
+    *   **B. Attribute/Aptitude Score:** Each attribute/aptitude has a score, typically ranging from 1 to 20 for player characters (though some beings may exceed this). This score is the current numerical representation of the character's ability and is primarily used to derive the modifier. Scores can increase over time through leveling or other significant character development.
+    *   **C. Attribute/Aptitude Modifier:** For each attribute/aptitude, a character has a modifier derived from their score. This modifier is calculated as: `(Score - 10) / 2`, rounded down. This modifier is added to relevant d20 Resolution Checks.
+        *   *Example: An Intelligence Score of 14 yields an Intelligence Modifier of +2. A Score of 9 yields a modifier of -1.*
+    *   **D. Attribute/Aptitude Potential (Coefficient):**
         1.  **Definition:** Each character has an innate "Aptitude Potential" coefficient (rated 1-5) for each Aptitude, representing their natural talent. This coefficient primarily influences the rate of yearly progression.
         
         2.  **Determination at Character Creation:** The GM (AI) and player will collaborate to determine these coefficients based on character concept, background, lineage, or a random generation method.
@@ -460,6 +477,60 @@ Combat in this system is turn-based. On your turn, you can move a distance up to
 **VI. Combat Mechanics**
 
 This section details fundamental mechanics governing combat resolution, damage, defenses, and character states.
+
+### Combat State Management
+
+The `combat_state` object is used to track the status of combat encounters. It must adhere to the following structure:
+
+*   **`in_combat` (Boolean):** `true` if a combat encounter is active, otherwise `false`.
+*   **`current_round` (Number):** The current round number (starts at 1).
+*   **`current_turn_index` (Number):** Index in the initiative order for current turn.
+*   **`initiative_order` (Array of Objects):** List of combatants ordered by initiative:
+    *   `name`: The combatant's display name.
+    *   `initiative`: Their initiative roll result.
+    *   `type`: "pc", "companion", or "enemy".
+*   **`combatants` (Dictionary of Objects):** A dictionary where each key is the combatant's name. The value for each key is an object containing:
+    *   `hp_current`: Their current hit points.
+    *   `hp_max`: Their maximum hit points.
+    *   `status`: Array of status effects (e.g., ["Prone", "Poisoned"]).
+
+#### Combat Initialization
+When combat starts, update the combat state:
+```json
+"combat_state": {
+  "in_combat": true,
+  "current_round": 1,
+  "current_turn_index": 0,
+  "initiative_order": [
+    {"name": "Sir Kaelan", "initiative": 18, "type": "pc"},
+    {"name": "Aria Moonwhisper", "initiative": 15, "type": "companion"},
+    {"name": "Orc Warrior", "initiative": 12, "type": "enemy"}
+  ],
+  "combatants": {
+    "Sir Kaelan": {"hp_current": 85, "hp_max": 100, "status": []},
+    "Aria Moonwhisper": {"hp_current": 60, "hp_max": 60, "status": []},
+    "Orc Warrior": {"hp_current": 45, "hp_max": 45, "status": ["bloodied"]}
+  }
+}
+```
+
+#### Turn Progression
+- **Advance `current_turn_index`** after each combatant's turn
+- **Increment `current_round`** when cycling back to first combatant
+- **Update HP and status effects** as combat progresses
+- **Remove defeated combatants** or mark them as unconscious
+
+#### Combat End
+When combat ends, reset the combat state:
+```json
+"combat_state": {
+  "in_combat": false,
+  "current_round": 0,
+  "current_turn_index": 0,
+  "initiative_order": [],
+  "combatants": {}
+}
+```
 
 *   **6.1 Hit Points (HP) & Consciousness:**
     *   **A. Maximum HP:** A character's maximum Hit Points are determined by their **Health Aptitude Score + a cumulative bonus gained from their Class and/or Role features at each level.**

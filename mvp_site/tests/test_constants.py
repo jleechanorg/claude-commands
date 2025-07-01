@@ -137,6 +137,62 @@ class TestConstants(unittest.TestCase):
         self.assertIsInstance(constants.ACTOR_USER, str)
         self.assertIsInstance(constants.PROMPTS_DIR, str)
 
+    def test_attribute_system_constants(self):
+        """Test that attribute system constants are defined correctly."""
+        self.assertEqual(constants.ATTRIBUTE_SYSTEM_DND, "D&D")
+        self.assertEqual(constants.ATTRIBUTE_SYSTEM_DESTINY, "Destiny")
+        self.assertEqual(constants.DEFAULT_ATTRIBUTE_SYSTEM, "Destiny")
+    
+    def test_attribute_lists(self):
+        """Test that attribute lists are defined correctly."""
+        # D&D attributes
+        self.assertEqual(len(constants.DND_ATTRIBUTES), 6)
+        self.assertIn("Strength", constants.DND_ATTRIBUTES)
+        self.assertIn("Charisma", constants.DND_ATTRIBUTES)
+        
+        # D&D codes
+        self.assertEqual(len(constants.DND_ATTRIBUTE_CODES), 6)
+        self.assertIn("STR", constants.DND_ATTRIBUTE_CODES)
+        self.assertIn("CHA", constants.DND_ATTRIBUTE_CODES)
+        
+        # Destiny attributes
+        self.assertEqual(len(constants.DESTINY_ATTRIBUTES), 5)
+        self.assertIn("Physique", constants.DESTINY_ATTRIBUTES)
+        self.assertNotIn("Charisma", constants.DESTINY_ATTRIBUTES)
+        
+        # Big Five traits
+        self.assertEqual(len(constants.BIG_FIVE_TRAITS), 5)
+        self.assertIn("Openness", constants.BIG_FIVE_TRAITS)
+        self.assertIn("Neuroticism", constants.BIG_FIVE_TRAITS)
+    
+    def test_helper_functions(self):
+        """Test the attribute system helper functions."""
+        # Test validation
+        self.assertTrue(constants.is_valid_attribute_system("D&D"))
+        self.assertTrue(constants.is_valid_attribute_system("Destiny"))
+        self.assertFalse(constants.is_valid_attribute_system("Invalid"))
+        
+        # Test get attributes
+        dnd_attrs = constants.get_attributes_for_system("D&D")
+        self.assertEqual(len(dnd_attrs), 6)
+        self.assertIn("Charisma", dnd_attrs)
+        
+        destiny_attrs = constants.get_attributes_for_system("Destiny")
+        self.assertEqual(len(destiny_attrs), 5)
+        self.assertNotIn("Charisma", destiny_attrs)
+        
+        # Test characteristic checks
+        self.assertTrue(constants.uses_charisma("D&D"))
+        self.assertFalse(constants.uses_charisma("Destiny"))
+        self.assertFalse(constants.uses_big_five("D&D"))
+        self.assertTrue(constants.uses_big_five("Destiny"))
+        
+        # Test error handling
+        with self.assertRaises(ValueError):
+            constants.get_attributes_for_system("Invalid")
+        with self.assertRaises(ValueError):
+            constants.get_attribute_codes_for_system("Invalid")
+
 
 if __name__ == '__main__':
     unittest.main()

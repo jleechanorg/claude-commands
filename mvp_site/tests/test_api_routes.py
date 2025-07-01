@@ -371,6 +371,153 @@ class TestCreateCampaignRoute(unittest.TestCase):
         self.assertIn('campaign_id', data)
         self.assertTrue(data['success'])
 
+    @patch('main.firestore_service')
+    @patch('main.constants')
+    @patch('main.gemini_service')
+    @patch('main.GameState')
+    def test_create_campaign_destiny_system_checkbox_checked(self, mock_game_state_class, mock_gemini_service, mock_constants, mock_firestore_service):
+        """Test campaign creation with Destiny system checkbox checked (default)."""
+        # Import constants for comparison
+        import constants
+        
+        # Mock constants
+        mock_constants.KEY_TITLE = 'title'
+        mock_constants.ATTRIBUTE_SYSTEM_DESTINY = constants.ATTRIBUTE_SYSTEM_DESTINY
+        mock_constants.ATTRIBUTE_SYSTEM_DND = constants.ATTRIBUTE_SYSTEM_DND
+        
+        # Mock GameState to capture the attribute_system
+        mock_game_state = MagicMock()
+        mock_game_state.to_dict.return_value = {'initial': 'state'}
+        mock_game_state_class.return_value = mock_game_state
+        
+        # Mock Gemini service
+        mock_gemini_service.get_initial_story.return_value = 'Adventure begins...'
+        
+        # Mock Firestore
+        mock_firestore_service.create_campaign.return_value = 'test-campaign-123'
+        
+        campaign_data = {
+            'prompt': 'Create a fantasy adventure',
+            'title': 'Destiny System Campaign',
+            'selected_prompts': ['narrative'],
+            'custom_options': ['destinySystem']  # Destiny checkbox checked
+        }
+        
+        response = self.client.post(
+            '/api/campaigns',
+            headers=self.test_headers,
+            json=campaign_data
+        )
+        
+        # Verify successful creation
+        self.assertEqual(response.status_code, 201)
+        data = json.loads(response.data)
+        self.assertTrue(data['success'])
+        
+        # Verify GameState was created with Destiny system
+        mock_game_state_class.assert_called_once()
+        call_args = mock_game_state_class.call_args
+        custom_campaign_state = call_args[1]['custom_campaign_state']
+        self.assertEqual(custom_campaign_state['attribute_system'], constants.ATTRIBUTE_SYSTEM_DESTINY)
+
+    @patch('main.firestore_service')
+    @patch('main.constants')
+    @patch('main.gemini_service')
+    @patch('main.GameState')
+    def test_create_campaign_destiny_system_checkbox_unchecked(self, mock_game_state_class, mock_gemini_service, mock_constants, mock_firestore_service):
+        """Test campaign creation with Destiny system checkbox unchecked (uses D&D)."""
+        # Import constants for comparison
+        import constants
+        
+        # Mock constants
+        mock_constants.KEY_TITLE = 'title'
+        mock_constants.ATTRIBUTE_SYSTEM_DESTINY = constants.ATTRIBUTE_SYSTEM_DESTINY
+        mock_constants.ATTRIBUTE_SYSTEM_DND = constants.ATTRIBUTE_SYSTEM_DND
+        
+        # Mock GameState to capture the attribute_system
+        mock_game_state = MagicMock()
+        mock_game_state.to_dict.return_value = {'initial': 'state'}
+        mock_game_state_class.return_value = mock_game_state
+        
+        # Mock Gemini service
+        mock_gemini_service.get_initial_story.return_value = 'Adventure begins...'
+        
+        # Mock Firestore
+        mock_firestore_service.create_campaign.return_value = 'test-campaign-456'
+        
+        campaign_data = {
+            'prompt': 'Create a fantasy adventure',
+            'title': 'D&D System Campaign',
+            'selected_prompts': ['narrative'],
+            'custom_options': []  # Destiny checkbox NOT checked = D&D system
+        }
+        
+        response = self.client.post(
+            '/api/campaigns',
+            headers=self.test_headers,
+            json=campaign_data
+        )
+        
+        # Verify successful creation
+        self.assertEqual(response.status_code, 201)
+        data = json.loads(response.data)
+        self.assertTrue(data['success'])
+        
+        # Verify GameState was created with D&D system
+        mock_game_state_class.assert_called_once()
+        call_args = mock_game_state_class.call_args
+        custom_campaign_state = call_args[1]['custom_campaign_state']
+        self.assertEqual(custom_campaign_state['attribute_system'], constants.ATTRIBUTE_SYSTEM_DND)
+
+    @patch('main.firestore_service')
+    @patch('main.constants')
+    @patch('main.gemini_service')
+    @patch('main.GameState')
+    def test_create_campaign_multiple_custom_options(self, mock_game_state_class, mock_gemini_service, mock_constants, mock_firestore_service):
+        """Test campaign creation with multiple custom options including destinySystem."""
+        # Import constants for comparison
+        import constants
+        
+        # Mock constants
+        mock_constants.KEY_TITLE = 'title'
+        mock_constants.ATTRIBUTE_SYSTEM_DESTINY = constants.ATTRIBUTE_SYSTEM_DESTINY
+        mock_constants.ATTRIBUTE_SYSTEM_DND = constants.ATTRIBUTE_SYSTEM_DND
+        
+        # Mock GameState to capture the attribute_system
+        mock_game_state = MagicMock()
+        mock_game_state.to_dict.return_value = {'initial': 'state'}
+        mock_game_state_class.return_value = mock_game_state
+        
+        # Mock Gemini service
+        mock_gemini_service.get_initial_story.return_value = 'Adventure begins...'
+        
+        # Mock Firestore
+        mock_firestore_service.create_campaign.return_value = 'test-campaign-789'
+        
+        campaign_data = {
+            'prompt': 'Create a fantasy adventure',
+            'title': 'Multi-Option Campaign',
+            'selected_prompts': ['narrative', 'mechanics'],
+            'custom_options': ['destinySystem', 'companions', 'defaultWorld']  # Multiple options
+        }
+        
+        response = self.client.post(
+            '/api/campaigns',
+            headers=self.test_headers,
+            json=campaign_data
+        )
+        
+        # Verify successful creation
+        self.assertEqual(response.status_code, 201)
+        data = json.loads(response.data)
+        self.assertTrue(data['success'])
+        
+        # Verify GameState was created with Destiny system (because destinySystem is in options)
+        mock_game_state_class.assert_called_once()
+        call_args = mock_game_state_class.call_args
+        custom_campaign_state = call_args[1]['custom_campaign_state']
+        self.assertEqual(custom_campaign_state['attribute_system'], constants.ATTRIBUTE_SYSTEM_DESTINY)
+
 
 if __name__ == '__main__':
     unittest.main()

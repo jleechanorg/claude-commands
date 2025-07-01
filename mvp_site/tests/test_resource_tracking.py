@@ -5,8 +5,8 @@ Test resource tracking in debug output for PR changes
 import os
 import sys
 
-# Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 print("\n=== Testing Resource Tracking in Debug Output ===")
 
@@ -22,7 +22,36 @@ class MockClient:
 sys.modules['google'] = type(sys)('google')
 sys.modules['google.genai'] = type(sys)('genai')
 sys.modules['google.genai'].Client = lambda **kwargs: MockClient()
-sys.modules['google.genai'].types = type(sys)('types')
+
+# Mock the types module with necessary attributes
+class MockTypes:
+    class SafetySetting:
+        def __init__(self, **kwargs):
+            pass
+    
+    class HarmCategory:
+        HARM_CATEGORY_HATE_SPEECH = "hate_speech"
+        HARM_CATEGORY_HARASSMENT = "harassment"  
+        HARM_CATEGORY_SEXUALLY_EXPLICIT = "sexually_explicit"
+        HARM_CATEGORY_DANGEROUS_CONTENT = "dangerous_content"
+    
+    class HarmBlockThreshold:
+        BLOCK_NONE = "block_none"
+    
+    class Part:
+        def __init__(self, text=""):
+            self.text = text
+    
+    class Content:
+        def __init__(self, role="", parts=None):
+            self.role = role
+            self.parts = parts or []
+    
+    class GenerateContentConfig:
+        def __init__(self, **kwargs):
+            pass
+
+sys.modules['google.genai'].types = MockTypes()
 
 # Set dummy API key
 os.environ['GEMINI_API_KEY'] = 'dummy_key'
@@ -48,8 +77,8 @@ try:
     # Capture the system instruction by mocking _call_gemini_api
     capture_box = {'instruction': None}
     original_call = gemini_service._call_gemini_api
-    def mock_call(system_instruction, model, contents, **kwargs):
-        capture_box['instruction'] = system_instruction
+    def mock_call(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None, use_json_mode=False):
+        capture_box['instruction'] = system_instruction_text
         class Response:
             text = "Test response"
         return Response()
@@ -75,7 +104,7 @@ try:
     assert 'short rest' in captured_instruction, "Missing short rest tracking"
     print("✓ Debug mode includes resource tracking tags and examples")
     
-    # Test 2: Non-debug mode excludes resource tracking
+    # Test 2: AI always gets debug instructions (backend strips for display)
     capture_box['instruction'] = None
     gs_no_debug = GameState(debug_mode=False)
     
@@ -89,9 +118,10 @@ try:
     
     captured_instruction = capture_box['instruction']
     assert captured_instruction is not None, "System instruction not captured"
-    assert '[DEBUG_RESOURCES_START]' not in captured_instruction, "DEBUG_RESOURCES_START should not be in non-debug mode"
-    assert '[DEBUG_RESOURCES_END]' not in captured_instruction, "DEBUG_RESOURCES_END should not be in non-debug mode"
-    print("✓ Non-debug mode excludes resource tracking")
+    # AI always gets debug instructions - backend strips them for user display
+    assert '[DEBUG_RESOURCES_START]' in captured_instruction, "DEBUG_RESOURCES_START should be in instructions for AI"
+    assert '[DEBUG_RESOURCES_END]' in captured_instruction, "DEBUG_RESOURCES_END should be in instructions for AI"
+    print("✓ AI always receives debug instructions (backend handles display filtering)")
     
     # Restore original functions
     gemini_service._load_instruction_file = original_load

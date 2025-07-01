@@ -17,18 +17,26 @@ WorldArchitect.AI is an AI-powered tabletop RPG platform that serves as a digita
 ## Development Commands
 
 ### Testing
+
+**CRITICAL RULE: Test File Placement**
+- **ALL test files** must be placed in the `mvp_site/tests/` directory
+- **NO test files** should be created in the root `mvp_site/` directory
+- **Test naming**: All test files must follow the pattern `test_*.py`
+- **Organization**: Group related tests in the same file when possible
+- **Migration**: Any existing test files in the root directory must be moved to `tests/`
+
 ```bash
 # Run all tests (must be in mvp_site directory)
 cd mvp_site && TESTING=true vpython -m unittest discover
 
-# Run specific test file
-cd mvp_site && TESTING=true vpython test_integration.py
+# Run specific test file (note: now in tests/ directory)
+cd mvp_site && TESTING=true vpython -m unittest tests.test_integration
 
 # Run data integrity tests (catches corruption bugs)
-cd mvp_site && TESTING=true vpython test_data_integrity.py
+cd mvp_site && TESTING=true vpython -m unittest tests.test_data_integrity
 
 # Run combat integration tests (end-to-end combat flow)
-cd mvp_site && TESTING=true vpython test_combat_integration.py
+cd mvp_site && TESTING=true vpython -m unittest tests.test_combat_integration
 
 # Run specific test method
 cd mvp_site && TESTING=true vpython -m unittest test_module.TestClass.test_method

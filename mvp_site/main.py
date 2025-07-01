@@ -377,8 +377,22 @@ def create_app():
         selected_prompts = data.get(KEY_SELECTED_PROMPTS, [])
         custom_options = data.get('custom_options', [])
         
-        # Create a blank initial game state.
-        initial_game_state = GameState().to_dict()
+        # Debug logging
+        app.logger.info(f"Received custom_options: {custom_options}")
+        
+        # Check if Destiny system checkbox is checked (default)
+        if 'destinySystem' in custom_options:
+            attribute_system = constants.ATTRIBUTE_SYSTEM_DESTINY
+        else:
+            # Unchecked means use D&D system
+            attribute_system = constants.ATTRIBUTE_SYSTEM_DND
+        
+        app.logger.info(f"Selected attribute_system: {attribute_system}")
+        
+        # Create initial game state with attribute system
+        initial_game_state = GameState(
+            custom_campaign_state={'attribute_system': attribute_system}
+        ).to_dict()
 
         generate_companions = 'companions' in custom_options
         use_default_world = 'defaultWorld' in custom_options

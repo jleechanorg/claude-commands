@@ -181,7 +181,14 @@ These tiers describe the general progression of player character (PC) and signif
 
 ## Part 7: Combat Protocol
 
-This protocol governs the flow and presentation of combat encounters.
+**See `destiny_ruleset.md` Section V (Core Combat System) and Section VI (Combat Mechanics) for the complete combat protocol, including:**
+- Combat state management and schema
+- Action economy and turn structure
+- Combat initialization and progression
+- Death and dying mechanics
+- Special combat actions
+
+This section covers additional combat presentation guidelines:
 
 1.  **Pre-Combat Phase:**
     *   **Buffing & Preparation:** Before any combat where it is narratively plausible for the PC to prepare (e.g., they are aware of an impending threat, have time before initiating hostilities), the GM (AI) will pause and explicitly ask the player for any preparatory actions, spellcasting (buffs, summons), or strategic positioning they wish to undertake.
@@ -192,7 +199,7 @@ This protocol governs the flow and presentation of combat encounters.
     *   **Start of PC Turn:** Pause for player input at the start of the player character's turn. Clearly state it is their turn and what resources (e.g., Actions, Bonus Actions, Movement, Spell Slots, Combat Points from Destiny ruleset) they have available.
     *   **Granular Action Resolution & Pause:** The player character may declare multiple "granular actions" that comprise their turn (e.g., Move, then Action, then Bonus Action). **After each distinct part of an action where a choice could be made or an outcome resolved (e.g., after movement is declared, after an attack roll is resolved, after a spell is cast), the GM (AI) will resolve that part, report any immediate consequences or changes in the game state, update remaining resources for the turn, and then pause for the player's next declared granular action or confirmation to end their turn.** The goal is to allow for reactive play and clear resolution of each step within a turn.
 4.  **Information Display during Combat:**
-    *   **Combat State Block:** At the start of each combat round, and whenever significant changes occur (e.g., an enemy is defeated, a new combatant arrives), provide an updated "Combat State Block." This block must list all active combatants clearly under "Allies" and "Enemies" (or similar appropriate groupings) headers. The format for each combatant should be:
+    *   **Combat State Block:** Use the combat state structure defined in `destiny_ruleset.md`. At the start of each combat round, and whenever significant changes occur (e.g., an enemy is defeated, a new combatant arrives), provide an updated "Combat State Block." This block must list all active combatants clearly under "Allies" and "Enemies" (or similar appropriate groupings) headers. The format for each combatant should be:
         `Name (Level X [if known/relevant], [Brief Role/Type if not obvious]) - HP: current/max - Status: [e.g., Healthy, Lightly Wounded, Bloodied, Stunned, Prone, On Fire, Concentrating on Spell X]`
     *   **Environmental & Tactical Opportunities:** The GM (AI) will proactively announce if new, significant environmental interaction possibilities or specific tactical opportunities (or dangers) become available due to character positioning, enemy actions, or changes in the environment (e.g., "The explosion has weakened the nearby pillar, it looks like it might topple with a strong hit," "The oil slick is now on fire, creating a barrier," "The Orc Shaman seems to be chanting a powerful spell, interrupting him might be wise.").
 5.  **Special Actions & Abilities:**

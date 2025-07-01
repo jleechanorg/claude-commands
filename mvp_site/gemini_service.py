@@ -74,6 +74,9 @@ PATH_MAP = {
     constants.PROMPT_TYPE_CHARACTER_TEMPLATE: constants.CHARACTER_TEMPLATE_PATH,
     constants.PROMPT_TYPE_CHARACTER_SHEET: constants.CHARACTER_SHEET_TEMPLATE_PATH,
     constants.PROMPT_TYPE_ENTITY_SCHEMA: constants.ENTITY_SCHEMA_INSTRUCTION_PATH,
+    constants.PROMPT_TYPE_DUAL_SYSTEM_REFERENCE: constants.DUAL_SYSTEM_REFERENCE_PATH,
+    constants.PROMPT_TYPE_MASTER_DIRECTIVE: constants.MASTER_DIRECTIVE_PATH,
+    constants.PROMPT_TYPE_ATTRIBUTE_CONVERSION: constants.ATTRIBUTE_CONVERSION_PATH,
 }
 
 # --- END CONSTANTS ---
@@ -307,7 +310,10 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
 
     system_instruction_parts = []
 
-    # CRITICAL: Load game_state instructions FIRST for highest priority
+    # CRITICAL: Load master directive FIRST for highest priority
+    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
+
+    # CRITICAL: Load game_state instructions SECOND for highest priority
     # This prevents "instruction fatigue" and ensures data structure compliance
     system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
     
@@ -331,6 +337,12 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     
     # NEW: Always include the destiny_ruleset as a default system instruction
     system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DESTINY))
+    
+    # Add dual system reference for attribute system guidance
+    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DUAL_SYSTEM_REFERENCE))
+    
+    # Add attribute conversion guide for system switching
+    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_ATTRIBUTE_CONVERSION))
 
     # Add companion generation instruction if requested
     if generate_companions:
@@ -460,7 +472,10 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
 
     system_instruction_parts = []
 
-    # CRITICAL: Load game_state instructions FIRST for highest priority
+    # CRITICAL: Load master directive FIRST for highest priority
+    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
+
+    # CRITICAL: Load game_state instructions SECOND for highest priority
     # This prevents "instruction fatigue" and ensures data structure compliance
     system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
     
@@ -485,6 +500,12 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     
     # NEW: Always include the destiny_ruleset for continue_story too
     system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DESTINY))
+    
+    # Add dual system reference for attribute system guidance
+    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DUAL_SYSTEM_REFERENCE))
+    
+    # Add attribute conversion guide for system switching
+    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_ATTRIBUTE_CONVERSION))
 
     # Add world instructions if campaign was created with default world enabled
     if use_default_world:

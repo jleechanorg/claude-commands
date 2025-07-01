@@ -199,6 +199,19 @@ if isinstance(item, dict):
 - **Test Isolation**: Use temporary directories to avoid overwriting application files
 - **Data Integrity**: Implement defensive programming for external data sources
 
+## Directory and Path Conventions
+
+### Important Path References
+- **roadmap/**: ALWAYS refers to `/roadmap/` from the project root, never a subdirectory
+- **mvp_site/**: The main application directory containing all production code
+- **prototype/**: Experimental code and prototypes (separate from production)
+- **.cursor/**: Project rules and documentation (at workspace root only)
+
+### When Writing Documentation
+- Always use paths from project root (e.g., `/roadmap/file.md`, `/mvp_site/prompts/`)
+- Never use relative paths that could be ambiguous
+- When user says "roadmap/", they mean the roadmap directory at project root
+
 ## I. Core Principles & Interaction
 
 1.  **Clarify and Understand the Goal:**

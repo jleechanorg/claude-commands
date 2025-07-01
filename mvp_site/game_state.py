@@ -5,6 +5,7 @@ import datetime
 from enum import Enum
 from typing import Optional, List
 import logging
+import constants
 
 class MigrationStatus(Enum):
     """Enum for the migration status of the game state."""
@@ -25,6 +26,11 @@ class GameState:
         self.world_data = kwargs.get("world_data", {})
         self.npc_data = kwargs.get("npc_data", {})
         self.custom_campaign_state = kwargs.get("custom_campaign_state", {})
+        
+        # Ensure attribute_system is set (defaults to Destiny system)
+        if 'attribute_system' not in self.custom_campaign_state:
+            self.custom_campaign_state['attribute_system'] = constants.DEFAULT_ATTRIBUTE_SYSTEM
+            
         self.combat_state = kwargs.get("combat_state", {"in_combat": False})
         self.last_state_update_timestamp = kwargs.get("last_state_update_timestamp", datetime.datetime.now(datetime.timezone.utc))
         

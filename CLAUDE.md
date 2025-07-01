@@ -24,5 +24,9 @@ When using Claude Code (claude.ai/code):
 3. **Test Execution**: Use `vpython` with the `TESTING=true` environment variable as specified in rules.mdc
 4. **File Paths**: Always use absolute paths when referencing files in responses
 5. **Gemini SDK**: Always use `from google import genai` (NOT `google.generativeai`)
+6. **Path Conventions**: 
+   - `roadmap/` always means `/roadmap/` from project root
+   - Never assume relative paths - always clarify from project root
+   - See Directory and Path Conventions in rules.mdc
 
 The complete operating protocol is in `.cursor/rules/rules.mdc` - refer to that file for all development guidelines.

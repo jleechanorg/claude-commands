@@ -306,6 +306,24 @@ class CampaignWizard {
                   </div>
                 </div>
               </div>
+              
+              <div class="col-md-6 mb-4">
+                <div class="card option-card" data-option="destinySystem">
+                  <div class="card-body">
+                    <div class="d-flex align-items-start">
+                      <div class="option-icon me-3">✨</div>
+                      <div class="flex-grow-1">
+                        <h5 class="card-title">Destiny 5-Aptitude System</h5>
+                        <p class="card-text">Use Destiny's aptitude system with personality-based social mechanics. Uncheck for traditional D&D attributes.</p>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" id="wizard-destiny-system" checked>
+                          <label class="form-check-label" for="wizard-destiny-system">Use Destiny system</label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -532,6 +550,7 @@ class CampaignWizard {
       const options = [];
       if (document.getElementById('wizard-companions')?.checked) options.push('Companions');
       if (document.getElementById('wizard-default-world')?.checked) options.push('Default World');
+      if (document.getElementById('wizard-destiny-system')?.checked) options.push('Destiny System');
       document.getElementById('preview-options').textContent = options.join(', ') || 'None selected';
     }
   }
@@ -547,7 +566,8 @@ class CampaignWizard {
       ],
       customOptions: [
         ...(document.getElementById('wizard-companions')?.checked ? ['companions'] : []),
-        ...(document.getElementById('wizard-default-world')?.checked ? ['defaultWorld'] : [])
+        ...(document.getElementById('wizard-default-world')?.checked ? ['defaultWorld'] : []),
+        ...(document.getElementById('wizard-destiny-system')?.checked ? ['destinySystem'] : [])
       ]
     };
   }

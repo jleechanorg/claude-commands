@@ -4,11 +4,11 @@
 **This is the most critical first step.** Immediately after you generate the initial campaign premise, the main character, the world, and any key NPCs, you **must** consolidate all of that information into a single, comprehensive `[STATE_UPDATES_PROPOSED]` block.
 
 This first block should not be an "update" but a "creation." It must contain all the initial data for:
-- `player_character_data`: The full character sheet, stats, inventory, and backstory, and a **Myers-Briggs Type (MBTI)**.
-- `npc_data`: Profiles for all key NPCs created during setup, each with their own **Myers-Briggs Type (MBTI)**.
-- `world_data`: Key locations, political situation, and any other foundational world-building elements.
-- `custom_campaign_state`: The initial premise and any other custom tracking fields.
-- `world_time`: The starting date and time.
+- `player_character_data`: The full character sheet, stats, inventory, and backstory, and a **Myers-Briggs Type (MBTI)**
+- `npc_data`: Profiles for all key NPCs created during setup, each with their own **Myers-Briggs Type (MBTI)**
+- `world_data`: Key locations, political situation, and any other foundational world-building elements
+- `custom_campaign_state`: The initial premise, attribute_system ("dnd" or "destiny"), and any other custom tracking fields
+- `world_time`: The starting date and time
 
 **Example of an Initial State Block:**
 ```
@@ -55,7 +55,8 @@ This first block should not be an "update" but a "creation." It must contain all
     "second": 10
   },
   "custom_campaign_state": {
-    "premise": "A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side."
+    "premise": "A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.",
+    "attribute_system": "dnd"  // or "destiny" - set based on user's campaign creation choice
   },
   "migration_status": "FRESH_INSTALL"
 }
@@ -212,7 +213,10 @@ This is the only way to use this command. It is for small, precise corrections.
 ## NEW: World Time Management
 You are now responsible for tracking the in-game date and time. This is stored in the `world_data` object within the `CURRENT_GAME_STATE`.
 
--   **Calendar System:** Your primary narrative instructions contain the rules for which calendar to use (e.g., Calendar of Harptos for Forgotten Realms, Gregorian for Modern Earth). You must ensure the `month` value you use in the state is consistent with the correct calendar for the setting.
+-   **Calendar System:** Use the appropriate calendar system for the campaign's setting:
+    -   **For Forgotten Realms settings:** Use the Calendar of Harptos. The default starting year is 1492 DR. The months are: Hammer, Alturiak, Ches, Tarsakh, Mirtul, Kythorn, Flamerule, Eleasis, Eleint, Marpenoth, Uktar, and Nightal.
+    -   **For Modern Earth settings:** Use the standard Gregorian calendar (e.g., January, February, etc.). The year should be the current real-world year unless specified otherwise by the campaign's premise.
+    -   **For other custom settings:** Use a logical calendar system. If one is not specified in the premise, you may use a simple numbered month system (e.g., "Month 1, Day 1") and inform the user of this choice.
 -   **`world_time` Object:** This is a dictionary with the keys: `year`, `month`, `day`, `hour`, `minute`, `second`.
 -   **Advancing Time:** As the character takes actions, you must update this object. Resting might advance the day and reset the time, traveling a long distance could take hours, and a short action might advance the clock by minutes or seconds.
 -   **Example Update (Forgotten Realms):** If a short rest takes an hour from `09:51:10`, you should propose a state update like this:
@@ -317,8 +321,9 @@ Your goal is to propose a JSON "patch" that updates the game state. For maximum 
 
 ## Custom Campaign State Schema
 
-The `custom_campaign_state` object is used for tracking narrative progress. It must adhere to the following structure:
+The `custom_campaign_state` object is used for tracking narrative progress and campaign configuration. It must adhere to the following structure:
 
+*   **`attribute_system` (String):** Must be either "dnd" or "destiny". Set at campaign creation and cannot be changed. Determines whether to use D&D 6-attribute or Destiny 5-aptitude system.
 *   **`active_missions` (List of Objects):** This **must** be a list of mission objects. It must **not** be a dictionary. Each object in the list should contain at least:
     *   `mission_id`: A unique string identifier.
     *   `title`: A human-readable title.
@@ -327,7 +332,7 @@ The `custom_campaign_state` object is used for tracking narrative progress. It m
     
     **To add new missions or update existing ones:**
     
-    ✅ **PREFERRED METHOD - Replace entire list:**
+    ✅ **REQUIRED METHOD - List of mission objects:**
     ```json
     {
       "custom_campaign_state": {
@@ -349,12 +354,12 @@ The `custom_campaign_state` object is used for tracking narrative progress. It m
     }
     ```
     
-    ⚠️ **TOLERATED BUT NOT RECOMMENDED - Dictionary format:**
-    If you accidentally use this format, the system will convert it, but please avoid:
+    ❌ **INVALID FORMAT - Never use dictionary format:**
+    The following format is INCORRECT and will cause errors:
     ```json
     {
       "custom_campaign_state": {
-        "active_missions": {
+        "active_missions": {  // WRONG: This must be an array, not an object
           "main_quest_1": {
             "title": "Defeat the Dark Lord",
             "status": "accepted"
@@ -364,7 +369,11 @@ The `custom_campaign_state` object is used for tracking narrative progress. It m
     }
     ```
     
-    **Note:** When updating a mission, include the complete mission object with all fields. The `mission_id` field is used to identify which mission to update.
+    **Important Rules:**
+    - `active_missions` MUST ALWAYS be an array (list) of mission objects
+    - Each mission object MUST include: `mission_id`, `title`, `status`, and `objective`
+    - When updating a mission, include the complete mission object with all fields
+    - The `mission_id` field is used to identify which mission to update
 
 *   **`core_memories` (List of Strings):** This **must** be a list of strings. To add a new memory, you must propose a state update that appends a new string using the following specific format. This is the only valid way to add a memory.
     ```json
@@ -379,57 +388,12 @@ The `custom_campaign_state` object is used for tracking narrative progress. It m
 
 ## Combat State Schema
 
-The `combat_state` object is used to track the status of combat encounters. It must adhere to the following structure:
+The `combat_state` object is used to track the status of combat encounters. For the complete combat state structure and management rules, see the **Combat State Management** section in `destiny_ruleset.md`.
 
-*   **`in_combat` (Boolean):** `true` if a combat encounter is active, otherwise `false`.
-*   **`combatants` (Dictionary of Objects):** A dictionary where each key is a unique ID for a combatant (e.g., "player", "lyra_vex", "goblin_1"). The value for each key is an object containing their combat-relevant status:
-    *   `name`: The combatant's display name.
-    *   `hp_current`: Their current hit points.
-    *   `hp_max`: Their maximum hit points.
-    *   `status_effects`: A list of strings for any active conditions (e.g., ["Prone", "Poisoned"]).
-*   **`initiative_order` (List of Strings):** A list of the combatant IDs, ordered from highest to lowest initiative for the current round.
-
-## 1. Combat State Management
-
-When combat begins involving the player character and any companions/allies, you must manage the `combat_state` field to track D&D-style rounds and turns.
-
-### Combat Initialization
-When combat starts, update the combat state:
-```json
-"combat_state": {
-  "in_combat": true,
-  "current_round": 1,
-  "current_turn_index": 0,
-  "initiative_order": [
-    {"name": "Sir Kaelan", "initiative": 18, "type": "pc"},
-    {"name": "Aria Moonwhisper", "initiative": 15, "type": "companion"},
-    {"name": "Orc Warrior", "initiative": 12, "type": "enemy"}
-  ],
-  "combatants": {
-    "Sir Kaelan": {"hp_current": 85, "hp_max": 100, "status": []},
-    "Aria Moonwhisper": {"hp_current": 60, "hp_max": 60, "status": []},
-    "Orc Warrior": {"hp_current": 45, "hp_max": 45, "status": ["bloodied"]}
-  }
-}
-```
-
-### Turn Progression
-- **Advance `current_turn_index`** after each combatant's turn
-- **Increment `current_round`** when cycling back to first combatant
-- **Update HP and status effects** as combat progresses
-- **Remove defeated combatants** or mark them as unconscious
-
-### Combat End
-When combat ends, reset the combat state:
-```json
-"combat_state": {
-  "in_combat": false,
-  "current_round": 0,
-  "current_turn_index": 0,
-  "initiative_order": [],
-  "combatants": {}
-}
-```
+**Key Points:**
+- Combat state tracks initiative order, current round/turn, and all combatants
+- Must be updated when combat begins, progresses, and ends
+- See `destiny_ruleset.md` Section VI for complete schema and examples
 
 ## Time Pressure System
 

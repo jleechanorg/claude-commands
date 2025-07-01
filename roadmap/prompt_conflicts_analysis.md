@@ -2,7 +2,13 @@
 
 ## Executive Summary
 
-This analysis identifies conflicts, redundancies, and inconsistencies in the WorldArchitect.AI prompt system. The system uses multiple AI instructions that are loaded in sequence, creating potential conflicts due to overlapping responsibilities, conflicting directives, and instruction ordering issues.
+This comprehensive analysis identifies conflicts, redundancies, and inconsistencies in the WorldArchitect.AI prompt system. The system uses multiple AI instructions that are loaded in sequence, creating potential conflicts due to overlapping responsibilities, conflicting directives, and instruction ordering issues.
+
+The most critical problems are:
+- **Direct Contradictions**: Clear conflicts in how core game systems like combat and mission tracking are defined across different files
+- **Massive Redundancy**: Multiple documents define the same concepts, creating maintenance nightmares and confusing the AI's source of truth
+- **Procedural Ambiguity**: No clear hierarchy for which instructions take precedence when conflicts arise
+- **File Duplication**: Duplicate files within the personalities directory indicate repository management issues
 
 ## Critical Conflicts Identified
 
@@ -71,7 +77,41 @@ This analysis identifies conflicts, redundancies, and inconsistencies in the Wor
 
 **Impact:** Planning features may behave inconsistently.
 
-### 6. Instruction Loading Order Issue
+### 6. Character Attribute System Conflict
+
+**Files Involved:**
+- `character_sheet_template.md` (Section I)
+- `destiny_ruleset.md` (Section II)
+
+**Conflict:** Two incompatible character attribute systems:
+- Character sheet uses classic D&D stats: STR, DEX, CON, INT, WIS, CHA (6 attributes)
+- Destiny ruleset uses: Physique, Coordination, Health, Intelligence, Wisdom (5 attributes, no Charisma)
+
+**Impact:** Fundamental conflict in character definition. The character sheet template is unusable with the Destiny ruleset as written.
+
+### 7. Competing "Priority #1" Claims
+
+**Files Involved:**
+- `narrative_system_instruction.md`: Claims "Think Block" is "PRIORITY #1"
+- `mechanics_system_instruction.md`: Claims "Verbatim Check Protocol" is "final and most critical"
+- `game_state_instruction.md`: Claims "Initial State Generation" is "most critical first step"
+
+**Conflict:** Multiple files claim to contain the most important instructions with no clear hierarchy.
+
+**Impact:** When conflicts arise, the AI has no clear rule to determine which prompt's directives take precedence.
+
+### 8. Mission List Data Structure Contradiction
+
+**Files Involved:**
+- `game_state_instruction.md`
+
+**Conflict:** Self-contradictory instructions:
+- States "active_missions is ALWAYS a LIST" and "must not be a dictionary"
+- Then shows dictionary format as "TOLERATED BUT NOT RECOMMENDED"
+
+**Impact:** Confusing guidance that undermines the absolute rule, potentially leading AI to use the wrong format.
+
+### 9. Instruction Loading Order Issue
 
 **Critical Finding:** Based on CLAUDE.md lessons learned:
 > "AI was ignoring state update requirements because game state instructions were loaded LAST after lengthy narrative instructions. Moving them FIRST fixed the core state update failure."
@@ -88,7 +128,7 @@ This analysis identifies conflicts, redundancies, and inconsistencies in the Wor
 
 ## Additional Issues
 
-### 7. Entity ID Inconsistencies
+### 10. Entity ID Inconsistencies
 
 **Files:** `entity_schema_instruction.md` vs `game_state_instruction.md`
 
@@ -96,7 +136,18 @@ This analysis identifies conflicts, redundancies, and inconsistencies in the Wor
 - Game state examples sometimes use different formats
 - NPC storage by display name vs string_id creates confusion
 
-### 8. Personality System Fragmentation
+### 11. Duplicate Personality Files
+
+**Files:** Multiple files in `personalities/` directory
+
+**Duplicates Found:**
+- ESFP_portrait.md, INFJ_portrait.md, INFP_portrait.md
+- INTJ_portrait.md, ISTJ_portrait.md, ISTP_portrait.md
+- ENFJ_portrait.md, ENTP_portrait.md, ESTP_portrait.md, ESTJ_portrait.md
+
+**Impact:** File management error indicating lack of repository hygiene and potential confusion.
+
+### 12. Personality System Fragmentation
 
 **Files:** 
 - 32 personality files (16 MBTI types × 2 files each)
@@ -105,14 +156,14 @@ This analysis identifies conflicts, redundancies, and inconsistencies in the Wor
 
 **Issue:** Massive personality instruction set without clear loading protocol or integration with main systems.
 
-### 9. DELETE Token Implementation Gap
+### 13. DELETE Token Implementation Gap
 
 **Critical Finding from CLAUDE.md:**
 > "A bug was missed where AI was instructed to use `__DELETE__` tokens for defeated enemies, but no code existed to process these tokens"
 
 **Current State:** Multiple prompt files reference `__DELETE__` but implementation verification needed.
 
-### 10. Data Type Enforcement Weaknesses
+### 14. Data Type Enforcement Weaknesses
 
 **Files:** `game_state_instruction.md`
 
@@ -122,44 +173,56 @@ This analysis identifies conflicts, redundancies, and inconsistencies in the Wor
 
 ## Recommendations
 
-### 1. Reorder Instruction Loading (CRITICAL)
+### 1. Create Master Directive File (HIGHEST PRIORITY)
+Create a single `master_directive.md` that:
+- Defines the hierarchy and loading order of all other prompt files
+- Resolves precedence conflicts between competing "priority #1" claims
+- Serves as the ultimate source of truth for instruction conflicts
+
+### 2. Reorder Instruction Loading (CRITICAL)
 ```
-1. entity_schema_instruction.md (data structures first)
-2. game_state_instruction.md (state management second) 
-3. mechanics_system_instruction.md (game rules third)
-4. narrative_system_instruction.md (storytelling last)
-5. calibration_instruction.md (only during setup)
-6. destiny_ruleset.md (if selected)
+1. master_directive.md (hierarchy and precedence)
+2. entity_schema_instruction.md (data structures)
+3. game_state_instruction.md (state management) 
+4. mechanics_system_instruction.md (game rules)
+5. narrative_system_instruction.md (storytelling)
+6. calibration_instruction.md (only during setup)
+7. destiny_ruleset.md (if selected)
 ```
 
-### 2. Consolidate Overlapping Systems
-- Merge combat protocols into single authoritative source
+### 3. Resolve Direct Contradictions
+- **Character Attributes**: Either update Destiny ruleset to use D&D stats OR update character sheet template to use Destiny aptitudes
+- **Mission List Format**: Remove the "TOLERATED" dictionary format entirely - enforce list-only format
+- **Combat Rules**: Merge all combat rules into destiny_ruleset.md as the single source
+
+### 4. Consolidate Overlapping Systems
 - Unify time management into game_state_instruction.md
-- Combine character templates into single comprehensive format
-- Create single planning/agency protocol
+- Create single planning/agency protocol in narrative_system_instruction.md
+- Define "Leveling Tiers" once in mechanics_system_instruction.md
 
-### 3. Remove Redundancies
-- Delete duplicate calendar definitions
-- Remove overlapping state update protocols
-- Consolidate character data structures
+### 5. Clean Up Repository
+- Delete duplicate personality files
+- Remove redundant calendar definitions
+- Consolidate character data structures into single template
 
-### 4. Clarify Authority Hierarchy
+### 6. Clarify Authority Hierarchy
 ```
+Precedence: master_directive.md (ABSOLUTE)
 State Management: game_state_instruction.md (PRIMARY)
 Entity Structure: entity_schema_instruction.md (PRIMARY)
 Game Mechanics: mechanics_system_instruction.md (PRIMARY)
 Narrative Style: narrative_system_instruction.md (SECONDARY)
 ```
 
-### 5. Add Validation Layer
+### 7. Add Validation Layer
 - Implement explicit type checking for critical data structures
 - Add validation for entity IDs
 - Verify __DELETE__ token processing
 
-### 6. Reduce Instruction Length
+### 8. Reduce Instruction Complexity
 - Current system loads ~5000+ lines of instructions
-- Consider breaking into modular, purpose-specific chunks
-- Load only relevant personality files when needed
+- Break into modular, purpose-specific chunks
+- Load personality files on-demand rather than all at once
 
 ## Risk Assessment
 
@@ -182,6 +245,19 @@ Narrative Style: narrative_system_instruction.md (SECONDARY)
 
 ## Conclusion
 
-The WorldArchitect.AI prompt system suffers from significant architectural issues stemming from overlapping authorities, redundant implementations, and poor instruction ordering. The most critical issue is that state management instructions are loaded too late, after extensive narrative instructions that cause "instruction fatigue." This directly impacts core functionality.
+The WorldArchitect.AI prompt system suffers from significant architectural issues that actively undermine its goal of creating a robust and consistent AI Game Master. The problems include:
 
-Immediate action should focus on reordering instruction loading and consolidating overlapping systems. Long-term sustainability requires reducing overall instruction complexity and creating clear authority hierarchies for each system component.
+1. **Direct contradictions** between core systems (combat, character attributes, data structures)
+2. **Massive redundancy** with the same concepts defined in multiple places
+3. **No master hierarchy** to resolve competing "priority #1" claims
+4. **Poor instruction ordering** causing critical state management rules to be ignored
+
+The most critical issue is the lack of a master directive file that establishes clear precedence rules. Combined with state management instructions being loaded too late (after extensive narrative instructions cause "instruction fatigue"), this directly impacts core functionality.
+
+Immediate action should focus on:
+1. Creating a master directive file to establish hierarchy
+2. Reordering instruction loading to prioritize state management
+3. Resolving direct contradictions in character systems and data structures
+4. Cleaning up duplicate files and redundant definitions
+
+Long-term sustainability requires reducing overall instruction complexity and maintaining clear, single sources of truth for each system component.
