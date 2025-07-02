@@ -1,49 +1,114 @@
-# WorldArchitect.AI
+# WorldArchitect.AI - AI-Powered Tabletop RPG Platform
 
-An AI-powered tabletop RPG platform that serves as a digital Game Master for D&D 5e experiences. Create dynamic, interactive storytelling adventures with Google's Gemini AI.
+## 🎲 Overview
 
-## 🎲 Features
+WorldArchitect.AI is a revolutionary AI-powered platform that serves as your digital Game Master for Dungeons & Dragons 5th Edition experiences. Using advanced language models and sophisticated state management, it delivers dynamic, interactive storytelling that adapts to your choices in real-time - no human DM required.
 
-- **AI Game Master**: Intelligent storytelling that adapts to player choices
-- **D&D 5e Integration**: Complete rule implementation with automated combat
-- **Persistent Campaigns**: Save and resume long-form adventures
-- **Multiple AI Personas**: Choose from Narrative Flair, Mechanical Precision, or Calibration Rigor
-- **Rich Character Development**: MBTI personality system for deep character interactions
-- **Export & Share**: Download campaigns in PDF, DOCX, or TXT formats
+## ✨ Key Benefits
 
-## 📋 Product Specification
+- **Always Available GM**: Play D&D anytime without coordinating schedules
+- **Consistent Rule Enforcement**: AI ensures fair and accurate gameplay
+- **Dynamic Storytelling**: Narratives that adapt to your decisions with perfect state synchronization
+- **Multiple Play Styles**: Choose from different AI personas for varied experiences
+- **Persistent Campaigns**: Your adventures are saved and continue where you left off
+- **Export Your Adventures**: Download your campaigns as PDF, DOCX, or TXT files
 
-For a detailed overview of the application's vision, user journey, and core features from a product perspective, please see our comprehensive product specification document.
+## 🛠️ Technologies
 
-**[📖 View the Full Product Specification](product_spec.md)**
+### Backend
+- **Python 3.11** with Flask framework
+- **Google Gemini AI** (2.5-flash, 2.5-pro models)
+- **Firebase** (Authentication & Firestore)
+- **Docker** containerization
+- **Google Cloud Run** deployment
+
+### Frontend
+- **Vanilla JavaScript** (ES6+)
+- **Bootstrap 5.3.2** responsive UI
+- **Multiple theme support** (Light, Dark, Fantasy, Cyberpunk)
+
+### AI & Game Logic
+- **Pydantic** structured generation for 0% desync
+- **MBTI personality system** for deep character interactions
+- **Entity tracking** for narrative consistency
+- **Dual-pass generation** for accuracy
 
 ## 🚀 Quick Start
 
+### Prerequisites
+- Python 3.11+
+- Firebase project with Firestore
+- Google Cloud project with Gemini API access
+
+### Installation
+
 ```bash
-# Run the development server
-cd mvp_site && vpython main.py
+# Clone the repository
+git clone https://github.com/your-repo/worldarchitect-ai.git
+cd worldarchitect-ai/mvp_site
 
-# Run tests
-./run_tests.sh
+# Install dependencies
+pip install -r requirements.txt
 
-# Deploy to production
-./deploy.sh
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your API keys
+
+# Run locally
+python main.py
 ```
 
-## 🛠️ Technology Stack
+### Docker Deployment
 
-- **Backend**: Python 3.11 + Flask + Gunicorn
-- **AI Service**: Google Gemini API (2.5-flash, 2.5-pro models)
-- **Database**: Firebase Firestore
-- **Frontend**: Vanilla JavaScript + Bootstrap 5.3.2
-- **Deployment**: Docker + Google Cloud Run
+```bash
+# Build the container
+docker build -t worldarchitect-ai .
+
+# Run with environment variables
+docker run -p 8080:8080 \
+  -e GEMINI_API_KEY=your-key \
+  -e FIREBASE_PROJECT_ID=your-project \
+  worldarchitect-ai
+```
 
 ## 📚 Documentation
 
-- [Product Specification](product_spec.md) - Complete product overview and features.
-- [Development Guide](mvp_site/CLAUDE.md) - Development setup and patterns for contributors.
-- [Milestone 0.4: Narrative Desync Prevention](docs/milestone_0.4_summary.md) - 0% desynchronization rate achieved with Pydantic structured generation.
+For a comprehensive understanding of the platform, including detailed architecture, game mechanics, and development guidelines, see our [Product Specification](product_spec.md).
+
+## 🎮 Features
+
+- **Campaign Management**: Create and manage multiple campaigns
+- **AI Game Master**: Three specialized personas for different play styles
+- **Full D&D 5e Support**: Complete rule implementation
+- **Character & God Modes**: Standard play or administrative control
+- **State Persistence**: Never lose your progress
+- **Export Functionality**: Save your adventures in multiple formats
+- **Debug Mode**: Full transparency into AI decisions
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+TESTING=true vpython -m pytest
+
+# Run with coverage
+TESTING=true vpython -m pytest --cov=. --cov-report=html
+```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [contributing guidelines](CONTRIBUTING.md) and refer to the [product specification](product_spec.md) for architectural details.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Dungeons & Dragons 5th Edition by Wizards of the Coast
+- Google Gemini AI for powering our Game Master
+- The tabletop RPG community for inspiration
 
 ---
 
-*An intelligent RPG companion for limitless adventures.*
+**Ready to embark on your AI-powered adventure?** Visit [worldarchitect.ai](https://worldarchitect.ai) to start playing!
