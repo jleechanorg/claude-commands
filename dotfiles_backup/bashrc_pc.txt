@@ -133,28 +133,31 @@ export CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
 #   ssh-add ~/.ssh/id_ed25519
 # fi
 
-# Single command to add and activate
+alias claudep='claude --dangerously-skip-permissions'
+alias csy='claude-squad -p "claude --dangerously-skip-permissions --verbose"'
+alias cm='claude-monitor --plan max20 --timezone PST'
 
 # Auto-navigate to WorldArchitect.AI project
 if [ \"\$PWD\" = \"\$HOME\" ]; then
     cd ~/projects/worldarchitect.ai
 fi
-
-alias claudep='claude --dangerously-skip-permissions'
-alias csy='cs -y'
 alias wa='cd ~/projects/worldarchitect.ai'
+
 alias push="git add . && git commit -a -m \"a\" && git push"
 export GOOGLE_CLOUD_PROJECT="worldarchitecture-ai"
 alias deploy='~/projects/worldarchitect.ai/deploy.sh "$@"'
 alias commit='git commit -a -m "a" && git push'
+alias status='git status'
+alias add='git add .'
+alias integrate='git checkout main && git pull && git branch -D dev && git checkout -b dev'
 alias h='history | grep'
+alias tree='~/projects/worldarchitect.ai/create_worktree.sh'
+alias sb='~/projects/worldarchitect.ai/sync_branch.sh'
 
 # Load Gemini API Key from a secret file if it exists
 if [ -f ~/.gemini_api_key_secret ]; then
     source ~/.gemini_api_key_secret
 fi
-
-alias integrate='git checkout main && git pull && git branch -D dev && git checkout -b dev'
 
 vpython() {
     PROJECT_ROOT_PATH="$HOME/projects/worldarchitect.ai"
