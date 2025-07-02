@@ -14,6 +14,7 @@ These names are overused by LLMs and cannot be used in any world content.
 - Seraphina
 - Thorne
 - Valerius
+- Isolde
 
 ### Extended Banned Names (Top 50 AI Overused Names)
 - Aiden
