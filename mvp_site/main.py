@@ -50,6 +50,342 @@ DEFAULT_TEST_USER = 'test-user'
 
 # --- END CONSTANTS ---
 
+
+class StateHelper:
+    """
+    Helper class for state-related operations.
+    Consolidates debug content stripping and state cleanup functions.
+    """
+    
+    @staticmethod
+    def strip_debug_content(text):
+        """
+        Strip debug content from AI response text while preserving the rest.
+        Removes content between debug tags: [DEBUG_START/END], [DEBUG_ROLL_START/END], [DEBUG_STATE_START/END]
+        Also removes [STATE_UPDATES_PROPOSED] blocks which are internal state management.
+        
+        Args:
+            text: The raw text containing debug content
+            
+        Returns:
+            str: Text with debug content removed
+        """
+        return strip_debug_content(text)
+    
+    @staticmethod
+    def strip_state_updates_only(text):
+        """
+        Strip only [STATE_UPDATES_PROPOSED] blocks while preserving other debug content.
+        Used when user has debug mode enabled but we still want to hide internal state updates.
+        
+        Args:
+            text: The raw text containing state updates
+            
+        Returns:
+            str: Text with state updates removed
+        """
+        return strip_state_updates_only(text)
+    
+    @staticmethod
+    def strip_other_debug_content(text):
+        """
+        Strip all debug content EXCEPT [STATE_UPDATES_PROPOSED] blocks.
+        Used for extracting state updates while removing other debug information.
+        
+        Args:
+            text: The raw text containing debug content
+            
+        Returns:
+            str: Text with only state updates remaining
+        """
+        return strip_other_debug_content(text)
+    
+    @staticmethod
+    def apply_automatic_combat_cleanup(state_dict, proposed_changes):
+        """
+        Automatically clean up combat state when combat ends.
+        
+        Args:
+            state_dict: Current game state dictionary
+            proposed_changes: Proposed state changes
+            
+        Returns:
+            dict: Updated state dictionary with combat cleanup applied
+        """
+        return apply_automatic_combat_cleanup(state_dict, proposed_changes)
+    
+    @staticmethod
+    def cleanup_legacy_state(state_dict):
+        """
+        Clean up legacy state issues like __DELETE__ tokens and str() conversions.
+        
+        Args:
+            state_dict: Game state dictionary to clean
+            
+        Returns:
+            tuple: (cleaned_dict, was_cleaned, num_cleaned)
+        """
+        return _cleanup_legacy_state(state_dict)
+
+
+def _prepare_game_state(user_id, campaign_id):
+    """
+    Load and prepare game state, including legacy cleanup.
+    
+    Args:
+        user_id: User ID
+        campaign_id: Campaign ID
+        
+    Returns:
+        tuple: (current_game_state, was_cleaned, num_cleaned)
+    """
+    current_game_state_doc = firestore_service.get_campaign_game_state(user_id, campaign_id)
+    
+    # Ensure current_game_state is always a valid GameState object
+    if current_game_state_doc:
+        current_game_state = GameState.from_dict(current_game_state_doc.to_dict())
+    else:
+        current_game_state = GameState()
+    
+    # Perform cleanup on a dictionary copy
+    cleaned_state_dict, was_cleaned, num_cleaned = StateHelper.cleanup_legacy_state(current_game_state.to_dict())
+    if was_cleaned:
+        # If cleaned, update the main object from the cleaned dictionary
+        current_game_state = GameState.from_dict(cleaned_state_dict)
+        firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state.to_dict())
+        logging.info(f"Legacy state cleanup complete. Removed {num_cleaned} entries.")
+    
+    return current_game_state, was_cleaned, num_cleaned
+
+
+def _handle_set_command(user_input, current_game_state, user_id, campaign_id):
+    """
+    Handle GOD_MODE_SET command.
+    
+    Args:
+        user_input: User input string
+        current_game_state: Current GameState object
+        user_id: User ID
+        campaign_id: Campaign ID
+        
+    Returns:
+        Flask response or None if not a SET command
+    """
+    GOD_MODE_SET_COMMAND = "GOD_MODE_SET:"
+    user_input_stripped = user_input.strip()
+    
+    if not user_input_stripped.startswith(GOD_MODE_SET_COMMAND):
+        return None
+    
+    payload_str = user_input_stripped[len(GOD_MODE_SET_COMMAND):]
+    logging.info(f"--- GOD_MODE_SET received for campaign {campaign_id} ---")
+    logging.info(f"GOD_MODE_SET raw payload:\\n---\\n{payload_str}\\n---")
+    
+    proposed_changes = parse_set_command(payload_str)
+    logging.info(f"GOD_MODE_SET parsed changes to be merged:\\n{_truncate_log_json(proposed_changes)}")
+    
+    if not proposed_changes:
+        logging.warning(f"GOD_MODE_SET command resulted in no valid changes.")
+        return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: The GOD_MODE_SET command was received, but contained no valid instructions or was empty.]"})
+    
+    current_state_dict_before_update = current_game_state.to_dict()
+    logging.info(f"GOD_MODE_SET state BEFORE update:\\n{_truncate_log_json(current_state_dict_before_update)}")
+    
+    updated_state = update_state_with_changes(current_state_dict_before_update, proposed_changes)
+    updated_state = StateHelper.apply_automatic_combat_cleanup(updated_state, proposed_changes)
+    logging.info(f"GOD_MODE_SET state AFTER update:\\n{_truncate_log_json(updated_state)}")
+    
+    firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
+    
+    # Log the formatted changes for both server and chat
+    log_message_for_log = format_state_changes(proposed_changes, for_html=False)
+    logging.info(f"GOD_MODE_SET changes applied for campaign {campaign_id}:\\n{log_message_for_log}")
+    
+    log_message_for_chat = format_state_changes(proposed_changes, for_html=True)
+    
+    logging.info(f"--- GOD_MODE_SET for campaign {campaign_id} complete ---")
+    
+    return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: f"[System Message]<br>{log_message_for_chat}"})
+
+
+def _handle_ask_state_command(user_input, current_game_state, user_id, campaign_id):
+    """
+    Handle GOD_ASK_STATE command.
+    
+    Returns:
+        Flask response or None if not ASK_STATE command
+    """
+    GOD_ASK_STATE_COMMAND = "GOD_ASK_STATE"
+    
+    if user_input.strip() != GOD_ASK_STATE_COMMAND:
+        return None
+    
+    game_state_dict = current_game_state.to_dict()
+    game_state_json = json.dumps(game_state_dict, indent=2, default=json_default_serializer)
+    
+    firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, constants.MODE_CHARACTER)
+    
+    response_text = f"```json\\n{game_state_json}\\n```"
+    return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: response_text})
+
+
+def _handle_update_state_command(user_input, user_id, campaign_id):
+    """
+    Handle GOD_MODE_UPDATE_STATE command.
+    
+    Returns:
+        Flask response or None if not UPDATE_STATE command
+    """
+    GOD_MODE_UPDATE_STATE_COMMAND = "GOD_MODE_UPDATE_STATE:"
+    
+    if not user_input.strip().startswith(GOD_MODE_UPDATE_STATE_COMMAND):
+        return None
+    
+    json_payload = user_input.strip()[len(GOD_MODE_UPDATE_STATE_COMMAND):]
+    try:
+        state_changes = json.loads(json_payload)
+        if not isinstance(state_changes, dict):
+            raise ValueError("Payload is not a JSON object.")
+        
+        # Fetch the current state as a dictionary
+        current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
+        if not current_game_state:
+            return jsonify({KEY_ERROR: 'Game state not found for GOD_MODE_UPDATE_STATE'}), 404
+        
+        current_state_dict = current_game_state.to_dict()
+        
+        # Perform an update
+        updated_state_dict = update_state_with_changes(current_state_dict, state_changes)
+        updated_state_dict = StateHelper.apply_automatic_combat_cleanup(updated_state_dict, state_changes)
+        
+        # Convert back to GameState object after the update to validate
+        final_game_state = GameState.from_dict(updated_state_dict)
+        
+        firestore_service.update_campaign_game_state(user_id, campaign_id, final_game_state.to_dict())
+        
+        log_message = format_state_changes(state_changes, for_html=False)
+        return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: f"[System Message: The following state changes were applied via GOD MODE]\\n{log_message}"})
+    
+    except json.JSONDecodeError:
+        return jsonify({KEY_ERROR: 'Invalid JSON payload for GOD_MODE_UPDATE_STATE command.'}), 400
+    except ValueError as e:
+        return jsonify({KEY_ERROR: f'Error in GOD_MODE_UPDATE_STATE payload: {e}'}), 400
+    except Exception as e:
+        return jsonify({KEY_ERROR: f'An unexpected error occurred during GOD_MODE_UPDATE_STATE: {e}'}), 500
+
+
+def _handle_legacy_migration(current_game_state, campaign_id, story_context, user_id):
+    """
+    Handle one-time legacy migration for campaigns.
+    
+    Args:
+        current_game_state: Current GameState object
+        campaign_id: Campaign ID
+        story_context: Story context list
+        user_id: User ID
+        
+    Returns:
+        GameState: Updated game state object
+    """
+    logging.info(f"Evaluating campaign {campaign_id} for legacy migration. Current status: {current_game_state.migration_status.value}")
+    
+    if current_game_state.migration_status != MigrationStatus.NOT_CHECKED:
+        logging.info(f"-> Status is {current_game_state.migration_status.value}. Skipping scan.")
+        return current_game_state
+    
+    logging.info(f"-> Status is NOT_CHECKED. Performing scan.")
+    
+    # The story context here still has datetime objects, which is fine for the parser
+    if story_context:
+        legacy_state_dict = gemini_service.create_game_state_from_legacy_story(story_context)
+    else:
+        legacy_state_dict = None
+    
+    if legacy_state_dict:
+        logging.info(f"-> SUCCESS: Found and parsed legacy state for campaign {campaign_id}. Migrating.")
+        # Check if we already have a GameState object
+        if isinstance(legacy_state_dict, GameState):
+            legacy_game_state = legacy_state_dict
+        else:
+            # If not, create one from the dictionary
+            legacy_game_state = GameState.from_dict(legacy_state_dict)
+        
+        legacy_game_state.migration_status = MigrationStatus.MIGRATED
+        
+        # Save the newly migrated state to Firestore
+        firestore_service.update_campaign_game_state(user_id, campaign_id, legacy_game_state.to_dict())
+        return legacy_game_state
+    else:
+        logging.info(f"-> FAILED: No legacy state found for campaign {campaign_id}. Marking as checked.")
+        # Mark as checked and update Firestore so we don't check again
+        current_game_state.migration_status = MigrationStatus.NO_LEGACY_DATA
+        firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state.to_dict())
+        return current_game_state
+
+
+def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response, 
+                                   mode, story_context, campaign_id, user_id):
+    """
+    Apply state changes from AI response and prepare final response.
+    
+    Args:
+        proposed_changes: Proposed state changes dict
+        current_game_state: Current GameState object
+        gemini_response: Full AI response text
+        mode: Game mode
+        story_context: Story context list
+        campaign_id: Campaign ID
+        user_id: User ID
+        
+    Returns:
+        Flask response
+    """
+    # Store the full response with debug content for database and AI context
+    full_response_with_debug = gemini_response
+    
+    # Conditionally strip debug content based on debug mode
+    if hasattr(current_game_state, 'debug_mode') and current_game_state.debug_mode:
+        # User has debug mode enabled - show ALL debug content
+        final_response = full_response_with_debug
+    else:
+        # User has debug mode disabled - strip ALL debug content
+        final_response = StateHelper.strip_debug_content(full_response_with_debug)
+    
+    if proposed_changes:
+        # Track last story mode sequence ID
+        if mode == constants.MODE_CHARACTER:
+            # The new sequence ID will be the length of the old context plus the two new entries
+            last_story_id = len(story_context) + 2
+            story_id_update = {
+                "custom_campaign_state": {
+                    "last_story_mode_sequence_id": last_story_id
+                }
+            }
+            # Merge this update with the changes from the LLM
+            proposed_changes = update_state_with_changes(story_id_update, proposed_changes)
+        
+        # Enhanced logging for normal gameplay
+        logging.info(f"AI proposed changes for campaign {campaign_id}:\\n{_truncate_log_json(proposed_changes)}")
+        
+        log_message = format_state_changes(proposed_changes, for_html=False)
+        logging.info(f"Applying formatted state changes for campaign {campaign_id}:\\n{log_message}")
+        
+        # Update state with changes
+        updated_state_dict = update_state_with_changes(current_game_state.to_dict(), proposed_changes)
+        updated_state_dict = StateHelper.apply_automatic_combat_cleanup(updated_state_dict, proposed_changes)
+        
+        logging.info(f"New complete game state for campaign {campaign_id}:\\n{truncate_game_state_for_logging(updated_state_dict)}")
+        
+        firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state_dict)
+    
+    # Include debug mode status in response
+    return jsonify({
+        KEY_SUCCESS: True, 
+        KEY_RESPONSE: final_response,
+        'debug_mode': current_game_state.debug_mode if hasattr(current_game_state, 'debug_mode') else True
+    })
+
+
 def strip_debug_content(text):
     """
     Strip debug content from AI response text while preserving the rest.
@@ -439,24 +775,8 @@ def create_app():
         user_input_stripped = user_input.strip()
 
         # --- Game State Loading and Legacy Cleanup ---
-        current_game_state_doc = firestore_service.get_campaign_game_state(user_id, campaign_id)
-        
-        # This is the key fix: ensure current_game_state is always a valid GameState object.
-        if current_game_state_doc:
-            current_game_state = GameState.from_dict(current_game_state_doc.to_dict())
-        else:
-            current_game_state = GameState()
-        
+        current_game_state, was_cleaned, num_cleaned = _prepare_game_state(user_id, campaign_id)
         game_state_dict = current_game_state.to_dict()
-
-        # Perform cleanup on a dictionary copy
-        cleaned_state_dict, was_cleaned, num_cleaned = _cleanup_legacy_state(current_game_state.to_dict())
-        if was_cleaned:
-            # If cleaned, update the main object from the cleaned dictionary
-            current_game_state = GameState.from_dict(cleaned_state_dict)
-            firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state.to_dict())
-            logging.info(f"Legacy state cleanup complete. Removed {num_cleaned} entries.")
-        # --- End cleanup ---
 
         # --- Debug Mode Command Parsing (BEFORE other commands) ---
         debug_response = _handle_debug_mode_command(user_input, mode, current_game_state, user_id, campaign_id)
@@ -482,125 +802,32 @@ def create_app():
                 logging.info(f"RETROACTIVE_ASSIGNMENT: NPC '{npc_name}' is missing an MBTI type. The AI will be prompted to assign one.")
         # --- END Retroactive MBTI ---
 
-        if user_input_stripped.startswith(GOD_MODE_SET_COMMAND):
-            payload_str = user_input_stripped[len(GOD_MODE_SET_COMMAND):]
-            logging.info(f"--- GOD_MODE_SET received for campaign {campaign_id} ---")
-            logging.info(f"GOD_MODE_SET raw payload:\\n---\\n{payload_str}\\n---")
-            
-            proposed_changes = parse_set_command(payload_str)
-            logging.info(f"GOD_MODE_SET parsed changes to be merged:\\n{_truncate_log_json(proposed_changes)}")
-
-            if not proposed_changes:
-                logging.warning(f"GOD_MODE_SET command resulted in no valid changes.")
-                return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: The GOD_MODE_SET command was received, but contained no valid instructions or was empty.]"})
-
-            # The loaded current_game_state object is guaranteed to be valid here
-            current_state_dict_before_update = current_game_state.to_dict()
-            logging.info(f"GOD_MODE_SET state BEFORE update:\\n{_truncate_log_json(current_state_dict_before_update)}")
-            
-            updated_state = update_state_with_changes(current_state_dict_before_update, proposed_changes)
-            updated_state = apply_automatic_combat_cleanup(updated_state, proposed_changes)
-            logging.info(f"GOD_MODE_SET state AFTER update:\\n{_truncate_log_json(updated_state)}")
-            
-            firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
-            
-            # --- Log the formatted changes for both server and chat ---
-            log_message_for_log = format_state_changes(proposed_changes, for_html=False)
-            logging.info(f"GOD_MODE_SET changes applied for campaign {campaign_id}:\\n{log_message_for_log}")
-            
-            log_message_for_chat = format_state_changes(proposed_changes, for_html=True)
-            
-            logging.info(f"--- GOD_MODE_SET for campaign {campaign_id} complete ---")
-
-            return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: f"[System Message]<br>{log_message_for_chat}"})
+        # Handle SET command
+        set_response = _handle_set_command(user_input, current_game_state, user_id, campaign_id)
+        if set_response:
+            return set_response
 
         # --- Debug Mode Command Parsing (BEFORE other commands) ---
         debug_response = _handle_debug_mode_command(user_input, mode, current_game_state, user_id, campaign_id)
         if debug_response:
             return debug_response
         
-        if user_input_stripped == GOD_ASK_STATE_COMMAND:
-            # The loaded current_game_state object is guaranteed to be valid here
-            game_state_dict = current_game_state.to_dict()
-            game_state_json = json.dumps(game_state_dict, indent=2, default=json_default_serializer)
-            
-            firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
-            
-            response_text = f"```json\\n{game_state_json}\\n```"
-            return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: response_text})
+        # Handle ASK_STATE command
+        ask_state_response = _handle_ask_state_command(user_input, current_game_state, user_id, campaign_id)
+        if ask_state_response:
+            return ask_state_response
 
-        # Special command handling for direct state updates
-        if user_input.strip().startswith(GOD_MODE_UPDATE_STATE_COMMAND):
-            json_payload = user_input.strip()[len(GOD_MODE_UPDATE_STATE_COMMAND):]
-            try:
-                state_changes = json.loads(json_payload)
-                if not isinstance(state_changes, dict):
-                    raise ValueError("Payload is not a JSON object.")
-                
-                # Fetch the current state as a dictionary
-                current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
-                if not current_game_state:
-                     return jsonify({KEY_ERROR: 'Game state not found for GOD_MODE_UPDATE_STATE'}), 404
-
-                current_state_dict = current_game_state.to_dict()
-
-                # Perform an update
-                updated_state_dict = update_state_with_changes(current_state_dict, state_changes)
-                updated_state_dict = apply_automatic_combat_cleanup(updated_state_dict, state_changes)
-                
-                # Convert back to GameState object *after* the update to validate and use its methods
-                final_game_state = GameState.from_dict(updated_state_dict)
-
-                firestore_service.update_campaign_game_state(user_id, campaign_id, final_game_state.to_dict())
-
-                log_message = format_state_changes(state_changes, for_html=False)
-                return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: f"[System Message: The following state changes were applied via GOD MODE]\\n{log_message}"})
-
-            except json.JSONDecodeError:
-                return jsonify({KEY_ERROR: 'Invalid JSON payload for GOD_MODE_UPDATE_STATE command.'}), 400
-            except ValueError as e:
-                return jsonify({KEY_ERROR: f'Error in GOD_MODE_UPDATE_STATE payload: {e}'}), 400
-            except Exception as e:
-                return jsonify({KEY_ERROR: f'An unexpected error occurred during GOD_MODE_UPDATE_STATE: {e}'}), 500
+        # Handle UPDATE_STATE command
+        update_state_response = _handle_update_state_command(user_input, user_id, campaign_id)
+        if update_state_response:
+            return update_state_response
 
         # Fetch campaign metadata and story context
         campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
         if not campaign: return jsonify({KEY_ERROR: 'Campaign not found'}), 404
         
         # --- ONE-TIME LEGACY MIGRATION ---
-        logging.info(f"Evaluating campaign {campaign_id} for legacy migration. Current status: {current_game_state.migration_status.value}")
-        if current_game_state.migration_status == MigrationStatus.NOT_CHECKED:
-            logging.info(f"-> Status is NOT_CHECKED. Performing scan.")
-            # The story context here still has datetime objects, which is fine for the parser.
-            if story_context:
-                legacy_state_dict = gemini_service.create_game_state_from_legacy_story(story_context)
-            else:
-                legacy_state_dict = None
-            
-            if legacy_state_dict:
-                logging.info(f"-> SUCCESS: Found and parsed legacy state for campaign {campaign_id}. Migrating.")
-                # This is the fix. Check if we already have a GameState object.
-                if isinstance(legacy_state_dict, GameState):
-                    legacy_game_state = legacy_state_dict
-                else:
-                    # If not, create one from the dictionary.
-                    legacy_game_state = GameState.from_dict(legacy_state_dict)
-                
-                legacy_game_state.migration_status = MigrationStatus.MIGRATED
-                
-                # Overwrite the current_game_state object and its dictionary representation
-                current_game_state = legacy_game_state
-                
-                # Save the newly migrated state to Firestore.
-                firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state.to_dict())
-            else:
-                logging.info(f"-> FAILED: No legacy state found for campaign {campaign_id}. Marking as checked.")
-                # Mark as checked and update Firestore so we don't check again.
-                current_game_state.migration_status = MigrationStatus.NO_LEGACY_DATA
-                # Pass the full dict to ensure document creation on the first run.
-                firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state.to_dict())
-        else:
-            logging.info(f"-> Status is {current_game_state.migration_status.value}. Skipping scan.")
+        current_game_state = _handle_legacy_migration(current_game_state, campaign_id, story_context, user_id)
 
         # 2. Add user's action to the story log
         firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
@@ -646,52 +873,9 @@ def create_app():
                 for i, discrepancy in enumerate(post_update_discrepancies, 1):
                     logging.warning(f"  {i}. {discrepancy}")
         
-        # --- NEW: Append state changes to response for player ---
-        # Store the full response with debug content for database and AI context
-        full_response_with_debug = gemini_response
-        
-        # Conditionally strip debug content based on debug mode
-        if hasattr(current_game_state, 'debug_mode') and current_game_state.debug_mode:
-            # User has debug mode enabled - show ALL debug content including STATE_UPDATES_PROPOSED
-            final_response = full_response_with_debug
-        else:
-            # User has debug mode disabled - strip ALL debug content including STATE_UPDATES_PROPOSED
-            final_response = strip_debug_content(full_response_with_debug)
-        
-        if proposed_changes:
-            # --- NEW: Track last story mode sequence ID ---
-            if mode == constants.MODE_CHARACTER:
-                # The new sequence ID will be the length of the old context plus the two
-                # new entries (user and AI).
-                last_story_id = len(story_context) + 2
-                story_id_update = {
-                    "custom_campaign_state": {
-                        "last_story_mode_sequence_id": last_story_id
-                    }
-                }
-                # Merge this update with the changes from the LLM
-                proposed_changes = update_state_with_changes(story_id_update, proposed_changes)
-
-            # --- NEW: Enhanced Logging for normal gameplay ---
-            logging.info(f"AI proposed changes for campaign {campaign_id}:\\n{_truncate_log_json(proposed_changes)}")
-
-            log_message = format_state_changes(proposed_changes, for_html=False)
-            logging.info(f"Applying formatted state changes for campaign {campaign_id}:\\n{log_message}")
-            
-            # --- FIX: UPDATE STATE WITH CHANGES ---
-            updated_state_dict = update_state_with_changes(current_game_state.to_dict(), proposed_changes)
-            updated_state_dict = apply_automatic_combat_cleanup(updated_state_dict, proposed_changes)
-
-            logging.info(f"New complete game state for campaign {campaign_id}:\\n{truncate_game_state_for_logging(updated_state_dict)}")
-            
-            firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state_dict)
-            
-        # Include debug mode status in response
-        return jsonify({
-            KEY_SUCCESS: True, 
-            KEY_RESPONSE: final_response,
-            'debug_mode': current_game_state.debug_mode if hasattr(current_game_state, 'debug_mode') else True
-        })
+        # Apply state changes and return response
+        return _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response, 
+                                              mode, story_context, campaign_id, user_id)
 
 
     @app.route('/api/campaigns/<campaign_id>/export', methods=['GET'])

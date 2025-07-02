@@ -161,6 +161,326 @@ def _add_world_instructions_to_system(system_instruction_parts):
     world_content = load_world_content_for_system_instruction()
     system_instruction_parts.append(world_content)
 
+
+class PromptBuilder:
+    """
+    Encapsulates prompt building logic for the Gemini service.
+    Handles system instructions, debug content, and specialized instructions.
+    """
+    
+    def __init__(self):
+        """Initialize the PromptBuilder."""
+        pass
+    
+    def build_core_system_instructions(self):
+        """
+        Build the core system instructions that are always loaded first.
+        Returns a list of instruction parts.
+        """
+        parts = []
+        # CRITICAL: Load master directive FIRST for highest priority
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
+        
+        # CRITICAL: Load game_state instructions SECOND for highest priority
+        # This prevents "instruction fatigue" and ensures data structure compliance
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+        
+        # Load entity schema instructions for proper entity management
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_ENTITY_SCHEMA))
+        
+        return parts
+    
+    def add_character_instructions(self, parts, selected_prompts):
+        """
+        Conditionally add character-related instructions based on selected prompts.
+        """
+        # Conditionally add the character template if narrative instructions are selected
+        if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
+            parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE))
+        
+        # Conditionally add the character sheet if mechanics instructions are selected
+        if constants.PROMPT_TYPE_MECHANICS in selected_prompts:
+            parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_SHEET))
+    
+    def add_selected_prompt_instructions(self, parts, selected_prompts, filter_calibration=False):
+        """
+        Add instructions for selected prompt types in consistent order.
+        """
+        # Define the order for consistency
+        prompt_order = [constants.PROMPT_TYPE_NARRATIVE, constants.PROMPT_TYPE_MECHANICS]
+        if not filter_calibration:
+            prompt_order.append(constants.PROMPT_TYPE_CALIBRATION)
+        
+        # Add in order
+        for p_type in prompt_order:
+            if p_type in selected_prompts:
+                parts.append(_load_instruction_file(p_type))
+    
+    def add_system_reference_instructions(self, parts):
+        """
+        Add system reference instructions that are always included.
+        """
+        # Always include the destiny_ruleset
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_DESTINY))
+        
+        # Add dual system reference for attribute system guidance
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_DUAL_SYSTEM_REFERENCE))
+        
+        # Add attribute conversion guide for system switching
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_ATTRIBUTE_CONVERSION))
+    
+    def build_companion_instruction(self):
+        """
+        Build the companion generation instruction.
+        """
+        return (
+            "\n**SPECIAL INSTRUCTION: COMPANION GENERATION ACTIVATED**\n"
+            "You have been specifically requested to generate 3 starting companions for this campaign. "
+            "Follow Part 7: Companion Generation Protocol from the narrative instructions. "
+            "In your opening narrative, introduce all 3 companions and include them in the initial STATE_UPDATES_PROPOSED block.\n\n"
+        )
+    
+    def build_background_summary_instruction(self):
+        """
+        Build the background summary instruction for initial story.
+        """
+        return (
+            "\n**CRITICAL INSTRUCTION: START WITH BACKGROUND SUMMARY**\n"
+            "Before beginning the actual narrative, you MUST provide a background summary section that orients the player. "
+            "This should be 2-4 paragraphs covering:\n"
+            "1. **World Background:** A brief overview of the setting, key factions, current political situation, and important world elements (without major spoilers)\n"
+            "2. **Character History:** Who the character is, their background, motivations, and current situation (based on the prompt provided)\n"
+            "3. **Current Context:** What brings them to this moment and why their story is beginning now\n\n"
+            "**Requirements:**\n"
+            "- Keep it concise but informative (2-4 paragraphs total)\n"
+            "- NO future plot spoilers or major story reveals\n"
+            "- Focus on established facts the character would know\n"
+            "- End with a transition into the opening scene\n"
+            "- Use a clear header like '**--- BACKGROUND ---**' to separate this from the main narrative\n\n"
+            "After the background summary, proceed with the normal opening scene and narrative.\n\n"
+        )
+    
+    def finalize_instructions(self, parts, use_default_world=False):
+        """
+        Finalize the system instructions by adding world and debug instructions.
+        Returns the complete system instruction string.
+        """
+        # Add world instructions if requested
+        if use_default_world:
+            _add_world_instructions_to_system(parts)
+        
+        # Always add debug instructions
+        parts.append(_build_debug_instructions())
+        
+        return "\n\n".join(parts)
+
+
+def _build_debug_instructions():
+    """
+    Build the debug mode instructions that are always included for game state management.
+    The backend will strip debug content for users when debug_mode is False.
+    
+    Returns:
+        str: The formatted debug instruction string
+    """
+    return (
+        "\n**DEBUG MODE - ALWAYS GENERATE**\n"
+        "You must ALWAYS include the following debug information in your response for game state management:\n"
+        "\n"
+        "1. **DM COMMENTARY**: Wrap any behind-the-scenes DM thoughts, rule considerations, or meta-game commentary in [DEBUG_START] and [DEBUG_END] tags.\n"
+        "\n"
+        "2. **DICE ROLLS**: Show ALL dice rolls throughout your response:\n"
+        "   - **During Narrative**: Show important rolls (skill checks, saving throws, random events) using [DEBUG_ROLL_START] and [DEBUG_ROLL_END] tags\n"
+        "   - **During Combat**: Show ALL combat rolls including attack rolls, damage rolls, initiative, saving throws, and any other dice mechanics\n"
+        "   - Format: [DEBUG_ROLL_START]Rolling Perception check: 1d20+3 = 15+3 = 18 (Success)[DEBUG_ROLL_END]\n"
+        "   - Include both the dice result and the final total with modifiers\n"
+        "\n"
+        "3. **RESOURCES USED**: Track resources expended during the scene:\n"
+        "   - Format: [DEBUG_RESOURCES_START]Resources: 2 EP used (6/8 remaining), 1 spell slot level 2 (2/3 remaining), short rests: 1/2[DEBUG_RESOURCES_END]\n"
+        "   - Include: Effort Points (EP), spell slots by level, short rests, long rests, hit dice, consumables\n"
+        "   - Show both used and remaining for each resource\n"
+        "\n"
+        "4. **STATE CHANGES**: After your main narrative, include a section wrapped in [DEBUG_STATE_START] and [DEBUG_STATE_END] tags that explains what state changes you're proposing and why.\n"
+        "\n"
+        "**Examples:**\n"
+        "- [DEBUG_START]The player is attempting a stealth approach, so I need to roll for the guards' perception...[DEBUG_END]\n"
+        "- [DEBUG_ROLL_START]Guard Perception: 1d20+2 = 12+2 = 14 vs DC 15 (Failure - guards don't notice)[DEBUG_ROLL_END]\n"
+        "- [DEBUG_RESOURCES_START]Resources: 0 EP used (8/8 remaining), no spell slots used, short rests: 2/2[DEBUG_RESOURCES_END]\n"
+        "- [DEBUG_STATE_START]Updating player position to 'hidden behind crates' and setting guard alertness to 'unaware'[DEBUG_STATE_END]\n"
+        "\n"
+        "NOTE: This debug information helps maintain game state consistency and will be conditionally shown to players based on their debug mode setting.\n\n"
+    )
+
+
+def _prepare_entity_tracking(game_state, story_context, session_number):
+    """
+    Prepare entity tracking manifest and expected entities.
+    
+    Args:
+        game_state: Current GameState object
+        story_context: List of story context entries
+        session_number: Current session number
+        
+    Returns:
+        tuple: (entity_manifest_text, expected_entities, entity_tracking_instruction)
+    """
+    # Extract turn number from story context
+    turn_number = len(story_context) + 1
+    
+    # Create entity manifest from current game state (with basic caching)
+    game_state_dict = game_state.to_dict()
+    manifest_cache_key = f"manifest_{session_number}_{turn_number}_{hash(str(sorted(game_state_dict.get('npc_data', {}).items())))}"
+    
+    # Simple in-memory cache for the request duration
+    if not hasattr(game_state, '_manifest_cache'):
+        game_state._manifest_cache = {}
+    
+    if manifest_cache_key in game_state._manifest_cache:
+        entity_manifest = game_state._manifest_cache[manifest_cache_key]
+        logging.debug("Using cached entity manifest")
+    else:
+        entity_manifest = create_from_game_state(game_state_dict, session_number, turn_number)
+        game_state._manifest_cache[manifest_cache_key] = entity_manifest
+        logging.debug("Created new entity manifest")
+    
+    entity_manifest_text = entity_manifest.to_prompt_format()
+    expected_entities = entity_manifest.get_expected_entities()
+    
+    # Add structured entity tracking instruction
+    entity_tracking_instruction = ""
+    if expected_entities:
+        entity_tracking_instruction = create_structured_prompt_injection(entity_manifest_text, expected_entities)
+    
+    return entity_manifest_text, expected_entities, entity_tracking_instruction
+
+
+def _build_timeline_log(story_context):
+    """
+    Build the timeline log string from story context.
+    
+    Args:
+        story_context: List of story context entries
+        
+    Returns:
+        str: Formatted timeline log
+    """
+    timeline_log_parts = []
+    for entry in story_context:
+        actor_label = "Story" if entry.get(constants.KEY_ACTOR) == constants.ACTOR_GEMINI else "You"
+        seq_id = entry.get('sequence_id', 'N/A')
+        timeline_log_parts.append(f"[SEQ_ID: {seq_id}] {actor_label}: {entry.get(constants.KEY_TEXT)}")
+    
+    return "\n\n".join(timeline_log_parts)
+
+
+def _build_continuation_prompt(checkpoint_block, core_memories_summary, sequence_id_list_string,
+                             serialized_game_state, entity_tracking_instruction, 
+                             timeline_log_string, current_prompt_text):
+    """
+    Build the full continuation prompt.
+    
+    Returns:
+        str: Complete prompt for continuation
+    """
+    return (
+        f"{checkpoint_block}\\n\\n"
+        f"{core_memories_summary}"
+        f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{sequence_id_list_string}]\\n\\n"
+        f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\n"
+        f"{entity_tracking_instruction}"
+        f"TIMELINE LOG (FOR CONTEXT):\\n{timeline_log_string}\\n\\n"
+        f"YOUR TURN:\\n{current_prompt_text}"
+    )
+
+
+def _select_model_for_continuation(user_input_count):
+    """
+    Select the appropriate model based on testing mode and input count.
+    
+    Args:
+        user_input_count: Number of user inputs so far
+        
+    Returns:
+        str: Model name to use
+    """
+    if os.environ.get('TESTING'):
+        return TEST_MODEL
+    elif user_input_count is not None and user_input_count <= USE_PRO_MODEL_FOR_FIRST_N_INPUTS:
+        logging.info(f"Using pro model for user input {user_input_count}/{USE_PRO_MODEL_FOR_FIRST_N_INPUTS}")
+        return LARGE_CONTEXT_MODEL
+    else:
+        return DEFAULT_MODEL
+
+
+def _process_structured_response(raw_response_text, expected_entities):
+    """
+    Process structured JSON response and validate entity coverage.
+    
+    Args:
+        raw_response_text: Raw response from API
+        expected_entities: List of expected entity names
+        
+    Returns:
+        tuple: (response_text, validation_logged)
+    """
+    response_text, structured_response = parse_structured_response(raw_response_text)
+    
+    # Validate structured response coverage
+    if isinstance(structured_response, NarrativeResponse):
+        coverage_validation = validate_entity_coverage(structured_response, expected_entities)
+        logging.info(f"STRUCTURED_GENERATION: Coverage rate {coverage_validation['coverage_rate']:.2f}, "
+                    f"Schema valid: {coverage_validation['schema_valid']}")
+        
+        if not coverage_validation['schema_valid']:
+            logging.warning(f"STRUCTURED_GENERATION: Missing from schema: {coverage_validation['missing_from_schema']}")
+    else:
+        logging.warning("STRUCTURED_GENERATION: Failed to parse JSON response, falling back to plain text")
+    
+    return response_text
+
+
+def _validate_entity_tracking(response_text, expected_entities, game_state):
+    """
+    Validate that the narrative includes all expected entities.
+    
+    Args:
+        response_text: Generated narrative text
+        expected_entities: List of expected entity names
+        game_state: Current GameState object
+        
+    Returns:
+        str: Response text with debug validation if in debug mode
+    """
+    validator = NarrativeSyncValidator()
+    validation_result = validator.validate(
+        narrative_text=response_text,
+        expected_entities=expected_entities,
+        location=game_state.world_data.get('current_location_name', 'Unknown')
+    )
+    
+    if not validation_result.all_entities_present:
+        logging.warning(f"ENTITY_TRACKING_VALIDATION: Narrative failed entity validation")
+        logging.warning(f"Missing entities: {validation_result.entities_missing}")
+        if validation_result.warnings:
+            for warning in validation_result.warnings:
+                logging.warning(f"Validation warning: {warning}")
+    
+    # Add validation context to the response for debugging
+    if game_state.debug_mode and expected_entities:
+        debug_validation = (
+            f"\n\n[DEBUG_VALIDATION_START]\n"
+            f"Entity Tracking Validation Result:\n"
+            f"- Expected entities: {expected_entities}\n"
+            f"- Found entities: {validation_result.entities_found}\n"
+            f"- Missing entities: {validation_result.entities_missing}\n"
+            f"- Confidence: {validation_result.confidence:.2f}\n"
+            f"[DEBUG_VALIDATION_END]"
+        )
+        response_text += debug_validation
+    
+    return response_text
+
+
 def _log_token_count(model_name, user_prompt_contents, system_instruction_text=None):
     """Helper function to count and log the number of tokens being sent, with a breakdown."""
     try:
@@ -308,106 +628,30 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
         selected_prompts = [] 
         logging.warning("No specific system prompts selected for initial story. Using none.")
 
-    system_instruction_parts = []
-
-    # CRITICAL: Load master directive FIRST for highest priority
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
-
-    # CRITICAL: Load game_state instructions SECOND for highest priority
-    # This prevents "instruction fatigue" and ensures data structure compliance
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+    # Use PromptBuilder to construct system instructions
+    builder = PromptBuilder()
     
-    # Load entity schema instructions for proper entity management
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_ENTITY_SCHEMA))
-
-    # Conditionally add the character template if narrative instructions are selected.
-    if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
-        system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE))
-
-    # Conditionally add the character sheet if mechanics instructions are selected.
-    if constants.PROMPT_TYPE_MECHANICS in selected_prompts:
-        system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_SHEET))
-
-
-    # Consistent order for instructions
-    # Narrative, Mechanics, Calibration (from checkboxes)
-    for p_type in [constants.PROMPT_TYPE_NARRATIVE, constants.PROMPT_TYPE_MECHANICS, constants.PROMPT_TYPE_CALIBRATION]: 
-        if p_type in selected_prompts:
-            system_instruction_parts.append(_load_instruction_file(p_type))
+    # Build core instructions
+    system_instruction_parts = builder.build_core_system_instructions()
     
-    # NEW: Always include the destiny_ruleset as a default system instruction
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DESTINY))
+    # Add character-related instructions
+    builder.add_character_instructions(system_instruction_parts, selected_prompts)
     
-    # Add dual system reference for attribute system guidance
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DUAL_SYSTEM_REFERENCE))
+    # Add selected prompt instructions
+    builder.add_selected_prompt_instructions(system_instruction_parts, selected_prompts)
     
-    # Add attribute conversion guide for system switching
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_ATTRIBUTE_CONVERSION))
-
+    # Add system reference instructions
+    builder.add_system_reference_instructions(system_instruction_parts)
+    
     # Add companion generation instruction if requested
     if generate_companions:
-        companion_instruction = (
-            "\n**SPECIAL INSTRUCTION: COMPANION GENERATION ACTIVATED**\n"
-            "You have been specifically requested to generate 3 starting companions for this campaign. "
-            "Follow Part 7: Companion Generation Protocol from the narrative instructions. "
-            "In your opening narrative, introduce all 3 companions and include them in the initial STATE_UPDATES_PROPOSED block.\n\n"
-        )
-        system_instruction_parts.append(companion_instruction)
-
+        system_instruction_parts.append(builder.build_companion_instruction())
+    
     # Add background summary instruction for initial story
-    background_summary_instruction = (
-        "\n**CRITICAL INSTRUCTION: START WITH BACKGROUND SUMMARY**\n"
-        "Before beginning the actual narrative, you MUST provide a background summary section that orients the player. "
-        "This should be 2-4 paragraphs covering:\n"
-        "1. **World Background:** A brief overview of the setting, key factions, current political situation, and important world elements (without major spoilers)\n"
-        "2. **Character History:** Who the character is, their background, motivations, and current situation (based on the prompt provided)\n"
-        "3. **Current Context:** What brings them to this moment and why their story is beginning now\n\n"
-        "**Requirements:**\n"
-        "- Keep it concise but informative (2-4 paragraphs total)\n"
-        "- NO future plot spoilers or major story reveals\n"
-        "- Focus on established facts the character would know\n"
-        "- End with a transition into the opening scene\n"
-        "- Use a clear header like '**--- BACKGROUND ---**' to separate this from the main narrative\n\n"
-        "After the background summary, proceed with the normal opening scene and narrative.\n\n"
-    )
-    system_instruction_parts.append(background_summary_instruction)
-
-    # Add world instructions if requested
-    if use_default_world:
-        _add_world_instructions_to_system(system_instruction_parts)
-
-    # ALWAYS add debug mode instructions for AI context and state management
-    # The backend will strip debug content for users when debug_mode is False
-    debug_instruction = (
-        "\n**DEBUG MODE - ALWAYS GENERATE**\n"
-        "You must ALWAYS include the following debug information in your response for game state management:\n"
-        "\n"
-        "1. **DM COMMENTARY**: Wrap any behind-the-scenes DM thoughts, rule considerations, or meta-game commentary in [DEBUG_START] and [DEBUG_END] tags.\n"
-        "\n"
-        "2. **DICE ROLLS**: Show ALL dice rolls throughout your response:\n"
-        "   - **During Narrative**: Show important rolls (skill checks, saving throws, random events) using [DEBUG_ROLL_START] and [DEBUG_ROLL_END] tags\n"
-        "   - **During Combat**: Show ALL combat rolls including attack rolls, damage rolls, initiative, saving throws, and any other dice mechanics\n"
-        "   - Format: [DEBUG_ROLL_START]Rolling Perception check: 1d20+3 = 15+3 = 18 (Success)[DEBUG_ROLL_END]\n"
-        "   - Include both the dice result and the final total with modifiers\n"
-        "\n"
-        "3. **RESOURCES USED**: Track resources expended during the scene:\n"
-        "   - Format: [DEBUG_RESOURCES_START]Resources: 2 EP used (6/8 remaining), 1 spell slot level 2 (2/3 remaining), short rests: 1/2[DEBUG_RESOURCES_END]\n"
-        "   - Include: Effort Points (EP), spell slots by level, short rests, long rests, hit dice, consumables\n"
-        "   - Show both used and remaining for each resource\n"
-        "\n"
-        "4. **STATE CHANGES**: After your main narrative, include a section wrapped in [DEBUG_STATE_START] and [DEBUG_STATE_END] tags that explains what state changes you're proposing and why.\n"
-        "\n"
-        "**Examples:**\n"
-        "- [DEBUG_START]The player is attempting a stealth approach, so I need to roll for the guards' perception...[DEBUG_END]\n"
-        "- [DEBUG_ROLL_START]Guard Perception: 1d20+2 = 12+2 = 14 vs DC 15 (Failure - guards don't notice)[DEBUG_ROLL_END]\n"
-        "- [DEBUG_RESOURCES_START]Resources: 0 EP used (8/8 remaining), no spell slots used, short rests: 2/2[DEBUG_RESOURCES_END]\n"
-        "- [DEBUG_STATE_START]Updating player position to 'hidden behind crates' and setting guard alertness to 'unaware'[DEBUG_STATE_END]\n"
-        "\n"
-        "NOTE: This debug information helps maintain game state consistency and will be conditionally shown to players based on their debug mode setting.\n\n"
-    )
-    system_instruction_parts.append(debug_instruction)
-
-    system_instruction_final = "\n\n".join(system_instruction_parts)
+    system_instruction_parts.append(builder.build_background_summary_instruction())
+    
+    # Finalize with world and debug instructions
+    system_instruction_final = builder.finalize_instructions(system_instruction_parts, use_default_world)
     
     # Add clear indication when using default world setting
     if use_default_world:
@@ -470,79 +714,23 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         logging.warning("No specific system prompts selected for continue_story. Using none.")
 
 
-    system_instruction_parts = []
-
-    # CRITICAL: Load master directive FIRST for highest priority
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
-
-    # CRITICAL: Load game_state instructions SECOND for highest priority
-    # This prevents "instruction fatigue" and ensures data structure compliance
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
+    # Use PromptBuilder to construct system instructions
+    builder = PromptBuilder()
     
-    # Load entity schema instructions for proper entity management
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_ENTITY_SCHEMA))
-
-    # Conditionally add the character template if narrative instructions are selected.
-    if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
-        system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE))
-
-    # Conditionally add the character sheet if mechanics instructions are selected.
-    if constants.PROMPT_TYPE_MECHANICS in selected_prompts:
-        system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_SHEET))
-
-    # Load destiny ruleset EARLY (position 4) for system rules foundation
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DESTINY))
-
-    # Filter out 'calibration' for continue_story calls
-    # Calibration is only for initial campaign setup, not ongoing story
-    selected_prompts_filtered = [p_type for p_type in selected_prompts if p_type != constants.PROMPT_TYPE_CALIBRATION]
+    # Build core instructions
+    system_instruction_parts = builder.build_core_system_instructions()
     
-    # Load user-selected prompts (excluding calibration)
-    for p_type in selected_prompts_filtered:
-        system_instruction_parts.append(_load_instruction_file(p_type))
+    # Add character-related instructions
+    builder.add_character_instructions(system_instruction_parts, selected_prompts)
     
-    # Add dual system reference for attribute system guidance
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DUAL_SYSTEM_REFERENCE))
+    # Add selected prompt instructions (filter calibration for continue_story)
+    builder.add_selected_prompt_instructions(system_instruction_parts, selected_prompts, filter_calibration=True)
     
-    # Add attribute conversion guide for system switching
-    system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_ATTRIBUTE_CONVERSION))
-
-    # Add world instructions if campaign was created with default world enabled
-    if use_default_world:
-        _add_world_instructions_to_system(system_instruction_parts)
+    # Add system reference instructions
+    builder.add_system_reference_instructions(system_instruction_parts)
     
-    # ALWAYS add debug mode instructions for AI context and state management
-    # The backend will strip debug content for users when debug_mode is False
-    debug_instruction = (
-        "\n**DEBUG MODE - ALWAYS GENERATE**\n"
-        "You must ALWAYS include the following debug information in your response for game state management:\n"
-        "\n"
-        "1. **DM COMMENTARY**: Wrap any behind-the-scenes DM thoughts, rule considerations, or meta-game commentary in [DEBUG_START] and [DEBUG_END] tags.\n"
-        "\n"
-        "2. **DICE ROLLS**: Show ALL dice rolls throughout your response:\n"
-        "   - **During Narrative**: Show important rolls (skill checks, saving throws, random events) using [DEBUG_ROLL_START] and [DEBUG_ROLL_END] tags\n"
-        "   - **During Combat**: Show ALL combat rolls including attack rolls, damage rolls, initiative, saving throws, and any other dice mechanics\n"
-        "   - Format: [DEBUG_ROLL_START]Rolling Perception check: 1d20+3 = 15+3 = 18 (Success)[DEBUG_ROLL_END]\n"
-        "   - Include both the dice result and the final total with modifiers\n"
-        "\n"
-        "3. **RESOURCES USED**: Track resources expended during the scene:\n"
-        "   - Format: [DEBUG_RESOURCES_START]Resources: 2 EP used (6/8 remaining), 1 spell slot level 2 (2/3 remaining), short rests: 1/2[DEBUG_RESOURCES_END]\n"
-        "   - Include: Effort Points (EP), spell slots by level, short rests, long rests, hit dice, consumables\n"
-        "   - Show both used and remaining for each resource\n"
-        "\n"
-        "4. **STATE CHANGES**: After your main narrative, include a section wrapped in [DEBUG_STATE_START] and [DEBUG_STATE_END] tags that explains what state changes you're proposing and why.\n"
-        "\n"
-        "**Examples:**\n"
-        "- [DEBUG_START]The player is attempting a stealth approach, so I need to roll for the guards' perception...[DEBUG_END]\n"
-        "- [DEBUG_ROLL_START]Guard Perception: 1d20+2 = 12+2 = 14 vs DC 15 (Failure - guards don't notice)[DEBUG_ROLL_END]\n"
-        "- [DEBUG_RESOURCES_START]Resources: 0 EP used (8/8 remaining), no spell slots used, short rests: 2/2[DEBUG_RESOURCES_END]\n"
-        "- [DEBUG_STATE_START]Updating player position to 'hidden behind crates' and setting guard alertness to 'unaware'[DEBUG_STATE_END]\n"
-        "\n"
-        "NOTE: This debug information helps maintain game state consistency and will be conditionally shown to players based on their debug mode setting.\n\n"
-    )
-    system_instruction_parts.append(debug_instruction)
-
-    system_instruction_final = "\n\n".join(system_instruction_parts)
+    # Finalize with world and debug instructions
+    system_instruction_final = builder.finalize_instructions(system_instruction_parts, use_default_world)
 
     # --- NEW: Budget-based Truncation ---
     # 1. Calculate the size of the "prompt scaffold" (everything except the timeline log)
@@ -572,67 +760,26 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2, default=json_datetime_serializer)
     
     # --- ENTITY TRACKING: Create scene manifest for entity tracking ---
-    # Extract session and turn numbers from game state
     session_number = current_game_state.custom_campaign_state.get('session_number', 1)
-    turn_number = len(truncated_story_context) + 1  # Approximate turn count
+    entity_manifest_text, expected_entities, entity_tracking_instruction = _prepare_entity_tracking(
+        current_game_state, truncated_story_context, session_number
+    )
     
-    # Create entity manifest from current game state (with basic caching)
-    game_state_dict = current_game_state.to_dict()
-    manifest_cache_key = f"manifest_{session_number}_{turn_number}_{hash(str(sorted(game_state_dict.get('npc_data', {}).items())))}"
-    
-    # Simple in-memory cache for the request duration
-    if not hasattr(current_game_state, '_manifest_cache'):
-        current_game_state._manifest_cache = {}
-    
-    if manifest_cache_key in current_game_state._manifest_cache:
-        entity_manifest = current_game_state._manifest_cache[manifest_cache_key]
-        logging.debug("Using cached entity manifest")
-    else:
-        entity_manifest = create_from_game_state(game_state_dict, session_number, turn_number)
-        current_game_state._manifest_cache[manifest_cache_key] = entity_manifest
-        logging.debug("Created new entity manifest")
-    
-    entity_manifest_text = entity_manifest.to_prompt_format()
-    expected_entities = entity_manifest.get_expected_entities()
-    
-    # Add structured entity tracking instruction
-    entity_tracking_instruction = ""
-    if expected_entities:
-        entity_tracking_instruction = create_structured_prompt_injection(entity_manifest_text, expected_entities)
-    
-    timeline_log_parts = []
-    # NEW: Define sequence_ids from the final recent_context
-    sequence_ids = [str(entry.get('sequence_id', 'N/A')) for entry in truncated_story_context]
-    for entry in truncated_story_context:
-        actor_label = "Story" if entry.get(constants.KEY_ACTOR) == constants.ACTOR_GEMINI else "You"
-        seq_id = entry.get('sequence_id', 'N/A')
-        timeline_log_parts.append(f"[SEQ_ID: {seq_id}] {actor_label}: {entry.get(constants.KEY_TEXT)}")
-    
-    timeline_log_string = "\n\n".join(timeline_log_parts)
+    # Build timeline log
+    timeline_log_string = _build_timeline_log(truncated_story_context)
 
     # Create the final prompt for the current user turn (User's preferred method)
     current_prompt_text = _get_current_turn_prompt(user_input, mode)
 
-    # --- NEW: Incorporate Game State & Timeline ---
-    full_prompt = (
-        f"{checkpoint_block}\\n\\n"
-        f"{core_memories_summary}"
-        f"REFERENCE TIMELINE (SEQUENCE ID LIST):\\n[{sequence_id_list_string}]\\n\\n"
-        f"CURRENT GAME STATE:\\n{serialized_game_state}\\n\\n"
-        f"{entity_tracking_instruction}"
-        f"TIMELINE LOG (FOR CONTEXT):\\n{timeline_log_string}\\n\\n"
-        f"YOUR TURN:\\n{current_prompt_text}"
+    # Build the full prompt
+    full_prompt = _build_continuation_prompt(
+        checkpoint_block, core_memories_summary, sequence_id_list_string,
+        serialized_game_state, entity_tracking_instruction, 
+        timeline_log_string, current_prompt_text
     )
     
-    # For all subsequent calls, use the standard, cheaper model.
-    # Use pro model for first 5 user inputs for better world building
-    if os.environ.get('TESTING'):
-        chosen_model = TEST_MODEL
-    elif user_input_count is not None and user_input_count <= USE_PRO_MODEL_FOR_FIRST_N_INPUTS:
-        chosen_model = LARGE_CONTEXT_MODEL
-        logging.info(f"Using pro model for user input {user_input_count}/{USE_PRO_MODEL_FOR_FIRST_N_INPUTS}")
-    else:
-        chosen_model = DEFAULT_MODEL
+    # Select appropriate model
+    chosen_model = _select_model_for_continuation(user_input_count)
     
     # Use structured JSON output if entity tracking is enabled
     if expected_entities:
@@ -643,19 +790,8 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
                                   use_json_mode=True)
         raw_response_text = _get_text_from_response(response)
         
-        # Parse structured response
-        response_text, structured_response = parse_structured_response(raw_response_text)
-        
-        # Validate structured response coverage
-        if isinstance(structured_response, NarrativeResponse):
-            coverage_validation = validate_entity_coverage(structured_response, expected_entities)
-            logging.info(f"STRUCTURED_GENERATION: Coverage rate {coverage_validation['coverage_rate']:.2f}, "
-                        f"Schema valid: {coverage_validation['schema_valid']}")
-            
-            if not coverage_validation['schema_valid']:
-                logging.warning(f"STRUCTURED_GENERATION: Missing from schema: {coverage_validation['missing_from_schema']}")
-        else:
-            logging.warning("STRUCTURED_GENERATION: Failed to parse JSON response, falling back to plain text")
+        # Process structured response
+        response_text = _process_structured_response(raw_response_text, expected_entities)
     else:
         # Standard generation without entity tracking
         response = _call_gemini_api([full_prompt], chosen_model, 
@@ -663,34 +799,9 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
                                   system_instruction_text=system_instruction_final)
         response_text = _get_text_from_response(response)
     
-    # --- ENTITY TRACKING VALIDATION: Validate narrative against entity manifest ---
+    # Validate entity tracking if enabled
     if expected_entities:
-        validator = NarrativeSyncValidator()
-        validation_result = validator.validate(
-            narrative_text=response_text,
-            expected_entities=expected_entities,
-            location=current_game_state.world_data.get('current_location_name', 'Unknown')
-        )
-        
-        if not validation_result.all_entities_present:
-            logging.warning(f"ENTITY_TRACKING_VALIDATION: Narrative failed entity validation")
-            logging.warning(f"Missing entities: {validation_result.entities_missing}")
-            if validation_result.warnings:
-                for warning in validation_result.warnings:
-                    logging.warning(f"Validation warning: {warning}")
-            
-            # Add validation context to the response for debugging
-            if current_game_state.debug_mode:
-                debug_validation = (
-                    f"\n\n[DEBUG_VALIDATION_START]\n"
-                    f"Entity Tracking Validation Result:\n"
-                    f"- Expected entities: {expected_entities}\n"
-                    f"- Found entities: {validation_result.entities_found}\n"
-                    f"- Missing entities: {validation_result.entities_missing}\n"
-                    f"- Confidence: {validation_result.confidence:.2f}\n"
-                    f"[DEBUG_VALIDATION_END]"
-                )
-                response_text += debug_validation
+        response_text = _validate_entity_tracking(response_text, expected_entities, current_game_state)
     
     return response_text
 

@@ -56,33 +56,29 @@ class TestDebugModeE2E(unittest.TestCase):
         # has the debug instructions that tell AI to always generate debug content
         import inspect
         
-        source = inspect.getsource(gemini_service.continue_story)
+        # Check that _build_debug_instructions exists and contains the right content
+        build_debug_source = inspect.getsource(gemini_service._build_debug_instructions)
+        self.assertIn("DEBUG MODE - ALWAYS GENERATE", build_debug_source)
         
-        # Verify that the debug instructions are always added (not conditional)
-        self.assertIn("DEBUG MODE - ALWAYS GENERATE", source)
-        self.assertIn("system_instruction_parts.append(debug_instruction)", source)
+        # Check that finalize_instructions always adds debug instructions
+        finalize_source = inspect.getsource(gemini_service.PromptBuilder.finalize_instructions)
         
-        # Verify there's no conditional check for debug_mode before adding instructions
-        # The old code had: if current_game_state.debug_mode:
-        # The new code should not have this condition
-        lines = source.split('\n')
-        debug_instruction_line = None
+        # Verify debug instructions are always added
+        self.assertIn("# Always add debug instructions", finalize_source)
+        self.assertIn("parts.append(_build_debug_instructions())", finalize_source)
+        
+        # Verify there's no conditional check for debug_mode
+        lines = finalize_source.split('\n')
         for i, line in enumerate(lines):
-            if "DEBUG MODE - ALWAYS GENERATE" in line:
-                debug_instruction_line = i
-                break
-        
-        self.assertIsNotNone(debug_instruction_line, "Debug instruction not found")
-        
-        # Check that there's no 'if' statement controlling the debug instruction
-        # Look backwards from the debug instruction line
-        found_conditional = False
-        for i in range(max(0, debug_instruction_line - 10), debug_instruction_line):
-            if 'if' in lines[i] and 'debug_mode' in lines[i]:
-                found_conditional = True
-                break
-        
-        self.assertFalse(found_conditional, "Debug instructions should not be conditional on debug_mode")
+            if '_build_debug_instructions' in line:
+                # Check previous lines for any 'if' statement
+                found_conditional = False
+                for j in range(max(0, i - 5), i):
+                    if 'if' in lines[j] and 'debug' in lines[j]:
+                        found_conditional = True
+                        break
+                self.assertFalse(found_conditional, 
+                    "Debug instructions should not be conditional on debug_mode")
     
     @patch('main.firestore_service')
     def test_full_e2e_debug_mode_disabled(self, mock_firestore_service):

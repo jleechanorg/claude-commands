@@ -7,6 +7,7 @@ __pycache__/
 # Ignore Python virtual environments
 venv/
 mvp_site/venv/
+test_venv/
 
 # Service account keys
 key.json
@@ -84,10 +85,17 @@ scripts/*.pyc
 
 # Testing
 .coverage
+.coverage.*
 .pytest_cache/
 htmlcov/
 .tox/
 .hypothesis/
+coverage_html*/
+coverage_report*/
+coverage_complete/
+coverage_full/
+**/coverage/
+docs/coverage/
 
 # Temporary files
 *.tmp

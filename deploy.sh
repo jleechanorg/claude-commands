@@ -73,14 +73,28 @@ echo "Building container image from '$TARGET_DIR' with tag '$IMAGE_TAG'..."
 # Copy world directory into mvp_site for deployment
 echo "DEBUG: TARGET_DIR = '$TARGET_DIR'"
 echo "DEBUG: Current directory = $(pwd)"
-echo "DEBUG: Checking if world directory exists = $([ -d "world" ] && echo "YES" || echo "NO")"
+
+# Check for world directory in current dir or parent dir
+WORLD_DIR=""
+if [ -d "world" ]; then
+    WORLD_DIR="world"
+    echo "DEBUG: Found world directory in current directory"
+elif [ -d "../world" ]; then
+    WORLD_DIR="../world"
+    echo "DEBUG: Found world directory in parent directory"
+else
+    echo "DEBUG: No world directory found"
+fi
 
 # Handle different possible values of TARGET_DIR
-if [[ "$TARGET_DIR" == *"mvp_site"* ]] && [ -d "world" ]; then
+if [[ "$TARGET_DIR" == *"mvp_site"* ]] && [ -n "$WORLD_DIR" ]; then
     echo "Copying world directory into mvp_site..."
-    cp -r world "$TARGET_DIR/"
-    echo "DEBUG: World files copied to $TARGET_DIR/world"
+    cp -r "$WORLD_DIR" "$TARGET_DIR/"
+    echo "DEBUG: World files copied from $WORLD_DIR to $TARGET_DIR/world"
     ls -la "$TARGET_DIR/world/" | head -5
+elif [[ "$TARGET_DIR" == *"mvp_site"* ]] && [ -z "$WORLD_DIR" ]; then
+    echo "WARNING: No world directory found to copy!"
+    echo "Deployment may fail if world files are required."
 fi
 
 (cd "$TARGET_DIR" && gcloud builds submit . --tag "$IMAGE_TAG")

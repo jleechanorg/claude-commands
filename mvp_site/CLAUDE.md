@@ -167,6 +167,25 @@ grep -r "process.*special_token" *.py
 ### Automatic Rule Updates
 **MANDATORY**: Whenever I make a mistake, encounter a bug I should have caught, or receive correction from the user, I MUST immediately update both CLAUDE.md and .cursor/rules/rules.mdc with the lesson learned. I will not wait for the user to remind me - this is an automatic responsibility that happens every time I fail or am corrected.
 
+### Temporary Fix Protocol - NEVER GLOSS OVER
+**CRITICAL RULE**: When implementing ANY temporary fix or workaround:
+1. **IMMEDIATELY flag it** - "⚠️ TEMPORARY FIX: This will break when [specific scenario]"
+2. **PROPOSE permanent solution in same message** - Don't wait to be asked
+3. **Run the checklist**:
+   - [ ] Will this work from a fresh clone?
+   - [ ] Will this work in CI/CD?
+   - [ ] Will this work for other developers?
+   - [ ] Will this work next week/month?
+   - [ ] What are ALL the failure scenarios?
+4. **Create the permanent fix NOW** - Not "we could fix it" but actually implement it
+5. **Document assumptions** - "This assumes [X] which will fail if [Y]"
+
+**Example**: When copying files manually for deployment:
+- ❌ BAD: "I copied the files, deployment works now"
+- ✅ GOOD: "⚠️ TEMPORARY FIX: I manually copied world/ to fix deployment. This WILL BREAK on next deploy from fresh clone. Creating permanent fix to deploy.sh now..."
+
+**Lesson**: Manually copied world directory for deployment without immediately fixing deploy.sh, causing future deployment failures. Always think about sustainability, not just immediate success.
+
 ### Data Corruption Pattern Analysis
 **CRITICAL RULE**: When encountering ANY data corruption bug, treat it as a systemic issue requiring comprehensive pattern analysis:
 - Search for ALL similar corruption patterns across the codebase (e.g., `str()` conversions, type changes)

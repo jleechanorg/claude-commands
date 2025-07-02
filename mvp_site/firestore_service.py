@@ -48,62 +48,159 @@ def _perform_append(target_list: list, items_to_append, key_name: str, deduplica
         logging.info(f"APPEND/SAFEGUARD: No new items were added to '{key_name}' (duplicates may have been found).")
 
 
-def _initialize_missions_list(state_to_update: dict, key: str) -> None:
-    """Initialize active_missions as empty list if it doesn't exist or is wrong type."""
+class MissionHandler:
+    """
+    Handles mission-related operations for game state management.
+    Consolidates mission processing, conversion, and updates.
+    """
+    
+    @staticmethod
+    def initialize_missions_list(state_to_update: dict, key: str) -> None:
+        """Initialize active_missions as empty list if it doesn't exist or is wrong type."""
+        if key not in state_to_update or not isinstance(state_to_update.get(key), list):
+            state_to_update[key] = []
+    
+    @staticmethod
+    def find_existing_mission_index(missions_list: list, mission_id: str) -> int:
+        """Find the index of an existing mission by mission_id. Returns -1 if not found."""
+        for i, existing_mission in enumerate(missions_list):
+            if isinstance(existing_mission, dict) and existing_mission.get('mission_id') == mission_id:
+                return i
+        return -1
+    
+    @staticmethod
+    def process_mission_data(state_to_update: dict, key: str, mission_id: str, mission_data: dict) -> None:
+        """Process a single mission, either updating existing or adding new."""
+        # Ensure the mission has an ID
+        if 'mission_id' not in mission_data:
+            mission_data['mission_id'] = mission_id
+        
+        # Check if this mission already exists (by mission_id)
+        existing_mission_index = MissionHandler.find_existing_mission_index(state_to_update[key], mission_id)
+        
+        if existing_mission_index != -1:
+            # Update existing mission
+            logging.info(f"Updating existing mission: {mission_id}")
+            state_to_update[key][existing_mission_index].update(mission_data)
+        else:
+            # Add new mission
+            logging.info(f"Adding new mission: {mission_id}")
+            state_to_update[key].append(mission_data)
+    
+    @staticmethod
+    def handle_missions_dict_conversion(state_to_update: dict, key: str, missions_dict: dict) -> None:
+        """Convert dictionary format missions to list append format."""
+        for mission_id, mission_data in missions_dict.items():
+            if isinstance(mission_data, dict):
+                MissionHandler.process_mission_data(state_to_update, key, mission_id, mission_data)
+            else:
+                logging.warning(f"Skipping invalid mission data for {mission_id}: not a dictionary")
+    
+    @staticmethod
+    def handle_active_missions_conversion(state_to_update: dict, key: str, value) -> None:
+        """Handle smart conversion of active_missions from various formats to list."""
+        logging.warning(f"SMART CONVERSION: AI attempted to set 'active_missions' as {type(value).__name__}. Converting to list append.")
+        
+        # Initialize active_missions as empty list if it doesn't exist
+        MissionHandler.initialize_missions_list(state_to_update, key)
+        
+        # Convert based on value type
+        if isinstance(value, dict):
+            # AI is providing missions as a dict like {"main_quest_1": {...}, "side_quest_1": {...}}
+            MissionHandler.handle_missions_dict_conversion(state_to_update, key, value)
+        else:
+            # For other non-list types, log error and skip
+            logging.error(f"Cannot convert {type(value).__name__} to mission list. Skipping.")
+
+
+def _handle_append_syntax(state_to_update: dict, key: str, value: dict) -> bool:
+    """
+    Handle explicit append syntax {'append': ...}.
+    
+    Returns:
+        bool: True if handled, False otherwise
+    """
+    if not (isinstance(value, dict) and 'append' in value):
+        return False
+    
+    logging.info(f"update_state: Detected explicit append for '{key}'.")
     if key not in state_to_update or not isinstance(state_to_update.get(key), list):
         state_to_update[key] = []
+    _perform_append(state_to_update[key], value['append'], key, deduplicate=(key == 'core_memories'))
+    return True
 
 
-def _find_existing_mission_index(missions_list: list, mission_id: str) -> int:
-    """Find the index of an existing mission by mission_id. Returns -1 if not found."""
-    for i, existing_mission in enumerate(missions_list):
-        if isinstance(existing_mission, dict) and existing_mission.get('mission_id') == mission_id:
-            return i
-    return -1
-
-
-def _process_mission_data(state_to_update: dict, key: str, mission_id: str, mission_data: dict) -> None:
-    """Process a single mission, either updating existing or adding new."""
-    # Ensure the mission has an ID
-    if 'mission_id' not in mission_data:
-        mission_data['mission_id'] = mission_id
+def _handle_core_memories_safeguard(state_to_update: dict, key: str, value) -> bool:
+    """
+    Handle safeguard for direct 'core_memories' overwrite.
     
-    # Check if this mission already exists (by mission_id)
-    existing_mission_index = _find_existing_mission_index(state_to_update[key], mission_id)
+    Returns:
+        bool: True if handled, False otherwise
+    """
+    if key != 'core_memories':
+        return False
     
-    if existing_mission_index != -1:
-        # Update existing mission
-        logging.info(f"Updating existing mission: {mission_id}")
-        state_to_update[key][existing_mission_index].update(mission_data)
+    logging.warning("CRITICAL SAFEGUARD: Intercepted direct overwrite on 'core_memories'. Converting to safe, deduplicated append.")
+    if key not in state_to_update or not isinstance(state_to_update.get(key), list):
+        state_to_update[key] = []
+    _perform_append(state_to_update[key], value, key, deduplicate=True)
+    return True
+
+
+def _handle_dict_merge(state_to_update: dict, key: str, value) -> bool:
+    """
+    Handle dictionary merging and creation.
+    
+    Returns:
+        bool: True if handled, False otherwise
+    """
+    if not isinstance(value, dict):
+        return False
+    
+    # Case 1: Recursive merge for nested dictionaries
+    if isinstance(state_to_update.get(key), collections.abc.Mapping):
+        state_to_update[key] = update_state_with_changes(state_to_update.get(key, {}), value)
+        return True
+    
+    # Case 2: Create new dictionary when incoming value is dict but existing is not
+    state_to_update[key] = update_state_with_changes({}, value)
+    return True
+
+
+def _handle_delete_token(state_to_update: dict, key: str, value) -> bool:
+    """
+    Handle DELETE_TOKEN for field deletion.
+    
+    Returns:
+        bool: True if handled, False otherwise
+    """
+    if value != DELETE_TOKEN:
+        return False
+    
+    if key in state_to_update:
+        logging.info(f"update_state: Deleting key '{key}' due to DELETE_TOKEN.")
+        del state_to_update[key]
     else:
-        # Add new mission
-        logging.info(f"Adding new mission: {mission_id}")
-        state_to_update[key].append(mission_data)
+        logging.info(f"update_state: Attempted to delete key '{key}' but it doesn't exist.")
+    return True
 
 
-def _handle_missions_dict_conversion(state_to_update: dict, key: str, missions_dict: dict) -> None:
-    """Convert dictionary format missions to list append format."""
-    for mission_id, mission_data in missions_dict.items():
-        if isinstance(mission_data, dict):
-            _process_mission_data(state_to_update, key, mission_id, mission_data)
-        else:
-            logging.warning(f"Skipping invalid mission data for {mission_id}: not a dictionary")
-
-
-def _handle_active_missions_conversion(state_to_update: dict, key: str, value) -> None:
-    """Handle smart conversion of active_missions from various formats to list."""
-    logging.warning(f"SMART CONVERSION: AI attempted to set 'active_missions' as {type(value).__name__}. Converting to list append.")
+def _handle_string_to_dict_update(state_to_update: dict, key: str, value) -> bool:
+    """
+    Handle string updates to existing dictionaries (preserve dict structure).
     
-    # Initialize active_missions as empty list if it doesn't exist
-    _initialize_missions_list(state_to_update, key)
+    Returns:
+        bool: True if handled, False otherwise
+    """
+    if not isinstance(state_to_update.get(key), collections.abc.Mapping):
+        return False
     
-    # Convert based on value type
-    if isinstance(value, dict):
-        # AI is providing missions as a dict like {"main_quest_1": {...}, "side_quest_1": {...}}
-        _handle_missions_dict_conversion(state_to_update, key, value)
-    else:
-        # For other non-list types, log error and skip
-        logging.error(f"Cannot convert {type(value).__name__} to mission list. Skipping.")
+    logging.info(f"update_state: Preserving dict structure for key '{key}', adding 'status' field.")
+    existing_dict = state_to_update[key].copy()
+    existing_dict['status'] = value
+    state_to_update[key] = existing_dict
+    
+    return True
 
 
 def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
@@ -117,57 +214,35 @@ def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
     logging.info(f"--- update_state_with_changes: applying changes:\\n{_truncate_log_json(changes)}")
     
     for key, value in changes.items():
-
+        # Try each handler in order of precedence
+        
         # Case 1: Handle DELETE_TOKEN first (highest priority)
-        if value == DELETE_TOKEN:
-            if key in state_to_update:
-                logging.info(f"update_state: Deleting key '{key}' due to DELETE_TOKEN.")
-                del state_to_update[key]
-            else:
-                logging.info(f"update_state: Attempted to delete key '{key}' but it doesn't exist.")
+        if _handle_delete_token(state_to_update, key, value):
             continue
-
-        # Case 2: Explicit append syntax {'append': ...}
-        elif isinstance(value, dict) and 'append' in value:
-            logging.info(f"update_state: Detected explicit append for '{key}'.")
-            if key not in state_to_update or not isinstance(state_to_update.get(key), list):
-                state_to_update[key] = []
-            _perform_append(state_to_update[key], value['append'], key, deduplicate=(key == 'core_memories'))
         
-        # Case 3: Smart safeguard for direct 'core_memories' overwrite
-        elif key == 'core_memories':
-            logging.warning("CRITICAL SAFEGUARD: Intercepted direct overwrite on 'core_memories'. Converting to safe, deduplicated append.")
-            if key not in state_to_update or not isinstance(state_to_update.get(key), list):
-                state_to_update[key] = []
-            # The helper function is designed to handle non-lists, so we call it directly.
-            _perform_append(state_to_update[key], value, key, deduplicate=True)
-
-        # Case 4: Smart safeguard for 'active_missions' list
-        elif key == 'active_missions' and not isinstance(value, list):
-            _handle_active_missions_conversion(state_to_update, key, value)
-            continue  # Skip normal processing since we handled it
-
-        # Case 5: Recursive merge for nested dictionaries
-        elif isinstance(value, dict) and isinstance(state_to_update.get(key), collections.abc.Mapping):
-            state_to_update[key] = update_state_with_changes(state_to_update.get(key, {}), value)
+        # Case 2: Explicit append syntax
+        if _handle_append_syntax(state_to_update, key, value):
+            continue
         
-        # Case 6: Create new dictionary when incoming value is dict but existing is not
-        elif isinstance(value, dict):
-            state_to_update[key] = update_state_with_changes({}, value)
-
-        # Case 7: Handle string updates to existing dictionaries (preserve dict structure)
-        elif isinstance(state_to_update.get(key), collections.abc.Mapping):
-            logging.info(f"update_state: Preserving dict structure for key '{key}', adding 'status' field.")
-            # Don't overwrite the entire dictionary with a string
-            # Instead, treat string values as status updates
-            existing_dict = state_to_update[key].copy()
-            existing_dict['status'] = value
-            state_to_update[key] = existing_dict
-
-        # Case 8: Simple overwrite for everything else
-        else:
-            state_to_update[key] = value
-            
+        # Case 3: Core memories safeguard
+        if _handle_core_memories_safeguard(state_to_update, key, value):
+            continue
+        
+        # Case 4: Active missions smart conversion
+        if key == 'active_missions' and not isinstance(value, list):
+            MissionHandler.handle_active_missions_conversion(state_to_update, key, value)
+            continue
+        
+        # Case 5: Dictionary operations (merge or create)
+        if _handle_dict_merge(state_to_update, key, value):
+            continue
+        
+        # Case 6: String to dict updates (preserve structure)
+        if _handle_string_to_dict_update(state_to_update, key, value):
+            continue
+        
+        # Case 7: Simple overwrite for everything else
+        state_to_update[key] = value
     logging.info("--- update_state_with_changes: finished ---")
     return state_to_update
 
