@@ -160,3 +160,12 @@ ENTITY_SCHEMA_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "entity_schema_instru
 DUAL_SYSTEM_REFERENCE_PATH = os.path.join(PROMPTS_DIR, "dual_system_quick_reference.md")
 MASTER_DIRECTIVE_PATH = os.path.join(PROMPTS_DIR, "master_directive.md")
 ATTRIBUTE_CONVERSION_PATH = os.path.join(PROMPTS_DIR, "attribute_conversion_guide.md")
+
+# --- PROMPT LOADING ORDER ---
+# User-selectable prompts that are conditionally added based on campaign settings
+# These are loaded in this specific order when selected
+USER_SELECTABLE_PROMPTS = [
+    PROMPT_TYPE_NARRATIVE,
+    PROMPT_TYPE_MECHANICS, 
+    PROMPT_TYPE_CALIBRATION
+]

@@ -9,6 +9,7 @@ from game_state import GameState
 
 MAX_TEXT_BYTES = 1000000
 MAX_LOG_LINES = 20
+DELETE_TOKEN = "__DELETE__"  # Token used to mark fields for deletion in state updates
 
 def _truncate_log_json(data, max_lines=MAX_LOG_LINES):
     """Truncate JSON logs to max_lines to prevent log spam."""
@@ -117,14 +118,23 @@ def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
     
     for key, value in changes.items():
 
-        # Case 1: Explicit append syntax {'append': ...}
-        if isinstance(value, dict) and 'append' in value:
+        # Case 1: Handle DELETE_TOKEN first (highest priority)
+        if value == DELETE_TOKEN:
+            if key in state_to_update:
+                logging.info(f"update_state: Deleting key '{key}' due to DELETE_TOKEN.")
+                del state_to_update[key]
+            else:
+                logging.info(f"update_state: Attempted to delete key '{key}' but it doesn't exist.")
+            continue
+
+        # Case 2: Explicit append syntax {'append': ...}
+        elif isinstance(value, dict) and 'append' in value:
             logging.info(f"update_state: Detected explicit append for '{key}'.")
             if key not in state_to_update or not isinstance(state_to_update.get(key), list):
                 state_to_update[key] = []
             _perform_append(state_to_update[key], value['append'], key, deduplicate=(key == 'core_memories'))
         
-        # Case 2: Smart safeguard for direct 'core_memories' overwrite
+        # Case 3: Smart safeguard for direct 'core_memories' overwrite
         elif key == 'core_memories':
             logging.warning("CRITICAL SAFEGUARD: Intercepted direct overwrite on 'core_memories'. Converting to safe, deduplicated append.")
             if key not in state_to_update or not isinstance(state_to_update.get(key), list):
@@ -132,34 +142,29 @@ def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
             # The helper function is designed to handle non-lists, so we call it directly.
             _perform_append(state_to_update[key], value, key, deduplicate=True)
 
-        # NEW Case 2b: Smart safeguard for 'active_missions' list
+        # Case 4: Smart safeguard for 'active_missions' list
         elif key == 'active_missions' and not isinstance(value, list):
             _handle_active_missions_conversion(state_to_update, key, value)
             continue  # Skip normal processing since we handled it
 
-        # Case 3: Recursive merge for nested dictionaries
+        # Case 5: Recursive merge for nested dictionaries
         elif isinstance(value, dict) and isinstance(state_to_update.get(key), collections.abc.Mapping):
             state_to_update[key] = update_state_with_changes(state_to_update.get(key, {}), value)
         
-        # Case 3b: Create new dictionary when incoming value is dict but existing is not
+        # Case 6: Create new dictionary when incoming value is dict but existing is not
         elif isinstance(value, dict):
             state_to_update[key] = update_state_with_changes({}, value)
 
-        # Case 4: Handle string updates to existing dictionaries (preserve dict structure)
+        # Case 7: Handle string updates to existing dictionaries (preserve dict structure)
         elif isinstance(state_to_update.get(key), collections.abc.Mapping):
-            # Special case: __DELETE__ token should delete the key, not update status
-            if value == "__DELETE__":
-                logging.info(f"update_state: Deleting key '{key}' due to __DELETE__ token.")
-                del state_to_update[key]
-            else:
-                logging.info(f"update_state: Preserving dict structure for key '{key}', adding 'status' field.")
-                # Don't overwrite the entire dictionary with a string
-                # Instead, treat string values as status updates
-                existing_dict = state_to_update[key].copy()
-                existing_dict['status'] = value
-                state_to_update[key] = existing_dict
+            logging.info(f"update_state: Preserving dict structure for key '{key}', adding 'status' field.")
+            # Don't overwrite the entire dictionary with a string
+            # Instead, treat string values as status updates
+            existing_dict = state_to_update[key].copy()
+            existing_dict['status'] = value
+            state_to_update[key] = existing_dict
 
-        # Case 5: Simple overwrite for everything else
+        # Case 8: Simple overwrite for everything else
         else:
             state_to_update[key] = value
             

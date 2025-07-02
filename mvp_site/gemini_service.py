@@ -490,16 +490,16 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     if constants.PROMPT_TYPE_MECHANICS in selected_prompts:
         system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_SHEET))
 
-    # Filter out 'calibration' for continue_story calls
-    # NEW: Also ensure consistent order for continue_story
-    filtered_prompts = [p_type for p_type in selected_prompts if p_type in [constants.PROMPT_TYPE_NARRATIVE, constants.PROMPT_TYPE_MECHANICS]]
-
-    # Load content for narrative and mechanics
-    for p_type in filtered_prompts: 
-        system_instruction_parts.append(_load_instruction_file(p_type))
-    
-    # NEW: Always include the destiny_ruleset for continue_story too
+    # Load destiny ruleset EARLY (position 4) for system rules foundation
     system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DESTINY))
+
+    # Filter out 'calibration' for continue_story calls
+    # Calibration is only for initial campaign setup, not ongoing story
+    selected_prompts_filtered = [p_type for p_type in selected_prompts if p_type != constants.PROMPT_TYPE_CALIBRATION]
+    
+    # Load user-selected prompts (excluding calibration)
+    for p_type in selected_prompts_filtered:
+        system_instruction_parts.append(_load_instruction_file(p_type))
     
     # Add dual system reference for attribute system guidance
     system_instruction_parts.append(_load_instruction_file(constants.PROMPT_TYPE_DUAL_SYSTEM_REFERENCE))
