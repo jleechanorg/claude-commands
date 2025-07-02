@@ -26,7 +26,6 @@
 9. [Names Library](#names-library)
    - [Fantasy Names for Characters](#fantasy-names-for-characters)
    - [Banned Names](#banned-names)
-10. [Reference Materials & Influences](#reference-materials--influences)
 
 ---
 
@@ -5634,28 +5633,6 @@ Orin, Vorlag, Zaccaria, Perrin, Valerius, Theron, Lysander, Joric, Fendrel, Brad
 
 ### Banned Names  
 Lyra, Kaelen, Seraphina, Valerius, Corvus, Blackwood
-
----
-
-## Reference Materials & Influences
-
-### Literary and Gaming Influences
-- Pathfinder Kingmaker and Wrath of the Righteous
-- Diablo series
-- Divinity: Original Sin
-- Simon R. Green novels
-- Empire Trilogy by Raymond E. Feist
-- The Lord of the Rings by J.R.R. Tolkien
-- The Wheel of Time by Robert Jordan
-- Warcraft universe
-- A Game of Thrones by George R.R. Martin
-- Dungeons & Dragons
-- Warhammer 40,000
-- Angel Sanctuary manga
-- Talion: Revenant by Michael A. Stackpole
-- Frieren: Beyond Journey's End
-
-These influences have shaped the political intrigue, divine mythology, moral complexity, and epic scope of the World of Assiah.
 
 ---
 
