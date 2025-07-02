@@ -91,7 +91,7 @@ class TestInteractionIntegration(unittest.TestCase):
         """Helper function to run the god-command script and return its output."""
         # Use sys.executable to ensure we're using the python from the venv
         python_executable = sys.executable
-        script_path = "/home/jleechan/projects/worldarchitect.ai/mvp_site/main.py"
+        script_path = os.path.join(project_root, "main.py")
         base_command = [
             python_executable, script_path, "god-command",
             action,
@@ -102,7 +102,7 @@ class TestInteractionIntegration(unittest.TestCase):
             base_command.extend(["--command_string", command_string])
         
         # Run the god-command from the original directory
-        result = subprocess.run(base_command, capture_output=True, text=True, cwd="/home/jleechan/projects/worldarchitect.ai/mvp_site")
+        result = subprocess.run(base_command, capture_output=True, text=True, cwd=project_root)
         self.assertEqual(result.returncode, 0, f"god-command {action} failed: {result.stderr}")
 
         # The god-command 'ask' prints an info line before the JSON. Extract the JSON block.

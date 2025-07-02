@@ -28,7 +28,7 @@ WorldArchitect.AI is a revolutionary AI-powered platform that serves as your dig
 - **Multiple theme support** (Light, Dark, Fantasy, Cyberpunk)
 
 ### AI & Game Logic
-- **Pydantic** structured generation for 0% desync
+- **Pydantic** structured generation for improved consistency
 - **MBTI personality system** for deep character interactions
 - **Entity tracking** for narrative consistency
 - **Dual-pass generation** for accuracy

@@ -18,7 +18,8 @@ import threading
 from pathlib import Path
 
 # Add parent directories to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, project_root)
 
 # Try to import Selenium - skip tests if not available
 try:
@@ -72,7 +73,7 @@ class CampaignTimingAutomatedTests(unittest.TestCase):
     def _start_test_server(cls):
         """Start a local HTTP server to serve test files"""
         # Change to mvp_site directory to serve test files
-        mvp_site_dir = Path(__file__).parent.parent.parent
+        mvp_site_dir = Path(__file__).parent.parent
         os.chdir(mvp_site_dir)
         
         # Create simple HTTP server
@@ -276,7 +277,7 @@ class CampaignTimingAutomatedTests(unittest.TestCase):
         }
         
         # Read the JavaScript test file to verify thresholds are set correctly
-        test_file_path = Path(__file__).parent / "test_campaign_wizard_timing.js"
+        test_file_path = Path(__file__).parent.parent / "tests" / "timing" / "test_campaign_wizard_timing.js"
         
         self.assertTrue(test_file_path.exists(), 
                        f"JavaScript timing test file not found: {test_file_path}")

@@ -63,15 +63,30 @@ cd mvp_site
 print_status "Running tests in mvp_site directory..."
 print_status "Setting TESTING=true for faster AI model usage"
 
+# Check if we should include integration tests (not for GitHub export)
+include_integration=true
+if [ "$1" = "--github-export" ] || [ "$GITHUB_EXPORT" = "true" ]; then
+    include_integration=false
+    print_status "GitHub export mode - skipping integration tests"
+fi
+
 # Find all test files in tests subdirectory, excluding venv and prototype
 test_files=()
 while IFS= read -r -d '' file; do
     test_files+=("$file")
 done < <(find ./tests -name "test_*.py" -type f ! -path "./venv/*" ! -path "./node_modules/*" ! -path "./prototype/*" -print0)
 
+# Also include test_integration directory if not in GitHub export mode
+if [ "$include_integration" = true ] && [ -d "./test_integration" ]; then
+    print_status "Including integration tests from test_integration/"
+    while IFS= read -r -d '' file; do
+        test_files+=("$file")
+    done < <(find ./test_integration -name "test_*.py" -type f -print0)
+fi
+
 # Check if any test files exist
 if [ ${#test_files[@]} -eq 0 ]; then
-    print_warning "No test files found matching pattern test_*.py in current directory or tests/ subdirectory"
+    print_warning "No test files found matching pattern test_*.py in tests/ or test_integration/ directories"
     exit 0
 fi
 
