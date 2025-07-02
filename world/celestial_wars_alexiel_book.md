@@ -854,7 +854,7 @@ ch 6
 - Year 78, Month of Mirtul: Travels to Aeterna
 - Year 78, Month of Eleasis: Marries Artorius (age 17)
 - Year 78, Month of Eleint: Takes command of Third Regiment
-- the Spring Equinox celebrations of Year 79: Birth of twins Cassian and Valerius (Alexiel age 18)
+- the Spring Equinox celebrations of Year 79: Birth of twins Cassian and Darius (Alexiel age 18)
 - Year 80: Birth of daughter Sariel (Alexiel age 19)
 
 Here is the revised version of the first debriefing scene, with the new context subtly worked in.
@@ -1839,7 +1839,7 @@ Plot: Alexiel is given command of a demoralized and disgraced legion to test her
 
 Chapter 8: The Birth of a Dynasty
 
-Plot: A few years pass. Alexiel and Artorius are married, and their twin sons, Cassian and Valerius, are born, followed by Sariel. This chapter explores the deep psychological toll of Alexiel's deception as she tries to be a wife and mother. She loves her family, but her inability to be truly vulnerable forces her to adopt a new mask for her children: the distant, perfect "God-Warrior," who teaches lessons of strength instead of offering simple affection.
+Plot: A few years pass. Alexiel and Artorius are married, and their twin sons, Cassian and Darius, are born, followed by Sariel. This chapter explores the deep psychological toll of Alexiel's deception as she tries to be a wife and mother. She loves her family, but her inability to be truly vulnerable forces her to adopt a new mask for her children: the distant, perfect "God-Warrior," who teaches lessons of strength instead of offering simple affection.
 
 Incorporate nobles plotting against her
 
@@ -3181,13 +3181,13 @@ And they both knew there were still two more of those things out there.
 [Location: The Barracks, Seraph's Watch.]
 
 [Physical exhaustion weighing on her movements]
-In the smoky ruin of the common room, the surviving legionary, a grizzled veteran named Valerius, looked at Alexiel, his eyes filled with a battle-hardened awe. "What now, my Lady? We hunt the others?"
+In the smoky ruin of the common room, the surviving legionary, a grizzled veteran named Darius, looked at Alexiel, his eyes filled with a battle-hardened awe. "What now, my Lady? We hunt the others?"
 
 Alexiel shook her head, her mind coldly processing the new tactical reality. Mission objective: reconnaissance. Objective complete. Threat identified: Chitinous Weaver, pack hunter, phases through solid matter, vulnerable to fire. Current force non-viable for extermination. Further engagement is not strategic; it is attrition.
 
 "No," she said, her voice firm. "The mission is complete. We have the intelligence we came for. To continue with a force of two would be an act of ego, not strategy. We are leaving."
 
-Valerius stared at her, shock warring with his ingrained discipline. For a commander to choose retreat over a "glorious" last stand was almost unheard of in the Imperial military. It was also the smartest order he had ever received.
+Darius stared at her, shock warring with his ingrained discipline. For a commander to choose retreat over a "glorious" last stand was almost unheard of in the Imperial military. It was also the smartest order he had ever received.
 
 "The main gate is too heavy for two men to unbar," he said, his mind catching up. "How do we get out?"
 
@@ -3718,7 +3718,7 @@ Alexiel's Focus: Applying her research to solve the Weaver problem permanently, 
 
 Month 1-8: The Weaver Purge. Armed with a deep understanding of the creatures' biology from the live specimens, Alexiel's commission develops new weapons: alchemical agents that dissolve Weaver webbing and specialized carapace-piercing arrowheads. She then spends the better part of the year leading her Starfall Guard in a brutal, systematic extermination campaign throughout the valley and upper catacombs of Seraph's Watch. The campaign is a stunning success, but it is costly, resulting in the deaths of twenty members of the Starfall Guard. The sacrifice cements the unit's legendary status and their fanatical devotion to the commander who bled with them.
 
-Month 9: The twin sons, Cassian and Valerius, are born. The birth of healthy, male heirs to Artorius solidifies Alexiel's position within the Empyrean Bloodline, to the disgust of the hardliners.
+Month 9: The twin sons, Cassian and Darius, are born. The birth of healthy, male heirs to Artorius solidifies Alexiel's position within the Empyrean Bloodline, to the disgust of the hardliners.
 
 Month 10-12: With the birth of her children, Alexiel begins to adopt her "God-Warrior" mask in her private life. She loves her sons fiercely, but her inability to be truly vulnerable forces her to express it through lessons of strength and discipline, not simple affection, a change that a loving but concerned Artorius begins to notice.
 
@@ -3757,9 +3757,9 @@ Feats: Alert, War Caster, Mage Slayer (Assumed)
 
 Three years had transformed Alexiel. The uncertain defector was gone, replaced by the Magister of the Watch, a celebrated hero of the Imperium and a figure of immense power. The Starfall Guard was now her personal legion, the most elite fighting force in the empire, armed with strange new weapons and armor derived from her secret research.
 
-She stood watching her sons. Cassian and Valerius, now energetic toddlers, sparred on a plush carpet with blunted wooden swords. She observed their movements with the cool, analytical eye of a commander assessing recruits, not the warm gaze of a mother. This was the "God-Warrior" mask she had forged for her family: a persona of distant, perfect strength.
+She stood watching her sons. Cassian and Darius, now energetic toddlers, sparred on a plush carpet with blunted wooden swords. She observed their movements with the cool, analytical eye of a commander assessing recruits, not the warm gaze of a mother. This was the "God-Warrior" mask she had forged for her family: a persona of distant, perfect strength.
 
-Artorius entered the room, a weary but fond smile on his face. The years had deepened the lines of responsibility around his eyes. "Cassian has your fire," he said, coming to stand beside her. "Valerius has your focus."
+Artorius entered the room, a weary but fond smile on his face. The years had deepened the lines of responsibility around his eyes. "Cassian has your fire," he said, coming to stand beside her. "Darius has your focus."
 
 "Fire without focus is a weakness," Alexiel replied without looking away from the boys. "Focus without fire is a liability. They must learn to temper both."
 
@@ -4194,7 +4194,7 @@ Fatigue: 0
 
 The Winter Solstice celebrations of the previous year had marked another milestone—Sariel, now four years old's third birthday had been celebrated with the pageantry befitting an Imperial princess.
 
-The afternoon sunlight streamed through the high windows of the library, illuminating motes of dust dancing in the air. It was a rare moment of peace. Alexiel sat on a plush carpet with her daughter, now four years old, Sariel, now four years old. The twins, Cassian and Valerius, now three years old, were with their martial tutors. But Sariel, now four years old, a quiet, preternaturally bright child of four, loved the quiet of the library as much as her mother did. Alexiel was showing her an illustrated bestiary, pointing out the different mythical creatures.
+The afternoon sunlight streamed through the high windows of the library, illuminating motes of dust dancing in the air. It was a rare moment of peace. Alexiel sat on a plush carpet with her daughter, now four years old, Sariel, now four years old. The twins, Cassian and Darius, now three years old, were with their martial tutors. But Sariel, now four years old, a quiet, preternaturally bright child of four, loved the quiet of the library as much as her mother did. Alexiel was showing her an illustrated bestiary, pointing out the different mythical creatures.
 
 "This one," Alexiel said softly, "is a Gorgon. They live in the high mountains..."
 
@@ -4891,13 +4891,13 @@ ch 20
 
 [Location: The Grand Strategy Chamber, Zenith Spire, Aeterna.]
 
-The atmosphere in the Grand Strategy Chamber was as cold and hard as the obsidian floor. The three surviving Apex Generals of the Imperium stood around the glowing holographic map, their presence filling the room with an aura of immense, ancient power. Legatus Orin Zeth, the Cunning Tactician; Commander Kyra Vian, the Young Prodigy; and Lord Jaxom Vale, the Peerless Duelist. They were legends, each with centuries of victories to their name. And they were waiting to receive their orders from a sixteen-year-old girl.
+The atmosphere in the Grand Strategy Chamber was as cold and hard as the obsidian floor. The three surviving Apex Generals of the Imperium stood around the glowing holographic map, their presence filling the room with an aura of immense, ancient power. Legatus Orin Zeth, the Cunning Tactician; Commander Kyra Vian, the Young Prodigy; and Lord Jaxom Harren, the Peerless Duelist. They were legends, each with centuries of victories to their name. And they were waiting to receive their orders from a sixteen-year-old girl.
 
 Raziel was a silent shadow in his high-backed chair, observing.
 
 Alexiel entered, dressed not in the robes of her new house, but in the simple, functional uniform of a field commander. She walked directly to the map, her Unseeing Eyes already tracing the crimson tide of Lucifer's advancing forces.
 
-Lord Jaxom Vale spoke first, his voice a low challenge. "Magister Arcanus. The Lord Regent has seen fit to place you in supreme command. The legions await their orders. What is your strategy to save the empire?"
+Lord Jaxom Harren spoke first, his voice a low challenge. "Magister Arcanus. The Lord Regent has seen fit to place you in supreme command. The legions await their orders. What is your strategy to save the empire?"
 
 Alexiel met his gaze, her expression unreadable. "We will not save the empire by defending its borders," she said, her voice quiet but carrying an absolute authority that silenced any potential retort. "We will save it by breaking its greatest enemy."
 
@@ -5287,7 +5287,7 @@ Alexiel watched him, her mind a relentless processor, searching for the angle, t
 
 "For three years, I have reviewed the records," Titus said, his voice heavy with the weight of his own folly. "Fortress Vigil. Seraph's Watch. Your strategies... your victories... while I was consumed by my own selfish rage, you were the one truly protecting his legacy. You were the one fighting to save the Imperium he loved."
 
-His gaze softened as he looked past her, towards the Prince's residential spire. "And I have seen you with his children. With Cassian and Valerius. With little Sariel." His voice cracked, the first genuine emotion she had ever heard from him. "They are all that is left of him. You are their mother. You have protected them, when I would have seen them orphaned by my own blind fury."
+His gaze softened as he looked past her, towards the Prince's residential spire. "And I have seen you with his children. With Cassian and Darius. With little Sariel." His voice cracked, the first genuine emotion she had ever heard from him. "They are all that is left of him. You are their mother. You have protected them, when I would have seen them orphaned by my own blind fury."
 
 He straightened, the old princely authority returning to his shoulders, but now tempered with a new, hard-won humility.
 
@@ -5313,7 +5313,7 @@ The Battle of the Mourning Fields and Artorius's death happened when Alexiel was
 
 A second time skip of roughly six years has now passed. The war with Lucifer has been a long, brutal stalemate.
 
-Alexiel is now 25 years old. The twins, Cassian and Valerius, are 8. Sariel, born shortly before Artorius's death, is 5.
+Alexiel is now 25 years old. The twins, Cassian and Darius, are 8. Sariel, born shortly before Artorius's death, is 5.
 
 Her "Starfall Gambit" is not a new plan, but the culmination of years of patient, secret preparation.
 
@@ -5325,7 +5325,7 @@ Here is the revised scene, reflecting the correct ages and the new context of a 
 
 The nursery of years past had long since been converted into a sparring chamber, its soft carpets replaced by padded mats. The air was filled with the hiss and smack of blunted practice swords. Alexiel entered silently, watching her sons.
 
-At eight years old, the twins were already formidable. Cassian, a whirlwind of furious offense, pressed his attack on his brother with a ferocity that echoed the battle-rage of his uncle, Titus. Valerius, a prodigy of defense, moved with a calm, precise economy of motion, his shield and blade a seemingly impenetrable wall.
+At eight years old, the twins were already formidable. Cassian, a whirlwind of furious offense, pressed his attack on his brother with a ferocity that echoed the battle-rage of his uncle, Titus. Darius, a prodigy of defense, moved with a calm, precise economy of motion, his shield and blade a seemingly impenetrable wall.
 
 Alexiel watched them for a full minute before speaking, her voice cutting cleanly through their grunts of exertion. "Enough."
 
@@ -5333,7 +5333,7 @@ They immediately froze and turned to her, panting, their faces slick with sweat.
 
 "Cassian," she said, her tone analytical. "Your fury makes you predictable. You telegraph every power-strike, leaving yourself open. A skilled opponent would have disarmed you three times."
 
-She then turned to Valerius. "Your defense is flawless. It is also useless. A perfect defense wins no wars. It only delays defeat. You fail to see the openings your brother's recklessness gives you."
+She then turned to Darius. "Your defense is flawless. It is also useless. A perfect defense wins no wars. It only delays defeat. You fail to see the openings your brother's recklessness gives you."
 
 It was the harsh, demanding love of the God-Warrior, the only love she knew how to give. They nodded, accepting the critique without complaint.
 
@@ -5387,7 +5387,7 @@ The news arrived like a death sentence. A lone scout, his horse collapsing dead 
 
 Panic, for the first time in centuries, threatened to grip the heart of the Imperium. But in the Grand Strategy Chamber, there was only a cold, terrifying calm.
 
-Alexiel stood before the great map of the city, now the undisputed supreme commander of the Imperial war effort. The three surviving Apex Generals—Commander Kyra Vian, Legatus Orin Zeth, and Lord Jaxom Vale—stood before her, their expressions grim. Prince Titus stood with them, his own fury now channeled into a disciplined readiness. The time for political maneuvering was over. There was only the war.
+Alexiel stood before the great map of the city, now the undisputed supreme commander of the Imperial war effort. The three surviving Apex Generals—Commander Kyra Vian, Legatus Orin Zeth, and Lord Jaxom Harren—stood before her, their expressions grim. Prince Titus stood with them, his own fury now channeled into a disciplined readiness. The time for political maneuvering was over. There was only the war.
 
 "His strategy is sound," Alexiel stated, her voice cutting through the tension. "He knows we cannot allow the capital to fall. He is forcing us into a decisive, conventional battle where his power is at its peak. We will not deny him."
 
@@ -5459,7 +5459,7 @@ The battle began not with a charge, but with a challenge. At Lucifer's command, 
 
 Then came the drums. A low, thunderous heartbeat from the Host's lines, and the great army began its advance. It was not a chaotic rush, but a slow, inexorable, terrifying tide of disciplined fury.
 
-The Imperial defense was textbook perfection. Prince Titus stood on the central bastion, his armor gleaming, his commands roaring across the walls as he directed the catapults. Commander Kyra Vian and Lord Jaxom Vale moved along the ramparts, their presence inspiring the thousands of soldiers who unleashed volley after volley of arrows into the approaching horde.
+The Imperial defense was textbook perfection. Prince Titus stood on the central bastion, his armor gleaming, his commands roaring across the walls as he directed the catapults. Commander Kyra Vian and Lord Jaxom Harren moved along the ramparts, their presence inspiring the thousands of soldiers who unleashed volley after volley of arrows into the approaching horde.
 
 To Lucifer, watching from his command post, it looked exactly as he had predicted. It was the desperate, final stand of a cornered empire, fighting with honor, courage, and a complete lack of imagination.
 
@@ -6069,7 +6069,7 @@ That final accusation—that he was a mere reflection of the monstrous Creator h
 
 In that single, fatal moment of emotional chaos, a new front in the battle opened.
 
-A wave of black-clad warriors slammed into the flank of Lucifer's elite guard. The sixty Silent Acolytes, with several true, lesser angels in their midst, tore into the Apostate lines with terrifying, disciplined fury. At their head, their own four wings blazing, were the Imperium's two remaining Apex Generals, Commander Kyra Vian and Lord Jaxom Vale.
+A wave of black-clad warriors slammed into the flank of Lucifer's elite guard. The sixty Silent Acolytes, with several true, lesser angels in their midst, tore into the Apostate lines with terrifying, disciplined fury. At their head, their own four wings blazing, were the Imperium's two remaining Apex Generals, Commander Kyra Vian and Lord Jaxom Harren.
 
 Through the breach they created, a single, silent figure glided, untouched by the chaos. It was Raziel himself, in person, his own four wings of cold starlight unfurled behind him. In his hands, he held a spear crafted from the solidified light of a dying Seraphim.
 
@@ -6131,7 +6131,7 @@ The holy artifact, a weapon of pure light, sputtered. The silver and gold radian
 
 He unleashed this new power not as a blast, but as a wave of pure, psychic despair.
 
-It washed over the battlefield. The Imperial soldiers faltered. Their courage, their honor, their hope—it all turned to ash in their hearts, replaced by an overwhelming, soul-crushing certainty of their own defeat. Men dropped their swords and fell to their knees, weeping. Even the mighty Apex General, Jaxom Vale, stumbled back, his face a mask of sudden, inexplicable terror.
+It washed over the battlefield. The Imperial soldiers faltered. Their courage, their honor, their hope—it all turned to ash in their hearts, replaced by an overwhelming, soul-crushing certainty of their own defeat. Men dropped their swords and fell to their knees, weeping. Even the mighty Apex General, Jaxom Harren, stumbled back, his face a mask of sudden, inexplicable terror.
 
 The battle was not over. It was decided.
 
@@ -6147,7 +6147,7 @@ ch 29
 
 The wave of psychic despair Lucifer unleashed shattered the Imperium's morale, but it could not break the will of its greatest champions. The battle for the plaza devolved from a clash of armies into a series of desperate, heroic duels amidst a sea of chaos.
 
-Lord Jaxom Vale, the Peerless Duelist, found himself locked in a battle of impossible speed against Leliel, the Whispering Prince. Vale was the finer swordsman, his technique flawless, but Leliel was a master of illusions. With a subtle twist of magic, Leliel created a phantom image of himself, and as Vale lunged for the feint, the real Leliel’s blade slid into his back. The Imperium’s greatest duelist died with a look of surprise, outplayed by a lie.
+Lord Jaxom Harren, the Peerless Duelist, found himself locked in a battle of impossible speed against Leliel, the Whispering Prince. Vale was the finer swordsman, his technique flawless, but Leliel was a master of illusions. With a subtle twist of magic, Leliel created a phantom image of himself, and as Vale lunged for the feint, the real Leliel’s blade slid into his back. The Imperium’s greatest duelist died with a look of surprise, outplayed by a lie.
 
 Nearby, Legatus Orin Zeth, the Cunning Tactician, tried to rally the broken Imperial lines. He was a brilliant commander, but he was not a frontline brawler. Abaddon, the Unchained Fury, a demigod of pure physical might, smashed through the shield wall like it was kindling and ended the Legatus’s life with a single, brutal, contemptuous blow.
 
@@ -6333,7 +6333,7 @@ Alexiel stood in the silent plaza, the power of a fallen god thrumming in her ve
 
 She hesitated.
 
-I must hide this power, the thought came, swift and absolute. It was not a strategic calculation, but a protective instinct. She thought of Cassian and Valerius, her fierce, proud sons. She thought of Sariel, her quiet, brilliant daughter.
+I must hide this power, the thought came, swift and absolute. It was not a strategic calculation, but a protective instinct. She thought of Cassian and Darius, her fierce, proud sons. She thought of Sariel, her quiet, brilliant daughter.
 
 As powerful as I am, my children will become targets. They will be the children of a god, and I cannot always protect them from that. I do not know how cosmic attention works, but a power like this... it is a beacon. It could attract the attention of the original Seraphim, or whatever the Creator truly was.
 
@@ -6360,19 +6360,19 @@ epilogue
 
 Ten years had passed. The training terrace, once a place of quiet solitude for Alexiel, was now filled with the sharp clang of practice swords.
 
-The twin Princes, Cassian and Valerius, were now eighteen, and they were the living embodiments of their parents. Cassian fought with the passionate, honor-bound fury of Artorius, his movements powerful and heroic. Valerius, quieter and more focused, possessed a defensive perfection that was almost supernatural, his mind clearly analyzing his twin's every move. They were locked in a fierce but loving duel.
+The twin Princes, Cassian and Darius, were now eighteen, and they were the living embodiments of their parents. Cassian fought with the passionate, honor-bound fury of Artorius, his movements powerful and heroic. Darius, quieter and more focused, possessed a defensive perfection that was almost supernatural, his mind clearly analyzing his twin's every move. They were locked in a fierce but loving duel.
 
 Sariel, now fifteen, did not spar. She sat under the shade of the silver-barked ironwood tree, a complex astronomical device hovering in the air beside her as she made minute adjustments. Her focus was absolute, her intelligence a quiet, formidable presence.
 
 Alexiel watched them from the edge of the terrace. At twenty-nine, the years of war and grief had settled into a quiet, unshakeable wisdom. She was no longer just a commander; she was a Queen Regent in all but name, the guardian of an age. The "God-Warrior" mask she had worn for them as children had softened.
 
-"Cassian," she called out, her voice calm but carrying. "Your fury makes you predictable. You telegraph your power-strikes." She then turned her gaze to her other son. "Valerius, a perfect defense wins no wars. It only delays defeat. You fail to see the openings your brother's recklessness gives you."
+"Cassian," she called out, her voice calm but carrying. "Your fury makes you predictable. You telegraph your power-strikes." She then turned her gaze to her other son. "Darius, a perfect defense wins no wars. It only delays defeat. You fail to see the openings your brother's recklessness gives you."
 
 The twins stopped, breathing heavily, and nodded, accepting her critique with the respect they always showed her.
 
 Alexiel smiled, a rare, genuine expression. "Sariel," she said, turning to her daughter. "Your assessment?"
 
-Sariel looked up from her device. "Cassian's center of gravity is too high on his final swing," she said without hesitation. "And Valerius fails to exploit the .75 seconds of recovery time that follows. If this were a true battle, they would both be dead."
+Sariel looked up from her device. "Cassian's center of gravity is too high on his final swing," she said without hesitation. "And Darius fails to exploit the .75 seconds of recovery time that follows. If this were a true battle, they would both be dead."
 
 Alexiel nodded, a look of profound pride in her eyes. Her children, the legacy of Artorius, were growing into their own forms of strength. The future of the Imperium was in good, if challenging, hands.
 

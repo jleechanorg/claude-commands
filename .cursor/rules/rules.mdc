@@ -342,6 +342,22 @@ For complete project details including technology stack, architecture, developme
     *   **NEVER use**: `git checkout origin/main -b branch-name` as it sets tracking to main
     *   **Push Safety**: Always use explicit push syntax: `git push origin HEAD:branch-name` instead of relying on `-u` or default tracking
     *   **Recovery Protocol**: If accidental main push is detected, immediately notify user and provide recovery options
+    
+13. **Pull Request Branch Verification Protocol:**
+    *   **CRITICAL**: Before creating a pull request, ALWAYS verify that the branch contains only intended commits
+    *   **Pre-PR Checklist** (MANDATORY before creating any PR):
+        1. Check commits that will be included: `git log main..HEAD --oneline`
+        2. Verify file changes: `git diff main...HEAD --name-only`
+        3. Count commits: `git rev-list --count main..HEAD`
+        4. If unrelated commits are found: WARN the user immediately
+    *   **Warning Format**: "⚠️ WARNING: This branch contains X unrelated commits from other work. Creating a PR now will include all these changes. Recommend creating a fresh branch from latest main and cherry-picking only the intended commit(s)."
+    *   **Clean Branch Pattern**: When warned about unrelated commits:
+        ```bash
+        git checkout main && git pull origin main
+        git checkout -b clean-branch-name
+        git cherry-pick <specific-commit-hash>
+        ```
+    *   **PR Creation**: Only proceed with PR creation after confirming the branch is clean or user explicitly approves including unrelated commits
 
 ## IV. Environment, Tooling & Scripts
 

@@ -2050,11 +2050,11 @@ Alexiel's original cavalry saber (worn, but not used in major combat)
 Signet ring of his house
 
 
-### Character Dossier: Valerius val Artorius
+### Character Dossier: Darius val Artorius
 #### Part 1: Personality Profile
 I. Core Identity
 
-Name: Valerius val Artorius
+Name: Darius val Artorius
 
 Archetype/Role: The Cold Disciplinarian
 
@@ -2147,7 +2147,7 @@ Liberation: Would allow him to accept the value of intuition and the "human elem
 #### Part 2: Mechanical Character Sheet
 I. Core Attributes
 
-Name: Valerius val Artorius
+Name: Darius val Artorius
 
 Class/Concept: Fighter (Battle Master) / Tactician
 

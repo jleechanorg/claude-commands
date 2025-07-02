@@ -37,9 +37,9 @@
 ### Character Ages at Campaign Start
 - **Sariel val Artorius**: 15 years old (was 14 when taken hostage at the Battle of the Sacrifice Fields)
 - **Cassian val Artorius**: 18 years old (twin, was 17 when mother died)
-- **Valerius val Artorius**: 18 years old (twin, was 17 when mother died)
+- **Darius val Artorius**: 18 years old (twin, was 17 when mother died)
 - **Sariel's Companions**: 16 years old
-  - Rowan Thorne (scholar/healer)
+  - Gareth Ashfeld (scholar/healer)
   - Gideon (defensive magic specialist)
   - Cressida (loyal friend)
 
@@ -110,8 +110,8 @@ The last of the elder fey courts, retreating deeper into their hidden sanctuarie
 
 **Sub-factions:**
 - **The Stillwood Sentinels**: The largest and most traditionalist elven faction, dedicated to a policy of absolute isolationism. They believe the only path to survival is to remain perfectly hidden within their forest enclave, avoiding all contact with the violent, short-lived races. The ancient archdruid Lianor has been their matriarch and guiding hand for centuries.
-- **The Whisper-Binders**: A secret society of elven spies and lore-keepers who believe that hiding is a slow death. They use their skills to gather intelligence and leak dangerous truths to the outside world, seeking to undermine the Imperium without drawing direct attention to their people. Their enigmatic and calculating spymaster is the elf known as Corvus.
-- **The Ashen-Sworn**: A war band of radicalized elves who have rejected isolationism in favor of vengeance. Traumatized by Imperial atrocities, they have allied themselves with factions of the Shattered Host, adopting their ferocity to wage a guerilla war against the Imperium. They are led by the fierce and bitter warrior Elara.
+- **The Whisper-Binders**: A secret society of elven spies and lore-keepers who believe that hiding is a slow death. They use their skills to gather intelligence and leak dangerous truths to the outside world, seeking to undermine the Imperium without drawing direct attention to their people. Their enigmatic and calculating spymaster is the elf known as Silas.
+- **The Ashen-Sworn**: A war band of radicalized elves who have rejected isolationism in favor of vengeance. Traumatized by Imperial atrocities, they have allied themselves with factions of the Shattered Host, adopting their ferocity to wage a guerilla war against the Imperium. They are led by the fierce and bitter warrior Mira.
 
 ### The Glimmering Combine (Gnomes)
 A merchant confederation that has filled the power vacuum through trade networks and economic influence. They profit from the chaos while maintaining careful neutrality, trading with all sides.
@@ -235,7 +235,7 @@ Intelligence network masquerading as library (The Athenaeum), based in Nexus.
 - **The Battle of the Sacrifice Fields (Year 10 of the New Peace)**: Alexiel's death when Sariel (age 14) was taken hostage by the warlord Mordan
 - **Treaty of Nexus**: Formal end of bipolar power structure
 - **Year 11 of the New Peace, Kythorn Day 1**: Anniversary of Alexiel's death
-- **Year 11 of the New Peace, Kythorn Day 2**: Campaign start date - Sariel is now 15, the twins are 18, her companions (Rowan Thorne, Gideon, Cressida) are 16
+- **Year 11 of the New Peace, Kythorn Day 2**: Campaign start date - Sariel is now 15, the twins are 18, her companions (Gareth Ashfeld, Gideon, Cressida) are 16
 - **Current multi-polar world**: Multiple independent powers competing
 
 ---
@@ -827,11 +827,11 @@ Masterwork Plate Armor of the Starfall Guard
 Alexiel's original cavalry saber (worn, but not used in major combat)
 
 Signet ring of his house
-### Character Dossier: Valerius val Artorius
+### Character Dossier: Darius val Artorius
 #### Part 1: Personality Profile
 I. Core Identity
 
-Name: Valerius val Artorius
+Name: Darius val Artorius
 
 Age: 18 (Twin brother of Cassian, was 17 when mother died)
 
@@ -926,7 +926,7 @@ Liberation: Would allow him to accept the value of intuition and the "human elem
 #### Part 2: Mechanical Character Sheet
 I. Core Attributes
 
-Name: Valerius val Artorius
+Name: Darius val Artorius
 
 Class/Concept: Fighter (Battle Master) / Tactician
 
@@ -3520,7 +3520,7 @@ Sariel's story begins in the shadow of her mother's legend and death. Born into 
 
 **The First Alliance**: Sariel knows she needs honorable allies. She reaches out to Durgin "The Breaker" Iron-Hand of the Adamant Vault, using her knowledge of a corrupt noble's finances to help him expose a mutual enemy. She forges her first political alliance based on shared ideals, not manipulation.
 
-**Mastering the Mirror**: Now understanding her potential, she begins secretly training her innate Mirror Magic. She is a late bloomer, and it is a struggle. Rowan Thorne helps her research the ethical implications of her power, while Gideon helps her practice defensive applications, becoming her trusted training partner.
+**Mastering the Mirror**: Now understanding her potential, she begins secretly training her innate Mirror Magic. She is a late bloomer, and it is a struggle. Gareth Ashfeld helps her research the ethical implications of her power, while Gideon helps her practice defensive applications, becoming her trusted training partner.
 
 **A Bridge to the Clans**: Believing in restorative justice for the crimes of the Edict of Chains, Sariel opens a secret dialogue with War-Chief Vorlag. She uses her deep historical knowledge to arrange for the return of sacred artifacts stolen by the Imperium centuries ago, beginning the long, difficult process of building trust with the First-Spear Clans.
 
@@ -3546,7 +3546,7 @@ Sariel's story begins in the shadow of her mother's legend and death. Born into 
 #### Arc 1: The Pariah's Ordeal (Tier 1: Levels 2-7)
 **Theme**: This arc is about survival. Sariel is a genuine victim of courtly politics and her family's scorn. She is lost, confused, and uses her intellect reactively, only to defend herself. The arc culminates in a discovery that shatters her worldview and plants the seed of her transformation.
 
-**A Brother's Fury**: The story begins with Cassian's public condemnation. The accusation devastates Sariel, reinforcing her feelings of guilt and worthlessness. She is genuinely terrified of her brother's rage. Her companions, Gideon, Cressida, and Rowan Thorne, form a protective circle around her, not as part of a plan, but because they are her only friends shielding a frightened young woman from a genuine threat.
+**A Brother's Fury**: The story begins with Cassian's public condemnation. The accusation devastates Sariel, reinforcing her feelings of guilt and worthlessness. She is genuinely terrified of her brother's rage. Her companions, Gideon, Cressida, and Gareth Ashfeld, form a protective circle around her, not as part of a plan, but because they are her only friends shielding a frightened young woman from a genuine threat.
 
 **The Whispering Ledgers**: When a rival house frames her for treason, Sariel is truly panicked. There is no master plan; she and her friends are in a desperate race against time to find proof of her innocence before she is arrested and executed. This ordeal is the first time she is forced to use her intellect as a weapon for survival, and the victory, when it comes, is a gasp of relief, not a calculated step.
 
@@ -4316,7 +4316,7 @@ A Null's eyes are marked by irises that are shot through with a network of fine,
 - Sariel's companions are:
   - **Ser Gideon Vance** (age 28) - Knight of the Starfall Guard, sworn shield to Sariel
   - **Lady Cressida Valeriana** (age 16) - Childhood friend, lady-in-waiting and political operative
-  - **Rowan Thorne** (age 16) - Childhood friend, personal scribe and healer
+  - **Gareth Ashfeld** (age 16) - Childhood friend, personal scribe and healer
 - Deceased characters:
   - **Alexiel val Artorius** - Died Year 10 of the New Peace at the Battle of the Sacrifice Fields
   - **Commander Kyra Vian** - Died at the Starfall Gambit fighting Samael alongside Alexiel's victory over Lucifer
@@ -4712,17 +4712,17 @@ Key Personality Traits: Melancholic, ancient beyond measure, coldly pragmatic be
 
 Quirks & Habits: Constantly weaves memories into physical form—small charms made of leaves and dreams. She speaks to trees as if they were old friends. Tears of silver sap occasionally leak from her eyes.
 
-### Character Dossier: Elara of the Ashen Wardens
+### Character Dossier: Mira of the Ashen Wardens
 #### Part 1: Personality Profile
 I. Core Identity
 
-Name: Elara Thornwhisper
+Name: Mira Thornwhisper
 
 Archetype/Role: The Vengeful Hunter
 
 Occupation/Social Standing: Captain of the Ashen Wardens; Leader of the militant wing of the Sylvan Remnant.
 
-D&D Alignment: (Internal) Chaotic Neutral (Elara's war is personal. She doesn't fight for justice or balance, but for vengeance against those who destroyed her world.)
+D&D Alignment: (Internal) Chaotic Neutral (Mira's war is personal. She doesn't fight for justice or balance, but for vengeance against those who destroyed her world.)
 
 Myers-Briggs Type (MBTI): (Internal) ISTP (The Virtuoso: A master of her craft—which happens to be killing—practical and focused on results.)
 
@@ -4736,17 +4736,17 @@ Key Personality Traits: Ruthless, patient like a stalking cat, grimly determined
 
 Quirks & Habits: Carves a notch in her bow for every significant kill. Refuses to speak Common, viewing it as the language of murderers. Sleeps in the burned remains of destroyed groves as penance.
 
-### Character Dossier: Corvus the Memory-Keeper
+### Character Dossier: Silas the Memory-Keeper
 #### Part 1: Personality Profile
 I. Core Identity
 
-Name: Corvus of the Obsidian Archives
+Name: Silas of the Obsidian Archives
 
 Archetype/Role: The Last Loremaster
 
 Occupation/Social Standing: Keeper of elven history and magical knowledge; De facto spymaster of the Remnant.
 
-D&D Alignment: (Internal) Lawful Neutral (Corvus believes in the preservation of knowledge above all else. He will trade with anyone, betray anyone, if it means saving another fragment of elven lore.)
+D&D Alignment: (Internal) Lawful Neutral (Silas believes in the preservation of knowledge above all else. He will trade with anyone, betray anyone, if it means saving another fragment of elven lore.)
 
 Myers-Briggs Type (MBTI): (Internal) INTJ (The Architect: A strategic mastermind focused on the long-term survival of elven knowledge, even if the elves themselves perish.)
 
@@ -5435,7 +5435,7 @@ A ring bearing her minor house's crest.
 ### Part 1: Personality Profile
 I. Core Identity
 
-Name: Rowan Thorne
+Name: Gareth Ashfeld
 
 Archetype/Role: The Grounded Heart
 
@@ -5532,7 +5532,7 @@ Liberation: Would allow him to develop a more complete understanding of the worl
 ### Part 2: Mechanical Character Sheet
 I. Core Attributes
 
-Name: Rowan Thorne
+Name: Gareth Ashfeld
 
 Class/Concept: Expert (Non-Combatant Scholar/Healer)
 
@@ -5632,7 +5632,7 @@ All members of this lineage, including the Apex tier, are half-celestial and not
 Orin, Vorlag, Zaccaria, Perrin, Valerius, Theron, Lysander, Joric, Fendrel, Braddock, Cygnus, Hesper, Linnea, Sariel, Morwen, Keris, Lyra, Vespera, Eliara, Tamsin, Zephyr, Halcyon, Kione, Ishan, Kenjiro, Ren, Sorim, Takeo, Jin, Haru, Kaida, Asami, Himari, Kaelen, Ember, Griselda, Torvin, Zanjul, Borborygmos, Rakdos, Mog, Grak, Urzok, Nazgûl, Shelob, Skarn, Malakor, Ichor, Vorinclex, Elesh Norn, Jin-Gitaxias, Sheoldred, Urabrask, Atrax, Phyrexia, Mirrodin, Zendikar, Innistrad, Ravnica, Azorius, Dimir, Gruul, Selesnya, Orzhov, Izzet, Golgari, Simic, Boros, Cyric, Talos, Myrkul, Bane, Bhaal, Asmodeus, Mephistopheles, Dispater, Mammon, Belial, Leviathan, Samael, Abaddon, Azazel, Beelzebub, Lucifuge, Rofocale, Adrammelech, Lilith, Naamah, Agrat, Mahlat, Eisheth, Zenunim, Rahab, Tanin'iver, Nehushtan, Chiviah, Zophiel, Raziel, Tzaphqiel, Cassiel
 
 ### Banned Names  
-Lyra, Kaelen, Seraphina, Valerius, Corvus, Blackwood
+Lyra, Kaelen, Seraphina, Valerius, Silas, Blackwood
 
 ---
 
