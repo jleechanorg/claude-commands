@@ -52,16 +52,6 @@ PRESENT CHARACTERS:
         self.assertEqual(response.narrative, narrative)
         self.assertEqual(response.entities_mentioned, entities)
         self.assertEqual(response.location_confirmed, location)
-        
-    def test_narrative_response_validation(self):
-        """Test validation rules"""
-        # Test minimum narrative length
-        with self.assertRaises(ValueError):
-            NarrativeResponse(
-                narrative="Too short",
-                entities_mentioned=["Gideon"],
-                location_confirmed="Tavern"
-            )
             
     def test_entity_tracking_instruction(self):
         """Test EntityTrackingInstruction creation"""

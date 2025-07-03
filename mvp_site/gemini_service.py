@@ -40,7 +40,7 @@ def json_datetime_serializer(obj):
 
 # --- CONSTANTS ---
 # Use flash for standard, cheaper operations.
-DEFAULT_MODEL = 'gemini-2.5-flash-lite-preview-06-17'
+DEFAULT_MODEL = 'gemini-2.5-flash'
 # Use pro for large-context operations.
 LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'
 # Use 1.5 flash for testing as requested
@@ -48,9 +48,9 @@ TEST_MODEL = 'gemini-1.5-flash'
 
 # Model cycling order for 503 errors - try these in sequence
 MODEL_FALLBACK_CHAIN = [
-    "gemini-2.5-flash-lite-preview-06-17",  # Starting point
-    "gemini-2.5-flash",                     # Same generation fallback
-    'gemini-2.5-pro',
+    "gemini-2.5-flash",    
+    "gemini-2.5-pro",                 
+    "gemini-2.5-flash-lite-preview-06-17",
     "gemini-2.0-flash",                     # Cross-generation fallback
     "gemini-2.0-flash-lite",                # Highest availability
 ]
@@ -58,11 +58,11 @@ MODEL_FALLBACK_CHAIN = [
 # Use pro model for first N user inputs for higher quality world building
 USE_PRO_MODEL_FOR_FIRST_N_INPUTS = 3
 
-MAX_TOKENS = 30000
+MAX_TOKENS = 50000
 TEMPERATURE = 0.9
 TARGET_WORD_COUNT = 300
 # Add a safety margin for JSON responses
-JSON_MODE_MAX_TOKENS = 20000  # Reduced limit when using JSON mode for reliability
+JSON_MODE_MAX_TOKENS = 50000  # Reduced limit when using JSON mode for reliability
 MAX_INPUT_TOKENS = 750000 
 SAFE_CHAR_LIMIT = MAX_INPUT_TOKENS * 4
 

@@ -24,8 +24,6 @@ class NarrativeResponse:
             raise ValueError("Narrative must be a string")
         
         cleaned = narrative.strip()
-        if len(cleaned) < 20:
-            raise ValueError("Narrative must be at least 20 characters long")
         
         return cleaned
     

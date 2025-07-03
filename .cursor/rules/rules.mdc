@@ -158,7 +158,7 @@ For complete project details including technology stack, architecture, developme
     *   NEVER use the legacy `google.generativeai` package or `genai.GenerativeModel()` pattern.
 
 10. **Do Not Change the AI Model:**
-    *   **AI Models**: Current models are `DEFAULT_MODEL = 'gemini-2.5-flash-lite-preview-06-17'`, `LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'`, `TEST_MODEL = 'gemini-1.5-flash'` - never change without explicit user authorization
+    *   **AI Models**: Current models are `DEFAULT_MODEL = 'gemini-2.5-flash'`, `LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'`, `TEST_MODEL = 'gemini-1.5-flash'` - never change without explicit user authorization
 
 11. **Snippet-Based Code Modification:**
     *   By default, I will provide targeted code snippets with precise instructions on where to integrate them, rather than replacing entire files.
