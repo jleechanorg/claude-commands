@@ -167,6 +167,34 @@ class TestRobustJSONParser(unittest.TestCase):
             # Should handle all these cases gracefully
             if result and "narrative" in result:
                 self.assertIsInstance(result["narrative"], str)
+    
+    def test_empty_string_values(self):
+        """Test that empty string values are preserved, not skipped"""
+        # Test with empty narrative
+        json_empty_narrative = '{"narrative": "", "entities_mentioned": ["test"], "location_confirmed": "place"}'
+        result, was_incomplete = parse_llm_json_response(json_empty_narrative)
+        
+        self.assertIsNotNone(result)
+        self.assertFalse(was_incomplete)
+        self.assertEqual(result["narrative"], "")  # Should be empty string, not missing
+        self.assertEqual(result["entities_mentioned"], ["test"])
+        
+        # Test with empty location
+        json_empty_location = '{"narrative": "Story", "entities_mentioned": [], "location_confirmed": ""}'
+        result, was_incomplete = parse_llm_json_response(json_empty_location)
+        
+        self.assertIsNotNone(result)
+        self.assertFalse(was_incomplete)
+        self.assertEqual(result["location_confirmed"], "")  # Should be empty string, not "Unknown"
+        
+        # Test extraction of empty values from truncated JSON
+        truncated_empty = '{"narrative": "", "location_confirmed": ""'
+        result, was_incomplete = RobustJSONParser.parse(truncated_empty)
+        
+        self.assertIsNotNone(result)
+        self.assertTrue(was_incomplete)
+        self.assertEqual(result["narrative"], "")
+        self.assertEqual(result["location_confirmed"], "")
 
 
 if __name__ == '__main__':

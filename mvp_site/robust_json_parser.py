@@ -5,6 +5,12 @@ import json
 import re
 import logging
 from typing import Tuple, Dict, Any, Optional
+from json_utils import (
+    try_parse_json,
+    complete_truncated_json,
+    extract_json_boundaries,
+    extract_field_value
+)
 
 
 class RobustJSONParser:
@@ -30,11 +36,9 @@ class RobustJSONParser:
         text = text.strip()
         
         # Strategy 1: Try standard JSON parsing first
-        try:
-            result = json.loads(text)
+        result, success = try_parse_json(text)
+        if success:
             return result, False
-        except json.JSONDecodeError:
-            pass
         
         # Strategy 2: Find JSON boundaries and fix common issues
         try:
@@ -90,91 +94,13 @@ class RobustJSONParser:
     @staticmethod
     def _fix_json_boundaries(text: str) -> str:
         """Fix common JSON boundary issues"""
-        # Remove any text before the first { or [
-        start_match = re.search(r'[{\[]', text)
-        if not start_match:
-            return text
-        
-        # Find the last } or ]
-        text = text[start_match.start():]
-        
-        # Try to find matching closing bracket
-        if text.startswith('{'):
-            # Count braces to find the right closing point
-            brace_count = 0
-            last_close = -1
-            in_string = False
-            escape_next = False
-            
-            for i, char in enumerate(text):
-                if escape_next:
-                    escape_next = False
-                    continue
-                    
-                if char == '\\':
-                    escape_next = True
-                    continue
-                    
-                if char == '"' and not escape_next:
-                    in_string = not in_string
-                    continue
-                
-                if not in_string:
-                    if char == '{':
-                        brace_count += 1
-                    elif char == '}':
-                        brace_count -= 1
-                        if brace_count == 0:
-                            last_close = i
-            
-            if last_close > 0:
-                return text[:last_close + 1]
-        
-        return text
+        extracted = extract_json_boundaries(text)
+        return extracted if extracted else text
     
     @staticmethod
     def _complete_json(text: str) -> str:
         """Attempt to complete incomplete JSON"""
-        if not text.strip():
-            return "{}"
-        
-        # Ensure it starts with { or [
-        if not text.strip().startswith(('{', '[')):
-            return text
-        
-        completed = text
-        
-        # Count quotes to see if we're in the middle of a string
-        quote_count = 0
-        in_string = False
-        escape_next = False
-        
-        for char in text:
-            if escape_next:
-                escape_next = False
-                continue
-            if char == '\\':
-                escape_next = True
-                continue
-            if char == '"' and not escape_next:
-                quote_count += 1
-                in_string = not in_string
-        
-        # If odd number of quotes, we're in a string
-        if quote_count % 2 == 1:
-            completed += '"'
-        
-        # Count brackets
-        open_braces = text.count('{') - text.count('}')
-        open_brackets = text.count('[') - text.count(']')
-        
-        # Close any open arrays first
-        completed += ']' * open_brackets
-        
-        # Close any open objects
-        completed += '}' * open_braces
-        
-        return completed
+        return complete_truncated_json(text)
     
     @staticmethod
     def _extract_fields(text: str) -> Optional[Dict[str, Any]]:
@@ -182,23 +108,9 @@ class RobustJSONParser:
         result = {}
         
         # Extract narrative field
-        narrative_patterns = [
-            r'"narrative"\s*:\s*"((?:[^"\\]|\\.)*)"',  # Standard JSON string
-            r'"narrative"\s*:\s*"((?:[^"\\]|\\.)*?)(?=\s*[,}]|$)',  # Incomplete string
-            r'"narrative"\s*:\s*"(.*?)(?:"|$)',  # Very loose match
-        ]
-        
-        for pattern in narrative_patterns:
-            match = re.search(pattern, text, re.DOTALL)
-            if match:
-                narrative = match.group(1)
-                # Unescape common sequences
-                narrative = narrative.replace('\\n', '\n')
-                narrative = narrative.replace('\\t', '\t')
-                narrative = narrative.replace('\\"', '"')
-                narrative = narrative.replace('\\\\', '\\')
-                result['narrative'] = narrative
-                break
+        narrative = extract_field_value(text, 'narrative')
+        if narrative is not None:
+            result['narrative'] = narrative
         
         # Extract entities_mentioned array
         entities_match = re.search(
@@ -215,12 +127,9 @@ class RobustJSONParser:
             result['entities_mentioned'] = entities
         
         # Extract location_confirmed
-        location_match = re.search(
-            r'"location_confirmed"\s*:\s*"([^"]*)"',
-            text
-        )
-        if location_match:
-            result['location_confirmed'] = location_match.group(1)
+        location = extract_field_value(text, 'location_confirmed')
+        if location is not None:
+            result['location_confirmed'] = location
         
         return result if result else None
     

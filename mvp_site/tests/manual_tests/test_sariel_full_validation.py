@@ -10,11 +10,7 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Any
 
-# Add the project root to the Python path
-# We're in mvp_site/tests/manual_tests/, so we need to go up to mvp_site/
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-sys.path.insert(0, project_root)
-
+# Import setup handled by __init__.py
 from main import create_app
 from test_integration.integration_test_lib import IntegrationTestSetup
 from game_state import GameState

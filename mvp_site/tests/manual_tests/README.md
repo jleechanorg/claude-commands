@@ -2,6 +2,28 @@
 
 This directory contains tests that make extensive API calls and should only be run manually when needed.
 
+## Running Manual Tests
+
+There are several ways to run these tests:
+
+### Method 1: Using the run_manual_test.py script (Recommended)
+```bash
+cd mvp_site
+TESTING=true python run_manual_test.py tests/manual_tests/test_sariel_exact_production.py
+```
+
+### Method 2: As Python modules
+```bash
+cd mvp_site
+TESTING=true python -m tests.manual_tests.test_sariel_exact_production
+```
+
+### Method 3: Using vpython (legacy)
+```bash
+cd mvp_site
+TESTING=true vpython tests/manual_tests/test_sariel_exact_production.py
+```
+
 ## Tests in this directory:
 
 ### test_sariel_full_validation.py

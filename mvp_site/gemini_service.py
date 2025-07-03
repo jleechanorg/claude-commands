@@ -40,7 +40,7 @@ def json_datetime_serializer(obj):
 
 # --- CONSTANTS ---
 # Use flash for standard, cheaper operations.
-DEFAULT_MODEL = 'gemini-2.5-flash'
+DEFAULT_MODEL = 'gemini-2.5-flash-lite-preview-06-17'
 # Use pro for large-context operations.
 LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'
 # Use 1.5 flash for testing as requested
@@ -48,11 +48,11 @@ TEST_MODEL = 'gemini-1.5-flash'
 
 # Model cycling order for 503 errors - try these in sequence
 MODEL_FALLBACK_CHAIN = [
-    'gemini-2.5-flash',
-    'gemini-1.5-flash', 
+    "gemini-2.5-flash-lite-preview-06-17",  # Starting point
+    "gemini-2.5-flash",                     # Same generation fallback
     'gemini-2.5-pro',
-    'gemini-1.5-pro',
-    'gemini-1.0-pro'
+    "gemini-2.0-flash",                     # Cross-generation fallback
+    "gemini-2.0-flash-lite",                # Highest availability
 ]
 
 # Use pro model for first N user inputs for higher quality world building

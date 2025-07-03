@@ -4,6 +4,11 @@ Debug utilities for handling incomplete JSON responses from Gemini API
 import json
 import logging
 import re
+from json_utils import (
+    try_parse_json,
+    complete_truncated_json,
+    extract_field_value
+)
 
 def fix_incomplete_json(response_text):
     """
@@ -19,65 +24,27 @@ def fix_incomplete_json(response_text):
         return None, False
         
     # First, try to parse as-is
-    try:
-        return json.loads(response_text), False
-    except json.JSONDecodeError:
-        pass
+    result, success = try_parse_json(response_text)
+    if success:
+        return result, False
     
-    # Check if it's incomplete JSON
+    # Try to complete truncated JSON
     response_text = response_text.strip()
+    completed = complete_truncated_json(response_text)
     
-    # Common patterns of incomplete JSON
-    incomplete = False
+    # Try to parse the completed JSON
+    result, success = try_parse_json(completed)
+    if success:
+        logging.warning("Fixed incomplete JSON response")
+        return result, True
     
-    # Case 1: Missing closing quotes and braces
-    if response_text.startswith('{') and not response_text.endswith('}'):
-        incomplete = True
-        # Count open braces vs close braces
-        open_braces = response_text.count('{')
-        close_braces = response_text.count('}')
-        
-        # Add missing close braces
-        response_text += '}' * (open_braces - close_braces)
-        
-        # Check if the last field is incomplete (missing closing quote)
-        # Look for pattern like: "field": "value with no closing quote
-        lines = response_text.split('\n')
-        last_line = lines[-2] if lines[-1] == '}' else lines[-1]
-        
-        if '"' in last_line and not last_line.rstrip().endswith('"') and not last_line.rstrip().endswith(','):
-            # Find the last quote position
-            last_quote_pos = last_line.rfind('"')
-            if last_quote_pos > 0 and last_line[last_quote_pos-1] == ':':
-                # This is likely an incomplete string value
-                lines[-2 if lines[-1] == '}' else -1] = last_line + '"'
-                response_text = '\n'.join(lines)
+    # As a last resort, try to extract just the narrative field
+    logging.error(f"Failed to fix incomplete JSON")
+    narrative = extract_field_value(response_text, "narrative")
+    if narrative:
+        return {"narrative": narrative, "_incomplete": True}, True
     
-    # Case 2: Truncated in the middle of a string
-    # Check if there's an odd number of quotes (excluding escaped quotes)
-    unescaped_quotes = re.findall(r'(?<!\\)"', response_text)
-    if len(unescaped_quotes) % 2 != 0:
-        incomplete = True
-        # Add a closing quote before the closing braces
-        if response_text.endswith('}'):
-            response_text = response_text[:-1] + '"}' 
-        else:
-            response_text += '"}'
-    
-    # Try to parse the fixed JSON
-    try:
-        result = json.loads(response_text)
-        if incomplete:
-            logging.warning("Fixed incomplete JSON response")
-        return result, incomplete
-    except json.JSONDecodeError as e:
-        logging.error(f"Failed to fix incomplete JSON: {e}")
-        # As a last resort, try to extract just the narrative field
-        narrative_match = re.search(r'"narrative"\s*:\s*"([^"]*)', response_text, re.DOTALL)
-        if narrative_match:
-            return {"narrative": narrative_match.group(1), "_incomplete": True}, True
-        
-        return None, True
+    return None, True
 
 
 def validate_json_response(response_dict):

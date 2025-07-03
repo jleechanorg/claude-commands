@@ -598,6 +598,64 @@ nonDropdownButtons.forEach(btn => {
 
 **Critical Insight:** UI enhancements are system integration projects, not isolated feature additions. They require the same level of testing rigor as core functionality changes.
 
+## Code Review Blind Spots - Automated Refactoring (July 2025)
+
+### Lesson: Empty String Handling in Truthiness Checks
+**CRITICAL INCIDENT:** During JSON parser refactoring, missed that `if value:` excludes empty strings while `if value is not None:` preserves them. GitHub Copilot caught this in code review.
+
+### Root Cause Analysis
+1. **Why missed?** → Focused on structural duplication, not semantic differences
+2. **Why structural focus?** → Automated refactoring emphasizes code patterns over edge cases  
+3. **Why edge cases ignored?** → No tests for empty string handling existed
+4. **Why no tests?** → Original code didn't have comprehensive edge case coverage
+5. **Why accepted without tests?** → Assumed behavior preservation during extraction
+
+### Lesson: Semantic Preservation During Refactoring
+**MANDATORY CHECKS** when extracting common code:
+1. **Truthiness vs None checks**: 
+   - `if value:` → Excludes: `""`, `0`, `[]`, `False`
+   - `if value is not None:` → Only excludes: `None`
+2. **Type coercion differences**:
+   - `str(value)` → Changes type permanently
+   - `value or default` → May skip valid falsy values
+3. **Edge case inventory**:
+   - Empty strings, zero values, empty collections
+   - None vs missing keys in dicts
+   - Type variations (string "0" vs int 0)
+
+### Lesson: Unused Import Cleanup
+**After any refactoring that moves code:**
+1. Run linter/formatter to identify unused imports
+2. Review each import removal for side effects
+3. Verify no runtime imports or type hints affected
+
+### Prevention Protocol for Refactoring
+1. **Before extraction**: Document current behavior including edge cases
+2. **During extraction**: Preserve exact semantics unless explicitly changing
+3. **After extraction**: Add tests for edge cases discovered
+4. **Code review focus**: Not just "does it work" but "does it work identically"
+
+### Technical Pattern Recognition
+```python
+# SEMANTIC CHANGE ALERT: These are NOT equivalent
+if narrative:  # Skips empty string ""
+if narrative is not None:  # Preserves empty string ""
+
+# SAFE REFACTORING: Preserve original semantics
+# Original: if data.get('field'):
+# Extracted: if extracted_value:  # WRONG if empty strings valid
+# Extracted: if extracted_value is not None:  # RIGHT
+```
+
+### Why Automated Reviews Matter
+**GitHub Copilot and similar tools catch patterns humans miss:**
+- Systematic scanning for common pitfalls
+- No "refactoring fatigue" that causes oversight
+- Consistent application of best practices
+- Cross-file impact analysis
+
+**Meta-Lesson:** Refactoring is not just moving code—it's preserving complete behavioral contracts including edge cases. Always verify semantic equivalence, not just structural similarity.
+
 ## Enhanced Components Complete Implementation Failure (December 2024)
 
 ### CRITICAL INCIDENT: Total UI Breakdown from CSS/JS Enhancement Attempt

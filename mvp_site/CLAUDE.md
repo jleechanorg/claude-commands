@@ -182,6 +182,16 @@ grep -r "process.*special_token" *.py
 ### Automatic Rule Updates
 **MANDATORY**: Whenever I make a mistake, encounter a bug I should have caught, or receive correction from the user, I MUST immediately update both CLAUDE.md and .cursor/rules/rules.mdc with the lesson learned. I will not wait for the user to remind me - this is an automatic responsibility that happens every time I fail or am corrected.
 
+### Code Review Blind Spots - Empty String Handling
+**CRITICAL RULE**: When refactoring code that checks for truthiness, ALWAYS verify empty string handling:
+- ❌ BAD: `if value:` - This skips empty strings which may be valid
+- ✅ GOOD: `if value is not None:` - This preserves empty strings
+- **Common locations**: JSON parsing, form validation, data extraction
+- **Why missed**: Automated refactoring focuses on structural changes, not semantic differences
+- **Prevention**: Add specific tests for empty string cases when refactoring conditionals
+
+**Lesson**: Missed empty string handling bugs in JSON parser refactoring because the extraction focused on structural duplication, not behavioral differences. The `if narrative:` check was copied verbatim without considering that empty strings are valid JSON values.
+
 ### Temporary Fix Protocol - NEVER GLOSS OVER
 **CRITICAL RULE**: When implementing ANY temporary fix or workaround:
 1. **IMMEDIATELY flag it** - "⚠️ TEMPORARY FIX: This will break when [specific scenario]"

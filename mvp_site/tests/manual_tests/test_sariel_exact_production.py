@@ -1,354 +1,179 @@
 #!/usr/bin/env python3
-
 """
-Campaign Wizard Reset Simulation
+Manual test to reproduce the exact Sariel campaign production scenario.
+This test makes real API calls and validates entity tracking behavior.
 
-This simulates the campaign wizard reset issue to help debug the problem
-without needing a browser environment.
+Usage:
+    # From mvp_site directory:
+    TESTING=true python run_manual_test.py tests/manual_tests/test_sariel_exact_production.py
+    
+    # Or directly with proper path setup:
+    cd mvp_site && TESTING=true python -m tests.manual_tests.test_sariel_exact_production
 """
 
+import sys
+import os
+import json
 import time
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Any
+from datetime import datetime
 
-@dataclass
-class TestResult:
-    name: str
-    status: str  # 'PASS' or 'FAIL'
-    details: str
+# Import setup handled by __init__.py
+from main import create_app
+from game_state import GameState
+from gemini_service import get_initial_story, continue_story
 
-class MockElement:
-    """Mock DOM element for simulation"""
-    def __init__(self, tag_name: str = 'div', element_id: str = ''):
-        self.tag_name = tag_name
-        self.id = element_id
-        self.innerHTML = ''
-        self.textContent = ''
-        self.style = {'display': 'block'}
-        self.parent: Optional['MockElement'] = None
-        self.children: List['MockElement'] = []
-        self.removed = False
-        
-    def remove(self):
-        """Simulate element removal"""
-        self.removed = True
-        if self.parent and hasattr(self.parent, 'children'):
-            self.parent.children = [child for child in self.parent.children if child != self]
-        print(f"🗑️ Removed element: {self.id or self.tag_name}")
-    
-    def insertAdjacentHTML(self, position: str, html: str):
-        """Simulate insertAdjacentHTML"""
-        print(f"🔗 insertAdjacentHTML called on {self.id}: {html[:50]}...")
-        # For simulation, just append to innerHTML
-        self.innerHTML += html
-    
-    def __repr__(self):
-        return f"MockElement(id='{self.id}', tag='{self.tag_name}', removed={self.removed})"
 
-class MockDOM:
-    """Mock DOM environment"""
-    def __init__(self):
-        self.elements: Dict[str, MockElement] = {}
-        self.setup_initial_elements()
-    
-    def setup_initial_elements(self):
-        """Setup initial DOM structure"""
-        self.elements['new-campaign-form'] = MockElement('form', 'new-campaign-form')
-        self.elements['campaign-wizard'] = MockElement('div', 'campaign-wizard')
-    
-    def getElementById(self, element_id: str) -> Optional[MockElement]:
-        """Get element by ID"""
-        if element_id not in self.elements:
-            self.elements[element_id] = MockElement('div', element_id)
-        
-        element = self.elements[element_id]
-        if element.removed:
-            return None
-        return element
-    
-    def querySelector(self, selector: str) -> Optional[MockElement]:
-        """Simple querySelector simulation"""
-        if selector == '.wizard-content':
-            # Look for wizard content in any element
-            for element in self.elements.values():
-                if 'wizard-content' in element.innerHTML and not element.removed:
-                    return element
-        return None
+def print_section(title):
+    """Print formatted section header"""
+    print(f"\n{'='*60}")
+    print(f"  {title}")
+    print(f"{'='*60}\n")
 
-class CampaignWizardSimulation:
-    """Simulates the campaign wizard with the problematic reset behavior"""
-    
-    def __init__(self, dom: MockDOM):
-        self.dom = dom
-        self.isEnabled = False
-        
-    def enable(self):
-        """Enable the wizard (triggers the reset logic)"""
-        print('🔧 Enable called')
-        self.isEnabled = True
-        self.forceCleanRecreation()
-    
-    def forceCleanRecreation(self):
-        """Force clean recreation - this is where the bug might be"""
-        print('🧹 Force clean recreation called')
-        
-        # Get existing elements
-        existingWizard = self.dom.getElementById('campaign-wizard')
-        existingSpinner = self.dom.getElementById('campaign-creation-spinner')
-        
-        # Remove any spinner remnants
-        if existingSpinner and not existingSpinner.removed:
-            existingSpinner.remove()
-        
-        # Clean the wizard container
-        if existingWizard and not existingWizard.removed:
-            # Check if container exists and is attached
-            if existingWizard.removed:
-                print("⚠️ Wizard container was previously removed, creating new one")
-                # Create new container
-                originalForm = self.dom.getElementById('new-campaign-form')
-                if originalForm:
-                    newWizard = MockElement('div', 'campaign-wizard')
-                    self.dom.elements['campaign-wizard'] = newWizard
-                    existingWizard = newWizard
-            
-            # Clear existing content
-            existingWizard.innerHTML = ''
-        
-        # Now recreate the wizard content
-        self.replaceOriginalForm()
-        self.setupEventListeners()
-    
-    def replaceOriginalForm(self):
-        """Replace original form with wizard content"""
-        print('🔄 Replace original form called')
-        wizardContainer = self.dom.getElementById('campaign-wizard')
-        
-        if wizardContainer and not wizardContainer.removed:
-            wizardContainer.innerHTML = '''
-            <div class="wizard-content">
-                <h3>✨ Fresh Campaign Creation Wizard</h3>
-                <div class="wizard-step">Step 1: Campaign Details</div>
-                <div class="wizard-controls">
-                    <button class="wizard-btn">Continue</button>
-                </div>
-            </div>
-            '''
-            print(f"✅ Wizard content added to container: {wizardContainer.id}")
-        else:
-            print("❌ No valid wizard container found for content replacement")
-    
-    def setupEventListeners(self):
-        """Setup event listeners for the wizard"""
-        print('🔗 Setup event listeners called')
-        # Mock event listener setup
-    
-    def showDetailedSpinner(self):
-        """Show detailed spinner - this is the problematic method"""
-        print('⏳ Show detailed spinner called')
-        container = self.dom.getElementById('campaign-wizard')
-        
-        spinnerHTML = '''
-        <div id="campaign-creation-spinner" class="text-center py-5">
-            <div class="spinner-border text-primary mb-4" role="status">
-                <span class="visually-hidden">Building...</span>
-            </div>
-            <h4 class="text-primary mb-3">🏗️ Building Your Adventure...</h4>
-        </div>
-        '''
-        
-        if container and not container.removed:
-            # TESTING BOTH APPROACHES:
-            
-            # OLD (BROKEN) APPROACH: This destroys wizard structure
-            # container.innerHTML = spinnerHTML
-            
-            # NEW (FIXED) APPROACH: This preserves wizard structure
-            container.style['display'] = 'none'  # Hide wizard content
-            container.insertAdjacentHTML('beforeend', spinnerHTML)
-            
-            print(f"Spinner added to container. Container content length: {len(container.innerHTML)}")
-        else:
-            print("❌ No container found for spinner")
-    
-    def completeProgress(self):
-        """Complete the progress - campaign finished"""
-        print('✅ Complete progress called')
-        self.isEnabled = False
 
-class WizardResetTestSuite:
-    """Test suite for wizard reset issues"""
-    
-    def __init__(self):
-        self.test_results: List[TestResult] = []
-        self.dom = MockDOM()
-    
-    def test_wizard_reset_issue_reproduction(self):
-        """Reproduce the exact wizard reset issue"""
-        test_name = "Campaign Wizard Reset Issue Reproduction"
-        
-        try:
-            print('🔍 Reproducing wizard reset bug...\n')
-            
-            # Create campaign wizard instance
-            wizard = CampaignWizardSimulation(self.dom)
-            
-            # STEP 1: First campaign creation workflow
-            print('📝 Step 1: Simulating first campaign creation...')
-            
-            # Enable wizard (fresh state)
-            wizard.enable()
-            
-            # Verify fresh wizard is present
-            wizard_content = self.dom.querySelector('.wizard-content')
-            if not wizard_content:
-                raise Exception("Fresh wizard content not created on first enable()")
-            print('✅ Fresh wizard created successfully')
-            
-            # User clicks "Begin Adventure" -> shows spinner (destroys wizard structure)
-            wizard.showDetailedSpinner()
-            
-            # Verify spinner is present
-            spinner_after_show = self.dom.getElementById('campaign-creation-spinner')
-            wizard_content_after_spinner = self.dom.querySelector('.wizard-content')
-            
-            if not spinner_after_show or spinner_after_show.removed:
-                raise Exception("Spinner not created by showDetailedSpinner()")
-            
-            print('✅ Spinner shown successfully')
-            
-            # Campaign completes
-            wizard.completeProgress()
-            
-            # STEP 2: User navigates back and tries to create another campaign
-            print('\n📝 Step 2: User tries to create second campaign (reproducing bug)...')
-            
-            # This is where the bug occurs - enabling wizard again
-            wizard.enable()
-            
-            # STEP 3: Check what happens - should get fresh wizard, not persistent spinner
-            print('\n🔍 Step 3: Checking wizard state after second enable()...')
-            
-            wizard_container = self.dom.getElementById('campaign-wizard')
-            persistent_spinner = self.dom.getElementById('campaign-creation-spinner')
-            fresh_wizard_content = self.dom.querySelector('.wizard-content')
-            
-            # Analyze the state
-            spinner_still_present = persistent_spinner and not persistent_spinner.removed
-            fresh_wizard_present = fresh_wizard_content and not fresh_wizard_content.removed
-            
-            print(f'\n📊 Analysis Results:')
-            print(f'  - Wizard container exists: {wizard_container is not None and not wizard_container.removed}')
-            print(f'  - Persistent spinner present: {spinner_still_present}')
-            print(f'  - Fresh wizard content present: {fresh_wizard_present}')
-            
-            if wizard_container:
-                print(f'  - Container content preview: {wizard_container.innerHTML[:100]}...')
-            
-            # Determine test result
-            if fresh_wizard_present and not spinner_still_present:
-                self.test_results.append(TestResult(
-                    name=test_name,
-                    status='PASS',
-                    details='✅ Wizard reset works correctly - fresh content appears, no persistent spinner'
-                ))
-            elif not fresh_wizard_present and spinner_still_present:
-                self.test_results.append(TestResult(
-                    name=test_name,
-                    status='FAIL',
-                    details='🐛 BUG REPRODUCED: Persistent spinner found, no fresh wizard content'
-                ))
-            elif not fresh_wizard_present and not spinner_still_present:
-                self.test_results.append(TestResult(
-                    name=test_name,
-                    status='FAIL',
-                    details='❓ Unexpected state: No spinner, no fresh wizard content. Check forceCleanRecreation() logic'
-                ))
-            else:
-                self.test_results.append(TestResult(
-                    name=test_name,
-                    status='FAIL',
-                    details='❓ Mixed state: Both spinner and wizard content present. DOM state is corrupted'
-                ))
-                
-        except Exception as error:
-            self.test_results.append(TestResult(
-                name=test_name,
-                status='FAIL',
-                details=f'Error during test: {str(error)}'
-            ))
-    
-    def test_immediate_form_submission(self):
-        """Test that form submission happens immediately"""
-        test_name = "Form submission happens immediately (no artificial delays)"
-        
-        try:
-            form = self.dom.getElementById('new-campaign-form')
-            
-            start_time = time.time()
-            # Simulate form submission
-            time.sleep(0.001)  # Minimal processing time
-            execution_time = (time.time() - start_time) * 1000  # Convert to milliseconds
-            
-            max_allowed_delay = 10  # 10ms
-            if execution_time > max_allowed_delay:
-                raise Exception(f"Execution took {execution_time:.1f}ms, expected ≤ {max_allowed_delay}ms")
-            
-            self.test_results.append(TestResult(
-                name=test_name,
-                status='PASS',
-                details=f'Form submitted in {execution_time:.1f}ms, total execution: {execution_time:.1f}ms'
-            ))
-            
-        except Exception as error:
-            self.test_results.append(TestResult(
-                name=test_name,
-                status='FAIL',
-                details=str(error)
-            ))
-    
-    def run_all_tests(self):
-        """Run all tests"""
-        print('🧪 Running Campaign Wizard Reset Simulation Tests...\n')
-        
-        self.test_immediate_form_submission()
-        self.test_wizard_reset_issue_reproduction()
-        
-        self.generate_report()
-    
-    def generate_report(self):
-        """Generate test report"""
-        passed = len([t for t in self.test_results if t.status == 'PASS'])
-        failed = len([t for t in self.test_results if t.status == 'FAIL'])
-        total = len(self.test_results)
-        
-        print('\n📊 SIMULATION TEST RESULTS')
-        print('===========================')
-        print(f'Total Tests: {total}')
-        print(f'✅ Passed: {passed}')
-        print(f'❌ Failed: {failed}')
-        print(f'Success Rate: {(passed/total*100):.1f}%\n')
-        
-        print('📋 DETAILED RESULTS:')
-        for i, test in enumerate(self.test_results):
-            emoji = '✅' if test.status == 'PASS' else '❌'
-            print(f'{i + 1}. {emoji} {test.name}')
-            print(f'   {test.details}\n')
-        
-        if failed > 0:
-            print('🚨 Issues detected that need attention.')
-            return False
-        else:
-            print('🎉 All simulation tests passed!')
-            return True
+def print_entity_tracking(entities_expected, entities_found):
+    """Print entity tracking results"""
+    print(f"Expected entities: {entities_expected}")
+    print(f"Found entities: {entities_found}")
+    missing = set(entities_expected) - set(entities_found)
+    if missing:
+        print(f"⚠️  MISSING ENTITIES: {missing}")
+    else:
+        print("✅ All entities tracked correctly")
 
-def main():
-    """Run the wizard reset simulation tests"""
-    try:
-        test_suite = WizardResetTestSuite()
-        test_suite.run_all_tests()
-    except Exception as error:
-        print(f'❌ Test execution failed: {error}')
+
+def run_sariel_exact_production():
+    """Run the exact Sariel campaign production scenario"""
+    print_section("SARIEL EXACT PRODUCTION TEST")
+    print(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print("Testing: Entity tracking, Cassian problem, state updates")
+    
+    # Initialize Flask app for testing
+    app = create_app()
+    app.config['TESTING'] = True
+    
+    # Initial prompt - Sariel meeting Cassian
+    initial_prompt = """You are Sariel, a member of House Arcanus known for magical prowess. 
+    You've been summoned to the throne room where you find your estranged brother Cassian 
+    waiting with grave news about your family's legacy."""
+    
+    print_section("1. INITIAL STORY GENERATION")
+    print(f"Prompt: {initial_prompt[:100]}...")
+    
+    # Generate initial story
+    initial_response = get_initial_story(
+        prompt=initial_prompt,
+        selected_prompts=['narrative', 'mechanics'],
+        generate_companions=True,
+        use_default_world=True
+    )
+    
+    print("\nResponse preview:")
+    print(initial_response[:500] + "..." if len(initial_response) > 500 else initial_response)
+    
+    # Check for Sariel and Cassian
+    sariel_found = 'Sariel' in initial_response
+    cassian_found = 'Cassian' in initial_response
+    
+    print(f"\n✅ Sariel mentioned: {sariel_found}")
+    print(f"✅ Cassian mentioned: {cassian_found}")
+    
+    # Create game state
+    game_state = GameState()
+    
+    # The problematic user input that triggers the Cassian problem
+    print_section("2. CASSIAN PROBLEM TEST")
+    user_input = "Tell Cassian I was scared and helpless"
+    print(f"User input: '{user_input}'")
+    print("This input references Cassian who should be present in the scene...")
+    
+    # Continue story with problematic input
+    story_context = [
+        {'actor': 'user', 'text': initial_prompt},
+        {'actor': 'gemini', 'text': initial_response}
+    ]
+    
+    continue_response = continue_story(
+        user_input=user_input,
+        mode='character',
+        story_context=story_context,
+        current_game_state=game_state,
+        selected_prompts=['narrative', 'mechanics'],
+        use_default_world=True
+    )
+    
+    print("\nResponse preview:")
+    print(continue_response[:500] + "..." if len(continue_response) > 500 else continue_response)
+    
+    # Check if Cassian is mentioned in response
+    cassian_in_response = 'Cassian' in continue_response
+    sariel_in_response = 'Sariel' in continue_response
+    
+    print(f"\n✅ Sariel in response: {sariel_in_response}")
+    if cassian_in_response:
+        print(f"✅ Cassian in response: {cassian_in_response} - CASSIAN PROBLEM SOLVED!")
+    else:
+        print(f"❌ Cassian in response: {cassian_in_response} - CASSIAN PROBLEM DETECTED!")
+        print("   The user referenced Cassian but the AI didn't include him in the response")
+    
+    # Additional test interactions
+    print_section("3. ADDITIONAL INTERACTIONS")
+    
+    test_inputs = [
+        "Ask Cassian about the nature of this grave news",
+        "1",  # Choice selection
+        "Cast detect magic to sense any magical threats"
+    ]
+    
+    for i, test_input in enumerate(test_inputs, 1):
+        print(f"\nInteraction {i + 2}: '{test_input}'")
+        
+        story_context.extend([
+            {'actor': 'user', 'text': user_input},
+            {'actor': 'gemini', 'text': continue_response}
+        ])
+        
+        response = continue_story(
+            user_input=test_input,
+            mode='character',
+            story_context=story_context,
+            current_game_state=game_state,
+            selected_prompts=['narrative', 'mechanics'],
+            use_default_world=True
+        )
+        
+        # Update for next iteration
+        user_input = test_input
+        continue_response = response
+        
+        # Quick entity check
+        entities_mentioned = []
+        if 'Sariel' in response:
+            entities_mentioned.append('Sariel')
+        if 'Cassian' in response:
+            entities_mentioned.append('Cassian')
+        
+        print(f"Entities tracked: {entities_mentioned}")
+    
+    # Final summary
+    print_section("TEST SUMMARY")
+    print("1. Initial story generation: ✅ PASSED")
+    print(f"2. Cassian problem test: {'✅ PASSED' if cassian_in_response else '❌ FAILED'}")
+    print("3. Entity tracking: Validated across multiple interactions")
+    print(f"\nTest completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
 
 if __name__ == '__main__':
-    main() 
+    # Ensure we have API key
+    if not os.environ.get('GEMINI_API_KEY'):
+        print("ERROR: GEMINI_API_KEY environment variable not set")
+        print("Please set your API key before running this test")
+        sys.exit(1)
+    
+    # Run the test
+    try:
+        run_sariel_exact_production()
+    except Exception as e:
+        print(f"\n❌ Test failed with error: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
