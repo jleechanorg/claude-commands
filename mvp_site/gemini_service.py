@@ -421,7 +421,7 @@ def _process_structured_response(raw_response_text, expected_entities):
         expected_entities: List of expected entity names
         
     Returns:
-        tuple: (response_text, validation_logged)
+        str: Response text with state updates appended
     """
     response_text, structured_response = parse_structured_response(raw_response_text)
     
@@ -433,6 +433,13 @@ def _process_structured_response(raw_response_text, expected_entities):
         
         if not coverage_validation['schema_valid']:
             logging.warning(f"STRUCTURED_GENERATION: Missing from schema: {coverage_validation['missing_from_schema']}")
+        
+        # Append state updates to response text if present
+        if hasattr(structured_response, 'state_updates') and structured_response.state_updates:
+            import json
+            state_updates_text = f"\n\n[STATE_UPDATES_PROPOSED]\n{json.dumps(structured_response.state_updates, indent=2)}\n[END_STATE_UPDATES_PROPOSED]"
+            response_text = response_text + state_updates_text
+            logging.info("Appended state updates from structured response to response text")
     else:
         logging.warning("STRUCTURED_GENERATION: Failed to parse JSON response, falling back to plain text")
     
@@ -812,6 +819,12 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
             f"\nUSER REQUEST:\n{prompt}"
         )
         logging.info(f"Added entity tracking to initial story. Expected entities: {expected_entities}")
+    
+    # Add character creation prompt if mechanics is enabled
+    if selected_prompts and 'mechanics' in selected_prompts:
+        character_creation_reminder = "\n\n" + constants.CHARACTER_CREATION_REMINDER + "\n"
+        enhanced_prompt = character_creation_reminder + enhanced_prompt
+        logging.info("Added character creation reminder for mechanics-enabled campaign")
     
     contents = [types.Content(role="user", parts=[types.Part(text=enhanced_prompt)])]
     

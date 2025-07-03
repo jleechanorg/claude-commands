@@ -15,39 +15,37 @@ else:
     
 CELESTIAL_WARS_BOOK_PATH = os.path.join(WORLD_DIR, "celestial_wars_alexiel_book.md")
 WORLD_ASSIAH_PATH = os.path.join(WORLD_DIR, "world_assiah.md")
-BANNED_NAMES_PATH = os.path.join(WORLD_DIR, "banned_names.md")
+# BANNED_NAMES_PATH = os.path.join(WORLD_DIR, "banned_names.md")  # Removed - banned names are in world_assiah.md
 
 def load_banned_names():
     """
-    Load the banned names list from banned_names.md
+    Extract the banned names section from world_assiah.md
     
     Returns:
-        str: Raw markdown content from banned_names.md file.
-             Returns empty string if file not found or on any error,
-             allowing the system to continue without banned names.
+        str: Banned names content or empty string if not found.
+             The banned names are embedded in world_assiah.md, not a separate file.
     """
     try:
-        # Construct the path to banned_names.md
-        # Always resolve relative to the module directory for consistency
-        if os.path.isabs(BANNED_NAMES_PATH):
-            banned_names_path = BANNED_NAMES_PATH
-        else:
-            banned_names_path = os.path.join(os.path.dirname(__file__), BANNED_NAMES_PATH)
+        # The banned names are in world_assiah.md, not a separate file
+        world_path = os.path.join(os.path.dirname(__file__), WORLD_ASSIAH_PATH)
+        
+        with open(world_path, 'r', encoding='utf-8') as f:
+            world_content = f.read()
             
-        logging.info(f"Looking for banned names at: {banned_names_path}")
+        # Extract the banned names section
+        import re
+        banned_match = re.search(r'### Banned Names\s*\n(.*?)(?=\n---|\n##|\Z)', world_content, re.DOTALL)
         
-        # Load banned names content
-        with open(banned_names_path, 'r', encoding='utf-8') as f:
-            banned_names_content = f.read().strip()
-        logging.info(f"Loaded banned names list: {len(banned_names_content)} characters")
-        
-        return banned_names_content
-        
-    except FileNotFoundError:
-        logging.warning(f"Banned names file not found at {banned_names_path}. Continuing without it.")
-        return ""
+        if banned_match:
+            banned_names_content = banned_match.group(1).strip()
+            logging.info(f"Extracted banned names from world_assiah.md: {banned_names_content}")
+            return f"### Banned Names\n{banned_names_content}"
+        else:
+            logging.info("No banned names section found in world_assiah.md")
+            return ""
+            
     except Exception as e:
-        logging.error(f"Error loading banned names: {e}")
+        logging.warning(f"Could not extract banned names from world file: {e}")
         return ""
 
 

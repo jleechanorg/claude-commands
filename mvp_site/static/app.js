@@ -39,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const campaignPromptTextarea = document.getElementById('campaign-prompt');
         const narrativeCheckbox = document.getElementById('prompt-narrative');
         const mechanicsCheckbox = document.getElementById('prompt-mechanics');
-        const calibrationCheckbox = document.getElementById('prompt-calibration');
 
         if (campaignTitleInput) {
             campaignTitleInput.value = "My Epic Adventure"; // Your default title
@@ -52,12 +51,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (mechanicsCheckbox) {
             mechanicsCheckbox.checked = true; // Default checked
-        }
-        if (calibrationCheckbox) {
-            calibrationCheckbox.checked = false; // Default unchecked
-        }
-        if (mechanicsCheckbox) {
-            mechanicsCheckbox.checked = false; // Default unchecked
         }
         console.log("New campaign form reset to defaults.");
     }

@@ -1,6 +1,6 @@
 # Master Directive: WorldArchitect.AI Prompt Hierarchy
-**Version: 1.0**
-**Last Updated: 2025-01-07**
+**Version: 1.4**
+**Last Updated: 2025-07-03**
 
 ## Critical Loading Order and Precedence
 
@@ -21,22 +21,24 @@ These instructions form the core operational framework and MUST be loaded before
 These define the fundamental game rules:
 
 3. **`mechanics_system_instruction.md`** - System integration
-   - Authority over: Dice rolling, leveling tiers, mechanical processes
+   - Authority over: Character creation (when mechanics enabled), dice rolling, leveling tiers, mechanical processes
    - Defers to: dnd_srd_instruction.md for core mechanics
+   - Special role: Triggers mandatory character creation when mechanics checkbox is selected
 
 ### 3. NARRATIVE FRAMEWORK (Load Third)
 These guide storytelling and interaction:
 
 4. **`narrative_system_instruction.md`** - Storytelling protocol
-   - Authority over: Think blocks, narrative flow, character generation process
+   - Authority over: Think blocks, narrative flow, story progression
    - Must respect: State management and mechanics from above
 
 ### 3. TEMPLATES (Load When Needed)
 These are reference formats:
 
 5. **`character_template.md`** - Character personality and narrative data
-   - Authority over: Character creation process and depth requirements
-   - Load when: Character creation or detailed NPC development needed
+   - Authority over: Character depth requirements and personality templates
+   - Load when: Detailed NPC development needed
+   - Note: Character creation process is handled by mechanics_system_instruction.md
 
 ## Core File Dependencies
 
@@ -89,6 +91,33 @@ When instructions conflict, follow this precedence:
 - Custom commands
 - Combat presentation format
 
+## Campaign Initialization Protocol
+
+### Order of Operations for New Campaigns
+
+When starting a new campaign, follow this exact sequence:
+
+1. **Load Instructions** (in hierarchy order per this document)
+2. **Check Mechanics Checkbox**:
+   - If ENABLED: Character creation is MANDATORY (see below)
+   - If DISABLED: Skip to step 4
+3. **Character Creation** (when mechanics enabled):
+   - STOP before any narrative or background
+   - Present character creation options FIRST
+   - Wait for player to create/approve character
+   - Only proceed after character is finalized
+4. **World Background**:
+   - Describe setting and initial situation
+   - If character exists: Include them in narrative
+   - If no character: Keep description general
+5. **Begin Gameplay**:
+   - Present initial scene
+   - Provide planning block with options
+
+### Character Creation Authority
+
+When mechanics is enabled, `mechanics_system_instruction.md` has absolute authority over character creation timing and process. The character creation MUST happen before any story narrative begins.
+
 ## D&D 5E SRD System Authority
 
 This campaign uses **D&D 5E System Reference Document (SRD) rules exclusively**. All attribute references use the standard D&D attributes: STR, DEX, CON, INT, WIS, CHA.
@@ -105,12 +134,19 @@ When creating ANY new character, location, or entity:
 ### Naming Authority
 - Original, creative naming takes precedence over generic fantasy names
 - Avoid repetitive use of the same name patterns across campaigns
+- **Player Override**: If a player chooses a name (even a banned one), you MUST:
+  1. Acknowledge their choice explicitly
+  2. If it's on a banned list, explain why it's discouraged
+  3. Offer alternatives BUT also offer to use it anyway if they prefer
+  4. NEVER silently substitute without consent - player agency is paramount
 
 ## Version Control
 
 - Version 1.0: Initial hierarchy establishment
 - Version 1.1: Simplified to D&D 5E SRD-only system
 - Version 1.2: Added universal naming rules and banned names enforcement
+- Version 1.3: Added Campaign Initialization Protocol and character creation flow
+- Version 1.4: Added player override authority for names and absolute transparency requirement
 - Future versions will be marked with clear changelog
 
 ## CRITICAL REMINDERS

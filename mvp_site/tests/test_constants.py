@@ -47,16 +47,19 @@ class TestConstants(unittest.TestCase):
         """Test prompt filename constants."""
         self.assertEqual(constants.FILENAME_NARRATIVE, "narrative_system_instruction.md")
         self.assertEqual(constants.FILENAME_MECHANICS, "mechanics_system_instruction.md")
-        self.assertEqual(constants.FILENAME_CALIBRATION, "calibration_instruction.md")
-        self.assertEqual(constants.FILENAME_DESTINY, "destiny_ruleset.md")
+        # Calibration and Destiny are archived/removed
+        # self.assertEqual(constants.FILENAME_CALIBRATION, "calibration_instruction.md")
+        # self.assertEqual(constants.FILENAME_DESTINY, "destiny_ruleset.md")
         self.assertEqual(constants.FILENAME_GAME_STATE, "game_state_instruction.md")
+        self.assertEqual(constants.FILENAME_CHARACTER_TEMPLATE, "character_template.md")
     
     def test_prompt_type_constants(self):
         """Test prompt type constants."""
         self.assertEqual(constants.PROMPT_TYPE_NARRATIVE, "narrative")
         self.assertEqual(constants.PROMPT_TYPE_MECHANICS, "mechanics")
-        self.assertEqual(constants.PROMPT_TYPE_CALIBRATION, "calibration")
-        self.assertEqual(constants.PROMPT_TYPE_DESTINY, "destiny_ruleset")
+        # Calibration and Destiny are archived/removed
+        # self.assertEqual(constants.PROMPT_TYPE_CALIBRATION, "calibration")
+        # self.assertEqual(constants.PROMPT_TYPE_DESTINY, "destiny_ruleset")
         self.assertEqual(constants.PROMPT_TYPE_GAME_STATE, "game_state")
         self.assertEqual(constants.PROMPT_TYPE_CHARACTER_TEMPLATE, "character_template")
         self.assertEqual(constants.PROMPT_TYPE_CHARACTER_SHEET, "character_sheet")
@@ -187,6 +190,14 @@ class TestConstants(unittest.TestCase):
             constants.get_attributes_for_system("Invalid")
         with self.assertRaises(ValueError):
             constants.get_attribute_codes_for_system("Invalid")
+
+
+    def test_character_creation_constants(self):
+        """Test character creation constants."""
+        self.assertIsInstance(constants.CHARACTER_CREATION_REMINDER, str)
+        self.assertIn("CRITICAL REMINDER", constants.CHARACTER_CREATION_REMINDER)
+        self.assertIn("mechanics is enabled", constants.CHARACTER_CREATION_REMINDER)
+        self.assertIn("character creation", constants.CHARACTER_CREATION_REMINDER)
 
 
 if __name__ == '__main__':

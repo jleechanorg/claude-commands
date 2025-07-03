@@ -248,20 +248,6 @@ class CampaignWizard {
                   </div>
                 </div>
               </div>
-              
-              <div class="col-md-4 mb-3">
-                <div class="card personality-card" data-personality="calibration">
-                  <div class="card-body text-center">
-                    <div class="personality-icon">⚖️</div>
-                    <h5 class="card-title">Calibration Rigor</h5>
-                    <p class="card-text">Game balance, difficulty tuning, and strategic design.</p>
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="wizard-calibration" checked>
-                      <label class="form-check-label" for="wizard-calibration">Enable</label>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -525,8 +511,7 @@ class CampaignWizard {
       // Update personalities
       const personalities = [];
       if (document.getElementById('wizard-narrative')?.checked) personalities.push('Narrative');
-      if (document.getElementById('wizard-mechanics')?.checked) personalities.push('Mechanical');
-      if (document.getElementById('wizard-calibration')?.checked) personalities.push('Calibration');
+      if (document.getElementById('wizard-mechanics')?.checked) personalities.push('Mechanics');
       document.getElementById('preview-personalities').textContent = personalities.join(', ') || 'None selected';
 
       // Update options
@@ -544,7 +529,6 @@ class CampaignWizard {
       selectedPrompts: [
         ...(document.getElementById('wizard-narrative')?.checked ? ['narrative'] : []),
         ...(document.getElementById('wizard-mechanics')?.checked ? ['mechanics'] : []),
-        ...(document.getElementById('wizard-calibration')?.checked ? ['calibration'] : [])
       ],
       customOptions: [
         ...(document.getElementById('wizard-companions')?.checked ? ['companions'] : []),
@@ -761,7 +745,6 @@ class CampaignWizard {
     const checkboxes = [
       'wizard-narrative',
       'wizard-mechanics', 
-      'wizard-calibration',
       'wizard-companions',
       'wizard-default-world'
     ];

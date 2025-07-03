@@ -16,8 +16,6 @@ import gemini_service
 PROMPT_TYPES_TO_TEST = [
     constants.PROMPT_TYPE_NARRATIVE,
     constants.PROMPT_TYPE_MECHANICS,
-    constants.PROMPT_TYPE_CALIBRATION,
-    constants.PROMPT_TYPE_DESTINY,
     constants.PROMPT_TYPE_GAME_STATE,
 ]
 

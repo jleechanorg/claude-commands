@@ -111,6 +111,7 @@ FILENAME_GAME_STATE = "game_state_instruction.md"
 # FILENAME_ENTITY_SCHEMA = "entity_schema_instruction.md" # Integrated into game_state_instruction.md
 FILENAME_MASTER_DIRECTIVE = "master_directive.md"
 FILENAME_DND_SRD = "dnd_srd_instruction.md"
+FILENAME_CHARACTER_TEMPLATE = "character_template.md"
 
 # --- ARCHIVED FILENAMES (for reference) ---
 # These files have been archived to prompt_archive/ directory:
@@ -155,3 +156,14 @@ USER_SELECTABLE_PROMPTS = [
     PROMPT_TYPE_NARRATIVE,
     PROMPT_TYPE_MECHANICS
 ]
+
+# --- CHARACTER CREATION ---
+# Reminder text injected into initial prompt when mechanics is enabled
+CHARACTER_CREATION_REMINDER = """
+🔥 CRITICAL REMINDER: Since mechanics is enabled, you MUST start with character creation! 🔥
+Before generating ANY story content or background narrative, present the character creation options exactly as specified in the Campaign Initialization section of the mechanics instructions.
+DO NOT create a character or start the story - let the player choose their character creation method first!
+IMPORTANT: During character creation, numeric responses (1, 2, 3, etc.) are selections from the presented list, NOT story continuation requests.
+Use the clean [CHARACTER CREATION - Step X of 7] format without DM notes or debug blocks.
+MANDATORY: Include [STATE_UPDATES_PROPOSED] block in EVERY response to track character creation progress!
+""".strip()

@@ -12,11 +12,13 @@ class NarrativeResponse:
     """Schema for structured narrative generation response"""
     
     def __init__(self, narrative: str, entities_mentioned: List[str] = None, 
-                 location_confirmed: str = "Unknown", turn_summary: str = None):
+                 location_confirmed: str = "Unknown", turn_summary: str = None,
+                 state_updates: Dict[str, Any] = None):
         self.narrative = self._validate_narrative(narrative)
         self.entities_mentioned = self._validate_entities(entities_mentioned or [])
         self.location_confirmed = location_confirmed
         self.turn_summary = turn_summary
+        self.state_updates = state_updates or {}
     
     def _validate_narrative(self, narrative: str) -> str:
         """Validate narrative content"""
@@ -40,7 +42,8 @@ class NarrativeResponse:
             "narrative": self.narrative,
             "entities_mentioned": self.entities_mentioned,
             "location_confirmed": self.location_confirmed,
-            "turn_summary": self.turn_summary
+            "turn_summary": self.turn_summary,
+            "state_updates": self.state_updates
         }
 
 class EntityTrackingInstruction:
@@ -57,7 +60,13 @@ class EntityTrackingInstruction:
         response_format = {
             "narrative": "Your narrative text here...",
             "entities_mentioned": expected_entities,
-            "location_confirmed": "The current location name"
+            "location_confirmed": "The current location name",
+            "state_updates": {
+                "player_character_data": {"hp_current": "updated value if changed"},
+                "npc_data": {"npc_name": {"status": "updated status"}},
+                "world_data": {"current_location": "if moved"},
+                "custom_campaign_state": {"any": "custom updates"}
+            }
         }
         
         response_format_str = json.dumps(response_format, indent=2)
@@ -87,7 +96,9 @@ IMPORTANT NOTES:
 - The "narrative" field should contain your complete narrative response
 - The "entities_mentioned" field should list ALL entities you referenced in the narrative
 - The "location_confirmed" field should match the location from the manifest
+- The "state_updates" field should contain game state changes (same format as [STATE_UPDATES_PROPOSED])
 - Ensure ALL required entities ({entities_list}) appear in both the narrative text AND the entities_mentioned list
+- MANDATORY: Include state updates for any changes to characters, NPCs, world, or custom state
 """
 
 def parse_structured_response(response_text: str) -> tuple[str, NarrativeResponse]:
@@ -125,7 +136,8 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
             fallback_response = NarrativeResponse(
                 narrative=narrative,
                 entities_mentioned=parsed_data.get('entities_mentioned', []),
-                location_confirmed=parsed_data.get('location_confirmed', 'Unknown')
+                location_confirmed=parsed_data.get('location_confirmed', 'Unknown'),
+                state_updates=parsed_data.get('state_updates', {})
             )
         return narrative, fallback_response
     
