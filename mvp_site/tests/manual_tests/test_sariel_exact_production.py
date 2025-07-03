@@ -11,7 +11,8 @@ import re
 from typing import Dict, List, Any
 
 # Add project root to path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# We're in mvp_site/tests/manual_tests/, so we need to go up to mvp_site/
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 sys.path.insert(0, project_root)
 
 from main import create_app

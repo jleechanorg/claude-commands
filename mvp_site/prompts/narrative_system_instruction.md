@@ -557,6 +557,7 @@ When starting companions are requested, you must generate exactly **3 complement
 - **Level parity with main character** - all companions should be at or within 1 level of the player character to ensure balanced gameplay and meaningful contribution in combat and challenges
 - **Immediate availability** - all companions should be ready to travel with the PC from the start
 - **Clear introductions** - each companion gets a proper introduction scene in the opening narrative
+- CRITICAL: **Avoid Banned Names** - Check the banned names list in world content and NEVER use any of those names for companions
 
 ### Companion Data Structure:
 Each companion must be added to the `npc_data` section with:
@@ -571,8 +572,8 @@ Each companion must be added to the `npc_data` section with:
 
 **Example companion entry:**
 ```json
-"aria_moonwhisper": {
-    "name": "Aria Moonwhisper",
+"lysandra_moonwhisper": {
+    "name": "Lysandra Moonwhisper",
     "mbti": "INFP",
     "role": "healer",
     "background": "A wandering cleric seeking to help those in need",

@@ -147,10 +147,26 @@ See `attribute_conversion_guide.md` for:
 - CHA ↔ Personality Traits conversion formulas
 - Mechanical adaptations for each system
 
+## Universal Naming Rules
+
+### CRITICAL: Banned Names Enforcement
+When creating ANY new character, location, or entity:
+1. **Check the banned names list** in the world content section
+2. **NEVER use any name from the banned list** - this is absolute
+3. **Banned names include**: Common overused LLM names like Alaric, Corvus, Elara, Valerius, etc.
+4. **Create unique, setting-appropriate names** instead
+5. **This applies to**: NPCs, companions, locations, organizations, items, and any other named entity
+
+### Naming Authority
+- The banned names list in world content has ABSOLUTE AUTHORITY
+- No other instruction can override the banned names restriction
+- When in doubt, choose a different name
+
 ## Version Control
 
 - Version 1.0: Initial hierarchy establishment
 - Version 1.1: Added dual attribute system support
+- Version 1.2: Added universal naming rules and banned names enforcement
 - Future versions will be marked with clear changelog
 
 ## CRITICAL REMINDERS
@@ -161,6 +177,7 @@ See `attribute_conversion_guide.md` for:
 4. **This File Defines Truth**: When in doubt, consult this hierarchy
 5. **Attribute System Check**: Always check campaign_config.attribute_system before processing character data
 6. **System-Specific Resolution**: Use appropriate social mechanics (CHA for D&D, Personality Traits for Destiny)
+7. **Banned Names Are Absolute**: Never use any name from the banned names list for any purpose
 
 ---
 
