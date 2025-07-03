@@ -47,6 +47,23 @@ NEVER create manual API key checks or custom infrastructure when the project alr
 
 **ENFORCEMENT PRINCIPLE**: Documentation is part of the solution, not administrative overhead. Any error resolution that doesn't include lessons capture is an incomplete solution that increases the risk of recurrence.
 
+## Accidental Push to Main Branch (July 2025)
+
+**Problem**: Accidentally pushed directory structure documentation directly to main branch instead of creating a PR
+**Root Cause**: Used `git push origin jleechan/directory-docs` which pushed to main because the local branch was tracking origin/main
+**Impact**: Changes were merged without PR review process
+
+**Lessons Learned**:
+1. **ALWAYS verify branch tracking** before pushing: `git branch -vv`
+2. **ALWAYS use explicit push syntax**: `git push origin HEAD:branch-name` 
+3. **NEVER rely on default push behavior** when branch tracking might be ambiguous
+4. **Create untracked branches** using: `git checkout -b branch-name` (without origin/ prefix)
+
+**Prevention**:
+- Added "No Direct Push to Main Branch Protocol" to rules.mdc
+- Always specify target branch explicitly in push commands
+- Verify current branch and tracking before any push operation
+
 ## Entity Tracking Integration Failure (July 2025)
 
 ### Failure Description

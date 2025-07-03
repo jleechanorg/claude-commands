@@ -360,6 +360,23 @@ For complete project details including technology stack, architecture, developme
         ```
     *   **PR Creation**: Only proceed with PR creation after confirming the branch is clean or user explicitly approves including unrelated commits
 
+14. **No Direct Push to Main Branch Protocol:**
+    *   **ABSOLUTE PROHIBITION**: NEVER push directly to main/master branch under any circumstances
+    *   **Git Push Commands**: When pushing, ALWAYS specify the target branch explicitly:
+        - ✅ CORRECT: `git push origin HEAD:feature-branch-name`
+        - ✅ CORRECT: `git push origin feature-branch:feature-branch`
+        - ❌ FORBIDDEN: `git push origin main` or any variant that targets main
+        - ❌ FORBIDDEN: `git push` without explicit branch specification if tracking main
+    *   **Accidental Push Prevention**:
+        1. Always verify current branch before pushing: `git branch --show-current`
+        2. Always use explicit branch syntax in push commands
+        3. If a push accidentally goes to main, immediately alert the user
+    *   **PR-Only Workflow**: All changes to main must go through pull requests - no exceptions
+    *   **Recovery**: If accidental push to main occurs, immediately:
+        1. Stop all operations
+        2. Alert user with: "⚠️ CRITICAL: Accidentally pushed to main branch!"
+        3. Provide revert instructions if needed
+
 ## IV. Environment, Tooling & Scripts
 
 1.  **Python Virtual Environment Management:**
