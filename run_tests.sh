@@ -61,7 +61,7 @@ fi
 test_files=()
 while IFS= read -r -d '' file; do
     test_files+=("$file")
-done < <(find ./tests -name "test_*.py" -type f ! -path "./venv/*" ! -path "./node_modules/*" ! -path "./prototype/*" -print0)
+done < <(find ./tests -name "test_*.py" -type f ! -path "./venv/*" ! -path "./node_modules/*" ! -path "./prototype/*" ! -path "./tests/manual_tests/*" -print0)
 
 # Also include test_integration directory if not in GitHub export mode
 if [ "$include_integration" = true ] && [ -d "./test_integration" ]; then

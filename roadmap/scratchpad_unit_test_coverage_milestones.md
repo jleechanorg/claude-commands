@@ -287,3 +287,11 @@ TESTING=true vpython -m pytest -m "not integration"
 **Created**: 2025-07-03
 **Author**: AI Assistant
 **Status**: Draft - Ready for Review
+
+## Update Log
+
+### 2025-07-03 - Excluded Manual Tests
+- Updated `run_tests.sh` to exclude `./tests/manual_tests/*` from automatic test discovery
+- Updated `.github/workflows/test.yml` to exclude manual_tests from CI/CD pipeline
+- Ensures manual tests are not run automatically in local or CI environments
+- Manual tests can still be run explicitly when needed

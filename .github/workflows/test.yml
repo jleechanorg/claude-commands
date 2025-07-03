@@ -40,8 +40,8 @@ jobs:
     # Step 5: Run tests directly with Python
     - name: Run test suite
       run: |
-        # Find all test files in mvp_site/tests directory (excluding prototype)
-        test_files=$(find mvp_site/tests -name "test_*.py" -type f | sort)
+        # Find all test files in mvp_site/tests directory (excluding prototype and manual_tests)
+        test_files=$(find mvp_site/tests -name "test_*.py" -type f ! -path "*/manual_tests/*" | sort)
         
         # Run each test file
         failed_tests=0
