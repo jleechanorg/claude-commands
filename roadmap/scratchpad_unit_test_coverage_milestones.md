@@ -14,7 +14,11 @@ This scratchpad outlines a comprehensive plan to improve unit test coverage from
   - `main.py`: <10% (needs +70%)
 
 ### Existing Test Infrastructure
-- **Total Test Files**: 78
+- **Total Test Files**: 76 (excluding manual tests)
+- **Existing Coverage**:
+  - 39 tests already cover game_state functionality
+  - 32 tests already cover gemini service
+  - 23 tests already cover firestore service
 - **Test Framework**: pytest with pytest-cov
 - **CI/CD**: GitHub Actions with coverage reporting
 - **Testing Tools Available**: pytest-mock, responses, freezegun
@@ -26,92 +30,93 @@ This scratchpad outlines a comprehensive plan to improve unit test coverage from
 **Target Coverage: 32% → 45% (+13%)**
 
 #### Deliverables
-1. **Mock Infrastructure Setup**
-   - [ ] Create `tests/fixtures/` directory structure
-   - [ ] Implement `firebase_fixtures.py` with reusable Firestore mocks
-   - [ ] Implement `gemini_fixtures.py` with API response mocks
-   - [ ] Implement `flask_fixtures.py` for app context mocks
-   - [ ] Create `conftest.py` with shared pytest fixtures
+1. **Enhance Existing Mock Infrastructure**
+   - [ ] Review and consolidate existing mocks in 76 test files
+   - [ ] Create centralized `tests/fixtures/` directory
+   - [ ] Extract reusable patterns from existing tests
+   - [ ] Standardize mock usage across all tests
+   - [ ] Update `conftest.py` with shared fixtures
 
-2. **Low-Hanging Fruit Tests**
-   - [ ] Test all constant definitions and enums
-   - [ ] Test utility functions without dependencies
-   - [ ] Test data validation functions
-   - [ ] Test error handling paths
+2. **Fill Coverage Gaps in Tested Files**
+   - [ ] Identify untested methods in already-tested modules
+   - [ ] Add tests for error paths in existing test files
+   - [ ] Test edge cases not covered by existing tests
+   - [ ] Focus on increasing coverage in files already at 20-40%
 
 3. **Documentation**
-   - [ ] Create `tests/README.md` with testing guidelines
-   - [ ] Document mock usage patterns
-   - [ ] Add coverage badge to main README
+   - [ ] Document existing test patterns
+   - [ ] Create testing best practices from current tests
+   - [ ] Add coverage tracking dashboard
 
 #### Success Metrics
-- All mock fixtures working and documented
-- 15+ new test files created
+- Existing tests refactored to use shared fixtures
+- 10-15 new test methods added to existing files
 - Coverage increased to 45%
-- CI pipeline remains under 5 minutes
+- No increase in test execution time
 
 ### Milestone 2: Core Business Logic (Week 2-3)
 **Target Coverage: 45% → 65% (+20%)**
 
 #### Deliverables
-1. **GameState Module (Priority: Critical)**
-   - [ ] Test `GameState.from_dict()` with 20+ state variations
-   - [ ] Test `GameState.to_dict()` round-trip serialization
-   - [ ] Test all entity management methods
-   - [ ] Test combat system state transitions
-   - [ ] Test mission tracking logic
-   - [ ] Test state migration scenarios
+1. **Enhance GameState Coverage (39 existing tests)**
+   - [ ] Review gaps in existing game_state tests
+   - [ ] Add missing tests for untested methods
+   - [ ] Test complex state merge scenarios
+   - [ ] Test all error conditions and edge cases
+   - [ ] Improve existing tests with better assertions
+   - [ ] Focus on the 85% uncovered code in game_state.py
 
-2. **Entity Management Tests**
-   - [ ] Test entity creation and validation
-   - [ ] Test entity removal (`__DELETE__` token)
-   - [ ] Test companion state management
-   - [ ] Test NPC state persistence
-   - [ ] Test entity location tracking
+2. **Complete Entity Management Coverage**
+   - [ ] Build on existing entity tests
+   - [ ] Test entity relationship management
+   - [ ] Test bulk entity operations
+   - [ ] Test entity state consistency
+   - [ ] Add parametrized tests for all entity types
 
-3. **Combat System Tests**
-   - [ ] Test combat initialization
-   - [ ] Test turn order calculation
-   - [ ] Test damage application
-   - [ ] Test combat cleanup logic
-   - [ ] Test combat state persistence
+3. **Combat System Enhancement**
+   - [ ] Extend existing combat tests
+   - [ ] Test combat with multiple participants
+   - [ ] Test special combat conditions
+   - [ ] Test combat history tracking
+   - [ ] Add integration tests for combat flow
 
 #### Success Metrics
-- `game_state.py` coverage > 70%
+- `game_state.py` coverage: 15% → 70% (+55%)
+- Build on existing 39 tests, add 20-30 new ones
 - All critical paths have tests
-- No flaky tests introduced
-- 30+ new test files
+- Reuse existing test infrastructure
 
 ### Milestone 3: Service Layer Testing (Week 4-5)
 **Target Coverage: 65% → 75% (+10%)**
 
 #### Deliverables
-1. **Gemini Service Tests**
-   - [ ] Test prompt building logic
-   - [ ] Test model selection and fallback
-   - [ ] Test token counting and budgets
-   - [ ] Test response parsing
-   - [ ] Test error handling and retries
-   - [ ] Test debug mode integration
+1. **Enhance Gemini Service Coverage (32 existing tests)**
+   - [ ] Review gaps in existing gemini tests (73% uncovered)
+   - [ ] Test PromptBuilder class thoroughly
+   - [ ] Test all model cycling scenarios
+   - [ ] Test rate limiting and quotas
+   - [ ] Test streaming responses
+   - [ ] Focus on untested helper methods
 
-2. **Firestore Service Tests**
-   - [ ] Test document CRUD operations
-   - [ ] Test state merging logic
-   - [ ] Test transaction handling
-   - [ ] Test query operations
-   - [ ] Test error recovery
-   - [ ] Test data migrations
+2. **Complete Firestore Coverage (23 existing tests)**
+   - [ ] Review gaps in existing firestore tests (50% covered)
+   - [ ] Test MissionHandler class completely
+   - [ ] Test complex merge scenarios
+   - [ ] Test batch operations
+   - [ ] Test transaction rollbacks
+   - [ ] Add tests for all error paths
 
-3. **Integration Points**
-   - [ ] Test service interactions
-   - [ ] Test state synchronization
-   - [ ] Test concurrent access patterns
+3. **Service Integration Testing**
+   - [ ] Build on existing integration patterns
+   - [ ] Test cross-service data flow
+   - [ ] Test failure cascades
+   - [ ] Mock external dependencies consistently
 
 #### Success Metrics
-- `gemini_service.py` coverage > 70%
-- `firestore_service.py` coverage > 80%
-- All API calls properly mocked
-- Test execution time < 3 minutes
+- `gemini_service.py`: 27% → 70% (+43%)
+- `firestore_service.py`: 50% → 80% (+30%)
+- Leverage existing 55 service tests
+- Add 15-20 focused test methods
 
 ### Milestone 4: API & Routes (Week 6)
 **Target Coverage: 75% → 82% (+7%)**
