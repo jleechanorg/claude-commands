@@ -57,11 +57,16 @@ if [ "$1" = "--github-export" ] || [ "$GITHUB_EXPORT" = "true" ]; then
     print_status "GitHub export mode - skipping integration tests"
 fi
 
-# Find all test files in tests subdirectory, excluding venv and prototype
+# Find all test files in tests subdirectory, excluding venv, prototype, and manual_tests
 test_files=()
 while IFS= read -r -d '' file; do
     test_files+=("$file")
-done < <(find ./tests -name "test_*.py" -type f ! -path "./venv/*" ! -path "./node_modules/*" ! -path "./prototype/*" ! -path "./tests/manual_tests/*" -print0)
+done < <(find ./tests -name "test_*.py" -type f \
+    ! -path "./venv/*" \
+    ! -path "./node_modules/*" \
+    ! -path "./prototype/*" \
+    ! -path "./tests/manual_tests/*" \
+    -print0)
 
 # Also include test_integration directory if not in GitHub export mode
 if [ "$include_integration" = true ] && [ -d "./test_integration" ]; then
