@@ -39,6 +39,10 @@ mvp_site/world/
 # MCP Server Configuration
 .mcp.json
 
+# Git worktrees - keep local only
+worktree_*/
+/worktree_*
+
 # Node.js / JavaScript
 node_modules/
 mvp_site/node_modules/
