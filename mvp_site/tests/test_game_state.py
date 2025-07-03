@@ -83,7 +83,7 @@ class TestGameState(unittest.TestCase):
         self.assertEqual(gs.player_character_data, {})
         self.assertEqual(gs.world_data, {})
         self.assertEqual(gs.npc_data, {})
-        self.assertEqual(gs.custom_campaign_state, {'attribute_system': 'Destiny'})
+        self.assertEqual(gs.custom_campaign_state, {'attribute_system': 'D&D'})
         self.assertEqual(gs.migration_status, MigrationStatus.NOT_CHECKED)
         
         # Test that timestamp is recent
@@ -114,7 +114,7 @@ class TestGameState(unittest.TestCase):
         self.assertEqual(gs.player_character_data, {"name": "Hero", "level": 5})
         self.assertEqual(gs.world_data, {"location": "Forest"})
         self.assertEqual(gs.npc_data, {"npc1": {"name": "Villager"}})
-        self.assertEqual(gs.custom_campaign_state, {"quest_active": True, "attribute_system": "Destiny"})
+        self.assertEqual(gs.custom_campaign_state, {"quest_active": True, "attribute_system": "D&D"})
         self.assertEqual(gs.last_state_update_timestamp, custom_time)
         self.assertEqual(gs.migration_status, MigrationStatus.MIGRATED)
         self.assertEqual(gs.extra_field, "extra_value")
@@ -147,7 +147,7 @@ class TestGameState(unittest.TestCase):
             "player_character_data": {"name": "Test"},
             "world_data": {},
             "npc_data": {},
-            "custom_campaign_state": {"attribute_system": "Destiny"},
+            "custom_campaign_state": {"attribute_system": "D&D"},
             "combat_state": {"in_combat": False},  # Added combat_state field
             "last_state_update_timestamp": custom_time,
             "migration_status": "MIGRATED",  # Should be string value
@@ -489,7 +489,7 @@ class TestGetInitialGameState(unittest.TestCase):
         self.assertEqual(result["player_character_data"], {})
         self.assertEqual(result["world_data"], {})
         self.assertEqual(result["npc_data"], {})
-        self.assertEqual(result["custom_campaign_state"], {"attribute_system": "Destiny"})
+        self.assertEqual(result["custom_campaign_state"], {"attribute_system": "D&D"})
         self.assertEqual(result["migration_status"], "NOT_CHECKED")
         self.assertIn("last_state_update_timestamp", result)
 

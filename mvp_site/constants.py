@@ -73,7 +73,7 @@ BIG_FIVE_TRAITS = [
 ]
 
 # Default attribute system for new campaigns
-DEFAULT_ATTRIBUTE_SYSTEM = ATTRIBUTE_SYSTEM_DESTINY
+DEFAULT_ATTRIBUTE_SYSTEM = ATTRIBUTE_SYSTEM_DND
 
 # Helper functions for attribute system validation
 def is_valid_attribute_system(system):

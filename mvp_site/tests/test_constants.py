@@ -141,7 +141,7 @@ class TestConstants(unittest.TestCase):
         """Test that attribute system constants are defined correctly."""
         self.assertEqual(constants.ATTRIBUTE_SYSTEM_DND, "D&D")
         self.assertEqual(constants.ATTRIBUTE_SYSTEM_DESTINY, "Destiny")
-        self.assertEqual(constants.DEFAULT_ATTRIBUTE_SYSTEM, "Destiny")
+        self.assertEqual(constants.DEFAULT_ATTRIBUTE_SYSTEM, "D&D")
     
     def test_attribute_lists(self):
         """Test that attribute lists are defined correctly."""

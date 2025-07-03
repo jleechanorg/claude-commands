@@ -414,11 +414,11 @@ class TestCreateCampaignRoute(unittest.TestCase):
         data = json.loads(response.data)
         self.assertTrue(data['success'])
         
-        # Verify GameState was created with Destiny system
+        # Verify GameState was created with D&D system (always uses D&D now)
         mock_game_state_class.assert_called_once()
         call_args = mock_game_state_class.call_args
         custom_campaign_state = call_args[1]['custom_campaign_state']
-        self.assertEqual(custom_campaign_state['attribute_system'], constants.ATTRIBUTE_SYSTEM_DESTINY)
+        self.assertEqual(custom_campaign_state['attribute_system'], constants.ATTRIBUTE_SYSTEM_DND)
 
     @patch('main.firestore_service')
     @patch('main.constants')
@@ -512,11 +512,11 @@ class TestCreateCampaignRoute(unittest.TestCase):
         data = json.loads(response.data)
         self.assertTrue(data['success'])
         
-        # Verify GameState was created with Destiny system (because destinySystem is in options)
+        # Verify GameState was created with D&D system (always uses D&D now)
         mock_game_state_class.assert_called_once()
         call_args = mock_game_state_class.call_args
         custom_campaign_state = call_args[1]['custom_campaign_state']
-        self.assertEqual(custom_campaign_state['attribute_system'], constants.ATTRIBUTE_SYSTEM_DESTINY)
+        self.assertEqual(custom_campaign_state['attribute_system'], constants.ATTRIBUTE_SYSTEM_DND)
 
 
 if __name__ == '__main__':

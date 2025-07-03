@@ -716,12 +716,8 @@ def create_app():
         # Debug logging
         app.logger.info(f"Received custom_options: {custom_options}")
         
-        # Check if Destiny system checkbox is checked (default)
-        if 'destinySystem' in custom_options:
-            attribute_system = constants.ATTRIBUTE_SYSTEM_DESTINY
-        else:
-            # Unchecked means use D&D system
-            attribute_system = constants.ATTRIBUTE_SYSTEM_DND
+        # Always use D&D system (Destiny system removed)
+        attribute_system = constants.ATTRIBUTE_SYSTEM_DND
         
         app.logger.info(f"Selected attribute_system: {attribute_system}")
         
