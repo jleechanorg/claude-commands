@@ -299,4 +299,189 @@ TESTING=true vpython -m pytest -m "not integration"
 - Updated `run_tests.sh` to exclude `./tests/manual_tests/*` from automatic test discovery
 - Updated `.github/workflows/test.yml` to exclude manual_tests from CI/CD pipeline
 - Ensures manual tests are not run automatically in local or CI environments
-- Manual tests can still be run explicitly when needed
+- Manual tests can still be run explicitly when needed### 2025-07-03 - Milestone 1 Complete ✅
+**Summary**: Successfully completed all 7 sub-tasks in Milestone 1
+- Created centralized test fixtures (3 files)
+- Added 47 new tests across 4 test files
+- Demonstrated fixture usage with refactored example
+- Created comprehensive test documentation
+
+### 2025-07-03 - Milestone 2 Complete ✅
+**Summary**: Successfully completed all 5 sub-tasks in Milestone 2
+- Added 72 new tests across 5 test files
+- Covered all GameState functionality gaps
+- Added comprehensive entity management tests
+- Created state merging and error handling tests
+- Achieved significant coverage improvement for game_state.py
+
+### 2025-07-03 - Overall Progress Summary
+**Milestones Completed**: 2/5 (40%)
+**Total Tests Added**: 119 tests across 9 new files
+**Key Achievements**:
+- Created centralized test fixtures reducing boilerplate by 68%
+- Comprehensive GameState coverage including edge cases
+- Entity management testing for all types
+- State synchronization and error resilience
+- Full test suite documentation
+
+**Next**: Milestone 3 - Service Layer Testing (gemini_service.py, firestore_service.py)
+
+#### 2.1 Review gaps in existing game_state tests ✅
+- Analyzed game_state.py for untested methods and code paths
+- Identified 10 major gaps including:
+  - Time pressure attributes initialization
+  - Attribute system edge cases
+  - Combat state edge cases
+  - Underscore-prefixed attribute filtering
+  - Empty/malformed state handling
+- Added TestGameStateUncoveredPaths class with 11 new tests:
+  - `test_time_pressure_attributes_initialization`
+  - `test_attribute_system_default_with_existing_campaign_state`
+  - `test_combat_state_default_initialization`
+  - `test_underscore_prefixed_attributes_filtered`
+  - `test_cleanup_defeated_enemies_empty_combat_state`
+  - `test_cleanup_defeated_enemies_missing_initiative_order`
+  - `test_get_initial_game_state_roundtrip`
+  - `test_timestamp_without_timezone`
+  - `test_combat_status_field`
+  - `test_combat_log_initialization`
+  - `test_validate_checkpoint_consistency_edge_cases`
+
+#### 2.2 Add missing tests for untested methods ✅  
+- Identified lack of dedicated entity management methods in GameState
+- Created `test_entity_management.py` with 19 tests covering:
+  - Entity CRUD operations through npc_data
+  - Entity filtering by type and location
+  - Status effect management
+  - HP validation scenarios
+  - Bulk entity operations
+  - Entity relationships and companion tracking
+  - Entity serialization and deserialization
+  - Edge cases: empty data, malformed entities, type changes
+- Tests work with existing npc_data structure rather than non-existent methods
+
+#### 2.3 Test complex state merge scenarios ✅
+- Created `test_state_merging.py` with 15 comprehensive tests:
+  - Nested dictionary merging with field preservation
+  - Array append operations with dot notation
+  - Deep nested structure updates (3+ levels)
+  - Entity updates with __DELETE__ token handling
+  - Concurrent updates to same paths
+  - Array operations (append vs replacement)
+  - Null and empty value handling
+  - Type conversion behavior
+  - GameState integration with firestore merge
+  - Edge cases: empty states, circular references
+- Tests cover critical state synchronization logic
+
+#### 2.4 Test all error conditions and edge cases ✅
+- Created `test_game_state_errors.py` with 17 tests covering:
+  - Invalid input handling (None, wrong types)
+  - Deeply nested None values
+  - Extremely large states (1000+ entities)
+  - Recursive data structures
+  - Invalid combat operations
+  - State corruption scenarios
+  - Special characters in keys
+  - Memory pressure scenarios
+  - Concurrent modification simulation
+  - Partial state recovery
+  - Missing required fields
+  - Type coercion scenarios
+- Ensures GameState is resilient to malformed/corrupted data
+
+#### 2.5 Add parametrized tests for all entity types ✅
+- Created `test_entity_types.py` with 10 comprehensive tests:
+  - All entity types in combat (7 types tested)
+  - Entity type-specific cleanup behavior
+  - Dynamic entity type transitions
+  - Entity subtypes (6 subtypes tested)
+  - Mixed-type party composition
+  - Invalid entity type handling
+  - Entity statistics by type
+  - Type-specific behaviors (summons, illusions, companions)
+  - Faction-based hostility rules
+- Ensures all entity types work consistently across the system
+
+#### 1.1 Review and consolidate existing mocks ✅
+- Analyzed 76 test files to identify common mock patterns
+- Found key patterns: Firebase sys.modules patching, Gemini API mocking, Flask test client setup
+- Discovered no existing pytest fixtures or conftest.py (all tests use unittest)
+- Created `tests/fixtures/` directory structure
+- Created `firebase_fixtures.py` with centralized Firebase/Firestore mock utilities:
+  - `setup_firebase_mocks()` - Standard Firebase Admin SDK mocking
+  - `create_mock_firestore_client()` - Mock Firestore client with common methods
+  - `create_mock_firestore_service()` - Mock firestore_service module
+  - `patch_firebase_admin_init()` - Helper for patching initialize_app
+
+#### 1.2 Create centralized fixtures directory ✅
+- Created `gemini_fixtures.py` with Gemini API mock utilities:
+  - `setup_gemini_env()` - Set up test environment variables
+  - `create_mock_gemini_response()` - Mock API response objects
+  - `create_mock_gemini_client()` - Mock Gemini client
+  - `create_mock_gemini_service()` - Mock gemini_service module
+  - `create_mock_model_error()` - Mock errors for fallback testing
+- Created `flask_fixtures.py` with Flask test utilities:
+  - `create_test_headers()` - Standard test auth headers
+  - `create_test_app_with_mocks()` - Flask app with mocked services
+  - `mock_auth_decorator()` - Bypass authentication
+  - Standard test data creators for campaigns and game states
+
+#### 1.3 Extract reusable patterns from existing tests ✅
+- Identified top 5 test files with duplicate mock setup
+- Created `test_prompt_loading_simple_refactored.py` as example:
+  - Reduced setup from 19 lines to 6 lines
+  - Uses centralized fixtures for Firebase and Gemini
+  - Cleaner, more maintainable test code
+- Demonstrated 68% reduction in boilerplate code
+
+#### 1.4 Identify untested methods in already-tested modules ✅
+- Analyzed coverage gaps in existing test files
+- Added 8 new combat tests to `test_game_state.py`:
+  - `test_start_combat_initializes_state_correctly` - Tests combat initialization
+  - `test_start_combat_handles_missing_optional_fields` - Tests default handling
+  - `test_end_combat_resets_state` - Tests combat cleanup
+  - `test_end_combat_when_not_in_combat` - Tests safe no-op
+  - `test_end_combat_calls_cleanup_defeated_enemies` - Tests cleanup integration
+  - `test_cleanup_defeated_enemies_removes_only_enemies` - Tests enemy filtering
+  - `test_cleanup_defeated_enemies_handles_missing_type` - Tests edge cases
+  - `test_cleanup_defeated_enemies_preserves_alive_enemies` - Tests HP checking
+- These tests cover previously untested combat methods: start_combat(), end_combat(), cleanup_defeated_enemies()
+
+#### 1.5 Add tests for error paths in existing test files ✅
+- Created comprehensive test suite for MissionHandler class in `test_mission_handler.py`:
+  - 15 test methods covering all 5 MissionHandler static methods
+  - Tests initialization, finding, processing, and conversion of missions
+  - Includes edge cases: empty lists, missing fields, type mismatches
+  - Tests error paths: non-dict values, unsupported types
+  - Integration test demonstrating full workflow
+- Coverage includes:
+  - `initialize_missions_list()` - 3 tests
+  - `find_existing_mission_index()` - 4 tests  
+  - `process_mission_data()` - 3 tests
+  - `handle_missions_dict_conversion()` - 2 tests
+  - `handle_active_missions_conversion()` - 4 tests
+
+#### 1.6 Test edge cases not covered by existing tests ✅
+- Created `test_firestore_helpers.py` with 24 tests for helper functions:
+  - `_expand_dot_notation()` - 5 tests including overlapping paths
+  - `json_serial()` and `json_default_serializer()` - 6 tests for serialization
+  - `_perform_append()` and `_handle_append_syntax()` - 6 tests for append operations
+  - `_handle_core_memories_safeguard()` - 2 tests for safeguarding
+  - `_handle_dict_merge()` - 2 tests for dictionary merging
+  - `_handle_string_to_dict_update()` - 1 test for string updates
+  - `_truncate_log_json()` - 3 tests for log truncation
+- These helper functions are critical for data manipulation and were previously untested
+
+#### 1.7 Document existing test patterns ✅
+- Created comprehensive `tests/README.md` documentation:
+  - Test organization and directory structure
+  - How to use centralized fixtures (Firebase, Gemini, Flask)
+  - Test file template with best practices
+  - Common testing patterns (error handling, logging, dict updates)
+  - Running tests with various options
+  - Coverage goals and strategy
+  - Troubleshooting guide
+  - Contributing guidelines
+- Merged with existing README content about frontend tests
+- Provides single source of truth for test documentation
