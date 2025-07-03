@@ -3,7 +3,7 @@ Entity tracking system for narrative generation
 Supports both Simple and Pydantic validation approaches for comparison testing
 """
 import os
-from typing import List, Dict, Any
+from typing import Dict, Any
 
 # Configuration for choosing validation approach
 USE_PYDANTIC = os.getenv('USE_PYDANTIC', 'false').lower() == 'true'

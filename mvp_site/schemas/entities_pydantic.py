@@ -3,7 +3,7 @@ Pydantic schema models for entity tracking in Milestone 0.4
 Uses sequence ID format: {type}_{name}_{sequence}
 """
 
-from typing import List, Dict, Optional, Any, Union
+from typing import List, Dict, Optional, Any
 from pydantic import BaseModel, Field, validator
 from enum import Enum
 from datetime import datetime

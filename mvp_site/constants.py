@@ -76,10 +76,6 @@ BIG_FIVE_TRAITS = [
 DEFAULT_ATTRIBUTE_SYSTEM = ATTRIBUTE_SYSTEM_DND
 
 # Helper functions for attribute system validation
-def is_valid_attribute_system(system):
-    """Check if the given system is a valid attribute system."""
-    return system in [ATTRIBUTE_SYSTEM_DND, ATTRIBUTE_SYSTEM_DESTINY]
-
 def get_attributes_for_system(system):
     """Get the list of attributes for the given system."""
     if system == ATTRIBUTE_SYSTEM_DND:

@@ -13,7 +13,7 @@ import datetime
 from unittest.mock import patch, MagicMock
 import json
 
-from game_state import GameState, MigrationStatus, get_initial_game_state
+from game_state import GameState, MigrationStatus
 from firestore_service import update_state_with_changes, _perform_append
 import main
 
@@ -475,23 +475,6 @@ class TestGameState(unittest.TestCase):
         self.assertEqual(state_dict['player_character_data']['name'], "TestHero")
         self.assertEqual(state_dict['player_character_data']['level'], 5)
         self.assertEqual(state_dict['world_data']['current_location'], "Test Town")
-
-
-class TestGetInitialGameState(unittest.TestCase):
-    """Test cases for get_initial_game_state function."""
-    
-    def test_get_initial_game_state(self):
-        """Test that get_initial_game_state returns a proper dictionary."""
-        result = get_initial_game_state()
-        
-        self.assertIsInstance(result, dict)
-        self.assertEqual(result["game_state_version"], 1)
-        self.assertEqual(result["player_character_data"], {})
-        self.assertEqual(result["world_data"], {})
-        self.assertEqual(result["npc_data"], {})
-        self.assertEqual(result["custom_campaign_state"], {"attribute_system": "D&D"})
-        self.assertEqual(result["migration_status"], "NOT_CHECKED")
-        self.assertIn("last_state_update_timestamp", result)
 
 
 class TestUpdateStateWithChanges(unittest.TestCase):

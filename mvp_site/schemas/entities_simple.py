@@ -3,7 +3,7 @@ Simple entity schema models for Milestone 0.4 (without Pydantic)
 Uses sequence ID format: {type}_{name}_{sequence}
 """
 
-from typing import List, Dict, Optional, Any, Union
+from typing import List, Dict, Optional, Any
 from enum import Enum
 from datetime import datetime
 import re

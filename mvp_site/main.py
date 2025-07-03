@@ -1,6 +1,5 @@
 # Diagnostic edit to test file system access.
 import os
-import io
 import uuid
 import re
 from functools import wraps

@@ -5,7 +5,7 @@ Adapted from Milestone 0.4 prototype for production use in gemini_service.py
 
 import re
 import logging
-from typing import List, Dict, Any, Set, Tuple, Optional
+from typing import List, Dict, Any, Tuple, Optional
 from dataclasses import dataclass
 from enum import Enum
 

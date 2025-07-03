@@ -3,7 +3,7 @@ Defines the GameState class, which represents the complete state of a campaign.
 """
 import datetime
 from enum import Enum
-from typing import Optional, List
+from typing import List
 import logging
 import constants
 
@@ -272,10 +272,3 @@ class GameState:
                 logging.info(f"COMBAT CLEANUP: Removed {enemy_name} from npc_data")
         
         return defeated_enemies
-
-def get_initial_game_state():
-    """
-    Returns a blank, initial game state dictionary.
-    The Gemini service is responsible for populating this.
-    """
-    return GameState().to_dict()

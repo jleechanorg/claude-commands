@@ -250,6 +250,24 @@ For complete project details including technology stack, architecture, developme
     *   **PREVENTION**: Screenshots reveal problems that code review cannot catch
     *   **VALIDATION**: All UI fixes must be verified through visual inspection, not just code changes
 
+25. **Dead Code Detection Protocol:**
+    *   **MANDATORY TOOL**: Always use `vulture` for dead code detection instead of basic grep searches
+    *   **Installation**: `pip install vulture` (install in virtual environment)
+    *   **Basic Usage**: `vulture . --min-confidence 80 --exclude="*/venv/*,*/tests/*"`
+    *   **Why Vulture**: Understands Python AST and detects:
+        - Callback functions (e.g., `json.dumps(data, default=func)`)
+        - Functions passed as parameters
+        - Dynamic imports and getattr usage
+        - Class methods and properties
+    *   **Process**:
+        1. Run vulture first to identify candidates
+        2. Manually verify each finding (some may be false positives)
+        3. Run tests before removing any code
+        4. Remove incrementally and test after each removal
+        5. Document findings in DEAD_CODE_ANALYSIS.md
+    *   **Whitelist**: Create `.vulture_whitelist.py` for known false positives
+    *   **Lesson Learned**: Basic grep missed `json_datetime_serializer` because it was used as a callback parameter
+
 ## III. Git & Repository Workflow
 
 1.  **Source of Truth for Code is Main/Master Branch:**

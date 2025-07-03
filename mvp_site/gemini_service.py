@@ -22,7 +22,7 @@ from entity_preloader import EntityPreloader
 from entity_instructions import EntityInstructionGenerator
 from entity_validator import EntityValidator
 from dual_pass_generator import DualPassGenerator
-from entity_tracking import SceneManifest as EntityManifest, create_from_game_state
+from entity_tracking import SceneManifest, create_from_game_state
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 

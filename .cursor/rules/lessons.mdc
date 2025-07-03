@@ -1664,3 +1664,81 @@ def test_pydantic_validation_approach():
 ```
 
 **Key Lesson**: Never trust test names. Always verify the test is testing what it claims. Architectural decisions based on false tests lead to cascading failures.
+
+## Dead Code Analysis Protocol (January 2025)
+
+### Lesson: False Positives in Dead Code Detection
+**Problem:** When identifying dead code, functions that appear unused via grep may actually be used dynamically (e.g., as default parameters in json.dumps).
+
+**Root Cause:** Simple grep searches for function names don't catch all usage patterns, especially:
+- Functions passed as parameters (e.g., `default=json_datetime_serializer`)
+- Dynamic imports or getattr usage
+- Functions referenced in strings for reflection
+- Callback functions registered elsewhere
+
+**Solution:** When identifying dead code:
+1. **Search for multiple patterns**: Don't just grep for `function_name(`, also search for `function_name` without parentheses
+2. **Check dynamic usage**: Look for the function being passed as a parameter or callback
+3. **Run tests first**: Before removing any code, run the full test suite to establish baseline
+4. **Remove incrementally**: Remove one function/file at a time and test after each removal
+5. **Check imports carefully**: A function may be imported but used in the importing module
+
+**Example:** `json_datetime_serializer` appeared unused but was actually used as:
+```python
+json.dumps(data, default=json_datetime_serializer)
+```
+
+### Lesson: Test Dependencies on Dead Code
+**Problem:** Tests may depend on functions that are otherwise dead code, creating false dependencies.
+
+**Solution:** When removing dead code:
+1. Check if any tests import or use the function
+2. If only tests use it, consider if the function and its tests should both be removed
+3. Update test imports immediately after removing functions
+4. Don't assume test-only usage means the code is safe to remove - verify the function isn't testing a public API
+
+### Lesson: Dead Code Categories and Removal Priority
+**Safe to Remove (High Priority):**
+- Backup files (e.g., `*_original.py`, `*_backup.py`)
+- Unused utility files never imported anywhere
+- Functions only used in their own tests
+- Commented-out code blocks
+
+**Requires Careful Analysis (Medium Priority):**
+- Functions with no direct calls but might be used dynamically
+- Classes that appear unused but might be part of an interface
+- Factory methods that seem unused but follow a pattern
+
+**Keep Despite Appearing Dead (Low Priority):**
+- Example/template files
+- Functions that are part of a public API (even if unused internally)
+- Deprecated functions with migration warnings
+
+### Lesson: PR Hygiene for Dead Code Removal (From PR Review)
+**Problem:** Dead code removal PRs can become cluttered with unrelated changes from merge commits, making review difficult.
+
+**Solution:**
+1. **Clean PR History**: Consider rebasing on main before creating PR to avoid merge commit clutter
+2. **Isolated Changes**: Keep dead code removal separate from other changes
+3. **Clear Diff**: Ensure the PR diff only shows dead code removal, not unrelated changes
+
+### Lesson: Advanced Dead Code Detection Tools
+**Recommendation from PR Review:** Consider using specialized tools for more accurate dead code detection:
+- **vulture**: Python-specific dead code finder that understands dynamic usage patterns
+- **coverage.py**: Can identify unused code paths during test runs
+- **ast-based tools**: Parse Python AST to find unused definitions more accurately
+
+**Example vulture usage:**
+```bash
+pip install vulture
+vulture . --min-confidence 80
+```
+
+**Note**: In this PR we used basic grep searches instead of vulture, which led to the false positive with `json_datetime_serializer`. Vulture would have recognized it as a callback parameter and not flagged it as dead code.
+
+### Lesson: CI Integration for Dead Code
+**Recommendation from PR Review:** Add automated dead code detection to CI pipeline:
+1. Run dead code detection tools in CI
+2. Fail builds if new dead code is introduced
+3. Generate reports on potential dead code for regular review
+4. Exclude known false positives via configuration file

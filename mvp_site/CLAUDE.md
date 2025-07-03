@@ -286,4 +286,10 @@ The complete cursor rules from `/home/jleechan/projects/worldarchitect.ai/.curso
 - **Working Code Only**: Never push unverified code
 - **Confirm Before Push**: Ask permission before remote operations
 
+### Dead Code Analysis
+- **Run Tests First**: Always run tests before removing any code to establish baseline
+- **Check Dynamic Usage**: Functions may be used as callbacks or default parameters (e.g., `json.dumps(data, default=func)`)
+- **Remove Incrementally**: Remove one item at a time and test after each removal
+- **See Full Protocol**: Detailed dead code analysis lessons in `.cursor/rules/lessons.mdc`
+
 The full detailed rules are maintained in `.cursor/rules/rules.mdc` and should be consulted for complete protocol compliance.

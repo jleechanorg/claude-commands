@@ -167,11 +167,6 @@ class TestConstants(unittest.TestCase):
     
     def test_helper_functions(self):
         """Test the attribute system helper functions."""
-        # Test validation
-        self.assertTrue(constants.is_valid_attribute_system("D&D"))
-        self.assertTrue(constants.is_valid_attribute_system("Destiny"))
-        self.assertFalse(constants.is_valid_attribute_system("Invalid"))
-        
         # Test get attributes
         dnd_attrs = constants.get_attributes_for_system("D&D")
         self.assertEqual(len(dnd_attrs), 6)
