@@ -1,0 +1,43 @@
+{
+  "campaign": "sariel_exact_production",
+  "extraction_date": "2025-07-02",
+  "description": "Exact copy of production campaign example",
+  "prompts": [
+    {
+      "prompt_id": "initial_setup",
+      "mode": "god",
+      "input": "Start as Sariel. We are in the throne room the day after her mother's death.",
+      "expected_entities": ["Sariel"],
+      "generates_state_updates": true
+    },
+    {
+      "prompt_id": "interaction_1",
+      "mode": "character",
+      "input": "friends_3",
+      "expected_entities": ["Sariel", "Ser Gideon Vance", "Lady Cressida Valeriana", "Rowan Thorne"],
+      "generates_state_updates": true
+    },
+    {
+      "prompt_id": "interaction_2",
+      "mode": "character",
+      "input": "Speak_3",
+      "expected_entities": ["Sariel", "Raziel"],
+      "generates_state_updates": true
+    },
+    {
+      "prompt_id": "interaction_3",
+      "mode": "character",
+      "input": "Accept_1",
+      "expected_entities": ["Sariel", "Cassian val Artorius", "Valerius val Artorius"],
+      "generates_state_updates": true
+    },
+    {
+      "prompt_id": "interaction_4",
+      "mode": "character",
+      "input": "2",
+      "expected_entities": ["Sariel", "Cassian val Artorius", "Valerius val Artorius"],
+      "generates_state_updates": true
+    }
+  ],
+  "auto_continue_strategy": "Always pick option 1 after exhausting provided prompts"
+}

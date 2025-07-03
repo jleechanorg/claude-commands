@@ -1,10 +1,10 @@
 {
-  "test_date": "2025-07-01T01:10:19.499909",
-  "campaign_id": "2o5GusocoYMPym50s8HG",
+  "test_date": "2025-07-01T21:59:12.287133",
+  "campaign_id": "bNTyZPyf2wwNtp5dTNBQ",
   "total_interactions": 10,
   "successful_tracking": 5,
   "success_rate": 0.5,
-  "cassian_problem_handled": false,
+  "cassian_problem_handled": true,
   "total_fields_checked": 130,
   "detailed_results": [
     {
@@ -36,13 +36,12 @@
         "Cassian"
       ],
       "found": [
-        "Sariel"
-      ],
-      "missing": [
+        "Sariel",
         "Cassian"
       ],
+      "missing": [],
       "extra": [],
-      "success": false,
+      "success": true,
       "fields_checked": {
         "state_fields": 13,
         "pc_fields": 0,
@@ -79,12 +78,13 @@
         "Valerius"
       ],
       "found": [
-        "Sariel",
+        "Sariel"
+      ],
+      "missing": [
         "Valerius"
       ],
-      "missing": [],
       "extra": [],
-      "success": true,
+      "success": false,
       "fields_checked": {
         "state_fields": 13,
         "pc_fields": 0,

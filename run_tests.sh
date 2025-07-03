@@ -5,27 +5,14 @@
 
 # Note: Not using 'set -e' so we can run all tests even if some fail
 
-# Define vpython function locally (replicating the bashrc function)
-vpython() {
-    PROJECT_ROOT_PATH="$HOME/projects/worldarchitect.ai"
-    VENV_ACTIVATE_SCRIPT="$PROJECT_ROOT_PATH/venv/bin/activate"
-    
-    if [ ! -f "$VENV_ACTIVATE_SCRIPT" ]; then
-        echo "Error: Virtual environment activate script not found at $VENV_ACTIVATE_SCRIPT"
-        echo "Please create the virtual environment first: cd $PROJECT_ROOT_PATH && python3 -m venv venv"
-        return 1
-    fi
-    
-    if [[ "$VIRTUAL_ENV" != "$PROJECT_ROOT_PATH/venv" ]]; then
-        echo "Activating virtual environment: $PROJECT_ROOT_PATH/venv"
-        source "$VENV_ACTIVATE_SCRIPT"
-    else
-        echo "Virtual environment already active."
-    fi
-    
-    echo "Running python $*"
-    python "$@"
-}
+# Use the vpython script in project root
+VPYTHON="$PWD/vpython"
+
+# Check if vpython exists
+if [ ! -f "$VPYTHON" ]; then
+    echo "Error: vpython script not found at $VPYTHON"
+    exit 1
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -114,7 +101,7 @@ run_test() {
         local output_file="$temp_dir/${safe_filename}.output"
         local status_file="$temp_dir/${safe_filename}.status"
         
-        if TESTING=true vpython "$test_file" >"$output_file" 2>&1; then
+        if TESTING=true "$VPYTHON" "$test_file" >"$output_file" 2>&1; then
             echo "PASS" > "$status_file"
             print_success "$test_file completed successfully"
         else

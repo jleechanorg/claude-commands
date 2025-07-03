@@ -1,0 +1,212 @@
+"""
+Tests to ensure entity tracking works for ANY campaign, not just Sariel.
+Tests that the system is truly generic and doesn't have hardcoded campaign data.
+"""
+
+import unittest
+import sys
+import os
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from entity_instructions import EntityInstructionGenerator
+from entity_preloader import LocationEntityEnforcer, EntityPreloader
+from entity_tracking import create_from_game_state
+from game_state import GameState
+
+
+class TestEntityTrackingGeneric(unittest.TestCase):
+    """Test that entity tracking is generic and not campaign-specific"""
+    
+    def test_entity_instructions_not_hardcoded_sariel(self):
+        """Test that entity instructions don't have hardcoded Sariel references"""
+        generator = EntityInstructionGenerator()
+        
+        # Test with a completely different campaign
+        non_sariel_entities = ["Bob the Merchant", "Alice the Warrior", "Dragon King"]
+        player_references = ["Bob the Merchant"]
+        location = "The Marketplace"
+        
+        instructions = generator.generate_entity_instructions(
+            entities=non_sariel_entities,
+            player_references=player_references,
+            location=location
+        )
+        
+        # Should not contain any Sariel-specific references
+        self.assertNotIn("sariel", instructions.lower())
+        self.assertNotIn("cassian", instructions.lower())
+        self.assertNotIn("valerius", instructions.lower())
+        self.assertNotIn("cressida", instructions.lower())
+        
+        # Should contain our actual entities
+        self.assertIn("Bob the Merchant", instructions)
+        self.assertIn("Alice the Warrior", instructions)
+    
+    def test_player_character_detection_is_generic(self):
+        """Test that PC detection isn't hardcoded to Sariel"""
+        generator = EntityInstructionGenerator()
+        
+        # After fix, should return False for all (not hardcoded)
+        self.assertFalse(generator._is_player_character("Sariel"))
+        self.assertFalse(generator._is_player_character("Gandalf"))
+        self.assertFalse(generator._is_player_character("PlayerCharacter"))
+    
+    def test_location_enforcer_not_hardcoded(self):
+        """Test that location enforcer doesn't have hardcoded locations"""
+        enforcer = LocationEntityEnforcer()
+        
+        # After fix, should return empty for all locations
+        generic_location = "The Tavern"
+        rules = enforcer.get_required_entities_for_location(generic_location)
+        self.assertEqual(rules, {})
+        
+        # Even Sariel locations should now return empty
+        sariel_rules = enforcer.get_required_entities_for_location("valerius's study")
+        self.assertEqual(sariel_rules, {})
+    
+    def test_location_mappings_are_generic(self):
+        """Test that location owner mappings are not campaign-specific"""
+        generator = EntityInstructionGenerator()
+        
+        # After fix, should return False for all (not hardcoded)
+        self.assertFalse(generator._is_location_owner("Valerius", "valerius's study"))
+        self.assertFalse(generator._is_location_owner("Lady Cressida", "cressida's chamber"))
+        self.assertFalse(generator._is_location_owner("Innkeeper John", "John's Tavern"))
+        self.assertFalse(generator._is_location_owner("Wizard Merlin", "Merlin's Tower"))
+    
+    def test_entity_specific_instruction_is_generic(self):
+        """Test that entity-specific methods are generic"""
+        generator = EntityInstructionGenerator()
+        
+        # Old method should be gone
+        self.assertFalse(hasattr(generator, 'create_cassian_specific_instruction'))
+        
+        # New generic method should exist
+        self.assertTrue(hasattr(generator, 'create_entity_specific_instruction'))
+        
+        # Test it works for any entity
+        cassian_instruction = generator.create_entity_specific_instruction("Cassian", "I'm scared, Cassian help me")
+        self.assertIn("Cassian", cassian_instruction)
+        
+        # And also works for other characters
+        bob_instruction = generator.create_entity_specific_instruction("Bob", "I'm scared, Bob help me")
+        self.assertIn("Bob", bob_instruction)
+    
+    def test_entity_tracking_with_different_campaign(self):
+        """Test full entity tracking with a non-Sariel campaign"""
+        # Create a space opera campaign
+        game_state = GameState(
+            player_character_data={
+                "name": "Captain Rex",
+                "class": "Space Marine",
+                "hp_current": 100,
+                "hp_max": 100
+            },
+            world_data={
+                "current_location_name": "Bridge of the Starship Endeavor",
+                "campaign_type": "Space Opera"
+            },
+            npc_data={
+                "lieutenant_sarah": {
+                    "name": "Lieutenant Sarah Chen",
+                    "role": "Science Officer",
+                    "location": "Bridge of the Starship Endeavor"
+                },
+                "ai_companion": {
+                    "name": "ARIA",
+                    "role": "Ship AI",
+                    "location": "All ship systems"
+                }
+            },
+            custom_campaign_state={
+                "campaign_name": "Galactic Odyssey"
+            }
+        )
+        
+        # Create manifest
+        manifest = create_from_game_state(game_state.to_dict(), session_number=1, turn_number=1)
+        
+        # Should work with any campaign
+        self.assertEqual(len(manifest.player_characters), 1)
+        self.assertEqual(manifest.player_characters[0].display_name, "Captain Rex")
+        
+        # Check NPCs by entity_id
+        npc_names = [npc.display_name for npc in manifest.npcs]
+        self.assertIn("Lieutenant Sarah Chen", npc_names)
+        self.assertIn("ARIA", npc_names)
+    
+    def test_hardcoded_location_instructions(self):
+        """Test that location instructions are hardcoded"""
+        generator = EntityInstructionGenerator()
+        
+        # These are hardcoded in the method
+        sariel_location = "throne room"
+        instructions = generator.create_location_specific_instructions(
+            sariel_location, 
+            ["Guard Captain", "Royal Advisor"]
+        )
+        
+        self.assertIn("Court setting", instructions)
+        self.assertIn("nobles, guards, or advisors", instructions)
+        
+        # But generic locations get generic instructions
+        generic_location = "The Spaceship Bridge"
+        generic_instructions = generator.create_location_specific_instructions(
+            generic_location,
+            ["Captain", "Navigator"]
+        )
+        
+        # Only gets generic instruction
+        self.assertIn("Ensure entities appropriate to this setting", generic_instructions)
+        self.assertNotIn("Court setting", generic_instructions)
+
+
+class TestEntityTrackingGenericFixes(unittest.TestCase):
+    """Test proposed fixes for making entity tracking generic"""
+    
+    def test_proposed_generic_player_character_detection(self):
+        """Test how PC detection should work generically"""
+        # This is how it SHOULD work - pass PC info to the generator
+        game_state = GameState(
+            player_character_data={"name": "Captain Rex"},
+            world_data={},
+            npc_data={},
+            custom_campaign_state={}
+        )
+        
+        # Generator should accept game state or PC name
+        # Not implemented yet, but this is the interface we need
+        # generator = EntityInstructionGenerator(player_character_name="Captain Rex")
+        # self.assertTrue(generator._is_player_character("Captain Rex"))
+        # self.assertFalse(generator._is_player_character("Some NPC"))
+    
+    def test_proposed_dynamic_location_rules(self):
+        """Test how location rules should work dynamically"""
+        # Location rules should come from the campaign data, not hardcoded
+        campaign_location_rules = {
+            "bridge": {
+                "required_roles": ["officer", "navigator"],
+                "suggested_npcs": ["Ship AI"]
+            },
+            "engineering": {
+                "required_roles": ["engineer", "technician"],
+                "suggested_items": ["Warp core", "Tools"]
+            }
+        }
+        
+        # This is how it SHOULD work
+        # enforcer = LocationEntityEnforcer(location_rules=campaign_location_rules)
+        # rules = enforcer.get_required_entities_for_location("bridge")
+        # self.assertEqual(rules["required_roles"], ["officer", "navigator"])
+    
+    def test_proposed_no_character_specific_methods(self):
+        """Test that generic system shouldn't have character-specific methods"""
+        # The system should handle ALL character references generically
+        # not have special methods for specific characters
+        pass
+
+
+if __name__ == '__main__':
+    unittest.main()

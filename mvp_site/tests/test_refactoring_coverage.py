@@ -112,7 +112,7 @@ class TestPromptBuilderMethods(unittest.TestCase):
         
         self.assertIn("part1", result)
         self.assertIn("part2", result)
-        self.assertIn("debug instructions", result)
+        # Debug instructions are now added in build_core_system_instructions, not finalize
         mock_world.assert_not_called()
         
         # Test with world instructions

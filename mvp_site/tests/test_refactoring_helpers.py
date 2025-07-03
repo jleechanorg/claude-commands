@@ -29,9 +29,11 @@ class TestPromptBuilder(unittest.TestCase):
         
         parts = self.builder.build_core_system_instructions()
         
-        self.assertEqual(len(parts), 3)
-        self.assertEqual(mock_load.call_count, 3)
-        self.assertTrue(all(part == "instruction content" for part in parts))
+        self.assertEqual(len(parts), 4)  # Now includes debug instructions
+        self.assertEqual(mock_load.call_count, 3)  # Only 3 calls to _load_instruction_file
+        # First part is debug instructions, rest are loaded instructions
+        self.assertIn("DEBUG MODE", parts[0])
+        self.assertTrue(all(part == "instruction content" for part in parts[1:]))
     
     @patch('gemini_service._load_instruction_file')
     def test_add_character_instructions(self, mock_load):
@@ -75,7 +77,8 @@ class TestPromptBuilder(unittest.TestCase):
         result = self.builder.finalize_instructions(parts, use_default_world=False)
         self.assertIn("part1", result)
         self.assertIn("part2", result)
-        self.assertIn("DEBUG MODE", result)
+        # Debug instructions are now added in build_core_system_instructions, not finalize
+        # So we shouldn't expect it here
         mock_add_world.assert_not_called()
         
         # Test with world instructions

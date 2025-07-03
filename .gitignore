@@ -30,6 +30,9 @@ local_api_key.txt
 usage_tracking2.json
 uploads/
 
+# ChromeDriver binary
+mvp_site/bin/chromedriver*
+
 # World files copied for deployment
 mvp_site/world/
 

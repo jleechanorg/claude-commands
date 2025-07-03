@@ -304,7 +304,7 @@ def create_from_game_state(game_state: Dict[str, Any],
             
             npc = NPC(
                 entity_id=npc_entity_id,
-                display_name=npc_name,
+                display_name=npc_info.get("name", npc_name),
                 health=HealthStatus(
                     hp=npc_info.get("hp_current", npc_info.get("hp", 10)),
                     hp_max=npc_info.get("hp_max", 10)

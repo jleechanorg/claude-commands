@@ -47,6 +47,36 @@ NEVER create manual API key checks or custom infrastructure when the project alr
 
 **ENFORCEMENT PRINCIPLE**: Documentation is part of the solution, not administrative overhead. Any error resolution that doesn't include lessons capture is an incomplete solution that increases the risk of recurrence.
 
+## Entity Tracking Integration Failure (July 2025)
+
+### Failure Description
+Spent significant time running validation comparison tests between Pydantic and Simple approaches without first verifying that the entity tracking modules were integrated into the main flow. Tests showed 0% success for both approaches because the mitigation strategies weren't connected.
+
+### Technical Details
+- **What existed**: entity_preloader.py, entity_validator.py, entity_instructions.py, dual_pass_generator.py
+- **What was missing**: None of these modules were imported or used in gemini_service.py
+- **Test results**: Cassian Problem 0% success, no difference between validation approaches
+- **Root cause**: Testing disconnected code that wasn't part of the execution flow
+
+### Key Discoveries
+1. Entity tracking partially integrated (basic manifest creation) but not the advanced features
+2. USE_PYDANTIC environment variable switches validation approaches correctly
+3. API expects 'input' parameter, not 'prompt' or 'user_input'
+4. Real API tests take 1-2 minutes per interaction (30+ minutes for full suite)
+
+### Prevention Strategy
+- Always trace code flow before testing: "Is this feature connected?"
+- Check imports and usage, not just file existence
+- Propose integration before running comparison tests
+- Use mocked responses for faster iteration during development
+
+### 5 Whys Analysis
+1. Why did tests fail? → Entity tracking modules weren't integrated
+2. Why weren't they integrated? → I didn't check integration before testing
+3. Why didn't I check? → User asked to "run tests" and I went into execution mode
+4. Why execution mode? → Prioritized immediate task over meaningful results
+5. Why prioritize task over results? → Lost sight that goal was to validate mitigation strategies work
+
 ## Campaign Wizard DOM State Corruption Failure (January 2025)
 
 ### CRITICAL INCIDENT: "How Did You Mess This Up" - Campaign Wizard Reset Failure

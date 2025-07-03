@@ -476,6 +476,25 @@ grep -r "process.*special_token" *.py
 ### Automatic Rule Updates
 **MANDATORY**: Whenever I make a mistake, encounter a bug I should have caught, or receive correction from the user, I MUST immediately update both this rules.mdc file and .cursor/rules/lessons.mdc with the lesson learned. I will not wait for the user to remind me - this is an automatic responsibility that happens every time I fail or am corrected.
 
+### Temporary Fix Protocol - NEVER GLOSS OVER
+**CRITICAL RULE**: When implementing ANY temporary fix or workaround:
+1. **IMMEDIATELY flag it** - "⚠️ TEMPORARY FIX: This will break when [specific scenario]"
+2. **PROPOSE permanent solution in same message** - Don't wait to be asked
+3. **Run the checklist**:
+   - [ ] Will this work from a fresh clone?
+   - [ ] Will this work in CI/CD?
+   - [ ] Will this work for other developers?
+   - [ ] Will this work next week/month?
+   - [ ] What are ALL the failure scenarios?
+4. **Create the permanent fix NOW** - Not "we could fix it" but actually implement it
+5. **Document assumptions** - "This assumes [X] which will fail if [Y]"
+
+**Example**: When copying files manually for deployment:
+- ❌ BAD: "I copied the files, deployment works now"
+- ✅ GOOD: "⚠️ TEMPORARY FIX: I manually copied world/ to fix deployment. This WILL BREAK on next deploy from fresh clone. Creating permanent fix to deploy.sh now..."
+
+**Lesson**: Manually copied world directory for deployment without immediately fixing deploy.sh, causing future deployment failures. Always think about sustainability, not just immediate success.
+
 ### Task Completion Protocol (December 2024)
 **CRITICAL REDEFINITION**: Task completion is NOT just solving the user's immediate problem. Task completion includes all mandatory follow-up actions as core requirements.
 
@@ -553,6 +572,38 @@ grep -r "process.*special_token" *.py
 3. **Investigate specific issues** - Only then dive into individual files and components
 
 **Lesson**: Failed to catch multiple dependency and API inconsistency bugs because I explored code files individually instead of running tests first. The test suite immediately reveals: current state, expected behavior, dependency issues, and API changes. This systematic approach prevents iterative discovery of issues that should be obvious upfront.
+
+### Integration Before Testing Protocol
+**CRITICAL RULE**: When asked to test or validate any feature:
+1. **STOP and verify prerequisites** - Check if the feature is actually integrated and functional
+2. **Question test readiness** - Ask "Is this code connected to the main flow?"
+3. **Propose integration first** - If components aren't wired up, suggest integration before testing
+4. **Explain dependencies** - Clearly state why integration is needed for meaningful results
+5. **Never test disconnected code** - Testing unintegrated modules wastes time and gives false results
+
+**Lesson**: Testing validation approaches without integrated mitigation strategies provided meaningless results (0% success for both approaches). Always ensure code is connected before testing.
+
+### Task Analysis Protocol
+**CRITICAL RULE**: When receiving any user request:
+1. **Analyze before executing** - Understand the full context and purpose
+2. **Check assumptions** - "What needs to be true for this task to be meaningful?"
+3. **Identify dependencies** - "What other components must be working?"
+4. **Communicate gaps** - Immediately inform user of missing prerequisites
+5. **Propose correct sequence** - Suggest the right order of operations
+
+**Example**: User says "run tests" → Check if feature is integrated → If not, say "The feature needs integration first. Should I integrate it before testing?"
+
+### Execution Mode vs Analysis Mode
+**CRITICAL RULE**: Never let "execution mode" override critical thinking:
+- **Red flags that you're in pure execution mode**:
+  - Implementing exactly what's asked without questioning feasibility
+  - Continuing despite discovering blockers
+  - Prioritizing "showing progress" over "achieving goals"
+  - Running tests that you know will fail
+- **Required mindset**: Every task requires both analysis AND execution
+- **Recovery**: If you catch yourself in pure execution mode, STOP and reassess
+
+**Lesson**: Blindly executed test comparisons without integrating the code being tested, wasting time on meaningless results. Discovered entity tracking modules weren't connected but continued testing anyway.
 
 ## XI. API Error Prevention
 

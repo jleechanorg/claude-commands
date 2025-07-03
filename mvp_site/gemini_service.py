@@ -17,8 +17,20 @@ from narrative_response_schema import (
     validate_entity_coverage,
     NarrativeResponse
 )
+# Import entity tracking mitigation modules
+from entity_preloader import EntityPreloader
+from entity_instructions import EntityInstructionGenerator
+from entity_validator import EntityValidator
+from dual_pass_generator import DualPassGenerator
+from entity_tracking import SceneManifest as EntityManifest, create_from_game_state
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Initialize entity tracking mitigation modules
+entity_preloader = EntityPreloader()
+instruction_generator = EntityInstructionGenerator()
+entity_validator = EntityValidator()
+dual_pass_generator = DualPassGenerator()
 
 def json_datetime_serializer(obj):
     """JSON serializer for datetime objects."""
@@ -33,6 +45,15 @@ DEFAULT_MODEL = 'gemini-2.5-flash'
 LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'
 # Use 1.5 flash for testing as requested
 TEST_MODEL = 'gemini-1.5-flash'
+
+# Model cycling order for 503 errors - try these in sequence
+MODEL_FALLBACK_CHAIN = [
+    'gemini-2.5-flash',
+    'gemini-1.5-flash', 
+    'gemini-2.5-pro',
+    'gemini-1.5-pro',
+    'gemini-1.0-pro'
+]
 
 # Use pro model for first 5 user inputs for higher quality world building
 USE_PRO_MODEL_FOR_FIRST_N_INPUTS = 5
@@ -178,10 +199,15 @@ class PromptBuilder:
         Returns a list of instruction parts.
         """
         parts = []
-        # CRITICAL: Load master directive FIRST for highest priority
+        
+        # CRITICAL: Add debug mode instructions FIRST to prevent premature completion
+        # The backend will strip debug content for users when debug_mode is False
+        parts.append(_build_debug_instructions())
+        
+        # CRITICAL: Load master directive SECOND for highest priority
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
         
-        # CRITICAL: Load game_state instructions SECOND for highest priority
+        # CRITICAL: Load game_state instructions THIRD for highest priority
         # This prevents "instruction fatigue" and ensures data structure compliance
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
         
@@ -262,15 +288,14 @@ class PromptBuilder:
     
     def finalize_instructions(self, parts, use_default_world=False):
         """
-        Finalize the system instructions by adding world and debug instructions.
+        Finalize the system instructions by adding world instructions.
         Returns the complete system instruction string.
         """
         # Add world instructions if requested
         if use_default_world:
             _add_world_instructions_to_system(parts)
         
-        # Always add debug instructions
-        parts.append(_build_debug_instructions())
+        # Debug instructions already added at the beginning in build_core_system_instructions
         
         return "\n\n".join(parts)
 
@@ -501,12 +526,19 @@ def _log_token_count(model_name, user_prompt_contents, system_instruction_text=N
     except Exception as e:
         logging.warning(f"Could not count tokens before API call: {e}")
 
-def _call_gemini_api(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None, use_json_mode=False):
-    """Calls the Gemini API with a given prompt and returns the response."""
+def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None, use_json_mode=False):
+    """
+    Calls the Gemini API with model cycling on 503 errors.
+    Tries the requested model first, then cycles through fallback models.
+    """
     client = get_client()
-    # Pass the system instruction text to the token logger
-    _log_token_count(model_name, prompt_contents, system_instruction_text)
-
+    
+    # Create ordered list starting with requested model, then fallbacks
+    models_to_try = [model_name]
+    for fallback_model in MODEL_FALLBACK_CHAIN:
+        if fallback_model != model_name and fallback_model not in models_to_try:
+            models_to_try.append(fallback_model)
+    
     if current_prompt_text_for_logging:
         logging.info(f"--- Calling Gemini API with current prompt: {str(current_prompt_text_for_logging)[:1000]}... ---")
 
@@ -516,27 +548,93 @@ def _call_gemini_api(prompt_contents, model_name, current_prompt_text_for_loggin
         total_chars += len(system_instruction_text)
     logging.info(f"--- Calling Gemini API with prompt of total characters: {total_chars} ---")
 
-    generation_config_params = {
-        "max_output_tokens": MAX_TOKENS,
-        "temperature": TEMPERATURE,
-        "safety_settings": SAFETY_SETTINGS
-    }
+    last_error = None
     
-    # Configure JSON response mode if requested
-    if use_json_mode:
-        generation_config_params["response_mime_type"] = "application/json"
-        logging.info("--- Using JSON response mode for structured generation ---")
-    
-    # Pass the system instruction to the generate_content call
-    if system_instruction_text:
-        generation_config_params["system_instruction"] = types.Part(text=system_instruction_text)
+    for attempt, current_model in enumerate(models_to_try):
+        try:
+            # Log token count for the current model being tried
+            _log_token_count(current_model, prompt_contents, system_instruction_text)
+            
+            if attempt > 0:
+                logging.warning(f"--- Attempting fallback model #{attempt}: {current_model} (after {attempt} failed attempts) ---")
+            else:
+                logging.info(f"--- Attempting primary model: {current_model} ---")
 
-    response = client.models.generate_content(
-        model=model_name,
-        contents=prompt_contents,
-        config=types.GenerateContentConfig(**generation_config_params)
+            generation_config_params = {
+                "max_output_tokens": MAX_TOKENS,
+                "temperature": TEMPERATURE,
+                "safety_settings": SAFETY_SETTINGS
+            }
+            
+            # Configure JSON response mode if requested
+            if use_json_mode:
+                generation_config_params["response_mime_type"] = "application/json"
+                if attempt == 0:  # Only log once
+                    logging.info("--- Using JSON response mode for structured generation ---")
+            
+            # Pass the system instruction to the generate_content call
+            if system_instruction_text:
+                generation_config_params["system_instruction"] = types.Part(text=system_instruction_text)
+
+            response = client.models.generate_content(
+                model=current_model,
+                contents=prompt_contents,
+                config=types.GenerateContentConfig(**generation_config_params)
+            )
+            
+            if attempt > 0:
+                logging.warning(f"--- SUCCESS: Fallback model {current_model} worked after {attempt} failed attempts ---")
+            else:
+                logging.info(f"--- SUCCESS: Primary model {current_model} worked ---")
+            
+            return response
+            
+        except Exception as e:
+            last_error = e
+            error_message = str(e)
+            
+            # Try to extract status code from different exception types
+            status_code = None
+            
+            # Check if the exception has a status_code attribute
+            if hasattr(e, 'status_code'):
+                status_code = e.status_code
+            # Check if it's a ServerError with the status in the message
+            elif '503 UNAVAILABLE' in error_message:
+                status_code = 503
+            elif '429' in error_message:
+                status_code = 429
+            elif '400' in error_message and "not found" in error_message.lower():
+                status_code = 400
+            
+            if status_code == 503:  # Service unavailable
+                logging.warning(f"--- Model {current_model} overloaded (503), trying next model... ---")
+                continue
+            elif status_code == 429:  # Rate limit
+                logging.warning(f"--- Model {current_model} rate limited (429), trying next model... ---")
+                continue
+            elif status_code == 400 and "not found" in error_message.lower():  # Model not found
+                logging.warning(f"--- Model {current_model} not found (400), trying next model... ---")
+                continue
+            else:
+                # For other errors, don't continue cycling - raise immediately
+                logging.error(f"--- Non-recoverable error with model {current_model}: {e} ---")
+                raise e
+    
+    # If we get here, all models failed
+    logging.error(f"--- ALL MODELS FAILED: Tried {len(models_to_try)} models: {models_to_try} ---")
+    logging.error(f"--- Last error: {last_error} ---")
+    
+    # Ensure we have a meaningful error to raise
+    if last_error is None:
+        raise RuntimeError(f"All {len(models_to_try)} Gemini models failed but no specific error was captured")
+    raise last_error
+
+def _call_gemini_api(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None, use_json_mode=False):
+    """Legacy wrapper for backward compatibility - now uses model cycling."""
+    return _call_gemini_api_with_model_cycling(
+        prompt_contents, model_name, current_prompt_text_for_logging, system_instruction_text, use_json_mode
     )
-    return response
 
 def _get_text_from_response(response):
     """Safely extracts text from a Gemini response object."""
@@ -657,15 +755,113 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     if use_default_world:
         prompt = f"Use default setting Assiah. {prompt}"
     
-    contents = [types.Content(role="user", parts=[types.Part(text=prompt)])]
+    # --- ENTITY TRACKING FOR INITIAL STORY ---
+    # Extract expected entities from the prompt for initial tracking
+    expected_entities = []
+    entity_preload_text = ""
+    entity_specific_instructions = ""
+    entity_tracking_instruction = ""
+    
+    # Try to extract character name from prompt
+    import re
+    # Look for "Player Character: Name" or "PC: Name" patterns
+    character_match = re.search(r'(?:Player\s+Character|PC|Character):\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)', prompt)
+    if character_match:
+        character_name = character_match.group(1).strip()
+        expected_entities.append(character_name)
+        logging.info(f"Detected player character name from prompt: {character_name}")
+    
+    # Extract NPCs mentioned in prompt - look for specific patterns
+    # "NPCs including X, Y, and Z" or "advisor named X"
+    npc_patterns = [
+        r'NPCs?\s+(?:including|such as)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:,\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)*)',
+        r'(?:advisor|companion|member)s?\s+(?:named?|called?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)'
+    ]
+    
+    for pattern in npc_patterns:
+        matches = re.findall(pattern, prompt)
+        for match in matches:
+            # Split by commas if multiple NPCs listed
+            npc_names = [n.strip() for n in match.split(',')]
+            for npc in npc_names:
+                if npc and npc not in expected_entities and npc not in ['and', 'or', 'the', 'a', 'an']:
+                    expected_entities.append(npc)
+                    logging.info(f"Detected NPC from prompt: {npc}")
+    
+    # Create a minimal initial game state for entity tracking
+    if expected_entities:
+        # Create minimal game state for entity tracking
+        pc_name = expected_entities[0] if expected_entities else "Unknown"
+        initial_game_state = {
+            'player_character_data': {
+                'name': pc_name,
+                'hp': 10,
+                'max_hp': 10,
+                'level': 1,
+                'string_id': f"pc_{pc_name.lower().replace(' ', '_')}_001"
+            },
+            'npc_data': {},
+            'world_data': {'current_location_name': 'The throne room'},
+            'combat_state': {'in_combat': False}
+        }
+        
+        # 1. Entity Pre-Loading (Option 3)
+        entity_preload_text = entity_preloader.create_entity_preload_text(
+            initial_game_state, 1, 1, 'Starting Location'
+        )
+        
+        # 2. Entity-Specific Instructions (Option 5)
+        entity_instructions = instruction_generator.generate_entity_instructions(
+            entities=expected_entities,
+            player_references=[prompt],
+            location='Starting Location',
+            story_context=""
+        )
+        entity_specific_instructions = entity_instructions
+        
+        # 3. Create entity manifest for tracking using create_from_game_state
+        # For initial story, we use session 1, turn 1
+        entity_manifest = create_from_game_state(initial_game_state, 1, 1)
+        entity_manifest_text = entity_manifest.to_prompt_format()
+        entity_tracking_instruction = create_structured_prompt_injection(entity_manifest_text, expected_entities)
+    
+    # Build enhanced prompt with entity tracking
+    enhanced_prompt = prompt
+    if entity_preload_text or entity_specific_instructions or entity_tracking_instruction:
+        enhanced_prompt = (
+            f"{entity_preload_text}"
+            f"{entity_specific_instructions}"
+            f"{entity_tracking_instruction}"
+            f"\nUSER REQUEST:\n{prompt}"
+        )
+        logging.info(f"Added entity tracking to initial story. Expected entities: {expected_entities}")
+    
+    contents = [types.Content(role="user", parts=[types.Part(text=enhanced_prompt)])]
     
     # --- DYNAMIC MODEL SELECTION ---
     # Use the more powerful model at the beginning of the game.
     model_to_use = TEST_MODEL if os.environ.get('TESTING') else LARGE_CONTEXT_MODEL
     logging.info(f"Using model: {model_to_use} for initial story generation.")
 
-    response = _call_gemini_api(contents, model_to_use, current_prompt_text_for_logging=prompt, system_instruction_text=system_instruction_final)
-    return _get_text_from_response(response)
+    response = _call_gemini_api(contents, model_to_use, current_prompt_text_for_logging=prompt, 
+                              system_instruction_text=system_instruction_final)
+    response_text = _get_text_from_response(response)
+    
+    # --- ENTITY VALIDATION FOR INITIAL STORY ---
+    if expected_entities:
+        validator = NarrativeSyncValidator()
+        validation_result = validator.validate(
+            narrative_text=response_text,
+            expected_entities=expected_entities,
+            location='Starting Location'
+        )
+        
+        if not validation_result.all_entities_present:
+            logging.warning(f"Initial story failed entity validation. Missing: {validation_result.entities_missing}")
+            # For initial story, we'll log but not retry to avoid complexity
+            # The continue_story function will handle retry logic for subsequent interactions
+    
+    return response_text
 
 @log_exceptions
 def continue_story(user_input, mode, story_context, current_game_state: GameState, selected_prompts=None, use_default_world=False):
@@ -767,14 +963,45 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     
     # Build timeline log
     timeline_log_string = _build_timeline_log(truncated_story_context)
+    
+    # Enhanced entity tracking with mitigation strategies
+    entity_preload_text = ""
+    entity_specific_instructions = ""
+    
+    if expected_entities:
+        # 1. Entity Pre-Loading (Option 3)
+        game_state_dict = current_game_state.to_dict()
+        turn_number = len(truncated_story_context) + 1
+        current_location = current_game_state.world_data.get('current_location_name', 'Unknown')
+        entity_preload_text = entity_preloader.create_entity_preload_text(
+            game_state_dict, session_number, turn_number, current_location
+        )
+        
+        # 2. Entity-Specific Instructions (Option 5)
+        player_references = [user_input] if user_input else []
+        entity_instructions = instruction_generator.generate_entity_instructions(
+            entities=expected_entities,
+            player_references=player_references,
+            location=current_location,
+            story_context=timeline_log_string
+        )
+        entity_specific_instructions = entity_instructions
 
     # Create the final prompt for the current user turn (User's preferred method)
     current_prompt_text = _get_current_turn_prompt(user_input, mode)
 
-    # Build the full prompt
+    # Build the full prompt with entity tracking enhancements
+    enhanced_entity_tracking = entity_tracking_instruction
+    if entity_preload_text or entity_specific_instructions:
+        enhanced_entity_tracking = (
+            f"{entity_preload_text}"
+            f"{entity_specific_instructions}"
+            f"{entity_tracking_instruction}"
+        )
+    
     full_prompt = _build_continuation_prompt(
         checkpoint_block, core_memories_summary, sequence_id_list_string,
-        serialized_game_state, entity_tracking_instruction, 
+        serialized_game_state, enhanced_entity_tracking, 
         timeline_log_string, current_prompt_text
     )
     
@@ -801,6 +1028,49 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     
     # Validate entity tracking if enabled
     if expected_entities:
+        # First do basic validation
+        validator = NarrativeSyncValidator()
+        validation_result = validator.validate(
+            narrative_text=response_text,
+            expected_entities=expected_entities,
+            location=current_game_state.world_data.get('current_location_name', 'Unknown')
+        )
+        
+        if not validation_result.all_entities_present:
+            logging.warning(f"ENTITY_TRACKING_VALIDATION: Narrative failed entity validation")
+            logging.warning(f"Missing entities: {validation_result.entities_missing}")
+            if validation_result.warnings:
+                for warning in validation_result.warnings:
+                    logging.warning(f"Validation warning: {warning}")
+            
+            # Attempt dual-pass retry (Option 7)
+            logging.info("ENTITY_TRACKING_RETRY: Attempting dual-pass generation to fix missing entities")
+            
+            # Create generation callback for API calls
+            def generation_callback(prompt):
+                response = _call_gemini_api([prompt], chosen_model, 
+                                          current_prompt_text_for_logging=current_prompt_text,
+                                          system_instruction_text=system_instruction_final)
+                return _get_text_from_response(response)
+            
+            # Use dual-pass generator to fix missing entities
+            dual_pass_result = dual_pass_generator.generate_with_dual_pass(
+                initial_prompt=full_prompt,
+                expected_entities=expected_entities,
+                location=current_game_state.world_data.get('current_location_name', 'Unknown'),
+                generation_callback=generation_callback
+            )
+            
+            if dual_pass_result.final_narrative:
+                response_text = dual_pass_result.final_narrative
+                # Calculate injected entities from the difference between passes
+                injected_count = len(dual_pass_result.total_entities_found) - len(dual_pass_result.first_pass.entities_found)
+                logging.info(f"ENTITY_TRACKING_RETRY: Dual-pass succeeded. "
+                           f"Entities recovered: {injected_count}")
+            else:
+                logging.error("ENTITY_TRACKING_RETRY: Dual-pass generation failed")
+        
+        # Use the common validation function to add debug info if needed
         response_text = _validate_entity_tracking(response_text, expected_entities, current_game_state)
     
     return response_text
@@ -1007,7 +1277,7 @@ def parse_llm_response_for_state_changes(llm_text_response: str) -> dict:
     matches = re.findall(r'\[STATE_UPDATES_PROPOSED\](.*?)\[END_STATE_UPDATES_PROPOSED\]', llm_text_response, re.DOTALL)
 
     if not matches:
-        logging.info("No state update block found in the LLM response.")
+        logging.warning("⚠️ ALERT: No STATE_UPDATES_PROPOSED block found in LLM response! This means game state will NOT be updated. The AI should always generate STATE_UPDATES_PROPOSED blocks to track entities and game state.")
         return {}
 
     # Iterate through the found blocks in reverse order, taking the last valid one.

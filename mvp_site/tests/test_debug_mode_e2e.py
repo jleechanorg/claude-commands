@@ -60,15 +60,15 @@ class TestDebugModeE2E(unittest.TestCase):
         build_debug_source = inspect.getsource(gemini_service._build_debug_instructions)
         self.assertIn("DEBUG MODE - ALWAYS GENERATE", build_debug_source)
         
-        # Check that finalize_instructions always adds debug instructions
-        finalize_source = inspect.getsource(gemini_service.PromptBuilder.finalize_instructions)
+        # Check that build_core_system_instructions adds debug instructions FIRST
+        build_core_source = inspect.getsource(gemini_service.PromptBuilder.build_core_system_instructions)
         
-        # Verify debug instructions are always added
-        self.assertIn("# Always add debug instructions", finalize_source)
-        self.assertIn("parts.append(_build_debug_instructions())", finalize_source)
+        # Verify debug instructions are added first
+        self.assertIn("# CRITICAL: Add debug mode instructions FIRST", build_core_source)
+        self.assertIn("parts.append(_build_debug_instructions())", build_core_source)
         
         # Verify there's no conditional check for debug_mode
-        lines = finalize_source.split('\n')
+        lines = build_core_source.split('\n')
         for i, line in enumerate(lines):
             if '_build_debug_instructions' in line:
                 # Check previous lines for any 'if' statement

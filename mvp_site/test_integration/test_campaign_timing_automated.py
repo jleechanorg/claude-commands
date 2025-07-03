@@ -4,6 +4,10 @@ Automated Campaign Wizard Timing Tests
 
 This test file integrates the JavaScript timing tests into the Python test suite.
 It uses Selenium to run the browser-based timing tests and reports results.
+
+REQUIREMENTS:
+- ChromeDriver must be installed: sudo apt-get install chromium-chromedriver
+- Or download from: https://chromedriver.chromium.org/
 """
 
 import unittest
@@ -108,7 +112,14 @@ class CampaignTimingAutomatedTests(unittest.TestCase):
         chrome_options.add_argument("--window-size=1920,1080")
         
         try:
-            cls.driver = webdriver.Chrome(options=chrome_options)
+            # Try to use local ChromeDriver first
+            local_chromedriver = os.path.join(os.path.dirname(__file__), '../../bin/chromedriver')
+            if os.path.exists(local_chromedriver):
+                from selenium.webdriver.chrome.service import Service
+                service = Service(executable_path=local_chromedriver)
+                cls.driver = webdriver.Chrome(service=service, options=chrome_options)
+            else:
+                cls.driver = webdriver.Chrome(options=chrome_options)
             cls.driver.set_page_load_timeout(30)
             print("✅ Chrome browser initialized successfully")
             

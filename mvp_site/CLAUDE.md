@@ -1,4 +1,19 @@
-# CLAUDE.md
+# CLAUDE.md - Claude Code Specific Configuration Only
+
+⚠️ **DO NOT ADD GENERAL RULES HERE** ⚠️
+- General operating protocols → `.cursor/rules/rules.mdc`
+- Technical lessons → `.cursor/rules/lessons.mdc`
+- This file → Claude Code tool-specific behavior ONLY
+
+## What Belongs Here
+✅ Claude Code specific tool usage
+✅ Claude Code environment variables
+✅ Claude Code file path handling
+❌ General development rules
+❌ Testing protocols
+❌ Git workflows
+❌ Code review processes
+❌ Integration patterns
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -218,6 +233,10 @@ grep -r "process.*special_token" *.py
 - Docker containerization with health checks and 300s timeout
 - Google Cloud Run with secret management for API keys
 - Automatic context-aware deployment from any directory
+
+---
+
+**Remember**: For all general development rules, testing protocols, and operating procedures, see `.cursor/rules/rules.mdc`
 
 ## Work Progress Tracking
 
