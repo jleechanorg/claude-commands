@@ -76,30 +76,16 @@ SAFETY_SETTINGS = [
     types.SafetySetting(category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold=types.HarmBlockThreshold.BLOCK_NONE),
 ]
 
-# NEW: Mapping from instruction type to filename using shared constants
-PROMPT_FILENAMES = {
-    constants.PROMPT_TYPE_NARRATIVE: constants.FILENAME_NARRATIVE,
-    constants.PROMPT_TYPE_MECHANICS: constants.FILENAME_MECHANICS,
-    constants.PROMPT_TYPE_CALIBRATION: constants.FILENAME_CALIBRATION,
-    constants.PROMPT_TYPE_DESTINY: constants.FILENAME_DESTINY,
-    constants.PROMPT_TYPE_GAME_STATE: constants.FILENAME_GAME_STATE,
-    constants.PROMPT_TYPE_ENTITY_SCHEMA: constants.FILENAME_ENTITY_SCHEMA,
-}
-
 # NEW: Centralized map of prompt types to their file paths.
 # This is now the single source of truth for locating prompt files.
 PATH_MAP = {
     constants.PROMPT_TYPE_NARRATIVE: constants.NARRATIVE_SYSTEM_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_MECHANICS: constants.MECHANICS_SYSTEM_INSTRUCTION_PATH,
-    constants.PROMPT_TYPE_CALIBRATION: constants.CALIBRATION_INSTRUCTION_PATH,
-    constants.PROMPT_TYPE_DESTINY: constants.DESTINY_RULESET_PATH,
     constants.PROMPT_TYPE_GAME_STATE: constants.GAME_STATE_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_CHARACTER_TEMPLATE: constants.CHARACTER_TEMPLATE_PATH,
-    constants.PROMPT_TYPE_CHARACTER_SHEET: constants.CHARACTER_SHEET_TEMPLATE_PATH,
-    constants.PROMPT_TYPE_ENTITY_SCHEMA: constants.ENTITY_SCHEMA_INSTRUCTION_PATH,
-    constants.PROMPT_TYPE_DUAL_SYSTEM_REFERENCE: constants.DUAL_SYSTEM_REFERENCE_PATH,
+    # constants.PROMPT_TYPE_ENTITY_SCHEMA: constants.ENTITY_SCHEMA_INSTRUCTION_PATH, # Integrated into game_state
     constants.PROMPT_TYPE_MASTER_DIRECTIVE: constants.MASTER_DIRECTIVE_PATH,
-    constants.PROMPT_TYPE_ATTRIBUTE_CONVERSION: constants.ATTRIBUTE_CONVERSION_PATH,
+    constants.PROMPT_TYPE_DND_SRD: constants.DND_SRD_INSTRUCTION_PATH,
 }
 
 # --- END CONSTANTS ---
@@ -202,19 +188,18 @@ class PromptBuilder:
         """
         parts = []
         
-        # CRITICAL: Add debug mode instructions FIRST to prevent premature completion
-        # The backend will strip debug content for users when debug_mode is False
-        parts.append(_build_debug_instructions())
-        
-        # CRITICAL: Load master directive SECOND for highest priority
+        # CRITICAL: Load master directive FIRST to establish hierarchy and authority
+        # This must come before all other instructions to set the precedence rules
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_MASTER_DIRECTIVE))
         
-        # CRITICAL: Load game_state instructions THIRD for highest priority
+        # CRITICAL: Load game_state instructions SECOND (highest authority per master directive)
         # This prevents "instruction fatigue" and ensures data structure compliance
+        # NOTE: Entity schemas are now integrated into game_state_instruction.md for LLM optimization
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_GAME_STATE))
         
-        # Load entity schema instructions for proper entity management
-        parts.append(_load_instruction_file(constants.PROMPT_TYPE_ENTITY_SCHEMA))
+        # Add debug mode instructions THIRD for technical functionality
+        # The backend will strip debug content for users when debug_mode is False
+        parts.append(_build_debug_instructions())
         
         return parts
     
@@ -225,19 +210,13 @@ class PromptBuilder:
         # Conditionally add the character template if narrative instructions are selected
         if constants.PROMPT_TYPE_NARRATIVE in selected_prompts:
             parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE))
-        
-        # Conditionally add the character sheet if mechanics instructions are selected
-        if constants.PROMPT_TYPE_MECHANICS in selected_prompts:
-            parts.append(_load_instruction_file(constants.PROMPT_TYPE_CHARACTER_SHEET))
     
-    def add_selected_prompt_instructions(self, parts, selected_prompts, filter_calibration=False):
+    def add_selected_prompt_instructions(self, parts, selected_prompts):
         """
         Add instructions for selected prompt types in consistent order.
         """
-        # Define the order for consistency
+        # Define the order for consistency (calibration archived)
         prompt_order = [constants.PROMPT_TYPE_NARRATIVE, constants.PROMPT_TYPE_MECHANICS]
-        if not filter_calibration:
-            prompt_order.append(constants.PROMPT_TYPE_CALIBRATION)
         
         # Add in order
         for p_type in prompt_order:
@@ -248,14 +227,8 @@ class PromptBuilder:
         """
         Add system reference instructions that are always included.
         """
-        # Always include the destiny_ruleset
-        parts.append(_load_instruction_file(constants.PROMPT_TYPE_DESTINY))
-        
-        # Add dual system reference for attribute system guidance
-        parts.append(_load_instruction_file(constants.PROMPT_TYPE_DUAL_SYSTEM_REFERENCE))
-        
-        # Add attribute conversion guide for system switching
-        parts.append(_load_instruction_file(constants.PROMPT_TYPE_ATTRIBUTE_CONVERSION))
+        # Always include the D&D SRD instruction (replaces complex dual-system approach)
+        parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
     
     def build_companion_instruction(self):
         """
@@ -924,7 +897,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     builder.add_character_instructions(system_instruction_parts, selected_prompts)
     
     # Add selected prompt instructions (filter calibration for continue_story)
-    builder.add_selected_prompt_instructions(system_instruction_parts, selected_prompts, filter_calibration=True)
+    builder.add_selected_prompt_instructions(system_instruction_parts, selected_prompts)
     
     # Add system reference instructions
     builder.add_system_reference_instructions(system_instruction_parts)

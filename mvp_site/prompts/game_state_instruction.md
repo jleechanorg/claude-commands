@@ -1,13 +1,227 @@
 # Game State Management Protocol
+
+## Entity Data Schemas and D&D 5E Rules
+
+All characters, NPCs, locations, and other game entities use **D&D 5E System Reference Document (SRD) rules**. This section defines the standardized structure for consistent entity tracking and state management.
+
+### D&D 5E Core System Rules
+
+#### Character Attributes (The Big Six)
+- **STR** (Strength) - Physical power, melee attacks, carrying capacity
+- **DEX** (Dexterity) - Agility, ranged attacks, AC, initiative 
+- **CON** (Constitution) - Health, hit points, concentration
+- **INT** (Intelligence) - Reasoning, investigation, knowledge
+- **WIS** (Wisdom) - Perception, insight, awareness
+- **CHA** (Charisma) - Social skills, persuasion, deception
+
+#### Core Mechanics
+- **Ability Checks**: 1d20 + ability modifier + proficiency (if applicable)
+- **Saving Throws**: 1d20 + ability modifier + proficiency (if proficient)
+- **Attack Rolls**: 1d20 + ability modifier + proficiency bonus
+- **Damage**: Weapon die + ability modifier
+- **Armor Class**: 10 + DEX modifier + armor bonus
+- **Hit Points**: Hit Die + CON modifier per level
+- **Proficiency Bonus**: +2 (levels 1-4), +3 (levels 5-8), +4 (levels 9-12), etc.
+
+#### Combat Mechanics
+- **Initiative**: 1d20 + DEX modifier
+- **Attack Roll**: 1d20 + STR/DEX + proficiency
+- **Damage Roll**: Weapon damage + STR/DEX modifier
+- **Critical Hit**: Natural 20, roll damage dice twice
+
+#### Death and Dying
+- **0 HP**: Unconscious and making death saving throws
+- **Death Saves**: 1d20, 10+ is success, need 3 successes to stabilize
+- **Massive Damage**: If damage ≥ max HP, instant death
+
+#### Social Interaction Rules
+- **Persuasion**: CHA + proficiency (if proficient)
+- **Deception**: CHA + proficiency (if proficient)  
+- **Intimidation**: CHA + proficiency (if proficient)
+- **Insight**: WIS + proficiency (if proficient)
+
+### Entity ID Format
+
+All entities MUST have a unique `string_id` following this format:
+- **Player Characters**: `pc_{name}_{sequence}` (e.g., `pc_kaelan_001`)
+- **NPCs**: `npc_{name}_{sequence}` (e.g., `npc_theron_001`)
+- **Locations**: `loc_{name}_{sequence}` (e.g., `loc_throneroom_001`)
+- **Items**: `item_{name}_{sequence}` (e.g., `item_excalibur_001`)
+- **Factions**: `faction_{name}_{sequence}` (e.g., `faction_rebels_001`)
+
+The sequence number should be zero-padded to 3 digits (001, 002, etc.).
+
+### Player Character Data Schema
+
+Every player character MUST include these fields in `player_character_data`:
+
+```json
+{
+  "string_id": "pc_name_001",
+  "name": "Character Name",
+  "level": 3,
+  "class": "Fighter",
+  "background": "Soldier",
+  "alignment": "Lawful Good",
+  "mbti": "INFJ",
+  
+  "hp_current": 28,
+  "hp_max": 28,
+  "temp_hp": 0,
+  "armor_class": 16,
+  
+  "attributes": {
+    "strength": 16,
+    "dexterity": 14, 
+    "constitution": 15,
+    "intelligence": 12,
+    "wisdom": 13,
+    "charisma": 10
+  },
+  
+  "proficiency_bonus": 2,
+  "skills": ["Athletics", "Perception", "Insight"],
+  "saving_throw_proficiencies": ["Strength", "Constitution"],
+  
+  "resources": {
+    "gold": 150,
+    "inspiration": false,
+    "hit_dice": {"used": 1, "total": 3},
+    "spell_slots": {
+      "level_1": {"used": 0, "total": 2},
+      "level_2": {"used": 1, "total": 1}
+    }
+  },
+  
+  "equipment": {
+    "weapons": ["Longsword", "Shield"],
+    "armor": "Chain Mail",
+    "backpack": ["Rope (50 feet)", "Rations (5 days)"],
+    "money": "150 gp"
+  },
+  
+  "combat_stats": {
+    "initiative": 2,
+    "speed": 30,
+    "passive_perception": 13
+  },
+  
+  "status_conditions": [],
+  "death_saves": { "successes": 0, "failures": 0 },
+  
+  "features": ["Fighting Style: Defense", "Second Wind", "Action Surge"],
+  "spells_known": []
+}
+```
+
+### NPC Data Schema
+
+NPCs in `npc_data` should be stored by their display name as the key, with this structure:
+
+```json
+{
+  "King Theron": {
+    "string_id": "npc_theron_001",
+    "role": "King of Eldoria",
+    "faction": "faction_royalty_001",
+    "mbti": "ISFP",
+    "attitude_to_party": "neutral",
+    
+    "level": 10,
+    "class": "Noble",
+    "hp_current": 65,
+    "hp_max": 65,
+    "armor_class": 15,
+    
+    "attributes": {
+      "strength": 13,
+      "dexterity": 12,
+      "constitution": 14,
+      "intelligence": 16,
+      "wisdom": 15,
+      "charisma": 18
+    },
+    
+    "combat_stats": {
+      "initiative": 1,
+      "speed": 30,
+      "passive_perception": 15
+    },
+    
+    "present": true,
+    "conscious": true,
+    "hidden": false,
+    "status": "Concerned about kingdom",
+    
+    "relationships": {
+      "pc_kaelan_001": "cautious respect"
+    },
+    
+    "knowledge": ["kingdom politics", "dragon threat"],
+    "recent_actions": ["summoned heroes", "offered quest"]
+  }
+}
+```
+
+### Location Data Schema
+
+Locations should be tracked with connections and present entities:
+
+```json
+{
+  "current_location": "loc_throneroom_001",
+  "locations": {
+    "loc_throneroom_001": {
+      "display_name": "Royal Throne Room",
+      "description": "A grand hall with marble columns",
+      "connected_to": ["loc_hallway_001", "loc_chambers_001"],
+      "entities_present": ["npc_theron_001", "npc_guard_001"],
+      "environmental_effects": ["dim lighting", "echo"]
+    }
+  }
+}
+```
+
+### Entity Status and Visibility
+
+#### Status Conditions
+Entities can have multiple status conditions from this list:
+- `conscious` - Normal, active state
+- `unconscious` - Knocked out but alive
+- `dead` - Deceased
+- `hidden` - Actively concealing
+- `invisible` - Magically unseen
+- `paralyzed` - Unable to move
+- `stunned` - Temporarily incapacitated
+
+#### Visibility States
+- `visible` - Can be seen normally
+- `hidden` - Concealed but can be detected
+- `invisible` - Cannot be seen without special means
+- `obscured` - Partially visible
+- `darkness` - In area of darkness
+
+### Critical Entity Rules
+
+1. **Always include string_id** when creating new entities
+2. **Maintain consistency** - once an entity has a string_id, never change it
+3. **Use present/hidden/conscious flags** to track entity availability
+4. **Track relationships** between entities using their string_ids
+5. **Delete defeated enemies** using `"__DELETE__"` to remove them completely
+6. **MBTI required** - All characters (PC and major NPCs) must have MBTI personality type
+7. **D&D 5E SRD Authority** - All attributes, mechanics, and stats follow standard D&D 5E rules
+8. **Calculate modifiers correctly** - Ability modifier = (attribute - 10) / 2 (rounded down)
+9. **Update hp_current** for damage, never modify hp_max unless level changes
+
 ## 0. Initial State Generation
 
 **This is the most critical first step.** Immediately after you generate the initial campaign premise, the main character, the world, and any key NPCs, you **must** consolidate all of that information into a single, comprehensive `[STATE_UPDATES_PROPOSED]` block.
 
 This first block should not be an "update" but a "creation." It must contain all the initial data for:
-- `player_character_data`: The full character sheet, stats, inventory, and backstory, and a **Myers-Briggs Type (MBTI)**
-- `npc_data`: Profiles for all key NPCs created during setup, each with their own **Myers-Briggs Type (MBTI)**
-- `world_data`: Key locations, political situation, and any other foundational world-building elements
-- `custom_campaign_state`: The initial premise, attribute_system ("dnd" or "destiny"), and any other custom tracking fields
+- `player_character_data`: Full character data per `entity_schema_instruction.md` format
+- `npc_data`: NPC profiles per `entity_schema_instruction.md` format
+- `world_data`: Key locations, political situation, and foundational world-building elements
+- `custom_campaign_state`: Initial premise, campaign configuration, and custom tracking fields
 - `world_time`: The starting date and time
 
 **Example of an Initial State Block:**
@@ -16,30 +230,33 @@ This first block should not be an "update" but a "creation." It must contain all
 {
   "game_state_version": 1,
   "player_character_data": {
+    // Follow complete format from Character Entity Schema section above
     "string_id": "pc_kaelan_001",
     "name": "Sir Kaelan the Adamant",
-    "archetype": "The Idealistic Knight Facing a Corrupt Reality",
+    "level": 5,
+    "class": "Paladin",
     "alignment": "Lawful Good",
     "mbti": "INFJ",
-    "level": 5,
-    "hp_max": 49,
     "hp_current": 49,
-    "stats": { "STR": 18, "DEX": 10, ... },
-    "inventory": { "gold": 50, "items": { ... } },
-    ...
+    "hp_max": 49,
+    "armor_class": 18,
+    "attributes": { "strength": 18, "dexterity": 10, "constitution": 16, "intelligence": 12, "wisdom": 14, "charisma": 16 },
+    "proficiency_bonus": 3,
+    // ... plus all other fields per entity schema
   },
   "npc_data": {
     "King Theron": {
+      // Follow complete NPC format from entity_schema_instruction.md
       "string_id": "npc_theron_001",
       "role": "King of Eldoria",
-      "status": "Weak and ineffective",
-      "mbti": "ISFP"
-    },
-    "Pyrexxus": {
-      "string_id": "npc_pyrexxus_001",
-      "role": "Ancient Evil Dragon",
-      "location": "Dragon's Tooth mountains",
-      "mbti": "ENTJ"
+      "class": "Noble",
+      "mbti": "ISFP",
+      "level": 8,
+      "hp_current": 55,
+      "hp_max": 55,
+      "armor_class": 15,
+      "attributes": { "strength": 13, "dexterity": 12, "constitution": 14, "intelligence": 16, "wisdom": 15, "charisma": 18 },
+      // ... plus all other NPC fields per entity schema
     }
   },
   "world_data": {
@@ -56,7 +273,7 @@ This first block should not be an "update" but a "creation." It must contain all
   },
   "custom_campaign_state": {
     "premise": "A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.",
-    "attribute_system": "dnd"  // or "destiny" - set based on user's campaign creation choice
+    "attribute_system": "dnd"  // Default system, can be customized for campaign setting
   },
   "migration_status": "FRESH_INSTALL"
 }

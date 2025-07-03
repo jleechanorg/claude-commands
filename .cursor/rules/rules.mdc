@@ -661,7 +661,35 @@ grep -r "process.*special_token" *.py
 
 **What I Cannot Control**: API request/response handling, message filtering/processing, or the actual API error mechanism itself.
 
-## XII. Lessons Archive Process
+## XII. User Command Shortcuts
+
+### Context Estimation Command
+**Triggers**: "est", "estimate context", "context usage", "how much context left"
+
+**Response Format**: When user requests context estimation, provide:
+1. **Session Context Usage**: Estimated percentage of my context window used
+2. **Breakdown by Category**:
+   - System messages & instructions: ~X%
+   - File reading operations: ~X%
+   - Conversation history: ~X%
+   - Tool outputs & responses: ~X%
+3. **Remaining Capacity**: Percentage and practical limitations
+4. **Usage Indicators**: What suggests approaching limits
+5. **Recommendations**: Whether to continue or start fresh session
+
+**Example Response**:
+```
+Session Context Usage: ~75-85% used
+- System messages: ~10-15%
+- File operations: ~30-40%  
+- Conversation: ~25-35%
+- Tool outputs: ~10-15%
+
+Remaining: ~15-25% (good for a few more operations)
+Recommendation: Approaching limits, consider fresh session for major work
+```
+
+## XIII. Lessons Archive Process
 
 ### When to Archive
 - Archive lessons quarterly (January, April, July, October)
@@ -688,7 +716,7 @@ lessons_archive_YYYY.mdc
 - Maintain searchability across all archive files
 - Never delete archives - they contain valuable historical context
 
-## XIII. Deployment
+## XIV. Deployment
 
 - Multi-environment deployment via `./deploy.sh` script
 - Docker containerization with health checks and 300s timeout
