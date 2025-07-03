@@ -256,8 +256,15 @@ class TestExportRoutes(unittest.TestCase):
         self.assertIn('error', data)
         self.assertIn('not found', data['error'].lower())
     
-    def test_export_campaign_unsupported_format(self):
+    @patch('main.firestore_service')
+    def test_export_campaign_unsupported_format(self, mock_firestore_service):
         """Test export with unsupported format."""
+        # Mock the campaign data
+        mock_firestore_service.get_campaign_by_id.return_value = (
+            {'title': 'Test Campaign'},
+            [{'actor': 'user', 'text': 'Test story'}]
+        )
+        
         response = self.client.get(
             '/api/campaigns/test-campaign/export?format=xml',
             headers=self.test_headers

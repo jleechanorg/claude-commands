@@ -55,12 +55,14 @@ MODEL_FALLBACK_CHAIN = [
     'gemini-1.0-pro'
 ]
 
-# Use pro model for first 5 user inputs for higher quality world building
-USE_PRO_MODEL_FOR_FIRST_N_INPUTS = 5
+# Use pro model for first N user inputs for higher quality world building
+USE_PRO_MODEL_FOR_FIRST_N_INPUTS = 3
 
-MAX_TOKENS = 50000 
+MAX_TOKENS = 30000
 TEMPERATURE = 0.9
 TARGET_WORD_COUNT = 300
+# Add a safety margin for JSON responses
+JSON_MODE_MAX_TOKENS = 20000  # Reduced limit when using JSON mode for reliability
 MAX_INPUT_TOKENS = 750000 
 SAFE_CHAR_LIMIT = MAX_INPUT_TOKENS * 4
 
@@ -569,8 +571,10 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             # Configure JSON response mode if requested
             if use_json_mode:
                 generation_config_params["response_mime_type"] = "application/json"
+                # Use reduced token limit for JSON mode to ensure proper completion
+                generation_config_params["max_output_tokens"] = JSON_MODE_MAX_TOKENS
                 if attempt == 0:  # Only log once
-                    logging.info("--- Using JSON response mode for structured generation ---")
+                    logging.info(f"--- Using JSON response mode with reduced token limit ({JSON_MODE_MAX_TOKENS}) ---")
             
             # Pass the system instruction to the generate_content call
             if system_instruction_text:

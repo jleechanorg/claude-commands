@@ -5,6 +5,8 @@ Based on Milestone 0.4 Combined approach implementation (without pydantic depend
 
 from typing import List, Optional, Dict, Any
 import json
+import logging
+from robust_json_parser import parse_llm_json_response
 
 class NarrativeResponse:
     """Schema for structured narrative generation response"""
@@ -97,28 +99,40 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     Returns:
         tuple: (narrative_text, parsed_response_or_none)
     """
-    # Try to parse as JSON first
-    try:
-        # Clean the response - sometimes LLMs add extra text
-        response_text = response_text.strip()
-        
-        # Look for JSON content between braces
-        start_idx = response_text.find('{')
-        end_idx = response_text.rfind('}')
-        
-        if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-            json_text = response_text[start_idx:end_idx + 1]
-            parsed_data = json.loads(json_text)
-            
-            # Validate with Pydantic
+    if not response_text:
+        empty_response = NarrativeResponse(
+            narrative="The story awaits your input...",  # Default narrative for empty response
+            entities_mentioned=[],
+            location_confirmed="Unknown"
+        )
+        return empty_response.narrative, empty_response
+    
+    # Use the robust parser
+    parsed_data, was_incomplete = parse_llm_json_response(response_text)
+    
+    if was_incomplete:
+        logging.info(f"Recovered from incomplete JSON response. Narrative length: {len(parsed_data.get('narrative', '')) if parsed_data else 0}")
+    
+    # Create NarrativeResponse from parsed data
+    if parsed_data:
+        try:
             validated_response = NarrativeResponse(**parsed_data)
             return validated_response.narrative, validated_response
-            
-    except (json.JSONDecodeError, ValueError, TypeError) as e:
-        # JSON parsing failed, fall back to plain text
-        pass
+                
+        except (ValueError, TypeError) as e:
+            # NarrativeResponse creation failed
+            logging.error(f"Failed to create NarrativeResponse: {e}")
+            # Return the narrative if we at least got that
+            narrative = parsed_data.get('narrative', response_text)
+            fallback_response = NarrativeResponse(
+                narrative=narrative,
+                entities_mentioned=parsed_data.get('entities_mentioned', []),
+                location_confirmed=parsed_data.get('location_confirmed', 'Unknown')
+            )
+        return narrative, fallback_response
     
-    # Fallback: return original text with empty response object
+    # Final fallback: return original text with empty response object
+    # This should rarely be reached with the robust parser
     fallback_response = NarrativeResponse(
         narrative=response_text,
         entities_mentioned=[],

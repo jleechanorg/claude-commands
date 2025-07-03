@@ -592,12 +592,13 @@ class TestUserInputCountAndModelSelection(unittest.TestCase):
             custom_campaign_state={}
         )
         
-        # Test cases: user input counts 1-5 should use pro model, 6+ should use default
+        # Test cases: user input counts 1-3 should use pro model, 4+ should use default
         test_cases = [
             ([], 1, gemini_service.LARGE_CONTEXT_MODEL),  # 1st input
             ([{'actor': 'user', 'text': 'input1'}], 2, gemini_service.LARGE_CONTEXT_MODEL),  # 2nd input
             ([{'actor': 'user', 'text': 'input1'}, {'actor': 'user', 'text': 'input2'}], 3, gemini_service.LARGE_CONTEXT_MODEL),  # 3rd input
-            ([{'actor': 'user', 'text': f'input{i}'} for i in range(1, 5)], 5, gemini_service.LARGE_CONTEXT_MODEL),  # 5th input
+            ([{'actor': 'user', 'text': f'input{i}'} for i in range(1, 4)], 4, gemini_service.DEFAULT_MODEL),  # 4th input (should use default)
+            ([{'actor': 'user', 'text': f'input{i}'} for i in range(1, 5)], 5, gemini_service.DEFAULT_MODEL),  # 5th input (should use default)
             ([{'actor': 'user', 'text': f'input{i}'} for i in range(1, 6)], 6, gemini_service.DEFAULT_MODEL),  # 6th input (should use default)
         ]
         
@@ -705,12 +706,12 @@ class TestUserInputCountAndModelSelection(unittest.TestCase):
                 ['narrative']
             )
         
-        # Assert - should still use pro model since it's only the 4th user input
+        # Assert - should use default model since it's the 4th user input (limit is 3)
         mock_api_call.assert_called()
         call_args = mock_api_call.call_args
         actual_model = call_args[0][1]
-        self.assertEqual(actual_model, gemini_service.LARGE_CONTEXT_MODEL,
-                        "Should use pro model for 4th user input despite many AI responses")
+        self.assertEqual(actual_model, gemini_service.DEFAULT_MODEL,
+                        "Should use default model for 4th user input (beyond the limit of 3)")
     
     @patch('gemini_service._call_gemini_api')
     @patch('gemini_service._load_instruction_file')
