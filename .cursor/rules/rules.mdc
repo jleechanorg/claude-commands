@@ -36,6 +36,7 @@ For complete project details including technology stack, architecture, developme
 - **Documentation Map**: For a visual hierarchy and navigation guide to all documentation, see `.cursor/rules/documentation_map.md`
 - **Quick Reference**: For common commands and quick lookups, see `.cursor/rules/quick_reference.md`
 - **Progress Tracking Template**: For milestone progress tracking, see `roadmap/templates/progress_tracking_template.md`
+- **Directory Structure**: For comprehensive project directory layout and file locations, see `/directory_structure.md`
 
 ## Directory and Path Conventions
 

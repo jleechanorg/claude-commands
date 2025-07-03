@@ -1,8 +1,12 @@
 #!/bin/bash
 
 # This script creates a new Git worktree with a specified name.
-# It prepends "worktree_" to the given name and automatically navigates
-# into the new worktree directory after creation.
+# It prepends "worktree_" to the given name and automatically navigates to it.
+# 
+# Usage (MUST be sourced to navigate):
+#   source ./create_worktree.sh [name]
+#   . ./create_worktree.sh [name]
+#
 # It also includes checks for name collisions with existing directories and local branches.
 
 # Function to display error messages and exit the script
@@ -71,10 +75,17 @@ if git worktree add "$WORKTREE_NAME" -b "$WORKTREE_NAME"; then
     # --- 4. Navigate into the new Worktree ---
     info_message "Navigating into the new worktree directory: './$WORKTREE_NAME'..."
     cd "$WORKTREE_NAME" || error_exit "Failed to navigate into the new worktree directory."
-    info_message "You are now in the new worktree: $(pwd)"
+    
+    echo "=============================================="
+    echo "✅ Worktree created and navigated to!"
+    echo "=============================================="
+    info_message "You are now in: $(pwd)"
+    
     echo ""
-    echo "To list all your worktrees, run:"
-    echo "  git worktree list"
+    echo "Useful commands:"
+    echo "  git worktree list        # List all worktrees"
+    echo "  git worktree remove      # Remove a worktree"
+    echo "  git branch -d            # Delete the branch when done"
 else
     # If 'git worktree add' fails for any reason (e.g., permissions, internal Git error)
     error_exit "Failed to create worktree '$WORKTREE_NAME'. Please check the error messages from Git above."

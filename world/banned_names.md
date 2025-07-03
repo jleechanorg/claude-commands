@@ -18,6 +18,7 @@ These names are overused by LLMs and cannot be used in any world content.
 
 ### Extended Banned Names (Top 50 AI Overused Names)
 - Aiden
+- OakHaven
 - Aria
 - Aris
 - Astrid
