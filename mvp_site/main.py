@@ -10,6 +10,7 @@ from firebase_admin import auth
 import traceback
 import document_generator
 import logging
+import logging_util
 from game_state import GameState, MigrationStatus
 from debug_mode_parser import DebugModeParser
 import constants
@@ -528,7 +529,7 @@ def apply_automatic_combat_cleanup(updated_state_dict: dict, proposed_changes: d
     # CRITICAL BUG FIX: Handle case where GameState.from_dict returns None
     temp_game_state = GameState.from_dict(updated_state_dict)
     if temp_game_state is None:
-        logging.error("COMBAT CLEANUP ERROR: GameState.from_dict returned None, returning original state")
+        logging_util.error("COMBAT CLEANUP ERROR: GameState.from_dict returned None, returning original state")
         return updated_state_dict
     
     # Check if we have combatants data to potentially clean up
@@ -928,14 +929,14 @@ def create_app():
                         os.remove(safe_file_path)
                         logging.info(f"Cleaned up temporary file: {safe_file_path}")
                     except Exception as e:
-                        logging.error(f"Error cleaning up file {safe_file_path}: {e}")
+                        logging_util.error(f"Error cleaning up file {safe_file_path}: {e}")
 
                 return response
             else:
                 return jsonify({KEY_ERROR: 'Failed to create export file.'}), 500
 
         except Exception as e:
-            logging.error(f"Export failed: {e}")
+            logging_util.error(f"Export failed: {e}")
             traceback.print_exc()
             return jsonify({KEY_ERROR: 'An unexpected error occurred during export.', KEY_DETAILS: str(e)}), 500
 

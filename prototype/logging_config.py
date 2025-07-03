@@ -4,6 +4,8 @@ Provides centralized logging setup and metrics tracking.
 """
 
 import logging
+# Import logging_util from the mvp_site package
+from mvp_site import logging_util
 import json
 import time
 from datetime import datetime
@@ -224,8 +226,9 @@ class ValidationLogger:
                 f"(duration: {duration:.3f}s)"
             )
         else:
-            self.logger.error(
+            logging_util.error(
                 f"Failed validation test: {self.test_name} "
-                f"(duration: {duration:.3f}s, error: {exc_val})"
+                f"(duration: {duration:.3f}s, error: {exc_val})",
+                logger=self.logger
             )
         return False

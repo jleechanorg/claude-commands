@@ -1,6 +1,7 @@
 import functools
 import logging
 import traceback
+import logging_util
 
 # Get a logger instance for this module
 logger = logging.getLogger(__name__) # Assuming this was meant to be __name__ for module-level logger
@@ -45,7 +46,7 @@ def log_exceptions(func):
                 f"Traceback:\n{traceback.format_exc()}"
                 f"--- END EXCEPTION ---"
             )
-            logger.error(error_message)
+            logging_util.error(error_message, logger=logger)
             # Re-raise the exception so it can be handled by the calling code (e.g., the route)
             raise
     return wrapper

@@ -2,6 +2,7 @@ import collections.abc
 import datetime
 import json
 import logging
+import logging_util
 
 from decorators import log_exceptions
 from firebase_admin import firestore
@@ -94,12 +95,12 @@ class MissionHandler:
             if isinstance(mission_data, dict):
                 MissionHandler.process_mission_data(state_to_update, key, mission_id, mission_data)
             else:
-                logging.warning(f"Skipping invalid mission data for {mission_id}: not a dictionary")
+                logging_util.warning(f"Skipping invalid mission data for {mission_id}: not a dictionary")
     
     @staticmethod
     def handle_active_missions_conversion(state_to_update: dict, key: str, value) -> None:
         """Handle smart conversion of active_missions from various formats to list."""
-        logging.warning(f"SMART CONVERSION: AI attempted to set 'active_missions' as {type(value).__name__}. Converting to list append.")
+        logging_util.warning(f"SMART CONVERSION: AI attempted to set 'active_missions' as {type(value).__name__}. Converting to list append.")
         
         # Initialize active_missions as empty list if it doesn't exist
         MissionHandler.initialize_missions_list(state_to_update, key)
@@ -110,7 +111,7 @@ class MissionHandler:
             MissionHandler.handle_missions_dict_conversion(state_to_update, key, value)
         else:
             # For other non-list types, log error and skip
-            logging.error(f"Cannot convert {type(value).__name__} to mission list. Skipping.")
+            logging_util.error(f"Cannot convert {type(value).__name__} to mission list. Skipping.")
 
 
 def _handle_append_syntax(state_to_update: dict, key: str, value: dict) -> bool:
@@ -140,7 +141,7 @@ def _handle_core_memories_safeguard(state_to_update: dict, key: str, value) -> b
     if key != 'core_memories':
         return False
     
-    logging.warning("CRITICAL SAFEGUARD: Intercepted direct overwrite on 'core_memories'. Converting to safe, deduplicated append.")
+    logging_util.warning("CRITICAL SAFEGUARD: Intercepted direct overwrite on 'core_memories'. Converting to safe, deduplicated append.")
     if key not in state_to_update or not isinstance(state_to_update.get(key), list):
         state_to_update[key] = []
     _perform_append(state_to_update[key], value, key, deduplicate=True)
@@ -427,7 +428,7 @@ def update_campaign_game_state(user_id, campaign_id, game_state_update: dict):
         logging.info(f"Final state written to Firestore for campaign {campaign_id}:\\n{_truncate_log_json(game_state_update)}")
 
     except Exception as e:
-        logging.error(f"Failed to update game state for campaign {campaign_id}: {e}", exc_info=True)
+        logging_util.error(f"Failed to update game state for campaign {campaign_id}: {e}", exc_info=True)
         raise
 
 # --- NEWLY ADDED FUNCTION ---

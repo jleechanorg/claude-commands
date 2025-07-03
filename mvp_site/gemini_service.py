@@ -2,6 +2,7 @@ import os
 from google import genai
 from google.genai import types
 import logging
+import logging_util
 from decorators import log_exceptions
 import sys
 import json
@@ -112,7 +113,7 @@ def _load_instruction_file(instruction_type):
         relative_path = PATH_MAP.get(instruction_type)
         
         if not relative_path:
-            logging.error(f"FATAL: Unknown instruction type requested: {instruction_type}")
+            logging_util.error(f"FATAL: Unknown instruction type requested: {instruction_type}")
             raise ValueError(f"Unknown instruction type requested: {instruction_type}")
 
         file_path = os.path.join(os.path.dirname(__file__), relative_path)
@@ -123,10 +124,10 @@ def _load_instruction_file(instruction_type):
             # logging.info(f'Loaded prompt "{instruction_type}" from file: {os.path.basename(file_path)}')
             _loaded_instructions_cache[instruction_type] = content
         except FileNotFoundError:
-            logging.error(f"CRITICAL: System instruction file not found: {file_path}. This is a fatal error for this request.")
+            logging_util.error(f"CRITICAL: System instruction file not found: {file_path}. This is a fatal error for this request.")
             raise
         except Exception as e:
-            logging.error(f"CRITICAL: Error loading system instruction file {file_path}: {e}")
+            logging_util.error(f"CRITICAL: Error loading system instruction file {file_path}: {e}")
             raise
     else:
         pass
@@ -138,14 +139,13 @@ def _load_instruction_file(instruction_type):
 def get_client():
     """Initializes and returns a singleton Gemini client."""
     global _client
-    # FOR DEBUGGING: Always re-initialize to pick up new keys from env.
-    # if _client is None:
-    logging.info("--- Initializing Gemini Client ---")
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
-    _client = genai.Client(api_key=api_key)
-    logging.info("--- Gemini Client Initialized Successfully ---")
+    if _client is None:
+        logging.info("--- Initializing Gemini Client ---")
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
+        _client = genai.Client(api_key=api_key)
+        logging.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
 def _add_world_instructions_to_system(system_instruction_parts):
@@ -432,7 +432,7 @@ def _process_structured_response(raw_response_text, expected_entities):
                     f"Schema valid: {coverage_validation['schema_valid']}")
         
         if not coverage_validation['schema_valid']:
-            logging.warning(f"STRUCTURED_GENERATION: Missing from schema: {coverage_validation['missing_from_schema']}")
+            logging_util.warning(f"STRUCTURED_GENERATION: Missing from schema: {coverage_validation['missing_from_schema']}")
         
         # Append state updates to response text if present
         if hasattr(structured_response, 'state_updates') and structured_response.state_updates:
@@ -441,7 +441,7 @@ def _process_structured_response(raw_response_text, expected_entities):
             response_text = response_text + state_updates_text
             logging.info("Appended state updates from structured response to response text")
     else:
-        logging.warning("STRUCTURED_GENERATION: Failed to parse JSON response, falling back to plain text")
+        logging_util.warning("STRUCTURED_GENERATION: Failed to parse JSON response, falling back to plain text")
     
     return response_text
 
@@ -466,11 +466,11 @@ def _validate_entity_tracking(response_text, expected_entities, game_state):
     )
     
     if not validation_result.all_entities_present:
-        logging.warning(f"ENTITY_TRACKING_VALIDATION: Narrative failed entity validation")
-        logging.warning(f"Missing entities: {validation_result.entities_missing}")
+        logging_util.warning(f"ENTITY_TRACKING_VALIDATION: Narrative failed entity validation")
+        logging_util.warning(f"Missing entities: {validation_result.entities_missing}")
         if validation_result.warnings:
             for warning in validation_result.warnings:
-                logging.warning(f"Validation warning: {warning}")
+                logging_util.warning(f"Validation warning: {warning}")
     
     # Add validation context to the response for debugging
     if game_state.debug_mode and expected_entities:
@@ -1027,11 +1027,11 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         )
         
         if not validation_result.all_entities_present:
-            logging.warning(f"ENTITY_TRACKING_VALIDATION: Narrative failed entity validation")
-            logging.warning(f"Missing entities: {validation_result.entities_missing}")
+            logging_util.warning(f"ENTITY_TRACKING_VALIDATION: Narrative failed entity validation")
+            logging_util.warning(f"Missing entities: {validation_result.entities_missing}")
             if validation_result.warnings:
                 for warning in validation_result.warnings:
-                    logging.warning(f"Validation warning: {warning}")
+                    logging_util.warning(f"Validation warning: {warning}")
             
             # Attempt dual-pass retry (Option 7)
             logging.info("ENTITY_TRACKING_RETRY: Attempting dual-pass generation to fix missing entities")

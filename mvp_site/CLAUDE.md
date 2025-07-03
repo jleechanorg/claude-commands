@@ -296,6 +296,13 @@ The complete cursor rules from `/home/jleechan/projects/worldarchitect.ai/.curso
 - **Working Code Only**: Never push unverified code
 - **Confirm Before Push**: Ask permission before remote operations
 
+### GitHub Copilot Comment Response Protocol
+- **MANDATORY**: Reply to every individual GitHub Copilot comment on PRs
+- **Individual Responses**: Address each line-level comment with specific acknowledgment
+- **Status Updates**: Clearly indicate Fixed/Acknowledged/Future for each comment
+- **Implementation Details**: Explain how issues were resolved with code examples
+- **Follow-up Actions**: Document any remaining work or future improvements needed
+
 ### Dead Code Analysis
 - **Run Tests First**: Always run tests before removing any code to establish baseline
 - **Check Dynamic Usage**: Functions may be used as callbacks or default parameters (e.g., `json.dumps(data, default=func)`)

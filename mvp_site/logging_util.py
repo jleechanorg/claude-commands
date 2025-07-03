@@ -1,0 +1,122 @@
+"""
+Centralized logging utility with emoji-enhanced messages.
+Provides consistent error and warning logging across the application.
+Supports both module-level convenience functions and logger-aware functions 
+that preserve logger context.
+"""
+
+import logging
+from typing import Any, Optional
+
+
+class LoggingUtil:
+    """Centralized logging utility with emoji-enhanced messages."""
+    
+    # Emoji constants
+    ERROR_EMOJI = "🔥🔴"
+    WARNING_EMOJI = "⚠️"
+    
+    @staticmethod
+    def error(message: str, *args: Any, logger: Optional[logging.Logger] = None, **kwargs: Any) -> None:
+        """
+        Log an error message with fire and red dot emojis.
+        
+        Args:
+            message: The error message to log
+            *args: Additional positional arguments for logging
+            logger: Optional logger instance to preserve context. If None, uses root logger.
+            **kwargs: Additional keyword arguments for logging
+        """
+        enhanced_message = f"{LoggingUtil.ERROR_EMOJI} {message}"
+        if logger:
+            logger.error(enhanced_message, *args, **kwargs)
+        else:
+            logging.error(enhanced_message, *args, **kwargs)
+    
+    @staticmethod
+    def warning(message: str, *args: Any, logger: Optional[logging.Logger] = None, **kwargs: Any) -> None:
+        """
+        Log a warning message with warning emoji.
+        
+        Args:
+            message: The warning message to log
+            *args: Additional positional arguments for logging
+            logger: Optional logger instance to preserve context. If None, uses root logger.
+            **kwargs: Additional keyword arguments for logging
+        """
+        enhanced_message = f"{LoggingUtil.WARNING_EMOJI} {message}"
+        if logger:
+            logger.warning(enhanced_message, *args, **kwargs)
+        else:
+            logging.warning(enhanced_message, *args, **kwargs)
+    
+    @staticmethod
+    def get_error_prefix() -> str:
+        """Get the error emoji prefix for manual use."""
+        return LoggingUtil.ERROR_EMOJI
+    
+    @staticmethod
+    def get_warning_prefix() -> str:
+        """Get the warning emoji prefix for manual use."""
+        return LoggingUtil.WARNING_EMOJI
+    
+    @staticmethod
+    def info(message: str, *args: Any, **kwargs: Any) -> None:
+        """
+        Log an info message (no emoji modification).
+        
+        Args:
+            message: The info message to log
+            *args: Additional positional arguments for logging
+            **kwargs: Additional keyword arguments for logging
+        """
+        logging.info(message, *args, **kwargs)
+    
+    @staticmethod
+    def debug(message: str, *args: Any, **kwargs: Any) -> None:
+        """
+        Log a debug message (no emoji modification).
+        
+        Args:
+            message: The debug message to log
+            *args: Additional positional arguments for logging
+            **kwargs: Additional keyword arguments for logging
+        """
+        logging.debug(message, *args, **kwargs)
+
+
+# Convenience module-level functions
+def error(message: str, *args: Any, **kwargs: Any) -> None:
+    """
+    Log an error message with fire and red dot emojis.
+    
+    Args:
+        message: The error message to log
+        *args: Additional positional arguments for logging
+        **kwargs: Additional keyword arguments for logging. 
+                 Use logger=my_logger to preserve logger context.
+    """
+    LoggingUtil.error(message, *args, **kwargs)
+
+
+def warning(message: str, *args: Any, **kwargs: Any) -> None:
+    """
+    Log a warning message with warning emoji.
+    
+    Args:
+        message: The warning message to log
+        *args: Additional positional arguments for logging
+        **kwargs: Additional keyword arguments for logging.
+                 Use logger=my_logger to preserve logger context.
+    """
+    LoggingUtil.warning(message, *args, **kwargs)
+
+
+def info(message: str, *args: Any, **kwargs: Any) -> None:
+    """Log an info message (no emoji modification)."""
+    LoggingUtil.info(message, *args, **kwargs)
+
+
+def debug(message: str, *args: Any, **kwargs: Any) -> None:
+    """Log a debug message (no emoji modification)."""
+    LoggingUtil.debug(message, *args, **kwargs)
