@@ -18,10 +18,10 @@ def home():
             raise ValueError("GEMINI_API_KEY not set in environment.")
         
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.5-pro-preview-06-05')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
         start_time = time.time()
-        app.logger.info("Making request to Gemini 2.5 Pro...")
+        app.logger.info("Making request to Gemini 2.5 Flash...")
         response = model.generate_content(prompt_text)
         end_time = time.time()
         latency_seconds = end_time - start_time
@@ -34,7 +34,7 @@ def home():
         app.logger.error(f"Full traceback:\n{gemini_response}")
 
     template_data = {
-        'page_title': 'World Architecture AI - Gemini 2.5 Pro',
+        'page_title': 'World Architecture AI - Gemini 2.5 Flash',
         'gemini_weather': gemini_response,
         'prompt_text': prompt_text,
         'latency_seconds': f"{latency_seconds:.2f}"

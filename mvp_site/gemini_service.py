@@ -40,24 +40,20 @@ def json_datetime_serializer(obj):
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 # --- CONSTANTS ---
-# Use flash for standard, cheaper operations.
+# Use flash for all operations.
 DEFAULT_MODEL = 'gemini-2.5-flash'
-# Use pro for large-context operations.
-LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'
 # Use 1.5 flash for testing as requested
 TEST_MODEL = 'gemini-1.5-flash'
 
 # Model cycling order for 503 errors - try these in sequence
 MODEL_FALLBACK_CHAIN = [
-    "gemini-2.5-flash",    
-    "gemini-2.5-pro",                 
+    "gemini-2.5-flash",                     
     "gemini-2.5-flash-lite-preview-06-17",
     "gemini-2.0-flash",                     # Cross-generation fallback
     "gemini-2.0-flash-lite",                # Highest availability
 ]
 
-# Use pro model for first N user inputs for higher quality world building
-USE_PRO_MODEL_FOR_FIRST_N_INPUTS = 3
+# No longer using pro model for any inputs
 
 MAX_TOKENS = 50000
 TEMPERATURE = 0.9
@@ -419,9 +415,6 @@ def _select_model_for_continuation(user_input_count):
     """
     if os.environ.get('TESTING'):
         return TEST_MODEL
-    elif user_input_count is not None and user_input_count <= USE_PRO_MODEL_FOR_FIRST_N_INPUTS:
-        logging.info(f"Using pro model for user input {user_input_count}/{USE_PRO_MODEL_FOR_FIRST_N_INPUTS}")
-        return LARGE_CONTEXT_MODEL
     else:
         return DEFAULT_MODEL
 
@@ -842,9 +835,9 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     
     contents = [types.Content(role="user", parts=[types.Part(text=enhanced_prompt)])]
     
-    # --- DYNAMIC MODEL SELECTION ---
-    # Use the more powerful model at the beginning of the game.
-    model_to_use = TEST_MODEL if os.environ.get('TESTING') else LARGE_CONTEXT_MODEL
+    # --- MODEL SELECTION ---
+    # Use default model for all operations.
+    model_to_use = TEST_MODEL if os.environ.get('TESTING') else DEFAULT_MODEL
     logging.info(f"Using model: {model_to_use} for initial story generation.")
 
     response = _call_gemini_api(contents, model_to_use, current_prompt_text_for_logging=prompt, 

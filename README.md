@@ -17,7 +17,7 @@ WorldArchitect.AI is a revolutionary AI-powered platform that serves as your dig
 
 ### Backend
 - **Python 3.11** with Flask framework
-- **Google Gemini AI** (2.5-flash, 2.5-pro models)
+- **Google Gemini AI** (2.5-flash model)
 - **Firebase** (Authentication & Firestore)
 - **Docker** containerization
 - **Google Cloud Run** deployment

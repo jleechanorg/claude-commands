@@ -590,14 +590,14 @@ class TestUserInputCountAndModelSelection(unittest.TestCase):
             custom_campaign_state={}
         )
         
-        # Test cases: user input counts 1-3 should use pro model, 4+ should use default
+        # Test cases: all inputs should now use default model
         test_cases = [
-            ([], 1, gemini_service.LARGE_CONTEXT_MODEL),  # 1st input
-            ([{'actor': 'user', 'text': 'input1'}], 2, gemini_service.LARGE_CONTEXT_MODEL),  # 2nd input
-            ([{'actor': 'user', 'text': 'input1'}, {'actor': 'user', 'text': 'input2'}], 3, gemini_service.LARGE_CONTEXT_MODEL),  # 3rd input
-            ([{'actor': 'user', 'text': f'input{i}'} for i in range(1, 4)], 4, gemini_service.DEFAULT_MODEL),  # 4th input (should use default)
-            ([{'actor': 'user', 'text': f'input{i}'} for i in range(1, 5)], 5, gemini_service.DEFAULT_MODEL),  # 5th input (should use default)
-            ([{'actor': 'user', 'text': f'input{i}'} for i in range(1, 6)], 6, gemini_service.DEFAULT_MODEL),  # 6th input (should use default)
+            ([], 1, gemini_service.DEFAULT_MODEL),  # 1st input
+            ([{'actor': 'user', 'text': 'input1'}], 2, gemini_service.DEFAULT_MODEL),  # 2nd input
+            ([{'actor': 'user', 'text': 'input1'}, {'actor': 'user', 'text': 'input2'}], 3, gemini_service.DEFAULT_MODEL),  # 3rd input
+            ([{'actor': 'user', 'text': f'input{i}'} for i in range(1, 4)], 4, gemini_service.DEFAULT_MODEL),  # 4th input
+            ([{'actor': 'user', 'text': f'input{i}'} for i in range(1, 5)], 5, gemini_service.DEFAULT_MODEL),  # 5th input
+            ([{'actor': 'user', 'text': f'input{i}'} for i in range(1, 6)], 6, gemini_service.DEFAULT_MODEL),  # 6th input
         ]
         
         for story_context, expected_count, expected_model in test_cases:
@@ -749,12 +749,12 @@ class TestUserInputCountAndModelSelection(unittest.TestCase):
                         ['narrative']
                     )
                 
-                # Assert - should use pro model for first input
+                # Assert - should use default model for all inputs
                 mock_api_call.assert_called()
                 call_args = mock_api_call.call_args
                 actual_model = call_args[0][1]
-                self.assertEqual(actual_model, gemini_service.LARGE_CONTEXT_MODEL,
-                               f"Should use pro model for first input with context: {story_context}")
+                self.assertEqual(actual_model, gemini_service.DEFAULT_MODEL,
+                               f"Should use default model for all inputs with context: {story_context}")
                 
                 mock_api_call.reset_mock()
 

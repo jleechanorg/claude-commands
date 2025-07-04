@@ -15,7 +15,6 @@ from gemini_service import (
     _call_gemini_api_with_model_cycling, 
     MODEL_FALLBACK_CHAIN,
     DEFAULT_MODEL,
-    LARGE_CONTEXT_MODEL,
     TEST_MODEL
 )
 from google.genai import types

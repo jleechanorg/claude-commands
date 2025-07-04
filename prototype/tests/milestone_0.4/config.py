@@ -6,8 +6,7 @@ import os
 import logging
 
 # Model configuration
-DEFAULT_MODEL = 'gemini-2.5-flash'  # Fast and cheap for testing
-LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'  # If needed for complex tests
+DEFAULT_MODEL = 'gemini-2.5-flash'  # Fast and cheap for all operations
 TEST_MODEL = 'gemini-2.5-flash'  # Explicitly use for all tests
 
 # API Configuration
