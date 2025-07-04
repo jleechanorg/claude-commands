@@ -110,3 +110,5 @@ For the common citizen, life has never been more secure or predictable. They hav
 Into this stagnant era, two new, terrifying powers have emerged, challenging the very foundation of the Empress's world. In the frozen north, the magnificent gold dragon Aurum, the Gilded King, has awakened. He proclaims himself a champion of light and freedom, his golden voice echoing in the minds of the disillusioned, calling for a crusade against the Empress's soulless tyranny. He represents the beautiful, dangerous ideal of liberty that the world has forgotten.
 
 Meanwhile, from the black salt flats of the south, the monstrous black dragon Umbrax, the Shadow of the Pit, has stirred. A creature of pure nihilism and decay, it does not seek to conquer, but to consume. It is the embodiment of the despair that festers under the Empress's perfect order, a final answer to a world without hope. The Silent Peace is over. A new war of ideas, fought between the Tyrant, the Crusader, and the Nihilist, is about to begin.
+
+**Follow this protocol "World & NPC Generation Protocol (For Player-Defined Custom Scenarios)"**
