@@ -16,6 +16,10 @@ ACTOR_GEMINI = 'gemini'
 MODE_CHARACTER = 'character'
 MODE_GOD = 'god'
 
+# Mode switching detection phrases
+MODE_SWITCH_PHRASES = ['god mode', 'dm mode', 'gm mode', 'enter dm mode', 'enter god mode']
+MODE_SWITCH_SIMPLE = ['god mode', 'god', 'dm mode', 'dm']
+
 
 # --- DICTIONARY KEYS ---
 # Used in request/response payloads and when passing data between services

@@ -888,8 +888,7 @@ def _validate_and_enforce_planning_block(response_text, user_input, game_state, 
         return response_text
     
     # Skip planning block if user is switching to god/dm mode
-    mode_switch_phrases = ['god mode', 'dm mode', 'gm mode', 'enter dm mode', 'enter god mode']
-    if any(phrase in user_input.lower() for phrase in mode_switch_phrases):
+    if any(phrase in user_input.lower() for phrase in constants.MODE_SWITCH_PHRASES):
         logging.info("User switching to god/dm mode - skipping planning block")
         return response_text
     
@@ -1212,7 +1211,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # Validate and enforce planning block for story mode
     # Check if user is switching to god mode with their input
     user_input_lower = user_input.lower().strip()
-    is_switching_to_god_mode = user_input_lower in ['god mode', 'god', 'dm mode', 'dm']
+    is_switching_to_god_mode = user_input_lower in constants.MODE_SWITCH_SIMPLE
     
     # Also check if the AI response indicates DM MODE
     is_dm_mode_response = '[Mode: DM MODE]' in response_text or '[Mode: GOD MODE]' in response_text

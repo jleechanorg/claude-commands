@@ -18,6 +18,7 @@ sys.path.insert(0, project_root)
 
 from main import create_app
 from game_state import GameState
+from schemas.entities_simple import SimpleValidator
 from entity_tracking import SceneManifest, create_from_game_state
 from entity_preloader import EntityPreloader
 from entity_validator import EntityValidator
@@ -245,6 +246,37 @@ class TestEntityValidationComparison(unittest.TestCase):
             json.dump(metrics.get_summary(), f, indent=2)
         
         logger.info(f"Saved results to {filepath}")
+
+class TestEntityIDValidation(unittest.TestCase):
+    """Test entity ID validation with various character name formats"""
+    
+    def test_entity_id_validation_with_hyphens(self):
+        """Test that entity IDs with hyphens in character names are valid"""
+        # Test cases for character names with hyphens
+        test_cases = [
+            ('pc_torvin_drake-bane_001', 'pc', True),  # The original issue
+            ('pc_mary-jane_watson_002', 'pc', True),
+            ('npc_village-chief_003', 'npc', True),
+            ('loc_town-square_001', 'loc', True),
+            ('pc_multi-word-name_004', 'pc', True),
+            ('pc_normalname_005', 'pc', True),  # No hyphen
+            ('pc_name_with_numbers123_006', 'pc', True),
+            ('pc_invalid_format', 'pc', False),  # Missing number suffix
+            ('invalid_no_prefix_001', 'pc', False),  # Wrong prefix
+        ]
+        
+        for entity_id, entity_type, expected in test_cases:
+            with self.subTest(entity_id=entity_id, entity_type=entity_type):
+                result = SimpleValidator.validate_entity_id(entity_id, entity_type)
+                self.assertEqual(result, expected, 
+                    f"Expected {expected} for {entity_id} with type {entity_type}, got {result}")
+    
+    def test_problematic_character_name_regression(self):
+        """Regression test for the specific 'Torvin Drake-Bane' case that caused the error"""
+        # This is the exact ID that was failing in production
+        problematic_id = 'pc_torvin_drake-bane_001'
+        result = SimpleValidator.validate_entity_id(problematic_id, 'pc')
+        self.assertTrue(result, f"The ID '{problematic_id}' should be valid but was rejected")
 
 
 if __name__ == '__main__':

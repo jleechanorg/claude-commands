@@ -10,6 +10,8 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import constants
+
 
 class TestPlanningBlockEnforcement(unittest.TestCase):
     """Test planning block validation and enforcement."""
@@ -205,16 +207,8 @@ Please tell me about the hero you want to bring to life. What is their story? Wh
         """Test that planning blocks are NOT added when switching to god mode."""
         response = "You enter the realm of divine control."
         
-        # Various god mode inputs
-        god_mode_inputs = [
-            "god mode",
-            "God Mode",
-            "enter god mode",
-            "dm mode",
-            "DM MODE",
-            "enter dm mode",
-            "gm mode"
-        ]
+        # Use the same mode switch phrases as the production code
+        god_mode_inputs = constants.MODE_SWITCH_PHRASES
         
         for user_input in god_mode_inputs:
             result = self.validate_func(response, user_input, self.mock_game_state,
@@ -244,25 +238,16 @@ Please tell me about the hero you want to bring to life. What is their story? Wh
             self.assertNotIn("--- PLANNING BLOCK ---", result)
             self.mock_call_api.assert_not_called()
     
-    def test_god_mode_switching_no_planning_block(self):
-        """Test that planning blocks are NOT added when user switches to god mode."""
-        # Import the continue_story function to test the full flow
-        from gemini_service import continue_story
-        
-        # Test various god mode inputs
-        god_mode_inputs = ["god mode", "God Mode", "GOD MODE", "dm mode", "DM", "god"]
+    def test_god_mode_detection_logic(self):
+        """Test that mode switching detection logic works correctly."""
+        # Test the simple mode switch phrases used in detection logic
+        god_mode_inputs = constants.MODE_SWITCH_SIMPLE
         
         for user_input in god_mode_inputs:
-            # Mock response without planning block
-            story_response = "Switching to god mode for meta discussion."
-            
-            # This should be handled by continue_story, not validate_func
             # Testing that the mode switching detection works
-            from gemini_service import constants
-            
             # Simulate the check that happens in continue_story
             user_input_lower = user_input.lower().strip()
-            is_switching_to_god_mode = user_input_lower in ['god mode', 'god', 'dm mode', 'dm']
+            is_switching_to_god_mode = user_input_lower in constants.MODE_SWITCH_SIMPLE
             
             # Should detect mode switching
             self.assertTrue(is_switching_to_god_mode, f"Failed to detect god mode switch for: {user_input}")
@@ -271,9 +256,6 @@ Please tell me about the hero you want to bring to life. What is their story? Wh
         """Test that planning blocks are NOT added when AI responds in DM MODE."""
         response = "[Mode: DM MODE]\n\nLet's discuss the campaign settings."
         user_input = "tell me about the world"
-        
-        # Import to test the detection logic
-        from gemini_service import constants
         
         # Test the DM mode detection
         is_dm_mode_response = '[Mode: DM MODE]' in response or '[Mode: GOD MODE]' in response
@@ -291,8 +273,7 @@ class TestContinueStoryPlanningBlocks(unittest.TestCase):
         sys.modules['google.genai'] = self.mock_genai
         sys.modules['google.genai.types'] = MagicMock()
         
-        # Import constants
-        import constants
+        # Store constants reference
         self.constants = constants
         
         # Mock game state

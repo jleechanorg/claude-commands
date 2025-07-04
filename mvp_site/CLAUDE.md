@@ -303,6 +303,14 @@ The complete cursor rules from `/home/jleechan/projects/worldarchitect.ai/.curso
 - **Implementation Details**: Explain how issues were resolved with code examples
 - **Follow-up Actions**: Document any remaining work or future improvements needed
 
+### Import Statement Rules
+- **MANDATORY**: All imports must be at the top of the module, never inline
+- **NO INLINE IMPORTS**: Never use `import` statements inside functions, methods, or test methods
+- **Module-Level Only**: All imports must be declared after module docstring and before any code
+- **Shared Imports**: Import shared constants/modules once at the top, reference throughout the module
+- **Example Violation**: `import constants` inside a test method
+- **Correct Pattern**: `import constants` at module top, then use `constants.CONSTANT_NAME` throughout
+
 ### Dead Code Analysis
 - **Run Tests First**: Always run tests before removing any code to establish baseline
 - **Check Dynamic Usage**: Functions may be used as callbacks or default parameters (e.g., `json.dumps(data, default=func)`)

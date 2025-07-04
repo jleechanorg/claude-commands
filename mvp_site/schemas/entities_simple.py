@@ -44,7 +44,7 @@ class SimpleValidator:
     """Simple validation helper"""
     @staticmethod
     def validate_entity_id(entity_id: str, entity_type: str) -> bool:
-        pattern = f"^{entity_type}_[\\w]+_\\d{{3}}$"
+        pattern = rf"^{entity_type}_[\w-]+_\d{{3}}$"
         return bool(re.match(pattern, entity_id))
     
     @staticmethod
