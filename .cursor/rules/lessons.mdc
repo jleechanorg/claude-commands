@@ -277,10 +277,10 @@ Spent significant time running validation comparison tests between Pydantic and 
 - **Fonts**: Wrap font loading in try/except for graceful fallback 
 
 ## VIII. Debugging & Verification Protocol (June 2024)
-*[Archived in lessons_archive_2024.mdc - contains detailed lessons on file verification, test hypothesis validation, error analysis, and data structure refactoring]*
+*[Content moved to separate file - contains detailed lessons on file verification, test hypothesis validation, error analysis, and data structure refactoring]*
 
 ## Integration Testing & Performance Optimization (December 2024)
-*[Archived in lessons_archive_2024.mdc - see archive for detailed incident analysis]*
+*[Detailed incident analysis available in separate documentation]*
 
 **Key Patterns**:
 - Validate data types with external sources: `if isinstance(item, dict):`
@@ -289,7 +289,7 @@ Spent significant time running validation comparison tests between Pydantic and 
 
 ## Theme System Architectural Failure (December 2024)
 
-*[Archived in lessons_archive_2024.mdc - see archive for detailed incident analysis]*
+*[Detailed incident analysis available in separate documentation]*
 
 **Key Pattern**: Avoid global event delegation with broad selectors - use specific selectors like `[data-theme-menu-item]` instead of `[data-theme]` to prevent `preventDefault()` from blocking form submissions.
 
@@ -336,7 +336,7 @@ Spent significant time running validation comparison tests between Pydantic and 
 **Critical Insight:** This failure was particularly dangerous because it silently broke the core value proposition (creating campaigns) with what appeared to be an unrelated cosmetic change. In production, this type of bug justifies immediate rollback.
 
 ## Content Consolidation Failure Pattern (December 2024)
-*[Archived in lessons_archive_2024.mdc - see archive for detailed incident analysis]*
+*[Detailed incident analysis available in separate documentation]*
 
 **Key Pattern**: Consolidation = merging while preserving all valuable content, NOT elimination of redundancy.
 *   **Technical Failures:**
@@ -823,10 +823,10 @@ By strictly adhering to this pattern, the backend has full control over the fina
 - **Fonts**: Wrap font loading in try/except for graceful fallback 
 
 ## VIII. Debugging & Verification Protocol (June 2024)
-*[Archived in lessons_archive_2024.mdc - contains detailed lessons on file verification, test hypothesis validation, error analysis, and data structure refactoring]*
+*[Content moved to separate file - contains detailed lessons on file verification, test hypothesis validation, error analysis, and data structure refactoring]*
 
 
-*[December 2024 duplicate sections removed - content archived in lessons_archive_2024.mdc]*
+*[December 2024 duplicate sections removed - content moved to separate documentation]*
 
 ### Red/Green Testing Protocol (MANDATORY)
 - **RED Phase**: Write tests that FAIL to reproduce the issue

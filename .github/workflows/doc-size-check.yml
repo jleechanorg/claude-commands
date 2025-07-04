@@ -1,0 +1,54 @@
+name: Documentation Size Check
+
+on:
+  pull_request:
+    paths:
+      - '.cursor/rules/*.md*'
+      - 'CLAUDE.md'
+      - 'mvp_site/test_documentation_performance.py'
+      - 'mvp_site/monitor_doc_sizes.sh'
+    paths-ignore:
+      - '.cursor/rules/archives/**'
+  push:
+    branches:
+      - main
+    paths:
+      - '.cursor/rules/*.md*'
+      - 'CLAUDE.md'
+      - 'mvp_site/test_documentation_performance.py'
+      - 'mvp_site/monitor_doc_sizes.sh'
+    paths-ignore:
+      - '.cursor/rules/archives/**'
+
+jobs:
+  check-doc-sizes:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Run documentation size check
+      run: |
+        python3 mvp_site/test_documentation_performance.py
+        
+    - name: Quick size monitor
+      run: |
+        chmod +x mvp_site/monitor_doc_sizes.sh
+        ./mvp_site/monitor_doc_sizes.sh
+        
+    - name: Comment PR if files too large
+      if: failure() && github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '⚠️ **Documentation Size Warning**\n\nSome documentation files exceed recommended size limits and may cause API timeouts.\n\nPlease run `python3 mvp_site/test_documentation_performance.py` locally to see which files need reduction.'
+          })

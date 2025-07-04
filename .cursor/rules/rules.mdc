@@ -262,6 +262,23 @@ For complete project details including technology stack, architecture, developme
     *   **PREVENTION**: Screenshots reveal problems that code review cannot catch
     *   **VALIDATION**: All UI fixes must be verified through visual inspection, not just code changes
 
+26. **Code Review Analysis Completeness:**
+    *   **MANDATORY**: When analyzing any code review (GitHub, Copilot, human), extract ALL comments
+    *   **Never assume** "suppressed" or "low confidence" means unimportant
+    *   **User Quote Priority**: If user quotes specific review text I haven't mentioned, immediately acknowledge the miss
+    *   **Complete Analysis Format**:
+        - Total comments: X (Y visible, Z suppressed)
+        - List EVERY comment with status (Addressed/Pending)
+        - Explicitly search for hidden/suppressed comments
+    *   **Cross-File Consistency**: When multiple files serve similar purposes, verify configuration matches
+
+27. **Configuration Synchronization:**
+    *   **When creating related files** with similar settings, always:
+        1. Add sync comments: `# Keep in sync with other_file.py`
+        2. Consider extracting to shared configuration file
+        3. Verify lists/constants match across files
+    *   **Prevention**: Avoids drift between related configurations that should stay aligned
+
 25. **Dead Code Detection Protocol:**
     *   **MANDATORY TOOL**: Always use `vulture` for dead code detection instead of basic grep searches
     *   **Installation**: `pip install vulture` (install in virtual environment)
