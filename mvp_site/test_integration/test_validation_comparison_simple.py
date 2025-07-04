@@ -87,7 +87,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from main import create_app
 import json
-from test_integration.integration_test_lib import IntegrationTestSetup
+from integration_test_lib import IntegrationTestSetup
 
 # Load test data
 with open('data/sariel_campaign_prompts.json', 'r') as f:

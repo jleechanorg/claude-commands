@@ -23,7 +23,7 @@ from entity_tracking import SceneManifest, create_from_game_state
 from entity_preloader import EntityPreloader
 from entity_validator import EntityValidator
 from entity_instructions import EntityInstructionGenerator
-from test_integration.integration_test_lib import IntegrationTestSetup, setup_integration_test_environment
+from integration_test_lib import IntegrationTestSetup, setup_integration_test_environment
 
 # Import both validation schemas
 from schemas import entities_pydantic, entities_simple

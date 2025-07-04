@@ -1,0 +1,13 @@
+# Integration tests that should be excluded from GitHub Actions
+# These tests make real API calls to external services
+
+# Exclude entire test_integration/ directory
+# This directory contains all tests that make real API calls to:
+# - Google Gemini API
+# - Firebase Firestore
+# - Other external services
+test_integration/
+
+# Individual unit tests that also make real API calls
+tests/test_document_export.py
+tests/test_settings.py

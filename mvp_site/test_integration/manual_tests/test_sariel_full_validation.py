@@ -12,7 +12,7 @@ from typing import Dict, List, Any
 
 # Import setup handled by __init__.py
 from main import create_app
-from test_integration.integration_test_lib import IntegrationTestSetup
+from integration_test_lib import IntegrationTestSetup
 from game_state import GameState
 from entity_tracking import create_from_game_state
 

@@ -20,7 +20,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from main import create_app
-from test_integration.integration_test_lib import IntegrationTestSetup
+from integration_test_lib import IntegrationTestSetup
 from entity_tracking import create_from_game_state
 
 
