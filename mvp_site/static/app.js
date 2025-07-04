@@ -337,18 +337,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!campaignItem) return;
 
-        if (target.classList.contains('edit-campaign-btn')) {
-            campaignToEdit = {
-                id: campaignItem.dataset.campaignId,
-                title: campaignItem.dataset.campaignTitle
-            };
-            const editModalEl = document.getElementById('editCampaignModal');
-            const editModal = new bootstrap.Modal(editModalEl);
-            document.getElementById('edit-campaign-title').value = campaignToEdit.title;
-            editModal.show();
-        } 
-        else if (target.classList.contains('campaign-title-link') || target.closest('.campaign-title-link')) {
-            const campaignId = campaignItem.dataset.campaignId;
+        // Check if we clicked on a button (edit button, etc)
+        if (target.closest('.btn')) {
+            if (target.classList.contains('edit-campaign-btn')) {
+                e.stopPropagation(); // Prevent campaign navigation
+                campaignToEdit = {
+                    id: campaignItem.dataset.campaignId,
+                    title: campaignItem.dataset.campaignTitle
+                };
+                const editModalEl = document.getElementById('editCampaignModal');
+                const editModal = new bootstrap.Modal(editModalEl);
+                document.getElementById('edit-campaign-title').value = campaignToEdit.title;
+                editModal.show();
+            }
+            return; // Don't navigate if any button was clicked
+        }
+        
+        // Make the entire campaign item clickable (except buttons)
+        const campaignId = campaignItem.dataset.campaignId;
+        if (campaignId) {
+            // Add visual feedback
+            campaignItem.style.opacity = '0.8';
+            setTimeout(() => {
+                campaignItem.style.opacity = '';
+            }, 100);
+            
+            // Navigate to campaign
             history.pushState({ campaignId }, '', `/game/${campaignId}`);
             handleRouteChange();
         }
