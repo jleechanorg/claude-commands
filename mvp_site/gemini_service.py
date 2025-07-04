@@ -261,6 +261,20 @@ class PromptBuilder:
             "After the background summary, proceed with the normal opening scene and narrative.\n\n"
         )
     
+    def build_continuation_reminder(self):
+        """
+        Build reminders for story continuation, especially planning blocks.
+        """
+        return (
+            "\n**CRITICAL REMINDER FOR STORY CONTINUATION**\n"
+            "1. **MANDATORY PLANNING BLOCK**: Every STORY MODE response MUST end with '--- PLANNING BLOCK ---'\n"
+            "2. **Think Commands**: If the user says 'think', 'plan', 'consider', 'strategize', or 'options', "
+            "generate ONLY internal thoughts with a deep think block (pros/cons). DO NOT take narrative actions.\n"
+            "3. **Standard Responses**: All other responses should include narrative continuation followed by "
+            "a standard planning block with 3-4 action options.\n"
+            "4. **Never Skip**: The planning block is MANDATORY - never end a response without one.\n\n"
+        )
+    
     def finalize_instructions(self, parts, use_default_world=False):
         """
         Finalize the system instructions by adding world instructions.
@@ -853,6 +867,134 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     
     return response_text
 
+def _validate_and_enforce_planning_block(response_text, user_input, game_state, chosen_model, system_instruction):
+    """
+    Validates that a story mode response ends with a planning block.
+    If missing, asks the LLM to generate an appropriate planning block.
+    
+    Args:
+        response_text: The AI's response text
+        user_input: The user's input to determine if deep think block is needed
+        game_state: Current game state for context
+        chosen_model: Model to use for generation
+        system_instruction: System instruction for the LLM
+        
+    Returns:
+        str: Response text with planning block ensured
+    """
+    # Skip planning block enforcement during character creation
+    if re.search(r"\[CHARACTER CREATION", response_text, re.IGNORECASE):
+        logging.info("Skipping planning block for character creation step")
+        return response_text
+    
+    # Skip planning block if user is switching to god/dm mode
+    mode_switch_phrases = ['god mode', 'dm mode', 'gm mode', 'enter dm mode', 'enter god mode']
+    if any(phrase in user_input.lower() for phrase in mode_switch_phrases):
+        logging.info("User switching to god/dm mode - skipping planning block")
+        return response_text
+    
+    # Skip planning block if AI response indicates mode switch
+    if "[Mode: DM MODE]" in response_text or "[Mode: GOD MODE]" in response_text:
+        logging.info("Response indicates mode switch - skipping planning block")
+        return response_text
+    
+    # Check if response already contains a planning block
+    if "--- PLANNING BLOCK ---" in response_text:
+        logging.info("Planning block found in response")
+        return response_text
+    
+    logging.warning("PLANNING_BLOCK_MISSING: Story mode response missing required planning block")
+    
+    # Determine if we need a deep think block based on keywords
+    think_keywords = ['think', 'plan', 'consider', 'strategize', 'options']
+    user_input_lower = user_input.lower()
+    needs_deep_think = any(keyword in user_input_lower for keyword in think_keywords)
+    
+    # Strip any trailing whitespace
+    response_text = response_text.rstrip()
+    
+    # Create prompt to generate planning block with proper context isolation
+    # Extract current character info for context
+    pc_name = game_state.player_character_data.get('name', 'the character') if game_state.player_character_data else 'the character'
+    current_location = game_state.world_data.get('current_location_name', 'current location') if game_state.world_data else 'current location'
+    
+    if needs_deep_think:
+        planning_prompt = f"""
+CRITICAL: Generate planning options ONLY for {pc_name} in {current_location}.
+DO NOT reference other characters, campaigns, or unrelated narrative elements.
+
+The player just said: "{user_input}"
+
+They are asking to think/plan/consider their options. Generate ONLY a planning block that presents {pc_name}'s internal thoughts with pros/cons analysis. Use this exact format:
+
+--- PLANNING BLOCK ---
+[Character's internal monologue about the situation]
+
+I see several options before me:
+
+1. **[CHOICE_ID: DescriptiveName_1]:** [First option based on the CURRENT situation ONLY]
+   - Pros: [Advantages from character's perspective]
+   - Cons: [Disadvantages/risks]
+   - Confidence: [Character's subjective assessment]
+
+2. **[CHOICE_ID: DescriptiveName_2]:** [Second option relevant to THIS scene]
+   - Pros: [Advantages]
+   - Cons: [Disadvantages]
+   - Confidence: [Assessment]
+
+3. **[CHOICE_ID: DescriptiveName_3]:** [Third option for THIS character]
+   - Pros: [Advantages]
+   - Cons: [Disadvantages]
+   - Confidence: [Assessment]
+
+4. **[Other_4]:** I could also try something else entirely.
+
+[Character's concluding thoughts]
+
+Current narrative context for {pc_name}:
+{response_text[-500:]}"""
+    else:
+        planning_prompt = f"""
+CRITICAL: Generate planning options ONLY for {pc_name} in {current_location}.
+DO NOT reference other characters, campaigns, or unrelated narrative elements.
+
+Generate ONLY a planning block for {pc_name}'s next actions based on the current narrative situation. Use this exact format:
+
+--- PLANNING BLOCK ---
+What would you like to do next?
+1. **[Option_1]:** [Action appropriate for {pc_name} in THIS scene]
+2. **[Option_2]:** [Another action relevant to CURRENT situation]
+3. **[Option_3]:** [A third option for THIS character ONLY]
+4. **[Other_4]:** You can also describe a different action you'd like to take.
+
+Current narrative context for {pc_name}:
+{response_text[-500:]}"""
+    
+    # Generate planning block using LLM
+    try:
+        planning_response = _call_gemini_api(
+            [planning_prompt], 
+            chosen_model, 
+            current_prompt_text_for_logging="Planning block generation",
+            system_instruction_text=system_instruction
+        )
+        planning_block = _get_text_from_response(planning_response)
+        
+        # Ensure it starts with newlines and the header
+        if not planning_block.startswith("\n\n--- PLANNING BLOCK ---"):
+            planning_block = "\n\n" + planning_block.strip()
+        
+        # Append the planning block
+        response_text = response_text + planning_block
+        logging.info(f"Added LLM-generated {'deep think' if needs_deep_think else 'standard'} planning block")
+        
+    except Exception as e:
+        logging.error(f"Failed to generate planning block: {e}")
+        # Fallback to a minimal generic block
+        response_text = response_text + "\n\n--- PLANNING BLOCK ---\nWhat would you like to do next?\n1. **[Continue_1]:** Continue with your current course of action.\n2. **[Explore_2]:** Explore your surroundings.\n3. **[Other_3]:** Describe a different action you'd like to take."
+    
+    return response_text
+
 @log_exceptions
 def continue_story(user_input, mode, story_context, current_game_state: GameState, selected_prompts=None, use_default_world=False):
     """
@@ -915,6 +1057,10 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # Add system reference instructions
     builder.add_system_reference_instructions(system_instruction_parts)
     
+    # Add continuation-specific reminders (planning blocks) only in character mode
+    if mode == constants.MODE_CHARACTER:
+        system_instruction_parts.append(builder.build_continuation_reminder())
+    
     # Finalize with world and debug instructions
     system_instruction_final = builder.finalize_instructions(system_instruction_parts, use_default_world)
 
@@ -947,7 +1093,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     
     # --- ENTITY TRACKING: Create scene manifest for entity tracking ---
     session_number = current_game_state.custom_campaign_state.get('session_number', 1)
-    entity_manifest_text, expected_entities, entity_tracking_instruction = _prepare_entity_tracking(
+    _, expected_entities, entity_tracking_instruction = _prepare_entity_tracking(
         current_game_state, truncated_story_context, session_number
     )
     
@@ -1063,6 +1209,23 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         # Use the common validation function to add debug info if needed
         response_text = _validate_entity_tracking(response_text, expected_entities, current_game_state)
     
+    # Validate and enforce planning block for story mode
+    # Check if user is switching to god mode with their input
+    user_input_lower = user_input.lower().strip()
+    is_switching_to_god_mode = user_input_lower in ['god mode', 'god', 'dm mode', 'dm']
+    
+    # Also check if the AI response indicates DM MODE
+    is_dm_mode_response = '[Mode: DM MODE]' in response_text or '[Mode: GOD MODE]' in response_text
+    
+    # Only add planning blocks if:
+    # 1. Currently in character mode
+    # 2. User isn't switching to god mode
+    # 3. AI response isn't in DM mode
+    if mode == constants.MODE_CHARACTER and not is_switching_to_god_mode and not is_dm_mode_response:
+        response_text = _validate_and_enforce_planning_block(
+            response_text, user_input, current_game_state, chosen_model, system_instruction_final
+        )
+    
     return response_text
 
 def _get_static_prompt_parts(current_game_state: GameState, story_context: list):
@@ -1115,8 +1278,20 @@ def _get_static_prompt_parts(current_game_state: GameState, story_context: list)
 def _get_current_turn_prompt(user_input, mode):
     """Helper to generate the text for the user's current action."""
     if mode == 'character':
-        prompt_template = "Main character: {user_input}. Continue the story in about {word_count} words and " \
-            "add details for narrative, descriptions of scenes, character dialog, character emotions."
+        # Check if user is requesting planning/thinking
+        think_keywords = ['think', 'plan', 'consider', 'strategize', 'options']
+        user_input_lower = user_input.lower()
+        is_think_command = any(keyword in user_input_lower for keyword in think_keywords)
+        
+        if is_think_command:
+            # Emphasize planning for think commands
+            prompt_template = "Main character: {user_input}. Generate the character's INTERNAL THOUGHTS ONLY with a deep think planning block. " \
+                "DO NOT take any narrative actions. End with '--- PLANNING BLOCK ---' containing pros/cons analysis."
+        else:
+            # Standard story continuation with planning block reminder
+            prompt_template = "Main character: {user_input}. Continue the story in about {word_count} words and " \
+                "add details for narrative, descriptions of scenes, character dialog, character emotions. " \
+                "MANDATORY: End your response with '--- PLANNING BLOCK ---' containing options for the player."
         return prompt_template.format(user_input=user_input, word_count=TARGET_WORD_COUNT)
     else: # god mode
         prompt_template = "GOD MODE: {user_input}"

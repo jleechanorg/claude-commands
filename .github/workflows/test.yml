@@ -40,8 +40,8 @@ jobs:
     # Step 5: Run tests directly with Python
     - name: Run test suite
       run: |
-        # Find all test files in mvp_site/tests directory (excluding prototype and manual_tests)
-        test_files=$(find mvp_site/tests -name "test_*.py" -type f ! -path "*/manual_tests/*" | sort)
+        # Find all test files in mvp_site/tests directory, excluding integration and manual tests
+        test_files=$(find mvp_site/tests -name "test_*.py" -type f ! -path "*/integration/*" ! -path "*/test_integration/*" ! -path "*/manual_tests/*" ! -name "*integration*" | sort)
         
         # Run each test file
         failed_tests=0
@@ -74,14 +74,12 @@ jobs:
           echo ""
           echo "Note: Some tests may fail in CI due to:"
           echo "  - Missing local services (e.g., test server)"
-          echo "  - Integration tests requiring specific setup"
+          echo "  - Test isolation issues"
           echo "  - Timing-sensitive tests"
           exit 1
         fi
       env:
         TESTING: true
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
     
     # Step 6: Upload test results (optional)
     - name: Upload test results
