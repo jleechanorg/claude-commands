@@ -139,7 +139,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 location_confirmed=parsed_data.get('location_confirmed', 'Unknown'),
                 state_updates=parsed_data.get('state_updates', {})
             )
-        return narrative, fallback_response
+            return narrative, fallback_response
     
     # Final fallback: return original text with empty response object
     # This should rarely be reached with the robust parser
