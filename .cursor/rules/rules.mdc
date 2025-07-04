@@ -718,6 +718,59 @@ Remaining: ~15-25% (good for a few more operations)
 Recommendation: Approaching limits, consider fresh session for major work
 ```
 
+### Milestone Commands
+**Triggers**: "milestones N", "milestones suggest"
+
+**Command: `milestones N`**
+- **Purpose**: Break current work into N specific milestones
+- **Action**: 
+  1. Analyze the current task/project scope
+  2. Create N well-defined milestones with clear deliverables
+  3. After completing each milestone:
+     - Update the standard scratchpad file (`roadmap/scratchpad_[branch_name].md`)
+     - Commit and push to GitHub to save state
+     - Provide status update before proceeding
+  4. Each milestone should be independently valuable and testable
+
+**Command: `milestones suggest`**
+- **Purpose**: Analyze task and suggest optimal milestone breakdown
+- **Action**:
+  1. Analyze the task complexity and dependencies
+  2. Suggest a number of milestones (typically 3-7)
+  3. Provide rationale for the suggested breakdown
+  4. List each milestone with:
+     - Clear objective
+     - Estimated effort/complexity
+     - Dependencies on other milestones
+     - Success criteria
+
+**Example Response for `milestones suggest`**:
+```
+Based on the task complexity, I suggest 4 milestones:
+
+Milestone 1: Foundation Setup (Low complexity)
+- Set up base infrastructure
+- Create initial test framework
+- Success: Basic tests passing
+
+Milestone 2: Core Implementation (High complexity)
+- Implement main feature logic
+- Add error handling
+- Success: Feature works end-to-end
+
+Milestone 3: Integration (Medium complexity)
+- Connect to existing systems
+- Update documentation
+- Success: Feature integrated with main app
+
+Milestone 4: Polish & Deploy (Low complexity)
+- Add edge case handling
+- Performance optimization
+- Success: Production-ready code
+
+This breakdown ensures incremental progress with natural save points.
+```
+
 ## XIII. Lessons Archive Process
 
 ### When to Archive
