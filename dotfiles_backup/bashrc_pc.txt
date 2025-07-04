@@ -149,9 +149,9 @@ alias deploy='~/projects/worldarchitect.ai/deploy.sh "$@"'
 alias commit='git commit -a -m "a" && git push'
 alias status='git status'
 alias add='git add .'
-alias integrate='git checkout main && git pull && git branch -D dev && git checkout -b dev'
+alias integrate='~/projects/worldarchitect.ai/integrate.sh'
 alias h='history | grep'
-alias tree='~/projects/worldarchitect.ai/create_worktree.sh'
+alias tree='source ~/projects/worldarchitect.ai/create_worktree.sh'
 alias sb='~/projects/worldarchitect.ai/sync_branch.sh'
 
 # Load Gemini API Key from a secret file if it exists
