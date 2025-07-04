@@ -1,10 +1,4 @@
 # Banned Names
-
-These names are overused by LLMs and cannot be used in any world content.
-
-## Banned Names List
-
-### Primary Banned Names (Original)
 - Alaric
 - Blackwood
 - Corvus
@@ -15,8 +9,6 @@ These names are overused by LLMs and cannot be used in any world content.
 - Thorne
 - Valerius
 - Isolde
-
-### Extended Banned Names (Top 50 AI Overused Names)
 - Aiden
 - OakHaven
 - Aria
@@ -63,13 +55,3 @@ These names are overused by LLMs and cannot be used in any world content.
 - Wren
 - Zara
 - Zephyr
-
-## Replacement History
-
-### 2025-01-02
-- Valerius val Artorius → Darius val Artorius
-- Rowan Thorne → Rowan Ashfeld
-- Corvus → Silas
-- Elara → Mira
-- Lord Jaxom Vale → Lord Jaxom Harren (in celestial_wars_alexiel_book.md)
-- Rowan Ashfeld → Gareth Ashfeld (in world_assiah.md)
