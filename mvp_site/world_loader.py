@@ -10,39 +10,30 @@ import logging
 # The world directory is now permanently located within mvp_site/world/
 WORLD_DIR = os.path.join(os.path.dirname(__file__), "world")
     
-CELESTIAL_WARS_BOOK_PATH = os.path.join(WORLD_DIR, "celestial_wars_alexiel_book.md")
-WORLD_ASSIAH_PATH = os.path.join(WORLD_DIR, "world_assiah.md")
-# BANNED_NAMES_PATH = os.path.join(WORLD_DIR, "banned_names.md")  # Removed - banned names are in world_assiah.md
+CELESTIAL_WARS_BOOK_PATH = os.path.join(WORLD_DIR, "celestial_wars_alexiel_book_compressed.md")
+WORLD_ASSIAH_PATH = os.path.join(WORLD_DIR, "world_assiah_compressed.md")
+BANNED_NAMES_PATH = os.path.join(WORLD_DIR, "banned_names.md")
 
 def load_banned_names():
     """
-    Extract the banned names section from world_assiah.md
+    Load the banned names from the dedicated banned_names.md file
     
     Returns:
         str: Banned names content or empty string if not found.
-             The banned names are embedded in world_assiah.md, not a separate file.
     """
     try:
-        # The banned names are in world_assiah.md, not a separate file
-        world_path = WORLD_ASSIAH_PATH
-        
-        with open(world_path, 'r', encoding='utf-8') as f:
-            world_content = f.read()
+        # Load from dedicated banned_names.md file
+        with open(BANNED_NAMES_PATH, 'r', encoding='utf-8') as f:
+            banned_content = f.read().strip()
             
-        # Extract the banned names section
-        import re
-        banned_match = re.search(r'### Banned Names\s*\n(.*?)(?=\n---|\n##|\Z)', world_content, re.DOTALL)
-        
-        if banned_match:
-            banned_names_content = banned_match.group(1).strip()
-            logging.info(f"Extracted banned names from world_assiah.md: {banned_names_content}")
-            return f"### Banned Names\n{banned_names_content}"
-        else:
-            logging.info("No banned names section found in world_assiah.md")
-            return ""
+        logging.info(f"Loaded banned names from {BANNED_NAMES_PATH}: {len(banned_content)} characters")
+        return banned_content
             
+    except FileNotFoundError:
+        logging.warning(f"Banned names file not found at {BANNED_NAMES_PATH}")
+        return ""
     except Exception as e:
-        logging.warning(f"Could not extract banned names from world file: {e}")
+        logging.warning(f"Could not load banned names file: {e}")
         return ""
 
 
