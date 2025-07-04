@@ -122,6 +122,18 @@ For complete project details including technology stack, architecture, developme
 17. **Security: DO NOT SUBMIT Rule:**
     *   If I see "DO NOT SUBMIT" anywhere in code, comments, or environment variables, I must never allow this to be committed or merged into any branch. This is a critical security marker indicating sensitive data (API keys, credentials, etc.) that must be removed before any PR or commit.
 
+18. **Unit Test Content Independence:**
+    *   **CRITICAL**: Unit tests must test behavior and logic, NOT exact content strings
+    *   **Bad Practice**: `self.assertIn("CRITICAL NAMING RESTRICTIONS", content)` - brittle, breaks when wording changes
+    *   **Good Practice**: `self.assertTrue(loader.has_banned_names_section())` - tests behavior, not implementation
+    *   **Content Testing Guidelines**:
+        - Test that required sections/data exist, not their exact wording
+        - Test that functions return expected types/structures, not exact strings
+        - Test that validation logic works, not specific error messages
+        - Use helper methods that abstract content checks (e.g., `contains_section(name)`)
+    *   **Exception**: Only test exact content when it's a critical API contract that must never change
+    *   **Refactoring Safety**: Tests should survive content updates, rewording, and formatting changes
+
 ## II. Development, Coding & Architecture
 
 1.  **Preservation Over Efficiency:**
@@ -196,31 +208,31 @@ For complete project details including technology stack, architecture, developme
     *   **ANALYSIS REQUIRED**: Event handling patterns, DOM manipulation scope, CSS cascade impact, global state changes
     *   **BLAST RADIUS**: Document all systems the change will touch before proceeding
 
-18. **Core User Workflow Protection:**
+19. **Core User Workflow Protection:**
     *   **IDENTIFICATION**: Before implementing any system modification, identify the top 3-5 core user workflows
     *   **CORE WORKFLOWS**: Authentication, Campaign Creation, Game Interaction, Data Persistence, Form Submissions
     *   **MANDATORY TESTING**: Test each core workflow after ANY system modification, regardless of perceived scope
     *   **VALIDATION**: All core workflows must function identically before and after feature addition
     *   **ROLLBACK TRIGGER**: ANY core workflow failure requires immediate feature rollback
 
-19. **File Naming Conventions:**
+20. **File Naming Conventions:**
     *   **No Red/Green in Filenames:** I must never use "red", "green", "red_green", or similar color-based terminology in filenames. This avoids confusion and maintains professional naming standards.
     *   Use descriptive names that indicate the file's purpose instead (e.g., `test_comprehensive.py`, `test_integration.py`, `test_edge_cases.py`).
 
-20. **Backup and Temporary File Management:**
+21. **Backup and Temporary File Management:**
     *   **MANDATORY**: All backup files (*.backup, *.orig, *.old) and temporary files (temp_*, *_temp, *_tmp) MUST be placed in the `tmp/` directory within each module
     *   **Structure**: Each module/directory should have its own `tmp/` subdirectory for organizing backups and temporary files
     *   **Never Leave Scattered**: Never leave backup or temporary files scattered throughout the codebase - always consolidate into appropriate tmp/ directories
     *   **Naming Convention**: Use descriptive names that indicate the original file and purpose (e.g., `narrative_system_instruction.md.backup`, `temp_header.txt`)
     *   **Git Tracking**: Backup files in tmp/ directories may be committed for safety, but temporary working files should generally be excluded via .gitignore
 
-21. **Method Length Guidelines:**
+22. **Method Length Guidelines:**
     *   **CRITICAL**: Keep methods under 500 lines of code for maintainability
     *   **Extract Helper Methods**: When a method approaches this limit, extract logical sections into well-named helper methods
     *   **Single Responsibility**: Each method should have a single, clear purpose
     *   **Refactoring Priority**: When fixing bugs in long methods, prioritize extracting duplicate code into helper methods first
 
-22. **AI-Assisted Development Time Estimation:**
+23. **AI-Assisted Development Time Estimation:**
     *   **CRITICAL**: Always estimate development time based on AI-assisted coding speeds, not traditional human coding
     *   **Code Generation**: Assume Claude can generate complete files, components, or modules in 1-3 minutes
     *   **Real Work Identification**: The actual time is spent on testing, integration, bug fixes, and iteration - not writing code
@@ -232,7 +244,7 @@ For complete project details including technology stack, architecture, developme
     *   **Project Estimation**: A complete frontend modernization takes 6-9 hours, not 20-40 hours
     *   **Avoid Human Coding Assumptions**: Never estimate based on how long it would take to write code manually
 
-23. **Visual Testing and UI Validation Protocol:**
+24. **Visual Testing and UI Validation Protocol:**
     *   **MANDATORY**: Before claiming ANY UI feature works, must run comprehensive visual validation
     *   **The "Show Me" Protocol**: Visual proof is required before marking any UI task complete
     *   **Screenshot Analysis**: When user provides screenshots showing UI problems, perform systematic visual inspection before responding
@@ -241,7 +253,7 @@ For complete project details including technology stack, architecture, developme
     *   **Core Principle**: "Code that looks right can be completely broken" - never assume functionality based on code existence alone
     *   **Visual Evidence Trumps Code**: User screenshots and visual evidence override all code analysis and assumptions
 
-24. **Screenshot-Based Problem Identification:**
+25. **Screenshot-Based Problem Identification:**
     *   **CRITICAL ANALYSIS PROTOCOL**: When user provides screenshots of UI issues:
         1. Systematically analyze for overlapping elements, misaligned components, broken layouts
         2. Never assume functionality works if visual evidence suggests problems

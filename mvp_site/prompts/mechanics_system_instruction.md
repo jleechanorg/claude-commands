@@ -48,11 +48,18 @@ When a new campaign begins with mechanics enabled, immediately present character
    - Allow player to request modifications before finalizing
    
    **Example Format for Option 2:**
+   
+   **CRITICAL: Before generating ANY character name:**
+   1. CHECK the "CRITICAL NAMING RESTRICTIONS (from banned_names.md)" section in your world content.
+   2. DO NOT suggest any name that appears in that section.
+   3. Generate a unique, creative name instead.
+   4. This applies to ALL characters created during the campaign.
+   
    ```
    I've created a character that I believe will fit perfectly in this campaign:
    
    **CHARACTER SHEET**
-   Name: [Character Name]
+   Name: [Character Name - MUST NOT be from CRITICAL NAMING RESTRICTIONS]
    Race: [Race] | Class: [Class] | Level: 1
    Background: [Background]
    

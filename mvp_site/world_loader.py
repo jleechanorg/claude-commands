@@ -89,12 +89,12 @@ def load_world_content_for_system_instruction():
         if banned_names_content:
             combined_parts.extend([
                 "",
-                "## CRITICAL NAMING RESTRICTIONS",
-                "**IMPORTANT**: The following names are BANNED and must NEVER be used for any character, location, or entity:",
+                "## CRITICAL NAMING RESTRICTIONS (from banned_names.md)",
+                "**IMPORTANT**: The following content is from banned_names.md. These names are BANNED and must NEVER be used for any character, location, or entity:",
                 "",
                 banned_names_content,
                 "",
-                "**Enforcement**: If you are about to use any name from the banned list, you MUST choose a different name. This applies to:",
+                "**Enforcement**: If you are about to use any name from the CRITICAL NAMING RESTRICTIONS, you MUST choose a different name. This applies to:",
                 "- New NPCs being introduced",
                 "- Player character suggestions",
                 "- Location names",
@@ -118,7 +118,7 @@ def load_world_content_for_system_instruction():
         
         # Only add rule 7 if banned names were loaded
         if banned_names_content:
-            combined_parts.append("7. **Name Restrictions**: NEVER use any name from the banned names list")
+            combined_parts.append("7. **Name Restrictions**: NEVER use any name from the CRITICAL NAMING RESTRICTIONS section")
         
         combined_parts.extend([
             "",
