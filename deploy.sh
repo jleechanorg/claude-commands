@@ -107,7 +107,10 @@ gcloud run deploy "$SERVICE_NAME" \
     --allow-unauthenticated \
     --set-secrets="GEMINI_API_KEY=gemini-api-key:latest" \
     --memory=2Gi \
-    --timeout=300
+    --timeout=300 \
+    --min-instances=1 \
+    --max-instances=10 \
+    --concurrency=10
 
 echo "--- Deployment of '$SERVICE_NAME' complete. ---"
 gcloud run services describe "$SERVICE_NAME" --platform managed --format 'value(status.url)'
