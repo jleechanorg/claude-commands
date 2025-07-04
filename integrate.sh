@@ -12,11 +12,13 @@ git checkout main
 echo "2. Pulling latest changes from origin..."
 git pull
 
-echo "3. Deleting existing dev branch (if it exists)..."
-git branch -D dev 2>/dev/null || echo "   (dev branch didn't exist, continuing...)"
+echo "3. Creating timestamp for unique branch name..."
+timestamp=$(date +%s)
+branch_name="dev${timestamp}"
+echo "   New branch will be: $branch_name"
 
 echo "4. Creating fresh dev branch from main..."
-git checkout -b dev
+git checkout -b "$branch_name"
 
-echo "✅ Integration complete! You are now on a fresh 'dev' branch with latest main changes."
+echo "✅ Integration complete! You are now on a fresh '$branch_name' branch with latest main changes."
 echo "📍 Current branch: $(git branch --show-current)" 
