@@ -33,8 +33,7 @@ uploads/
 # ChromeDriver binary
 mvp_site/bin/chromedriver*
 
-# World files copied for deployment
-mvp_site/world/
+# World files are now permanently part of mvp_site
 
 # MCP Server Configuration
 .mcp.json

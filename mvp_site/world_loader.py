@@ -7,11 +7,8 @@ import os
 import logging
 
 # World file paths - only used in this module
-# In deployment, world files are copied to same directory as the app
-if os.path.exists(os.path.join(os.path.dirname(__file__), "world")):
-    WORLD_DIR = "world"
-else:
-    WORLD_DIR = "../world"
+# The world directory is now permanently located within mvp_site/world/
+WORLD_DIR = os.path.join(os.path.dirname(__file__), "world")
     
 CELESTIAL_WARS_BOOK_PATH = os.path.join(WORLD_DIR, "celestial_wars_alexiel_book.md")
 WORLD_ASSIAH_PATH = os.path.join(WORLD_DIR, "world_assiah.md")
@@ -27,7 +24,7 @@ def load_banned_names():
     """
     try:
         # The banned names are in world_assiah.md, not a separate file
-        world_path = os.path.join(os.path.dirname(__file__), WORLD_ASSIAH_PATH)
+        world_path = WORLD_ASSIAH_PATH
         
         with open(world_path, 'r', encoding='utf-8') as f:
             world_content = f.read()
@@ -58,13 +55,9 @@ def load_world_content_for_system_instruction():
         str: Combined world content formatted for system instruction
     """
     try:
-        # Construct paths consistently with banned_names logic
-        if os.path.isabs(CELESTIAL_WARS_BOOK_PATH):
-            book_path = CELESTIAL_WARS_BOOK_PATH
-            world_path = WORLD_ASSIAH_PATH
-        else:
-            book_path = os.path.join(os.path.dirname(__file__), CELESTIAL_WARS_BOOK_PATH)
-            world_path = os.path.join(os.path.dirname(__file__), WORLD_ASSIAH_PATH)
+        # Use the absolute paths that are already constructed
+        book_path = CELESTIAL_WARS_BOOK_PATH
+        world_path = WORLD_ASSIAH_PATH
             
         logging.info(f"Looking for book at: {book_path}")
         logging.info(f"Looking for world at: {world_path}")

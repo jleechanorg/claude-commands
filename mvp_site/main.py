@@ -378,11 +378,16 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
         
         firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state_dict)
     
-    # Include debug mode status in response
+    # Calculate the sequence ID for the AI response
+    # It should be the length of the story context + 2 (user input + AI response)
+    ai_sequence_id = len(story_context) + 2
+    
+    # Include debug mode status and sequence ID in response
     return jsonify({
         KEY_SUCCESS: True, 
         KEY_RESPONSE: final_response,
-        'debug_mode': current_game_state.debug_mode if hasattr(current_game_state, 'debug_mode') else True
+        'debug_mode': current_game_state.debug_mode if hasattr(current_game_state, 'debug_mode') else True,
+        'sequence_id': ai_sequence_id
     })
 
 

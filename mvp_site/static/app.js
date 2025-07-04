@@ -75,12 +75,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    const appendToStory = (actor, text, mode = null, debugMode = false) => {
+    const appendToStory = (actor, text, mode = null, debugMode = false, sequenceId = null) => {
         const storyContainer = document.getElementById('story-content');
         const entryEl = document.createElement('p');
         let label = '';
         if (actor === 'gemini') {
-            label = 'Story';
+            label = sequenceId ? `Scene #${sequenceId}` : 'Story';
         } else { // actor is 'user'
             label = mode === 'character' ? 'Main Character' : (mode === 'god' ? 'God' : 'You');
         }
@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // Render story with debug mode awareness
-            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode, debugMode));
+            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode, debugMode, entry.sequence_id));
             
             // Add a slight delay to allow rendering before scrolling
             console.log("Attempting to scroll after content append, with a slight delay."); // RESTORED console.log
@@ -310,7 +310,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { data, duration } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
                     method: 'POST', body: JSON.stringify({ input: userInput, mode }),
                 });
-                appendToStory('gemini', data.response, null, data.debug_mode || false);
+                // Use sequence_id from backend response if available
+                appendToStory('gemini', data.response, null, data.debug_mode || false, data.sequence_id);
                 timerInfo.textContent = `Response time: ${duration}s`;
                 
                 // Update debug mode indicator if present
@@ -353,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('save-campaign-title-btn').addEventListener('click', async () => {
+    const saveCampaignTitle = async () => {
         const newTitleInput = document.getElementById('edit-campaign-title');
         const newTitle = newTitleInput.value.trim();
         
@@ -384,6 +385,14 @@ document.addEventListener('DOMContentLoaded', () => {
             hideSpinner();
             campaignToEdit = null;
         }
+    };
+
+    document.getElementById('save-campaign-title-btn').addEventListener('click', saveCampaignTitle);
+    
+    // Add form submit handler for Enter key support
+    document.getElementById('edit-campaign-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        saveCampaignTitle();
     });
 
     // --- Share & Download Functionality ---
