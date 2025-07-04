@@ -52,7 +52,12 @@ class TestPromptBuilderMethods(unittest.TestCase):
         # Test with mechanics
         parts = []
         self.builder.add_character_instructions(parts, ['mechanics'])
-        self.assertEqual(len(parts), 1)
+        self.assertEqual(len(parts), 0)  # mechanics doesn't trigger character instructions
+        
+        # Test with both
+        parts = []
+        self.builder.add_character_instructions(parts, ['narrative', 'mechanics'])
+        self.assertEqual(len(parts), 1)  # only narrative triggers character instructions
     
     @patch('gemini_service._load_instruction_file')
     def test_add_selected_prompt_instructions(self, mock_load):
@@ -63,13 +68,10 @@ class TestPromptBuilderMethods(unittest.TestCase):
         self.builder.add_selected_prompt_instructions(parts, ['narrative', 'mechanics'])
         self.assertEqual(len(parts), 2)
         
-        # Test with filter_calibration
+        # Test with calibration (which gets filtered out by the method implementation)
         parts = []
-        self.builder.add_selected_prompt_instructions(
-            parts, ['narrative', 'mechanics', 'calibration'], 
-            filter_calibration=True
-        )
-        self.assertEqual(len(parts), 2)  # calibration filtered out
+        self.builder.add_selected_prompt_instructions(parts, ['narrative', 'mechanics', 'calibration'])
+        self.assertEqual(len(parts), 2)  # calibration is not in prompt_order so it's ignored
     
     @patch('gemini_service._load_instruction_file')
     def test_add_system_reference_instructions(self, mock_load):
@@ -78,7 +80,7 @@ class TestPromptBuilderMethods(unittest.TestCase):
         parts = []
         
         self.builder.add_system_reference_instructions(parts)
-        self.assertTrue(len(parts) >= 2)  # At least dual_system and attribute_conversion
+        self.assertEqual(len(parts), 1)  # Only D&D SRD instruction (dual-system approach archived)
     
     def test_build_companion_instruction(self):
         """Test build_companion_instruction method."""
@@ -199,8 +201,8 @@ class TestHelperFunctions(unittest.TestCase):
         mock_logging.info.assert_called()
     
     @patch('gemini_service.NarrativeSyncValidator')
-    @patch('gemini_service.logging')
-    def test_validate_entity_tracking(self, mock_logging, mock_validator_class):
+    @patch('gemini_service.logging_util')
+    def test_validate_entity_tracking(self, mock_logging_util, mock_validator_class):
         """Test _validate_entity_tracking function."""
         response = "The hero walks into the room"
         expected = ['hero', 'villain']
@@ -223,7 +225,7 @@ class TestHelperFunctions(unittest.TestCase):
         self.assertEqual(result, response)  # Should return response unchanged when debug_mode=False
         
         # Check that warning was logged for missing entity
-        mock_logging.warning.assert_called()
+        mock_logging_util.warning.assert_called()
 
 
 class TestMainHelpers(unittest.TestCase):

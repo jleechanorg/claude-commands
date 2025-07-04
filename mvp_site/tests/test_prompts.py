@@ -153,8 +153,7 @@ class TestPromptLoading(unittest.TestCase):
         # Define prompts that are loaded conditionally
         conditional_prompts = {
             constants.PROMPT_TYPE_NARRATIVE,  # Only when narrative selected
-            constants.PROMPT_TYPE_MECHANICS,  # Only when mechanics selected  
-            constants.PROMPT_TYPE_CALIBRATION  # Only when calibration selected
+            constants.PROMPT_TYPE_MECHANICS   # Only when mechanics selected  
         }
         
         # Separate always-loaded vs conditional prompts

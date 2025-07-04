@@ -284,11 +284,11 @@ class TestFunctionValidationFlow(unittest.TestCase):
             "player_character_data": {"hp_current": 25, "hp_max": 100}
         })
         
-        # Create story context with discrepancy
+        # Create story context with discrepancy - should have an AI response that contradicts the game state
         discrepancy_context = [
             {
                 constants.KEY_ACTOR: constants.ACTOR_GEMINI,
-                constants.KEY_TEXT: "The hero lies unconscious on the ground.",
+                constants.KEY_TEXT: "The hero stands tall and strong, ready for battle with full energy.",  # Contradicts low HP
                 constants.KEY_MODE: constants.MODE_CHARACTER,
                 "sequence_id": 1
             }
@@ -315,7 +315,9 @@ class TestFunctionValidationFlow(unittest.TestCase):
             # Check that validation instruction was added to prompt
             call_args = mock_api_call.call_args[0]
             prompt_content = str(call_args[0])
-            self.assertIn("validation", prompt_content.lower())
+            
+            # Look for the actual validation instruction text, not just "validation"
+            self.assertIn("State validation detected potential inconsistencies", prompt_content)
 
 
 if __name__ == '__main__':

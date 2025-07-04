@@ -85,11 +85,11 @@ class TestEntitySchemaIntegration(unittest.TestCase):
                 
                 gemini_service.get_initial_story("Test prompt", selected_prompts=['narrative'])
                 
-                # Verify entity schema was loaded
+                # Verify game state (which includes entity schema) was loaded
                 load_calls = mock_load.call_args_list
-                entity_schema_calls = [call for call in load_calls 
-                                     if call[0][0] == constants.PROMPT_TYPE_ENTITY_SCHEMA]
-                self.assertEqual(len(entity_schema_calls), 1)
+                game_state_calls = [call for call in load_calls 
+                                     if call[0][0] == constants.PROMPT_TYPE_GAME_STATE]
+                self.assertGreaterEqual(len(game_state_calls), 1)
             
             mock_load.reset_mock()
             
@@ -110,11 +110,11 @@ class TestEntitySchemaIntegration(unittest.TestCase):
                     selected_prompts=['narrative']
                 )
                 
-                # Verify entity schema was loaded
+                # Verify game state (which includes entity schema) was loaded
                 load_calls = mock_load.call_args_list
-                entity_schema_calls = [call for call in load_calls 
-                                     if call[0][0] == constants.PROMPT_TYPE_ENTITY_SCHEMA]
-                self.assertEqual(len(entity_schema_calls), 1)
+                game_state_calls = [call for call in load_calls 
+                                     if call[0][0] == constants.PROMPT_TYPE_GAME_STATE]
+                self.assertGreaterEqual(len(game_state_calls), 1)
 
 
 class TestDebugModeDefaults(unittest.TestCase):
@@ -276,23 +276,29 @@ class TestEntityStringIdPreservation(unittest.TestCase):
         self.assertEqual(manifest.npcs[0].entity_id, 'npc_special_villain_042')
 
 
-class TestEntitySchemaPathConstant(unittest.TestCase):
-    """Test that PROMPT_TYPE_ENTITY_SCHEMA constant exists and is used"""
+class TestEntitySchemaIntegrationInGameState(unittest.TestCase):
+    """Test that entity schema is properly integrated into game state instruction"""
     
-    def test_entity_schema_constant_exists(self):
-        """Test that the entity schema constant is defined"""
-        self.assertTrue(hasattr(constants, 'PROMPT_TYPE_ENTITY_SCHEMA'))
-        self.assertIsInstance(constants.PROMPT_TYPE_ENTITY_SCHEMA, str)
+    def test_game_state_instruction_includes_entity_schema(self):
+        """Test that game state instruction file includes entity schema content"""
+        # Load game state instruction content
+        game_state_content = gemini_service._load_instruction_file(constants.PROMPT_TYPE_GAME_STATE)
+        
+        # Verify it contains entity schema sections
+        self.assertIn("Entity Schema", game_state_content)
+        self.assertIn("SceneManifest", game_state_content)
+        self.assertIn("CharacterEntity", game_state_content)
+        self.assertIn("entity_id", game_state_content)
     
-    def test_entity_schema_path_exists_in_path_map(self):
-        """Test that entity schema path is properly mapped"""
-        self.assertIn(constants.PROMPT_TYPE_ENTITY_SCHEMA, gemini_service.PATH_MAP)
+    def test_game_state_path_exists(self):
+        """Test that game state instruction file exists"""
+        self.assertIn(constants.PROMPT_TYPE_GAME_STATE, gemini_service.PATH_MAP)
         
         # Verify the file exists
-        path = gemini_service.PATH_MAP[constants.PROMPT_TYPE_ENTITY_SCHEMA]
+        path = gemini_service.PATH_MAP[constants.PROMPT_TYPE_GAME_STATE]
         full_path = os.path.join(os.path.dirname(gemini_service.__file__), path)
         self.assertTrue(os.path.exists(full_path), 
-                       f"Entity schema file not found at {full_path}")
+                       f"Game state instruction file not found at {full_path}")
 
 
 if __name__ == '__main__':

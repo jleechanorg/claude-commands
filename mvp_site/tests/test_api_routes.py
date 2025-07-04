@@ -389,7 +389,6 @@ class TestCreateCampaignRoute(unittest.TestCase):
         
         # Mock constants
         mock_constants.KEY_TITLE = 'title'
-        mock_constants.ATTRIBUTE_SYSTEM_DESTINY = constants.ATTRIBUTE_SYSTEM_DESTINY
         mock_constants.ATTRIBUTE_SYSTEM_DND = constants.ATTRIBUTE_SYSTEM_DND
         
         # Mock GameState to capture the attribute_system
@@ -438,7 +437,6 @@ class TestCreateCampaignRoute(unittest.TestCase):
         
         # Mock constants
         mock_constants.KEY_TITLE = 'title'
-        mock_constants.ATTRIBUTE_SYSTEM_DESTINY = constants.ATTRIBUTE_SYSTEM_DESTINY
         mock_constants.ATTRIBUTE_SYSTEM_DND = constants.ATTRIBUTE_SYSTEM_DND
         
         # Mock GameState to capture the attribute_system
@@ -487,7 +485,6 @@ class TestCreateCampaignRoute(unittest.TestCase):
         
         # Mock constants
         mock_constants.KEY_TITLE = 'title'
-        mock_constants.ATTRIBUTE_SYSTEM_DESTINY = constants.ATTRIBUTE_SYSTEM_DESTINY
         mock_constants.ATTRIBUTE_SYSTEM_DND = constants.ATTRIBUTE_SYSTEM_DND
         
         # Mock GameState to capture the attribute_system

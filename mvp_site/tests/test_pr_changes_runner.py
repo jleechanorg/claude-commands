@@ -43,9 +43,14 @@ print("\n=== Testing Entity Schema Constant ===")
 try:
     import constants
     
-    assert hasattr(constants, 'PROMPT_TYPE_ENTITY_SCHEMA'), "Missing PROMPT_TYPE_ENTITY_SCHEMA constant"
-    assert constants.PROMPT_TYPE_ENTITY_SCHEMA == 'entity_schema', f"Wrong value: {constants.PROMPT_TYPE_ENTITY_SCHEMA}"
-    print("✓ PROMPT_TYPE_ENTITY_SCHEMA constant exists and has correct value")
+    # PROMPT_TYPE_ENTITY_SCHEMA was integrated into game_state_instruction.md
+    # So we check that it's no longer a separate constant
+    assert not hasattr(constants, 'PROMPT_TYPE_ENTITY_SCHEMA'), "PROMPT_TYPE_ENTITY_SCHEMA should be removed (integrated into game_state)"
+    
+    # Verify that PROMPT_TYPE_GAME_STATE exists instead
+    assert hasattr(constants, 'PROMPT_TYPE_GAME_STATE'), "Missing PROMPT_TYPE_GAME_STATE constant"
+    assert constants.PROMPT_TYPE_GAME_STATE == 'game_state', f"Wrong value: {constants.PROMPT_TYPE_GAME_STATE}"
+    print("✓ Entity schema has been properly integrated into game_state instructions")
     
 except Exception as e:
     print(f"✗ Entity schema constant test failed: {e}")

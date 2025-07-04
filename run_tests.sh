@@ -2,6 +2,13 @@
 
 # Test Runner Script for WorldArchitect.ai
 # Runs all test_*.py files in mvp_site directory using vpython
+#
+# Usage:
+#   ./run_tests.sh                  # Run unit tests only (default)
+#   ./run_tests.sh --integration    # Run unit tests AND integration tests
+#
+# Integration tests (in test_integration/) require external dependencies like google-genai
+# and are excluded by default to ensure tests run quickly and without external dependencies.
 
 # Note: Not using 'set -e' so we can run all tests even if some fail
 
@@ -50,14 +57,18 @@ cd mvp_site
 print_status "Running tests in mvp_site directory..."
 print_status "Setting TESTING=true for faster AI model usage"
 
-# Check if we should include integration tests (not for GitHub export)
-include_integration=true
-if [ "$1" = "--github-export" ] || [ "$GITHUB_EXPORT" = "true" ]; then
-    include_integration=false
-    print_status "GitHub export mode - skipping integration tests"
+# Check if we should include integration tests
+# Default: exclude integration tests unless --integration flag is specified
+include_integration=false
+
+if [ "$1" = "--integration" ]; then
+    include_integration=true
+    print_status "Integration tests enabled (--integration flag specified)"
+else
+    print_status "Skipping integration tests (use --integration to include them)"
 fi
 
-# Find all test files in tests subdirectory, excluding venv, prototype, and manual_tests
+# Find all test files in tests subdirectory, excluding venv, prototype, manual_tests, and test_integration
 test_files=()
 while IFS= read -r -d '' file; do
     test_files+=("$file")
@@ -66,19 +77,34 @@ done < <(find ./tests -name "test_*.py" -type f \
     ! -path "./node_modules/*" \
     ! -path "./prototype/*" \
     ! -path "./tests/manual_tests/*" \
+    ! -path "./tests/test_integration/*" \
     -print0)
 
-# Also include test_integration directory if not in GitHub export mode
-if [ "$include_integration" = true ] && [ -d "./test_integration" ]; then
-    print_status "Including integration tests from test_integration/"
-    while IFS= read -r -d '' file; do
-        test_files+=("$file")
-    done < <(find ./test_integration -name "test_*.py" -type f -print0)
+# Also include test_integration directories if not in GitHub export mode
+if [ "$include_integration" = true ]; then
+    # Check for test_integration in both root and tests/ directory
+    if [ -d "./test_integration" ]; then
+        print_status "Including integration tests from test_integration/"
+        while IFS= read -r -d '' file; do
+            test_files+=("$file")
+        done < <(find ./test_integration -name "test_*.py" -type f -print0)
+    fi
+    
+    if [ -d "./tests/test_integration" ]; then
+        print_status "Including integration tests from tests/test_integration/"
+        while IFS= read -r -d '' file; do
+            test_files+=("$file")
+        done < <(find ./tests/test_integration -name "test_*.py" -type f -print0)
+    fi
 fi
 
 # Check if any test files exist
 if [ ${#test_files[@]} -eq 0 ]; then
-    print_warning "No test files found matching pattern test_*.py in tests/ or test_integration/ directories"
+    if [ "$include_integration" = false ]; then
+        print_warning "No unit test files found in tests/ directory"
+    else
+        print_warning "No test files found (checked both unit and integration tests)"
+    fi
     exit 0
 fi
 
@@ -195,5 +221,20 @@ if [ $failed_tests -eq 0 ]; then
     exit 0
 else
     print_error "$failed_tests test(s) failed"
+    
+    # Clean summary at the end
+    echo
+    echo "SUMMARY: $passed_tests passed, $failed_tests failed"
+    echo "FAILED TESTS:"
+    for test_file in "${test_files[@]}"; do
+        if [ -f "$test_file" ]; then
+            safe_filename=$(echo "$test_file" | sed 's|[./]|_|g')
+            status_file="$temp_dir/${safe_filename}.status"
+            if [ -f "$status_file" ] && [ "$(cat "$status_file")" = "FAIL" ]; then
+                echo "$test_file"
+            fi
+        fi
+    done
+    
     exit 1
 fi 

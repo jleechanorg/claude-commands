@@ -60,11 +60,11 @@ class TestDebugModeE2E(unittest.TestCase):
         build_debug_source = inspect.getsource(gemini_service._build_debug_instructions)
         self.assertIn("DEBUG MODE - ALWAYS GENERATE", build_debug_source)
         
-        # Check that build_core_system_instructions adds debug instructions FIRST
+        # Check that build_core_system_instructions adds debug instructions
         build_core_source = inspect.getsource(gemini_service.PromptBuilder.build_core_system_instructions)
         
-        # Verify debug instructions are added first
-        self.assertIn("# CRITICAL: Add debug mode instructions FIRST", build_core_source)
+        # Verify debug instructions are added (third in the sequence after master directive and game state)
+        self.assertIn("# Add debug mode instructions THIRD for technical functionality", build_core_source)
         self.assertIn("parts.append(_build_debug_instructions())", build_core_source)
         
         # Verify there's no conditional check for debug_mode

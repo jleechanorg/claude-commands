@@ -75,8 +75,8 @@ class TestHandleCoreMemoriesSafeguard(unittest.TestCase):
     """Test the _handle_core_memories_safeguard helper."""
     
     @patch('firestore_service._perform_append')
-    @patch('firestore_service.logging')
-    def test_handle_core_memories_overwrite(self, mock_logging, mock_append):
+    @patch('firestore_service.logging_util')
+    def test_handle_core_memories_overwrite(self, mock_logging_util, mock_append):
         """Test safeguarding core_memories from overwrite."""
         state = {}
         
@@ -85,7 +85,7 @@ class TestHandleCoreMemoriesSafeguard(unittest.TestCase):
         self.assertTrue(result)
         self.assertEqual(state['core_memories'], [])
         mock_append.assert_called_once_with([], ['new_memory'], 'core_memories', deduplicate=True)
-        mock_logging.warning.assert_called()
+        mock_logging_util.warning.assert_called()
     
     def test_ignore_non_core_memories(self):
         """Test that non-core_memories keys return False."""

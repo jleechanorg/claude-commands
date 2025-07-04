@@ -18,12 +18,6 @@ import constants
 class TestEntityTracking(unittest.TestCase):
     """Test entity tracking components"""
     
-    def test_entity_schema_constant_exists(self):
-        """Test that PROMPT_TYPE_ENTITY_SCHEMA constant is defined"""
-        self.assertTrue(hasattr(constants, 'PROMPT_TYPE_ENTITY_SCHEMA'))
-        self.assertIsInstance(constants.PROMPT_TYPE_ENTITY_SCHEMA, str)
-        self.assertEqual(constants.PROMPT_TYPE_ENTITY_SCHEMA, 'entity_schema')
-    
     def test_entity_id_format_standardization(self):
         """Test that entity IDs follow underscore format like 'pc_name_001'"""
         test_game_state = {

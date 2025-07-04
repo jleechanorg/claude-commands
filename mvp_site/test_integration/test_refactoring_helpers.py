@@ -29,11 +29,11 @@ class TestPromptBuilder(unittest.TestCase):
         
         parts = self.builder.build_core_system_instructions()
         
-        self.assertEqual(len(parts), 4)  # Now includes debug instructions
-        self.assertEqual(mock_load.call_count, 3)  # Only 3 calls to _load_instruction_file
-        # First part is debug instructions, rest are loaded instructions
-        self.assertIn("DEBUG MODE", parts[0])
-        self.assertTrue(all(part == "instruction content" for part in parts[1:]))
+        self.assertEqual(len(parts), 3)  # Master directive + game state + debug instructions
+        self.assertEqual(mock_load.call_count, 2)  # Only 2 calls to _load_instruction_file (master directive + game state)
+        # First two parts are loaded instructions, last is debug instructions
+        self.assertTrue(all(part == "instruction content" for part in parts[:2]))
+        self.assertIn("DEBUG MODE", parts[2])  # Debug instructions are at index 2
     
     @patch('gemini_service._load_instruction_file')
     def test_add_character_instructions(self, mock_load):
@@ -41,19 +41,19 @@ class TestPromptBuilder(unittest.TestCase):
         mock_load.return_value = "character instruction"
         parts = []
         
-        # Test with narrative prompt
+        # Test with narrative prompt - should add character template
         self.builder.add_character_instructions(parts, ['narrative'])
         self.assertEqual(len(parts), 1)
         
-        # Test with mechanics prompt
+        # Test with mechanics prompt - should NOT add character template (only narrative triggers it)
         parts = []
         self.builder.add_character_instructions(parts, ['mechanics'])
-        self.assertEqual(len(parts), 1)
+        self.assertEqual(len(parts), 0)  # mechanics doesn't trigger character instructions
         
-        # Test with both
+        # Test with both - should add 1 (only narrative triggers character instructions)
         parts = []
         self.builder.add_character_instructions(parts, ['narrative', 'mechanics'])
-        self.assertEqual(len(parts), 2)
+        self.assertEqual(len(parts), 1)  # still only 1 since character template is only added for narrative
     
     def test_build_companion_instruction(self):
         """Test companion instruction generation."""
