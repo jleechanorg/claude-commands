@@ -611,16 +611,21 @@ For different worktrees:
 - Milestone 3: Complete continuity testing (1 hr)
 
 #### Sunday (8 hrs)
-- **[TASK-110] Playwright MPC Evaluate** 🟢 (1.5 hrs)
+- **[TASK-110] Playwright MPC Evaluate** 🟢 (1 hr)
   - Evaluate Playwright for MPC (Model-Prompted Coding) testing
   - Set up initial Playwright configuration
   - Create sample tests for critical user flows
   - Assess integration with current testing framework
-- **[TASK-111] Zen MCP Evaluate** 🟢 (1.5 hrs)
+- **[TASK-111] Zen MCP Evaluate** 🟢 (1 hr)
   - Evaluate Zen MCP (Model Context Protocol) tools
   - Test integration capabilities with Claude
   - Assess potential benefits for development workflow
   - Document findings and recommendations
+- **[TASK-112] Context7 MCP Server Evaluate** 🟢 (1 hr)
+  - Evaluate Context7 MCP Server capabilities
+  - Test context management features
+  - Assess integration with existing development workflow
+  - Compare with other MCP solutions
 - Milestone 4: UI Polish small tasks (2 hrs)
   - Keep timestamp sync task ([TASK-005c])
   - Other small UI fixes
