@@ -175,6 +175,7 @@ For different worktrees:
 
 ### Narrative
 *   [TASK-073] 🟡 **IN PROGRESS** Update default campaign prompt to Ser Arion moral crisis scenario - PR #246 (ACTIVE)
+*   [TASK-079] **Trim Default Start Backstory** - Reduce amount of backstory exposed to player during default campaign start
 *   Dragon knight detailed start
 *   Generate siblings/houses/factions etc if they pick a custom character even in default world
 *   Generate companions
@@ -202,7 +203,7 @@ For different worktrees:
 *   [TASK-004] **Project:** Continuity load test - 10 interactions (should track entity consistency and narrative coherence)
 *   [TASK-003] `roadmap/scratchpad_state_sync_entity.md` followups
 *   `test_sariel_consolidated.py`
-*   Ensure it does real sariel test and ask for proof real gemini and real pydantic were used.
+*   [TASK-083] Ensure it does real sariel test and ask for proof real gemini and real pydantic were used.
 *   `Scratchpad_prompt_optimization.md`
 *   **Project:** Brand new frontend
 *   [TASK-008b] Figma integration
@@ -245,20 +246,27 @@ For different worktrees:
     *   Compare with manual code review process
     *   Decision: Adopt for all PRs or remove
     *   Enable "copilot ping" command if adopted
+*   [TASK-075] **Laptop SSH Setup** - Configure SSH access from laptop to development environment for remote coding
+*   [TASK-076] **Cost Savings Plan** - Analyze Gemini API usage costs using exported CSV data to identify optimization opportunities
+*   [TASK-077] **Generic D&D Setting Adaptation** - Create flexible prompt system that adapts D&D mechanics to any fictional universe (e.g., Star Wars: Jedi Knight vs Paladin, Force Lightning vs Lightning Bolt)
+*   [TASK-078] **GitHub Actions Unit Test Coverage** - Set up automated unit test coverage reporting in CI/CD pipeline
 *   Improve rules? https://ghuntley.com/stdlib/
 *   Ssh into desktop from laptop?
-*   Dev server per PR?
 *   https://www.reddit.com/r/ClaudeAI/s/EtrZt0B9nE
 *   Macbook SSH: AI coding
-*   Cursor prompts: https://github.com/x1xhlol/system-prompts-and-models-of-ai-tools
 *   Coding or Agent eval
 *   Backtrack Vagent vs single
-*   Setup mobile phone stuff: https://www.perplexity.ai/search/what-doe-sthis-mean-i-use-blin-FI3Qns9xSZqFPSKMhg18Cg
-*   Tailscale for open internet
+*   [TASK-084] **Dev Server per PR** - Set up preview deployment URLs for each pull request for easier testing and review
+*   [TASK-085] **Cursor AI Prompts Research** - Research and integrate Cursor AI prompts from https://github.com/x1xhlol/system-prompts-and-models-of-ai-tools
+*   [TASK-086] **Mobile SSH Access** - Configure SSH access from mobile phone to development PC when not on home WiFi using the Perplexity guide
+*   [TASK-087] **Tailscale VPN Setup** - Set up Tailscale for secure development environment networking and remote access
 
 ## Optimization
 *   Start generating the world after user first choice?
 *   [TASK-062] Generate ahead for planning blocks to reduce latency? Maybe a premium feature - Pre-generate common planning block responses to improve response times
+*   [TASK-080] **Firebase Collection Group Optimization** - Migrate from individual collections to collection groups for better query performance
+*   [TASK-081] **Firestore Query Optimization** - Ensure all queries use proper indexes and fetch only single-user data
+*   [TASK-082] **Firestore Auth Setup** - Complete authentication configuration by July 13 using AI coding assistance
 
 ## Core changes
 *   Perplexity research and feed back into my project
