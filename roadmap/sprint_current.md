@@ -5,23 +5,12 @@
 ## Sprint Overview
 - **Duration**: 7 days (Jan 3-9)
 - **Total Hours**: 35 (8+8+8+3+3+3+3)
-- **Focus**: Critical bugs, state sync, four-mode system
+- **Focus**: Critical bugs, state sync, JSON parsing issues
 
-## Today - Friday, Jan 3 (Holiday - 8 hours)
+## Today - Saturday, Jan 4 (8 hours)
 
-### ⏰ Morning Block (9am-1pm) - NOT COMPLETED
-- [x] **TASK-001a** 🔴 Malformed JSON investigation (1.5 hrs) - PAUSED
-- [ ] **TASK-001b** 🔴 Dragon Knight v3 plot fix (0.5 hrs) - PAUSED
-
-### ⏰ Evening Block (6pm-8pm) - Current Time: 6pm  
-- [x] **TASK-002** ❌ LLM I/O format standardization (2 hrs) - CLOSED (PR #272 - session tracking doesn't improve LLM accuracy)
-- [x] **TASK-002a** ✅ Scene number increment-by-2 fix - COMPLETED (PR #281)
-- [ ] **TASK-073** 🟡 Default campaign prompt update (Ser Arion scenario) - ACTIVE (PR #246)
-- [ ] **TASK-074** 🔴 JSON display bug fix - ACTIVE (Branch: debug-json-display-bug)
-- [ ] **TASK-003** 🟡 State sync validation (if time permits)
-- [ ] **TASK-004a** 🟡 Continuity testing Phase 1 (if time permits)
-
-### ⏰ Late Evening Block (8pm-10pm) - Simple Tasks
+### Morning (4 hrs)
+- [x] **TASK-110** 🟡 Trim CLAUDE.md file (1 hr) - COMPLETED (PR #305)
 - [ ] **TASK-114** 🟢 Cache all file reads (30 min)
   - [ ] Implement in-memory cache for world content files
   - [ ] Cache system instruction files beyond session
@@ -35,35 +24,17 @@
   - [ ] Parse DC from dice roll results
   - [ ] Display as "(Success vs DC 15)"
 
-### ⏰ Completed Tasks (Based on PR History)
-- [x] **TASK-014a** 🟢 Homepage navigation improvements (PR #266)
-- [x] **TASK-009a** 🟢 Token logging implementation (PR #264)
-- [x] **TASK-005a** 🟢 Campaign click fix - Merged to main
-- [x] **TASK-005b** 🟢 Loading spinner messages - Merged to main
-
-## Tomorrow - Saturday, Jan 4 (8 hours)
-
-### Morning (4 hrs)
-- [ ] **TASK-110** 🟡 Trim CLAUDE.md file (1 hr)
-  - [ ] Remove redundancy and consolidate rules
-  - [ ] Archive outdated sections
-  - [ ] Improve organization
-- [ ] **TASK-007** 🟡 Four-mode system implementation
-  - [ ] TASK-007a: Architecture (30 min)
-  - [ ] TASK-007b: DM mode (45 min)
-  - [ ] TASK-007c: Author mode (45 min)
-  - [ ] TASK-007d: Story mode (30 min)
-  - [ ] TASK-007e: Game mode (30 min)
-
 ### Afternoon (4 hrs)
+- [ ] **TASK-126** 🔴 Debug raw JSON display in campaigns (1.5 hrs)
+  - [ ] Investigate why users still see raw JSON responses (see tmp/luke_campaign_log.txt)
+  - [ ] Review recent JSON parsing performance improvements from PR #310
+  - [ ] Test narrative response schema parsing with real campaign data
+  - [ ] Ensure proper fallback text cleanup is working
 - [ ] **TASK-111** 🟡 LLM narrative improvements (1 hr)
   - [ ] Fix direct alignment mentions in narrative
   - [ ] Improve subtlety in character descriptions
   - [ ] Update prompts to avoid meta-game references
-- [ ] **TASK-125** 🟢 Standardize logging to logging_util (1 hr)
-  - [ ] Replace all usage of standard logging module with logging_util
-  - [ ] Ensure consistent logging format across codebase
-  - [ ] Update any remaining print statements to use logging_util
+- [x] **TASK-125** 🟢 Standardize logging to logging_util (1 hr) - COMPLETED (PR #309)
 - [ ] **TASK-005** 🟢 UI Polish - Small tasks
   - [x] TASK-005a: Campaign clicks (30 min) - COMPLETED
   - [x] TASK-005b: Loading spinner (1 hr) - COMPLETED
@@ -126,9 +97,7 @@
 ## Progress Tracking
 
 ### Completed Today
-- **TASK-014a** 🟢 Homepage navigation improvements (PR #266)
-- **TASK-009a** 🟢 Token logging implementation (PR #264)
-- **TASK-001a** 🔴 Malformed JSON investigation (PAUSED - mostly complete)
+- (No tasks completed yet)
 
 ### Blocked Items
 - TASK-001c: Null HP bug (waiting for combat PR review)
@@ -137,3 +106,28 @@
 - All times adjusted for AI-assisted development
 - Use `roadmap next` for next task
 - Update with `roadmap finish TASK-XXX`
+
+## Completed Tasks Record
+
+### Friday, Jan 3 (Holiday - 8 hours) - COMPLETED
+- [x] **TASK-001a** 🔴 Malformed JSON investigation (1.5 hrs) - COMPLETED (PR #310)
+- [x] **TASK-002** ❌ LLM I/O format standardization (2 hrs) - CLOSED (PR #272 - session tracking doesn't improve LLM accuracy)
+- [x] **TASK-002a** ✅ Scene number increment-by-2 fix - COMPLETED (PR #281)
+- [x] **TASK-014a** 🟢 Homepage navigation improvements (PR #266)
+- [x] **TASK-009a** 🟢 Token logging implementation (PR #264)
+- [x] **TASK-005a** 🟢 Campaign click fix - Merged to main
+- [x] **TASK-005b** 🟢 Loading spinner messages - Merged to main
+- [x] **TASK-110** 🟡 Trim CLAUDE.md file (1 hr) - COMPLETED (PR #305)
+- [x] **TASK-125** 🟢 Standardize logging to logging_util (1 hr) - COMPLETED (PR #309)
+- [x] **TASK-088** 🟢 Remove Myers-Briggs references - COMPLETED (PR #287)
+- [x] **Slash Commands Implementation** - COMPLETED (PR #307)
+
+### Incomplete Tasks from Friday (moved to appropriate days)
+- [ ] **TASK-001b** 🔴 Dragon Knight v3 plot fix (0.5 hrs) - MOVED TO MONDAY
+- [ ] **TASK-073** 🟡 Default campaign prompt update (Ser Arion scenario) - ACTIVE (PR #246)
+- [ ] **TASK-074** 🔴 JSON display bug fix - ACTIVE (Branch: debug-json-display-bug)
+- [ ] **TASK-003** 🟡 State sync validation (if time permits)
+- [ ] **TASK-004a** 🟡 Continuity testing Phase 1 (if time permits)
+- [ ] **TASK-114** 🟢 Cache all file reads (30 min)
+- [ ] **TASK-115** 🟢 Document LLM input structure (45 min)
+- [ ] **TASK-116** 🟢 Show DC in dice rolls (45 min)
