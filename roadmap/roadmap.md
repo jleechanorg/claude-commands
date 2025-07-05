@@ -285,6 +285,17 @@ For different worktrees:
 *   [TASK-085] **Cursor AI Prompts Research** - Research and integrate Cursor AI prompts from https://github.com/x1xhlol/system-prompts-and-models-of-ai-tools
 *   [TASK-086] **Mobile SSH Access** - Configure SSH access from mobile phone to development PC when not on home WiFi using the Perplexity guide
 *   [TASK-087] **Tailscale VPN Setup** - Set up Tailscale for secure development environment networking and remote access
+*   [TASK-114] **Cache All File Reads** - Implement in-memory caching for all file reads to improve performance
+*   [TASK-115] **Document LLM Input Structure** - Create formal documentation of exact JSON/data structures sent to LLM
+*   [TASK-116] **Show DC in Dice Rolls** - Display Difficulty Class values in dice roll results (e.g., "Success vs DC 15")
+*   [TASK-117] **Move Default Fantasy World Checkbox** - Relocate "Use default fantasy world" option to campaign creation screen
+*   [TASK-118] **Move Generate Companions Checkbox** - Move "Generate default companions" from wizard last step to narrative/mechanics section
+*   [TASK-119] **Claude-Simone Evaluation** - Evaluate https://github.com/Helmi/claude-simone for potential integration
+*   [TASK-120] **MCP Servers General Evaluation** - Survey and compare available MCP servers beyond those already scheduled
+*   [TASK-121] **Create LLMResponse Class** - Implement structured class to handle all LLM responses instead of raw strings/JSON
+*   [TASK-122] **Migrate Claude Commands to Slash Format** - Convert all claude.md commands to slash commands and document on GitHub
+*   [TASK-123] **Traycer Planning Tool Evaluation** - Evaluate Traycer for architecture planning and development workflow
+*   [TASK-124] **Research Claude Best Practices** - Investigate other users' Claude configurations and compile useful patterns
 
 ## Optimization
 *   Start generating the world after user first choice?
