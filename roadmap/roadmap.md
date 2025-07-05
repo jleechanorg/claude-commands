@@ -76,7 +76,7 @@ For different worktrees:
 *   [TASK-009b] Further compression integrate alexiel book: `roadmap/alexiel_book_token_reduction_scratchpad.md`
 *   [TASK-009a] ✅ **COMPLETED** Logging make it all tokens vs characters (token-based logging instead of character counts) - PR #264
 *   Claude always getting directories wrong
-*   [TASK-005a] Clicking on a campaign doesn\'t show spinner loading and seems to not always register clicks (issue is about the campaign list)
+*   [TASK-005a] ✅ **COMPLETED** Clicking on a campaign doesn\'t show spinner loading and seems to not always register clicks (issue is about the campaign list) - Merged to main
 
 ### Bugs
 *   [TASK-001c] **Null HP during combat** - Happens during combat, defer to combat system revamp (see PR #102: https://github.com/jleechan2015/worldarchitect.ai/pull/102)
@@ -112,8 +112,8 @@ For different worktrees:
 - Phase 3: 50 interactions
 
 ### UI Improvements
-- **Campaign list click issues** - Doesn't show spinner, clicks don't always register
-- **Loading spinner with messages** - During campaign continue, add random hardcoded messages like creation
+- **Campaign list click issues** - ✅ COMPLETED - Doesn't show spinner, clicks don't always register
+- **Loading spinner with messages** - ✅ COMPLETED - During campaign continue, add random hardcoded messages like creation
 - **Timestamp/narrative mismatch** - Sync timestamps with story events
 - **Let player read background story** - Currently scrolls past too quickly, add pause/continue button
 - **Homepage navigation** - Make "WorldArchitect.AI" text clickable to return to homepage
