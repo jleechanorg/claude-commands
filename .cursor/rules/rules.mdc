@@ -424,6 +424,22 @@ For complete project details including technology stack, architecture, developme
         2. Alert user with: "⚠️ CRITICAL: Accidentally pushed to main branch!"
         3. Provide revert instructions if needed
 
+15. **Pull Request Workflow for All Changes:**
+    *   **MANDATORY**: ALL changes to main branch must go through pull requests, including:
+        - Code changes
+        - Documentation updates
+        - Configuration modifications
+        - **Roadmap changes** (scheduling, task updates, etc.)
+    *   **Workflow Process**:
+        1. Make changes on feature/dev branch
+        2. Commit changes with descriptive messages
+        3. Create pull request using `gh pr create`
+        4. Review and merge PR (do not merge directly to main)
+        5. Run `./integrate.sh` to create fresh clean branch
+    *   **No Direct Main Merges**: Never merge directly to main branch, even for simple changes
+    *   **Visibility**: PRs provide visibility, review history, and proper change tracking
+    *   **Exception**: No exceptions - all changes require PRs
+
 ## IV. Environment, Tooling & Scripts
 
 1.  **Python Virtual Environment Management:**
