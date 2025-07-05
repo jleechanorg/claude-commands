@@ -18,7 +18,7 @@
 ## Today's Focus - Time Blocks
 
 ### Morning Block (4 hours)
-1. **[TASK-001a] Investigate Malformed JSON** 🔴 (1.5 hrs)
+1. **[TASK-001a] Investigate Malformed JSON** 🟡 (1.5 hrs) - PR #296
    - Investigate malformed JSON from AI responses
    - Add robust error handling and recovery
 2. **[TASK-002] State Sync Testing Setup** 🟡 (2.5 hrs)
@@ -71,27 +71,27 @@
      - Verify that unchecked options properly disable their respective features
 
 ### Tonight's Work Block (Small LLM Tasks)
-8. **[TASK-088] Remove Direct Myers-Briggs References in Narrative** 🟢 (15 min)
+8. **[TASK-088] Remove Direct Myers-Briggs References in Narrative** 🟡 (15 min) - PR #287
    - **Note:** Small task suitable for LLM to do alone
    - Find and remove all direct references to personality types (e.g., "His mind, ever analytical as an ISTJ")
    - IMPORTANT: Continue using Myers-Briggs for character behavior and decision-making
    - Only mention personality types when a character is explicitly discussing them in dialogue
    - Keep the underlying personality system functional but invisible in narration
-9. **[TASK-089] Planning Block IDs** 🟢 (15 min)
+9. **[TASK-089] Planning Block IDs** 🟡 (15 min) - PR #295
    - **Note:** Small task suitable for LLM to do alone
    - Ensure all planning block IDs use camelCase format
    - Update any inconsistent ID formats across the codebase
-10. **[TASK-090] Remove Legacy Migration Code** 🟢 (30 min)
+10. **[TASK-090] Remove Legacy Migration Code** 🟡 (30 min) - PR #288
     - **Note:** Small task suitable for LLM to do alone
     - Identify and remove old migration code that is no longer needed
     - Clean up any related dead code or unused imports
 
 ### Tomorrow's Tasks
-11. **[TASK-108] Remove Word/Character Counts from Logs** 🟢 (30 min)
+11. **[TASK-108] Remove Word/Character Counts from Logs** 🟡 (30 min) - PR #289
     - Remove word or character counts from logs
     - Focus exclusively on token counts for all logging
     - Update any logging utilities that still use character/word metrics
-12. **[TASK-109] Fix ChoiceIDs Planning Block Formatting** 🟢 (30 min)
+12. **[TASK-109] Fix ChoiceIDs Planning Block Formatting** 🟡 (30 min) - PR #295
     - Investigate and fix ChoiceIDs not correctly formatted in planning blocks
     - Ensure consistent formatting across all planning block responses
     - Update any parsing logic if needed
@@ -115,12 +115,12 @@ For different worktrees:
 ## Unit test scratchpad followups
 
 ### Core integrity
-*   [TASK-099] **Trim Initial Prompts** - Optimize initial prompt size for better performance
-*   [TASK-092] **System Instructions Optimization** - Just include assiah prompt once in campaign creation vs system instructions, evaluate if all prompts need to be system instructions
-*   [TASK-100] **Dynamic World State** - Handle stale world info as game progresses (e.g., faction leader dies)
+*   [TASK-099] **Trim Initial Prompts** 🟡 - Optimize initial prompt size for better performance - PR #292
+*   [TASK-092] **System Instructions Optimization** 🟡 - Just include assiah prompt once in campaign creation vs system instructions, evaluate if all prompts need to be system instructions - PR #293
+*   [TASK-100] **Dynamic World State** 🟡 - Handle stale world info as game progresses (e.g., faction leader dies) - PR #294
 *   [TASK-002] **LLM I/O Format Standardization** - Define explicit input/output formats including Scene#, prompts, returns, debug data, game state updates
-*   [TASK-101] **Story Mode Entry Format** - Define proper format for story mode entries
-*   [TASK-102] **Slim Mode Design** - Design lightweight mode for reduced token usage
+*   [TASK-101] **Story Mode Entry Format** 🟡 - Define proper format for story mode entries - PR #297
+*   [TASK-102] **Slim Mode Design** 🟡 - Design lightweight mode for reduced token usage - PR #303
 *   [TASK-003] **Character Creation State Tracking** - Implement tracking per `character_creation_state_tracking_scratchpad.md`
 *   [TASK-103] **Prompt Quality Review** - Have LLM review and provide feedback on new prompts
 *   [TASK-104] **Prompt Optimization** - Optimize prompts based on `roadmap/scratchpad_8k_optimization.md`
@@ -130,14 +130,14 @@ For different worktrees:
 *   [TASK-106] **Parallel Processing Setup** - Implement parallel processing for improved performance
 *   [TASK-009b] **Alexiel Book Compression** - Further compression integrate alexiel book: `roadmap/alexiel_book_token_reduction_scratchpad.md`
 *   [TASK-009a] ✅ **COMPLETED** Logging make it all tokens vs characters (token-based logging instead of character counts) - PR #264
-*   [TASK-107] **Claude Directory Navigation** - Fix Claude's directory navigation issues
+*   [TASK-107] **Claude Directory Navigation** 🟡 - Fix Claude's directory navigation issues - PR #290
 *   [TASK-005a] ✅ **COMPLETED** Clicking on a campaign doesn\'t show spinner loading and seems to not always register clicks (issue is about the campaign list) - PR #267
 *   [TASK-005b] ✅ **COMPLETED** Loading spinner with messages during campaign continue - PR #268
 *   [TASK-014a] ✅ **COMPLETED** WorldArchitect.AI make this clickable to homepage - PR #266
 
 ### Bugs
 *   [TASK-001c] **Null HP during combat** - Happens during combat, defer to combat system revamp (see PR #102: https://github.com/jleechan2015/worldarchitect.ai/pull/102)
-*   [TASK-001a] 🟡 **IN PROGRESS** Malformed JSON response from AI - From AI responses, needs investigation of when/why AI responses fail to parse
+*   [TASK-001a] 🟡 **IN PROGRESS** Malformed JSON response from AI - From AI responses, needs investigation of when/why AI responses fail to parse - PR #296
 *   [TASK-001b] ✅ **COMPLETED** Dragon Knight v3 plot coherence - AI introduced unrelated plot element (randomly introduced crypt element), need stronger narrative constraints
 *   Stable?
 
@@ -425,7 +425,7 @@ For different worktrees:
 ## Detailed Milestone Breakdown
 
 ### Milestone 1: Critical Bug Fixes & Investigation (4 hrs)
-- **TASK-001a** 🟡 **IN PROGRESS** Investigate malformed JSON responses
+- **TASK-001a** 🟡 **IN PROGRESS** Investigate malformed JSON responses - PR #296
   - Currently being worked on
   - Analyze when/where AI responses fail to parse
   - Add robust JSON parsing with fallbacks
@@ -590,7 +590,7 @@ For different worktrees:
 
 #### Saturday (8 hrs)
 - **[TASK-072] Alexiel Content Review** - Review `roadmap/alexiel_content_review_saturday.md` for missing content integration (1.5 hrs)
-- **[TASK-092] System Instructions Optimization** 🟡 (1.5 hrs)
+- **[TASK-092] System Instructions Optimization** 🟡 (1.5 hrs) - PR #293
   - Consider adding world_assiah.md only once during campaign creation vs every system instruction
   - Re-evaluate all system instructions for token optimization
   - Review if all prompts need to be system instructions
@@ -611,7 +611,7 @@ For different worktrees:
 - Milestone 3: Complete continuity testing (1 hr)
 
 #### Sunday (8 hrs)
-- **[TASK-110] Playwright MPC Evaluate** 🟢 (45 min)
+- **[TASK-110] Playwright MPC Evaluate** 🟢 (45 min) - Not started
   - Evaluate Playwright for MPC (Model-Prompted Coding) testing
   - Set up initial Playwright configuration
   - Create sample tests for critical user flows
