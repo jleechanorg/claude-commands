@@ -674,10 +674,12 @@ Milestone 4: Polish & Deploy (Low complexity)
 - Use `TESTING=true vpython` for integration tests
 
 ### `/integrate`
-**Git Integration Workflow**: Execute clean branch management
-- Run integrate pattern: `git checkout main && git pull && git branch -D dev && git checkout -b dev`
-- Create fresh branch from latest main
-- Ensure proper branch tracking and push safety
+**Git Integration Workflow**: Execute the `./integrate.sh` script from project root
+- Runs the `integrate.sh` script located in the project root directory
+- Script contains specific branch management logic for this project
+- Creates a fresh branch from latest main (branch name determined by script)
+- Ensures proper branch tracking and push safety
+- Script may create branches other than 'dev' based on its configuration
 - Follow PR-only workflow for main branch protection
 
 ### `/scratchpad`
