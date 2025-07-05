@@ -58,6 +58,10 @@
   - [ ] Fix direct alignment mentions in narrative
   - [ ] Improve subtlety in character descriptions
   - [ ] Update prompts to avoid meta-game references
+- [ ] **TASK-125** 🟢 Standardize logging to logging_util (1 hr)
+  - [ ] Replace all usage of standard logging module with logging_util
+  - [ ] Ensure consistent logging format across codebase
+  - [ ] Update any remaining print statements to use logging_util
 - [ ] **TASK-005** 🟢 UI Polish - Small tasks
   - [x] TASK-005a: Campaign clicks (30 min) - COMPLETED
   - [x] TASK-005b: Loading spinner (1 hr) - COMPLETED

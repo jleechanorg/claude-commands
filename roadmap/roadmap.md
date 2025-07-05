@@ -296,6 +296,7 @@ For different worktrees:
 *   [TASK-122] **Migrate Claude Commands to Slash Format** - Convert all claude.md commands to slash commands and document on GitHub
 *   [TASK-123] **Traycer Planning Tool Evaluation** - Evaluate Traycer for architecture planning and development workflow
 *   [TASK-124] **Research Claude Best Practices** - Investigate other users' Claude configurations and compile useful patterns
+*   [TASK-125] **Standardize Logging to logging_util** - Replace all usage of standard logging module with logging_util for consistency
 
 ## Optimization
 *   Start generating the world after user first choice?
