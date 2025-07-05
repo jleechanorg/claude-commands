@@ -1,5 +1,5 @@
 ---
-description: 
+description: Technical lessons and specific incident analysis
 globs: 
 alwaysApply: true
 ---
@@ -7,7 +7,9 @@ alwaysApply: true
 
 **Meta-Rule:** Any instruction to "add a lesson," "add to lessons," or a similar directive refers specifically to this file: `.cursor/rules/lessons.mdc`.
 
-This document is a persistent repository for reusable knowledge, best practices, and crucial insights.
+**PRIMARY RULE SOURCE**: The main operating protocol is now in `/CLAUDE.md`. This file contains specific technical lessons and incident analysis.
+
+This document is a persistent repository for reusable knowledge, best practices, and crucial insights from specific technical incidents.
 
 ## CRITICAL: ALWAYS USE EXISTING INTEGRATION TEST INFRASTRUCTURE
 
