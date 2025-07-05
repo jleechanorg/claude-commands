@@ -28,19 +28,27 @@
 ## Tomorrow - Saturday, Jan 4 (8 hours)
 
 ### Morning (4 hrs)
+- [ ] **TASK-110** 🟡 Trim CLAUDE.md file (1 hr)
+  - [ ] Remove redundancy and consolidate rules
+  - [ ] Archive outdated sections
+  - [ ] Improve organization
 - [ ] **TASK-007** 🟡 Four-mode system implementation
   - [ ] TASK-007a: Architecture (30 min)
-  - [ ] TASK-007b: DM mode (1 hr)
-  - [ ] TASK-007c: Author mode (1 hr)
-  - [ ] TASK-007d: Story mode (45 min)
-  - [ ] TASK-007e: Game mode (45 min)
+  - [ ] TASK-007b: DM mode (45 min)
+  - [ ] TASK-007c: Author mode (45 min)
+  - [ ] TASK-007d: Story mode (30 min)
+  - [ ] TASK-007e: Game mode (30 min)
 
 ### Afternoon (4 hrs)
+- [ ] **TASK-111** 🟡 LLM narrative improvements (1 hr)
+  - [ ] Fix direct alignment mentions in narrative
+  - [ ] Improve subtlety in character descriptions
+  - [ ] Update prompts to avoid meta-game references
 - [ ] **TASK-005** 🟢 UI Polish - Small tasks
   - [x] TASK-005a: Campaign clicks (30 min) - COMPLETED
   - [x] TASK-005b: Loading spinner (1 hr) - COMPLETED
   - [ ] TASK-005c: Timestamp sync (30 min)
-- [ ] **TASK-004b** 🟡 Continuity Phase 2 (2 hrs)
+- [ ] **TASK-004b** 🟡 Continuity Phase 2 (1.5 hrs)
 
 ## Week Overview
 

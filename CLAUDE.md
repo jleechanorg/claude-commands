@@ -483,6 +483,15 @@ For complete project details including technology stack, architecture, developme
     * **No Direct Main Merges**: Never merge directly to main branch, except for roadmap/sprint files
     * **Visibility**: PRs provide visibility, review history, and proper change tracking
 
+13. **Task Addition Notification Protocol:**
+    * **MANDATORY**: When adding or modifying tasks in roadmap/sprint files, ALWAYS inform the user of the method used:
+      - "Added tasks via direct push to main" (for roadmap/sprint files pushed directly)
+      - "Added tasks in PR #XXX" (for changes included in a pull request)
+      - "Added tasks in dev branch, not yet pushed" (for local changes not yet pushed)
+      - "Added tasks in branch XXX, ready for PR" (for changes pushed to a feature branch)
+    * **Purpose**: Ensures transparency about where changes are made and their current status
+    * **Format Example**: "Added TASK-110 and TASK-111 to Saturday's schedule via direct push to main"
+
 ## Environment, Tooling & Scripts
 
 1. **Python Virtual Environment Management:**
