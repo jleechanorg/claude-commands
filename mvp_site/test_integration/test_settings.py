@@ -8,7 +8,7 @@ to eliminate duplication across test files and provide consistent patterns.
 import unittest
 import json
 import tempfile
-import logging
+import logging_util
 from unittest.mock import patch, MagicMock, mock_open
 from io import StringIO, BytesIO
 import os
@@ -327,10 +327,10 @@ class LoggingTestMixin:
     
     def setUp_logging(self, logger_name: str = 'test'):
         """Set up logging capture for tests."""
-        self.test_logger = logging.getLogger(logger_name)
-        self.test_logger.setLevel(logging.ERROR)
+        self.test_logger = logging_util.getLogger(logger_name)
+        self.test_logger.setLevel(logging_util.ERROR)
         self.log_stream = StringIO()
-        self.handler = logging.StreamHandler(self.log_stream)
+        self.handler = logging_util.StreamHandler(self.log_stream)
         self.test_logger.addHandler(self.handler)
     
     def tearDown_logging(self):

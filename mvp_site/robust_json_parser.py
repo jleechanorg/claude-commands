@@ -3,7 +3,7 @@ Robust JSON parser for handling various forms of incomplete or malformed JSON fr
 """
 import json
 import re
-import logging
+import logging_util
 from typing import Tuple, Dict, Any, Optional
 from json_utils import (
     try_parse_json,
@@ -45,34 +45,34 @@ class RobustJSONParser:
             fixed_json = RobustJSONParser._fix_json_boundaries(text)
             if fixed_json != text:
                 result = json.loads(fixed_json)
-                logging.info("Successfully fixed JSON boundaries")
+                logging_util.info("Successfully fixed JSON boundaries")
                 return result, True
         except json.JSONDecodeError:
             pass
         except Exception as e:
-            logging.debug(f"JSON boundary fix failed: {e}")
+            logging_util.debug(f"JSON boundary fix failed: {e}")
             pass
         
         # Strategy 3: Try to complete incomplete JSON
         try:
             completed_json = RobustJSONParser._complete_json(text)
             result = json.loads(completed_json)
-            logging.info("Successfully completed incomplete JSON")
+            logging_util.info("Successfully completed incomplete JSON")
             return result, True
         except json.JSONDecodeError:
             pass
         except Exception as e:
-            logging.debug(f"JSON completion failed: {e}")
+            logging_util.debug(f"JSON completion failed: {e}")
             pass
         
         # Strategy 4: Extract fields individually using regex
         try:
             extracted = RobustJSONParser._extract_fields(text)
             if extracted:
-                logging.info("Successfully extracted fields from malformed JSON")
+                logging_util.info("Successfully extracted fields from malformed JSON")
                 return extracted, True
         except Exception as e:
-            logging.debug(f"Field extraction failed: {e}")
+            logging_util.debug(f"Field extraction failed: {e}")
             pass
         
         # Strategy 5: Last resort - try to fix and parse again
@@ -80,15 +80,15 @@ class RobustJSONParser:
             aggressively_fixed = RobustJSONParser._aggressive_fix(text)
             if aggressively_fixed and aggressively_fixed != '{}':
                 result = json.loads(aggressively_fixed)
-                logging.info("Successfully parsed with aggressive fixes")
+                logging_util.info("Successfully parsed with aggressive fixes")
                 return result, True
         except json.JSONDecodeError:
             pass
         except Exception as e:
-            logging.debug(f"Aggressive fix failed: {e}")
+            logging_util.debug(f"Aggressive fix failed: {e}")
             pass
         
-        logging.error("All JSON parsing strategies failed")
+        logging_util.error("All JSON parsing strategies failed")
         return None, True
     
     @staticmethod
@@ -165,7 +165,7 @@ def parse_llm_json_response(response_text: str) -> Tuple[Dict[str, Any], bool]:
     
     if result is None:
         # If no JSON could be parsed, treat the entire text as narrative
-        logging.info("No JSON found in response, treating as plain text narrative")
+        logging_util.info("No JSON found in response, treating as plain text narrative")
         return {"narrative": response_text.strip(), "entities_mentioned": [], "location_confirmed": "Unknown"}, True
     
     # Ensure required fields exist

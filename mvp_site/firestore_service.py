@@ -1,7 +1,6 @@
 import collections.abc
 import datetime
 import json
-import logging
 import logging_util
 
 from decorators import log_exceptions
@@ -44,9 +43,9 @@ def _perform_append(target_list: list, items_to_append, key_name: str, deduplica
         newly_added_items.append(item)
 
     if newly_added_items:
-        logging.info(f"APPEND/SAFEGUARD: Added {len(newly_added_items)} new items to '{key_name}'.")
+        logging_util.info(f"APPEND/SAFEGUARD: Added {len(newly_added_items)} new items to '{key_name}'.")
     else:
-        logging.info(f"APPEND/SAFEGUARD: No new items were added to '{key_name}' (duplicates may have been found).")
+        logging_util.info(f"APPEND/SAFEGUARD: No new items were added to '{key_name}' (duplicates may have been found).")
 
 
 class MissionHandler:
@@ -81,11 +80,11 @@ class MissionHandler:
         
         if existing_mission_index != -1:
             # Update existing mission
-            logging.info(f"Updating existing mission: {mission_id}")
+            logging_util.info(f"Updating existing mission: {mission_id}")
             state_to_update[key][existing_mission_index].update(mission_data)
         else:
             # Add new mission
-            logging.info(f"Adding new mission: {mission_id}")
+            logging_util.info(f"Adding new mission: {mission_id}")
             state_to_update[key].append(mission_data)
     
     @staticmethod
@@ -124,7 +123,7 @@ def _handle_append_syntax(state_to_update: dict, key: str, value: dict) -> bool:
     if not (isinstance(value, dict) and 'append' in value):
         return False
     
-    logging.info(f"update_state: Detected explicit append for '{key}'.")
+    logging_util.info(f"update_state: Detected explicit append for '{key}'.")
     if key not in state_to_update or not isinstance(state_to_update.get(key), list):
         state_to_update[key] = []
     _perform_append(state_to_update[key], value['append'], key, deduplicate=(key == 'core_memories'))
@@ -179,10 +178,10 @@ def _handle_delete_token(state_to_update: dict, key: str, value) -> bool:
         return False
     
     if key in state_to_update:
-        logging.info(f"update_state: Deleting key '{key}' due to DELETE_TOKEN.")
+        logging_util.info(f"update_state: Deleting key '{key}' due to DELETE_TOKEN.")
         del state_to_update[key]
     else:
-        logging.info(f"update_state: Attempted to delete key '{key}' but it doesn't exist.")
+        logging_util.info(f"update_state: Attempted to delete key '{key}' but it doesn't exist.")
     return True
 
 
@@ -196,7 +195,7 @@ def _handle_string_to_dict_update(state_to_update: dict, key: str, value) -> boo
     if not isinstance(state_to_update.get(key), collections.abc.Mapping):
         return False
     
-    logging.info(f"update_state: Preserving dict structure for key '{key}', adding 'status' field.")
+    logging_util.info(f"update_state: Preserving dict structure for key '{key}', adding 'status' field.")
     existing_dict = state_to_update[key].copy()
     existing_dict['status'] = value
     state_to_update[key] = existing_dict
@@ -212,7 +211,7 @@ def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
     - Merges nested dictionaries recursively.
     - Overwrites all other values.
     """
-    logging.info(f"--- update_state_with_changes: applying changes:\\n{_truncate_log_json(changes)}")
+    logging_util.info(f"--- update_state_with_changes: applying changes:\\n{_truncate_log_json(changes)}")
     
     for key, value in changes.items():
         # Try each handler in order of precedence
@@ -244,7 +243,7 @@ def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
         
         # Case 7: Simple overwrite for everything else
         state_to_update[key] = value
-    logging.info("--- update_state_with_changes: finished ---")
+    logging_util.info("--- update_state_with_changes: finished ---")
     return state_to_update
 
 def _expand_dot_notation(d: dict) -> dict:
@@ -433,9 +432,9 @@ def update_campaign_game_state(user_id, campaign_id, game_state_update: dict):
         game_state_update['last_state_update_timestamp'] = firestore.SERVER_TIMESTAMP
         
         game_state_ref.set(game_state_update) 
-        logging.info(f"Successfully set new game state for campaign {campaign_id}.")
+        logging_util.info(f"Successfully set new game state for campaign {campaign_id}.")
         # The log below is for the final state being written.
-        logging.info(f"Final state written to Firestore for campaign {campaign_id}:\\n{_truncate_log_json(game_state_update)}")
+        logging_util.info(f"Final state written to Firestore for campaign {campaign_id}:\\n{_truncate_log_json(game_state_update)}")
 
     except Exception as e:
         logging_util.error(f"Failed to update game state for campaign {campaign_id}: {e}", exc_info=True)

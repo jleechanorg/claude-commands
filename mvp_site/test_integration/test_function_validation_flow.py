@@ -9,7 +9,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import unittest
-import logging
+import logging_util
 from unittest.mock import patch, MagicMock
 import json
 
@@ -50,14 +50,14 @@ class TestFunctionValidationFlow(unittest.TestCase):
         
         # Capture log messages for validation
         self.log_messages = []
-        self.log_handler = logging.StreamHandler()
+        self.log_handler = logging_util.StreamHandler()
         self.log_handler.emit = lambda record: self.log_messages.append(record.getMessage())
-        logging.getLogger().addHandler(self.log_handler)
-        logging.getLogger().setLevel(logging.INFO)
+        logging_util.getLogger().addHandler(self.log_handler)
+        logging_util.getLogger().setLevel(logging_util.INFO)
     
     def tearDown(self):
         """Clean up after each test."""
-        logging.getLogger().removeHandler(self.log_handler)
+        logging_util.getLogger().removeHandler(self.log_handler)
         self.log_messages.clear()
     
     @patch('gemini_service.get_client')

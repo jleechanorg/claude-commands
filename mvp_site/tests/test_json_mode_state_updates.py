@@ -4,12 +4,13 @@
 import os
 import sys
 import json
-import logging
 from unittest.mock import patch, MagicMock
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
+import logging_util
 import unittest
 from gemini_service import _process_structured_response
 from narrative_response_schema import NarrativeResponse
@@ -20,7 +21,7 @@ class TestJsonModeStateUpdates(unittest.TestCase):
     def setUp(self):
         """Set up test environment."""
         os.environ['TESTING'] = 'true'
-        logging.basicConfig(level=logging.INFO)
+        logging_util.basicConfig(level=logging_util.INFO)
     
     def test_json_response_with_state_updates(self):
         """Test that state updates from JSON response are appended to response text."""

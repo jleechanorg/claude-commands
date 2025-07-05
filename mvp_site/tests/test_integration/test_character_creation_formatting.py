@@ -3,18 +3,18 @@
 
 import os
 import sys
-import logging
-
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
+import logging_util
 from gemini_service import get_initial_story
 
 def test_clean_character_creation_format():
     """Test that character creation responses don't include DM notes or debug blocks."""
     # Set up environment
     os.environ['TESTING'] = 'true'
-    logging.basicConfig(level=logging.INFO)
+    logging_util.basicConfig(level=logging_util.INFO)
     
     print("\n=== Testing Clean Character Creation Formatting ===\n")
     

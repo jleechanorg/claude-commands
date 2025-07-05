@@ -6,14 +6,18 @@ import os
 import sys
 import tempfile
 import shutil
-import logging
 import signal
 import platform
 from typing import Optional, Dict, Any
 
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import logging_util
+
 # Configure logging
-logging.basicConfig(level=logging.WARNING)
-logger = logging.getLogger(__name__)
+logging_util.basicConfig(level=logging_util.logging.WARNING)
+logger = logging_util.getLogger(__name__)
 
 
 class TimeoutError(Exception):

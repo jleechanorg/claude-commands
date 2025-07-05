@@ -3,11 +3,12 @@ from unittest.mock import patch, MagicMock
 import os
 import sys
 import shutil
-import logging
 import tempfile
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import logging_util
 
 import constants
 from gemini_service import _load_instruction_file, _loaded_instructions_cache
@@ -373,7 +374,7 @@ class TestPromptLoading(unittest.TestCase):
         Ensures that all referenced prompt files can be loaded successfully
         by calling the actual _load_instruction_file function.
         """
-        logging.info("--- Running Test: test_all_prompts_are_loadable_via_service ---")
+        logging_util.info("--- Running Test: test_all_prompts_are_loadable_via_service ---")
         
         for p_type in gemini_service.PATH_MAP.keys():
             content = _load_instruction_file(p_type)
@@ -385,7 +386,7 @@ class TestPromptLoading(unittest.TestCase):
         Ensures that calling _load_instruction_file with an unknown type
         correctly raises a ValueError, following the strict loading policy.
         """
-        logging.info("--- Running Test: test_loading_unknown_prompt_raises_error ---")
+        logging_util.info("--- Running Test: test_loading_unknown_prompt_raises_error ---")
         with self.assertRaises(ValueError):
             _load_instruction_file("this_is_not_a_real_prompt_type")
 
@@ -396,7 +397,7 @@ class TestPromptLoading(unittest.TestCase):
         in the gemini_service.path_map, and vice-versa. This prevents
         un-loaded or orphaned prompt files.
         """
-        logging.info("--- Running Test: test_all_prompt_files_are_registered_in_service ---")
+        logging_util.info("--- Running Test: test_all_prompt_files_are_registered_in_service ---")
         
         # This test needs to look in the actual prompts directory, not a temp one.
         # It's testing the real state of the project.
