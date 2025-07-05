@@ -254,7 +254,7 @@ Intelligence network masquerading as library (The Athenaeum), controlling flow o
 **Reputation:** Contradictory legend - "Great Betrayer" to Host, "Hero of Western Wall" to Imperium, "Trojan Horse" to Raziel, "Reluctant Champion" to Artorius
 
 **Essential Background:** Created by Lucifer as perfect heir, disappointed him with "Null" status but secretly developed magical abilities. Defected after Silverwood massacre violated her one moral rule. Married Artorius, became mother to twin heirs while maintaining elaborate deception about her true nature and capabilities.
-**Psychology:** INTJ Architect - Uses intellectualization and compartmentalization as primary defenses. Core belief: "Only I can truly rely on myself." Terrified of being genuinely seen and understood.
+**Psychology:** Uses intellectualization and compartmentalization as primary defenses. Core belief: "Only I can truly rely on myself." Terrified of being genuinely seen and understood.
 **Key Relationships:** Devoted but manipulative with Artorius (husband), fiercely protective of Sariel/Cassian/Darius (children), complex chess match with Raziel (father-in-law) who suspects her deeper nature
 **Plot Hook:** Her true identity as Lucifer's former weapon and hidden magical prodigy could destabilize the Imperium if revealed
 
@@ -270,7 +270,7 @@ Intelligence network masquerading as library (The Athenaeum), controlling flow o
 **Reputation:** Beloved by soldiers and common people, seen as hope for reform, respected but sometimes viewed as naive by political establishment
 
 **Essential Background:** Raised as heir to ancient Raziel, trained in combat and statecraft but maintained genuine compassion. Fell in love with Alexiel despite political complications, became devoted husband and father. Struggles with family legacy of cold pragmatism while trying to embody higher ideals.
-**Psychology:** ENFJ Protagonist - Uses inspiration and protection as primary responses. Core belief: "Leadership means serving others, not being served." Stress trigger: Moral compromises demanded by politics.
+**Psychology:** Uses inspiration and protection as primary responses. Core belief: "Leadership means serving others, not being served." Stress trigger: Moral compromises demanded by politics.
 **Key Relationships:** Deeply in love with Alexiel (wife), devoted father to children, respectful but sometimes conflicted with Raziel (father), brotherly bond with twin Cassian
 **Plot Hook:** His idealism may force difficult choices between family loyalty and moral principles when Alexiel's secrets emerge
 
@@ -286,7 +286,7 @@ Intelligence network masquerading as library (The Athenaeum), controlling flow o
 **Reputation:** Feared and respected as ultimate authority, seen as cold but effective ruler, known for making difficult decisions others cannot
 
 **Essential Background:** One of the original celestial beings, ruled for over a millennium after Creator's departure. Made countless difficult decisions to preserve order, gradually becoming more detached and pragmatic. Genuinely cares for Artorius but struggles to show affection due to responsibilities.
-**Psychology:** INTJ Mastermind - Primary defense is emotional withdrawal. Core belief: "Personal desires must be sacrificed for greater stability." Stress trigger: Threats to cosmic order.
+**Psychology:** Primary defense is emotional withdrawal. Core belief: "Personal desires must be sacrificed for greater stability." Stress trigger: Threats to cosmic order.
 **Key Relationships:** Complex paternal love for Artorius (son), suspicious chess match with Alexiel (daughter-in-law), respectful rivalry with ancient peers
 **Plot Hook:** His willingness to sacrifice anything for stability may conflict with protecting his family when crisis comes
 
@@ -302,7 +302,7 @@ Intelligence network masquerading as library (The Athenaeum), controlling flow o
 **Reputation:** Beloved youngest heir, seen as combining best of both parents, hope for future but still developing
 
 **Essential Background:** Daughter of Alexiel and Artorius, born into complex political situation. Inherited aspects of both parents' abilities but struggles with pressure of expectations. Witnessed mother's death at Battle of Sacrifice Fields, now must navigate grief while preparing for leadership role.
-**Psychology:** INFP Mediator - Uses introspection and idealism as coping mechanisms. Core belief: "I must be worthy of the sacrifices made for me." Stress trigger: Feeling inadequate compared to legendary parents.
+**Psychology:** Uses introspection and idealism as coping mechanisms. Core belief: "I must be worthy of the sacrifices made for me." Stress trigger: Feeling inadequate compared to legendary parents.
 **Key Relationships:** Idolizes deceased mother Alexiel, seeks to honor father Artorius, complex dynamic with twin brothers, guided by grandfather Raziel
 **Plot Hook:** Her unique mirror magic abilities and dual heritage make her key to resolving cosmic conflicts
 
@@ -314,7 +314,7 @@ Intelligence network masquerading as library (The Athenaeum), controlling flow o
 **Faction:** Celestial Imperium **Role:** Twin Prince, Military Commander **Archetype:** Cold Disciplinarian
 **Core Motivation:** Create perfect order immune to emotional chaos that caused mother's death
 **Key Traits:** Disciplined, analytical, emotionally repressed, strategic, perfectionist
-**Psychology:** ISTJ Logistician - Primary defenses: intellectualization and emotional repression. Core belief: "Order is the only true morality."
+**Psychology:** Primary defenses: intellectualization and emotional repression. Core belief: "Order is the only true morality."
 **Key Relationships:** Complex twin bond with Cassian, protective but critical of Sariel, serves Raziel with absolute loyalty
 **Plot Hook:** His rigid perfectionism may crack when forced to make emotional decisions under pressure
 **Abilities:** Master tactical warfare, defensive formations, brilliant commander, polearm expertise, inspiring leadership
@@ -323,7 +323,7 @@ Intelligence network masquerading as library (The Athenaeum), controlling flow o
 **Faction:** First-Spear Clans (High Council) **Role:** Clan Leader, Elder Statesman **Archetype:** Wise Warrior
 **Core Motivation:** Build stable future for liberated clans while honoring warrior traditions
 **Key Traits:** Patient, respected, pragmatic, wise, experienced, diplomatic
-**Psychology:** ISFJ Protector - Primary response: careful deliberation. Core belief: "True strength builds, not just destroys."
+**Psychology:** Primary response: careful deliberation. Core belief: "True strength builds, not just destroys."
 **Key Relationships:** Mentor to younger warriors, rivals but respects Karg, allied with Spirit-Walker Zanja
 **Abilities:** Veteran combat skills, diplomatic negotiation, clan leadership, tactical wisdom, survival expertise
 
@@ -331,7 +331,7 @@ Intelligence network masquerading as library (The Athenaeum), controlling flow o
 **Faction:** Celestial Imperium (Revisionist Scholars) **Role:** Archive Keeper, Secret Scholar **Archetype:** Fearful Truth-Seeker
 **Core Motivation:** Uncover truth about Empyrean Affliction and Imperial history while staying alive
 **Key Traits:** Scholarly, fearful, curious, meticulous, secretive, knowledgeable
-**Psychology:** INTP Thinker - Primary defense: cautious investigation. Core belief: "Truth is worth the risk, but survival allows continued seeking."
+**Psychology:** Primary defense: cautious investigation. Core belief: "Truth is worth the risk, but survival allows continued seeking."
 **Key Relationships:** Secret patron in Praetor Cassius, careful cooperation with other scholars, fear of Raziel's suspicion
 **Abilities:** Vast historical knowledge, research skills, archival access, careful investigation, scholarly analysis
 
@@ -339,7 +339,7 @@ Intelligence network masquerading as library (The Athenaeum), controlling flow o
 **Faction:** Tsuran Dominion (Shiro Alliance) **Role:** Progressive Leader, Modernizer **Archetype:** Ambitious Reformer
 **Core Motivation:** Modernize Dominion through trade and engagement while preserving essential culture
 **Key Traits:** Brilliant, ambitious, progressive, diplomatic, strategic, culturally aware
-**Psychology:** ENTJ Commander - Primary tool: strategic persuasion. Core belief: "Adaptation ensures survival where rigid tradition fails."
+**Psychology:** Primary tool: strategic persuasion. Core belief: "Adaptation ensures survival where rigid tradition fails."
 **Key Relationships:** Political rival to Daimyo Kenjiro, secret contacts with foreign powers, careful dance with The Ghost
 **Abilities:** Political maneuvering, trade negotiation, cultural adaptation, strategic planning, diplomatic immunity
 
@@ -347,7 +347,7 @@ Intelligence network masquerading as library (The Athenaeum), controlling flow o
 **Faction:** Obsidian Covenant (Shattered Host) **Role:** Former Imperial Noble, Covenant Leader **Archetype:** Sophisticated Manipulator
 **Core Motivation:** Build new order based on enlightened self-interest and rational freedom
 **Key Traits:** Charismatic, manipulative, intelligent, sophisticated, pragmatic, former Imperial noble
-**Psychology:** ENTP Debater - Uses charm and intellectual argument as primary tools. Core belief: "Rational self-interest creates better order than imposed authority."
+**Psychology:** Uses charm and intellectual argument as primary tools. Core belief: "Rational self-interest creates better order than imposed authority."
 **Key Relationships:** Complex relationship with other Host leaders, attracts followers through philosophy rather than force
 **Abilities:** Master manipulation, political intrigue, charismatic leadership, magical abilities, sophisticated strategic thinking
 
