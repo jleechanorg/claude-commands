@@ -10,7 +10,6 @@ import logging
 # The world directory is now permanently located within mvp_site/world/
 WORLD_DIR = os.path.join(os.path.dirname(__file__), "world")
     
-CELESTIAL_WARS_BOOK_PATH = os.path.join(WORLD_DIR, "celestial_wars_alexiel_book_compressed.md")
 WORLD_ASSIAH_PATH = os.path.join(WORLD_DIR, "world_assiah_compressed.md")
 BANNED_NAMES_PATH = os.path.join(WORLD_DIR, "banned_names.md")
 
@@ -41,33 +40,23 @@ def load_banned_names():
 
 def load_world_content_for_system_instruction():
     """
-    Load world files and create a combined system instruction.
-    The book takes precedence over the world file for any conflicts.
+    Load world file and create system instruction.
     
     Returns:
         str: Combined world content formatted for system instruction
     """
     try:
-        # Use the absolute paths that are already constructed
-        book_path = CELESTIAL_WARS_BOOK_PATH
+        # Use the absolute path that is already constructed
         world_path = WORLD_ASSIAH_PATH
             
-        logging.info(f"Looking for book at: {book_path}")
-        logging.info(f"Looking for world at: {world_path}")
+        logging.info(f"Looking for world content at: {world_path}")
         
-        # Load book content (higher precedence)
-        with open(book_path, 'r', encoding='utf-8') as f:
-            book_content = f.read().strip()
-        char_count = len(book_content)
-        token_count = char_count // 4  # Rough estimate
-        logging.info(f"Loaded Celestial Wars book: {char_count} characters (~{token_count} tokens)")
-        
-        # Load world content (lower precedence)
+        # Load world content
         with open(world_path, 'r', encoding='utf-8') as f:
             world_content = f.read().strip()
         char_count = len(world_content)
         token_count = char_count // 4  # Rough estimate
-        logging.info(f"Loaded Assiah world: {char_count} characters (~{token_count} tokens)")
+        logging.info(f"Loaded world content: {char_count} characters (~{token_count} tokens)")
         
         # Load banned names list
         banned_names_content = load_banned_names()
@@ -76,15 +65,8 @@ def load_world_content_for_system_instruction():
         combined_parts = [
             "# WORLD CONTENT FOR CAMPAIGN CONSISTENCY",
             "",
-            "## PRIMARY CANON - CELESTIAL WARS ALEXIEL BOOK (HIGHEST AUTHORITY)",
-            "The following content takes absolute precedence over all other world information:",
-            "",
-            book_content,
-            "",
-            "---",
-            "",
-            "## SECONDARY CANON - WORLD OF ASSIAH DOCUMENTATION",
-            "The following content supplements the book but is overruled by it in case of conflicts:",
+            "## WORLD CANON - INTEGRATED CAMPAIGN GUIDE",
+            "The following content contains all world information in a single authoritative source:",
             "",
             world_content,
             "",
@@ -114,17 +96,16 @@ def load_world_content_for_system_instruction():
         combined_parts.extend([
             "",
             "## WORLD CONSISTENCY RULES",
-            "1. **Canon Hierarchy**: Book content ALWAYS overrides world content",
-            "2. **Character Consistency**: Maintain established character personalities and relationships",
-            "3. **Timeline Integrity**: Respect established historical events and chronology",
-            "4. **Power Scaling**: Follow established power hierarchies and combat abilities",
-            "5. **Cultural Accuracy**: Maintain consistency in world cultures and societies",
-            "6. **Geographic Consistency**: Respect established locations and their descriptions"
+            "1. **Character Consistency**: Maintain established character personalities and relationships",
+            "2. **Timeline Integrity**: Respect established historical events and chronology",
+            "3. **Power Scaling**: Follow established power hierarchies and combat abilities",
+            "4. **Cultural Accuracy**: Maintain consistency in world cultures and societies",
+            "5. **Geographic Consistency**: Respect established locations and their descriptions"
         ])
         
-        # Only add rule 7 if banned names were loaded
+        # Only add rule 6 if banned names were loaded
         if banned_names_content:
-            combined_parts.append("7. **Name Restrictions**: NEVER use any name from the CRITICAL NAMING RESTRICTIONS section")
+            combined_parts.append("6. **Name Restrictions**: NEVER use any name from the CRITICAL NAMING RESTRICTIONS section")
         
         combined_parts.extend([
             "",

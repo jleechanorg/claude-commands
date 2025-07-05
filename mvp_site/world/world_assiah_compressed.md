@@ -361,6 +361,77 @@ Intelligence network masquerading as library (The Athenaeum), controlling flow o
 **Mira** (Sylvan Remnant) - Bitter elven warrior seeking active vengeance against Imperial atrocities
 **Karg, the Iron-Tusk** (First-Spear Clans) - Young aggressive warrior leader advocating eternal war over peaceful governance
 **Zanja** (First-Spear Clans) - Ancient goblin shaman providing spiritual guidance balancing warrior traditions with practical needs
+**Gorok** (Unchained Host) - Beastman lieutenant who led Silverwood massacre, literal philosophy interpreter, hunted Alexiel after defection
+**Prince Titus val Artorius** (Celestial Imperium) - Royal prince suffering from Empyrean Affliction, prone to rage/paranoia under stress
+**Warlord Grull** (Unchained Host) - Hulking Orc berserker commander, utterly devoted to Lucifer, leads through strength
+**Warlord Ghor'mar** (Unchained Host) - Orc champion with predictable three-stroke combat pattern, killed by Alexiel at Fortress Vigil
+**Prefect Quintus** (Celestial Imperium) - Fortress Vigil commander, scarred veteran who follows orders precisely, initially imprisoned Alexiel
+**Ser Bastion** (Celestial Imperium) - Starfall Guard veteran, reliable aide "solid as stone", trusted warrior
+**Veteran-Sergeant Cato** (Celestial Imperium) - Scarred officer who leads vanguard forces, developed deep loyalty to Alexiel
+**Praetor Cassius** (Celestial Imperium) - Chief advisor, secret patron of Revisionist Scholars, political operator
+**Matriarch Tiberia Varrick** (Celestial Imperium) - Sharp political operator, head of major noble house, navigates Imperial politics
+**Lord Vorlag** (Celestial Imperium) - House Sanguis leader, arch-traditionalist opposing Alexiel and reform
+**Captain Snarlfang** (Unchained Host) - Scarred, cunning Orc captain serving in Host forces
+**Horg** (Unchained Host) - Ogre captain and berserker commander, brutal enforcer
+**Commander Thrak** (Unchained Host) - Host officer who falls to Silent Guard in combat
+**Lady Mara** (House Jannus) - Imperial noble suffering from Empyrean Affliction symptoms
+**Lord Erevan** (House Tyrell) - Fake identity used in intelligence operations, ghost signature
+
+### Elite Units & Forces
+
+#### Silent Guard
+**Faction:** Celestial Imperium
+**Description:** Elite guards with white masks, bone armor, manifest wings of light
+**Role:** Raziel's personal retinue, supreme combat unit
+**Capabilities:** Tier 5+ warriors, perfect coordination, absolute loyalty to Lord Regent
+**Notable Actions:** Responsible for eliminating threats to Imperial stability, operate with surgical precision
+**Equipment:** Distinctive white masks, bone-white armor, celestial weapons
+**Selection:** Chosen from the most devoted and skilled Imperial warriors
+
+#### Apostate Guard
+**Faction:** Unchained Host
+**Description:** Crimson-winged elite forces serving Lord Marshal Xylos
+**Role:** Elite military unit, strategic command force
+**Capabilities:** Highly disciplined, sophisticated tactical awareness, reality-altering abilities
+**Notable Actions:** Commanded by Xylos during major Host operations, recognized Alexiel's deeper strategic game
+**Equipment:** Crimson wings, advanced Host weaponry, tactical gear
+**Selection:** Chosen for both combat prowess and strategic thinking
+
+#### Third Imperial Regiment
+**Faction:** Celestial Imperium
+**Description:** Formerly disgraced unit transformed into elite force under Alexiel's command
+**Role:** Specialized assault unit, proof of Alexiel's leadership capabilities
+**Capabilities:** Redeemed through rigorous training, exceptional unit cohesion, versatile combat roles
+**Notable Actions:** Transformed from disgrace to elite status, symbol of Alexiel's command ability
+**Equipment:** Standard Imperial gear with elite modifications
+**Selection:** Redeemed soldiers given second chance under Alexiel's mentorship
+
+#### Seventh Fang Legion
+**Faction:** Unchained Host
+**Description:** Major Host military force under Lord Marshal Xylos
+**Role:** Primary offensive unit, strategic operations
+**Capabilities:** Large-scale military operations, coordinated assaults, veteran combat experience
+**Notable Actions:** Participated in major Host campaigns, strategic importance to Host operations
+**Equipment:** Standard Host military equipment, legion-specific identifiers
+**Selection:** Veteran Host warriors with proven combat record
+
+#### Iron-Tusk Crushers
+**Faction:** Unchained Host
+**Description:** Berserker elite unit formerly commanded by Warlord Ghor'mar
+**Role:** Shock troops, breakthrough assault force
+**Capabilities:** Devastating close combat, fearless berserker tactics, overwhelming force
+**Notable Actions:** Elite berserker unit known for brutal effectiveness until Ghor'mar's death
+**Equipment:** Heavy melee weapons, minimal armor for mobility
+**Selection:** Chosen for savage combat ability and unwavering aggression
+
+#### Revisionist Scholars
+**Faction:** Secret Network (Celestial Imperium)
+**Description:** Covert research group seeking cure for Empyrean Affliction
+**Role:** Academic resistance, medical research, questioning official doctrine
+**Capabilities:** Advanced magical research, political discretion, network coordination
+**Notable Actions:** Secretly funded by Praetor Cassius, led by Magister Lucian Kantos
+**Equipment:** Research materials, hidden facilities, coded communications
+**Selection:** Scholars and researchers willing to risk careers for truth
 
 ---
 
@@ -495,3 +566,6 @@ Key Moral Choices: Sacrifice desires for others? Accept diminished power for mor
 - Cultural naming conventions for character creation
 
 This compressed guide maintains complete campaign functionality while dramatically improving accessibility and reducing preparation time for World Assiah adventures.
+
+---
+

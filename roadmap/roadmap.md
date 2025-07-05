@@ -527,8 +527,9 @@ For different worktrees:
 - Milestone 3: Start continuity testing (1 hr)
 
 #### Saturday (8 hrs)
-- Milestone 3: Complete continuity testing (5 hrs)
-- Milestone 5: Four-mode system (3 hrs)
+- **[TASK-072] Alexiel Content Review** - Review `roadmap/alexiel_content_review_saturday.md` for missing content integration (2-3 hrs)
+- Milestone 3: Complete continuity testing (3 hrs)
+- Milestone 5: Four-mode system (2-3 hrs)
 
 #### Sunday (8 hrs)
 - Milestone 5: Complete four-mode system (1 hr)
