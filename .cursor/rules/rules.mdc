@@ -429,16 +429,24 @@ For complete project details including technology stack, architecture, developme
         - Code changes
         - Documentation updates
         - Configuration modifications
-        - **Roadmap changes** (scheduling, task updates, etc.)
-    *   **Workflow Process**:
+    *   **ROADMAP AND SPRINT PLANNING EXCEPTION**: Direct pushes to main are ALLOWED for these specific files only:
+        - `roadmap/roadmap.md`
+        - `roadmap/sprint_current.md`
+        - `roadmap/sprint_*.md` (any sprint planning files)
+        - Rationale: Frequent small updates for task tracking and planning should not require PR overhead
+        - **Process for roadmap/sprint files**:
+            1. Make changes directly on main branch
+            2. Commit with descriptive message: "Update roadmap: [brief description]"
+            3. Push directly to main: `git push origin main`
+        - **Restriction**: This exception applies ONLY to roadmap and sprint files, not any other documentation
+    *   **Workflow Process for Non-Roadmap Changes**:
         1. Make changes on feature/dev branch
         2. Commit changes with descriptive messages
         3. Create pull request using `gh pr create`
         4. Review and merge PR (do not merge directly to main)
         5. Run `./integrate.sh` to create fresh clean branch
-    *   **No Direct Main Merges**: Never merge directly to main branch, even for simple changes
+    *   **No Direct Main Merges**: Never merge directly to main branch, except for roadmap/sprint files
     *   **Visibility**: PRs provide visibility, review history, and proper change tracking
-    *   **Exception**: No exceptions - all changes require PRs
 
 ## IV. Environment, Tooling & Scripts
 

@@ -76,7 +76,10 @@ For different worktrees:
 *   [TASK-009b] Further compression integrate alexiel book: `roadmap/alexiel_book_token_reduction_scratchpad.md`
 *   [TASK-009a] ✅ **COMPLETED** Logging make it all tokens vs characters (token-based logging instead of character counts) - PR #264
 *   Claude always getting directories wrong
-*   [TASK-005a] ✅ **COMPLETED** Clicking on a campaign doesn\'t show spinner loading and seems to not always register clicks (issue is about the campaign list) - Merged to main
+*   [TASK-005a] ✅ **COMPLETED** Clicking on a campaign doesn\'t show spinner loading and seems to not always register clicks (issue is about the campaign list) - PR #267
+*   [TASK-005b] ✅ **COMPLETED** Loading spinner with messages during campaign continue - PR #268
+*   [TASK-014a] ✅ **COMPLETED** WorldArchitect.AI make this clickable to homepage - PR #266
+*   [TASK-002] 🟡 **IN PROGRESS** LLM I/O format standardization - PR #272 (Ready for review)
 
 ### Bugs
 *   [TASK-001c] **Null HP during combat** - Happens during combat, defer to combat system revamp (see PR #102: https://github.com/jleechan2015/worldarchitect.ai/pull/102)
@@ -92,14 +95,14 @@ For different worktrees:
 - **Dragon Knight v3 plot coherence** - AI randomly introduced unrelated crypt element, need stronger narrative constraints
 
 ### LLM I/O Format Standardization
-**Explicit input/output formats must include:**
-- Scene # tracking system
-- Prompt structure template for LLM
-- Return data format specification
-- Debug data section (comes first)
-- Game state updates format
-- Story mode entry format
-- Incorporate `character_creation_state_tracking_scratchpad.md`
+**✅ COMPLETED (PR #272) - Ready for review**
+- ✅ Scene # tracking system (S{session}_SC{scene} format)
+- ✅ Prompt structure template for LLM
+- ✅ Return data format specification (unified JSON format)
+- ✅ Debug data section (structured format)
+- ✅ Game state updates format (enhanced with timestamping)
+- ✅ Story mode entry format
+- ✅ Character creation numeric input fix incorporated
 
 ### Continuity Testing System
 **Automated program specifications:**
@@ -112,11 +115,11 @@ For different worktrees:
 - Phase 3: 50 interactions
 
 ### UI Improvements
-- **Campaign list click issues** - ✅ COMPLETED - Doesn't show spinner, clicks don't always register
-- **Loading spinner with messages** - ✅ COMPLETED - During campaign continue, add random hardcoded messages like creation
-- **Timestamp/narrative mismatch** - Sync timestamps with story events
+- **Campaign list click issues** - ✅ COMPLETED (PR #267) - Doesn't show spinner, clicks don't always register
+- **Loading spinner with messages** - ✅ COMPLETED (PR #268) - During campaign continue, add random hardcoded messages like creation
+- **Homepage navigation** - ✅ COMPLETED (PR #266) - Make "WorldArchitect.AI" text clickable to return to homepage
+- **Timestamp/narrative mismatch** - 🟡 IN PROGRESS (PR #269) - Sync timestamps with story events
 - **Let player read background story** - Currently scrolls past too quickly, add pause/continue button
-- **Homepage navigation** - Make "WorldArchitect.AI" text clickable to return to homepage
 - **Pagination** - Add for story content with "load more" functionality
 
 ### Four-Mode System Implementation
@@ -146,18 +149,19 @@ For different worktrees:
 - **Documentation** - Update user guides, API docs
 
 ### Narrative
+*   [TASK-073] 🟡 **IN PROGRESS** Update default campaign prompt to Ser Arion moral crisis scenario - PR #246 (ACTIVE)
 *   Dragon knight detailed start
 *   Generate siblings/houses/factions etc if they pick a custom character even in default world
 *   Generate companions
 *   [TASK-072] **Next Saturday** Evaluate alignment change mechanic - Review current implementation and assess if alignment shifts are working correctly during gameplay
 
 ### UI
-*   [TASK-005b] More interesting loading spinner during campaign continue, similar to creation. Should show hardcoded messages for the user
+*   [TASK-005b] ✅ **COMPLETED** More interesting loading spinner during campaign continue, similar to creation. Should show hardcoded messages for the user - PR #268
 *   Third new checkbox to replace ruleset one?
 *   Smaller
 *   [TASK-014a] ✅ **COMPLETED** WorldArchitect.AI make this clickable to homepage - PR #266
 *   Script: report number campaigns and size per user
-*   [TASK-005c] Timestamp not matching narrative
+*   [TASK-005c] 🟡 **IN PROGRESS** Timestamp not matching narrative - PR #269
 *   [TASK-006b] Let player read background story (currently scrolls too fast, need pause button)
 
 ### Combat
