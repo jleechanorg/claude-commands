@@ -502,7 +502,13 @@ class CampaignWizard {
     } else {
       // Update all fields
       const title = document.getElementById('wizard-campaign-title')?.value || 'My Epic Adventure';
-      const description = document.getElementById('wizard-campaign-prompt')?.value || 'A brave knight...';
+      let description = document.getElementById('wizard-campaign-prompt')?.value || 'A brave knight...';
+      
+      // NEW: Check if default world is selected and show preview
+      const useDefaultWorld = document.getElementById('wizard-default-world')?.checked;
+      if (useDefaultWorld && description === 'A brave knight...' || description.trim() === '') {
+        description = 'Ser Arion Dragon Knight Campaign (Default World Selected)';
+      }
       
       document.getElementById('preview-title').textContent = title;
       document.getElementById('preview-description').textContent = 
@@ -517,7 +523,7 @@ class CampaignWizard {
       // Update options
       const options = [];
       if (document.getElementById('wizard-companions')?.checked) options.push('Companions');
-      if (document.getElementById('wizard-default-world')?.checked) options.push('Default World');
+      if (document.getElementById('wizard-default-world')?.checked) options.push('Dragon Knight World');
       document.getElementById('preview-options').textContent = options.join(', ') || 'None selected';
     }
   }
@@ -714,8 +720,6 @@ class CampaignWizard {
     const finalIcon = document.getElementById('step-story');
     if (finalIcon) finalIcon.textContent = '✅';
   }
-
-
 
   resetWizard() {
     // Remove any existing spinner

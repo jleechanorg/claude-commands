@@ -954,10 +954,19 @@ def create_app():
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_frontend(path):
-        if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
+        """Serve the frontend files. This is the fallback for any non-API routes."""
+        if path and os.path.exists(os.path.join(app.static_folder, path)):
             return send_from_directory(app.static_folder, path)
-        else:
-            return send_from_directory(app.static_folder, 'index.html')
+        return send_from_directory(app.static_folder, 'index.html')
+
+    # NEW: Route to serve world reference files
+    @app.route('/world_reference/<path:filename>')
+    def serve_world_reference(filename):
+        """Serve files from the world_reference directory."""
+        world_ref_path = os.path.join(os.path.dirname(__file__), '..', 'world_reference')
+        if os.path.exists(os.path.join(world_ref_path, filename)):
+            return send_from_directory(world_ref_path, filename)
+        return "File not found", 404
 
     return app
 

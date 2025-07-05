@@ -828,11 +828,10 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
         )
         logging.info(f"Added entity tracking to initial story. Expected entities: {expected_entities}")
     
-    # Add character creation prompt if mechanics is enabled
-    if selected_prompts and 'mechanics' in selected_prompts:
-        character_creation_reminder = "\n\n" + constants.CHARACTER_CREATION_REMINDER + "\n"
-        enhanced_prompt = character_creation_reminder + enhanced_prompt
-        logging.info("Added character creation reminder for mechanics-enabled campaign")
+    # Add character creation reminder if mechanics is enabled
+    if selected_prompts and constants.PROMPT_TYPE_MECHANICS in selected_prompts:
+        enhanced_prompt = constants.CHARACTER_CREATION_REMINDER + "\n\n" + enhanced_prompt
+        logging.info("Added character creation reminder to initial story prompt")
     
     contents = [types.Content(role="user", parts=[types.Part(text=enhanced_prompt)])]
     
