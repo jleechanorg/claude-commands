@@ -448,7 +448,32 @@ For complete project details including technology stack, architecture, developme
     *   **No Direct Main Merges**: Never merge directly to main branch, except for roadmap/sprint files
     *   **Visibility**: PRs provide visibility, review history, and proper change tracking
 
-16. **Post-PR Merge Local File Check Protocol:**
+16. **Granular Progress Protocol:**
+    *   **MANDATORY**: For ALL development tasks, every sub-bullet/milestone step must include:
+    
+    1. **Scratchpad Update**: Update the relevant `roadmap/scratchpad_TASK-XXX_*.md` file with:
+       - Mark completed sub-bullets with ✅
+       - Update "Current State" section with progress
+       - Document findings, decisions, or blockers
+       - Update "Next Steps" section
+    
+    2. **GitHub Commit**: Create individual commit for each sub-bullet with:
+       - Descriptive commit message referencing the specific sub-bullet
+       - All related code changes
+       - Link to task and milestone in commit message
+    
+    3. **Todo Tracking**: Update TodoWrite with progress on each sub-bullet completion
+    
+    **Example Workflow**:
+    - Sub-bullet: "Review existing LLM I/O patterns in gemini_service.py"
+    - Complete the analysis
+    - Update scratchpad with findings
+    - Commit changes: "TASK-002 M1.1: Document current LLM I/O patterns in gemini_service.py"
+    - Mark sub-bullet complete in todo tracker
+    
+    This ensures complete traceability and allows for easy rollback/review of incremental progress.
+
+17. **Post-PR Merge Local File Check Protocol:**
     *   **CRITICAL**: After merging any pull request, ALWAYS check for unpushed local files that may have been forgotten
     *   **Mandatory Post-Merge Checklist**:
         1. Immediately after PR is merged: Run `git status` on the local branch
