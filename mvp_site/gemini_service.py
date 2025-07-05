@@ -531,11 +531,12 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
     if current_prompt_text_for_logging:
         logging.info(f"--- Calling Gemini API with current prompt: {str(current_prompt_text_for_logging)[:1000]}... ---")
 
-    # The character count log is less useful now, but we'll keep it for now.
+    # Log both character and estimated token counts for transition period
     total_chars = sum(len(p) for p in prompt_contents if isinstance(p, str))
     if system_instruction_text:
         total_chars += len(system_instruction_text)
-    logging.info(f"--- Calling Gemini API with prompt of total characters: {total_chars} ---")
+    estimated_tokens = total_chars // 4  # Rough estimate: 1 token per 4 characters
+    logging.info(f"--- Calling Gemini API with prompt of {total_chars} characters (~{estimated_tokens} tokens) ---")
 
     last_error = None
     
@@ -1072,7 +1073,9 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     
     # Calculate the character budget for the story context
     char_budget_for_story = SAFE_CHAR_LIMIT - len(prompt_scaffold)
-    logging.info(f"Prompt scaffold is {len(prompt_scaffold)} chars. Remaining budget for story: {char_budget_for_story}")
+    scaffold_tokens = len(prompt_scaffold) // 4
+    story_budget_tokens = char_budget_for_story // 4
+    logging.info(f"Prompt scaffold is {len(prompt_scaffold)} chars (~{scaffold_tokens} tokens). Remaining budget for story: {char_budget_for_story} chars (~{story_budget_tokens} tokens)")
 
     # Truncate the story context if it exceeds the budget
     truncated_story_context = _truncate_context(story_context, char_budget_for_story, DEFAULT_MODEL, current_game_state)

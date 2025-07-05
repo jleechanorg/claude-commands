@@ -120,7 +120,9 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     parsed_data, was_incomplete = parse_llm_json_response(response_text)
     
     if was_incomplete:
-        logging.info(f"Recovered from incomplete JSON response. Narrative length: {len(parsed_data.get('narrative', '')) if parsed_data else 0}")
+        narrative_len = len(parsed_data.get('narrative', '')) if parsed_data else 0
+        token_count = narrative_len // 4  # Rough estimate
+        logging.info(f"Recovered from incomplete JSON response. Narrative length: {narrative_len} characters (~{token_count} tokens)")
     
     # Create NarrativeResponse from parsed data
     if parsed_data:

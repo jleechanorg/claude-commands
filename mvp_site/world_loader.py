@@ -26,7 +26,9 @@ def load_banned_names():
         with open(BANNED_NAMES_PATH, 'r', encoding='utf-8') as f:
             banned_content = f.read().strip()
             
-        logging.info(f"Loaded banned names from {BANNED_NAMES_PATH}: {len(banned_content)} characters")
+        char_count = len(banned_content)
+        token_count = char_count // 4  # Rough estimate
+        logging.info(f"Loaded banned names from {BANNED_NAMES_PATH}: {char_count} characters (~{token_count} tokens)")
         return banned_content
             
     except FileNotFoundError:
@@ -56,12 +58,16 @@ def load_world_content_for_system_instruction():
         # Load book content (higher precedence)
         with open(book_path, 'r', encoding='utf-8') as f:
             book_content = f.read().strip()
-        logging.info(f"Loaded Celestial Wars book: {len(book_content)} characters")
+        char_count = len(book_content)
+        token_count = char_count // 4  # Rough estimate
+        logging.info(f"Loaded Celestial Wars book: {char_count} characters (~{token_count} tokens)")
         
         # Load world content (lower precedence)
         with open(world_path, 'r', encoding='utf-8') as f:
             world_content = f.read().strip()
-        logging.info(f"Loaded Assiah world: {len(world_content)} characters")
+        char_count = len(world_content)
+        token_count = char_count // 4  # Rough estimate
+        logging.info(f"Loaded Assiah world: {char_count} characters (~{token_count} tokens)")
         
         # Load banned names list
         banned_names_content = load_banned_names()
