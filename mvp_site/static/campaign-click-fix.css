@@ -1,0 +1,56 @@
+/* Campaign Click Fix - TASK-005a */
+
+/* Make campaign items clearly clickable */
+.campaign-title-link {
+    cursor: pointer;
+    transition: color 0.2s ease, opacity 0.2s ease;
+    user-select: none;
+}
+
+.campaign-title-link:hover {
+    color: var(--bs-primary);
+    opacity: 0.9;
+}
+
+/* Ensure the entire campaign item is clickable */
+.list-group-item[data-campaign-id] {
+    position: relative;
+    transition: background-color 0.2s ease;
+}
+
+.list-group-item[data-campaign-id]:hover {
+    background-color: var(--bs-gray-100);
+}
+
+/* Dark theme support */
+[data-bs-theme="dark"] .list-group-item[data-campaign-id]:hover {
+    background-color: var(--bs-gray-800);
+}
+
+/* Prevent button clicks from triggering campaign navigation */
+.list-group-item[data-campaign-id] .btn {
+    position: relative;
+    z-index: 2;
+}
+
+/* Visual feedback on click */
+.list-group-item[data-campaign-id]:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+}
+
+/* Ensure proper click area */
+.campaign-title-link {
+    display: block;
+    width: 100%;
+}
+
+/* Fix potential overlapping issues */
+.list-group-item[data-campaign-id] > div {
+    pointer-events: none;
+}
+
+.list-group-item[data-campaign-id] .campaign-title-link,
+.list-group-item[data-campaign-id] .btn {
+    pointer-events: auto;
+}
