@@ -149,7 +149,7 @@ For different worktrees:
 *   Dragon knight detailed start
 *   Generate siblings/houses/factions etc if they pick a custom character even in default world
 *   Generate companions
-*   Alignment change mechanic
+*   [TASK-072] **Next Saturday** Evaluate alignment change mechanic - Review current implementation and assess if alignment shifts are working correctly during gameplay
 
 ### UI
 *   [TASK-005b] More interesting loading spinner during campaign continue, similar to creation. Should show hardcoded messages for the user
