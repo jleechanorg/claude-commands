@@ -680,6 +680,16 @@ Milestone 4: Polish & Deploy (Low complexity)
 - Use for quick integration testing during development
 - Focus on end-to-end functionality validation
 
+### `/roadmap`
+**Roadmap Task Management**: Add tasks to roadmap and sprint planning
+- **Target Files**: `roadmap/roadmap.md` and `roadmap/sprint_current.md`
+- **Process**: Ask user for task details, priority, and target location
+- **Auto-assign Task IDs**: Generate next available TASK-XXX identifier
+- **Direct Commit**: Changes are committed directly to main branch (roadmap exception)
+- **Format**: Follow existing task format with priority indicators (🔴🟡🟢🔵)
+- **Clarification**: If target location unclear, ask user: roadmap only or both roadmap and sprint
+- **Usage**: `/roadmap [task description]` or `/roadmap` for interactive mode
+
 ### `/integrate`
 **Git Integration Workflow**: Execute the `./integrate.sh` script from project root
 - Runs the `integrate.sh` script located in the project root directory
