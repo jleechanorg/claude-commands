@@ -5,7 +5,7 @@ Based on Milestone 0.4 Combined approach implementation (without pydantic depend
 
 from typing import List, Optional, Dict, Any
 import json
-import logging_util
+import logging
 from robust_json_parser import parse_llm_json_response
 
 class NarrativeResponse:
@@ -122,7 +122,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     if was_incomplete:
         narrative_len = len(parsed_data.get('narrative', '')) if parsed_data else 0
         token_count = narrative_len // 4  # Rough estimate
-        logging_util.info(f"Recovered from incomplete JSON response. Narrative length: {narrative_len} characters (~{token_count} tokens)")
+        logging.info(f"Recovered from incomplete JSON response. Narrative length: {narrative_len} characters (~{token_count} tokens)")
     
     # Create NarrativeResponse from parsed data
     if parsed_data:
@@ -132,7 +132,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 
         except (ValueError, TypeError) as e:
             # NarrativeResponse creation failed
-            logging_util.error(f"Failed to create NarrativeResponse: {e}")
+            logging.error(f"Failed to create NarrativeResponse: {e}")
             # Return the narrative if we at least got that
             narrative = parsed_data.get('narrative', response_text)
             fallback_response = NarrativeResponse(

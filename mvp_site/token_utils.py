@@ -1,6 +1,6 @@
 """Token counting utilities for consistent logging across the application."""
 
-import logging_util
+import logging
 from typing import Union, List
 
 def estimate_tokens(text: Union[str, List[str]]) -> int:

@@ -9,7 +9,8 @@ import tempfile
 import shutil
 import unittest
 from unittest.mock import patch
-import logging_util
+import logging
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

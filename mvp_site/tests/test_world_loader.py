@@ -10,11 +10,8 @@ import tempfile
 import shutil
 import unittest
 from unittest.mock import patch, mock_open
+import logging
 
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-import logging_util
 
 class TestWorldLoader(unittest.TestCase):
     """Test world_loader.py path handling in different environments."""
@@ -55,7 +52,8 @@ class TestWorldLoader(unittest.TestCase):
         # Create world_loader.py in app directory
         world_loader_code = '''
 import os
-import logging_util
+import logging
+
 # World file paths - only used in this module
 # In deployment, world files are copied to same directory as the app
 if os.path.exists(os.path.join(os.path.dirname(__file__), "world")):
@@ -128,7 +126,8 @@ def load_world_content_for_system_instruction():
         # Create world_loader.py (same code as above)
         world_loader_code = '''
 import os
-import logging_util
+import logging
+
 # World file paths - only used in this module
 # In deployment, world files are copied to same directory as the app
 if os.path.exists(os.path.join(os.path.dirname(__file__), "world")):
@@ -221,7 +220,8 @@ def load_world_content_for_system_instruction():
         # Create world_loader.py
         world_loader_code = '''
 import os
-import logging_util
+import logging
+
 # World file paths - only used in this module
 if os.path.exists(os.path.join(os.path.dirname(__file__), "world")):
     WORLD_DIR = "world"

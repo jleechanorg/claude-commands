@@ -1,13 +1,12 @@
 import unittest
 from unittest.mock import patch, MagicMock
+import logging
 import datetime
 import sys
 import os
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-import logging_util
 
 # Mock firebase_admin before importing the service
 mock_firestore = MagicMock()
@@ -19,7 +18,7 @@ mock_firestore.SERVER_TIMESTAMP = MagicMock(name="SERVER_TIMESTAMP")
 import firestore_service
 
 # Disable logging for most tests to keep output clean, can be enabled for debugging
-# logging.disable(logging_util.logging.CRITICAL)
+# logging.disable(logging.CRITICAL)
 
 sys.modules['firebase_admin.firestore'] = mock_firestore
 

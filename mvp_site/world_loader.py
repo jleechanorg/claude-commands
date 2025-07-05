@@ -4,7 +4,8 @@ Loads world files and creates combined instruction content for AI system.
 """
 
 import os
-import logging_util
+import logging
+
 # World file paths - only used in this module
 # The world directory is now permanently located within mvp_site/world/
 WORLD_DIR = os.path.join(os.path.dirname(__file__), "world")
@@ -26,14 +27,14 @@ def load_banned_names():
             
         char_count = len(banned_content)
         token_count = char_count // 4  # Rough estimate
-        logging_util.info(f"Loaded banned names from {BANNED_NAMES_PATH}: {char_count} characters (~{token_count} tokens)")
+        logging.info(f"Loaded banned names from {BANNED_NAMES_PATH}: {char_count} characters (~{token_count} tokens)")
         return banned_content
             
     except FileNotFoundError:
-        logging_util.warning(f"Banned names file not found at {BANNED_NAMES_PATH}")
+        logging.warning(f"Banned names file not found at {BANNED_NAMES_PATH}")
         return ""
     except Exception as e:
-        logging_util.warning(f"Could not load banned names file: {e}")
+        logging.warning(f"Could not load banned names file: {e}")
         return ""
 
 
@@ -48,14 +49,14 @@ def load_world_content_for_system_instruction():
         # Use the absolute path that is already constructed
         world_path = WORLD_ASSIAH_PATH
             
-        logging_util.info(f"Looking for world content at: {world_path}")
+        logging.info(f"Looking for world content at: {world_path}")
         
         # Load world content
         with open(world_path, 'r', encoding='utf-8') as f:
             world_content = f.read().strip()
         char_count = len(world_content)
         token_count = char_count // 4  # Rough estimate
-        logging_util.info(f"Loaded world content: {char_count} characters (~{token_count} tokens)")
+        logging.info(f"Loaded world content: {char_count} characters (~{token_count} tokens)")
         
         # Load banned names list
         banned_names_content = load_banned_names()
@@ -116,8 +117,8 @@ def load_world_content_for_system_instruction():
         return combined_content
         
     except FileNotFoundError as e:
-        logging_util.error(f"CRITICAL: World file not found: {e}")
+        logging.error(f"CRITICAL: World file not found: {e}")
         raise
     except Exception as e:
-        logging_util.error(f"CRITICAL: Error loading world content: {e}")
+        logging.error(f"CRITICAL: Error loading world content: {e}")
         raise

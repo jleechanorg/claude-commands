@@ -140,7 +140,7 @@ class TestHelperFunctions(unittest.TestCase):
     
     @patch('gemini_service.create_structured_prompt_injection')
     @patch('gemini_service.create_from_game_state')
-    @patch('gemini_service.logging_util')
+    @patch('gemini_service.logging')
     def test_prepare_entity_tracking(self, mock_logging, mock_create_from_game_state, mock_prompt_injection):
         """Test _prepare_entity_tracking function."""
         # Mock the entity manifest
@@ -186,7 +186,7 @@ class TestHelperFunctions(unittest.TestCase):
     
     @patch('gemini_service.parse_structured_response')
     @patch('gemini_service.validate_entity_coverage')
-    @patch('gemini_service.logging_util')
+    @patch('gemini_service.logging')
     def test_process_structured_response(self, mock_logging, mock_validate, mock_parse):
         """Test _process_structured_response function."""
         # Mock the parse function to return extracted narrative

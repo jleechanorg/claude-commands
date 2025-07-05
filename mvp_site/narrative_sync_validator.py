@@ -4,7 +4,7 @@ Adapted from Milestone 0.4 prototype for production use in gemini_service.py
 """
 
 import re
-import logging_util
+import logging
 from typing import List, Dict, Any, Tuple, Optional
 from dataclasses import dataclass
 from enum import Enum
@@ -65,7 +65,7 @@ class NarrativeSyncValidator:
     
     def __init__(self):
         self.name = "NarrativeSyncValidator"
-        self.logger = logging_util.getLogger(self.name)
+        self.logger = logging.getLogger(self.name)
         
         # Patterns for detecting presence indicators
         self.presence_patterns = {

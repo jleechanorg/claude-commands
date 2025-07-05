@@ -7,7 +7,7 @@ import unittest
 import os
 import json
 import sys
-import logging_util
+import logging
 import time
 from datetime import datetime
 
@@ -19,8 +19,8 @@ from main import create_app
 from integration_test_lib import IntegrationTestSetup
 
 # Configure logging
-logging_util.basicConfig(level=logging_util.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging_util.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 
 class TestQuickValidationComparison(unittest.TestCase):

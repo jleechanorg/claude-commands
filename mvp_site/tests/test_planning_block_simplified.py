@@ -2,14 +2,13 @@
 
 import unittest
 from unittest.mock import patch, MagicMock
+import logging
 import sys
 import os
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-
-import logging_util
 import gemini_service
 import constants
 from game_state import GameState
@@ -151,5 +150,5 @@ class TestSimplifiedPlanningBlockPrompts(unittest.TestCase):
                             f"Keyword '{keyword}' should trigger think planning block")
 
 if __name__ == '__main__':
-    logging_util.basicConfig(level=logging_util.INFO)
+    logging.basicConfig(level=logging.INFO)
     unittest.main()

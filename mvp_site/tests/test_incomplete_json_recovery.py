@@ -36,7 +36,7 @@ class TestIncompleteJsonRecovery(unittest.TestCase):
         incomplete_json = '''{
             "narrative": "The knight entered the throne room.\\nThe king awaited.\\nSuddenly, a loud crash'''
         
-        with patch('narrative_response_schema.logging_util') as mock_logging:
+        with patch('narrative_response_schema.logging') as mock_logging:
             narrative, response_obj = parse_structured_response(incomplete_json)
         
         # Should recover the narrative
@@ -53,7 +53,7 @@ class TestIncompleteJsonRecovery(unittest.TestCase):
             "narrative": "The adventure begins here.",
             "entities_mentioned": ["hero"'''
         
-        with patch('narrative_response_schema.logging_util') as mock_logging:
+        with patch('narrative_response_schema.logging') as mock_logging:
             narrative, response_obj = parse_structured_response(incomplete_json)
         
         self.assertEqual(narrative, "The adventure begins here.")
@@ -66,7 +66,7 @@ class TestIncompleteJsonRecovery(unittest.TestCase):
         # This simulates the exact issue from the user's example
         truncated_json = '''{"narrative": "[SESSION_HEADER]\\nTimestamp: Year 1620, Kythorn, Day 10, 02:05 PM\\nLocation: The Eastern March, on the road to the Dragon's Tooth mountains.\\nStatus: Lvl 1 Fighter/Paladin | HP: 12/12 | Gold: 25gp\\nResources:\\n- Hero Points: 1/1\\n\\nSir Andrew ignored Gareth's probing question, his focus narrowing back to the mission. He folded the map with crisp, efficient movements and tucked it away. His duty was clear; the feelings of his companions were secondary variables. He turned to the other two members of his small company, his expression a mask of command.\\n\\n\\"Report,\\" he said, his voice flat and devoid of warmth. He looked first to Kiera Varrus, the scout, whose cynical eyes were already scanning the treacherous path ahead.\\n\\nKiera spat on the ground, pulling her leather hood tighter against the wind. \\"It's a goat track at best, Sir Knight. Not a proper road. The ground is loose shale, easy to turn an ankle or alert anything hiding in the rocks.\\" She squinted at the mountains.'''
         
-        with patch('narrative_response_schema.logging_util') as mock_logging:
+        with patch('narrative_response_schema.logging') as mock_logging:
             narrative, response_obj = parse_structured_response(truncated_json)
         
         # Should recover all the narrative content
@@ -112,7 +112,7 @@ class TestIncompleteJsonRecovery(unittest.TestCase):
             "entities_mentioned": ["hero", "wizard"],
             "location_confirmed": "tower"'''
         
-        with patch('narrative_response_schema.logging_util') as mock_logging:
+        with patch('narrative_response_schema.logging') as mock_logging:
             narrative, response_obj = parse_structured_response(partial_json)
         
         self.assertEqual(narrative, "The hero met the wizard.")
@@ -140,7 +140,7 @@ class TestIncompleteJsonRecovery(unittest.TestCase):
         malformed = '''{"narrative": "Test malformed JSON with syntax errors", "entities_mentioned": ["a", "b",], }'''
         
         # Should fall back to trying to extract narrative
-        with patch('narrative_response_schema.logging_util') as mock_logging:
+        with patch('narrative_response_schema.logging') as mock_logging:
             narrative, response_obj = parse_structured_response(malformed)
         
         # Should at least extract the narrative part

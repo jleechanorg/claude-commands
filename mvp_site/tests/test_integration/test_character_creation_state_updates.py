@@ -3,18 +3,18 @@
 
 import os
 import sys
+import logging
+
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-
-import logging_util
 from gemini_service import get_initial_story
 
 def test_character_creation_state_updates():
     """Test that character creation proposes state updates."""
     # Set up environment
     os.environ['TESTING'] = 'true'
-    logging_util.basicConfig(level=logging_util.INFO)
+    logging.basicConfig(level=logging.INFO)
     
     print("\n=== Testing Character Creation State Updates ===\n")
     

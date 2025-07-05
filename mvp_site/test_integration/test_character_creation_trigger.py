@@ -4,7 +4,7 @@
 import unittest
 import os
 import sys
-import logging_util
+import logging
 from unittest.mock import patch, MagicMock
 
 # Add parent directory to path
@@ -19,7 +19,7 @@ class TestCharacterCreationTrigger(unittest.TestCase):
     def setUp(self):
         """Set up test environment."""
         os.environ['TESTING'] = 'true'
-        logging_util.basicConfig(level=logging_util.INFO)
+        logging.basicConfig(level=logging.INFO)
     
     @patch('gemini_service._call_gemini_api')
     @patch('gemini_service.get_client')

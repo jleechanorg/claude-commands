@@ -1,9 +1,10 @@
 import functools
-import logging_util
+import logging
 import traceback
+import logging_util
 
 # Get a logger instance for this module
-logger = logging_util.getLogger(__name__) # Assuming this was meant to be __name__ for module-level logger
+logger = logging.getLogger(__name__) # Assuming this was meant to be __name__ for module-level logger
 
 def log_exceptions(func):
     """A decorator that wraps a function in a try-except block

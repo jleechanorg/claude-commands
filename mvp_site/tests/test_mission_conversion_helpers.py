@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import unittest
 from unittest.mock import patch
-import logging_util
+import logging
 from firestore_service import update_state_with_changes
 
 
@@ -16,14 +16,14 @@ class TestMissionConversionHelpers(unittest.TestCase):
     def setUp(self):
         """Set up logging to capture conversion messages."""
         self.log_messages = []
-        self.handler = logging_util.StreamHandler()
+        self.handler = logging.StreamHandler()
         self.handler.emit = lambda record: self.log_messages.append(record.getMessage())
-        logging_util.getLogger().addHandler(self.handler)
-        logging_util.getLogger().setLevel(logging_util.INFO)
+        logging.getLogger().addHandler(self.handler)
+        logging.getLogger().setLevel(logging.INFO)
     
     def tearDown(self):
         """Clean up logging handler."""
-        logging_util.getLogger().removeHandler(self.handler)
+        logging.getLogger().removeHandler(self.handler)
     
     def test_missions_dict_with_valid_mission_data(self):
         """Test converting dict with valid mission objects."""

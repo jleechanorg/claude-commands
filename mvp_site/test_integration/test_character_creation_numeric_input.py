@@ -3,7 +3,8 @@
 
 import os
 import sys
-import logging_util
+import logging
+
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -14,7 +15,7 @@ def test_numeric_race_selection():
     """Test that numeric input '1' selects the first race option."""
     # Set up environment
     os.environ['TESTING'] = 'true'
-    logging_util.basicConfig(level=logging_util.INFO)
+    logging.basicConfig(level=logging.INFO)
     
     print("\n=== Testing Numeric Input During Character Creation ===\n")
     

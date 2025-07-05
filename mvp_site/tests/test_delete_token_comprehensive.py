@@ -24,7 +24,7 @@ class TestDeleteTokenProcessing(unittest.TestCase):
     def setUp(self):
         """Set up test data."""
         # Mock logging to avoid clutter
-        self.log_patcher = patch('firestore_service.logging_util')
+        self.log_patcher = patch('firestore_service.logging')
         self.mock_logging = self.log_patcher.start()
         
     def tearDown(self):

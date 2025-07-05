@@ -5,8 +5,9 @@ Includes full entity manifest in every AI prompt to ensure entity presence.
 
 from typing import Dict, List, Any, Optional
 from entity_tracking import create_from_game_state, SceneManifest
-import logging_util
-logger = logging_util.getLogger(__name__)
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class EntityPreloader:

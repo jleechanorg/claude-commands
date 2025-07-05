@@ -1,4 +1,5 @@
 import unittest
+import logging
 from unittest.mock import patch, MagicMock
 from io import StringIO
 import sys
@@ -6,8 +7,6 @@ import os
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-import logging_util
 
 
 from decorators import log_exceptions
@@ -19,12 +18,12 @@ class TestLogExceptionsDecorator(unittest.TestCase):
     def setUp(self):
         """Set up test logging environment."""
         # Create a test logger
-        self.test_logger = logging_util.getLogger('decorators')
-        self.test_logger.setLevel(logging_util.ERROR)
+        self.test_logger = logging.getLogger('decorators')
+        self.test_logger.setLevel(logging.ERROR)
         
         # Create a string stream to capture log output
         self.log_stream = StringIO()
-        self.handler = logging_util.StreamHandler(self.log_stream)
+        self.handler = logging.StreamHandler(self.log_stream)
         self.test_logger.addHandler(self.handler)
     
     def tearDown(self):

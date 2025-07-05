@@ -3,7 +3,8 @@
 
 import os
 import sys
-import logging_util
+import logging
+
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -14,7 +15,7 @@ def test_player_name_transparency():
     """Test that the AI respects player name choices and is transparent about any issues."""
     # Set up environment
     os.environ['TESTING'] = 'true'
-    logging_util.basicConfig(level=logging_util.INFO)
+    logging.basicConfig(level=logging.INFO)
     
     print("\n=== Testing Player Name Transparency ===\n")
     

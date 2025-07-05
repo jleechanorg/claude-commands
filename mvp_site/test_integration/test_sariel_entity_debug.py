@@ -6,7 +6,8 @@ import unittest
 import os
 import json
 import sys
-import logging_util
+import logging
+
 # Add the project root to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
@@ -16,11 +17,11 @@ from integration_test_lib import IntegrationTestSetup
 import gemini_service
 
 # Configure very verbose logging
-logging_util.basicConfig(
-    level=logging_util.DEBUG,
+logging.basicConfig(
+    level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging_util.StreamHandler(sys.stdout)
+        logging.StreamHandler(sys.stdout)
     ]
 )
 

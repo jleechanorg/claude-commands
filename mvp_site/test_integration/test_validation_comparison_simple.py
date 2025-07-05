@@ -7,7 +7,7 @@ import unittest
 import os
 import json
 import sys
-import logging_util
+import logging
 import subprocess
 from datetime import datetime
 
@@ -16,8 +16,8 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
 # Configure logging
-logging_util.basicConfig(level=logging_util.INFO)
-logger = logging_util.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class TestValidationComparisonSimple(unittest.TestCase):
