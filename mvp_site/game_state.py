@@ -53,6 +53,9 @@ class GameState:
         for key, value in kwargs.items():
             if not hasattr(self, key):
                 setattr(self, key, value)
+                
+        # Apply time consolidation migration
+        self._consolidate_time_tracking()
 
     def to_dict(self) -> dict:
         """Serializes the GameState object to a dictionary for Firestore."""
@@ -272,3 +275,99 @@ class GameState:
                 logging.info(f"COMBAT CLEANUP: Removed {enemy_name} from npc_data")
         
         return defeated_enemies
+    
+    def _consolidate_time_tracking(self):
+        """
+        Consolidate time tracking from separate fields into a single object.
+        Migrates old time_of_day field into world_time object if needed.
+        """
+        if not hasattr(self, 'world_data') or not self.world_data:
+            return
+            
+        world_data = self.world_data
+        
+        # Check if we have the old separate time_of_day field
+        if 'time_of_day' in world_data:
+            # Migrate time_of_day into world_time object
+            old_time_of_day = world_data['time_of_day']
+            
+            # Ensure world_time exists and is a dict
+            if 'world_time' not in world_data:
+                # Create world_time with reasonable defaults based on time_of_day
+                hour = self._estimate_hour_from_time_of_day(old_time_of_day)
+                world_data['world_time'] = {
+                    'hour': hour,
+                    'minute': 0,
+                    'second': 0,
+                    'time_of_day': old_time_of_day
+                }
+            elif not isinstance(world_data['world_time'], dict):
+                world_data['world_time'] = {'hour': 12, 'minute': 0, 'second': 0}
+                world_data['world_time']['time_of_day'] = old_time_of_day
+            else:
+                # world_time exists and is dict, just add time_of_day
+                world_data['world_time']['time_of_day'] = old_time_of_day
+            
+            # Remove the old field
+            del world_data['time_of_day']
+            logging.info(f"Migrated time_of_day '{old_time_of_day}' into world_time object")
+        
+        # Only process world_time if it already exists
+        if 'world_time' in world_data and isinstance(world_data['world_time'], dict):
+            # Calculate time_of_day from hour if not present
+            if 'time_of_day' not in world_data['world_time']:
+                hour = world_data['world_time'].get('hour', 12)
+                world_data['world_time']['time_of_day'] = self._calculate_time_of_day(hour)
+                logging.info(f"Calculated time_of_day as '{world_data['world_time']['time_of_day']}' from hour {hour}")
+    
+    def _calculate_time_of_day(self, hour):
+        """
+        Calculate descriptive time of day from hour value.
+        
+        Args:
+            hour: Hour value (0-23)
+            
+        Returns:
+            String description of time of day
+        """
+        if 0 <= hour <= 4:
+            return "Deep Night"
+        elif 5 <= hour <= 6:
+            return "Dawn"
+        elif 7 <= hour <= 11:
+            return "Morning"
+        elif 12 <= hour <= 13:
+            return "Midday"
+        elif 14 <= hour <= 17:
+            return "Afternoon"
+        elif 18 <= hour <= 19:
+            return "Evening"
+        elif 20 <= hour <= 23:
+            return "Night"
+        else:
+            return "Unknown"
+    
+    def _estimate_hour_from_time_of_day(self, time_of_day):
+        """
+        Estimate a reasonable hour value from a time of day description.
+        Used for migration when we have time_of_day but no hour.
+        
+        Args:
+            time_of_day: String description like "Morning", "Evening", etc.
+            
+        Returns:
+            Integer hour value (0-23)
+        """
+        time_mapping = {
+            "deep night": 2,     # Middle of deep night
+            "dawn": 6,           # Dawn hour
+            "morning": 9,        # Mid-morning
+            "midday": 12,        # Noon
+            "afternoon": 15,     # Mid-afternoon
+            "evening": 18,       # Early evening
+            "night": 21,         # Mid-night
+        }
+        
+        # Normalize and look up
+        normalized = time_of_day.lower().strip()
+        return time_mapping.get(normalized, 12)  # Default to noon if unknown

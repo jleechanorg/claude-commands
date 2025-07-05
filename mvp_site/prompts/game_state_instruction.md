@@ -273,7 +273,8 @@ This first block should not be an "update" but a "creation." It must contain all
     "day": 20,
     "hour": 9,
     "minute": 51,
-    "second": 10
+    "second": 10,
+    "time_of_day": "Morning"
   },
   "custom_campaign_state": {
     "premise": "A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.",
@@ -440,22 +441,57 @@ You are now responsible for tracking the in-game date and time. This is stored i
     -   **For Forgotten Realms settings:** Use the Calendar of Harptos. The default starting year is 1492 DR. The months are: Hammer, Alturiak, Ches, Tarsakh, Mirtul, Kythorn, Flamerule, Eleasis, Eleint, Marpenoth, Uktar, and Nightal.
     -   **For Modern Earth settings:** Use the standard Gregorian calendar (e.g., January, February, etc.). The year should be the current real-world year unless specified otherwise by the campaign's premise.
     -   **For other custom settings:** Use a logical calendar system. If one is not specified in the premise, you may use a simple numbered month system (e.g., "Month 1, Day 1") and inform the user of this choice.
--   **`world_time` Object:** This is a dictionary with the keys: `year`, `month`, `day`, `hour`, `minute`, `second`.
--   **Advancing Time:** As the character takes actions, you must update this object. Resting might advance the day and reset the time, traveling a long distance could take hours, and a short action might advance the clock by minutes or seconds.
--   **Example Update (Forgotten Realms):** If a short rest takes an hour from `09:51:10`, you should propose a state update like this:
-    ```
-    [STATE_UPDATES_PROPOSED]
-    {
-      "world_data": {
-        "world_time": {
-          "hour": 10,
-          "minute": 51,
-          "second": 10
-        }
-      }
+
+### Unified World Time Object (MANDATORY)
+The `world_time` object now contains BOTH structured time AND descriptive time-of-day in a single object:
+
+```json
+{
+  "world_time": {
+    "year": 1492,
+    "month": "Ches",
+    "day": 20,
+    "hour": 9,
+    "minute": 51,
+    "second": 10,
+    "time_of_day": "Morning"
+  }
+}
+```
+
+**CRITICAL FIELDS**:
+- `year`, `month`, `day`, `hour`, `minute`, `second`: The structured time components
+- `time_of_day`: The descriptive text that MUST match the hour value
+
+### Time-of-Day Mapping (MANDATORY)
+The `time_of_day` field MUST always match the `hour` field according to this mapping:
+- **0-4**: "Deep Night"
+- **5-6**: "Dawn"  
+- **7-11**: "Morning"
+- **12-13**: "Midday"
+- **14-17**: "Afternoon"
+- **18-19**: "Evening"
+- **20-23**: "Night"
+
+**CRITICAL**: When updating time, you MUST update BOTH the numeric fields AND the time_of_day description together:
+```json
+[STATE_UPDATES_PROPOSED]
+{
+  "world_data": {
+    "world_time": {
+      "hour": 21,
+      "minute": 30,
+      "second": 0,
+      "time_of_day": "Night"
     }
-    [END_STATE_UPDATES_PROPOSED]
-    ```
+  }
+}
+[END_STATE_UPDATES_PROPOSED]
+```
+
+**NEVER** update just the hour without also updating time_of_day. They must ALWAYS be synchronized.
+
+-   **Advancing Time:** As the character takes actions, you must update this object. Resting might advance the day and reset the time, traveling a long distance could take hours, and a short action might advance the clock by minutes or seconds.
 
 This is critical for tracking time-sensitive quests and creating a realistic world.
 

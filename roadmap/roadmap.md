@@ -58,6 +58,33 @@
      - Review gaps in gemini_service.py (27% coverage) and firestore_service.py (50% coverage)
      - Plan integration of existing test fixtures with new tests
      - Update test coverage improvement plan based on current progress
+7. **[TASK-091] Test Campaign with Unchecked Checkboxes** 🟡 (30 min)
+   - **Test Instructions:**
+     - Create new campaign with default settings
+     - Uncheck both mechanics and narrative checkboxes
+     - Test 5-10 interactions to ensure:
+       - No crashes or errors occur
+       - Game continues functioning properly
+       - UI remains responsive
+       - State persists correctly
+     - Document any issues or unexpected behavior
+     - Verify that unchecked options properly disable their respective features
+
+### Tonight's Work Block (Small LLM Tasks)
+7. **[TASK-088] Remove Direct Myers-Briggs References in Narrative** 🟢 (15 min)
+   - **Note:** Small task suitable for LLM to do alone
+   - Find and remove all direct references to personality types (e.g., "His mind, ever analytical as an ISTJ")
+   - IMPORTANT: Continue using Myers-Briggs for character behavior and decision-making
+   - Only mention personality types when a character is explicitly discussing them in dialogue
+   - Keep the underlying personality system functional but invisible in narration
+8. **[TASK-089] Planning Block IDs** 🟢 (15 min)
+   - **Note:** Small task suitable for LLM to do alone
+   - Ensure all planning block IDs use camelCase format
+   - Update any inconsistent ID formats across the codebase
+9. **[TASK-090] Remove Legacy Migration Code** 🟢 (30 min)
+   - **Note:** Small task suitable for LLM to do alone
+   - Identify and remove old migration code that is no longer needed
+   - Clean up any related dead code or unused imports
 
 ## Parallel Work Opportunities
 
@@ -79,9 +106,9 @@ For different worktrees:
 
 ### Core integrity
 *   Trim initial prompt more?
-*   Just include assiah prompt once in campaign creation vs system instructions?
+*   [TASK-092] Just include assiah prompt once in campaign creation vs system instructions?
 *   As we progress through the game the assiah info becomes stale ie. faction leader dies?
-*   Do all of those prompts need to be system instructions?
+*   [TASK-092] Do all of those prompts need to be system instructions?
 *   [TASK-002] Explicit input/output LLM formats (should include Scene#, prompts, returns, debug data, game state updates)
 *   Scene #
 *   Prompt to send to LLM
@@ -108,8 +135,8 @@ For different worktrees:
 
 ### Bugs
 *   [TASK-001c] **Null HP during combat** - Happens during combat, defer to combat system revamp (see PR #102: https://github.com/jleechan2015/worldarchitect.ai/pull/102)
-*   [TASK-001a] **Malformed JSON response from AI** - From AI responses, needs investigation of when/why AI responses fail to parse
-*   [TASK-001b] **Dragon Knight v3 plot coherence** - AI introduced unrelated plot element (randomly introduced crypt element), need stronger narrative constraints
+*   [TASK-001a] 🟡 **IN PROGRESS** Malformed JSON response from AI - From AI responses, needs investigation of when/why AI responses fail to parse
+*   [TASK-001b] ✅ **COMPLETED** Dragon Knight v3 plot coherence - AI introduced unrelated plot element (randomly introduced crypt element), need stronger narrative constraints
 *   Stable?
 
 ## Detailed Task Specifications
@@ -117,7 +144,7 @@ For different worktrees:
 ### Critical Bug Fixes
 - **Null HP during combat** - DEFERRED to combat system revamp (see PR #102: https://github.com/jleechan2015/worldarchitect.ai/pull/102)
 - **Malformed JSON response from AI** - Need thorough investigation of when/why AI responses fail to parse, add robust error handling
-- **Dragon Knight v3 plot coherence** - AI randomly introduced unrelated crypt element, need stronger narrative constraints
+- **Dragon Knight v3 plot coherence** - ✅ COMPLETED - Fixed AI introducing unrelated plot elements
 
 ### LLM I/O Format Standardization
 **✅ COMPLETED (PR #272) - Ready for review**
@@ -400,15 +427,15 @@ For different worktrees:
 ## Detailed Milestone Breakdown
 
 ### Milestone 1: Critical Bug Fixes & Investigation (4 hrs)
-- **TASK-001a** 🔴 Investigate malformed JSON responses (1.5 hrs)
+- **TASK-001a** 🟡 **IN PROGRESS** Investigate malformed JSON responses
+  - Currently being worked on
   - Analyze when/where AI responses fail to parse
   - Add robust JSON parsing with fallbacks
   - Log all malformed responses for pattern analysis
   - Implement recovery mechanism
-- **TASK-001b** 🔴 Dragon Knight v3 plot coherence (0.5 hrs)
-  - Investigate why AI introduced random crypt
-  - Add stronger narrative constraints
-  - Test plot consistency mechanisms
+- **TASK-001b** ✅ **COMPLETED** Dragon Knight v3 plot coherence
+  - Fixed issue with AI introducing random plot elements
+  - Added stronger narrative constraints
 - **TASK-001c** 🟡 Defer null HP bug to combat revamp (0 hrs)
   - Document issue for PR #102 integration
   - Link to combat system overhaul
@@ -564,16 +591,42 @@ For different worktrees:
 - Milestone 3: Start continuity testing (1 hr)
 
 #### Saturday (8 hrs)
-- **[TASK-072] Alexiel Content Review** - Review `roadmap/alexiel_content_review_saturday.md` for missing content integration (2-3 hrs)
-- Milestone 3: Complete continuity testing (3 hrs)
-- Milestone 5: Four-mode system (2-3 hrs)
+- **[TASK-072] Alexiel Content Review** - Review `roadmap/alexiel_content_review_saturday.md` for missing content integration (1.5 hrs)
+- **[TASK-092] System Instructions Optimization** 🟡 (1.5 hrs)
+  - Consider adding world_assiah.md only once during campaign creation vs every system instruction
+  - Re-evaluate all system instructions for token optimization
+  - Review if all prompts need to be system instructions
+  - Test impact on narrative coherence with reduced system prompts
+  - Document findings in `roadmap/scratchpad_8k_optimization.md`
+- **[TASK-012a] Combat System PR #102 Review** 🟡 (1 hr)
+  - Review existing combat system overhaul PR
+  - Plan integration approach for null HP fix
+  - Document combat system architecture
+- **[TASK-006c] Add Guaranteed Combat to Ser Arion** 🟡 (2 hrs)
+  - Add 2-3 smaller combat encounters before Ashwood Keep
+  - Build narrative tension
+  - Test combat mechanics thoroughly
+- **[TASK-012c] Derek Campaign Combat Issues** 🟡 (1 hr)
+  - Replay Derek's campaign focusing on combat
+  - Document all combat-related bugs
+  - Test combat flow and balance
+- Milestone 3: Complete continuity testing (1 hr)
 
 #### Sunday (8 hrs)
-- Milestone 5: Complete four-mode system (1 hr)
 - Milestone 4: UI Polish small tasks (2 hrs)
+  - Keep timestamp sync task ([TASK-005c])
+  - Other small UI fixes
 - Milestone 6: Campaign improvements (3 hrs)
-- Milestone 7: Start UI major improvements (2 hrs)
+- Milestone 7: Start UI major improvements (3 hrs)
 
 ### Week 2 Plan
 - Monday-Thursday (12 hrs): Milestones 7-10
-- Weekend (16 hrs): Integration, testing, and Derek feedback implementation
+
+#### Next Saturday (8 hrs)
+- **Milestone 5: Four-Mode System Implementation** 🟡 (6 hrs)
+  - [TASK-007a] Mode architecture design (0.5 hrs)
+  - [TASK-007b] DM/System Admin mode (1.5 hrs)
+  - [TASK-007c] Author mode (1.5 hrs)
+  - [TASK-007d] Story mode (1.25 hrs)
+  - [TASK-007e] Game mode (1.25 hrs)
+- Integration testing and Derek feedback (2 hrs)

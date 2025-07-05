@@ -335,10 +335,14 @@ For complete project details including technology stack, architecture, developme
         1. Create feature branch from latest main using integrate pattern
         2. Make changes and commit with descriptive messages
         3. **MANDATORY**: Run `./run_tests.sh` and include test results in PR description
-        4. Push branch and create PR with comprehensive description using `gh pr create`
-        5. Provide clickable PR URL for user review
-        6. After merge, immediately run integrate pattern before next PR
-        7. **CRITICAL**: Never use 'dev' as a remote branch for PRs - always use descriptive feature branch names
+        4. **MANDATORY**: Use REVIEWER virtual agent to check the changes before creating PR:
+           - Switch to `[REVIEWER MODE]` and review code without implementation context
+           - Check for bugs, edge cases, security issues, and missing requirements
+           - Document reviewer findings in PR description
+        5. Push branch and create PR with comprehensive description using `gh pr create`
+        6. Provide clickable PR URL for user review
+        7. After merge, immediately run integrate pattern before next PR
+        8. **CRITICAL**: Never use 'dev' as a remote branch for PRs - always use descriptive feature branch names
     *   **PR Descriptions**: Always include Summary, Changes, Benefits, and Usage sections
     *   **Commit Messages**: Use descriptive titles with bullet points and Claude Code attribution
 

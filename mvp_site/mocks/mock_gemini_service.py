@@ -106,7 +106,12 @@ class MockGeminiClient:
     },
     "world_data": {
         "current_location_name": "Ancient Tavern",
-        "time_of_day": "Evening"
+        "world_time": {
+            "hour": 18,
+            "minute": 30,
+            "second": 0,
+            "time_of_day": "Evening"
+        }
     },
     "custom_campaign_state": {
         "core_memories": {

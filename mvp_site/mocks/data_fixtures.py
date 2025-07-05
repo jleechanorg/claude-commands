@@ -38,7 +38,12 @@ SAMPLE_GAME_STATE = {
         "current_location_name": "Ancient Tavern",
         "current_location": "Ancient Tavern",
         "weather": "Misty evening",
-        "time_of_day": "Evening"
+        "world_time": {
+            "hour": 18,
+            "minute": 30,
+            "second": 0,
+            "time_of_day": "Evening"
+        }
     },
     "npc_data": {
         "innkeeper": {
@@ -158,7 +163,12 @@ SAMPLE_STATE_UPDATES = {
         },
         "world_data": {
             "current_location_name": "Royal Palace",
-            "time_of_day": "Dawn"
+            "world_time": {
+                "hour": 6,
+                "minute": 0,
+                "second": 0,
+                "time_of_day": "Dawn"
+            }
         },
         "custom_campaign_state": {
             "core_memories": {
