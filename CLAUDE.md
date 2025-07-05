@@ -682,6 +682,20 @@ Milestone 4: Polish & Deploy (Low complexity)
 - Script may create branches other than 'dev' based on its configuration
 - Follow PR-only workflow for main branch protection
 
+### `/push`
+**Virtual Agent Review and Push**: Perform pre-push review before pushing to GitHub
+- Execute virtual agent reviewer to analyze pending changes
+- Review git diff for all modified files
+- Check for common issues:
+  - Code quality and style consistency
+  - Security concerns (hardcoded secrets, API keys)
+  - Missing error handling
+  - Incomplete implementations
+  - Test coverage gaps
+- Provide review summary with any concerns
+- If review passes, push to current branch
+- If issues found, list them and ask for confirmation before pushing
+
 ### `/scratchpad`
 **Project Planning**: Create or update work-in-progress plans
 - Generate `roadmap/scratchpad_[branch_name].md` with:
