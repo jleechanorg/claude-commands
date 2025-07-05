@@ -34,6 +34,31 @@
    - Build automated program for 10 interactions
    - Use planning block responses
 
+### Evening Block (2 hours)
+5. **[TASK-073] Comprehensive Hand Testing** 🟢 (30 min)
+   - **Test Instructions:**
+     - Create new campaign with default character
+     - Test 5-10 story interactions focusing on:
+       - Combat encounters (damage, HP tracking, enemy defeat)
+       - NPC interactions (dialogue, relationship tracking)
+       - State persistence (save/load, continue campaign)
+       - UI responsiveness (loading spinners, click registration)
+       - Error handling (refresh page, invalid inputs)
+     - Test both Story Mode and Game Mode
+     - Document any bugs or UX issues found
+     - Focus on user experience, not just functionality
+6. **[TASK-074] Unit Test Coverage Review** 🟡 (1.5 hrs)
+   - **Review Current State:**
+     - Analyze PR #238 (test fixtures) and PR #239 (GameState tests)
+     - Check status of unit test coverage milestones (see `roadmap/scratchpad_unit_test_coverage_milestones.md`)
+     - Review existing test infrastructure and identified gaps
+     - Assess progress toward 85% coverage goal
+   - **Next Actions:**
+     - Identify which milestone to tackle next (likely Milestone 3: Service Layer)
+     - Review gaps in gemini_service.py (27% coverage) and firestore_service.py (50% coverage)
+     - Plan integration of existing test fixtures with new tests
+     - Update test coverage improvement plan based on current progress
+
 ## Parallel Work Opportunities
 
 For different worktrees:
