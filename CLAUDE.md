@@ -673,6 +673,13 @@ Milestone 4: Polish & Deploy (Low complexity)
 - Include test results in PR descriptions
 - Use `TESTING=true vpython` for integration tests
 
+### `/testi`
+**Integration Test**: Run the main integration test
+- Execute `TESTING=true vpython mvp_site/test_integration/test_integration.py`
+- Run from project root for proper imports
+- Use for quick integration testing during development
+- Focus on end-to-end functionality validation
+
 ### `/integrate`
 **Git Integration Workflow**: Execute the `./integrate.sh` script from project root
 - Runs the `integrate.sh` script located in the project root directory

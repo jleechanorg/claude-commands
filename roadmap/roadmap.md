@@ -69,6 +69,29 @@
        - State persists correctly
      - Document any issues or unexpected behavior
      - Verify that unchecked options properly disable their respective features
+8. **[TASK-126] Improve Character Creation Flow - Ask Who/What** 🟡 (45 min)
+   - **Implementation Details:**
+     - During character creation, explicitly ask user:
+       - "Who is your character?" (name, background, personality)
+       - "What scenario/campaign do you want to play?"
+     - Improve the initial character creation flow to be more guided
+     - Add specific questions at the beginning of character creation
+     - Ensure user provides context before proceeding
+9. **[TASK-127] Add Missing Planning Block After Campaign Start** 🟡 (45 min)
+   - **Implementation Details:**
+     - Planning block should appear immediately after campaign is started
+     - Default text should include: "OK to proceed or changes requested"
+     - Currently missing during character creation flow
+     - Ensure planning block appears at the right time
+     - Test that it properly waits for user confirmation
+10. **[TASK-128] Create Long Integration Test - Option 1 Repeated** 🟡 (30 min)
+    - **Test Details:**
+      - Create new test file: `test_integration_long.py`
+      - Test choosing option 1 (planning block option) repeatedly
+      - Run 10-20 iterations of selecting option 1
+      - Focus on state consistency throughout the interactions
+      - Verify no state corruption or drift over many turns
+      - Ensure game remains stable with repeated planning choices
 
 ### Tonight's Work Block (Small LLM Tasks)
 8. **[TASK-088] Remove Direct Myers-Briggs References in Narrative** 🟡 (15 min) - PR #287
