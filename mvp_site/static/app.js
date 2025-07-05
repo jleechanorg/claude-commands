@@ -18,8 +18,18 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- Core UI & Navigation Logic ---
-    const showSpinner = () => loadingOverlay.style.display = 'flex';
-    const hideSpinner = () => loadingOverlay.style.display = 'none';
+    const showSpinner = (context = 'loading') => {
+        loadingOverlay.style.display = 'flex';
+        if (window.loadingMessages) {
+            window.loadingMessages.start(context);
+        }
+    };
+    const hideSpinner = () => {
+        loadingOverlay.style.display = 'none';
+        if (window.loadingMessages) {
+            window.loadingMessages.stop();
+        }
+    };
     
     const showView = (viewName) => {
         Object.values(views).forEach(v => v.classList.remove('active-view'));
@@ -110,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Data Fetching and Rendering ---
     let renderCampaignList = async () => {
-        showSpinner();
+        showSpinner('loading');
         try {
             const { data: campaigns } = await fetchApi('/api/campaigns');
             
@@ -188,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let resumeCampaign = async (campaignId) => {
-        showSpinner();
+        showSpinner('loading');
         try {
             const { data } = await fetchApi(`/api/campaigns/${campaignId}`);
             document.getElementById('game-title').innerText = data.campaign.title;
@@ -227,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('new-campaign-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        showSpinner();
+        showSpinner('newCampaign');
         const prompt = document.getElementById('campaign-prompt').value;
         const title = document.getElementById('campaign-title').value;
         const selectedPrompts = Array.from(document.querySelectorAll('input[name="selectedPrompts"]:checked')).map(checkbox => checkbox.value);
@@ -302,6 +312,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const localSpinner = document.getElementById('loading-spinner');
             const timerInfo = document.getElementById('timer-info');
             localSpinner.style.display = 'block';
+            
+            // Start loading messages for interactions
+            if (window.loadingMessages) {
+                const messageEl = localSpinner.querySelector('.loading-message');
+                window.loadingMessages.start('interaction', messageEl);
+            }
+            
             userInputEl.disabled = true;
             timerInfo.textContent = '';
             appendToStory('user', userInput, mode);
@@ -324,6 +341,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 appendToStory('system', 'Sorry, an error occurred. Please try again.');
             } finally {
                 localSpinner.style.display = 'none';
+                if (window.loadingMessages) {
+                    window.loadingMessages.stop();
+                }
                 userInputEl.disabled = false;
                 userInputEl.focus();
             }
@@ -363,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        showSpinner();
+        showSpinner('saving');
         try {
             await fetchApi(`/api/campaigns/${campaignToEdit.id}`, {
                 method: 'PATCH',
@@ -405,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function downloadFile(format) {
         if (!currentCampaignId) return;
-        showSpinner();
+        showSpinner('saving');
         try {
             const user = firebase.auth().currentUser;
             if (!user) throw new Error('User not authenticated for download.');
