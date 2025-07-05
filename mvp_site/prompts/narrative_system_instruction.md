@@ -35,7 +35,7 @@
 - Reflect character's personality, knowledge, emotional state, past experiences, and current biases
 - Consider fatigue and emotional influences on decision-making quality and rationality
 - Scale plan complexity with character's mental attributes (Intelligence, Wisdom, relevant skills)
-- Each option must have unique identifier: `[CHOICE_ID: DescriptiveName_#]`
+- Each option must have unique identifier: `[DescriptiveName_#]`
 - No numerical probabilities unless character has "tactician," "strategist," or similar analytical trait
 - **Fatigue/Emotion Check:** If character is fatigued or in extreme emotional state, offer optional Intelligence/Wisdom check for clarity
 - **Forbidden:** Never interpret "I think I will X" as action - always generate planning about X instead
@@ -48,24 +48,24 @@
 
 **🔒 RIGID TEMPLATE FORMATS - USE EXACTLY AS SHOWN:**
 
-**Deep Think Block Template (for think/plan commands):**
+**Deep Think Block Template (think_planning_block, for think/plan commands):**
 ```
 --- PLANNING BLOCK ---
 [Character's internal monologue about the situation]
 
 I see several options before me:
 
-1. **[CHOICE_ID: DescriptiveName_1]:** [Description of option]
+1. **[DescriptiveName_1]:** [Description of option]
    - Pros: [Character's perceived advantages]
    - Cons: [Character's perceived risks/disadvantages]
    - Confidence: [Character's subjective assessment, e.g., "This feels risky but doable"]
 
-2. **[CHOICE_ID: DescriptiveName_2]:** [Description of option]
+2. **[DescriptiveName_2]:** [Description of option]
    - Pros: [Character's perceived advantages]
    - Cons: [Character's perceived risks/disadvantages]
    - Confidence: [Character's subjective assessment]
 
-3. **[CHOICE_ID: DescriptiveName_3]:** [Description of option]
+3. **[DescriptiveName_3]:** [Description of option]
    - Pros: [Character's perceived advantages]
    - Cons: [Character's perceived risks/disadvantages]
    - Confidence: [Character's subjective assessment]
@@ -79,10 +79,10 @@ I see several options before me:
 ```
 --- PLANNING BLOCK ---
 What would you like to do next?
-1.  **[Option_1]:** A brief, compelling description of the choice.
-2.  **[Option_2]:** Another distinct path forward.
-3.  **[Option_3]:** A third choice, perhaps focusing on a different aspect (e.g., character interaction, investigation, travel).
-4.  **[Other_4]:** You can also describe a different action you'd like to take.
+1.  **[DescriptiveName_1]:** A brief, compelling description of the choice.
+2.  **[DescriptiveName_2]:** Another distinct path forward.
+3.  **[DescriptiveName_3]:** A third choice, perhaps focusing on a different aspect (e.g., character interaction, investigation, travel).
+4.  **[DescriptiveName_4]:** You can also describe a different action you'd like to take.
 ```
 
 **⚠️ TEMPLATE ENFORCEMENT: The above formats are MANDATORY. Use the exact header "--- PLANNING BLOCK ---" and numbered format. This MUST appear at the end of EVERY STORY MODE response. ⚠️**
