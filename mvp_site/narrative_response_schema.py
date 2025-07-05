@@ -6,6 +6,7 @@ Based on Milestone 0.4 Combined approach implementation (without pydantic depend
 from typing import List, Optional, Dict, Any
 import json
 import logging
+import re
 from robust_json_parser import parse_llm_json_response
 
 class NarrativeResponse:
@@ -13,12 +14,17 @@ class NarrativeResponse:
     
     def __init__(self, narrative: str, entities_mentioned: List[str] = None, 
                  location_confirmed: str = "Unknown", turn_summary: str = None,
-                 state_updates: Dict[str, Any] = None):
+                 state_updates: Dict[str, Any] = None, debug_info: Dict[str, Any] = None, **kwargs):
+        # Core required fields
         self.narrative = self._validate_narrative(narrative)
         self.entities_mentioned = self._validate_entities(entities_mentioned or [])
-        self.location_confirmed = location_confirmed
+        self.location_confirmed = location_confirmed or "Unknown"
         self.turn_summary = turn_summary
-        self.state_updates = state_updates or {}
+        self.state_updates = self._validate_state_updates(state_updates)
+        self.debug_info = self._validate_debug_info(debug_info)
+        
+        # Store any extra fields that Gemini might include (shouldn't be any now)
+        self.extra_fields = kwargs
     
     def _validate_narrative(self, narrative: str) -> str:
         """Validate narrative content"""
@@ -36,6 +42,28 @@ class NarrativeResponse:
         
         return [str(entity).strip() for entity in entities if str(entity).strip()]
     
+    def _validate_state_updates(self, state_updates: Any) -> Dict[str, Any]:
+        """Validate and clean state updates"""
+        if state_updates is None:
+            return {}
+        
+        if not isinstance(state_updates, dict):
+            logging.warning(f"Invalid state_updates type: {type(state_updates).__name__}, expected dict. Using empty dict instead.")
+            return {}
+        
+        return state_updates
+    
+    def _validate_debug_info(self, debug_info: Any) -> Dict[str, Any]:
+        """Validate and clean debug info"""
+        if debug_info is None:
+            return {}
+        
+        if not isinstance(debug_info, dict):
+            logging.warning(f"Invalid debug_info type: {type(debug_info).__name__}, expected dict. Using empty dict instead.")
+            return {}
+        
+        return debug_info
+    
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
         return {
@@ -43,7 +71,8 @@ class NarrativeResponse:
             "entities_mentioned": self.entities_mentioned,
             "location_confirmed": self.location_confirmed,
             "turn_summary": self.turn_summary,
-            "state_updates": self.state_updates
+            "state_updates": self.state_updates,
+            "debug_info": self.debug_info
         }
 
 class EntityTrackingInstruction:
@@ -88,17 +117,10 @@ CRITICAL ENTITY TRACKING REQUIREMENT:
 You MUST mention ALL characters listed in the manifest above in your narrative.
 Required entities: {entities_list}
 
-RESPONSE FORMAT REQUIREMENT:
-You must format your response as valid JSON with exactly this structure:
-{self.response_format}
-
-IMPORTANT NOTES:
-- The "narrative" field should contain your complete narrative response
-- The "entities_mentioned" field should list ALL entities you referenced in the narrative
-- The "location_confirmed" field should match the location from the manifest
-- The "state_updates" field should contain game state changes (same format as [STATE_UPDATES_PROPOSED])
-- Ensure ALL required entities ({entities_list}) appear in both the narrative text AND the entities_mentioned list
-- MANDATORY: Include state updates for any changes to characters, NPCs, world, or custom state
+ENTITY TRACKING NOTES:
+- Include ALL required entities ({entities_list}) in BOTH the narrative AND entities_mentioned array
+- Set location_confirmed to match the current location from the manifest
+- Update state_updates with any changes to entity status, health, or relationships
 """
 
 def parse_structured_response(response_text: str) -> tuple[str, NarrativeResponse]:
@@ -116,8 +138,29 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
         )
         return empty_response.narrative, empty_response
     
-    # Use the robust parser
-    parsed_data, was_incomplete = parse_llm_json_response(response_text)
+    # First check if the JSON is wrapped in markdown code blocks
+    json_content = response_text
+    
+    # Pattern to match ```json ... ``` blocks
+    pattern = r'```json\s*\n?(.*?)\n?```'
+    match = re.search(pattern, response_text, re.DOTALL)
+    
+    if match:
+        json_content = match.group(1).strip()
+        logging.info("Extracted JSON from markdown code block")
+    else:
+        # Also try without the 'json' language identifier
+        pattern = r'```\s*\n?(.*?)\n?```'
+        match = re.search(pattern, response_text, re.DOTALL)
+        
+        if match:
+            content = match.group(1).strip()
+            if content.startswith('{') and content.endswith('}'):
+                json_content = content
+                logging.info("Extracted JSON from generic code block")
+    
+    # Use the robust parser on the extracted content
+    parsed_data, was_incomplete = parse_llm_json_response(json_content)
     
     if was_incomplete:
         narrative_len = len(parsed_data.get('narrative', '')) if parsed_data else 0
@@ -135,37 +178,90 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
             logging.error(f"Failed to create NarrativeResponse: {e}")
             # Return the narrative if we at least got that
             narrative = parsed_data.get('narrative', response_text)
-            fallback_response = NarrativeResponse(
-                narrative=narrative,
-                entities_mentioned=parsed_data.get('entities_mentioned', []),
-                location_confirmed=parsed_data.get('location_confirmed', 'Unknown'),
-                state_updates=parsed_data.get('state_updates', {})
-            )
+            # Extract only the fields we know about, let **kwargs handle the rest
+            known_fields = {
+                'narrative': narrative,
+                'entities_mentioned': parsed_data.get('entities_mentioned', []),
+                'location_confirmed': parsed_data.get('location_confirmed') or 'Unknown',
+                'state_updates': parsed_data.get('state_updates', {}),
+                'debug_info': parsed_data.get('debug_info', {})
+            }
+            # Pass any other fields as kwargs
+            extra_fields = {k: v for k, v in parsed_data.items() if k not in known_fields}
+            fallback_response = NarrativeResponse(**known_fields, **extra_fields)
             return narrative, fallback_response
     
-    # Final fallback: return original text with empty response object
-    # This should rarely be reached with the robust parser
+    # Additional mitigation: Try to extract narrative from raw JSON-like text
+    # This handles cases where JSON wasn't properly parsed but contains "narrative": "..."
+    narrative_pattern = r'"narrative"\s*:\s*"([^"]*(?:\\.[^"]*)*)"'
+    narrative_match = re.search(narrative_pattern, response_text)
+    
+    if narrative_match:
+        extracted_narrative = narrative_match.group(1)
+        # Unescape JSON string escapes
+        extracted_narrative = extracted_narrative.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+        logging.info("Extracted narrative from JSON-like text pattern")
+        
+        fallback_response = NarrativeResponse(
+            narrative=extracted_narrative,
+            entities_mentioned=[],
+            location_confirmed="Unknown"
+        )
+        return extracted_narrative, fallback_response
+    
+    # Final fallback: Clean up raw text for display
+    # Remove JSON-like structures and format for readability
+    cleaned_text = response_text
+    
+    # If it looks like JSON (has curly braces and quotes), try to make it readable
+    if '{' in cleaned_text and '"' in cleaned_text:
+        # Remove common JSON syntax that users shouldn't see
+        cleaned_text = re.sub(r'[{}\[\]]', '', cleaned_text)  # Remove braces and brackets
+        cleaned_text = re.sub(r'"([^"]+)":', r'\1:', cleaned_text)  # Remove quotes from keys
+        cleaned_text = re.sub(r'",\s*"', '. ', cleaned_text)  # Replace JSON comma separators
+        cleaned_text = re.sub(r'\\n', '\n', cleaned_text)  # Convert \n to actual newlines
+        cleaned_text = re.sub(r'\\"', '"', cleaned_text)  # Unescape quotes
+        cleaned_text = re.sub(r'\\\\', '\\', cleaned_text)  # Unescape backslashes
+        cleaned_text = re.sub(r'[^\S\r\n]+', ' ', cleaned_text)  # Normalize spaces while preserving line breaks
+        cleaned_text = cleaned_text.strip()
+        logging.warning("Applied final cleanup to make JSON-like text readable")
+    
+    # Final fallback response
     fallback_response = NarrativeResponse(
-        narrative=response_text,
+        narrative=cleaned_text,
         entities_mentioned=[],
         location_confirmed="Unknown"
     )
     
-    return response_text, fallback_response
+    return cleaned_text, fallback_response
+
+def create_generic_json_instruction() -> str:
+    """
+    Create generic JSON response format instruction when no entity tracking is needed
+    (e.g., during character creation, campaign initialization, or scenes without entities)
+    """
+    # The JSON format is now defined in game_state_instruction.md which is always loaded
+    # This function returns empty string since the format is already specified
+    return ""
 
 def create_structured_prompt_injection(manifest_text: str, expected_entities: List[str]) -> str:
     """
-    Create structured prompt injection for entity tracking
+    Create structured prompt injection for JSON response format
     
     Args:
-        manifest_text: Formatted scene manifest
-        expected_entities: List of entities that must be mentioned
+        manifest_text: Formatted scene manifest (can be empty)
+        expected_entities: List of entities that must be mentioned (can be empty)
         
     Returns:
         Formatted prompt injection string
     """
-    instruction = EntityTrackingInstruction.create_from_manifest(manifest_text, expected_entities)
-    return instruction.to_prompt_injection()
+    if expected_entities:
+        # Use full entity tracking instruction when entities are present
+        instruction = EntityTrackingInstruction.create_from_manifest(manifest_text, expected_entities)
+        return instruction.to_prompt_injection()
+    else:
+        # Use generic JSON response format when no entities (e.g., character creation)
+        return create_generic_json_instruction()
 
 def validate_entity_coverage(response: NarrativeResponse, expected_entities: List[str]) -> Dict[str, Any]:
     """

@@ -113,7 +113,7 @@ class TestGeminiModelFallback(unittest.TestCase):
         # Call the function
         result = _call_gemini_api_with_model_cycling(
             ["Test prompt"],
-            LARGE_CONTEXT_MODEL,
+            DEFAULT_MODEL,
             current_prompt_text_for_logging="Test"
         )
         
@@ -244,11 +244,10 @@ class TestGeminiModelFallback(unittest.TestCase):
             mock_response
         ]
         
-        # Call with JSON mode
+        # Call the function
         result = _call_gemini_api_with_model_cycling(
             ["Test prompt"],
-            DEFAULT_MODEL,
-            use_json_mode=True
+            DEFAULT_MODEL
         )
         
         # Verify JSON mode was set on both attempts

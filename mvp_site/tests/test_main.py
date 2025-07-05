@@ -197,9 +197,14 @@ class TestApiEndpoints(unittest.TestCase):
         mock_firestore_service.get_campaign_by_id.return_value = (mock_campaign, mock_story)
         mock_firestore_service.get_campaign_game_state.return_value = mock_doc_snapshot
         
-        # Mock Gemini response
+        # Mock Gemini response - create a mock GeminiResponse object
         mock_ai_response = "You walk through the bustling village square..."
-        mock_gemini_service.continue_story.return_value = mock_ai_response
+        mock_gemini_response = MagicMock()
+        mock_gemini_response.narrative_text = mock_ai_response
+        mock_gemini_response.debug_tags_present = {'dm_notes': False, 'dice_rolls': False, 'state_changes': False}
+        mock_gemini_response.state_updates = {}
+        mock_gemini_response.structured_response = None
+        mock_gemini_service.continue_story.return_value = mock_gemini_response
         mock_gemini_service.parse_llm_response_for_state_changes.return_value = {}
         
         response = self.client.post(

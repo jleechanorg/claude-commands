@@ -169,5 +169,5 @@ Before generating ANY story content or background narrative, present the charact
 DO NOT create a character or start the story - let the player choose their character creation method first!
 IMPORTANT: During character creation, numeric responses (1, 2, 3, etc.) are selections from the presented list, NOT story continuation requests.
 Use the clean [CHARACTER CREATION - Step X of 7] format without DM notes or debug blocks.
-MANDATORY: Include [STATE_UPDATES_PROPOSED] block in EVERY response to track character creation progress!
+IMPORTANT: State updates must be included in a JSON field, not in the narrative text.
 """.strip()

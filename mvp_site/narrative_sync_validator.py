@@ -250,7 +250,7 @@ class NarrativeSyncValidator:
                 ambiguous.append(entity)
                 entity_analysis[entity] = "ambiguous"
                 result.warnings.append(
-                    f"{entity}'s presence is ambiguous - unclear if physically present"
+                    f"⚠️ {entity}'s presence is ambiguous - unclear if physically present"
                 )
             else:
                 missing.append(entity)
@@ -308,12 +308,12 @@ class NarrativeSyncValidator:
             if any(ent.lower() in trans.lower() for ent in expected_entities)
         ):
             result.warnings.append(
-                "Scene transition detected but no character movement described"
+                "⚠️ Scene transition detected but no character movement described"
             )
         
         if len(mentioned_absent) > len(physically_present):
             result.warnings.append(
-                "More entities mentioned as absent than physically present - possible scene confusion"
+                "⚠️ More entities mentioned as absent than physically present - possible scene confusion"
             )
         
         # Add validation details

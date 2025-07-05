@@ -303,9 +303,12 @@ class TestCreateCampaignRoute(unittest.TestCase):
         mock_game_state.to_dict.return_value = {'initial': 'state'}
         mock_game_state_class.return_value = mock_game_state
         
-        # Mock Gemini service
+        # Mock Gemini service - create mock GeminiResponse
         mock_opening_story = 'Your adventure begins...'
-        mock_gemini_service.get_initial_story.return_value = mock_opening_story
+        mock_gemini_response = MagicMock()
+        mock_gemini_response.narrative_text = mock_opening_story
+        mock_gemini_response.structured_response = None
+        mock_gemini_service.get_initial_story.return_value = mock_gemini_response
         
         # Mock Firestore response
         campaign_id = 'new-campaign-123'
@@ -354,7 +357,10 @@ class TestCreateCampaignRoute(unittest.TestCase):
         mock_game_state_class.return_value = mock_game_state
         
         # Mock the gemini service to return a proper response
-        mock_gemini_service.get_initial_story.return_value = "Mock story response"
+        mock_gemini_response = MagicMock()
+        mock_gemini_response.narrative_text = "Mock story response"
+        mock_gemini_response.structured_response = None
+        mock_gemini_service.get_initial_story.return_value = mock_gemini_response
         
         # Mock firestore service
         mock_firestore_service.create_campaign.return_value = "test-campaign-id"
@@ -397,7 +403,7 @@ class TestCreateCampaignRoute(unittest.TestCase):
         mock_game_state_class.return_value = mock_game_state
         
         # Mock Gemini service
-        mock_gemini_service.get_initial_story.return_value = 'Adventure begins...'
+        mock_gemini_response = MagicMock(); mock_gemini_response.narrative_text = 'Adventure begins...'; mock_gemini_response.structured_response = None; mock_gemini_service.get_initial_story.return_value = mock_gemini_response
         
         # Mock Firestore
         mock_firestore_service.create_campaign.return_value = 'test-campaign-123'
@@ -445,7 +451,7 @@ class TestCreateCampaignRoute(unittest.TestCase):
         mock_game_state_class.return_value = mock_game_state
         
         # Mock Gemini service
-        mock_gemini_service.get_initial_story.return_value = 'Adventure begins...'
+        mock_gemini_response = MagicMock(); mock_gemini_response.narrative_text = 'Adventure begins...'; mock_gemini_response.structured_response = None; mock_gemini_service.get_initial_story.return_value = mock_gemini_response
         
         # Mock Firestore
         mock_firestore_service.create_campaign.return_value = 'test-campaign-456'
@@ -493,7 +499,7 @@ class TestCreateCampaignRoute(unittest.TestCase):
         mock_game_state_class.return_value = mock_game_state
         
         # Mock Gemini service
-        mock_gemini_service.get_initial_story.return_value = 'Adventure begins...'
+        mock_gemini_response = MagicMock(); mock_gemini_response.narrative_text = 'Adventure begins...'; mock_gemini_response.structured_response = None; mock_gemini_service.get_initial_story.return_value = mock_gemini_response
         
         # Mock Firestore
         mock_firestore_service.create_campaign.return_value = 'test-campaign-789'

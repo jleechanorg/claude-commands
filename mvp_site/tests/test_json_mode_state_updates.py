@@ -46,7 +46,7 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         expected_entities = ["Drake", "goblin"]
         
         # Process the response
-        result = _process_structured_response(raw_response, expected_entities)
+        result, structured_response = _process_structured_response(raw_response, expected_entities)
         
         # Check that narrative is included
         self.assertIn("Drake swings his sword", result)
@@ -77,7 +77,7 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         expected_entities = ["Drake"]
         
         # Process the response
-        result = _process_structured_response(raw_response, expected_entities)
+        result, structured_response = _process_structured_response(raw_response, expected_entities)
         
         # Check that narrative is included
         self.assertIn("Drake explores the peaceful forest", result)
@@ -101,7 +101,7 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         expected_entities = []
         
         # Process the response
-        result = _process_structured_response(raw_response, expected_entities)
+        result, structured_response = _process_structured_response(raw_response, expected_entities)
         
         # Check that narrative is included
         self.assertIn("The scene is quiet", result)

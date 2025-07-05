@@ -71,9 +71,15 @@ class TestDebugLogging(unittest.TestCase):
             "[DEBUG_STATE_START]No traps found[DEBUG_STATE_END]"
         )
         
-        with patch('gemini_service.continue_story', return_value=ai_response):
-            with patch('gemini_service.parse_llm_response_for_state_changes', return_value={}):
-                with self.assertLogs(level='INFO') as log:
+        # Create mock GeminiResponse
+        mock_gemini_response = MagicMock()
+        mock_gemini_response.narrative_text = ai_response
+        mock_gemini_response.debug_tags_present = {'dm_notes': True, 'dice_rolls': True, 'state_changes': True}
+        mock_gemini_response.state_updates = {}
+        mock_gemini_response.structured_response = None
+        
+        with patch('gemini_service.continue_story', return_value=mock_gemini_response):
+            with self.assertLogs(level='INFO') as log:
                     response = self.client.post(
                         f'/api/campaigns/{self.mock_campaign_id}/interaction',
                         json={'input': 'I enter the room', 'mode': 'character'},
@@ -99,9 +105,15 @@ class TestDebugLogging(unittest.TestCase):
         # Mock AI response WITHOUT debug content (simulating AI not following instructions)
         ai_response = "You enter the room. It appears to be empty."
         
-        with patch('gemini_service.continue_story', return_value=ai_response):
-            with patch('gemini_service.parse_llm_response_for_state_changes', return_value={}):
-                with self.assertLogs(level='WARNING') as log:
+        # Create mock GeminiResponse
+        mock_gemini_response = MagicMock()
+        mock_gemini_response.narrative_text = ai_response
+        mock_gemini_response.debug_tags_present = {'dm_notes': False, 'dice_rolls': False, 'state_changes': False}
+        mock_gemini_response.state_updates = {}
+        mock_gemini_response.structured_response = None
+        
+        with patch('gemini_service.continue_story', return_value=mock_gemini_response):
+            with self.assertLogs(level='WARNING') as log:
                     response = self.client.post(
                         f'/api/campaigns/{self.mock_campaign_id}/interaction',
                         json={'input': 'I enter the room', 'mode': 'character'},
@@ -132,9 +144,15 @@ class TestDebugLogging(unittest.TestCase):
             "Your sword strikes true!"
         )
         
-        with patch('gemini_service.continue_story', return_value=ai_response):
-            with patch('gemini_service.parse_llm_response_for_state_changes', return_value={}):
-                with self.assertLogs(level='INFO') as log:
+        # Create mock GeminiResponse
+        mock_gemini_response = MagicMock()
+        mock_gemini_response.narrative_text = ai_response
+        mock_gemini_response.debug_tags_present = {'dm_notes': False, 'dice_rolls': True, 'state_changes': False}
+        mock_gemini_response.state_updates = {}
+        mock_gemini_response.structured_response = None
+        
+        with patch('gemini_service.continue_story', return_value=mock_gemini_response):
+            with self.assertLogs(level='INFO') as log:
                     response = self.client.post(
                         f'/api/campaigns/{self.mock_campaign_id}/interaction',
                         json={'input': 'I attack the goblin', 'mode': 'character'},

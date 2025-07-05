@@ -108,27 +108,33 @@ class TestDebugModeE2E(unittest.TestCase):
             "A mysterious hooded figure sits in the corner."
         )
         
-        with patch('gemini_service.continue_story', return_value=ai_response_with_debug):
-            with patch('gemini_service.parse_llm_response_for_state_changes', return_value={}):
-                response = self.client.post(
-                    f'/api/campaigns/{self.mock_campaign_id}/interaction',
-                    json={'input': 'I enter the tavern', 'mode': 'character'},
-                    headers=self.test_headers
-                )
-                
-                self.assertEqual(response.status_code, 200)
-                data = json.loads(response.data)
-                
-                # User should NOT see debug content
-                user_response = data.get('response', '')
-                self.assertNotIn('[DEBUG_START]', user_response)
-                self.assertNotIn('[DEBUG_ROLL_START]', user_response)
-                self.assertIn('You enter the tavern', user_response)
-                self.assertIn('A mysterious hooded figure', user_response)
-                
-                # Database should have FULL response with debug
-                self.assertEqual(len(saved_responses), 1)
-                self.assertEqual(saved_responses[0], ai_response_with_debug)
+        # Create mock GeminiResponse
+        mock_gemini_response = MagicMock()
+        mock_gemini_response.narrative_text = ai_response_with_debug
+        mock_gemini_response.debug_tags_present = {"dm_notes": True, "dice_rolls": True, "state_changes": False}
+        mock_gemini_response.state_updates = {}
+        mock_gemini_response.structured_response = None
+
+        with patch('gemini_service.continue_story', return_value=mock_gemini_response):
+            response = self.client.post(
+                f'/api/campaigns/{self.mock_campaign_id}/interaction',
+                json={'input': 'I enter the tavern', 'mode': 'character'},
+                headers=self.test_headers
+            )
+            
+            self.assertEqual(response.status_code, 200)
+            data = json.loads(response.data)
+            
+            # User should NOT see debug content
+            user_response = data.get('response', '')
+            self.assertNotIn('[DEBUG_START]', user_response)
+            self.assertNotIn('[DEBUG_ROLL_START]', user_response)
+            self.assertIn('You enter the tavern', user_response)
+            self.assertIn('A mysterious hooded figure', user_response)
+            
+            # Database should have FULL response with debug
+            self.assertEqual(len(saved_responses), 1)
+            self.assertEqual(saved_responses[0], ai_response_with_debug)
     
     @patch('main.firestore_service')
     def test_full_e2e_debug_mode_enabled(self, mock_firestore_service):
@@ -151,23 +157,29 @@ class TestDebugModeE2E(unittest.TestCase):
             "A mysterious hooded figure sits in the corner."
         )
         
-        with patch('gemini_service.continue_story', return_value=ai_response_with_debug):
-            with patch('gemini_service.parse_llm_response_for_state_changes', return_value={}):
-                response = self.client.post(
-                    f'/api/campaigns/{self.mock_campaign_id}/interaction',
-                    json={'input': 'I enter the tavern', 'mode': 'character'},
-                    headers=self.test_headers
-                )
-                
-                self.assertEqual(response.status_code, 200)
-                data = json.loads(response.data)
-                
-                # User SHOULD see debug content
-                user_response = data.get('response', '')
-                self.assertIn('[DEBUG_START]', user_response)
-                self.assertIn('[DEBUG_ROLL_START]', user_response)
-                self.assertIn('Rolling to see if any interesting NPCs', user_response)
-                self.assertIn('Random Encounter: 1d20 = 17', user_response)
+        # Create mock GeminiResponse
+        mock_gemini_response = MagicMock()
+        mock_gemini_response.narrative_text = ai_response_with_debug
+        mock_gemini_response.debug_tags_present = {"dm_notes": True, "dice_rolls": True, "state_changes": False}
+        mock_gemini_response.state_updates = {}
+        mock_gemini_response.structured_response = None
+
+        with patch('gemini_service.continue_story', return_value=mock_gemini_response):
+            response = self.client.post(
+                f'/api/campaigns/{self.mock_campaign_id}/interaction',
+                json={'input': 'I enter the tavern', 'mode': 'character'},
+                headers=self.test_headers
+            )
+            
+            self.assertEqual(response.status_code, 200)
+            data = json.loads(response.data)
+            
+            # User SHOULD see debug content
+            user_response = data.get('response', '')
+            self.assertIn('[DEBUG_START]', user_response)
+            self.assertIn('[DEBUG_ROLL_START]', user_response)
+            self.assertIn('Rolling to see if any interesting NPCs', user_response)
+            self.assertIn('Random Encounter: 1d20 = 17', user_response)
 
 
 if __name__ == '__main__':

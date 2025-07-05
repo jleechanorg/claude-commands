@@ -86,8 +86,7 @@ class TestCompleteCombinedApproach(unittest.TestCase):
         # Verify prompt contains all required components
         self.assertIn('=== SCENE MANIFEST ===', structured_prompt)
         self.assertIn('CRITICAL ENTITY TRACKING REQUIREMENT', structured_prompt)
-        self.assertIn('RESPONSE FORMAT REQUIREMENT', structured_prompt)
-        self.assertIn('format your response as valid JSON', structured_prompt)
+        # JSON format instructions are now handled automatically by always-JSON mode
         self.assertIn('Gideon, Sariel, Rowan', structured_prompt)
         
         print(f"   ✅ Expected entities: {expected_entities}")

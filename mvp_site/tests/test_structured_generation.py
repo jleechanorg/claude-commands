@@ -77,10 +77,10 @@ PRESENT CHARACTERS:
         self.assertIn("You MUST mention ALL characters", injection)
         self.assertIn("Gideon, Sariel, Rowan", injection)
         
-        # Should contain JSON format requirement
-        self.assertIn("format your response as valid JSON", injection)
-        self.assertIn('"narrative":', injection)
-        self.assertIn('"entities_mentioned":', injection)
+        # JSON format is now handled automatically by always-JSON mode
+        # Should contain entity tracking instructions
+        self.assertIn("entities_mentioned array", injection)
+        self.assertIn("location_confirmed", injection)
         
     def test_parse_structured_response_valid_json(self):
         """Test parsing valid JSON response"""
@@ -181,7 +181,8 @@ PRESENT CHARACTERS:
         self.assertIn("TestPlayer", prompt_injection)
         self.assertIn("NPC1", prompt_injection)
         self.assertIn("NPC2", prompt_injection)
-        self.assertIn("format your response as valid JSON", prompt_injection)
+        # JSON format is now handled automatically by always-JSON mode
+        self.assertIn("CRITICAL ENTITY TRACKING REQUIREMENT", prompt_injection)
         
         print("✅ Integration test: Structured generation works with entity tracking")
 

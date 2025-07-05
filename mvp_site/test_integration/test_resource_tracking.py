@@ -77,7 +77,7 @@ try:
     # Capture the system instruction by mocking _call_gemini_api
     capture_box = {'instruction': None}
     original_call = gemini_service._call_gemini_api
-    def mock_call(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None, use_json_mode=False):
+    def mock_call(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None):
         capture_box['instruction'] = system_instruction_text
         class Response:
             text = "Test response"

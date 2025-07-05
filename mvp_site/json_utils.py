@@ -178,7 +178,38 @@ def extract_field_value(text: str, field_name: str) -> Optional[str]:
     Returns:
         The extracted value or None
     """
-    # Try multiple patterns
+    # Special handling for narrative field - it often contains quotes and can be very long
+    if field_name == 'narrative':
+        # For narrative, we need to handle incomplete JSON where the string might be cut off
+        # First try: Look for narrative field and find its proper end
+        narrative_start = re.search(rf'"{field_name}"\s*:\s*"', text, re.DOTALL)
+        if narrative_start:
+            start_pos = narrative_start.end()
+            
+            # Find the end of the narrative value by tracking escape sequences
+            pos = start_pos
+            escaped = False
+            while pos < len(text):
+                char = text[pos]
+                
+                if escaped:
+                    escaped = False
+                elif char == '\\':
+                    escaped = True
+                elif char == '"':
+                    # Found the closing quote
+                    value = text[start_pos:pos]
+                    return unescape_json_string(value)
+                
+                pos += 1
+            
+            # If we reach here, the JSON is incomplete - return everything from start
+            value = text[start_pos:]
+            # Clean up any trailing incomplete syntax
+            value = value.rstrip('\\')
+            return unescape_json_string(value)
+    
+    # For other fields, use the original patterns
     patterns = [
         rf'"{field_name}"\s*:\s*"((?:[^"\\]|\\.)*)"',  # Standard JSON string
         rf'"{field_name}"\s*:\s*"((?:[^"\\]|\\.)*?)(?=\s*[,}}]|$)',  # Incomplete string
@@ -192,3 +223,4 @@ def extract_field_value(text: str, field_name: str) -> Optional[str]:
             return unescape_json_string(value)
     
     return None
+

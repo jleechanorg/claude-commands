@@ -124,27 +124,33 @@ class TestDebugMode(unittest.TestCase):
             "You notice a glimmer in the darkness."
         )
         
-        with patch('gemini_service.continue_story', return_value=mock_response):
-            with patch('gemini_service.parse_llm_response_for_state_changes', return_value={}):
-                response = self.client.post(
-                    f'/api/campaigns/{self.mock_campaign_id}/interaction',
-                    json={'input': 'I enter the cave', 'mode': 'character'},
-                    headers=self.test_headers
-                )
-                
-                self.assertEqual(response.status_code, 200)
-                data = json.loads(response.data)
-                self.assertTrue(data.get('debug_mode'))
-                # When debug mode is enabled, user should see debug content
-                self.assertIn('[DEBUG_START]', data.get('response', ''))
-                self.assertIn('[DEBUG_END]', data.get('response', ''))
-                self.assertIn('[DEBUG_ROLL_START]', data.get('response', ''))
-                self.assertIn('[DEBUG_ROLL_END]', data.get('response', ''))
-                
-                # Verify full response was saved to database
-                mock_firestore_service.add_story_entry.assert_called_with(
-                    self.mock_user_id, self.mock_campaign_id, 'gemini', mock_response
-                )
+        # Create mock GeminiResponse
+        mock_gemini_response = MagicMock()
+        mock_gemini_response.narrative_text = mock_response
+        mock_gemini_response.debug_tags_present = {"dm_notes": True, "dice_rolls": True, "state_changes": False}
+        mock_gemini_response.state_updates = {}
+        mock_gemini_response.structured_response = None
+
+        with patch('gemini_service.continue_story', return_value=mock_gemini_response):
+            response = self.client.post(
+                f'/api/campaigns/{self.mock_campaign_id}/interaction',
+                json={'input': 'I enter the cave', 'mode': 'character'},
+                headers=self.test_headers
+            )
+            
+            self.assertEqual(response.status_code, 200)
+            data = json.loads(response.data)
+            self.assertTrue(data.get('debug_mode'))
+            # When debug mode is enabled, user should see debug content
+            self.assertIn('[DEBUG_START]', data.get('response', ''))
+            self.assertIn('[DEBUG_END]', data.get('response', ''))
+            self.assertIn('[DEBUG_ROLL_START]', data.get('response', ''))
+            self.assertIn('[DEBUG_ROLL_END]', data.get('response', ''))
+            
+            # Verify full response was saved to database
+            mock_firestore_service.add_story_entry.assert_called_with(
+                self.mock_user_id, self.mock_campaign_id, 'gemini', mock_response
+            )
     
     @patch('main.firestore_service')
     def test_enhanced_dice_roll_display(self, mock_firestore_service):
@@ -163,28 +169,34 @@ class TestDebugMode(unittest.TestCase):
             "Your sword strikes true, dealing a devastating blow!"
         )
         
-        with patch('gemini_service.continue_story', return_value=mock_response):
-            with patch('gemini_service.parse_llm_response_for_state_changes', return_value={}):
-                response = self.client.post(
+        # Create mock GeminiResponse
+        mock_gemini_response = MagicMock()
+        mock_gemini_response.narrative_text = mock_response
+        mock_gemini_response.debug_tags_present = {"dm_notes": False, "dice_rolls": True, "state_changes": False}
+        mock_gemini_response.state_updates = {}
+        mock_gemini_response.structured_response = None
+
+        with patch('gemini_service.continue_story', return_value=mock_gemini_response):
+            response = self.client.post(
                     f'/api/campaigns/{self.mock_campaign_id}/interaction',
                     json={'input': 'I attack with my sword', 'mode': 'character'},
                     headers=self.test_headers
-                )
-                
-                self.assertEqual(response.status_code, 200)
-                data = json.loads(response.data)
-                self.assertTrue(data.get('debug_mode'))
-                response_text = data.get('response', '')
-                
-                # Verify multiple dice rolls are shown
-                self.assertEqual(response_text.count('[DEBUG_ROLL_START]'), 2)
-                self.assertEqual(response_text.count('[DEBUG_ROLL_END]'), 2)
-                
-                # Verify specific roll information
-                self.assertIn('Attack Roll: 1d20+5', response_text)
-                self.assertIn('Damage Roll: 1d8+3', response_text)
-                self.assertIn('vs AC 15', response_text)
-                self.assertIn('slashing damage', response_text)
+            )
+            
+            self.assertEqual(response.status_code, 200)
+            data = json.loads(response.data)
+            self.assertTrue(data.get('debug_mode'))
+            response_text = data.get('response', '')
+            
+            # Verify multiple dice rolls are shown
+            self.assertEqual(response_text.count('[DEBUG_ROLL_START]'), 2)
+            self.assertEqual(response_text.count('[DEBUG_ROLL_END]'), 2)
+            
+            # Verify specific roll information
+            self.assertIn('Attack Roll: 1d20+5', response_text)
+            self.assertIn('Damage Roll: 1d8+3', response_text)
+            self.assertIn('vs AC 15', response_text)
+            self.assertIn('slashing damage', response_text)
     
     @patch('main.firestore_service')
     def test_debug_content_hidden_when_disabled(self, mock_firestore_service):
@@ -203,30 +215,36 @@ class TestDebugMode(unittest.TestCase):
             "You notice a glimmer in the darkness."
         )
         
-        with patch('gemini_service.continue_story', return_value=mock_response):
-            with patch('gemini_service.parse_llm_response_for_state_changes', return_value={}):
-                response = self.client.post(
-                    f'/api/campaigns/{self.mock_campaign_id}/interaction',
-                    json={'input': 'I enter the cave', 'mode': 'character'},
-                    headers=self.test_headers
-                )
-                
-                self.assertEqual(response.status_code, 200)
-                data = json.loads(response.data)
-                self.assertFalse(data.get('debug_mode'))
-                # When debug mode is disabled, user should NOT see debug content
-                self.assertNotIn('[DEBUG_START]', data.get('response', ''))
-                self.assertNotIn('[DEBUG_END]', data.get('response', ''))
-                self.assertNotIn('[DEBUG_ROLL_START]', data.get('response', ''))
-                self.assertNotIn('[DEBUG_ROLL_END]', data.get('response', ''))
-                # But should still see the main narrative
-                self.assertIn('You enter the dark cave', data.get('response', ''))
-                self.assertIn('You notice a glimmer in the darkness', data.get('response', ''))
-                
-                # Verify full response (with debug content) was saved to database
-                mock_firestore_service.add_story_entry.assert_called_with(
-                    self.mock_user_id, self.mock_campaign_id, 'gemini', mock_response
-                )
+        # Create mock GeminiResponse
+        mock_gemini_response = MagicMock()
+        mock_gemini_response.narrative_text = mock_response
+        mock_gemini_response.debug_tags_present = {"dm_notes": True, "dice_rolls": True, "state_changes": False}
+        mock_gemini_response.state_updates = {}
+        mock_gemini_response.structured_response = None
+
+        with patch('gemini_service.continue_story', return_value=mock_gemini_response):
+            response = self.client.post(
+                f'/api/campaigns/{self.mock_campaign_id}/interaction',
+                json={'input': 'I enter the cave', 'mode': 'character'},
+                headers=self.test_headers
+            )
+            
+            self.assertEqual(response.status_code, 200)
+            data = json.loads(response.data)
+            self.assertFalse(data.get('debug_mode'))
+            # When debug mode is disabled, user should NOT see debug content
+            self.assertNotIn('[DEBUG_START]', data.get('response', ''))
+            self.assertNotIn('[DEBUG_END]', data.get('response', ''))
+            self.assertNotIn('[DEBUG_ROLL_START]', data.get('response', ''))
+            self.assertNotIn('[DEBUG_ROLL_END]', data.get('response', ''))
+            # But should still see the main narrative
+            self.assertIn('You enter the dark cave', data.get('response', ''))
+            self.assertIn('You notice a glimmer in the darkness', data.get('response', ''))
+            
+            # Verify full response (with debug content) was saved to database
+            mock_firestore_service.add_story_entry.assert_called_with(
+                self.mock_user_id, self.mock_campaign_id, 'gemini', mock_response
+            )
     
     @patch('main.firestore_service')
     def test_debug_mode_only_in_god_mode(self, mock_firestore_service):
@@ -236,19 +254,25 @@ class TestDebugMode(unittest.TestCase):
         mock_firestore_service.add_story_entry.return_value = None
         
         # Mock Gemini to return a normal response
-        with patch('gemini_service.continue_story', return_value="You speak the words but nothing happens."):
-            with patch('gemini_service.parse_llm_response_for_state_changes', return_value={}):
-                response = self.client.post(
+        # Create mock GeminiResponse
+        mock_gemini_response = MagicMock()
+        mock_gemini_response.narrative_text = "You speak the words but nothing happens."
+        mock_gemini_response.debug_tags_present = {"dm_notes": False, "dice_rolls": False, "state_changes": False}
+        mock_gemini_response.state_updates = {}
+        mock_gemini_response.structured_response = None
+
+        with patch('gemini_service.continue_story', return_value=mock_gemini_response):
+            response = self.client.post(
                     f'/api/campaigns/{self.mock_campaign_id}/interaction',
                     json={'input': 'enable debug mode', 'mode': 'character'},
                     headers=self.test_headers
-                )
-                
-                self.assertEqual(response.status_code, 200)
-                data = json.loads(response.data)
-                # Should get AI response, not system message
-                self.assertNotIn('System Message', data.get('response', ''))
-                self.assertFalse(data.get('debug_mode', False))
+            )
+            
+            self.assertEqual(response.status_code, 200)
+            data = json.loads(response.data)
+            # Should get AI response, not system message
+            self.assertNotIn('System Message', data.get('response', ''))
+            self.assertFalse(data.get('debug_mode', False))
 
 
 if __name__ == '__main__':

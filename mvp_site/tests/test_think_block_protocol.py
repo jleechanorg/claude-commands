@@ -45,7 +45,8 @@ class TestThinkBlockProtocol(unittest.TestCase):
         
         # Read the actual prompt file content
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        original_prompt_path = os.path.join(os.path.dirname(current_dir), 'prompts', 'narrative_system_instruction.md')
+        # Think block protocol was moved to game_state_instruction.md
+        original_prompt_path = os.path.join(os.path.dirname(current_dir), 'prompts', 'game_state_instruction.md')
         
         if os.path.exists(original_prompt_path):
             with open(original_prompt_path, 'r') as f:

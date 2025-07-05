@@ -14,8 +14,10 @@
 - [ ] **TASK-001b** 🔴 Dragon Knight v3 plot fix (0.5 hrs) - PAUSED
 
 ### ⏰ Evening Block (6pm-8pm) - Current Time: 6pm  
-- [x] **TASK-002** 🟡 LLM I/O format standardization (2 hrs) - COMPLETED (PR #272)
+- [x] **TASK-002** ❌ LLM I/O format standardization (2 hrs) - CLOSED (PR #272 - session tracking doesn't improve LLM accuracy)
+- [x] **TASK-002a** ✅ Scene number increment-by-2 fix - COMPLETED (PR #281)
 - [ ] **TASK-073** 🟡 Default campaign prompt update (Ser Arion scenario) - ACTIVE (PR #246)
+- [ ] **TASK-074** 🔴 JSON display bug fix - ACTIVE (Branch: debug-json-display-bug)
 - [ ] **TASK-003** 🟡 State sync validation (if time permits)
 - [ ] **TASK-004a** 🟡 Continuity testing Phase 1 (if time permits)
 

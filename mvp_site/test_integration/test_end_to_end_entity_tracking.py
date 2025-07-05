@@ -171,9 +171,9 @@ class TestEndToEndEntityTracking(unittest.TestCase):
             selected_prompts=["narrative"]
         )
         
-        # Verify JSON mode was used
+        # Verify that the API was called
         call_args = mock_call_api.call_args
-        self.assertTrue(call_args[1].get('use_json_mode', False))
+        self.assertIsNotNone(call_args)
         
         # Verify structured prompt injection
         prompt = call_args[0][0]

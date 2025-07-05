@@ -18,6 +18,7 @@ from narrative_response_schema import (
     validate_entity_coverage,
     NarrativeResponse
 )
+from gemini_response import GeminiResponse
 # Import entity tracking mitigation modules
 from entity_preloader import EntityPreloader
 from entity_instructions import EntityInstructionGenerator
@@ -345,8 +346,8 @@ def _build_debug_instructions():
         "   - Include both the dice result and the final total with modifiers\n"
         "\n"
         "3. **RESOURCES USED**: Track resources expended during the scene:\n"
-        "   - Format: [DEBUG_RESOURCES_START]Resources: 2 EP used (6/8 remaining), 1 spell slot level 2 (2/3 remaining), short rests: 1/2[DEBUG_RESOURCES_END]\n"
-        "   - Include: Effort Points (EP), spell slots by level, short rests, long rests, hit dice, consumables\n"
+        "   - Format: [DEBUG_RESOURCES_START]Resources: 1 HD used (2/3 remaining), 1 spell slot level 2 (2/3 remaining), short rests: 1/2[DEBUG_RESOURCES_END]\n"
+        "   - Include: Hit Dice (HD), spell slots by level, class features (ki points, rage, etc.), consumables, exhaustion\n"
         "   - Show both used and remaining for each resource\n"
         "\n"
         "4. **STATE CHANGES**: After your main narrative, include a section wrapped in [DEBUG_STATE_START] and [DEBUG_STATE_END] tags that explains what state changes you're proposing and why.\n"
@@ -354,7 +355,7 @@ def _build_debug_instructions():
         "**Examples:**\n"
         "- [DEBUG_START]The player is attempting a stealth approach, so I need to roll for the guards' perception...[DEBUG_END]\n"
         "- [DEBUG_ROLL_START]Guard Perception: 1d20+2 = 12+2 = 14 vs DC 15 (Failure - guards don't notice)[DEBUG_ROLL_END]\n"
-        "- [DEBUG_RESOURCES_START]Resources: 0 EP used (8/8 remaining), no spell slots used, short rests: 2/2[DEBUG_RESOURCES_END]\n"
+        "- [DEBUG_RESOURCES_START]Resources: 0 HD used (3/3 remaining), no spell slots used, short rests: 2/2[DEBUG_RESOURCES_END]\n"
         "- [DEBUG_STATE_START]Updating player position to 'hidden behind crates' and setting guard alertness to 'unaware'[DEBUG_STATE_END]\n"
         "\n"
         "NOTE: This debug information helps maintain game state consistency and will be conditionally shown to players based on their debug mode setting.\n\n"
@@ -395,10 +396,8 @@ def _prepare_entity_tracking(game_state, story_context, session_number):
     entity_manifest_text = entity_manifest.to_prompt_format()
     expected_entities = entity_manifest.get_expected_entities()
     
-    # Add structured entity tracking instruction
-    entity_tracking_instruction = ""
-    if expected_entities:
-        entity_tracking_instruction = create_structured_prompt_injection(entity_manifest_text, expected_entities)
+    # Always add structured response format instruction (for both entity tracking and general JSON response)
+    entity_tracking_instruction = create_structured_prompt_injection(entity_manifest_text, expected_entities)
     
     return entity_manifest_text, expected_entities, entity_tracking_instruction
 
@@ -467,7 +466,7 @@ def _process_structured_response(raw_response_text, expected_entities):
         expected_entities: List of expected entity names
         
     Returns:
-        str: Response text with state updates appended
+        tuple: (response_text, structured_response) where structured_response is NarrativeResponse or None
     """
     response_text, structured_response = parse_structured_response(raw_response_text)
     
@@ -489,7 +488,7 @@ def _process_structured_response(raw_response_text, expected_entities):
     else:
         logging_util.warning("STRUCTURED_GENERATION: Failed to parse JSON response, falling back to plain text")
     
-    return response_text
+    return response_text, structured_response
 
 
 def _validate_entity_tracking(response_text, expected_entities, game_state):
@@ -554,10 +553,20 @@ def _log_token_count(model_name, user_prompt_contents, system_instruction_text=N
     except Exception as e:
         logging.warning(f"Could not count tokens before API call: {e}")
 
-def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None, use_json_mode=False):
+def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None):
     """
     Calls the Gemini API with model cycling on 503 errors.
     Tries the requested model first, then cycles through fallback models.
+    Always uses JSON mode for structured responses.
+    
+    Args:
+        prompt_contents: The content to send to the API
+        model_name: Primary model to try first  
+        current_prompt_text_for_logging: Text for logging purposes (optional)
+        system_instruction_text: System instructions (optional)
+    
+    Returns:
+        Gemini API response object with JSON response
     """
     client = get_client()
     
@@ -596,12 +605,12 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             }
             
             # Configure JSON response mode if requested
-            if use_json_mode:
-                generation_config_params["response_mime_type"] = "application/json"
-                # Use reduced token limit for JSON mode to ensure proper completion
-                generation_config_params["max_output_tokens"] = JSON_MODE_MAX_TOKENS
-                if attempt == 0:  # Only log once
-                    logging.info(f"--- Using JSON response mode with reduced token limit ({JSON_MODE_MAX_TOKENS}) ---")
+            # Always use JSON response mode for consistent structured output
+            generation_config_params["response_mime_type"] = "application/json"
+            # Use reduced token limit for JSON mode to ensure proper completion
+            generation_config_params["max_output_tokens"] = JSON_MODE_MAX_TOKENS
+            if attempt == 0:  # Only log once
+                logging.info(f"--- Using JSON response mode with reduced token limit ({JSON_MODE_MAX_TOKENS}) ---")
             
             # Pass the system instruction to the generate_content call
             if system_instruction_text:
@@ -661,10 +670,23 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
         raise RuntimeError(f"All {len(models_to_try)} Gemini models failed but no specific error was captured")
     raise last_error
 
-def _call_gemini_api(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None, use_json_mode=False):
-    """Legacy wrapper for backward compatibility - now uses model cycling."""
+def _call_gemini_api(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None):
+    """
+    Call Gemini API with model cycling on errors.
+    
+    This function always uses JSON mode for consistent structured responses.
+    
+    Args:
+        prompt_contents: The content to send to the API
+        model_name: Primary model to try first  
+        current_prompt_text_for_logging: Text for logging purposes (optional)
+        system_instruction_text: System instructions (optional)
+    
+    Returns:
+        Gemini API response object with JSON response
+    """
     return _call_gemini_api_with_model_cycling(
-        prompt_contents, model_name, current_prompt_text_for_logging, system_instruction_text, use_json_mode
+        prompt_contents, model_name, current_prompt_text_for_logging, system_instruction_text
     )
 
 def _get_text_from_response(response):
@@ -881,7 +903,10 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
 
     response = _call_gemini_api(contents, model_to_use, current_prompt_text_for_logging=prompt, 
                               system_instruction_text=system_instruction_final)
-    response_text = _get_text_from_response(response)
+    raw_response_text = _get_text_from_response(response)
+    
+    # Process structured response for consistency
+    response_text, structured_response = _process_structured_response(raw_response_text, expected_entities or [])
     
     # --- ENTITY VALIDATION FOR INITIAL STORY ---
     if expected_entities:
@@ -897,7 +922,7 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
             # For initial story, we'll log but not retry to avoid complexity
             # The continue_story function will handle retry logic for subsequent interactions
     
-    return response_text
+    return GeminiResponse.create(response_text, structured_response, raw_response_text)
 
 def _validate_and_enforce_planning_block(response_text, user_input, game_state, chosen_model, system_instruction):
     """
@@ -1094,6 +1119,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     serialized_game_state = json.dumps(current_game_state.to_dict(), indent=2, default=json_datetime_serializer)
     
     # --- ENTITY TRACKING: Create scene manifest for entity tracking ---
+    # Always prepare entity tracking to ensure JSON response format
     session_number = current_game_state.custom_campaign_state.get('session_number', 1)
     _, expected_entities, entity_tracking_instruction = _prepare_entity_tracking(
         current_game_state, truncated_story_context, session_number
@@ -1146,23 +1172,15 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # Select appropriate model
     chosen_model = _select_model_for_continuation(user_input_count)
     
-    # Use structured JSON output if entity tracking is enabled
-    if expected_entities:
-        # Configure for JSON response
-        response = _call_gemini_api([full_prompt], chosen_model, 
-                                  current_prompt_text_for_logging=current_prompt_text, 
-                                  system_instruction_text=system_instruction_final,
-                                  use_json_mode=True)
-        raw_response_text = _get_text_from_response(response)
-        
-        # Process structured response
-        response_text = _process_structured_response(raw_response_text, expected_entities)
-    else:
-        # Standard generation without entity tracking
-        response = _call_gemini_api([full_prompt], chosen_model, 
-                                  current_prompt_text_for_logging=current_prompt_text, 
-                                  system_instruction_text=system_instruction_final)
-        response_text = _get_text_from_response(response)
+    # ALWAYS use structured JSON output for consistent response format
+    # This ensures state updates, planning blocks, and narrative are properly structured
+    response = _call_gemini_api([full_prompt], chosen_model, 
+                              current_prompt_text_for_logging=current_prompt_text, 
+                              system_instruction_text=system_instruction_final)
+    raw_response_text = _get_text_from_response(response)
+    
+    # Process structured response (handles both entity tracking and non-entity cases)
+    response_text, structured_response = _process_structured_response(raw_response_text, expected_entities or [])
     
     # Validate entity tracking if enabled
     if expected_entities:
@@ -1228,7 +1246,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
             response_text, user_input, current_game_state, chosen_model, system_instruction_final
         )
     
-    return response_text
+    return GeminiResponse.create(response_text, structured_response, raw_response_text)
 
 def _get_static_prompt_parts(current_game_state: GameState, story_context: list):
     """Helper to generate the non-timeline parts of the prompt."""
@@ -1379,98 +1397,6 @@ def create_game_state_from_legacy_story(story_context: list) -> GameState | None
     logging.warning("No legacy game state block found in story context.")
     return None
 
-@log_exceptions
-def _clean_markdown_from_json(json_string: str) -> str:
-    """
-    Cleans various markdown formatting patterns from JSON strings that LLMs might generate.
-    Handles code blocks, bold formatting, HTML tags, and other common markdown decorations.
-    """
-    # Start with the original string, stripped of leading/trailing whitespace
-    cleaned = json_string.strip()
-    
-    # Remove HTML tags (like <strong>, </strong>) first
-    cleaned = re.sub(r'<[^>]+>', '', cleaned)
-    
-    # Remove lines that are purely markdown decorations or commentary
-    lines = cleaned.split('\n')
-    json_lines = []
-    for line in lines:
-        stripped_line = line.strip()
-        # Skip lines that are just markdown decorations or commentary
-        if (stripped_line and 
-            not re.match(r'^[\*\-_=]+$', stripped_line) and           # Lines of just asterisks/dashes
-            not re.match(r'^\*[^{]*\*$', stripped_line) and           # Lines wrapped in asterisks without JSON
-            not re.match(r'^\*.*\*$', stripped_line) and              # Any line wrapped in single asterisks
-            not re.match(r'^[^{}\[\]]*update[^{}\[\]]*$', stripped_line, re.IGNORECASE)):  # Commentary lines mentioning "update"
-            json_lines.append(line)
-    
-    cleaned = '\n'.join(json_lines)
-    
-    # Handle mixed formatting patterns like **```json...```**
-    # Remove outer bold markers around code blocks
-    if cleaned.startswith("**```") and cleaned.endswith("```**"):
-        cleaned = cleaned[2:-2]  # Remove ** from both ends
-    
-    # Handle markdown code blocks (```json and ```) - do this AFTER line filtering
-    if cleaned.startswith("```json"):
-        cleaned = cleaned[7:]
-    elif cleaned.startswith("```"):
-        cleaned = cleaned[3:]
-    if cleaned.endswith("```"):
-        cleaned = cleaned[:-3]
-    
-    # Remove bold markdown formatting (**text**)
-    # Handle both single-line and multi-line bold wrapping
-    cleaned = re.sub(r'^\*\*\s*', '', cleaned, flags=re.MULTILINE)
-    cleaned = re.sub(r'\s*\*\*$', '', cleaned, flags=re.MULTILINE)
-    
-    # Remove italic markdown formatting (*text*)
-    cleaned = re.sub(r'^\*\s*', '', cleaned, flags=re.MULTILINE)
-    cleaned = re.sub(r'\s*\*$', '', cleaned, flags=re.MULTILINE)
-    
-    # Final cleanup: strip whitespace
-    cleaned = cleaned.strip()
-    
-    return cleaned
-
-def parse_llm_response_for_state_changes(llm_text_response: str) -> dict:
-    """
-    Parses the full text response from the LLM to find and extract the JSON object
-    containing proposed state changes. It is robust to multiple state update blocks,
-    parsing the last valid one it finds.
-    """
-    # Use re.findall to get all occurrences of the state update block.
-    # This handles cases where the AI might generate multiple blocks in its thought process.
-    matches = re.findall(r'\[STATE_UPDATES_PROPOSED\](.*?)\[END_STATE_UPDATES_PROPOSED\]', llm_text_response, re.DOTALL)
-
-    if not matches:
-        logging.warning("⚠️ ALERT: No STATE_UPDATES_PROPOSED block found in LLM response! This means game state will NOT be updated. The AI should always generate STATE_UPDATES_PROPOSED blocks to track entities and game state.")
-        return {}
-
-    # Iterate through the found blocks in reverse order, taking the last valid one.
-    for json_string in reversed(matches):
-        json_string = json_string.strip()
-        
-        if not json_string:
-            continue # Skip empty blocks
-
-        # Clean up markdown formatting from the LLM response
-        json_string = _clean_markdown_from_json(json_string)
-
-        try:
-            proposed_changes = json.loads(json_string)
-            
-            if isinstance(proposed_changes, dict):
-                logging.info("Successfully parsed a valid state update block.")
-                return proposed_changes
-            else:
-                logging.warning(f"Found a state update block, but parsed JSON was not a dictionary. Type: {type(proposed_changes)}. Content: {proposed_changes}")
-        except json.JSONDecodeError:
-            logging.warning(f"Found a state update block, but it contained invalid JSON. Content: `{json_string}`")
-            continue # Try the next block
-
-    logging.warning("Found state update block(s), but none contained valid JSON.")
-    return {}
 
 # --- Main block for rapid, direct testing ---
 if __name__ == "__main__":

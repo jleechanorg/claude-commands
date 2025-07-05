@@ -49,11 +49,6 @@ if DEPS_AVAILABLE:
 
 class TestInteractionIntegration(unittest.TestCase):
 
-    def setUp(self):
-        """Check dependencies before each test."""
-        if not DEPS_AVAILABLE:
-            self.fail("CRITICAL FAILURE: Integration test dependencies missing (Flask, etc.). Install requirements.txt to fix.")
-
     @classmethod
     def setUpClass(cls):
         """Create one campaign for all tests to share."""
@@ -76,7 +71,10 @@ class TestInteractionIntegration(unittest.TestCase):
         assert cls.campaign_id is not None
 
     def setUp(self):
-        """Use shared campaign from setUpClass."""
+        """Check dependencies and use shared campaign from setUpClass."""
+        if not DEPS_AVAILABLE:
+            self.fail("CRITICAL FAILURE: Integration test dependencies missing (Flask, etc.). Install requirements.txt to fix.")
+        
         self.app = self.__class__.app
         self.client = self.__class__.client
         self.user_id = self.__class__.user_id
@@ -174,9 +172,12 @@ class TestInteractionIntegration(unittest.TestCase):
         stats_updated = False
         gold_updated = False
         
-        # Check for stats in various locations
-        if 'stats' in pc_data and isinstance(pc_data['stats'], dict):
+        # Check for stats in various locations (current structure uses 'attributes')
+        if 'attributes' in pc_data and isinstance(pc_data['attributes'], dict):
             # Check if any numeric stats exist (STR, strength, etc.)
+            stats_updated = any(isinstance(v, (int, float)) for v in pc_data['attributes'].values())
+        elif 'stats' in pc_data and isinstance(pc_data['stats'], dict):
+            # Fallback check for old structure
             stats_updated = any(isinstance(v, (int, float)) for v in pc_data['stats'].values())
         
         # Check for gold in various locations
@@ -184,14 +185,28 @@ class TestInteractionIntegration(unittest.TestCase):
         if initial_gold is None:
             initial_gold = 0
             
-        # Gold might be at root level or in stats
+        # Gold might be at root level, in stats, attributes, or resources
         current_gold = pc_data.get('gold', 0)
         if current_gold is None:
             current_gold = 0
+        
+        # Check attributes for gold
+        if 'attributes' in pc_data and isinstance(pc_data['attributes'], dict):
+            attrs_gold = pc_data['attributes'].get('gold', 0)
+            if attrs_gold and attrs_gold > current_gold:
+                current_gold = attrs_gold
+                
+        # Check stats for gold (fallback)
         if 'stats' in pc_data and isinstance(pc_data['stats'], dict):
             stats_gold = pc_data['stats'].get('gold', 0)
             if stats_gold and stats_gold > current_gold:
                 current_gold = stats_gold
+                
+        # Check resources for gold
+        if 'resources' in pc_data and isinstance(pc_data['resources'], dict):
+            resources_gold = pc_data['resources'].get('gold', 0)
+            if resources_gold and resources_gold > current_gold:
+                current_gold = resources_gold
                 
         gold_updated = current_gold > initial_gold
         
@@ -311,8 +326,11 @@ class TestInteractionIntegration(unittest.TestCase):
         initial_gold = pc_data.get('gold', 0)
         initial_exp = pc_data.get('exp', 0)
         
-        # Also check in stats subdictionary if present
-        if 'stats' in pc_data and isinstance(pc_data['stats'], dict):
+        # Also check in attributes/stats subdictionary if present
+        if 'attributes' in pc_data and isinstance(pc_data['attributes'], dict):
+            initial_gold = pc_data['attributes'].get('gold', initial_gold)
+            initial_exp = pc_data['attributes'].get('exp', initial_exp)
+        elif 'stats' in pc_data and isinstance(pc_data['stats'], dict):
             initial_gold = pc_data['stats'].get('gold', initial_gold)
             initial_exp = pc_data['stats'].get('exp', initial_exp)
         
@@ -366,11 +384,17 @@ class TestInteractionIntegration(unittest.TestCase):
         print(f"PC data after second command: {final_pc_data}")
         
         # Verify that state has evolved - check for these fields in various locations
-        # They might be at root level or in a stats subdictionary
-        has_level = 'level' in final_pc_data or ('stats' in final_pc_data and 'level' in final_pc_data.get('stats', {}))
-        has_gold = 'gold' in final_pc_data or ('stats' in final_pc_data and 'gold' in final_pc_data.get('stats', {}))
-        has_exp = 'exp' in final_pc_data or 'experience' in final_pc_data or \
-                  ('stats' in final_pc_data and ('exp' in final_pc_data.get('stats', {}) or 'experience' in final_pc_data.get('stats', {})))
+        # They might be at root level or in attributes/stats subdictionary
+        has_level = ('level' in final_pc_data or 
+                    ('attributes' in final_pc_data and 'level' in final_pc_data.get('attributes', {})) or
+                    ('stats' in final_pc_data and 'level' in final_pc_data.get('stats', {})))
+        has_gold = ('gold' in final_pc_data or 
+                   ('attributes' in final_pc_data and 'gold' in final_pc_data.get('attributes', {})) or
+                   ('stats' in final_pc_data and 'gold' in final_pc_data.get('stats', {})) or
+                   ('resources' in final_pc_data and 'gold' in final_pc_data.get('resources', {})))
+        has_exp = ('exp' in final_pc_data or 'experience' in final_pc_data or
+                  ('attributes' in final_pc_data and ('exp' in final_pc_data.get('attributes', {}) or 'experience' in final_pc_data.get('attributes', {}))) or
+                  ('stats' in final_pc_data and ('exp' in final_pc_data.get('stats', {}) or 'experience' in final_pc_data.get('stats', {}))))
         
         # At least some progression fields should exist
         self.assertTrue(has_level or has_gold or has_exp, 

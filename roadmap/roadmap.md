@@ -134,6 +134,8 @@ For different worktrees:
 *   [TASK-005a] ✅ **COMPLETED** Clicking on a campaign doesn\'t show spinner loading and seems to not always register clicks (issue is about the campaign list) - PR #267
 *   [TASK-005b] ✅ **COMPLETED** Loading spinner with messages during campaign continue - PR #268
 *   [TASK-014a] ✅ **COMPLETED** WorldArchitect.AI make this clickable to homepage - PR #266
+*   [TASK-002] ❌ **CLOSED** LLM I/O format standardization - PR #272 (Closed - session tracking doesn't improve LLM accuracy)
+*   [TASK-002a] ✅ **COMPLETED** Fix scene number increment-by-2 display issue - PR #281
 
 ### Bugs
 *   [TASK-001c] **Null HP during combat** - Happens during combat, defer to combat system revamp (see PR #102: https://github.com/jleechan2015/worldarchitect.ai/pull/102)
@@ -149,14 +151,14 @@ For different worktrees:
 - **Dragon Knight v3 plot coherence** - ✅ COMPLETED - Fixed AI introducing unrelated plot elements
 
 ### LLM I/O Format Standardization
-**[TASK-002] ✅ COMPLETED (PR #272)**
-- ✅ Scene # tracking system (S{session}_SC{scene} format)
-- ✅ Prompt structure template for LLM
-- ✅ Return data format specification (unified JSON format)
-- ✅ Debug data section (structured format)
-- ✅ Game state updates format (enhanced with timestamping)
-- ✅ Story mode entry format
-- ✅ Character creation numeric input fix incorporated
+**❌ CLOSED (PR #272) - Session tracking doesn't improve LLM accuracy**
+- ❌ Scene # tracking system (S{session}_SC{scene} format) - Not needed for LLM accuracy
+
+### Scene Number Display Fix
+**✅ COMPLETED (PR #281)**
+- ✅ Fixed increment-by-2 display issue where scene numbers appeared to jump
+- ✅ Added user_scene_number that only increments for AI responses
+- ✅ Maintains backward compatibility with fallback to sequence_id
 
 ### Continuity Testing System
 **Automated program specifications:**

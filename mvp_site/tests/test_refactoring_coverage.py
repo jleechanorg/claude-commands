@@ -196,8 +196,8 @@ class TestHelperFunctions(unittest.TestCase):
         mock_validate.return_value = {'coverage_rate': 1.0, 'schema_valid': True}
         
         json_response = '{"narrative": "story text", "entities": ["pc1"]}'
-        result = _process_structured_response(json_response, ['pc1'])
-        self.assertEqual(result, "story text")
+        result_text, result_response = _process_structured_response(json_response, ['pc1'])
+        self.assertEqual(result_text, "story text")
         mock_logging.info.assert_called()
     
     @patch('gemini_service.NarrativeSyncValidator')

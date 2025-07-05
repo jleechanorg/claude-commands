@@ -155,5 +155,58 @@ class TestJSONDisplayFix(unittest.TestCase):
                 self.assertNotIn('"state_updates":', result_narrative,
                                f"Narrative should not contain JSON structure: {result_narrative}")
 
+    def test_narrative_extraction_from_partial_json(self):
+        """Test extracting narrative from JSON-like text when parsing fails"""
+        partial_json = 'Some prefix {"narrative": "The story continues with action", "other": "data"}'
+        
+        result_narrative, result_response = parse_structured_response(partial_json)
+        
+        # Should extract just the narrative
+        self.assertEqual(result_narrative, "The story continues with action")
+        self.assertNotIn("Some prefix", result_narrative)
+        self.assertNotIn("other", result_narrative)
+        
+    def test_generic_code_block_extraction(self):
+        """Test JSON extraction from generic code blocks without 'json' language identifier"""
+        generic_code_block = '''```
+{
+  "narrative": "Story text from generic code block",
+  "entities_mentioned": ["Entity1"],
+  "location_confirmed": "TestLocation",
+  "state_updates": {}
+}
+```'''
+        
+        result_narrative, result_response = parse_structured_response(generic_code_block)
+        
+        # Should extract narrative from generic code block
+        self.assertEqual(result_narrative, "Story text from generic code block")
+        self.assertIsNotNone(result_response)
+        self.assertEqual(result_response.entities_mentioned, ["Entity1"])
+        self.assertEqual(result_response.location_confirmed, "TestLocation")
+
+    def test_escaped_character_handling(self):
+        """Test proper handling of escaped characters in narrative"""
+        escaped_json = '"narrative": "She said \\"Hello!\\"\\nNew line here\\nAnother line"'
+        
+        result_narrative, result_response = parse_structured_response(escaped_json)
+        
+        # Should properly unescape characters
+        self.assertIn('She said "Hello!"', result_narrative)
+        self.assertIn('\n', result_narrative)  # Should have actual newlines
+        self.assertEqual(result_narrative.count('\n'), 2)
+        
+    def test_json_cleanup_fallback(self):
+        """Test the final cleanup fallback for malformed JSON"""
+        malformed_json = '{"narrative": "Story text", "entities_mentioned": ["Hero"], broken json...'
+        
+        result_narrative, result_response = parse_structured_response(malformed_json)
+        
+        # Should clean up JSON syntax
+        self.assertNotIn('{', result_narrative)
+        self.assertNotIn('"narrative":', result_narrative)
+        self.assertNotIn('["Hero"]', result_narrative)
+        self.assertIn("Story text", result_narrative)
+
 if __name__ == '__main__':
     unittest.main()

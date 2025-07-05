@@ -324,32 +324,54 @@ def _handle_legacy_migration(current_game_state, campaign_id, story_context, use
 
 
 def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response, 
-                                   mode, story_context, campaign_id, user_id):
+                                   structured_response, mode, story_context, campaign_id, user_id):
     """
     Apply state changes from AI response and prepare final response.
     
     Args:
         proposed_changes: Proposed state changes dict
         current_game_state: Current GameState object
-        gemini_response: Full AI response text
+        gemini_response: Processed narrative text
+        structured_response: Parsed NarrativeResponse object or None
         mode: Game mode
         story_context: Story context list
         campaign_id: Campaign ID
         user_id: User ID
         
     Returns:
-        Flask response
+        Flask response with JSON structure
     """
-    # Store the full response with debug content for database and AI context
-    full_response_with_debug = gemini_response
-    
-    # Conditionally strip debug content based on debug mode
-    if hasattr(current_game_state, 'debug_mode') and current_game_state.debug_mode:
-        # User has debug mode enabled - show ALL debug content
-        final_response = full_response_with_debug
+    # Process narrative text based on debug mode
+    debug_mode_enabled = hasattr(current_game_state, 'debug_mode') and current_game_state.debug_mode
+    if debug_mode_enabled:
+        # Show all content including debug tags
+        final_narrative = gemini_response
     else:
-        # User has debug mode disabled - strip ALL debug content
-        final_response = StateHelper.strip_debug_content(full_response_with_debug)
+        # Strip debug content when debug mode is disabled
+        final_narrative = StateHelper.strip_debug_content(gemini_response)
+    
+    # Build response data structure
+    response_data = {
+        KEY_SUCCESS: True,
+        KEY_RESPONSE: final_narrative,
+        'debug_mode': debug_mode_enabled,
+        'sequence_id': len(story_context) + 2
+    }
+    
+    # Always include structured response fields that consumers rely on
+    if structured_response:
+        # State updates are critical for game state progression
+        if hasattr(structured_response, 'state_updates') and structured_response.state_updates:
+            response_data['state_updates'] = structured_response.state_updates
+        
+        # Entity tracking fields used by frontend
+        response_data['entities_mentioned'] = getattr(structured_response, 'entities_mentioned', [])
+        response_data['location_confirmed'] = getattr(structured_response, 'location_confirmed', 'Unknown')
+    
+    # Add debug information only if debug mode is enabled
+    if debug_mode_enabled:
+        if structured_response and hasattr(structured_response, 'debug_info'):
+            response_data['debug_info'] = structured_response.debug_info
     
     if proposed_changes:
         # Track last story mode sequence ID
@@ -378,21 +400,14 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
         
         firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state_dict)
     
-    # Calculate the sequence ID for the AI response
-    # It should be the length of the story context + 2 (user input + AI response)
-    ai_sequence_id = len(story_context) + 2
-    
     # Calculate user_scene_number by counting AI responses in story_context
     # Plus 1 for the new AI response we're about to add
     user_scene_number = sum(1 for entry in story_context if entry.get('actor') == 'gemini') + 1
     
-    # Include debug mode status and user scene number in response
-    return jsonify({
-        KEY_SUCCESS: True, 
-        KEY_RESPONSE: final_response,
-        'debug_mode': current_game_state.debug_mode if hasattr(current_game_state, 'debug_mode') else True,
-        'user_scene_number': user_scene_number
-    })
+    # Add user_scene_number to response_data
+    response_data['user_scene_number'] = user_scene_number
+    
+    return jsonify(response_data)
 
 
 def strip_debug_content(text):
@@ -738,7 +753,7 @@ def create_app():
         generate_companions = 'companions' in custom_options
         use_default_world = 'defaultWorld' in custom_options
         
-        opening_story = gemini_service.get_initial_story(
+        opening_story_response = gemini_service.get_initial_story(
             prompt, 
             selected_prompts=selected_prompts,
             generate_companions=generate_companions,
@@ -746,7 +761,7 @@ def create_app():
         )
         
         campaign_id = firestore_service.create_campaign(
-            user_id, title, prompt, opening_story, initial_game_state, selected_prompts, use_default_world
+            user_id, title, prompt, opening_story_response.narrative_text, initial_game_state, selected_prompts, use_default_world
         )
         
         return jsonify({KEY_SUCCESS: True, KEY_CAMPAIGN_ID: campaign_id}), 201
@@ -840,28 +855,26 @@ def create_app():
         # 3. Process: Get AI response, passing in the current state
         selected_prompts = campaign.get(KEY_SELECTED_PROMPTS, [])
         use_default_world = campaign.get('use_default_world', False)
-        gemini_response = gemini_service.continue_story(user_input, mode, story_context, current_game_state, selected_prompts, use_default_world)
+        gemini_response_obj = gemini_service.continue_story(user_input, mode, story_context, current_game_state, selected_prompts, use_default_world)
         
         # 3a. Verify debug content generation for monitoring
-        debug_tags_found = {
-            'dm_notes': '[DEBUG_START]' in gemini_response,
-            'dice_rolls': '[DEBUG_ROLL_START]' in gemini_response,
-            'state_changes': '[DEBUG_STATE_START]' in gemini_response
-        }
+        debug_tags_found = gemini_response_obj.debug_tags_present
         
         if not any(debug_tags_found.values()):
             logging.warning(f"AI response missing debug content for campaign {campaign_id}")
             logging.warning(f"Debug tags found: {debug_tags_found}")
-            logging.warning(f"Response length: {len(gemini_response)} chars")
+            logging.warning(f"Response length: {len(gemini_response_obj.narrative_text)} chars")
         else:
             # Log which debug content types were included
             logging.info(f"Debug content generated for campaign {campaign_id}: {debug_tags_found}")
         
         # 4. Write: Add AI response to story log and update state
-        firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response)
+        firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response_obj.narrative_text)
 
         # 5. Parse and apply state changes from AI response
-        proposed_changes = gemini_service.parse_llm_response_for_state_changes(gemini_response)
+        # JSON mode is the ONLY mode - state updates come exclusively from the structured response object.
+        # No fallback parsing is performed.
+        proposed_changes = gemini_response_obj.state_updates
         
         # --- NEW: Post-response checkpoint validation ---
         if proposed_changes:
@@ -871,7 +884,7 @@ def create_app():
             temp_game_state = GameState.from_dict(updated_temp_state)
             
             # Validate the new response against the updated state
-            post_update_discrepancies = temp_game_state.validate_checkpoint_consistency(gemini_response)
+            post_update_discrepancies = temp_game_state.validate_checkpoint_consistency(gemini_response_obj.narrative_text)
             
             if post_update_discrepancies:
                 logging.warning(f"POST_UPDATE_VALIDATION: AI response created {len(post_update_discrepancies)} new discrepancies:")
@@ -879,8 +892,8 @@ def create_app():
                     logging.warning(f"  {i}. {discrepancy}")
         
         # Apply state changes and return response
-        return _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response, 
-                                              mode, story_context, campaign_id, user_id)
+        return _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response_obj.narrative_text, 
+                                              gemini_response_obj.structured_response, mode, story_context, campaign_id, user_id)
 
 
     @app.route('/api/campaigns/<campaign_id>/export', methods=['GET'])

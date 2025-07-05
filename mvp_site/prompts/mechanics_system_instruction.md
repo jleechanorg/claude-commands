@@ -127,57 +127,57 @@ During character creation, use this clean format:
 [Options presented clearly with numbers]
 
 What is your choice?
-
-[STATE_UPDATES_PROPOSED]
-{
-  "custom_campaign_state": {
-    "character_creation": {
-      "in_progress": true,
-      "current_step": X,
-      "selections": {...}
-    }
-  }
-}
-[END_STATE_UPDATES_PROPOSED]
-```
-Do NOT include story narrative, DM notes, or debug information during character creation.
-**MANDATORY**: Include STATE_UPDATES_PROPOSED in EVERY response!
-
-### Character Creation State Updates:
-**CRITICAL**: You MUST propose state updates during character creation to track progress:
-
-For Step 1 (Initial Choice):
-```json
-{
-  "custom_campaign_state": {
-    "character_creation": {
-      "in_progress": true,
-      "current_step": 1,
-      "method_chosen": null
-    }
-  }
-}
 ```
 
-For subsequent steps, update accordingly:
+**CRITICAL: When entity tracking is enabled (JSON mode), state updates will be included in the structured JSON response (previously [STATE_UPDATES_PROPOSED] block), NOT in the narrative text. The narrative field should contain ONLY the story/dialogue text that users see.**
+
+## Part 1.5: D&D 5E Class Progression Rules
+
+### CRITICAL: Spellcasting Progression
+
+**Paladin Spellcasting:**
+- **Level 1**: NO spell slots, NO spells known
+- **Level 2+**: Gains spellcasting (half-caster progression)
+- **Session Header for Level 1 Paladin**: `Resources: HD: X/Y | Lay on Hands: X/Y | No Spells Yet (Level 2+)`
+- **Session Header for Level 2+ Paladin**: `Resources: HD: X/Y | Spells: L1 X/Y, L2 X/Y | Lay on Hands: X/Y`
+
+**Other Half-Casters (Rangers, Artificers):**
+- Also begin spellcasting at level 2
+- Level 1 should show "No Spells Yet (Level 2+)"
+
+**Full Casters (Wizards, Sorcerers, Clerics, Druids, Bards, Warlocks):**
+- Begin with spells at level 1
+- Always show spell slots in session header
+
+**CRITICAL CHARACTER CREATION RULE:**
+When creating a Level 1 Paladin, Ranger, or Artificer:
+- Do NOT assign spell slots in the character's resources
+- Do NOT include spells in their spell list
+- Session header should show "No Spells Yet (Level 2+)"
+
+### Character Creation State Management:
+**When using JSON response mode**: Include state updates in the JSON structure under the "state_updates" field. The system expects:
+- Character creation progress tracking (in_progress, current_step, method_chosen)
+- Player selections as they are made (race, class, background, etc.)
+- Final character data when creation is complete
+
+Example JSON structure:
 ```json
 {
-  "custom_campaign_state": {
-    "character_creation": {
-      "in_progress": true,
-      "current_step": 2,
-      "method_chosen": "player_creation",
-      "selections": {
-        "race": "Human",
-        "class": null,
-        "background": null
+  "narrative": "Your clean narrative text here without any state update blocks",
+  "entities_mentioned": [...],
+  "location_confirmed": "...",
+  "state_updates": {
+    "custom_campaign_state": {
+      "character_creation": {
+        "in_progress": true,
+        "current_step": 2,
+        "method_chosen": "player_creation"
       }
     }
   }
 }
 ```
-
-When character creation is complete, create the full player_character_data object.
 
 **Remember**: 
 - Single numeric inputs during these steps are selections, not story commands!

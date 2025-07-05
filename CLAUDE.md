@@ -37,7 +37,7 @@ WorldArchitect.AI is an AI-powered tabletop RPG platform that serves as a digita
 
 ### Technology Stack
 - **Backend**: Python 3.11 + Flask + Gunicorn
-- **AI Service**: Google Gemini API (2.5-flash, 1.5-flash models) via `google` SDK
+- **AI Service**: Google Gemini API (2.5-flash, 1.5-flash models) via `google-genai` SDK
 - **Database**: Firebase Firestore for persistence and real-time sync
 - **Frontend**: Vanilla JavaScript (ES6+) + Bootstrap 5.3.2
 - **Deployment**: Docker + Google Cloud Run
@@ -419,6 +419,7 @@ grep -r "getattr" *.py
 
 ### Common Pitfalls
 - **Empty String Handling**: Use `if value is not None:` not `if value:`
+- **Response Format Changes**: When changing AI response formats (e.g., markdown to JSON), update ALL parsing logic across the entire pipeline, not just generation
 
 ### AI Instruction Priority and Ordering
 **CRITICAL RULE**: When AI systems have multiple competing instructions, instruction ORDER determines compliance:
@@ -763,6 +764,7 @@ For Cursor-specific configuration and behavior, see:
 
 ### Quick Reference
 - **Test Commands**: `TESTING=true vpython mvp_site/test_file.py` (from project root)
+- **Integration Test**: When user says "run test_integration", always run `TESTING=true python3 mvp_site/test_integration/test_integration.py`
 - **New Branch**: `./integrate.sh`
 - **Run All Tests**: `./run_tests.sh`
 - **Deploy**: `./deploy.sh` or `./deploy.sh stable`
