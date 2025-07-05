@@ -18,19 +18,19 @@
 ## Today's Focus - Time Blocks
 
 ### Morning Block (4 hours)
-1. **Critical Bugs** 🔴 (1.5 hrs)
+1. **[TASK-001a] Investigate Malformed JSON** 🔴 (1.5 hrs)
    - Investigate malformed JSON from AI responses
-   - Fix Dragon Knight v3 plot coherence issue
-2. **State Sync Testing Setup** 🟡 (2.5 hrs)
+   - Add robust error handling and recovery
+2. **[TASK-002] State Sync Testing Setup** 🟡 (2.5 hrs)
    - Define exact LLM I/O format with Scene#, prompts, returns
    - Create test framework for continuity
 
 ### Afternoon Block (4 hours)
-3. **Complete State Sync Testing** 🟡 (2 hrs)
+3. **[TASK-003] Complete State Sync Testing** 🟡 (2 hrs)
    - Run integration tests for proper prompts
    - Verify master prompt inclusion
    - Document in `roadmap/scratchpad_state_sync_entity.md`
-4. **Start Continuity Testing Phase 1** 🟡 (2 hrs)
+4. **[TASK-004] Start Continuity Testing Phase 1** 🟡 (2 hrs)
    - Build automated program for 10 interactions
    - Use planning block responses
 
@@ -71,20 +71,20 @@
      - Verify that unchecked options properly disable their respective features
 
 ### Tonight's Work Block (Small LLM Tasks)
-7. **[TASK-088] Remove Direct Myers-Briggs References in Narrative** 🟢 (15 min)
+8. **[TASK-088] Remove Direct Myers-Briggs References in Narrative** 🟢 (15 min)
    - **Note:** Small task suitable for LLM to do alone
    - Find and remove all direct references to personality types (e.g., "His mind, ever analytical as an ISTJ")
    - IMPORTANT: Continue using Myers-Briggs for character behavior and decision-making
    - Only mention personality types when a character is explicitly discussing them in dialogue
    - Keep the underlying personality system functional but invisible in narration
-8. **[TASK-089] Planning Block IDs** 🟢 (15 min)
+9. **[TASK-089] Planning Block IDs** 🟢 (15 min)
    - **Note:** Small task suitable for LLM to do alone
    - Ensure all planning block IDs use camelCase format
    - Update any inconsistent ID formats across the codebase
-9. **[TASK-090] Remove Legacy Migration Code** 🟢 (30 min)
-   - **Note:** Small task suitable for LLM to do alone
-   - Identify and remove old migration code that is no longer needed
-   - Clean up any related dead code or unused imports
+10. **[TASK-090] Remove Legacy Migration Code** 🟢 (30 min)
+    - **Note:** Small task suitable for LLM to do alone
+    - Identify and remove old migration code that is no longer needed
+    - Clean up any related dead code or unused imports
 
 ## Parallel Work Opportunities
 
@@ -105,33 +105,25 @@ For different worktrees:
 ## Unit test scratchpad followups
 
 ### Core integrity
-*   Trim initial prompt more?
-*   [TASK-092] Just include assiah prompt once in campaign creation vs system instructions?
-*   As we progress through the game the assiah info becomes stale ie. faction leader dies?
-*   [TASK-092] Do all of those prompts need to be system instructions?
-*   [TASK-002] Explicit input/output LLM formats (should include Scene#, prompts, returns, debug data, game state updates)
-*   Scene #
-*   Prompt to send to LLM
-*   Return data
-*   Debug data first
-*   Game state updates
-*   story mode entry format: AI coding
-*   Slim mode?
-*   [TASK-003] `character_creation_state_tracking_scratchpad.md`
-*   Ask LLM how the new prompts look
-*   Prompt optimization
-*   `System instructions roadmap/scratchpad_8k_optimization.md`
+*   [TASK-099] **Trim Initial Prompts** - Optimize initial prompt size for better performance
+*   [TASK-092] **System Instructions Optimization** - Just include assiah prompt once in campaign creation vs system instructions, evaluate if all prompts need to be system instructions
+*   [TASK-100] **Dynamic World State** - Handle stale world info as game progresses (e.g., faction leader dies)
+*   [TASK-002] **LLM I/O Format Standardization** - Define explicit input/output formats including Scene#, prompts, returns, debug data, game state updates
+*   [TASK-101] **Story Mode Entry Format** - Define proper format for story mode entries
+*   [TASK-102] **Slim Mode Design** - Design lightweight mode for reduced token usage
+*   [TASK-003] **Character Creation State Tracking** - Implement tracking per `character_creation_state_tracking_scratchpad.md`
+*   [TASK-103] **Prompt Quality Review** - Have LLM review and provide feedback on new prompts
+*   [TASK-104] **Prompt Optimization** - Optimize prompts based on `roadmap/scratchpad_8k_optimization.md`
 
 ### General Tasks & Integration
-*   Run integration test to prove to me all the proper prompts and master prompt included
-*   Parallel
-*   [TASK-009b] Further compression integrate alexiel book: `roadmap/alexiel_book_token_reduction_scratchpad.md`
+*   [TASK-105] **Integration Test for Prompts** - Run integration test to verify all proper prompts and master prompt are included
+*   [TASK-106] **Parallel Processing Setup** - Implement parallel processing for improved performance
+*   [TASK-009b] **Alexiel Book Compression** - Further compression integrate alexiel book: `roadmap/alexiel_book_token_reduction_scratchpad.md`
 *   [TASK-009a] ✅ **COMPLETED** Logging make it all tokens vs characters (token-based logging instead of character counts) - PR #264
-*   Claude always getting directories wrong
+*   [TASK-107] **Claude Directory Navigation** - Fix Claude's directory navigation issues
 *   [TASK-005a] ✅ **COMPLETED** Clicking on a campaign doesn\'t show spinner loading and seems to not always register clicks (issue is about the campaign list) - PR #267
 *   [TASK-005b] ✅ **COMPLETED** Loading spinner with messages during campaign continue - PR #268
 *   [TASK-014a] ✅ **COMPLETED** WorldArchitect.AI make this clickable to homepage - PR #266
-*   [TASK-002] 🟡 **IN PROGRESS** LLM I/O format standardization - PR #272 (Ready for review)
 
 ### Bugs
 *   [TASK-001c] **Null HP during combat** - Happens during combat, defer to combat system revamp (see PR #102: https://github.com/jleechan2015/worldarchitect.ai/pull/102)
@@ -147,7 +139,7 @@ For different worktrees:
 - **Dragon Knight v3 plot coherence** - ✅ COMPLETED - Fixed AI introducing unrelated plot elements
 
 ### LLM I/O Format Standardization
-**✅ COMPLETED (PR #272) - Ready for review**
+**[TASK-002] ✅ COMPLETED (PR #272)**
 - ✅ Scene # tracking system (S{session}_SC{scene} format)
 - ✅ Prompt structure template for LLM
 - ✅ Return data format specification (unified JSON format)
@@ -201,20 +193,16 @@ For different worktrees:
 - **Documentation** - Update user guides, API docs
 
 ### Narrative
-*   [TASK-073] 🟡 **IN PROGRESS** Update default campaign prompt to Ser Arion moral crisis scenario - PR #246 (ACTIVE)
 *   [TASK-079] **Trim Default Start Backstory** - Reduce amount of backstory exposed to player during default campaign start
-*   Dragon knight detailed start
-*   Generate siblings/houses/factions etc if they pick a custom character even in default world
-*   Generate companions
+*   [TASK-093] **Dragon Knight Detailed Start** - Create detailed narrative start for Dragon Knight character class
+*   [TASK-094] **Generate Custom Character Background** - Generate siblings/houses/factions etc if they pick a custom character even in default world
+*   [TASK-095] **Generate Companions System** - Create system to generate appropriate companions based on character and story
 *   [TASK-072] **Next Saturday** Evaluate alignment change mechanic - Review current implementation and assess if alignment shifts are working correctly during gameplay
 
 ### UI
-*   [TASK-005b] ✅ **COMPLETED** More interesting loading spinner during campaign continue, similar to creation. Should show hardcoded messages for the user - PR #268
-*   Third new checkbox to replace ruleset one?
-*   Smaller
-*   [TASK-014a] ✅ **COMPLETED** WorldArchitect.AI make this clickable to homepage - PR #266
-*   Script: report number campaigns and size per user
-*   [TASK-005c] 🟡 **IN PROGRESS** Timestamp not matching narrative - PR #269
+*   [TASK-096] **Third Checkbox for Ruleset** - Add third checkbox to replace ruleset option
+*   [TASK-097] **UI Size Optimization** - Make UI elements smaller for better space usage
+*   [TASK-098] **Campaign Metrics Script** - Create script to report number of campaigns and size per user
 *   [TASK-006b] Let player read background story (currently scrolls too fast, need pause button)
 
 ### Combat
