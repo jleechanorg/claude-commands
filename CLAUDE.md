@@ -52,204 +52,83 @@ For complete project details including technology stack, architecture, developme
 
 ## Core Principles & Interaction
 
-1. **Clarify and Understand the Goal:**
-   * Before initiating any work, I will ensure I have a complete and unambiguous understanding of your task. If anything is unclear, I will ask for clarification immediately.
+**Work Approach:**
+- Clarify before acting | Ask if unclear
+- User instructions = law | Never assume or override  
+- Never delete without explicit permission | Default: preserve and add
+- Leave working code alone | Don't modify for linters without permission
+- Focus on primary goal | Ignore distractions unless instructed
+- Propose solutions before implementing | Especially for complex changes
+- Summarize key takeaways | Ensure alignment after major steps
+- Externalize all knowledge | Rules, lessons, project info must be documented
 
-2. **Your Instructions are Law:**
-   * Your explicit instructions regarding code, component names, and file contents are the absolute source of truth.
+**Rule Management:**
+- "Add to rules" → CLAUDE.md | Technical lessons → .cursor/rules/lessons.mdc
+- General principles in rules files | Specific technical details in lessons files
+- Ask for clarification if directive is ambiguous
 
-3. **Deletion is Prohibited Without Explicit Confirmation:**
-   * I am strictly prohibited from deleting any asset—be it a file, directory, or lines of code—without first proposing the exact deletion and receiving explicit, affirmative confirmation from you. My default operation must always be to preserve and add, never to remove, without your consent.
+**Development Protocols:**
+- Planning methodologies in `.cursor/rules/planning_protocols.md`
+- Mode selection: single-agent vs multi-perspective (SUPERVISOR/WORKER/REVIEWER)
+- Always indicate current mode when using multi-perspective system
 
-4. **Leave Working Code Alone & Adhere to Protocol:**
-   * I will not modify functional code to satisfy linters or for any other non-essential reason without your explicit permission.
-   * I will review these rules before every response to ensure I am in full compliance.
+**Edit Verification:**
+- Verify every edit with `git diff` or `read_file` before proceeding
+- Changes must be additive or surgical | Never delete unrelated code
+- Ignore Firebase/Firestore linter errors unless instructed otherwise
 
-5. **Focus on the Primary Goal:**
-   * I will prioritize the user's most recent, explicit goal above all else. I must not get sidetracked by secondary issues like linter warnings or unrelated code cleanup unless explicitly instructed to do so.
+**Testing Requirements:**
+- Red-green methodology: Write failing test first, then implement
+- Propose failing tests for uncovered bugs before adding to code
+- Test truth verification: Verify tests actually test what they claim
+- UI features: Test user experience, not just code functionality
+- Architecture Decision Tests (ADTs) for validating architectural choices
 
-6. **Propose and Confirm:**
-   * My primary mode of operation is to propose a solution for your confirmation before implementing it, especially for complex changes.
-
-7. **Acknowledge Key Takeaways:**
-   * I will summarize important points after major steps or debugging sessions to ensure we are aligned.
-
-8. **Externalize Knowledge for Transparency:**
-   * As a core directive, I recognize that you have no access to my internal memories. Therefore, all important rules, project-specific knowledge, and lessons learned **must** be externalized into the appropriate files within the `.cursor/` directory (`rules/rules.mdc`, `rules/lessons.mdc`, `project.md`).
-
-9. **Rule Addition Protocol:**
-   * When user says "add to rules" or "add a rule", this refers to CLAUDE.md
-   * Technical lessons go to .cursor/rules/lessons.mdc  
-   * Cursor-specific items go to .cursor/rules/rules.mdc
-   * If the directive is ambiguous in any way, I must ask for clarification before proceeding.
-
-10. **General Principles Over Specific Details:**
-    * Both CLAUDE.md and `.cursor/rules/rules.mdc` must contain **general principles and protocols** only
-    * **Specific technical failures, code patterns, and detailed incident analysis** belong in `.cursor/rules/lessons.mdc`
-    * **Rules files** establish timeless operational principles; **lessons files** capture specific technical learning
-    * When adding content, ask: "Is this a general principle or a specific technical detail?" and place accordingly
-
-11. **Planning and Development Approaches:**
-    * For planning methodologies, see `.cursor/rules/planning_protocols.md`
-    * Includes scratchpad protocol, milestone planning, multi-perspective approach
-    * Provides decision trees for choosing approach based on task complexity
-
-12. **Mode Selection Protocol:**
-    * When starting tasks, ask which mode if not specified:
-      - Single-agent approach
-      - Multi-perspective system (SUPERVISOR/WORKER/REVIEWER)
-      - Other planning approaches
-    * Always indicate current mode when using multi-perspective system
-
-13. **Verify Edits Before Concluding:**
-    * After every file edit, I must not assume the change was applied correctly. I will use my tools (`git diff` or `read_file`) to verify that the change exactly matches my intention before proceeding. This is especially critical for deletions, reverts, and changes to rule files.
-
-14. **Ignore Firestore Linter Errors:**
-    * I will disregard any linter errors originating from Firebase/Firestore code and assume the code is functional unless you instruct me otherwise.
-
-15. **Edits Must Be Additive or Surgical:**
-    * When modifying a file, my changes must be strictly additive (adding new code) or surgical (modifying specific lines). I must never delete existing, unrelated code, especially tests. I will verify this by carefully inspecting the diff after every `edit_file` operation.
-
-16. **Propose Failing Tests:**
-    * When debugging a bug that is not covered by the existing test suite, I must first propose a new unit test that reliably reproduces the failure (a "red" test). I will explain why the test is expected to fail and will not add it to the code until you explicitly approve it.
-
-17. **Red-Green Testing Methodology:**
-    * When implementing new features or functionality, I must follow the red-green testing approach: First, write a unit test that fails without the new implementation ("red" state), then implement the feature to make the test pass ("green" state). This ensures the test actually validates the new functionality and catches regressions.
-    * **For UI Features**: Create functional tests that reproduce specific user issues, run tests to confirm they FAIL (red state), then fix implementation to make tests PASS (green state).
-    * **Critical Mindset**: "I haven't seen it work with my own eyes yet" - Never claim features work based on code alone. Must validate actual user experience.
-
-18. **Test Truth Verification Protocol:**
-    * **MANDATORY**: Before making any architectural decision based on test results, verify the test is testing what it claims:
-      ```python
-      # Required at start of every comparison test
-      print(f"TEST VERIFICATION: Testing {approach_name}")
-      print(f"  Module: {module.__name__}")
-      print(f"  Has expected base: {'BaseModel' in str(Model.__bases__)}")
-      print(f"  Dependencies present: {verify_dependencies()}")
-      ```
-    * **Negative Test Requirement**: For any validation approach, MUST test cases that should be rejected
-    * **Architecture Decision Tests (ADTs)**: Create separate tests that verify architectural decisions remain valid
-    * **No Duplicate Implementations**: Actively check for and prevent multiple implementations of the same concept
+**Red-Green Testing Protocol:**
+- **TDD Command**: When user says "tdd", use Test-Driven Development:
+  1. Write comprehensive failing tests FIRST
+  2. Run tests to confirm they fail  
+  3. Implement minimal code to make tests pass
+  4. Refactor while keeping tests green
+- **For UI Features**: Create functional tests that reproduce specific user issues, run tests to confirm they FAIL (red state), then fix implementation to make tests PASS (green state)
+- **Critical Mindset**: "I haven't seen it work with my own eyes yet" - Never claim features work based on code alone. Must validate actual user experience
 
 ## Development Guidelines
 
 ### Development, Coding & Architecture
 
-1. **Preservation Over Efficiency:**
-   * My most critical coding directive is to treat existing code as a fixed template. I will make surgical edits and will not delete or refactor working code without your explicit permission.
+**Code Standards:**
+- Treat existing code as fixed template | Only surgical edits
+- String constants: Module-level if used >1x, global constants.py if cross-file
+- DRY principle: Refactor shared code into helper functions
+- Defensive programming: Validate data types with `isinstance()` before operations
 
-2. **String Constant Management:**
-   * To improve maintainability and prevent errors from typos, string literals must be managed as constants.
-   * **Rule:** If a string literal is used more than once within a single file, it must be defined as a module-level constant (e.g., `MY_CONSTANT = "my_string"`).
-   * **Rule:** If a string literal is used across multiple files (e.g., as a dictionary key in a data structure), it must be defined in the global `constants.py` file and imported where needed.
+**Gemini SDK & Models:**
+- Always use `from google import genai` (NOT google.generativeai)
+- Initialize: `client = genai.Client(api_key=api_key)`
+- Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test) - never change without authorization
 
-3. **DRY (Don't Repeat Yourself):**
-   * Code used in multiple places should be refactored into a helper function to improve maintainability.
+**Development Practices:**
+- Use temporary directories for test files (`tempfile.mkdtemp()`)
+- Verify before assuming: Check API signatures, library versions
+- No unsolicited refactoring: Get explicit approval first
+- Professional standards: logging module, docstrings, proper JS loading
 
-4. **Robust Data Handling:**
-   * Application code must be resilient to data variations, handle API limits gracefully, and manage different data schemas within the application logic.
+**Quality & Testing:**
+- File naming: Use descriptive names, avoid "red"/"green" in filenames
+- Method length: <500 lines, single responsibility, extract helpers
+- Integration tests: Natural state, flexible assertions, temp directories
+- Visual testing: Comprehensive validation required before claiming UI works
+- Dead code detection: Use `vulture` tool, not grep searches
+- Unit tests: Test behavior not exact strings | User screenshots override code analysis
 
-5. **Case-Insensitive Field Detection:**
-   * When searching for fields that may have inconsistent naming (e.g., AI-generated data), implement case-insensitive searches and handle multiple possible field names (e.g., `hp_current`, `HP_current`, `hp`).
-
-6. **Defensive Data Structure Handling:**
-   * Before calling methods on data structures, always verify the data type. Collections from external sources may contain mixed types (strings, dictionaries, etc.) that require different handling approaches.
-
-7. **Professional-Grade Development Practices:**
-   * I will follow standard best practices, including: using the `logging` module in Python, using docstrings, and ensuring all DOM-manipulating JavaScript is properly loaded.
-
-8. **Verify, Don't Assume:**
-   * I will use my tools to check the current state of the codebase (e.g., API method signatures, library versions) before making assumptions.
-
-9. **Use the Correct Gemini SDK:**
-   * This project uses the modern `google.genai` Python SDK (NOT `google.generativeai`). All Gemini API calls **must** use:
-     - Import: `from google import genai` and `from google.genai import types`
-     - Initialization: `client = genai.Client(api_key=api_key)`
-     - API calls: `client.models.generate_content(model=MODEL_NAME, contents=prompt)`
-   * NEVER use the legacy `google.generativeai` package or `genai.GenerativeModel()` pattern.
-
-10. **Do Not Change the AI Model:**
-    * **AI Models**: Current models are `DEFAULT_MODEL = 'gemini-2.5-flash'`, `TEST_MODEL = 'gemini-1.5-flash'` - never change without explicit user authorization
-
-11. **Snippet-Based Code Modification:**
-    * By default, I will provide targeted code snippets with precise instructions on where to integrate them, rather than replacing entire files.
-
-12. **No Unsolicited Refactoring:**
-    * I will not perform any cleanup, refactoring, or other changes that are not directly part of the assigned task. I may suggest these changes, but I must await your explicit approval before implementing them.
-
-13. **Always Use Temporary Files for Testing:**
-    * When creating test files or any files that might overwrite user data, I must always use temporary directories (e.g., `tempfile.mkdtemp()`) to avoid overwriting real project files. This prevents data loss and ensures test isolation.
-
-14. **Defensive Programming for Dynamic Data:**
-    * When processing data from external sources (databases, APIs, AI responses), I must always validate data types before attempting operations. Use `isinstance(data, expected_type)` checks before calling type-specific methods like `.get()`, `.append()`, etc.
-    * **Pattern:** For dictionary iteration, always check `if isinstance(item, dict):` before using dictionary methods.
-
-6. **File Naming Conventions:**
-   - Never use "red", "green", "red_green" in filenames
-   - Use descriptive names (e.g., `test_integration.py`)
-
-7. **Method Length Guidelines:**
-   - Keep methods under 500 lines for maintainability
-   - Extract logical sections into helper methods
-   - Single responsibility per method
-
-8. **Integration Test Design:**
-   - Work with natural application state
-   - Use flexible assertions for AI-generated content
-   - Optimize with faster models and shared fixtures
-   - Always use temporary directories
-
-9. **Global Event Listener Safety:**
-   - **PROHIBITION**: Never use `document.addEventListener('click')` without approval
-   - Always use targeted event binding to specific elements
-   - Exception only for genuinely global concerns (keyboard shortcuts, window resize)
-
-10. **Dead Code Detection:**
-    - Use `vulture` tool, not grep searches
-    - Install: `pip install vulture`
-    - Run: `vulture . --min-confidence 80 --exclude="*/venv/*,*/tests/*"`
-    - Handles callbacks, dynamic imports, class methods
-
-11. **Visual Testing and UI Validation:**
-    - **MANDATORY**: Run comprehensive visual validation before claiming UI works
-    - Visual proof required before marking UI tasks complete
-    - Screenshot analysis for systematic inspection
-    - User screenshots override all code analysis
-
-12. **Core User Workflow Protection:**
-    - Identify top 3-5 core workflows before system modifications
-    - Test each workflow after ANY modification
-    - Core workflows must function identically before/after changes
-    - ANY workflow failure requires immediate rollback
-
-13. **Cross-Cutting Concern Analysis:**
-    - Categorize changes: Surface Feature, Cross-Cutting, Infrastructure
-    - Cross-cutting requires integration analysis of ALL systems
-    - Document blast radius before proceeding
-
-14. **Execution vs Analysis Mode:**
-    - Never let "execution mode" override critical thinking
-    - Red flags: implementing without questioning, continuing despite blockers
-    - Required mindset: Every task needs analysis AND execution
-
-15. **Backup and Temporary File Management:**
-    - **MANDATORY**: All backup files (*.backup, *.orig, *.old) go in `tmp/` directory
-    - Each module/directory should have its own `tmp/` subdirectory
-    - Never leave backup files scattered throughout codebase
-    - Naming convention: `narrative_system_instruction.md.backup`
-    - Backup files in tmp/ may be committed for safety
-
-16. **Security: DO NOT SUBMIT Rule:**
-    - If "DO NOT SUBMIT" appears anywhere, NEVER allow commit/merge
-    - Critical security marker for sensitive data (API keys, credentials)
-    - Must be removed before any PR or commit
-
-17. **Unit Test Content Independence:**
-    - Test behavior and logic, NOT exact content strings
-    - ❌ BAD: `self.assertIn("CRITICAL NAMING", content)` - brittle
-    - ✅ GOOD: `self.assertTrue(loader.has_banned_names_section())` - behavior
-    - Test that required sections exist, not exact wording
-    - Exception only for critical API contracts
+**Safety & Security:**
+- Global events: Never `document.addEventListener('click')` without approval
+- Workflow protection: Test core workflows after ANY modification
+- Cross-cutting analysis: Document blast radius for infrastructure changes  
+- Backup management: All backup files go in `tmp/` directory
+- Security markers: Never commit if "DO NOT SUBMIT" present
+- Execution mindset: Analysis AND execution required, never pure execution mode
 
 ### Git Workflow
 1. **Main Branch is Source of Truth:**
@@ -406,91 +285,11 @@ For complete project details including technology stack, architecture, developme
    - Provides convenient workflow and reduces manual errors
 
 8. **Merge Protocol and Branch Management:**
-   * **CRITICAL**: Always use the `integrate` alias pattern for updating from main: `git checkout main && git pull && git branch -D dev && git checkout -b dev`
-   * **Main Branch Protection**: Never work directly on `main` - always use a local `dev` branch for protection
-   * **After Merges**: Always run the integrate pattern to get latest changes and create fresh dev branch
-   * **PR Creation Process**:
-     1. Create feature branch from latest main using integrate pattern
-     2. Make changes and commit with descriptive messages
-     3. **MANDATORY**: Run `./run_tests.sh` and include test results in PR description
-     4. Push branch and create PR with comprehensive description using `gh pr create`
-     5. Provide clickable PR URL for user review
-     6. After merge, immediately run integrate pattern before next PR
-     7. **CRITICAL**: Never use 'dev' as a remote branch for PRs - always use descriptive feature branch names
-   * **PR Descriptions**: Always include Summary, Changes, Benefits, and Usage sections
-   * **Commit Messages**: Use descriptive titles with bullet points and Claude Code attribution
-
-9. **GitHub CLI Preference for PR Operations:**
-   * Always use GitHub CLI (`gh`) commands for creating and managing pull requests when available
-   * This ensures proper authentication and streamlined workflow
-
-10. **Branch Safety and Push Verification Protocol:**
-    * **CRITICAL**: Never accidentally push to main/master branch. Always verify branch and tracking before any push operation.
-    * **Pre-Push Checklist** (MANDATORY before every push):
-      1. Check current branch: `git branch --show-current`
-      2. Verify branch tracking: `git branch -vv`
-      3. Confirm push target: Use explicit syntax `git push origin HEAD:branch-name`
-      4. Test with dry-run first: `git push --dry-run`
-    * **Safe Branch Creation Pattern**: Always use this sequence to avoid tracking issues:
-      ```bash
-      git checkout main
-      git pull origin main
-      git checkout -b feature-branch-name
-      # This creates an untracked branch, forcing explicit remote setup
-      ```
-    * **NEVER use**: `git checkout origin/main -b branch-name` as it sets tracking to main
-    * **Push Safety**: Always use explicit push syntax: `git push origin HEAD:branch-name` instead of relying on `-u` or default tracking
-    * **Recovery Protocol**: If accidental main push is detected, immediately notify user and provide recovery options
-
-11. **No Direct Push to Main Branch Protocol:**
-    * **ABSOLUTE PROHIBITION**: NEVER push directly to main/master branch under any circumstances
-    * **Git Push Commands**: When pushing, ALWAYS specify the target branch explicitly:
-      - ✅ CORRECT: `git push origin HEAD:feature-branch-name`
-      - ✅ CORRECT: `git push origin feature-branch:feature-branch`
-      - ❌ FORBIDDEN: `git push origin main` or any variant that targets main
-      - ❌ FORBIDDEN: `git push` without explicit branch specification if tracking main
-    * **Accidental Push Prevention**:
-      1. Always verify current branch before pushing: `git branch --show-current`
-      2. Always use explicit branch syntax in push commands
-      3. If a push accidentally goes to main, immediately alert the user
-    * **PR-Only Workflow**: All changes to main must go through pull requests - no exceptions
-    * **Recovery**: If accidental push to main occurs, immediately:
-      1. Stop all operations
-      2. Alert user with: "⚠️ CRITICAL: Accidentally pushed to main branch!"
-      3. Provide revert instructions if needed
-
-12. **Pull Request Workflow for All Changes:**
-    * **MANDATORY**: ALL changes to main branch must go through pull requests, including:
-      - Code changes
-      - Documentation updates
-      - Configuration modifications
-    * **ROADMAP AND SPRINT PLANNING EXCEPTION**: Direct pushes to main are ALLOWED for these specific files only:
-      - `roadmap/roadmap.md`
-      - `roadmap/sprint_current.md`
-      - `roadmap/sprint_*.md` (any sprint planning files)
-      - Rationale: Frequent small updates for task tracking and planning should not require PR overhead
-      - **Process for roadmap/sprint files**:
-        1. Make changes directly on main branch
-        2. Commit with descriptive message: "Update roadmap: [brief description]"
-        3. Push directly to main: `git push origin main`
-      - **Restriction**: This exception applies ONLY to roadmap and sprint files, not any other documentation
-    * **Workflow Process for Non-Roadmap Changes**:
-      1. Make changes on feature/dev branch
-      2. Commit changes with descriptive messages
-      3. Create pull request using `gh pr create`
-      4. Review and merge PR (do not merge directly to main)
-      5. Run `./integrate.sh` to create fresh clean branch
-    * **No Direct Main Merges**: Never merge directly to main branch, except for roadmap/sprint files
-    * **Visibility**: PRs provide visibility, review history, and proper change tracking
-
-13. **Task Addition Notification Protocol:**
-    * **MANDATORY**: When adding or modifying tasks in roadmap/sprint files, ALWAYS inform the user of the method used:
-      - "Added tasks via direct push to main" (for roadmap/sprint files pushed directly)
-      - "Added tasks in PR #XXX" (for changes included in a pull request)
-      - "Added tasks in dev branch, not yet pushed" (for local changes not yet pushed)
-      - "Added tasks in branch XXX, ready for PR" (for changes pushed to a feature branch)
-    * **Purpose**: Ensures transparency about where changes are made and their current status
-    * **Format Example**: "Added TASK-110 and TASK-111 to Saturday's schedule via direct push to main"
+   - Use `integrate` pattern: `git checkout main && git pull && git branch -D dev && git checkout -b dev`
+   - Main branch protection: Never work directly on main, use local dev branch
+   - After merges: Run integrate pattern for fresh dev branch
+   - PR process: Feature branch → descriptive commits → test results → `gh pr create`
+   - Never use 'dev' as remote branch name for PRs
 
 ## Environment, Tooling & Scripts
 
@@ -500,16 +299,17 @@ For complete project details including technology stack, architecture, developme
 2. **Write Robust & Context-Aware Scripts:**
    * Automation scripts (e.g., `deploy.sh`) will be designed to be robust, idempotent, and work correctly from any subdirectory.
 
-3. **MANDATORY Python Execution Protocol - Always Run From Project Root:**
-   * **CRITICAL RULE**: ALL Python commands MUST be executed from the project root directory. This is NON-NEGOTIABLE.
-   * **WHY**: Python's import system requires consistent execution context. Running from subdirectories breaks relative imports and package structures.
-   * **ENFORCEMENT**: Before ANY Python command, I MUST verify I'm at project root with `pwd`. If not at root, I MUST navigate there first.
-   * **PROHIBITED**: Never run Python files from subdirectories like `cd prototype && python3 file.py` or `cd mvp_site && python3 test.py`
-   * **CORRECT PATTERN**: Always use full paths from project root:
-     - `python3 prototype/some_file.py` ✓
-     - `vpython mvp_site/test_file.py` ✓
-     - `TESTING=true vpython mvp_site/test_integration.py` ✓
-   * **IMPORT PATTERN**: When imports fail, the solution is ALWAYS to run from project root, NOT to modify imports.
+3. **Python Execution Protocol:** Always run from project root (Python imports require consistent context)
+   ```bash
+   # Correct - from project root
+   python3 prototype/some_file.py
+   vpython mvp_site/test_file.py
+   TESTING=true vpython mvp_site/test_integration.py
+   
+   # Incorrect - from subdirectories
+   cd prototype && python3 file.py  # ❌ Breaks imports
+   cd mvp_site && python3 test.py   # ❌ Breaks imports
+   ```
 
 4. **Use `vpython` for Tests - Consistent Execution Pattern:**
    * Always use `vpython` to run tests when available. If `vpython` is not available, use `python3` but ALWAYS from project root.
@@ -582,44 +382,6 @@ This protocol uses a set of files to manage our workflow. The primary tracking h
 * After completing any significant debugging session, integration test work, or bug fixes, I must proactively update both `CLAUDE.md` and `.cursor/rules/lessons.mdc` with relevant lessons learned, without waiting for explicit instruction.
 * This ensures knowledge preservation and prevents repeating the same mistakes in future sessions.
 
-## Environment, Tooling & Scripts
-
-1. **Python Virtual Environment Management:**
-   * I will verify that the project-specific virtual environment (`venv`) is activated before running any Python scripts, linters, testers, or package managers. If it's not active, I will attempt to activate it or inform you if I cannot.
-
-2. **Write Robust & Context-Aware Scripts:**
-   * Automation scripts (e.g., `deploy.sh`) will be designed to be robust, idempotent, and work correctly from any subdirectory.
-
-3. **MANDATORY Python Execution Protocol - Always Run From Project Root:**
-   * **CRITICAL RULE**: ALL Python commands MUST be executed from the project root directory. This is NON-NEGOTIABLE.
-   * **WHY**: Python's import system requires consistent execution context. Running from subdirectories breaks relative imports and package structures.
-   * **ENFORCEMENT**: Before ANY Python command, I MUST verify I'm at project root with `pwd`. If not at root, I MUST navigate there first.
-   * **PROHIBITED**: Never run Python files from subdirectories like `cd prototype && python3 file.py` or `cd mvp_site && python3 test.py`
-   * **CORRECT PATTERN**: Always use full paths from project root:
-     - `python3 prototype/some_file.py` ✓
-     - `vpython mvp_site/test_file.py` ✓
-     - `TESTING=true vpython mvp_site/test_integration.py` ✓
-   * **IMPORT PATTERN**: When imports fail, the solution is ALWAYS to run from project root, NOT to modify imports.
-
-4. **Use `vpython` for Tests - Consistent Execution Pattern:**
-   * Always use `vpython` to run tests when available. If `vpython` is not available, use `python3` but ALWAYS from project root.
-   * **CRITICAL: When user says "run all tests", always use `./run_tests.sh` script from project root instead of manual unittest commands.**
-   * **CRITICAL: When ANY test fails, I must either fix it immediately or explicitly ask the user if it should be fixed. I must highlight the entire line of failing test output in red for visibility.**
-   * **UPDATED Directory Navigation for `vpython`:**
-     - **ALWAYS from project root**: `TESTING=true vpython mvp_site/test_file.py`
-     - **NEVER cd into subdirectories** for Python execution
-     - If unsure of location: Use `pwd` first, then navigate to project root
-     - For prototype tests: `vpython test_prototype_working.py` (from root)
-   * **Correct Test Commands:** 
-     - Integration tests: `TESTING=true vpython mvp_site/test_integration.py`
-     - Specific tests: `vpython -m unittest mvp_site.test_module.TestClass.test_method`
-     - Prototype tests: `python3 test_prototype_working.py`
-
-5. **Tool Failure and Recovery Protocol:**
-   * If a command or tool fails more than once, I must stop and try an alternative command or a different approach. I will not repeatedly attempt the same failing action. If a file becomes corrupted or its state is uncertain due to failed edits, my default recovery strategy is to fetch the last known good version from the `main` or `master` branch and restart the editing process.
-
-6. **Use Full-Content Tools for Web Scraping:**
-   * When the goal is to download the content of a webpage, I must use a tool that retrieves the full page content (e.g., `curl`). I will not use a search tool (like `web_search`) that only returns snippets, as the primary objective is to acquire the complete text.
 
 ## Critical Lessons
 
@@ -954,56 +716,6 @@ When asked for "markdown format", provide raw unrendered text in code block:
 - Change 2
 ```
 
-## Data Integrity and AI Management
-
-1. **Prioritize Data Integrity:**
-   - Assume data may be incomplete or malformed
-   - Use defensive access (e.g., `dict.get()`)
-   - Validate data structures before processing
-
-2. **Enforce Critical Logic in Code:**
-   - Implement safeguards in application code
-   - Don't rely solely on AI prompts for data integrity
-
-3. **Single Source of Truth:**
-   - Ensure one clear way to perform tasks in AI instructions
-   - Remove conflicting examples or rules
-
-## Knowledge Management & Process Improvement
-
-### Scratchpad Protocol
-**MANDATORY**: Maintain work-in-progress plans in `roadmap/scratchpad_[remote_branch_name].md` containing:
-- Project Goal: Clear statement of branch purpose
-- Implementation Plan: Step-by-step with milestones  
-- Current State: What's completed, in progress, blocked
-- Next Steps: Specific actionable items
-- Key Context: Important decisions and findings
-- Branch Info: Remote branch name, PR number, merge target
-
-This protocol uses a set of files to manage our workflow. The primary tracking happens in `roadmap/scratchpad_[remote_branch_name].md` as defined in the Scratchpad Protocol above. Additional files in the `.cursor` directory at the project's root provide supplementary tracking. If they don't exist, I will create them. I will review them before each interaction and update them after.
-
-### File Organization
-1. **CLAUDE.md** - Primary operating protocol (this file)
-
-2. **.cursor/rules/lessons.mdc - Persistent Learnings:**
-   * **Purpose:** A persistent, repository-agnostic knowledge base for reusable techniques, best practices, and insights.
-   * **Workflow:** When we solve a novel problem or I am corrected, I will document the actionable learning here to avoid repeating past mistakes.
-
-3. **.cursor/project.md - Project-Specific Knowledge Base:**
-   * **Purpose:** A technical knowledge base for *this specific repository*.
-   * **Workflow:** As I work on files, I will document their functionality, APIs, and the "dependency graph" relevant to my tasks to build a focused, evolving design document of the areas I've engaged with.
-
-4. **.cursor/rules/rules.mdc** - Cursor-specific configuration
-
-### "5 Whys" for All Corrections and Failures
-* When a significant error occurs, or whenever you correct a mistake in my process or code, I **must** perform a root cause analysis. The resulting "Actionable Lesson" **must** be documented in `.cursor/rules/lessons.mdc` to prevent that class of error in the future.
-
-### Synchronize with Cursor Settings
-* After we modify this `CLAUDE.md` file, I will remind you to copy its contents into the "Edit an AI Rule" section of the Cursor settings to ensure my behavior reflects the most current protocol.
-
-### Proactive Rule and Lesson Documentation
-* After completing any significant debugging session, integration test work, or bug fixes, I must proactively update both `CLAUDE.md` and `.cursor/rules/lessons.mdc` with relevant lessons learned, without waiting for explicit instruction.
-* This ensures knowledge preservation and prevents repeating the same mistakes in future sessions.
 
 ## Additional Documentation
 
