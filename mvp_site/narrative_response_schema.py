@@ -9,6 +9,17 @@ import logging
 import re
 from robust_json_parser import parse_llm_json_response
 
+# Precompiled regex patterns for better performance
+JSON_MARKDOWN_PATTERN = re.compile(r'```json\s*\n?(.*?)\n?```', re.DOTALL)
+GENERIC_MARKDOWN_PATTERN = re.compile(r'```\s*\n?(.*?)\n?```', re.DOTALL)
+NARRATIVE_PATTERN = re.compile(r'"narrative"\s*:\s*"([^"]*(?:\\.[^"]*)*)"')
+
+# JSON cleanup patterns
+JSON_STRUCTURE_PATTERN = re.compile(r'[{}\[\]]')
+JSON_KEY_QUOTES_PATTERN = re.compile(r'"([^"]+)":')
+JSON_COMMA_SEPARATOR_PATTERN = re.compile(r'",\s*"')
+WHITESPACE_PATTERN = re.compile(r'[^\S\r\n]+')  # Normalize spaces while preserving line breaks
+
 class NarrativeResponse:
     """Schema for structured narrative generation response"""
     
@@ -141,17 +152,15 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     # First check if the JSON is wrapped in markdown code blocks
     json_content = response_text
     
-    # Pattern to match ```json ... ``` blocks
-    pattern = r'```json\s*\n?(.*?)\n?```'
-    match = re.search(pattern, response_text, re.DOTALL)
+    # Use precompiled pattern to match ```json ... ``` blocks
+    match = JSON_MARKDOWN_PATTERN.search(response_text)
     
     if match:
         json_content = match.group(1).strip()
         logging.info("Extracted JSON from markdown code block")
     else:
         # Also try without the 'json' language identifier
-        pattern = r'```\s*\n?(.*?)\n?```'
-        match = re.search(pattern, response_text, re.DOTALL)
+        match = GENERIC_MARKDOWN_PATTERN.search(response_text)
         
         if match:
             content = match.group(1).strip()
@@ -193,8 +202,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     
     # Additional mitigation: Try to extract narrative from raw JSON-like text
     # This handles cases where JSON wasn't properly parsed but contains "narrative": "..."
-    narrative_pattern = r'"narrative"\s*:\s*"([^"]*(?:\\.[^"]*)*)"'
-    narrative_match = re.search(narrative_pattern, response_text)
+    narrative_match = NARRATIVE_PATTERN.search(response_text)
     
     if narrative_match:
         extracted_narrative = narrative_match.group(1)
@@ -213,18 +221,41 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     # Remove JSON-like structures and format for readability
     cleaned_text = response_text
     
-    # If it looks like JSON (has curly braces and quotes), try to make it readable
-    if '{' in cleaned_text and '"' in cleaned_text:
-        # Remove common JSON syntax that users shouldn't see
-        cleaned_text = re.sub(r'[{}\[\]]', '', cleaned_text)  # Remove braces and brackets
-        cleaned_text = re.sub(r'"([^"]+)":', r'\1:', cleaned_text)  # Remove quotes from keys
-        cleaned_text = re.sub(r'",\s*"', '. ', cleaned_text)  # Replace JSON comma separators
-        cleaned_text = re.sub(r'\\n', '\n', cleaned_text)  # Convert \n to actual newlines
-        cleaned_text = re.sub(r'\\"', '"', cleaned_text)  # Unescape quotes
-        cleaned_text = re.sub(r'\\\\', '\\', cleaned_text)  # Unescape backslashes
-        cleaned_text = re.sub(r'[^\S\r\n]+', ' ', cleaned_text)  # Normalize spaces while preserving line breaks
-        cleaned_text = cleaned_text.strip()
-        logging.warning("Applied final cleanup to make JSON-like text readable")
+    # Safer approach: Only clean if it's clearly malformed JSON
+    # Check multiple indicators to avoid corrupting valid narrative text
+    is_likely_json = (
+        '{' in cleaned_text and '"' in cleaned_text and 
+        (cleaned_text.strip().startswith('{') or cleaned_text.strip().startswith('"')) and
+        (cleaned_text.strip().endswith('}') or cleaned_text.strip().endswith('"')) and
+        cleaned_text.count('"') >= 4  # At least 2 key-value pairs
+    )
+    
+    if is_likely_json:
+        # Apply cleanup only to confirmed JSON-like text
+        # First, try to extract just the narrative value if possible
+        if '"narrative"' in cleaned_text:
+            # Try to extract narrative value safely
+            narrative_match = NARRATIVE_PATTERN.search(cleaned_text)
+            if narrative_match:
+                cleaned_text = narrative_match.group(1)
+                # Unescape JSON string escapes
+                cleaned_text = cleaned_text.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                logging.info("Extracted narrative from JSON structure")
+            else:
+                # Fallback to aggressive cleanup only as last resort
+                cleaned_text = JSON_STRUCTURE_PATTERN.sub('', cleaned_text)  # Remove braces and brackets
+                cleaned_text = JSON_KEY_QUOTES_PATTERN.sub(r'\1:', cleaned_text)  # Remove quotes from keys
+                cleaned_text = JSON_COMMA_SEPARATOR_PATTERN.sub('. ', cleaned_text)  # Replace JSON comma separators
+                cleaned_text = cleaned_text.replace('\\n', '\n')  # Convert \n to actual newlines
+                cleaned_text = cleaned_text.replace('\\"', '"')  # Unescape quotes
+                cleaned_text = cleaned_text.replace('\\\\', '\\')  # Unescape backslashes
+                cleaned_text = WHITESPACE_PATTERN.sub(' ', cleaned_text)  # Normalize spaces while preserving line breaks
+                cleaned_text = cleaned_text.strip()
+                logging.warning("Applied aggressive cleanup to malformed JSON")
+        else:
+            # No narrative field found, apply minimal cleanup
+            cleaned_text = cleaned_text.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+            logging.warning("Applied minimal cleanup to JSON-like text without narrative field")
     
     # Final fallback response
     fallback_response = NarrativeResponse(
