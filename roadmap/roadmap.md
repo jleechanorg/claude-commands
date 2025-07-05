@@ -92,6 +92,16 @@
       - Focus on state consistency throughout the interactions
       - Verify no state corruption or drift over many turns
       - Ensure game remains stable with repeated planning choices
+11. **[TASK-129] Implement Hard Stop on Integrity Failures** 🔴 (1 hr)
+    - **Implementation Details:**
+      - Add module-level boolean constant `STRICT_INTEGRITY_MODE = True` for toggling
+      - Detect integrity failures: missing state updates, malformed responses, validation errors
+      - On integrity failure: hard stop gameplay, warn user with clear explanation
+      - Provide correction options: retry, manual fix, or abort session
+      - Review all current warnings to determine which should be upgraded to errors
+      - Focus on non-recoverable failures (vs recoverable ones like dual-pass validation)
+      - Create obvious early indicator when playing in broken state
+      - Ensure user never continues with corrupted game state unknowingly
 
 ### Tonight's Work Block (Small LLM Tasks)
 8. **[TASK-088] Remove Direct Myers-Briggs References in Narrative** 🟡 (15 min) - PR #287
