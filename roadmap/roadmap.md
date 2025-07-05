@@ -74,7 +74,7 @@ For different worktrees:
 *   Run integration test to prove to me all the proper prompts and master prompt included
 *   Parallel
 *   [TASK-009b] Further compression integrate alexiel book: `roadmap/alexiel_book_token_reduction_scratchpad.md`
-*   [TASK-009a] Logging make it all tokens vs characters (token-based logging instead of character counts)
+*   [TASK-009a] ✅ **COMPLETED** Logging make it all tokens vs characters (token-based logging instead of character counts) - PR #264
 *   Claude always getting directories wrong
 *   [TASK-005a] Clicking on a campaign doesn\'t show spinner loading and seems to not always register clicks (issue is about the campaign list)
 
@@ -155,7 +155,7 @@ For different worktrees:
 *   [TASK-005b] More interesting loading spinner during campaign continue, similar to creation. Should show hardcoded messages for the user
 *   Third new checkbox to replace ruleset one?
 *   Smaller
-*   [TASK-011a] WorldArchitect.AI make this clickable to homepage
+*   [TASK-014a] ✅ **COMPLETED** WorldArchitect.AI make this clickable to homepage - PR #266
 *   Script: report number campaigns and size per user
 *   [TASK-005c] Timestamp not matching narrative
 *   [TASK-006b] Let player read background story (currently scrolls too fast, need pause button)
@@ -462,7 +462,7 @@ For different worktrees:
   - Smooth transitions
 
 ### Milestone 8: Metrics & Optimization (3 hrs)
-- **TASK-009a** 🟢 Token-based logging (1 hr)
+- **TASK-009a** ✅ **COMPLETED** Token-based logging (1 hr) - PR #264
   - Convert all character counts to tokens
   - Add token usage dashboard
 - **TASK-009b** 🟢 Alexiel book compression (1 hr)
@@ -488,7 +488,7 @@ For different worktrees:
   - Special command to reveal
 
 ### Milestone 10: Navigation & Polish (2 hrs)
-- **TASK-011a** 🟢 Homepage navigation (0.5 hrs)
+- **TASK-014a** ✅ **COMPLETED** Homepage navigation (0.5 hrs) - PR #266
   - Make "WorldArchitect.AI" clickable
   - Link to landing page
 - **TASK-011b** 🟢 Pagination implementation (1 hr)
