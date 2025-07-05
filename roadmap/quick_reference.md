@@ -1,5 +1,22 @@
 # Quick Reference Card
 
+## Slash Commands
+
+### Development Workflow
+- `/tdd` or `/rg` - Test-driven development (red-green-refactor)
+- `/test` - Run comprehensive test suite with reporting
+- `/optimize` - Code/file optimization following user preferences
+- `/integrate` - Git integration workflow (fresh branch from main)
+
+### Project Management  
+- `/milestones N` - Break work into N specific milestones
+- `/milestones suggest` - Analyze and suggest optimal milestone breakdown
+- `/scratchpad` - Create/update work-in-progress planning documents
+
+### Analysis & Review
+- `/context` or `/est` - Analyze current session context usage
+- `/review` or `/copilot` - Process GitHub Copilot/CodeRabbit feedback
+
 ## Essential Commands
 
 ### Testing

@@ -85,10 +85,10 @@ For complete project details including technology stack, architecture, developme
 - Architecture Decision Tests (ADTs) for validating architectural choices
 
 **Red-Green Testing Protocol:**
-- **TDD Command**: When user says "tdd", use Test-Driven Development:
+- **Slash Commands**: `/tdd` or `/rg` trigger Test-Driven Development workflow:
   1. Write comprehensive failing tests FIRST
-  2. Run tests to confirm they fail  
-  3. Implement minimal code to make tests pass
+  2. Run tests to confirm they fail (red state)
+  3. Implement minimal code to make tests pass (green state)
   4. Refactor while keeping tests green
 - **For UI Features**: Create functional tests that reproduce specific user issues, run tests to confirm they FAIL (red state), then fix implementation to make tests PASS (green state)
 - **Critical Mindset**: "I haven't seen it work with my own eyes yet" - Never claim features work based on code alone. Must validate actual user experience
@@ -566,13 +566,13 @@ When creating related files with similar settings:
 - **Documentation**: 5-10 minutes
 - Never estimate based on manual coding time
 
-## User Command Shortcuts
+## Slash Commands
 
-### Context Estimation
-**Triggers**: "est", "estimate context", "context usage", "how much context left"
+### `/context` or `/est`
+**Context Estimation**: Analyze current session context usage
 
-**Response Format**: When user requests context estimation, provide:
-1. **Session Context Usage**: Estimated percentage of my context window used
+**Response Format**:
+1. **Session Context Usage**: Estimated percentage of context window used
 2. **Breakdown by Category**:
    - System messages & instructions: ~X%
    - File reading operations: ~X%
@@ -594,10 +594,10 @@ Remaining: ~15-25% (good for a few more operations)
 Recommendation: Approaching limits, consider fresh session for major work
 ```
 
-### Milestone Commands
-**Triggers**: "milestones N", "milestones suggest"
+### `/milestones N` or `/milestones suggest`
+**Milestone Planning**: Break work into structured phases
 
-**Command: `milestones N`**
+**Command: `/milestones N`**
 - Break current work into N specific milestones
 - After completing each milestone:
   - Update scratchpad file (`roadmap/scratchpad_[branch_name].md`)
@@ -605,7 +605,7 @@ Recommendation: Approaching limits, consider fresh session for major work
   - Provide status update before proceeding
 - Each milestone should be independently valuable and testable
 
-**Command: `milestones suggest`**
+**Command: `/milestones suggest`**
 - Analyze task complexity and dependencies
 - Suggest optimal number of milestones (typically 3-7)
 - Provide rationale for suggested breakdown
@@ -615,7 +615,7 @@ Recommendation: Approaching limits, consider fresh session for major work
   - Dependencies on other milestones
   - Success criteria
 
-Example Response:
+**Example Response**:
 ```
 Based on task complexity, I suggest 4 milestones:
 
@@ -640,20 +640,54 @@ Milestone 4: Polish & Deploy (Low complexity)
 - Success: Production-ready code
 ```
 
-### Copilot Review
-**Trigger**: "copilot review"
-- List all open PRs with CodeRabbit comments
-- For each PR with feedback:
-  - Fetch and display suggestions using `gh pr view [PR_NUMBER] --comments`
-  - Filter comments from 'coderabbitai' user
-  - Analyze each suggestion and determine action:
-    - Implemented (make the suggested change)
-    - Explained (provide rationale for not implementing)
-  - Apply accepted changes to codebase
-  - Add explanatory comments for rejected suggestions
+### `/tdd` or `/rg`
+**Test-Driven Development**: Execute red-green-refactor workflow
+- Write comprehensive failing tests FIRST
+- Run tests to confirm they fail (red state)
+- Implement minimal code to make tests pass (green state)
+- Refactor while keeping tests green
+- For UI: Test actual user experience, not just code
+
+### `/review` or `/copilot`
+**Code Review Processing**: Handle GitHub Copilot/CodeRabbit feedback
+- List all open PRs with AI comments
+- Fetch and analyze suggestions using `gh pr view [PR_NUMBER] --comments`
+- Filter comments from 'coderabbitai' user
+- Apply accepted changes and explain rejections
 - Create commits addressing feedback
-- Update PR with summary of changes made
-- Push updates to respective PR branches
+- Update PRs with summary of changes made
+
+### `/optimize`
+**Code/File Optimization**: Improve performance, readability, or structure
+- Analyze current file/code for optimization opportunities
+- Remove duplicates, condense verbose sections
+- Maintain functionality while improving efficiency
+- Follow user's established preferences for format choices
+
+### `/test`
+**Comprehensive Testing**: Run full test suite with proper reporting
+- Execute `./run_tests.sh` from project root
+- Highlight any failing tests in red for visibility
+- Fix failures immediately or ask user for guidance
+- Include test results in PR descriptions
+- Use `TESTING=true vpython` for integration tests
+
+### `/integrate`
+**Git Integration Workflow**: Execute clean branch management
+- Run integrate pattern: `git checkout main && git pull && git branch -D dev && git checkout -b dev`
+- Create fresh branch from latest main
+- Ensure proper branch tracking and push safety
+- Follow PR-only workflow for main branch protection
+
+### `/scratchpad`
+**Project Planning**: Create or update work-in-progress plans
+- Generate `roadmap/scratchpad_[branch_name].md` with:
+  - Project Goal: Clear statement of purpose
+  - Implementation Plan: Step-by-step with milestones
+  - Current State: Completed, in progress, blocked items
+  - Next Steps: Specific actionable items
+  - Key Context: Important decisions and findings
+  - Branch Info: Remote branch, PR number, merge target
 
 ### GitHub Copilot Comment Response Protocol
 **MANDATORY**: Reply to every individual GitHub Copilot comment on PRs

@@ -52,6 +52,7 @@
 
 | Looking for | Go to |
 |------------|-------|
+| Slash commands | `slash_commands.md` or `CLAUDE.md` → Slash Commands |
 | How to run tests | `project_overview.md` → Development Commands |
 | Git workflow | `rules.mdc` → Git & Repository Workflow |
 | Planning approach | `planning_protocols.md` → Decision Tree |
@@ -64,6 +65,7 @@
 
 | Adding | Put in |
 |--------|--------|
+| New slash command | `slash_commands.md` and `CLAUDE.md` |
 | New rule/protocol | `rules.mdc` |
 | Lesson from bug | `lessons.mdc` |
 | API endpoint doc | `project_overview.md` |
@@ -77,6 +79,7 @@
 3. **planning_protocols.md** - The playbook. How to approach tasks.
 4. **lessons.mdc** - The journal. Recent learnings.
 5. **CLAUDE.md** - The tool guide. Claude Code specifics only.
+6. **slash_commands.md** - The command reference. All slash commands documented.
 
 ---
 *Created: 2025-01-01*
