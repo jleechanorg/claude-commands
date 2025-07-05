@@ -1,0 +1,11 @@
+rank,user_id,total_campaigns,total_entries,avg_entries_per_campaign,most_active_campaign_title,most_active_campaign_entries
+1,integration_test_user_standalone,8,714,89.25,Truncation Test Campaign - d4a76f22-67e4-4463-bf05-d183cc4f0938,102
+2,test-cassian-pydantic_0,52,191,3.67,Cassian Test pydantic_0,4
+3,analytics_test_user_3,5,70,14.0,Wild West Showdown,22
+4,sariel-validation-test-user,3,49,16.33,Sariel Validation Test Campaign,22
+5,analytics_test_user_2,1,30,30.0,Magical Forest Quest,30
+6,analytics_test_user_1,2,20,10.0,The Dragon's Hoard,12
+7,2dDglrTbz9Zb3zV0bKc8trukN9b2,2,18,9.0,The Good Place,12
+8,0wf6sCREyLcgynidU5LjyZEfm7D2,1,3,3.0,My Epic Adventure,3
+9,s6PqXg7JynhnMxOcZQDv8nUSk5E3,1,1,1.0,Cindil is a vampire ,1
+10,god-cli-user,0,0,0,N/A,0
