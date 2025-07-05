@@ -3,11 +3,12 @@ import os
 import json
 import sys
 import subprocess
-import logging
 
 # Add the project root to the Python path to allow for imports
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
+
+import logging_util
 
 # Handle missing dependencies gracefully
 try:

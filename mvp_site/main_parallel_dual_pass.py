@@ -8,8 +8,7 @@ To be integrated into main.py
 from flask import jsonify, request
 from entity_validator import entity_validator
 from dual_pass_generator import dual_pass_generator
-import logging
-
+import logging_util
 def add_parallel_dual_pass_routes(app, get_campaign_info):
     """Add routes for parallel dual-pass optimization"""
     
@@ -37,7 +36,7 @@ def add_parallel_dual_pass_routes(app, get_campaign_info):
             location = current_game_state.world_data.get('current_location_name', 'Unknown')
             
             # Run Pass 2 - Entity injection using the internal method
-            logging.info(f"PARALLEL_DUAL_PASS: Starting background entity enhancement for {len(missing_entities)} entities")
+            logging_util.info(f"PARALLEL_DUAL_PASS: Starting background entity enhancement for {len(missing_entities)} entities")
             
             # Create injection prompt
             injection_prompt = dual_pass_generator._create_injection_prompt(
@@ -60,7 +59,7 @@ def add_parallel_dual_pass_routes(app, get_campaign_info):
             )
             
             if final_narrative:
-                logging.info(f"PARALLEL_DUAL_PASS: Successfully enhanced narrative with {len(missing_entities)} entities")
+                logging_util.info(f"PARALLEL_DUAL_PASS: Successfully enhanced narrative with {len(missing_entities)} entities")
                 return jsonify({
                     'enhanced_response': final_narrative,
                     'entities_injected': len(missing_entities),
@@ -68,14 +67,14 @@ def add_parallel_dual_pass_routes(app, get_campaign_info):
                     'success': True
                 })
             else:
-                logging.warning("PARALLEL_DUAL_PASS: Entity enhancement failed")
+                logging_util.warning("PARALLEL_DUAL_PASS: Entity enhancement failed")
                 return jsonify({
                     'success': False,
                     'error': 'Enhancement failed'
                 })
                 
         except Exception as e:
-            logging.error(f"PARALLEL_DUAL_PASS: Error in enhance_entities: {str(e)}")
+            logging_util.error(f"PARALLEL_DUAL_PASS: Error in enhance_entities: {str(e)}")
             return jsonify({'error': str(e)}), 500
     
     @app.route('/api/campaigns/<campaign_id>/check-enhancement', methods=['GET'])
@@ -87,5 +86,5 @@ def add_parallel_dual_pass_routes(app, get_campaign_info):
             return jsonify({'status': 'ready'})
             
         except Exception as e:
-            logging.error(f"PARALLEL_DUAL_PASS: Error checking status: {str(e)}")
+            logging_util.error(f"PARALLEL_DUAL_PASS: Error checking status: {str(e)}")
             return jsonify({'error': str(e)}), 500

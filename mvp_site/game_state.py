@@ -4,7 +4,7 @@ Defines the GameState class, which represents the complete state of a campaign.
 import datetime
 from enum import Enum
 from typing import List
-import logging
+import logging_util
 import constants
 
 class MigrationStatus(Enum):
@@ -175,7 +175,7 @@ class GameState:
         Args:
             combatants_data: List of dicts with keys: name, initiative, type, hp_current, hp_max
         """
-        logging.info(f"COMBAT STARTED - Participants: {[c['name'] for c in combatants_data]}")
+        logging_util.info(f"COMBAT STARTED - Participants: {[c['name'] for c in combatants_data]}")
         
         # Sort by initiative (highest first)
         sorted_combatants = sorted(combatants_data, key=lambda x: x['initiative'], reverse=True)
@@ -202,7 +202,7 @@ class GameState:
         }
         
         initiative_list = [f"{c['name']}({c['initiative']})" for c in sorted_combatants]
-        logging.info(f"COMBAT INITIALIZED - Initiative order: {initiative_list}")
+        logging_util.info(f"COMBAT INITIALIZED - Initiative order: {initiative_list}")
     
     def end_combat(self) -> None:
         """End combat and reset combat state."""
@@ -213,9 +213,9 @@ class GameState:
             # Clean up defeated enemies before ending combat
             defeated_enemies = self.cleanup_defeated_enemies()
             if defeated_enemies:
-                logging.info(f"COMBAT CLEANUP: Defeated enemies removed during combat end: {defeated_enemies}")
+                logging_util.info(f"COMBAT CLEANUP: Defeated enemies removed during combat end: {defeated_enemies}")
             
-            logging.info(f"COMBAT ENDED - Duration: {final_round} rounds, Participants: {participants}")
+            logging_util.info(f"COMBAT ENDED - Duration: {final_round} rounds, Participants: {participants}")
         
         # Reset combat state
         self.combat_state = {
@@ -254,14 +254,14 @@ class GameState:
                 
                 if enemy_type not in ["pc", "companion", "ally"]:
                     defeated_enemies.append(name)
-                    logging.info(f"COMBAT CLEANUP: Marking {name} ({enemy_type}) as defeated")
+                    logging_util.info(f"COMBAT CLEANUP: Marking {name} ({enemy_type}) as defeated")
         
         # Remove defeated enemies from combat tracking
         for enemy_name in defeated_enemies:
             # Remove from combat_state combatants
             if enemy_name in self.combat_state.get("combatants", {}):
                 del self.combat_state["combatants"][enemy_name]
-                logging.info(f"COMBAT CLEANUP: Removed {enemy_name} from combat_state.combatants")
+                logging_util.info(f"COMBAT CLEANUP: Removed {enemy_name} from combat_state.combatants")
             
             # Remove from initiative order
             self.combat_state["initiative_order"] = [
@@ -272,7 +272,7 @@ class GameState:
             # Remove from NPC data (defeated enemies shouldn't persist)
             if enemy_name in self.npc_data:
                 del self.npc_data[enemy_name]
-                logging.info(f"COMBAT CLEANUP: Removed {enemy_name} from npc_data")
+                logging_util.info(f"COMBAT CLEANUP: Removed {enemy_name} from npc_data")
         
         return defeated_enemies
     
@@ -310,7 +310,7 @@ class GameState:
             
             # Remove the old field
             del world_data['time_of_day']
-            logging.info(f"Migrated time_of_day '{old_time_of_day}' into world_time object")
+            logging_util.info(f"Migrated time_of_day '{old_time_of_day}' into world_time object")
         
         # Only process world_time if it already exists
         if 'world_time' in world_data and isinstance(world_data['world_time'], dict):
@@ -318,7 +318,7 @@ class GameState:
             if 'time_of_day' not in world_data['world_time']:
                 hour = world_data['world_time'].get('hour', 12)
                 world_data['world_time']['time_of_day'] = self._calculate_time_of_day(hour)
-                logging.info(f"Calculated time_of_day as '{world_data['world_time']['time_of_day']}' from hour {hour}")
+                logging_util.info(f"Calculated time_of_day as '{world_data['world_time']['time_of_day']}' from hour {hour}")
     
     def _calculate_time_of_day(self, hour):
         """

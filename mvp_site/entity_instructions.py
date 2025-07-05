@@ -5,9 +5,8 @@ Generates specific AI instructions requiring entity mentions and presence.
 
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
-import logging
-
-logger = logging.getLogger(__name__)
+import logging_util
+logger = logging_util.getLogger(__name__)
 
 
 @dataclass

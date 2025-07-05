@@ -6,9 +6,8 @@ Validates AI output for missing entities and implements retry logic.
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 import re
-import logging
-
-logger = logging.getLogger(__name__)
+import logging_util
+logger = logging_util.getLogger(__name__)
 
 
 @dataclass

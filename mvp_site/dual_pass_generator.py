@@ -5,10 +5,10 @@ First pass generates narrative, second pass verifies and injects missing entitie
 
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
-import logging
+import logging_util
 from entity_validator import EntityValidator, ValidationResult
 
-logger = logging.getLogger(__name__)
+logger = logging_util.getLogger(__name__)
 
 
 @dataclass

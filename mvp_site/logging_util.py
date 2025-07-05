@@ -8,6 +8,23 @@ that preserve logger context.
 import logging
 from typing import Any, Optional
 
+# Export logging level constants
+CRITICAL = logging.CRITICAL
+FATAL = logging.FATAL
+ERROR = logging.ERROR
+WARNING = logging.WARNING
+WARN = logging.WARN
+INFO = logging.INFO
+DEBUG = logging.DEBUG
+NOTSET = logging.NOTSET
+
+# Export common logging classes
+StreamHandler = logging.StreamHandler
+FileHandler = logging.FileHandler
+Handler = logging.Handler
+Formatter = logging.Formatter
+Logger = logging.Logger
+
 
 class LoggingUtil:
     """Centralized logging utility with emoji-enhanced messages."""
@@ -83,6 +100,55 @@ class LoggingUtil:
             **kwargs: Additional keyword arguments for logging
         """
         logging.debug(message, *args, **kwargs)
+    
+    @staticmethod
+    def critical(message: str, *args: Any, **kwargs: Any) -> None:
+        """
+        Log a critical message with double fire emoji.
+        
+        Args:
+            message: The critical message to log
+            *args: Additional positional arguments for logging
+            **kwargs: Additional keyword arguments for logging
+        """
+        enhanced_message = f"🔥🔥 {message}"
+        logging.critical(enhanced_message, *args, **kwargs)
+    
+    @staticmethod
+    def exception(message: str, *args: Any, **kwargs: Any) -> None:
+        """
+        Log an exception message with traceback.
+        
+        Args:
+            message: The exception message to log
+            *args: Additional positional arguments for logging
+            **kwargs: Additional keyword arguments for logging
+        """
+        enhanced_message = f"{LoggingUtil.ERROR_EMOJI} {message}"
+        logging.exception(enhanced_message, *args, **kwargs)
+    
+    @staticmethod
+    def basicConfig(**kwargs: Any) -> None:
+        """
+        Configure basic logging settings.
+        
+        Args:
+            **kwargs: Arguments to pass to logging.basicConfig
+        """
+        logging.basicConfig(**kwargs)
+    
+    @staticmethod
+    def getLogger(name: Optional[str] = None) -> logging.Logger:
+        """
+        Get a logger instance.
+        
+        Args:
+            name: Logger name (optional)
+            
+        Returns:
+            Logger instance
+        """
+        return logging.getLogger(name)
 
 
 # Convenience module-level functions
@@ -120,3 +186,23 @@ def info(message: str, *args: Any, **kwargs: Any) -> None:
 def debug(message: str, *args: Any, **kwargs: Any) -> None:
     """Log a debug message (no emoji modification)."""
     LoggingUtil.debug(message, *args, **kwargs)
+
+
+def critical(message: str, *args: Any, **kwargs: Any) -> None:
+    """Log a critical message with double fire emoji."""
+    LoggingUtil.critical(message, *args, **kwargs)
+
+
+def exception(message: str, *args: Any, **kwargs: Any) -> None:
+    """Log an exception message with traceback."""
+    LoggingUtil.exception(message, *args, **kwargs)
+
+
+def basicConfig(**kwargs: Any) -> None:
+    """Configure basic logging settings."""
+    LoggingUtil.basicConfig(**kwargs)
+
+
+def getLogger(name: Optional[str] = None) -> logging.Logger:
+    """Get a logger instance."""
+    return LoggingUtil.getLogger(name)

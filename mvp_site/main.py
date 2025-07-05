@@ -9,7 +9,6 @@ import firebase_admin
 from firebase_admin import auth
 import traceback
 import document_generator
-import logging
 import logging_util
 from game_state import GameState, MigrationStatus
 from debug_mode_parser import DebugModeParser
@@ -153,7 +152,7 @@ def _prepare_game_state(user_id, campaign_id):
         # If cleaned, update the main object from the cleaned dictionary
         current_game_state = GameState.from_dict(cleaned_state_dict)
         firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state.to_dict())
-        logging.info(f"Legacy state cleanup complete. Removed {num_cleaned} entries.")
+        logging_util.info(f"Legacy state cleanup complete. Removed {num_cleaned} entries.")
     
     return current_game_state, was_cleaned, num_cleaned
 
@@ -178,32 +177,32 @@ def _handle_set_command(user_input, current_game_state, user_id, campaign_id):
         return None
     
     payload_str = user_input_stripped[len(GOD_MODE_SET_COMMAND):]
-    logging.info(f"--- GOD_MODE_SET received for campaign {campaign_id} ---")
-    logging.info(f"GOD_MODE_SET raw payload:\\n---\\n{payload_str}\\n---")
+    logging_util.info(f"--- GOD_MODE_SET received for campaign {campaign_id} ---")
+    logging_util.info(f"GOD_MODE_SET raw payload:\\n---\\n{payload_str}\\n---")
     
     proposed_changes = parse_set_command(payload_str)
-    logging.info(f"GOD_MODE_SET parsed changes to be merged:\\n{_truncate_log_json(proposed_changes)}")
+    logging_util.info(f"GOD_MODE_SET parsed changes to be merged:\\n{_truncate_log_json(proposed_changes)}")
     
     if not proposed_changes:
-        logging.warning(f"GOD_MODE_SET command resulted in no valid changes.")
+        logging_util.warning(f"GOD_MODE_SET command resulted in no valid changes.")
         return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: "[System Message: The GOD_MODE_SET command was received, but contained no valid instructions or was empty.]"})
     
     current_state_dict_before_update = current_game_state.to_dict()
-    logging.info(f"GOD_MODE_SET state BEFORE update:\\n{_truncate_log_json(current_state_dict_before_update)}")
+    logging_util.info(f"GOD_MODE_SET state BEFORE update:\\n{_truncate_log_json(current_state_dict_before_update)}")
     
     updated_state = update_state_with_changes(current_state_dict_before_update, proposed_changes)
     updated_state = StateHelper.apply_automatic_combat_cleanup(updated_state, proposed_changes)
-    logging.info(f"GOD_MODE_SET state AFTER update:\\n{_truncate_log_json(updated_state)}")
+    logging_util.info(f"GOD_MODE_SET state AFTER update:\\n{_truncate_log_json(updated_state)}")
     
     firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
     
     # Log the formatted changes for both server and chat
     log_message_for_log = format_state_changes(proposed_changes, for_html=False)
-    logging.info(f"GOD_MODE_SET changes applied for campaign {campaign_id}:\\n{log_message_for_log}")
+    logging_util.info(f"GOD_MODE_SET changes applied for campaign {campaign_id}:\\n{log_message_for_log}")
     
     log_message_for_chat = format_state_changes(proposed_changes, for_html=True)
     
-    logging.info(f"--- GOD_MODE_SET for campaign {campaign_id} complete ---")
+    logging_util.info(f"--- GOD_MODE_SET for campaign {campaign_id} complete ---")
     
     return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: f"[System Message]<br>{log_message_for_chat}"})
 
@@ -287,13 +286,13 @@ def _handle_legacy_migration(current_game_state, campaign_id, story_context, use
     Returns:
         GameState: Updated game state object
     """
-    logging.info(f"Evaluating campaign {campaign_id} for legacy migration. Current status: {current_game_state.migration_status.value}")
+    logging_util.info(f"Evaluating campaign {campaign_id} for legacy migration. Current status: {current_game_state.migration_status.value}")
     
     if current_game_state.migration_status != MigrationStatus.NOT_CHECKED:
-        logging.info(f"-> Status is {current_game_state.migration_status.value}. Skipping scan.")
+        logging_util.info(f"-> Status is {current_game_state.migration_status.value}. Skipping scan.")
         return current_game_state
     
-    logging.info(f"-> Status is NOT_CHECKED. Performing scan.")
+    logging_util.info(f"-> Status is NOT_CHECKED. Performing scan.")
     
     # The story context here still has datetime objects, which is fine for the parser
     if story_context:
@@ -302,7 +301,7 @@ def _handle_legacy_migration(current_game_state, campaign_id, story_context, use
         legacy_state_dict = None
     
     if legacy_state_dict:
-        logging.info(f"-> SUCCESS: Found and parsed legacy state for campaign {campaign_id}. Migrating.")
+        logging_util.info(f"-> SUCCESS: Found and parsed legacy state for campaign {campaign_id}. Migrating.")
         # Check if we already have a GameState object
         if isinstance(legacy_state_dict, GameState):
             legacy_game_state = legacy_state_dict
@@ -316,7 +315,7 @@ def _handle_legacy_migration(current_game_state, campaign_id, story_context, use
         firestore_service.update_campaign_game_state(user_id, campaign_id, legacy_game_state.to_dict())
         return legacy_game_state
     else:
-        logging.info(f"-> FAILED: No legacy state found for campaign {campaign_id}. Marking as checked.")
+        logging_util.info(f"-> FAILED: No legacy state found for campaign {campaign_id}. Marking as checked.")
         # Mark as checked and update Firestore so we don't check again
         current_game_state.migration_status = MigrationStatus.NO_LEGACY_DATA
         firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state.to_dict())
@@ -387,16 +386,16 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
             proposed_changes = update_state_with_changes(story_id_update, proposed_changes)
         
         # Enhanced logging for normal gameplay
-        logging.info(f"AI proposed changes for campaign {campaign_id}:\\n{_truncate_log_json(proposed_changes)}")
+        logging_util.info(f"AI proposed changes for campaign {campaign_id}:\\n{_truncate_log_json(proposed_changes)}")
         
         log_message = format_state_changes(proposed_changes, for_html=False)
-        logging.info(f"Applying formatted state changes for campaign {campaign_id}:\\n{log_message}")
+        logging_util.info(f"Applying formatted state changes for campaign {campaign_id}:\\n{log_message}")
         
         # Update state with changes
         updated_state_dict = update_state_with_changes(current_game_state.to_dict(), proposed_changes)
         updated_state_dict = StateHelper.apply_automatic_combat_cleanup(updated_state_dict, proposed_changes)
         
-        logging.info(f"New complete game state for campaign {campaign_id}:\\n{truncate_game_state_for_logging(updated_state_dict)}")
+        logging_util.info(f"New complete game state for campaign {campaign_id}:\\n{truncate_game_state_for_logging(updated_state_dict)}")
         
         firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state_dict)
     
@@ -510,7 +509,7 @@ def _handle_debug_mode_command(user_input, mode, current_game_state, user_id, ca
     if current_debug_state != new_debug_state:
         current_game_state.debug_mode = new_debug_state
         firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state.to_dict())
-        logging.info(f"Debug mode {'enabled' if new_debug_state else 'disabled'} for campaign {campaign_id}")
+        logging_util.info(f"Debug mode {'enabled' if new_debug_state else 'disabled'} for campaign {campaign_id}")
     
     # Get appropriate message
     message = DebugModeParser.get_state_update_message(debug_command, new_debug_state)
@@ -559,7 +558,7 @@ def apply_automatic_combat_cleanup(updated_state_dict: dict, proposed_changes: d
     # Check if we have combatants data to potentially clean up
     combatants = temp_game_state.combat_state.get("combatants", {})
     if not combatants:
-        logging.info("COMBAT CLEANUP CHECK: No combatants found, skipping cleanup")
+        logging_util.info("COMBAT CLEANUP CHECK: No combatants found, skipping cleanup")
         return updated_state_dict
     
     # CRITICAL FIX: Always attempt cleanup if combatants exist
@@ -567,16 +566,16 @@ def apply_automatic_combat_cleanup(updated_state_dict: dict, proposed_changes: d
     # 1. Combat ongoing with new defeats
     # 2. Combat ending with pre-existing defeats
     # 3. State updates without explicit combat_state changes but with defeated enemies
-    logging.info(f"COMBAT CLEANUP CHECK: Found {len(combatants)} combatants, scanning for defeated enemies...")
+    logging_util.info(f"COMBAT CLEANUP CHECK: Found {len(combatants)} combatants, scanning for defeated enemies...")
     
     # Perform cleanup - this always runs regardless of proposed_changes content
     defeated_enemies = temp_game_state.cleanup_defeated_enemies()
     if defeated_enemies:
-        logging.info(f"AUTOMATIC CLEANUP: Defeated enemies removed: {defeated_enemies}")
+        logging_util.info(f"AUTOMATIC CLEANUP: Defeated enemies removed: {defeated_enemies}")
         # Return the updated state dict from the game state that had cleanup applied
         return temp_game_state.to_dict()
     else:
-        logging.info("AUTOMATIC CLEANUP: No defeated enemies found to clean up")
+        logging_util.info("AUTOMATIC CLEANUP: No defeated enemies found to clean up")
         # Return the original state since no cleanup was needed
         return updated_state_dict
 
@@ -595,7 +594,7 @@ def _cleanup_legacy_state(state_dict: dict) -> tuple[dict, bool, int]:
     if not keys_to_delete:
         return state_dict, False, 0
 
-    logging.info(f"Performing one-time cleanup. Deleting {num_deleted} legacy keys: {keys_to_delete}")
+    logging_util.info(f"Performing one-time cleanup. Deleting {num_deleted} legacy keys: {keys_to_delete}")
     cleaned_state = state_dict.copy()
     for key in keys_to_delete:
         if key in cleaned_state:
@@ -655,7 +654,7 @@ def parse_set_command(payload_str: str) -> dict:
         try:
             value = json.loads(value_str)
         except json.JSONDecodeError:
-            logging.warning(f"Skipping line in SET command due to invalid JSON value: {line}")
+            logging_util.warning(f"Skipping line in SET command due to invalid JSON value: {line}")
             continue
         
         if key_path.endswith('.append'):
@@ -808,18 +807,18 @@ def create_app():
         pc_data = game_state_dict.get('player_character_data', {})
         if constants.KEY_MBTI not in pc_data:
             pc_name = pc_data.get('name', 'Player Character')
-            logging.info(f"RETROACTIVE_ASSIGNMENT: Character '{pc_name}' is missing an MBTI type. The AI will be prompted to assign one.")
+            logging_util.info(f"RETROACTIVE_ASSIGNMENT: Character '{pc_name}' is missing an MBTI type. The AI will be prompted to assign one.")
 
         npc_data = game_state_dict.get('npc_data', {})
         for npc_id, npc_info in npc_data.items():
             # Defensive programming: ensure npc_info is a dictionary
             if not isinstance(npc_info, dict):
-                logging.warning(f"NPC data for '{npc_id}' is not a dictionary: {type(npc_info)}. Skipping MBTI check.")
+                logging_util.warning(f"NPC data for '{npc_id}' is not a dictionary: {type(npc_info)}. Skipping MBTI check.")
                 continue
                 
             if constants.KEY_MBTI not in npc_info:
                 npc_name = npc_info.get('name', npc_id)
-                logging.info(f"RETROACTIVE_ASSIGNMENT: NPC '{npc_name}' is missing an MBTI type. The AI will be prompted to assign one.")
+                logging_util.info(f"RETROACTIVE_ASSIGNMENT: NPC '{npc_name}' is missing an MBTI type. The AI will be prompted to assign one.")
         # --- END Retroactive MBTI ---
 
         # Handle SET command
@@ -861,12 +860,12 @@ def create_app():
         debug_tags_found = gemini_response_obj.debug_tags_present
         
         if not any(debug_tags_found.values()):
-            logging.warning(f"AI response missing debug content for campaign {campaign_id}")
-            logging.warning(f"Debug tags found: {debug_tags_found}")
-            logging.warning(f"Response length: {len(gemini_response_obj.narrative_text)} chars")
+            logging_util.warning(f"AI response missing debug content for campaign {campaign_id}")
+            logging_util.warning(f"Debug tags found: {debug_tags_found}")
+            logging_util.warning(f"Response length: {len(gemini_response_obj.narrative_text)} chars")
         else:
             # Log which debug content types were included
-            logging.info(f"Debug content generated for campaign {campaign_id}: {debug_tags_found}")
+            logging_util.info(f"Debug content generated for campaign {campaign_id}: {debug_tags_found}")
         
         # 4. Write: Add AI response to story log and update state
         firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response_obj.narrative_text)
@@ -887,9 +886,9 @@ def create_app():
             post_update_discrepancies = temp_game_state.validate_checkpoint_consistency(gemini_response_obj.narrative_text)
             
             if post_update_discrepancies:
-                logging.warning(f"POST_UPDATE_VALIDATION: AI response created {len(post_update_discrepancies)} new discrepancies:")
+                logging_util.warning(f"POST_UPDATE_VALIDATION: AI response created {len(post_update_discrepancies)} new discrepancies:")
                 for i, discrepancy in enumerate(post_update_discrepancies, 1):
-                    logging.warning(f"  {i}. {discrepancy}")
+                    logging_util.warning(f"  {i}. {discrepancy}")
         
         # Apply state changes and return response
         return _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response_obj.narrative_text, 
@@ -935,7 +934,7 @@ def create_app():
                 return jsonify({KEY_ERROR: f"Unsupported format: {export_format}"}), 400
 
             if os.path.exists(safe_file_path):
-                logging.info(f"Exporting file '{safe_file_path}' with download_name='{desired_download_name}'")
+                logging_util.info(f"Exporting file '{safe_file_path}' with download_name='{desired_download_name}'")
                 
                 # Use the standard send_file call, which should now work correctly
                 # with the fixed JavaScript client.
@@ -949,7 +948,7 @@ def create_app():
                 def cleanup():
                     try:
                         os.remove(safe_file_path)
-                        logging.info(f"Cleaned up temporary file: {safe_file_path}")
+                        logging_util.info(f"Cleaned up temporary file: {safe_file_path}")
                     except Exception as e:
                         logging_util.error(f"Error cleaning up file {safe_file_path}: {e}")
 

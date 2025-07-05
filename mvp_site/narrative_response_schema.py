@@ -5,7 +5,7 @@ Based on Milestone 0.4 Combined approach implementation (without pydantic depend
 
 from typing import List, Optional, Dict, Any
 import json
-import logging
+import logging_util
 import re
 from robust_json_parser import parse_llm_json_response
 
@@ -59,7 +59,7 @@ class NarrativeResponse:
             return {}
         
         if not isinstance(state_updates, dict):
-            logging.warning(f"Invalid state_updates type: {type(state_updates).__name__}, expected dict. Using empty dict instead.")
+            logging_util.warning(f"Invalid state_updates type: {type(state_updates).__name__}, expected dict. Using empty dict instead.")
             return {}
         
         return state_updates
@@ -70,7 +70,7 @@ class NarrativeResponse:
             return {}
         
         if not isinstance(debug_info, dict):
-            logging.warning(f"Invalid debug_info type: {type(debug_info).__name__}, expected dict. Using empty dict instead.")
+            logging_util.warning(f"Invalid debug_info type: {type(debug_info).__name__}, expected dict. Using empty dict instead.")
             return {}
         
         return debug_info
@@ -157,7 +157,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     
     if match:
         json_content = match.group(1).strip()
-        logging.info("Extracted JSON from markdown code block")
+        logging_util.info("Extracted JSON from markdown code block")
     else:
         # Also try without the 'json' language identifier
         match = GENERIC_MARKDOWN_PATTERN.search(response_text)
@@ -166,7 +166,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
             content = match.group(1).strip()
             if content.startswith('{') and content.endswith('}'):
                 json_content = content
-                logging.info("Extracted JSON from generic code block")
+                logging_util.info("Extracted JSON from generic code block")
     
     # Use the robust parser on the extracted content
     parsed_data, was_incomplete = parse_llm_json_response(json_content)
@@ -174,7 +174,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     if was_incomplete:
         narrative_len = len(parsed_data.get('narrative', '')) if parsed_data else 0
         token_count = narrative_len // 4  # Rough estimate
-        logging.info(f"Recovered from incomplete JSON response. Narrative length: {narrative_len} characters (~{token_count} tokens)")
+        logging_util.info(f"Recovered from incomplete JSON response. Narrative length: {narrative_len} characters (~{token_count} tokens)")
     
     # Create NarrativeResponse from parsed data
     if parsed_data:
@@ -184,7 +184,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 
         except (ValueError, TypeError) as e:
             # NarrativeResponse creation failed
-            logging.error(f"Failed to create NarrativeResponse: {e}")
+            logging_util.error(f"Failed to create NarrativeResponse: {e}")
             # Return the narrative if we at least got that
             narrative = parsed_data.get('narrative', response_text)
             # Extract only the fields we know about, let **kwargs handle the rest
@@ -208,7 +208,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
         extracted_narrative = narrative_match.group(1)
         # Unescape JSON string escapes
         extracted_narrative = extracted_narrative.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
-        logging.info("Extracted narrative from JSON-like text pattern")
+        logging_util.info("Extracted narrative from JSON-like text pattern")
         
         fallback_response = NarrativeResponse(
             narrative=extracted_narrative,
@@ -240,7 +240,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 cleaned_text = narrative_match.group(1)
                 # Unescape JSON string escapes
                 cleaned_text = cleaned_text.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
-                logging.info("Extracted narrative from JSON structure")
+                logging_util.info("Extracted narrative from JSON structure")
             else:
                 # Fallback to aggressive cleanup only as last resort
                 cleaned_text = JSON_STRUCTURE_PATTERN.sub('', cleaned_text)  # Remove braces and brackets
@@ -251,11 +251,11 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 cleaned_text = cleaned_text.replace('\\\\', '\\')  # Unescape backslashes
                 cleaned_text = WHITESPACE_PATTERN.sub(' ', cleaned_text)  # Normalize spaces while preserving line breaks
                 cleaned_text = cleaned_text.strip()
-                logging.warning("Applied aggressive cleanup to malformed JSON")
+                logging_util.warning("Applied aggressive cleanup to malformed JSON")
         else:
             # No narrative field found, apply minimal cleanup
             cleaned_text = cleaned_text.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
-            logging.warning("Applied minimal cleanup to JSON-like text without narrative field")
+            logging_util.warning("Applied minimal cleanup to JSON-like text without narrative field")
     
     # Final fallback response
     fallback_response = NarrativeResponse(

@@ -1,7 +1,6 @@
 import os
 from google import genai
 from google.genai import types
-import logging
 import logging_util
 from decorators import log_exceptions
 import sys
@@ -26,7 +25,7 @@ from entity_validator import EntityValidator
 from dual_pass_generator import DualPassGenerator
 from entity_tracking import SceneManifest, create_from_game_state
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging_util.basicConfig(level=logging_util.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Initialize entity tracking mitigation modules
 entity_preloader = EntityPreloader()
@@ -118,7 +117,7 @@ def _load_instruction_file(instruction_type):
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read().strip()
-            # logging.info(f'Loaded prompt "{instruction_type}" from file: {os.path.basename(file_path)}')
+            # logging_util.info(f'Loaded prompt "{instruction_type}" from file: {os.path.basename(file_path)}')
             _loaded_instructions_cache[instruction_type] = content
         except FileNotFoundError:
             logging_util.error(f"CRITICAL: System instruction file not found: {file_path}. This is a fatal error for this request.")
@@ -128,7 +127,7 @@ def _load_instruction_file(instruction_type):
             raise
     else:
         pass
-        #logging.info(f'Loaded prompt "{instruction_type}" from cache.')
+        #logging_util.info(f'Loaded prompt "{instruction_type}" from cache.')
         
     return _loaded_instructions_cache[instruction_type]
 
@@ -137,12 +136,12 @@ def get_client():
     """Initializes and returns a singleton Gemini client."""
     global _client
     if _client is None:
-        logging.info("--- Initializing Gemini Client ---")
+        logging_util.info("--- Initializing Gemini Client ---")
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
         _client = genai.Client(api_key=api_key)
-        logging.info("--- Gemini Client Initialized Successfully ---")
+        logging_util.info("--- Gemini Client Initialized Successfully ---")
     return _client
 
 def _add_world_instructions_to_system(system_instruction_parts):
@@ -387,11 +386,11 @@ def _prepare_entity_tracking(game_state, story_context, session_number):
     
     if manifest_cache_key in game_state._manifest_cache:
         entity_manifest = game_state._manifest_cache[manifest_cache_key]
-        logging.debug("Using cached entity manifest")
+        logging_util.debug("Using cached entity manifest")
     else:
         entity_manifest = create_from_game_state(game_state_dict, session_number, turn_number)
         game_state._manifest_cache[manifest_cache_key] = entity_manifest
-        logging.debug("Created new entity manifest")
+        logging_util.debug("Created new entity manifest")
     
     entity_manifest_text = entity_manifest.to_prompt_format()
     expected_entities = entity_manifest.get_expected_entities()
@@ -473,7 +472,7 @@ def _process_structured_response(raw_response_text, expected_entities):
     # Validate structured response coverage
     if isinstance(structured_response, NarrativeResponse):
         coverage_validation = validate_entity_coverage(structured_response, expected_entities)
-        logging.info(f"STRUCTURED_GENERATION: Coverage rate {coverage_validation['coverage_rate']:.2f}, "
+        logging_util.info(f"STRUCTURED_GENERATION: Coverage rate {coverage_validation['coverage_rate']:.2f}, "
                     f"Schema valid: {coverage_validation['schema_valid']}")
         
         if not coverage_validation['schema_valid']:
@@ -484,7 +483,7 @@ def _process_structured_response(raw_response_text, expected_entities):
             import json
             state_updates_text = f"\n\n[STATE_UPDATES_PROPOSED]\n{json.dumps(structured_response.state_updates, indent=2)}\n[END_STATE_UPDATES_PROPOSED]"
             response_text = response_text + state_updates_text
-            logging.info("Appended state updates from structured response to response text")
+            logging_util.info("Appended state updates from structured response to response text")
     else:
         logging_util.warning("STRUCTURED_GENERATION: Failed to parse JSON response, falling back to plain text")
     
@@ -548,10 +547,10 @@ def _log_token_count(model_name, user_prompt_contents, system_instruction_text=N
             system_tokens = client.models.count_tokens(model=model_name, contents=[system_instruction_text]).total_tokens
 
         total_tokens = user_prompt_tokens + system_tokens
-        logging.info(f"--- Sending {total_tokens} tokens to the API. (Prompt: {user_prompt_tokens}, System: {system_tokens}) ---")
+        logging_util.info(f"--- Sending {total_tokens} tokens to the API. (Prompt: {user_prompt_tokens}, System: {system_tokens}) ---")
 
     except Exception as e:
-        logging.warning(f"Could not count tokens before API call: {e}")
+        logging_util.warning(f"Could not count tokens before API call: {e}")
 
 def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None):
     """
@@ -577,14 +576,14 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             models_to_try.append(fallback_model)
     
     if current_prompt_text_for_logging:
-        logging.info(f"--- Calling Gemini API with current prompt: {str(current_prompt_text_for_logging)[:1000]}... ---")
+        logging_util.info(f"--- Calling Gemini API with current prompt: {str(current_prompt_text_for_logging)[:1000]}... ---")
 
     # Log both character and estimated token counts for transition period
     total_chars = sum(len(p) for p in prompt_contents if isinstance(p, str))
     if system_instruction_text:
         total_chars += len(system_instruction_text)
     estimated_tokens = total_chars // 4  # Rough estimate: 1 token per 4 characters
-    logging.info(f"--- Calling Gemini API with prompt of {total_chars} characters (~{estimated_tokens} tokens) ---")
+    logging_util.info(f"--- Calling Gemini API with prompt of {total_chars} characters (~{estimated_tokens} tokens) ---")
 
     last_error = None
     
@@ -594,9 +593,9 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             _log_token_count(current_model, prompt_contents, system_instruction_text)
             
             if attempt > 0:
-                logging.warning(f"--- Attempting fallback model #{attempt}: {current_model} (after {attempt} failed attempts) ---")
+                logging_util.warning(f"--- Attempting fallback model #{attempt}: {current_model} (after {attempt} failed attempts) ---")
             else:
-                logging.info(f"--- Attempting primary model: {current_model} ---")
+                logging_util.info(f"--- Attempting primary model: {current_model} ---")
 
             generation_config_params = {
                 "max_output_tokens": MAX_TOKENS,
@@ -610,7 +609,7 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             # Use reduced token limit for JSON mode to ensure proper completion
             generation_config_params["max_output_tokens"] = JSON_MODE_MAX_TOKENS
             if attempt == 0:  # Only log once
-                logging.info(f"--- Using JSON response mode with reduced token limit ({JSON_MODE_MAX_TOKENS}) ---")
+                logging_util.info(f"--- Using JSON response mode with reduced token limit ({JSON_MODE_MAX_TOKENS}) ---")
             
             # Pass the system instruction to the generate_content call
             if system_instruction_text:
@@ -623,9 +622,9 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             )
             
             if attempt > 0:
-                logging.warning(f"--- SUCCESS: Fallback model {current_model} worked after {attempt} failed attempts ---")
+                logging_util.warning(f"--- SUCCESS: Fallback model {current_model} worked after {attempt} failed attempts ---")
             else:
-                logging.info(f"--- SUCCESS: Primary model {current_model} worked ---")
+                logging_util.info(f"--- SUCCESS: Primary model {current_model} worked ---")
             
             return response
             
@@ -648,22 +647,22 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
                 status_code = 400
             
             if status_code == 503:  # Service unavailable
-                logging.warning(f"--- Model {current_model} overloaded (503), trying next model... ---")
+                logging_util.warning(f"--- Model {current_model} overloaded (503), trying next model... ---")
                 continue
             elif status_code == 429:  # Rate limit
-                logging.warning(f"--- Model {current_model} rate limited (429), trying next model... ---")
+                logging_util.warning(f"--- Model {current_model} rate limited (429), trying next model... ---")
                 continue
             elif status_code == 400 and "not found" in error_message.lower():  # Model not found
-                logging.warning(f"--- Model {current_model} not found (400), trying next model... ---")
+                logging_util.warning(f"--- Model {current_model} not found (400), trying next model... ---")
                 continue
             else:
                 # For other errors, don't continue cycling - raise immediately
-                logging.error(f"--- Non-recoverable error with model {current_model}: {e} ---")
+                logging_util.error(f"--- Non-recoverable error with model {current_model}: {e} ---")
                 raise e
     
     # If we get here, all models failed
-    logging.error(f"--- ALL MODELS FAILED: Tried {len(models_to_try)} models: {models_to_try} ---")
-    logging.error(f"--- Last error: {last_error} ---")
+    logging_util.error(f"--- ALL MODELS FAILED: Tried {len(models_to_try)} models: {models_to_try} ---")
+    logging_util.error(f"--- Last error: {last_error} ---")
     
     # Ensure we have a meaningful error to raise
     if last_error is None:
@@ -695,11 +694,11 @@ def _get_text_from_response(response):
         if response.text:
             return response.text
     except ValueError as e:
-        logging.warning(f"ValueError while extracting text: {e}")
+        logging_util.warning(f"ValueError while extracting text: {e}")
     except Exception as e:
-        logging.error(f"Unexpected error in _get_text_from_response: {e}")
+        logging_util.error(f"Unexpected error in _get_text_from_response: {e}")
     
-    logging.warning(f"--- Response did not contain valid text. Full response object: {response} ---")
+    logging_util.warning(f"--- Response did not contain valid text. Full response object: {response} ---")
     return "[System Message: The model returned a non-text response. Please check the logs for details.]"
 
 def _get_context_stats(context, model_name, current_game_state: GameState):
@@ -719,7 +718,7 @@ def _get_context_stats(context, model_name, current_game_state: GameState):
         count_response = client.models.count_tokens(model=model_name, contents=parts)
         tokens = count_response.total_tokens
     except Exception as e:
-        logging.warning(f"Could not count tokens for context stats: {e}")
+        logging_util.warning(f"Could not count tokens for context stats: {e}")
         
     all_core_memories = current_game_state.custom_campaign_state.get('core_memories', [])
     stats_string = f"Turns: {len(context)}, Chars: {chars}, Words: {words}, Tokens: {tokens}, Core Memories: {len(all_core_memories)}"
@@ -739,15 +738,15 @@ def _truncate_context(story_context, max_chars: int, model_name: str, current_ga
     Intelligently truncates the story context to fit within a given character budget.
     """
     initial_stats = _get_context_stats(story_context, model_name, current_game_state)
-    logging.info(f"Initial context stats: {initial_stats}")
+    logging_util.info(f"Initial context stats: {initial_stats}")
 
     current_chars = sum(len(entry.get(constants.KEY_TEXT, '')) for entry in story_context)
 
     if current_chars <= max_chars:
-        logging.info("Context is within character budget. No truncation needed.")
+        logging_util.info("Context is within character budget. No truncation needed.")
         return story_context
 
-    logging.warning(
+    logging_util.warning(
         f"Context ({current_chars} chars) exceeds budget of {max_chars} chars. Truncating..."
     )
 
@@ -767,7 +766,7 @@ def _truncate_context(story_context, max_chars: int, model_name: str, current_ga
     truncated_context = start_context + [truncation_marker] + end_context
     
     final_stats = _get_context_stats(truncated_context, model_name, current_game_state)
-    logging.info(f"Final context stats after truncation: {final_stats}")
+    logging_util.info(f"Final context stats after truncation: {final_stats}")
     
     return truncated_context
 
@@ -777,7 +776,7 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
 
     if selected_prompts is None:
         selected_prompts = [] 
-        logging.warning("No specific system prompts selected for initial story. Using none.")
+        logging_util.warning("No specific system prompts selected for initial story. Using none.")
 
     # Use PromptBuilder to construct system instructions
     builder = PromptBuilder()
@@ -822,7 +821,7 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     if character_match:
         character_name = character_match.group(1).strip()
         expected_entities.append(character_name)
-        logging.info(f"Detected player character name from prompt: {character_name}")
+        logging_util.info(f"Detected player character name from prompt: {character_name}")
     
     # Extract NPCs mentioned in prompt - look for specific patterns
     # "NPCs including X, Y, and Z" or "advisor named X"
@@ -839,7 +838,7 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
             for npc in npc_names:
                 if npc and npc not in expected_entities and npc not in ['and', 'or', 'the', 'a', 'an']:
                     expected_entities.append(npc)
-                    logging.info(f"Detected NPC from prompt: {npc}")
+                    logging_util.info(f"Detected NPC from prompt: {npc}")
     
     # Create a minimal initial game state for entity tracking
     if expected_entities:
@@ -887,19 +886,19 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
             f"{entity_tracking_instruction}"
             f"\nUSER REQUEST:\n{prompt}"
         )
-        logging.info(f"Added entity tracking to initial story. Expected entities: {expected_entities}")
+        logging_util.info(f"Added entity tracking to initial story. Expected entities: {expected_entities}")
     
     # Add character creation reminder if mechanics is enabled
     if selected_prompts and constants.PROMPT_TYPE_MECHANICS in selected_prompts:
         enhanced_prompt = constants.CHARACTER_CREATION_REMINDER + "\n\n" + enhanced_prompt
-        logging.info("Added character creation reminder to initial story prompt")
+        logging_util.info("Added character creation reminder to initial story prompt")
     
     contents = [types.Content(role="user", parts=[types.Part(text=enhanced_prompt)])]
     
     # --- MODEL SELECTION ---
     # Use default model for all operations.
     model_to_use = TEST_MODEL if os.environ.get('TESTING') else DEFAULT_MODEL
-    logging.info(f"Using model: {model_to_use} for initial story generation.")
+    logging_util.info(f"Using model: {model_to_use} for initial story generation.")
 
     response = _call_gemini_api(contents, model_to_use, current_prompt_text_for_logging=prompt, 
                               system_instruction_text=system_instruction_final)
@@ -918,7 +917,7 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
         )
         
         if not validation_result.all_entities_present:
-            logging.warning(f"Initial story failed entity validation. Missing: {validation_result.entities_missing}")
+            logging_util.warning(f"Initial story failed entity validation. Missing: {validation_result.entities_missing}")
             # For initial story, we'll log but not retry to avoid complexity
             # The continue_story function will handle retry logic for subsequent interactions
     
@@ -941,25 +940,25 @@ def _validate_and_enforce_planning_block(response_text, user_input, game_state, 
     """
     # Skip planning block enforcement during character creation
     if re.search(r"\[CHARACTER CREATION", response_text, re.IGNORECASE):
-        logging.info("Skipping planning block for character creation step")
+        logging_util.info("Skipping planning block for character creation step")
         return response_text
     
     # Skip planning block if user is switching to god/dm mode
     if any(phrase in user_input.lower() for phrase in constants.MODE_SWITCH_PHRASES):
-        logging.info("User switching to god/dm mode - skipping planning block")
+        logging_util.info("User switching to god/dm mode - skipping planning block")
         return response_text
     
     # Skip planning block if AI response indicates mode switch
     if "[Mode: DM MODE]" in response_text or "[Mode: GOD MODE]" in response_text:
-        logging.info("Response indicates mode switch - skipping planning block")
+        logging_util.info("Response indicates mode switch - skipping planning block")
         return response_text
     
     # Check if response already contains a planning block
     if "--- PLANNING BLOCK ---" in response_text:
-        logging.info("Planning block found in response")
+        logging_util.info("Planning block found in response")
         return response_text
     
-    logging.warning("PLANNING_BLOCK_MISSING: Story mode response missing required planning block")
+    logging_util.warning("PLANNING_BLOCK_MISSING: Story mode response missing required planning block")
     
     # Determine if we need a deep think block based on keywords
     think_keywords = ['think', 'plan', 'consider', 'strategize', 'options']
@@ -1011,10 +1010,10 @@ Full narrative context:
         
         # Append the planning block
         response_text = response_text + planning_block
-        logging.info(f"Added LLM-generated {'deep think' if needs_deep_think else 'standard'} planning block")
+        logging_util.info(f"Added LLM-generated {'deep think' if needs_deep_think else 'standard'} planning block")
         
     except Exception as e:
-        logging.error(f"Failed to generate planning block: {e}")
+        logging_util.error(f"Failed to generate planning block: {e}")
         # Fallback to a minimal generic block
         response_text = response_text + "\n\n--- PLANNING BLOCK ---\nWhat would you like to do next?\n1. **[Continue_1]:** Continue with your current course of action.\n2. **[Explore_2]:** Explore your surroundings.\n3. **[Other_3]:** Describe a different action you'd like to take."
     
@@ -1050,9 +1049,9 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
             discrepancies = current_game_state.validate_checkpoint_consistency(latest_narrative)
             
             if discrepancies:
-                logging.warning(f"CHECKPOINT_VALIDATION: Found {len(discrepancies)} potential discrepancies:")
+                logging_util.warning(f"CHECKPOINT_VALIDATION: Found {len(discrepancies)} potential discrepancies:")
                 for i, discrepancy in enumerate(discrepancies, 1):
-                    logging.warning(f"  {i}. {discrepancy}")
+                    logging_util.warning(f"  {i}. {discrepancy}")
                 
                 # Add validation prompt to ensure AI addresses inconsistencies
                 validation_instruction = (
@@ -1064,7 +1063,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     
     if selected_prompts is None:
         selected_prompts = []
-        logging.warning("No specific system prompts selected for continue_story. Using none.")
+        logging_util.warning("No specific system prompts selected for continue_story. Using none.")
 
 
     # Use PromptBuilder to construct system instructions
@@ -1107,7 +1106,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     char_budget_for_story = SAFE_CHAR_LIMIT - len(prompt_scaffold)
     scaffold_tokens = len(prompt_scaffold) // 4
     story_budget_tokens = char_budget_for_story // 4
-    logging.info(f"Prompt scaffold is {len(prompt_scaffold)} chars (~{scaffold_tokens} tokens). Remaining budget for story: {char_budget_for_story} chars (~{story_budget_tokens} tokens)")
+    logging_util.info(f"Prompt scaffold is {len(prompt_scaffold)} chars (~{scaffold_tokens} tokens). Remaining budget for story: {char_budget_for_story} chars (~{story_budget_tokens} tokens)")
 
     # Truncate the story context if it exceeds the budget
     truncated_story_context = _truncate_context(story_context, char_budget_for_story, DEFAULT_MODEL, current_game_state)
@@ -1200,7 +1199,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
                     logging_util.warning(f"Validation warning: {warning}")
             
             # Attempt dual-pass retry (Option 7)
-            logging.info("ENTITY_TRACKING_RETRY: Attempting dual-pass generation to fix missing entities")
+            logging_util.info("ENTITY_TRACKING_RETRY: Attempting dual-pass generation to fix missing entities")
             
             # Create generation callback for API calls
             def generation_callback(prompt):
@@ -1221,10 +1220,10 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
                 response_text = dual_pass_result.final_narrative
                 # Calculate injected entities from the difference between passes
                 injected_count = len(dual_pass_result.total_entities_found) - len(dual_pass_result.first_pass.entities_found)
-                logging.info(f"ENTITY_TRACKING_RETRY: Dual-pass succeeded. "
+                logging_util.info(f"ENTITY_TRACKING_RETRY: Dual-pass succeeded. "
                            f"Entities recovered: {injected_count}")
             else:
-                logging.error("ENTITY_TRACKING_RETRY: Dual-pass generation failed")
+                logging_util.error("ENTITY_TRACKING_RETRY: Dual-pass generation failed")
         
         # Use the common validation function to add debug info if needed
         response_text = _validate_entity_tracking(response_text, expected_entities, current_game_state)
@@ -1322,7 +1321,7 @@ def create_game_state_from_legacy_story(story_context: list) -> GameState | None
     Parses a legacy story entry to create a GameState object.
     Returns a GameState object if a legacy block is found and parsed, otherwise None.
     """
-    logging.info("Attempting to find and parse legacy game state from story context...")
+    logging_util.info("Attempting to find and parse legacy game state from story context...")
     
     # Limit the search to the last 20 entries for efficiency.
     search_context = story_context[-20:]
@@ -1331,7 +1330,7 @@ def create_game_state_from_legacy_story(story_context: list) -> GameState | None
     for entry in reversed(search_context):
         text = entry.get(constants.KEY_TEXT, '')
         if text.strip().startswith('[Mode: STORY MODE]'):
-            logging.info("Found a potential legacy game state block. Parsing...")
+            logging_util.info("Found a potential legacy game state block. Parsing...")
             
             # --- Helper function for parsing numeric values ---
             def get_stat(pattern, text, is_float=False):
@@ -1386,7 +1385,7 @@ def create_game_state_from_legacy_story(story_context: list) -> GameState | None
                 "completed_missions": completed_missions
             }
             
-            logging.info(f"Successfully parsed legacy state. Location: {location}, Gold: {gold}")
+            logging_util.info(f"Successfully parsed legacy state. Location: {location}, Gold: {gold}")
             return GameState(
                 player_character_data=player_character_data,
                 world_data=world_data,
@@ -1394,7 +1393,7 @@ def create_game_state_from_legacy_story(story_context: list) -> GameState | None
                 custom_campaign_state=custom_campaign_state
             )
 
-    logging.warning("No legacy game state block found in story context.")
+    logging_util.warning("No legacy game state block found in story context.")
     return None
 
 

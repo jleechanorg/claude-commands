@@ -3,8 +3,7 @@
 
 import os
 import sys
-import logging
-
+import logging_util
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -14,7 +13,7 @@ def test_character_creation():
     """Test that character creation triggers with a real prompt."""
     # Set up environment
     os.environ['TESTING'] = 'true'
-    logging.basicConfig(level=logging.INFO)
+    logging_util.basicConfig(level=logging_util.INFO)
     
     print("\n=== Testing Character Creation Trigger ===\n")
     

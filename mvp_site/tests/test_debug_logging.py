@@ -3,7 +3,6 @@ Test debug content logging functionality.
 """
 import unittest
 import json
-import logging
 import os
 from unittest.mock import Mock, patch, MagicMock
 import sys
@@ -12,6 +11,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+
+import logging_util
 # Mock firebase_admin before importing main
 mock_firebase_admin = MagicMock()
 mock_firestore = MagicMock()

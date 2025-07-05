@@ -7,7 +7,7 @@ import unittest
 import os
 import json
 import sys
-import logging
+import logging_util
 from datetime import datetime
 from typing import Dict, List, Any
 import time
@@ -32,8 +32,8 @@ from schemas import entities_pydantic, entities_simple
 test_setup = setup_integration_test_environment(project_root)
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logging_util.basicConfig(level=logging_util.INFO)
+logger = logging_util.getLogger(__name__)
 
 
 class ValidationMetrics:

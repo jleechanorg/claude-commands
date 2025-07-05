@@ -24,11 +24,26 @@ class TestDeploymentBuild(unittest.TestCase):
         self.mvp_site_dir = os.path.join(self.test_dir, "mvp_site")
         os.makedirs(self.mvp_site_dir)
         
+        # Create a minimal logging_util.py for the test
+        logging_util_content = '''
+import logging
+
+def info(message, *args, **kwargs):
+    logging.info(message, *args, **kwargs)
+
+def error(message, *args, **kwargs):
+    logging.error(message, *args, **kwargs)
+
+def warning(message, *args, **kwargs):
+    logging.warning(message, *args, **kwargs)
+'''
+        
+        with open(os.path.join(self.mvp_site_dir, "logging_util.py"), "w") as f:
+            f.write(logging_util_content)
+        
         # Create a minimal world_loader.py that mimics the real one
         world_loader_content = '''
 import os
-import logging
-
 WORLD_DIR = "../world"
 CELESTIAL_WARS_BOOK_PATH = os.path.join(WORLD_DIR, "celestial_wars_alexiel_book.md")
 WORLD_ASSIAH_PATH = os.path.join(WORLD_DIR, "world_assiah.md")
@@ -67,6 +82,7 @@ def load_world_content_for_system_instruction():
         # Import should work
         sys.path.insert(0, self.mvp_site_dir)
         try:
+            import logging_util
             import world_loader
             
             # But loading should fail

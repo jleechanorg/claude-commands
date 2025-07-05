@@ -2,7 +2,7 @@
 Debug utilities for handling incomplete JSON responses from Gemini API
 """
 import json
-import logging
+import logging_util
 import re
 from json_utils import (
     try_parse_json,
@@ -35,11 +35,11 @@ def fix_incomplete_json(response_text):
     # Try to parse the completed JSON
     result, success = try_parse_json(completed)
     if success:
-        logging.warning("Fixed incomplete JSON response")
+        logging_util.warning("Fixed incomplete JSON response")
         return result, True
     
     # As a last resort, try to extract just the narrative field
-    logging.error(f"Failed to fix incomplete JSON")
+    logging_util.error(f"Failed to fix incomplete JSON")
     narrative = extract_field_value(response_text, "narrative")
     if narrative:
         return {"narrative": narrative, "_incomplete": True}, True

@@ -131,7 +131,7 @@ class TestHandleDictMerge(unittest.TestCase):
 class TestHandleStringToDictUpdate(unittest.TestCase):
     """Test the _handle_string_to_dict_update helper."""
     
-    @patch('firestore_service.logging')
+    @patch('firestore_service.logging_util')
     def test_handle_delete_token(self, mock_logging):
         """Test handling __DELETE__ token now uses separate function."""
         state = {'key': {'old': 'value'}}
@@ -142,7 +142,7 @@ class TestHandleStringToDictUpdate(unittest.TestCase):
         self.assertNotIn('key', state)
         mock_logging.info.assert_called()
     
-    @patch('firestore_service.logging')
+    @patch('firestore_service.logging_util')
     def test_preserve_dict_structure(self, mock_logging):
         """Test preserving dict structure with status update."""
         state = {'key': {'old': 'value'}}
@@ -170,7 +170,7 @@ class TestUpdateStateWithChanges(unittest.TestCase):
     @patch('firestore_service._handle_dict_merge')
     @patch('firestore_service._handle_string_to_dict_update')
     @patch('firestore_service.MissionHandler.handle_active_missions_conversion')
-    @patch('firestore_service.logging')
+    @patch('firestore_service.logging_util')
     def test_handler_precedence(self, mock_logging, mock_missions, 
                               mock_string_dict, mock_dict_merge,
                               mock_core_memories, mock_append):
@@ -196,7 +196,7 @@ class TestUpdateStateWithChanges(unittest.TestCase):
         self.assertEqual(result['key'], 'simple_value')
     
     @patch('firestore_service._handle_append_syntax')
-    @patch('firestore_service.logging')
+    @patch('firestore_service.logging_util')
     def test_early_handler_exit(self, mock_logging, mock_append):
         """Test that when a handler returns True, subsequent handlers aren't called."""
         mock_append.return_value = True
@@ -214,7 +214,7 @@ class TestUpdateStateWithChanges(unittest.TestCase):
                 mock_dict.assert_not_called()
     
     @patch('firestore_service.MissionHandler.handle_active_missions_conversion')
-    @patch('firestore_service.logging')
+    @patch('firestore_service.logging_util')
     def test_active_missions_special_case(self, mock_logging, mock_missions):
         """Test special handling of active_missions."""
         state = {}
@@ -224,7 +224,7 @@ class TestUpdateStateWithChanges(unittest.TestCase):
         
         mock_missions.assert_called_once_with(state, 'active_missions', {'quest': 'data'})
     
-    @patch('firestore_service.logging')
+    @patch('firestore_service.logging_util')
     def test_simple_overwrite_fallback(self, mock_logging):
         """Test simple overwrite for unhandled cases."""
         state = {'existing': 'old'}
