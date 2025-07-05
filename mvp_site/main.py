@@ -382,12 +382,16 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
     # It should be the length of the story context + 2 (user input + AI response)
     ai_sequence_id = len(story_context) + 2
     
-    # Include debug mode status and sequence ID in response
+    # Calculate user_scene_number by counting AI responses in story_context
+    # Plus 1 for the new AI response we're about to add
+    user_scene_number = sum(1 for entry in story_context if entry.get('actor') == 'gemini') + 1
+    
+    # Include debug mode status and user scene number in response
     return jsonify({
         KEY_SUCCESS: True, 
         KEY_RESPONSE: final_response,
         'debug_mode': current_game_state.debug_mode if hasattr(current_game_state, 'debug_mode') else True,
-        'sequence_id': ai_sequence_id
+        'user_scene_number': user_scene_number
     })
 
 

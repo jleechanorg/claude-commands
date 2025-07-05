@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // Render story with debug mode awareness
-            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode, debugMode, entry.sequence_id));
+            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode, debugMode, entry.user_scene_number));
             
             // Add a slight delay to allow rendering before scrolling
             console.log("Attempting to scroll after content append, with a slight delay."); // RESTORED console.log
@@ -327,8 +327,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const { data, duration } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
                     method: 'POST', body: JSON.stringify({ input: userInput, mode }),
                 });
-                // Use sequence_id from backend response if available
-                appendToStory('gemini', data.response, null, data.debug_mode || false, data.sequence_id);
+                // Use user_scene_number from backend response
+                appendToStory('gemini', data.response, null, data.debug_mode || false, data.user_scene_number);
                 timerInfo.textContent = `Response time: ${duration}s`;
                 
                 // Update debug mode indicator if present

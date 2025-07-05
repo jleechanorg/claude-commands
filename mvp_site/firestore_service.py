@@ -342,8 +342,18 @@ def get_campaign_by_id(user_id, campaign_id):
     all_story_entries.sort(key=lambda x: (x['timestamp'], x.get('part', 1)))
 
     # 4. Add a sequence ID and convert timestamps AFTER sorting.
+    # Also add user_scene_number that only increments for AI responses
+    user_scene_counter = 0
     for i, entry in enumerate(all_story_entries):
         entry['sequence_id'] = i + 1
+        
+        # Only increment user scene number for AI responses
+        if entry.get('actor') == 'gemini':
+            user_scene_counter += 1
+            entry['user_scene_number'] = user_scene_counter
+        else:
+            entry['user_scene_number'] = None
+            
         entry['timestamp'] = entry['timestamp'].isoformat()
 
     return campaign_doc.to_dict(), all_story_entries
