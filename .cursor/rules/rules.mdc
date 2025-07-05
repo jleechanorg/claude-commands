@@ -771,6 +771,42 @@ Milestone 4: Polish & Deploy (Low complexity)
 This breakdown ensures incremental progress with natural save points.
 ```
 
+### Copilot Commands
+**Triggers**: "copilot review"
+
+**Command: `copilot review`**
+- **Purpose**: Review and address all CodeRabbit comments on open PRs
+- **Action**:
+  1. List all open PRs with CodeRabbit comments
+  2. For each PR with CodeRabbit feedback:
+     - Fetch and display CodeRabbit suggestions using `gh pr view [PR_NUMBER] --comments`
+     - Filter comments from 'coderabbitai' user
+     - Analyze each suggestion and determine if it should be:
+       - Implemented (make the suggested change)
+       - Explained (provide rationale for not implementing)
+     - Apply accepted changes to the codebase
+     - Add explanatory comments for suggestions not implemented
+  3. Create commits addressing the feedback
+  4. Update PR with summary of changes made and explanations provided
+  5. Push updates to the respective PR branches
+
+**Example Response for `copilot review`**:
+```
+Found 3 open PRs with CodeRabbit comments:
+
+PR #123: Add user authentication
+- Suggestion: Add input validation for email format
+  ✅ Implemented in auth.py:45
+- Suggestion: Consider rate limiting for login attempts  
+  ℹ️ Deferred - will add in separate security PR
+
+PR #124: Update dashboard UI
+- Suggestion: Add aria-labels for accessibility
+  ✅ Implemented in Dashboard.tsx:78-92
+
+All suggestions addressed. Pushed updates to respective branches.
+```
+
 ## XIII. Lessons Archive Process
 
 ### When to Archive

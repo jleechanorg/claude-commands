@@ -209,6 +209,13 @@ For different worktrees:
 
 ## Tech optimization
 *   [TASK-009c] `mvp_site/roadmap/scratchpad_parallel_dual_pass_optimization.md`
+*   [TASK-072] **Evaluate CodeRabbit AI Code Review Tool** (Scheduled: January 19, 2025) 🟢
+    *   Install and configure CodeRabbit on the repository
+    *   Test automated PR review capabilities
+    *   Evaluate quality of suggestions and false positive rate
+    *   Compare with manual code review process
+    *   Decision: Adopt for all PRs or remove
+    *   Enable "copilot ping" command if adopted
 *   Improve rules? https://ghuntley.com/stdlib/
 *   Ssh into desktop from laptop?
 *   Dev server per PR?
