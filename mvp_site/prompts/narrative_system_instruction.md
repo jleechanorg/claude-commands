@@ -75,7 +75,7 @@ I see several options before me:
 [Character's concluding thoughts about the decision]
 ```
 
-**Standard Choice Block Template (for regular story responses):**
+**Standard Choice Block Template (standard_choice_block, for regular story responses):**
 ```
 --- PLANNING BLOCK ---
 What would you like to do next?

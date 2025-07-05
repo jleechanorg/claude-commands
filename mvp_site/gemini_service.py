@@ -918,50 +918,19 @@ DO NOT reference other characters, campaigns, or unrelated narrative elements.
 
 The player just said: "{user_input}"
 
-They are asking to think/plan/consider their options. Generate ONLY a planning block that presents {pc_name}'s internal thoughts with pros/cons analysis. Use this exact format:
+They are asking to think/plan/consider their options. Generate ONLY a planning block using the think_planning_block template format from your system instructions.
 
---- PLANNING BLOCK ---
-[Character's internal monologue about the situation]
-
-I see several options before me:
-
-1. **[CHOICE_ID: DescriptiveName_1]:** [First option based on the CURRENT situation ONLY]
-   - Pros: [Advantages from character's perspective]
-   - Cons: [Disadvantages/risks]
-   - Confidence: [Character's subjective assessment]
-
-2. **[CHOICE_ID: DescriptiveName_2]:** [Second option relevant to THIS scene]
-   - Pros: [Advantages]
-   - Cons: [Disadvantages]
-   - Confidence: [Assessment]
-
-3. **[CHOICE_ID: DescriptiveName_3]:** [Third option for THIS character]
-   - Pros: [Advantages]
-   - Cons: [Disadvantages]
-   - Confidence: [Assessment]
-
-4. **[Other_4]:** I could also try something else entirely.
-
-[Character's concluding thoughts]
-
-Current narrative context for {pc_name}:
-{response_text[-500:]}"""
+Full narrative context:
+{response_text}"""
     else:
         planning_prompt = f"""
 CRITICAL: Generate planning options ONLY for {pc_name} in {current_location}.
 DO NOT reference other characters, campaigns, or unrelated narrative elements.
 
-Generate ONLY a planning block for {pc_name}'s next actions based on the current narrative situation. Use this exact format:
+Generate ONLY a planning block using the standard_choice_block template format from your system instructions.
 
---- PLANNING BLOCK ---
-What would you like to do next?
-1. **[Option_1]:** [Action appropriate for {pc_name} in THIS scene]
-2. **[Option_2]:** [Another action relevant to CURRENT situation]
-3. **[Option_3]:** [A third option for THIS character ONLY]
-4. **[Other_4]:** You can also describe a different action you'd like to take.
-
-Current narrative context for {pc_name}:
-{response_text[-500:]}"""
+Full narrative context:
+{response_text}"""
     
     # Generate planning block using LLM
     try:
