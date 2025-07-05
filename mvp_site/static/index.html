@@ -20,6 +20,9 @@
     <!-- Interactive Features - Milestone 4 -->
     <link rel="stylesheet" href="/static/styles/interactive-features.css">
     
+    <!-- Loading Messages - TASK-005b -->
+    <link rel="stylesheet" href="/static/loading-messages.css">
+    
     <style>
         /* Smooth theme transitions */
         .theme-transitioning * {
@@ -79,7 +82,10 @@
 
 
     <div id="loading-overlay">
-        <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
+        <div class="loading-content">
+            <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
+            <div class="loading-message"></div>
+        </div>
     </div>
     
     <!-- Main Content Container -->
@@ -162,6 +168,7 @@
             
             <div id="loading-spinner" class="text-center mt-3" style="display: none;">
                 <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
+                <div class="loading-message"></div>
             </div>
         </div>
     </div>
@@ -226,6 +233,7 @@
     <!-- Enhanced Components temporarily disabled due to layout conflicts
     <script src="/static/js/component-enhancer.js"></script>
     -->
+    <script src="/static/js/loading-messages.js"></script>
     <script src="/static/app.js"></script>
 </body>
 </html>
