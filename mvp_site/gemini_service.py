@@ -168,14 +168,15 @@ def _add_world_instructions_to_system(system_instruction_parts):
 
 
 class PromptBuilder:
-    """
-    Encapsulates prompt building logic for the Gemini service.
-    Handles system instructions, debug content, and specialized instructions.
-    """
-    
-    def __init__(self):
-        """Initialize the PromptBuilder."""
-        pass
+    """Encapsulates prompt building logic for the Gemini service."""
+
+    def __init__(self, game_state=None):
+        """Initialize the PromptBuilder.
+
+        Args:
+            game_state: Optional GameState used for dynamic instructions.
+        """
+        self.game_state = game_state
     
     def build_core_system_instructions(self):
         """
@@ -227,9 +228,29 @@ class PromptBuilder:
         parts.append(_load_instruction_file(constants.PROMPT_TYPE_DND_SRD))
     
     def build_companion_instruction(self):
-        """
-        Build the companion generation instruction.
-        """
+        """Build companion instruction text."""
+
+        state = None
+        if self.game_state is not None:
+            if hasattr(self.game_state, "to_dict"):
+                state = self.game_state.to_dict()
+            elif hasattr(self.game_state, "data"):
+                state = self.game_state.data
+
+        companions = None
+        if isinstance(state, dict):
+            companions = state.get("game_state", {}).get("companions")
+
+        if companions and isinstance(companions, dict):
+            lines = ["**ACTIVE COMPANIONS**"]
+            for name, info in companions.items():
+                if not isinstance(info, dict):
+                    continue
+                cls = info.get("class", "Unknown")
+                lines.append(f"- {name} ({cls})")
+            return "\n".join(lines)
+
+        # Fallback to static instruction used during initial story generation
         return (
             "\n**SPECIAL INSTRUCTION: COMPANION GENERATION ACTIVATED**\n"
             "You have been specifically requested to generate 3 starting companions for this campaign. "
@@ -238,9 +259,27 @@ class PromptBuilder:
         )
     
     def build_background_summary_instruction(self):
-        """
-        Build the background summary instruction for initial story.
-        """
+        """Build background summary instruction text."""
+
+        state = None
+        if self.game_state is not None:
+            if hasattr(self.game_state, "to_dict"):
+                state = self.game_state.to_dict()
+            elif hasattr(self.game_state, "data"):
+                state = self.game_state.data
+
+        story = None
+        if isinstance(state, dict):
+            story = state.get("game_state", {}).get("story")
+
+        summary = None
+        if isinstance(story, dict):
+            summary = story.get("summary")
+
+        if summary:
+            return f"**STORY SUMMARY**\n{summary}"
+
+        # Fallback to static background instruction
         return (
             "\n**CRITICAL INSTRUCTION: START WITH BACKGROUND SUMMARY**\n"
             "Before beginning the actual narrative, you MUST provide a background summary section that orients the player. "
@@ -999,12 +1038,12 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
                 user_input = f"{validation_instruction}\n\n{user_input}"
     
     if selected_prompts is None:
-        selected_prompts = [] 
+        selected_prompts = []
         logging.warning("No specific system prompts selected for continue_story. Using none.")
 
 
     # Use PromptBuilder to construct system instructions
-    builder = PromptBuilder()
+    builder = PromptBuilder(current_game_state)
     
     # Build core instructions
     system_instruction_parts = builder.build_core_system_instructions()
