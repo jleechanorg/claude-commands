@@ -1,0 +1,75 @@
+/**
+ * Parallel Dual-Pass Styles - TASK-019
+ */
+
+.enhancement-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-size: 0.875rem;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 10;
+}
+
+.enhancement-indicator .spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
+    border-width: 0.1em;
+}
+
+.enhancement-success {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 4px;
+    padding: 6px 16px;
+    font-size: 0.875rem;
+    color: #155724;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 10;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Ensure story entries have relative positioning for absolute children */
+.story-entry,
+[data-sequence-id] {
+    position: relative;
+}
+
+/* Smooth narrative transitions */
+.narrative-content {
+    transition: opacity 0.3s ease;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .enhancement-indicator,
+    .enhancement-success {
+        position: static;
+        margin-top: 8px;
+        margin-bottom: 8px;
+        right: auto;
+        top: auto;
+    }
+}
