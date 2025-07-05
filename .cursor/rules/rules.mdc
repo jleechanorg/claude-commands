@@ -448,6 +448,31 @@ For complete project details including technology stack, architecture, developme
     *   **No Direct Main Merges**: Never merge directly to main branch, except for roadmap/sprint files
     *   **Visibility**: PRs provide visibility, review history, and proper change tracking
 
+16. **Post-PR Merge Local File Check Protocol:**
+    *   **CRITICAL**: After merging any pull request, ALWAYS check for unpushed local files that may have been forgotten
+    *   **Mandatory Post-Merge Checklist**:
+        1. Immediately after PR is merged: Run `git status` on the local branch
+        2. Check for any modified or untracked files that weren't included in the PR
+        3. If local files exist, WARN the user: "⚠️ WARNING: Found local files not included in merged PR!"
+        4. List all modified/untracked files with their status
+        5. Ask user: "Should these files be included in a follow-up PR?"
+    *   **Common Scenarios Where This Happens**:
+        - Working on multiple features simultaneously
+        - Testing changes that weren't committed
+        - Documentation updates made during development
+        - Configuration files modified for local testing
+        - Files added but not staged before creating PR
+    *   **Prevention Strategy**:
+        - Always run `git status` before creating PR
+        - Use `git diff` to review all changes
+        - Check both staged and unstaged changes
+        - Never assume all work is included without verification
+    *   **Recovery Protocol**: If important files were missed:
+        1. Create new feature branch from updated main
+        2. Apply the missed changes
+        3. Create follow-up PR immediately
+        4. Reference original PR in description
+
 ## IV. Environment, Tooling & Scripts
 
 1.  **Python Virtual Environment Management:**
