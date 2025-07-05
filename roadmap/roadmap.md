@@ -86,6 +86,16 @@
     - Identify and remove old migration code that is no longer needed
     - Clean up any related dead code or unused imports
 
+### Tomorrow's Tasks
+11. **[TASK-108] Remove Word/Character Counts from Logs** 🟢 (30 min)
+    - Remove word or character counts from logs
+    - Focus exclusively on token counts for all logging
+    - Update any logging utilities that still use character/word metrics
+12. **[TASK-109] Fix ChoiceIDs Planning Block Formatting** 🟢 (30 min)
+    - Investigate and fix ChoiceIDs not correctly formatted in planning blocks
+    - Ensure consistent formatting across all planning block responses
+    - Update any parsing logic if needed
+
 ## Parallel Work Opportunities
 
 For different worktrees:
