@@ -28,6 +28,16 @@
   - [ ] Update all response handling code
 
 ### Evening (4 hrs)
+- [ ] **TASK-143** 🟡 Context7 MCP integration with Claude Code CLI (1 hr) - MANUAL
+  - [ ] Set up Context7 MCP server for Claude Code CLI integration
+  - [ ] Configure context management for all development workflows
+  - [ ] Test context retention across planning, coding, and debugging sessions
+  - [ ] Document setup and usage patterns for ongoing development
+- [ ] **TASK-144** 🟡 Sequential Thinking MCP integration with Claude Code CLI (1 hr) - MANUAL  
+  - [ ] Set up Sequential Thinking MCP server for Claude Code CLI integration
+  - [ ] Configure step-by-step reasoning for complex development decisions
+  - [ ] Test on planning workflows, debugging processes, and architectural decisions
+  - [ ] Document integration benefits and recommended usage scenarios
 - [ ] **TASK-140** 🔴 Hard stop for integrity failures (2.5 hrs) - HIGH PRIORITY
   - [ ] Detect when LLM doesn't generate state updates, halt game progression immediately
   - [ ] Show detailed traceback in debug mode, user-friendly error in normal mode

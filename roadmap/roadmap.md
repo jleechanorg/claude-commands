@@ -319,9 +319,11 @@ For different worktrees:
 *   [TASK-116] ✅ **COMPLETED** Show DC in Dice Rolls - Display Difficulty Class values in dice roll results (e.g., "Success vs DC 15") - PR #313
 *   [TASK-117] ✅ **COMPLETED** Move Default Fantasy World Checkbox - Relocate "Use default fantasy world" option to campaign creation screen - PR #313
 *   [TASK-118] ✅ **COMPLETED** Move Generate Companions Checkbox - Move "Generate default companions" from wizard last step to narrative/mechanics section - PR #313
-*   [TASK-119] **Claude-Simone Evaluation** - Evaluate https://github.com/Helmi/claude-simone for potential integration
-*   [TASK-120] **MCP Servers General Evaluation** - Survey and compare available MCP servers beyond those already scheduled
+*   [TASK-119] ✅ **COMPLETED** Claude-Simone Evaluation - Evaluated https://github.com/Helmi/claude-simone for potential integration - PR #349/#372
+*   [TASK-120] ✅ **COMPLETED** MCP Servers General Evaluation - Surveyed and compared available MCP servers beyond those already scheduled - PR #350
 *   [TASK-121] 🔴 **Create LLMResponse Class** - HIGH PRIORITY - Implement structured class to handle all LLM responses instead of raw strings/JSON
+*   [TASK-143] 🟡 **Context7 MCP Integration with Claude Code CLI** - MANUAL - Set up Context7 MCP server for Claude Code CLI integration across all development workflows
+*   [TASK-144] 🟡 **Sequential Thinking MCP Integration with Claude Code CLI** - MANUAL - Set up Sequential Thinking MCP server for Claude Code CLI integration for complex development decisions
 *   [TASK-122] **Migrate Claude Commands to Slash Format** - Convert all claude.md commands to slash commands and document on GitHub
 *   [TASK-123] **Traycer Planning Tool Evaluation** - Evaluate Traycer for architecture planning and development workflow
 *   [TASK-124] **Research Claude Best Practices** - Investigate other users' Claude configurations and compile useful patterns
@@ -664,21 +666,21 @@ For different worktrees:
   - ✅ Comprehensive testing and MCP tool evaluation documentation completed
   - ✅ Playwright configuration and sample tests implemented
   - ✅ Integration assessment with current testing framework documented
-- **[TASK-111] Zen MCP Evaluate** 🟢 (45 min)
-  - Evaluate Zen MCP (Model Context Protocol) tools
-  - Test integration capabilities with Claude
-  - Assess potential benefits for development workflow
-  - Document findings and recommendations
-- **[TASK-112] Context7 MCP Server Evaluate** 🟢 (45 min)
-  - Evaluate Context7 MCP Server capabilities
-  - Test context management features
-  - Assess integration with existing development workflow
-  - Compare with other MCP solutions
-- **[TASK-113] Sequential Thinking MCP Server Evaluate** 🟢 (45 min)
-  - Evaluate Sequential Thinking MCP Server
-  - Test step-by-step reasoning capabilities
-  - Assess benefits for complex problem solving
-  - Document integration possibilities
+- **[TASK-111] Zen MCP Evaluate** ✅ **COMPLETED** (PR #346)
+  - ✅ Evaluated Zen MCP (Model Context Protocol) tools
+  - ✅ Tested integration capabilities with Claude
+  - ✅ Assessed potential benefits for development workflow
+  - ✅ Documented findings and recommendations
+- **[TASK-112] Context7 MCP Server Evaluate** ✅ **COMPLETED** (PR #347)
+  - ✅ Evaluated Context7 MCP Server capabilities
+  - ✅ Tested context management features
+  - ✅ Assessed integration with existing development workflow
+  - ✅ Compared with other MCP solutions
+- **[TASK-113] Sequential Thinking MCP Server Evaluate** ✅ **COMPLETED** (PR #348)
+  - ✅ Evaluated Sequential Thinking MCP Server
+  - ✅ Tested step-by-step reasoning capabilities
+  - ✅ Assessed benefits for complex problem solving
+  - ✅ Documented integration possibilities
 - Milestone 4: UI Polish small tasks (2 hrs)
   - Keep timestamp sync task ([TASK-005c])
   - Other small UI fixes
