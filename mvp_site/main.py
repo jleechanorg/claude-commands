@@ -972,15 +972,6 @@ def create_app():
             return send_from_directory(app.static_folder, path)
         return send_from_directory(app.static_folder, 'index.html')
 
-    # NEW: Route to serve world reference files
-    @app.route('/world_reference/<path:filename>')
-    def serve_world_reference(filename):
-        """Serve files from the world_reference directory."""
-        world_ref_path = os.path.join(os.path.dirname(__file__), '..', 'world_reference')
-        if os.path.exists(os.path.join(world_ref_path, filename)):
-            return send_from_directory(world_ref_path, filename)
-        return "File not found", 404
-
     return app
 
 def run_god_command(campaign_id, user_id, action, command_string=None):
