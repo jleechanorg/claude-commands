@@ -265,6 +265,10 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 ### Task Execution (`/execute` `/e`) (⚠️)
 **MANDATORY**: When using `/execute` command, follow this exact sequence:
 1. **Branch Creation**: ALWAYS create new branch first using `./integrate.sh` (NEVER work on main)
+   - 🚨 **CRITICAL**: `./integrate.sh` MUST be run to create clean branch from main
+   - ❌ **NEVER create branches from other task branches** 
+   - ✅ **ALWAYS start from fresh main branch** to avoid file contamination
+   - Each task gets isolated, independent branch
 2. **Context Assessment**: Run `/est` equivalent to check context usage percentage
 3. **Context Warning**: If ≤25% context remaining:
    - ⚠️ **WARN USER**: "Context critically low (X% remaining). Task may be truncated or fail."
