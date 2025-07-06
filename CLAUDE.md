@@ -218,6 +218,13 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 ### API Error Prevention (🚨)
 ❌ Print code/file content | ✅ Use file_path:line_number | Keep responses concise
 
+### PR References (⚠️)
+**MANDATORY**: When discussing PRs, ALWAYS include the full GitHub URL
+- ✅ Format: "PR #123: https://github.com/jleechan2015/worldarchitect.ai/pull/123"
+- ✅ Use `gh pr view <PR#> --web` to get URL quickly
+- ❌ Never reference PRs by number only
+- **Repository URL**: https://github.com/jleechan2015/worldarchitect.ai
+
 ### Roadmap Updates (`/roadmap` `/r`) (⚠️)
 **MANDATORY**: When using `/roadmap` command, follow this exact sequence:
 1. **Autonomy-Focused Task Clarification**: Ask detailed clarifying questions with the explicit goal of making tasks as autonomous as possible. Gather all necessary context, constraints, and requirements upfront.

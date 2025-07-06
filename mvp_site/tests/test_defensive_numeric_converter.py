@@ -17,8 +17,10 @@ class TestDefensiveNumericConverter(unittest.TestCase):
     
     def test_hp_unknown_values(self):
         """Test HP fields with unknown values"""
-        # Test HP conversion
+        # Test HP conversion (case-insensitive)
         self.assertEqual(DefensiveNumericConverter.convert_value('hp', 'unknown'), 1)
+        self.assertEqual(DefensiveNumericConverter.convert_value('hp', 'Unknown'), 1)
+        self.assertEqual(DefensiveNumericConverter.convert_value('hp', 'UNKNOWN'), 1)
         self.assertEqual(DefensiveNumericConverter.convert_value('hp', None), 1)
         self.assertEqual(DefensiveNumericConverter.convert_value('hp', 'invalid'), 1)
         
@@ -42,6 +44,16 @@ class TestDefensiveNumericConverter(unittest.TestCase):
         self.assertEqual(DefensiveNumericConverter.convert_value('level', 'unknown'), 1)
         self.assertEqual(DefensiveNumericConverter.convert_value('level', None), 1)
         self.assertEqual(DefensiveNumericConverter.convert_value('level', 'invalid'), 1)
+    
+    def test_non_hp_defaults(self):
+        """Test non-HP field defaults (gold, initiative, etc.)"""
+        # Test gold (resource field)
+        self.assertEqual(DefensiveNumericConverter.convert_value('gold', 'unknown'), 0)
+        self.assertEqual(DefensiveNumericConverter.convert_value('gold', None), 0)
+        
+        # Test initiative (combat field)
+        self.assertEqual(DefensiveNumericConverter.convert_value('initiative', 'unknown'), 0)
+        self.assertEqual(DefensiveNumericConverter.convert_value('initiative', None), 0)
     
     def test_numeric_string_conversion(self):
         """Test valid numeric strings get converted properly"""

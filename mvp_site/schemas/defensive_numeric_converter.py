@@ -2,10 +2,16 @@
 Defensive numeric field converter that handles 'unknown' and invalid values
 """
 from typing import Any, Dict, Set
+import logging
 
 
 class DefensiveNumericConverter:
     """Handles conversion of numeric fields with fallback defaults for unknown/invalid values"""
+    
+    # Field categories for validation rules
+    HP_FIELDS = {'hp', 'hp_current', 'hp_max', 'level'}
+    NON_NEGATIVE_FIELDS = {'temp_hp', 'xp', 'xp_current', 'gold', 'successes', 'failures', 'damage', 'healing'}
+    ABILITY_SCORE_FIELDS = {'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'}
     
     # Define default values for different types of numeric fields
     FIELD_DEFAULTS: Dict[str, int] = {
@@ -65,22 +71,23 @@ class DefensiveNumericConverter:
         if key not in cls.FIELD_DEFAULTS:
             return value
         
-        # Handle explicit 'unknown' values
-        if value == 'unknown' or value is None:
+        # Handle explicit 'unknown' values (case-insensitive)
+        if (isinstance(value, str) and str(value).lower() == 'unknown') or value is None:
+            logging.warning(f"Invalid value '{value}' for field '{key}'. Using default: {cls.FIELD_DEFAULTS[key]}")
             return cls.FIELD_DEFAULTS[key]
         
         # Try to convert to integer
         try:
             converted = int(value)
             
-            # Apply field-specific validation
-            if key in ['hp', 'hp_current', 'hp_max', 'level']:
+            # Apply field-specific validation using field sets
+            if key in cls.HP_FIELDS:
                 # These fields should never be less than 1
                 return max(1, converted)
-            elif key in ['temp_hp', 'xp', 'gold', 'successes', 'failures']:
+            elif key in cls.NON_NEGATIVE_FIELDS:
                 # These fields should never be negative
                 return max(0, converted)
-            elif key in ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma']:
+            elif key in cls.ABILITY_SCORE_FIELDS:
                 # Ability scores should be 1-30
                 return max(1, min(30, converted))
             else:
@@ -88,6 +95,7 @@ class DefensiveNumericConverter:
                 
         except (ValueError, TypeError):
             # If conversion fails, return the default
+            logging.warning(f"Failed to convert '{value}' to int for field '{key}'. Using default: {cls.FIELD_DEFAULTS[key]}")
             return cls.FIELD_DEFAULTS[key]
     
     @classmethod
@@ -117,11 +125,9 @@ class DefensiveNumericConverter:
                 ]
             else:
                 # Convert the value if it's a numeric field
-                result[key] = cls.convert_value(key, value)
+                if key in cls.FIELD_DEFAULTS:
+                    result[key] = cls.convert_value(key, value)
+                else:
+                    result[key] = value
         
         return result
-    
-    @classmethod
-    def is_numeric_field(cls, field_name: str) -> bool:
-        """Check if a field name should be defensively converted."""
-        return field_name in cls.FIELD_DEFAULTS

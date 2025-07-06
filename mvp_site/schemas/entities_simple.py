@@ -292,7 +292,7 @@ def create_from_game_state(game_state: Dict[str, Any],
         
         # Convert HP values to integers with defensive handling
         # Using DefensiveNumericConverter to handle 'unknown' values gracefully
-        hp_current = DefensiveNumericConverter.convert_value("hp", 
+        hp_current = DefensiveNumericConverter.convert_value("hp_current", 
                      pc_data.get("hp_current", pc_data.get("hp", 10)))
         hp_max = DefensiveNumericConverter.convert_value("hp_max", 
                   pc_data.get("hp_max", pc_data.get("hp", 10)))
@@ -318,7 +318,7 @@ def create_from_game_state(game_state: Dict[str, Any],
             
             # Convert HP values to integers with defensive handling
             # Using DefensiveNumericConverter to handle 'unknown' values gracefully
-            npc_hp_current = DefensiveNumericConverter.convert_value("hp",
+            npc_hp_current = DefensiveNumericConverter.convert_value("hp_current",
                             npc_info.get("hp_current", npc_info.get("hp", 10)))
             npc_hp_max = DefensiveNumericConverter.convert_value("hp_max",
                          npc_info.get("hp_max", npc_info.get("hp", 10)))

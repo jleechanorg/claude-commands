@@ -50,6 +50,12 @@ class TestHPUnknownValues(unittest.TestCase):
         self.assertEqual(health.hp, 1)
         self.assertEqual(health.hp_max, 10)
     
+    def test_hp_empty_string(self):
+        """Test HP with empty string gets converted to 1"""
+        health = HealthStatus(hp='', hp_max=10)
+        self.assertEqual(health.hp, 1)
+        self.assertEqual(health.hp_max, 10)
+    
     def test_hp_max_invalid_string(self):
         """Test HP_MAX with invalid string gets converted to 1"""
         health = HealthStatus(hp=5, hp_max='not_a_number')
@@ -80,6 +86,18 @@ class TestHPUnknownValues(unittest.TestCase):
         health = HealthStatus(hp=5, hp_max='unknown')
         self.assertEqual(health.hp, 1)  # Should be clamped to hp_max
         self.assertEqual(health.hp_max, 1)
+    
+    def test_negative_hp_values(self):
+        """Test negative HP and HP_MAX values get clamped"""
+        # Test negative HP
+        health = HealthStatus(hp=-5, hp_max=10)
+        self.assertEqual(health.hp, 1)  # Should be clamped to minimum of 1
+        self.assertEqual(health.hp_max, 10)
+        
+        # Test negative HP_MAX  
+        health = HealthStatus(hp=5, hp_max=-10)
+        self.assertEqual(health.hp, 1)  # Should be clamped to hp_max
+        self.assertEqual(health.hp_max, 1)  # HP_MAX clamped to minimum of 1
 
 
 if __name__ == '__main__':
