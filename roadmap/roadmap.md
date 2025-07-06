@@ -499,13 +499,14 @@ For different worktrees:
   - Document in `roadmap/scratchpad_state_sync_entity.md`
   - Run integration tests on real campaigns
 
-### Milestone 3: Continuity Testing System (6 hrs)
+### Milestone 3: Continuity & State Integrity System (8 hrs)
 - **TASK-004** 🟡 Phase 1 - 10 interactions (2 hrs)
   - Build automated interaction program
   - Random planning block response selection
   - Track entity consistency metrics
   - Monitor narrative coherence
-- **TASK-004b** 🟡 Phase 2 - 20 interactions (2 hrs)
+- **TASK-004b** 🟡 Phase 2 - 20 interactions (2 hrs) - MOVED TO MONDAY-THURSDAY
+  - NOTE: Define requirements before starting
   - Extend test framework
   - Analyze patterns in failures
   - Generate detailed reports
@@ -513,6 +514,13 @@ For different worktrees:
   - Full continuity stress test
   - Compile comprehensive metrics
   - Identify breaking points
+- **TASK-129** 🔴 Implement Hard Stop on Integrity Failures (1 hr)
+  - Add STRICT_INTEGRITY_MODE toggle
+  - Detect integrity failures and halt gameplay
+  - Provide correction options
+- **TASK-003** 🟡 State sync validation (1 hr)
+  - Implement tracking per character_creation_state_tracking_scratchpad.md
+  - Validate all user inputs and state transitions
 
 ### Milestone 4: UI Polish - Small Tasks (2 hrs)
 - **TASK-005a** 🟢 Fix campaign list click registration (0.5 hrs)

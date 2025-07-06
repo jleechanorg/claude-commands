@@ -16,12 +16,6 @@
 ### Sunday, Jan 5 (8 hrs)
 
 ### Afternoon (4 hrs)
-- [ ] **TASK-111** 🟡 LLM narrative improvements (1 hr)
-  - [ ] Fix direct alignment mentions in narrative
-  - [ ] Improve subtlety in character descriptions
-  - [ ] Update prompts to avoid meta-game references
-- [ ] **TASK-005** 🟢 UI Polish - Small tasks
-  - [ ] TASK-005c: Timestamp sync (30 min)
 - [ ] **TASK-130** 🟡 Unit test coverage improvements (2 hrs)
   - [ ] Review current test coverage gaps
   - [ ] Implement tests for gemini_service.py (currently 27% coverage)
@@ -39,15 +33,23 @@
   - [ ] Create tests for campaign creation flow
   - [ ] Create tests for game interaction flow
   - [ ] Test cross-browser compatibility
-- [ ] **TASK-004b** 🟡 Continuity Phase 2 (1.5 hrs)
-- [ ] **TASK-119** 🟢 Claude-Simone evaluation (30 min)
-  - [ ] Review https://github.com/Helmi/claude-simone
-  - [ ] Assess integration possibilities
-  - [ ] Document findings
 
 ### Monday-Thursday (12 hrs total)
 - **TASK-001b** 🔴 Dragon Knight v3 plot fix (0.5 hrs) - MOVED FROM FRIDAY
 - **TASK-006c** 🟡 Enhanced combat scenarios (1 hr)
+- **TASK-111** 🟡 LLM narrative improvements (1 hr) - MOVED FROM SUNDAY
+  - [ ] Fix direct alignment mentions in narrative
+  - [ ] Improve subtlety in character descriptions
+  - [ ] Update prompts to avoid meta-game references
+  - [ ] See roadmap/scratchpad_task111_llm_narrative_improvements.md for requirements
+- **TASK-005c** 🟡 UI Polish - Timestamp sync (30 min) - MOVED FROM SUNDAY
+- **TASK-004b** 🟡 Continuity Phase 2 (1.5 hrs) - MOVED FROM SUNDAY
+  - [ ] NOTE: Define requirements before starting - group with other continuity tasks
+  - [ ] See continuity testing system in roadmap for related tasks
+- **TASK-119** 🟡 Claude-Simone evaluation (30 min) - MOVED FROM SUNDAY
+  - [ ] Review https://github.com/Helmi/claude-simone
+  - [ ] Assess integration possibilities
+  - [ ] Document findings
 - **TASK-123** 🔵 Traycer planning tool evaluation (1.5 hrs)
   - Install and configure Traycer
   - Test on architecture planning tasks
