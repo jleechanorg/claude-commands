@@ -217,20 +217,23 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 
 ### Roadmap Updates (`/roadmap` `/r`) (⚠️)
 **MANDATORY**: When using `/roadmap` command, follow this exact sequence:
-1. Record current branch name
-2. If not on main branch:
+1. **Task Clarification**: Ask clarifying questions to make each task more detailed and clear
+2. **Scratchpad Decision**: For medium or large tasks, ask enough clarifying questions and create `roadmap/scratchpad_task[NUMBER]_[brief-description].md` where NUMBER is the actual task number. If ambiguous whether scratchpad is needed, ask user.
+3. Record current branch name
+4. If not on main branch:
    - Check for uncommitted changes with `git status`
    - If changes exist, commit them with descriptive message
-3. Switch to main branch: `git checkout main`
-4. Pull latest changes: `git pull origin main`
-5. Make requested changes to:
+5. Switch to main branch: `git checkout main`
+6. Pull latest changes: `git pull origin main`
+7. Make requested changes to:
    - `roadmap/roadmap.md` (main roadmap file)
    - `roadmap/sprint_current.md` (current sprint status)
-6. Commit changes with format: `docs(roadmap): [description]`
-7. Push directly to main: `git push origin main`
-8. Switch back to original branch: `git checkout [original-branch]`
+   - `roadmap/scratchpad_task[NUMBER]_[description].md` (if applicable)
+8. Commit changes with format: `docs(roadmap): [description]`
+9. Push directly to main: `git push origin main`
+10. Switch back to original branch: `git checkout [original-branch]`
 
-**Files Updated**: Only `roadmap/roadmap.md` and `roadmap/sprint_current.md`
+**Files Updated**: `roadmap/roadmap.md`, `roadmap/sprint_current.md`, and task scratchpads as needed
 **Exception**: This is the ONLY case where direct push to main is allowed
 
 ## Project-Specific
