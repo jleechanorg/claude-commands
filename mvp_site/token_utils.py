@@ -34,7 +34,7 @@ def log_with_tokens(message: str, text: str, logger=None):
         logger: Logger instance (uses logging if not provided)
     """
     if logger is None:
-        logger = logging
+        logger = logging_util
         
     char_count = len(text) if text else 0
     token_count = estimate_tokens(text)
