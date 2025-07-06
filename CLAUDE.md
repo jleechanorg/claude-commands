@@ -260,23 +260,27 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 
 ### Task Execution (`/execute` `/e`) (⚠️)
 **MANDATORY**: When using `/execute` command, follow this exact sequence:
-1. **Context Assessment**: Run `/est` equivalent to check context usage percentage
-2. **Context Warning**: If ≤25% context remaining:
+1. **Branch Creation**: ALWAYS create new branch first using `./integrate.sh` (NEVER work on main)
+2. **Context Assessment**: Run `/est` equivalent to check context usage percentage
+3. **Context Warning**: If ≤25% context remaining:
    - ⚠️ **WARN USER**: "Context critically low (X% remaining). Task may be truncated or fail."
    - **Ask for confirmation**: "Proceed anyway? (y/n)"
    - **If user says no**: Stop execution and suggest context optimization
-3. **Subagent Analysis**: Evaluate if task should use subagents:
+4. **Subagent Analysis**: Evaluate if task should use subagents:
    - **Use subagents if**: Complex task, multiple files, requires research, or context-heavy
    - **Direct execution if**: Simple task, single file focus, or context sufficient
-4. **Subagent Planning**: If using subagents:
+5. **Subagent Planning**: If using subagents:
    - **Estimate subagent count**: Based on task complexity and scope
    - **Define subagent roles**: Specific responsibilities for each subagent
    - **Report to user**: "Using X subagents: [role descriptions]"
-5. **Execution Method Declaration**: 
+6. **Execution Method Declaration**: 
    - **If subagents**: "Executing with X subagents for [reasons]"
    - **If direct**: "Executing directly (sufficient context/simple task)"
-6. **Task Execution**: Proceed with chosen execution method
-7. **Result Reporting**: Summarize completion status and any issues
+7. **Task Execution**: Proceed with chosen execution method
+8. **Commit Changes**: Commit all changes with descriptive commit messages
+9. **Push Branch**: Push branch to GitHub using `git push origin HEAD:branch-name`
+10. **Create PR**: ALWAYS create PR using `gh pr create` with test results and description
+11. **Result Reporting**: Summarize completion status, PR URL, and any issues
 
 **Subagent Decision Criteria**:
 - ✅ **Use subagents for**: Multi-file changes, research tasks, complex debugging, large refactoring
@@ -286,6 +290,12 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 - **>50% remaining**: Proceed normally
 - **26-50% remaining**: Consider subagents for complex tasks
 - **≤25% remaining**: Warn user and strongly recommend subagents or context optimization
+
+**CRITICAL REQUIREMENT**: `/execute` MUST ALWAYS create PRs, never work directly on main branch. This ensures:
+- ✅ **Code review** through GitHub PR process
+- ✅ **GitHub Actions** run tests automatically  
+- ✅ **Proper workflow** follows branch → PR → merge pattern
+- ❌ **NO direct main changes** except for roadmap files via `/roadmap`
 
 ## Project-Specific
 
