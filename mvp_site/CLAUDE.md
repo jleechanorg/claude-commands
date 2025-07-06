@@ -20,6 +20,15 @@ TESTING=true vpython mvp_site/tests/test_integration.py
 cd .. && TESTING=true vpython mvp_site/tests/test_integration.py
 ```
 
+### Claude Code Navigation Best Practices
+- **ALWAYS run Python commands from project root** to avoid import errors
+- **Use absolute paths** when referencing files in Claude Code
+- **Navigation patterns**:
+  - `pwd` to check current directory before any Python execution
+  - `cd /path/to/project/root` if not at root
+  - Use full paths: `vpython mvp_site/test_file.py` ✓
+  - Never: `cd mvp_site && vpython test_file.py` ✗
+
 ### Key Files in mvp_site
 - **main.py**: Flask application entry point
 - **game_state.py**: Campaign state management
