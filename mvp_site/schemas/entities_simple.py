@@ -8,12 +8,12 @@ from enum import Enum
 from datetime import datetime
 import re
 
-# Import numeric field converter
+# Import defensive numeric field converter
 # This handles both package imports (relative) and direct script execution
 try:
-    from ..numeric_field_converter import NumericFieldConverter
+    from .defensive_numeric_converter import DefensiveNumericConverter
 except ImportError:
-    from numeric_field_converter import NumericFieldConverter
+    from schemas.defensive_numeric_converter import DefensiveNumericConverter
 
 
 class EntityType(Enum):
@@ -65,28 +65,28 @@ class Stats:
     """D&D-style character stats"""
     def __init__(self, strength=10, dexterity=10, constitution=10, 
                  intelligence=10, wisdom=10, charisma=10):
-        self.strength = SimpleValidator.validate_range(strength, 1, 30, "Strength")
-        self.dexterity = SimpleValidator.validate_range(dexterity, 1, 30, "Dexterity")
-        self.constitution = SimpleValidator.validate_range(constitution, 1, 30, "Constitution")
-        self.intelligence = SimpleValidator.validate_range(intelligence, 1, 30, "Intelligence")
-        self.wisdom = SimpleValidator.validate_range(wisdom, 1, 30, "Wisdom")
-        self.charisma = SimpleValidator.validate_range(charisma, 1, 30, "Charisma")
+        # Use defensive conversion for all stats
+        self.strength = DefensiveNumericConverter.convert_value('strength', strength)
+        self.dexterity = DefensiveNumericConverter.convert_value('dexterity', dexterity)
+        self.constitution = DefensiveNumericConverter.convert_value('constitution', constitution)
+        self.intelligence = DefensiveNumericConverter.convert_value('intelligence', intelligence)
+        self.wisdom = DefensiveNumericConverter.convert_value('wisdom', wisdom)
+        self.charisma = DefensiveNumericConverter.convert_value('charisma', charisma)
 
 
 class HealthStatus:
     """Health and condition tracking"""
     def __init__(self, hp: int, hp_max: int, temp_hp: int = 0, 
                  conditions: List[str] = None):
-        if hp > hp_max:
-            raise ValueError(f"HP {hp} cannot exceed max HP {hp_max}")
-        if hp < 0:
-            raise ValueError(f"HP cannot be negative")
-        if hp_max < 1:
-            raise ValueError(f"Max HP must be at least 1")
+        # Use defensive conversion for all HP-related fields
+        self.hp = DefensiveNumericConverter.convert_value('hp', hp)
+        self.hp_max = DefensiveNumericConverter.convert_value('hp_max', hp_max)
+        self.temp_hp = DefensiveNumericConverter.convert_value('temp_hp', temp_hp)
+        
+        # Ensure HP doesn't exceed hp_max after conversion
+        if self.hp > self.hp_max:
+            self.hp = self.hp_max
             
-        self.hp = hp
-        self.hp_max = hp_max
-        self.temp_hp = max(0, temp_hp)
         self.conditions = conditions or []
         self.death_saves = {"successes": 0, "failures": 0}
 
@@ -134,7 +134,7 @@ class Character:
         self.entity_type = entity_type
         self.display_name = display_name
         self.aliases = aliases or []
-        self.level = SimpleValidator.validate_range(level, 1, 20, "Level")
+        self.level = DefensiveNumericConverter.convert_value('level', level)
         self.stats = stats or Stats()
         self.health = health
         self.status = status or [EntityStatus.CONSCIOUS]
@@ -290,11 +290,11 @@ def create_from_game_state(game_state: Dict[str, Any],
         # Use string_id if present, otherwise generate one
         pc_entity_id = pc_data.get("string_id", f"pc_{pc_name.lower().replace(' ', '_')}_001")
         
-        # Convert HP values to integers (Firestore may store as strings)
-        # Using NumericFieldConverter for consistency with firestore_service
-        hp_current = NumericFieldConverter.convert_value("hp_current", 
+        # Convert HP values to integers with defensive handling
+        # Using DefensiveNumericConverter to handle 'unknown' values gracefully
+        hp_current = DefensiveNumericConverter.convert_value("hp", 
                      pc_data.get("hp_current", pc_data.get("hp", 10)))
-        hp_max = NumericFieldConverter.convert_value("hp_max", 
+        hp_max = DefensiveNumericConverter.convert_value("hp_max", 
                   pc_data.get("hp_max", pc_data.get("hp", 10)))
         
         pc = PlayerCharacter(
@@ -316,11 +316,11 @@ def create_from_game_state(game_state: Dict[str, Any],
             # Use string_id if present, otherwise generate one
             npc_entity_id = npc_info.get("string_id", f"npc_{npc_name.lower().replace(' ', '_')}_{idx+1:03d}")
             
-            # Convert HP values to integers (Firestore may store as strings)
-            # Using NumericFieldConverter for consistency with firestore_service
-            npc_hp_current = NumericFieldConverter.convert_value("hp_current",
+            # Convert HP values to integers with defensive handling
+            # Using DefensiveNumericConverter to handle 'unknown' values gracefully
+            npc_hp_current = DefensiveNumericConverter.convert_value("hp",
                             npc_info.get("hp_current", npc_info.get("hp", 10)))
-            npc_hp_max = NumericFieldConverter.convert_value("hp_max",
+            npc_hp_max = DefensiveNumericConverter.convert_value("hp_max",
                          npc_info.get("hp_max", npc_info.get("hp", 10)))
             
             npc = NPC(

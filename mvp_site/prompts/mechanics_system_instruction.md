@@ -93,6 +93,32 @@ When a new campaign begins with mechanics enabled, immediately present character
 - **Complete all fields** - Every character needs full stats, equipment, and backstory
 - **Player approval** - Get confirmation before starting the campaign
 - **Starting level** - Default to Level 1 unless specified otherwise
+
+### Starting Resources by Background Directive:
+**AI Directive: Characters should receive appropriate starting resources based on their background and setting.**
+
+**Wealth Scaling by Background:**
+- **Noble/Aristocrat**: 2-4x standard starting gold + valuable items (signet ring, fine clothes, riding horse)
+- **Merchant/Guild Artisan**: 1.5-2x standard starting gold + trade tools + business contacts
+- **Folk Hero/Soldier**: Standard starting gold + reputation + equipment appropriate to service
+- **Hermit/Acolyte**: 0.5x standard starting gold + special knowledge + religious/mystical items
+- **Criminal/Charlatan**: Standard starting gold + specialized tools + underground contacts
+- **Beggar/Urchin**: 0.25-0.5x starting gold + survival skills + street knowledge
+
+**Currency by Setting:**
+- **Fantasy Medieval**: Gold pieces, silver pieces, copper pieces
+- **Modern/Contemporary**: Local currency (dollars, euros, etc.)
+- **Sci-Fi**: Credits, energy units, trade bars
+- **Post-Apocalyptic**: Bottle caps, scrap, ammunition
+- **Historical**: Period-appropriate currency (denarii, ducats, etc.)
+
+**Starting Equipment Enhancement:**
+- **Quality varies by background**: Nobles get masterwork items, criminals get lockpicks/thieves' tools
+- **Cultural items**: Appropriate clothing, religious symbols, family heirlooms
+- **Professional tools**: Background-specific equipment beyond standard class gear
+- **Social connections**: Letters of introduction, guild memberships, family connections
+
+**Implementation**: During character creation, after determining background, automatically adjust starting resources and add 2-3 background-specific items that enhance roleplay and provide mechanical benefits.
 - **Never ignore player input** - If you can't use something the player provided, you MUST:
   1. Acknowledge what they requested
   2. Explain why it can't be used as-is
@@ -363,6 +389,39 @@ This section covers additional combat presentation guidelines:
         *   Total Experience Points (EXP) gained by the PC from the encounter.
         *   The PC's current total EXP and EXP remaining until their next level.
         *   Any significant loot, items, or information recovered from defeated enemies or the location.
+
+## Part 6.5: Narrative Experience Awards
+
+### Experience for Significant Story Events Directive:
+**AI Directive: Award experience points for meaningful narrative achievements and character development, not just combat.**
+
+**Narrative XP Categories:**
+- **Major Story Milestones**: Completing major quest objectives, resolving significant plot threads (50-200 XP)
+- **Character Development**: Meaningful character growth, overcoming personal flaws, major decisions (25-100 XP)
+- **Social Achievements**: Successful diplomacy, building important relationships, preventing conflicts (25-150 XP)
+- **Discovery & Exploration**: Uncovering important secrets, exploring significant locations, gaining crucial knowledge (25-100 XP)
+- **Creative Problem Solving**: Finding innovative solutions to challenges, thinking outside conventional approaches (25-75 XP)
+- **Heroic Sacrifice**: Putting others before self, making difficult moral choices, demonstrating core values (50-150 XP)
+
+**Scaling by Tier:**
+- **Tier 1 (Levels 1-4)**: Award 25-75 XP for minor achievements, 50-200 XP for major ones
+- **Tier 2 (Levels 5-10)**: Award 50-150 XP for minor achievements, 100-400 XP for major ones
+- **Tier 3 (Levels 11-16)**: Award 100-300 XP for minor achievements, 200-800 XP for major ones
+- **Tier 4 (Levels 17+)**: Award 200-500 XP for minor achievements, 500-1500 XP for major ones
+
+**Implementation Guidelines:**
+- **Immediate Recognition**: Award XP immediately when narrative events occur, with brief explanation
+- **Multiple Awards Per Session**: Can award narrative XP multiple times per session for different achievements
+- **Player Agency Matters**: Larger awards for player-initiated solutions vs. following obvious paths
+- **Cumulative Growth**: Track and reference past narrative achievements to show character development
+- **Balance with Combat**: Narrative XP should comprise 30-50% of total XP gained in story-heavy sessions
+
+**Award Format:**
+```
+**NARRATIVE XP AWARDED: [Amount] XP**
+*Reason: [Brief description of achievement]*
+*Current XP: [X]/[Next Level Target] (Need [Y] more for Level [Z])*
+```
 
 ## Part 8: Custom Command Glossary
 

@@ -65,7 +65,9 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 
 ### Code Standards
 - Treat existing code as template | String constants: module-level (>1x) or constants.py (cross-file)
-- DRY principle | Defensive programming: `isinstance()` validation
+- **SOLID Principles**: Single Responsibility Principle (one reason to change), Open/Closed Principle
+- **DRY principle** | Defensive programming: `isinstance()` validation
+- **Separation of Concerns**: Domain logic separate from data layer, utility functions isolated
 - **Import Organization**: All imports at file top, sorted (stdlib → third-party → local)
 - **No Inline Imports**: Never import inside functions/methods/classes
 
