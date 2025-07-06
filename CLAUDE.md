@@ -167,8 +167,9 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 | `/context` `/est` | Context estimation | Show % used, breakdown, recommendations |
 | `/milestones N` | Break into N phases | Create milestones, update scratchpad, commit each |
 | `/milestones suggest` | Suggest optimal count | Analyze complexity, suggest 3-7 with rationale |
+| `/list` | List all commands | Display all slash commands with descriptions |
 | `/tdd` `/rg` | Test-driven dev | Red → Green → Refactor workflow |
-| `/review` `/copilot` | Process AI reviews | Fetch comments, apply changes, commit |
+| `/review` `/copilot` | Process all PR comments | Fetch ALL comments, apply changes, commit |
 | `/optimize` | Improve code/files | Remove dupes, improve efficiency |
 | `/test` | Run full test suite | `./run_tests.sh` + fix failures |
 | `/integrate` | Fresh branch | Run `./integrate.sh` script |
