@@ -46,19 +46,10 @@
 ### Monday-Thursday (12 hrs total)
 - **TASK-001b** 🔴 Dragon Knight v3 plot fix (0.5 hrs) - MOVED FROM FRIDAY
 - **TASK-006c** 🟡 Enhanced combat scenarios (1 hr)
-- **TASK-111** 🟡 Subtle alignment and Myers-Briggs narrative handling (1 hr) - MOVED FROM SUNDAY
-  - [ ] Hide alignment/MBTI from player-visible narrative while keeping in game state
-  - [ ] Improve subtlety in character descriptions
-  - [ ] Update prompts to avoid meta-game references
-  - [ ] See roadmap/scratchpad_task111_llm_narrative_improvements.md for detailed requirements
 - **TASK-005c** 🟡 UI Polish - Timestamp sync (30 min) - MOVED FROM SUNDAY
 - **TASK-004b** 🟡 Continuity Phase 2 (1.5 hrs) - MOVED FROM SUNDAY
   - [ ] NOTE: Define requirements before starting - group with other continuity tasks
   - [ ] See continuity testing system in roadmap for related tasks
-- **TASK-119** 🟡 Claude-Simone evaluation (30 min) - MOVED FROM SUNDAY
-  - [ ] Review https://github.com/Helmi/claude-simone
-  - [ ] Assess integration possibilities
-  - [ ] Document findings
 - **TASK-132** 🟡 GitHub Actions /testi integration (1.5 hrs) - NEW
   - [ ] Create .github/workflows/integration-tests.yml for PR automation
   - [ ] Configure Firebase and Gemini API secrets, use vpython with TESTING=true
@@ -107,9 +98,13 @@
 
 ### Already Done/In Progress (WIP)
 - [x] **TASK-006a** 🟡 Editable campaign names - WIP (PR #301)
-- [x] **TASK-006b** 🟡 Background story pause button - WIP (PR #299)
+- [x] **TASK-006b** 🟡 Background story pause button - WIP (PR #323)
 - [x] **TASK-122** 🟡 Migrate Claude commands to slash - COMPLETED (PR #318)
-- [x] **TASK-120** 🟢 MCP servers general evaluation - WIP (PR #314)
+- [x] **TASK-111** ✅ **COMPLETED** Zen MCP evaluation - COMPLETED (PR #346/#364/#367)
+- [x] **TASK-112** ✅ **COMPLETED** Context7 MCP evaluation - COMPLETED (PR #347/#362/#368)
+- [x] **TASK-113** ✅ **COMPLETED** Sequential Thinking MCP evaluation - COMPLETED (PR #348/#365/#369)
+- [x] **TASK-119** ✅ **COMPLETED** Claude-Simone evaluation - COMPLETED (PR #349/#361/#372)
+- [x] **TASK-120** ✅ **COMPLETED** MCP servers general evaluation - COMPLETED (PR #350/#363/#374)
 
 ### Blocked Items
 - TASK-001c: Null HP bug (waiting for combat PR review)
@@ -120,6 +115,23 @@
 - Update with `roadmap finish TASK-XXX`
 
 ## Completed Tasks Record
+
+### Sunday, Jan 5-6 - COMPLETED
+- [x] **TASK-111** ✅ **COMPLETED** Zen MCP evaluation (PR #346/#364/#367)
+  - ✅ Comprehensive evaluation of Zen MCP server completed
+  - ✅ Integration assessment documented with clean final report
+- [x] **TASK-112** ✅ **COMPLETED** Context7 MCP evaluation (PR #347/#362/#368)
+  - ✅ Context7 MCP server evaluation completed
+  - ✅ Integration capabilities assessed with clean documentation
+- [x] **TASK-113** ✅ **COMPLETED** Sequential Thinking MCP evaluation (PR #348/#365/#369)
+  - ✅ Sequential Thinking MCP server evaluated
+  - ✅ Step-by-step reasoning capabilities assessed with clean report
+- [x] **TASK-119** ✅ **COMPLETED** Claude-Simone evaluation (PR #349/#361/#372)
+  - ✅ Claude-Simone project management framework evaluated
+  - ✅ Integration possibilities documented with comprehensive clean report
+- [x] **TASK-120** ✅ **COMPLETED** MCP servers general evaluation (PR #350/#363/#374)
+  - ✅ Comprehensive ecosystem evaluation completed
+  - ✅ Multiple MCP servers compared and analyzed with clean consolidated report
 
 ### Saturday, Jan 4 - COMPLETED
 - [x] **TASK-126** 🔴 Debug raw JSON display in campaigns - COMPLETED (PR #321)
