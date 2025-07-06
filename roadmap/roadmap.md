@@ -321,7 +321,7 @@ For different worktrees:
 *   [TASK-118] ✅ **COMPLETED** Move Generate Companions Checkbox - Move "Generate default companions" from wizard last step to narrative/mechanics section - PR #313
 *   [TASK-119] **Claude-Simone Evaluation** - Evaluate https://github.com/Helmi/claude-simone for potential integration
 *   [TASK-120] **MCP Servers General Evaluation** - Survey and compare available MCP servers beyond those already scheduled
-*   [TASK-121] **Create LLMResponse Class** - Implement structured class to handle all LLM responses instead of raw strings/JSON
+*   [TASK-121] 🔴 **Create LLMResponse Class** - HIGH PRIORITY - Implement structured class to handle all LLM responses instead of raw strings/JSON
 *   [TASK-122] **Migrate Claude Commands to Slash Format** - Convert all claude.md commands to slash commands and document on GitHub
 *   [TASK-123] **Traycer Planning Tool Evaluation** - Evaluate Traycer for architecture planning and development workflow
 *   [TASK-124] **Research Claude Best Practices** - Investigate other users' Claude configurations and compile useful patterns

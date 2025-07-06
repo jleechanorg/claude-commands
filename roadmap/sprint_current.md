@@ -16,12 +16,12 @@
 ### Sunday, Jan 5 (8 hrs)
 
 ### Afternoon (4 hrs)
-- [ ] **TASK-130** 🟡 Unit test coverage improvements (2 hrs)
+- [ ] **TASK-130** 🔴 Unit test coverage improvements (2 hrs) - HIGH PRIORITY
   - [ ] Review current test coverage gaps
   - [ ] Implement tests for gemini_service.py (currently 27% coverage)
   - [ ] Implement tests for firestore_service.py (currently 50% coverage)
   - [ ] Target 85% overall coverage milestone
-- [ ] **TASK-121** 🟡 Create LLMResponse class (30 min)
+- [ ] **TASK-121** 🔴 Create LLMResponse class (30 min) - HIGH PRIORITY
   - [ ] Design class with all identified fields
   - [ ] Implement parsing methods
   - [ ] Refactor gemini_service.py to use class
