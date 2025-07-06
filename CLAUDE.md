@@ -245,6 +245,7 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 10. Commit changes with format: `docs(roadmap): [description]`
 11. Push directly to main: `git push origin main`
 12. Switch back to original branch: `git checkout [original-branch]`
+13. **MANDATORY**: Explicitly report merge status: "✅ MERGED" or "❌ NOT MERGED" with explanation
 
 **Files Updated**: `roadmap/roadmap.md`, `roadmap/sprint_current.md`, and task scratchpads as needed
 **Exception**: This is the ONLY case where direct push to main is allowed
