@@ -84,14 +84,14 @@
      - Currently missing during character creation flow
      - Ensure planning block appears at the right time
      - Test that it properly waits for user confirmation
-10. **[TASK-128] Create Long Integration Test - Option 1 Repeated** 🟡 (30 min)
+10. **[TASK-128] Create Long Integration Test - Option 1 Repeated** ✅ **COMPLETED** (PR #313)
     - **Test Details:**
-      - Create new test file: `test_integration_long.py`
-      - Test choosing option 1 (planning block option) repeatedly
-      - Run 10-20 iterations of selecting option 1
-      - Focus on state consistency throughout the interactions
-      - Verify no state corruption or drift over many turns
-      - Ensure game remains stable with repeated planning choices
+      - ✅ Create new test file: `test_integration_long.py`
+      - ✅ Test choosing option 1 (planning block option) repeatedly
+      - ✅ Run 10-20 iterations of selecting option 1
+      - ✅ Focus on state consistency throughout the interactions
+      - ✅ Verify no state corruption or drift over many turns
+      - ✅ Ensure game remains stable with repeated planning choices
 11. **[TASK-129] Implement Hard Stop on Integrity Failures** 🔴 (1 hr)
     - **Implementation Details:**
       - Add module-level boolean constant `STRICT_INTEGRITY_MODE = True` for toggling
@@ -172,7 +172,7 @@ For different worktrees:
 
 ### Bugs
 *   [TASK-001c] **Null HP during combat** - Happens during combat, defer to combat system revamp (see PR #102: https://github.com/jleechan2015/worldarchitect.ai/pull/102)
-*   [TASK-001a] 🟡 **IN PROGRESS** Malformed JSON response from AI - From AI responses, needs investigation of when/why AI responses fail to parse - PR #296
+*   [TASK-001a] ✅ **COMPLETED** Malformed JSON response from AI - Fixed god mode JSON display issue - PR #321
 *   [TASK-001b] ✅ **COMPLETED** Dragon Knight v3 plot coherence - AI introduced unrelated plot element (randomly introduced crypt element), need stronger narrative constraints
 *   Stable?
 
@@ -180,7 +180,7 @@ For different worktrees:
 
 ### Critical Bug Fixes
 - **Null HP during combat** - DEFERRED to combat system revamp (see PR #102: https://github.com/jleechan2015/worldarchitect.ai/pull/102)
-- **Malformed JSON response from AI** - Need thorough investigation of when/why AI responses fail to parse, add robust error handling
+- **Malformed JSON response from AI** - ✅ COMPLETED - Fixed god mode JSON display issue (PR #321)
 - **Dragon Knight v3 plot coherence** - ✅ COMPLETED - Fixed AI introducing unrelated plot elements
 
 ### LLM I/O Format Standardization
@@ -320,18 +320,18 @@ For different worktrees:
 *   [TASK-085] **Cursor AI Prompts Research** - Research and integrate Cursor AI prompts from https://github.com/x1xhlol/system-prompts-and-models-of-ai-tools
 *   [TASK-086] **Mobile SSH Access** - Configure SSH access from mobile phone to development PC when not on home WiFi using the Perplexity guide
 *   [TASK-087] **Tailscale VPN Setup** - Set up Tailscale for secure development environment networking and remote access
-*   [TASK-114] **Cache All File Reads** - Implement in-memory caching for all file reads to improve performance
-*   [TASK-115] **Document LLM Input Structure** - Create formal documentation of exact JSON/data structures sent to LLM
-*   [TASK-116] **Show DC in Dice Rolls** - Display Difficulty Class values in dice roll results (e.g., "Success vs DC 15")
-*   [TASK-117] **Move Default Fantasy World Checkbox** - Relocate "Use default fantasy world" option to campaign creation screen
-*   [TASK-118] **Move Generate Companions Checkbox** - Move "Generate default companions" from wizard last step to narrative/mechanics section
+*   [TASK-114] ✅ **COMPLETED** Cache All File Reads - Implement in-memory caching for all file reads to improve performance - PR #319
+*   [TASK-115] ✅ **COMPLETED** Document LLM Input Structure - Create formal documentation of exact JSON/data structures sent to LLM - PR #314
+*   [TASK-116] ✅ **COMPLETED** Show DC in Dice Rolls - Display Difficulty Class values in dice roll results (e.g., "Success vs DC 15") - PR #313
+*   [TASK-117] ✅ **COMPLETED** Move Default Fantasy World Checkbox - Relocate "Use default fantasy world" option to campaign creation screen - PR #313
+*   [TASK-118] ✅ **COMPLETED** Move Generate Companions Checkbox - Move "Generate default companions" from wizard last step to narrative/mechanics section - PR #313
 *   [TASK-119] **Claude-Simone Evaluation** - Evaluate https://github.com/Helmi/claude-simone for potential integration
 *   [TASK-120] **MCP Servers General Evaluation** - Survey and compare available MCP servers beyond those already scheduled
 *   [TASK-121] **Create LLMResponse Class** - Implement structured class to handle all LLM responses instead of raw strings/JSON
 *   [TASK-122] **Migrate Claude Commands to Slash Format** - Convert all claude.md commands to slash commands and document on GitHub
 *   [TASK-123] **Traycer Planning Tool Evaluation** - Evaluate Traycer for architecture planning and development workflow
 *   [TASK-124] **Research Claude Best Practices** - Investigate other users' Claude configurations and compile useful patterns
-*   [TASK-125] **Standardize Logging to logging_util** - Replace all usage of standard logging module with logging_util for consistency
+*   [TASK-125] ✅ **COMPLETED** Standardize Logging to logging_util - Replace all usage of standard logging module with logging_util for consistency - PR #319
 
 ## Optimization
 *   Start generating the world after user first choice?
