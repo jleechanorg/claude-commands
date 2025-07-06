@@ -44,8 +44,14 @@ if [ "$current_branch" != "main" ]; then
     
     # Check if current branch has unpushed commits - HARD STOP
     if git log origin/main..HEAD --oneline | grep -q .; then
-        echo "❌ HARD STOP: Branch '$current_branch' has unpushed commits:"
-        git log origin/main..HEAD --oneline | head -5
+        commit_count=$(git log origin/main..HEAD --oneline | wc -l)
+        echo "❌ HARD STOP: Branch '$current_branch' has $commit_count unpushed commit(s):"
+        echo ""
+        echo "   📋 COMMIT SUMMARY:"
+        git log origin/main..HEAD --oneline | head -10 | sed 's/^/     /'
+        echo ""
+        echo "   📊 FILES CHANGED:"
+        git diff --name-only origin/main..HEAD | head -10 | sed 's/^/     /'
         echo ""
         if [ "$FORCE_MODE" = true ]; then
             echo "🚨 FORCE MODE: Proceeding anyway (unpushed commits will be abandoned)"
