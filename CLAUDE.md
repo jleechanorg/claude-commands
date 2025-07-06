@@ -269,6 +269,7 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
    - ❌ **NEVER create branches from other task branches** 
    - ✅ **ALWAYS start from fresh main branch** to avoid file contamination
    - Each task gets isolated, independent branch
+   - 🚨 **WORKTREE CLEANUP TIMING**: Only cleanup `worktree_task[NUMBER]` AFTER PR merge, not after PR creation
 2. **Context Assessment**: Run `/est` equivalent to check context usage percentage
 3. **Context Warning**: If ≤25% context remaining:
    - ⚠️ **WARN USER**: "Context critically low (X% remaining). Task may be truncated or fail."
