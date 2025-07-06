@@ -1,7 +1,10 @@
 # Diagnostic edit to test file system access.
 import os
+import sys
 import uuid
 import re
+import subprocess
+import argparse
 from functools import wraps
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
@@ -909,7 +912,9 @@ def create_app():
             campaign_title = campaign_data.get('title', 'Untitled Campaign')
             desired_download_name = f"{campaign_title}.{export_format}"
 
-            temp_dir = '/tmp/campaign_exports'
+            # Use project-specific tmp directory instead of system /tmp
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            temp_dir = os.path.join(project_root, 'tmp', 'campaign_exports')
             os.makedirs(temp_dir, exist_ok=True)
             safe_file_path = os.path.join(temp_dir, f"{uuid.uuid4()}.{export_format}")
             
@@ -1025,11 +1030,8 @@ def run_god_command(campaign_id, user_id, action, command_string=None):
 
 
 if __name__ == "__main__":
-    import argparse
-    import sys
-
     parser = argparse.ArgumentParser(description="World Architect AI Server & Tools")
-    parser.add_argument('command', nargs='?', default='serve', help="Command to run ('serve' or 'god-command')")
+    parser.add_argument('command', nargs='?', default='serve', help="Command to run ('serve', 'god-command', or 'testui')")
     
     # Manual parsing for god-command to handle multi-line strings
     if len(sys.argv) > 1 and sys.argv[1] == 'god-command':
@@ -1050,6 +1052,17 @@ if __name__ == "__main__":
 
         run_god_command(args.campaign_id, args.user_id, args.action, args.command_string)
 
+    elif len(sys.argv) > 1 and sys.argv[1] == 'testui':
+        # Run browser tests
+        test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_ui', 'run_all_browser_tests.py')
+        if os.path.exists(test_runner):
+            print("🌐 Running WorldArchitect.AI Browser Tests...")
+            result = subprocess.run([sys.executable, test_runner])
+            sys.exit(result.returncode)
+        else:
+            print(f"❌ Test runner not found: {test_runner}")
+            sys.exit(1)
+
     else:
         # Standard server execution
         args = parser.parse_args()
@@ -1058,5 +1071,15 @@ if __name__ == "__main__":
             port = int(os.environ.get('PORT', 8080))
             print(f"Development server running: http://localhost:{port}")
             app.run(host='0.0.0.0', port=port, debug=True)
+        elif args.command == 'testui':
+            # Alternative path if testui wasn't caught above
+            test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_ui', 'run_all_browser_tests.py')
+            if os.path.exists(test_runner):
+                print("🌐 Running WorldArchitect.AI Browser Tests...")
+                result = subprocess.run([sys.executable, test_runner])
+                sys.exit(result.returncode)
+            else:
+                print(f"❌ Test runner not found: {test_runner}")
+                sys.exit(1)
         else:
             parser.error(f"Unknown command: {args.command}")

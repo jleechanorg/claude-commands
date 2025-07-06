@@ -242,6 +242,19 @@ class GameState:
         if not combatants:
             return defeated_enemies
         
+        # Handle both dict and list formats for combatants
+        # AI sometimes generates combatants as a list instead of dict
+        if isinstance(combatants, list):
+            # Convert list format to dict format for processing
+            combatants_dict = {}
+            for combatant in combatants:
+                if isinstance(combatant, dict) and "name" in combatant:
+                    name = combatant["name"]
+                    combatants_dict[name] = combatant
+            combatants = combatants_dict
+            # Update the combat_state with the normalized dict format
+            self.combat_state["combatants"] = combatants_dict
+        
         # Find defeated enemies (HP <= 0)
         for name, combat_data in combatants.items():
             if combat_data.get("hp_current", 0) <= 0:
