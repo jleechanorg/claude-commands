@@ -2,7 +2,7 @@
 Defensive numeric field converter that handles 'unknown' and invalid values
 """
 from typing import Any, Dict, Set
-import logging
+import logging_util
 
 
 class DefensiveNumericConverter:
@@ -73,7 +73,7 @@ class DefensiveNumericConverter:
         
         # Handle explicit 'unknown' values (case-insensitive)
         if (isinstance(value, str) and str(value).lower() == 'unknown') or value is None:
-            logging.warning(f"Invalid value '{value}' for field '{key}'. Using default: {cls.FIELD_DEFAULTS[key]}")
+            logging_util.warning(f"Invalid value '{value}' for field '{key}'. Using default: {cls.FIELD_DEFAULTS[key]}")
             return cls.FIELD_DEFAULTS[key]
         
         # Try to convert to integer
@@ -95,7 +95,7 @@ class DefensiveNumericConverter:
                 
         except (ValueError, TypeError):
             # If conversion fails, return the default
-            logging.warning(f"Failed to convert '{value}' to int for field '{key}'. Using default: {cls.FIELD_DEFAULTS[key]}")
+            logging_util.warning(f"Failed to convert '{value}' to int for field '{key}'. Using default: {cls.FIELD_DEFAULTS[key]}")
             return cls.FIELD_DEFAULTS[key]
     
     @classmethod
