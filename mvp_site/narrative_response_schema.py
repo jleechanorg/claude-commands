@@ -25,7 +25,8 @@ class NarrativeResponse:
     
     def __init__(self, narrative: str, entities_mentioned: List[str] = None, 
                  location_confirmed: str = "Unknown", turn_summary: str = None,
-                 state_updates: Dict[str, Any] = None, debug_info: Dict[str, Any] = None, **kwargs):
+                 state_updates: Dict[str, Any] = None, debug_info: Dict[str, Any] = None,
+                 god_mode_response: str = None, **kwargs):
         # Core required fields
         self.narrative = self._validate_narrative(narrative)
         self.entities_mentioned = self._validate_entities(entities_mentioned or [])
@@ -33,6 +34,7 @@ class NarrativeResponse:
         self.turn_summary = turn_summary
         self.state_updates = self._validate_state_updates(state_updates)
         self.debug_info = self._validate_debug_info(debug_info)
+        self.god_mode_response = god_mode_response
         
         # Store any extra fields that Gemini might include (shouldn't be any now)
         self.extra_fields = kwargs
@@ -134,6 +136,23 @@ ENTITY TRACKING NOTES:
 - Update state_updates with any changes to entity status, health, or relationships
 """
 
+def _combine_god_mode_and_narrative(god_mode_response: str, narrative: Optional[str]) -> str:
+    """
+    Helper function to combine god_mode_response and narrative fields.
+    
+    Args:
+        god_mode_response: The god mode response text
+        narrative: Optional narrative text (may be None or empty)
+        
+    Returns:
+        Combined response with god_mode_response first, then narrative if present
+    """
+    combined_response = god_mode_response
+    if narrative and narrative.strip():
+        combined_response += "\n\n" + narrative
+    return combined_response
+
+
 def parse_structured_response(response_text: str) -> tuple[str, NarrativeResponse]:
     """
     Parse structured JSON response from LLM
@@ -180,13 +199,49 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     if parsed_data:
         try:
             validated_response = NarrativeResponse(**parsed_data)
+            # If god_mode_response is present, return both god mode response and narrative
+            if hasattr(validated_response, 'god_mode_response') and validated_response.god_mode_response:
+                combined_response = _combine_god_mode_and_narrative(
+                    validated_response.god_mode_response,
+                    validated_response.narrative
+                )
+                return combined_response, validated_response
             return validated_response.narrative, validated_response
                 
         except (ValueError, TypeError) as e:
             # NarrativeResponse creation failed
             logging_util.error(f"Failed to create NarrativeResponse: {e}")
+            # Check for god_mode_response first
+            god_mode_response = parsed_data.get('god_mode_response')
+            if god_mode_response:
+                # For god mode, combine god_mode_response with narrative if both exist
+                narrative = parsed_data.get('narrative')
+                # Handle null narrative
+                if narrative is None:
+                    narrative = ''
+                combined_response = _combine_god_mode_and_narrative(
+                    god_mode_response,
+                    narrative
+                )
+                    
+                known_fields = {
+                    'narrative': narrative,
+                    'god_mode_response': god_mode_response,
+                    'entities_mentioned': parsed_data.get('entities_mentioned', []),
+                    'location_confirmed': parsed_data.get('location_confirmed') or 'Unknown',
+                    'state_updates': parsed_data.get('state_updates', {}),
+                    'debug_info': parsed_data.get('debug_info', {})
+                }
+                # Pass any other fields as kwargs
+                extra_fields = {k: v for k, v in parsed_data.items() if k not in known_fields}
+                fallback_response = NarrativeResponse(**known_fields, **extra_fields)
+                return combined_response, fallback_response
+            
             # Return the narrative if we at least got that
             narrative = parsed_data.get('narrative', response_text)
+            # Handle null narrative
+            if narrative is None:
+                narrative = response_text
             # Extract only the fields we know about, let **kwargs handle the rest
             known_fields = {
                 'narrative': narrative,
