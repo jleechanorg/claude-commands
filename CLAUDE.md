@@ -79,7 +79,8 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 
 ### Development Practices
 `tempfile.mkdtemp()` for test files | Verify before assuming | ❌ unsolicited refactoring |
-Use logging module, docstrings, proper JS loading
+**Logging**: ✅ `import logging_util` | ❌ `import logging` | Use project's unified logging
+Use docstrings, proper JS loading
 
 ### Quality & Testing
 - File naming: descriptive, ❌ "red"/"green" | Methods <500 lines | Single responsibility
