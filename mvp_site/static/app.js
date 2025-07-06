@@ -320,6 +320,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             userInputEl.disabled = true;
+            const submitBtn = document.querySelector('#interaction-form button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
             timerInfo.textContent = '';
             appendToStory('user', userInput, mode);
             userInputEl.value = '';
@@ -345,6 +347,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.loadingMessages.stop();
                 }
                 userInputEl.disabled = false;
+                const submitBtn = document.querySelector('#interaction-form button[type="submit"]');
+                if (submitBtn) submitBtn.disabled = false;
                 userInputEl.focus();
             }
         });
