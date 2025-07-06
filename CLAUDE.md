@@ -280,7 +280,10 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 5. **Subagent Planning**: If using subagents:
    - **Estimate subagent count**: Based on task complexity and scope
    - **Define subagent roles**: Specific responsibilities for each subagent
-   - **Worktree Inheritance**: By default, subagents inherit current worktree context
+   - **Worktree Creation**: Create dedicated worktrees for true parallelism
+     - Format: `worktree_task[TASK_NUMBER]_[SUBAGENT_ID]` 
+     - Example: `worktree_task111_agent1`, `worktree_task111_agent2`
+     - Each subagent gets isolated filesystem to prevent conflicts
    - **Report to user**: "Using X subagents: [role descriptions]"
    - **List execution plan**: For each subagent, show: ID, worktree path, specific task
 6. **User Confirmation**: Present complete execution plan and request explicit approval
@@ -291,11 +294,21 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 9. **Commit Changes**: Commit all changes with descriptive commit messages
 10. **Push Branch**: Push branch to GitHub using `git push origin HEAD:branch-name`
 11. **Create PR**: ALWAYS create PR using `gh pr create` with test results and description
-12. **Result Reporting**: Summarize completion status, PR URL, and any issues
+12. **Worktree Cleanup**: If subagents were used, clean up temporary worktrees
+    - Remove `worktree_task[NUMBER]_*` directories after successful merge
+    - Keep worktrees if debugging needed, document in PR
+13. **Result Reporting**: Summarize completion status, PR URL, and any issues
 
 **Subagent Decision Criteria**:
 - ✅ **Use subagents for**: Multi-file changes, research tasks, complex debugging, large refactoring
 - ❌ **Direct execution for**: Single file edits, simple fixes, quick tests, small changes
+
+**True Parallelism Requirements**:
+- ✅ **Subagents work on different file sets** - No overlapping file modifications
+- ✅ **Independent functionality** - Frontend vs Backend vs Documentation
+- ✅ **Separate concerns** - Each subagent has distinct, non-conflicting scope
+- ❌ **Same files/directories** - Use direct execution instead
+- ❌ **Sequential dependencies** - Use single agent with step-by-step approach
 
 **Context Thresholds**:
 - **>50% remaining**: Proceed normally
