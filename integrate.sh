@@ -19,6 +19,7 @@ echo "🔄 Starting integration process..."
 
 # Check for unmerged changes on current branch
 current_branch=$(git branch --show-current)
+should_delete_branch=false
 if [ "$current_branch" != "main" ]; then
     echo "⚠️  WARNING: You are on branch '$current_branch'"
     
@@ -55,6 +56,10 @@ if [ "$current_branch" != "main" ]; then
             echo "   Or:  ./integrate.sh --force (to abandon commits)"
             exit 1
         fi
+    else
+        # Branch is clean (no uncommitted changes, no unpushed commits)
+        should_delete_branch=true
+        echo "✅ Branch '$current_branch' is clean and will be deleted after integration"
     fi
 fi
 
@@ -80,6 +85,13 @@ echo "   New branch will be: $branch_name"
 
 echo "5. Creating fresh dev branch from main..."
 git checkout -b "$branch_name"
+
+# Delete the old branch if it was clean
+if [ "$should_delete_branch" = true ] && [ "$current_branch" != "main" ]; then
+    echo "6. Deleting clean branch '$current_branch'..."
+    git branch -d "$current_branch"
+    echo "✅ Deleted clean branch '$current_branch'"
+fi
 
 echo "✅ Integration complete! You are now on a fresh '$branch_name' branch with latest main changes."
 echo "📍 Current branch: $(git branch --show-current)" 
