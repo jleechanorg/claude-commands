@@ -24,6 +24,7 @@ from entity_instructions import EntityInstructionGenerator
 from entity_validator import EntityValidator
 from dual_pass_generator import DualPassGenerator
 from entity_tracking import SceneManifest, create_from_game_state
+from token_utils import estimate_tokens, log_with_tokens
 
 logging_util.basicConfig(level=logging_util.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -579,11 +580,14 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
         logging_util.info(f"--- Calling Gemini API with current prompt: {str(current_prompt_text_for_logging)[:1000]}... ---")
 
     # Log both character and estimated token counts for transition period
-    total_chars = sum(len(p) for p in prompt_contents if isinstance(p, str))
+    
+    # Collect all prompt text for token counting
+    all_prompt_text = [p for p in prompt_contents if isinstance(p, str)]
     if system_instruction_text:
-        total_chars += len(system_instruction_text)
-    estimated_tokens = total_chars // 4  # Rough estimate: 1 token per 4 characters
-    logging_util.info(f"--- Calling Gemini API with prompt of {total_chars} characters (~{estimated_tokens} tokens) ---")
+        all_prompt_text.append(system_instruction_text)
+    
+    combined_text = ' '.join(all_prompt_text)
+    log_with_tokens("--- Calling Gemini API with prompt", combined_text, logging_util)
 
     last_error = None
     
@@ -704,24 +708,24 @@ def _get_text_from_response(response):
 def _get_context_stats(context, model_name, current_game_state: GameState):
     """Helper to calculate and format statistics for a given story context."""
     if not context:
-        return "Turns: 0, Chars: 0, Words: 0, Tokens: 0"
+        return "Turns: 0, Tokens: 0"
     
-    chars = sum(len(entry.get(constants.KEY_TEXT, '')) for entry in context)
-    words = sum(len(entry.get(constants.KEY_TEXT, '').split()) for entry in context)
+    combined_text = ''.join(entry.get(constants.KEY_TEXT, '') for entry in context)
+    estimated_tokens = estimate_tokens(combined_text)
     
-    # Token counting is an API call, so wrap it in a try-except
-    tokens = "N/A"
+    # Try to get exact token count via API, fall back to estimate
+    actual_tokens = "N/A"
     try:
         client = get_client()
-        # To count tokens, we create a temporary list of content parts
         parts = [types.Part(text=entry.get(constants.KEY_TEXT, '')) for entry in context]
         count_response = client.models.count_tokens(model=model_name, contents=parts)
-        tokens = count_response.total_tokens
+        actual_tokens = count_response.total_tokens
     except Exception as e:
         logging_util.warning(f"Could not count tokens for context stats: {e}")
+        actual_tokens = estimated_tokens  # Fall back to estimate
         
     all_core_memories = current_game_state.custom_campaign_state.get('core_memories', [])
-    stats_string = f"Turns: {len(context)}, Chars: {chars}, Words: {words}, Tokens: {tokens}, Core Memories: {len(all_core_memories)}"
+    stats_string = f"Turns: {len(context)}, Tokens: {actual_tokens} (est: {estimated_tokens}), Core Memories: {len(all_core_memories)}"
 
     if all_core_memories:
         last_three = all_core_memories[-3:]
@@ -740,14 +744,16 @@ def _truncate_context(story_context, max_chars: int, model_name: str, current_ga
     initial_stats = _get_context_stats(story_context, model_name, current_game_state)
     logging_util.info(f"Initial context stats: {initial_stats}")
 
-    current_chars = sum(len(entry.get(constants.KEY_TEXT, '')) for entry in story_context)
+    combined_text = ''.join(entry.get(constants.KEY_TEXT, '') for entry in story_context)
+    current_tokens = estimate_tokens(combined_text)
+    max_tokens = estimate_tokens(' ' * max_chars)  # Convert char budget to token budget using estimate_tokens
 
-    if current_chars <= max_chars:
-        logging_util.info("Context is within character budget. No truncation needed.")
+    if current_tokens <= max_tokens:
+        logging_util.info("Context is within token budget. No truncation needed.")
         return story_context
 
     logging_util.warning(
-        f"Context ({current_chars} chars) exceeds budget of {max_chars} chars. Truncating..."
+        f"Context ({current_tokens} tokens) exceeds budget of {max_tokens} tokens. Truncating..."
     )
 
     total_turns = len(story_context)

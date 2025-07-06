@@ -16,6 +16,7 @@ import constants
 import json
 import collections
 from firestore_service import update_state_with_changes, json_default_serializer, _truncate_log_json
+from token_utils import log_with_tokens
 
 # --- Service Imports ---
 import gemini_service
@@ -862,7 +863,7 @@ def create_app():
         if not any(debug_tags_found.values()):
             logging_util.warning(f"AI response missing debug content for campaign {campaign_id}")
             logging_util.warning(f"Debug tags found: {debug_tags_found}")
-            logging_util.warning(f"Response length: {len(gemini_response_obj.narrative_text)} chars")
+            log_with_tokens("Response length", gemini_response_obj.narrative_text, logging_util)
         else:
             # Log which debug content types were included
             logging_util.info(f"Debug content generated for campaign {campaign_id}: {debug_tags_found}")
