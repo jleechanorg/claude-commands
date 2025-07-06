@@ -238,10 +238,10 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 return combined_response, fallback_response
             
             # Return the narrative if we at least got that
-            narrative = parsed_data.get('narrative', response_text)
-            # Handle null narrative
+            narrative = parsed_data.get('narrative')
+            # Handle null or missing narrative - use empty string instead of raw JSON
             if narrative is None:
-                narrative = response_text
+                narrative = ''
             # Extract only the fields we know about, let **kwargs handle the rest
             known_fields = {
                 'narrative': narrative,
