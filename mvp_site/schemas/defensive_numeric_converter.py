@@ -6,11 +6,14 @@ import logging_util
 
 
 class DefensiveNumericConverter:
-    """Handles conversion of numeric fields with fallback defaults for unknown/invalid values"""
+    """Handles conversion of numeric fields with fallback defaults for unknown/invalid values.
+    
+    When invalid values are encountered, logs warnings and uses safe defaults.
+    """
     
     # Field categories for validation rules
     HP_FIELDS = {'hp', 'hp_current', 'hp_max', 'level'}
-    NON_NEGATIVE_FIELDS = {'temp_hp', 'xp', 'xp_current', 'gold', 'successes', 'failures', 'damage', 'healing'}
+    NON_NEGATIVE_FIELDS = {'temp_hp', 'xp', 'xp_current', 'gold', 'successes', 'failures', 'damage', 'healing', 'initiative'}
     ABILITY_SCORE_FIELDS = {'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'}
     
     # Define default values for different types of numeric fields
@@ -72,7 +75,7 @@ class DefensiveNumericConverter:
             return value
         
         # Handle explicit 'unknown' values (case-insensitive)
-        if (isinstance(value, str) and str(value).lower() == 'unknown') or value is None:
+        if (isinstance(value, str) and value.lower() == 'unknown') or value is None:
             logging_util.warning(f"Invalid value '{value}' for field '{key}'. Using default: {cls.FIELD_DEFAULTS[key]}")
             return cls.FIELD_DEFAULTS[key]
         
