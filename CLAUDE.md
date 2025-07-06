@@ -292,15 +292,21 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
    - **If subagents**: "Executing with X subagents for [reasons]"
    - **If direct**: "Executing directly (sufficient context/simple task)"
 8. **Task Execution**: Proceed with chosen execution method only after user approval
-9. **Commit Changes**: Commit all changes with descriptive commit messages
-10. **Push Branch**: Push branch to GitHub using `git push origin HEAD:branch-name`
-11. **Create PR**: ALWAYS create PR using `gh pr create` with test results and description
-12. **Worktree Cleanup**: If subagents were used, clean up temporary worktrees
+9. **Verification Requirements**: CRITICAL validation steps to prevent errors
+    - 🚨 **VERIFY FILE CONTENTS**: Each subagent must validate they have the correct file for their specific task
+    - 🚨 **VALIDATE TASK-FILE MAPPING**: Confirm task number matches file content (e.g., TASK-111 gets task_111_*.md)
+    - 🚨 **CHECK FILE UNIQUENESS**: Ensure each subagent has different files, no duplicates
+    - 🚨 **TEST ONE COMPONENT**: Validate individual pieces before combining complex workflows
+    - ❌ **NEVER rush demonstration** - Prioritize correctness over proving architecture
+10. **Commit Changes**: Commit all changes with descriptive commit messages
+11. **Push Branch**: Push branch to GitHub using `git push origin HEAD:branch-name`
+12. **Create PR**: ALWAYS create PR using `gh pr create` with test results and description
+13. **Worktree Cleanup**: If subagents were used, clean up temporary worktrees
     - 🚨 **ONLY remove `worktree_task[NUMBER]` directories AFTER PRs are merged**
     - ❌ **NEVER cleanup before merge** - worktrees needed for potential fixes/updates
     - ✅ **Keep worktrees until PR merge completion**
     - Document worktree locations in PR for future reference if needed
-13. **Result Reporting**: Summarize completion status, PR URL, and any issues
+14. **Result Reporting**: Summarize completion status, PR URL, and any issues
 
 **Subagent Decision Criteria**:
 - ✅ **Use subagents for**: Multi-file changes, research tasks, complex debugging, large refactoring
