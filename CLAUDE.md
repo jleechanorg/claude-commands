@@ -181,6 +181,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 | `/push` | Pre-push review | Virtual agent review → push if clean |
 | `/scratchpad` | Update planning | Create/update scratchpad_[branch].md |
 | `/roadmap` `/r` | Update roadmap files | Commit local changes, switch to main, update roadmap/*.md, push to origin, switch back |
+| `/execute` `/e` | Execute task with context management | Check context, warn if ≤25%, consider subagents, execute task |
 
 **Command Examples**: → `.cursor/rules/examples.md`
 
@@ -249,6 +250,35 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 
 **Files Updated**: `roadmap/roadmap.md`, `roadmap/sprint_current.md`, and task scratchpads as needed
 **Exception**: This is the ONLY case where direct push to main is allowed
+
+### Task Execution (`/execute` `/e`) (⚠️)
+**MANDATORY**: When using `/execute` command, follow this exact sequence:
+1. **Context Assessment**: Run `/est` equivalent to check context usage percentage
+2. **Context Warning**: If ≤25% context remaining:
+   - ⚠️ **WARN USER**: "Context critically low (X% remaining). Task may be truncated or fail."
+   - **Ask for confirmation**: "Proceed anyway? (y/n)"
+   - **If user says no**: Stop execution and suggest context optimization
+3. **Subagent Analysis**: Evaluate if task should use subagents:
+   - **Use subagents if**: Complex task, multiple files, requires research, or context-heavy
+   - **Direct execution if**: Simple task, single file focus, or context sufficient
+4. **Subagent Planning**: If using subagents:
+   - **Estimate subagent count**: Based on task complexity and scope
+   - **Define subagent roles**: Specific responsibilities for each subagent
+   - **Report to user**: "Using X subagents: [role descriptions]"
+5. **Execution Method Declaration**: 
+   - **If subagents**: "Executing with X subagents for [reasons]"
+   - **If direct**: "Executing directly (sufficient context/simple task)"
+6. **Task Execution**: Proceed with chosen execution method
+7. **Result Reporting**: Summarize completion status and any issues
+
+**Subagent Decision Criteria**:
+- ✅ **Use subagents for**: Multi-file changes, research tasks, complex debugging, large refactoring
+- ❌ **Direct execution for**: Single file edits, simple fixes, quick tests, small changes
+
+**Context Thresholds**:
+- **>50% remaining**: Proceed normally
+- **26-50% remaining**: Consider subagents for complex tasks
+- **≤25% remaining**: Warn user and strongly recommend subagents or context optimization
 
 ## Project-Specific
 
