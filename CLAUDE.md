@@ -275,15 +275,18 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 5. **Subagent Planning**: If using subagents:
    - **Estimate subagent count**: Based on task complexity and scope
    - **Define subagent roles**: Specific responsibilities for each subagent
+   - **Worktree Inheritance**: By default, subagents inherit current worktree context
    - **Report to user**: "Using X subagents: [role descriptions]"
-6. **Execution Method Declaration**: 
+   - **List execution plan**: For each subagent, show: ID, worktree path, specific task
+6. **User Confirmation**: Present complete execution plan and request explicit approval
+7. **Execution Method Declaration**: 
    - **If subagents**: "Executing with X subagents for [reasons]"
    - **If direct**: "Executing directly (sufficient context/simple task)"
-7. **Task Execution**: Proceed with chosen execution method
-8. **Commit Changes**: Commit all changes with descriptive commit messages
-9. **Push Branch**: Push branch to GitHub using `git push origin HEAD:branch-name`
-10. **Create PR**: ALWAYS create PR using `gh pr create` with test results and description
-11. **Result Reporting**: Summarize completion status, PR URL, and any issues
+8. **Task Execution**: Proceed with chosen execution method only after user approval
+9. **Commit Changes**: Commit all changes with descriptive commit messages
+10. **Push Branch**: Push branch to GitHub using `git push origin HEAD:branch-name`
+11. **Create PR**: ALWAYS create PR using `gh pr create` with test results and description
+12. **Result Reporting**: Summarize completion status, PR URL, and any issues
 
 **Subagent Decision Criteria**:
 - ✅ **Use subagents for**: Multi-file changes, research tasks, complex debugging, large refactoring
