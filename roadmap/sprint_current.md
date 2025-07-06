@@ -28,11 +28,20 @@
   - [ ] Update all response handling code
 
 ### Evening (4 hrs)
-- [ ] **TASK-131** 🟡 Browser-based UI test coverage (2 hrs)
-  - [ ] Set up Selenium or Playwright testing framework
-  - [ ] Create tests for campaign creation flow
-  - [ ] Create tests for game interaction flow
-  - [ ] Test cross-browser compatibility
+- [ ] **TASK-140** 🔴 Hard stop for integrity failures (2.5 hrs) - HIGH PRIORITY
+  - [ ] Detect when LLM doesn't generate state updates, halt game progression immediately
+  - [ ] Show detailed traceback in debug mode, user-friendly error in normal mode
+  - [ ] Provide retry/reload/abort recovery options in separate error modal
+  - [ ] See roadmap/scratchpad_task140_integrity_failure_hard_stop.md for complete requirements
+- [ ] **TASK-141** 🔴 Token optimization and verification (3 hrs) - HIGH PRIORITY  
+  - [ ] Stop sending world content with every request, implement session-level caching
+  - [ ] Verify token measurements match actual prompt sizes sent to LLM in gemini_service.py
+  - [ ] Target 30-50% token reduction while maintaining narrative quality
+  - [ ] See roadmap/scratchpad_task141_token_optimization_verification.md for complete requirements
+- [ ] **TASK-142** 🔴 Fix send button unclickable (45 min) - HIGH PRIORITY
+  - [ ] Investigate campaign send button appearing in progress state and becoming unresponsive
+  - [ ] Check for console errors, fix button state management to prevent stuck states
+  - [ ] Ensure button properly resets after response or errors, test across browsers
 
 ### Monday-Thursday (12 hrs total)
 - **TASK-001b** 🔴 Dragon Knight v3 plot fix (0.5 hrs) - MOVED FROM FRIDAY
