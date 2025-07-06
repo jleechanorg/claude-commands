@@ -226,8 +226,9 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 3. **Comprehensive Requirements Definition**: Based on classification:
    - **Small & LLM Autonomous**: Add complete 1-2 sentence requirements with all context needed
    - **Small & Human-Guided**: Add detailed 3-5 sentence requirements covering edge cases
-   - **Medium**: Create detailed `roadmap/scratchpad_task[NUMBER]_[brief-description].md` with implementation plan
-   - **Large**: Create comprehensive `roadmap/scratchpad_task[NUMBER]_[brief-description].md` with architecture and phases
+   - **Medium**: ALWAYS create detailed `roadmap/scratchpad_task[NUMBER]_[brief-description].md` with implementation plan
+   - **Large**: ALWAYS create comprehensive `roadmap/scratchpad_task[NUMBER]_[brief-description].md` with architecture and phases
+   - **Any Detailed Task**: If defining tasks to a detailed degree during planning, ALWAYS create scratchpad files regardless of classification
 4. **Autonomy Validation**: Before finalizing, verify each task has sufficient detail for independent execution
 5. Record current branch name
 6. If not on main branch:
