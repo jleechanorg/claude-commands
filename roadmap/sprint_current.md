@@ -55,6 +55,11 @@
   - [ ] Configure Firebase and Gemini API secrets, use vpython with TESTING=true
   - [ ] Post full test output in PR comments and upload artifacts
   - [ ] See roadmap/scratchpad_task132_github_actions_testi_integration.md for complete requirements
+- **TASK-133** 🟡 Universal calendar system (2 hrs) - NEW
+  - [ ] Backend uses consistent numbers, LLM handles narrative conversion per universe
+  - [ ] Add universe presets: fantasy, modern, starwars, scifi, custom
+  - [ ] Campaign creation includes universe selection, DM can infer from setting
+  - [ ] See roadmap/scratchpad_task133_universal_calendar_system.md for complete requirements
 - **TASK-123** 🔵 Traycer planning tool evaluation (1.5 hrs)
   - Install and configure Traycer
   - Test on architecture planning tasks
