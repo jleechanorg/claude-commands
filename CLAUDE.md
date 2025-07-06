@@ -281,8 +281,8 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
    - **Estimate subagent count**: Based on task complexity and scope
    - **Define subagent roles**: Specific responsibilities for each subagent
    - **Worktree Creation**: Create dedicated worktrees for true parallelism
-     - Format: `worktree_task[TASK_NUMBER]_[SUBAGENT_ID]` 
-     - Example: `worktree_task111_agent1`, `worktree_task111_agent2`
+     - Format: `worktree_task[TASK_NUMBER]` 
+     - Example: `worktree_task111`, `worktree_task112`
      - Each subagent gets isolated filesystem to prevent conflicts
    - **Report to user**: "Using X subagents: [role descriptions]"
    - **List execution plan**: For each subagent, show: ID, worktree path, specific task
@@ -295,7 +295,7 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 10. **Push Branch**: Push branch to GitHub using `git push origin HEAD:branch-name`
 11. **Create PR**: ALWAYS create PR using `gh pr create` with test results and description
 12. **Worktree Cleanup**: If subagents were used, clean up temporary worktrees
-    - Remove `worktree_task[NUMBER]_*` directories after successful merge
+    - Remove `worktree_task[NUMBER]` directories after successful merge
     - Keep worktrees if debugging needed, document in PR
 13. **Result Reporting**: Summarize completion status, PR URL, and any issues
 
