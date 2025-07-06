@@ -218,20 +218,29 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 ### Roadmap Updates (`/roadmap` `/r`) (⚠️)
 **MANDATORY**: When using `/roadmap` command, follow this exact sequence:
 1. **Task Clarification**: Ask clarifying questions to make each task more detailed and clear
-2. **Scratchpad Decision**: For medium or large tasks, ask enough clarifying questions and create `roadmap/scratchpad_task[NUMBER]_[brief-description].md` where NUMBER is the actual task number. If ambiguous whether scratchpad is needed, ask user.
-3. Record current branch name
-4. If not on main branch:
+2. **Task Classification**: For each task, ask user if it should be categorized as:
+   - **Small & LLM Autonomous**: LLM can complete independently with minimal guidance
+   - **Small & Human-Guided**: Needs human oversight but straightforward
+   - **Medium**: Requires detailed planning
+   - **Large**: Requires comprehensive scratchpad
+3. **Requirements Definition**: Based on classification:
+   - **Small & LLM Autonomous**: Add clear 1-2 sentence requirements inline
+   - **Small & Human-Guided**: Add 3-5 sentence requirements inline
+   - **Medium**: Create `roadmap/scratchpad_task[NUMBER]_[brief-description].md`
+   - **Large**: Create comprehensive `roadmap/scratchpad_task[NUMBER]_[brief-description].md`
+4. Record current branch name
+5. If not on main branch:
    - Check for uncommitted changes with `git status`
    - If changes exist, commit them with descriptive message
-5. Switch to main branch: `git checkout main`
-6. Pull latest changes: `git pull origin main`
-7. Make requested changes to:
+6. Switch to main branch: `git checkout main`
+7. Pull latest changes: `git pull origin main`
+8. Make requested changes to:
    - `roadmap/roadmap.md` (main roadmap file)
    - `roadmap/sprint_current.md` (current sprint status)
    - `roadmap/scratchpad_task[NUMBER]_[description].md` (if applicable)
-8. Commit changes with format: `docs(roadmap): [description]`
-9. Push directly to main: `git push origin main`
-10. Switch back to original branch: `git checkout [original-branch]`
+9. Commit changes with format: `docs(roadmap): [description]`
+10. Push directly to main: `git push origin main`
+11. Switch back to original branch: `git checkout [original-branch]`
 
 **Files Updated**: `roadmap/roadmap.md`, `roadmap/sprint_current.md`, and task scratchpads as needed
 **Exception**: This is the ONLY case where direct push to main is allowed
