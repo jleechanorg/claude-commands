@@ -1,0 +1,197 @@
+—-Core integrity
+    Trim initial prompt more?
+    Just include assiah prompt once in campaign creation vs system instructions?
+    As we progress through the game the assiah info becomes stale ie. faction leader dies?
+    Do all of those prompts need to be system instructions?
+    Explicit input/output LLM formats
+    Scene #
+    Prompt to send to LLM
+    Return data
+    Debug data first
+    Game state updates
+    story mode entry format: AI coding
+    Slim mode
+    character_creation_state_tracking_scratchpad.md
+    Ask LLM how the new prompts look
+    Prompt optimization 
+    System instructions roadmap/scratchpad_8k_optimization.md
+    Run integration test to prove to me all the proper prompts and master prompt included
+—-Parallel
+    Claude always getting directories wrong
+    Stable?
+—-Narrative
+    Dragon knight detailed start
+    Generate siblings/houses/factions etc if they pick a custom character even in default world
+    Generate companions
+    Alignment change mechanic
+—-UI
+    More interesting loading spinner during campaign continue, similar to creation. Do some random hardcoded messages for the user
+    Third new checkbox to replace ruleset one?
+    Smaller
+    WorldArchitect.AI make this go to homepage
+    Script: report number campaigns and size per user
+    Timestamp not matching narrative
+    Let player read background story
+—-Combat
+    Combat system PR revisit
+    Derek campaign issues combat, replay campaign
+    Default scenario add some guaranteed combat
+—-Derek feedback
+    Evernote
+    Ensure god mode and questions don’t progress narrative
+    Metrics for me and other users
+—-Project: Continuity load test - 10 interactions
+    roadmap/scratchpad_state_sync_entity.md followups
+    test_sariel_consolidated.py
+    Ensure it does real sariel test and ask for proof real gemini and real pydantic were used.
+    Scratchpad_prompt_optimization.md
+—-Project: Brand new frontend
+    Figma integration
+    Fix wizard 
+    Fix themes?
+    Nicer spinner when continuing story
+—-Campaign default starts?
+    Default character starts like
+    Sariel: intrigue/research
+    Host: combat?
+    Shadow faction: stealth/assassination
+    Merc? Maybe define a new merc faction
+    Game thrones Ned stark choice
+    Luke join Vader choice
+—--Project: Demo site branch 
+Project: Continuity - 50 interactions
+    Custom program to run N interactions and randomly pick planning block response
+    20 interactions
+    50 interactions
+    Cleanup
+    CI integration dead code: roadmap/scratchpad_worktree_dead_code.md
+    —Project: advanced state exploration
+    roadmap/state_consistency_adanvanced_v2.md
+    Double check on ROI
+    business_plan_v1.md
+—----- Tech optimization
+    mvp_site/roadmap/scratchpad_parallel_dual_pass_optimization.md
+    Improve rules? https://ghuntley.com/stdlib/ 
+    Ssh into desktop from laptop?
+    Dev server per PR?
+    https://www.reddit.com/r/ClaudeAI/s/EtrZt0B9nE 
+    Macbook SSH: AI coding
+    Cursor prompts: https://github.com/x1xhlol/system-prompts-and-models-of-ai-tools 
+    Coding or Agent eval
+    Backtrack Vagent vs single
+    Setup mobile phone stuff: https://www.perplexity.ai/search/what-doe-sthis-mean-i-use-blin-FI3Qns9xSZqFPSKMhg18Cg 
+Tailscale for open internet 
+—----- Optimization
+    Start generating the world after user first choice?
+    Generate ahead for planning blocks to reduce latency? Maybe a premium feature
+— core changes
+    Perplexity research and feed back into my project
+    Fix campaign issues from core ideas tab
+    Rename story mode vs game mode (maybe call it narrative mode?)
+    Implement real story mode with simplified mechanics and more like choose your own adventure—-- Stable milestone - game state seems mostly ok?
+    UI portraits: Character gen: https://airealm.com/user/newChat 
+    https://bg3.wiki/wiki/Category:Character_Portraits 
+— tweaks / small
+    Pagination
+    Give the user back input in sections so they can see the narrative and read it during creation
+    Download as markdown
+    Hide myers briggs D&D alignment
+    Proper domain name maybe with firebase domains 
+—-Campaigns	
+    Other worlds
+    Sci fi, modern, rome
+    GOT - Arthur dayne
+    GOT - Tywin campaign to test character agency
+    Rome campaign 
+    Celestial wars.
+—-narrative core
+    Generate worlds for future, modern day, Ancient Rome similar to assiah 
+    Test different narrative arcs per personality type
+    Give different sample campaign options even if copyrighted
+    Star wars
+    Game thrones
+    Baldurs gate
+    Modern day
+    Ancient rome
+— personality core
+    Make sure PC and npc have one 
+    Hide myers briggs even in DM mode
+    Only a special command can show the info
+—---core game logic
+    Characters don’t flesh themselves out enough or talk enough? Need a different character where I do more social stuff
+    Game thrones tywin - didn't die 
+    20% failure rate show explicit logs for now
+    —-- Project: Allow users to edit gamestate and context
+—--- UI core
+    Skins/themes - nicer UI
+    Continue button
+    Delete campaign 
+    Erase functionality
+—----Security
+    Validate all user inputs
+    Misc security stuff
+—--- Polish
+    stephanie - too much formatting. Hard to know what to do next. Too many stars ie. look at 
+    Maximize space for input and reading
+    Cooler website icon
+    Edit campaign name on campaign page
+    Cancel submission
+    Firebase hosting domain?
+    Nicer titles
+    Rewind like dungeon AI
+    Streaming API
+    Also show gemini thinking
+    Add pagination for the story box or a “load more” thing like if they keep scrolling up in the past load older content in the story
+—- later promotion
+    Bigger stabilization: AI coding
+    Google org?
+    booktok?
+—-- external prep
+    The names "Dungeons & Dragons" and "D&D": Third-party creators cannot use these names on their products. Instead, they often say "Compatible with the world's most popular roleplaying game" or "5e compatible.
+    Copyright cleanup 
+    Cleanup code
+    Metrics 
+    Open source a prototype fork
+    Remove game state
+    Remove personality stuff
+    Reduce LLM input/output
+    Game state deltas only?
+    Is Game state truly needed? LLM seems to handle things fine maybe because game state is explicit in the convo now?
+    Cost estimates
+    God mode changes
+    Don’t let others steal prompts or have full gemini access
+    Make an admin mode with full access
+    Let me edit the name of the campaign on campaign page
+    Mailing list permission
+    Newer onboarding flow and do hand holding
+    Customer observation sessions
+    Themes
+    Image gen
+    D&D copyright double check
+    Check for any other copyright issues
+    Double check any copyright issues scraping myers briggs personalities from the webpages
+—- external project
+    Bring your own key allow users to input their own API key
+—----full external prep
+    Images and map are cool from friend and fables. consider
+    Gemini nano?
+    Tweaks to hide DM mode stuff
+    Tell user if using Jeff special prompts
+    Multiple modes: story, game, god etc. Make four modes
+    DM or system admin mode: lets you change everything. Like you’re talking to real gemini agent. You can do anything or change anything you want.
+    I can say DM note: to make an adjustment but stay in whatever mode I am in
+    If I say “enter DM mode” then I say there until I say “back to mode X” or “leave DM mode”
+    Author mode: You’re like a god but still bound by the laws of the game universe. This mode is to help people who are writing a book and making their own story.
+    Story mode: everything the player does always succeeds. The game should explicitly tell you this for each decision
+    Game mode: use the ruleset to see if the player succeeds. Game should be explicit its using a realset, roll real dice etc.
+    Multi player
+    chatGpt and deepseek support? Support other models
+    Make domain name nicer
+    Don’t show stacktrace to internal ppl
+    Setup VSCode for local dev
+    Make UI nicer and snappy like Gemini chat or AIDungeon
+    Erase functionality
+—- bigger launch
+    Rate limits
+    Quota etc 
+—- Prototype limited alpha
