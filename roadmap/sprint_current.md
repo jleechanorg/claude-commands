@@ -60,6 +60,22 @@
   - [ ] Add universe presets: fantasy, modern, starwars, scifi, custom
   - [ ] Campaign creation includes universe selection, DM can infer from setting
   - [ ] See roadmap/scratchpad_task133_universal_calendar_system.md for complete requirements
+- **TASK-134** 🟡 Prompt optimization revisit (4 hrs) - NEW
+  - [ ] Comprehensive review of all prompts including PR #292 analysis for token reduction and quality
+  - [ ] Target 30% token reduction across system instructions while maintaining functionality
+  - [ ] See roadmap/scratchpad_task134_prompt_optimization_revisit.md for complete requirements
+- **TASK-135** 🟡 Model cycling debug (2.25 hrs) - NEW
+  - [ ] Investigate transient errors where retry works, add comprehensive model cycling logging
+  - [ ] Fix suspected model switching issues causing failed first attempts
+  - [ ] See roadmap/scratchpad_task135_model_cycling_debug.md for complete requirements
+- **TASK-136** 🟡 Requirements builder evaluation (1 hr) - NEW
+  - [ ] Test https://github.com/rizethereum/claude-code-requirements-builder on 2 new tasks (132,133) and 2 completed tasks, evaluate for workflow integration and provide assessment with integration recommendations
+- **TASK-137** 🟡 Move download/share story buttons (30 min) - NEW
+  - [ ] Relocate existing download and share buttons from current location to top of campaign page below campaign title, maintain exact same functionality and behavior
+- **TASK-138** 🟡 Stacktrace in debug mode (45 min) - NEW
+  - [ ] Add separate debug section to display full Python stacktraces when debug mode toggle is enabled, show complete tracebacks for debugging purposes
+- **TASK-139** 🟡 Restore Dragon Knight character start (1.5 hrs) - NEW
+  - [ ] Review PR #325 to understand previous Dragon Knight implementation, create improved version that works properly, restore as character creation option with enhanced functionality
 - **TASK-123** 🔵 Traycer planning tool evaluation (1.5 hrs)
   - Install and configure Traycer
   - Test on architecture planning tasks
