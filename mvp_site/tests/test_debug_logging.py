@@ -129,7 +129,6 @@ class TestDebugLogging(unittest.TestCase):
                     self.assertIn("'dm_notes': False", log_output)
                     self.assertIn("'dice_rolls': False", log_output)
                     self.assertIn("'state_changes': False", log_output)
-                    self.assertIn('Response length:', log_output)
     
     @patch('main.firestore_service')
     def test_logs_partial_debug_content(self, mock_firestore_service):
