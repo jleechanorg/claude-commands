@@ -248,6 +248,20 @@ class CampaignWizard {
                   </div>
                 </div>
               </div>
+              
+              <div class="col-md-4 mb-3">
+                <div class="card personality-card" data-personality="companions">
+                  <div class="card-body text-center">
+                    <div class="personality-icon">👥</div>
+                    <h5 class="card-title">Starting Companions</h5>
+                    <p class="card-text">Automatically create complementary party members to join your adventure.</p>
+                    <div class="form-check">
+                      <input class="form-check-input" type="checkbox" id="wizard-companions" checked>
+                      <label class="form-check-label" for="wizard-companions">Generate companions</label>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -257,24 +271,6 @@ class CampaignWizard {
             <p class="step-description">Customize your adventure with these optional features.</p>
             
             <div class="row">
-              <div class="col-md-6 mb-4">
-                <div class="card option-card" data-option="companions">
-                  <div class="card-body">
-                    <div class="d-flex align-items-start">
-                      <div class="option-icon me-3">👥</div>
-                      <div class="flex-grow-1">
-                        <h5 class="card-title">Starting Companions</h5>
-                        <p class="card-text">Automatically create complementary party members to join your adventure.</p>
-                        <div class="form-check">
-                          <input class="form-check-input" type="checkbox" id="wizard-companions" checked>
-                          <label class="form-check-label" for="wizard-companions">Generate companions</label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
               <div class="col-md-6 mb-4">
                 <div class="card option-card" data-option="defaultWorld">
                   <div class="card-body">
@@ -402,12 +398,19 @@ class CampaignWizard {
     // Get values from original form
     const titleInput = originalForm.querySelector('#campaign-title');
     const promptInput = originalForm.querySelector('#campaign-prompt');
+    const companionsInput = originalForm.querySelector('#generate-companions');
 
     if (titleInput?.value) {
       document.getElementById('wizard-campaign-title').value = titleInput.value;
     }
     if (promptInput?.value) {
       document.getElementById('wizard-campaign-prompt').value = promptInput.value;
+    }
+    if (companionsInput) {
+      const wizardCompanions = document.getElementById('wizard-companions');
+      if (wizardCompanions) {
+        wizardCompanions.checked = companionsInput.checked;
+      }
     }
 
     this.updatePreview();
