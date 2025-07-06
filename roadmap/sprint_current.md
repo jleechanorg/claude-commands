@@ -37,11 +37,11 @@
 ### Monday-Thursday (12 hrs total)
 - **TASK-001b** 🔴 Dragon Knight v3 plot fix (0.5 hrs) - MOVED FROM FRIDAY
 - **TASK-006c** 🟡 Enhanced combat scenarios (1 hr)
-- **TASK-111** 🟡 LLM narrative improvements (1 hr) - MOVED FROM SUNDAY
-  - [ ] Fix direct alignment mentions in narrative
+- **TASK-111** 🟡 Subtle alignment and Myers-Briggs narrative handling (1 hr) - MOVED FROM SUNDAY
+  - [ ] Hide alignment/MBTI from player-visible narrative while keeping in game state
   - [ ] Improve subtlety in character descriptions
   - [ ] Update prompts to avoid meta-game references
-  - [ ] See roadmap/scratchpad_task111_llm_narrative_improvements.md for requirements
+  - [ ] See roadmap/scratchpad_task111_llm_narrative_improvements.md for detailed requirements
 - **TASK-005c** 🟡 UI Polish - Timestamp sync (30 min) - MOVED FROM SUNDAY
 - **TASK-004b** 🟡 Continuity Phase 2 (1.5 hrs) - MOVED FROM SUNDAY
   - [ ] NOTE: Define requirements before starting - group with other continuity tasks

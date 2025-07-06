@@ -1,7 +1,7 @@
-# TASK-111: LLM Narrative Improvements - Requirements & Implementation
+# TASK-111: Subtle Alignment and Myers-Briggs Narrative Handling - Requirements & Implementation
 
 ## Task Overview
-Fix direct alignment mentions in narrative, improve subtlety in character descriptions, and update prompts to avoid meta-game references.
+Hide alignment and Myers-Briggs references from player-visible narrative while keeping them in game state for AI guidance. Improve subtlety in character descriptions and update prompts to avoid meta-game references.
 
 ## Current Issues Identified
 1. **Direct Alignment Mentions**: AI occasionally references D&D alignment terms explicitly in narrative
