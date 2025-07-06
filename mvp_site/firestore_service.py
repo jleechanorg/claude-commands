@@ -6,6 +6,12 @@ import logging_util
 from decorators import log_exceptions
 from firebase_admin import firestore
 from game_state import GameState
+# Import numeric field converter
+# This handles both package imports (relative) and direct script execution
+try:
+    from .numeric_field_converter import NumericFieldConverter
+except ImportError:
+    from numeric_field_converter import NumericFieldConverter
 
 MAX_TEXT_BYTES = 1000000
 MAX_LOG_LINES = 20
@@ -242,7 +248,16 @@ def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
             continue
         
         # Case 7: Simple overwrite for everything else
-        state_to_update[key] = value
+        # Convert numeric fields from strings to integers
+        # Note: We handle conversion here instead of in _handle_dict_merge to avoid
+        # double conversion when dictionaries are recursively processed
+        if isinstance(value, dict):
+            # For dictionaries, use convert_dict to handle nested conversions
+            converted_value = NumericFieldConverter.convert_dict(value)
+        else:
+            # For simple values, use convert_value
+            converted_value = NumericFieldConverter.convert_value(key, value)
+        state_to_update[key] = converted_value
     logging_util.info("--- update_state_with_changes: finished ---")
     return state_to_update
 

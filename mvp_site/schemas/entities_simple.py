@@ -8,6 +8,13 @@ from enum import Enum
 from datetime import datetime
 import re
 
+# Import numeric field converter
+# This handles both package imports (relative) and direct script execution
+try:
+    from ..numeric_field_converter import NumericFieldConverter
+except ImportError:
+    from numeric_field_converter import NumericFieldConverter
+
 
 class EntityType(Enum):
     """Entity type enumeration"""
@@ -283,12 +290,19 @@ def create_from_game_state(game_state: Dict[str, Any],
         # Use string_id if present, otherwise generate one
         pc_entity_id = pc_data.get("string_id", f"pc_{pc_name.lower().replace(' ', '_')}_001")
         
+        # Convert HP values to integers (Firestore may store as strings)
+        # Using NumericFieldConverter for consistency with firestore_service
+        hp_current = NumericFieldConverter.convert_value("hp_current", 
+                     pc_data.get("hp_current", pc_data.get("hp", 10)))
+        hp_max = NumericFieldConverter.convert_value("hp_max", 
+                  pc_data.get("hp_max", pc_data.get("hp", 10)))
+        
         pc = PlayerCharacter(
             entity_id=pc_entity_id,
             display_name=pc_name,
             health=HealthStatus(
-                hp=pc_data.get("hp_current", pc_data.get("hp", 10)),
-                hp_max=pc_data.get("hp_max", 10)
+                hp=hp_current,
+                hp_max=hp_max
             ),
             current_location=location.entity_id
         )
@@ -302,12 +316,19 @@ def create_from_game_state(game_state: Dict[str, Any],
             # Use string_id if present, otherwise generate one
             npc_entity_id = npc_info.get("string_id", f"npc_{npc_name.lower().replace(' ', '_')}_{idx+1:03d}")
             
+            # Convert HP values to integers (Firestore may store as strings)
+            # Using NumericFieldConverter for consistency with firestore_service
+            npc_hp_current = NumericFieldConverter.convert_value("hp_current",
+                            npc_info.get("hp_current", npc_info.get("hp", 10)))
+            npc_hp_max = NumericFieldConverter.convert_value("hp_max",
+                         npc_info.get("hp_max", npc_info.get("hp", 10)))
+            
             npc = NPC(
                 entity_id=npc_entity_id,
                 display_name=npc_info.get("name", npc_name),
                 health=HealthStatus(
-                    hp=npc_info.get("hp_current", npc_info.get("hp", 10)),
-                    hp_max=npc_info.get("hp_max", 10)
+                    hp=npc_hp_current,
+                    hp_max=npc_hp_max
                 ),
                 current_location=location.entity_id,
                 status=[EntityStatus.CONSCIOUS] if npc_info.get("conscious", True) 

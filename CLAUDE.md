@@ -66,6 +66,8 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 ### Code Standards
 - Treat existing code as template | String constants: module-level (>1x) or constants.py (cross-file)
 - DRY principle | Defensive programming: `isinstance()` validation
+- **Import Organization**: All imports at file top, sorted (stdlib → third-party → local)
+- **No Inline Imports**: Never import inside functions/methods/classes
 
 ### Gemini SDK
 ✅ `from google import genai` | ✅ `client = genai.Client(api_key=api_key)`
@@ -169,9 +171,10 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 | `/milestones suggest` | Suggest optimal count | Analyze complexity, suggest 3-7 with rationale |
 | `/list` | List all commands | Display all slash commands with descriptions |
 | `/tdd` `/rg` | Test-driven dev | Red → Green → Refactor workflow |
-| `/review` `/copilot` | Process all PR comments | Fetch ALL comments, apply changes, commit |
+| `/review` `/copilot` | Process ALL PR comments | List EVERY comment individually, apply changes, commit |
 | `/optimize` | Improve code/files | Remove dupes, improve efficiency |
 | `/test` | Run full test suite | `./run_tests.sh` + fix failures |
+| `/testi` | Integration test | `source venv/bin/activate && TESTING=true python3 mvp_site/test_integration/test_integration.py` |
 | `/integrate` | Fresh branch | Run `./integrate.sh` script |
 | `/push` | Pre-push review | Virtual agent review → push if clean |
 | `/scratchpad` | Update planning | Create/update scratchpad_[branch].md |
@@ -183,8 +186,30 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 ### GitHub Copilot Comments (⚠️)
 Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppressed"
 
+### Code Review Protocol (`/review` `/copilot`) (⚠️)
+**MANDATORY**: When reviewing PRs, list EVERY SINGLE comment explicitly:
+1. Use `gh pr view <PR#> --comments` to get ALL comments
+2. Use `gh api repos/owner/repo/pulls/<PR#>/comments` for inline comments
+3. List each comment with:
+   - Author (user vs bot)
+   - File:Line if applicable
+   - Full comment text
+   - Status: ✅ Addressed / ❌ Not addressed / 🔄 Partially addressed
+4. Include "suppressed" and "low confidence" comments
+5. Extract comments from ALL sources:
+   - PR review comments
+   - Inline code comments
+   - Issue comments
+   - Bot suggestions
+
 ### Import Rules (⚠️)
-✅ Top of module only | ❌ Inside functions/methods | Import once, reference throughout
+**CRITICAL**: ALL imports MUST be at module level (top of file)
+- ✅ Top of module only - after docstring, before any code
+- ❌ NEVER inside functions, methods, or class definitions
+- ❌ NEVER inside try/except blocks (except for import fallbacks)
+- ❌ NEVER conditional imports inside if statements
+- Import once at top, reference throughout module
+- For import conflicts: use `as` aliases, not inline imports
 
 ### API Error Prevention (🚨)
 ❌ Print code/file content | ✅ Use file_path:line_number | Keep responses concise

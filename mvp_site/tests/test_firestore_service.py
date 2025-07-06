@@ -167,5 +167,192 @@ class TestUpdateStateWithChanges(unittest.TestCase):
         
         self.assertEqual(state['custom_campaign_state']['core_memories'], expected_memories)
 
+
+class TestNumericFieldConversion(unittest.TestCase):
+    """Test that numeric fields are automatically converted from strings to integers"""
+    
+    def test_hp_values_stored_as_integers_in_state_updates(self):
+        """Test that HP values in state updates are integers, not strings"""
+        # Current game state
+        current_state = {
+            'player_character_data': {
+                'name': 'Test Hero',
+                'hp_current': 15,  # Currently an integer
+                'hp_max': 20
+            },
+            'npc_data': {
+                'Guard': {
+                    'name': 'Guard Captain',
+                    'hp_current': 25,
+                    'hp_max': 30
+                }
+            }
+        }
+        
+        # Proposed changes from AI (simulating what AI might send)
+        # This simulates the problem: AI sending HP as strings
+        proposed_changes = {
+            'player_character_data': {
+                'hp_current': '10'  # String from AI response
+            },
+            'npc_data': {
+                'Guard': {
+                    'hp_current': '22'  # String from AI response
+                }
+            }
+        }
+        
+        # Apply the updates
+        updated_state = update_state_with_changes(current_state, proposed_changes)
+        
+        # HP values should be stored as integers, not strings
+        self.assertIsInstance(updated_state['player_character_data']['hp_current'], int,
+                            "Player HP should be stored as integer, not string")
+        self.assertIsInstance(updated_state['npc_data']['Guard']['hp_current'], int,
+                            "NPC HP should be stored as integer, not string")
+        
+        # Verify the actual values
+        self.assertEqual(updated_state['player_character_data']['hp_current'], 10)
+        self.assertEqual(updated_state['npc_data']['Guard']['hp_current'], 22)
+    
+    def test_hp_max_updates_stored_as_integers(self):
+        """Test that hp_max updates are stored as integers"""
+        current_state = {
+            'player_character_data': {
+                'name': 'Test Hero',
+                'hp_current': 15,
+                'hp_max': 20
+            }
+        }
+        
+        proposed_changes = {
+            'player_character_data': {
+                'hp_max': '25'  # String from AI
+            }
+        }
+        
+        updated_state = update_state_with_changes(current_state, proposed_changes)
+        
+        self.assertIsInstance(updated_state['player_character_data']['hp_max'], int,
+                            "hp_max should be stored as integer")
+        self.assertEqual(updated_state['player_character_data']['hp_max'], 25)
+    
+    def test_new_character_hp_stored_as_integers(self):
+        """Test that new character creation stores HP as integers"""
+        current_state = {
+            'npc_data': {}
+        }
+        
+        # Adding a new NPC with HP values
+        proposed_changes = {
+            'npc_data': {
+                'NewGuard': {
+                    'name': 'New Guard',
+                    'hp_current': '30',  # String from AI
+                    'hp_max': '30'       # String from AI
+                }
+            }
+        }
+        
+        updated_state = update_state_with_changes(current_state, proposed_changes)
+        
+        new_npc = updated_state['npc_data']['NewGuard']
+        self.assertIsInstance(new_npc['hp_current'], int,
+                            "New NPC hp_current should be integer")
+        self.assertIsInstance(new_npc['hp_max'], int,
+                            "New NPC hp_max should be integer")
+        # Verify the actual values
+        self.assertEqual(new_npc['hp_current'], 30)
+        self.assertEqual(new_npc['hp_max'], 30)
+    
+    def test_combat_damage_hp_updates_as_integers(self):
+        """Test that combat damage updates store HP as integers"""
+        current_state = {
+            'player_character_data': {
+                'name': 'Test Hero',
+                'hp_current': 20,
+                'hp_max': 20
+            }
+        }
+        
+        # Simulating combat damage
+        proposed_changes = {
+            'player_character_data': {
+                'hp_current': '12'  # After taking 8 damage, sent as string
+            }
+        }
+        
+        updated_state = update_state_with_changes(current_state, proposed_changes)
+        
+        self.assertIsInstance(updated_state['player_character_data']['hp_current'], int,
+                            "HP after damage should be integer")
+        self.assertEqual(updated_state['player_character_data']['hp_current'], 12)
+    
+    def test_all_numeric_fields_should_be_integers(self):
+        """Test that other numeric fields are also stored as integers"""
+        current_state = {
+            'player_character_data': {
+                'level': 1,
+                'xp': 0
+            }
+        }
+        
+        proposed_changes = {
+            'player_character_data': {
+                'level': '2',  # String from AI
+                'xp': '300'    # String from AI
+            }
+        }
+        
+        updated_state = update_state_with_changes(current_state, proposed_changes)
+        
+        self.assertIsInstance(updated_state['player_character_data']['level'], int,
+                            "Level should be integer")
+        self.assertIsInstance(updated_state['player_character_data']['xp'], int,
+                            "XP should be integer")
+        # Verify the actual values
+        self.assertEqual(updated_state['player_character_data']['level'], 2)
+        self.assertEqual(updated_state['player_character_data']['xp'], 300)
+    
+    def test_nested_numeric_fields_converted(self):
+        """Test that deeply nested numeric fields are converted"""
+        current_state = {
+            'combat_state': {
+                'round_number': 1
+            }
+        }
+        
+        proposed_changes = {
+            'combat_state': {
+                'round_number': '3'  # String from AI
+            }
+        }
+        
+        updated_state = update_state_with_changes(current_state, proposed_changes)
+        
+        self.assertIsInstance(updated_state['combat_state']['round_number'], int,
+                            "Round number should be integer")
+        self.assertEqual(updated_state['combat_state']['round_number'], 3)
+    
+    def test_invalid_numeric_strings_unchanged(self):
+        """Test that invalid numeric strings are left as-is"""
+        current_state = {
+            'player_character_data': {
+                'hp_current': 15
+            }
+        }
+        
+        proposed_changes = {
+            'player_character_data': {
+                'hp_current': 'not-a-number'  # Invalid numeric string
+            }
+        }
+        
+        updated_state = update_state_with_changes(current_state, proposed_changes)
+        
+        # Should remain as string since it can't be converted
+        self.assertEqual(updated_state['player_character_data']['hp_current'], 'not-a-number')
+
+
 if __name__ == '__main__':
     unittest.main()

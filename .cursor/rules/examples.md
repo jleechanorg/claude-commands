@@ -24,6 +24,34 @@ git checkout -b feature-branch-name
 
 ## Code Examples
 
+### Import Statements (Correct)
+```python
+# All imports at top of file
+import os
+import sys
+from typing import Dict, List
+
+import flask
+from firebase_admin import firestore
+
+from game_state import GameState
+from numeric_field_converter import NumericFieldConverter
+```
+
+### Import Statements (Incorrect)
+```python
+def process_data():
+    import json  # ❌ NEVER import inside functions
+    return json.dumps(data)
+
+class MyClass:
+    def method(self):
+        from utils import helper  # ❌ NEVER import inside methods
+        
+if condition:
+    import special_module  # ❌ NEVER conditional imports
+```
+
 ### Python Execution (Correct)
 ```bash
 # From project root
