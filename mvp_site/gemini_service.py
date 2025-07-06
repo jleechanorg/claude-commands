@@ -147,10 +147,13 @@ def get_client():
 
 def _add_world_instructions_to_system(system_instruction_parts):
     """
-    Add world content instructions to system instruction parts if world is enabled.
+    Add world content instructions to system instruction parts with token-optimized caching.
     Avoids code duplication between get_initial_story and continue_story.
     """
+    global _world_content_cache, _world_content_cache_timestamp
+    
     from world_loader import load_world_content_for_system_instruction
+    import time
     
     world_instruction = (
         "\n**CRITICAL INSTRUCTION: USE ESTABLISHED WORLD LORE**\n"
@@ -163,8 +166,30 @@ def _add_world_instructions_to_system(system_instruction_parts):
     )
     system_instruction_parts.append(world_instruction)
     
-    # Load world content directly into system instruction
-    world_content = load_world_content_for_system_instruction()
+    # Implement world content caching for token optimization
+    current_time = time.time()
+    cache_duration = 3600  # 1 hour cache
+    
+    if (_world_content_cache_timestamp is None or 
+        current_time - _world_content_cache_timestamp > cache_duration or
+        'world_content' not in _world_content_cache):
+        
+        # Cache miss - load fresh content
+        logging_util.info("Loading world content (cache miss or expired)")
+        world_content = load_world_content_for_system_instruction()
+        _world_content_cache['world_content'] = world_content
+        _world_content_cache_timestamp = current_time
+        
+        # Log token savings potential
+        content_size = len(world_content)
+        estimated_tokens = estimate_tokens(world_content)
+        logging_util.info(f"World content cached: {content_size} chars, ~{estimated_tokens} tokens")
+    else:
+        # Cache hit - use cached content
+        world_content = _world_content_cache['world_content']
+        cache_age = int(current_time - _world_content_cache_timestamp)
+        logging_util.debug(f"Using cached world content (age: {cache_age}s)")
+    
     system_instruction_parts.append(world_content)
 
 
@@ -534,7 +559,7 @@ def _validate_entity_tracking(response_text, expected_entities, game_state):
 
 
 def _log_token_count(model_name, user_prompt_contents, system_instruction_text=None):
-    """Helper function to count and log the number of tokens being sent, with a breakdown."""
+    """Enhanced token counting with verification and optimization warnings."""
     try:
         client = get_client()
         
@@ -548,10 +573,36 @@ def _log_token_count(model_name, user_prompt_contents, system_instruction_text=N
             system_tokens = client.models.count_tokens(model=model_name, contents=[system_instruction_text]).total_tokens
 
         total_tokens = user_prompt_tokens + system_tokens
-        logging_util.info(f"--- Sending {total_tokens} tokens to the API. (Prompt: {user_prompt_tokens}, System: {system_tokens}) ---")
+        
+        # Enhanced logging with optimization warnings
+        if total_tokens > MAX_INPUT_TOKENS * 0.8:  # 80% of max
+            logging_util.warning(f"⚠️ High token usage: {total_tokens}/{MAX_INPUT_TOKENS} tokens ({total_tokens/MAX_INPUT_TOKENS:.1%})")
+            logging_util.warning("Consider context truncation or world content caching")
+        elif total_tokens > MAX_INPUT_TOKENS * 0.6:  # 60% of max
+            logging_util.info(f"📊 Moderate token usage: {total_tokens}/{MAX_INPUT_TOKENS} tokens ({total_tokens/MAX_INPUT_TOKENS:.1%})")
+        else:
+            logging_util.info(f"✅ Optimal token usage: {total_tokens}/{MAX_INPUT_TOKENS} tokens ({total_tokens/MAX_INPUT_TOKENS:.1%})")
+        
+        # Detailed breakdown
+        logging_util.info(f"Token breakdown - Prompt: {user_prompt_tokens}, System: {system_tokens}, Model: {model_name}")
+        
+        # Verification: Cross-check with estimate_tokens
+        if user_prompt_contents:
+            combined_text = ' '.join(str(p) for p in user_prompt_contents if isinstance(p, str))
+            estimated_tokens = estimate_tokens(combined_text)
+            accuracy = abs(user_prompt_tokens - estimated_tokens) / user_prompt_tokens if user_prompt_tokens > 0 else 0
+            
+            if accuracy > 0.2:  # More than 20% difference
+                logging_util.warning(f"Token count discrepancy: API={user_prompt_tokens}, Estimated={estimated_tokens} (±{accuracy:.1%})")
+            else:
+                logging_util.debug(f"Token verification: API={user_prompt_tokens}, Estimated={estimated_tokens} (±{accuracy:.1%})")
 
     except Exception as e:
         logging_util.warning(f"Could not count tokens before API call: {e}")
+
+# Token optimization cache for world content
+_world_content_cache = {}
+_world_content_cache_timestamp = None
 
 def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_prompt_text_for_logging=None, system_instruction_text=None):
     """
