@@ -7,8 +7,6 @@ on:
       - 'CLAUDE.md'
       - 'mvp_site/test_documentation_performance.py'
       - 'mvp_site/monitor_doc_sizes.sh'
-    paths-ignore:
-      - '.cursor/rules/archives/**'
   push:
     branches:
       - main
@@ -17,8 +15,6 @@ on:
       - 'CLAUDE.md'
       - 'mvp_site/test_documentation_performance.py'
       - 'mvp_site/monitor_doc_sizes.sh'
-    paths-ignore:
-      - '.cursor/rules/archives/**'
 
 jobs:
   check-doc-sizes:
