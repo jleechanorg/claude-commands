@@ -178,7 +178,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 | `/integrate` | Fresh branch | Run `./integrate.sh` script |
 | `/push` | Pre-push review | Virtual agent review → push if clean |
 | `/scratchpad` | Update planning | Create/update scratchpad_[branch].md |
-| `/roadmap` | Update roadmap files | Commit local changes, switch to main, update roadmap/*.md, push to origin, switch back |
+| `/roadmap` `/r` | Update roadmap files | Commit local changes, switch to main, update roadmap/*.md, push to origin, switch back |
 
 **Command Examples**: → `.cursor/rules/examples.md`
 
@@ -215,7 +215,7 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 ### API Error Prevention (🚨)
 ❌ Print code/file content | ✅ Use file_path:line_number | Keep responses concise
 
-### Roadmap Updates (`/roadmap`) (⚠️)
+### Roadmap Updates (`/roadmap` `/r`) (⚠️)
 **MANDATORY**: When using `/roadmap` command, follow this exact sequence:
 1. Record current branch name
 2. If not on main branch:
