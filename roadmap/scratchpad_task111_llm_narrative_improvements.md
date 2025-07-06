@@ -11,11 +11,13 @@ Fix direct alignment mentions in narrative, improve subtlety in character descri
 ## Requirements Definition
 
 ### 1. Direct Alignment Fix
-- **Problem**: AI mentions "Lawful Good", "Chaotic Neutral", etc. in narrative text
-- **Solution**: Update prompts to use "moral compass" terminology that was already implemented
+- **Problem**: AI mentions "Lawful Good", "Chaotic Neutral", etc. in narrative text shown to players
+- **Solution**: Keep alignment/Myers-Briggs in game state for AI guidance, but hide from narrative
 - **Implementation**: 
   - Review all narrative generation prompts
-  - Replace any remaining alignment references with descriptive moral compass language
+  - Add explicit instructions to NEVER mention alignment terms in player-visible narrative
+  - Keep alignment data in game state JSON for AI internal use
+  - Add instructions to NEVER mention Myers-Briggs types in player-visible narrative
   - Test with sample generations to ensure compliance
 
 ### 2. Character Description Subtlety
@@ -41,10 +43,12 @@ Fix direct alignment mentions in narrative, improve subtlety in character descri
 - Any other system instruction files
 
 ## Success Criteria
-- [ ] No direct alignment mentions in generated narrative
+- [ ] No direct alignment mentions in player-visible narrative (but kept in game state)
+- [ ] No Myers-Briggs type mentions in player-visible narrative (but kept in game state)
 - [ ] Character descriptions use subtle, indirect methods
 - [ ] All prompts free of meta-game references
 - [ ] Integration test shows improved narrative quality
+- [ ] Game state JSON still contains alignment/MBTI data for AI use
 
 ## Estimated Time: 1 hour
 - Prompt audit: 30 minutes
