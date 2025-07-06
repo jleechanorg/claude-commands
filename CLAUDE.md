@@ -295,8 +295,10 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 10. **Push Branch**: Push branch to GitHub using `git push origin HEAD:branch-name`
 11. **Create PR**: ALWAYS create PR using `gh pr create` with test results and description
 12. **Worktree Cleanup**: If subagents were used, clean up temporary worktrees
-    - Remove `worktree_task[NUMBER]` directories after successful merge
-    - Keep worktrees if debugging needed, document in PR
+    - 🚨 **ONLY remove `worktree_task[NUMBER]` directories AFTER PRs are merged**
+    - ❌ **NEVER cleanup before merge** - worktrees needed for potential fixes/updates
+    - ✅ **Keep worktrees until PR merge completion**
+    - Document worktree locations in PR for future reference if needed
 13. **Result Reporting**: Summarize completion status, PR URL, and any issues
 
 **Subagent Decision Criteria**:
