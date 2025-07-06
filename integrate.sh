@@ -2,8 +2,18 @@
 
 # integrate.sh - Updates from main and creates fresh dev branch
 # This script implements the standard integration pattern for the project
+# 
+# Usage: ./integrate.sh [--force]
+#   --force: Override hard stops for uncommitted/unpushed changes
 
 set -e  # Exit on any error
+
+# Check for force flag
+FORCE_MODE=false
+if [[ "$1" == "--force" ]]; then
+    FORCE_MODE=true
+    echo "🚨 FORCE MODE: Overriding safety checks"
+fi
 
 echo "🔄 Starting integration process..."
 
@@ -12,23 +22,37 @@ current_branch=$(git branch --show-current)
 if [ "$current_branch" != "main" ]; then
     echo "⚠️  WARNING: You are on branch '$current_branch'"
     
-    # Check if current branch has uncommitted changes
+    # Check if current branch has uncommitted changes - HARD STOP
     if ! git diff --quiet || ! git diff --cached --quiet; then
-        echo "❌ ERROR: You have uncommitted changes on '$current_branch'"
-        echo "   Please commit or stash your changes before integrating."
-        exit 1
+        echo "❌ HARD STOP: You have uncommitted changes on '$current_branch'"
+        echo "   Staged changes:"
+        git diff --cached --name-only | sed 's/^/     /'
+        echo "   Unstaged changes:"
+        git diff --name-only | sed 's/^/     /'
+        echo ""
+        if [ "$FORCE_MODE" = true ]; then
+            echo "🚨 FORCE MODE: Proceeding anyway (changes will be lost)"
+        else
+            echo "   Please commit or stash your changes before integrating."
+            echo "   Use: git add -A && git commit -m \"your message\""
+            echo "   Or:  git stash"
+            echo "   Or:  ./integrate.sh --force (to abandon changes)"
+            exit 1
+        fi
     fi
     
-    # Check if current branch has unpushed commits
+    # Check if current branch has unpushed commits - HARD STOP
     if git log origin/main..HEAD --oneline | grep -q .; then
-        echo "⚠️  WARNING: Branch '$current_branch' has unpushed commits:"
+        echo "❌ HARD STOP: Branch '$current_branch' has unpushed commits:"
         git log origin/main..HEAD --oneline | head -5
         echo ""
-        echo "   Consider merging these changes to main or creating a PR before integrating."
-        echo "   Continue anyway? (y/N)"
-        read -r response
-        if [[ ! "$response" =~ ^[Yy]$ ]]; then
-            echo "❌ Integration cancelled."
+        if [ "$FORCE_MODE" = true ]; then
+            echo "🚨 FORCE MODE: Proceeding anyway (unpushed commits will be abandoned)"
+        else
+            echo "   Please push these changes or create a PR before integrating."
+            echo "   Use: git push origin HEAD:$current_branch"
+            echo "   Or:  gh pr create"
+            echo "   Or:  ./integrate.sh --force (to abandon commits)"
             exit 1
         fi
     fi
