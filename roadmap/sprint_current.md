@@ -50,6 +50,11 @@
   - [ ] Review https://github.com/Helmi/claude-simone
   - [ ] Assess integration possibilities
   - [ ] Document findings
+- **TASK-132** 🟡 GitHub Actions /testi integration (1.5 hrs) - NEW
+  - [ ] Create .github/workflows/integration-tests.yml for PR automation
+  - [ ] Configure Firebase and Gemini API secrets, use vpython with TESTING=true
+  - [ ] Post full test output in PR comments and upload artifacts
+  - [ ] See roadmap/scratchpad_task132_github_actions_testi_integration.md for complete requirements
 - **TASK-123** 🔵 Traycer planning tool evaluation (1.5 hrs)
   - Install and configure Traycer
   - Test on architecture planning tasks
