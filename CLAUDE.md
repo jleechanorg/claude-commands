@@ -178,6 +178,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 | `/integrate` | Fresh branch | Run `./integrate.sh` script |
 | `/push` | Pre-push review | Virtual agent review → push if clean |
 | `/scratchpad` | Update planning | Create/update scratchpad_[branch].md |
+| `/roadmap` | Update roadmap files | Commit local changes, switch to main, update roadmap/*.md, push to origin, switch back |
 
 **Command Examples**: → `.cursor/rules/examples.md`
 
@@ -213,6 +214,24 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 
 ### API Error Prevention (🚨)
 ❌ Print code/file content | ✅ Use file_path:line_number | Keep responses concise
+
+### Roadmap Updates (`/roadmap`) (⚠️)
+**MANDATORY**: When using `/roadmap` command, follow this exact sequence:
+1. Record current branch name
+2. If not on main branch:
+   - Check for uncommitted changes with `git status`
+   - If changes exist, commit them with descriptive message
+3. Switch to main branch: `git checkout main`
+4. Pull latest changes: `git pull origin main`
+5. Make requested changes to:
+   - `roadmap/roadmap.md` (main roadmap file)
+   - `roadmap/sprint_current.md` (current sprint status)
+6. Commit changes with format: `docs(roadmap): [description]`
+7. Push directly to main: `git push origin main`
+8. Switch back to original branch: `git checkout [original-branch]`
+
+**Files Updated**: Only `roadmap/roadmap.md` and `roadmap/sprint_current.md`
+**Exception**: This is the ONLY case where direct push to main is allowed
 
 ## Project-Specific
 
