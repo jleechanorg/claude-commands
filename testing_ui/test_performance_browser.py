@@ -12,7 +12,7 @@ from playwright.sync_api import Page, TimeoutError
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from testing_ui.browser_test_base import BrowserTestBase, click_button_with_text, wait_for_element
+from browser_test_base import BrowserTestBase, click_button_with_text, wait_for_element
 
 
 class PerformanceTest(BrowserTestBase):

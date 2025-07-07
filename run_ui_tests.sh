@@ -126,20 +126,39 @@ else
     exit 1
 fi
 
-# Create parallel execution
+# Create parallel execution with limited concurrency
 PASSED=0
 FAILED=0
 FAILED_TESTS=()
 PIDS=()
 TEST_RESULTS=()
+MAX_PARALLEL=3
 
-echo "🚀 Starting ${#BROWSER_TESTS[@]} tests in parallel..."
+echo "🚀 Starting ${#BROWSER_TESTS[@]} tests with max $MAX_PARALLEL concurrent..."
 
-# Start all tests in background
+# Function to wait for any background job to complete
+wait_for_slot() {
+    while [ ${#PIDS[@]} -ge $MAX_PARALLEL ]; do
+        for i in "${!PIDS[@]}"; do
+            if ! kill -0 "${PIDS[$i]}" 2>/dev/null; then
+                wait "${PIDS[$i]}"
+                unset PIDS[$i]
+                PIDS=("${PIDS[@]}")  # Re-index array
+                break
+            fi
+        done
+        sleep 0.1
+    done
+}
+
+# Start tests with limited parallelism
 for i in "${!BROWSER_TESTS[@]}"; do
     test_file="${BROWSER_TESTS[$i]}"
     if [ -f "$test_file" ]; then
-        echo "   📋 Queuing: $test_file"
+        # Wait for a slot to become available
+        wait_for_slot
+        
+        echo "   📋 Starting: $test_file (${#PIDS[@]}/$MAX_PARALLEL active)"
         
         # Run test in background, capture output to temp file
         temp_file="/tmp/test_result_$i.log"

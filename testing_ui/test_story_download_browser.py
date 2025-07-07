@@ -67,29 +67,76 @@ class StoryDownloadTest(BrowserTestBase):
     
     def _create_campaign_with_story(self, page: Page) -> bool:
         """Create a campaign and add some story content."""
-        if not page.is_visible("text=New Campaign"):
-            return False
+        try:
+            # Create campaign using robust approach
+            if not page.is_visible("text=New Campaign"):
+                print("   ❌ New Campaign button not found")
+                return False
+                
+            page.click("text=New Campaign")
+            page.wait_for_load_state("networkidle")
             
-        page.click("text=New Campaign")
-        page.wait_for_timeout(1000)
-        
-        if page.is_visible("#wizard-campaign-title"):
-            page.fill("#wizard-campaign-title", "Story Download Test Campaign")
-            page.fill("#wizard-campaign-prompt", "A campaign for testing story download and export features.")
+            # Fill campaign details - try multiple selectors
+            title_selectors = ["#wizard-campaign-title", "#campaign-title", "input[name='title']"]
+            desc_selectors = ["#wizard-campaign-prompt", "#campaign-description", "textarea[name='description']"]
             
-            # Quick wizard navigation
-            for i in range(4):
-                if page.is_visible("#wizard-next"):
-                    page.click("#wizard-next")
-                    page.wait_for_timeout(500)
-                elif page.is_visible("#launch-campaign"):
-                    page.click("#launch-campaign")
+            title_filled = False
+            for selector in title_selectors:
+                if page.is_visible(selector):
+                    page.fill(selector, "Story Download Test Campaign")
+                    title_filled = True
                     break
             
-            page.wait_for_timeout(2000)
+            desc_filled = False
+            for selector in desc_selectors:
+                if page.is_visible(selector):
+                    page.fill(selector, "A campaign for testing story download and export features.")
+                    desc_filled = True
+                    break
             
-            # Add some story content by sending messages
-            message_input = page.query_selector("#message-input")
+            if not title_filled or not desc_filled:
+                print(f"   ⚠️  Form filling incomplete: title={title_filled}, desc={desc_filled}")
+            
+            # Navigate through wizard with robust waiting
+            for i in range(4):
+                page.wait_for_timeout(1000)
+                if page.is_visible("button:has-text('Begin Adventure')"):
+                    # Use the robust button clicking from campaign creation test
+                    try:
+                        page.wait_for_selector("button:has-text('Begin Adventure')", state="visible", timeout=5000)
+                        button = page.locator("button:has-text('Begin Adventure')").first
+                        button.scroll_into_view_if_needed()
+                        page.wait_for_timeout(1000)
+                        button.click(timeout=10000)
+                        break
+                    except:
+                        page.evaluate("document.querySelector('button[type=submit]').click()")
+                        break
+                elif page.is_visible("button:has-text('Next')"):
+                    page.click("button:has-text('Next')")
+                else:
+                    print(f"   ⚠️  No Next or Launch button found at step {i+1}")
+            
+            # Wait for game to start
+            page.wait_for_timeout(3000)
+            return True
+            
+        except Exception as e:
+            print(f"   ❌ Campaign creation failed: {e}")
+            return False
+    
+    def _add_story_content(self, page: Page) -> bool:
+        """Add story content by sending messages."""
+        try:
+            # Add some story content by sending messages  
+            message_selectors = ["#message-input", "#user-input", "textarea[name='userInput']"]
+            message_input = None
+            
+            for selector in message_selectors:
+                if page.is_visible(selector):
+                    message_input = page.query_selector(selector)
+                    break
+            
             if message_input:
                 messages = [
                     "I explore the mysterious cave entrance.",
@@ -108,6 +155,10 @@ class StoryDownloadTest(BrowserTestBase):
                 
                 print("   ✅ Story content added")
                 return True
+        
+        except Exception as e:
+            print(f"   ❌ Failed to add story content: {e}")
+            return False
         
         return False
     

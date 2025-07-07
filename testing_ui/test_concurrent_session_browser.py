@@ -13,6 +13,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from browser_test_base import BrowserTestBase, FlaskServerManager
 
+# Configuration
+BASE_URL = os.getenv("TEST_SERVER_URL", "http://localhost:6006")
+
 
 class ConcurrentSessionTest(BrowserTestBase):
     """Test concurrent sessions using the v2 framework."""
@@ -31,7 +34,7 @@ class ConcurrentSessionTest(BrowserTestBase):
             new_tab = page.context.new_page()
             
             # Navigate both tabs
-            test_url = f"http://localhost:8080?test_mode=true&test_user_id=browser-test-user"
+            test_url = f"{BASE_URL}?test_mode=true&test_user_id=browser-test-user"
             new_tab.goto(test_url)
             new_tab.wait_for_timeout(2000)
             
