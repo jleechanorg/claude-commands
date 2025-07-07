@@ -221,34 +221,6 @@ class TestApiEndpoints(unittest.TestCase):
         # Verify AI service was called
         mock_gemini_service.continue_story.assert_called_once()
     
-    @patch('main.firestore_service')
-    def test_legacy_migration_status_handling(self, mock_firestore_service):
-        """Test handling of different legacy migration statuses."""
-        from game_state import MigrationStatus
-        
-        # Mock campaign
-        mock_campaign = {'id': 'test-campaign', 'title': 'Test'}
-        mock_story = []
-        
-        # Test with NOT_CHECKED status
-        mock_game_state = {
-            'player': {'name': 'Hero'},
-            'migration_status': MigrationStatus.NOT_CHECKED.value
-        }
-        
-        mock_doc_snapshot = MagicMock()
-        mock_doc_snapshot.to_dict.return_value = mock_game_state
-        mock_firestore_service.get_campaign_by_id.return_value = (mock_campaign, mock_story)
-        mock_firestore_service.get_campaign_game_state.return_value = mock_doc_snapshot
-        
-        response = self.client.post(
-            '/api/campaigns/test-campaign/interaction',
-            headers=self.test_headers,
-            json={'input': 'GOD_ASK_STATE'}
-        )
-        
-        self.assertEqual(response.status_code, 200)
-        # Should handle migration status without error
 
 
 class TestAuthenticationDecorator(unittest.TestCase):

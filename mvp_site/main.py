@@ -13,7 +13,7 @@ from firebase_admin import auth
 import traceback
 import document_generator
 import logging_util
-from game_state import GameState, MigrationStatus
+from game_state import GameState
 from debug_mode_parser import DebugModeParser
 import constants
 import json
@@ -277,53 +277,6 @@ def _handle_update_state_command(user_input, user_id, campaign_id):
         return jsonify({KEY_ERROR: f'An unexpected error occurred during GOD_MODE_UPDATE_STATE: {e}'}), 500
 
 
-def _handle_legacy_migration(current_game_state, campaign_id, story_context, user_id):
-    """
-    Handle one-time legacy migration for campaigns.
-
-    Args:
-        current_game_state: Current GameState object
-        campaign_id: Campaign ID
-        story_context: Story context list
-        user_id: User ID
-
-    Returns:
-        GameState: Updated game state object
-    """
-    logging_util.info(f"Evaluating campaign {campaign_id} for legacy migration. Current status: {current_game_state.migration_status.value}")
-
-    if current_game_state.migration_status != MigrationStatus.NOT_CHECKED:
-        logging_util.info(f"-> Status is {current_game_state.migration_status.value}. Skipping scan.")
-        return current_game_state
-
-    logging_util.info(f"-> Status is NOT_CHECKED. Performing scan.")
-
-    # The story context here still has datetime objects, which is fine for the parser
-    if story_context:
-        legacy_state_dict = gemini_service.create_game_state_from_legacy_story(story_context)
-    else:
-        legacy_state_dict = None
-
-    if legacy_state_dict:
-        logging_util.info(f"-> SUCCESS: Found and parsed legacy state for campaign {campaign_id}. Migrating.")
-        # Check if we already have a GameState object
-        if isinstance(legacy_state_dict, GameState):
-            legacy_game_state = legacy_state_dict
-        else:
-            # If not, create one from the dictionary
-            legacy_game_state = GameState.from_dict(legacy_state_dict)
-
-        legacy_game_state.migration_status = MigrationStatus.MIGRATED
-
-        # Save the newly migrated state to Firestore
-        firestore_service.update_campaign_game_state(user_id, campaign_id, legacy_game_state.to_dict())
-        return legacy_game_state
-    else:
-        logging_util.info(f"-> FAILED: No legacy state found for campaign {campaign_id}. Marking as checked.")
-        # Mark as checked and update Firestore so we don't check again
-        current_game_state.migration_status = MigrationStatus.NO_LEGACY_DATA
-        firestore_service.update_campaign_game_state(user_id, campaign_id, current_game_state.to_dict())
-        return current_game_state
 
 
 def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response,
@@ -861,9 +814,6 @@ def create_app():
             # Fetch campaign metadata and story context
             campaign, story_context = firestore_service.get_campaign_by_id(user_id, campaign_id)
             if not campaign: return jsonify({KEY_ERROR: 'Campaign not found'}), 404
-
-            # --- ONE-TIME LEGACY MIGRATION ---
-            current_game_state = _handle_legacy_migration(current_game_state, campaign_id, story_context, user_id)
 
             # 2. Add user's action to the story log
             firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
