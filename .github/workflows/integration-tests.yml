@@ -65,11 +65,11 @@ jobs:
       id: integration_tests
       env:
         TESTING: true
-        # Add API secrets when available (commented out for now)
-        # GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        # FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-        # FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
-        # FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+        # API secrets for integration tests
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+        FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
       run: |
         echo "🧪 Running integration tests (equivalent to /testi command)..."
         echo "Command: TESTING=true python3 mvp_site/test_integration/test_integration.py"
@@ -146,22 +146,22 @@ jobs:
           // Create comment body
           const commentBody = `## ${statusEmoji} Integration Test Results (/testi)
           
-**Status**: ${testResult}  
-**Duration**: ${duration}s  
-**Command**: \`TESTING=true python3 mvp_site/test_integration/test_integration.py\`
-
-<details>
-<summary>📋 Test Output (click to expand)</summary>
-
-\`\`\`
-${testOutput}
-\`\`\`
-
-</details>
-
----
-*Automated integration test triggered by PR to main branch*  
-*Workflow: [integration-tests.yml](${context.repo.owner}/${context.repo.repo}/actions/workflows/integration-tests.yml)*`;
+          **Status**: ${testResult}  
+          **Duration**: ${duration}s  
+          **Command**: \`TESTING=true python3 mvp_site/test_integration/test_integration.py\`
+          
+          <details>
+          <summary>📋 Test Output (click to expand)</summary>
+          
+          \`\`\`
+          ${testOutput}
+          \`\`\`
+          
+          </details>
+          
+          ---
+          *Automated integration test triggered by PR to main branch*  
+          *Workflow: [integration-tests.yml](${context.repo.owner}/${context.repo.repo}/actions/workflows/integration-tests.yml)*`;
           
           // Post comment to PR
           const { data: comments } = await github.rest.issues.listComments({

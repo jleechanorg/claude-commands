@@ -4,10 +4,10 @@
 # Runs all tests with comprehensive coverage analysis
 #
 # Usage:
-#   ./coverage.sh                   # Unit tests only with coverage (HTML report included by default)
-#   ./coverage.sh --integration     # Unit tests AND integration tests with coverage
+#   ./coverage.sh                   # Unit tests with coverage + HTML report (default)
+#   ./coverage.sh --integration     # Unit + integration tests with coverage + HTML report
 #   ./coverage.sh --no-html         # Generate text report only (skip HTML)
-#   ./coverage.sh --integration --no-html  # Integration tests with text report only
+#   ./coverage.sh --integration --no-html  # All tests with text report only
 #
 # HTML output goes to: /tmp/worldarchitectai/coverage/
 
@@ -79,7 +79,11 @@ cd mvp_site
 
 print_status "🧪 Running coverage analysis..."
 print_status "Setting TESTING=true for faster AI model usage"
-print_status "HTML output will be saved to: $COVERAGE_DIR"
+if [ "$generate_html" = true ]; then
+    print_status "HTML report will be generated at: $COVERAGE_DIR/index.html"
+else
+    print_status "HTML report generation disabled (--no-html specified)"
+fi
 
 if [ "$include_integration" = true ]; then
     print_status "Integration tests enabled (--integration flag specified)"
@@ -274,7 +278,10 @@ fi
 echo
 print_status "📁 Coverage files saved to: $COVERAGE_DIR"
 print_status "  - Text report: $COVERAGE_DIR/coverage_report.txt"
-print_status "  - HTML report: $COVERAGE_DIR/index.html"
+if [ "$generate_html" = true ]; then
+    print_status "  - HTML report: $COVERAGE_DIR/index.html"
+    print_status "  - Quick link: file://$COVERAGE_DIR/index.html"
+fi
 
 if [ $failed_tests -eq 0 ]; then
     print_success "✅ Coverage analysis complete - all tests passed!"

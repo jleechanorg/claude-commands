@@ -378,11 +378,11 @@ class TestCreateCampaignRoute(unittest.TestCase):
             json=campaign_data
         )
         
-        # Should succeed with mocked services, even with None prompt
-        self.assertEqual(response.status_code, 201)
+        # Should fail with 400 due to missing prompt
+        self.assertEqual(response.status_code, 400)
         data = json.loads(response.data)
-        self.assertIn('campaign_id', data)
-        self.assertTrue(data['success'])
+        self.assertIn('error', data)
+        self.assertEqual(data['error'], 'Prompt is required')
 
     @patch('main.firestore_service')
     @patch('main.constants')

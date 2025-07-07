@@ -279,3 +279,27 @@ def click_button_with_text(page: Page, text: str) -> bool:
             continue
     
     return False
+
+
+def take_screenshot(page: Page, filename: str) -> str:
+    """
+    Centralized screenshot function for all UI tests.
+    
+    Args:
+        page: Playwright page object
+        filename: Base filename (will be saved to /tmp/worldarchitectai/browser/)
+    
+    Returns:
+        str: Full path to the screenshot file
+    """
+    # Ensure screenshot directory exists
+    os.makedirs(SCREENSHOT_DIR, exist_ok=True)
+    
+    # Ensure filename has .png extension
+    if not filename.endswith('.png'):
+        filename += '.png'
+    
+    filepath = os.path.join(SCREENSHOT_DIR, filename)
+    page.screenshot(path=filepath)
+    print(f"📸 Screenshot: {filename}")
+    return filepath
