@@ -146,22 +146,22 @@ jobs:
           // Create comment body
           const commentBody = `## ${statusEmoji} Integration Test Results (/testi)
           
-**Status**: ${testResult}  
-**Duration**: ${duration}s  
-**Command**: \`TESTING=true python3 mvp_site/test_integration/test_integration.py\`
-
-<details>
-<summary>📋 Test Output (click to expand)</summary>
-
-\`\`\`
-${testOutput}
-\`\`\`
-
-</details>
-
----
-*Automated integration test triggered by PR to main branch*  
-*Workflow: [integration-tests.yml](${context.repo.owner}/${context.repo.repo}/actions/workflows/integration-tests.yml)*`;
+          **Status**: ${testResult}  
+          **Duration**: ${duration}s  
+          **Command**: \`TESTING=true python3 mvp_site/test_integration/test_integration.py\`
+          
+          <details>
+          <summary>📋 Test Output (click to expand)</summary>
+          
+          \`\`\`
+          ${testOutput}
+          \`\`\`
+          
+          </details>
+          
+          ---
+          *Automated integration test triggered by PR to main branch*  
+          *Workflow: [integration-tests.yml](${context.repo.owner}/${context.repo.repo}/actions/workflows/integration-tests.yml)*`;
           
           // Post comment to PR
           const { data: comments } = await github.rest.issues.listComments({
