@@ -11,7 +11,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from entity_tracking import SceneManifest, create_from_game_state
+from entity_tracking import SceneManifest, create_from_game_state, get_validation_info
 from narrative_sync_validator import NarrativeSyncValidator
 import constants
 
@@ -228,6 +228,22 @@ class TestEntityTracking(unittest.TestCase):
         print(f"   Expected entities: {expected_entities}")
         print(f"   Found entities: {result.entities_found}")
         print(f"   Confidence: {result.confidence:.2f}")
+    
+    def test_get_validation_info(self):
+        """Test get_validation_info function returns correct information."""
+        info = get_validation_info()
+        
+        # Verify the function returns a dictionary
+        self.assertIsInstance(info, dict)
+        
+        # Verify expected keys are present
+        self.assertIn("validation_type", info)
+        self.assertIn("pydantic_available", info)
+        
+        # Verify expected values
+        self.assertEqual(info["validation_type"], "Pydantic")
+        self.assertEqual(info["pydantic_available"], "true")
+    
 
 if __name__ == '__main__':
     # Set testing environment

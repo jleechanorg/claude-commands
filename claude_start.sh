@@ -16,6 +16,8 @@ if [ $DAYS_DIFF -gt 30 ]; then
     echo ""
 fi
 
+FLAGS="--dangerously-skip-permissions --continue"
+
 echo "Select mode:"
 echo "1) Worker (Sonnet 4)"
 echo "2) Default"
@@ -25,14 +27,14 @@ case ${choice:-2} in
     1) 
         MODEL="claude-sonnet-4-20250514"
         echo "Starting Claude Code in worker mode with $MODEL..."
-        claude --model "$MODEL" --dangerously-skip-permissions "$@"
+        claude --model "$MODEL" $FLAGS "$@"
         ;;
     2) 
         echo "Starting Claude Code with default settings..."
-        claude --dangerously-skip-permissions "$@"
+        claude $FLAGS "$@"
         ;;
     *) 
         echo "Invalid choice, using default"
-        claude --dangerously-skip-permissions "$@"
+        claude $FLAGS "$@"
         ;;
 esac

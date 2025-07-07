@@ -1,12 +1,26 @@
 async function fetchApi(path, options = {}, retryCount = 0) {
     const startTime = performance.now();
-    const user = firebase.auth().currentUser;
-    if (!user) throw new Error('User not authenticated');
+    
+    // Check for test mode bypass
+    let defaultHeaders;
+    if (window.testAuthBypass && window.testAuthBypass.enabled) {
+        // Use test bypass headers
+        defaultHeaders = {
+            'X-Test-Bypass-Auth': 'true',
+            'X-Test-User-ID': window.testAuthBypass.userId,
+            'Content-Type': 'application/json'
+        };
+    } else {
+        // Normal authentication flow
+        const user = firebase.auth().currentUser;
+        if (!user) throw new Error('User not authenticated');
 
-    // Get fresh token, forcing refresh on retries to handle clock skew
-    const forceRefresh = retryCount > 0;
-    const token = await user.getIdToken(forceRefresh);
-    const defaultHeaders = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+        // Get fresh token, forcing refresh on retries to handle clock skew
+        const forceRefresh = retryCount > 0;
+        const token = await user.getIdToken(forceRefresh);
+        defaultHeaders = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+    }
+    
     const config = { ...options, headers: { ...defaultHeaders, ...options.headers } };
 
     const response = await fetch(path, config);

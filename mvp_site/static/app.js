@@ -1,4 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Check for test mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const isTestMode = urlParams.get('test_mode') === 'true';
+    
     // --- State and Constants ---
     const views = { 
         auth: document.getElementById('auth-view'), 
@@ -66,7 +70,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let handleRouteChange = () => {
-        if (!firebase.auth().currentUser) { showView('auth'); return; }
+        // In test mode, skip auth check
+        if (!isTestMode) {
+            // Only check Firebase auth if not in test mode
+            if (!firebase.auth().currentUser) { 
+                showView('auth'); 
+                return; 
+            }
+        } else {
+            console.log('📍 handleRouteChange called in test mode');
+        }
         const path = window.location.pathname;
         const campaignIdMatch = path.match(/^\/game\/([a-zA-Z0-9]+)/);
         if (campaignIdMatch) {
@@ -441,14 +454,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentCampaignId) return;
         showSpinner('saving');
         try {
-            const user = firebase.auth().currentUser;
-            if (!user) throw new Error('User not authenticated for download.');
-            const token = await user.getIdToken();
+            let headers = {};
+            
+            if (isTestMode && window.testAuthBypass) {
+                // Use test bypass headers
+                headers = {
+                    'X-Test-Bypass-Auth': 'true',
+                    'X-Test-User-ID': window.testAuthBypass.userId
+                };
+            } else {
+                // Normal auth flow
+                const user = firebase.auth().currentUser;
+                if (!user) throw new Error('User not authenticated for download.');
+                const token = await user.getIdToken();
+                headers = {
+                    'Authorization': `Bearer ${token}`
+                };
+            }
 
             const response = await fetch(`/api/campaigns/${currentCampaignId}/export?format=${format}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                headers: headers
             });
 
             if (!response.ok) {
@@ -544,17 +569,30 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log(`Theme changed to: ${e.detail.theme}`);
     });
 
-    // Show user email in navbar when authenticated
-    firebase.auth().onAuthStateChanged(user => {
-        const userEmailElement = document.getElementById('user-email');
-        if (user && userEmailElement) {
-            userEmailElement.textContent = user.email;
-            userEmailElement.style.display = 'block';
-        } else if (userEmailElement) {
-            userEmailElement.style.display = 'none';
-        }
-        handleRouteChange();
-    });
+    // Handle authentication or test mode
+    if (isTestMode) {
+        // In test mode, wait for test mode to be ready then proceed
+        window.addEventListener('testModeReady', (e) => {
+            const userEmailElement = document.getElementById('user-email');
+            if (userEmailElement) {
+                userEmailElement.textContent = `Test User (${e.detail.userId})`;
+                userEmailElement.style.display = 'block';
+            }
+            handleRouteChange();
+        });
+    } else {
+        // Normal authentication flow
+        firebase.auth().onAuthStateChanged(user => {
+            const userEmailElement = document.getElementById('user-email');
+            if (user && userEmailElement) {
+                userEmailElement.textContent = user.email;
+                userEmailElement.style.display = 'block';
+            } else if (userEmailElement) {
+                userEmailElement.style.display = 'none';
+            }
+            handleRouteChange();
+        });
+    }
 
     // Main navigation listeners (these must remain at the end of DOMContentLoaded)
     document.getElementById('go-to-new-campaign').onclick = () => {

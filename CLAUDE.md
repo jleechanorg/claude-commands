@@ -14,13 +14,17 @@
 
 ## Meta-Rules
 
-**ANCHORING**: `.cursor` directory at workspace root = single source of truth for all protocol files.
 
 🚨 **NO FALSE ✅**: Only use ✅ for 100% complete/working. Use ❌ ⚠️ 🔄 or text for partial.
 
 🚨 **NO POSITIVITY**: Be extremely self-critical. No celebration unless 100% working.
 
 🚨 **NEVER SIMULATE**: Ask if stuck. Fake answer = 1000x worse than getting help.
+   - ❌ NEVER create fake files pretending to be real output (e.g., text files named .png)
+   - ❌ NEVER show "simulated" test results when real tests fail
+   - ❌ NEVER create workarounds that hide actual failures
+   - ✅ ALWAYS say "I cannot do X because Y" when facing limitations
+   - ✅ ALWAYS show actual error messages instead of hiding them
 
 ## Claude Code Specific Behavior
 
@@ -32,6 +36,12 @@
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
 7. 🚨 **BRANCH DISCIPLINE**: ❌ NEVER switch git branches unless user explicitly requests it | Work on current branch only | Ask before any `git checkout` operations
 8. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
+9. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
+   - **OPEN** = Work In Progress (WIP) - NOT completed
+   - **MERGED** = Completed and integrated into main branch  
+   - **CLOSED** = Abandoned or rejected - NOT completed
+   - ❌ NEVER mark tasks as completed just because PR exists
+   - ✅ ONLY mark completed when PR state = "MERGED"
 
 ## Project Overview
 
@@ -63,6 +73,21 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 **Red-Green Protocol** (`/tdd` or `/rg`):
 1. Write failing tests FIRST → 2. Confirm fail (red) → 3. Minimal code to pass (green) → 4. Refactor
 
+🚨 **Test Infrastructure Validation Protocol**:
+When working with test runners/harnesses:
+1. **Verify Core Function**: Before adding features, verify runner correctly detects PASS vs FAIL
+2. **Test Both Paths**: Create one passing test AND one failing test to validate detection
+3. **Output Analysis**: If visual output (❌/✅) doesn't match summary, STOP and fix immediately
+4. **Exit Code Distrust**: Don't rely solely on process exit codes - parse actual output
+5. **Contradiction = Bug**: Any mismatch between test output and summary is CRITICAL bug
+
+🚨 **MANDATORY TEST EXECUTION BEFORE COMPLETION**:
+❌ NEVER claim test completion without executing at least ONE test successfully
+- Before any ✅ "tests complete", run at least one test to verify framework works
+- If dependencies missing (Playwright, etc.), FULL STOP - report "Cannot complete - X not installed"
+- Use ⚠️ "Created but unverified" instead of ✅ "Complete" for untested code
+- Only use ✅ after seeing actual PASS/FAIL results from real test execution
+
 ## Development Guidelines
 
 ### Code Standards
@@ -86,10 +111,112 @@ Use docstrings, proper JS loading
 - File naming: descriptive, ❌ "red"/"green" | Methods <500 lines | Single responsibility
 - Integration tests: natural state, flexible assertions | Visual testing required
 - Dead code: use `vulture` | Test behavior not strings
+- 🚨 **Test Runner Validation**: When modifying test runners, MUST verify both PASS and FAIL detection | Create intentional failure case | Verify output matches actual result
+- 🚨 **Output Contradiction Check**: If output shows failure indicators (❌, FAILED, ERROR) but summary shows success (✅, PASSED), STOP immediately and investigate
+- ⚠️ **Test Exit Codes**: Don't assume test scripts return proper exit codes | Parse output for success/failure strings | Verify detection logic before trusting results
+- ⚠️ **Dynamic Test Discovery**: ❌ NEVER hardcode test file lists in scripts | ✅ Use `find` or glob patterns to discover tests automatically | Update test runners to scan directories (e.g., `find testing_ui -name "test_*.py"`)
 
 ### Safety & Security
 ❌ Global `document.addEventListener('click')` without approval | Test workflows after modifications |
 Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Analysis + execution required
+
+### Browser vs HTTP Testing (🚨 HARD RULE)
+**CRITICAL DISTINCTION**: Never confuse browser automation with HTTP simulation
+- 🚨 **testing_ui/**: ONLY real browser automation using Playwright | ❌ NEVER use `requests` library here
+- 🚨 **testing_http/**: ONLY HTTP requests using `requests` library | ❌ NEVER use Playwright here
+- ⚠️ **/testui and /testuif**: MUST use real Playwright browser automation | NO HTTP simulation
+- ⚠️ **/testhttp and /testhttpf**: MUST use HTTP requests | NO browser automation
+- ✅ **/testi**: HTTP requests are acceptable (integration testing)
+- **Red Flag**: If writing "browser tests" with `requests.get()`, STOP immediately
+- **Command Structure**:
+  - `/testui` = Browser + Mock APIs
+  - `/testuif` = Browser + REAL APIs (costs $)
+  - `/testhttp` = HTTP + Mock APIs  
+  - `/testhttpf` = HTTP + REAL APIs (costs $)
+- 🚨 **Screenshot Rule**: Real screenshots are PNG/JPG images taken by browsers
+  - ❌ NEVER create text files and name them .png
+  - ❌ NEVER simulate screenshots with text descriptions
+  - ✅ If browser tests can't run, say "Cannot take screenshots - Playwright not installed"
+
+### Browser Test Execution Protocol (🚨 MANDATORY STEPS)
+When asked to run browser tests, follow these steps IN ORDER:
+
+1. **Check Playwright Installation**
+   ```bash
+   vpython -c "import playwright" || echo "STOP: Playwright not installed"
+   ```
+   - ✅ Continue only if import succeeds
+   - ❌ FULL STOP if not installed - report: "Cannot run browser tests - Playwright not installed"
+
+2. **Verify Browser Dependencies**
+   ```bash
+   vpython -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); p.chromium.launch(headless=True); p.stop()" || echo "STOP: Browser deps missing"
+   ```
+   - ✅ Continue only if browser launches
+   - ❌ FULL STOP if fails - report: "Cannot launch browsers - missing system dependencies"
+
+3. **Start Test Server**
+   ```bash
+   TESTING=true PORT=6006 vpython mvp_site/main.py serve &
+   sleep 3
+   curl -s http://localhost:6006 || echo "STOP: Server not running"
+   ```
+   - ✅ Continue only if server responds
+   - ❌ FULL STOP if fails - report: "Cannot start test server"
+
+4. **Run Browser Test**
+   ```bash
+   TESTING=true vpython testing_ui/test_name.py
+   ```
+   - ✅ Report actual results/errors
+   - ❌ NEVER create fake output
+
+**GOLDEN RULE**: Stop at first failure. Never proceed to simulate missing components.
+
+### HTTP Test Execution Protocol (⚠️ MANDATORY STEPS)
+When asked to run HTTP tests, follow these steps IN ORDER:
+
+1. **Verify Test Environment**
+   ```bash
+   vpython -c "import requests" || echo "STOP: requests library not installed"
+   ```
+   - ✅ Continue only if import succeeds
+   - ❌ FULL STOP if not installed
+
+2. **Start Test Server (if needed)**
+   ```bash
+   TESTING=true PORT=8086 vpython mvp_site/main.py serve &
+   sleep 3
+   curl -s http://localhost:8086 || echo "Note: Using different port or external server"
+   ```
+   - ✅ Continue even if local server fails (tests may use different setup)
+
+3. **Run HTTP Test**
+   ```bash
+   TESTING=true vpython testing_http/test_name.py
+   ```
+   - ✅ Report actual HTTP responses/errors
+   - ❌ NEVER pretend requests succeeded
+
+### General Test Protocol (🚨 APPLIES TO ALL TESTS)
+1. **Environment Check First**: Verify ALL dependencies before attempting test
+2. **Fail Fast**: Stop at first missing dependency
+3. **Honest Reporting**: State exactly what failed and why
+4. **No Workarounds**: Don't create alternatives that hide the real issue
+
+### Coverage Analysis Protocol (⚠️)
+**MANDATORY**: When analyzing test coverage:
+1. **ALWAYS use**: `./run_tests.sh --coverage` or `./coverage.sh` (HTML default)
+2. **NEVER use**: Manual `coverage run` commands on individual test files
+3. **Verify full test suite**: Ensure all 94+ test files are included in coverage analysis
+4. **Report source**: Always mention "Coverage from full test suite via run_tests.sh"
+5. **Expected timing**: ~10 seconds total (6s tests + 4s report generation)
+6. **HTML location**: `/tmp/worldarchitectai/coverage/index.html`
+7. **Usage patterns**:
+   - `./coverage.sh` - Unit tests with HTML report (default)
+   - `./coverage.sh --integration` - Include integration tests
+   - `./coverage.sh --no-html` - Text report only
+   - `./run_tests.sh --coverage` - Use existing test runner with coverage
 
 ## Git Workflow
 
@@ -107,6 +234,12 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 🚨 **No Main Push**: ✅ `git push origin HEAD:feature` | ❌ `git push origin main`
 
+🚨 **PR Context Management**: ⚠️ MANDATORY before creating new branches/PRs:
+1. **Check git status**: `git status` and `git branch` to see current work
+2. **Verify PR context**: When user says "push to the PR" without number, ask which PR
+3. **Use existing branches**: Check if work should go to existing PR before creating new
+4. **Never assume**: If ambiguous, ask for clarification rather than creating duplicate work
+
 **Commit Format**: → `.cursor/rules/examples.md`
 
 ## Environment, Tooling & Scripts
@@ -118,8 +251,9 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
    - ⚠️ "run all tests" → `./run_tests.sh`
    - ⚠️ Test fails → fix immediately or ask user
    - ✅ `TESTING=true vpython mvp_site/test_file.py` (from root)
-5. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
-6. **Web Scraping**: Use full-content tools (curl) not search snippets
+5. 🚨 **NEVER DISMISS FAILING TESTS**: ❌ "minor failures" or "test expectation updates" | ✅ Fix ALL failing tests systematically | Debug root cause | Real bugs vs test issues | One failure = potential systemic issue
+6. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
+7. **Web Scraping**: Use full-content tools (curl) not search snippets
 
 **Test Commands**: → `.cursor/rules/validation_commands.md`
 
@@ -152,6 +286,10 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - **Code Reviews**: Extract ALL comments | ❌ assume "suppressed" = unimportant
 - **Empty Strings**: ✅ `if value is not None:` | ❌ `if value:`
 - **AI Instructions**: Critical first, style last | Order determines compliance
+- 🚨 **Trust But Verify**: NEVER assume existing code works | Test core functionality before adding features | Validate success AND failure paths
+- 🚨 **Fake Results = Instant Failure**: Creating fake test output violates core trust
+  - Examples: Text files named .png, "simulated" results when real tests fail
+  - Correct response: "Cannot run X because Y is not installed/available"
 
 ### Critical Rules
 - **Data Corruption**: Treat as systemic | Search ALL similar patterns | "One bug = many bugs"
@@ -169,23 +307,12 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 ## Slash Commands
 
-| Command | Purpose | Action |
-|---------|---------|--------|
-| `/context` `/est` | Context estimation | Show % used, breakdown, recommendations |
-| `/milestones N` | Break into N phases | Create milestones, update scratchpad, commit each |
-| `/milestones suggest` | Suggest optimal count | Analyze complexity, suggest 3-7 with rationale |
-| `/list` | List all commands | Display all slash commands with descriptions |
-| `/tdd` `/rg` | Test-driven dev | Red → Green → Refactor workflow |
-| `/review` `/copilot` | Process ALL PR comments | List EVERY comment individually, apply changes, commit |
-| `/optimize` | Improve code/files | Remove dupes, improve efficiency |
-| `/test` | Run full test suite | `./run_tests.sh` + fix failures |
-| `/testi` | Integration test | `source venv/bin/activate && TESTING=true python3 mvp_site/test_integration/test_integration.py` |
-| `/integrate` | Fresh branch | Run `./integrate.sh` script |
-| `/push` | Pre-push review | Virtual agent review → push if clean |
-| `/scratchpad` | Update planning | Create/update scratchpad_[branch].md |
-| `/roadmap` `/r` | Update roadmap files | Commit local changes, switch to main, update roadmap/*.md, push to origin, switch back |
-| `/execute` `/e` | Execute task with context management | Check context, warn if ≤25%, consider subagents, execute task |
-| `/bclean` | Branch cleanup | Delete local branches without open GitHub PRs |
+Use `/list` to display all available slash commands with descriptions.
+
+**Command Documentation**: → `.claude/commands/`
+
+**Special Commands**:
+- `/think` - Maximum thinking budget | Append "ultrathink" to trigger Claude's highest computation level
 
 **Command Examples**: → `.cursor/rules/examples.md`
 
@@ -222,6 +349,15 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 ### API Error Prevention (🚨)
 ❌ Print code/file content | ✅ Use file_path:line_number | Keep responses concise
 
+### Browser Testing vs HTTP Testing (🚨)
+**HARD RULE - NO SIMULATION FOR BROWSER TESTS**:
+- 🚨 **NEVER create HTTP simulation tests for `/testuif` or browser automation**
+- ✅ `/testi` - HTTP requests are fine (integration testing via API endpoints)
+- ✅ `/testuif` - MUST use real Playwright browser automation (NO HTTP simulation)
+- ❌ **STOP SIMULATING** - User explicitly demanded real browsers for UI testing
+- **Browser tests require**: Actual page navigation, element clicking, form filling, screenshot capture
+- **If auth blocks browser tests**: Implement frontend test mode bypass, NOT HTTP simulation
+
 ### PR References (⚠️)
 **MANDATORY**: When discussing PRs, ALWAYS include the full GitHub URL
 - ✅ Format: "PR #123: https://github.com/jleechan2015/worldarchitect.ai/pull/123"
@@ -229,130 +365,8 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 - ❌ Never reference PRs by number only
 - **Repository URL**: https://github.com/jleechan2015/worldarchitect.ai
 
-### Roadmap Updates (`/roadmap` `/r`) (⚠️)
-**MANDATORY**: When using `/roadmap` command, follow this exact sequence:
-1. **Autonomy-Focused Task Clarification**: Ask detailed clarifying questions with the explicit goal of making tasks as autonomous as possible. Gather all necessary context, constraints, and requirements upfront.
-2. **Task Classification**: Suggest classifications prioritizing autonomy:
-   - **Small & LLM Autonomous**: LLM can complete independently with minimal guidance (PREFERRED)
-   - **Small & Human-Guided**: Needs human oversight but straightforward
-   - **Medium**: Requires detailed planning
-   - **Large**: Requires comprehensive scratchpad
-3. **Comprehensive Requirements Definition**: Based on classification:
-   - **Small & LLM Autonomous**: Add complete 1-2 sentence requirements with all context needed
-   - **Small & Human-Guided**: Add detailed 3-5 sentence requirements covering edge cases
-   - **Medium**: ALWAYS create detailed `roadmap/scratchpad_task[NUMBER]_[brief-description].md` with implementation plan
-   - **Large**: ALWAYS create comprehensive `roadmap/scratchpad_task[NUMBER]_[brief-description].md` with architecture and phases
-   - **Any Detailed Task**: If defining tasks to a detailed degree during planning, ALWAYS create scratchpad files regardless of classification
-4. **Autonomy Validation**: Before finalizing, verify each task has sufficient detail for independent execution
-5. Record current branch name
-6. If not on main branch:
-   - Check for uncommitted changes with `git status`
-   - If changes exist, commit them with descriptive message
-7. Switch to main branch: `git checkout main`
-8. Pull latest changes: `git pull origin main`
-9. Make requested changes to:
-   - `roadmap/roadmap.md` (main roadmap file)
-   - `roadmap/sprint_current.md` (current sprint status)
-   - `roadmap/scratchpad_task[NUMBER]_[description].md` (if applicable)
-10. Commit changes with format: `docs(roadmap): [description]`
-11. Push directly to main: `git push origin main`
-12. Switch back to original branch: `git checkout [original-branch]`
-13. **MANDATORY**: Explicitly report merge status: "✅ MERGED" or "❌ NOT MERGED" with explanation
 
-**Files Updated**: `roadmap/roadmap.md`, `roadmap/sprint_current.md`, and task scratchpads as needed
-**Exception**: This is the ONLY case where direct push to main is allowed
 
-### Task Execution (`/execute` `/e`) (⚠️)
-**MANDATORY**: When using `/execute` command, follow this exact sequence:
-1. **Branch Creation**: ALWAYS create new branch first using `./integrate.sh` (NEVER work on main)
-   - 🚨 **CRITICAL**: `./integrate.sh` MUST be run to create clean branch from main
-   - ❌ **NEVER create branches from other task branches** 
-   - ✅ **ALWAYS start from fresh main branch** to avoid file contamination
-   - Each task gets isolated, independent branch
-   - 🚨 **WORKTREE CLEANUP TIMING**: Only cleanup `worktree_task[NUMBER]` AFTER PR merge, not after PR creation
-2. **Context Assessment**: Run `/est` equivalent to check context usage percentage
-3. **Context Warning**: If ≤25% context remaining:
-   - ⚠️ **WARN USER**: "Context critically low (X% remaining). Task may be truncated or fail."
-   - **Ask for confirmation**: "Proceed anyway? (y/n)"
-   - **If user says no**: Stop execution and suggest context optimization
-4. **Subagent Analysis**: Evaluate if task should use subagents:
-   - **Use subagents if**: Complex task, multiple files, requires research, or context-heavy
-   - **Direct execution if**: Simple task, single file focus, or context sufficient
-5. **Subagent Planning**: If using subagents:
-   - **Estimate subagent count**: Based on task complexity and scope
-   - **Define subagent roles**: Specific responsibilities for each subagent
-   - **Worktree Creation**: Create dedicated worktrees for true parallelism
-     - Format: `worktree_task[TASK_NUMBER]` 
-     - Example: `worktree_task111`, `worktree_task112`
-     - Each subagent gets isolated filesystem to prevent conflicts
-   - **Report to user**: "Using X subagents: [role descriptions]"
-   - **List execution plan**: For each subagent, show: ID, worktree path, specific task
-6. **User Confirmation**: Present complete execution plan and request explicit approval
-7. **Execution Method Declaration**: 
-   - **If subagents**: "Executing with X subagents for [reasons]"
-   - **If direct**: "Executing directly (sufficient context/simple task)"
-8. **Task Execution**: Proceed with chosen execution method only after user approval
-9. **Verification Requirements**: CRITICAL validation steps to prevent errors
-    - 🚨 **VERIFY FILE CONTENTS**: Each subagent must validate they have the correct file for their specific task
-    - 🚨 **VALIDATE TASK-FILE MAPPING**: Confirm task number matches file content (e.g., TASK-111 gets task_111_*.md)
-    - 🚨 **CHECK FILE UNIQUENESS**: Ensure each subagent has different files, no duplicates
-    - 🚨 **TEST ONE COMPONENT**: Validate individual pieces before combining complex workflows
-    - ❌ **NEVER rush demonstration** - Prioritize correctness over proving architecture
-10. **Commit Changes**: Commit all changes with descriptive commit messages
-11. **Push Branch**: Push branch to GitHub using `git push origin HEAD:branch-name`
-12. **Create PR**: ALWAYS create PR using `gh pr create` with test results and description
-13. **Worktree Cleanup**: If subagents were used, clean up temporary worktrees
-    - 🚨 **ONLY remove `worktree_task[NUMBER]` directories AFTER PRs are merged**
-    - ❌ **NEVER cleanup before merge** - worktrees needed for potential fixes/updates
-    - ✅ **Keep worktrees until PR merge completion**
-    - Document worktree locations in PR for future reference if needed
-14. **Result Reporting**: Summarize completion status, PR URL, and any issues
-
-**Subagent Decision Criteria**:
-- ✅ **Use subagents for**: Multi-file changes, research tasks, complex debugging, large refactoring
-- ❌ **Direct execution for**: Single file edits, simple fixes, quick tests, small changes
-
-**True Parallelism Requirements**:
-- ✅ **Subagents work on different file sets** - No overlapping file modifications
-- ✅ **Independent functionality** - Frontend vs Backend vs Documentation
-- ✅ **Separate concerns** - Each subagent has distinct, non-conflicting scope
-- ❌ **Same files/directories** - Use direct execution instead
-- ❌ **Sequential dependencies** - Use single agent with step-by-step approach
-
-**Context Thresholds**:
-- **>50% remaining**: Proceed normally
-- **26-50% remaining**: Consider subagents for complex tasks
-- **≤25% remaining**: Warn user and strongly recommend subagents or context optimization
-
-**CRITICAL REQUIREMENT**: `/execute` MUST ALWAYS create PRs, never work directly on main branch. This ensures:
-- ✅ **Code review** through GitHub PR process
-- ✅ **GitHub Actions** run tests automatically  
-- ✅ **Proper workflow** follows branch → PR → merge pattern
-- ❌ **NO direct main changes** except for roadmap files via `/roadmap`
-
-### Branch Cleanup (`/bclean`) (⚠️)
-**MANDATORY**: When using `/bclean` command, follow this exact sequence:
-1. **GitHub PR Check**: Use `gh pr list --state open --json headRefName` to get all open PR branch names
-2. **Local Branch List**: Use `git branch` to get all local branches (exclude main/master)
-3. **Cross-Reference**: Identify local branches that do NOT have corresponding open GitHub PRs
-4. **Safety Check**: 
-   - ⚠️ **NEVER delete current branch**
-   - ⚠️ **NEVER delete main/master branches**
-   - ⚠️ **NEVER delete worktree branches** (check `git worktree list`)
-5. **User Confirmation**: Present list of branches to delete and request explicit approval
-6. **Branch Deletion**: Only delete branches after user confirms with:
-   - `git branch -d <branch>` (safe delete - only if merged)
-   - `git branch -D <branch>` (force delete - only if user explicitly requests)
-7. **Result Reporting**: Summarize branches deleted, any that couldn't be deleted, and reasons
-
-**Safety Rules**:
-- ✅ **Only delete branches without open PRs**
-- ✅ **Always check for unpushed commits** before deletion
-- ✅ **Warn about unpushed work** and offer to create PRs first
-- ❌ **NEVER delete without user confirmation**
-- ❌ **NEVER delete branches with uncommitted changes**
-
-**Command Purpose**: Clean up stale local branches that don't have active GitHub PRs, preventing branch pollution while preserving active work.
 
 ## Project-Specific
 

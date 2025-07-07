@@ -1,100 +1,132 @@
-# Testing UI - Browser and Integration Testing
+# Browser Testing Directory (REAL Browsers Only!)
 
-This directory contains browser-based testing infrastructure for WorldArchitect.AI, including HTTP-based browser simulation tests, test servers, and testing utilities.
+This directory contains REAL browser automation tests using Playwright.
 
-## Directory Structure
+## HARD RULE: NO HTTP SIMULATION
 
-```
-testing_ui/
-├── test_scripts/       # Standalone test scripts for various scenarios
-├── test_servers/       # Specialized test servers with enhanced features
-├── test_results/       # Test output and result files
-├── http_captures/      # HTTP request/response captures (gitignored)
-├── test_config.py      # Shared test configuration and auth headers
-├── run_all_browser_tests.py  # Main test runner
-└── test_*.py          # Main browser test files
-```
+🚨 **CRITICAL**: This directory is for REAL BROWSER AUTOMATION ONLY!
+- ✅ Use Playwright to control actual browsers
+- ✅ Click real buttons, fill real forms, see real UI
+- ❌ NO direct HTTP requests
+- ❌ NO `requests` library
+- ❌ NO API simulation
 
-## Main Test Files
+## Structure
 
-### Core Browser Tests
-- `test_continue_campaign.py` - Tests loading and continuing existing campaigns
-- `test_multiple_turns.py` - Tests multiple gameplay turns in a session
-- `test_god_mode.py` - Tests god mode commands and mode switching
-- `test_character_creation.py` - Tests 7-step character creation flow
-- `test_export_download.py` - Tests campaign export in various formats
-- `test_settings_theme.py` - Tests UI settings and theme changes
-- `test_error_cases.py` - Tests error handling and edge cases
-- `test_http_browser_simulation.py` - Comprehensive HTTP simulation demo
+- **Real Browser Tests**: Automate actual Chrome/Firefox browsers
+- **Visual Tests**: Take screenshots, verify UI elements
+- **User Journey Tests**: Complete end-to-end workflows as a real user would
 
-### Testing Infrastructure
-- `test_config.py` - Provides shared configuration, auth headers, and base URL
-- `run_all_browser_tests.py` - Runs all browser tests sequentially
-- `FIXES_APPLIED.md` - Documents fixes applied to resolve 500 errors
+## Key Difference from testing_http/
+
+- **testing_ui/**: REAL browser automation (Playwright)
+- **testing_http/**: Direct HTTP requests (requests library)
 
 ## Running Tests
 
-### Individual Test
+### Browser Tests with Mock APIs (Safe, Free)
 ```bash
-python3 testing_ui/test_continue_campaign.py
-```
-
-### All Browser Tests
-```bash
-# From project root
+# From project root - run browser tests with mocked backend
 python3 mvp_site/main.py testui
 
 # Or directly
-python3 testing_ui/run_all_browser_tests.py
+TESTING=true python3 testing_ui/run_all_browser_tests.py
 ```
 
-### With Test Server
-Many tests require a test server running on port 8086:
+### Browser Tests with Real APIs (DANGER: Costs Money!)
 ```bash
-python3 testing_ui/test_servers/monitored_test_server.py
+# From project root - run browser tests with real Firebase/Gemini
+python3 mvp_site/main.py testuif
+
+# Or directly with environment variable
+TESTING=true REAL_APIS=true python3 testing_ui/run_all_browser_tests.py
 ```
 
-## Authentication
+## Test Files
 
-Tests use header-based authentication bypass for the test environment:
-- `X-Test-Bypass-Auth: true`
-- `X-Test-User-ID: test-user`
+### Current Browser Tests
+- `test_campaign_creation_browser.py` - Campaign creation browser automation
+- `test_campaign_creation_browser_v2.py` - Campaign creation v2 framework
+- `test_continue_campaign_browser.py` - Campaign continuation automation
+- `test_continue_campaign_browser_v2.py` - Campaign continuation v2 framework
+- `test_god_mode_browser.py` - God mode UI automation
+- `test_real_browser.py` - Main browser automation test suite
+- `test_playwright_sample.py` - Playwright sample implementation
+- `test_playwright_mock.py` - Playwright with mock APIs
 
-This is configured automatically via `test_config.py`.
+### Legacy Files (for reference)
+- `test_selenium_browser_legacy.py` - Legacy Selenium implementation
+- `test_real_playwright_legacy.py` - Legacy Playwright test
+- `test_final_real_browser_moved.py` - Moved from testing_http
+- `test_real_browser_moved.py` - Moved from testing_http
 
-## Test Categories
+### Test Runners
+- `run_all_browser_tests.py` - Main browser test runner (supports mock/real APIs)
+- `run_full_browser_tests.py` - Real API browser test runner with confirmation
 
-### Functional Tests
-- Campaign creation and management
-- Story interaction and progression
-- Character creation workflow
-- Export functionality
+### Supporting Infrastructure
+- `browser_test_base.py` - Shared test framework for v2 tests
+- `playwright_config.py` - Playwright configuration
+- Various test documentation and analysis files
 
-### UI Tests
-- Theme switching
-- Settings persistence
-- Error handling
-- Browser simulation
+## Writing New Tests
 
-### Integration Tests
-- God mode commands
-- Multiple turn sequences
-- Campaign continuation
-- Auth bypass verification
+Always use Playwright for browser automation:
+
+```python
+from playwright.sync_api import sync_playwright
+
+def test_user_can_create_character():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False)  # Set True for CI
+        page = browser.new_page()
+        
+        # Navigate to the app
+        page.goto("http://localhost:6006")
+        
+        # Click real buttons
+        page.click("text=Create Character")
+        
+        # Fill real forms
+        page.fill("#character-name", "Gandalf")
+        
+        # Assert real UI state
+        assert page.is_visible("text=Character Created")
+        
+        browser.close()
+```
 
 ## Important Notes
 
-1. **No Mocks**: These tests interact with real servers, not mocks
-2. **Port 8086**: Default test server port (different from production 8080)
-3. **Field Names**: API expects `input` field, not `text` 
-4. **Status Codes**: Campaign creation returns 201, not 200
-5. **Endpoints**: Use `/api/campaigns/{id}/interaction` for story interactions
+1. These tests use REAL browser automation
+2. They test the FULL user experience, not just APIs
+3. For HTTP/API testing, use `testing_http/` directory instead
+4. Browser tests are slower but more realistic
+5. Always verify UI elements are visible before interacting
 
-## Subdirectories
+## Test Coverage Summary
 
-- **test_scripts/** - Reusable test scripts for specific scenarios (combat, auth, etc.)
-- **test_servers/** - Test servers with debugging, monitoring, and special features
-- **test_results/** - Test outputs and reports (temporary, can be cleaned)
-- **http_captures/** - HTTP request/response captures for debugging
+### Currently Implemented:
+1. **Campaign Creation** (Full coverage)
+   - Browser automation v1 ✅ (`test_campaign_creation_browser.py`)
+   - Browser automation v2 ✅ (`test_campaign_creation_browser_v2.py`)
+   
+2. **Campaign Continuation** (Full coverage)
+   - Browser automation v1 ✅ (`test_continue_campaign_browser.py`)
+   - Browser automation v2 ✅ (`test_continue_campaign_browser_v2.py`)
+   
+3. **God Mode** (Partial coverage)
+   - Browser automation ✅ (`test_god_mode_browser.py`)
+   - Needs integration with v2 framework ⚠️
 
-See README files in each subdirectory for more details.
+4. **General Browser Testing**
+   - Main test suite ✅ (`test_real_browser.py`)
+   - Playwright samples ✅ (`test_playwright_sample.py`, `test_playwright_mock.py`)
+
+### Authentication:
+- Test mode bypass implemented for both backend and frontend
+- URL parameter: `?test_mode=true&test_user_id=<user-id>`
+- Backend header: `X-Test-Bypass-Auth: true`
+
+### Red/Green Testing:
+All test infrastructure has been validated with red/green methodology to ensure proper failure detection.

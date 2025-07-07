@@ -9,7 +9,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from schemas.defensive_numeric_converter import DefensiveNumericConverter
-from schemas.entities_simple import HealthStatus, Stats, Character, EntityType
+from schemas.entities_pydantic import HealthStatus, Stats, Character, EntityType
 
 
 class TestDefensiveNumericConverter(unittest.TestCase):
@@ -148,12 +148,13 @@ class TestEntitiesWithDefensiveConverter(unittest.TestCase):
         
         self.assertEqual(character.level, 1)
     
-    def test_hp_clamping_after_conversion(self):
-        """Test that HP is clamped to hp_max after conversion"""
-        # HP=10, HP_MAX=unknown (converts to 1) -> HP should be clamped to 1
-        health = HealthStatus(hp=10, hp_max='unknown')
-        self.assertEqual(health.hp, 1)
-        self.assertEqual(health.hp_max, 1)
+    def test_hp_validation_after_conversion(self):
+        """Test that HP validation works after defensive conversion"""
+        from pydantic import ValidationError
+        
+        # HP=10, HP_MAX=unknown (converts to 1) -> Should fail validation (hp > hp_max)
+        with self.assertRaises(ValidationError):
+            HealthStatus(hp=10, hp_max='unknown')  # hp=10 > hp_max=1 after conversion
         
         # HP=unknown (converts to 1), HP_MAX=5 -> HP should be 1
         health = HealthStatus(hp='unknown', hp_max=5)

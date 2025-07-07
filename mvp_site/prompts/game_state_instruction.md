@@ -483,6 +483,9 @@ NPCs in `npc_data` should be stored by their display name as the key, with this 
     "hp_max": 65,
     "armor_class": 15,
     
+    "gender": "male",
+    "age": 45,
+    
     "attributes": {
       "strength": 13,
       "dexterity": 12,
@@ -512,6 +515,10 @@ NPCs in `npc_data` should be stored by their display name as the key, with this 
   }
 }
 ```
+
+#### NPC Gender and Age Fields (MANDATORY)
+
+All NPCs require `gender` ("male", "female", "non-binary", "other") and `age` (numeric) for narrative consistency.
 
 ### Location Data Schema
 

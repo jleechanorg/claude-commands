@@ -1,5 +1,8 @@
 """
 Gemini Response objects for clean architecture between AI service and main application.
+
+DEPRECATED: This module is kept for backwards compatibility. 
+New code should use llm_response.py for the unified LLMResponse interface.
 """
 
 from typing import Optional, Dict, Any, List
@@ -7,94 +10,72 @@ from dataclasses import dataclass
 import logging
 from narrative_response_schema import NarrativeResponse
 
+# Import the new unified response classes
+from llm_response import GeminiLLMResponse as _GeminiLLMResponse
 
-@dataclass
-class GeminiResponse:
+
+class GeminiResponse(_GeminiLLMResponse):
     """
-    Clean response object from Gemini service to main application.
+    DEPRECATED: Backwards compatibility class for existing GeminiResponse usage.
     
-    Separates concerns between narrative text and structured data.
+    This class inherits from GeminiLLMResponse to maintain API compatibility
+    while providing the new unified interface.
     """
     
-    # Core response content
-    narrative_text: str  # Clean narrative text for display (no debug tags)
-    structured_response: Optional[NarrativeResponse]  # Parsed JSON structure
-    
-    # Debug monitoring data
-    debug_tags_present: Dict[str, bool]  # Which debug content types were generated
-    
-    # Raw data (for compatibility/debugging)
-    raw_response: str  # Original AI response before processing
-    
-    @classmethod
-    def create(cls, narrative_text: str, structured_response: Optional[NarrativeResponse], 
-               raw_response: str) -> 'GeminiResponse':
+    def __init__(self, narrative_text: str, raw_response: str, 
+                 structured_response: Optional[NarrativeResponse] = None,
+                 debug_tags_present: Optional[Dict[str, bool]] = None,
+                 processing_metadata: Optional[Dict[str, Any]] = None,
+                 provider: str = "gemini",
+                 model: str = "gemini-2.5-flash"):
         """
-        Create a GeminiResponse with automatic debug tag detection.
+        Backwards compatible constructor for GeminiResponse.
         
-        Args:
-            narrative_text: Clean narrative text for display
-            structured_response: Parsed NarrativeResponse object
-            raw_response: Original AI response before processing
-            
-        Returns:
-            GeminiResponse object
+        Maintains the old interface while using the new unified structure.
         """
-        # Detect debug content in structured response, not raw text
-        debug_tags_present = {
-            'dm_notes': False,
-            'dice_rolls': False, 
-            'state_changes': False
-        }
-        
-        if structured_response and hasattr(structured_response, 'debug_info'):
-            debug_info = structured_response.debug_info or {}
-            
-            # Check for non-empty debug content
-            debug_tags_present['dm_notes'] = bool(debug_info.get('dm_notes'))
-            debug_tags_present['dice_rolls'] = bool(debug_info.get('dice_rolls'))
-            debug_tags_present['state_changes'] = '[DEBUG_STATE_START]' in raw_response
-        
-        return cls(
+        super().__init__(
             narrative_text=narrative_text,
+            raw_response=raw_response, 
+            provider=provider,
+            model=model,
             structured_response=structured_response,
             debug_tags_present=debug_tags_present,
-            raw_response=raw_response
+            processing_metadata=processing_metadata
         )
     
-    @property
-    def has_debug_content(self) -> bool:
-        """Check if any debug content was generated."""
-        return any(self.debug_tags_present.values())
-    
-    @property
+    # Maintain backwards compatibility for property access
+    @property 
     def state_updates(self) -> Dict[str, Any]:
-        """Get state updates from structured response."""
-        if self.structured_response and hasattr(self.structured_response, 'state_updates'):
-            return self.structured_response.state_updates or {}
-        
-        # JSON mode is the ONLY mode - log error if no structured response
-        if not self.structured_response:
-            logging.error("ERROR: No structured response available for state updates. JSON mode is required.")
-        return {}
+        """Backwards compatibility property for state_updates."""
+        return self.get_state_updates()
     
     @property
     def entities_mentioned(self) -> List[str]:
-        """Get entities mentioned from structured response."""
-        if self.structured_response and hasattr(self.structured_response, 'entities_mentioned'):
-            return self.structured_response.entities_mentioned or []
-        return []
+        """Backwards compatibility property for entities_mentioned."""
+        return self.get_entities_mentioned()
     
-    @property
+    @property 
     def location_confirmed(self) -> str:
-        """Get confirmed location from structured response."""
-        if self.structured_response and hasattr(self.structured_response, 'location_confirmed'):
-            return self.structured_response.location_confirmed or 'Unknown'
-        return 'Unknown'
+        """Backwards compatibility property for location_confirmed."""
+        return self.get_location_confirmed()
     
     @property
     def debug_info(self) -> Dict[str, Any]:
-        """Get debug info from structured response."""
-        if self.structured_response and hasattr(self.structured_response, 'debug_info'):
-            return self.structured_response.debug_info or {}
-        return {}
+        """Backwards compatibility property for debug_info."""
+        return self.get_debug_info()
+    
+    @classmethod
+    def create(cls, narrative_text: str, structured_response: Optional[NarrativeResponse], 
+               raw_response: str, model: str = "gemini-2.5-flash") -> 'GeminiResponse':
+        """
+        Create a GeminiResponse with backwards compatibility.
+        
+        Maintains the existing create() interface while using the new unified structure.
+        """
+        return cls(
+            narrative_text=narrative_text,
+            raw_response=raw_response,
+            provider="gemini",
+            model=model,
+            structured_response=structured_response
+        )
