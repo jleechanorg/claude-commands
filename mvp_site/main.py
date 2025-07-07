@@ -343,14 +343,20 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
         
     Returns:
         Flask response with JSON structure
+        
+    Note: This function handles two types of debug content:
+        1. Legacy debug tags embedded in narrative text - shown/hidden based on debug_mode
+        2. Structured debug_info field - always included when present (frontend decides display)
     """
-    # Process narrative text based on debug mode
+    # Check if debug mode is enabled
     debug_mode_enabled = hasattr(current_game_state, 'debug_mode') and current_game_state.debug_mode
+    
+    # Process narrative text based on debug mode (for legacy embedded debug tags)
     if debug_mode_enabled:
-        # Show all content including debug tags
+        # Show all content including embedded debug tags
         final_narrative = gemini_response
     else:
-        # Strip debug content when debug mode is disabled
+        # Strip embedded debug tags when debug mode is disabled
         final_narrative = StateHelper.strip_debug_content(gemini_response)
     
     # Build response data structure
@@ -370,10 +376,10 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
         # Entity tracking fields used by frontend
         response_data['entities_mentioned'] = getattr(structured_response, 'entities_mentioned', [])
         response_data['location_confirmed'] = getattr(structured_response, 'location_confirmed', 'Unknown')
-    
-    # Add debug information only if debug mode is enabled
-    if debug_mode_enabled:
-        if structured_response and hasattr(structured_response, 'debug_info'):
+        
+        # Always include structured debug_info if present (separate from legacy debug tags)
+        # Frontend will use debug_mode flag to decide whether to display debug_info
+        if hasattr(structured_response, 'debug_info') and structured_response.debug_info:
             response_data['debug_info'] = structured_response.debug_info
     
     if proposed_changes:

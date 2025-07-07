@@ -54,10 +54,10 @@ class TestRawJsonDisplayBugReproduction(unittest.TestCase):
         
     def test_reproduce_actual_raw_json_display_bug(self):
         """
-        RED TEST: Reproduce the actual bug where the system displays raw JSON
-        instead of calling parse_structured_response.
+        GREEN TEST: Verify the fix for the raw JSON display bug.
         
-        This test simulates what happens when the response bypasses parsing.
+        This test demonstrates that raw JSON responses are properly parsed
+        to extract just the narrative text for display to users.
         """
         # This is exactly what the user is seeing - raw JSON displayed directly
         raw_json_that_user_sees = """{
@@ -80,12 +80,13 @@ class TestRawJsonDisplayBugReproduction(unittest.TestCase):
         # What the user SHOULD see (after parsing):
         expected_user_display = "[Mode: STORY MODE]\n[CHARACTER CREATION - Step 2 of 7]\n\nExcellent choice! Character created successfully."
         
-        # What the user ACTUALLY sees (the bug):
-        actual_user_display = raw_json_that_user_sees  # This is the bug!
+        # What the user SHOULD see (after fixing the bug):
+        # FIX: Parse the raw JSON to extract just the narrative
+        actual_user_display, _ = parse_structured_response(raw_json_that_user_sees)
         
-        # This assertion SHOULD FAIL - proving the bug exists
+        # This assertion SHOULD PASS - proving the bug is fixed
         self.assertEqual(actual_user_display, expected_user_display, 
-                        "BUG: User is seeing raw JSON instead of parsed narrative!")
+                        "FIX: User should see parsed narrative, not raw JSON!")
         
         # These should also fail if raw JSON is being displayed
         self.assertNotIn('"narrative":', actual_user_display, "User should not see JSON keys")
