@@ -370,6 +370,37 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     if '"narrative":' in cleaned_text or '"god_mode_response":' in cleaned_text:
         logging_util.error(f"JSON_BUG_PARSE_RETURNING_JSON: Still returning JSON artifacts!")
         logging_util.error(f"JSON_BUG_PARSE_FINAL_TEXT: {cleaned_text[:500]}...")
+        
+        # CRITICAL FIX: Apply aggressive cleanup to remove JSON artifacts
+        logging_util.info("JSON_BUG_FIX: Applying aggressive cleanup to remove JSON artifacts")
+        
+        # Try to extract narrative value one more time with more aggressive pattern
+        narrative_match = NARRATIVE_PATTERN.search(cleaned_text)
+        if narrative_match:
+            cleaned_text = narrative_match.group(1)
+            # Unescape JSON string escapes
+            cleaned_text = cleaned_text.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+            logging_util.info("JSON_BUG_FIX: Successfully extracted narrative from JSON artifacts")
+        else:
+            # Final aggressive cleanup
+            cleaned_text = JSON_STRUCTURE_PATTERN.sub('', cleaned_text)  # Remove braces and brackets
+            cleaned_text = JSON_KEY_QUOTES_PATTERN.sub(r'\1:', cleaned_text)  # Remove quotes from keys
+            cleaned_text = JSON_COMMA_SEPARATOR_PATTERN.sub('. ', cleaned_text)  # Replace JSON comma separators
+            cleaned_text = cleaned_text.replace('\\n', '\n')  # Convert \n to actual newlines
+            cleaned_text = cleaned_text.replace('\\"', '"')  # Unescape quotes
+            cleaned_text = cleaned_text.replace('\\\\', '\\')  # Unescape backslashes
+            cleaned_text = WHITESPACE_PATTERN.sub(' ', cleaned_text)  # Normalize spaces
+            cleaned_text = cleaned_text.strip()
+            logging_util.info("JSON_BUG_FIX: Applied aggressive cleanup to remove JSON structure")
+        
+        # Update the fallback response with cleaned text
+        fallback_response = NarrativeResponse(
+            narrative=cleaned_text,
+            entities_mentioned=[],
+            location_confirmed="Unknown"
+        )
+        
+        logging_util.info(f"JSON_BUG_FIX: Final cleaned text: {cleaned_text[:200]}...")
     
     return cleaned_text, fallback_response
 

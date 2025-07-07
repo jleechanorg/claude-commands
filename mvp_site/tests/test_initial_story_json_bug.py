@@ -91,9 +91,10 @@ class TestInitialStoryJsonBug(unittest.TestCase):
             
             print(f"Simple response preview: {response.narrative_text[:100]}...")
             
-            # Should not contain JSON structure
+            # Should not contain JSON structure (but allow legitimate content with braces)
             self.assertNotIn('"narrative":', response.narrative_text)
-            self.assertNotIn('{', response.narrative_text)
+            self.assertNotIn('{"narrative":', response.narrative_text)
+            self.assertNotIn('"god_mode_response":', response.narrative_text)
             
             print("✅ Simple initial story test passed!")
             
