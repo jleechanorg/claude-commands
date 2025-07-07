@@ -307,28 +307,12 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 
 ## Slash Commands
 
-| Command | Purpose | Action |
-|---------|---------|--------|
-| `/context` `/est` | Context estimation | Show % used, breakdown, recommendations |
-| `/milestones N` | Break into N phases | Create milestones, update scratchpad, commit each |
-| `/milestones suggest` | Suggest optimal count | Analyze complexity, suggest 3-7 with rationale |
-| `/list` | List all commands | Display all slash commands with descriptions |
-| `/think` | Maximum thinking budget | Append "ultrathink" to trigger Claude's highest computation level |
-| `/tdd` `/rg` | Test-driven dev | Red → Green → Refactor workflow |
-| `/review` `/copilot` | Process ALL PR comments | List EVERY comment individually, apply changes, commit |
-| `/optimize` | Improve code/files | Remove dupes, improve efficiency |
-| `/test` | Run full test suite | `./run_tests.sh` + fix failures |
-| `/testi` | Integration test | `source venv/bin/activate && TESTING=true python3 mvp_site/test_integration/test_integration.py` |
-| `/testui` | Browser tests (mock) | `./run_ui_tests.sh mock` - REAL browser tests with mock APIs (free) |
-| `/testuif` | Browser tests (FULL) | `./run_ui_tests.sh` - REAL browser tests with REAL APIs (costs money!) |
-| `/testhttp` | HTTP tests (mock) | Run HTTP request tests with mock APIs (free) |
-| `/testhttpf` | HTTP tests (FULL) | Run HTTP request tests with REAL APIs (costs money!) |
-| `/integrate` | Fresh branch | Run `./integrate.sh` script |
-| `/push` | Pre-push review | Virtual agent review → push if clean |
-| `/scratchpad` | Update planning | Create/update scratchpad_[branch].md |
-| `/roadmap` `/r` | Update roadmap files | Commit local changes, switch to main, update roadmap/*.md, push to origin, switch back |
-| `/execute` `/e` | Fresh branch from latest main | Switch to main, pull latest from remote, create clean branch |
-| `/bclean` | Branch cleanup | Delete local branches without open GitHub PRs |
+Use `/list` to display all available slash commands with descriptions.
+
+**Command Documentation**: → `.claude/commands/`
+
+**Special Commands**:
+- `/think` - Maximum thinking budget | Append "ultrathink" to trigger Claude's highest computation level
 
 **Command Examples**: → `.cursor/rules/examples.md`
 
