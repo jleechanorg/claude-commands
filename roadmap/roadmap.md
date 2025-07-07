@@ -13,10 +13,10 @@
 - **TASK-142** 🔴 Fix send button unclickable - PR #338 OPEN
 
 ### Next Priority Tasks (Ready to Start)
-- **TASK-130** 🔴 Unit test coverage improvements (30 min)
-- **TASK-121** 🔴 Create LLMResponse class (30 min)
-- **TASK-132** 🟡 GitHub Actions /testi integration (1.5 hrs)
+- **TASK-074** 🔴 Unit test coverage Phase 3: main.py error handling (55% → 65%)
 - **TASK-133** 🟡 Universal calendar system (2 hrs)
+- **TASK-139** 🟡 Restore Dragon Knight character start (1.5 hrs)
+- **TASK-137** 🟡 Move download/share story buttons (30 min)
 
 ### 📋 Quick Links
 - [Current Work](#current-work---active-development-priority-section) - Active development items
@@ -36,16 +36,16 @@
 ### Active Work Items
 
 #### Afternoon (4 hrs)
-- [ ] **TASK-130** 🔴 Unit test coverage improvements (30 min) - HIGH PRIORITY
+- [x] **TASK-130** ✅ Unit test coverage improvements (30 min) - COMPLETED (PR #400)
   - [x] Review current test coverage gaps
-  - [ ] Implement tests for gemini_service.py (currently 27% coverage)
-  - [ ] Implement tests for firestore_service.py (currently 50% coverage)
-  - [ ] Target 85% overall coverage milestone
-- [ ] **TASK-121** 🔴 Create LLMResponse class (30 min) - HIGH PRIORITY
-  - [ ] Design class with all identified fields
-  - [ ] Implement parsing methods
-  - [ ] Refactor gemini_service.py to use class
-  - [ ] Update all response handling code
+  - [x] Implement tests for token_utils.py (0% → 100% coverage)
+  - [x] Implement tests for entity_tracking.py (88% → 100% coverage)
+  - [x] 11 new test cases added
+- [x] **TASK-121** ✅ Create LLMResponse class (30 min) - COMPLETED (PR #398)
+  - [x] Design class with all identified fields
+  - [x] Implement parsing methods
+  - [x] Refactor gemini_service.py to use class
+  - [x] Update all response handling code
 
 #### Evening (4 hrs)
 - [ ] **TASK-143** 🟡 Context7 MCP integration with Claude Code CLI (1 hr) - MANUAL
@@ -78,10 +78,10 @@
 - **TASK-006c** 🟡 Enhanced combat scenarios (45 min) - REDUCED SCOPE
 
 #### Group B: Infrastructure & Features (5.5 hrs)
-- **TASK-132** 🟡 GitHub Actions /testi integration (1.5 hrs)
-  - [ ] Create .github/workflows/integration-tests.yml for PR automation
-  - [ ] Configure Firebase and Gemini API secrets, use vpython with TESTING=true
-  - [ ] Post full test output in PR comments and upload artifacts
+- **TASK-132** ✅ GitHub Actions /testi integration (1.5 hrs) - COMPLETED (PR #402)
+  - [x] Create .github/workflows/integration-tests.yml for PR automation
+  - [x] Configure Firebase and Gemini API secrets, use vpython with TESTING=true
+  - [x] Post full test output in PR comments and upload artifacts
 - **TASK-133** 🟡 Universal calendar system (2 hrs)
   - [ ] Backend uses consistent numbers, LLM handles narrative conversion per universe
   - [ ] Add universe presets: fantasy, modern, starwars, scifi, custom
@@ -129,6 +129,17 @@
 - **TASK-124** 🔵 Research Claude best practices (1 hr)
 
 ### Recently Completed Tasks (Last 7 Days)
+- [x] **TASK-074** 🔴 Unit test coverage improvements - Phase 2 COMPLETED (PR #401, #407)
+  - [x] Phase 1: main.py route handler tests (33% → 45% coverage) - PR #401
+  - [x] Phase 2: main.py auth & state management tests (45% → 55% coverage) - PR #401
+  - [x] Coverage infrastructure fix (0% → 67% overall) - PR #407
+- [x] **TASK-132** 🟡 GitHub Actions /testi integration - COMPLETED (PR #402)
+- [x] **TASK-130** 🔴 Unit test coverage for utility modules - COMPLETED (PR #400)
+  - [x] token_utils.py: 0% → 100% coverage (11 test cases)
+  - [x] entity_tracking.py: 88% → 100% coverage
+- [x] **TASK-121** 🔴 Create LLMResponse class - COMPLETED (PR #398)
+- [x] **Browser Test Suite Completion** - COMPLETED (PR #391)
+- [x] **Roadmap Optimization** - COMPLETED (PR #393)
 - [x] **TASK-111** ✅ **COMPLETED** Zen MCP evaluation - COMPLETED (PR #346/#364/#367)
 - [x] **TASK-112** ✅ **COMPLETED** Context7 MCP evaluation - COMPLETED (PR #347/#362/#368)
 - [x] **TASK-113** ✅ **COMPLETED** Sequential Thinking MCP evaluation - COMPLETED (PR #348/#365/#369)
