@@ -22,6 +22,27 @@ class GeminiResponse(_GeminiLLMResponse):
     while providing the new unified interface.
     """
     
+    def __init__(self, narrative_text: str, raw_response: str, 
+                 structured_response: Optional[NarrativeResponse] = None,
+                 debug_tags_present: Optional[Dict[str, bool]] = None,
+                 processing_metadata: Optional[Dict[str, Any]] = None,
+                 provider: str = "gemini",
+                 model: str = "gemini-2.5-flash"):
+        """
+        Backwards compatible constructor for GeminiResponse.
+        
+        Maintains the old interface while using the new unified structure.
+        """
+        super().__init__(
+            narrative_text=narrative_text,
+            raw_response=raw_response, 
+            provider=provider,
+            model=model,
+            structured_response=structured_response,
+            debug_tags_present=debug_tags_present,
+            processing_metadata=processing_metadata
+        )
+    
     # Maintain backwards compatibility for property access
     @property 
     def state_updates(self) -> Dict[str, Any]:
@@ -42,3 +63,19 @@ class GeminiResponse(_GeminiLLMResponse):
     def debug_info(self) -> Dict[str, Any]:
         """Backwards compatibility property for debug_info."""
         return self.get_debug_info()
+    
+    @classmethod
+    def create(cls, narrative_text: str, structured_response: Optional[NarrativeResponse], 
+               raw_response: str, model: str = "gemini-2.5-flash") -> 'GeminiResponse':
+        """
+        Create a GeminiResponse with backwards compatibility.
+        
+        Maintains the existing create() interface while using the new unified structure.
+        """
+        return cls(
+            narrative_text=narrative_text,
+            raw_response=raw_response,
+            provider="gemini",
+            model=model,
+            structured_response=structured_response
+        )
