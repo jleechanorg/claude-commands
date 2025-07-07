@@ -15,8 +15,8 @@ from playwright.sync_api import sync_playwright, Page, Browser, BrowserContext
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Standard configuration
-BASE_URL = "http://localhost:8080"
-SCREENSHOT_DIR = "/tmp/worldarchitect_browser_screenshots"
+BASE_URL = "http://localhost:6006"
+SCREENSHOT_DIR = "/tmp/worldarchitectai/browser"
 TEST_USER_ID = "browser-test-user"
 
 
@@ -64,10 +64,11 @@ class FlaskServerManager:
         print("   🚀 Starting fresh Flask server with TESTING=true...")
         env = os.environ.copy()
         env['TESTING'] = 'true'
+        env['PORT'] = '6006'
         
         with open(self.log_file, 'w') as log:
             self.process = subprocess.Popen(
-                ['python', 'mvp_site/main.py'],
+                ['python3', 'mvp_site/main.py', 'serve'],
                 env=env,
                 stdout=log,
                 stderr=subprocess.STDOUT,

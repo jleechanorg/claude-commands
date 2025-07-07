@@ -6,40 +6,26 @@ This test automates a real browser to test God Mode functionality.
 
 import os
 import sys
-import time
-from playwright.sync_api import sync_playwright, TimeoutError
+from playwright.sync_api import Page, TimeoutError
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-BASE_URL = "http://localhost:8080?test_mode=true&test_user_id=browser-test-user"
-SCREENSHOT_DIR = "/tmp/worldarchitect_browser_screenshots"  # Standardized screenshot directory
+from testing_ui.browser_test_base import BrowserTestBase, click_button_with_text, wait_for_element
 
-def test_god_mode_browser():
+
+class GodModeTest(BrowserTestBase):
     """Test God Mode interactions through real browser automation."""
     
-    # Create screenshot directory
-    os.makedirs(SCREENSHOT_DIR, exist_ok=True)
+    def __init__(self):
+        super().__init__("God Mode Test")
     
-    with sync_playwright() as p:
-        # Launch browser (headless=True for CI)
-        browser = p.chromium.launch(headless=True)
-        context = browser.new_context()
-        page = context.new_page()
+    def run_test(self, page: Page) -> bool:
+        """Test God Mode interactions through real browser automation."""
         
         try:
-            # Set up console listener before navigation
-            console_logs = []
-            page.on("console", lambda msg: console_logs.append(f"{msg.type}: {msg.text}"))
-            page.on("pageerror", lambda exc: console_logs.append(f"error: {exc}"))
-            
-            print("🌐 Navigating to WorldArchitect.AI...")
-            page.goto(BASE_URL, wait_until="networkidle")
-            page.screenshot(path=os.path.join(SCREENSHOT_DIR, "godmode_01_homepage.png"))
-            
-            # Wait for test mode to initialize
-            print("⏳ Waiting for test mode initialization...")
-            page.wait_for_timeout(3000)
+            # Take initial screenshot
+            self.take_screenshot(page, "homepage")
             
             # Create a new campaign first
             print("🎮 Creating a test campaign for God Mode...")
@@ -73,7 +59,7 @@ def test_god_mode_browser():
                 except:
                     print("⚠️  Game view timeout - continuing anyway")
             
-            page.screenshot(path=os.path.join(SCREENSHOT_DIR, "godmode_02_game_view.png"))
+            self.take_screenshot(page, "game_view")
             
             # Test switching to God Mode
             print("🔮 Testing God Mode toggle...")
@@ -95,7 +81,7 @@ def test_god_mode_browser():
                     god_radio.click()
                     page.wait_for_timeout(1000)
             
-            page.screenshot(path=os.path.join(SCREENSHOT_DIR, "godmode_03_god_mode_active.png"))
+            self.take_screenshot(page, "god_mode_active")
             
             # Test God Mode command
             print("⚡ Sending God Mode command...")
@@ -122,7 +108,7 @@ def test_god_mode_browser():
                 print("⏳ Waiting for AI response...")
                 page.wait_for_timeout(5000)  # Give AI time to respond
                 
-                page.screenshot(path=os.path.join(SCREENSHOT_DIR, "godmode_04_god_response.png"))
+                self.take_screenshot(page, "god_response")
                 
                 # Check for response
                 chat_area = page.query_selector("#chat-messages") or page.query_selector(".chat-messages")
@@ -148,7 +134,7 @@ def test_god_mode_browser():
                 if "world_state" in debug_content:
                     print("   ✅ World state visible in debug panel")
             
-            page.screenshot(path=os.path.join(SCREENSHOT_DIR, "godmode_05_state_updates.png"))
+            self.take_screenshot(page, "state_updates")
             
             # Test switching back to Character Mode
             print("👤 Testing switch back to Character Mode...")
@@ -162,40 +148,28 @@ def test_god_mode_browser():
                     char_radio.click()
                     page.wait_for_timeout(1000)
             
-            page.screenshot(path=os.path.join(SCREENSHOT_DIR, "godmode_06_character_mode.png"))
+            self.take_screenshot(page, "character_mode")
             
             # Verify mode switch
             if page.is_visible("input[type='radio'][value='character']:checked"):
                 print("✅ Successfully switched back to Character Mode")
-            
-            # Print console logs if any errors
-            error_logs = [log for log in console_logs if "error" in log.lower()]
-            if error_logs:
-                print("\n⚠️  Console errors detected:")
-                for log in error_logs[:5]:  # Show first 5 errors
-                    print(f"   {log}")
             
             print("\n✅ God Mode browser test completed successfully!")
             return True
             
         except TimeoutError as e:
             print(f"❌ Timeout error: {e}")
-            page.screenshot(path=os.path.join(SCREENSHOT_DIR, "godmode_error_timeout.png"))
+            self.take_screenshot(page, "error_timeout")
             return False
         except Exception as e:
             print(f"❌ Test failed: {e}")
-            page.screenshot(path=os.path.join(SCREENSHOT_DIR, "godmode_error_general.png"))
+            self.take_screenshot(page, "error_general")
             return False
-        finally:
-            browser.close()
 
 
 if __name__ == "__main__":
-    print("🚀 Starting WorldArchitect.AI God Mode Browser Test")
-    print(f"📍 Target URL: {BASE_URL}")
-    print(f"📸 Screenshots will be saved to: {SCREENSHOT_DIR}")
-    
-    success = test_god_mode_browser()
+    test = GodModeTest()
+    success = test.execute()
     
     if success:
         print("\n✅ TEST PASSED - God Mode tested via browser automation")

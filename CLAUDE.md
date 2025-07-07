@@ -75,6 +75,13 @@ When working with test runners/harnesses:
 4. **Exit Code Distrust**: Don't rely solely on process exit codes - parse actual output
 5. **Contradiction = Bug**: Any mismatch between test output and summary is CRITICAL bug
 
+🚨 **MANDATORY TEST EXECUTION BEFORE COMPLETION**:
+❌ NEVER claim test completion without executing at least ONE test successfully
+- Before any ✅ "tests complete", run at least one test to verify framework works
+- If dependencies missing (Playwright, etc.), FULL STOP - report "Cannot complete - X not installed"
+- Use ⚠️ "Created but unverified" instead of ✅ "Complete" for untested code
+- Only use ✅ after seeing actual PASS/FAIL results from real test execution
+
 ## Development Guidelines
 
 ### Code Standards
@@ -305,8 +312,8 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 | `/optimize` | Improve code/files | Remove dupes, improve efficiency |
 | `/test` | Run full test suite | `./run_tests.sh` + fix failures |
 | `/testi` | Integration test | `source venv/bin/activate && TESTING=true python3 mvp_site/test_integration/test_integration.py` |
-| `/testui` | Browser tests (mock) | Run REAL browser tests with mock APIs (free) |
-| `/testuif` | Browser tests (FULL) | Run REAL browser tests with REAL APIs (costs money!) |
+| `/testui` | Browser tests (mock) | `./run_ui_tests.sh mock` - REAL browser tests with mock APIs (free) |
+| `/testuif` | Browser tests (FULL) | `./run_ui_tests.sh` - REAL browser tests with REAL APIs (costs money!) |
 | `/testhttp` | HTTP tests (mock) | Run HTTP request tests with mock APIs (free) |
 | `/testhttpf` | HTTP tests (FULL) | Run HTTP request tests with REAL APIs (costs money!) |
 | `/integrate` | Fresh branch | Run `./integrate.sh` script |
