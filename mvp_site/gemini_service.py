@@ -17,7 +17,7 @@ from narrative_response_schema import (
     validate_entity_coverage,
     NarrativeResponse
 )
-from gemini_response import GeminiResponse
+from llm_response import GeminiLLMResponse, LLMResponse
 # Import entity tracking mitigation modules
 from entity_preloader import EntityPreloader
 from entity_instructions import EntityInstructionGenerator
@@ -927,7 +927,7 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
             # For initial story, we'll log but not retry to avoid complexity
             # The continue_story function will handle retry logic for subsequent interactions
     
-    return GeminiResponse.create(response_text, structured_response, raw_response_text)
+    return GeminiLLMResponse.create(response_text, structured_response, raw_response_text)
 
 def _validate_and_enforce_planning_block(response_text, user_input, game_state, chosen_model, system_instruction):
     """
@@ -1251,7 +1251,7 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
             response_text, user_input, current_game_state, chosen_model, system_instruction_final
         )
     
-    return GeminiResponse.create(response_text, structured_response, raw_response_text)
+    return GeminiLLMResponse.create(response_text, structured_response, raw_response_text)
 
 def _get_static_prompt_parts(current_game_state: GameState, story_context: list):
     """Helper to generate the non-timeline parts of the prompt."""
