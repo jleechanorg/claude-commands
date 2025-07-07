@@ -65,11 +65,11 @@ jobs:
       id: integration_tests
       env:
         TESTING: true
-        # Add API secrets when available (commented out for now)
-        # GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        # FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-        # FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
-        # FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+        # API secrets for integration tests
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+        FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
       run: |
         echo "🧪 Running integration tests (equivalent to /testi command)..."
         echo "Command: TESTING=true python3 mvp_site/test_integration/test_integration.py"
