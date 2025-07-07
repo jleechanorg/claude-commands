@@ -161,6 +161,16 @@ test_firestore_database_errors.py:
 - test_document_size_limit_handling
 - test_collection_query_errors
 - test_auth_token_expiry
+- test_network_interruption_handling
+- test_quota_exceeded_errors
+- test_invalid_field_path_errors
+- test_permission_denied_handling
+- test_resource_exhausted_errors
+- test_deadline_exceeded_recovery
+- test_already_exists_conflict
+- test_not_found_document_handling
+- test_failed_precondition_errors
+- test_aborted_transaction_retry
 ```
 
 #### Milestone 7.2: Complex State Merging Tests (20 tests)
@@ -171,6 +181,21 @@ test_firestore_complex_merging.py:
 - test_circular_reference_prevention
 - test_type_coercion_rules
 - test_null_vs_undefined_handling
+- test_timestamp_conflict_resolution
+- test_numeric_precision_handling
+- test_unicode_field_merging
+- test_binary_data_conflicts
+- test_reference_field_merging
+- test_geopoint_merge_logic
+- test_map_field_deep_merge
+- test_array_union_operations
+- test_array_remove_operations
+- test_increment_field_conflicts
+- test_server_timestamp_merging
+- test_field_mask_application
+- test_transform_operation_order
+- test_compound_write_atomicity
+- test_optimistic_concurrency_control
 ```
 
 #### Milestone 7.3: Batch Operation Tests (15 tests)
@@ -181,6 +206,16 @@ test_firestore_batch_operations.py:
 - test_batch_size_optimization
 - test_concurrent_batch_handling
 - test_batch_retry_logic
+- test_batch_commit_failure
+- test_max_batch_size_enforcement
+- test_batch_precondition_checks
+- test_cross_collection_batch
+- test_batch_delete_operations
+- test_batch_update_validation
+- test_batch_create_conflicts
+- test_batch_field_transforms
+- test_batch_transaction_isolation
+- test_batch_operation_ordering
 ```
 
 ---
