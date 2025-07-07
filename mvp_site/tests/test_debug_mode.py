@@ -116,12 +116,20 @@ class TestDebugMode(unittest.TestCase):
         mock_firestore_service.get_campaign_by_id.return_value = (self.campaign_data, [])
         mock_firestore_service.add_story_entry.return_value = None
         
-        # Mock Gemini to return debug content (AI now always generates debug content)
-        mock_response = (
-            "You enter the dark cave. "
-            "[DEBUG_START]As the DM, I'm rolling a perception check...[DEBUG_END] "
-            "[DEBUG_ROLL_START]Perception: 1d20+3 = 15+3 = 18 (Success)[DEBUG_ROLL_END] "
-            "You notice a glimmer in the darkness."
+        # Mock Gemini to return clean narrative with structured debug_info (modern approach)
+        mock_response = "You enter the dark cave. You notice a glimmer in the darkness."
+        
+        # Create mock structured response with debug_info
+        from narrative_response_schema import NarrativeResponse
+        mock_structured_response = NarrativeResponse(
+            narrative=mock_response,
+            entities_mentioned=["Cave", "Player"],
+            location_confirmed="Dark Cave",
+            debug_info={
+                "dm_notes": ["As the DM, I'm rolling a perception check..."],
+                "dice_rolls": ["Perception: 1d20+3 = 15+3 = 18 (Success)"],
+                "resources": "HP: 25/30, AC: 16"
+            }
         )
         
         # Create mock GeminiResponse
@@ -129,7 +137,7 @@ class TestDebugMode(unittest.TestCase):
         mock_gemini_response.narrative_text = mock_response
         mock_gemini_response.debug_tags_present = {"dm_notes": True, "dice_rolls": True, "state_changes": False}
         mock_gemini_response.state_updates = {}
-        mock_gemini_response.structured_response = None
+        mock_gemini_response.structured_response = mock_structured_response
 
         with patch('gemini_service.continue_story', return_value=mock_gemini_response):
             response = self.client.post(
@@ -141,11 +149,13 @@ class TestDebugMode(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             data = json.loads(response.data)
             self.assertTrue(data.get('debug_mode'))
-            # When debug mode is enabled, user should see debug content
-            self.assertIn('[DEBUG_START]', data.get('response', ''))
-            self.assertIn('[DEBUG_END]', data.get('response', ''))
-            self.assertIn('[DEBUG_ROLL_START]', data.get('response', ''))
-            self.assertIn('[DEBUG_ROLL_END]', data.get('response', ''))
+            # When debug mode is enabled, structured debug_info should be included
+            self.assertIn('debug_info', data, "debug_info should be in response when debug mode enabled")
+            debug_info = data.get('debug_info', {})
+            self.assertIn('dm_notes', debug_info, "dm_notes should be in debug_info")
+            self.assertIn('dice_rolls', debug_info, "dice_rolls should be in debug_info")
+            # Response should be clean narrative without embedded tags
+            self.assertNotIn('[DEBUG_START]', data.get('response', ''), "Response should not contain legacy debug tags")
             
             # Verify full response was saved to database
             mock_firestore_service.add_story_entry.assert_called_with(
@@ -161,12 +171,23 @@ class TestDebugMode(unittest.TestCase):
         mock_firestore_service.get_campaign_by_id.return_value = (self.campaign_data, [])
         mock_firestore_service.add_story_entry.return_value = None
         
-        # Mock Gemini to return enhanced dice roll content
-        mock_response = (
-            "You attack the orc! "
-            "[DEBUG_ROLL_START]Attack Roll: 1d20+5 = 14+5 = 19 vs AC 15 (Hit!)[DEBUG_ROLL_END] "
-            "[DEBUG_ROLL_START]Damage Roll: 1d8+3 = 6+3 = 9 slashing damage[DEBUG_ROLL_END] "
-            "Your sword strikes true, dealing a devastating blow!"
+        # Mock Gemini to return clean narrative with enhanced dice roll debug_info
+        mock_response = "You attack the orc! Your sword strikes true, dealing a devastating blow!"
+        
+        # Create mock structured response with enhanced dice roll debug_info
+        from narrative_response_schema import NarrativeResponse
+        mock_structured_response = NarrativeResponse(
+            narrative=mock_response,
+            entities_mentioned=["Orc", "Player"],
+            location_confirmed="Combat Area",
+            debug_info={
+                "dm_notes": [],
+                "dice_rolls": [
+                    "Attack Roll: 1d20+5 = 14+5 = 19 vs AC 15 (Hit!)",
+                    "Damage Roll: 1d8+3 = 6+3 = 9 slashing damage"
+                ],
+                "resources": "HP: 28/30, AC: 16"
+            }
         )
         
         # Create mock GeminiResponse
@@ -174,7 +195,7 @@ class TestDebugMode(unittest.TestCase):
         mock_gemini_response.narrative_text = mock_response
         mock_gemini_response.debug_tags_present = {"dm_notes": False, "dice_rolls": True, "state_changes": False}
         mock_gemini_response.state_updates = {}
-        mock_gemini_response.structured_response = None
+        mock_gemini_response.structured_response = mock_structured_response
 
         with patch('gemini_service.continue_story', return_value=mock_gemini_response):
             response = self.client.post(
@@ -188,15 +209,22 @@ class TestDebugMode(unittest.TestCase):
             self.assertTrue(data.get('debug_mode'))
             response_text = data.get('response', '')
             
-            # Verify multiple dice rolls are shown
-            self.assertEqual(response_text.count('[DEBUG_ROLL_START]'), 2)
-            self.assertEqual(response_text.count('[DEBUG_ROLL_END]'), 2)
+            # Verify structured debug_info contains dice rolls
+            self.assertIn('debug_info', data, "debug_info should be in response")
+            debug_info = data.get('debug_info', {})
+            self.assertIn('dice_rolls', debug_info, "dice_rolls should be in debug_info")
+            dice_rolls = debug_info.get('dice_rolls', [])
+            self.assertEqual(len(dice_rolls), 2, "Should have 2 dice rolls")
             
-            # Verify specific roll information
-            self.assertIn('Attack Roll: 1d20+5', response_text)
-            self.assertIn('Damage Roll: 1d8+3', response_text)
-            self.assertIn('vs AC 15', response_text)
-            self.assertIn('slashing damage', response_text)
+            # Verify specific roll information in debug_info
+            dice_roll_text = ' '.join(dice_rolls)
+            self.assertIn('Attack Roll: 1d20+5', dice_roll_text)
+            self.assertIn('Damage Roll: 1d8+3', dice_roll_text)
+            self.assertIn('vs AC 15', dice_roll_text)
+            self.assertIn('slashing damage', dice_roll_text)
+            
+            # Response should be clean narrative without embedded tags
+            self.assertNotIn('[DEBUG_ROLL_START]', response_text, "Response should not contain legacy debug tags")
     
     @patch('main.firestore_service')
     def test_debug_content_hidden_when_disabled(self, mock_firestore_service):
@@ -207,12 +235,20 @@ class TestDebugMode(unittest.TestCase):
         mock_firestore_service.get_campaign_by_id.return_value = (self.campaign_data, [])
         mock_firestore_service.add_story_entry.return_value = None
         
-        # Mock Gemini to return debug content (AI now always generates debug content)
-        mock_response = (
-            "You enter the dark cave. "
-            "[DEBUG_START]As the DM, I'm rolling a perception check...[DEBUG_END] "
-            "[DEBUG_ROLL_START]Perception: 1d20+3 = 15+3 = 18 (Success)[DEBUG_ROLL_END] "
-            "You notice a glimmer in the darkness."
+        # Mock Gemini to return clean narrative with structured debug_info (modern approach)
+        mock_response = "You enter the dark cave. You notice a glimmer in the darkness."
+        
+        # Create mock structured response with debug_info
+        from narrative_response_schema import NarrativeResponse
+        mock_structured_response = NarrativeResponse(
+            narrative=mock_response,
+            entities_mentioned=["Cave", "Player"],
+            location_confirmed="Dark Cave",
+            debug_info={
+                "dm_notes": ["As the DM, I'm rolling a perception check..."],
+                "dice_rolls": ["Perception: 1d20+3 = 15+3 = 18 (Success)"],
+                "resources": "HP: 25/30, AC: 16"
+            }
         )
         
         # Create mock GeminiResponse
@@ -220,7 +256,7 @@ class TestDebugMode(unittest.TestCase):
         mock_gemini_response.narrative_text = mock_response
         mock_gemini_response.debug_tags_present = {"dm_notes": True, "dice_rolls": True, "state_changes": False}
         mock_gemini_response.state_updates = {}
-        mock_gemini_response.structured_response = None
+        mock_gemini_response.structured_response = mock_structured_response
 
         with patch('gemini_service.continue_story', return_value=mock_gemini_response):
             response = self.client.post(
@@ -232,14 +268,15 @@ class TestDebugMode(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             data = json.loads(response.data)
             self.assertFalse(data.get('debug_mode'))
-            # When debug mode is disabled, user should NOT see debug content
-            self.assertNotIn('[DEBUG_START]', data.get('response', ''))
-            self.assertNotIn('[DEBUG_END]', data.get('response', ''))
-            self.assertNotIn('[DEBUG_ROLL_START]', data.get('response', ''))
-            self.assertNotIn('[DEBUG_ROLL_END]', data.get('response', ''))
+            # When debug mode is disabled, narrative should be clean and debug_info NOT included
+            response_text = data.get('response', '')
+            self.assertNotIn('[DEBUG_START]', response_text, "Legacy debug tags should not be in response")
+            self.assertNotIn('[DEBUG_END]', response_text, "Legacy debug tags should not be in response")
             # But should still see the main narrative
-            self.assertIn('You enter the dark cave', data.get('response', ''))
-            self.assertIn('You notice a glimmer in the darkness', data.get('response', ''))
+            self.assertIn('You enter the dark cave', response_text)
+            self.assertIn('You notice a glimmer in the darkness', response_text)
+            # And debug_info should NOT be included when debug mode is disabled
+            self.assertNotIn('debug_info', data, "debug_info should not be included when debug mode disabled")
             
             # Verify full response (with debug content) was saved to database
             mock_firestore_service.add_story_entry.assert_called_with(
