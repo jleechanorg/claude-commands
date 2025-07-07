@@ -279,6 +279,7 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 | `/milestones N` | Break into N phases | Create milestones, update scratchpad, commit each |
 | `/milestones suggest` | Suggest optimal count | Analyze complexity, suggest 3-7 with rationale |
 | `/list` | List all commands | Display all slash commands with descriptions |
+| `/think` | Maximum thinking budget | Append "ultrathink" to trigger Claude's highest computation level |
 | `/tdd` `/rg` | Test-driven dev | Red → Green → Refactor workflow |
 | `/review` `/copilot` | Process ALL PR comments | List EVERY comment individually, apply changes, commit |
 | `/optimize` | Improve code/files | Remove dupes, improve efficiency |
