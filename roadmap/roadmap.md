@@ -13,10 +13,10 @@
 - **TASK-142** 🔴 Fix send button unclickable - PR #338 OPEN
 
 ### Next Priority Tasks (Ready to Start)
-- **TASK-074** 🔴 Unit test coverage Phase 3: main.py error handling (55% → 65%)
-- **TASK-133** 🟡 Universal calendar system (2 hrs)
+- **TASK-133** 🟡 Universal calendar system (2 hrs) - PR #403 OPEN
 - **TASK-139** 🟡 Restore Dragon Knight character start (1.5 hrs)
-- **TASK-137** 🟡 Move download/share story buttons (30 min)
+- **TASK-137** 🟡 Move download/share story buttons (30 min) - PR #396 OPEN
+- **TASK-145** 🟡 Consolidate roadmap files into single source (1 hr) - PR #377 OPEN
 
 ### 📋 Quick Links
 - [Current Work](#current-work---active-development-priority-section) - Active development items
