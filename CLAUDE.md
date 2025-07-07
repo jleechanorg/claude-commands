@@ -190,6 +190,20 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 3. **Honest Reporting**: State exactly what failed and why
 4. **No Workarounds**: Don't create alternatives that hide the real issue
 
+### Coverage Analysis Protocol (⚠️)
+**MANDATORY**: When analyzing test coverage:
+1. **ALWAYS use**: `./run_tests.sh --coverage` or `./coverage.sh` (HTML default)
+2. **NEVER use**: Manual `coverage run` commands on individual test files
+3. **Verify full test suite**: Ensure all 94+ test files are included in coverage analysis
+4. **Report source**: Always mention "Coverage from full test suite via run_tests.sh"
+5. **Expected timing**: ~10 seconds total (6s tests + 4s report generation)
+6. **HTML location**: `/tmp/worldarchitectai/coverage/index.html`
+7. **Usage patterns**:
+   - `./coverage.sh` - Unit tests with HTML report (default)
+   - `./coverage.sh --integration` - Include integration tests
+   - `./coverage.sh --no-html` - Text report only
+   - `./run_tests.sh --coverage` - Use existing test runner with coverage
+
 ## Git Workflow
 
 | Rule | Description | Commands/Actions |
@@ -205,6 +219,12 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 | **Roadmap Exception** | Direct push allowed | Only: roadmap/*.md, sprint_*.md |
 
 🚨 **No Main Push**: ✅ `git push origin HEAD:feature` | ❌ `git push origin main`
+
+🚨 **PR Context Management**: ⚠️ MANDATORY before creating new branches/PRs:
+1. **Check git status**: `git status` and `git branch` to see current work
+2. **Verify PR context**: When user says "push to the PR" without number, ask which PR
+3. **Use existing branches**: Check if work should go to existing PR before creating new
+4. **Never assume**: If ambiguous, ask for clarification rather than creating duplicate work
 
 **Commit Format**: → `.cursor/rules/examples.md`
 

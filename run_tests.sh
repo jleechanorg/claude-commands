@@ -6,9 +6,13 @@
 # Usage:
 #   ./run_tests.sh                  # Run unit tests only (default)
 #   ./run_tests.sh --integration    # Run unit tests AND integration tests
+#   ./run_tests.sh --coverage       # Run unit tests with coverage analysis
+#   ./run_tests.sh --integration --coverage  # Run unit and integration tests with coverage
 #
 # Integration tests (in test_integration/) require external dependencies like google-genai
 # and are excluded by default to ensure tests run quickly and without external dependencies.
+# Coverage runs tests sequentially (not parallel) for accurate coverage tracking.
+# Coverage HTML output goes to: /tmp/worldarchitectai/coverage/
 
 # Note: Not using 'set -e' so we can run all tests even if some fail
 
@@ -57,15 +61,67 @@ cd mvp_site
 print_status "Running tests in mvp_site directory..."
 print_status "Setting TESTING=true for faster AI model usage"
 
-# Check if we should include integration tests
-# Default: exclude integration tests unless --integration flag is specified
+# Parse command line arguments
 include_integration=false
+enable_coverage=false
+coverage_dir="/tmp/worldarchitectai/coverage"
 
-if [ "$1" = "--integration" ]; then
-    include_integration=true
+for arg in "$@"; do
+    case $arg in
+        --integration)
+            include_integration=true
+            ;;
+        --coverage)
+            enable_coverage=true
+            ;;
+        *)
+            if [[ $arg == --* ]]; then
+                print_warning "Unknown argument: $arg"
+            fi
+            ;;
+    esac
+done
+
+if [ "$include_integration" = true ]; then
     print_status "Integration tests enabled (--integration flag specified)"
 else
     print_status "Skipping integration tests (use --integration to include them)"
+fi
+
+if [ "$enable_coverage" = true ]; then
+    print_status "🧪 Coverage analysis enabled (--coverage flag specified)"
+    print_status "HTML output will be saved to: $coverage_dir"
+    
+    # Create coverage output directory
+    mkdir -p "$coverage_dir"
+    
+    # Check if coverage is installed
+    print_status "Checking coverage installation..."
+    
+    # First, activate the virtual environment
+    if ! source ../venv/bin/activate; then
+        print_error "Failed to activate virtual environment"
+        exit 1
+    fi
+    
+    # Then check if coverage is importable
+    if ! python -c "import coverage" 2>/dev/null; then
+        print_warning "Coverage tool not found. Installing..."
+        if ! pip install coverage; then
+            print_error "Failed to install coverage"
+            exit 1
+        fi
+        print_success "Coverage installed successfully"
+    else
+        print_status "Coverage already installed"
+    fi
+    
+    # Clear any previous coverage data
+    source ../venv/bin/activate && coverage erase
+    
+    print_warning "Coverage mode: Running tests SEQUENTIALLY (not parallel) for accurate tracking"
+else
+    print_status "Running tests in parallel mode (use --coverage for coverage analysis)"
 fi
 
 # Find all test files in tests subdirectory, excluding venv, prototype, manual_tests, and test_integration
@@ -132,12 +188,25 @@ run_test() {
         local output_file="$temp_dir/${safe_filename}.output"
         local status_file="$temp_dir/${safe_filename}.status"
         
-        if TESTING=true "$VPYTHON" "$test_file" >"$output_file" 2>&1; then
-            echo "PASS" > "$status_file"
-            print_success "$test_file completed successfully"
+        # Choose command based on coverage mode
+        if [ "$enable_coverage" = true ]; then
+            # Run with coverage
+            if TESTING=true source ../venv/bin/activate && coverage run --append --source=. "$VPYTHON" "$test_file" >"$output_file" 2>&1; then
+                echo "PASS" > "$status_file"
+                print_success "$test_file completed successfully"
+            else
+                echo "FAIL" > "$status_file"
+                print_error "$test_file failed"
+            fi
         else
-            echo "FAIL" > "$status_file"
-            print_error "$test_file failed"
+            # Run without coverage (normal mode)
+            if TESTING=true "$VPYTHON" "$test_file" >"$output_file" 2>&1; then
+                echo "PASS" > "$status_file"
+                print_success "$test_file completed successfully"
+            else
+                echo "FAIL" > "$status_file"
+                print_error "$test_file failed"
+            fi
         fi
         echo "----------------------------------------"
         
@@ -155,23 +224,43 @@ run_test() {
 temp_dir=$(mktemp -d)
 trap "rm -rf $temp_dir" EXIT
 
-print_status "Running tests in parallel (one thread per file)..."
+# Choose execution mode based on coverage
+if [ "$enable_coverage" = true ]; then
+    # Sequential execution for coverage
+    print_status "Running tests sequentially for coverage analysis..."
+    start_time=$(date +%s)
+    
+    for test_file in "${test_files[@]}"; do
+        if [ -f "$test_file" ]; then
+            total_tests=$((total_tests + 1))
+            echo -n "[$total_tests/${#test_files[@]}] "
+            run_test "$test_file" "$temp_dir"
+        fi
+    done
+    
+    test_end_time=$(date +%s)
+    test_duration=$((test_end_time - start_time))
+    print_status "⏱️  Test execution completed in ${test_duration}s"
+else
+    # Parallel execution for normal mode
+    print_status "Running tests in parallel (one thread per file)..."
+    
+    # Run tests in parallel using background processes
+    pids=()
+    for test_file in "${test_files[@]}"; do
+        if [ -f "$test_file" ]; then
+            total_tests=$((total_tests + 1))
+            run_test "$test_file" "$temp_dir" &
+            pids+=($!)
+        fi
+    done
 
-# Run tests in parallel using background processes
-pids=()
-for test_file in "${test_files[@]}"; do
-    if [ -f "$test_file" ]; then
-        total_tests=$((total_tests + 1))
-        run_test "$test_file" "$temp_dir" &
-        pids+=($!)
-    fi
-done
-
-# Wait for all background processes to complete
-print_status "Waiting for all tests to complete..."
-for pid in "${pids[@]}"; do
-    wait "$pid"
-done
+    # Wait for all background processes to complete
+    print_status "Waiting for all tests to complete..."
+    for pid in "${pids[@]}"; do
+        wait "$pid"
+    done
+fi
 
 # Collect results
 for test_file in "${test_files[@]}"; do
@@ -189,9 +278,56 @@ for test_file in "${test_files[@]}"; do
     fi
 done
 
+# Generate coverage report if enabled
+if [ "$enable_coverage" = true ]; then
+    echo
+    print_status "📊 Generating coverage report..."
+    coverage_start_time=$(date +%s)
+    
+    # Generate text coverage report
+    if source ../venv/bin/activate && coverage report > "$coverage_dir/coverage_report.txt"; then
+        print_success "Coverage report generated successfully"
+        
+        # Display key coverage metrics
+        echo
+        print_status "📈 Coverage Summary:"
+        echo "----------------------------------------"
+        
+        # Show overall coverage
+        overall_coverage=$(tail -1 "$coverage_dir/coverage_report.txt" | awk '{print $4}')
+        echo "Overall Coverage: $overall_coverage"
+        
+        # Show key file coverage
+        echo
+        echo "Key Files Coverage:"
+        grep -E "(main\.py|gemini_service\.py|game_state\.py|firestore_service\.py)" "$coverage_dir/coverage_report.txt" | head -10
+        
+        echo "----------------------------------------"
+    else
+        print_error "Failed to generate coverage report"
+    fi
+    
+    # Generate HTML report
+    print_status "🌐 Generating HTML coverage report..."
+    if source ../venv/bin/activate && coverage html --directory="$coverage_dir"; then
+        print_success "HTML coverage report generated in $coverage_dir/"
+        print_status "Open $coverage_dir/index.html in your browser to view detailed coverage"
+    else
+        print_error "Failed to generate HTML coverage report"
+    fi
+    
+    # Calculate coverage generation time
+    coverage_end_time=$(date +%s)
+    coverage_duration=$((coverage_end_time - coverage_start_time))
+    
+    echo
+    print_status "⏱️  Coverage generation completed in ${coverage_duration}s"
+    print_status "📁 Coverage files saved to: $coverage_dir"
+fi
+
 # Print summary
 echo
-print_status "Test Summary:"
+print_status "🧪 Test Summary:"
 echo "  Total tests: $total_tests"
 echo "  Passed: $passed_tests"
 echo "  Failed: $failed_tests"
