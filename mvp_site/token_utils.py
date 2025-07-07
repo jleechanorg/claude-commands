@@ -3,6 +3,9 @@
 import logging_util
 from typing import Union, List
 
+# Token estimation constant - Gemini uses roughly 1 token per 4 characters
+CHARS_PER_TOKEN = 4
+
 def estimate_tokens(text: Union[str, List[str]]) -> int:
     """
     Estimate token count for text.
@@ -21,8 +24,8 @@ def estimate_tokens(text: Union[str, List[str]]) -> int:
     else:
         total_chars = len(text) if text else 0
     
-    # Gemini uses roughly 1 token per 4 characters
-    return total_chars // 4
+    # Use the centralized token calculation constant
+    return total_chars // CHARS_PER_TOKEN
 
 def log_with_tokens(message: str, text: str, logger=None):
     """
@@ -37,9 +40,9 @@ def log_with_tokens(message: str, text: str, logger=None):
         logger = logging_util
         
     char_count = len(text) if text else 0
-    token_count = estimate_tokens(text)
+    formatted_count = format_token_count(char_count)
     
-    logger.info(f"{message}: {char_count} characters (~{token_count} tokens)")
+    logger.info(f"{message}: {formatted_count}")
 
 def format_token_count(char_count: int) -> str:
     """
@@ -51,5 +54,6 @@ def format_token_count(char_count: int) -> str:
     Returns:
         Formatted string like "1000 characters (~250 tokens)"
     """
-    token_count = char_count // 4
-    return f"{char_count} characters (~{token_count} tokens)"
+    token_count = char_count // CHARS_PER_TOKEN
+    token_text = "token" if token_count == 1 else "tokens"
+    return f"{char_count} characters (~{token_count} {token_text})"
