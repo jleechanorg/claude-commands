@@ -1008,7 +1008,12 @@ Full narrative context:
             current_prompt_text_for_logging="Planning block generation",
             system_instruction_text=system_instruction
         )
-        planning_block = _get_text_from_response(planning_response)
+        raw_planning_response = _get_text_from_response(planning_response)
+        
+        # Parse the planning block response in case it's JSON
+        # The planning block should be plain text, but AI might return JSON structure
+        planning_text, _ = parse_structured_response(raw_planning_response)
+        planning_block = planning_text
         
         # Ensure it starts with newlines and the header
         if not planning_block.startswith("\n\n--- PLANNING BLOCK ---"):
