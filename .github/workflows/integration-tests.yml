@@ -1,0 +1,221 @@
+name: Integration Tests (/testi)
+
+# Run integration tests on PRs targeting main branch
+on:
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened]
+
+# Allow manual dispatch for testing
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to test (optional)'
+        required: false
+        type: string
+
+jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    
+    steps:
+    # Step 1: Checkout the PR code
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
+    
+    # Step 2: Set up Python environment
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    # Step 3: Cache dependencies for faster builds
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    # Step 4: Install Python dependencies
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r mvp_site/requirements.txt
+    
+    # Step 5: Verify integration test file exists
+    - name: Verify integration test setup
+      run: |
+        if [ ! -f "mvp_site/test_integration/test_integration.py" ]; then
+          echo "❌ Integration test file not found"
+          exit 1
+        fi
+        echo "✅ Integration test file found"
+    
+    # Step 6: Run integration tests (/testi command equivalent)
+    - name: Run integration tests
+      id: integration_tests
+      env:
+        TESTING: true
+        # Add API secrets when available (commented out for now)
+        # GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        # FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        # FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+        # FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+      run: |
+        echo "🧪 Running integration tests (equivalent to /testi command)..."
+        echo "Command: TESTING=true python3 mvp_site/test_integration/test_integration.py"
+        echo ""
+        
+        # Capture start time
+        start_time=$(date +%s)
+        
+        # Run the integration test and capture output
+        cd mvp_site
+        if TESTING=true python3 test_integration/test_integration.py > ../integration_test_output.txt 2>&1; then
+          test_result="✅ PASSED"
+          exit_code=0
+        else
+          test_result="❌ FAILED"
+          exit_code=1
+        fi
+        
+        # Capture end time and calculate duration
+        end_time=$(date +%s)
+        duration=$((end_time - start_time))
+        
+        # Save results for later steps
+        echo "TEST_RESULT=$test_result" >> $GITHUB_ENV
+        echo "EXIT_CODE=$exit_code" >> $GITHUB_ENV
+        echo "DURATION=$duration" >> $GITHUB_ENV
+        
+        # Show output
+        echo ""
+        echo "========================================"
+        echo "Integration Test Output:"
+        echo "========================================"
+        cat ../integration_test_output.txt
+        echo "========================================"
+        echo "Result: $test_result"
+        echo "Duration: ${duration}s"
+        echo "========================================"
+        
+        # Exit with the test result
+        exit $exit_code
+      continue-on-error: true
+    
+    # Step 7: Post results to PR as comment
+    - name: Post integration test results to PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read the test output
+          let testOutput = '';
+          try {
+            testOutput = fs.readFileSync('integration_test_output.txt', 'utf8');
+          } catch (error) {
+            testOutput = 'Could not read test output';
+          }
+          
+          // Get environment variables
+          const testResult = process.env.TEST_RESULT || '❓ UNKNOWN';
+          const duration = process.env.DURATION || '0';
+          const exitCode = process.env.EXIT_CODE || '1';
+          
+          // Truncate output if too long (GitHub comment limit)
+          const maxOutputLength = 50000; // Leave room for other content
+          if (testOutput.length > maxOutputLength) {
+            testOutput = testOutput.substring(0, maxOutputLength) + '\n\n... (output truncated due to length)';
+          }
+          
+          // Determine status emoji and message
+          const statusEmoji = exitCode === '0' ? '✅' : '❌';
+          const statusMessage = exitCode === '0' ? 'Integration tests passed!' : 'Integration tests failed';
+          
+          // Create comment body
+          const commentBody = `## ${statusEmoji} Integration Test Results (/testi)
+          
+**Status**: ${testResult}  
+**Duration**: ${duration}s  
+**Command**: \`TESTING=true python3 mvp_site/test_integration/test_integration.py\`
+
+<details>
+<summary>📋 Test Output (click to expand)</summary>
+
+\`\`\`
+${testOutput}
+\`\`\`
+
+</details>
+
+---
+*Automated integration test triggered by PR to main branch*  
+*Workflow: [integration-tests.yml](${context.repo.owner}/${context.repo.repo}/actions/workflows/integration-tests.yml)*`;
+          
+          // Post comment to PR
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+          
+          // Look for existing integration test comment
+          const existingComment = comments.find(comment => 
+            comment.user.login === 'github-actions[bot]' && 
+            comment.body.includes('Integration Test Results (/testi)')
+          );
+          
+          if (existingComment) {
+            // Update existing comment
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existingComment.id,
+              body: commentBody
+            });
+            console.log('Updated existing integration test comment');
+          } else {
+            // Create new comment
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: commentBody
+            });
+            console.log('Created new integration test comment');
+          }
+    
+    # Step 8: Upload test artifacts
+    - name: Upload integration test artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: integration-test-results
+        path: |
+          integration_test_output.txt
+          mvp_site/test-results/
+          mvp_site/*.log
+        retention-days: 7
+        if-no-files-found: warn
+    
+    # Step 9: Set final job status
+    - name: Set job status
+      run: |
+        if [ "${{ env.EXIT_CODE }}" = "0" ]; then
+          echo "✅ Integration tests passed"
+          exit 0
+        else
+          echo "❌ Integration tests failed"
+          exit 1
+        fi
