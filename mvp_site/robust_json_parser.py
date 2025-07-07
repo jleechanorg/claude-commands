@@ -131,6 +131,43 @@ class RobustJSONParser:
         if location is not None:
             result['location_confirmed'] = location
         
+        # Extract god_mode_response field (critical for god mode commands)
+        god_mode_response = extract_field_value(text, 'god_mode_response')
+        if god_mode_response is not None:
+            result['god_mode_response'] = god_mode_response
+        
+        # Extract state_updates object (try to preserve state changes)
+        state_updates_match = re.search(
+            r'"state_updates"\s*:\s*(\{.*?\})',
+            text,
+            re.DOTALL
+        )
+        if state_updates_match:
+            try:
+                import json
+                state_updates_str = state_updates_match.group(1)
+                state_updates = json.loads(state_updates_str)
+                result['state_updates'] = state_updates
+            except json.JSONDecodeError:
+                # If the object is malformed, just set empty dict
+                result['state_updates'] = {}
+        
+        # Extract debug_info object (try to preserve debug information)
+        debug_info_match = re.search(
+            r'"debug_info"\s*:\s*(\{.*?\})',
+            text,
+            re.DOTALL
+        )
+        if debug_info_match:
+            try:
+                import json
+                debug_info_str = debug_info_match.group(1)
+                debug_info = json.loads(debug_info_str)
+                result['debug_info'] = debug_info
+            except json.JSONDecodeError:
+                # If the object is malformed, just set empty dict
+                result['debug_info'] = {}
+        
         return result if result else None
     
     @staticmethod

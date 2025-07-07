@@ -276,6 +276,9 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     # Remove JSON-like structures and format for readability
     cleaned_text = response_text
     
+    # DEBUG: Log fallback entry conditions
+    logging_util.debug(f"RAW_JSON_FALLBACK_ENTRY: response_text[:200] = {response_text[:200]}")
+    
     # Safer approach: Only clean if it's clearly malformed JSON
     # Check multiple indicators to avoid corrupting valid narrative text
     is_likely_json = (
@@ -284,6 +287,8 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
         (cleaned_text.strip().endswith('}') or cleaned_text.strip().endswith('"')) and
         cleaned_text.count('"') >= 4  # At least 2 key-value pairs
     )
+    
+    logging_util.debug(f"RAW_JSON_FALLBACK_IS_LIKELY_JSON: {is_likely_json}")
     
     if is_likely_json:
         # Apply cleanup only to confirmed JSON-like text
@@ -295,9 +300,11 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 cleaned_text = narrative_match.group(1)
                 # Unescape JSON string escapes
                 cleaned_text = cleaned_text.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                logging_util.debug(f"RAW_JSON_FALLBACK_EXTRACTED_NARRATIVE: {cleaned_text[:200]}")
                 logging_util.info("Extracted narrative from JSON structure")
             else:
                 # Fallback to aggressive cleanup only as last resort
+                logging_util.debug(f"RAW_JSON_FALLBACK_BEFORE_AGGRESSIVE_CLEANUP: {cleaned_text[:200]}")
                 cleaned_text = JSON_STRUCTURE_PATTERN.sub('', cleaned_text)  # Remove braces and brackets
                 cleaned_text = JSON_KEY_QUOTES_PATTERN.sub(r'\1:', cleaned_text)  # Remove quotes from keys
                 cleaned_text = JSON_COMMA_SEPARATOR_PATTERN.sub('. ', cleaned_text)  # Replace JSON comma separators
@@ -306,13 +313,18 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 cleaned_text = cleaned_text.replace('\\\\', '\\')  # Unescape backslashes
                 cleaned_text = WHITESPACE_PATTERN.sub(' ', cleaned_text)  # Normalize spaces while preserving line breaks
                 cleaned_text = cleaned_text.strip()
+                logging_util.debug(f"RAW_JSON_FALLBACK_AFTER_AGGRESSIVE_CLEANUP: {cleaned_text[:200]}")
                 logging_util.warning("Applied aggressive cleanup to malformed JSON")
         else:
             # No narrative field found, apply minimal cleanup
+            logging_util.debug(f"RAW_JSON_FALLBACK_BEFORE_MINIMAL_CLEANUP: {cleaned_text[:200]}")
             cleaned_text = cleaned_text.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+            logging_util.debug(f"RAW_JSON_FALLBACK_AFTER_MINIMAL_CLEANUP: {cleaned_text[:200]}")
             logging_util.warning("Applied minimal cleanup to JSON-like text without narrative field")
     
     # Final fallback response
+    logging_util.debug(f"RAW_JSON_FALLBACK_FINAL_RESULT: {cleaned_text[:200]}")
+    
     fallback_response = NarrativeResponse(
         narrative=cleaned_text,
         entities_mentioned=[],

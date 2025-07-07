@@ -7,6 +7,7 @@ Completely eliminate raw JSON appearing in user responses and campaign logs thro
 
 ## State  
 **CRITICAL DISCOVERY**: This is a **fallback logic bug** in `parse_structured_response()`.
+**STATUS**: ✅ **FIXED** - Root cause identified and resolved.
 - Primary JSON parsing fails for some God mode responses
 - Fallback cleanup logic returns partially processed JSON instead of clean narrative
 - Raw/partial JSON flows through entire pipeline to frontend display
@@ -157,4 +158,36 @@ def log_campaign_entry(scene_number, content, source_type):
 6. **Validate with red/green tests**
 
 ---
+## Fix Summary
+
+### Root Cause Identified
+The bug was in the **robust JSON parser** (`robust_json_parser.py`), specifically in the `_extract_fields()` method. When malformed JSON failed standard parsing, the field extraction only preserved:
+- `narrative`
+- `entities_mentioned`  
+- `location_confirmed`
+
+**Critical missing field**: `god_mode_response` was completely lost during field extraction from malformed JSON.
+
+### Fix Applied
+**File**: `mvp_site/robust_json_parser.py` lines 134-170
+
+Added extraction for missing fields:
+- ✅ `god_mode_response` - Critical for god mode commands
+- ✅ `state_updates` - Preserves game state changes  
+- ✅ `debug_info` - Preserves debug information
+
+### Validation
+- ✅ All existing tests pass
+- ✅ New comprehensive test cases validate fix
+- ✅ Malformed god mode JSON now extracts clean narrative text
+- ✅ No more raw JSON displayed to users
+- ✅ All structured data preserved where possible
+
+### Debug Logging Added
+Added comprehensive debug logging in `narrative_response_schema.py` for future debugging:
+- Fallback entry conditions
+- JSON likelihood detection  
+- Cleanup process steps
+- Final results
+
 **Key Insight**: The bug is in the **fallback logic** of `parse_structured_response()`. When primary JSON parsing fails (God mode responses), the fallback cleanup returns partial JSON instead of clean narrative text. This partial JSON flows through the entire pipeline to the frontend display.
