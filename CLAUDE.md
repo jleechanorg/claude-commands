@@ -36,6 +36,12 @@
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
 7. 🚨 **BRANCH DISCIPLINE**: ❌ NEVER switch git branches unless user explicitly requests it | Work on current branch only | Ask before any `git checkout` operations
 8. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
+9. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
+   - **OPEN** = Work In Progress (WIP) - NOT completed
+   - **MERGED** = Completed and integrated into main branch  
+   - **CLOSED** = Abandoned or rejected - NOT completed
+   - ❌ NEVER mark tasks as completed just because PR exists
+   - ✅ ONLY mark completed when PR state = "MERGED"
 
 ## Project Overview
 

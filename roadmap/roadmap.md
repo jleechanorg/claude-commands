@@ -3,22 +3,39 @@
 <!-- Merged from sprint_current.md and roadmap.md - Sprint current takes precedence -->
 <!-- UUID Reference: See UUID_MAPPING.md for task identifier consistency across all roadmap files -->
 
-## Current Sprint - Jan 3-9, 2025 (PRIORITY SECTION)
+## 🎯 WHAT TO DO NOW (Quick Navigation)
 
-### Sprint Overview
-- **Duration**: 7 days (Jan 3-9)
-- **Total Hours**: 35 (8+8+8+3+3+3+3)
+### Active WIP Tasks (Check PR status)
+- **TASK-001a** 🔴 Malformed JSON investigation - PR #296 OPEN
+- **TASK-006a** 🟡 Editable campaign names - PR #301 OPEN  
+- **TASK-006b** 🟡 Background story pause button - PR #323 OPEN
+- **TASK-140** 🔴 Hard stop for integrity failures - PR #336 OPEN
+- **TASK-142** 🔴 Fix send button unclickable - PR #338 OPEN
+
+### Next Priority Tasks (Ready to Start)
+- **TASK-130** 🔴 Unit test coverage improvements (30 min)
+- **TASK-121** 🔴 Create LLMResponse class (30 min)
+- **TASK-132** 🟡 GitHub Actions /testi integration (1.5 hrs)
+- **TASK-133** 🟡 Universal calendar system (2 hrs)
+
+### 📋 Quick Links
+- [Current Work](#current-work---active-development-priority-section) - Active development items
+- [WIP Tasks](#currently-in-progress-wip) - Work in progress with PR links
+- [Recently Completed](#recently-completed-tasks-last-7-days) - This week's accomplishments
+- [Planning Horizon](#planning-horizon) - Future work organization
+- [Archive References](#planning--archive-references) - Detailed milestone planning
+
+---
+
+## Current Work - Active Development (PRIORITY SECTION)
+
+### Current Focus
+- **Duration**: Ongoing development cycle
 - **Focus**: Critical bugs, state sync, JSON parsing issues
 
-### Today - Sunday, Jan 5 (8 hrs)
+### Active Work Items
 
 #### Afternoon (4 hrs)
-- [ ] **TASK-143** 🔴 Luke Campaign Fixes (1.5 hrs) - HIGH PRIORITY
-  - [x] Fix gender consistency issue in NPC data structure
-  - [ ] Fix god mode responses showing raw JSON instead of formatted content
-  - [x] Add explicit gender field to NPC entity schema with validation
-  - [ ] Update UI to properly format god mode responses
-  - [ ] See roadmap/scratchpad_luke_campaign_fixes.md for complete requirements
 - [ ] **TASK-130** 🔴 Unit test coverage improvements (30 min) - HIGH PRIORITY
   - [x] Review current test coverage gaps
   - [ ] Implement tests for gemini_service.py (currently 27% coverage)
@@ -41,64 +58,75 @@
   - [ ] Configure step-by-step reasoning for complex development decisions
   - [ ] Test on planning workflows, debugging processes, and architectural decisions
   - [ ] Document integration benefits and recommended usage scenarios
-- [ ] **TASK-140** 🔴 Hard stop for integrity failures (2.5 hrs) - HIGH PRIORITY
+- [ ] **TASK-140** 🔴 Hard stop for integrity failures (2 hrs) - HIGH PRIORITY - MOVED TO MONDAY
+  - [ ] NOTE: Moved to Monday-Thursday critical fixes group for better focus
+  - [ ] See roadmap/scratchpad_task140_integrity_failure_hard_stop.md for complete requirements
+
+### Monday-Thursday (12 hrs total) - REORGANIZED BY PRIORITY
+
+#### Group A: Critical Fixes (4.5 hrs)
+- **TASK-001b** 🔴 Dragon Knight v3 plot fix (0.5 hrs)
+- **TASK-142** 🔴 Fix send button unclickable (45 min) - MOVED FROM SUNDAY
+  - [ ] Investigate campaign send button appearing in progress state and becoming unresponsive
+  - [ ] Check for console errors, fix button state management to prevent stuck states
+  - [ ] Ensure button properly resets after response or errors, test across browsers
+- **TASK-140** 🔴 Hard stop for integrity failures (2.5 hrs) - HIGH PRIORITY - MOVED FROM SUNDAY
   - [ ] Detect when LLM doesn't generate state updates, halt game progression immediately
   - [ ] Show detailed traceback in debug mode, user-friendly error in normal mode
   - [ ] Provide retry/reload/abort recovery options in separate error modal
   - [ ] See roadmap/scratchpad_task140_integrity_failure_hard_stop.md for complete requirements
-- [ ] **TASK-142** 🔴 Fix send button unclickable (45 min) - HIGH PRIORITY
-  - [ ] Investigate campaign send button appearing in progress state and becoming unresponsive
-  - [ ] Check for console errors, fix button state management to prevent stuck states
-  - [ ] Ensure button properly resets after response or errors, test across browsers
+- **TASK-006c** 🟡 Enhanced combat scenarios (45 min) - REDUCED SCOPE
 
-### Monday-Thursday (12 hrs total)
-- **TASK-001b** 🔴 Dragon Knight v3 plot fix (0.5 hrs) - MOVED FROM FRIDAY
-- **TASK-006c** 🟡 Enhanced combat scenarios (1 hr)
-- **TASK-005c** 🟡 UI Polish - Timestamp sync (30 min) - MOVED FROM SUNDAY
-- **TASK-004b** 🟡 Continuity Phase 2 (1.5 hrs) - MOVED FROM SUNDAY
-  - [ ] NOTE: Define requirements before starting - group with other continuity tasks
-  - [ ] See continuity testing system in roadmap for related tasks
-- **TASK-141** 🟢 Token optimization and verification (3 hrs) - MEDIUM PRIORITY
-  - [ ] Stop sending world content with every request, implement session-level caching
-  - [ ] Verify token measurements match actual prompt sizes sent to LLM in gemini_service.py
-  - [ ] Target 30-50% token reduction while maintaining narrative quality
-  - [ ] See roadmap/scratchpad_task141_token_optimization_verification.md for complete requirements
-- **TASK-132** 🟡 GitHub Actions /testi integration (1.5 hrs) - NEW
+#### Group B: Infrastructure & Features (5.5 hrs)
+- **TASK-132** 🟡 GitHub Actions /testi integration (1.5 hrs)
   - [ ] Create .github/workflows/integration-tests.yml for PR automation
   - [ ] Configure Firebase and Gemini API secrets, use vpython with TESTING=true
   - [ ] Post full test output in PR comments and upload artifacts
-  - [ ] See roadmap/scratchpad_task132_github_actions_testi_integration.md for complete requirements
-- **TASK-133** 🟡 Universal calendar system (2 hrs) - NEW
+- **TASK-133** 🟡 Universal calendar system (2 hrs)
   - [ ] Backend uses consistent numbers, LLM handles narrative conversion per universe
   - [ ] Add universe presets: fantasy, modern, starwars, scifi, custom
   - [ ] Campaign creation includes universe selection, DM can infer from setting
-  - [ ] See roadmap/scratchpad_task133_universal_calendar_system.md for complete requirements
-- **TASK-134** 🟡 Prompt optimization revisit (4 hrs) - NEW
-  - [ ] Comprehensive review of all prompts including PR #292 analysis for token reduction and quality
-  - [ ] Target 30% token reduction across system instructions while maintaining functionality
-  - [ ] See roadmap/scratchpad_task134_prompt_optimization_revisit.md for complete requirements
-- **TASK-135** 🟡 Model cycling debug (2.25 hrs) - NEW
-  - [ ] Investigate transient errors where retry works, add comprehensive model cycling logging
-  - [ ] Fix suspected model switching issues causing failed first attempts
-  - [ ] See roadmap/scratchpad_task135_model_cycling_debug.md for complete requirements
-- **TASK-136** 🟡 Requirements builder evaluation (1 hr) - NEW
-  - [ ] Test https://github.com/rizethereum/claude-code-requirements-builder on 2 new tasks (132,133) and 2 completed tasks, evaluate for workflow integration and provide assessment with integration recommendations
-- **TASK-137** 🟡 Move download/share story buttons (30 min) - NEW
-  - [ ] Relocate existing download and share buttons from current location to top of campaign page below campaign title, maintain exact same functionality and behavior
-- **TASK-138** 🟡 Stacktrace in debug mode (45 min) - NEW
-  - [ ] Add separate debug section to display full Python stacktraces when debug mode toggle is enabled, show complete tracebacks for debugging purposes
-- **TASK-139** 🟡 Restore Dragon Knight character start (1.5 hrs) - NEW
-  - [ ] Review PR #325 to understand previous Dragon Knight implementation, create improved version that works properly, restore as character creation option with enhanced functionality
+- **TASK-139** 🟡 Restore Dragon Knight character start (1.5 hrs)
+  - [ ] Review PR #325 to understand previous Dragon Knight implementation, create improved version
+  - [ ] Restore as character creation option with enhanced functionality
+- **TASK-136** 🟡 Requirements builder evaluation (30 min) - REDUCED SCOPE
+  - [ ] Quick evaluation of https://github.com/rizethereum/claude-code-requirements-builder
+
+#### Group C: UI Polish (2 hrs)
+- **TASK-137** 🟡 Move download/share story buttons (30 min)
+  - [ ] Relocate existing download and share buttons to top of campaign page below campaign title
+- **TASK-138** 🟡 Stacktrace in debug mode (45 min)
+  - [ ] Add separate debug section to display full Python stacktraces when debug mode toggle is enabled
+- **TASK-005c** 🟡 UI Polish - Timestamp sync (45 min)
+
+#### Deferred Tasks (Move to separate sessions)
+- **TASK-135** 🟡 Model cycling debug (2.25 hrs) - MOVED TO OPTIMIZATION PHASE
+  - [ ] Complex debugging task, better grouped with other optimization work
+
+### Optimization Phase (Separate dedicated session)
+#### CONSOLIDATED: Token/Prompt Optimization (6-8 hrs)
+- **TASK-141+134+099+092** 🟢 Comprehensive token/prompt optimization - GROUPED
+  - [ ] **Phase 1 (TASK-141):** Token measurement and caching (2 hrs)
+    - Stop sending world content with every request, implement session-level caching
+    - Verify token measurements match actual prompt sizes sent to LLM in gemini_service.py
+  - [ ] **Phase 2 (TASK-134+099):** Prompt optimization (3 hrs)
+    - Comprehensive review of all prompts including PR #292 analysis for token reduction
+    - Trim initial prompts for better performance
+  - [ ] **Phase 3 (TASK-092):** System instructions optimization (2 hrs)
+    - Include assiah prompt once in campaign creation vs system instructions
+    - Evaluate if all prompts need to be system instructions
+  - [ ] **Target:** 30-50% token reduction while maintaining narrative quality
+
+### Continuity Testing Phase (Separate dedicated session)
+#### CONSOLIDATED: Sequential Testing (6 hrs)
+- **TASK-004+004b+004c** 🟡 Complete continuity testing pipeline - GROUPED
+  - [ ] **Phase 1:** 10 interactions automated testing (2 hrs)
+  - [ ] **Phase 2:** 20 interactions with failure analysis (2 hrs) 
+  - [ ] **Phase 3:** 50 interactions stress test (2 hrs)
+
+### Research Tasks (Lower Priority)
 - **TASK-123** 🔵 Traycer planning tool evaluation (1.5 hrs)
-  - Install and configure Traycer
-  - Test on architecture planning tasks
-  - Compare with current planning workflow
-  - Document pros/cons and recommendations
 - **TASK-124** 🔵 Research Claude best practices (1 hr)
-  - Investigate other users' slash commands
-  - Review public claude.md files
-  - Compile list of useful patterns
-  - Create recommendations document
 
 ### Recently Completed Tasks (Last 7 Days)
 - [x] **TASK-111** ✅ **COMPLETED** Zen MCP evaluation - COMPLETED (PR #346/#364/#367)
@@ -108,6 +136,7 @@
 - [x] **TASK-120** ✅ **COMPLETED** MCP servers general evaluation - COMPLETED (PR #350/#363/#374)
 - [x] **TASK-122** ✅ **COMPLETED** Migrate Claude commands to slash - COMPLETED (PR #318)
 - [x] **TASK-125** ✅ **COMPLETED** Standardize logging to logging_util - COMPLETED (PR #309)
+- [x] **TASK-143** 🔴 Luke Campaign Fixes - COMPLETED (PR #351)
 - [x] **TASK-126** 🔴 Debug raw JSON display in campaigns - COMPLETED (PR #321)
 - [x] **TASK-116** 🟢 Show DC in dice rolls - COMPLETED (PR #313)
 - [x] **TASK-117** 🟢 Move default fantasy world checkbox - COMPLETED (PR #313)
@@ -116,7 +145,6 @@
 - [x] **TASK-114** 🟢 Cache all file reads - COMPLETED (PR #319)
 - [x] **TASK-115** 🟢 Document LLM input structure - COMPLETED (PR #314)
 - [x] **TASK-110** 🟡 Trim CLAUDE.md file (1 hr) - COMPLETED (PR #305)
-- [x] **TASK-001a** 🔴 Malformed JSON investigation (1.5 hrs) - COMPLETED (PR #310)
 - [x] **TASK-002** ❌ LLM I/O format standardization - CLOSED (PR #272 - session tracking doesn't improve LLM accuracy)
 - [x] **TASK-002a** ✅ Scene number increment-by-2 fix - COMPLETED (PR #281)
 - [x] **TASK-014a** 🟢 Homepage navigation improvements (PR #266)
@@ -127,8 +155,17 @@
 - [x] **Slash Commands Implementation** - COMPLETED (PR #307)
 
 ### Currently In Progress (WIP)
-- [ ] **TASK-006a** 🟡 Editable campaign names - WIP (PR #301)
-- [ ] **TASK-006b** 🟡 Background story pause button - WIP (PR #323)
+- [ ] **TASK-001a** 🔴 Malformed JSON investigation - WIP (PR #296 OPEN)
+- [ ] **TASK-006a** 🟡 Editable campaign names - WIP (PR #301 OPEN)
+- [ ] **TASK-006b** 🟡 Background story pause button - WIP (PR #323 OPEN)
+- [ ] **TASK-140** 🔴 Hard stop for integrity failures - WIP (PR #336 OPEN)
+- [ ] **TASK-142** 🔴 Fix send button unclickable - WIP (PR #338 OPEN)
+- [ ] **TASK-092** 🟡 System instructions optimization - WIP (PR #293 OPEN)
+- [ ] **TASK-089** 🟡 Planning block IDs format - WIP (PR #295 OPEN)
+- [ ] **TASK-090** 🟡 Remove legacy migration code - WIP (PR #288 OPEN)
+- [ ] **TASK-100** 🟡 Dynamic world state design - WIP (PR #294 OPEN)
+- [ ] **TASK-101** 🟡 Story mode entry format - WIP (PR #297 OPEN)
+- [ ] **TASK-102** 🟡 Slim mode design - WIP (PR #303 OPEN)
 
 ### Blocked Items
 - TASK-001c: Null HP bug (waiting for combat PR review)
@@ -150,6 +187,40 @@
 - All times adjusted for AI-assisted development
 - Use `roadmap next` for next task
 - Update with `roadmap finish TASK-XXX`
+
+### PR Status Legend
+🚨 **CRITICAL**: GitHub PR states mean:
+- **OPEN** = Work In Progress (WIP) - NOT completed
+- **MERGED** = Completed and integrated into main branch  
+- **CLOSED** = Abandoned or rejected - NOT completed
+- ❌ Tasks are NOT completed just because PR exists
+- ✅ Tasks are ONLY completed when PR state = "MERGED"
+
+## Planning Horizon
+
+### Current Sprint Goals
+- **Critical Fixes**: Resolve integrity failures, malformed JSON, send button issues
+- **Infrastructure**: GitHub Actions integration, universal calendar system
+- **Testing**: Unit test coverage improvements, continuity testing phases
+- **UI Polish**: Timestamp sync, button placement, debug mode improvements
+
+### Next Sprint Preparation
+- **Token Optimization**: Consolidate TASK-141, TASK-134, TASK-099, TASK-092 into optimization phase
+- **Continuity Testing**: Sequential phases (10 → 20 → 50 interactions)
+- **Four-Mode System**: Complete implementation of DM/Author/Story/Game modes
+- **Combat System**: Integration with existing PR #102
+
+### Research & Future Items
+- **MCP Integration**: Context7 and Sequential Thinking setup for Claude Code CLI
+- **Optimization Tools**: Traycer evaluation, Claude best practices research
+- **Advanced Features**: Demo site branch, advanced state exploration
+- **Launch Preparation**: Copyright cleanup, security validation, documentation
+
+### Risk & Dependency Tracking
+- **Blocked**: TASK-001c (Null HP) waiting for combat PR #102 review
+- **Dependencies**: Token optimization should precede prompt optimization work
+- **Resource Constraints**: 11+ WIP tasks may need prioritization
+- **Technical Debt**: Legacy migration code cleanup needed
 
 ## Parallel Work Opportunities
 
@@ -194,7 +265,8 @@ For different worktrees:
 
 ### Bugs
 *   [TASK-001c] **Null HP during combat** - Happens during combat, defer to combat system revamp (see PR #102: https://github.com/jleechan2015/worldarchitect.ai/pull/102)
-*   [TASK-001a] ✅ **COMPLETED** Malformed JSON response from AI - Fixed god mode JSON display issue - PR #321
+*   [TASK-001a] 🔄 **IN PROGRESS** Malformed JSON investigation - PR #296 (OPEN)
+*   [TASK-126] ✅ **COMPLETED** Debug raw JSON display in campaigns - Fixed god mode JSON display issue - PR #321
 *   [TASK-001b] ✅ **COMPLETED** Dragon Knight v3 plot coherence - AI introduced unrelated plot element (randomly introduced crypt element), need stronger narrative constraints
 *   Stable?
 
@@ -493,236 +565,17 @@ For different worktrees:
 
 ## Prototype limited alpha
 
-## Detailed Milestone Breakdown
+## 📚 Planning & Archive References
 
-### Milestone 1: Critical Bug Fixes & Investigation (4 hrs)
-- **TASK-001a** 🟡 **IN PROGRESS** Investigate malformed JSON responses - PR #296
-  - Currently being worked on
-  - Analyze when/where AI responses fail to parse
-  - Add robust JSON parsing with fallbacks
-  - Log all malformed responses for pattern analysis
-  - Implement recovery mechanism
-- **TASK-001b** ✅ **COMPLETED** Dragon Knight v3 plot coherence
-  - Fixed issue with AI introducing random plot elements
-  - Added stronger narrative constraints
-- **TASK-001c** 🟡 Defer null HP bug to combat revamp (0 hrs)
-  - Document issue for PR #102 integration
-  - Link to combat system overhaul
+### Detailed Milestone Planning
+**Archived**: Complete milestone breakdown with 10 detailed phases moved to preserve all content  
+**Location**: [roadmap_archive_milestone_breakdown.md](./roadmap_archive_milestone_breakdown.md)  
+**Contents**: All milestone details, Derek feedback implementation, development schedules
 
-### Milestone 2: LLM I/O Format Standardization (3 hrs)
-- **TASK-002** 🟡 Define exact LLM input/output format (1.5 hrs)
-  - Scene # tracking system
-  - Prompt structure template
-  - Return data format specification
-  - Debug data sections
-  - Game state update format
-  - Incorporate `character_creation_state_tracking_scratchpad.md`
-- **TASK-003** 🟡 State sync validation framework (1.5 hrs)
-  - Create test harness for prompt validation
-  - Verify all prompts include master prompt
-  - Document in `roadmap/scratchpad_state_sync_entity.md`
-  - Run integration tests on real campaigns
+### Future Planning & Ideas  
+**Location**: Various sections above contain long-term planning items
+**Categories**: Campaign worlds, narrative systems, technical optimization, launch preparation
 
-### Milestone 3: Continuity & State Integrity System (8 hrs)
-- **TASK-004** 🟡 Phase 1 - 10 interactions (2 hrs)
-  - Build automated interaction program
-  - Random planning block response selection
-  - Track entity consistency metrics
-  - Monitor narrative coherence
-- **TASK-004b** 🟡 Phase 2 - 20 interactions (2 hrs) - MOVED TO MONDAY-THURSDAY
-  - NOTE: Define requirements before starting
-  - Extend test framework
-  - Analyze patterns in failures
-  - Generate detailed reports
-- **TASK-004c** 🟡 Phase 3 - 50 interactions (2 hrs)
-  - Full continuity stress test
-  - Compile comprehensive metrics
-  - Identify breaking points
-- **TASK-129** 🔴 Implement Hard Stop on Integrity Failures (1 hr)
-  - Add STRICT_INTEGRITY_MODE toggle
-  - Detect integrity failures and halt gameplay
-  - Provide correction options
-- **TASK-003** 🟡 State sync validation (1 hr)
-  - Implement tracking per character_creation_state_tracking_scratchpad.md
-  - Validate all user inputs and state transitions
+---
 
-### Milestone 4: UI Polish - Small Tasks (2 hrs)
-- **TASK-005a** 🟢 Fix campaign list click registration (0.5 hrs)
-  - Debug event handlers
-  - Ensure all campaigns clickable
-  - Add visual feedback
-- **TASK-005b** 🟢 Loading spinner with messages (1 hr)
-  - Create message pool like creation
-  - Implement rotation logic
-  - Add to campaign continue flow
-- **TASK-005c** 🟢 Fix timestamp/narrative mismatch (0.5 hrs)
-  - Sync timestamps with story events
-  - Ensure correct chronological display
-
-### Milestone 5: Four-Mode System Implementation (4 hrs)
-- **TASK-007a** 🟡 Mode architecture design (0.5 hrs)
-  - Define mode switching mechanism
-  - Create mode state management
-- **TASK-007b** 🟡 DM/System Admin mode (1 hr)
-  - Full game state editing
-  - Narrative overrides
-  - Bounded to game mechanics
-- **TASK-007c** 🟡 Author mode (1 hr)
-  - God-like powers within universe
-  - Book-writing assistance features
-- **TASK-007d** 🟡 Story mode (0.75 hrs)
-  - Same D&D mechanics but hidden
-  - Players can query mechanics
-  - Not 100% success rate
-- **TASK-007e** 🟡 Game mode (0.75 hrs)
-  - Full ruleset visibility
-  - Real dice rolls shown
-  - Complete mechanics transparency
-
-### Milestone 6: Campaign & Combat Improvements (3 hrs)
-- **TASK-006a** 🟢 Editable campaign names (0.5 hrs)
-  - Add inline editing UI
-  - Save to database
-- **TASK-006b** 🟢 Background story display (0.5 hrs)
-  - Pause auto-scroll on creation
-  - Add "Continue" button
-  - Let players read at own pace
-- **TASK-006c** 🟡 Enhanced Ser Arion scenario (2 hrs)
-  - Add 2-3 minor combat encounters
-  - Build up to Ashwood Keep assault
-  - Demo all GenAI RPG features
-  - Balance combat and narrative
-
-### Milestone 7: UI/UX Major Improvements (5 hrs)
-- **TASK-011a** 🟢 Theme/skin system architecture (1 hr)
-  - Design CSS variable system
-  - Create theme switching logic
-- **TASK-008b** 🟢 Figma integration prep (1.5 hrs)
-  - Review Figma designs
-  - Plan component mapping
-- **TASK-011c** 🟢 UI responsiveness (1.5 hrs)
-  - Optimize render performance
-  - Reduce re-renders
-  - Improve interaction speed
-- **TASK-011d** 🟢 Gemini-like snappiness (1 hr)
-  - Instant feedback on all actions
-  - Optimistic UI updates
-  - Smooth transitions
-
-### Milestone 8: Metrics & Optimization (3 hrs)
-- **TASK-009a** ✅ **COMPLETED** Token-based logging (1 hr) - PR #264
-  - Convert all character counts to tokens
-  - Add token usage dashboard
-- **TASK-009b** 🟢 Alexiel book compression (1 hr)
-  - Implement `roadmap/alexiel_book_token_reduction_scratchpad.md`
-  - Reduce token usage by 50%+
-- **TASK-009c** 🟢 Parallel dual-pass optimization (1 hr)
-  - Implement `mvp_site/roadmap/scratchpad_parallel_dual_pass_optimization.md`
-  - Speed up response generation
-
-### Milestone 9: Launch Preparation (4 hrs)
-- **TASK-010a** 🟡 Copyright cleanup (1 hr)
-  - Remove D&D references
-  - Replace with "5e compatible"
-- **TASK-010b** 🟡 Security validation (1 hr)
-  - Input sanitization audit
-  - API key protection review
-- **TASK-010c** 🟡 Documentation update (1 hr)
-  - User guides
-  - API documentation
-- **TASK-010d** 🟡 Myers-Briggs hiding (1 hr)
-  - Hide personality types in UI
-  - Keep for internal use only
-  - Special command to reveal
-
-### Milestone 10: Navigation & Polish (2 hrs)
-- **TASK-014a** ✅ **COMPLETED** Homepage navigation (0.5 hrs) - PR #266
-  - Make "WorldArchitect.AI" clickable
-  - Link to landing page
-- **TASK-011b** 🟢 Pagination implementation (1 hr)
-  - Story content pagination
-  - Load more on scroll
-  - Smooth loading UX
-- **TASK-012a** 🟢 Combat PR #102 review (0.5 hrs)
-  - Analyze existing combat work
-  - Plan integration approach
-  - Schedule null HP fix
-
-## Derek Feedback Implementation
-
-### Priority Items from Derek's Testing
-- Ensure god mode and questions don't progress narrative
-- Metrics for me and other users
-- Campaign default starts improvements
-- Combat encounter balancing
-- UI/UX pain points identified during testing
-
-*Note: Specific Derek feedback items to be integrated as they are provided*
-
-## Development Schedule
-
-### Week 1 Schedule
-#### Friday (8 hrs - Holiday)
-- Milestone 1: Critical Bugs (4 hrs)
-- Milestone 2: LLM I/O Format (3 hrs)
-- Milestone 3: Start continuity testing (1 hr)
-
-#### Saturday (8 hrs)
-- **[TASK-072] Alexiel Content Review** - Review `roadmap/alexiel_content_review_saturday.md` for missing content integration (1.5 hrs)
-- **[TASK-092] System Instructions Optimization** 🟡 (1.5 hrs) - PR #293
-  - Consider adding world_assiah.md only once during campaign creation vs every system instruction
-  - Re-evaluate all system instructions for token optimization
-  - Review if all prompts need to be system instructions
-  - Test impact on narrative coherence with reduced system prompts
-  - Document findings in `roadmap/scratchpad_8k_optimization.md`
-- **[TASK-012a] Combat System PR #102 Review** 🟡 (1 hr)
-  - Review existing combat system overhaul PR
-  - Plan integration approach for null HP fix
-  - Document combat system architecture
-- **[TASK-006c] Add Guaranteed Combat to Ser Arion** 🟡 (2 hrs)
-  - Add 2-3 smaller combat encounters before Ashwood Keep
-  - Build narrative tension
-  - Test combat mechanics thoroughly
-- **[TASK-012c] Derek Campaign Combat Issues** 🟡 (1 hr)
-  - Replay Derek's campaign focusing on combat
-  - Document all combat-related bugs
-  - Test combat flow and balance
-- Milestone 3: Complete continuity testing (1 hr)
-
-#### Sunday (8 hrs)
-- **[TASK-110] Playwright MPC Evaluate** ✅ **COMPLETED** (PR #314)
-  - ✅ Comprehensive testing and MCP tool evaluation documentation completed
-  - ✅ Playwright configuration and sample tests implemented
-  - ✅ Integration assessment with current testing framework documented
-- **[TASK-111] Zen MCP Evaluate** ✅ **COMPLETED** (PR #346)
-  - ✅ Evaluated Zen MCP (Model Context Protocol) tools
-  - ✅ Tested integration capabilities with Claude
-  - ✅ Assessed potential benefits for development workflow
-  - ✅ Documented findings and recommendations
-- **[TASK-112] Context7 MCP Server Evaluate** ✅ **COMPLETED** (PR #347)
-  - ✅ Evaluated Context7 MCP Server capabilities
-  - ✅ Tested context management features
-  - ✅ Assessed integration with existing development workflow
-  - ✅ Compared with other MCP solutions
-- **[TASK-113] Sequential Thinking MCP Server Evaluate** ✅ **COMPLETED** (PR #348)
-  - ✅ Evaluated Sequential Thinking MCP Server
-  - ✅ Tested step-by-step reasoning capabilities
-  - ✅ Assessed benefits for complex problem solving
-  - ✅ Documented integration possibilities
-- Milestone 4: UI Polish small tasks (2 hrs)
-  - Keep timestamp sync task ([TASK-005c])
-  - Other small UI fixes
-- Milestone 6: Campaign improvements (1.5 hrs)
-- Milestone 7: Start UI major improvements (1.5 hrs)
-
-### Week 2 Plan
-- Monday-Thursday (12 hrs): Milestones 7-10
-
-#### Next Saturday (8 hrs)
-- **Milestone 5: Four-Mode System Implementation** 🟡 (6 hrs)
-  - [TASK-007a] Mode architecture design (0.5 hrs)
-  - [TASK-007b] DM/System Admin mode (1.5 hrs)
-  - [TASK-007c] Author mode (1.5 hrs)
-  - [TASK-007d] Story mode (1.25 hrs)
-  - [TASK-007e] Game mode (1.25 hrs)
-- Integration testing and Derek feedback (2 hrs)
+**Note**: All detailed milestone planning has been archived to keep this roadmap focused on current actionable work. No tasks were deleted - only reorganized for better navigation.
