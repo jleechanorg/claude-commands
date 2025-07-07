@@ -780,6 +780,18 @@ def create_app():
                 use_default_world=use_default_world
             )
             
+            # DEBUG: Log what initial story generation returned
+            logging_util.debug(f"JSON_BUG_INITIAL_STORY_RESPONSE: {opening_story_response.narrative_text[:300]}...")
+            logging_util.debug(f"JSON_BUG_INITIAL_STORY_TYPE: {type(opening_story_response)}")
+            if hasattr(opening_story_response, 'raw_response'):
+                logging_util.debug(f"JSON_BUG_INITIAL_STORY_RAW: {opening_story_response.raw_response[:300]}...")
+            
+            # DEBUG: Check if opening story contains JSON artifacts
+            if '"narrative":' in opening_story_response.narrative_text or '"god_mode_response":' in opening_story_response.narrative_text:
+                logging_util.error(f"JSON_BUG_DETECTED_IN_OPENING_STORY: Campaign creation has JSON artifacts!")
+                logging_util.error(f"JSON_BUG_OPENING_STORY_CONTENT: {opening_story_response.narrative_text[:500]}...")
+                logging_util.error(f"JSON_BUG_USER_ID: {user_id}, TITLE: {title}")
+                
             campaign_id = firestore_service.create_campaign(
                 user_id, title, prompt, opening_story_response.narrative_text, initial_game_state, selected_prompts, use_default_world
             )
@@ -878,6 +890,18 @@ def create_app():
             selected_prompts = campaign.get(KEY_SELECTED_PROMPTS, [])
             use_default_world = campaign.get('use_default_world', False)
             gemini_response_obj = gemini_service.continue_story(user_input, mode, story_context, current_game_state, selected_prompts, use_default_world)
+            
+            # DEBUG: Log the raw response from gemini service
+            logging_util.debug(f"JSON_BUG_DEBUG_MAIN_GEMINI_RESPONSE: {gemini_response_obj.narrative_text[:300]}...")
+            logging_util.debug(f"JSON_BUG_DEBUG_MAIN_GEMINI_TYPE: {type(gemini_response_obj.narrative_text)}")
+            
+            # Check if narrative_text contains JSON artifacts
+            if '"narrative":' in gemini_response_obj.narrative_text or '"god_mode_response":' in gemini_response_obj.narrative_text:
+                logging_util.error(f"JSON_BUG_DETECTED_IN_NARRATIVE_TEXT: Campaign {campaign_id}, Mode {mode}")
+                logging_util.error(f"JSON_BUG_RAW_CONTENT: {gemini_response_obj.narrative_text[:500]}...")
+                logging_util.error(f"JSON_BUG_RESPONSE_OBJ_TYPE: {type(gemini_response_obj)}")
+                if hasattr(gemini_response_obj, 'raw_response'):
+                    logging_util.error(f"JSON_BUG_RAW_RESPONSE: {gemini_response_obj.raw_response[:500]}...")
 
             # 3a. Verify debug content generation for monitoring
             debug_tags_found = gemini_response_obj.debug_tags_present

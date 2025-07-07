@@ -155,6 +155,17 @@ def _combine_god_mode_and_narrative(god_mode_response: str, narrative: Optional[
 
 def parse_structured_response(response_text: str) -> tuple[str, NarrativeResponse]:
     """
+    Parse structured response and check for JSON bug issues.
+    """
+    # DEBUG: Log entry into parse function
+    logging_util.debug(f"JSON_BUG_PARSE_ENTRY: Processing response of length {len(response_text)}")
+    logging_util.debug(f"JSON_BUG_PARSE_INPUT: {response_text[:300]}...")
+    
+    # Check if input is already raw JSON
+    if response_text.strip().startswith('{') and '"narrative":' in response_text:
+        logging_util.error(f"JSON_BUG_PARSE_RAW_JSON_INPUT: Input is already raw JSON!")
+        logging_util.error(f"JSON_BUG_PARSE_RAW_CONTENT: {response_text[:500]}...")
+    """
     Parse structured JSON response from LLM
     
     Returns:
@@ -188,7 +199,9 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 logging_util.info("Extracted JSON from generic code block")
     
     # Use the robust parser on the extracted content
+    logging_util.debug(f"JSON_BUG_PARSE_JSON_CONTENT: {json_content[:300]}...")
     parsed_data, was_incomplete = parse_llm_json_response(json_content)
+    logging_util.debug(f"JSON_BUG_PARSE_ROBUST_RESULT: parsed_data={parsed_data}, was_incomplete={was_incomplete}")
     
     if was_incomplete:
         narrative_len = len(parsed_data.get('narrative', '')) if parsed_data else 0
@@ -196,6 +209,8 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
         logging_util.info(f"Recovered from incomplete JSON response. Narrative length: {narrative_len} characters (~{token_count} tokens)")
     
     # Create NarrativeResponse from parsed data
+    logging_util.debug(f"JSON_BUG_PARSE_PARSED_DATA: {parsed_data}")
+    
     if parsed_data:
         try:
             validated_response = NarrativeResponse(**parsed_data)
@@ -210,7 +225,8 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 
         except (ValueError, TypeError) as e:
             # NarrativeResponse creation failed
-            logging_util.error(f"Failed to create NarrativeResponse: {e}")
+            logging_util.error(f"JSON_BUG_NARRATIVE_RESPONSE_FAILED: {e}")
+            logging_util.error(f"JSON_BUG_FAILED_PARSED_DATA: {parsed_data}")
             # Check for god_mode_response first
             god_mode_response = parsed_data.get('god_mode_response')
             if god_mode_response:
@@ -257,6 +273,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     
     # Additional mitigation: Try to extract narrative from raw JSON-like text
     # This handles cases where JSON wasn't properly parsed but contains "narrative": "..."
+    logging_util.debug(f"JSON_BUG_PARSE_FALLBACK_NARRATIVE_EXTRACTION: Trying to extract from {response_text[:200]}...")
     narrative_match = NARRATIVE_PATTERN.search(response_text)
     
     if narrative_match:
@@ -330,6 +347,15 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
         entities_mentioned=[],
         location_confirmed="Unknown"
     )
+    
+    # DEBUG: Log what we're returning from parse function
+    logging_util.debug(f"JSON_BUG_PARSE_RETURN_TEXT: {cleaned_text[:300]}...")
+    logging_util.debug(f"JSON_BUG_PARSE_RETURN_RESPONSE: {fallback_response}")
+    
+    # Final check for JSON artifacts in returned text
+    if '"narrative":' in cleaned_text or '"god_mode_response":' in cleaned_text:
+        logging_util.error(f"JSON_BUG_PARSE_RETURNING_JSON: Still returning JSON artifacts!")
+        logging_util.error(f"JSON_BUG_PARSE_FINAL_TEXT: {cleaned_text[:500]}...")
     
     return cleaned_text, fallback_response
 
