@@ -13,14 +13,14 @@
 ### Today - Sunday, Jan 5 (8 hrs)
 
 #### Afternoon (4 hrs)
-- [ ] **TASK-143** 🔴 Luke Campaign Fixes (2.5 hrs) - HIGH PRIORITY
-  - [ ] Fix gender consistency issue in NPC data structure
+- [ ] **TASK-143** 🔴 Luke Campaign Fixes (1.5 hrs) - HIGH PRIORITY
+  - [x] Fix gender consistency issue in NPC data structure
   - [ ] Fix god mode responses showing raw JSON instead of formatted content
-  - [ ] Add explicit gender field to NPC entity schema with validation
+  - [x] Add explicit gender field to NPC entity schema with validation
   - [ ] Update UI to properly format god mode responses
   - [ ] See roadmap/scratchpad_luke_campaign_fixes.md for complete requirements
-- [ ] **TASK-130** 🔴 Unit test coverage improvements (1 hr) - HIGH PRIORITY
-  - [ ] Review current test coverage gaps
+- [ ] **TASK-130** 🔴 Unit test coverage improvements (30 min) - HIGH PRIORITY
+  - [x] Review current test coverage gaps
   - [ ] Implement tests for gemini_service.py (currently 27% coverage)
   - [ ] Implement tests for firestore_service.py (currently 50% coverage)
   - [ ] Target 85% overall coverage milestone
@@ -46,11 +46,6 @@
   - [ ] Show detailed traceback in debug mode, user-friendly error in normal mode
   - [ ] Provide retry/reload/abort recovery options in separate error modal
   - [ ] See roadmap/scratchpad_task140_integrity_failure_hard_stop.md for complete requirements
-- [ ] **TASK-141** 🔴 Token optimization and verification (3 hrs) - HIGH PRIORITY  
-  - [ ] Stop sending world content with every request, implement session-level caching
-  - [ ] Verify token measurements match actual prompt sizes sent to LLM in gemini_service.py
-  - [ ] Target 30-50% token reduction while maintaining narrative quality
-  - [ ] See roadmap/scratchpad_task141_token_optimization_verification.md for complete requirements
 - [ ] **TASK-142** 🔴 Fix send button unclickable (45 min) - HIGH PRIORITY
   - [ ] Investigate campaign send button appearing in progress state and becoming unresponsive
   - [ ] Check for console errors, fix button state management to prevent stuck states
@@ -63,6 +58,11 @@
 - **TASK-004b** 🟡 Continuity Phase 2 (1.5 hrs) - MOVED FROM SUNDAY
   - [ ] NOTE: Define requirements before starting - group with other continuity tasks
   - [ ] See continuity testing system in roadmap for related tasks
+- **TASK-141** 🟢 Token optimization and verification (3 hrs) - MEDIUM PRIORITY
+  - [ ] Stop sending world content with every request, implement session-level caching
+  - [ ] Verify token measurements match actual prompt sizes sent to LLM in gemini_service.py
+  - [ ] Target 30-50% token reduction while maintaining narrative quality
+  - [ ] See roadmap/scratchpad_task141_token_optimization_verification.md for complete requirements
 - **TASK-132** 🟡 GitHub Actions /testi integration (1.5 hrs) - NEW
   - [ ] Create .github/workflows/integration-tests.yml for PR automation
   - [ ] Configure Firebase and Gemini API secrets, use vpython with TESTING=true
