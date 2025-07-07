@@ -16,7 +16,13 @@
 ### Sunday, Jan 5 (8 hrs)
 
 ### Afternoon (4 hrs)
-- [ ] **TASK-130** 🔴 Unit test coverage improvements (2 hrs) - HIGH PRIORITY
+- [ ] **TASK-143** 🔴 Luke Campaign Fixes (2.5 hrs) - HIGH PRIORITY
+  - [ ] Fix gender consistency issue in NPC data structure
+  - [ ] Fix god mode responses showing raw JSON instead of formatted content
+  - [ ] Add explicit gender field to NPC entity schema with validation
+  - [ ] Update UI to properly format god mode responses
+  - [ ] See roadmap/scratchpad_luke_campaign_fixes.md for complete requirements
+- [ ] **TASK-130** 🔴 Unit test coverage improvements (1 hr) - HIGH PRIORITY
   - [ ] Review current test coverage gaps
   - [ ] Implement tests for gemini_service.py (currently 27% coverage)
   - [ ] Implement tests for firestore_service.py (currently 50% coverage)

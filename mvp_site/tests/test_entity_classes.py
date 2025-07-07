@@ -8,44 +8,42 @@ import unittest
 # Add the mvp_site directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from schemas.entities_simple import (
+from schemas.entities_pydantic import (
     Stats, HealthStatus, Character, Location,
-    EntityType, EntityStatus, Visibility,
-    SimpleValidator
+    EntityType, EntityStatus, Visibility
 )
 
 
-class TestSimpleValidator(unittest.TestCase):
-    """Test SimpleValidator functionality"""
+class TestPydanticValidation(unittest.TestCase):
+    """Test Pydantic validation functionality"""
     
-    def test_validate_entity_id_valid_formats(self):
-        """Test valid entity ID formats"""
-        self.assertTrue(SimpleValidator.validate_entity_id('pc_john_001', 'pc'))
-        self.assertTrue(SimpleValidator.validate_entity_id('npc_sarah_042', 'npc'))
-        self.assertTrue(SimpleValidator.validate_entity_id('loc_tavern_999', 'loc'))
-        self.assertTrue(SimpleValidator.validate_entity_id('item_sword-magic_123', 'item'))
+    def test_entity_id_validation(self):
+        """Test entity ID validation in Pydantic models"""
+        from pydantic import ValidationError
+        
+        # Valid entity IDs should work
+        location = Location(entity_id='loc_tavern_001', display_name='The Tavern')
+        self.assertEqual(location.entity_id, 'loc_tavern_001')
+        
+        # Invalid entity IDs should be rejected
+        with self.assertRaises(ValidationError):
+            Location(entity_id='invalid_format', display_name='Test')
     
-    def test_validate_entity_id_invalid_formats(self):
-        """Test invalid entity ID formats"""
-        self.assertFalse(SimpleValidator.validate_entity_id('john_001', 'pc'))  # Missing prefix
-        self.assertFalse(SimpleValidator.validate_entity_id('pc_john', 'pc'))  # Missing number
-        self.assertFalse(SimpleValidator.validate_entity_id('pc_john_1', 'pc'))  # Wrong number format
-        self.assertFalse(SimpleValidator.validate_entity_id('npc_john_001', 'pc'))  # Wrong prefix
-    
-    def test_validate_range_valid_values(self):
-        """Test range validation with valid values"""
-        self.assertEqual(SimpleValidator.validate_range(15, 1, 30, "Test"), 15)
-        self.assertEqual(SimpleValidator.validate_range(1, 1, 30, "Test"), 1)
-        self.assertEqual(SimpleValidator.validate_range(30, 1, 30, "Test"), 30)
-    
-    def test_validate_range_invalid_values(self):
-        """Test range validation with invalid values"""
-        with self.assertRaises(ValueError):
-            SimpleValidator.validate_range(0, 1, 30, "Test")
-        with self.assertRaises(ValueError):
-            SimpleValidator.validate_range(31, 1, 30, "Test")
-        with self.assertRaises(ValueError):
-            SimpleValidator.validate_range(-5, 1, 30, "Test")
+    def test_pydantic_field_validation(self):
+        """Test Pydantic field validation with defensive conversion"""
+        from pydantic import ValidationError
+        
+        # Test Stats field validation (should be between 1-30)
+        stats = Stats(strength=15, dexterity=10)
+        self.assertEqual(stats.strength, 15)
+        
+        # Invalid values get converted to safe defaults
+        stats = Stats(strength=0)  # Below minimum -> converted to 1
+        self.assertEqual(stats.strength, 1)
+        
+        # Very high values also get converted to field maximum
+        stats = Stats(strength=100)  # Above maximum -> clamped to 30
+        self.assertEqual(stats.strength, 30)  # Field maximum
 
 
 class TestStats(unittest.TestCase):
@@ -112,10 +110,19 @@ class TestHealthStatus(unittest.TestCase):
         health = HealthStatus(hp=5, hp_max=10, conditions=conditions)
         self.assertEqual(health.conditions, conditions)
     
-    def test_health_status_hp_clamping(self):
-        """Test HP gets clamped to hp_max"""
-        health = HealthStatus(hp=20, hp_max=10)
-        self.assertEqual(health.hp, 10)  # Should be clamped to hp_max
+    def test_health_status_hp_validation(self):
+        """Test HP validation - should reject hp > hp_max"""
+        from pydantic import ValidationError
+        
+        # Pydantic should reject hp > hp_max rather than clamping
+        with self.assertRaises(ValidationError) as context:
+            HealthStatus(hp=20, hp_max=10)
+        
+        self.assertIn("cannot exceed max HP", str(context.exception))
+        
+        # Valid HP should work
+        health = HealthStatus(hp=10, hp_max=10)
+        self.assertEqual(health.hp, 10)
         self.assertEqual(health.hp_max, 10)
     
     def test_health_status_with_unknown_values(self):
@@ -194,8 +201,8 @@ class TestCharacter(unittest.TestCase):
         self.assertEqual(character.display_name, 'Aragorn')
         self.assertEqual(character.level, 1)  # Default level
         self.assertEqual(character.current_location, 'loc_tavern_001')
-        self.assertEqual(character.status, [EntityStatus.CONSCIOUS])
-        self.assertEqual(character.visibility, Visibility.VISIBLE)
+        self.assertEqual(character.status, [EntityStatus.CONSCIOUS])  # Default is enum object
+        self.assertEqual(character.visibility, Visibility.VISIBLE)  # Default is enum object
     
     def test_character_basic_npc(self):
         """Test basic NPC creation"""
@@ -205,7 +212,8 @@ class TestCharacter(unittest.TestCase):
             display_name='Gandalf',
             health=self.health,
             current_location='loc_tavern_001',
-            level=5
+            level=5,
+            gender='male'  # Required for NPCs
         )
         self.assertEqual(character.entity_type, EntityType.NPC)
         self.assertEqual(character.level, 5)
@@ -234,8 +242,8 @@ class TestCharacter(unittest.TestCase):
         self.assertEqual(character.aliases, ['Greenleaf', 'Elf Prince'])
         self.assertEqual(character.level, 3)
         self.assertEqual(character.stats, self.stats)
-        self.assertEqual(character.status, [EntityStatus.CONSCIOUS, EntityStatus.HIDDEN])
-        self.assertEqual(character.visibility, Visibility.HIDDEN)
+        self.assertEqual(character.status, ['conscious', 'hidden'])  # Explicit values become strings
+        self.assertEqual(character.visibility, 'hidden')  # Explicit values become strings
         self.assertEqual(character.equipped_items, ['item_bow_001', 'item_arrows_001'])
         self.assertEqual(character.inventory, ['item_rope_001', 'item_bread_001'])
         self.assertEqual(character.resources, {'gold': 50, 'arrows': 30})

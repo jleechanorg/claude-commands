@@ -3,10 +3,13 @@ Pydantic schema models for entity tracking in Milestone 0.4
 Uses sequence ID format: {type}_{name}_{sequence}
 """
 
-from typing import List, Dict, Optional, Any
-from pydantic import BaseModel, Field, validator
+from typing import List, Dict, Optional, Any, Union
+from pydantic import BaseModel, Field, validator, model_validator
 from enum import Enum
 from datetime import datetime
+
+# Import defensive numeric field converter for robust data handling
+from .defensive_numeric_converter import DefensiveNumericConverter
 
 
 class EntityType(Enum):
@@ -41,28 +44,69 @@ class Visibility(Enum):
 
 
 class Stats(BaseModel):
-    """D&D-style character stats"""
+    """D&D-style character stats with defensive conversion"""
     strength: int = Field(ge=1, le=30, default=10)
     dexterity: int = Field(ge=1, le=30, default=10)
     constitution: int = Field(ge=1, le=30, default=10)
     intelligence: int = Field(ge=1, le=30, default=10)
     wisdom: int = Field(ge=1, le=30, default=10)
     charisma: int = Field(ge=1, le=30, default=10)
+    
+    @validator('strength', pre=True)
+    def convert_strength(cls, v):
+        return DefensiveNumericConverter.convert_value('strength', v)
+    
+    @validator('dexterity', pre=True)
+    def convert_dexterity(cls, v):
+        return DefensiveNumericConverter.convert_value('dexterity', v)
+    
+    @validator('constitution', pre=True)
+    def convert_constitution(cls, v):
+        return DefensiveNumericConverter.convert_value('constitution', v)
+    
+    @validator('intelligence', pre=True)
+    def convert_intelligence(cls, v):
+        return DefensiveNumericConverter.convert_value('intelligence', v)
+    
+    @validator('wisdom', pre=True)
+    def convert_wisdom(cls, v):
+        return DefensiveNumericConverter.convert_value('wisdom', v)
+    
+    @validator('charisma', pre=True)
+    def convert_charisma(cls, v):
+        return DefensiveNumericConverter.convert_value('charisma', v)
+    
+    def get_modifier(self, ability_name: str) -> int:
+        """Calculate D&D 5e ability modifier: (ability - 10) // 2"""
+        ability_value = getattr(self, ability_name)
+        return (ability_value - 10) // 2
 
 
 class HealthStatus(BaseModel):
-    """Health and condition tracking"""
+    """Health and condition tracking with defensive conversion"""
     hp: int = Field(ge=0)
     hp_max: int = Field(ge=1)
     temp_hp: int = Field(ge=0, default=0)
     conditions: List[str] = Field(default_factory=list)
     death_saves: Dict[str, int] = Field(default_factory=lambda: {"successes": 0, "failures": 0})
     
-    @validator('hp')
-    def hp_not_exceed_max(cls, v, values):
-        if 'hp_max' in values and v > values['hp_max']:
-            raise ValueError(f"HP {v} cannot exceed max HP {values['hp_max']}")
-        return v
+    @validator('hp', pre=True)
+    def convert_hp(cls, v):
+        return DefensiveNumericConverter.convert_value('hp', v)
+    
+    @validator('hp_max', pre=True)
+    def convert_hp_max(cls, v):
+        return DefensiveNumericConverter.convert_value('hp_max', v)
+    
+    @validator('temp_hp', pre=True)
+    def convert_temp_hp(cls, v):
+        return DefensiveNumericConverter.convert_value('temp_hp', v)
+    
+    @model_validator(mode='after')
+    def hp_not_exceed_max(self):
+        if self.hp > self.hp_max:
+            raise ValueError(f"HP {self.hp} cannot exceed max HP {self.hp_max}")
+        return self
 
 
 class Location(BaseModel):
@@ -81,14 +125,28 @@ class Location(BaseModel):
 
 
 class Character(BaseModel):
-    """Base character model for PCs and NPCs"""
+    """Comprehensive character model with narrative consistency and D&D 5e support"""
     entity_id: str = Field(pattern=r"^(pc|npc)_[\w]+_\d{3}$")
     entity_type: EntityType
     display_name: str
     aliases: List[str] = Field(default_factory=list)
     
+    # CRITICAL: Narrative consistency fields (from entities_simple.py)
+    gender: Optional[str] = Field(None, description="Gender for narrative consistency (required for NPCs)")
+    age: Optional[int] = Field(None, ge=0, le=50000, description="Age in years for narrative consistency")
+    
+    # D&D fundamentals (from game_state_instruction.md)
+    mbti: Optional[str] = Field(None, description="MBTI personality type for consistent roleplay")
+    alignment: Optional[str] = Field(None, description="D&D alignment (Lawful Good, etc.)")
+    class_name: Optional[str] = Field(None, description="Character class (Fighter, Wizard, etc.)")
+    background: Optional[str] = Field(None, description="Character background (Soldier, Noble, etc.)")
+    
     # Core attributes
     level: int = Field(ge=1, le=20, default=1)
+    
+    @validator('level', pre=True)
+    def convert_level(cls, v):
+        return DefensiveNumericConverter.convert_value('level', v)
     stats: Stats = Field(default_factory=Stats)
     health: HealthStatus
     
@@ -114,6 +172,83 @@ class Character(BaseModel):
     # Relationships
     relationships: Dict[str, str] = Field(default_factory=dict)
     
+    @validator('gender')
+    def validate_gender(cls, v, values):
+        """Validate gender field for narrative consistency (critical for NPCs)"""
+        valid_genders = ["male", "female", "non-binary", "other"]
+        
+        # Check if this is an NPC
+        entity_type = values.get('entity_type')
+        entity_id = values.get('entity_id', '')
+        
+        # Determine entity type from entity_id if not set
+        if entity_type is None:
+            if entity_id.startswith('npc_'):
+                entity_type = EntityType.NPC
+            elif entity_id.startswith('pc_'):
+                entity_type = EntityType.PLAYER_CHARACTER
+        
+        # For NPCs, gender is mandatory to prevent narrative inconsistency
+        if entity_type == EntityType.NPC:
+            if v is None or v == "":
+                raise ValueError(f"Gender is required for NPCs to ensure narrative consistency. "
+                               f"Valid options: {valid_genders}")
+            
+            if v.lower() not in valid_genders:
+                raise ValueError(f"Invalid gender '{v}' for NPC. Valid options: {valid_genders}")
+            
+            return v.lower()
+        
+        # For PCs, gender is optional but validated if provided
+        elif v is not None and v != "":
+            if v.lower() not in valid_genders:
+                raise ValueError(f"Invalid gender '{v}'. Valid options: {valid_genders}")
+            return v.lower()
+        
+        return v
+    
+    @validator('age')
+    def validate_age(cls, v):
+        """Validate age field for narrative consistency"""
+        if v is not None:
+            if not isinstance(v, int) or v < 0:
+                raise ValueError(f"Age must be a non-negative integer, got: {v}")
+            if v > 50000:  # Fantasy setting allows very old beings
+                raise ValueError(f"Age {v} seems unreasonably high (max: 50000)")
+        return v
+    
+    @validator('mbti')
+    def validate_mbti(cls, v):
+        """Validate MBTI personality type"""
+        if v is not None:
+            if not isinstance(v, str) or len(v) != 4:
+                raise ValueError(f"MBTI must be a 4-character string (e.g., 'INFJ'), got: {v}")
+            
+            mbti_upper = v.upper()
+            valid_types = [
+                'INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
+                'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'
+            ]
+            
+            if mbti_upper not in valid_types:
+                raise ValueError(f"Invalid MBTI type '{v}'. Must be valid 4-letter type (e.g., INFJ, ENTP)")
+            
+            return mbti_upper
+        return v
+    
+    @validator('alignment')
+    def validate_alignment(cls, v):
+        """Validate D&D alignment"""
+        if v is not None:
+            valid_alignments = [
+                "Lawful Good", "Neutral Good", "Chaotic Good",
+                "Lawful Neutral", "True Neutral", "Chaotic Neutral", 
+                "Lawful Evil", "Neutral Evil", "Chaotic Evil"
+            ]
+            if v not in valid_alignments:
+                raise ValueError(f"Invalid alignment '{v}'. Valid options: {valid_alignments}")
+        return v
+    
     @validator('entity_type')
     def validate_entity_type(cls, v, values):
         if 'entity_id' in values:
@@ -122,6 +257,14 @@ class Character(BaseModel):
             elif values['entity_id'].startswith('npc_'):
                 return EntityType.NPC
         return v
+    
+    @model_validator(mode='after')
+    def validate_npc_gender_required(self):
+        """Ensure NPCs have gender field for narrative consistency"""
+        if self.entity_type == EntityType.NPC and (self.gender is None or self.gender == ""):
+            raise ValueError("Gender is required for NPCs to ensure narrative consistency. "
+                           "Valid options: ['male', 'female', 'non-binary', 'other']")
+        return self
     
     class Config:
         use_enum_values = True
@@ -213,15 +356,15 @@ class SceneManifest(BaseModel):
         
         # Add all visible, conscious entities
         for pc in self.player_characters:
-            if (pc.visibility == Visibility.VISIBLE and 
-                EntityStatus.CONSCIOUS in pc.status and
-                pc.entity_id in self.present_entities):
+            pc_visible = (pc.visibility == Visibility.VISIBLE or pc.visibility == 'visible')
+            pc_conscious = (EntityStatus.CONSCIOUS in pc.status or 'conscious' in pc.status)
+            if (pc_visible and pc_conscious and pc.entity_id in self.present_entities):
                 expected.append(pc.display_name)
         
         for npc in self.npcs:
-            if (npc.visibility == Visibility.VISIBLE and 
-                EntityStatus.CONSCIOUS in npc.status and
-                npc.entity_id in self.present_entities):
+            npc_visible = (npc.visibility == Visibility.VISIBLE or npc.visibility == 'visible')
+            npc_conscious = (EntityStatus.CONSCIOUS in npc.status or 'conscious' in npc.status)
+            if (npc_visible and npc_conscious and npc.entity_id in self.present_entities):
                 expected.append(npc.display_name)
         
         return expected
@@ -239,18 +382,18 @@ class SceneManifest(BaseModel):
         prompt_parts.append("PRESENT CHARACTERS:")
         for pc in self.player_characters:
             if pc.entity_id in self.present_entities:
-                status_str = ", ".join([s.value for s in pc.status])
+                status_str = ", ".join([s.value if hasattr(s, 'value') else str(s) for s in pc.status])
                 prompt_parts.append(
                     f"- {pc.display_name} (PC): HP {pc.health.hp}/{pc.health.hp_max}, "
-                    f"Status: {status_str}, Visibility: {pc.visibility.value}"
+                    f"Status: {status_str}, Visibility: {pc.visibility.value if hasattr(pc.visibility, 'value') else str(pc.visibility)}"
                 )
         
         for npc in self.npcs:
             if npc.entity_id in self.present_entities:
-                status_str = ", ".join([s.value for s in npc.status])
+                status_str = ", ".join([s.value if hasattr(s, 'value') else str(s) for s in npc.status])
                 prompt_parts.append(
                     f"- {npc.display_name} (NPC): HP {npc.health.hp}/{npc.health.hp_max}, "
-                    f"Status: {status_str}, Visibility: {npc.visibility.value}"
+                    f"Status: {status_str}, Visibility: {npc.visibility.value if hasattr(npc.visibility, 'value') else str(npc.visibility)}"
                 )
         
         # Add combat info if relevant
@@ -313,11 +456,14 @@ def create_from_game_state(game_state: Dict[str, Any],
     pc_data = game_state.get("player_character_data", {})
     pc_name = pc_data.get("name", "Unknown")
     
+    # Use existing string_id if present, otherwise generate one
+    pc_entity_id = pc_data.get("string_id", f"pc_{pc_name.lower().replace(' ', '_')}_001")
+    
     pc = PlayerCharacter(
-        entity_id=f"pc_{pc_name.lower().replace(' ', '_')}_001",
+        entity_id=pc_entity_id,
         display_name=pc_name,
         health=HealthStatus(
-            hp=pc_data.get("hp", 10),
+            hp=pc_data.get("hp_current", pc_data.get("hp", 10)),
             hp_max=pc_data.get("hp_max", 10)
         ),
         current_location=location.entity_id
@@ -326,20 +472,27 @@ def create_from_game_state(game_state: Dict[str, Any],
     # Create NPCs
     npcs = []
     npc_data = game_state.get("npc_data", {})
-    for idx, (npc_name, npc_info) in enumerate(npc_data.items()):
+    for idx, (npc_key, npc_info) in enumerate(npc_data.items()):
         if npc_info.get("present", True):
+            # Use existing string_id if present, otherwise generate one using the key
+            npc_entity_id = npc_info.get("string_id", f"npc_{npc_key.lower().replace(' ', '_')}_{idx+1:03d}")
+            
+            # Use "name" field if present, otherwise fall back to the key
+            npc_display_name = npc_info.get("name", npc_key)
+            
             npc = NPC(
-                entity_id=f"npc_{npc_name.lower().replace(' ', '_')}_{idx+1:03d}",
-                display_name=npc_name,
+                entity_id=npc_entity_id,
+                display_name=npc_display_name,
                 health=HealthStatus(
-                    hp=npc_info.get("hp", 10),
+                    hp=npc_info.get("hp_current", npc_info.get("hp", 10)),
                     hp_max=npc_info.get("hp_max", 10)
                 ),
                 current_location=location.entity_id,
                 status=[EntityStatus.CONSCIOUS] if npc_info.get("conscious", True) 
                        else [EntityStatus.UNCONSCIOUS],
                 visibility=Visibility.INVISIBLE if npc_info.get("hidden", False)
-                          else Visibility.VISIBLE
+                          else Visibility.VISIBLE,
+                gender=npc_info.get("gender", "other")  # Required for NPCs, default to "other" if not specified
             )
             npcs.append(npc)
     

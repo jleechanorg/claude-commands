@@ -118,8 +118,9 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
    - ⚠️ "run all tests" → `./run_tests.sh`
    - ⚠️ Test fails → fix immediately or ask user
    - ✅ `TESTING=true vpython mvp_site/test_file.py` (from root)
-5. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
-6. **Web Scraping**: Use full-content tools (curl) not search snippets
+5. 🚨 **NEVER DISMISS FAILING TESTS**: ❌ "minor failures" or "test expectation updates" | ✅ Fix ALL failing tests systematically | Debug root cause | Real bugs vs test issues | One failure = potential systemic issue
+6. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
+7. **Web Scraping**: Use full-content tools (curl) not search snippets
 
 **Test Commands**: → `.cursor/rules/validation_commands.md`
 
@@ -279,12 +280,21 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
    - **Use subagents if**: Complex task, multiple files, requires research, or context-heavy
    - **Direct execution if**: Simple task, single file focus, or context sufficient
 5. **Subagent Planning**: If using subagents:
-   - **Estimate subagent count**: Based on task complexity and scope
-   - **Define subagent roles**: Specific responsibilities for each subagent
-   - **Worktree Creation**: Create dedicated worktrees for true parallelism
-     - Format: `worktree_task[TASK_NUMBER]` 
-     - Example: `worktree_task111`, `worktree_task112`
+   - **Estimate subagent count**: Based on task complexity and scope (typically 2-4 agents)
+   - **Define subagent roles**: Specific responsibilities for each subagent with clear boundaries
+   - **Worktree Creation**: Create subagent worktrees as subdirectories within current working directory
+     - Format: `worktree_[task_description]` (e.g., `worktree_json_backend`, `worktree_frontend_debug`)
+     - Alternative format: `worktree_task[TASK_NUMBER]` (e.g., `worktree_task111`, `worktree_task112`)
+     - **CRITICAL**: Claude Code can only edit files within current directory and subdirectories
+     - ✅ Use `git worktree add subdir_name -b branch_name base_branch` 
+     - ❌ Never create worktrees outside current directory tree
      - Each subagent gets isolated filesystem to prevent conflicts
+   - **Subagent Task Design**: Each subagent should have:
+     - **Specialized focus area** (backend vs frontend vs specific component)
+     - **Clear deliverables** (specific analysis, code changes, test results)
+     - **Non-overlapping file sets** to prevent conflicts
+     - **Detailed investigation scope** with specific files/functions to examine
+     - **Expected output format** (analysis report, code fixes, test verification)
    - **Report to user**: "Using X subagents: [role descriptions]"
    - **List execution plan**: For each subagent, show: ID, worktree path, specific task
 6. **User Confirmation**: Present complete execution plan and request explicit approval
@@ -292,25 +302,38 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
    - **If subagents**: "Executing with X subagents for [reasons]"
    - **If direct**: "Executing directly (sufficient context/simple task)"
 8. **Task Execution**: Proceed with chosen execution method only after user approval
-9. **Verification Requirements**: CRITICAL validation steps to prevent errors
+9. **Subagent Coordination** (if using subagents):
+   - **Sequential Execution**: Launch subagents one at a time to monitor progress
+   - **Result Integration**: Copy critical fixes from subagent worktrees to main worktree
+   - **Cross-Agent Communication**: Share findings between agents via detailed prompts
+   - **Consolidation**: Merge results and ensure no conflicts between subagent outputs
+10. **Verification Requirements**: CRITICAL validation steps to prevent errors
     - 🚨 **VERIFY FILE CONTENTS**: Each subagent must validate they have the correct file for their specific task
     - 🚨 **VALIDATE TASK-FILE MAPPING**: Confirm task number matches file content (e.g., TASK-111 gets task_111_*.md)
     - 🚨 **CHECK FILE UNIQUENESS**: Ensure each subagent has different files, no duplicates
     - 🚨 **TEST ONE COMPONENT**: Validate individual pieces before combining complex workflows
     - ❌ **NEVER rush demonstration** - Prioritize correctness over proving architecture
-10. **Commit Changes**: Commit all changes with descriptive commit messages
-11. **Push Branch**: Push branch to GitHub using `git push origin HEAD:branch-name`
-12. **Create PR**: ALWAYS create PR using `gh pr create` with test results and description
-13. **Worktree Cleanup**: If subagents were used, clean up temporary worktrees
+11. **Commit Changes**: Commit all changes with descriptive commit messages
+12. **Push Branch**: Push branch to GitHub using `git push origin HEAD:branch-name`
+13. **Create PR**: ALWAYS create PR using `gh pr create` with test results and description
+14. **Worktree Cleanup**: If subagents were used, clean up temporary worktrees
     - 🚨 **ONLY remove `worktree_task[NUMBER]` directories AFTER PRs are merged**
     - ❌ **NEVER cleanup before merge** - worktrees needed for potential fixes/updates
     - ✅ **Keep worktrees until PR merge completion**
     - Document worktree locations in PR for future reference if needed
-14. **Result Reporting**: Summarize completion status, PR URL, and any issues
+15. **Result Reporting**: Summarize completion status, PR URL, and any issues
 
 **Subagent Decision Criteria**:
-- ✅ **Use subagents for**: Multi-file changes, research tasks, complex debugging, large refactoring
+- ✅ **Use subagents for**: Multi-file changes, research tasks, complex debugging, large refactoring, tracing data flows
 - ❌ **Direct execution for**: Single file edits, simple fixes, quick tests, small changes
+
+**Subagent Best Practices**:
+- **Clear Role Definition**: Each agent should have distinct, non-overlapping responsibilities  
+- **Detailed Context Sharing**: Include relevant findings from other agents in subsequent prompts
+- **Specific Deliverables**: Define exactly what each agent should produce (code, analysis, tests)
+- **File Boundary Enforcement**: Assign different file sets to each agent to prevent conflicts
+- **Progressive Investigation**: Use earlier agent findings to guide later agent focus areas
+- **Result Verification**: Copy key fixes back to main worktree and test before cleanup
 
 **True Parallelism Requirements**:
 - ✅ **Subagents work on different file sets** - No overlapping file modifications
