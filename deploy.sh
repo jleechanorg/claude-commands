@@ -113,4 +113,11 @@ gcloud run deploy "$SERVICE_NAME" \
     --concurrency=10
 
 echo "--- Deployment of '$SERVICE_NAME' complete. ---"
+
+# Configure load balancer timeout to match service timeout
+echo "Configuring load balancer timeout..."
+gcloud run services update "$SERVICE_NAME" \
+    --platform managed \
+    --timeout=300
+
 gcloud run services describe "$SERVICE_NAME" --platform managed --format 'value(status.url)'
