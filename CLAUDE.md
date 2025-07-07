@@ -146,7 +146,32 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
   - ✅ If browser tests can't run, say "Cannot take screenshots - Playwright not installed"
 
 ### Browser Test Execution Protocol (🚨 MANDATORY STEPS)
-When asked to run browser tests, follow these steps IN ORDER:
+
+#### Preferred Method - Using run_ui_tests.sh
+**ALWAYS use the test runner script when available:**
+```bash
+# Run all UI tests with mock APIs (recommended for testing)
+./run_ui_tests.sh mock
+
+# Run all UI tests with real APIs (costs money!)
+./run_ui_tests.sh
+
+# Run specific test file
+TESTING=true vpython testing_ui/test_specific_file.py
+```
+
+**The run_ui_tests.sh script handles:**
+- ✅ Virtual environment activation
+- ✅ Playwright installation verification
+- ✅ Browser dependency checks
+- ✅ Test server startup with proper ports
+- ✅ Parallel test execution
+- ✅ Proper cleanup on exit
+- ✅ Screenshot directory setup
+- ✅ Comprehensive result reporting
+
+#### Manual Method (if script unavailable)
+When asked to run browser tests manually, follow these steps IN ORDER:
 
 1. **Check Playwright Installation**
    ```bash

@@ -375,6 +375,16 @@ def get_campaign_by_id(user_id, campaign_id):
 
 @log_exceptions
 def add_story_entry(user_id, campaign_id, actor, text, mode=None):
+    # JSON BUG DEBUG: Log what's being saved to Firestore
+    logging_util.debug(f"JSON_BUG_ADD_STORY_ENTRY_ACTOR: {actor}")
+    logging_util.debug(f"JSON_BUG_ADD_STORY_ENTRY_MODE: {mode}")
+    logging_util.debug(f"JSON_BUG_ADD_STORY_ENTRY_TEXT: {text[:500]}...")
+    
+    # Check if text contains JSON artifacts
+    if '"narrative":' in text or '"god_mode_response":' in text:
+        logging_util.error(f"JSON_BUG_DETECTED_IN_ADD_STORY_ENTRY: Saving JSON to Firestore!")
+        logging_util.error(f"JSON_BUG_ADD_STORY_FULL_TEXT: {text[:1000]}...")
+        
     db = get_db()
     story_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
     text_bytes = text.encode('utf-8')
@@ -414,6 +424,12 @@ def create_campaign(user_id, title, initial_prompt, opening_story, initial_game_
     # Assuming 'god' mode for the very first conceptual prompt.
     # You might want to make this mode configurable or infer it.
     add_story_entry(user_id, campaign_ref.id, 'user', initial_prompt, mode='god')
+    
+    # JSON BUG DEBUG: Log opening story before saving
+    logging_util.debug(f"JSON_BUG_CREATE_CAMPAIGN_OPENING_STORY: {opening_story[:500]}...")
+    if '"narrative":' in opening_story or '"god_mode_response":' in opening_story:
+        logging_util.error(f"JSON_BUG_DETECTED_IN_CREATE_CAMPAIGN: Opening story contains JSON!")
+        
     add_story_entry(user_id, campaign_ref.id, 'gemini', opening_story)
     
     return campaign_ref.id

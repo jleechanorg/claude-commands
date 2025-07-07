@@ -468,7 +468,16 @@ def _process_structured_response(raw_response_text, expected_entities):
     Returns:
         tuple: (response_text, structured_response) where structured_response is NarrativeResponse or None
     """
+    # JSON BUG DEBUG: Log raw response
+    logging_util.debug(f"JSON_BUG_PROCESS_STRUCTURED_RAW_INPUT: {raw_response_text[:500]}...")
+    logging_util.debug(f"JSON_BUG_PROCESS_STRUCTURED_RAW_TYPE: {type(raw_response_text)}")
+    
     response_text, structured_response = parse_structured_response(raw_response_text)
+    
+    # JSON BUG DEBUG: Log parsed results
+    logging_util.debug(f"JSON_BUG_PROCESS_STRUCTURED_PARSED_TEXT: {response_text[:500]}...")
+    logging_util.debug(f"JSON_BUG_PROCESS_STRUCTURED_PARSED_TYPE: {type(response_text)}")
+    logging_util.debug(f"JSON_BUG_PROCESS_STRUCTURED_HAS_STRUCTURED: {structured_response is not None}")
     
     # Validate structured response coverage
     if isinstance(structured_response, NarrativeResponse):

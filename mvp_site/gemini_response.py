@@ -72,6 +72,15 @@ class GeminiResponse(_GeminiLLMResponse):
         
         Maintains the existing create() interface while using the new unified structure.
         """
+        # JSON BUG DEBUG: Log what's being passed to GeminiResponse
+        logging.debug(f"JSON_BUG_GEMINI_RESPONSE_CREATE_NARRATIVE: {narrative_text[:500]}...")
+        logging.debug(f"JSON_BUG_GEMINI_RESPONSE_CREATE_RAW: {raw_response[:500]}...")
+        logging.debug(f"JSON_BUG_GEMINI_RESPONSE_CREATE_STRUCTURED: {structured_response is not None}")
+        
+        # Check if narrative_text contains JSON
+        if '"narrative":' in narrative_text or '"god_mode_response":' in narrative_text:
+            logging.error(f"JSON_BUG_DETECTED_IN_GEMINI_RESPONSE_CREATE: narrative_text contains JSON!")
+        
         return cls(
             narrative_text=narrative_text,
             raw_response=raw_response,
