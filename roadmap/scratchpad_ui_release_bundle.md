@@ -79,13 +79,13 @@
 - [ ] Create `ui-release-bundle-20250707` from current dev branch
 - [ ] Commit initial state
 
-### **CHECKPOINT 2: Sequential Merges**
-- [ ] **Step 1**: Cherry-pick PR #392 (docs)
-- [ ] **Step 2**: Cherry-pick PR #396 (buttons)
-- [ ] **Step 3**: Cherry-pick PR #313 (UI enhancements)
-- [ ] **Step 4**: Cherry-pick PR #301 (editable names)
-- [ ] **Step 5**: Cherry-pick PR #323 (story reader)
-- [ ] **After each**: Run unit tests, commit checkpoint
+### **CHECKPOINT 2: Sequential Merges** ✅ COMPLETED
+- [x] **Step 1**: Cherry-pick PR #392 (docs) ✅ Success
+- [x] **Step 2**: Cherry-pick PR #396 (buttons) ✅ Success  
+- [x] **Step 3**: Cherry-pick PR #313 (UI enhancements) ✅ Success
+- [x] **Step 4**: Cherry-pick PR #301 (editable names) ✅ Success
+- [x] **Step 5**: Cherry-pick PR #323 (story reader) ✅ Success with conflicts resolved
+- [x] **After each**: Run unit tests ✅ 102/103 passing (import issue in one test)
 
 ### **CHECKPOINT 3: Comprehensive Testing**
 - [ ] Run full test suite (`./run_tests.sh`)
