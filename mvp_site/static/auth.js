@@ -1,4 +1,23 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Check for test mode bypass
+  const urlParams = new URLSearchParams(window.location.search);
+  const testMode = urlParams.get('test_mode') === 'true';
+  const testUserId = urlParams.get('test_user_id') || 'test-user';
+  
+  if (testMode) {
+    console.log('🧪 Test mode enabled - bypassing authentication');
+    // Set test user in window for API calls
+    window.testAuthBypass = {
+      enabled: true,
+      userId: testUserId
+    };
+    // Dispatch custom event to signal test mode is ready (with a small delay to ensure listeners are set up)
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('testModeReady', { detail: { userId: testUserId } }));
+    }, 100);
+    return; // Skip Firebase initialization
+  }
+
   const firebaseConfig = {
     apiKey: "AIzaSyARs7IekRptvhZIwtV7lwJh3axWFsn_4c8",
     authDomain: "worldarchitecture-ai.firebaseapp.com",

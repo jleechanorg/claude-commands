@@ -108,3 +108,6 @@ docs/coverage/
 *.bak
 *~
 .cache/
+
+# Environment files with sensitive data
+testing_ui/testing_full/.env

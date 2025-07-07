@@ -21,6 +21,11 @@
 🚨 **NO POSITIVITY**: Be extremely self-critical. No celebration unless 100% working.
 
 🚨 **NEVER SIMULATE**: Ask if stuck. Fake answer = 1000x worse than getting help.
+   - ❌ NEVER create fake files pretending to be real output (e.g., text files named .png)
+   - ❌ NEVER show "simulated" test results when real tests fail
+   - ❌ NEVER create workarounds that hide actual failures
+   - ✅ ALWAYS say "I cannot do X because Y" when facing limitations
+   - ✅ ALWAYS show actual error messages instead of hiding them
 
 ## Claude Code Specific Behavior
 
@@ -63,6 +68,14 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 **Red-Green Protocol** (`/tdd` or `/rg`):
 1. Write failing tests FIRST → 2. Confirm fail (red) → 3. Minimal code to pass (green) → 4. Refactor
 
+🚨 **Test Infrastructure Validation Protocol**:
+When working with test runners/harnesses:
+1. **Verify Core Function**: Before adding features, verify runner correctly detects PASS vs FAIL
+2. **Test Both Paths**: Create one passing test AND one failing test to validate detection
+3. **Output Analysis**: If visual output (❌/✅) doesn't match summary, STOP and fix immediately
+4. **Exit Code Distrust**: Don't rely solely on process exit codes - parse actual output
+5. **Contradiction = Bug**: Any mismatch between test output and summary is CRITICAL bug
+
 ## Development Guidelines
 
 ### Code Standards
@@ -86,10 +99,97 @@ Use docstrings, proper JS loading
 - File naming: descriptive, ❌ "red"/"green" | Methods <500 lines | Single responsibility
 - Integration tests: natural state, flexible assertions | Visual testing required
 - Dead code: use `vulture` | Test behavior not strings
+- 🚨 **Test Runner Validation**: When modifying test runners, MUST verify both PASS and FAIL detection | Create intentional failure case | Verify output matches actual result
+- 🚨 **Output Contradiction Check**: If output shows failure indicators (❌, FAILED, ERROR) but summary shows success (✅, PASSED), STOP immediately and investigate
+- ⚠️ **Test Exit Codes**: Don't assume test scripts return proper exit codes | Parse output for success/failure strings | Verify detection logic before trusting results
 
 ### Safety & Security
 ❌ Global `document.addEventListener('click')` without approval | Test workflows after modifications |
 Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Analysis + execution required
+
+### Browser vs HTTP Testing (🚨 HARD RULE)
+**CRITICAL DISTINCTION**: Never confuse browser automation with HTTP simulation
+- 🚨 **testing_ui/**: ONLY real browser automation using Playwright | ❌ NEVER use `requests` library here
+- 🚨 **testing_http/**: ONLY HTTP requests using `requests` library | ❌ NEVER use Playwright here
+- ⚠️ **/testui and /testuif**: MUST use real Playwright browser automation | NO HTTP simulation
+- ⚠️ **/testhttp and /testhttpf**: MUST use HTTP requests | NO browser automation
+- ✅ **/testi**: HTTP requests are acceptable (integration testing)
+- **Red Flag**: If writing "browser tests" with `requests.get()`, STOP immediately
+- **Command Structure**:
+  - `/testui` = Browser + Mock APIs
+  - `/testuif` = Browser + REAL APIs (costs $)
+  - `/testhttp` = HTTP + Mock APIs  
+  - `/testhttpf` = HTTP + REAL APIs (costs $)
+- 🚨 **Screenshot Rule**: Real screenshots are PNG/JPG images taken by browsers
+  - ❌ NEVER create text files and name them .png
+  - ❌ NEVER simulate screenshots with text descriptions
+  - ✅ If browser tests can't run, say "Cannot take screenshots - Playwright not installed"
+
+### Browser Test Execution Protocol (🚨 MANDATORY STEPS)
+When asked to run browser tests, follow these steps IN ORDER:
+
+1. **Check Playwright Installation**
+   ```bash
+   vpython -c "import playwright" || echo "STOP: Playwright not installed"
+   ```
+   - ✅ Continue only if import succeeds
+   - ❌ FULL STOP if not installed - report: "Cannot run browser tests - Playwright not installed"
+
+2. **Verify Browser Dependencies**
+   ```bash
+   vpython -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); p.chromium.launch(headless=True); p.stop()" || echo "STOP: Browser deps missing"
+   ```
+   - ✅ Continue only if browser launches
+   - ❌ FULL STOP if fails - report: "Cannot launch browsers - missing system dependencies"
+
+3. **Start Test Server**
+   ```bash
+   TESTING=true PORT=6006 vpython mvp_site/main.py serve &
+   sleep 3
+   curl -s http://localhost:6006 || echo "STOP: Server not running"
+   ```
+   - ✅ Continue only if server responds
+   - ❌ FULL STOP if fails - report: "Cannot start test server"
+
+4. **Run Browser Test**
+   ```bash
+   TESTING=true vpython testing_ui/test_name.py
+   ```
+   - ✅ Report actual results/errors
+   - ❌ NEVER create fake output
+
+**GOLDEN RULE**: Stop at first failure. Never proceed to simulate missing components.
+
+### HTTP Test Execution Protocol (⚠️ MANDATORY STEPS)
+When asked to run HTTP tests, follow these steps IN ORDER:
+
+1. **Verify Test Environment**
+   ```bash
+   vpython -c "import requests" || echo "STOP: requests library not installed"
+   ```
+   - ✅ Continue only if import succeeds
+   - ❌ FULL STOP if not installed
+
+2. **Start Test Server (if needed)**
+   ```bash
+   TESTING=true PORT=8086 vpython mvp_site/main.py serve &
+   sleep 3
+   curl -s http://localhost:8086 || echo "Note: Using different port or external server"
+   ```
+   - ✅ Continue even if local server fails (tests may use different setup)
+
+3. **Run HTTP Test**
+   ```bash
+   TESTING=true vpython testing_http/test_name.py
+   ```
+   - ✅ Report actual HTTP responses/errors
+   - ❌ NEVER pretend requests succeeded
+
+### General Test Protocol (🚨 APPLIES TO ALL TESTS)
+1. **Environment Check First**: Verify ALL dependencies before attempting test
+2. **Fail Fast**: Stop at first missing dependency
+3. **Honest Reporting**: State exactly what failed and why
+4. **No Workarounds**: Don't create alternatives that hide the real issue
 
 ## Git Workflow
 
@@ -153,6 +253,10 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - **Code Reviews**: Extract ALL comments | ❌ assume "suppressed" = unimportant
 - **Empty Strings**: ✅ `if value is not None:` | ❌ `if value:`
 - **AI Instructions**: Critical first, style last | Order determines compliance
+- 🚨 **Trust But Verify**: NEVER assume existing code works | Test core functionality before adding features | Validate success AND failure paths
+- 🚨 **Fake Results = Instant Failure**: Creating fake test output violates core trust
+  - Examples: Text files named .png, "simulated" results when real tests fail
+  - Correct response: "Cannot run X because Y is not installed/available"
 
 ### Critical Rules
 - **Data Corruption**: Treat as systemic | Search ALL similar patterns | "One bug = many bugs"
@@ -181,6 +285,10 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 | `/optimize` | Improve code/files | Remove dupes, improve efficiency |
 | `/test` | Run full test suite | `./run_tests.sh` + fix failures |
 | `/testi` | Integration test | `source venv/bin/activate && TESTING=true python3 mvp_site/test_integration/test_integration.py` |
+| `/testui` | Browser tests (mock) | Run REAL browser tests with mock APIs (free) |
+| `/testuif` | Browser tests (FULL) | Run REAL browser tests with REAL APIs (costs money!) |
+| `/testhttp` | HTTP tests (mock) | Run HTTP request tests with mock APIs (free) |
+| `/testhttpf` | HTTP tests (FULL) | Run HTTP request tests with REAL APIs (costs money!) |
 | `/integrate` | Fresh branch | Run `./integrate.sh` script |
 | `/push` | Pre-push review | Virtual agent review → push if clean |
 | `/scratchpad` | Update planning | Create/update scratchpad_[branch].md |
@@ -222,6 +330,15 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 
 ### API Error Prevention (🚨)
 ❌ Print code/file content | ✅ Use file_path:line_number | Keep responses concise
+
+### Browser Testing vs HTTP Testing (🚨)
+**HARD RULE - NO SIMULATION FOR BROWSER TESTS**:
+- 🚨 **NEVER create HTTP simulation tests for `/testuif` or browser automation**
+- ✅ `/testi` - HTTP requests are fine (integration testing via API endpoints)
+- ✅ `/testuif` - MUST use real Playwright browser automation (NO HTTP simulation)
+- ❌ **STOP SIMULATING** - User explicitly demanded real browsers for UI testing
+- **Browser tests require**: Actual page navigation, element clicking, form filling, screenshot capture
+- **If auth blocks browser tests**: Implement frontend test mode bypass, NOT HTTP simulation
 
 ### PR References (⚠️)
 **MANDATORY**: When discussing PRs, ALWAYS include the full GitHub URL

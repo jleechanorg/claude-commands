@@ -684,6 +684,10 @@ def parse_set_command(payload_str: str) -> dict:
 def create_app():
     app = Flask(__name__, static_folder='static')
     CORS(app, resources=CORS_RESOURCES)
+    
+    # Set TESTING config from environment
+    if os.environ.get('TESTING', '').lower() in ['true', '1', 'yes']:
+        app.config['TESTING'] = True
 
     if not firebase_admin._apps:
         firebase_admin.initialize_app()
@@ -1027,9 +1031,71 @@ def run_god_command(campaign_id, user_id, action, command_string=None):
         print(f"Error: Unknown god-command action '{action}'. Use 'set' or 'ask'.")
 
 
+def run_test_command(command):
+    """
+    Run a test command.
+    
+    Args:
+        command (str): The test command to run ('testui', 'testuif', 'testhttp', 'testhttpf')
+    """
+    if command == 'testui':
+        # Run browser tests with mock APIs
+        test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_ui', 'run_all_browser_tests.py')
+        if os.path.exists(test_runner):
+            print("🌐 Running WorldArchitect.AI Browser Tests (Mock APIs)...")
+            print("   Using real browser automation with mocked backend")
+            result = subprocess.run([sys.executable, test_runner])
+            sys.exit(result.returncode)
+        else:
+            print(f"❌ Test runner not found: {test_runner}")
+            sys.exit(1)
+    
+    elif command == 'testuif':
+        # Run browser tests with REAL APIs
+        test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_ui', 'run_all_browser_tests.py')
+        if os.path.exists(test_runner):
+            print("🌐 Running WorldArchitect.AI Browser Tests (REAL APIs)...")
+            print("⚠️  WARNING: These tests use REAL APIs and cost money!")
+            env = os.environ.copy()
+            env['REAL_APIS'] = 'true'
+            result = subprocess.run([sys.executable, test_runner], env=env)
+            sys.exit(result.returncode)
+        else:
+            print(f"❌ Test runner not found: {test_runner}")
+            sys.exit(1)
+    
+    elif command == 'testhttp':
+        # Run HTTP tests with mock APIs
+        test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_http', 'run_all_http_tests.py')
+        if os.path.exists(test_runner):
+            print("🔗 Running WorldArchitect.AI HTTP Tests (Mock APIs)...")
+            print("   Using direct HTTP requests with mocked backend")
+            result = subprocess.run([sys.executable, test_runner])
+            sys.exit(result.returncode)
+        else:
+            print(f"❌ Test runner not found: {test_runner}")
+            sys.exit(1)
+    
+    elif command == 'testhttpf':
+        # Run HTTP tests with REAL APIs
+        test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_http', 'testing_full', 'run_all_full_tests.py')
+        if os.path.exists(test_runner):
+            print("🔗 Running WorldArchitect.AI HTTP Tests (REAL APIs)...")
+            print("⚠️  WARNING: These tests use REAL APIs and cost money!")
+            result = subprocess.run([sys.executable, test_runner])
+            sys.exit(result.returncode)
+        else:
+            print(f"❌ Full API test runner not found: {test_runner}")
+            sys.exit(1)
+    
+    else:
+        print(f"❌ Unknown test command: {command}")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="World Architect AI Server & Tools")
-    parser.add_argument('command', nargs='?', default='serve', help="Command to run ('serve', 'god-command', or 'testui')")
+    parser.add_argument('command', nargs='?', default='serve', help="Command to run ('serve', 'god-command', 'testui', 'testuif', 'testhttp', or 'testhttpf')")
     
     # Manual parsing for god-command to handle multi-line strings
     if len(sys.argv) > 1 and sys.argv[1] == 'god-command':
@@ -1051,15 +1117,16 @@ if __name__ == "__main__":
         run_god_command(args.campaign_id, args.user_id, args.action, args.command_string)
 
     elif len(sys.argv) > 1 and sys.argv[1] == 'testui':
-        # Run browser tests
-        test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_ui', 'run_all_browser_tests.py')
-        if os.path.exists(test_runner):
-            print("🌐 Running WorldArchitect.AI Browser Tests...")
-            result = subprocess.run([sys.executable, test_runner])
-            sys.exit(result.returncode)
-        else:
-            print(f"❌ Test runner not found: {test_runner}")
-            sys.exit(1)
+        run_test_command('testui')
+
+    elif len(sys.argv) > 1 and sys.argv[1] == 'testuif':
+        run_test_command('testuif')
+
+    elif len(sys.argv) > 1 and sys.argv[1] == 'testhttp':
+        run_test_command('testhttp')
+
+    elif len(sys.argv) > 1 and sys.argv[1] == 'testhttpf':
+        run_test_command('testhttpf')
 
     else:
         # Standard server execution
@@ -1070,14 +1137,12 @@ if __name__ == "__main__":
             print(f"Development server running: http://localhost:{port}")
             app.run(host='0.0.0.0', port=port, debug=True)
         elif args.command == 'testui':
-            # Alternative path if testui wasn't caught above
-            test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_ui', 'run_all_browser_tests.py')
-            if os.path.exists(test_runner):
-                print("🌐 Running WorldArchitect.AI Browser Tests...")
-                result = subprocess.run([sys.executable, test_runner])
-                sys.exit(result.returncode)
-            else:
-                print(f"❌ Test runner not found: {test_runner}")
-                sys.exit(1)
+            run_test_command('testui')
+        elif args.command == 'testuif':
+            run_test_command('testuif')
+        elif args.command == 'testhttp':
+            run_test_command('testhttp')
+        elif args.command == 'testhttpf':
+            run_test_command('testhttpf')
         else:
             parser.error(f"Unknown command: {args.command}")
