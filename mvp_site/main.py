@@ -912,9 +912,7 @@ def create_app():
             campaign_title = campaign_data.get('title', 'Untitled Campaign')
             desired_download_name = f"{campaign_title}.{export_format}"
 
-            # Use project-specific tmp directory instead of system /tmp
-            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            temp_dir = os.path.join(project_root, 'tmp', 'campaign_exports')
+            temp_dir = os.path.join('/tmp', 'campaign_exports')
             os.makedirs(temp_dir, exist_ok=True)
             safe_file_path = os.path.join(temp_dir, f"{uuid.uuid4()}.{export_format}")
             
