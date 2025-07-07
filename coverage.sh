@@ -165,7 +165,7 @@ for test_file in "${test_files[@]}"; do
         total_tests=$((total_tests + 1))
         echo -n "[$total_tests/${#test_files[@]}] Running: $test_file ... "
         
-        if TESTING=true source ../venv/bin/activate && coverage run --append --source=. "$VPYTHON" "$test_file" >/dev/null 2>&1; then
+        if TESTING=true source ../venv/bin/activate && coverage run --append --source=. "$test_file" >/dev/null 2>&1; then
             passed_tests=$((passed_tests + 1))
             echo -e "${GREEN}✓${NC}"
         else
