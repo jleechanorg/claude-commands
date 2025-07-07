@@ -13,10 +13,10 @@
 - **TASK-142** 🔴 Fix send button unclickable - PR #338 OPEN
 
 ### Next Priority Tasks (Ready to Start)
-- **TASK-074** 🔴 Unit test coverage Phase 3: main.py error handling (55% → 65%)
-- **TASK-133** 🟡 Universal calendar system (2 hrs)
+- **TASK-133** 🟡 Universal calendar system (2 hrs) - PR #403 OPEN
 - **TASK-139** 🟡 Restore Dragon Knight character start (1.5 hrs)
-- **TASK-137** 🟡 Move download/share story buttons (30 min)
+- **TASK-137** 🟡 Move download/share story buttons (30 min) - PR #396 OPEN
+- **TASK-145** 🟡 Consolidate roadmap files into single source (1 hr) - PR #377 OPEN
 
 ### 📋 Quick Links
 - [Current Work](#current-work---active-development-priority-section) - Active development items
@@ -78,11 +78,12 @@
 - **TASK-006c** 🟡 Enhanced combat scenarios (45 min) - REDUCED SCOPE
 
 #### Group B: Infrastructure & Features (5.5 hrs)
-- **TASK-132** ✅ GitHub Actions /testi integration (1.5 hrs) - COMPLETED (PR #402)
+- **TASK-132** ✅ GitHub Actions /testi integration (1.5 hrs) - COMPLETED (PR #402, #412)
   - [x] Create .github/workflows/integration-tests.yml for PR automation
   - [x] Configure Firebase and Gemini API secrets, use vpython with TESTING=true
   - [x] Post full test output in PR comments and upload artifacts
-- **TASK-133** 🟡 Universal calendar system (2 hrs)
+  - [x] Enable Gemini API key in GitHub Actions - PR #412
+- **TASK-133** 🟡 Universal calendar system (2 hrs) - PR #403 OPEN
   - [ ] Backend uses consistent numbers, LLM handles narrative conversion per universe
   - [ ] Add universe presets: fantasy, modern, starwars, scifi, custom
   - [ ] Campaign creation includes universe selection, DM can infer from setting
@@ -93,7 +94,7 @@
   - [ ] Quick evaluation of https://github.com/rizethereum/claude-code-requirements-builder
 
 #### Group C: UI Polish (2 hrs)
-- **TASK-137** 🟡 Move download/share story buttons (30 min)
+- **TASK-137** 🟡 Move download/share story buttons (30 min) - PR #396 OPEN
   - [ ] Relocate existing download and share buttons to top of campaign page below campaign title
 - **TASK-138** 🟡 Stacktrace in debug mode (45 min)
   - [ ] Add separate debug section to display full Python stacktraces when debug mode toggle is enabled
@@ -129,17 +130,23 @@
 - **TASK-124** 🔵 Research Claude best practices (1 hr)
 
 ### Recently Completed Tasks (Last 7 Days)
-- [x] **TASK-074** 🔴 Unit test coverage improvements - Phase 2 COMPLETED (PR #401, #407)
+- [x] **TASK-074** 🔴 Unit test coverage improvements - Phase 5 COMPLETED (PR #413)
   - [x] Phase 1: main.py route handler tests (33% → 45% coverage) - PR #401
   - [x] Phase 2: main.py auth & state management tests (45% → 55% coverage) - PR #401
+  - [x] Phase 3: main.py error handling tests (55% → 65% coverage) - PR #409
+  - [x] Phase 4: firestore_service.py tests - PR #411
+  - [x] Phase 5: firestore_service.py state helpers tests - PR #413
   - [x] Coverage infrastructure fix (0% → 67% overall) - PR #407
-- [x] **TASK-132** 🟡 GitHub Actions /testi integration - COMPLETED (PR #402)
+- [x] **TASK-132** 🟡 GitHub Actions /testi integration - COMPLETED (PR #402, #412)
+  - [x] Enable Gemini API key in GitHub Actions - PR #412
 - [x] **TASK-130** 🔴 Unit test coverage for utility modules - COMPLETED (PR #400)
   - [x] token_utils.py: 0% → 100% coverage (11 test cases)
   - [x] entity_tracking.py: 88% → 100% coverage
 - [x] **TASK-121** 🔴 Create LLMResponse class - COMPLETED (PR #398)
-- [x] **Browser Test Suite Completion** - COMPLETED (PR #391)
+- [x] **Browser Test Suite Cleanup** - COMPLETED (PR #414)
+  - [x] Comprehensive browser test consolidation and cleanup from PR #248
 - [x] **Roadmap Optimization** - COMPLETED (PR #393)
+- [x] **Cloud Run Load Balancer Timeout Fix** - COMPLETED (PR #408)
 - [x] **TASK-111** ✅ **COMPLETED** Zen MCP evaluation - COMPLETED (PR #346/#364/#367)
 - [x] **TASK-112** ✅ **COMPLETED** Context7 MCP evaluation - COMPLETED (PR #347/#362/#368)
 - [x] **TASK-113** ✅ **COMPLETED** Sequential Thinking MCP evaluation - COMPLETED (PR #348/#365/#369)
@@ -166,17 +173,21 @@
 - [x] **Slash Commands Implementation** - COMPLETED (PR #307)
 
 ### Currently In Progress (WIP)
-- [ ] **TASK-001a** 🔴 Malformed JSON investigation - WIP (PR #296 OPEN)
-- [ ] **TASK-006a** 🟡 Editable campaign names - WIP (PR #301 OPEN)
-- [ ] **TASK-006b** 🟡 Background story pause button - WIP (PR #323 OPEN)
-- [ ] **TASK-140** 🔴 Hard stop for integrity failures - WIP (PR #336 OPEN)
+- [ ] **TASK-140** 🔴 Hard stop for integrity failures - WIP (PR #406 OPEN)
+- [ ] **TASK-001a** 🔴 Malformed JSON investigation - WIP (PR #405 OPEN) 
+- [ ] **TASK-133** 🟡 Universal calendar system - WIP (PR #403 OPEN)
+- [ ] **TASK-137** 🟡 Move download/share story buttons - WIP (PR #396 OPEN)
+- [ ] **TASK-145** 🟡 Consolidate roadmap files - WIP (PR #377 OPEN)
 - [ ] **TASK-142** 🔴 Fix send button unclickable - WIP (PR #338 OPEN)
-- [ ] **TASK-092** 🟡 System instructions optimization - WIP (PR #293 OPEN)
-- [ ] **TASK-089** 🟡 Planning block IDs format - WIP (PR #295 OPEN)
-- [ ] **TASK-090** 🟡 Remove legacy migration code - WIP (PR #288 OPEN)
-- [ ] **TASK-100** 🟡 Dynamic world state design - WIP (PR #294 OPEN)
-- [ ] **TASK-101** 🟡 Story mode entry format - WIP (PR #297 OPEN)
+- [ ] **TASK-006b** 🟡 Background story pause button - WIP (PR #323 OPEN)
+- [ ] **TASK-006a** 🟡 Editable campaign names - WIP (PR #301 OPEN)
 - [ ] **TASK-102** 🟡 Slim mode design - WIP (PR #303 OPEN)
+- [ ] **TASK-101** 🟡 Story mode entry format - WIP (PR #297 OPEN)
+- [ ] **TASK-001a** 🔴 Malformed JSON investigation - WIP (PR #296 OPEN)
+- [ ] **TASK-089** 🟡 Planning block IDs format - WIP (PR #295 OPEN)
+- [ ] **TASK-100** 🟡 Dynamic world state design - WIP (PR #294 OPEN)
+- [ ] **TASK-092** 🟡 System instructions optimization - WIP (PR #293 OPEN)
+- [ ] **TASK-090** 🟡 Remove legacy migration code - WIP (PR #288 OPEN)
 
 ### Blocked Items
 - TASK-001c: Null HP bug (waiting for combat PR review)
