@@ -69,6 +69,24 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("New campaign form reset to defaults.");
     }
 
+    // Dragon Knight campaign content loader
+    async function loadDragonKnightCampaignContent() {
+        try {
+            console.log('Loading Dragon Knight campaign content...');
+            const response = await fetch('/world_reference/campaign_module_dragon_knight.md');
+            if (!response.ok) {
+                throw new Error(`Failed to load campaign content: ${response.status}`);
+            }
+            const content = await response.text();
+            console.log('Dragon Knight campaign content loaded successfully');
+            return content;
+        } catch (error) {
+            console.error('Error loading Dragon Knight campaign content:', error);
+            // Fallback to original prompt if loading fails
+            return document.getElementById('campaign-prompt').value;
+        }
+    }
+
     let handleRouteChange = () => {
         // In test mode, skip auth check
         if (!isTestMode) {
@@ -251,10 +269,18 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         
         showSpinner('newCampaign');
-        const prompt = document.getElementById('campaign-prompt').value;
+        let prompt = document.getElementById('campaign-prompt').value;
         const title = document.getElementById('campaign-title').value;
         const selectedPrompts = Array.from(document.querySelectorAll('input[name="selectedPrompts"]:checked')).map(checkbox => checkbox.value);
         const customOptions = Array.from(document.querySelectorAll('input[name="customOptions"]:checked')).map(checkbox => checkbox.value);
+        
+        // Check if default world is selected and use Dragon Knight campaign content
+        const useDefaultWorld = customOptions.includes('defaultWorld');
+        if (useDefaultWorld) {
+            console.log('Default world selected - replacing prompt with Dragon Knight campaign content');
+            // Replace the prompt with the full Dragon Knight campaign content
+            prompt = await loadDragonKnightCampaignContent();
+        }
         try {
             const { data } = await fetchApi('/api/campaigns', { 
                 method: 'POST', 
