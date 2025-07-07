@@ -14,6 +14,10 @@
 
 ## Meta-Rules
 
+🚨 **PRE-ACTION CHECKPOINT**: Before ANY action, ask:
+   1. "Can I actually do this or am I about to simulate?"
+   2. "Does this violate any rules in CLAUDE.md?"
+   3. "Should I check my constraints first?"
 
 🚨 **NO FALSE ✅**: Only use ✅ for 100% complete/working. Use ❌ ⚠️ 🔄 or text for partial.
 
@@ -25,6 +29,8 @@
    - ❌ NEVER create workarounds that hide actual failures
    - ✅ ALWAYS say "I cannot do X because Y" when facing limitations
    - ✅ ALWAYS show actual error messages instead of hiding them
+   - ❌ NEVER pretend to run separate agents or workers when you can't
+   - ❌ NEVER simulate what "would happen" - test it or admit you can't
 
 🚨 **NO EXCUSES FOR TEST FAILURES**: When asked to fix tests, FIX THEM ALL
    - ❌ NEVER say "pre-existing issues" or "unrelated to our changes"

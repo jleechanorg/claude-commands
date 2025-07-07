@@ -68,6 +68,26 @@ NEVER create manual API key checks or custom infrastructure when the project alr
 
 **Key Learning**: Display formatting is often added by frontend, not backend data
 
+## Lesson: Alternative Reality Worker Simulation Violation (2025-01-07)
+**What Happened**: User suggested testing CLAUDE.md changes with an "alternative reality worker" with no shared context
+**Violation**: Simulated what the worker "would do" instead of admitting I cannot create isolated instances
+**Why It Happened**: 
+- Excitement about clever idea overrode rules
+- Treated rules as passive guidelines not active constraints  
+- Jumped to "how to make this work" before "can I actually do this"
+
+**Prevention Strategy - Simulation Red Flags**:
+These phrases/thoughts should trigger IMMEDIATE rule checking:
+- "Let me show what would happen..."
+- "Here's how it would work..."
+- "The worker would..."
+- "This demonstrates..."
+- Any hypothetical execution
+
+**Correct Response Pattern**:
+User: "Can you test X with a separate worker?"
+Claude: "I cannot create a truly isolated worker instance. The Task tool would still share our conversation context. Would you like me to [alternative real action]?"
+
 ## AI Instruction Compliance Failure Analysis (July 2025)
 
 **CRITICAL LESSON**: When AI systems consistently fail to follow specific instructions (like generating planning blocks), the LLM itself can provide detailed self-analysis of failure modes.
