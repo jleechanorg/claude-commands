@@ -113,6 +113,21 @@
 10. **[TASK-090] Remove Legacy Migration Code** ✅ **COMPLETED** (PR #288, PR #343)
     - ✅ Removed obsolete test files explicitly marked for removal
     - Additional migration system evaluation can be done separately if needed
+11. **[TASK-146] Focused Unit Test Coverage Improvements** 🟡 (2.5 hrs)
+    - **Priority Focus**: main.py (22% coverage), gemini_service.py (12% coverage), game_state.py (54% coverage)
+    - **Current Coverage Baseline**: Coverage tool installed and baseline established
+    - **Target Coverage**: Improve overall coverage from 22% to 40%+ for target files
+    - **Implementation Strategy**:
+      - Create comprehensive unit tests for main.py route handlers and utility functions
+      - Add focused tests for gemini_service.py core functionality (API calls, response handling, model cycling)
+      - Expand game_state.py tests to cover remaining untested methods and edge cases
+      - Use existing test patterns from test_main.py and test_game_state.py as templates
+      - Focus on high-impact untested code paths identified by coverage analysis
+    - **Deliverables**:
+      - New test files: test_main_extended.py, test_gemini_service_core.py, test_game_state_extended.py
+      - Coverage reports showing improvement in target percentages
+      - Integration with existing test fixture infrastructure
+    - **See detailed plan**: roadmap/scratchpad_task146_unit_test_coverage_focused.md
 
 ### Tomorrow's Tasks
 11. **[TASK-108] Remove Word/Character Counts from Logs** ✅ **COMPLETED** (PR #289)
