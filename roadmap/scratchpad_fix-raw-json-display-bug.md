@@ -195,7 +195,7 @@ def log_campaign_entry(scene_number, content, source_type):
 
 **Evidence**: `testing_ui/JSON_BUG_VALIDATION_RESULTS.md`
 
-## 🚨 CRITICAL UPDATE: Original Fix Was Incorrect
+## 🚨 CRITICAL UPDATE: Original Fix Was Incorrect - NOW FIXED
 
 ### New Discovery - The Real Bug
 **User Feedback**: "still not fixed at all. how did the browser test look for JSON?"
@@ -209,6 +209,33 @@ Scene #2: {
     ...
 }
 ```
+
+### ✅ ROOT CAUSE IDENTIFIED AND FIXED (2025-01-07)
+
+**The Real Issue**: Gemini sometimes prefixes its JSON responses with "Scene #X: " when using JSON response mode. Our parser wasn't handling this prefix, causing the entire raw response (including the prefix) to be displayed to users.
+
+**The Fix Applied**:
+- Added regex pattern to detect and strip "Scene #X:" prefix before JSON parsing
+- Handles variations like "Scene #1:", "scene #123:", "Scene  #7:" (with extra spaces)
+- Works for both direct JSON and markdown-wrapped JSON responses
+- Preserves all existing functionality while fixing the bug
+
+**Implementation Details**:
+```python
+# In narrative_response_schema.py, added:
+scene_prefix_pattern = re.compile(r'^Scene\s+#\d+:\s*', re.IGNORECASE)
+match = scene_prefix_pattern.match(json_content)
+if match:
+    json_content = json_content[match.end():]
+    logging_util.info(f"Stripped 'Scene #' prefix from JSON response: '{match.group(0)}'")
+```
+
+**Test Results**: ✅ All 5 unit tests pass
+- Scene prefix with valid JSON ✅
+- Scene prefix variations ✅ 
+- No scene prefix (backward compatibility) ✅
+- Scene prefix in markdown blocks ✅
+- Malformed JSON with scene prefix ✅
 
 ### Latest Investigation Results (2025-01-07)
 
@@ -319,3 +346,28 @@ Added comprehensive debug logging in `narrative_response_schema.py` for future d
 - Final results
 
 **Key Insight**: The bug is in the **fallback logic** of `parse_structured_response()`. When primary JSON parsing fails (God mode responses), the fallback cleanup returns partial JSON instead of clean narrative text. This partial JSON flows through the entire pipeline to the frontend display.
+
+---
+
+## 🎉 FINAL FIX SUMMARY (2025-01-07)
+
+### The Bug
+When Gemini API returns JSON with a "Scene #X:" prefix (e.g., `Scene #2: {"narrative": "...", ...}`), our parser wasn't stripping this prefix, causing raw JSON to be displayed to users.
+
+### The Solution
+Added prefix stripping logic to `narrative_response_schema.py`:
+1. Detects "Scene #X:" pattern at the start of responses
+2. Strips the prefix before JSON parsing
+3. Handles case variations and extra spaces
+4. Works with both direct JSON and markdown-wrapped JSON
+
+### Commits
+- `350077c` - fix: Handle 'Scene #X:' prefix in JSON responses
+
+### Status
+✅ **FIXED AND TESTED** - Ready for production deployment
+
+### Next Steps
+1. Deploy to production
+2. Monitor for any edge cases
+3. Remove debug logging once verified in production (low priority)
