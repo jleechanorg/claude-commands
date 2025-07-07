@@ -48,19 +48,14 @@
   - [x] Update all response handling code
 
 #### Evening (4 hrs)
-- [ ] **TASK-143** 🟡 Context7 MCP integration with Claude Code CLI (1 hr) - MANUAL
-  - [ ] Set up Context7 MCP server for Claude Code CLI integration
-  - [ ] Configure context management for all development workflows
-  - [ ] Test context retention across planning, coding, and debugging sessions
-  - [ ] Document setup and usage patterns for ongoing development
-- [ ] **TASK-144** 🟡 Sequential Thinking MCP integration with Claude Code CLI (1 hr) - MANUAL  
-  - [ ] Set up Sequential Thinking MCP server for Claude Code CLI integration
-  - [ ] Configure step-by-step reasoning for complex development decisions
-  - [ ] Test on planning workflows, debugging processes, and architectural decisions
-  - [ ] Document integration benefits and recommended usage scenarios
-- [ ] **TASK-140** 🔴 Hard stop for integrity failures (2 hrs) - HIGH PRIORITY - MOVED TO MONDAY
-  - [ ] NOTE: Moved to Monday-Thursday critical fixes group for better focus
-  - [ ] See roadmap/scratchpad_task140_integrity_failure_hard_stop.md for complete requirements
+- [ ] **TASK-139** 🟡 Restore Dragon Knight character start (1.5 hrs) - PRIORITY
+  - [ ] Review PR #325 to understand previous Dragon Knight implementation
+  - [ ] Create improved version with enhanced functionality
+  - [ ] Restore as character creation option
+- [ ] **TASK-137** 🟡 Move download/share story buttons (30 min) - PR #396 OPEN ✅ Tests Passing
+  - [ ] Review existing PR, potentially merge if ready
+- [ ] **TASK-133** 🟡 Universal calendar system (2 hrs) - PR #403 OPEN ✅ Tests Passing
+  - [ ] Review existing PR, potentially merge if ready
 
 ### Monday-Thursday (12 hrs total) - REORGANIZED BY PRIORITY
 
@@ -77,17 +72,27 @@
   - [ ] See roadmap/scratchpad_task140_integrity_failure_hard_stop.md for complete requirements
 - **TASK-006c** 🟡 Enhanced combat scenarios (45 min) - REDUCED SCOPE
 
-#### Group B: Infrastructure & Features (5.5 hrs)
+#### Group B: Infrastructure & Features (8 hrs) - MANUAL TASKS ADDED
 - **TASK-132** ✅ GitHub Actions /testi integration (1.5 hrs) - COMPLETED (PR #402, #412)
   - [x] Create .github/workflows/integration-tests.yml for PR automation
   - [x] Configure Firebase and Gemini API secrets, use vpython with TESTING=true
   - [x] Post full test output in PR comments and upload artifacts
   - [x] Enable Gemini API key in GitHub Actions - PR #412
-- **TASK-133** 🟡 Universal calendar system (2 hrs) - PR #403 OPEN
+- **TASK-143** 🟡 Context7 MCP integration with Claude Code CLI (1 hr) - MANUAL - MOVED FROM SUNDAY
+  - [ ] Set up Context7 MCP server for Claude Code CLI integration
+  - [ ] Configure context management for all development workflows
+  - [ ] Test context retention across planning, coding, and debugging sessions
+  - [ ] Document setup and usage patterns for ongoing development
+- **TASK-144** 🟡 Sequential Thinking MCP integration with Claude Code CLI (1 hr) - MANUAL - MOVED FROM SUNDAY
+  - [ ] Set up Sequential Thinking MCP server for Claude Code CLI integration
+  - [ ] Configure step-by-step reasoning for complex development decisions
+  - [ ] Test on planning workflows, debugging processes, and architectural decisions
+  - [ ] Document integration benefits and recommended usage scenarios
+- **TASK-133** 🟡 Universal calendar system (2 hrs) - PR #403 OPEN ✅ Tests Passing
   - [ ] Backend uses consistent numbers, LLM handles narrative conversion per universe
   - [ ] Add universe presets: fantasy, modern, starwars, scifi, custom
   - [ ] Campaign creation includes universe selection, DM can infer from setting
-- **TASK-139** 🟡 Restore Dragon Knight character start (1.5 hrs)
+- **TASK-139** 🟡 Restore Dragon Knight character start (1.5 hrs) - MOVED TO SUNDAY EVENING
   - [ ] Review PR #325 to understand previous Dragon Knight implementation, create improved version
   - [ ] Restore as character creation option with enhanced functionality
 - **TASK-136** 🟡 Requirements builder evaluation (30 min) - REDUCED SCOPE
