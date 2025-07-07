@@ -323,6 +323,26 @@ When asked to run HTTP tests, follow these steps IN ORDER:
   - Examples: Text files named .png, "simulated" results when real tests fail
   - Correct response: "Cannot run X because Y is not installed/available"
 
+### Debugging Protocol (🚨 MANDATORY)
+When debugging display/output issues:
+1. **Trace Complete Data Flow**: Backend → API → Frontend → Display
+   - ❌ NEVER assume formatting comes from backend without checking
+   - ✅ ALWAYS check where labels/prefixes are added (often frontend)
+   - ✅ Search for literal strings in BOTH backend (.py) AND frontend (.js/.html)
+2. **Question Assumptions**:
+   - "Is this one string or multiple parts combined?"
+   - "Where is formatting added - data layer or presentation layer?"
+   - "What does the raw API response actually look like?"
+3. **Verify Before Fixing**:
+   - ✅ Use browser DevTools Network tab to see actual API responses
+   - ✅ Add logging at multiple points to trace data transformation
+   - ✅ Test hypothesis with minimal changes first
+   - ❌ NEVER implement complex fixes based on assumptions
+4. **Common Patterns**:
+   - Frontend often adds labels/prefixes for display
+   - "Scene #", "Turn:", "Player:" etc. are usually UI additions
+   - Raw data rarely contains display formatting
+
 ### Critical Rules
 - **Data Corruption**: Treat as systemic | Search ALL similar patterns | "One bug = many bugs"
 - **Temp Fixes**: ⚠️ Flag immediately | Propose permanent fix NOW | Run sustainability checklist
