@@ -195,6 +195,96 @@ def log_campaign_entry(scene_number, content, source_type):
 
 **Evidence**: `testing_ui/JSON_BUG_VALIDATION_RESULTS.md`
 
+## 🚨 CRITICAL UPDATE: Original Fix Was Incorrect
+
+### New Discovery - The Real Bug
+**User Feedback**: "still not fixed at all. how did the browser test look for JSON?"
+
+User provided example showing raw JSON still appearing:
+```
+Scene #2: {
+    "narrative": "[Mode: STORY MODE]\\n[CHARACTER CREATION - Step 2 of 7]...",
+    "god_mode_response": "",
+    "entities_mentioned": ["Mark Grayson", "Nolan"],
+    ...
+}
+```
+
+### Latest Investigation Results (2025-01-07)
+
+#### ✅ Confirmed Working Components
+**All parsing functions work perfectly:**
+1. ✅ `parse_structured_response()` correctly extracts narrative from raw JSON
+2. ✅ `_process_structured_response()` correctly processes AI responses  
+3. ✅ Robust JSON parser enhanced field extraction works
+4. ✅ All unit tests pass (112/112)
+5. ✅ Browser test missed the real issue (false positive)
+
+#### 🔍 Root Cause Discovery
+**The AI is responding in pure JSON format due to configuration:**
+```python
+# Line 612 in gemini_service.py
+generation_config_params["response_mime_type"] = "application/json"
+```
+
+**This means AI returns raw JSON like:**
+```json
+{
+    "narrative": "story content...",
+    "god_mode_response": "",
+    "entities_mentioned": [...],
+    ...
+}
+```
+
+#### 🐛 Real Bug Location
+**Raw JSON bypasses parsing entirely somewhere in the pipeline.**
+
+**Evidence from comprehensive logging:**
+- ✅ `parse_structured_response()` gets raw JSON input and correctly extracts narrative
+- ✅ `_process_structured_response()` works correctly
+- ✅ All test scenarios work perfectly
+- ❌ **But users still see complete raw JSON structure**
+
+#### 🎯 Current Leading Theories
+
+**Theory 1: Exception Path Bypass**
+- Somewhere in the pipeline, an exception occurs
+- Error handling falls back to saving raw JSON directly
+- Bypasses all parsing logic
+
+**Theory 2: Alternative Save Path**  
+- Multiple places call `firestore_service.add_story_entry()`
+- One path might save raw response without processing
+- Campaign creation vs interaction handling differences
+
+**Theory 3: Async/Race Condition**
+- Processing completes but gets overwritten
+- Raw response saved after parsed response
+
+**Theory 4: Frontend Processing Issue**
+- Backend returns correct parsed content
+- Frontend accidentally displays raw API response
+- Scene # formatting adds to confusion
+
+#### 🔧 Debugging Infrastructure Added
+**Comprehensive logging throughout pipeline:**
+- JSON bug detection in main.py interaction handler
+- Gemini service response validation
+- Parse function entry/exit logging
+- Campaign creation opening story checks
+- Firestore save operation tracking
+
+#### 📋 Next Investigation Steps
+1. **Trace actual user campaign creation** with logging
+2. **Check exception handling paths** for fallback logic
+3. **Verify all `add_story_entry()` call sites** 
+4. **Test campaign creation end-to-end** with problematic prompts
+5. **Examine frontend API response handling**
+
+#### 💡 Key Insight
+**Our original fix was solving the wrong problem.** The robust JSON parser enhancement works perfectly, but raw JSON is entering the system through a completely different path that bypasses all our parsing logic.
+
 ---
 ## Fix Summary
 
