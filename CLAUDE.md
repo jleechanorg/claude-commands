@@ -327,7 +327,7 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 | `/push` | Pre-push review | Virtual agent review → push if clean |
 | `/scratchpad` | Update planning | Create/update scratchpad_[branch].md |
 | `/roadmap` `/r` | Update roadmap files | Commit local changes, switch to main, update roadmap/*.md, push to origin, switch back |
-| `/execute` `/e` | Execute task with context management | Check context, warn if ≤25%, consider subagents, execute task |
+| `/execute` `/e` | Fresh branch from latest main | Switch to main, pull latest from remote, create clean branch |
 | `/bclean` | Branch cleanup | Delete local branches without open GitHub PRs |
 
 **Command Examples**: → `.cursor/rules/examples.md`
