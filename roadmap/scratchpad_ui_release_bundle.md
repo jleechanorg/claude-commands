@@ -41,8 +41,28 @@
 
 ## 📊 **Current State**
 - **Branch**: dev1751876026
-- **Last Commit**: 2d3abeb (Dragon Knight restoration)
-- **Status**: Planning phase
+- **Last Commit**: 7ffcafd (UI release bundle scratchpad)
+- **Status**: Analysis complete, ready for execution
+
+## 🔍 **Subagent Analysis Results**
+
+### **Optimal Merge Order** (Risk-based sequence):
+1. **PR #392** → Documentation cleanup (IMMEDIATE - no conflicts)
+2. **PR #396** → Button placement (after #392)
+3. **PR #313** → UI enhancements (after #396)
+4. **PR #301** → Editable campaigns (after #313) 
+5. **PR #323** → Story reader (after all others)
+
+### **Key Conflicts Identified**:
+- `index.html` conflicts between #396 and #313 (resolved by order)
+- `campaign-wizard.js` conflicts between #313 and #323 (manual resolution needed)
+- File duplication between #301 and #323 (identical files, should auto-resolve)
+
+### **Testing Strategy**:
+- **Phase 1**: Individual feature tests (parallel)
+- **Phase 2**: Integration testing (sequential)
+- **Phase 3**: Cross-browser validation
+- **Coverage**: 85% UI coverage target, all existing tests must pass
 
 ## 🚨 **Risk Management**
 - **Rollback Plan**: Keep original PRs intact, abandon bundle if issues
@@ -53,12 +73,34 @@
 - **2025-07-07 Evening**: Decided on UI-focused bundle approach
 - **Rationale**: Lower risk, better testing opportunities than backend changes
 
-## 🔄 **Next Actions**
-1. Use `/execute` with subagents for parallel analysis
-2. Update scratchpad after each phase
-3. Commit progress frequently to preserve context
+## 🔄 **Execution Plan**
+
+### **CHECKPOINT 1: Create Release Branch**
+- [ ] Create `ui-release-bundle-20250707` from current dev branch
+- [ ] Commit initial state
+
+### **CHECKPOINT 2: Sequential Merges**
+- [ ] **Step 1**: Cherry-pick PR #392 (docs)
+- [ ] **Step 2**: Cherry-pick PR #396 (buttons)
+- [ ] **Step 3**: Cherry-pick PR #313 (UI enhancements)
+- [ ] **Step 4**: Cherry-pick PR #301 (editable names)
+- [ ] **Step 5**: Cherry-pick PR #323 (story reader)
+- [ ] **After each**: Run unit tests, commit checkpoint
+
+### **CHECKPOINT 3: Comprehensive Testing**
+- [ ] Run full test suite (`./run_tests.sh`)
+- [ ] Execute browser tests (`./run_ui_tests.sh mock`)
+- [ ] Manual UI verification
+- [ ] Performance regression check
+
+### **CHECKPOINT 4: Final Integration**
+- [ ] Create summary PR to main
+- [ ] Final test results analysis
+- [ ] Go/No-go decision
 
 ---
-**Last Updated**: 2025-07-07 Evening - Initial planning
-**Branch**: dev1751876026
+**Last Updated**: 2025-07-07 Evening - Analysis complete, ready for execution
+**Branch**: dev1751876026  
 **Context**: WorldArchitect.AI UI release consolidation
+**Time Budget**: ~2 hours remaining
+**Risk Level**: Medium (manageable with proper sequencing)
