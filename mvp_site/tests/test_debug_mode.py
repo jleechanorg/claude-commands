@@ -275,8 +275,8 @@ class TestDebugMode(unittest.TestCase):
             # But should still see the main narrative
             self.assertIn('You enter the dark cave', response_text)
             self.assertIn('You notice a glimmer in the darkness', response_text)
-            # And debug_info should NOT be included when debug mode is disabled
-            self.assertNotIn('debug_info', data, "debug_info should not be included when debug mode disabled")
+            # And debug_info should still be included (architectural fix: always include when present)
+            self.assertIn('debug_info', data, "debug_info should always be included when present")
             
             # Verify full response (with debug content) was saved to database
             mock_firestore_service.add_story_entry.assert_called_with(

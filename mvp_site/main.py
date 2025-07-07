@@ -63,18 +63,45 @@ class StateHelper:
     @staticmethod
     def strip_debug_content(text):
         """
-        Strip legacy STATE_UPDATES_PROPOSED blocks from AI response text.
-        
-        Note: Modern AI uses structured debug_info field instead of embedded debug tags.
-        This function only handles legacy STATE_UPDATES_PROPOSED blocks.
+        Strip debug content from AI response text while preserving the rest.
+        Removes content between debug tags: [DEBUG_START/END], [DEBUG_ROLL_START/END], [DEBUG_STATE_START/END]
+        Also removes [STATE_UPDATES_PROPOSED] blocks which are internal state management.
 
         Args:
-            text: The AI response text
+            text: The raw text containing debug content
 
         Returns:
-            str: Text with STATE_UPDATES_PROPOSED blocks removed
+            str: Text with debug content removed
         """
         return strip_debug_content(text)
+
+    @staticmethod
+    def strip_state_updates_only(text):
+        """
+        Strip only [STATE_UPDATES_PROPOSED] blocks while preserving other debug content.
+        Used when user has debug mode enabled but we still want to hide internal state updates.
+
+        Args:
+            text: The raw text containing state updates
+
+        Returns:
+            str: Text with state updates removed
+        """
+        return strip_state_updates_only(text)
+
+    @staticmethod
+    def strip_other_debug_content(text):
+        """
+        Strip all debug content EXCEPT [STATE_UPDATES_PROPOSED] blocks.
+        Used for extracting state updates while removing other debug information.
+
+        Args:
+            text: The raw text containing debug content
+
+        Returns:
+            str: Text with only state updates remaining
+        """
+        return strip_other_debug_content(text)
 
     @staticmethod
     def apply_automatic_combat_cleanup(state_dict, proposed_changes):
@@ -317,14 +344,20 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
     Returns:
         Flask response with JSON structure
         
-    Note: Modern AI uses structured debug_info field instead of embedded debug tags.
-    Final narrative is always clean text. Debug content is provided in structured debug_info field.
+    Note: This function handles two types of debug content:
+        1. Legacy debug tags embedded in narrative text - shown/hidden based on debug_mode
+        2. Structured debug_info field - always included when present (frontend decides display)
     """
-    # Check if debug mode is enabled (used for frontend display decisions)
+    # Check if debug mode is enabled
     debug_mode_enabled = hasattr(current_game_state, 'debug_mode') and current_game_state.debug_mode
     
-    # Clean narrative of any legacy STATE_UPDATES_PROPOSED blocks (should not be shown to users)
-    final_narrative = StateHelper.strip_debug_content(gemini_response)
+    # Process narrative text based on debug mode (for legacy embedded debug tags)
+    if debug_mode_enabled:
+        # Show all content including embedded debug tags
+        final_narrative = gemini_response
+    else:
+        # Strip embedded debug tags when debug mode is disabled
+        final_narrative = StateHelper.strip_debug_content(gemini_response)
 
     # Build response data structure
     response_data = {
@@ -344,8 +377,9 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
         response_data['entities_mentioned'] = getattr(structured_response, 'entities_mentioned', [])
         response_data['location_confirmed'] = getattr(structured_response, 'location_confirmed', 'Unknown')
         
-        # Include structured debug_info only when debug mode is enabled
-        if debug_mode_enabled and hasattr(structured_response, 'debug_info') and structured_response.debug_info:
+        # Always include structured debug_info if present (separate from legacy debug tags)
+        # Frontend will use debug_mode flag to decide whether to display debug_info
+        if hasattr(structured_response, 'debug_info') and structured_response.debug_info:
             response_data['debug_info'] = structured_response.debug_info
 
     if proposed_changes:
@@ -387,13 +421,38 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
 
 def strip_debug_content(text):
     """
-    Strip legacy STATE_UPDATES_PROPOSED blocks from AI response text.
-    
-    Note: Modern AI uses structured debug_info field instead of embedded debug tags.
-    This function only handles legacy STATE_UPDATES_PROPOSED blocks that should never be shown to users.
+    Strip debug content from AI response text while preserving the rest.
+    Removes content between debug tags: [DEBUG_START/END], [DEBUG_ROLL_START/END], [DEBUG_STATE_START/END]
+    Also removes [STATE_UPDATES_PROPOSED] blocks which are internal state management.
 
     Args:
-        text (str): The AI response text
+        text (str): The full AI response with debug content
+
+    Returns:
+        str: The response with debug content removed
+    """
+    if not text:
+        return text
+
+    # Use regex for proper pattern matching - same patterns as frontend
+    processed_text = re.sub(r'\[DEBUG_START\][\s\S]*?\[DEBUG_END\]', '', text)
+    processed_text = re.sub(r'\[DEBUG_STATE_START\][\s\S]*?\[DEBUG_STATE_END\]', '', processed_text)
+    processed_text = re.sub(r'\[DEBUG_ROLL_START\][\s\S]*?\[DEBUG_ROLL_END\]', '', processed_text)
+    # Also strip STATE_UPDATES_PROPOSED blocks which are internal state management
+    processed_text = re.sub(r'\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
+    # Handle malformed STATE_UPDATES_PROPOSED blocks (missing opening characters)
+    processed_text = re.sub(r'S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
+
+    return processed_text
+
+
+def strip_state_updates_only(text):
+    """
+    Strip only STATE_UPDATES_PROPOSED blocks from text, preserving all other debug content.
+    This ensures that internal state management blocks are never shown to users, even in debug mode.
+
+    Args:
+        text (str): The full AI response text
 
     Returns:
         str: The response with STATE_UPDATES_PROPOSED blocks removed
@@ -401,15 +460,33 @@ def strip_debug_content(text):
     if not text:
         return text
 
-    # Only strip STATE_UPDATES_PROPOSED blocks (legacy internal state management)
+    # Remove only STATE_UPDATES_PROPOSED blocks - these should never be shown to users
     processed_text = re.sub(r'\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', text)
-    # Handle malformed STATE_UPDATES_PROPOSED blocks (missing opening characters)
+    # Also handle malformed blocks where the opening characters might be missing
     processed_text = re.sub(r'S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
-
     return processed_text
 
 
-# Legacy functions removed - modern AI uses structured debug_info field
+def strip_other_debug_content(text):
+    """
+    Strip all debug content EXCEPT STATE_UPDATES_PROPOSED blocks from text.
+    Used when debug mode is disabled to hide DM commentary and dice rolls.
+
+    Args:
+        text (str): The full AI response text
+
+    Returns:
+        str: The response with debug content (except state updates) removed
+    """
+    if not text:
+        return text
+
+    # Strip debug content but NOT STATE_UPDATES_PROPOSED (already handled separately)
+    processed_text = re.sub(r'\[DEBUG_START\][\s\S]*?\[DEBUG_END\]', '', text)
+    processed_text = re.sub(r'\[DEBUG_STATE_START\][\s\S]*?\[DEBUG_STATE_END\]', '', processed_text)
+    processed_text = re.sub(r'\[DEBUG_ROLL_START\][\s\S]*?\[DEBUG_ROLL_END\]', '', processed_text)
+
+    return processed_text
 
 
 def _handle_debug_mode_command(user_input, mode, current_game_state, user_id, campaign_id):
