@@ -26,6 +26,13 @@
    - ✅ ALWAYS say "I cannot do X because Y" when facing limitations
    - ✅ ALWAYS show actual error messages instead of hiding them
 
+🚨 **NO EXCUSES FOR TEST FAILURES**: When asked to fix tests, FIX THEM ALL
+   - ❌ NEVER say "pre-existing issues" or "unrelated to our changes"
+   - ❌ NEVER settle for partial fixes (97/99 is NOT acceptable)
+   - ❌ NEVER blame test expectations - fix the code to meet them
+   - ✅ ALWAYS fix ALL failing tests to 100% pass rate
+   - ✅ ALWAYS take ownership of test failures, especially in new code
+
 ## Claude Code Specific Behavior
 
 1. **Directory Context**: Operates in worktree directory shown in environment

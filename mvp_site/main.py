@@ -695,7 +695,7 @@ def create_app():
     def check_token(f):
         @wraps(f)
         def wrap(*args, **kwargs):
-            if app.config.get('TESTING') and request.headers.get(HEADER_TEST_BYPASS) == 'true':
+            if app.config.get('TESTING') and request.headers.get(HEADER_TEST_BYPASS, '').lower() == 'true':
                 kwargs['user_id'] = request.headers.get(HEADER_TEST_USER_ID, DEFAULT_TEST_USER)
                 return f(*args, **kwargs)
             if not request.headers.get(HEADER_AUTH): return jsonify({KEY_MESSAGE: 'No token provided'}), 401
@@ -743,7 +743,13 @@ def create_app():
         prompt, title = data.get(KEY_PROMPT), data.get(constants.KEY_TITLE)
         selected_prompts = data.get(KEY_SELECTED_PROMPTS, [])
         custom_options = data.get('custom_options', [])
-
+        
+        # Validate required fields
+        if not prompt:
+            return jsonify({KEY_ERROR: 'Prompt is required'}), 400
+        if not title:
+            return jsonify({KEY_ERROR: 'Title is required'}), 400
+        
         # Debug logging
         app.logger.info(f"Received custom_options: {custom_options}")
 
@@ -759,20 +765,23 @@ def create_app():
 
         generate_companions = 'companions' in custom_options
         use_default_world = 'defaultWorld' in custom_options
-
-        opening_story_response = gemini_service.get_initial_story(
-            prompt,
-            selected_prompts=selected_prompts,
-            generate_companions=generate_companions,
-            use_default_world=use_default_world
-        )
-
-        campaign_id = firestore_service.create_campaign(
-            user_id, title, prompt, opening_story_response.narrative_text, initial_game_state, selected_prompts, use_default_world
-        )
-
-        return jsonify({KEY_SUCCESS: True, KEY_CAMPAIGN_ID: campaign_id}), 201
-
+        
+        try:
+            opening_story_response = gemini_service.get_initial_story(
+                prompt, 
+                selected_prompts=selected_prompts,
+                generate_companions=generate_companions,
+                use_default_world=use_default_world
+            )
+            
+            campaign_id = firestore_service.create_campaign(
+                user_id, title, prompt, opening_story_response.narrative_text, initial_game_state, selected_prompts, use_default_world
+            )
+            
+            return jsonify({KEY_SUCCESS: True, KEY_CAMPAIGN_ID: campaign_id}), 201
+        except Exception as e:
+            app.logger.error(f"Failed to create campaign: {e}")
+            return jsonify({KEY_ERROR: f'Failed to create campaign: {str(e)}'}), 500
     @app.route('/api/campaigns/<campaign_id>', methods=['PATCH'])
     @check_token
     def update_campaign(user_id, campaign_id):
@@ -794,6 +803,10 @@ def create_app():
         try:
             data = request.get_json()
             user_input, mode = data.get(KEY_USER_INPUT), data.get(constants.KEY_MODE, constants.MODE_CHARACTER)
+            
+            # Validate user_input is provided
+            if user_input is None:
+                return jsonify({KEY_ERROR: 'User input is required'}), 400
 
             # --- Special command handling ---
             GOD_MODE_SET_COMMAND = "GOD_MODE_SET:"
@@ -834,11 +847,6 @@ def create_app():
             set_response = _handle_set_command(user_input, current_game_state, user_id, campaign_id)
             if set_response:
                 return set_response
-
-            # --- Debug Mode Command Parsing (BEFORE other commands) ---
-            debug_response = _handle_debug_mode_command(user_input, mode, current_game_state, user_id, campaign_id)
-            if debug_response:
-                return debug_response
 
             # Handle ASK_STATE command
             ask_state_response = _handle_ask_state_command(user_input, current_game_state, user_id, campaign_id)
