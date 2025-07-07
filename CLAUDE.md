@@ -14,7 +14,6 @@
 
 ## Meta-Rules
 
-**ANCHORING**: `.cursor` directory at workspace root = single source of truth for all protocol files.
 
 🚨 **NO FALSE ✅**: Only use ✅ for 100% complete/working. Use ❌ ⚠️ 🔄 or text for partial.
 
