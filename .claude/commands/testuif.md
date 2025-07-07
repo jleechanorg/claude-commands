@@ -6,40 +6,16 @@
 
 **Usage**: `/testuif`
 
-**MANDATORY**: When using `/testuif` command, follow this exact sequence:
+**Action**: Simply run the UI test script with real APIs:
 
-1. **Check Playwright Installation**
-   ```bash
-   vpython -c "import playwright" || echo "STOP: Playwright not installed"
-   ```
-   - ✅ Continue only if import succeeds
-   - ❌ FULL STOP if not installed - report: "Cannot run browser tests - Playwright not installed"
+```bash
+./run_ui_tests.sh
+```
 
-2. **Verify Browser Dependencies**
-   ```bash
-   vpython -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); p.chromium.launch(headless=True); p.stop()" || echo "STOP: Browser deps missing"
-   ```
-   - ✅ Continue only if browser launches
-   - ❌ FULL STOP if fails - report: "Cannot launch browsers - missing system dependencies"
-
-3. **Start Test Server**
-   ```bash
-   TESTING=false PORT=6006 vpython mvp_site/main.py serve &
-   sleep 3
-   curl -s http://localhost:6006 || echo "STOP: Server not running"
-   ```
-   - ✅ Continue only if server responds
-   - ❌ FULL STOP if fails - report: "Cannot start test server"
-
-4. **Run Browser Test with Real APIs**
-   ```bash
-   TESTING=false vpython testing_ui/test_name.py
-   ```
-   - ✅ Report actual results/errors
-   - ❌ NEVER create fake output
-   - ⚠️ **WARNING**: This costs real money through API calls
-
-**GOLDEN RULE**: Stop at first failure. Never proceed to simulate missing components.
+- ✅ Script handles all setup automatically (Playwright installation, browser dependencies, server startup)
+- ✅ Report actual results/errors
+- ❌ NEVER create fake output
+- ⚠️ **WARNING**: This costs real money through API calls
 
 **CRITICAL REQUIREMENTS**:
 - 🚨 **REAL browser automation only** - Must use Playwright

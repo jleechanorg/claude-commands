@@ -113,27 +113,18 @@ trap cleanup EXIT
 echo "🧪 Running browser tests in parallel..."
 echo "======================================="
 
-# Complete list of all browser tests (unified from both PRs)
-BROWSER_TESTS=(
-    "testing_ui/test_god_mode_browser.py"
-    "testing_ui/test_campaign_deletion_browser.py"
-    "testing_ui/test_character_npc_browser.py"
-    "testing_ui/test_character_management_browser.py"
-    "testing_ui/test_combat_system_browser.py"
-    "testing_ui/test_multi_campaign_browser.py"
-    "testing_ui/test_error_handling_browser.py"
-    "testing_ui/test_settings_browser.py"
-    "testing_ui/test_settings_management_browser.py"
-    "testing_ui/test_search_browser.py"
-    "testing_ui/test_search_functionality_browser.py"
-    "testing_ui/test_performance_browser.py"
-    "testing_ui/test_long_story_performance_browser.py"
-    "testing_ui/test_concurrent_session_browser.py"
-    "testing_ui/test_mobile_responsive_browser.py"
-    "testing_ui/test_story_download_browser.py"
-    "testing_ui/test_story_sharing_browser.py"
-    "testing_ui/test_accessibility_browser.py"
-)
+# Automatically discover all test files in testing_ui/ directory
+BROWSER_TESTS=()
+if [ -d "testing_ui" ]; then
+    echo "🔍 Discovering test files in testing_ui/ directory..."
+    while IFS= read -r -d '' test_file; do
+        BROWSER_TESTS+=("$test_file")
+    done < <(find testing_ui -name "test_*.py" -type f -print0 | sort -z)
+    echo "✅ Found ${#BROWSER_TESTS[@]} test files"
+else
+    echo "❌ testing_ui/ directory not found"
+    exit 1
+fi
 
 # Create parallel execution
 PASSED=0
