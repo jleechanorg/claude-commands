@@ -237,7 +237,7 @@ class CampaignWizard {
               <textarea class="form-control" 
                         id="wizard-campaign-prompt" 
                         rows="4"
-                        placeholder="Loading Dragon Knight campaign..."
+                        placeholder=""
                         readonly
                         required></textarea>
               <div class="form-text" id="wizard-prompt-help">
