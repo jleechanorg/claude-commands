@@ -808,3 +808,40 @@ echo "✅ JSON bug fix complete!"
 ```
 
 This plan is designed to run without intervention and handle edge cases gracefully.
+
+## Resolution Summary
+
+### Root Cause Identified
+The bug occurred in `parse_structured_response()` in `narrative_response_schema.py`. When JSON parsing failed (due to malformed JSON), the function would fall through to a final fallback case that returned the raw input text unchanged. This raw JSON would then flow through the entire system and be displayed to users.
+
+### Fix Implementation
+Added defensive JSON detection and extraction in `_process_structured_response()` in `gemini_service.py`:
+1. Detects when response_text starts with `{` (JSON indicator)
+2. Attempts multiple extraction methods:
+   - JSON parsing to extract 'narrative' field
+   - Regex extraction as fallback
+   - User-friendly error message as last resort
+3. Ensures users NEVER see raw JSON, even with malformed responses
+
+### Test Results
+- ✅ RED test proved bug existed (would show JSON)
+- ✅ GREEN test proves fix works (extracts narrative correctly)
+- ✅ All existing tests still pass
+- ✅ Multiple edge cases handled
+
+### Code Changes
+- `mvp_site/gemini_service.py`: Added JSON detection and extraction logic (lines 482-510)
+- `mvp_site/main.py`: Added debug logging to trace data flow
+- Added 6 new test files to verify fix comprehensively
+
+### Verification
+The fix has been tested with:
+- Well-formed JSON (works correctly)
+- Malformed JSON (now handled gracefully)
+- Empty responses (returns error message)
+- Various edge cases (all handled)
+
+### GitHub
+- Branch: json_fix_v3
+- Commit: ba975b5
+- Ready for PR: https://github.com/jleechan2015/worldarchitect.ai/pull/new/json_fix_v3
