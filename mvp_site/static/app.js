@@ -326,32 +326,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // --- Story Reader Controls ---
-    document.getElementById('readStoryBtn')?.addEventListener('click', () => {
-        const storyContent = document.getElementById('story-content');
-        if (storyContent && window.storyReader) {
-            const storyText = Array.from(storyContent.querySelectorAll('p'))
-                .map(p => p.textContent)
-                .join('\n\n');
-            
-            window.storyReader.startReading(storyText, {
-                title: document.getElementById('game-title')?.textContent || 'Campaign Story',
-                onComplete: () => {
-                    document.getElementById('readStoryBtn').style.display = 'inline-block';
-                    document.getElementById('pauseStoryBtn').style.display = 'none';
-                }
-            });
-            
-            document.getElementById('readStoryBtn').style.display = 'none';
-            document.getElementById('pauseStoryBtn').style.display = 'inline-block';
-        }
-    });
-    
-    document.getElementById('pauseStoryBtn')?.addEventListener('click', () => {
-        if (window.storyReader) {
-            window.storyReader.togglePause();
-        }
-    });
 
     // --- Event Listeners ---
     document.getElementById('new-campaign-form').addEventListener('submit', async (e) => {
@@ -679,36 +653,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('download-pdf-btn')?.addEventListener('click', () => downloadFile('pdf'));
     document.getElementById('download-docx-btn')?.addEventListener('click', () => downloadFile('docx'));
     
-    // Story Reader controls
-    document.getElementById('readStoryBtn')?.addEventListener('click', () => {
-        const storyContent = document.getElementById('story-content');
-        if (storyContent && window.storyReader) {
-            // Get all story text
-            const storyText = Array.from(storyContent.querySelectorAll('p'))
-                .map(p => p.innerText.trim())
-                .join('\n\n');
-            
-            // Start reading
-            window.storyReader.startReading(storyText, {
-                title: document.getElementById('game-title')?.innerText || 'Campaign Story',
-                onComplete: () => {
-                    // Reset button states
-                    document.getElementById('readStoryBtn').style.display = 'inline-block';
-                    document.getElementById('pauseStoryBtn').style.display = 'none';
-                }
-            });
-            
-            // Update button visibility
-            document.getElementById('readStoryBtn').style.display = 'none';
-            document.getElementById('pauseStoryBtn').style.display = 'inline-block';
-        }
-    });
-    
-    document.getElementById('pauseStoryBtn')?.addEventListener('click', () => {
-        if (window.storyReader) {
-            window.storyReader.togglePause();
-        }
-    });
     
     // Theme integration
     window.addEventListener('themeChanged', (e) => {
