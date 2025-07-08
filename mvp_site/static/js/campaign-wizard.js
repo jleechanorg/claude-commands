@@ -620,6 +620,7 @@ class CampaignWizard {
 
   collectFormData() {
     const isDragonKnight = document.getElementById('wizard-dragonKnightCampaign')?.checked;
+    const useDefaultWorld = document.getElementById('wizard-default-world')?.checked;
     return {
       title: document.getElementById('wizard-campaign-title')?.value || '',
       prompt: document.getElementById('wizard-campaign-prompt')?.value || '',
@@ -629,7 +630,7 @@ class CampaignWizard {
       ],
       customOptions: [
         ...(document.getElementById('wizard-companions')?.checked ? ['companions'] : []),
-        ...(isDragonKnight ? ['defaultWorld'] : []),
+        ...(useDefaultWorld ? ['defaultWorld'] : []),
       ],
       campaignType: isDragonKnight ? 'dragon-knight' : 'custom'
     };
