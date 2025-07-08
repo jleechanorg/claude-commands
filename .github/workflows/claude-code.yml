@@ -22,11 +22,8 @@ jobs:
     name: Claude Code Action
     
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
+      # The Claude Code Action handles checkout internally
+      # We should NOT add our own checkout step
       - name: Claude Code Action
         uses: anthropics/claude-code-action@beta
         with:
