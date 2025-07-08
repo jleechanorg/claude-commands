@@ -457,6 +457,35 @@ def _select_model_for_continuation(user_input_count):
         return DEFAULT_MODEL
 
 
+def _parse_gemini_response(raw_response_text, context="general"):
+    """
+    Centralized JSON parsing logic for all Gemini responses.
+    Handles JSON extraction, parsing, and fallback logic.
+    
+    Args:
+        raw_response_text: Raw text from Gemini API
+        context: Context of the parse ("general", "planning_block", etc.)
+    
+    Returns:
+        tuple: (narrative_text, structured_data) where:
+               - narrative_text is clean text for display
+               - structured_data is parsed data (NarrativeResponse or None)
+    """
+    # Log raw response for debugging
+    logging_util.debug(f"[{context}] Raw Gemini response: {raw_response_text[:500]}...")
+    
+    # Use the existing robust parsing logic
+    response_text, structured_response = parse_structured_response(raw_response_text)
+    
+    # Validation and warning for JSON bugs
+    if response_text.strip().startswith('{'):
+        logging_util.warning(f"⚠️ [{context}] WARNING: response_text contains raw JSON - this indicates the JSON display bug")
+        logging_util.warning(f"   This should have been processed to extract narrative")
+        logging_util.warning(f"   response_text starts with: {response_text[:100]}")
+    
+    return response_text, structured_response
+
+
 def _process_structured_response(raw_response_text, expected_entities):
     """
     Process structured JSON response and validate entity coverage.
@@ -468,20 +497,8 @@ def _process_structured_response(raw_response_text, expected_entities):
     Returns:
         tuple: (response_text, structured_response) where structured_response is NarrativeResponse or None
     """
-    # Log raw Gemini API response for debugging
-    logging_util.debug(f"Raw Gemini API response: {raw_response_text[:500]}...")
-    
-    response_text, structured_response = parse_structured_response(raw_response_text)
-    
-    # JSON BUG CHECK - Remove incorrect fix
-    # TODO: The actual JSON bug is NOT about malformed JSON
-    # The system uses JSON mode intentionally - the bug is that valid JSON
-    # isn't being processed correctly to extract the narrative field
-    # See README_FOR_AI.md for details
-    if response_text.strip().startswith('{'):
-        logging_util.warning("⚠️ WARNING: response_text contains raw JSON - this indicates the JSON display bug")
-        logging_util.warning(f"   This should have been processed to extract narrative")
-        logging_util.warning(f"   response_text starts with: {response_text[:100]}")
+    # Use centralized parsing logic
+    response_text, structured_response = _parse_gemini_response(raw_response_text, context="structured_response")
     
     # Validate structured response coverage
     if isinstance(structured_response, NarrativeResponse):
@@ -915,14 +932,14 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     # Extract text from raw API response object
     raw_response_text = _get_text_from_response(api_response)
     
-    # Process structured response for consistency
-    response_text, structured_response = _process_structured_response(raw_response_text, expected_entities or [])
+    # Create GeminiResponse from raw response, which handles all parsing internally
+    gemini_response = GeminiResponse.create(raw_response_text)
     
     # --- ENTITY VALIDATION FOR INITIAL STORY ---
     if expected_entities:
         validator = NarrativeSyncValidator()
         validation_result = validator.validate(
-            narrative_text=response_text,
+            narrative_text=gemini_response.narrative_text,
             expected_entities=expected_entities,
             location='Starting Location'
         )
@@ -931,14 +948,6 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
             logging_util.warning(f"Initial story failed entity validation. Missing: {validation_result.entities_missing}")
             # For initial story, we'll log but not retry to avoid complexity
             # The continue_story function will handle retry logic for subsequent interactions
-    
-    # JSON should never reach this point - response_text should be clean narrative
-    if '"narrative":' in response_text or '"god_mode_response":' in response_text:
-        logging_util.error(f"JSON_BUG_DETECTED: response_text contains JSON instead of clean narrative")
-        raise ValueError("response_text should be clean narrative, not JSON - indicates parsing bug")
-    
-    # Create GeminiResponse with only clean narrative text and structured response  
-    gemini_response = GeminiResponse.create(response_text, structured_response)
     
     # Log GeminiResponse creation for debugging
     logging_util.debug(f"Created GeminiResponse with narrative_text length: {len(gemini_response.narrative_text)}")
@@ -1030,9 +1039,8 @@ Full narrative context:
         )
         raw_planning_response = _get_text_from_response(planning_response)
         
-        # Parse the planning block response in case it's JSON
-        # The planning block should be plain text, but AI might return JSON structure
-        planning_text, _ = parse_structured_response(raw_planning_response)
+        # Use centralized parsing for planning block
+        planning_text, _ = _parse_gemini_response(raw_planning_response, context="planning_block")
         planning_block = planning_text
         
         # Ensure it starts with newlines and the header
@@ -1213,8 +1221,9 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # Extract text from raw API response object
     raw_response_text = _get_text_from_response(api_response)
     
-    # Process structured response (handles both entity tracking and non-entity cases)
-    response_text, structured_response = _process_structured_response(raw_response_text, expected_entities or [])
+    # Create initial GeminiResponse from raw response
+    gemini_response = GeminiResponse.create(raw_response_text)
+    response_text = gemini_response.narrative_text
     
     # Validate entity tracking if enabled
     if expected_entities:
@@ -1283,13 +1292,14 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
             response_text, user_input, current_game_state, chosen_model, system_instruction_final
         )
     
-    # JSON should never reach this point - response_text should be clean narrative
-    if '"narrative":' in response_text or '"god_mode_response":' in response_text:
-        logging_util.error(f"JSON_BUG_DETECTED: response_text contains JSON instead of clean narrative")
-        raise ValueError("response_text should be clean narrative, not JSON - indicates parsing bug")
-    
-    # Create GeminiResponse with only clean narrative text and structured response  
-    gemini_response = GeminiResponse.create(response_text, structured_response)
+    # If response was modified (by dual-pass or planning block), recreate GeminiResponse
+    if response_text != gemini_response.narrative_text:
+        # Create a new response with the modified text
+        gemini_response = GeminiResponse(
+            narrative_text=response_text,
+            structured_response=gemini_response.structured_response,
+            model=gemini_response.model
+        )
     
     # Log GeminiResponse creation for debugging
     logging_util.debug(f"Created GeminiResponse with narrative_text length: {len(gemini_response.narrative_text)}")

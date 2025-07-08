@@ -929,13 +929,6 @@ def create_app():
             logging_util.info("🔍   narrative_text[:200]: %s", gemini_response_obj.narrative_text[:200])
             logging_util.info("🔍   is JSON: %s", gemini_response_obj.narrative_text.strip().startswith('{'))
             
-            # Also print to console directly to ensure visibility
-            print(f"\n{'='*60}")
-            print(f"🔍 DEBUG: MAIN.PY narrative_text check")
-            print(f"   Type: {type(gemini_response_obj.narrative_text)}")
-            print(f"   Starts with '{{': {gemini_response_obj.narrative_text.strip().startswith('{')}")
-            print(f"   First 200 chars: {gemini_response_obj.narrative_text[:200]}")
-            print(f"{'='*60}\n")
             
             firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response_obj.narrative_text)
 

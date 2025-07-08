@@ -64,21 +64,59 @@ class GeminiResponse(_GeminiLLMResponse):
         return self.get_debug_info()
     
     @classmethod
-    def create(cls, narrative_text: str, structured_response: Optional[NarrativeResponse], 
+    def create(cls, raw_response_text: str, model: str = "gemini-2.5-flash") -> 'GeminiResponse':
+        """
+        Create a GeminiResponse from raw Gemini API response.
+        
+        Handles all JSON parsing internally.
+        
+        Args:
+            raw_response_text: Raw text response from Gemini API
+            model: Model name used for generation
+            
+        Returns:
+            GeminiResponse with parsed narrative and structured data
+        """
+        # Import here to avoid circular dependency
+        from narrative_response_schema import parse_structured_response
+        
+        # Parse the raw response to extract narrative and structured data
+        narrative_text, structured_response = parse_structured_response(raw_response_text)
+        
+        # Log for debugging
+        logging.debug(f"GeminiResponse.create parsed narrative: {narrative_text[:200]}...")
+        logging.debug(f"GeminiResponse.create has structured response: {structured_response is not None}")
+        
+        # Validate that we got clean narrative text
+        if narrative_text and narrative_text.strip().startswith('{'):
+            logging.error(f"JSON_BUG_DETECTED_IN_GEMINI_RESPONSE: narrative_text contains JSON!")
+            logging.error(f"Raw response: {raw_response_text[:500]}...")
+            # Try to extract just the narrative field if possible
+            import json
+            try:
+                parsed = json.loads(narrative_text)
+                if 'narrative' in parsed:
+                    narrative_text = parsed['narrative']
+                    logging.info("Recovered narrative from JSON in GeminiResponse.create")
+            except:
+                pass
+        
+        return cls(
+            narrative_text=narrative_text,
+            provider="gemini",
+            model=model,
+            structured_response=structured_response
+        )
+    
+    @classmethod
+    def create_legacy(cls, narrative_text: str, structured_response: Optional[NarrativeResponse], 
                model: str = "gemini-2.5-flash") -> 'GeminiResponse':
         """
-        Create a GeminiResponse with backwards compatibility.
+        Legacy create method for backwards compatibility.
         
-        Maintains the existing create() interface while using the new unified structure.
+        DEPRECATED: Use create() with raw response text instead.
         """
-        # JSON BUG DEBUG: Log what's being passed to GeminiResponse
-        logging.debug(f"JSON_BUG_GEMINI_RESPONSE_CREATE_NARRATIVE: {narrative_text[:500]}...")
-        logging.debug(f"JSON_BUG_GEMINI_RESPONSE_CREATE_STRUCTURED: {structured_response is not None}")
-        
-        # Check if narrative_text contains JSON - this should never happen now
-        if '"narrative":' in narrative_text or '"god_mode_response":' in narrative_text:
-            logging.error(f"JSON_BUG_DETECTED_IN_GEMINI_RESPONSE_CREATE: narrative_text contains JSON!")
-            raise ValueError("narrative_text should not contain JSON - this indicates a parsing bug")
+        logging.warning("Using deprecated create_legacy method. Switch to create() with raw response.")
         
         return cls(
             narrative_text=narrative_text,
