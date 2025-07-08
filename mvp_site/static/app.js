@@ -39,6 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.values(views).forEach(v => v.classList.remove('active-view'));
         if(views[viewName]) {
             views[viewName].classList.add('active-view');
+            
+            // Setup campaign type handlers when showing new campaign view
+            if (viewName === 'newCampaign') {
+                setupCampaignTypeHandlers();
+            }
         }
     };
 
@@ -83,8 +88,42 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error loading Dragon Knight campaign content:', error);
             // Fallback to original prompt if loading fails
-            return document.getElementById('campaign-prompt').value;
+            return "A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.";
         }
+    }
+    
+    // Handle campaign type radio button changes
+    function setupCampaignTypeHandlers() {
+        const dragonKnightRadio = document.getElementById('dragonKnightCampaign');
+        const customRadio = document.getElementById('customCampaign');
+        const campaignPromptTextarea = document.getElementById('campaign-prompt');
+        
+        if (!dragonKnightRadio || !customRadio || !campaignPromptTextarea) return;
+        
+        // Load Dragon Knight content on page load (since it's default)
+        loadDragonKnightCampaignContent().then(content => {
+            if (dragonKnightRadio.checked) {
+                campaignPromptTextarea.value = content;
+                campaignPromptTextarea.readOnly = true;
+            }
+        });
+        
+        dragonKnightRadio.addEventListener('change', async (e) => {
+            if (e.target.checked) {
+                campaignPromptTextarea.readOnly = true;
+                campaignPromptTextarea.value = 'Loading Dragon Knight campaign...';
+                const content = await loadDragonKnightCampaignContent();
+                campaignPromptTextarea.value = content;
+            }
+        });
+        
+        customRadio.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                campaignPromptTextarea.readOnly = false;
+                campaignPromptTextarea.value = 'A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.';
+                campaignPromptTextarea.focus();
+            }
+        });
     }
 
     let handleRouteChange = () => {
@@ -232,7 +271,30 @@ document.addEventListener('DOMContentLoaded', () => {
         showSpinner('loading');
         try {
             const { data } = await fetchApi(`/api/campaigns/${campaignId}`);
-            document.getElementById('game-title').innerText = data.campaign.title;
+            const gameTitleElement = document.getElementById('game-title');
+            gameTitleElement.innerText = data.campaign.title;
+            
+            // Initialize inline editor for campaign title
+            if (window.InlineEditor) {
+                new InlineEditor(gameTitleElement, {
+                    maxLength: 100,
+                    minLength: 1,
+                    placeholder: 'Enter campaign title...',
+                    saveFn: async (newTitle) => {
+                        // Save the new title via API
+                        await fetchApi(`/api/campaigns/${campaignId}`, {
+                            method: 'PATCH',
+                            body: JSON.stringify({ title: newTitle })
+                        });
+                        console.log('Campaign title updated successfully');
+                    },
+                    onError: (error) => {
+                        console.error('Failed to update campaign title:', error);
+                        alert('Failed to update campaign title. Please try again.');
+                    }
+                });
+            }
+            
             const storyContainer = document.getElementById('story-content');
             storyContainer.innerHTML = '';
             
@@ -264,6 +326,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
+    // --- Story Reader Controls ---
+    document.getElementById('readStoryBtn')?.addEventListener('click', () => {
+        const storyContent = document.getElementById('story-content');
+        if (storyContent && window.storyReader) {
+            const storyText = Array.from(storyContent.querySelectorAll('p'))
+                .map(p => p.textContent)
+                .join('\n\n');
+            
+            window.storyReader.startReading(storyText, {
+                title: document.getElementById('game-title')?.textContent || 'Campaign Story',
+                onComplete: () => {
+                    document.getElementById('readStoryBtn').style.display = 'inline-block';
+                    document.getElementById('pauseStoryBtn').style.display = 'none';
+                }
+            });
+            
+            document.getElementById('readStoryBtn').style.display = 'none';
+            document.getElementById('pauseStoryBtn').style.display = 'inline-block';
+        }
+    });
+    
+    document.getElementById('pauseStoryBtn')?.addEventListener('click', () => {
+        if (window.storyReader) {
+            window.storyReader.togglePause();
+        }
+    });
+
     // --- Event Listeners ---
     document.getElementById('new-campaign-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -589,6 +678,37 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('download-txt-btn')?.addEventListener('click', () => downloadFile('txt'));
     document.getElementById('download-pdf-btn')?.addEventListener('click', () => downloadFile('pdf'));
     document.getElementById('download-docx-btn')?.addEventListener('click', () => downloadFile('docx'));
+    
+    // Story Reader controls
+    document.getElementById('readStoryBtn')?.addEventListener('click', () => {
+        const storyContent = document.getElementById('story-content');
+        if (storyContent && window.storyReader) {
+            // Get all story text
+            const storyText = Array.from(storyContent.querySelectorAll('p'))
+                .map(p => p.innerText.trim())
+                .join('\n\n');
+            
+            // Start reading
+            window.storyReader.startReading(storyText, {
+                title: document.getElementById('game-title')?.innerText || 'Campaign Story',
+                onComplete: () => {
+                    // Reset button states
+                    document.getElementById('readStoryBtn').style.display = 'inline-block';
+                    document.getElementById('pauseStoryBtn').style.display = 'none';
+                }
+            });
+            
+            // Update button visibility
+            document.getElementById('readStoryBtn').style.display = 'none';
+            document.getElementById('pauseStoryBtn').style.display = 'inline-block';
+        }
+    });
+    
+    document.getElementById('pauseStoryBtn')?.addEventListener('click', () => {
+        if (window.storyReader) {
+            window.storyReader.togglePause();
+        }
+    });
     
     // Theme integration
     window.addEventListener('themeChanged', (e) => {

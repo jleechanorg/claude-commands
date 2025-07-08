@@ -298,3 +298,19 @@ input[type="range"]:focus {
         color: #000;
     }
 }
+
+/* Inline story reader controls on game page */
+.story-reader-controls-inline {
+    display: inline-flex;
+    gap: 0.5rem;
+}
+
+.story-reader-controls-inline .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.story-reader-controls-inline .btn i {
+    font-size: 1rem;
+}

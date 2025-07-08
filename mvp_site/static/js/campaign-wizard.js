@@ -200,17 +200,48 @@ class CampaignWizard {
               <div class="form-text">This helps you identify your campaign in the dashboard.</div>
             </div>
 
+            <!-- Campaign Type Selection -->
+            <div class="mb-4">
+              <label class="form-label">Campaign Type</label>
+              <div class="campaign-type-cards">
+                <div class="campaign-type-card selected" data-type="dragon-knight">
+                  <input class="form-check-input" type="radio" name="wizardCampaignType" 
+                         id="wizard-dragonKnightCampaign" value="dragon-knight" checked>
+                  <label class="campaign-type-label" for="wizard-dragonKnightCampaign">
+                    <div class="campaign-type-icon">🐲</div>
+                    <div class="campaign-type-content">
+                      <h5>Dragon Knight Campaign</h5>
+                      <p class="text-muted mb-0">Play as Ser Arion in a morally complex world. Perfect for new players!</p>
+                    </div>
+                  </label>
+                </div>
+                
+                <div class="campaign-type-card" data-type="custom">
+                  <input class="form-check-input" type="radio" name="wizardCampaignType" 
+                         id="wizard-customCampaign" value="custom">
+                  <label class="campaign-type-label" for="wizard-customCampaign">
+                    <div class="campaign-type-icon">✨</div>
+                    <div class="campaign-type-content">
+                      <h5>Custom Campaign</h5>
+                      <p class="text-muted mb-0">Create your own unique world and story from scratch.</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
             <div class="mb-4">
               <label for="wizard-campaign-prompt" class="form-label">
-                Describe Your World
+                <span id="wizard-prompt-label">Campaign Description</span>
               </label>
               <textarea class="form-control" 
                         id="wizard-campaign-prompt" 
                         rows="4"
-                        placeholder="A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side."
+                        placeholder="Loading Dragon Knight campaign..."
+                        readonly
                         required></textarea>
-              <div class="form-text">
-                For inspiration, pick your favorite movie, book, or TV show. Describe a scenario where you get to make important decisions.
+              <div class="form-text" id="wizard-prompt-help">
+                This campaign uses the pre-written Dragon Knight story. Switch to Custom Campaign to write your own.
               </div>
             </div>
           </div>
@@ -361,6 +392,11 @@ class CampaignWizard {
         }
       });
     });
+    
+    // Setup campaign type handlers after navigation is ready
+    setTimeout(() => {
+      this.loadInitialCampaignContent();
+    }, 100);
   }
 
   setupEventListeners() {
@@ -376,6 +412,20 @@ class CampaignWizard {
     document.addEventListener('change', (e) => {
       if (e.target.matches('.wizard-step input[type="checkbox"]')) {
         this.updatePreview();
+      } else if (e.target.matches('input[name="wizardCampaignType"]')) {
+        this.handleCampaignTypeChange(e.target.value);
+      }
+    });
+
+    // Campaign type card selection
+    document.addEventListener('click', (e) => {
+      const typeCard = e.target.closest('.campaign-type-card');
+      if (typeCard && !e.target.matches('input')) {
+        const radio = typeCard.querySelector('input[type="radio"]');
+        if (radio) {
+          radio.checked = true;
+          radio.dispatchEvent(new Event('change', { bubbles: true }));
+        }
       }
     });
 
@@ -389,6 +439,55 @@ class CampaignWizard {
         }
       });
     });
+
+    // Load Dragon Knight content on wizard init if selected
+    this.loadInitialCampaignContent();
+  }
+
+  async loadInitialCampaignContent() {
+    const dragonKnightRadio = document.getElementById('wizard-dragonKnightCampaign');
+    if (dragonKnightRadio && dragonKnightRadio.checked) {
+      await this.handleCampaignTypeChange('dragon-knight');
+    }
+  }
+
+  async handleCampaignTypeChange(type) {
+    const promptTextarea = document.getElementById('wizard-campaign-prompt');
+    const promptLabel = document.getElementById('wizard-prompt-label');
+    const promptHelp = document.getElementById('wizard-prompt-help');
+    
+    // Update visual selection
+    document.querySelectorAll('.campaign-type-card').forEach(card => {
+      card.classList.toggle('selected', card.dataset.type === type);
+    });
+    
+    if (type === 'dragon-knight') {
+      promptTextarea.readOnly = true;
+      promptTextarea.value = 'Loading Dragon Knight campaign...';
+      promptLabel.textContent = 'Campaign Description';
+      promptHelp.textContent = 'This campaign uses the pre-written Dragon Knight story. Switch to Custom Campaign to write your own.';
+      
+      try {
+        const response = await fetch('/world_reference/campaign_module_dragon_knight.md');
+        if (response.ok) {
+          const content = await response.text();
+          promptTextarea.value = content;
+        } else {
+          promptTextarea.value = 'Failed to load Dragon Knight campaign. Please try again.';
+        }
+      } catch (error) {
+        console.error('Error loading Dragon Knight campaign:', error);
+        promptTextarea.value = 'A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.';
+      }
+    } else {
+      promptTextarea.readOnly = false;
+      promptTextarea.value = 'A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.';
+      promptLabel.textContent = 'Describe Your World';
+      promptHelp.textContent = 'For inspiration, pick your favorite movie, book, or TV show. Describe a scenario where you get to make important decisions.';
+      promptTextarea.focus();
+    }
+    
+    this.updatePreview();
   }
 
   populateFromOriginalForm() {
@@ -532,6 +631,7 @@ class CampaignWizard {
   }
 
   collectFormData() {
+    const isDragonKnight = document.getElementById('wizard-dragonKnightCampaign')?.checked;
     return {
       title: document.getElementById('wizard-campaign-title')?.value || '',
       prompt: document.getElementById('wizard-campaign-prompt')?.value || '',
@@ -541,8 +641,9 @@ class CampaignWizard {
       ],
       customOptions: [
         ...(document.getElementById('wizard-companions')?.checked ? ['companions'] : []),
-        ...(document.getElementById('wizard-default-world')?.checked ? ['defaultWorld'] : []),
-      ]
+        ...(isDragonKnight ? ['defaultWorld'] : []),
+      ],
+      campaignType: isDragonKnight ? 'dragon-knight' : 'custom'
     };
   }
 

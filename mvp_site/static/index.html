@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WorldArchitect.AI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
     
     <!-- Theme CSS files -->
@@ -29,6 +30,9 @@
     <!-- Story Reader - PR #323 -->
     <link rel="stylesheet" href="/static/css/pagination-styles.css">
     <link rel="stylesheet" href="/static/styles/story-reader.css">
+    
+    <!-- Inline Editor - UI Bundle -->
+    <link rel="stylesheet" href="/static/css/inline-editor.css">
     
     <style>
         /* Smooth theme transitions */
@@ -114,7 +118,25 @@
             <h2 class="text-center">Start a New Campaign</h2>
             <form id="new-campaign-form" class="mt-3">
                 <div class="mb-3"><label for="campaign-title" class="form-label">Campaign Title (Pick anything!)</label><input type="text" class="form-control" id="campaign-title" value="My Epic Adventure" required></div>
-                <div class="mb-3"><label for="campaign-prompt" class="form-label">Describe your world. For inspiration you can pick you favorite movie, book or tv show, favorite character, and describe a scenario where you get to make an important decision.</label><textarea class="form-control" id="campaign-prompt" rows="3">A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.</textarea></div>
+                
+                <!-- Campaign Type Selection -->
+                <div class="mb-3">
+                    <label class="form-label">Campaign Type</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="campaignType" id="dragonKnightCampaign" value="dragon-knight" checked>
+                        <label class="form-check-label" for="dragonKnightCampaign">
+                            Use Dragon Knight Campaign <small class="text-muted">(Recommended starter campaign)</small>
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="campaignType" id="customCampaign" value="custom">
+                        <label class="form-check-label" for="customCampaign">
+                            Create Custom Campaign
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mb-3"><label for="campaign-prompt" class="form-label">Describe your world. For inspiration you can pick you favorite movie, book or tv show, favorite character, and describe a scenario where you get to make an important decision.</label><textarea class="form-control" id="campaign-prompt" rows="3" readonly>Loading Dragon Knight campaign...</textarea></div>
                 
                 <div class="mb-3">
                     <label class="form-label">Choose your AI's expertise:</label>
@@ -153,9 +175,21 @@
             </div>
             
             <!-- Download/Share Buttons - Moved to top per TASK-137 -->
-            <div class="d-flex justify-content-end gap-2 mb-3">
-                <button id="downloadStoryBtn" class="btn btn-secondary">Download Story</button>
-                <button id="shareStoryBtn" class="btn btn-info">Share Story</button>
+            <div class="d-flex justify-content-between mb-3">
+                <!-- Story Reader Controls -->
+                <div class="story-reader-controls-inline">
+                    <button id="readStoryBtn" class="btn btn-primary btn-sm" title="Read story aloud">
+                        <i class="bi bi-play-circle"></i> Read Story
+                    </button>
+                    <button id="pauseStoryBtn" class="btn btn-secondary btn-sm" style="display: none;" title="Pause reading">
+                        <i class="bi bi-pause-circle"></i> Pause
+                    </button>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button id="downloadStoryBtn" class="btn btn-secondary">Download Story</button>
+                    <button id="shareStoryBtn" class="btn btn-info">Share Story</button>
+                </div>
             </div>
             <div id="story-content" class="p-3 border rounded bg-light"></div>
             <div id="timer-info" class="mt-2 text-muted text-center small"></div>
@@ -243,6 +277,7 @@
     -->
     <script src="/static/js/loading-messages.js"></script>
     <script src="/static/js/story-reader.js"></script>
+    <script src="/static/js/inline-editor.js"></script>
     <script src="/static/app.js"></script>
 </body>
 </html>
