@@ -477,11 +477,6 @@ def _parse_gemini_response(raw_response_text, context="general"):
     # Use the existing robust parsing logic
     response_text, structured_response = parse_structured_response(raw_response_text)
     
-    # Validation and warning for JSON bugs
-    if response_text.strip().startswith('{'):
-        logging_util.warning(f"⚠️ [{context}] WARNING: response_text contains raw JSON - this indicates the JSON display bug")
-        logging_util.warning(f"   This should have been processed to extract narrative")
-        logging_util.warning(f"   response_text starts with: {response_text[:100]}")
     
     return response_text, structured_response
 

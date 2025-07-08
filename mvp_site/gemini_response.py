@@ -87,19 +87,6 @@ class GeminiResponse(_GeminiLLMResponse):
         logging.debug(f"GeminiResponse.create parsed narrative: {narrative_text[:200]}...")
         logging.debug(f"GeminiResponse.create has structured response: {structured_response is not None}")
         
-        # Validate that we got clean narrative text
-        if narrative_text and narrative_text.strip().startswith('{'):
-            logging.error(f"JSON_BUG_DETECTED_IN_GEMINI_RESPONSE: narrative_text contains JSON!")
-            logging.error(f"Raw response: {raw_response_text[:500]}...")
-            # Try to extract just the narrative field if possible
-            import json
-            try:
-                parsed = json.loads(narrative_text)
-                if 'narrative' in parsed:
-                    narrative_text = parsed['narrative']
-                    logging.info("Recovered narrative from JSON in GeminiResponse.create")
-            except:
-                pass
         
         return cls(
             narrative_text=narrative_text,
