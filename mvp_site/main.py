@@ -2,7 +2,6 @@
 import os
 import sys
 import uuid
-import re
 import subprocess
 import argparse
 from functools import wraps
@@ -54,81 +53,6 @@ DEFAULT_TEST_USER = 'test-user'
 # --- END CONSTANTS ---
 
 
-class StateHelper:
-    """
-    Helper class for state-related operations.
-    Consolidates debug content stripping and state cleanup functions.
-    """
-
-    @staticmethod
-    def strip_debug_content(text):
-        """
-        Strip debug content from AI response text while preserving the rest.
-        Removes content between debug tags: [DEBUG_START/END], [DEBUG_ROLL_START/END], [DEBUG_STATE_START/END]
-        Also removes [STATE_UPDATES_PROPOSED] blocks which are internal state management.
-
-        Args:
-            text: The raw text containing debug content
-
-        Returns:
-            str: Text with debug content removed
-        """
-        return strip_debug_content(text)
-
-    @staticmethod
-    def strip_state_updates_only(text):
-        """
-        Strip only [STATE_UPDATES_PROPOSED] blocks while preserving other debug content.
-        Used when user has debug mode enabled but we still want to hide internal state updates.
-
-        Args:
-            text: The raw text containing state updates
-
-        Returns:
-            str: Text with state updates removed
-        """
-        return strip_state_updates_only(text)
-
-    @staticmethod
-    def strip_other_debug_content(text):
-        """
-        Strip all debug content EXCEPT [STATE_UPDATES_PROPOSED] blocks.
-        Used for extracting state updates while removing other debug information.
-
-        Args:
-            text: The raw text containing debug content
-
-        Returns:
-            str: Text with only state updates remaining
-        """
-        return strip_other_debug_content(text)
-
-    @staticmethod
-    def apply_automatic_combat_cleanup(state_dict, proposed_changes):
-        """
-        Automatically clean up combat state when combat ends.
-
-        Args:
-            state_dict: Current game state dictionary
-            proposed_changes: Proposed state changes
-
-        Returns:
-            dict: Updated state dictionary with combat cleanup applied
-        """
-        return apply_automatic_combat_cleanup(state_dict, proposed_changes)
-
-    @staticmethod
-    def cleanup_legacy_state(state_dict):
-        """
-        Clean up legacy state issues like __DELETE__ tokens and str() conversions.
-
-        Args:
-            state_dict: Game state dictionary to clean
-
-        Returns:
-            tuple: (cleaned_dict, was_cleaned, num_cleaned)
-        """
-        return _cleanup_legacy_state(state_dict)
 
 
 def _prepare_game_state(user_id, campaign_id):
@@ -151,7 +75,7 @@ def _prepare_game_state(user_id, campaign_id):
         current_game_state = GameState()
 
     # Perform cleanup on a dictionary copy
-    cleaned_state_dict, was_cleaned, num_cleaned = StateHelper.cleanup_legacy_state(current_game_state.to_dict())
+    cleaned_state_dict, was_cleaned, num_cleaned = _cleanup_legacy_state(current_game_state.to_dict())
     if was_cleaned:
         # If cleaned, update the main object from the cleaned dictionary
         current_game_state = GameState.from_dict(cleaned_state_dict)
@@ -195,7 +119,7 @@ def _handle_set_command(user_input, current_game_state, user_id, campaign_id):
     logging_util.info(f"GOD_MODE_SET state BEFORE update:\\n{_truncate_log_json(current_state_dict_before_update)}")
 
     updated_state = update_state_with_changes(current_state_dict_before_update, proposed_changes)
-    updated_state = StateHelper.apply_automatic_combat_cleanup(updated_state, proposed_changes)
+    updated_state = apply_automatic_combat_cleanup(updated_state, proposed_changes)
     logging_util.info(f"GOD_MODE_SET state AFTER update:\\n{_truncate_log_json(updated_state)}")
 
     firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
@@ -259,7 +183,7 @@ def _handle_update_state_command(user_input, user_id, campaign_id):
 
         # Perform an update
         updated_state_dict = update_state_with_changes(current_state_dict, state_changes)
-        updated_state_dict = StateHelper.apply_automatic_combat_cleanup(updated_state_dict, state_changes)
+        updated_state_dict = apply_automatic_combat_cleanup(updated_state_dict, state_changes)
 
         # Convert back to GameState object after the update to validate
         final_game_state = GameState.from_dict(updated_state_dict)
@@ -326,7 +250,7 @@ def _handle_legacy_migration(current_game_state, campaign_id, story_context, use
         return current_game_state
 
 
-def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response,
+def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response_obj,
                                    structured_response, mode, story_context, campaign_id, user_id):
     """
     Apply state changes from AI response and prepare final response.
@@ -351,15 +275,14 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
     # Check if debug mode is enabled
     debug_mode_enabled = hasattr(current_game_state, 'debug_mode') and current_game_state.debug_mode
     
-    # Process narrative text based on debug mode (for legacy embedded debug tags)
-    if debug_mode_enabled:
-        # Show all content including embedded debug tags
-        final_narrative = gemini_response
+    # Get narrative text with debug content handled based on debug mode
+    # GeminiResponse now handles debug content stripping internally
+    if hasattr(gemini_response_obj, 'get_narrative_text'):
+        final_narrative = gemini_response_obj.get_narrative_text(debug_mode=debug_mode_enabled)
     else:
-        # Strip embedded debug tags when debug mode is disabled
-        final_narrative = StateHelper.strip_debug_content(gemini_response)
-
-
+        # Fallback for string responses (shouldn't happen with current code)
+        final_narrative = gemini_response_obj
+    
     # Build response data structure
     response_data = {
         KEY_SUCCESS: True,
@@ -404,7 +327,7 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
 
         # Update state with changes
         updated_state_dict = update_state_with_changes(current_game_state.to_dict(), proposed_changes)
-        updated_state_dict = StateHelper.apply_automatic_combat_cleanup(updated_state_dict, proposed_changes)
+        updated_state_dict = apply_automatic_combat_cleanup(updated_state_dict, proposed_changes)
 
         logging_util.info(f"New complete game state for campaign {campaign_id}:\\n{truncate_game_state_for_logging(updated_state_dict)}")
 
@@ -420,74 +343,6 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
     return jsonify(response_data)
 
 
-def strip_debug_content(text):
-    """
-    Strip debug content from AI response text while preserving the rest.
-    Removes content between debug tags: [DEBUG_START/END], [DEBUG_ROLL_START/END], [DEBUG_STATE_START/END]
-    Also removes [STATE_UPDATES_PROPOSED] blocks which are internal state management.
-
-    Args:
-        text (str): The full AI response with debug content
-
-    Returns:
-        str: The response with debug content removed
-    """
-    if not text:
-        return text
-
-    # Use regex for proper pattern matching - same patterns as frontend
-    processed_text = re.sub(r'\[DEBUG_START\][\s\S]*?\[DEBUG_END\]', '', text)
-    processed_text = re.sub(r'\[DEBUG_STATE_START\][\s\S]*?\[DEBUG_STATE_END\]', '', processed_text)
-    processed_text = re.sub(r'\[DEBUG_ROLL_START\][\s\S]*?\[DEBUG_ROLL_END\]', '', processed_text)
-    # Also strip STATE_UPDATES_PROPOSED blocks which are internal state management
-    processed_text = re.sub(r'\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
-    # Handle malformed STATE_UPDATES_PROPOSED blocks (missing opening characters)
-    processed_text = re.sub(r'S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
-
-    return processed_text
-
-
-def strip_state_updates_only(text):
-    """
-    Strip only STATE_UPDATES_PROPOSED blocks from text, preserving all other debug content.
-    This ensures that internal state management blocks are never shown to users, even in debug mode.
-
-    Args:
-        text (str): The full AI response text
-
-    Returns:
-        str: The response with STATE_UPDATES_PROPOSED blocks removed
-    """
-    if not text:
-        return text
-
-    # Remove only STATE_UPDATES_PROPOSED blocks - these should never be shown to users
-    processed_text = re.sub(r'\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', text)
-    # Also handle malformed blocks where the opening characters might be missing
-    processed_text = re.sub(r'S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
-    return processed_text
-
-
-def strip_other_debug_content(text):
-    """
-    Strip all debug content EXCEPT STATE_UPDATES_PROPOSED blocks from text.
-    Used when debug mode is disabled to hide DM commentary and dice rolls.
-
-    Args:
-        text (str): The full AI response text
-
-    Returns:
-        str: The response with debug content (except state updates) removed
-    """
-    if not text:
-        return text
-
-    # Strip debug content but NOT STATE_UPDATES_PROPOSED (already handled separately)
-    processed_text = re.sub(r'\[DEBUG_START\][\s\S]*?\[DEBUG_END\]', '', text)
-    processed_text = re.sub(r'\[DEBUG_STATE_START\][\s\S]*?\[DEBUG_STATE_END\]', '', processed_text)
-    processed_text = re.sub(r'\[DEBUG_ROLL_START\][\s\S]*?\[DEBUG_ROLL_END\]', '', processed_text)
-
-    return processed_text
 
 
 def _handle_debug_mode_command(user_input, mode, current_game_state, user_id, campaign_id):
@@ -781,16 +636,7 @@ def create_app():
                 use_default_world=use_default_world
             )
             
-            # DEBUG: Log what initial story generation returned
-            logging_util.debug(f"JSON_BUG_INITIAL_STORY_RESPONSE: {opening_story_response.narrative_text[:300]}...")
-            logging_util.debug(f"JSON_BUG_INITIAL_STORY_TYPE: {type(opening_story_response)}")
             
-            # DEBUG: Check if opening story contains JSON artifacts
-            if '"narrative":' in opening_story_response.narrative_text or '"god_mode_response":' in opening_story_response.narrative_text:
-                logging_util.error(f"JSON_BUG_DETECTED_IN_OPENING_STORY: Campaign creation has JSON artifacts!")
-                logging_util.error(f"JSON_BUG_OPENING_STORY_CONTENT: {opening_story_response.narrative_text[:500]}...")
-                logging_util.error(f"JSON_BUG_USER_ID: {user_id}, TITLE: {title}")
-                
             campaign_id = firestore_service.create_campaign(
                 user_id, title, prompt, opening_story_response.narrative_text, initial_game_state, selected_prompts, use_default_world
             )
@@ -890,16 +736,7 @@ def create_app():
             use_default_world = campaign.get('use_default_world', False)
             gemini_response_obj = gemini_service.continue_story(user_input, mode, story_context, current_game_state, selected_prompts, use_default_world)
             
-            # DEBUG: Log the raw response from gemini service
-            logging_util.debug(f"JSON_BUG_DEBUG_MAIN_GEMINI_RESPONSE: {gemini_response_obj.narrative_text[:300]}...")
-            logging_util.debug(f"JSON_BUG_DEBUG_MAIN_GEMINI_TYPE: {type(gemini_response_obj.narrative_text)}")
             
-            # Check if narrative_text contains JSON artifacts - this should never happen now
-            if '"narrative":' in gemini_response_obj.narrative_text or '"god_mode_response":' in gemini_response_obj.narrative_text:
-                logging_util.error(f"JSON_BUG_DETECTED_IN_NARRATIVE_TEXT: Campaign {campaign_id}, Mode {mode}")
-                logging_util.error(f"JSON_BUG_RAW_CONTENT: {gemini_response_obj.narrative_text[:500]}...")
-                logging_util.error(f"JSON_BUG_RESPONSE_OBJ_TYPE: {type(gemini_response_obj)}")
-                raise ValueError("narrative_text contains JSON - indicates critical parsing bug")
 
             # 3a. Verify debug content generation for monitoring
             debug_tags_found = gemini_response_obj.debug_tags_present
@@ -936,7 +773,7 @@ def create_app():
                         logging_util.warning(f"  {i}. {discrepancy}")
 
             # Apply state changes and return response
-            return _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response_obj.narrative_text,
+            return _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response_obj,
                                                   gemini_response_obj.structured_response, mode, story_context, campaign_id, user_id)
 
         except Exception as e:

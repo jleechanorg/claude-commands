@@ -8,6 +8,7 @@ New code should use llm_response.py for the unified LLMResponse interface.
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 import logging
+import re
 from narrative_response_schema import NarrativeResponse
 
 # Import the new unified response classes
@@ -33,6 +34,9 @@ class GeminiResponse(_GeminiLLMResponse):
         
         Maintains the old interface while using the new unified structure.
         """
+        # Store the raw narrative text separately
+        self._raw_narrative_text = narrative_text
+        
         super().__init__(
             narrative_text=narrative_text,
             provider=provider,
@@ -63,6 +67,75 @@ class GeminiResponse(_GeminiLLMResponse):
         """Backwards compatibility property for debug_info."""
         return self.get_debug_info()
     
+    def get_narrative_text(self, debug_mode: bool = False) -> str:
+        """
+        Get the narrative text with debug content handled based on debug mode.
+        
+        Args:
+            debug_mode: If True, include debug content. If False, strip debug content.
+            
+        Returns:
+            Narrative text with debug content handled appropriately
+        """
+        if not hasattr(self, '_raw_narrative_text'):
+            # If we don't have raw text stored, return the narrative text as is
+            return self.narrative_text
+            
+        if debug_mode:
+            # In debug mode, strip only STATE_UPDATES_PROPOSED blocks (never shown to users)
+            return self._strip_state_updates_only(self._raw_narrative_text)
+        else:
+            # Strip all debug content when debug mode is off
+            return self._strip_debug_content(self._raw_narrative_text)
+    
+    @staticmethod
+    def _strip_debug_content(text: str) -> str:
+        """
+        Strip debug content from AI response text while preserving the rest.
+        Removes content between debug tags: [DEBUG_START/END], [DEBUG_ROLL_START/END], [DEBUG_STATE_START/END]
+        Also removes [STATE_UPDATES_PROPOSED] blocks which are internal state management.
+        
+        Args:
+            text: The full AI response with debug content
+            
+        Returns:
+            The response with debug content removed
+        """
+        if not text:
+            return text
+        
+        # Use regex for proper pattern matching - same patterns as frontend
+        processed_text = re.sub(r'\[DEBUG_START\][\s\S]*?\[DEBUG_END\]', '', text)
+        processed_text = re.sub(r'\[DEBUG_STATE_START\][\s\S]*?\[DEBUG_STATE_END\]', '', processed_text)
+        processed_text = re.sub(r'\[DEBUG_ROLL_START\][\s\S]*?\[DEBUG_ROLL_END\]', '', processed_text)
+        # Also strip STATE_UPDATES_PROPOSED blocks which are internal state management
+        processed_text = re.sub(r'\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
+        # Handle malformed STATE_UPDATES_PROPOSED blocks (missing opening characters)
+        processed_text = re.sub(r'S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
+        
+        return processed_text
+    
+    @staticmethod
+    def _strip_state_updates_only(text: str) -> str:
+        """
+        Strip only STATE_UPDATES_PROPOSED blocks from text, preserving all other debug content.
+        This ensures that internal state management blocks are never shown to users, even in debug mode.
+        
+        Args:
+            text: The full AI response text
+            
+        Returns:
+            The response with STATE_UPDATES_PROPOSED blocks removed
+        """
+        if not text:
+            return text
+        
+        # Remove only STATE_UPDATES_PROPOSED blocks - these should never be shown to users
+        processed_text = re.sub(r'\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', text)
+        # Also handle malformed blocks where the opening characters might be missing
+        processed_text = re.sub(r'S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
+        return processed_text
+    
     @classmethod
     def create(cls, raw_response_text: str, model: str = "gemini-2.5-flash") -> 'GeminiResponse':
         """
@@ -82,10 +155,6 @@ class GeminiResponse(_GeminiLLMResponse):
         
         # Parse the raw response to extract narrative and structured data
         narrative_text, structured_response = parse_structured_response(raw_response_text)
-        
-        # Log for debugging
-        logging.debug(f"GeminiResponse.create parsed narrative: {narrative_text[:200]}...")
-        logging.debug(f"GeminiResponse.create has structured response: {structured_response is not None}")
         
         
         return cls(
