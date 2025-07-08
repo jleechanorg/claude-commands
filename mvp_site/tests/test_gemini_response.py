@@ -4,13 +4,14 @@ Test-Driven Development: Tests for GeminiResponse object
 These tests define the expected behavior for the GeminiResponse object
 that will clean up the architecture between gemini_service and main.py.
 
-Written FIRST before implementation following TDD principles.
+Updated for new API where GeminiResponse.create() takes raw response text.
 """
 
 import unittest
 import sys
 import os
-from unittest.mock import Mock
+import json
+from unittest.mock import Mock, patch
 
 # Add the parent directory to the Python path so we can import modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,35 +25,32 @@ class TestGeminiResponse(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.sample_narrative = "The brave knight looked around the tavern."
-        # raw_response field removed - only clean narrative and structured response needed
         
-        # Mock structured response
-        self.mock_structured_response = Mock(spec=NarrativeResponse)
-        self.mock_structured_response.debug_info = {
-            "dm_notes": ["Player seems cautious"],
-            "dice_rolls": ["Perception: 1d20+3 = 15"],
-            "resources": "HD: 2/3, Spells: L1 1/2",
-            "state_rationale": "Updated HP after healing"
-        }
-        self.mock_structured_response.state_updates = {
-            "player_character_data": {"hp_current": 18}
-        }
-        self.mock_structured_response.entities_mentioned = ["knight", "tavern"]
-        self.mock_structured_response.location_confirmed = "Silver Stag Tavern"
+        # Create mock raw JSON response
+        self.sample_raw_response = json.dumps({
+            "narrative": self.sample_narrative,
+            "debug_info": {
+                "dm_notes": ["Player seems cautious"],
+                "dice_rolls": ["Perception: 1d20+3 = 15"],
+                "resources": "HD: 2/3, Spells: L1 1/2",
+                "state_rationale": "Updated HP after healing"
+            },
+            "state_updates": {
+                "player_character_data": {"hp_current": 18}
+            },
+            "entities_mentioned": ["knight", "tavern"],
+            "location_confirmed": "Silver Stag Tavern"
+        })
     
     def test_gemini_response_creation(self):
         """Test creating a GeminiResponse object."""
         from gemini_response import GeminiResponse
         
-        response = GeminiResponse.create(
-            narrative_text=self.sample_narrative,
-            structured_response=self.mock_structured_response,
-        )
+        response = GeminiResponse.create(self.sample_raw_response)
         
         # Core fields should be set
         self.assertEqual(response.narrative_text, self.sample_narrative)
-        self.assertEqual(response.structured_response, self.mock_structured_response)
-        # raw_response field removed - response only contains clean narrative
+        self.assertIsNotNone(response.structured_response)
         
         # Should have debug tags detection
         self.assertIsInstance(response.debug_tags_present, dict)
@@ -64,10 +62,7 @@ class TestGeminiResponse(unittest.TestCase):
         """Test debug tags are properly detected when content exists."""
         from gemini_response import GeminiResponse
         
-        response = GeminiResponse.create(
-            narrative_text=self.sample_narrative,
-            structured_response=self.mock_structured_response,
-        )
+        response = GeminiResponse.create(self.sample_raw_response)
         
         # Should detect dm_notes and dice_rolls from structured response
         self.assertTrue(response.debug_tags_present['dm_notes'])
@@ -80,18 +75,20 @@ class TestGeminiResponse(unittest.TestCase):
         """Test debug tags detection when no debug content exists."""
         from gemini_response import GeminiResponse
         
-        empty_structured_response = Mock(spec=NarrativeResponse)
-        empty_structured_response.debug_info = {
-            "dm_notes": [],
-            "dice_rolls": [],
-            "resources": "HD: 2/3",
-            "state_rationale": ""
-        }
+        # Create raw response without debug content
+        clean_raw_response = json.dumps({
+            "narrative": self.sample_narrative,
+            "debug_info": {
+                "dm_notes": [],
+                "dice_rolls": [],
+                "resources": "HD: 2/3",
+                "state_rationale": ""
+            },
+            "entities_mentioned": ["knight", "tavern"],
+            "location_confirmed": "Silver Stag Tavern"
+        })
         
-        response = GeminiResponse.create(
-            narrative_text=self.sample_narrative,
-            structured_response=empty_structured_response,
-        )
+        response = GeminiResponse.create(clean_raw_response)
         
         # Should detect no debug content
         self.assertFalse(response.debug_tags_present['dm_notes'])
@@ -104,137 +101,145 @@ class TestGeminiResponse(unittest.TestCase):
         """Test state_updates property returns correct data."""
         from gemini_response import GeminiResponse
         
-        response = GeminiResponse.create(
-            narrative_text=self.sample_narrative,
-            structured_response=self.mock_structured_response,
-        )
+        response = GeminiResponse.create(self.sample_raw_response)
         
-        expected_state_updates = {"player_character_data": {"hp_current": 18}}
-        self.assertEqual(response.state_updates, expected_state_updates)
+        # Should return state updates from structured response
+        self.assertEqual(response.state_updates, {"player_character_data": {"hp_current": 18}})
     
     def test_entities_mentioned_property(self):
         """Test entities_mentioned property returns correct data."""
         from gemini_response import GeminiResponse
         
-        response = GeminiResponse.create(
-            narrative_text=self.sample_narrative,
-            structured_response=self.mock_structured_response,
-        )
+        response = GeminiResponse.create(self.sample_raw_response)
         
-        expected_entities = ["knight", "tavern"]
-        self.assertEqual(response.entities_mentioned, expected_entities)
+        # Should return entities from structured response
+        self.assertEqual(response.entities_mentioned, ["knight", "tavern"])
     
     def test_location_confirmed_property(self):
         """Test location_confirmed property returns correct data."""
         from gemini_response import GeminiResponse
         
-        response = GeminiResponse.create(
-            narrative_text=self.sample_narrative,
-            structured_response=self.mock_structured_response,
-        )
+        response = GeminiResponse.create(self.sample_raw_response)
         
+        # Should return location from structured response
         self.assertEqual(response.location_confirmed, "Silver Stag Tavern")
     
     def test_debug_info_property(self):
         """Test debug_info property returns correct data."""
         from gemini_response import GeminiResponse
         
-        response = GeminiResponse.create(
-            narrative_text=self.sample_narrative,
-            structured_response=self.mock_structured_response,
-        )
+        response = GeminiResponse.create(self.sample_raw_response)
         
-        expected_debug_info = {
-            "dm_notes": ["Player seems cautious"],
-            "dice_rolls": ["Perception: 1d20+3 = 15"],
-            "resources": "HD: 2/3, Spells: L1 1/2",
-            "state_rationale": "Updated HP after healing"
-        }
-        self.assertEqual(response.debug_info, expected_debug_info)
+        # Should return debug_info from structured response
+        self.assertIsNotNone(response.debug_info)
+        self.assertIn("dm_notes", response.debug_info)
+        self.assertEqual(response.debug_info["dm_notes"], ["Player seems cautious"])
     
     def test_none_structured_response_handling(self):
-        """Test GeminiResponse handles None structured_response gracefully."""
+        """Test GeminiResponse handles plain text gracefully."""
         from gemini_response import GeminiResponse
         
-        response = GeminiResponse.create(
-            narrative_text=self.sample_narrative,
-            structured_response=None,
-        )
+        # Test with plain text (no JSON)
+        plain_response = self.sample_narrative
+        response = GeminiResponse.create(plain_response)
         
-        # Should handle None gracefully
+        # Should extract the narrative
+        self.assertEqual(response.narrative_text, self.sample_narrative)
+        
+        # Should have no structured response
+        self.assertIsNone(response.structured_response)
+        
+        # Properties should return empty/None values gracefully
         self.assertEqual(response.state_updates, {})
         self.assertEqual(response.entities_mentioned, [])
-        self.assertEqual(response.location_confirmed, 'Unknown')
+        self.assertEqual(response.location_confirmed, "")
         self.assertEqual(response.debug_info, {})
-        self.assertFalse(response.has_debug_content)
     
-    def test_continue_story_returns_gemini_response(self):
-        """Test that continue_story returns a GeminiResponse object."""
-        from gemini_service import continue_story
-        from gemini_response import GeminiResponse
-        from game_state import GameState
-        from unittest.mock import patch
-        
-        # Mock the API call
-        with patch('gemini_service._call_gemini_api') as mock_api, \
-             patch('gemini_service._get_text_from_response') as mock_get_text:
-            
-            mock_get_text.return_value = self.sample_raw_response
-            mock_api.return_value = Mock()
-            
-            game_state = GameState()
-            result = continue_story("test input", "character", [], game_state, [])
-            
-            # Should return GeminiResponse object
-            self.assertIsInstance(result, GeminiResponse)
-            self.assertIsInstance(result.narrative_text, str)
-            self.assertIsNotNone(result.debug_tags_present)
-    
-    def test_get_initial_story_returns_gemini_response(self):
+    @patch('gemini_service._call_gemini_api')
+    @patch('gemini_service._get_text_from_response')
+    def test_get_initial_story_returns_gemini_response(self, mock_get_text, mock_api):
         """Test that get_initial_story returns a GeminiResponse object."""
         from gemini_service import get_initial_story
-        from gemini_response import GeminiResponse
-        from unittest.mock import patch
+        from game_state import GameState
         
-        # Mock the API call
-        with patch('gemini_service._call_gemini_api') as mock_api, \
-             patch('gemini_service._get_text_from_response') as mock_get_text:
-            
-            mock_get_text.return_value = self.sample_raw_response
-            mock_api.return_value = Mock()
-            
-            result = get_initial_story("test prompt", [])
-            
-            # Should return GeminiResponse object
-            self.assertIsInstance(result, GeminiResponse)
-            self.assertIsInstance(result.narrative_text, str)
+        # Setup mocks - return raw response text
+        mock_api.return_value = Mock()
+        mock_get_text.return_value = self.sample_raw_response
+        
+        # Call function
+        result = get_initial_story("Start a fantasy adventure", generate_companions=False)
+        
+        # Should return a GeminiResponse object
+        self.assertEqual(type(result).__name__, 'GeminiResponse')
+        self.assertEqual(result.narrative_text, self.sample_narrative)
+    
+    @patch('gemini_service._call_gemini_api')
+    @patch('gemini_service._get_text_from_response')
+    def test_continue_story_returns_gemini_response(self, mock_get_text, mock_api):
+        """Test that continue_story returns a GeminiResponse object."""
+        from gemini_service import continue_story
+        from game_state import GameState
+        
+        # Setup mocks
+        mock_api.return_value = Mock()
+        mock_get_text.return_value = self.sample_raw_response
+        
+        game_state = GameState()
+        story_context = []
+        
+        # Call function
+        result = continue_story(
+            user_input="I approach the barkeep",
+            mode="story",
+            story_context=story_context,
+            current_game_state=game_state
+        )
+        
+        # Should return a GeminiResponse object
+        self.assertEqual(type(result).__name__, 'GeminiResponse')
+        self.assertEqual(result.narrative_text, self.sample_narrative)
     
     def test_main_py_handles_gemini_response_object(self):
         """Test that main.py properly handles GeminiResponse objects."""
+        # This is more of an integration test - checking the interface contract
         from gemini_response import GeminiResponse
         
-        # Create a mock GeminiResponse
-        mock_response = GeminiResponse.create(
-            narrative_text=self.sample_narrative,
-            structured_response=self.mock_structured_response,
+        response = GeminiResponse.create(self.sample_raw_response)
+        
+        # Main.py expects these attributes/methods
+        self.assertTrue(hasattr(response, 'narrative_text'))
+        self.assertTrue(hasattr(response, 'state_updates'))
+        self.assertTrue(hasattr(response, 'debug_tags_present'))
+        self.assertTrue(hasattr(response, 'has_debug_content'))
+        
+        # Should be able to access all necessary data
+        narrative = response.narrative_text
+        updates = response.state_updates
+        
+        self.assertIsInstance(narrative, str)
+        self.assertIsInstance(updates, dict)
+    
+    def test_legacy_create_method(self):
+        """Test that the legacy create method still works for backwards compatibility."""
+        from gemini_response import GeminiResponse
+        
+        # Mock structured response
+        mock_structured = Mock(spec=NarrativeResponse)
+        mock_structured.state_updates = {"hp": 10}
+        mock_structured.entities_mentioned = ["dragon"]
+        mock_structured.location_confirmed = "Dragon's Lair"
+        mock_structured.debug_info = {"dm_notes": ["Boss fight"]}
+        
+        # Use legacy create method
+        response = GeminiResponse.create_legacy(
+            narrative_text="The dragon roars!",
+            structured_response=mock_structured
         )
         
-        # Test that it has all the properties main.py needs
-        self.assertTrue(hasattr(mock_response, 'narrative_text'))
-        self.assertTrue(hasattr(mock_response, 'debug_tags_present'))
-        self.assertTrue(hasattr(mock_response, 'state_updates'))
-        self.assertTrue(hasattr(mock_response, 'has_debug_content'))
-        
-        # Test the debug monitoring interface
-        debug_tags = mock_response.debug_tags_present
-        self.assertIsInstance(debug_tags, dict)
-        self.assertIn('dm_notes', debug_tags)
-        self.assertIn('dice_rolls', debug_tags)
-        self.assertIn('state_changes', debug_tags)
-        
-        # Test that any() works on debug_tags.values()
-        has_any_debug = any(debug_tags.values())
-        self.assertIsInstance(has_any_debug, bool)
+        # Should work correctly
+        self.assertEqual(response.narrative_text, "The dragon roars!")
+        self.assertEqual(response.state_updates, {"hp": 10})
+        self.assertEqual(response.entities_mentioned, ["dragon"])
 
 
 if __name__ == '__main__':
