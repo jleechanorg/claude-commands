@@ -463,7 +463,8 @@ class CampaignWizard {
     
     if (type === 'dragon-knight') {
       promptTextarea.readOnly = true;
-      promptTextarea.value = 'A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.';
+      // Use the Dragon Knight campaign content from app.js
+      promptTextarea.value = window.DRAGON_KNIGHT_CAMPAIGN || "A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.";
       promptLabel.textContent = 'Campaign Description';
       promptHelp.textContent = 'This campaign uses the pre-written Dragon Knight story. Switch to Custom Campaign to write your own.';
     } else {
