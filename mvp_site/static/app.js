@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
             campaignTitleInput.value = "My Epic Adventure"; // Your default title
         }
         if (campaignPromptTextarea) {
-            campaignPromptTextarea.value = "A brave knight in a land of dragons."; // Your default prompt
+            campaignPromptTextarea.value = "A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side."; // Default Dragon Knight prompt
         }
         if (narrativeCheckbox) {
             narrativeCheckbox.checked = true; // Default checked
@@ -76,12 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Dragon Knight campaign content loader
     async function loadDragonKnightCampaignContent() {
-        // Hardcoded Dragon Knight campaign prompt
-        const dragonKnightPrompt = `You are Ser Arion, a 16 year old honorable knight on your first mission, sworn to protect the vast Celestial Imperium. For decades, the Empire has been ruled by the iron-willed Empress Sariel, a ruthless tyrant who uses psychic power to crush dissent. While her methods are terrifying, her reign has brought undeniable benefits: the roads are safe, trade flourishes, and the common people no longer starve or fear bandits. You are a product of this "Silent Peace," and your oath binds you to the security and prosperity it provides.
-
-Your loyalty is now brutally tested. You have been ordered to slaughter a settlement of innocent refugees whose very existence has been deemed a threat to the Empress's perfect, unyielding order. As you wrestle with this monstrous command, a powerful, new voice enters your mind—Aurum, the Gilded King, a magnificent gold dragon long thought to be a myth. He appears as a champion of freedom, urging you to defy the Empress's "soulless cage" and fight for a world of choice and glorious struggle.
-
-You are now caught between two powerful and morally grey forces. Do you uphold your oath and commit an atrocity, believing the sacrifice of a few is worth the peace and safety of millions? Or do you break your vow and join the arrogant dragon's chaotic crusade, plunging the world back into violence for a chance at true freedom? This single choice will define your honor and your path in an empire where security is bought with blood.`;
+        // Standard Dragon Knight campaign prompt
+        const dragonKnightPrompt = "A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.";
         
         console.log('Dragon Knight campaign content loaded (hardcoded)');
         return dragonKnightPrompt;
@@ -115,7 +111,7 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
         customRadio.addEventListener('change', (e) => {
             if (e.target.checked) {
                 campaignPromptTextarea.readOnly = false;
-                campaignPromptTextarea.value = 'A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.';
+                campaignPromptTextarea.value = '';
                 campaignPromptTextarea.focus();
             }
         });
