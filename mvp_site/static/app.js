@@ -93,6 +93,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (dragonKnightRadio.checked) {
                 campaignPromptTextarea.value = content;
                 campaignPromptTextarea.readOnly = true;
+                
+                // Also ensure default world is checked and disabled on initial load
+                const defaultWorldCheckbox = document.getElementById('use-default-world');
+                if (defaultWorldCheckbox) {
+                    defaultWorldCheckbox.checked = true;
+                    defaultWorldCheckbox.disabled = true;
+                }
             }
         });
         
@@ -104,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 campaignPromptTextarea.value = content;
                 
                 // Force default world checkbox to be checked when Dragon Knight is selected
-                const defaultWorldCheckbox = document.getElementById('defaultWorld');
+                const defaultWorldCheckbox = document.getElementById('use-default-world');
                 if (defaultWorldCheckbox) {
                     defaultWorldCheckbox.checked = true;
                     defaultWorldCheckbox.disabled = true; // Disable to prevent unchecking
@@ -115,11 +122,11 @@ document.addEventListener('DOMContentLoaded', () => {
         customRadio.addEventListener('change', (e) => {
             if (e.target.checked) {
                 campaignPromptTextarea.readOnly = false;
-                campaignPromptTextarea.value = 'A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.';
+                campaignPromptTextarea.value = '';
                 campaignPromptTextarea.focus();
                 
                 // Re-enable default world checkbox when custom campaign is selected
-                const defaultWorldCheckbox = document.getElementById('defaultWorld');
+                const defaultWorldCheckbox = document.getElementById('use-default-world');
                 if (defaultWorldCheckbox) {
                     defaultWorldCheckbox.disabled = false; // Re-enable checkbox
                 }
@@ -338,12 +345,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedPrompts = Array.from(document.querySelectorAll('input[name="selectedPrompts"]:checked')).map(checkbox => checkbox.value);
         const customOptions = Array.from(document.querySelectorAll('input[name="customOptions"]:checked')).map(checkbox => checkbox.value);
         
-        // Check if default world is selected and use Dragon Knight campaign content
-        const useDefaultWorld = customOptions.includes('defaultWorld');
-        if (useDefaultWorld) {
-            console.log('Default world selected - replacing prompt with Dragon Knight campaign content');
-            // Replace the prompt with the full Dragon Knight campaign content
-            prompt = await loadDragonKnightCampaignContent();
+        // Check if Dragon Knight campaign is selected
+        const dragonKnightRadio = document.getElementById('dragonKnightCampaign');
+        const isDragonKnight = dragonKnightRadio && dragonKnightRadio.checked;
+        
+        // Dragon Knight campaigns always use default world
+        if (isDragonKnight) {
+            console.log('Dragon Knight campaign selected - ensuring default world is used');
+            // Make sure defaultWorld is in customOptions
+            if (!customOptions.includes('defaultWorld')) {
+                customOptions.push('defaultWorld');
+            }
         }
         try {
             const { data } = await fetchApi('/api/campaigns', { 
