@@ -345,3 +345,6 @@ class StoryReader {
 
 // Create global instance
 const storyReader = new StoryReader();
+
+// Export to window for global access
+window.storyReader = storyReader;
