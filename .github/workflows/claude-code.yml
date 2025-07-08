@@ -36,8 +36,8 @@ jobs:
           timeout_minutes: 30
           base_branch: main
           
-          # Custom system prompt for WorldArchitect.AI context
-          system_prompt: |
+          # Custom instructions for WorldArchitect.AI context
+          custom_instructions: |
             You are helping with WorldArchitect.AI, an AI-powered tabletop RPG platform.
             
             Key project details:
