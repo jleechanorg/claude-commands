@@ -146,8 +146,8 @@ class TestGeminiResponse(unittest.TestCase):
         # Should extract the narrative
         self.assertEqual(response.narrative_text, self.sample_narrative)
         
-        # Should have no structured response
-        self.assertIsNone(response.structured_response)
+        # Should have a structured response (even if empty)
+        self.assertIsNotNone(response.structured_response)
         
         # Properties should return empty/None values gracefully
         self.assertEqual(response.state_updates, {})
