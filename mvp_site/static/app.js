@@ -96,26 +96,25 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
         if (!dragonKnightRadio || !customRadio || !campaignPromptTextarea) return;
         
         // Load Dragon Knight content on page load (since it's default)
-        loadDragonKnightCampaignContent().then(content => {
-            if (dragonKnightRadio.checked) {
-                campaignPromptTextarea.value = content;
-                campaignPromptTextarea.readOnly = true;
-                
-                // Also ensure default world is checked and disabled on initial load
-                const defaultWorldCheckbox = document.getElementById('use-default-world');
-                if (defaultWorldCheckbox) {
-                    defaultWorldCheckbox.checked = true;
-                    defaultWorldCheckbox.disabled = true;
-                }
+        if (dragonKnightRadio.checked) {
+            campaignPromptTextarea.value = window.DRAGON_KNIGHT_CAMPAIGN;
+            campaignPromptTextarea.readOnly = true;
+            
+            // Also ensure default world is checked and disabled on initial load
+            const defaultWorldCheckbox = document.getElementById('use-default-world');
+            if (defaultWorldCheckbox) {
+                defaultWorldCheckbox.checked = true;
+                defaultWorldCheckbox.disabled = true;
             }
-        });
+        } else if (customRadio.checked) {
+            campaignPromptTextarea.value = '';
+            campaignPromptTextarea.readOnly = false;
+        }
         
         dragonKnightRadio.addEventListener('change', async (e) => {
             if (e.target.checked) {
                 campaignPromptTextarea.readOnly = true;
-                campaignPromptTextarea.value = 'Loading Dragon Knight campaign...';
-                const content = await loadDragonKnightCampaignContent();
-                campaignPromptTextarea.value = content;
+                campaignPromptTextarea.value = window.DRAGON_KNIGHT_CAMPAIGN;
                 
                 // Force default world checkbox to be checked when Dragon Knight is selected
                 const defaultWorldCheckbox = document.getElementById('use-default-world');
