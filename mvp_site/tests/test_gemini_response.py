@@ -149,10 +149,10 @@ class TestGeminiResponse(unittest.TestCase):
         # Should have a structured response (even if empty)
         self.assertIsNotNone(response.structured_response)
         
-        # Properties should return empty/None values gracefully
+        # Properties should return empty/default values gracefully
         self.assertEqual(response.state_updates, {})
         self.assertEqual(response.entities_mentioned, [])
-        self.assertEqual(response.location_confirmed, "")
+        self.assertEqual(response.location_confirmed, "Unknown")  # Default value
         self.assertEqual(response.debug_info, {})
     
     @patch('gemini_service._call_gemini_api')
