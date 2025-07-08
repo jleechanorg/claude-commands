@@ -102,6 +102,9 @@
 #### Deferred Tasks (Move to separate sessions)
 - **TASK-135** 🟡 Model cycling debug (2.25 hrs) - MOVED TO OPTIMIZATION PHASE
   - [ ] Complex debugging task, better grouped with other optimization work
+- **UI Release Bundle** 🟡 Story Reader Feature - DEFERRED (PR #418 CLOSED)
+  - [ ] Story reader functionality removed from codebase - will revisit later
+  - [ ] Other UI bundle features (download/share buttons, editable names) preserved
 
 ### Optimization Phase (Separate dedicated session)
 #### CONSOLIDATED: Token/Prompt Optimization (6-8 hrs)
