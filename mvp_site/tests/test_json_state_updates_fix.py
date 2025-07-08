@@ -55,16 +55,11 @@ class TestJsonStateUpdatesFix(unittest.TestCase):
             state_updates=self.state_updates
         )
         
-        # Create a raw JSON response
-        raw_json = '''{
-            "narrative": "[Mode: STORY MODE]\\nYou strike the goblin with your sword!\\n\\n--- PLANNING BLOCK ---\\nWhat next?",
-            "entities_mentioned": ["player", "goblin"],
-            "location_confirmed": "Battle Arena",
-            "state_updates": ''' + str(self.state_updates).replace("'", '"') + '''
-        }'''
-        
-        # Create a GeminiResponse using new API
-        gemini_response = GeminiResponse.create(raw_json)
+        # Create a GeminiResponse directly with structured response
+        gemini_response = GeminiResponse(
+            narrative_text="You strike the goblin with your sword!",
+            structured_response=narrative_response
+        )
         
         # Mock the dependencies
         with patch('main.firestore_service') as mock_firestore:
