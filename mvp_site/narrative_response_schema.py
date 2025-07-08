@@ -161,10 +161,10 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     logging_util.debug(f"JSON_BUG_PARSE_ENTRY: Processing response of length {len(response_text)}")
     logging_util.debug(f"JSON_BUG_PARSE_INPUT: {response_text[:300]}...")
     
-    # Check if input is already raw JSON
+    # EXPECTED: Input should be JSON from Gemini API
     if response_text.strip().startswith('{') and '"narrative":' in response_text:
-        logging_util.error(f"JSON_BUG_PARSE_RAW_JSON_INPUT: Input is already raw JSON!")
-        logging_util.error(f"JSON_BUG_PARSE_RAW_CONTENT: {response_text[:500]}...")
+        logging_util.debug(f"JSON_BUG_PARSE_EXPECTED_JSON_INPUT: Received expected JSON from API")
+        logging_util.debug(f"JSON_BUG_PARSE_JSON_CONTENT: {response_text[:500]}...")
     """
     Parse structured JSON response from LLM
     
