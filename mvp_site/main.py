@@ -915,6 +915,12 @@ def create_app():
                 logging_util.info(f"Debug content generated for campaign {campaign_id}: {debug_tags_found}")
 
             # 4. Write: Add AI response to story log and update state
+            # JSON BUG LOGGING
+            logging_util.error("🔍 MAIN.PY before add_story_entry:")
+            logging_util.error("🔍   narrative_text type: %s", type(gemini_response_obj.narrative_text))
+            logging_util.error("🔍   narrative_text[:200]: %s", gemini_response_obj.narrative_text[:200])
+            logging_util.error("🔍   is JSON: %s", gemini_response_obj.narrative_text.strip().startswith('{'))
+            
             firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response_obj.narrative_text)
 
             # 5. Parse and apply state changes from AI response

@@ -479,6 +479,36 @@ def _process_structured_response(raw_response_text, expected_entities):
     logging_util.debug(f"JSON_BUG_PROCESS_STRUCTURED_PARSED_TYPE: {type(response_text)}")
     logging_util.debug(f"JSON_BUG_PROCESS_STRUCTURED_HAS_STRUCTURED: {structured_response is not None}")
     
+    # CRITICAL JSON BUG CHECK AND FIX
+    if response_text.strip().startswith('{'):
+        logging_util.error("🚨 JSON BUG FOUND IN _process_structured_response!")
+        logging_util.error(f"   parse_structured_response returned JSON instead of narrative")
+        logging_util.error(f"   response_text starts with: {response_text[:100]}")
+        
+        # FIX: Try to extract narrative if we got JSON
+        try:
+            import json
+            parsed = json.loads(response_text)
+            if 'narrative' in parsed:
+                logging_util.error("🔧 APPLYING FIX: Extracting narrative from valid JSON")
+                response_text = parsed['narrative']
+                logging_util.error(f"✅ Fixed response_text now starts with: {response_text[:100]}")
+            else:
+                # No narrative field, use empty string
+                logging_util.error("🔧 APPLYING FIX: No narrative in JSON, using empty string")
+                response_text = "[Error: Unable to generate narrative]"
+        except:
+            # Can't parse JSON, try to extract narrative with regex
+            import re
+            narrative_match = re.search(r'"narrative"\s*:\s*"([^"]*)"', response_text)
+            if narrative_match:
+                logging_util.error("🔧 APPLYING FIX: Extracted narrative with regex")
+                response_text = narrative_match.group(1).replace('\\n', '\n')
+            else:
+                # Last resort: return error message instead of raw JSON
+                logging_util.error("🔧 APPLYING FIX: Cannot extract narrative, using error message")
+                response_text = "[Error: Unable to parse AI response. Please try again.]"
+    
     # Validate structured response coverage
     if isinstance(structured_response, NarrativeResponse):
         coverage_validation = validate_entity_coverage(structured_response, expected_entities)
@@ -1207,6 +1237,12 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     
     # Process structured response (handles both entity tracking and non-entity cases)
     response_text, structured_response = _process_structured_response(raw_response_text, expected_entities or [])
+    
+    # JSON BUG LOGGING
+    logging_util.error("🔍 GEMINI_SERVICE creating response:")
+    logging_util.error("🔍   response_text type: %s", type(response_text))
+    logging_util.error("🔍   response_text[:200]: %s", response_text[:200])
+    logging_util.error("🔍   response_text is JSON: %s", response_text.strip().startswith('{'))
     
     # Validate entity tracking if enabled
     if expected_entities:
