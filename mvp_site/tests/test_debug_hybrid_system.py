@@ -2,7 +2,6 @@
 Test hybrid debug content system for backward compatibility.
 """
 
-import pytest
 import sys
 import os
 
