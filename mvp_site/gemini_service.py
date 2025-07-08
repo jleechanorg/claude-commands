@@ -137,12 +137,12 @@ def get_client():
     """Initializes and returns a singleton Gemini client."""
     global _client
     if _client is None:
-        logging_util.info("--- Initializing Gemini Client ---")
+        logging_util.info("Initializing Gemini Client")
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
         _client = genai.Client(api_key=api_key)
-        logging_util.info("--- Gemini Client Initialized Successfully ---")
+        logging_util.info("Gemini Client initialized successfully")
     return _client
 
 def _add_world_instructions_to_system(system_instruction_parts):
@@ -468,16 +468,10 @@ def _process_structured_response(raw_response_text, expected_entities):
     Returns:
         tuple: (response_text, structured_response) where structured_response is NarrativeResponse or None
     """
-    # JSON BUG DEBUG: Log raw response
-    logging_util.debug(f"JSON_BUG_PROCESS_STRUCTURED_RAW_INPUT: {raw_response_text[:500]}...")
-    logging_util.debug(f"JSON_BUG_PROCESS_STRUCTURED_RAW_TYPE: {type(raw_response_text)}")
+    # Log raw Gemini API response for debugging
+    logging_util.debug(f"Raw Gemini API response: {raw_response_text[:500]}...")
     
     response_text, structured_response = parse_structured_response(raw_response_text)
-    
-    # JSON BUG DEBUG: Log parsed results
-    logging_util.debug(f"JSON_BUG_PROCESS_STRUCTURED_PARSED_TEXT: {response_text[:500]}...")
-    logging_util.debug(f"JSON_BUG_PROCESS_STRUCTURED_PARSED_TYPE: {type(response_text)}")
-    logging_util.debug(f"JSON_BUG_PROCESS_STRUCTURED_HAS_STRUCTURED: {structured_response is not None}")
     
     # JSON BUG CHECK - Remove incorrect fix
     # TODO: The actual JSON bug is NOT about malformed JSON
@@ -552,8 +546,8 @@ def _log_token_count(model_name, user_prompt_contents, system_instruction_text=N
             # The system instruction is a single string, so it needs to be wrapped in a list for the API
             system_tokens = client.models.count_tokens(model=model_name, contents=[system_instruction_text]).total_tokens
 
-        total_tokens = user_prompt_tokens + system_tokens
-        logging_util.info(f"--- Sending {total_tokens} tokens to the API. (Prompt: {user_prompt_tokens}, System: {system_tokens}) ---")
+        total_tokens = (user_prompt_tokens or 0) + (system_tokens or 0)
+        logging_util.info(f"Sending {total_tokens} tokens to API (Prompt: {user_prompt_tokens or 0}, System: {system_tokens or 0})")
 
     except Exception as e:
         logging_util.warning(f"Could not count tokens before API call: {e}")
@@ -582,17 +576,15 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             models_to_try.append(fallback_model)
     
     if current_prompt_text_for_logging:
-        logging_util.info(f"--- Calling Gemini API with current prompt: {str(current_prompt_text_for_logging)[:1000]}... ---")
+        logging_util.info(f"Calling Gemini API with prompt: {str(current_prompt_text_for_logging)[:500]}...")
 
-    # Log both character and estimated token counts for transition period
-    
-    # Collect all prompt text for token counting
+    # Log token estimate for prompt
     all_prompt_text = [p for p in prompt_contents if isinstance(p, str)]
     if system_instruction_text:
         all_prompt_text.append(system_instruction_text)
     
     combined_text = ' '.join(all_prompt_text)
-    log_with_tokens("--- Calling Gemini API with prompt", combined_text, logging_util)
+    log_with_tokens("Calling Gemini API", combined_text, logging_util)
 
     last_error = None
     
@@ -602,9 +594,9 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             _log_token_count(current_model, prompt_contents, system_instruction_text)
             
             if attempt > 0:
-                logging_util.warning(f"--- Attempting fallback model #{attempt}: {current_model} (after {attempt} failed attempts) ---")
+                logging_util.warning(f"Attempting fallback model: {current_model}")
             else:
-                logging_util.info(f"--- Attempting primary model: {current_model} ---")
+                logging_util.info(f"Using model: {current_model}")
 
             generation_config_params = {
                 "max_output_tokens": MAX_TOKENS,
@@ -618,7 +610,7 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             # Use reduced token limit for JSON mode to ensure proper completion
             generation_config_params["max_output_tokens"] = JSON_MODE_MAX_TOKENS
             if attempt == 0:  # Only log once
-                logging_util.info(f"--- Using JSON response mode with reduced token limit ({JSON_MODE_MAX_TOKENS}) ---")
+                logging_util.info(f"Using JSON response mode with {JSON_MODE_MAX_TOKENS} token limit")
             
             # Pass the system instruction to the generate_content call
             if system_instruction_text:
@@ -631,9 +623,7 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             )
             
             if attempt > 0:
-                logging_util.warning(f"--- SUCCESS: Fallback model {current_model} worked after {attempt} failed attempts ---")
-            else:
-                logging_util.info(f"--- SUCCESS: Primary model {current_model} worked ---")
+                logging_util.info(f"Fallback model {current_model} succeeded")
             
             return response
             
@@ -646,7 +636,7 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             
             # Check if the exception has a status_code attribute
             if hasattr(e, 'status_code'):
-                status_code = e.status_code
+                status_code = getattr(e, 'status_code', None)
             # Check if it's a ServerError with the status in the message
             elif '503 UNAVAILABLE' in error_message:
                 status_code = 503
@@ -656,22 +646,22 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
                 status_code = 400
             
             if status_code == 503:  # Service unavailable
-                logging_util.warning(f"--- Model {current_model} overloaded (503), trying next model... ---")
+                logging_util.warning(f"Model {current_model} overloaded (503), trying next model")
                 continue
             elif status_code == 429:  # Rate limit
-                logging_util.warning(f"--- Model {current_model} rate limited (429), trying next model... ---")
+                logging_util.warning(f"Model {current_model} rate limited (429), trying next model")
                 continue
             elif status_code == 400 and "not found" in error_message.lower():  # Model not found
-                logging_util.warning(f"--- Model {current_model} not found (400), trying next model... ---")
+                logging_util.warning(f"Model {current_model} not found (400), trying next model")
                 continue
             else:
                 # For other errors, don't continue cycling - raise immediately
-                logging_util.error(f"--- Non-recoverable error with model {current_model}: {e} ---")
+                logging_util.error(f"Non-recoverable error with model {current_model}: {e}")
                 raise e
     
     # If we get here, all models failed
-    logging_util.error(f"--- ALL MODELS FAILED: Tried {len(models_to_try)} models: {models_to_try} ---")
-    logging_util.error(f"--- Last error: {last_error} ---")
+    logging_util.error(f"All models failed: {models_to_try}")
+    logging_util.error(f"Last error: {last_error}")
     
     # Ensure we have a meaningful error to raise
     if last_error is None:
@@ -707,7 +697,7 @@ def _get_text_from_response(response):
     except Exception as e:
         logging_util.error(f"Unexpected error in _get_text_from_response: {e}")
     
-    logging_util.warning(f"--- Response did not contain valid text. Full response object: {response} ---")
+    logging_util.warning(f"Response did not contain valid text. Response object: {response}")
     return "[System Message: The model returned a non-text response. Please check the logs for details.]"
 
 def _get_context_stats(context, model_name, current_game_state: GameState):
@@ -722,8 +712,9 @@ def _get_context_stats(context, model_name, current_game_state: GameState):
     actual_tokens = "N/A"
     try:
         client = get_client()
-        parts = [types.Part(text=entry.get(constants.KEY_TEXT, '')) for entry in context]
-        count_response = client.models.count_tokens(model=model_name, contents=parts)
+        # Use simple text strings for token counting
+        text_contents = [entry.get(constants.KEY_TEXT, '') for entry in context]
+        count_response = client.models.count_tokens(model=model_name, contents=text_contents)
         actual_tokens = count_response.total_tokens
     except Exception as e:
         logging_util.warning(f"Could not count tokens for context stats: {e}")
@@ -941,35 +932,16 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
             # For initial story, we'll log but not retry to avoid complexity
             # The continue_story function will handle retry logic for subsequent interactions
     
-    # DEBUG: Check for JSON in response_text before creating GeminiResponse (initial story)
     # JSON should never reach this point - response_text should be clean narrative
     if '"narrative":' in response_text or '"god_mode_response":' in response_text:
-        logging_util.error(f"JSON_BUG_DETECTED_IN_GEMINI_SERVICE_INITIAL: response_text contains JSON!")
-        logging_util.error(f"JSON_BUG_RESPONSE_TEXT_INITIAL: {response_text[:500]}...")
-        logging_util.error(f"JSON_BUG_STRUCTURED_RESPONSE_INITIAL: {structured_response}")
+        logging_util.error(f"JSON_BUG_DETECTED: response_text contains JSON instead of clean narrative")
         raise ValueError("response_text should be clean narrative, not JSON - indicates parsing bug")
-    
-    # 🔍 COMPREHENSIVE LOGGING: Track GeminiResponse.create parameters
-    logging_util.info(f"🔍 GEMINI_SERVICE creating GeminiResponse with:")
-    logging_util.info(f"🔍   response_text type: {type(response_text)}")
-    logging_util.info(f"🔍   response_text[:200]: {response_text[:200]}")
-    logging_util.info(f"🔍   response_text contains JSON: {'"narrative":' in response_text or '"god_mode_response":' in response_text}")
-    logging_util.info(f"🔍   structured_response type: {type(structured_response)}")
-    logging_util.info(f"🔍   structured_response is None: {structured_response is None}")
-    if structured_response:
-        logging_util.info(f"🔍   structured_response.narrative[:200]: {getattr(structured_response, 'narrative', 'NO_NARRATIVE_FIELD')[:200]}")
     
     # Create GeminiResponse with only clean narrative text and structured response  
     gemini_response = GeminiResponse.create(response_text, structured_response)
     
-    # 🔍 COMPREHENSIVE LOGGING: Track GeminiResponse fields after creation
-    logging_util.info(f"🔍 GEMINI_SERVICE created GeminiResponse with:")
-    logging_util.info(f"🔍   gemini_response.narrative_text type: {type(gemini_response.narrative_text)}")
-    logging_util.info(f"🔍   gemini_response.narrative_text[:200]: {gemini_response.narrative_text[:200]}")
-    logging_util.info(f"🔍   gemini_response.narrative_text contains JSON: {'"narrative":' in gemini_response.narrative_text or '"god_mode_response":' in gemini_response.narrative_text}")
-    logging_util.info(f"🔍   gemini_response.structured_response type: {type(gemini_response.structured_response)}")
-    if gemini_response.structured_response:
-        logging_util.info(f"🔍   gemini_response.structured_response.narrative[:200]: {getattr(gemini_response.structured_response, 'narrative', 'NO_NARRATIVE_FIELD')[:200]}")
+    # Log GeminiResponse creation for debugging
+    logging_util.debug(f"Created GeminiResponse with narrative_text length: {len(gemini_response.narrative_text)}")
     
     # Return our custom GeminiResponse object (not raw API response)
     # This object contains:
@@ -1244,20 +1216,6 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # Process structured response (handles both entity tracking and non-entity cases)
     response_text, structured_response = _process_structured_response(raw_response_text, expected_entities or [])
     
-    # JSON BUG LOGGING
-    logging_util.info("🔍 GEMINI_SERVICE creating response:")
-    logging_util.info("🔍   response_text type: %s", type(response_text))
-    logging_util.info("🔍   response_text[:200]: %s", response_text[:200])
-    logging_util.info("🔍   response_text is JSON: %s", response_text.strip().startswith('{'))
-    
-    # Also print to console directly
-    print(f"\n{'='*60}")
-    print(f"🔍 DEBUG: GEMINI_SERVICE after _process_structured_response")
-    print(f"   response_text type: {type(response_text)}")
-    print(f"   Starts with '{{': {response_text.strip().startswith('{')}")
-    print(f"   First 200 chars: {response_text[:200]}")
-    print(f"{'='*60}\n")
-    
     # Validate entity tracking if enabled
     if expected_entities:
         # First do basic validation
@@ -1327,34 +1285,14 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     
     # JSON should never reach this point - response_text should be clean narrative
     if '"narrative":' in response_text or '"god_mode_response":' in response_text:
-        logging_util.error(f"JSON_BUG_DETECTED_IN_GEMINI_SERVICE_CONTINUE: response_text contains JSON!")
-        logging_util.error(f"JSON_BUG_RESPONSE_TEXT_CONTINUE: {response_text[:500]}...")
-        logging_util.error(f"JSON_BUG_STRUCTURED_RESPONSE_CONTINUE: {structured_response}")
-        logging_util.error(f"JSON_BUG_MODE: {mode}")
-        logging_util.error(f"JSON_BUG_USER_INPUT: {user_input[:100]}...")
+        logging_util.error(f"JSON_BUG_DETECTED: response_text contains JSON instead of clean narrative")
         raise ValueError("response_text should be clean narrative, not JSON - indicates parsing bug")
-    
-    # 🔍 COMPREHENSIVE LOGGING: Track GeminiResponse.create parameters (continue mode)
-    logging_util.info(f"🔍 GEMINI_SERVICE (continue) creating GeminiResponse with:")
-    logging_util.info(f"🔍   response_text type: {type(response_text)}")
-    logging_util.info(f"🔍   response_text[:200]: {response_text[:200]}")
-    logging_util.info(f"🔍   response_text contains JSON: {'"narrative":' in response_text or '"god_mode_response":' in response_text}")
-    logging_util.info(f"🔍   structured_response type: {type(structured_response)}")
-    logging_util.info(f"🔍   structured_response is None: {structured_response is None}")
-    if structured_response:
-        logging_util.info(f"🔍   structured_response.narrative[:200]: {getattr(structured_response, 'narrative', 'NO_NARRATIVE_FIELD')[:200]}")
     
     # Create GeminiResponse with only clean narrative text and structured response  
     gemini_response = GeminiResponse.create(response_text, structured_response)
     
-    # 🔍 COMPREHENSIVE LOGGING: Track GeminiResponse fields after creation (continue mode)
-    logging_util.info(f"🔍 GEMINI_SERVICE (continue) created GeminiResponse with:")
-    logging_util.info(f"🔍   gemini_response.narrative_text type: {type(gemini_response.narrative_text)}")
-    logging_util.info(f"🔍   gemini_response.narrative_text[:200]: {gemini_response.narrative_text[:200]}")
-    logging_util.info(f"🔍   gemini_response.narrative_text contains JSON: {'"narrative":' in gemini_response.narrative_text or '"god_mode_response":' in gemini_response.narrative_text}")
-    logging_util.info(f"🔍   gemini_response.structured_response type: {type(gemini_response.structured_response)}")
-    if gemini_response.structured_response:
-        logging_util.info(f"🔍   gemini_response.structured_response.narrative[:200]: {getattr(gemini_response.structured_response, 'narrative', 'NO_NARRATIVE_FIELD')[:200]}")
+    # Log GeminiResponse creation for debugging
+    logging_util.debug(f"Created GeminiResponse with narrative_text length: {len(gemini_response.narrative_text)}")
     
     # Return our custom GeminiResponse object (not raw API response)
     # This object contains:
