@@ -22,7 +22,7 @@ class GeminiResponse(_GeminiLLMResponse):
     while providing the new unified interface.
     """
     
-    def __init__(self, narrative_text: str, raw_response: str, 
+    def __init__(self, narrative_text: str, 
                  structured_response: Optional[NarrativeResponse] = None,
                  debug_tags_present: Optional[Dict[str, bool]] = None,
                  processing_metadata: Optional[Dict[str, Any]] = None,
@@ -35,7 +35,6 @@ class GeminiResponse(_GeminiLLMResponse):
         """
         super().__init__(
             narrative_text=narrative_text,
-            raw_response=raw_response, 
             provider=provider,
             model=model,
             structured_response=structured_response,
@@ -66,7 +65,7 @@ class GeminiResponse(_GeminiLLMResponse):
     
     @classmethod
     def create(cls, narrative_text: str, structured_response: Optional[NarrativeResponse], 
-               raw_response: str, model: str = "gemini-2.5-flash") -> 'GeminiResponse':
+               model: str = "gemini-2.5-flash") -> 'GeminiResponse':
         """
         Create a GeminiResponse with backwards compatibility.
         
@@ -74,16 +73,15 @@ class GeminiResponse(_GeminiLLMResponse):
         """
         # JSON BUG DEBUG: Log what's being passed to GeminiResponse
         logging.debug(f"JSON_BUG_GEMINI_RESPONSE_CREATE_NARRATIVE: {narrative_text[:500]}...")
-        logging.debug(f"JSON_BUG_GEMINI_RESPONSE_CREATE_RAW: {raw_response[:500]}...")
         logging.debug(f"JSON_BUG_GEMINI_RESPONSE_CREATE_STRUCTURED: {structured_response is not None}")
         
-        # Check if narrative_text contains JSON
+        # Check if narrative_text contains JSON - this should never happen now
         if '"narrative":' in narrative_text or '"god_mode_response":' in narrative_text:
             logging.error(f"JSON_BUG_DETECTED_IN_GEMINI_RESPONSE_CREATE: narrative_text contains JSON!")
+            raise ValueError("narrative_text should not contain JSON - this indicates a parsing bug")
         
         return cls(
             narrative_text=narrative_text,
-            raw_response=raw_response,
             provider="gemini",
             model=model,
             structured_response=structured_response

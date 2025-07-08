@@ -63,7 +63,7 @@ class TestScenePrefixJSONBug(unittest.TestCase):
         ]
         
         for raw_response in test_cases:
-            with self.subTest(raw_response=raw_response):
+            with self.subTest():
                 narrative_text, structured_response = parse_structured_response(raw_response)
                 self.assertEqual(narrative_text, "Test story")
                 self.assertNotIn("Scene", narrative_text)

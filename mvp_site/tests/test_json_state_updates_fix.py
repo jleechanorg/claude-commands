@@ -59,7 +59,7 @@ class TestJsonStateUpdatesFix(unittest.TestCase):
         gemini_response = GeminiResponse.create(
             narrative_text="[Mode: STORY MODE]\\nYou strike the goblin with your sword!\\n\\n--- PLANNING BLOCK ---\\nWhat next?",
             structured_response=narrative_response,
-            raw_response="raw response"
+            
         )
         
         # Mock the dependencies
@@ -123,7 +123,7 @@ What next?
         gemini_response = GeminiResponse.create(
             narrative_text=narrative_text,
             structured_response=None,  # No structured response
-            raw_response=narrative_text
+            
         )
         
         # Mock the dependencies

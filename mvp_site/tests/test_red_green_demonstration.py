@@ -33,7 +33,7 @@ def demonstrate_red_phase():
     gemini_response = GeminiResponse.create(
         narrative_text=narrative_text,
         structured_response=mock_structured_response,
-        raw_response=raw_response
+        
     )
     
     print(f"✅ get_initial_story() returns: {type(gemini_response).__name__}")
@@ -70,7 +70,7 @@ def demonstrate_green_phase():
     gemini_response = GeminiResponse.create(
         narrative_text=narrative_text,
         structured_response=mock_structured_response,
-        raw_response=raw_response
+        
     )
     
     print(f"✅ get_initial_story() returns: {type(gemini_response).__name__}")

@@ -60,6 +60,11 @@ class TestAlwaysJSONMode(unittest.TestCase):
             self.assertTrue(mock_api.called, 
                           "API should have been called (JSON mode is always enabled)")
             
+            # Verify we got a clean GeminiResponse with narrative text (not JSON)
+            self.assertIsNotNone(result)
+            self.assertEqual(result.narrative_text, "Welcome to character creation!")
+            self.assertNotIn('"narrative":', result.narrative_text)  # Should be clean text, not JSON
+            
     def test_json_mode_with_entities(self):
         """Test that JSON mode is used when entities are present"""
         # Add a player character

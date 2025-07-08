@@ -55,7 +55,7 @@ class TestJSONModePreference(unittest.TestCase):
             narrative_text=narrative_with_block,
             structured_response=narrative_response,
             debug_tags_present={},
-            raw_response="raw"
+            
         )
         
         # Verify JSON is preferred
@@ -78,7 +78,7 @@ class TestJSONModePreference(unittest.TestCase):
             narrative_text="Test narrative",
             structured_response=narrative_response,
             debug_tags_present={},
-            raw_response="raw"
+            
         )
         
         # Simulate the main.py logic (now simplified)
@@ -94,7 +94,7 @@ class TestJSONModePreference(unittest.TestCase):
             narrative_text="Story with [STATE_UPDATES_PROPOSED]{\"pc_data\": {\"gold\": 200}}[END_STATE_UPDATES_PROPOSED]",
             structured_response=None,  # No JSON response
             debug_tags_present={},
-            raw_response="raw"
+            
         )
         
         # JSON mode is the ONLY mode - no fallback
@@ -177,7 +177,7 @@ More story."""
             narrative_text=narrative_with_embedded,
             structured_response=narrative_response,
             debug_tags_present={},
-            raw_response="raw"
+            
         )
         
         # The JSON value should win

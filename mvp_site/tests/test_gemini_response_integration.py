@@ -79,7 +79,7 @@ class TestGeminiResponseIntegration(unittest.TestCase):
         gemini_response_obj = GeminiResponse.create(
             narrative_text=narrative_text,
             structured_response=mock_structured_response,
-            raw_response=raw_response
+            
         )
         
         # Mock get_initial_story to return actual GeminiResponse object
@@ -140,7 +140,7 @@ class TestGeminiResponseIntegration(unittest.TestCase):
         gemini_response = GeminiResponse.create(
             narrative_text=narrative_text,
             structured_response=mock_structured_response,
-            raw_response=raw_response
+            
         )
         
         # Assert: Verify required interface

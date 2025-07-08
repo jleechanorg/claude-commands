@@ -24,20 +24,7 @@ class TestGeminiResponse(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         self.sample_narrative = "The brave knight looked around the tavern."
-        self.sample_raw_response = '''
-        {
-            "narrative": "The brave knight looked around the tavern.",
-            "entities_mentioned": ["knight", "tavern"],
-            "location_confirmed": "Silver Stag Tavern",
-            "state_updates": {"player_character_data": {"hp_current": 18}},
-            "debug_info": {
-                "dm_notes": ["Player seems cautious"],
-                "dice_rolls": ["Perception: 1d20+3 = 15"],
-                "resources": "HD: 2/3, Spells: L1 1/2",
-                "state_rationale": "Updated HP after healing"
-            }
-        }
-        '''
+        # raw_response field removed - only clean narrative and structured response needed
         
         # Mock structured response
         self.mock_structured_response = Mock(spec=NarrativeResponse)
@@ -60,13 +47,12 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(
             narrative_text=self.sample_narrative,
             structured_response=self.mock_structured_response,
-            raw_response=self.sample_raw_response
         )
         
         # Core fields should be set
         self.assertEqual(response.narrative_text, self.sample_narrative)
         self.assertEqual(response.structured_response, self.mock_structured_response)
-        self.assertEqual(response.raw_response, self.sample_raw_response)
+        # raw_response field removed - response only contains clean narrative
         
         # Should have debug tags detection
         self.assertIsInstance(response.debug_tags_present, dict)
@@ -81,7 +67,6 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(
             narrative_text=self.sample_narrative,
             structured_response=self.mock_structured_response,
-            raw_response=self.sample_raw_response
         )
         
         # Should detect dm_notes and dice_rolls from structured response
@@ -106,7 +91,6 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(
             narrative_text=self.sample_narrative,
             structured_response=empty_structured_response,
-            raw_response='{"narrative": "test"}'
         )
         
         # Should detect no debug content
@@ -123,7 +107,6 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(
             narrative_text=self.sample_narrative,
             structured_response=self.mock_structured_response,
-            raw_response=self.sample_raw_response
         )
         
         expected_state_updates = {"player_character_data": {"hp_current": 18}}
@@ -136,7 +119,6 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(
             narrative_text=self.sample_narrative,
             structured_response=self.mock_structured_response,
-            raw_response=self.sample_raw_response
         )
         
         expected_entities = ["knight", "tavern"]
@@ -149,7 +131,6 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(
             narrative_text=self.sample_narrative,
             structured_response=self.mock_structured_response,
-            raw_response=self.sample_raw_response
         )
         
         self.assertEqual(response.location_confirmed, "Silver Stag Tavern")
@@ -161,7 +142,6 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(
             narrative_text=self.sample_narrative,
             structured_response=self.mock_structured_response,
-            raw_response=self.sample_raw_response
         )
         
         expected_debug_info = {
@@ -179,7 +159,6 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(
             narrative_text=self.sample_narrative,
             structured_response=None,
-            raw_response=self.sample_raw_response
         )
         
         # Should handle None gracefully
@@ -238,7 +217,6 @@ class TestGeminiResponse(unittest.TestCase):
         mock_response = GeminiResponse.create(
             narrative_text=self.sample_narrative,
             structured_response=self.mock_structured_response,
-            raw_response=self.sample_raw_response
         )
         
         # Test that it has all the properties main.py needs

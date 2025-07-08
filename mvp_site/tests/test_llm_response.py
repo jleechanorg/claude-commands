@@ -37,7 +37,6 @@ class TestLLMResponse(unittest.TestCase):
         response = GeminiLLMResponse.create(
             narrative_text=self.sample_narrative,
             structured_response=self.mock_structured,
-            raw_response=self.sample_raw,
             model=self.sample_model
         )
         
@@ -57,7 +56,6 @@ class TestLLMResponse(unittest.TestCase):
         response = create_llm_response(
             provider="gemini",
             narrative_text=self.sample_narrative,
-            raw_response=self.sample_raw,
             model=self.sample_model,
             structured_response=self.mock_structured
         )
@@ -71,7 +69,6 @@ class TestLLMResponse(unittest.TestCase):
         response = GeminiResponse.create(
             narrative_text=self.sample_narrative,
             structured_response=self.mock_structured,
-            raw_response=self.sample_raw
         )
         
         # Test old property interface
@@ -89,7 +86,6 @@ class TestLLMResponse(unittest.TestCase):
         response = GeminiLLMResponse.create(
             narrative_text=self.sample_narrative,
             structured_response=self.mock_structured,
-            raw_response=self.sample_raw + "[DEBUG_STATE_START]test[DEBUG_STATE_END]"
         )
         
         # Should detect dm_notes and state_changes
@@ -103,7 +99,6 @@ class TestLLMResponse(unittest.TestCase):
         response = GeminiLLMResponse.create(
             narrative_text="",
             structured_response=None,
-            raw_response=""
         )
         
         self.assertFalse(response.is_valid)
@@ -116,7 +111,6 @@ class TestLLMResponse(unittest.TestCase):
         response = GeminiLLMResponse.create(
             narrative_text=self.sample_narrative,
             structured_response=self.mock_structured,
-            raw_response=self.sample_raw
         )
         
         result = response.to_dict()
@@ -134,8 +128,7 @@ class TestLLMResponse(unittest.TestCase):
             create_llm_response(
                 provider="unsupported_provider",
                 narrative_text=self.sample_narrative,
-                raw_response=self.sample_raw,
-                model="some-model"
+                    model="some-model"
             )
         
         self.assertIn("Unsupported LLM provider", str(context.exception))

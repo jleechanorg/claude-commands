@@ -57,7 +57,7 @@ class TestStateUpdatesJSONParsing(unittest.TestCase):
             narrative_text="The brave knight finds a magical sword.",
             structured_response=narrative_response,
             debug_tags_present={'dm_notes': False, 'dice_rolls': False, 'state_changes': False},
-            raw_response="raw response text"
+            
         )
         
         # Verify state updates are accessible through the property
@@ -82,7 +82,7 @@ class TestStateUpdatesJSONParsing(unittest.TestCase):
             narrative_text="The brave knight finds a magical sword.",
             structured_response=narrative_response,
             debug_tags_present={},
-            raw_response="raw"
+            
         )
         
         # Test that state_updates property works correctly
@@ -125,7 +125,7 @@ The temple guardian greets him."""
             narrative_text=narrative_with_block,
             structured_response=narrative_response,
             debug_tags_present={},
-            raw_response="raw"
+            
         )
         
         # The state updates should come from JSON, not the markdown block
@@ -144,7 +144,7 @@ The temple guardian greets him."""
             narrative_text="A quiet moment passes.",
             structured_response=narrative_response1,
             debug_tags_present={},
-            raw_response="raw"
+            
         )
         self.assertEqual(response1.state_updates, {})  # Property returns {} for None
         
@@ -158,7 +158,7 @@ The temple guardian greets him."""
             narrative_text="Nothing changes.",
             structured_response=narrative_response2,
             debug_tags_present={},
-            raw_response="raw"
+            
         )
         self.assertEqual(response2.state_updates, {})
         
@@ -204,7 +204,7 @@ The temple guardian greets him."""
             narrative_text="Dawn breaks as the adventurer prepares.",
             structured_response=narrative_response,
             debug_tags_present={},
-            raw_response="raw"
+            
         )
         
         # Verify complex structure is preserved

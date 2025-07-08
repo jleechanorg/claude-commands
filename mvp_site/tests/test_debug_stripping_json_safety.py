@@ -32,7 +32,7 @@ class TestDebugStrippingJSONSafety(unittest.TestCase):
             narrative_text="The knight enters the castle.",
             structured_response=narrative_response,
             debug_tags_present={},
-            raw_response="raw"
+            
         )
         
         # The state updates should be accessible regardless of text stripping
@@ -86,7 +86,7 @@ The adventure continues."""
             narrative_text="The hero finds treasure! The adventure continues.",
             structured_response=narrative_response,
             debug_tags_present={},
-            raw_response=narrative_with_block
+            
         )
         
         # Verify clean separation

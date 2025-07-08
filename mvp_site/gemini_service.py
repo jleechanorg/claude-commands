@@ -498,12 +498,8 @@ def _process_structured_response(raw_response_text, expected_entities):
         if not coverage_validation['schema_valid']:
             logging_util.warning(f"STRUCTURED_GENERATION: Missing from schema: {coverage_validation['missing_from_schema']}")
         
-        # Append state updates to response text if present
-        if hasattr(structured_response, 'state_updates') and structured_response.state_updates:
-            import json
-            state_updates_text = f"\n\n[STATE_UPDATES_PROPOSED]\n{json.dumps(structured_response.state_updates, indent=2)}\n[END_STATE_UPDATES_PROPOSED]"
-            response_text = response_text + state_updates_text
-            logging_util.info("Appended state updates from structured response to response text")
+        # State updates are now handled via structured_response object only
+        # Legacy STATE_UPDATES_PROPOSED text blocks are no longer used in JSON mode
     else:
         logging_util.warning("STRUCTURED_GENERATION: Failed to parse JSON response, falling back to plain text")
     
@@ -536,18 +532,8 @@ def _validate_entity_tracking(response_text, expected_entities, game_state):
             for warning in validation_result.warnings:
                 logging_util.warning(f"Validation warning: {warning}")
     
-    # Add validation context to the response for debugging
-    if game_state.debug_mode and expected_entities:
-        debug_validation = (
-            f"\n\n[DEBUG_VALIDATION_START]\n"
-            f"Entity Tracking Validation Result:\n"
-            f"- Expected entities: {expected_entities}\n"
-            f"- Found entities: {validation_result.entities_found}\n"
-            f"- Missing entities: {validation_result.entities_missing}\n"
-            f"- Confidence: {validation_result.confidence:.2f}\n"
-            f"[DEBUG_VALIDATION_END]"
-        )
-        response_text += debug_validation
+    # Debug validation is now handled via structured_response.debug_info
+    # No longer append debug content to narrative text in JSON mode
     
     return response_text
 
@@ -797,7 +783,14 @@ def _truncate_context(story_context, max_chars: int, model_name: str, current_ga
 
 @log_exceptions
 def get_initial_story(prompt, selected_prompts=None, generate_companions=False, use_default_world=False):
-    """Generates the initial story part, including character, narrative, and mechanics instructions."""
+    """
+    Generates the initial story part, including character, narrative, and mechanics instructions.
+    
+    Returns:
+        GeminiResponse: Custom response object containing:
+            - narrative_text: Clean text for display (guaranteed to be clean narrative)
+            - structured_response: Parsed JSON with state updates, entities, etc.
+    """
 
     if selected_prompts is None:
         selected_prompts = [] 
@@ -925,9 +918,11 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     model_to_use = TEST_MODEL if os.environ.get('TESTING') else DEFAULT_MODEL
     logging_util.info(f"Using model: {model_to_use} for initial story generation.")
 
-    response = _call_gemini_api(contents, model_to_use, current_prompt_text_for_logging=prompt, 
-                              system_instruction_text=system_instruction_final)
-    raw_response_text = _get_text_from_response(response)
+    # Call Gemini API - returns raw Gemini API response object
+    api_response = _call_gemini_api(contents, model_to_use, current_prompt_text_for_logging=prompt, 
+                                  system_instruction_text=system_instruction_final)
+    # Extract text from raw API response object
+    raw_response_text = _get_text_from_response(api_response)
     
     # Process structured response for consistency
     response_text, structured_response = _process_structured_response(raw_response_text, expected_entities or [])
@@ -947,11 +942,12 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
             # The continue_story function will handle retry logic for subsequent interactions
     
     # DEBUG: Check for JSON in response_text before creating GeminiResponse (initial story)
+    # JSON should never reach this point - response_text should be clean narrative
     if '"narrative":' in response_text or '"god_mode_response":' in response_text:
         logging_util.error(f"JSON_BUG_DETECTED_IN_GEMINI_SERVICE_INITIAL: response_text contains JSON!")
         logging_util.error(f"JSON_BUG_RESPONSE_TEXT_INITIAL: {response_text[:500]}...")
-        logging_util.error(f"JSON_BUG_RAW_RESPONSE_INITIAL: {raw_response_text[:500]}...")
         logging_util.error(f"JSON_BUG_STRUCTURED_RESPONSE_INITIAL: {structured_response}")
+        raise ValueError("response_text should be clean narrative, not JSON - indicates parsing bug")
     
     # 🔍 COMPREHENSIVE LOGGING: Track GeminiResponse.create parameters
     logging_util.info(f"🔍 GEMINI_SERVICE creating GeminiResponse with:")
@@ -963,7 +959,8 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     if structured_response:
         logging_util.info(f"🔍   structured_response.narrative[:200]: {getattr(structured_response, 'narrative', 'NO_NARRATIVE_FIELD')[:200]}")
     
-    gemini_response = GeminiResponse.create(response_text, structured_response, raw_response_text)
+    # Create GeminiResponse with only clean narrative text and structured response  
+    gemini_response = GeminiResponse.create(response_text, structured_response)
     
     # 🔍 COMPREHENSIVE LOGGING: Track GeminiResponse fields after creation
     logging_util.info(f"🔍 GEMINI_SERVICE created GeminiResponse with:")
@@ -974,6 +971,10 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     if gemini_response.structured_response:
         logging_util.info(f"🔍   gemini_response.structured_response.narrative[:200]: {getattr(gemini_response.structured_response, 'narrative', 'NO_NARRATIVE_FIELD')[:200]}")
     
+    # Return our custom GeminiResponse object (not raw API response)
+    # This object contains:
+    # - narrative_text: Clean text for display (guaranteed to be clean narrative)
+    # - structured_response: Parsed JSON structure with state updates, entities, etc.
     return gemini_response
 
 def _validate_and_enforce_planning_block(response_text, user_input, game_state, chosen_model, system_instruction):
@@ -1091,7 +1092,9 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         use_default_world: Whether to include world content in system instructions
         
     Returns:
-        The AI's response text
+        GeminiResponse: Custom response object containing:
+            - narrative_text: Clean text for display (guaranteed to be clean narrative)
+            - structured_response: Parsed JSON with state updates, entities, etc.
     """
     
     # Calculate user input count for model selection (count existing user entries + current input)
@@ -1231,10 +1234,12 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     
     # ALWAYS use structured JSON output for consistent response format
     # This ensures state updates, planning blocks, and narrative are properly structured
-    response = _call_gemini_api([full_prompt], chosen_model, 
-                              current_prompt_text_for_logging=current_prompt_text, 
-                              system_instruction_text=system_instruction_final)
-    raw_response_text = _get_text_from_response(response)
+    # Call Gemini API - returns raw Gemini API response object
+    api_response = _call_gemini_api([full_prompt], chosen_model, 
+                                  current_prompt_text_for_logging=current_prompt_text, 
+                                  system_instruction_text=system_instruction_final)
+    # Extract text from raw API response object
+    raw_response_text = _get_text_from_response(api_response)
     
     # Process structured response (handles both entity tracking and non-entity cases)
     response_text, structured_response = _process_structured_response(raw_response_text, expected_entities or [])
@@ -1278,7 +1283,10 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
                 response = _call_gemini_api([prompt], chosen_model, 
                                           current_prompt_text_for_logging=current_prompt_text,
                                           system_instruction_text=system_instruction_final)
-                return _get_text_from_response(response)
+                raw_json = _get_text_from_response(response)
+                # Parse JSON and return only narrative text for dual-pass generator
+                narrative_text, _ = _process_structured_response(raw_json, expected_entities or [])
+                return narrative_text
             
             # Use dual-pass generator to fix missing entities
             dual_pass_result = dual_pass_generator.generate_with_dual_pass(
@@ -1317,14 +1325,14 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
             response_text, user_input, current_game_state, chosen_model, system_instruction_final
         )
     
-    # DEBUG: Check for JSON in response_text before creating GeminiResponse (continue story)
+    # JSON should never reach this point - response_text should be clean narrative
     if '"narrative":' in response_text or '"god_mode_response":' in response_text:
         logging_util.error(f"JSON_BUG_DETECTED_IN_GEMINI_SERVICE_CONTINUE: response_text contains JSON!")
         logging_util.error(f"JSON_BUG_RESPONSE_TEXT_CONTINUE: {response_text[:500]}...")
-        logging_util.error(f"JSON_BUG_RAW_RESPONSE_CONTINUE: {raw_response_text[:500]}...")
         logging_util.error(f"JSON_BUG_STRUCTURED_RESPONSE_CONTINUE: {structured_response}")
         logging_util.error(f"JSON_BUG_MODE: {mode}")
         logging_util.error(f"JSON_BUG_USER_INPUT: {user_input[:100]}...")
+        raise ValueError("response_text should be clean narrative, not JSON - indicates parsing bug")
     
     # 🔍 COMPREHENSIVE LOGGING: Track GeminiResponse.create parameters (continue mode)
     logging_util.info(f"🔍 GEMINI_SERVICE (continue) creating GeminiResponse with:")
@@ -1336,7 +1344,8 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     if structured_response:
         logging_util.info(f"🔍   structured_response.narrative[:200]: {getattr(structured_response, 'narrative', 'NO_NARRATIVE_FIELD')[:200]}")
     
-    gemini_response = GeminiResponse.create(response_text, structured_response, raw_response_text)
+    # Create GeminiResponse with only clean narrative text and structured response  
+    gemini_response = GeminiResponse.create(response_text, structured_response)
     
     # 🔍 COMPREHENSIVE LOGGING: Track GeminiResponse fields after creation (continue mode)
     logging_util.info(f"🔍 GEMINI_SERVICE (continue) created GeminiResponse with:")
@@ -1347,6 +1356,10 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     if gemini_response.structured_response:
         logging_util.info(f"🔍   gemini_response.structured_response.narrative[:200]: {getattr(gemini_response.structured_response, 'narrative', 'NO_NARRATIVE_FIELD')[:200]}")
     
+    # Return our custom GeminiResponse object (not raw API response)
+    # This object contains:
+    # - narrative_text: Clean text for display (guaranteed to be clean narrative)
+    # - structured_response: Parsed JSON structure with state updates, entities, etc.
     return gemini_response
 
 def _get_static_prompt_parts(current_game_state: GameState, story_context: list):

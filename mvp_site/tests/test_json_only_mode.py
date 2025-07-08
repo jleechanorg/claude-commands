@@ -79,7 +79,7 @@ class TestJSONOnlyMode(unittest.TestCase):
             narrative_text="Some text with [STATE_UPDATES_PROPOSED]{\"gold\": 100}[END_STATE_UPDATES_PROPOSED]",
             structured_response=None,
             debug_tags_present={},
-            raw_response="raw"
+            
         )
         
         # Should return empty dict, not parse from text
@@ -153,7 +153,7 @@ class TestJSONOnlyMode(unittest.TestCase):
                 narrative_text="Story without JSON",
                 structured_response=None,
                 debug_tags_present={},
-                raw_response="raw"
+                
             )
             
             # Accessing state_updates on response without structured_response
