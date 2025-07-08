@@ -30,7 +30,7 @@ class RobustJSONParser:
         Returns:
             tuple: (parsed_dict or None, was_incomplete)
         """
-        if not text:
+        if not text or not text.strip():
             return None, False
         
         text = text.strip()
@@ -45,8 +45,12 @@ class RobustJSONParser:
             fixed_json = RobustJSONParser._fix_json_boundaries(text)
             if fixed_json != text:
                 result = json.loads(fixed_json)
-                logging_util.info("Successfully fixed JSON boundaries")
-                return result, True
+                # If we got a list but the text seems to contain object fields, continue
+                if isinstance(result, list) and ('"narrative"' in text or '"entities_mentioned"' in text):
+                    logging_util.debug("Got array but text contains object fields, continuing...")
+                else:
+                    logging_util.info("Successfully fixed JSON boundaries")
+                    return result, True
         except json.JSONDecodeError:
             pass
         except Exception as e:
