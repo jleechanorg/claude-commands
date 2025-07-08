@@ -29,7 +29,6 @@
     
     <!-- Story Reader - PR #323 -->
     <link rel="stylesheet" href="/static/css/pagination-styles.css">
-    <link rel="stylesheet" href="/static/styles/story-reader.css">
     
     <!-- Inline Editor - UI Bundle -->
     <link rel="stylesheet" href="/static/css/inline-editor.css">
@@ -175,21 +174,9 @@
             </div>
             
             <!-- Download/Share Buttons - Moved to top per TASK-137 -->
-            <div class="d-flex justify-content-between mb-3">
-                <!-- Story Reader Controls -->
-                <div class="story-reader-controls-inline">
-                    <button id="readStoryBtn" class="btn btn-primary btn-sm" title="Read story aloud">
-                        <i class="bi bi-play-circle"></i> Read Story
-                    </button>
-                    <button id="pauseStoryBtn" class="btn btn-secondary btn-sm" style="display: none;" title="Pause reading">
-                        <i class="bi bi-pause-circle"></i> Pause
-                    </button>
-                </div>
-                
-                <div class="d-flex gap-2">
-                    <button id="downloadStoryBtn" class="btn btn-secondary">Download Story</button>
-                    <button id="shareStoryBtn" class="btn btn-info">Share Story</button>
-                </div>
+            <div class="d-flex justify-content-end mb-3 gap-2">
+                <button id="downloadStoryBtn" class="btn btn-secondary">Download Story</button>
+                <button id="shareStoryBtn" class="btn btn-info">Share Story</button>
             </div>
             <div id="story-content" class="p-3 border rounded bg-light"></div>
             <div id="timer-info" class="mt-2 text-muted text-center small"></div>
@@ -276,7 +263,6 @@
     <script src="/static/js/component-enhancer.js"></script>
     -->
     <script src="/static/js/loading-messages.js"></script>
-    <script src="/static/js/story-reader.js"></script>
     <script src="/static/js/inline-editor.js"></script>
     <script src="/static/app.js"></script>
 </body>

@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
             campaignTitleInput.value = "My Epic Adventure"; // Your default title
         }
         if (campaignPromptTextarea) {
-            campaignPromptTextarea.value = "A brave knight in a land of dragons."; // Your default prompt
+            campaignPromptTextarea.value = "A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side."; // Default Dragon Knight prompt
         }
         if (narrativeCheckbox) {
             narrativeCheckbox.checked = true; // Default checked
@@ -327,32 +327,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // --- Story Reader Controls ---
-    document.getElementById('readStoryBtn')?.addEventListener('click', () => {
-        const storyContent = document.getElementById('story-content');
-        if (storyContent && window.storyReader) {
-            const storyText = Array.from(storyContent.querySelectorAll('p'))
-                .map(p => p.textContent)
-                .join('\n\n');
-            
-            window.storyReader.startReading(storyText, {
-                title: document.getElementById('game-title')?.textContent || 'Campaign Story',
-                onComplete: () => {
-                    document.getElementById('readStoryBtn').style.display = 'inline-block';
-                    document.getElementById('pauseStoryBtn').style.display = 'none';
-                }
-            });
-            
-            document.getElementById('readStoryBtn').style.display = 'none';
-            document.getElementById('pauseStoryBtn').style.display = 'inline-block';
-        }
-    });
-    
-    document.getElementById('pauseStoryBtn')?.addEventListener('click', () => {
-        if (window.storyReader) {
-            window.storyReader.togglePause();
-        }
-    });
 
     // --- Event Listeners ---
     document.getElementById('new-campaign-form').addEventListener('submit', async (e) => {
