@@ -106,7 +106,8 @@ class TestJSONModePreference(unittest.TestCase):
     def test_strip_debug_content_preserves_json_state_updates(self):
         """Test that strip_debug_content doesn't interfere with JSON state updates"""
         # Import strip_debug_content
-        from main import strip_debug_content
+        from gemini_response import GeminiResponse
+        strip_debug_content = GeminiResponse._strip_debug_content
         
         # Text with debug content
         text_with_debug = """Story text here.

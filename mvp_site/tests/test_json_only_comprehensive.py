@@ -120,7 +120,8 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
         
     def test_strip_functions_only_for_display(self):
         """Test that strip functions don't affect state parsing"""
-        from main import strip_debug_content
+        from gemini_response import GeminiResponse
+        strip_debug_content = GeminiResponse._strip_debug_content
         
         # Text with state block
         text = """Story text.
