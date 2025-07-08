@@ -620,8 +620,13 @@ def create_app():
             # Include game state for debug mode status
             game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
             game_state_dict = game_state.to_dict() if game_state else {}
+            
+            # Apply hybrid debug processing to story entries for backward compatibility
+            debug_mode = game_state_dict.get('debug_mode', False)
+            from debug_hybrid_system import process_story_for_display
+            processed_story = process_story_for_display(story, debug_mode)
 
-            return jsonify({KEY_CAMPAIGN: campaign, KEY_STORY: story, 'game_state': game_state_dict})
+            return jsonify({KEY_CAMPAIGN: campaign, KEY_STORY: processed_story, 'game_state': game_state_dict})
         except Exception as e:
             return jsonify({KEY_SUCCESS: False, KEY_ERROR: str(e), KEY_TRACEBACK: traceback.format_exc()}), 500
         # --- END RESTORED BLOCK ---

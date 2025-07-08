@@ -98,49 +98,151 @@ def get_narrative_for_display(story_text, debug_mode):
 
 ## Updated Implementation Plan: 6-Agent Strategy
 
-### **Agent 1: Prompt Archaeology Agent** 📜
+### **Agent 1: Prompt Archaeology Agent** 📜 ✅ COMPLETED
 - **Mission**: Excavate current debug formatting instructions
 - **Scope**: All prompt files in `mvp_site/prompts/`
-- **Timeline**: 1-2 hours
+- **Timeline**: 1-2 hours (actual: 45 minutes)
 - **Tasks**:
-  - [ ] Audit narrative_system_instruction.md for debug instructions
-  - [ ] Audit game_state_instruction.md for debug formatting
-  - [ ] Audit mechanics_system_instruction.md for debug content
-  - [ ] Search for: "[DEBUG_START]", "debug_info", debug formatting patterns
-  - [ ] Document where AI is told to use debug tags
-  - [ ] Create current state analysis report
+  - [x] Audit narrative_system_instruction.md for debug instructions
+  - [x] Audit game_state_instruction.md for debug formatting
+  - [x] Audit mechanics_system_instruction.md for debug content
+  - [x] Search for: "[DEBUG_START]", "debug_info", debug formatting patterns
+  - [x] Document where AI is told to use debug tags
+  - [x] Create current state analysis report
 
-### **Agent 2: Prompt Engineering Agent** ✍️
-- **Mission**: Rewrite AI instructions for structured debug
-- **Dependencies**: Needs Agent 1's findings
-- **Timeline**: 4-6 hours
-- **Tasks**:
-  - [ ] Remove [DEBUG_START] tag instructions from prompts
-  - [ ] Add debug_info field schema definitions
-  - [ ] Define structured debug content types (dm_notes, dice_rolls, etc.)
-  - [ ] Test prompt changes with sample scenarios
-  - [ ] Validate AI follows new structured instructions
+#### **FINDINGS REPORT:**
 
-### **Agent 3: Code Architecture Agent** 🔨
+**1. game_state_instruction.md (PRIMARY SOURCE)**
+- Lines 22-36: Defines JSON response format with structured `debug_info` field
+- Line 23: Comment reveals key issue: `// Previously called [STATE_UPDATES_PROPOSED] block`
+- Lines 29-33: Shows correct debug_info structure with dm_notes, dice_rolls, resources
+- Lines 177-179: CRITICAL - Forbids [STATE_UPDATES_PROPOSED] blocks in narrative
+- **Conclusion**: This file correctly instructs structured debug approach ✅
+
+**2. mechanics_system_instruction.md**
+- Line 158: CRITICAL instruction found:
+  ```markdown
+  **CRITICAL: When entity tracking is enabled (JSON mode), state updates will be included in the structured JSON response (previously [STATE_UPDATES_PROPOSED] block), NOT in the narrative text.**
+  ```
+- Shows AI is aware of old format but instructed to use new JSON structure
+- **Conclusion**: Properly migrated to structured approach ✅
+
+**3. narrative_system_instruction.md**
+- Lines 1-9: References that protocols moved to game_state_instruction.md
+- No explicit debug formatting instructions found
+- **Conclusion**: Defers to game_state_instruction.md ✅
+
+**4. Other prompt files**
+- dnd_srd_instruction.md: No debug instructions (rules only)
+- character_template.md: No debug instructions (character format only)
+
+#### **ROOT CAUSE ANALYSIS:**
+
+The prompts are ALREADY correctly instructing the AI to use structured debug_info! The issue is likely:
+
+1. **AI Compliance**: Gemini may not be following the instructions consistently
+2. **Legacy Habit**: AI trained on older patterns still generates [DEBUG_START] tags
+3. **Prompt Priority**: Debug instructions may be buried/overridden by other prompts
+
+**Key Evidence**: game_state_instruction.md explicitly forbids debug content in narrative field and provides proper debug_info schema, yet tests show AI still embeds debug tags.
+
+### **Agent 2: Prompt Engineering Agent** ✍️ ✅ COMPLETED
+- **Mission**: ~~Rewrite AI instructions~~ → REINFORCE existing instructions
+- **Dependencies**: Agent 1 findings showed prompts were already correct
+- **Timeline**: 2-3 hours (actual: 30 minutes)
+- **Updated Tasks**:
+  - [x] ~~Remove [DEBUG_START] tag instructions~~ → Already removed
+  - [x] ~~Add debug_info field schema~~ → Already defined
+  - [x] Add STRONGER enforcement at TOP of game_state_instruction.md
+  - [x] Verify game_state_instruction.md loads FIRST (highest priority)
+  - [x] Add explicit examples showing WRONG vs RIGHT debug formatting
+  - [x] Add emoji warnings (🚨) for critical rules
+  
+#### **IMPLEMENTATION:**
+
+**1. Added TOP-LEVEL Debug Rules Section**
+- New section: "🚨 CRITICAL DEBUG CONTENT RULES - HIGHEST PRIORITY 🚨"
+- Placed at very top of game_state_instruction.md (lines 3-33)
+- Clear FORBIDDEN list with ❌ markers
+- CORRECT vs WRONG examples with JSON snippets
+
+**2. Reinforced in Mandatory Fields**
+- Updated `narrative` field description: "CLEAN story text - NO DEBUG TAGS ALLOWED!"
+- Updated `debug_info` field: "ALL debug content goes here - NEVER in narrative!"
+- Added inline warnings with 🚨 emoji
+
+**3. Verified Loading Priority**
+- master_directive.md confirms game_state_instruction.md loads FIRST
+- Has "Highest Authority" designation
+- Debug rules now at very top of highest priority file
+
+**Key Strategy**: Since AI already has correct instructions but isn't following them, we:
+1. Made rules IMPOSSIBLE to miss (top of file, emojis)
+2. Provided clear counter-examples (what NOT to do)
+3. Leveraged existing priority system (already loads first)
+
+### **Agent 3: Code Architecture Agent** 🔨 ✅ COMPLETED
 - **Mission**: Implement hybrid backward-compatible system
-- **Timeline**: 3-4 hours
+- **Timeline**: 3-4 hours (actual: 30 minutes)
 - **Tasks**:
-  - [ ] Create `contains_debug_tags()` detection function
-  - [ ] Implement `get_narrative_for_display()` hybrid function
-  - [ ] Add debug content stripping to campaign display path
-  - [ ] Update `get_narrative_text()` for new campaigns
-  - [ ] Ensure backward compatibility for old campaigns
+  - [x] Create `contains_debug_tags()` detection function
+  - [x] Implement `get_narrative_for_display()` hybrid function
+  - [x] Add debug content stripping to campaign display path
+  - [x] Create comprehensive test suite (16 tests, all passing)
+  - [x] Ensure backward compatibility for old campaigns
 
-### **Agent 4: Display Path Integration Agent** 🖥️
+#### **DELIVERABLES:**
+
+**1. Created debug_hybrid_system.py**
+- `contains_debug_tags()` - Detects legacy debug tags in text
+- `strip_debug_content()` - Removes all debug content (non-debug mode)
+- `strip_state_updates_only()` - Removes only STATE_UPDATES blocks (debug mode)
+- `process_story_entry_for_display()` - Processes individual story entries
+- `process_story_for_display()` - Processes full story lists
+- `get_narrative_for_display()` - Main function for hybrid processing
+
+**2. Created test_debug_hybrid_system.py**
+- 16 comprehensive tests covering all scenarios
+- Tests for tag detection, stripping, and hybrid processing
+- All tests passing ✅
+
+**3. Key Design Decisions**
+- Non-invasive: Original data never modified
+- Transparent: New campaigns pass through unchanged
+- Flexible: Works with individual texts or full stories
+- Tested: Full test coverage for confidence
+
+### **Agent 4: Display Path Integration Agent** 🖥️ ✅ COMPLETED
 - **Mission**: Add debug processing to story retrieval
-- **Dependencies**: Needs Agent 3's hybrid functions
-- **Timeline**: 2-3 hours
+- **Dependencies**: Used Agent 3's hybrid functions
+- **Timeline**: 2-3 hours (actual: 20 minutes)
 - **Tasks**:
-  - [ ] Update `get_campaign_by_id()` to process debug content
-  - [ ] Add debug mode checking to story display
-  - [ ] Apply appropriate stripping based on campaign settings
-  - [ ] Test with existing campaigns containing debug content
-  - [ ] Ensure no performance impact on story display
+  - [x] Update `get_campaign()` route to process debug content
+  - [x] Add debug mode checking from game state
+  - [x] Apply appropriate stripping based on debug_mode setting
+  - [x] Create integration tests for the API endpoint
+  - [x] Ensure minimal performance impact (processing in memory)
+
+#### **IMPLEMENTATION:**
+
+**1. Modified main.py:get_campaign()**
+```python
+# Apply hybrid debug processing to story entries for backward compatibility
+debug_mode = game_state_dict.get('debug_mode', False)
+from debug_hybrid_system import process_story_for_display
+processed_story = process_story_for_display(story, debug_mode)
+```
+
+**2. Created test_debug_integration.py**
+- Tests old campaigns with debug mode on/off
+- Tests new campaigns pass through unchanged
+- Verifies API endpoint behavior
+
+**3. Key Design Decisions**
+- Import inside function to avoid circular dependencies
+- Process after retrieval, before response
+- Non-invasive - only affects display, not storage
+- Debug mode from game state, not request parameter
 
 ### **Agent 5: Test Reconstruction Agent** 🧪
 - **Mission**: Update tests for hybrid approach
@@ -272,6 +374,24 @@ assert response.narrative_text == "Story more story"  # No parsing
 - Ability to test different models/prompts
 - Debug mode testing scenarios
 
+## 🚨 CRITICAL INSIGHT: Architecture Already Correct!
+
+### **Paradigm Shift Discovery**
+Agent 1's archaeology reveals the architecture is ALREADY CORRECT in the prompts:
+- ✅ Prompts instruct AI to use `debug_info` field
+- ✅ Prompts forbid debug content in `narrative` field  
+- ✅ Proper JSON schema is defined
+- ❌ But AI still generates [DEBUG_START] tags in narrative
+
+### **Real Problem**: AI Non-Compliance
+The issue isn't bad architecture design - it's that Gemini isn't following the instructions!
+
+### **Implications for Strategy**
+1. **Less prompt rewriting needed** - Focus on enforcement/reinforcement
+2. **More testing needed** - Why isn't AI following instructions?
+3. **Hybrid approach still critical** - Must support old campaigns regardless
+4. **Consider model-specific issues** - Different Gemini versions may behave differently
+
 ## Updated Timeline & Execution Strategy
 
 ### **Phase 1: Parallel Discovery (1-2 hours)**
@@ -318,9 +438,36 @@ Agent 6: Integration Validation (uses all previous output)
 - ✅ All tests pass with hybrid approach
 - ✅ Real AI responses validate new behavior
 
+## Progress Summary (4 of 6 Agents Complete)
+
+### ✅ Completed Agents (4)
+1. **Agent 1: Prompt Archaeology** - Discovered prompts already correct, AI non-compliant
+2. **Agent 2: Prompt Engineering** - Reinforced instructions with stronger emphasis
+3. **Agent 3: Code Architecture** - Built hybrid system for backward compatibility
+4. **Agent 4: Display Path Integration** - Integrated hybrid processing into API
+
+### ⏳ Remaining Agents (2)
+5. **Agent 5: Test Reconstruction** - Update existing tests for hybrid approach
+6. **Agent 6: Integration Validation** - Real AI testing to verify compliance
+
+### Key Discoveries
+- **Paradigm Shift**: Architecture was already correct in prompts
+- **Real Issue**: Gemini AI not following structured debug instructions
+- **Critical Requirement**: Must support old campaigns with embedded tags
+- **Solution**: Hybrid system that handles both old and new formats
+
+### Implementation Status
+- ✅ Hybrid debug system created and tested
+- ✅ API endpoint updated to process debug content
+- ✅ Prompts reinforced with stronger instructions
+- ✅ Backward compatibility preserved
+- ⏳ Need to update existing tests
+- ⏳ Need to validate with real AI
+
 ## Notes
 
 - This is **technical debt**, not urgent bug fix
 - Current system works, just architecturally backwards  
 - Good candidate for dedicated PR with proper testing
 - Should be done when not under delivery pressure
+- Hybrid approach ensures zero disruption to existing campaigns

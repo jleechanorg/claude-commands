@@ -1,5 +1,37 @@
 # Game State Management Protocol
 
+## 🚨 CRITICAL DEBUG CONTENT RULES - HIGHEST PRIORITY 🚨
+
+**NEVER PUT DEBUG CONTENT IN THE NARRATIVE FIELD!**
+
+The following are FORBIDDEN in the `narrative` field:
+- ❌ [DEBUG_START]...[DEBUG_END] blocks
+- ❌ [DEBUG_STATE_START]...[DEBUG_STATE_END] blocks
+- ❌ [DEBUG_ROLL_START]...[DEBUG_ROLL_END] blocks
+- ❌ [STATE_UPDATES_PROPOSED]...[END_STATE_UPDATES_PROPOSED] blocks
+- ❌ Any debug tags or markers
+
+**CORRECT DEBUG HANDLING:**
+```json
+{
+    "narrative": "You swing your sword and strike the goblin!",  // CLEAN TEXT ONLY
+    "debug_info": {
+        "dm_notes": ["Attack roll: 15+3=18 vs AC 15"],
+        "dice_rolls": ["1d20+3: 15+3=18 (Hit)"],
+        "resources": "HD: 2/3, Spells: L1 2/2",
+        "state_rationale": "Goblin takes 8 damage"
+    }
+}
+```
+
+**WRONG DEBUG HANDLING:**
+```json
+{
+    "narrative": "You swing! [DEBUG_START]Roll: 18[DEBUG_END] Hit!",  // ❌ NEVER DO THIS
+    "debug_info": {}
+}
+```
+
 ## CRITICAL: JSON Communication Protocol
 
 The system uses structured JSON for BOTH input and output. This ensures:
@@ -34,17 +66,23 @@ Every response you generate MUST be valid JSON with this exact structure:
 ```
 
 **MANDATORY FIELDS:**
-- `narrative`: (string) ALL text the user sees including [SESSION_HEADER] at start and --- PLANNING BLOCK --- at end
+- `narrative`: (string) CLEAN story text the user sees - NO DEBUG TAGS ALLOWED!
+  - Include [SESSION_HEADER] at start and --- PLANNING BLOCK --- at end
   - Can be empty string "" or contain additional story narration when using god_mode_response
+  - 🚨 MUST NOT contain [DEBUG_START], [DEBUG_END], or any debug markers
 - `god_mode_response`: (string) Used ONLY for GOD MODE commands. Contains the god's direct response.
   - Omit this field entirely for normal gameplay
   - When user input starts with "GOD MODE:", use this field for your god mode response
   - If both god_mode_response and narrative are present, both will be shown (god mode first)
 - `entities_mentioned`: (array) Entity names referenced in your narrative. Empty array [] if none.
 - `location_confirmed`: (string) Current location. Use "Character Creation" during character creation.
-- `state_updates`: (object) Game state changes. MUST be present even if empty {}. (Previously [STATE_UPDATES_PROPOSED] block)
-- `debug_info`: (object) Debug information for DMs. Include dm_notes, dice_rolls, resources, state_rationale.
-  - `resources` field: Use "remaining/total" format (e.g., "HD: 2/3, Spells: L1 2/4")
+- `state_updates`: (object) Game state changes. MUST be present even if empty {}. 
+  - This replaces the old [STATE_UPDATES_PROPOSED] blocks - use this field instead!
+- `debug_info`: (object) ALL debug content goes here - NEVER in narrative!
+  - `dm_notes`: Array of DM thoughts, rules considerations, behind-the-scenes notes
+  - `dice_rolls`: Array of dice roll results with formulas (e.g., "1d20+3: 18 (Hit)")
+  - `resources`: Resource tracking in "remaining/total" format (e.g., "HD: 2/3, Spells: L1 2/4")
+  - `state_rationale`: Explanation of state changes made
   - For Level 1 Paladins/Rangers/Artificers: Show "No Spells Yet (Level 2+)" instead of spell slots
 
 **NARRATIVE FIELD STRUCTURE:**
@@ -173,8 +211,10 @@ What would you like to do next?
 ```
 
 **FORBIDDEN:**
-- Do NOT add fields beyond the 5 specified above
-- Do NOT include [STATE_UPDATES_PROPOSED] blocks anywhere
+- Do NOT add any fields beyond those specified above
+- Normal gameplay: 5 fields (narrative, entities_mentioned, location_confirmed, state_updates, debug_info)
+- GOD MODE only: 6 fields (add god_mode_response)
+- Do NOT include [STATE_UPDATES_PROPOSED] blocks anywhere in the narrative
 - Do NOT wrap response in markdown code blocks
 - Do NOT include any text outside the JSON structure
 
