@@ -362,7 +362,7 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
     # 🔍 CRITICAL JSON BUG LOGGING: Check final API response content
     logging_util.info(f"🔍 API_RESPONSE final_narrative type: {type(final_narrative)}")
     logging_util.info(f"🔍 API_RESPONSE final_narrative[:200]: {final_narrative[:200]}")
-    logging_util.info(f"🔍 API_RESPONSE contains JSON: {'\"narrative\":' in final_narrative or '\"god_mode_response\":' in final_narrative}")
+    logging_util.info(f"🔍 API_RESPONSE contains JSON: {('\"narrative\":' in final_narrative) or ('\"god_mode_response\":' in final_narrative)}")
     
     if '\"narrative\":' in final_narrative or '\"god_mode_response\":' in final_narrative:
         logging_util.error(f"🚨 JSON_BUG_DETECTED_IN_API_RESPONSE: final_narrative contains JSON!")

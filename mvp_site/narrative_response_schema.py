@@ -206,11 +206,6 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 json_content = content
                 logging_util.info("Extracted JSON from generic code block")
     
-    # Re-check for Scene prefix after markdown extraction
-    scene_match = scene_prefix_pattern.match(json_content)
-    if scene_match:
-        json_content = json_content[scene_match.end():]
-        logging_util.info(f"Stripped 'Scene #' prefix after markdown extraction: '{scene_match.group(0)}'")
     
     # Use the robust parser on the extracted content
     logging_util.debug(f"JSON_BUG_PARSE_JSON_CONTENT: {json_content[:300]}...")
