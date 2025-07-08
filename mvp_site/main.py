@@ -1038,34 +1038,34 @@ def run_god_command(campaign_id, user_id, action, command_string=None):
         firebase_admin.initialize_app()
 
     if action == 'ask':
-        print(f"Fetching current state for campaign: {campaign_id}")
+        logging_util.info(f"Fetching current state for campaign: {campaign_id}")
         current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
         if not current_game_state:
-            print("No game state found for this campaign.")
+            logging_util.info("No game state found for this campaign.")
             return
 
         # Pretty-print the JSON to the console
         state_json = json.dumps(current_game_state.to_dict(), indent=2, default=json_default_serializer)
-        print(state_json)
+        logging_util.info(f"Current game state:\n{state_json}")
         return
 
     elif action == 'set':
         if not command_string:
-            print("Error: The 'set' action requires a --command_string.")
+            logging_util.error("The 'set' action requires a --command_string.")
             return
 
         if not command_string.strip().startswith("GOD_MODE_SET:"):
-            print("Error: Command string must start with GOD_MODE_SET:")
+            logging_util.error("Command string must start with GOD_MODE_SET:")
             return
 
         payload_str = command_string.strip()[len("GOD_MODE_SET:"):].strip()
         proposed_changes = parse_set_command(payload_str)
 
         if not proposed_changes:
-            print("Command contained no valid changes.")
+            logging_util.warning("Command contained no valid changes.")
             return
 
-        print(f"Applying changes to campaign: {campaign_id}")
+        logging_util.info(f"Applying changes to campaign: {campaign_id}")
 
         current_game_state_doc = firestore_service.get_campaign_game_state(user_id, campaign_id)
         current_state_dict = current_game_state_doc.to_dict() if current_game_state_doc else GameState().to_dict()
@@ -1075,10 +1075,10 @@ def run_god_command(campaign_id, user_id, action, command_string=None):
         firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
 
         log_message = format_state_changes(proposed_changes, for_html=False)
-        print(f"Update successful:\\n{log_message}")
+        logging_util.info(f"Update successful:\n{log_message}")
 
     else:
-        print(f"Error: Unknown god-command action '{action}'. Use 'set' or 'ask'.")
+        logging_util.error(f"Unknown god-command action '{action}'. Use 'set' or 'ask'.")
 
 
 def run_test_command(command):
@@ -1092,54 +1092,54 @@ def run_test_command(command):
         # Run browser tests with mock APIs
         test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_ui', 'run_all_browser_tests.py')
         if os.path.exists(test_runner):
-            print("🌐 Running WorldArchitect.AI Browser Tests (Mock APIs)...")
-            print("   Using real browser automation with mocked backend")
+            logging_util.info("🌐 Running WorldArchitect.AI Browser Tests (Mock APIs)...")
+            logging_util.info("   Using real browser automation with mocked backend")
             result = subprocess.run([sys.executable, test_runner])
             sys.exit(result.returncode)
         else:
-            print(f"❌ Test runner not found: {test_runner}")
+            logging_util.error(f"Test runner not found: {test_runner}")
             sys.exit(1)
 
     elif command == 'testuif':
         # Run browser tests with REAL APIs
         test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_ui', 'run_all_browser_tests.py')
         if os.path.exists(test_runner):
-            print("🌐 Running WorldArchitect.AI Browser Tests (REAL APIs)...")
-            print("⚠️  WARNING: These tests use REAL APIs and cost money!")
+            logging_util.info("🌐 Running WorldArchitect.AI Browser Tests (REAL APIs)...")
+            logging_util.warning("⚠️  WARNING: These tests use REAL APIs and cost money!")
             env = os.environ.copy()
             env['REAL_APIS'] = 'true'
             result = subprocess.run([sys.executable, test_runner], env=env)
             sys.exit(result.returncode)
         else:
-            print(f"❌ Test runner not found: {test_runner}")
+            logging_util.error(f"Test runner not found: {test_runner}")
             sys.exit(1)
 
     elif command == 'testhttp':
         # Run HTTP tests with mock APIs
         test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_http', 'run_all_http_tests.py')
         if os.path.exists(test_runner):
-            print("🔗 Running WorldArchitect.AI HTTP Tests (Mock APIs)...")
-            print("   Using direct HTTP requests with mocked backend")
+            logging_util.info("🔗 Running WorldArchitect.AI HTTP Tests (Mock APIs)...")
+            logging_util.info("   Using direct HTTP requests with mocked backend")
             result = subprocess.run([sys.executable, test_runner])
             sys.exit(result.returncode)
         else:
-            print(f"❌ Test runner not found: {test_runner}")
+            logging_util.error(f"Test runner not found: {test_runner}")
             sys.exit(1)
 
     elif command == 'testhttpf':
         # Run HTTP tests with REAL APIs
         test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_http', 'testing_full', 'run_all_full_tests.py')
         if os.path.exists(test_runner):
-            print("🔗 Running WorldArchitect.AI HTTP Tests (REAL APIs)...")
-            print("⚠️  WARNING: These tests use REAL APIs and cost money!")
+            logging_util.info("🔗 Running WorldArchitect.AI HTTP Tests (REAL APIs)...")
+            logging_util.warning("⚠️  WARNING: These tests use REAL APIs and cost money!")
             result = subprocess.run([sys.executable, test_runner])
             sys.exit(result.returncode)
         else:
-            print(f"❌ Full API test runner not found: {test_runner}")
+            logging_util.error(f"Full API test runner not found: {test_runner}")
             sys.exit(1)
 
     else:
-        print(f"❌ Unknown test command: {command}")
+        logging_util.error(f"Unknown test command: {command}")
         sys.exit(1)
 
 
@@ -1184,7 +1184,7 @@ if __name__ == "__main__":
         if args.command == 'serve':
             app = create_app()
             port = int(os.environ.get('PORT', 8080))
-            print(f"Development server running: http://localhost:{port}")
+            logging_util.info(f"Development server running: http://localhost:{port}")
             app.run(host='0.0.0.0', port=port, debug=True)
         elif args.command == 'testui':
             run_test_command('testui')

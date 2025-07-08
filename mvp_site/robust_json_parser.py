@@ -12,6 +12,13 @@ from json_utils import (
     extract_field_value
 )
 
+# Precompiled regex patterns for better performance
+ENTITIES_MENTIONED_PATTERN = re.compile(r'"entities_mentioned"\s*:\s*\[(.*?)\]', re.DOTALL)
+ENTITY_STRING_PATTERN = re.compile(r'"([^"]*)"')
+STATE_UPDATES_PATTERN = re.compile(r'"state_updates"\s*:\s*(\{.*?\})', re.DOTALL)
+DEBUG_INFO_PATTERN = re.compile(r'"debug_info"\s*:\s*(\{.*?\})', re.DOTALL)
+TEXT_CONTENT_PATTERN = re.compile(r':\s*"([^"]+)')
+
 
 class RobustJSONParser:
     """
@@ -113,16 +120,12 @@ class RobustJSONParser:
             result['narrative'] = narrative
         
         # Extract entities_mentioned array
-        entities_match = re.search(
-            r'"entities_mentioned"\s*:\s*\[(.*?)\]',
-            text,
-            re.DOTALL
-        )
+        entities_match = ENTITIES_MENTIONED_PATTERN.search(text)
         if entities_match:
             entities_str = entities_match.group(1)
             # Parse entity list
             entities = []
-            for match in re.finditer(r'"([^"]*)"', entities_str):
+            for match in ENTITY_STRING_PATTERN.finditer(entities_str):
                 entities.append(match.group(1))
             result['entities_mentioned'] = entities
         
@@ -137,11 +140,7 @@ class RobustJSONParser:
             result['god_mode_response'] = god_mode_response
         
         # Extract state_updates object (try to preserve state changes)
-        state_updates_match = re.search(
-            r'"state_updates"\s*:\s*(\{.*?\})',
-            text,
-            re.DOTALL
-        )
+        state_updates_match = STATE_UPDATES_PATTERN.search(text)
         if state_updates_match:
             try:
                 import json
@@ -153,11 +152,7 @@ class RobustJSONParser:
                 result['state_updates'] = {}
         
         # Extract debug_info object (try to preserve debug information)
-        debug_info_match = re.search(
-            r'"debug_info"\s*:\s*(\{.*?\})',
-            text,
-            re.DOTALL
-        )
+        debug_info_match = DEBUG_INFO_PATTERN.search(text)
         if debug_info_match:
             try:
                 import json
@@ -177,7 +172,7 @@ class RobustJSONParser:
         if not extracted:
             # If we can't extract anything, try to at least get some text
             # Look for any substantial text content
-            text_match = re.search(r':\s*"([^"]+)', text)
+            text_match = TEXT_CONTENT_PATTERN.search(text)
             if text_match:
                 extracted = {'narrative': text_match.group(1)}
             else:

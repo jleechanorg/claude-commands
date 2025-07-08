@@ -182,14 +182,6 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     # First check if the JSON is wrapped in markdown code blocks
     json_content = response_text
     
-    # Strip "Scene #X:" prefix if present (common in JSON responses)
-    scene_prefix_pattern = re.compile(r'^Scene\s+#\d+:\s*', re.IGNORECASE)
-    match = scene_prefix_pattern.match(json_content)
-    if match:
-        json_content = json_content[match.end():]
-        logging_util.info(f"Stripped 'Scene #' prefix from JSON response: '{match.group(0)}'")
-        logging_util.debug(f"JSON_BUG_STRIPPED_PREFIX: Content after stripping: {json_content[:100]}...")
-    
     # Use precompiled pattern to match ```json ... ``` blocks
     match = JSON_MARKDOWN_PATTERN.search(response_text)
     
