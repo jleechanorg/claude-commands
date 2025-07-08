@@ -55,28 +55,114 @@ input_text = (
 ### Root Cause: Prompt Engineering
 The AI is being instructed to embed debug content in narrative text instead of using structured `debug_info` field.
 
-## Proposed Solution
+## 🚨 CRITICAL: Backward Compatibility Requirements
 
-### Phase 1: Analysis
-- [ ] Audit all prompt files for debug formatting instructions
-- [ ] Find where AI is told to use `[DEBUG_START]` tags
-- [ ] Document current debug content types and usage
+### **BREAKING DISCOVERY**: Old campaigns REQUIRE string parsing functions
 
-### Phase 2: Prompt Engineering
-- [ ] Update prompts to use structured `debug_info` field
-- [ ] Remove instructions for `[DEBUG_START]` style tags
-- [ ] Define clear schema for debug_info content
+**Data Flow Analysis reveals:**
+- **Existing campaigns**: Debug content stored in database with `[DEBUG_START]` tags
+- **Display path**: Returns raw DB content without processing
+- **Impact**: Removing string parsing = users see debug tags in existing campaigns
 
-### Phase 3: Code Changes  
-- [ ] Remove `_strip_debug_content()` functions
-- [ ] Update `get_narrative_text()` to just return narrative (no parsing)
-- [ ] Add `get_debug_info()` method for structured debug access
-- [ ] Update tests to expect clean narrative + structured debug
+**Current Storage Format:**
+```
+Database Story Entries:
+"You enter the cave. [DEBUG_START]Rolling perception...[DEBUG_END] You see treasure."
+```
 
-### Phase 4: Integration Testing
-- [ ] Test with real AI responses
-- [ ] Verify debug content appears in `debug_info` field
-- [ ] Confirm narrative is clean without parsing
+**If String Parsing Removed:**
+```
+User Views Campaign → [DEBUG_START]Rolling perception...[DEBUG_END] visible to user 😱
+```
+
+### **Updated Implementation Strategy: Hybrid Approach**
+
+**Phase 1: Dual System**
+- **New campaigns**: Use structured `debug_info` (no parsing)
+- **Old campaigns**: Use string parsing for display compatibility
+- **Detection**: Check if story content contains debug tags
+
+**Phase 2: Gradual Migration**
+```python
+def get_narrative_for_display(story_text, debug_mode):
+    # New campaigns: already clean
+    if not contains_debug_tags(story_text):
+        return story_text
+    
+    # Old campaigns: apply string parsing
+    if debug_mode:
+        return strip_state_updates_only(story_text)
+    else:
+        return strip_debug_content(story_text)
+```
+
+## Updated Implementation Plan: 6-Agent Strategy
+
+### **Agent 1: Prompt Archaeology Agent** 📜
+- **Mission**: Excavate current debug formatting instructions
+- **Scope**: All prompt files in `mvp_site/prompts/`
+- **Timeline**: 1-2 hours
+- **Tasks**:
+  - [ ] Audit narrative_system_instruction.md for debug instructions
+  - [ ] Audit game_state_instruction.md for debug formatting
+  - [ ] Audit mechanics_system_instruction.md for debug content
+  - [ ] Search for: "[DEBUG_START]", "debug_info", debug formatting patterns
+  - [ ] Document where AI is told to use debug tags
+  - [ ] Create current state analysis report
+
+### **Agent 2: Prompt Engineering Agent** ✍️
+- **Mission**: Rewrite AI instructions for structured debug
+- **Dependencies**: Needs Agent 1's findings
+- **Timeline**: 4-6 hours
+- **Tasks**:
+  - [ ] Remove [DEBUG_START] tag instructions from prompts
+  - [ ] Add debug_info field schema definitions
+  - [ ] Define structured debug content types (dm_notes, dice_rolls, etc.)
+  - [ ] Test prompt changes with sample scenarios
+  - [ ] Validate AI follows new structured instructions
+
+### **Agent 3: Code Architecture Agent** 🔨
+- **Mission**: Implement hybrid backward-compatible system
+- **Timeline**: 3-4 hours
+- **Tasks**:
+  - [ ] Create `contains_debug_tags()` detection function
+  - [ ] Implement `get_narrative_for_display()` hybrid function
+  - [ ] Add debug content stripping to campaign display path
+  - [ ] Update `get_narrative_text()` for new campaigns
+  - [ ] Ensure backward compatibility for old campaigns
+
+### **Agent 4: Display Path Integration Agent** 🖥️
+- **Mission**: Add debug processing to story retrieval
+- **Dependencies**: Needs Agent 3's hybrid functions
+- **Timeline**: 2-3 hours
+- **Tasks**:
+  - [ ] Update `get_campaign_by_id()` to process debug content
+  - [ ] Add debug mode checking to story display
+  - [ ] Apply appropriate stripping based on campaign settings
+  - [ ] Test with existing campaigns containing debug content
+  - [ ] Ensure no performance impact on story display
+
+### **Agent 5: Test Reconstruction Agent** 🧪
+- **Mission**: Update tests for hybrid approach
+- **Dependencies**: Needs Agent 3 & 4's changes
+- **Timeline**: 3-4 hours
+- **Tasks**:
+  - [ ] Update existing debug stripping tests (keep for old campaigns)
+  - [ ] Add new structured debug_info tests
+  - [ ] Create tests for hybrid detection logic
+  - [ ] Test backward compatibility scenarios
+  - [ ] Ensure 100% test coverage of both paths
+
+### **Agent 6: Integration Validation Agent** 🔍
+- **Mission**: End-to-end testing with real AI and campaigns
+- **Dependencies**: All previous agents complete
+- **Timeline**: 2-3 hours
+- **Tasks**:
+  - [ ] Test real Gemini responses with new prompts
+  - [ ] Verify debug_info field populated correctly for new campaigns
+  - [ ] Test existing campaigns display correctly (no visible debug tags)
+  - [ ] Validate both debug=True and debug=False modes
+  - [ ] Performance test: ensure no regression
 
 ## Files to Investigate
 
@@ -186,13 +272,51 @@ assert response.narrative_text == "Story more story"  # No parsing
 - Ability to test different models/prompts
 - Debug mode testing scenarios
 
-## Timeline Estimate
+## Updated Timeline & Execution Strategy
 
-- **Analysis**: 1-2 hours
-- **Prompt Engineering**: 4-6 hours (iteration required)
-- **Code Changes**: 2-3 hours  
-- **Testing**: 3-4 hours
-- **Total**: ~10-15 hours of focused work
+### **Phase 1: Parallel Discovery (1-2 hours)**
+```
+Agent 1: Prompt Archaeology → Current state report
+Agent 3: Code Architecture → Hybrid functions (start immediately)
+```
+
+### **Phase 2: Sequential Engineering (4-6 hours)**
+```
+Agent 2: Prompt Engineering (uses Agent 1 findings)
+Agent 4: Display Path Integration (uses Agent 3 functions)
+```
+
+### **Phase 3: Testing & Validation (3-4 hours)**
+```
+Agent 5: Test Reconstruction (uses Agent 3 & 4 changes)
+Agent 6: Integration Validation (uses all previous output)
+```
+
+### **Timeline Summary**
+- **Total Work**: ~15-20 hours across 6 agents
+- **Wall Clock Time**: ~8-10 hours with proper parallelization
+- **Critical Path**: Agent 1 → Agent 2 → Agent 6
+- **Parallel Work**: Agents 1&3, then 2&4, then 5&6
+
+## Success Criteria (Updated)
+
+### **Backward Compatibility (CRITICAL)**
+- ✅ Existing campaigns display correctly without debug tags
+- ✅ No regression in story viewing for old campaigns
+- ✅ New campaigns use structured debug_info approach
+- ✅ Hybrid detection works correctly
+
+### **Architecture Improvement**
+- ✅ AI generates structured debug_info field
+- ✅ Narrative field is always clean for new responses
+- ✅ No string parsing needed for new campaigns
+- ✅ Clear separation of narrative vs debug content
+
+### **System Integration**
+- ✅ Both debug modes work (on/off)
+- ✅ Performance maintained or improved
+- ✅ All tests pass with hybrid approach
+- ✅ Real AI responses validate new behavior
 
 ## Notes
 
