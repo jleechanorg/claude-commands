@@ -134,6 +134,13 @@ Use docstrings, proper JS loading
 ❌ Global `document.addEventListener('click')` without approval | Test workflows after modifications |
 Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Analysis + execution required
 
+### File Placement Rules (🚨 HARD RULE)
+🚨 **NEVER add new files directly to mvp_site/** without explicit user permission
+- ❌ NEVER create test files, documentation, or scripts directly in mvp_site/
+- ✅ If unsure, add content to roadmap/scratchpad_[branch].md instead
+- ✅ Ask user where to place new files before creating them
+- **Exception**: Only when user explicitly requests file creation in mvp_site/
+
 ### Browser vs HTTP Testing (🚨 HARD RULE)
 **CRITICAL DISTINCTION**: Never confuse browser automation with HTTP simulation
 - 🚨 **testing_ui/**: ONLY real browser automation using Playwright | ❌ NEVER use `requests` library here

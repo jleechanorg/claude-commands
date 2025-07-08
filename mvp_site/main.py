@@ -806,7 +806,6 @@ def create_app():
             traceback.print_exc()
             return jsonify({KEY_ERROR: 'An unexpected error occurred during export.', KEY_DETAILS: str(e)}), 500
 
-
     # --- Frontend Serving ---
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')

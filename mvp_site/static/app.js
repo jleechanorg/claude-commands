@@ -39,6 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.values(views).forEach(v => v.classList.remove('active-view'));
         if(views[viewName]) {
             views[viewName].classList.add('active-view');
+            
+            // Setup campaign type handlers when showing new campaign view
+            if (viewName === 'newCampaign') {
+                setupCampaignTypeHandlers();
+            }
         }
     };
 
@@ -58,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
             campaignTitleInput.value = "My Epic Adventure"; // Your default title
         }
         if (campaignPromptTextarea) {
-            campaignPromptTextarea.value = "A brave knight in a land of dragons."; // Your default prompt
+            campaignPromptTextarea.value = window.DRAGON_KNIGHT_CAMPAIGN; // Default Dragon Knight prompt
         }
         if (narrativeCheckbox) {
             narrativeCheckbox.checked = true; // Default checked
@@ -67,6 +72,72 @@ document.addEventListener('DOMContentLoaded', () => {
             mechanicsCheckbox.checked = true; // Default checked
         }
         console.log("New campaign form reset to defaults.");
+    }
+
+    // Dragon Knight campaign content - defined once to avoid duplication
+    window.DRAGON_KNIGHT_CAMPAIGN = `You are Ser Arion, a 16 year old honorable knight on your first mission, sworn to protect the vast Celestial Imperium. For decades, the Empire has been ruled by the iron-willed Empress Sariel, a ruthless tyrant who uses psychic power to crush dissent. While her methods are terrifying, her reign has brought undeniable benefits: the roads are safe, trade flourishes, and the common people no longer starve or fear bandits. You are a product of this "Silent Peace," and your oath binds you to the security and prosperity it provides.
+
+Your loyalty is now brutally tested. You have been ordered to slaughter a settlement of innocent refugees whose very existence has been deemed a threat to the Empress's perfect, unyielding order. As you wrestle with this monstrous command, a powerful, new voice enters your mind—Aurum, the Gilded King, a magnificent gold dragon long thought to be a myth. He appears as a champion of freedom, urging you to defy the Empress's "soulless cage" and fight for a world of choice and glorious struggle.
+
+You are now caught between two powerful and morally grey forces. Do you uphold your oath and commit an atrocity, believing the sacrifice of a few is worth the peace and safety of millions? Or do you break your vow and join the arrogant dragon's chaotic crusade, plunging the world back into violence for a chance at true freedom? This single choice will define your honor and your path in an empire where security is bought with blood.`;
+
+    // Dragon Knight campaign content loader
+    async function loadDragonKnightCampaignContent() {
+        console.log('Dragon Knight campaign content loaded (hardcoded)');
+        return window.DRAGON_KNIGHT_CAMPAIGN;
+    }
+    
+    // Handle campaign type radio button changes
+    function setupCampaignTypeHandlers() {
+        const dragonKnightRadio = document.getElementById('dragonKnightCampaign');
+        const customRadio = document.getElementById('customCampaign');
+        const campaignPromptTextarea = document.getElementById('campaign-prompt');
+        
+        if (!dragonKnightRadio || !customRadio || !campaignPromptTextarea) return;
+        
+        // Load Dragon Knight content on page load (since it's default)
+        if (dragonKnightRadio.checked) {
+            campaignPromptTextarea.value = window.DRAGON_KNIGHT_CAMPAIGN;
+            campaignPromptTextarea.readOnly = true;
+            
+            // Also ensure default world is checked and disabled on initial load
+            const defaultWorldCheckbox = document.getElementById('use-default-world');
+            if (defaultWorldCheckbox) {
+                defaultWorldCheckbox.checked = true;
+                defaultWorldCheckbox.disabled = true;
+            }
+        } else if (customRadio.checked) {
+            campaignPromptTextarea.value = '';
+            campaignPromptTextarea.readOnly = false;
+        }
+        
+        dragonKnightRadio.addEventListener('change', async (e) => {
+            if (e.target.checked) {
+                campaignPromptTextarea.readOnly = true;
+                campaignPromptTextarea.value = window.DRAGON_KNIGHT_CAMPAIGN;
+                
+                // Force default world checkbox to be checked when Dragon Knight is selected
+                const defaultWorldCheckbox = document.getElementById('use-default-world');
+                if (defaultWorldCheckbox) {
+                    defaultWorldCheckbox.checked = true;
+                    defaultWorldCheckbox.disabled = true; // Disable to prevent unchecking
+                }
+            }
+        });
+        
+        customRadio.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                campaignPromptTextarea.readOnly = false;
+                campaignPromptTextarea.value = '';
+                campaignPromptTextarea.focus();
+                
+                // Re-enable default world checkbox when custom campaign is selected
+                const defaultWorldCheckbox = document.getElementById('use-default-world');
+                if (defaultWorldCheckbox) {
+                    defaultWorldCheckbox.disabled = false; // Re-enable checkbox
+                }
+            }
+        });
     }
 
     let handleRouteChange = () => {
@@ -214,7 +285,30 @@ document.addEventListener('DOMContentLoaded', () => {
         showSpinner('loading');
         try {
             const { data } = await fetchApi(`/api/campaigns/${campaignId}`);
-            document.getElementById('game-title').innerText = data.campaign.title;
+            const gameTitleElement = document.getElementById('game-title');
+            gameTitleElement.innerText = data.campaign.title;
+            
+            // Initialize inline editor for campaign title
+            if (window.InlineEditor) {
+                new InlineEditor(gameTitleElement, {
+                    maxLength: 100,
+                    minLength: 1,
+                    placeholder: 'Enter campaign title...',
+                    saveFn: async (newTitle) => {
+                        // Save the new title via API
+                        await fetchApi(`/api/campaigns/${campaignId}`, {
+                            method: 'PATCH',
+                            body: JSON.stringify({ title: newTitle })
+                        });
+                        console.log('Campaign title updated successfully');
+                    },
+                    onError: (error) => {
+                        console.error('Failed to update campaign title:', error);
+                        alert('Failed to update campaign title. Please try again.');
+                    }
+                });
+            }
+            
             const storyContainer = document.getElementById('story-content');
             storyContainer.innerHTML = '';
             
@@ -246,15 +340,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
+
     // --- Event Listeners ---
     document.getElementById('new-campaign-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         
         showSpinner('newCampaign');
-        const prompt = document.getElementById('campaign-prompt').value;
+        let prompt = document.getElementById('campaign-prompt').value;
         const title = document.getElementById('campaign-title').value;
         const selectedPrompts = Array.from(document.querySelectorAll('input[name="selectedPrompts"]:checked')).map(checkbox => checkbox.value);
         const customOptions = Array.from(document.querySelectorAll('input[name="customOptions"]:checked')).map(checkbox => checkbox.value);
+        
+        // Check if Dragon Knight campaign is selected
+        const dragonKnightRadio = document.getElementById('dragonKnightCampaign');
+        const isDragonKnight = dragonKnightRadio && dragonKnightRadio.checked;
+        
+        // Dragon Knight campaigns always use default world
+        if (isDragonKnight) {
+            console.log('Dragon Knight campaign selected - ensuring default world is used');
+            // Make sure defaultWorld is in customOptions
+            if (!customOptions.includes('defaultWorld')) {
+                customOptions.push('defaultWorld');
+            }
+        }
         try {
             const { data } = await fetchApi('/api/campaigns', { 
                 method: 'POST', 
@@ -563,6 +671,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('download-txt-btn')?.addEventListener('click', () => downloadFile('txt'));
     document.getElementById('download-pdf-btn')?.addEventListener('click', () => downloadFile('pdf'));
     document.getElementById('download-docx-btn')?.addEventListener('click', () => downloadFile('docx'));
+    
     
     // Theme integration
     window.addEventListener('themeChanged', (e) => {
