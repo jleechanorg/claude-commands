@@ -54,7 +54,7 @@ from narrative_response_schema import (
     validate_entity_coverage,
     NarrativeResponse
 )
-from gemini_response_simplified import GeminiResponse
+from gemini_response import GeminiResponse
 # Import entity tracking mitigation modules
 from entity_preloader import EntityPreloader
 from entity_instructions import EntityInstructionGenerator

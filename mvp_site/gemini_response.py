@@ -67,26 +67,59 @@ class GeminiResponse(_GeminiLLMResponse):
         """Backwards compatibility property for debug_info."""
         return self.get_debug_info()
     
+    @property
+    def session_header(self) -> str:
+        """Get session header from structured response."""
+        if self.structured_response and hasattr(self.structured_response, 'session_header'):
+            return self.structured_response.session_header or ""
+        return ""
+    
+    @property
+    def planning_block(self) -> str:
+        """Get planning block from structured response."""
+        if self.structured_response and hasattr(self.structured_response, 'planning_block'):
+            return self.structured_response.planning_block or ""
+        return ""
+    
+    @property
+    def dice_rolls(self) -> List[str]:
+        """Get dice rolls from structured response."""
+        if self.structured_response and hasattr(self.structured_response, 'dice_rolls'):
+            return self.structured_response.dice_rolls or []
+        return []
+    
+    @property
+    def resources(self) -> str:
+        """Get resources from structured response."""
+        if self.structured_response and hasattr(self.structured_response, 'resources'):
+            return self.structured_response.resources or ""
+        return ""
+    
     def get_narrative_text(self, debug_mode: bool = False) -> str:
         """
         Get the narrative text with debug content handled based on debug mode.
+        
+        For new structured responses, the narrative is already clean.
+        For legacy responses, this method provides backward compatibility.
         
         Args:
             debug_mode: If True, include debug content. If False, strip debug content.
             
         Returns:
-            Narrative text with debug content handled appropriately
+            Clean narrative text (debug content is now in separate fields)
         """
-        if not hasattr(self, '_raw_narrative_text'):
-            # If we don't have raw text stored, return the narrative text as is
-            return self.narrative_text
-            
-        if debug_mode:
-            # In debug mode, strip only STATE_UPDATES_PROPOSED blocks (never shown to users)
-            return self._strip_state_updates_only(self._raw_narrative_text)
-        else:
-            # Strip all debug content when debug mode is off
-            return self._strip_debug_content(self._raw_narrative_text)
+        # With the new architecture, narrative_text is always clean
+        # Debug content is in separate fields (session_header, planning_block, etc.)
+        return self.narrative_text
+    
+    @property
+    def has_debug_content(self) -> bool:
+        """Check if response has any debug content."""
+        # Check debug tags if present - this is what the tests check
+        if self.debug_tags_present and any(self.debug_tags_present.values()):
+            return True
+        
+        return False
     
     @staticmethod
     def _strip_debug_content(text: str) -> str:
@@ -136,6 +169,53 @@ class GeminiResponse(_GeminiLLMResponse):
         processed_text = re.sub(r'S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
         return processed_text
     
+    @staticmethod
+    def _strip_all_debug_tags(text: str) -> str:
+        """Remove all debug tags from text."""
+        if not text:
+            return text
+        
+        # Remove [Mode: STORY MODE] prefix
+        text = re.sub(r'^\[Mode:\s*[A-Z\s]+\]\s*\n*', '', text)
+        
+        # Remove embedded JSON objects (malformed responses)
+        text = re.sub(r'\{[^}]*"session_header"[^}]*\}[^"]*"[^"]*"', '', text, flags=re.DOTALL)
+        
+        # Remove [DEBUG_START]...[DEBUG_END] blocks
+        text = re.sub(r'\[DEBUG_START\].*?\[DEBUG_END\]', '', text, flags=re.DOTALL)
+        
+        # Remove [SESSION_HEADER] blocks (if they exist in narrative)
+        text = re.sub(r'\[SESSION_HEADER\].*?(?=\n\n[A-Z]|\n\n[A-S]|\n\nT|\n\nU|\n\nV|\n\nW|\n\nX|\n\nY|\n\nZ|\n[A-Z][a-z])', '', text, flags=re.DOTALL)
+        
+        # Remove --- PLANNING BLOCK --- sections (if they exist in narrative)
+        text = re.sub(r'--- PLANNING BLOCK ---.*?$', '', text, flags=re.DOTALL)
+        
+        # Remove [STATE_UPDATES_PROPOSED] blocks
+        text = re.sub(r'\[STATE_UPDATES_PROPOSED\].*?\[END_STATE_UPDATES_PROPOSED\]', '', text, flags=re.DOTALL)
+        
+        # Remove other debug markers
+        text = re.sub(r'\[DEBUG_[A-Z_]+\].*?\[DEBUG_[A-Z_]+\]', '', text, flags=re.DOTALL)
+        
+        # Clean up extra whitespace
+        text = re.sub(r'\n\s*\n\s*\n', '\n\n', text)
+        text = text.strip()
+        
+        return text
+    
+    @staticmethod
+    def _detect_debug_tags_static(text: str) -> Dict[str, bool]:
+        """Detect which debug tags are present in text."""
+        if not text:
+            return {}
+        
+        return {
+            'debug_start_end': '[DEBUG_START]' in text and '[DEBUG_END]' in text,
+            'session_header': '[SESSION_HEADER]' in text,
+            'planning_block': '--- PLANNING BLOCK ---' in text,
+            'state_updates': '[STATE_UPDATES_PROPOSED]' in text,
+            'debug_rolls': '[DEBUG_ROLL_START]' in text,
+        }
+    
     @classmethod
     def create(cls, raw_response_text: str, model: str = "gemini-2.5-flash") -> 'GeminiResponse':
         """
@@ -156,27 +236,80 @@ class GeminiResponse(_GeminiLLMResponse):
         # Parse the raw response to extract narrative and structured data
         narrative_text, structured_response = parse_structured_response(raw_response_text)
         
+        # If we have a structured response, use the new method
+        if structured_response:
+            return cls.create_from_structured_response(structured_response, model)
+        
+        # Otherwise fall back to legacy mode
+        return cls.create_legacy(narrative_text, model)
+    
+    @classmethod
+    def create_from_structured_response(cls, structured_response: NarrativeResponse, 
+                                      model: str = "gemini-2.5-flash") -> 'GeminiResponse':
+        """
+        Create GeminiResponse from structured JSON response.
+        
+        This is the new preferred way to create responses that properly separates
+        narrative from debug content.
+        
+        Args:
+            structured_response: Parsed NarrativeResponse object
+            model: Model name used for generation
+            
+        Returns:
+            GeminiResponse with clean narrative and structured data
+        """
+        # Extract clean narrative from structured response
+        clean_narrative = structured_response.narrative
+        
+        # Remove any remaining debug tags from narrative using static method
+        clean_narrative = cls._strip_all_debug_tags(clean_narrative)
+        
+        # Detect debug tags from structured response content
+        debug_tags = {
+            'dm_notes': False,
+            'dice_rolls': False,
+            'state_changes': False
+        }
+        
+        if structured_response:
+            debug_info = structured_response.debug_info or {}
+            # Check for non-empty debug content
+            debug_tags['dm_notes'] = bool(debug_info.get('dm_notes'))
+            debug_tags['dice_rolls'] = bool(debug_info.get('dice_rolls'))
+            # Check for state changes
+            debug_tags['state_changes'] = bool(structured_response.state_updates)
         
         return cls(
-            narrative_text=narrative_text,
-            provider="gemini",
+            narrative_text=clean_narrative,
             model=model,
-            structured_response=structured_response
+            provider="gemini",
+            structured_response=structured_response,
+            debug_tags_present=debug_tags,
         )
     
     @classmethod
-    def create_legacy(cls, narrative_text: str, structured_response: Optional[NarrativeResponse], 
-               model: str = "gemini-2.5-flash") -> 'GeminiResponse':
+    def create_legacy(cls, narrative_text: str, model: str = "gemini-2.5-flash",
+                     structured_response: Optional[NarrativeResponse] = None) -> 'GeminiResponse':
         """
-        Legacy create method for backwards compatibility.
+        Create GeminiResponse from plain text (legacy support).
         
-        DEPRECATED: Use create() with raw response text instead.
+        This handles old-style responses that embed debug content in the narrative.
+        
+        Args:
+            narrative_text: Raw narrative text (may contain debug tags)
+            model: Model name used for generation
+            structured_response: Optional structured response object
+            
+        Returns:
+            GeminiResponse with debug content stripped from narrative
         """
-        logging.warning("Using deprecated create_legacy method. Switch to create() with raw response.")
+        clean_narrative = cls._strip_all_debug_tags(narrative_text)
         
         return cls(
-            narrative_text=narrative_text,
-            provider="gemini",
+            narrative_text=clean_narrative,
             model=model,
-            structured_response=structured_response
+            provider="gemini",
+            structured_response=structured_response,
+            debug_tags_present=cls._detect_debug_tags_static(narrative_text),
         )
