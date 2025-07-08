@@ -984,14 +984,6 @@ def create_app():
             return jsonify({KEY_ERROR: 'An unexpected error occurred during export.', KEY_DETAILS: str(e)}), 500
 
 
-    # --- World Reference Files ---
-    @app.route('/world_reference/<path:filename>')
-    def serve_world_reference(filename):
-        """Serve files from the world_reference directory."""
-        world_ref_path = os.path.join(os.path.dirname(__file__), '..', 'world_reference')
-        if os.path.exists(os.path.join(world_ref_path, filename)):
-            return send_from_directory(world_ref_path, filename)
-        return "File not found", 404
 
     # --- Frontend Serving ---
     @app.route('/', defaults={'path': ''})

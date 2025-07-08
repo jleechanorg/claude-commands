@@ -391,29 +391,6 @@ class TestWorldReferenceRoute(unittest.TestCase):
         self.client = self.app.test_client()
         self.app.config['TESTING'] = True
     
-    @patch('os.path.exists')
-    @patch('main.send_from_directory')
-    def test_serve_world_reference_file_exists(self, mock_send_from_directory, mock_exists):
-        """Test serving a world reference file that exists."""
-        mock_exists.return_value = True
-        mock_send_from_directory.return_value = "Mock file content"
-        
-        response = self.client.get('/world_reference/campaign_module_dragon_knight.md')
-        
-        # Check that os.path.exists was called with the correct path
-        mock_exists.assert_called_once()
-        # Check that send_from_directory was called
-        mock_send_from_directory.assert_called_once()
-        
-    @patch('os.path.exists')
-    def test_serve_world_reference_file_not_found(self, mock_exists):
-        """Test serving a world reference file that doesn't exist."""
-        mock_exists.return_value = False
-        
-        response = self.client.get('/world_reference/nonexistent_file.md')
-        
-        self.assertEqual(response.status_code, 404)
-        self.assertIn(b"File not found", response.data)
 
 
 if __name__ == '__main__':
