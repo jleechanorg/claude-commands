@@ -76,20 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Dragon Knight campaign content loader
     async function loadDragonKnightCampaignContent() {
-        try {
-            console.log('Loading Dragon Knight campaign content...');
-            const response = await fetch('/world_reference/campaign_module_dragon_knight.md');
-            if (!response.ok) {
-                throw new Error(`Failed to load campaign content: ${response.status}`);
-            }
-            const content = await response.text();
-            console.log('Dragon Knight campaign content loaded successfully');
-            return content;
-        } catch (error) {
-            console.error('Error loading Dragon Knight campaign content:', error);
-            // Fallback to original prompt if loading fails
-            return "A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.";
-        }
+        // Return the Dragon Knight campaign content directly
+        return "A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.";
     }
     
     // Handle campaign type radio button changes
@@ -114,6 +102,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 campaignPromptTextarea.value = 'Loading Dragon Knight campaign...';
                 const content = await loadDragonKnightCampaignContent();
                 campaignPromptTextarea.value = content;
+                
+                // Force default world checkbox to be checked when Dragon Knight is selected
+                const defaultWorldCheckbox = document.getElementById('defaultWorld');
+                if (defaultWorldCheckbox) {
+                    defaultWorldCheckbox.checked = true;
+                    defaultWorldCheckbox.disabled = true; // Disable to prevent unchecking
+                }
             }
         });
         
@@ -122,6 +117,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 campaignPromptTextarea.readOnly = false;
                 campaignPromptTextarea.value = 'A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.';
                 campaignPromptTextarea.focus();
+                
+                // Re-enable default world checkbox when custom campaign is selected
+                const defaultWorldCheckbox = document.getElementById('defaultWorld');
+                if (defaultWorldCheckbox) {
+                    defaultWorldCheckbox.disabled = false; // Re-enable checkbox
+                }
             }
         });
     }
@@ -679,36 +680,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('download-pdf-btn')?.addEventListener('click', () => downloadFile('pdf'));
     document.getElementById('download-docx-btn')?.addEventListener('click', () => downloadFile('docx'));
     
-    // Story Reader controls
-    document.getElementById('readStoryBtn')?.addEventListener('click', () => {
-        const storyContent = document.getElementById('story-content');
-        if (storyContent && window.storyReader) {
-            // Get all story text
-            const storyText = Array.from(storyContent.querySelectorAll('p'))
-                .map(p => p.innerText.trim())
-                .join('\n\n');
-            
-            // Start reading
-            window.storyReader.startReading(storyText, {
-                title: document.getElementById('game-title')?.innerText || 'Campaign Story',
-                onComplete: () => {
-                    // Reset button states
-                    document.getElementById('readStoryBtn').style.display = 'inline-block';
-                    document.getElementById('pauseStoryBtn').style.display = 'none';
-                }
-            });
-            
-            // Update button visibility
-            document.getElementById('readStoryBtn').style.display = 'none';
-            document.getElementById('pauseStoryBtn').style.display = 'inline-block';
-        }
-    });
-    
-    document.getElementById('pauseStoryBtn')?.addEventListener('click', () => {
-        if (window.storyReader) {
-            window.storyReader.togglePause();
-        }
-    });
     
     // Theme integration
     window.addEventListener('themeChanged', (e) => {

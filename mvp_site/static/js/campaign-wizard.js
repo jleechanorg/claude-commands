@@ -463,22 +463,9 @@ class CampaignWizard {
     
     if (type === 'dragon-knight') {
       promptTextarea.readOnly = true;
-      promptTextarea.value = 'Loading Dragon Knight campaign...';
+      promptTextarea.value = 'A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.';
       promptLabel.textContent = 'Campaign Description';
       promptHelp.textContent = 'This campaign uses the pre-written Dragon Knight story. Switch to Custom Campaign to write your own.';
-      
-      try {
-        const response = await fetch('/world_reference/campaign_module_dragon_knight.md');
-        if (response.ok) {
-          const content = await response.text();
-          promptTextarea.value = content;
-        } else {
-          promptTextarea.value = 'Failed to load Dragon Knight campaign. Please try again.';
-        }
-      } catch (error) {
-        console.error('Error loading Dragon Knight campaign:', error);
-        promptTextarea.value = 'A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.';
-      }
     } else {
       promptTextarea.readOnly = false;
       promptTextarea.value = 'A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.';
