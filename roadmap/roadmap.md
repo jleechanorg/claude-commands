@@ -363,7 +363,7 @@ For different worktrees:
 *   [TASK-093] **Dragon Knight Detailed Start** - Create detailed narrative start for Dragon Knight character class
 *   [TASK-094] **Generate Custom Character Background** - Generate siblings/houses/factions etc if they pick a custom character even in default world
 *   [TASK-095] **Generate Companions System** - Create system to generate appropriate companions based on character and story
-*   [TASK-072] **Next Saturday** Evaluate alignment change mechanic - Review current implementation and assess if alignment shifts are working correctly during gameplay
+*   [TASK-155] **Evaluate Alignment Change Mechanic** - Review current implementation and assess if alignment shifts are working correctly during gameplay
 
 ### UI
 *   [TASK-096] **Third Checkbox for Ruleset** - Add third checkbox to replace ruleset option
@@ -420,7 +420,7 @@ For different worktrees:
 
 ## Tech optimization
 *   [TASK-009c] `mvp_site/roadmap/scratchpad_parallel_dual_pass_optimization.md`
-*   [TASK-072] **Evaluate CodeRabbit AI Code Review Tool** (Scheduled: January 19, 2025) 🟢
+*   [TASK-072] **Evaluate CodeRabbit AI Code Review Tool** (Scheduled: July 19, 2025) 🟢
     *   Install and configure CodeRabbit on the repository
     *   Test automated PR review capabilities
     *   Evaluate quality of suggestions and false positive rate
@@ -431,6 +431,15 @@ For different worktrees:
 *   [TASK-076] **Cost Savings Plan** - Analyze Gemini API usage costs using exported CSV data to identify optimization opportunities
 *   [TASK-077] **Generic D&D Setting Adaptation** - Create flexible prompt system that adapts D&D mechanics to any fictional universe (e.g., Star Wars: Jedi Knight vs Paladin, Force Lightning vs Lightning Bolt)
 *   [TASK-078] **GitHub Actions Unit Test Coverage** - Set up automated unit test coverage reporting in CI/CD pipeline
+*   [TASK-146] **Firebase Write/Read Verification** - Implement mechanism to write data to Firebase and read it back to verify persistence
+*   [TASK-147] **Browser Test Mock Mode Support** - Add support for mock mode in browser tests to enable faster testing without real APIs
+*   [TASK-148] **Game State Debug Tool** - Create debug tool to print full game state for any campaign for troubleshooting
+*   [TASK-149] **Browser Test Cron with Email** - Set up browser tests to run every 6 hours via crontab and email results
+*   [TASK-150] **Rename vpython to vpython.sh** - Rename vpython command to vpython.sh for clarity
+*   [TASK-151] **Claude Best Practices Integration** - Evaluate and integrate relevant practices from https://www.anthropic.com/engineering/claude-code-best-practices
+*   [TASK-152] **Single Source of Truth Analysis** - Address duplications: 1) entities in Python code vs prompts, 2) GeminiResponse object consistency
+*   [TASK-153] **Pydantic Version Upgrade** - Evaluate and migrate to Pydantic v2 or v3 for better performance and features
+*   [TASK-154] **Campaign Tuning via God Mode** - Use god mode to analyze past campaigns and improve prompt quality based on learnings
 *   Improve rules? https://ghuntley.com/stdlib/
 *   Ssh into desktop from laptop?
 *   https://www.reddit.com/r/ClaudeAI/s/EtrZt0B9nE
