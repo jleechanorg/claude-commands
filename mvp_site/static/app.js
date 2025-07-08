@@ -171,7 +171,9 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
     
     const appendToStory = (actor, text, mode = null, debugMode = false, sequenceId = null) => {
         const storyContainer = document.getElementById('story-content');
-        const entryEl = document.createElement('p');
+        const entryEl = document.createElement('div');
+        entryEl.className = 'story-entry';
+        
         let label = '';
         if (actor === 'gemini') {
             label = sequenceId ? `Scene #${sequenceId}` : 'Story';
@@ -196,10 +198,132 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
                 .replace(/\[DEBUG_STATE_END\]/g, '</div>')
                 .replace(/\[DEBUG_ROLL_START\]/g, '<div class="debug-rolls"><strong>🎲 Dice Roll:</strong> ')
                 .replace(/\[DEBUG_ROLL_END\]/g, '</div>');
+            
+            // Parse and convert planning block choices to buttons
+            processedText = parsePlanningBlocks(processedText);
         }
         
-        entryEl.innerHTML = `<strong>${label}:</strong> ${processedText}`;
+        entryEl.innerHTML = `<p><strong>${label}:</strong> ${processedText}</p>`;
         storyContainer.appendChild(entryEl);
+        
+        // Add click handlers to any choice buttons we just added
+        if (actor === 'gemini') {
+            const choiceButtons = entryEl.querySelectorAll('.choice-button');
+            choiceButtons.forEach(button => {
+                button.addEventListener('click', handleChoiceClick);
+            });
+        }
+    };
+    
+    // Handler for choice button clicks
+    const handleChoiceClick = async (e) => {
+        const button = e.currentTarget;
+        const choiceText = button.getAttribute('data-choice-text');
+        const choiceId = button.getAttribute('data-choice-id');
+        const userInputEl = document.getElementById('user-input');
+        const interactionForm = document.getElementById('interaction-form');
+        
+        if (!userInputEl || !interactionForm) return;
+        
+        // Handle custom choice differently
+        if (choiceId === 'Custom' || choiceText === 'custom') {
+            // Clear the input and focus it for custom text
+            userInputEl.value = '';
+            userInputEl.focus();
+            userInputEl.placeholder = 'Type your custom action here...';
+            
+            // Scroll to the input area
+            userInputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Don't disable buttons for custom option
+            return;
+        }
+        
+        // For predefined choices, disable all buttons
+        document.querySelectorAll('.choice-button').forEach(btn => {
+            btn.disabled = true;
+        });
+        
+        // Set the choice text in the input field
+        userInputEl.value = choiceText;
+        
+        // Submit the form programmatically
+        const submitEvent = new Event('submit', { cancelable: true, bubbles: true });
+        interactionForm.dispatchEvent(submitEvent);
+    };
+    
+    // Helper function to parse planning blocks and create buttons
+    const parsePlanningBlocks = (text) => {
+        // Pattern to match choice format: **[ActionWord_Number]:** Description OR numbered format: 1. **Action:** Description
+        const bracketPattern = /\*\*\[([^\]]+)\]:\*\*\s*([^*\n]+(?:\n(?!\*\*\[)[^\n]*)*)/g;
+        const numberedPattern = /^\d+\.\s*\*\*([^:]+):\*\*\s*(.+?)(?=^\d+\.|$)/gm;
+        
+        // Find all choices in the text
+        const choices = [];
+        let match;
+        
+        // First try bracket pattern: **[Action_1]:** Description
+        while ((match = bracketPattern.exec(text)) !== null) {
+            choices.push({
+                id: match[1],
+                fullText: match[0],
+                description: match[2].trim()
+            });
+        }
+        
+        // If no bracket pattern found, try numbered pattern: 1. **Action:** Description
+        if (choices.length === 0) {
+            while ((match = numberedPattern.exec(text)) !== null) {
+                choices.push({
+                    id: match[1].trim(),
+                    fullText: match[0],
+                    description: match[2].trim()
+                });
+            }
+        }
+        
+        // If we found choices, create a planning block section
+        if (choices.length > 0) {
+            // Find where the choices start in the text
+            const firstChoiceIndex = text.indexOf(choices[0].fullText);
+            let narrativeText = text.substring(0, firstChoiceIndex).trim();
+            
+            // Remove planning block marker if present
+            const planningBlockMarker = '--- PLANNING BLOCK ---';
+            const markerIndex = narrativeText.lastIndexOf(planningBlockMarker);
+            if (markerIndex >= 0) {
+                narrativeText = narrativeText.substring(0, markerIndex).trim();
+            }
+            
+            // Create the choice buttons HTML
+            let choicesHtml = '<div class="planning-block-choices">';
+            choices.forEach(choice => {
+                // Escape the choice text for HTML attribute
+                const escapedText = `${choice.id}: ${choice.description}`.replace(/"/g, '&quot;');
+                choicesHtml += `
+                    <button class="choice-button" data-choice-id="${choice.id}" data-choice-text="${escapedText}">
+                        <span class="choice-id">[${choice.id}]</span>
+                        <span class="choice-description">${choice.description}</span>
+                    </button>
+                `;
+            });
+            
+            // Add custom text option
+            choicesHtml += `
+                <button class="choice-button choice-button-custom" data-choice-id="Custom" data-choice-text="custom">
+                    <span class="choice-id">[Custom]</span>
+                    <span class="choice-description">Type your own action...</span>
+                </button>
+            `;
+            
+            choicesHtml += '</div>';
+            
+            // Return narrative text followed by choice buttons
+            return narrativeText + choicesHtml;
+        }
+        
+        // No choices found, return text as-is
+        return text;
     };
 
     // --- Data Fetching and Rendering ---
@@ -457,9 +581,18 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
                 if (debugIndicator) {
                     debugIndicator.style.display = data.debug_mode ? 'block' : 'none';
                 }
+                
+                // Re-enable all choice buttons now that we have a new response
+                document.querySelectorAll('.choice-button').forEach(btn => {
+                    btn.disabled = false;
+                });
             } catch (error) {
                 console.error("Interaction failed:", error);
                 appendToStory('system', 'Sorry, an error occurred. Please try again.');
+                // Re-enable choice buttons even on error
+                document.querySelectorAll('.choice-button').forEach(btn => {
+                    btn.disabled = false;
+                });
             } finally {
                 localSpinner.style.display = 'none';
                 if (window.loadingMessages) {

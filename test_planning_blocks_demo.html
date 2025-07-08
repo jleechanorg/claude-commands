@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planning Block Buttons Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Planning Block Choice Buttons Styling */
+        .planning-block-choices {
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background-color: rgba(0, 0, 0, 0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .choice-button {
+            display: block;
+            width: 100%;
+            margin-bottom: 0.75rem;
+            padding: 1rem 1.5rem;
+            text-align: left;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            line-height: 1.5;
+            color: #212529;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .choice-button:hover {
+            background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+            border-color: #adb5bd;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .choice-id {
+            font-weight: bold;
+            color: #0d6efd;
+            margin-right: 0.5rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .choice-description {
+            color: #495057;
+        }
+
+        #demo-output {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 1rem;
+            margin-top: 1rem;
+            min-height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Planning Block Buttons Demo</h1>
+        <p>This demonstrates how planning block choices are rendered as clickable buttons.</p>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3>Example Story Content</h3>
+            </div>
+            <div class="card-body">
+                <p><strong>Scene #1:</strong> The goblin chieftain snarls at your approach, his yellowed tusks gleaming in the torchlight. His warriors shift nervously, hands on their crude weapons.</p>
+                
+                <p><strong>What do you do?</strong></p>
+                
+                <div class="planning-block-choices">
+                    <button class="choice-button" data-choice-id="Action_1" data-choice-text="Action_1: Draw your sword and charge the chieftain directly, hoping to end this quickly.">
+                        <span class="choice-id">[Action_1]</span>
+                        <span class="choice-description">Draw your sword and charge the chieftain directly, hoping to end this quickly.</span>
+                    </button>
+                    <button class="choice-button" data-choice-id="Continue_1" data-choice-text="Continue_1: Try to negotiate with the chieftain, offering gold for safe passage.">
+                        <span class="choice-id">[Continue_1]</span>
+                        <span class="choice-description">Try to negotiate with the chieftain, offering gold for safe passage.</span>
+                    </button>
+                    <button class="choice-button" data-choice-id="Explore_2" data-choice-text="Explore_2: Look for an alternate route around the goblin encampment.">
+                        <span class="choice-id">[Explore_2]</span>
+                        <span class="choice-description">Look for an alternate route around the goblin encampment.</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <h3>Click Output:</h3>
+            <div id="demo-output">
+                <em>Click a button above to see what text would be sent to the LLM...</em>
+            </div>
+        </div>
+        
+        <div class="mt-4 alert alert-info">
+            <h4>How it works:</h4>
+            <ul>
+                <li>Planning block choices are automatically detected using regex pattern: <code>**[ActionWord_Number]:** Description</code></li>
+                <li>Each choice is rendered as a styled button with hover effects</li>
+                <li>Clicking a button sends the full choice text (e.g., "Action_1: Draw your sword...")</li>
+                <li>Buttons are disabled during interaction and re-enabled after response</li>
+                <li>Special characters in choice text are properly escaped</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        // Add click handlers to demo buttons
+        document.querySelectorAll('.choice-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const choiceText = e.currentTarget.getAttribute('data-choice-text');
+                document.getElementById('demo-output').innerHTML = 
+                    `<strong>Text sent to LLM:</strong><br>"${choiceText}"<br><br>` +
+                    `<em>In the real app, this would be submitted automatically and the buttons would be disabled until the response arrives.</em>`;
+            });
+        });
+    </script>
+</body>
+</html>

@@ -86,6 +86,7 @@
 - **TASK-153**: Pydantic Version Upgrade
 - **TASK-154**: Campaign Tuning via God Mode
 - **TASK-155**: Evaluate Alignment Change Mechanic
+- **TASK-156**: Planning Block Choice Buttons (COMPLETED)
 
 ## Cross-Reference Notes
 

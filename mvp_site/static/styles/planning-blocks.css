@@ -1,0 +1,186 @@
+/* Planning Block Choice Buttons Styling */
+
+/* Container for planning block choices */
+.planning-block-choices {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background-color: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Individual choice button */
+.choice-button {
+    display: block;
+    width: 100%;
+    margin-bottom: 0.75rem;
+    padding: 1rem 1.5rem;
+    text-align: left;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #212529;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.choice-button:hover {
+    background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+    border-color: #adb5bd;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.choice-button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Choice ID styling */
+.choice-id {
+    font-weight: bold;
+    color: #0d6efd;
+    margin-right: 0.5rem;
+    font-family: 'Courier New', monospace;
+}
+
+/* Choice description */
+.choice-description {
+    color: #495057;
+}
+
+/* Disabled state when waiting for response */
+.choice-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #e9ecef;
+}
+
+/* Theme-specific adjustments */
+.theme-dark .planning-block-choices {
+    background-color: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .choice-button {
+    background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+    border-color: #444;
+    color: #e9ecef;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.theme-dark .choice-button:hover {
+    background: linear-gradient(135deg, #3a3a3a 0%, #2c2c2c 100%);
+    border-color: #666;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.theme-dark .choice-id {
+    color: #6ea8fe;
+}
+
+.theme-dark .choice-description {
+    color: #adb5bd;
+}
+
+/* Fantasy theme adjustments */
+.theme-fantasy .choice-button {
+    background: linear-gradient(135deg, #f4e4d4 0%, #e8d4bc 100%);
+    border-color: #d4a574;
+    font-family: 'Georgia', serif;
+}
+
+.theme-fantasy .choice-button:hover {
+    background: linear-gradient(135deg, #e8d4bc 0%, #d4a574 100%);
+    border-color: #b8935a;
+}
+
+.theme-fantasy .choice-id {
+    color: #8b4513;
+    font-weight: bold;
+}
+
+/* Cyberpunk theme adjustments */
+.theme-cyberpunk .choice-button {
+    background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1e 100%);
+    border: 2px solid #00ffff;
+    color: #00ffff;
+    text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+}
+
+.theme-cyberpunk .choice-button:hover {
+    background: linear-gradient(135deg, #2a2a3e 0%, #1a1a2e 100%);
+    border-color: #00ff00;
+    color: #00ff00;
+    text-shadow: 0 0 8px rgba(0, 255, 0, 0.7);
+}
+
+.theme-cyberpunk .choice-id {
+    color: #ff00ff;
+    text-shadow: 0 0 3px rgba(255, 0, 255, 0.7);
+}
+
+/* Custom choice button styling */
+.choice-button-custom {
+    background: linear-gradient(135deg, #f0f4ff 0%, #e0e8ff 100%);
+    border-color: #6c757d;
+    border-style: dashed;
+}
+
+.choice-button-custom:hover {
+    background: linear-gradient(135deg, #e0e8ff 0%, #d0d8ff 100%);
+    border-color: #495057;
+}
+
+.choice-button-custom .choice-id {
+    color: #6c757d;
+}
+
+.choice-button-custom .choice-description {
+    font-style: italic;
+    color: #6c757d;
+}
+
+/* Dark theme custom button */
+.theme-dark .choice-button-custom {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border-color: #666;
+}
+
+.theme-dark .choice-button-custom:hover {
+    background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
+    border-color: #888;
+}
+
+/* Fantasy theme custom button */
+.theme-fantasy .choice-button-custom {
+    background: linear-gradient(135deg, #f9f5f1 0%, #f0e6dc 100%);
+    border-color: #a68a64;
+}
+
+/* Cyberpunk theme custom button */
+.theme-cyberpunk .choice-button-custom {
+    background: linear-gradient(135deg, #0a0a0f 0%, #1a0a1f 100%);
+    border-color: #ff00ff;
+    border-style: dashed;
+}
+
+.theme-cyberpunk .choice-button-custom .choice-id {
+    color: #ff00ff;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .choice-button {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .planning-block-choices {
+        padding: 0.75rem;
+    }
+}

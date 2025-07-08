@@ -443,6 +443,7 @@ For different worktrees:
 *   [TASK-152] **Single Source of Truth Analysis** - Address duplications: 1) entities in Python code vs prompts, 2) GeminiResponse object consistency
 *   [TASK-153] **Pydantic Version Upgrade** - Evaluate and migrate to Pydantic v2 or v3 for better performance and features
 *   [TASK-154] **Campaign Tuning via God Mode** - Use god mode to analyze past campaigns and improve prompt quality based on learnings
+*   [TASK-156] **Planning Block Choice Buttons** ✅ COMPLETED - Convert planning block choice IDs into clickable buttons that send full choice text
 *   Improve rules? https://ghuntley.com/stdlib/
 *   Ssh into desktop from laptop?
 *   https://www.reddit.com/r/ClaudeAI/s/EtrZt0B9nE
