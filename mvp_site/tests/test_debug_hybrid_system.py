@@ -6,8 +6,10 @@ import pytest
 import sys
 import os
 
-# Add parent directory to path
+# Add parent directory to path for mvp_site imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add project root to path for debug_hybrid_system import
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from debug_hybrid_system import (
     contains_debug_tags,
