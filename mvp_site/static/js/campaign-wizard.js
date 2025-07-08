@@ -468,7 +468,7 @@ class CampaignWizard {
       promptHelp.textContent = 'This campaign uses the pre-written Dragon Knight story. Switch to Custom Campaign to write your own.';
     } else {
       promptTextarea.readOnly = false;
-      promptTextarea.value = 'A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.';
+      promptTextarea.value = '';
       promptLabel.textContent = 'Describe Your World';
       promptHelp.textContent = 'For inspiration, pick your favorite movie, book, or TV show. Describe a scenario where you get to make important decisions.';
       promptTextarea.focus();
