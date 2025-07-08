@@ -49,7 +49,7 @@ class RobustJSONParser:
                 return result, True
         except json.JSONDecodeError:
             pass
-        except Exception as e:
+        except (ValueError, KeyError, TypeError) as e:
             logging_util.debug(f"JSON boundary fix failed: {e}")
             pass
         
@@ -61,7 +61,7 @@ class RobustJSONParser:
             return result, True
         except json.JSONDecodeError:
             pass
-        except Exception as e:
+        except (ValueError, KeyError, TypeError) as e:
             logging_util.debug(f"JSON completion failed: {e}")
             pass
         
@@ -71,7 +71,7 @@ class RobustJSONParser:
             if extracted:
                 logging_util.info("Successfully extracted fields from malformed JSON")
                 return extracted, True
-        except Exception as e:
+        except (ValueError, KeyError, TypeError, AttributeError) as e:
             logging_util.debug(f"Field extraction failed: {e}")
             pass
         
@@ -84,7 +84,7 @@ class RobustJSONParser:
                 return result, True
         except json.JSONDecodeError:
             pass
-        except Exception as e:
+        except (ValueError, KeyError, TypeError) as e:
             logging_util.debug(f"Aggressive fix failed: {e}")
             pass
         
