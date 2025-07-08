@@ -31,7 +31,7 @@ sys.modules['firebase_admin.firestore'] = mock_firestore
 sys.modules['firebase_admin.auth'] = mock_auth
 
 from main import create_app
-from gemini_response_simplified import GeminiResponse
+from gemini_response import GeminiResponse
 import gemini_service
 
 

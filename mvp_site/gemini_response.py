@@ -238,14 +238,15 @@ class GeminiResponse(_GeminiLLMResponse):
         
         # If we have a structured response, use the new method
         if structured_response:
-            return cls.create_from_structured_response(structured_response, model)
+            return cls.create_from_structured_response(structured_response, model, narrative_text)
         
         # Otherwise fall back to legacy mode
         return cls.create_legacy(narrative_text, model)
     
     @classmethod
     def create_from_structured_response(cls, structured_response: NarrativeResponse, 
-                                      model: str = "gemini-2.5-flash") -> 'GeminiResponse':
+                                      model: str = "gemini-2.5-flash", 
+                                      combined_narrative_text: str = None) -> 'GeminiResponse':
         """
         Create GeminiResponse from structured JSON response.
         
@@ -255,12 +256,14 @@ class GeminiResponse(_GeminiLLMResponse):
         Args:
             structured_response: Parsed NarrativeResponse object
             model: Model name used for generation
+            combined_narrative_text: The combined narrative text (including god_mode_response if present)
             
         Returns:
             GeminiResponse with clean narrative and structured data
         """
-        # Extract clean narrative from structured response
-        clean_narrative = structured_response.narrative
+        # Use the combined narrative text if provided (includes god_mode_response)
+        # Otherwise extract clean narrative from structured response
+        clean_narrative = combined_narrative_text if combined_narrative_text is not None else structured_response.narrative
         
         # Remove any remaining debug tags from narrative using static method
         clean_narrative = cls._strip_all_debug_tags(clean_narrative)
