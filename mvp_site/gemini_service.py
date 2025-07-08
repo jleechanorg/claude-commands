@@ -479,35 +479,15 @@ def _process_structured_response(raw_response_text, expected_entities):
     logging_util.debug(f"JSON_BUG_PROCESS_STRUCTURED_PARSED_TYPE: {type(response_text)}")
     logging_util.debug(f"JSON_BUG_PROCESS_STRUCTURED_HAS_STRUCTURED: {structured_response is not None}")
     
-    # CRITICAL JSON BUG CHECK AND FIX
+    # JSON BUG CHECK - Remove incorrect fix
+    # TODO: The actual JSON bug is NOT about malformed JSON
+    # The system uses JSON mode intentionally - the bug is that valid JSON
+    # isn't being processed correctly to extract the narrative field
+    # See README_FOR_AI.md for details
     if response_text.strip().startswith('{'):
-        logging_util.error("🚨 JSON BUG FOUND IN _process_structured_response!")
-        logging_util.error(f"   parse_structured_response returned JSON instead of narrative")
-        logging_util.error(f"   response_text starts with: {response_text[:100]}")
-        
-        # FIX: Try to extract narrative if we got JSON
-        try:
-            import json
-            parsed = json.loads(response_text)
-            if 'narrative' in parsed:
-                logging_util.error("🔧 APPLYING FIX: Extracting narrative from valid JSON")
-                response_text = parsed['narrative']
-                logging_util.error(f"✅ Fixed response_text now starts with: {response_text[:100]}")
-            else:
-                # No narrative field, use empty string
-                logging_util.error("🔧 APPLYING FIX: No narrative in JSON, using empty string")
-                response_text = "[Error: Unable to generate narrative]"
-        except:
-            # Can't parse JSON, try to extract narrative with regex
-            import re
-            narrative_match = re.search(r'"narrative"\s*:\s*"([^"]*)"', response_text)
-            if narrative_match:
-                logging_util.error("🔧 APPLYING FIX: Extracted narrative with regex")
-                response_text = narrative_match.group(1).replace('\\n', '\n')
-            else:
-                # Last resort: return error message instead of raw JSON
-                logging_util.error("🔧 APPLYING FIX: Cannot extract narrative, using error message")
-                response_text = "[Error: Unable to parse AI response. Please try again.]"
+        logging_util.warning("⚠️ WARNING: response_text contains raw JSON - this indicates the JSON display bug")
+        logging_util.warning(f"   This should have been processed to extract narrative")
+        logging_util.warning(f"   response_text starts with: {response_text[:100]}")
     
     # Validate structured response coverage
     if isinstance(structured_response, NarrativeResponse):
@@ -1239,10 +1219,18 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     response_text, structured_response = _process_structured_response(raw_response_text, expected_entities or [])
     
     # JSON BUG LOGGING
-    logging_util.error("🔍 GEMINI_SERVICE creating response:")
-    logging_util.error("🔍   response_text type: %s", type(response_text))
-    logging_util.error("🔍   response_text[:200]: %s", response_text[:200])
-    logging_util.error("🔍   response_text is JSON: %s", response_text.strip().startswith('{'))
+    logging_util.info("🔍 GEMINI_SERVICE creating response:")
+    logging_util.info("🔍   response_text type: %s", type(response_text))
+    logging_util.info("🔍   response_text[:200]: %s", response_text[:200])
+    logging_util.info("🔍   response_text is JSON: %s", response_text.strip().startswith('{'))
+    
+    # Also print to console directly
+    print(f"\n{'='*60}")
+    print(f"🔍 DEBUG: GEMINI_SERVICE after _process_structured_response")
+    print(f"   response_text type: {type(response_text)}")
+    print(f"   Starts with '{{': {response_text.strip().startswith('{')}")
+    print(f"   First 200 chars: {response_text[:200]}")
+    print(f"{'='*60}\n")
     
     # Validate entity tracking if enabled
     if expected_entities:

@@ -67,6 +67,7 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 - Quick reference → `.cursor/rules/quick_reference.md`
 - Progress tracking → `roadmap/templates/progress_tracking_template.md`
 - Directory structure → `/directory_structure.md`
+- **AI Assistant Guide**: → `mvp_site/README_FOR_AI.md` (CRITICAL system architecture for AI assistants)
 
 ## Core Principles & Interaction
 
