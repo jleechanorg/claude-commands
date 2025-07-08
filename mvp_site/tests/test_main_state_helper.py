@@ -28,7 +28,7 @@ sys.modules['firebase_admin.auth'] = mock_auth
 
 # Import after mocking
 from gemini_response import GeminiResponse
-from main import create_app, format_state_changes, _handle_legacy_migration
+from main import create_app, format_state_changes
 
 # Create StateHelper wrapper for test compatibility
 class StateHelper:

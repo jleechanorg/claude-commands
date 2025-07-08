@@ -27,7 +27,7 @@ sys.modules['firebase_admin.auth'] = mock_auth
 from main import create_app, DEFAULT_TEST_USER, HEADER_TEST_BYPASS, HEADER_TEST_USER_ID
 from main import KEY_SUCCESS, KEY_ERROR, KEY_MESSAGE, HEADER_AUTH, KEY_TRACEBACK
 from main import _prepare_game_state, _handle_set_command, _handle_ask_state_command
-from main import _handle_update_state_command, _handle_legacy_migration, parse_set_command
+from main import _handle_update_state_command, parse_set_command
 from game_state import GameState
 
 

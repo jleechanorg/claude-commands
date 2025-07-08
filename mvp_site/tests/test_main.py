@@ -30,7 +30,7 @@ sys.modules['firebase_admin.auth'] = mock_auth
 
 from main import create_app, DEFAULT_TEST_USER, HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, parse_set_command, format_state_changes
 from firestore_service import _truncate_log_json as truncate_game_state_for_logging
-from game_state import GameState, MigrationStatus
+from game_state import GameState
 
 class TestApiEndpoints(unittest.TestCase):
 
@@ -61,7 +61,6 @@ class TestApiEndpoints(unittest.TestCase):
         # Mock the document snapshot and its to_dict method
         # Create a real GameState object instead of mock
         mock_game_state_obj = GameState.from_dict(mock_game_state)
-        mock_game_state_obj.migration_status = MigrationStatus.MIGRATED
         mock_firestore_service.get_campaign_game_state.return_value = mock_game_state_obj
 
         # 2. Act: Make the API call
@@ -197,7 +196,6 @@ class TestApiEndpoints(unittest.TestCase):
         
         # Create a real GameState object instead of mock
         mock_game_state_obj = GameState.from_dict(mock_game_state)
-        mock_game_state_obj.migration_status = MigrationStatus.MIGRATED
         
         mock_firestore_service.get_campaign_by_id.return_value = (mock_campaign, mock_story)
         mock_firestore_service.get_campaign_game_state.return_value = mock_game_state_obj
@@ -239,8 +237,7 @@ class TestApiEndpoints(unittest.TestCase):
         
         # Test with NOT_CHECKED status
         mock_game_state = {
-            'player': {'name': 'Hero'},
-            'migration_status': MigrationStatus.NOT_CHECKED.value
+            'player': {'name': 'Hero'}
         }
         
         mock_doc_snapshot = MagicMock()
