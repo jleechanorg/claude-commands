@@ -79,7 +79,7 @@ class TestJSONOnlyMode(unittest.TestCase):
             narrative_text="Some text with [STATE_UPDATES_PROPOSED]{\"gold\": 100}[END_STATE_UPDATES_PROPOSED]",
             structured_response=None,
             debug_tags_present={},
-            raw_response="raw"
+            
         )
         
         # Should return empty dict, not parse from text
@@ -132,7 +132,9 @@ class TestJSONOnlyMode(unittest.TestCase):
         
     def test_strip_functions_dont_affect_state_parsing(self):
         """Test that strip functions are only for display, not state extraction"""
-        from main import strip_debug_content, strip_state_updates_only
+        from gemini_response import GeminiResponse
+        strip_debug_content = GeminiResponse._strip_debug_content
+        strip_state_updates_only = GeminiResponse._strip_state_updates_only
         
         text_with_state_block = """Story text.
 [STATE_UPDATES_PROPOSED]
@@ -153,7 +155,7 @@ class TestJSONOnlyMode(unittest.TestCase):
                 narrative_text="Story without JSON",
                 structured_response=None,
                 debug_tags_present={},
-                raw_response="raw"
+                
             )
             
             # Accessing state_updates on response without structured_response

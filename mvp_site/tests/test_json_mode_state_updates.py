@@ -12,8 +12,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import logging_util
 import unittest
-from gemini_service import _process_structured_response
-from narrative_response_schema import NarrativeResponse
+from gemini_response import GeminiResponse
+from narrative_response_schema import NarrativeResponse, parse_structured_response
 
 class TestJsonModeStateUpdates(unittest.TestCase):
     """Test that state updates are properly extracted from JSON responses."""
@@ -46,22 +46,25 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         raw_response = json.dumps(json_response)
         expected_entities = ["Drake", "goblin"]
         
-        # Process the response
-        result, structured_response = _process_structured_response(raw_response, expected_entities)
+        # Process the response using new API
+        gemini_response = GeminiResponse.create(raw_response)
+        result = gemini_response.narrative_text
+        structured_response = gemini_response.structured_response
         
         # Check that narrative is included
         self.assertIn("Drake swings his sword", result)
         
-        # Check that STATE_UPDATES_PROPOSED block is appended
-        self.assertIn("[STATE_UPDATES_PROPOSED]", result)
-        self.assertIn("[END_STATE_UPDATES_PROPOSED]", result)
+        # Check that state updates are NOT in the narrative text (bug fix)
+        self.assertNotIn("[STATE_UPDATES_PROPOSED]", result)
+        self.assertNotIn("[END_STATE_UPDATES_PROPOSED]", result)
+        self.assertNotIn('"npc_data"', result)
+        self.assertNotIn('"goblin_001"', result)
         
-        # Check that state updates are included
-        self.assertIn('"npc_data"', result)
-        self.assertIn('"goblin_001"', result)
-        self.assertIn('"hp_current": 0', result)
-        self.assertIn('"player_character_data"', result)
-        self.assertIn('"xp_current": 150', result)
+        # Check that state updates are in the structured response
+        self.assertIsNotNone(structured_response)
+        self.assertIsNotNone(structured_response.state_updates)
+        self.assertEqual(structured_response.state_updates["npc_data"]["goblin_001"]["hp_current"], 0)
+        self.assertEqual(structured_response.state_updates["player_character_data"]["xp_current"], 150)
         
         print("✅ JSON response with state updates properly converted")
     
@@ -77,8 +80,10 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         raw_response = json.dumps(json_response)
         expected_entities = ["Drake"]
         
-        # Process the response
-        result, structured_response = _process_structured_response(raw_response, expected_entities)
+        # Process the response using new API
+        gemini_response = GeminiResponse.create(raw_response)
+        result = gemini_response.narrative_text
+        structured_response = gemini_response.structured_response
         
         # Check that narrative is included
         self.assertIn("Drake explores the peaceful forest", result)
@@ -101,8 +106,10 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         raw_response = json.dumps(json_response)
         expected_entities = []
         
-        # Process the response
-        result, structured_response = _process_structured_response(raw_response, expected_entities)
+        # Process the response using new API
+        gemini_response = GeminiResponse.create(raw_response)
+        result = gemini_response.narrative_text
+        structured_response = gemini_response.structured_response
         
         # Check that narrative is included
         self.assertIn("The scene is quiet", result)

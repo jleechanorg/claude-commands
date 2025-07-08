@@ -76,11 +76,10 @@ class TestGeminiResponseIntegration(unittest.TestCase):
         mock_structured_response = MagicMock()
         raw_response = '{"narrative": "Your adventure begins..."}'
         
-        gemini_response_obj = GeminiResponse.create(
-            narrative_text=narrative_text,
-            structured_response=mock_structured_response,
-            raw_response=raw_response
-        )
+        # Create a raw JSON response that would come from Gemini API
+        raw_json_response = '{"narrative": "Your adventure begins in a bustling tavern...", "entities_mentioned": [], "location_confirmed": "Tavern", "state_updates": {}, "debug_info": {}}'
+        
+        gemini_response_obj = GeminiResponse.create(raw_json_response)
         
         # Mock get_initial_story to return actual GeminiResponse object
         mock_gemini_service.get_initial_story.return_value = gemini_response_obj
@@ -137,11 +136,8 @@ class TestGeminiResponseIntegration(unittest.TestCase):
         raw_response = '{"narrative": "Test narrative"}'
         
         # Act: Create GeminiResponse
-        gemini_response = GeminiResponse.create(
-            narrative_text=narrative_text,
-            structured_response=mock_structured_response,
-            raw_response=raw_response
-        )
+        raw_json_response = '{"narrative": "Test narrative", "entities_mentioned": [], "location_confirmed": "Unknown", "state_updates": {}, "debug_info": {}}'
+        gemini_response = GeminiResponse.create(raw_json_response)
         
         # Assert: Verify required interface
         self.assertTrue(hasattr(gemini_response, 'narrative_text'), 

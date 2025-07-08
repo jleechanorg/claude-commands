@@ -29,10 +29,10 @@ class TestAlwaysJSONMode(unittest.TestCase):
         self.game_state.npc_data = {}
         
         with patch('gemini_service._call_gemini_api') as mock_api:
-            # Mock the API response
+            # Mock the API response - include planning block to avoid duplicate generation
             mock_response = MagicMock()
             mock_response.text = json.dumps({
-                "narrative": "Welcome to character creation!",
+                "narrative": "Welcome to character creation!\n\n--- PLANNING BLOCK ---\nWhat would you like to do?\n1. **[Create_1]:** Create your character\n2. **[Skip_2]:** Skip character creation",
                 "entities_mentioned": [],
                 "location_confirmed": "Character Creation",
                 "state_updates": {
@@ -59,6 +59,13 @@ class TestAlwaysJSONMode(unittest.TestCase):
             # JSON mode is now always enabled internally, no need to check for use_json_mode parameter
             self.assertTrue(mock_api.called, 
                           "API should have been called (JSON mode is always enabled)")
+            
+            # Verify we got a clean GeminiResponse with narrative text (not JSON)
+            self.assertIsNotNone(result)
+            # The narrative should include the planning block
+            self.assertIn("Welcome to character creation!", result.narrative_text)
+            self.assertIn("--- PLANNING BLOCK ---", result.narrative_text)
+            self.assertNotIn('"narrative":', result.narrative_text)  # Should be clean text, not JSON
             
     def test_json_mode_with_entities(self):
         """Test that JSON mode is used when entities are present"""

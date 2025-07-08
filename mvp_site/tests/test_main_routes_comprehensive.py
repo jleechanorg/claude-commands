@@ -30,7 +30,7 @@ class TestBusinessLogic(unittest.TestCase):
     def test_prepare_game_state_success(self):
         """Test successful game state preparation."""
         with patch('main.firestore_service') as mock_firestore_service, \
-             patch('main.StateHelper') as mock_state_helper, \
+             patch('gemini_response.GeminiResponse') as mock_gemini_response, \
              patch('main.GameState') as mock_game_state_class:
             
             # Mock firestore returning a game state document
@@ -44,7 +44,7 @@ class TestBusinessLogic(unittest.TestCase):
             mock_game_state_class.from_dict.return_value = mock_game_state
             
             # Mock StateHelper
-            mock_state_helper.cleanup_legacy_state.return_value = ({'test': 'data'}, False, 0)
+            mock_gemini_response.cleanup_legacy_state.return_value = ({'test': 'data'}, False, 0)
             
             # Call the function
             result, was_cleaned, num_cleaned = _prepare_game_state('user123', 'campaign456')
@@ -58,7 +58,7 @@ class TestBusinessLogic(unittest.TestCase):
     def test_prepare_game_state_no_existing_state(self):
         """Test game state preparation when no state exists."""
         with patch('main.firestore_service') as mock_firestore_service, \
-             patch('main.StateHelper') as mock_state_helper, \
+             patch('gemini_response.GeminiResponse') as mock_gemini_response, \
              patch('main.GameState') as mock_game_state_class:
             
             # Mock firestore returning None (no existing state)
@@ -70,7 +70,7 @@ class TestBusinessLogic(unittest.TestCase):
             mock_game_state_class.return_value = mock_game_state
             
             # Mock StateHelper
-            mock_state_helper.cleanup_legacy_state.return_value = ({}, False, 0)
+            mock_gemini_response.cleanup_legacy_state.return_value = ({}, False, 0)
             
             # Call the function
             result, was_cleaned, num_cleaned = _prepare_game_state('user123', 'campaign456')
@@ -84,21 +84,14 @@ class TestBusinessLogic(unittest.TestCase):
     def test_prepare_game_state_with_cleanup(self):
         """Test game state preparation with legacy cleanup."""
         with patch('main.firestore_service') as mock_firestore_service, \
-             patch('main.StateHelper') as mock_state_helper, \
-             patch('main.GameState') as mock_game_state_class:
+             patch('main._cleanup_legacy_state') as mock_cleanup:
             
-            # Mock firestore returning a game state document
-            mock_doc = MagicMock()
-            mock_doc.to_dict.return_value = {'old': 'data'}
-            mock_firestore_service.get_campaign_game_state.return_value = mock_doc
+            # Mock firestore returning a real GameState object with legacy data
+            mock_game_state = GameState.from_dict({'old': 'data', 'world_time': 'old_time', 'some.key': 'value'})
+            mock_firestore_service.get_campaign_game_state.return_value = mock_game_state
             
-            # Mock GameState creation
-            mock_game_state = MagicMock()
-            mock_game_state.to_dict.return_value = {'old': 'data'}
-            mock_game_state_class.from_dict.return_value = mock_game_state
-            
-            # Mock StateHelper - this time with cleanup
-            mock_state_helper.cleanup_legacy_state.return_value = ({'cleaned': 'data'}, True, 5)
+            # Mock cleanup to return cleaned data
+            mock_cleanup.return_value = ({'cleaned': 'data'}, True, 5)
             
             # Call the function
             result, was_cleaned, num_cleaned = _prepare_game_state('user123', 'campaign456')
@@ -106,8 +99,9 @@ class TestBusinessLogic(unittest.TestCase):
             # Verify
             self.assertTrue(was_cleaned)
             self.assertEqual(num_cleaned, 5)
-            # Should have called from_dict twice - once for initial load, once after cleanup
-            self.assertEqual(mock_game_state_class.from_dict.call_count, 2)
+            # Verify cleanup was called with the original state
+            mock_cleanup.assert_called_once()
+            # Verify firestore was updated with cleaned state
             mock_firestore_service.update_campaign_game_state.assert_called_once()
 
     def test_prepare_game_state_firestore_error(self):

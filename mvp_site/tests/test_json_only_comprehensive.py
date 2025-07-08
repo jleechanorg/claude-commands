@@ -37,7 +37,7 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
                 narrative_text="Story text",
                 structured_response=None,
                 debug_tags_present={},
-                raw_response="raw"
+                
             )
             
             # Access state_updates
@@ -100,7 +100,7 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
             narrative_text="The hero gains gold [STATE_UPDATES_PROPOSED]{\"pc_data\": {\"gold\": 100}}[END_STATE_UPDATES_PROPOSED]",
             structured_response=narrative_response,
             debug_tags_present={},
-            raw_response="raw"
+            
         )
         
         # Should use JSON value, not parsed from text
@@ -112,7 +112,7 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
             narrative_text="Story with [STATE_UPDATES_PROPOSED]{\"gold\": 999}[END_STATE_UPDATES_PROPOSED]",
             structured_response=None,
             debug_tags_present={},
-            raw_response="raw"
+            
         )
         
         # Should be empty
@@ -120,7 +120,8 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
         
     def test_strip_functions_only_for_display(self):
         """Test that strip functions don't affect state parsing"""
-        from main import strip_debug_content
+        from gemini_response import GeminiResponse
+        strip_debug_content = GeminiResponse._strip_debug_content
         
         # Text with state block
         text = """Story text.
