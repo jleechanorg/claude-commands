@@ -6,15 +6,29 @@
 
 **Usage**: `/testui`
 
-**Action**: Simply run the UI test script with mock APIs:
+**Action**: Run the UI test script with mock APIs and ALWAYS report the 3 critical confirmations:
 
 ```bash
 ./run_ui_tests.sh mock
 ```
 
-- ✅ Script handles all setup automatically (Playwright installation, browser dependencies, server startup)
-- ✅ Report actual results/errors
-- ❌ NEVER create fake output
+**MANDATORY CONFIRMATIONS TO REPORT**:
+After test execution, ALWAYS explicitly confirm these 3 points:
+
+1. **📸 BROWSER TEST EVIDENCE**: 
+   - List actual screenshot file paths from `/tmp/worldarchitectai/browser/`
+   - Confirm real Playwright browser automation worked
+   - Show count of PNG files generated
+
+2. **🔥 FIREBASE CONNECTION STATUS**:
+   - Confirm mock Firebase was used (not real Firebase)
+   - Verify no real Firestore API calls were made
+   - Report mock mode was active
+
+3. **🤖 GEMINI API STATUS**:
+   - Confirm mock Gemini responses were used (not real API calls)
+   - Verify no real Gemini API charges occurred
+   - Report mock AI mode was active
 
 **CRITICAL REQUIREMENTS**:
 - 🚨 **REAL browser automation only** - Must use Playwright
@@ -22,3 +36,4 @@
 - 🚨 **Mock APIs** - Uses mocked external API responses (free)
 - 🚨 **Real screenshots** - PNG/JPG images taken by browsers, never text files
 - ❌ **NEVER simulate** - If browser tests can't run, report honestly
+- ✅ **ALWAYS list screenshot paths** - Show exact file locations generated
