@@ -31,23 +31,8 @@ def test_narrative_text_should_not_contain_json():
     }
 }'''
     
-    # Mock the internal processing that happens in gemini_service
-    from narrative_response_schema import parse_structured_response
-    
-    # This is what currently happens - parse_structured_response returns the full JSON
-    response_text, structured_response = parse_structured_response(raw_json_response)
-    
-    print("🔍 Test Output:")
-    print(f"   response_text type: {type(response_text)}")
-    print(f"   response_text[:100]: {response_text[:100]}")
-    print(f"   response_text starts with '{{': {response_text.strip().startswith('{')}")
-    
-    # Create a GeminiResponse like gemini_service does
-    gemini_response = GeminiResponse.create(
-        response_text, 
-        structured_response, 
-        raw_json_response
-    )
+    # Create a GeminiResponse using the new API
+    gemini_response = GeminiResponse.create(raw_json_response)
     
     print(f"\n   narrative_text type: {type(gemini_response.narrative_text)}")
     print(f"   narrative_text[:100]: {gemini_response.narrative_text[:100]}")

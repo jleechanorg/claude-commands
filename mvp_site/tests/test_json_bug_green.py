@@ -9,8 +9,8 @@ import sys
 mvp_site_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, mvp_site_path)
 
-from gemini_service import _process_structured_response
 from gemini_response import GeminiResponse
+from narrative_response_schema import parse_structured_response
 
 def test_json_bug_fixed():
     """
@@ -26,7 +26,9 @@ def test_json_bug_fixed():
     "location_confirmed": "Dark Cave"
 }'''
     
-    response_text, structured_response = _process_structured_response(raw_json, [])
+    # Use the new GeminiResponse.create API
+    gemini_response = GeminiResponse.create(raw_json)
+    response_text = gemini_response.narrative_text
     print(f"  Result starts with '{{': {response_text.strip().startswith('{')}")
     print(f"  Result: {response_text[:50]}...")
     assert not response_text.strip().startswith('{'), "Well-formed JSON should extract narrative"
@@ -35,7 +37,9 @@ def test_json_bug_fixed():
     print("\nTest 2: Malformed JSON without proper structure")
     malformed_json = '{"Some malformed JSON that would cause the bug'
     
-    response_text, structured_response = _process_structured_response(malformed_json, [])
+    # Use the new GeminiResponse.create API
+    gemini_response = GeminiResponse.create(malformed_json)
+    response_text = gemini_response.narrative_text
     print(f"  Result starts with '{{': {response_text.strip().startswith('{')}")
     print(f"  Result: {response_text[:50]}...")
     
@@ -53,7 +57,9 @@ def test_json_bug_fixed():
     "other": "fields"
 }'''
     
-    response_text, structured_response = _process_structured_response(json_with_narrative, [])
+    # Use the new GeminiResponse.create API
+    gemini_response = GeminiResponse.create(json_with_narrative)
+    response_text = gemini_response.narrative_text
     print(f"  Result: {response_text}")
     assert response_text == "The story text that should be extracted", "Should extract narrative field"
     print("  ✅ Narrative correctly extracted")
@@ -73,11 +79,8 @@ def test_full_flow():
     "state_updates": {"player_character_data": {"name": "Ser Alderon"}}
 }'''
     
-    # Process through _process_structured_response
-    response_text, structured_response = _process_structured_response(raw_response, [])
-    
-    # Create GeminiResponse
-    gemini_response = GeminiResponse.create(response_text, structured_response, raw_response)
+    # Create GeminiResponse using new API
+    gemini_response = GeminiResponse.create(raw_response)
     
     print(f"  narrative_text: {gemini_response.narrative_text[:50]}...")
     print(f"  narrative_text starts with '{{': {gemini_response.narrative_text.strip().startswith('{')}")

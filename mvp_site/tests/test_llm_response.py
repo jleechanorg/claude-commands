@@ -13,6 +13,7 @@ import unittest
 from llm_response import LLMResponse, GeminiLLMResponse, create_llm_response
 from gemini_response import GeminiResponse
 from narrative_response_schema import NarrativeResponse
+import json
 
 
 class TestLLMResponse(unittest.TestCase):
@@ -34,10 +35,13 @@ class TestLLMResponse(unittest.TestCase):
     
     def test_gemini_llm_response_creation(self):
         """Test creating GeminiLLMResponse directly."""
-        response = GeminiLLMResponse.create(
+        # Use the legacy create method for direct GeminiLLMResponse creation
+        # since the base class doesn't have the new create() method
+        response = GeminiLLMResponse(
             narrative_text=self.sample_narrative,
             structured_response=self.mock_structured,
-            model=self.sample_model
+            model=self.sample_model,
+            provider="gemini"
         )
         
         self.assertEqual(response.narrative_text, self.sample_narrative)
@@ -66,9 +70,17 @@ class TestLLMResponse(unittest.TestCase):
     
     def test_backwards_compatibility(self):
         """Test that old GeminiResponse interface still works."""
+        # Create a mock JSON response that would come from Gemini API
+        mock_json = '''{
+            "narrative": "The dragon roars as you approach the castle gates.",
+            "state_updates": {"player_hp": 95, "location": "castle_gates"},
+            "entities_mentioned": ["dragon", "player"],
+            "location_confirmed": "castle_gates",
+            "debug_info": {"dm_notes": "Player seems confident"}
+        }'''
+        
         response = GeminiResponse.create(
-            narrative_text=self.sample_narrative,
-            structured_response=self.mock_structured,
+            raw_response_text=mock_json
         )
         
         # Test old property interface
@@ -83,9 +95,11 @@ class TestLLMResponse(unittest.TestCase):
     
     def test_debug_tag_detection(self):
         """Test automatic debug tag detection."""
-        response = GeminiLLMResponse.create(
+        response = GeminiLLMResponse(
             narrative_text=self.sample_narrative,
             structured_response=self.mock_structured,
+            provider="gemini",
+            model=self.sample_model
         )
         
         # Should detect dm_notes and state_changes
@@ -96,9 +110,11 @@ class TestLLMResponse(unittest.TestCase):
     def test_invalid_response_handling(self):
         """Test handling of invalid responses."""
         # Empty narrative should be invalid
-        response = GeminiLLMResponse.create(
+        response = GeminiLLMResponse(
             narrative_text="",
             structured_response=None,
+            provider="gemini",
+            model=self.sample_model
         )
         
         self.assertFalse(response.is_valid)
@@ -108,9 +124,11 @@ class TestLLMResponse(unittest.TestCase):
     
     def test_to_dict_serialization(self):
         """Test converting response to dictionary for API usage."""
-        response = GeminiLLMResponse.create(
+        response = GeminiLLMResponse(
             narrative_text=self.sample_narrative,
             structured_response=self.mock_structured,
+            provider="gemini",
+            model=self.sample_model
         )
         
         result = response.to_dict()
