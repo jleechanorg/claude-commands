@@ -1,6 +1,6 @@
 """
 Unit tests for game_state.py module.
-Tests the GameState class, MigrationStatus enum, and related functions.
+Tests the GameState class and related functions.
 """
 import os
 import sys
@@ -13,25 +13,11 @@ import datetime
 from unittest.mock import patch, MagicMock
 import json
 
-from game_state import GameState, MigrationStatus
+from game_state import GameState
 from firestore_service import update_state_with_changes, _perform_append
 import main
 
 
-class TestMigrationStatus(unittest.TestCase):
-    """Test cases for the MigrationStatus enum."""
-    
-    def test_migration_status_values(self):
-        """Test that all enum values are correct."""
-        self.assertEqual(MigrationStatus.NOT_CHECKED.value, "NOT_CHECKED")
-        self.assertEqual(MigrationStatus.MIGRATION_PENDING.value, "MIGRATION_PENDING")
-        self.assertEqual(MigrationStatus.MIGRATED.value, "MIGRATED")
-        self.assertEqual(MigrationStatus.NO_LEGACY_DATA.value, "NO_LEGACY_DATA")
-    
-    def test_migration_status_enum_creation(self):
-        """Test creating enum instances from values."""
-        self.assertEqual(MigrationStatus("NOT_CHECKED"), MigrationStatus.NOT_CHECKED)
-        self.assertEqual(MigrationStatus("MIGRATED"), MigrationStatus.MIGRATED)
 
 
 class TestGameState(unittest.TestCase):
@@ -84,7 +70,6 @@ class TestGameState(unittest.TestCase):
         self.assertEqual(gs.world_data, {})
         self.assertEqual(gs.npc_data, {})
         self.assertEqual(gs.custom_campaign_state, {'attribute_system': 'D&D'})
-        self.assertEqual(gs.migration_status, MigrationStatus.NOT_CHECKED)
         
         # Test that timestamp is recent
         now = datetime.datetime.now(datetime.timezone.utc)
@@ -104,7 +89,6 @@ class TestGameState(unittest.TestCase):
             "npc_data": {"npc1": {"name": "Villager"}},
             "custom_campaign_state": {"quest_active": True},
             "last_state_update_timestamp": custom_time,
-            "migration_status": MigrationStatus.MIGRATED.value,
             "extra_field": "extra_value"
         }
         
@@ -116,18 +100,8 @@ class TestGameState(unittest.TestCase):
         self.assertEqual(gs.npc_data, {"npc1": {"name": "Villager"}})
         self.assertEqual(gs.custom_campaign_state, {"quest_active": True, "attribute_system": "D&D"})
         self.assertEqual(gs.last_state_update_timestamp, custom_time)
-        self.assertEqual(gs.migration_status, MigrationStatus.MIGRATED)
         self.assertEqual(gs.extra_field, "extra_value")
     
-    def test_migration_status_invalid_value(self):
-        """Test that invalid migration status defaults to NOT_CHECKED."""
-        gs = GameState(migration_status="INVALID_STATUS")
-        self.assertEqual(gs.migration_status, MigrationStatus.NOT_CHECKED)
-    
-    def test_migration_status_none_value(self):
-        """Test that None migration status defaults to NOT_CHECKED."""
-        gs = GameState(migration_status=None)
-        self.assertEqual(gs.migration_status, MigrationStatus.NOT_CHECKED)
     
     def test_to_dict(self):
         """Test serialization to dictionary."""
@@ -135,7 +109,6 @@ class TestGameState(unittest.TestCase):
         gs = GameState(
             game_state_version=3,
             player_character_data={"name": "Test"},
-            migration_status=MigrationStatus.MIGRATED.value,
             last_state_update_timestamp=custom_time,
             extra_field="test_value"
         )
@@ -150,7 +123,6 @@ class TestGameState(unittest.TestCase):
             "custom_campaign_state": {"attribute_system": "D&D"},
             "combat_state": {"in_combat": False},  # Added combat_state field
             "last_state_update_timestamp": custom_time,
-            "migration_status": "MIGRATED",  # Should be string value
             "extra_field": "test_value",
             # Time pressure structures
             "time_sensitive_events": {},
@@ -162,14 +134,6 @@ class TestGameState(unittest.TestCase):
         
         self.assertEqual(result, expected)
     
-    def test_to_dict_with_enum_object(self):
-        """Test serialization when migration_status is an enum object."""
-        gs = GameState()
-        gs.migration_status = MigrationStatus.MIGRATED  # Set as enum object
-        
-        result = gs.to_dict()
-        
-        self.assertEqual(result["migration_status"], "MIGRATED")
     
     def test_from_dict_with_valid_data(self):
         """Test deserialization from dictionary."""
@@ -177,7 +141,6 @@ class TestGameState(unittest.TestCase):
         source_dict = {
             "game_state_version": 2,
             "player_character_data": {"name": "Hero"},
-            "migration_status": "MIGRATED",
             "last_state_update_timestamp": custom_time,
             "custom_field": "custom_value"
         }
@@ -186,7 +149,6 @@ class TestGameState(unittest.TestCase):
         
         self.assertEqual(gs.game_state_version, 2)
         self.assertEqual(gs.player_character_data, {"name": "Hero"})
-        self.assertEqual(gs.migration_status, MigrationStatus.MIGRATED)
         self.assertEqual(gs.last_state_update_timestamp, custom_time)
         self.assertEqual(gs.custom_field, "custom_value")
     
@@ -291,7 +253,6 @@ class TestGameState(unittest.TestCase):
                 }
             },
             "last_state_update_timestamp": test_datetime,
-            "migration_status": MigrationStatus.MIGRATED.value
         }
         
         gs = GameState(**complex_data)
@@ -341,7 +302,6 @@ class TestGameState(unittest.TestCase):
         self.assertEqual(gs.last_state_update_timestamp, test_datetime)
         
         # Test enum conversion
-        self.assertEqual(gs.migration_status, MigrationStatus.MIGRATED)
     
     def test_to_dict_three_layer_nesting_all_types(self):
         """Test serialization of GameState with 3 layers of nesting and all data types."""
@@ -364,7 +324,6 @@ class TestGameState(unittest.TestCase):
                 }
             },
             last_state_update_timestamp=test_datetime,
-            migration_status=MigrationStatus.MIGRATED
         )
         
         result = gs.to_dict()
@@ -379,7 +338,6 @@ class TestGameState(unittest.TestCase):
         self.assertEqual(combat_data["combat_style"]["preferred"], "aggressive")  # nested dict
         
         # Verify enum is serialized as string
-        self.assertEqual(result["migration_status"], "MIGRATED")
         
         # Verify datetime is preserved
         self.assertEqual(result["last_state_update_timestamp"], test_datetime)
@@ -406,7 +364,6 @@ class TestGameState(unittest.TestCase):
                 }
             },
             "last_state_update_timestamp": test_datetime,
-            "migration_status": "NO_LEGACY_DATA"
         }
         
         gs = GameState.from_dict(source_dict)
@@ -421,7 +378,6 @@ class TestGameState(unittest.TestCase):
         self.assertEqual(region_data["trade_routes"]["primary"], "sea_route")       # nested dict
         
         # Verify enum conversion
-        self.assertEqual(gs.migration_status, MigrationStatus.NO_LEGACY_DATA)
         
         # Verify datetime preservation
         self.assertEqual(gs.last_state_update_timestamp, test_datetime)

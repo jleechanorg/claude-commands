@@ -13,10 +13,10 @@
 - **TASK-142** 🔴 Fix send button unclickable - PR #338 OPEN
 
 ### Next Priority Tasks (Ready to Start)
-- **TASK-074** 🔴 Unit test coverage Phase 3: main.py error handling (55% → 65%)
-- **TASK-133** 🟡 Universal calendar system (2 hrs)
+- **TASK-133** 🟡 Universal calendar system (2 hrs) - PR #403 OPEN
 - **TASK-139** 🟡 Restore Dragon Knight character start (1.5 hrs)
-- **TASK-137** 🟡 Move download/share story buttons (30 min)
+- **TASK-137** 🟡 Move download/share story buttons (30 min) - PR #396 OPEN
+- **TASK-145** 🟡 Consolidate roadmap files into single source (1 hr) - PR #377 OPEN
 
 ### 📋 Quick Links
 - [Current Work](#current-work---active-development-priority-section) - Active development items
@@ -48,19 +48,14 @@
   - [x] Update all response handling code
 
 #### Evening (4 hrs)
-- [ ] **TASK-143** 🟡 Context7 MCP integration with Claude Code CLI (1 hr) - MANUAL
-  - [ ] Set up Context7 MCP server for Claude Code CLI integration
-  - [ ] Configure context management for all development workflows
-  - [ ] Test context retention across planning, coding, and debugging sessions
-  - [ ] Document setup and usage patterns for ongoing development
-- [ ] **TASK-144** 🟡 Sequential Thinking MCP integration with Claude Code CLI (1 hr) - MANUAL  
-  - [ ] Set up Sequential Thinking MCP server for Claude Code CLI integration
-  - [ ] Configure step-by-step reasoning for complex development decisions
-  - [ ] Test on planning workflows, debugging processes, and architectural decisions
-  - [ ] Document integration benefits and recommended usage scenarios
-- [ ] **TASK-140** 🔴 Hard stop for integrity failures (2 hrs) - HIGH PRIORITY - MOVED TO MONDAY
-  - [ ] NOTE: Moved to Monday-Thursday critical fixes group for better focus
-  - [ ] See roadmap/scratchpad_task140_integrity_failure_hard_stop.md for complete requirements
+- [ ] **TASK-139** 🟡 Restore Dragon Knight character start (1.5 hrs) - PRIORITY
+  - [ ] Review PR #325 to understand previous Dragon Knight implementation
+  - [ ] Create improved version with enhanced functionality
+  - [ ] Restore as character creation option
+- [ ] **TASK-137** 🟡 Move download/share story buttons (30 min) - PR #396 OPEN ✅ Tests Passing
+  - [ ] Review existing PR, potentially merge if ready
+- [ ] **TASK-133** 🟡 Universal calendar system (2 hrs) - PR #403 OPEN ✅ Tests Passing
+  - [ ] Review existing PR, potentially merge if ready
 
 ### Monday-Thursday (12 hrs total) - REORGANIZED BY PRIORITY
 
@@ -77,23 +72,34 @@
   - [ ] See roadmap/scratchpad_task140_integrity_failure_hard_stop.md for complete requirements
 - **TASK-006c** 🟡 Enhanced combat scenarios (45 min) - REDUCED SCOPE
 
-#### Group B: Infrastructure & Features (5.5 hrs)
-- **TASK-132** ✅ GitHub Actions /testi integration (1.5 hrs) - COMPLETED (PR #402)
+#### Group B: Infrastructure & Features (8 hrs) - MANUAL TASKS ADDED
+- **TASK-132** ✅ GitHub Actions /testi integration (1.5 hrs) - COMPLETED (PR #402, #412)
   - [x] Create .github/workflows/integration-tests.yml for PR automation
   - [x] Configure Firebase and Gemini API secrets, use vpython with TESTING=true
   - [x] Post full test output in PR comments and upload artifacts
-- **TASK-133** 🟡 Universal calendar system (2 hrs)
+  - [x] Enable Gemini API key in GitHub Actions - PR #412
+- **TASK-143** 🟡 Context7 MCP integration with Claude Code CLI (1 hr) - MANUAL - MOVED FROM SUNDAY
+  - [ ] Set up Context7 MCP server for Claude Code CLI integration
+  - [ ] Configure context management for all development workflows
+  - [ ] Test context retention across planning, coding, and debugging sessions
+  - [ ] Document setup and usage patterns for ongoing development
+- **TASK-144** 🟡 Sequential Thinking MCP integration with Claude Code CLI (1 hr) - MANUAL - MOVED FROM SUNDAY
+  - [ ] Set up Sequential Thinking MCP server for Claude Code CLI integration
+  - [ ] Configure step-by-step reasoning for complex development decisions
+  - [ ] Test on planning workflows, debugging processes, and architectural decisions
+  - [ ] Document integration benefits and recommended usage scenarios
+- **TASK-133** 🟡 Universal calendar system (2 hrs) - PR #403 OPEN ✅ Tests Passing
   - [ ] Backend uses consistent numbers, LLM handles narrative conversion per universe
   - [ ] Add universe presets: fantasy, modern, starwars, scifi, custom
   - [ ] Campaign creation includes universe selection, DM can infer from setting
-- **TASK-139** 🟡 Restore Dragon Knight character start (1.5 hrs)
+- **TASK-139** 🟡 Restore Dragon Knight character start (1.5 hrs) - MOVED TO SUNDAY EVENING
   - [ ] Review PR #325 to understand previous Dragon Knight implementation, create improved version
   - [ ] Restore as character creation option with enhanced functionality
 - **TASK-136** 🟡 Requirements builder evaluation (30 min) - REDUCED SCOPE
   - [ ] Quick evaluation of https://github.com/rizethereum/claude-code-requirements-builder
 
 #### Group C: UI Polish (2 hrs)
-- **TASK-137** 🟡 Move download/share story buttons (30 min)
+- **TASK-137** 🟡 Move download/share story buttons (30 min) - PR #396 OPEN
   - [ ] Relocate existing download and share buttons to top of campaign page below campaign title
 - **TASK-138** 🟡 Stacktrace in debug mode (45 min)
   - [ ] Add separate debug section to display full Python stacktraces when debug mode toggle is enabled
@@ -129,17 +135,23 @@
 - **TASK-124** 🔵 Research Claude best practices (1 hr)
 
 ### Recently Completed Tasks (Last 7 Days)
-- [x] **TASK-074** 🔴 Unit test coverage improvements - Phase 2 COMPLETED (PR #401, #407)
+- [x] **TASK-074** 🔴 Unit test coverage improvements - Phase 5 COMPLETED (PR #413)
   - [x] Phase 1: main.py route handler tests (33% → 45% coverage) - PR #401
   - [x] Phase 2: main.py auth & state management tests (45% → 55% coverage) - PR #401
+  - [x] Phase 3: main.py error handling tests (55% → 65% coverage) - PR #409
+  - [x] Phase 4: firestore_service.py tests - PR #411
+  - [x] Phase 5: firestore_service.py state helpers tests - PR #413
   - [x] Coverage infrastructure fix (0% → 67% overall) - PR #407
-- [x] **TASK-132** 🟡 GitHub Actions /testi integration - COMPLETED (PR #402)
+- [x] **TASK-132** 🟡 GitHub Actions /testi integration - COMPLETED (PR #402, #412)
+  - [x] Enable Gemini API key in GitHub Actions - PR #412
 - [x] **TASK-130** 🔴 Unit test coverage for utility modules - COMPLETED (PR #400)
   - [x] token_utils.py: 0% → 100% coverage (11 test cases)
   - [x] entity_tracking.py: 88% → 100% coverage
 - [x] **TASK-121** 🔴 Create LLMResponse class - COMPLETED (PR #398)
-- [x] **Browser Test Suite Completion** - COMPLETED (PR #391)
+- [x] **Browser Test Suite Cleanup** - COMPLETED (PR #414)
+  - [x] Comprehensive browser test consolidation and cleanup from PR #248
 - [x] **Roadmap Optimization** - COMPLETED (PR #393)
+- [x] **Cloud Run Load Balancer Timeout Fix** - COMPLETED (PR #408)
 - [x] **TASK-111** ✅ **COMPLETED** Zen MCP evaluation - COMPLETED (PR #346/#364/#367)
 - [x] **TASK-112** ✅ **COMPLETED** Context7 MCP evaluation - COMPLETED (PR #347/#362/#368)
 - [x] **TASK-113** ✅ **COMPLETED** Sequential Thinking MCP evaluation - COMPLETED (PR #348/#365/#369)
@@ -166,17 +178,21 @@
 - [x] **Slash Commands Implementation** - COMPLETED (PR #307)
 
 ### Currently In Progress (WIP)
-- [ ] **TASK-001a** 🔴 Malformed JSON investigation - WIP (PR #296 OPEN)
-- [ ] **TASK-006a** 🟡 Editable campaign names - WIP (PR #301 OPEN)
-- [ ] **TASK-006b** 🟡 Background story pause button - WIP (PR #323 OPEN)
-- [ ] **TASK-140** 🔴 Hard stop for integrity failures - WIP (PR #336 OPEN)
+- [ ] **TASK-140** 🔴 Hard stop for integrity failures - WIP (PR #406 OPEN)
+- [ ] **TASK-001a** 🔴 Malformed JSON investigation - WIP (PR #405 OPEN) 
+- [ ] **TASK-133** 🟡 Universal calendar system - WIP (PR #403 OPEN)
+- [ ] **TASK-137** 🟡 Move download/share story buttons - WIP (PR #396 OPEN)
+- [ ] **TASK-145** 🟡 Consolidate roadmap files - WIP (PR #377 OPEN)
 - [ ] **TASK-142** 🔴 Fix send button unclickable - WIP (PR #338 OPEN)
-- [ ] **TASK-092** 🟡 System instructions optimization - WIP (PR #293 OPEN)
-- [ ] **TASK-089** 🟡 Planning block IDs format - WIP (PR #295 OPEN)
-- [ ] **TASK-090** 🟡 Remove legacy migration code - WIP (PR #288 OPEN)
-- [ ] **TASK-100** 🟡 Dynamic world state design - WIP (PR #294 OPEN)
-- [ ] **TASK-101** 🟡 Story mode entry format - WIP (PR #297 OPEN)
+- [ ] **TASK-006b** 🟡 Background story pause button - WIP (PR #323 OPEN)
+- [ ] **TASK-006a** 🟡 Editable campaign names - WIP (PR #301 OPEN)
 - [ ] **TASK-102** 🟡 Slim mode design - WIP (PR #303 OPEN)
+- [ ] **TASK-101** 🟡 Story mode entry format - WIP (PR #297 OPEN)
+- [ ] **TASK-001a** 🔴 Malformed JSON investigation - WIP (PR #296 OPEN)
+- [ ] **TASK-089** 🟡 Planning block IDs format - WIP (PR #295 OPEN)
+- [ ] **TASK-100** 🟡 Dynamic world state design - WIP (PR #294 OPEN)
+- [ ] **TASK-092** 🟡 System instructions optimization - WIP (PR #293 OPEN)
+- [ ] **TASK-090** 🟡 Remove legacy migration code - WIP (PR #288 OPEN)
 
 ### Blocked Items
 - TASK-001c: Null HP bug (waiting for combat PR review)
@@ -347,7 +363,7 @@ For different worktrees:
 *   [TASK-093] **Dragon Knight Detailed Start** - Create detailed narrative start for Dragon Knight character class
 *   [TASK-094] **Generate Custom Character Background** - Generate siblings/houses/factions etc if they pick a custom character even in default world
 *   [TASK-095] **Generate Companions System** - Create system to generate appropriate companions based on character and story
-*   [TASK-072] **Next Saturday** Evaluate alignment change mechanic - Review current implementation and assess if alignment shifts are working correctly during gameplay
+*   [TASK-155] **Evaluate Alignment Change Mechanic** - Review current implementation and assess if alignment shifts are working correctly during gameplay
 
 ### UI
 *   [TASK-096] **Third Checkbox for Ruleset** - Add third checkbox to replace ruleset option
@@ -404,7 +420,7 @@ For different worktrees:
 
 ## Tech optimization
 *   [TASK-009c] `mvp_site/roadmap/scratchpad_parallel_dual_pass_optimization.md`
-*   [TASK-072] **Evaluate CodeRabbit AI Code Review Tool** (Scheduled: January 19, 2025) 🟢
+*   [TASK-072] **Evaluate CodeRabbit AI Code Review Tool** (Scheduled: July 19, 2025) 🟢
     *   Install and configure CodeRabbit on the repository
     *   Test automated PR review capabilities
     *   Evaluate quality of suggestions and false positive rate
@@ -415,6 +431,15 @@ For different worktrees:
 *   [TASK-076] **Cost Savings Plan** - Analyze Gemini API usage costs using exported CSV data to identify optimization opportunities
 *   [TASK-077] **Generic D&D Setting Adaptation** - Create flexible prompt system that adapts D&D mechanics to any fictional universe (e.g., Star Wars: Jedi Knight vs Paladin, Force Lightning vs Lightning Bolt)
 *   [TASK-078] **GitHub Actions Unit Test Coverage** - Set up automated unit test coverage reporting in CI/CD pipeline
+*   [TASK-146] **Firebase Write/Read Verification** - Implement mechanism to write data to Firebase and read it back to verify persistence
+*   [TASK-147] **Browser Test Mock Mode Support** - Add support for mock mode in browser tests to enable faster testing without real APIs
+*   [TASK-148] **Game State Debug Tool** - Create debug tool to print full game state for any campaign for troubleshooting
+*   [TASK-149] **Browser Test Cron with Email** - Set up browser tests to run every 6 hours via crontab and email results
+*   [TASK-150] **Rename vpython to vpython.sh** - Rename vpython command to vpython.sh for clarity
+*   [TASK-151] **Claude Best Practices Integration** - Evaluate and integrate relevant practices from https://www.anthropic.com/engineering/claude-code-best-practices
+*   [TASK-152] **Single Source of Truth Analysis** - Address duplications: 1) entities in Python code vs prompts, 2) GeminiResponse object consistency
+*   [TASK-153] **Pydantic Version Upgrade** - Evaluate and migrate to Pydantic v2 or v3 for better performance and features
+*   [TASK-154] **Campaign Tuning via God Mode** - Use god mode to analyze past campaigns and improve prompt quality based on learnings
 *   Improve rules? https://ghuntley.com/stdlib/
 *   Ssh into desktop from laptop?
 *   https://www.reddit.com/r/ClaudeAI/s/EtrZt0B9nE

@@ -257,6 +257,14 @@ When asked to run HTTP tests, follow these steps IN ORDER:
    - `./coverage.sh --no-html` - Text report only
    - `./run_tests.sh --coverage` - Use existing test runner with coverage
 
+### Current Coverage Baseline (January 2025)
+**Last Accurate Measurement**: 59% overall coverage (16,023 statements, 6,542 missing)
+- `main.py`: 85% (after Phase 8 completion)
+- `firestore_service.py`: 80% (after Phase 7 completion)
+- `gemini_service.py`: 85% (after Phase 6 completion)
+- `game_state.py`: 91% (excellent coverage)
+- **Utility modules**: 8-33% (critical gaps - Phase 9 target)
+
 ## Git Workflow
 
 | Rule | Description | Commands/Actions |
@@ -371,7 +379,8 @@ Use `/list` to display all available slash commands with descriptions.
 **Command Documentation**: → `.claude/commands/`
 
 **Special Commands**:
-- `/think` - Maximum thinking budget | Append "ultrathink" to trigger Claude's highest computation level
+- `/think` - Maximum thinking budget with ultrathink mode enabled by default
+- `/execute` or `/e` - 🚨 **NOW WITH MANDATORY 5-MINUTE MILESTONES** - Execute tasks with automatic progress tracking, scratchpad updates every 5 minutes, and incremental PR pushes
 
 **Command Examples**: → `.cursor/rules/examples.md`
 

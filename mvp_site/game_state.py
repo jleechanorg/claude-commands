@@ -2,17 +2,10 @@
 Defines the GameState class, which represents the complete state of a campaign.
 """
 import datetime
-from enum import Enum
 from typing import List
 import logging_util
 import constants
 
-class MigrationStatus(Enum):
-    """Enum for the migration status of the game state."""
-    NOT_CHECKED = "NOT_CHECKED"
-    MIGRATION_PENDING = "MIGRATION_PENDING"
-    MIGRATED = "MIGRATED"
-    NO_LEGACY_DATA = "NO_LEGACY_DATA"
 
 class GameState:
     """
@@ -43,11 +36,6 @@ class GameState:
         # Debug mode flag
         self.debug_mode = kwargs.get("debug_mode", True)
         
-        migration_status_value = kwargs.get("migration_status", MigrationStatus.NOT_CHECKED.value)
-        try:
-            self.migration_status = MigrationStatus(migration_status_value)
-        except ValueError:
-            self.migration_status = MigrationStatus.NOT_CHECKED
 
         # Dynamically set any other attributes from kwargs
         for key, value in kwargs.items():
@@ -69,8 +57,6 @@ class GameState:
             del data[key]
         
         # Convert Enum members to their string values for serialization
-        if 'migration_status' in data and isinstance(data['migration_status'], MigrationStatus):
-            data['migration_status'] = data['migration_status'].value
             
         return data
 

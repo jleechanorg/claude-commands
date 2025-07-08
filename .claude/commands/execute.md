@@ -1,10 +1,15 @@
 # Execute Command
 
-**Purpose**: Execute task with context management
+**Purpose**: Execute task with milestone-based progress tracking, automatic scratchpad updates, and incremental PR pushes
 
-**Action**: Check context, warn if ≤25%, consider subagents, execute task
+**Action**: Execute task with 5-minute milestones, context management, and continuous progress reporting
 
 **Usage**: `/execute` or `/e`
+
+**MANDATORY MILESTONE PROTOCOL**: 
+🚨 **EVERY 5 MINUTES** - Create milestone, update scratchpad, consider PR push
+🚨 **AUTOMATIC TRIGGERS** - File edits, code changes, task completion
+🚨 **ALL AGENTS** - Main agent and ALL subagents follow same protocol
 
 **MANDATORY**: When using `/execute` command, follow this exact sequence:
 
@@ -46,32 +51,128 @@
 
 7. **Task Execution**: Proceed with chosen execution method only after user approval
 
-8. **Subagent Coordination** (if using subagents):
-   - **Sequential Execution**: Launch subagents one at a time to monitor progress
+8. **Initialize Milestone Tracking**:
+   - **Create central scratchpad**: `roadmap/scratchpad_[branch]_milestones.md`
+   - **Start timer**: Track 5-minute intervals
+   - **Initialize milestone counter**: Starting at Milestone 1
+   - **Note start time**: Record exact timestamp
+
+9. **Task Execution with Milestone Protocol**: 
+   
+   🚨 **MANDATORY 5-MINUTE MILESTONE CREATION**:
+   - **Timer Alert**: Every 5 minutes, STOP current work
+   - **Create Milestone**: Update scratchpad with progress
+   - **Evaluate PR Push**: Decide if ready to push
+   - **Continue Work**: Resume from where you stopped
+   
+   🚨 **AUTOMATIC MILESTONE TRIGGERS** (even before 5 minutes):
+   - **5 files edited** → Create milestone immediately
+   - **300 lines changed** → Create milestone immediately  
+   - **Major task complete** → Create milestone immediately
+   - **Test suite passes** → Create milestone immediately
+   - **Blocker encountered** → Create milestone immediately
+   
+   🚨 **MILESTONE CONTENT REQUIREMENTS**:
+   ```markdown
+   ### Milestone [N]: [Descriptive Title] - [HH:MM:SS]
+   **Trigger**: 5-minute timer / 5 files / 300 lines / task complete / tests pass
+   **Duration**: 5 minutes (or actual if triggered early)
+   **Status**: ✅ Complete / 🔄 In Progress / ❌ Blocked
+   
+   #### Work Completed:
+   - [ ] Subtask 1 description
+   - [x] Subtask 2 description  
+   - Files edited:
+     - `path/file1.py` (120 lines added, 30 modified)
+     - `path/file2.js` (45 lines added, 10 deleted)
+   - Tests: 3 added, 2 modified
+   
+   #### Key Decisions:
+   - Chose approach X because Y
+   - Deferred Z until next milestone
+   
+   #### Blockers/Issues:
+   - None / Issue description
+   
+   #### Next 5 Minutes:
+   - Specific next task
+   - Expected files to modify
+   
+   #### Commit Info:
+   - Commit: abc123 - "feat: Add validation to user input"
+   - Ready for PR: Yes/No
+   ```
+   
+   🚨 **PR PUSH PROTOCOL**:
+   - **Every 2-3 milestones** → Push PR (10-15 minutes)
+   - **Major feature complete** → Push PR immediately
+   - **Before context <30%** → Push PR immediately
+   - **Tests passing** → Consider PR push
+   - **PR Title Format**: "feat: [Description] - Milestones 1-3"
+   - **PR Body**: Include milestone summaries from scratchpad
+
+10. **Subagent Coordination with Milestone Tracking** (if using subagents):
+   
+   🚨 **SUBAGENT MILESTONE REQUIREMENTS**:
+   - **Individual Scratchpads**: Each subagent maintains `roadmap/scratchpad_[branch]_[agent_id]_milestones.md`
+   - **5-Minute Rule Applies**: ALL subagents follow same 5-minute milestone protocol
+   - **Central Coordination**: Main agent monitors all subagent scratchpads
+   - **Synchronized PR Pushes**: Coordinate PRs across subagents
+   
+   **Subagent Milestone Tracking**:
+   - **Sequential Execution**: Launch subagents one at a time with milestone instructions
+   - **Progress Monitoring**: Check subagent scratchpads every 5 minutes
    - **Result Integration**: Copy critical fixes from subagent worktrees to main worktree
    - **Cross-Agent Communication**: Share findings between agents via detailed prompts
    - **Consolidation**: Merge results and ensure no conflicts between subagent outputs
+   
+   **Subagent Instructions Must Include**:
+   ```
+   MANDATORY: Create milestone every 5 minutes in your scratchpad:
+   - File: roadmap/scratchpad_[branch]_[agent_id]_milestones.md
+   - Follow exact milestone format from main agent
+   - Push PR every 2-3 milestones
+   - Report blockers immediately in milestone
+   ```
 
-9. **Verification Requirements**: CRITICAL validation steps to prevent errors
+11. **Verification Requirements**: CRITICAL validation steps to prevent errors
    - 🚨 **VERIFY FILE CONTENTS**: Each subagent must validate they have the correct file for their specific task
    - 🚨 **VALIDATE TASK-FILE MAPPING**: Confirm task number matches file content (e.g., TASK-111 gets task_111_*.md)
    - 🚨 **CHECK FILE UNIQUENESS**: Ensure each subagent has different files, no duplicates
    - 🚨 **TEST ONE COMPONENT**: Validate individual pieces before combining complex workflows
    - ❌ **NEVER rush demonstration** - Prioritize correctness over proving architecture
 
-10. **Commit Changes**: Commit all changes with descriptive commit messages
+12. **Milestone-Driven Commits**: 
+    - **Every milestone**: Commit with reference to milestone number
+    - **Commit message format**: "feat: [Description] - Milestone N"
+    - **Include stats**: "5 files, 287 lines changed"
 
-11. **Push Branch**: Push branch to GitHub using `git push origin HEAD:branch-name`
+13. **Incremental PR Pushes**: 
+    - **Push frequency**: Every 2-3 milestones (10-15 minutes)
+    - **Branch naming**: `git push origin HEAD:branch-name-milestone-N`
+    - **Multiple PRs OK**: Create new PRs as work progresses
 
-12. **Create PR**: ALWAYS create PR using `gh pr create` with test results and description
+14. **Create Milestone-Based PRs**: 
+    - **Title**: "feat: [Task] - Milestones X-Y"
+    - **Body MUST include**:
+      - Milestone summaries from scratchpad
+      - Test results at each milestone
+      - Files changed with line counts
+      - Link to scratchpad file
+    - **Use**: `gh pr create --title "..." --body "$(cat scratchpad_section.md)"`
 
-13. **Worktree Cleanup**: If subagents were used, clean up temporary worktrees
+15. **Worktree Cleanup**: If subagents were used, clean up temporary worktrees
     - 🚨 **ONLY remove `worktree_task[NUMBER]` directories AFTER PRs are merged**
     - ❌ **NEVER cleanup before merge** - worktrees needed for potential fixes/updates
     - ✅ **Keep worktrees until PR merge completion**
-    - Document worktree locations in PR for future reference if needed
+    - **Archive milestone scratchpads** before cleanup
 
-14. **Result Reporting**: Summarize completion status, PR URL, and any issues
+16. **Final Milestone Summary**:
+    - **Create summary milestone**: Consolidate all work done
+    - **Total metrics**: Files changed, lines modified, tests added
+    - **PR links**: List all PRs created during execution
+    - **Lessons learned**: Key decisions and blockers encountered
+    - **Time tracking**: Total time and time per milestone
 
 **Subagent Decision Criteria**:
 - ✅ **Use subagents for**: Multi-file changes, research tasks, complex debugging, large refactoring, tracing data flows
@@ -102,3 +203,42 @@
 - ✅ **GitHub Actions** run tests automatically  
 - ✅ **Proper workflow** follows branch → PR → merge pattern
 - ✅ **Subagent isolation** using worktrees from current working directory
+
+## 🚨 **MILESTONE ENFORCEMENT RULES** 🚨
+
+**NON-NEGOTIABLE 5-MINUTE RULE**:
+- ⏰ **SET TIMER**: Mental timer starts at `/execute` command
+- 🛑 **STOP AT 5 MINUTES**: Drop everything, create milestone
+- 📝 **UPDATE SCRATCHPAD**: Document progress immediately
+- 🔄 **CONTINUE WORK**: Resume after milestone creation
+- ❌ **NO EXCUSES**: "Almost done" is NOT valid - stop at 5 minutes
+
+**MILESTONE QUALITY STANDARDS**:
+- ✅ **Specific file changes**: List every file with line counts
+- ✅ **Concrete progress**: What actually works now vs 5 minutes ago
+- ✅ **Honest blockers**: If stuck, document exactly why
+- ❌ **No vague updates**: "Working on X" is insufficient
+- ❌ **No skipping**: Every 5 minutes means EVERY 5 minutes
+
+**EXAMPLE MILESTONE TIMELINE**:
+```
+00:00 - Start execution, create initial scratchpad
+00:05 - Milestone 1: Initial setup, 3 files examined
+00:10 - Milestone 2: Found bug, implemented fix, 2 files changed
+00:15 - Milestone 3: Tests written, PR pushed (Milestones 1-3)
+00:20 - Milestone 4: Refactoring started, 5 files modified
+00:25 - Milestone 5: Refactoring complete, tests pass
+00:30 - Milestone 6: Documentation updated, PR pushed (Milestones 4-6)
+```
+
+**SCRATCHPAD FILE NAMING**:
+- Main agent: `roadmap/scratchpad_[branch]_milestones.md`
+- Subagent 1: `roadmap/scratchpad_[branch]_agent1_milestones.md`
+- Subagent 2: `roadmap/scratchpad_[branch]_agent2_milestones.md`
+- Summary: `roadmap/scratchpad_[branch]_summary.md`
+
+**PR BATCHING STRATEGY**:
+- Milestones 1-3 → First PR (15 minutes)
+- Milestones 4-6 → Second PR (next 15 minutes)
+- Continue pattern throughout execution
+- Each PR is reviewable and testable independently
