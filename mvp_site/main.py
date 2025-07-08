@@ -359,6 +359,17 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
         # Strip embedded debug tags when debug mode is disabled
         final_narrative = StateHelper.strip_debug_content(gemini_response)
 
+    # 🔍 CRITICAL JSON BUG LOGGING: Check final API response content
+    logging_util.info(f"🔍 API_RESPONSE final_narrative type: {type(final_narrative)}")
+    logging_util.info(f"🔍 API_RESPONSE final_narrative[:200]: {final_narrative[:200]}")
+    logging_util.info(f"🔍 API_RESPONSE contains JSON: {'\"narrative\":' in final_narrative or '\"god_mode_response\":' in final_narrative}")
+    
+    if '\"narrative\":' in final_narrative or '\"god_mode_response\":' in final_narrative:
+        logging_util.error(f"🚨 JSON_BUG_DETECTED_IN_API_RESPONSE: final_narrative contains JSON!")
+        logging_util.error(f"🚨 This will be sent to frontend and displayed to user as: Scene #X: {final_narrative[:300]}...")
+        logging_util.error(f"🚨 gemini_response (input): {gemini_response[:300]}...")
+        logging_util.error(f"🚨 debug_mode_enabled: {debug_mode_enabled}")
+
     # Build response data structure
     response_data = {
         KEY_SUCCESS: True,
@@ -916,10 +927,18 @@ def create_app():
 
             # 4. Write: Add AI response to story log and update state
             # JSON BUG LOGGING
-            logging_util.error("🔍 MAIN.PY before add_story_entry:")
-            logging_util.error("🔍   narrative_text type: %s", type(gemini_response_obj.narrative_text))
-            logging_util.error("🔍   narrative_text[:200]: %s", gemini_response_obj.narrative_text[:200])
-            logging_util.error("🔍   is JSON: %s", gemini_response_obj.narrative_text.strip().startswith('{'))
+            logging_util.info("🔍 MAIN.PY before add_story_entry:")
+            logging_util.info("🔍   narrative_text type: %s", type(gemini_response_obj.narrative_text))
+            logging_util.info("🔍   narrative_text[:200]: %s", gemini_response_obj.narrative_text[:200])
+            logging_util.info("🔍   is JSON: %s", gemini_response_obj.narrative_text.strip().startswith('{'))
+            
+            # Also print to console directly to ensure visibility
+            print(f"\n{'='*60}")
+            print(f"🔍 DEBUG: MAIN.PY narrative_text check")
+            print(f"   Type: {type(gemini_response_obj.narrative_text)}")
+            print(f"   Starts with '{{': {gemini_response_obj.narrative_text.strip().startswith('{')}")
+            print(f"   First 200 chars: {gemini_response_obj.narrative_text[:200]}")
+            print(f"{'='*60}\n")
             
             firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response_obj.narrative_text)
 
