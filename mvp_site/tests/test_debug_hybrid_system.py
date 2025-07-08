@@ -3,6 +3,12 @@ Test hybrid debug content system for backward compatibility.
 """
 
 import pytest
+import sys
+import os
+
+# Add parent directory to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from debug_hybrid_system import (
     contains_debug_tags,
     strip_debug_content,

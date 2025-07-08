@@ -26,7 +26,9 @@ class NarrativeResponse:
     def __init__(self, narrative: str, entities_mentioned: List[str] = None, 
                  location_confirmed: str = "Unknown", turn_summary: str = None,
                  state_updates: Dict[str, Any] = None, debug_info: Dict[str, Any] = None,
-                 god_mode_response: str = None, **kwargs):
+                 god_mode_response: str = None, session_header: str = None,
+                 planning_block: str = None, dice_rolls: List[str] = None,
+                 resources: str = None, **kwargs):
         # Core required fields
         self.narrative = self._validate_narrative(narrative)
         self.entities_mentioned = self._validate_entities(entities_mentioned or [])
@@ -35,6 +37,12 @@ class NarrativeResponse:
         self.state_updates = self._validate_state_updates(state_updates)
         self.debug_info = self._validate_debug_info(debug_info)
         self.god_mode_response = god_mode_response
+        
+        # New always-visible fields
+        self.session_header = session_header or ""
+        self.planning_block = planning_block or ""
+        self.dice_rolls = dice_rolls or []
+        self.resources = resources or ""
         
         # Store any extra fields that Gemini might include (shouldn't be any now)
         self.extra_fields = kwargs
@@ -79,14 +87,24 @@ class NarrativeResponse:
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""
-        return {
+        result = {
             "narrative": self.narrative,
             "entities_mentioned": self.entities_mentioned,
             "location_confirmed": self.location_confirmed,
             "turn_summary": self.turn_summary,
             "state_updates": self.state_updates,
-            "debug_info": self.debug_info
+            "debug_info": self.debug_info,
+            "session_header": self.session_header,
+            "planning_block": self.planning_block,
+            "dice_rolls": self.dice_rolls,
+            "resources": self.resources
         }
+        
+        # Include god_mode_response if present
+        if self.god_mode_response:
+            result["god_mode_response"] = self.god_mode_response
+            
+        return result
 
 class EntityTrackingInstruction:
     """Schema for entity tracking instructions to be injected into prompts"""

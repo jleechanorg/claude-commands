@@ -54,7 +54,7 @@ from narrative_response_schema import (
     validate_entity_coverage,
     NarrativeResponse
 )
-from gemini_response import GeminiResponse
+from gemini_response_simplified import GeminiResponse
 # Import entity tracking mitigation modules
 from entity_preloader import EntityPreloader
 from entity_instructions import EntityInstructionGenerator
@@ -995,7 +995,16 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     raw_response_text = _get_text_from_response(api_response)
     
     # Create GeminiResponse from raw response, which handles all parsing internally
-    gemini_response = GeminiResponse.create(raw_response_text)
+    # Parse the structured response to extract clean narrative and debug data
+    narrative_text, structured_response = parse_structured_response(raw_response_text)
+    
+    # Create GeminiResponse with proper debug content separation
+    if structured_response:
+        # Use structured response (preferred) - ensures clean separation
+        gemini_response = GeminiResponse.create_from_structured_response(structured_response, model_to_use)
+    else:
+        # Fallback to legacy mode for non-JSON responses
+        gemini_response = GeminiResponse.create_legacy(narrative_text, model_to_use)
     
     # --- ENTITY VALIDATION FOR INITIAL STORY ---
     if expected_entities:
@@ -1284,7 +1293,17 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     raw_response_text = _get_text_from_response(api_response)
     
     # Create initial GeminiResponse from raw response
-    gemini_response = GeminiResponse.create(raw_response_text)
+    # Parse the structured response to extract clean narrative and debug data
+    narrative_text, structured_response = parse_structured_response(raw_response_text)
+    
+    # Create GeminiResponse with proper debug content separation
+    if structured_response:
+        # Use structured response (preferred) - ensures clean separation
+        gemini_response = GeminiResponse.create_from_structured_response(structured_response, chosen_model)
+    else:
+        # Fallback to legacy mode for non-JSON responses
+        gemini_response = GeminiResponse.create_legacy(narrative_text, chosen_model)
+    
     response_text = gemini_response.narrative_text
     
     # Validate entity tracking if enabled

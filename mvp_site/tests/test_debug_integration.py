@@ -5,6 +5,12 @@ Test debug hybrid system integration with main.py.
 import pytest
 from unittest.mock import Mock, patch
 import json
+import sys
+import os
+
+# Add parent directory to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from game_state import GameState
 
 

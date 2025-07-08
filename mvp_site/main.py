@@ -303,10 +303,15 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
         response_data['entities_mentioned'] = getattr(structured_response, 'entities_mentioned', [])
         response_data['location_confirmed'] = getattr(structured_response, 'location_confirmed', 'Unknown')
         
-        # Always include structured debug_info if present (separate from legacy debug tags)
+        # Always include new always-visible fields
+        response_data['session_header'] = getattr(structured_response, 'session_header', '')
+        response_data['planning_block'] = getattr(structured_response, 'planning_block', '')
+        response_data['dice_rolls'] = getattr(structured_response, 'dice_rolls', [])
+        response_data['resources'] = getattr(structured_response, 'resources', '')
+        
+        # Always include structured debug_info (separate from legacy debug tags)
         # Frontend will use debug_mode flag to decide whether to display debug_info
-        if hasattr(structured_response, 'debug_info') and structured_response.debug_info:
-            response_data['debug_info'] = structured_response.debug_info
+        response_data['debug_info'] = getattr(structured_response, 'debug_info', {})
 
     if proposed_changes:
         # Track last story mode sequence ID
