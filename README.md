@@ -99,6 +99,10 @@ TESTING=true vpython -m pytest --cov=. --cov-report=html
 
 We welcome contributions! Please see our [contributing guidelines](CONTRIBUTING.md) and refer to the [product specification](product_spec.md) for architectural details.
 
+### 🤖 Claude Code Integration
+
+This repository includes Claude Code GitHub Action for AI-assisted development. You can interact with Claude directly in pull requests by mentioning `@claude`. See [Claude Code Setup Guide](.github/CLAUDE_CODE_SETUP.md) for configuration instructions.
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
