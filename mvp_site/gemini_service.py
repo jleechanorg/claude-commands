@@ -953,7 +953,28 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
         logging_util.error(f"JSON_BUG_RAW_RESPONSE_INITIAL: {raw_response_text[:500]}...")
         logging_util.error(f"JSON_BUG_STRUCTURED_RESPONSE_INITIAL: {structured_response}")
     
-    return GeminiResponse.create(response_text, structured_response, raw_response_text)
+    # 🔍 COMPREHENSIVE LOGGING: Track GeminiResponse.create parameters
+    logging_util.info(f"🔍 GEMINI_SERVICE creating GeminiResponse with:")
+    logging_util.info(f"🔍   response_text type: {type(response_text)}")
+    logging_util.info(f"🔍   response_text[:200]: {response_text[:200]}")
+    logging_util.info(f"🔍   response_text contains JSON: {'"narrative":' in response_text or '"god_mode_response":' in response_text}")
+    logging_util.info(f"🔍   structured_response type: {type(structured_response)}")
+    logging_util.info(f"🔍   structured_response is None: {structured_response is None}")
+    if structured_response:
+        logging_util.info(f"🔍   structured_response.narrative[:200]: {getattr(structured_response, 'narrative', 'NO_NARRATIVE_FIELD')[:200]}")
+    
+    gemini_response = GeminiResponse.create(response_text, structured_response, raw_response_text)
+    
+    # 🔍 COMPREHENSIVE LOGGING: Track GeminiResponse fields after creation
+    logging_util.info(f"🔍 GEMINI_SERVICE created GeminiResponse with:")
+    logging_util.info(f"🔍   gemini_response.narrative_text type: {type(gemini_response.narrative_text)}")
+    logging_util.info(f"🔍   gemini_response.narrative_text[:200]: {gemini_response.narrative_text[:200]}")
+    logging_util.info(f"🔍   gemini_response.narrative_text contains JSON: {'"narrative":' in gemini_response.narrative_text or '"god_mode_response":' in gemini_response.narrative_text}")
+    logging_util.info(f"🔍   gemini_response.structured_response type: {type(gemini_response.structured_response)}")
+    if gemini_response.structured_response:
+        logging_util.info(f"🔍   gemini_response.structured_response.narrative[:200]: {getattr(gemini_response.structured_response, 'narrative', 'NO_NARRATIVE_FIELD')[:200]}")
+    
+    return gemini_response
 
 def _validate_and_enforce_planning_block(response_text, user_input, game_state, chosen_model, system_instruction):
     """
@@ -1305,7 +1326,28 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         logging_util.error(f"JSON_BUG_MODE: {mode}")
         logging_util.error(f"JSON_BUG_USER_INPUT: {user_input[:100]}...")
     
-    return GeminiResponse.create(response_text, structured_response, raw_response_text)
+    # 🔍 COMPREHENSIVE LOGGING: Track GeminiResponse.create parameters (continue mode)
+    logging_util.info(f"🔍 GEMINI_SERVICE (continue) creating GeminiResponse with:")
+    logging_util.info(f"🔍   response_text type: {type(response_text)}")
+    logging_util.info(f"🔍   response_text[:200]: {response_text[:200]}")
+    logging_util.info(f"🔍   response_text contains JSON: {'"narrative":' in response_text or '"god_mode_response":' in response_text}")
+    logging_util.info(f"🔍   structured_response type: {type(structured_response)}")
+    logging_util.info(f"🔍   structured_response is None: {structured_response is None}")
+    if structured_response:
+        logging_util.info(f"🔍   structured_response.narrative[:200]: {getattr(structured_response, 'narrative', 'NO_NARRATIVE_FIELD')[:200]}")
+    
+    gemini_response = GeminiResponse.create(response_text, structured_response, raw_response_text)
+    
+    # 🔍 COMPREHENSIVE LOGGING: Track GeminiResponse fields after creation (continue mode)
+    logging_util.info(f"🔍 GEMINI_SERVICE (continue) created GeminiResponse with:")
+    logging_util.info(f"🔍   gemini_response.narrative_text type: {type(gemini_response.narrative_text)}")
+    logging_util.info(f"🔍   gemini_response.narrative_text[:200]: {gemini_response.narrative_text[:200]}")
+    logging_util.info(f"🔍   gemini_response.narrative_text contains JSON: {'"narrative":' in gemini_response.narrative_text or '"god_mode_response":' in gemini_response.narrative_text}")
+    logging_util.info(f"🔍   gemini_response.structured_response type: {type(gemini_response.structured_response)}")
+    if gemini_response.structured_response:
+        logging_util.info(f"🔍   gemini_response.structured_response.narrative[:200]: {getattr(gemini_response.structured_response, 'narrative', 'NO_NARRATIVE_FIELD')[:200]}")
+    
+    return gemini_response
 
 def _get_static_prompt_parts(current_game_state: GameState, story_context: list):
     """Helper to generate the non-timeline parts of the prompt."""
