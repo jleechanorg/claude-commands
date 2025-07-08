@@ -31,6 +31,32 @@ import constants
 import gemini_service
 
 
+def create_mock_gemini_response(narrative_text, debug_tags_present=None, state_updates=None, structured_response=None):
+    """Helper to create a properly mocked GeminiResponse object."""
+    mock_response = MagicMock()
+    mock_response.narrative_text = narrative_text
+    mock_response.debug_tags_present = debug_tags_present or {"dm_notes": False, "dice_rolls": False, "state_changes": False}
+    mock_response.state_updates = state_updates or {}
+    mock_response.structured_response = structured_response
+    
+    # Mock get_narrative_text to handle debug mode stripping
+    def mock_get_narrative_text(debug_mode=True):
+        if debug_mode:
+            return narrative_text
+        else:
+            # Strip debug content when debug_mode=False
+            import re
+            text = narrative_text
+            text = re.sub(r'\[DEBUG_START\].*?\[DEBUG_END\]', '', text, flags=re.DOTALL)
+            text = re.sub(r'\[DEBUG_ROLL_START\].*?\[DEBUG_ROLL_END\]', '', text, flags=re.DOTALL)
+            text = re.sub(r'\[DEBUG_RESOURCES_START\].*?\[DEBUG_RESOURCES_END\]', '', text, flags=re.DOTALL)
+            text = re.sub(r'\[DEBUG_STATE_START\].*?\[DEBUG_STATE_END\]', '', text, flags=re.DOTALL)
+            return text.strip()
+    
+    mock_response.get_narrative_text = MagicMock(side_effect=mock_get_narrative_text)
+    return mock_response
+
+
 class TestDebugMode(unittest.TestCase):
     """Test debug mode toggle and visibility features."""
     
@@ -132,12 +158,12 @@ class TestDebugMode(unittest.TestCase):
             }
         )
         
-        # Create mock GeminiResponse
-        mock_gemini_response = MagicMock()
-        mock_gemini_response.narrative_text = mock_response
-        mock_gemini_response.debug_tags_present = {"dm_notes": True, "dice_rolls": True, "state_changes": False}
-        mock_gemini_response.state_updates = {}
-        mock_gemini_response.structured_response = mock_structured_response
+        # Create mock GeminiResponse using helper
+        mock_gemini_response = create_mock_gemini_response(
+            mock_response,
+            debug_tags_present={"dm_notes": True, "dice_rolls": True, "state_changes": False},
+            structured_response=mock_structured_response
+        )
 
         with patch('gemini_service.continue_story', return_value=mock_gemini_response):
             response = self.client.post(
@@ -190,12 +216,12 @@ class TestDebugMode(unittest.TestCase):
             }
         )
         
-        # Create mock GeminiResponse
-        mock_gemini_response = MagicMock()
-        mock_gemini_response.narrative_text = mock_response
-        mock_gemini_response.debug_tags_present = {"dm_notes": False, "dice_rolls": True, "state_changes": False}
-        mock_gemini_response.state_updates = {}
-        mock_gemini_response.structured_response = mock_structured_response
+        # Create mock GeminiResponse using helper
+        mock_gemini_response = create_mock_gemini_response(
+            mock_response,
+            debug_tags_present={"dm_notes": False, "dice_rolls": True, "state_changes": False},
+            structured_response=mock_structured_response
+        )
 
         with patch('gemini_service.continue_story', return_value=mock_gemini_response):
             response = self.client.post(
@@ -251,12 +277,12 @@ class TestDebugMode(unittest.TestCase):
             }
         )
         
-        # Create mock GeminiResponse
-        mock_gemini_response = MagicMock()
-        mock_gemini_response.narrative_text = mock_response
-        mock_gemini_response.debug_tags_present = {"dm_notes": True, "dice_rolls": True, "state_changes": False}
-        mock_gemini_response.state_updates = {}
-        mock_gemini_response.structured_response = mock_structured_response
+        # Create mock GeminiResponse using helper
+        mock_gemini_response = create_mock_gemini_response(
+            mock_response,
+            debug_tags_present={"dm_notes": True, "dice_rolls": True, "state_changes": False},
+            structured_response=mock_structured_response
+        )
 
         with patch('gemini_service.continue_story', return_value=mock_gemini_response):
             response = self.client.post(
@@ -291,12 +317,10 @@ class TestDebugMode(unittest.TestCase):
         mock_firestore_service.add_story_entry.return_value = None
         
         # Mock Gemini to return a normal response
-        # Create mock GeminiResponse
-        mock_gemini_response = MagicMock()
-        mock_gemini_response.narrative_text = "You speak the words but nothing happens."
-        mock_gemini_response.debug_tags_present = {"dm_notes": False, "dice_rolls": False, "state_changes": False}
-        mock_gemini_response.state_updates = {}
-        mock_gemini_response.structured_response = None
+        # Create mock GeminiResponse using helper
+        mock_gemini_response = create_mock_gemini_response(
+            "You speak the words but nothing happens."
+        )
 
         with patch('gemini_service.continue_story', return_value=mock_gemini_response):
             response = self.client.post(

@@ -27,7 +27,7 @@ sys.modules['firebase_admin.auth'] = mock_auth
 from main import create_app, DEFAULT_TEST_USER, HEADER_TEST_BYPASS, HEADER_TEST_USER_ID
 from main import KEY_SUCCESS, KEY_ERROR, KEY_MESSAGE, HEADER_AUTH, KEY_TRACEBACK
 from main import _prepare_game_state, _handle_set_command, _handle_ask_state_command
-from main import _handle_update_state_command, _handle_legacy_migration
+from main import _handle_update_state_command, _handle_legacy_migration, parse_set_command
 from game_state import GameState
 
 
@@ -203,7 +203,8 @@ class TestStateHelperFunctions(unittest.TestCase):
     def test_strip_state_updates_only_with_updates(self):
         """Test strip_state_updates_only with state updates present."""
         # Note: This function may not actually strip STATE_UPDATES based on test results
-        from main import strip_state_updates_only
+        from gemini_response import GeminiResponse
+        strip_state_updates_only = GeminiResponse._strip_state_updates_only
         
         text_with_updates = """
         Here is some story text.
@@ -224,7 +225,8 @@ class TestStateHelperFunctions(unittest.TestCase):
 
     def test_strip_state_updates_only_without_updates(self):
         """Test strip_state_updates_only with no state updates."""
-        from main import strip_state_updates_only
+        from gemini_response import GeminiResponse
+        strip_state_updates_only = GeminiResponse._strip_state_updates_only
         
         text_without_updates = "Just regular story text without any state updates."
         
@@ -234,7 +236,7 @@ class TestStateHelperFunctions(unittest.TestCase):
 
     def test_truncate_game_state_for_logging(self):
         """Test game state truncation for logging."""
-        from main import truncate_game_state_for_logging
+        from firestore_service import _truncate_log_json as truncate_game_state_for_logging
         
         large_state = {
             'characters': {f'char_{i}': f'data_{i}' for i in range(50)},
@@ -250,7 +252,7 @@ class TestStateHelperFunctions(unittest.TestCase):
         
     def test_truncate_game_state_for_logging_small_state(self):
         """Test game state truncation with small state."""
-        from main import truncate_game_state_for_logging
+        from firestore_service import _truncate_log_json as truncate_game_state_for_logging
         
         small_state = {'health': 100, 'location': 'tavern'}
         
@@ -267,8 +269,6 @@ class TestStateFormattingAndParsing(unittest.TestCase):
 
     def test_parse_set_command_valid_format(self):
         """Test parse_set_command with valid key=value format."""
-        from main import parse_set_command
-        
         # parse_set_command expects key=value format, not JSON
         set_command = "health = 80\nlocation = \"cave\""
         
@@ -279,8 +279,6 @@ class TestStateFormattingAndParsing(unittest.TestCase):
         
     def test_parse_set_command_empty_input(self):
         """Test parse_set_command with empty input."""
-        from main import parse_set_command
-        
         result = parse_set_command("")
         
         # Returns empty dict for empty input

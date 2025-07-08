@@ -48,9 +48,9 @@ class TestGodModeCommands(unittest.TestCase):
     def test_god_mode_set_valid_json(self):
         """Test GOD_MODE_SET command with valid JSON."""
         with patch('main.firestore_service') as mock_firestore_service, \
-             patch('main.StateHelper') as mock_state_helper:
+             patch('gemini_response.GeminiResponse') as mock_gemini_response:
             # Mock StateHelper
-            mock_state_helper.cleanup_legacy_state.return_value = ({'current_scene': 1, 'npcs': []}, False, 0)
+            mock_gemini_response.cleanup_legacy_state.return_value = ({'current_scene': 1, 'npcs': []}, False, 0)
             
             # Mock current game state
             mock_game_state = MagicMock()
@@ -75,9 +75,9 @@ class TestGodModeCommands(unittest.TestCase):
     def test_god_mode_set_invalid_json(self):
         """Test GOD_MODE_SET command with invalid JSON."""
         with patch('main.firestore_service') as mock_firestore_service, \
-             patch('main.StateHelper') as mock_state_helper:
+             patch('gemini_response.GeminiResponse') as mock_gemini_response:
             # Mock StateHelper
-            mock_state_helper.cleanup_legacy_state.return_value = ({'current_scene': 1}, False, 0)
+            mock_gemini_response.cleanup_legacy_state.return_value = ({'current_scene': 1}, False, 0)
             
             mock_game_state = MagicMock()
             mock_game_state.to_dict.return_value = {'current_scene': 1}
@@ -100,9 +100,9 @@ class TestGodModeCommands(unittest.TestCase):
     def test_god_mode_set_non_object_json(self):
         """Test GOD_MODE_SET command with non-object JSON."""
         with patch('main.firestore_service') as mock_firestore_service, \
-             patch('main.StateHelper') as mock_state_helper:
+             patch('gemini_response.GeminiResponse') as mock_gemini_response:
             # Mock StateHelper
-            mock_state_helper.cleanup_legacy_state.return_value = ({'current_scene': 1}, False, 0)
+            mock_gemini_response.cleanup_legacy_state.return_value = ({'current_scene': 1}, False, 0)
             
             mock_game_state = MagicMock()
             mock_game_state.to_dict.return_value = {'current_scene': 1}
@@ -124,9 +124,9 @@ class TestGodModeCommands(unittest.TestCase):
     def test_god_mode_set_no_game_state(self):
         """Test GOD_MODE_SET command when game state doesn't exist."""
         with patch('main.firestore_service') as mock_firestore_service, \
-             patch('main.StateHelper') as mock_state_helper:
+             patch('gemini_response.GeminiResponse') as mock_gemini_response:
             # Mock StateHelper for empty game state
-            mock_state_helper.cleanup_legacy_state.return_value = ({}, False, 0)
+            mock_gemini_response.cleanup_legacy_state.return_value = ({}, False, 0)
             
             mock_firestore_service.get_campaign_game_state.return_value = None
             
@@ -178,10 +178,10 @@ class TestGodModeCommands(unittest.TestCase):
     def test_god_update_state_valid_json(self):
         """Test GOD_MODE_UPDATE_STATE command with valid JSON."""
         with patch('main.firestore_service') as mock_firestore_service, \
-             patch('main.StateHelper') as mock_state_helper:
+             patch('gemini_response.GeminiResponse') as mock_gemini_response:
             
             # Mock StateHelper
-            mock_state_helper.cleanup_legacy_state.return_value = ({'current_scene': 1, 'hp': 100}, False, 0)
+            mock_gemini_response.cleanup_legacy_state.return_value = ({'current_scene': 1, 'hp': 100}, False, 0)
             
             # Mock current game state
             mock_game_state = MagicMock()
@@ -189,7 +189,7 @@ class TestGodModeCommands(unittest.TestCase):
             mock_firestore_service.get_campaign_game_state.return_value = mock_game_state
             
             # Mock state update helpers
-            mock_state_helper.apply_automatic_combat_cleanup.return_value = {'current_scene': 2, 'hp': 80}
+            mock_gemini_response.apply_automatic_combat_cleanup.return_value = {'current_scene': 2, 'hp': 80}
             
             # Mock GameState.from_dict
             with patch('main.GameState') as mock_gamestate_class:
@@ -258,16 +258,16 @@ class TestGodModeCommands(unittest.TestCase):
     def test_god_update_state_gamestate_validation_error(self):
         """Test GOD_MODE_UPDATE_STATE when GameState validation fails."""
         with patch('main.firestore_service') as mock_firestore_service, \
-             patch('main.StateHelper') as mock_state_helper:
+             patch('gemini_response.GeminiResponse') as mock_gemini_response:
             
             # Mock StateHelper
-            mock_state_helper.cleanup_legacy_state.return_value = ({'current_scene': 1}, False, 0)
+            mock_gemini_response.cleanup_legacy_state.return_value = ({'current_scene': 1}, False, 0)
             
             mock_game_state = MagicMock()
             mock_game_state.to_dict.return_value = {'current_scene': 1}
             mock_firestore_service.get_campaign_game_state.return_value = mock_game_state
             
-            mock_state_helper.apply_automatic_combat_cleanup.return_value = {'current_scene': 2}
+            mock_gemini_response.apply_automatic_combat_cleanup.return_value = {'current_scene': 2}
             
             # Mock GameState.from_dict to raise exception
             with patch('main.GameState') as mock_gamestate_class:
@@ -293,9 +293,9 @@ class TestGodModeCommands(unittest.TestCase):
     def test_god_update_state_unexpected_error(self):
         """Test GOD_MODE_UPDATE_STATE with unexpected error during processing."""
         with patch('main.firestore_service') as mock_firestore_service, \
-             patch('main.StateHelper') as mock_state_helper:
+             patch('gemini_response.GeminiResponse') as mock_gemini_response:
             # Mock StateHelper
-            mock_state_helper.cleanup_legacy_state.return_value = ({}, False, 0)
+            mock_gemini_response.cleanup_legacy_state.return_value = ({}, False, 0)
             
             mock_firestore_service.get_campaign_game_state.side_effect = Exception("Unexpected database error")
             
