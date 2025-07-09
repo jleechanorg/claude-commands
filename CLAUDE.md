@@ -6,11 +6,13 @@
 🚨 = CRITICAL | ⚠️ = MANDATORY | ✅ = Always/Do | ❌ = Never/Don't | → = See reference | PR = Pull Request
 
 ## File Organization
-- **CLAUDE.md** (this file): Primary operating protocol
+- **CLAUDE.md** (this file): Primary operating protocol (includes all integrated content)
 - **.cursor/rules/rules.mdc**: Cursor-specific configuration
-- **Technical Lessons**: Comprehensive technical lessons and incident analysis (integrated into this file)
 - **.cursor/rules/examples.md**: Detailed examples and patterns
 - **.cursor/rules/validation_commands.md**: Common command reference
+- **Integrated sections** (within this file):
+  - Comprehensive Technical Lessons & Incident Analysis (previously .cursor/rules/lessons.mdc)
+  - Claude's Learning Log & Self-Correction Patterns (previously .claude/learnings.md)
 
 ## Meta-Rules
 
@@ -80,10 +82,10 @@
 ### Learning Process
 1. **Detect** - Recognize correction/mistake (yours or user's)
 2. **Analyze** - Understand what went wrong and why
-3. **Document** - Update appropriate file:
-   - **CLAUDE.md** - Critical rules with 🚨 marker
-   - **"Claude's Learning Log & Self-Correction Patterns"** - Detailed categorized learnings (integrated section below)
-   - **Technical Lessons** - Comprehensive technical lessons and incident analysis (see end of this file)
+3. **Document** - Update appropriate section within CLAUDE.md:
+   - **Main rules sections** - Critical rules with 🚨 marker
+   - **"Claude's Learning Log & Self-Correction Patterns"** - Command/tool learnings
+   - **"Comprehensive Technical Lessons & Incident Analysis"** - Complex technical issues
 4. **Apply** - Use the learning immediately in current session
 
 ### /learn Command
@@ -118,7 +120,7 @@ When mistakes occur:
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
 7. 🚨 **DATE INTERPRETATION**: Environment date format is YYYY-MM-DD where MM is the month number (01=Jan, 07=July)
 8. 🚨 **BRANCH DISCIPLINE**: ❌ NEVER switch git branches unless user explicitly requests it | Work on current branch only | Ask before any `git checkout` operations
-9. 🚨 **DEV BRANCH PROTECTION**: ❌ NEVER make changes in dev[timestamp] branches | These are protective branches only | Always create descriptive branches for actual work
+9. 🚨 **BRANCH PROTECTION**: See "Branch Protection Protocol" section below for dev[timestamp] rules
 10. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
 11. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
    - **OPEN** = Work In Progress (WIP) - NOT completed
@@ -164,7 +166,7 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 - Re-evaluate: Week of July 15, 2025
 
 **Rule Management**:
-"Add to rules" → CLAUDE.md | Technical lessons → CLAUDE.md (Comprehensive Technical Lessons section) | General = rules | Specific = lessons
+"Add to rules" → CLAUDE.md | Technical lessons → "Comprehensive Technical Lessons & Incident Analysis" section | General = rules | Specific = lessons
 
 **Development Protocols**: → `.cursor/rules/planning_protocols.md`
 
@@ -306,6 +308,7 @@ When asked to run browser tests manually, follow these steps IN ORDER:
    sleep 3
    curl -s http://localhost:6006 || echo "STOP: Server not running"
    ```
+   - **Port 6006**: Used for browser UI tests to avoid conflicts
    - ✅ Continue only if server responds
    - ❌ FULL STOP if fails - report: "Cannot start test server"
 
@@ -334,6 +337,7 @@ When asked to run HTTP tests, follow these steps IN ORDER:
    sleep 3
    curl -s http://localhost:8086 || echo "Note: Using different port or external server"
    ```
+   - **Port 8086**: Used for HTTP API tests (different from browser test port 6006)
    - ✅ Continue even if local server fails (tests may use different setup)
 
 3. **Run HTTP Test**
@@ -363,14 +367,15 @@ When asked to run HTTP tests, follow these steps IN ORDER:
    - `./coverage.sh --no-html` - Text report only
    - `./run_tests.sh --coverage` - Use existing test runner with coverage
 
-### Current Coverage Baseline (January 2025)
-**Last Accurate Measurement**: 67% overall coverage (21,031 statements, 6,975 missing)
+### Current Coverage Baseline
+**Last Accurate Measurement**: January 8, 2025 - 67% overall coverage (21,031 statements, 6,975 missing)
 - `main.py`: 74% (550 statements, 144 missing)
 - `firestore_service.py`: 64% (254 statements, 91 missing)
 - `gemini_service.py`: 70% (594 statements, 178 missing)
 - `game_state.py`: 90% (169 statements, 17 missing - excellent!)
 - **Integration tests**: 0% (not run by default - use --integration flag)
 - **Mock services**: 32-36% (expected for mock objects)
+- **Note**: Coverage improved from 59% to 67% between measurements
 
 ## Git Workflow
 
@@ -447,10 +452,10 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 `roadmap/scratchpad_[branch].md`: Goal | Plan | State | Next | Context | Branch info
 
 ### File Organization
-- **CLAUDE.md**: Primary protocol
-- **Technical Lessons**: Comprehensive technical learnings from corrections (see end of this file)
+- **CLAUDE.md**: Primary protocol (includes all integrated lessons and learnings)
 - **project.md**: Repository-specific knowledge base
-- **rules.mdc**: Cursor configuration
+- **.cursor/rules/rules.mdc**: Cursor configuration
+- **.cursor/rules/examples.md**: Detailed examples and patterns
 
 ### Process Improvement
 - **5 Whys**: Root cause → Technical Lessons section (end of this file)
@@ -559,9 +564,9 @@ When sources disagree:
 
 ## Slash Commands
 
-Use `/list` to display all available slash commands with descriptions.
-
 **Command Documentation**: → `.claude/commands/`
+
+**Available Commands**: Use Claude's built-in slash commands like `/think`, `/execute`, `/learn`, etc.
 
 🚨 **SLASH COMMAND ENFORCEMENT**: 
 - `/e` or `/execute` MUST follow exact protocol in `.claude/commands/execute.md`
@@ -855,17 +860,12 @@ When I say these phrases, I'm recognizing a mistake:
 ## Coverage Analysis
 
 ### 2025-01-08 Coverage Findings
-- ✅ Coverage improved from 59% to 67% since last measurement
+- ✅ Coverage improved from 59% to 67% (see "Current Coverage Baseline" section for details)
 - ✅ Use `./coverage.sh` for unit tests only (default, fast ~76s)
 - ✅ Use `./coverage.sh --integration` to include integration tests
 - ✅ HTML report saved to `/tmp/worldarchitectai/coverage/index.html`
 - ✅ Integration tests show 0% coverage when not included (by design)
 - ✅ 124 unit tests all passing, excellent test suite health
-
-### Coverage Discrepancies
-- ⚠️ CLAUDE.md had outdated coverage numbers (showed 85% for files that are 70-74%)
-- ✅ Updated CLAUDE.md with actual current measurements
-- ✅ Coverage has more total statements now (21k vs 16k) indicating codebase growth
 
 ## Categories for Future Learning
 
