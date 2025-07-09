@@ -1,3 +1,40 @@
+"""
+Gemini Service - AI Integration and Response Processing
+
+This module provides comprehensive AI service integration for WorldArchitect.AI,
+handling all aspects of story generation, prompt construction, and response processing.
+
+Key Responsibilities:
+- Gemini AI client management and model selection
+- System instruction building and prompt construction  
+- Entity tracking and narrative validation
+- JSON response parsing and structured data handling
+- Model fallback and error handling
+- Planning block enforcement and debug content management
+- Token counting and context management
+
+Architecture:
+- Uses Google Generative AI (Gemini) for story generation
+- Implements robust prompt building with PromptBuilder class
+- Provides entity tracking with multiple mitigation strategies
+- Includes comprehensive error handling and model cycling
+- Supports both initial story generation and continuation
+- Manages complex state interactions and validation
+
+Key Classes:
+- PromptBuilder: Constructs system instructions and prompts
+- GeminiResponse: Custom response object with parsed data
+- EntityPreloader: Pre-loads entity context for tracking
+- EntityInstructionGenerator: Creates entity-specific instructions
+- DualPassGenerator: Retry mechanism for entity tracking
+
+Dependencies:
+- Google Generative AI SDK for Gemini API calls
+- Custom entity tracking and validation modules
+- Game state management for context
+- Token utilities for cost management
+"""
+
 import os
 from google import genai
 from google.genai import types
@@ -137,12 +174,12 @@ def get_client():
     """Initializes and returns a singleton Gemini client."""
     global _client
     if _client is None:
-        logging_util.info("--- Initializing Gemini Client ---")
+        logging_util.info("Initializing Gemini Client")
         api_key = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
         _client = genai.Client(api_key=api_key)
-        logging_util.info("--- Gemini Client Initialized Successfully ---")
+        logging_util.info("Gemini Client initialized successfully")
     return _client
 
 def _add_world_instructions_to_system(system_instruction_parts):
@@ -169,13 +206,43 @@ def _add_world_instructions_to_system(system_instruction_parts):
 
 
 class PromptBuilder:
-    """Encapsulates prompt building logic for the Gemini service."""
+    """
+    Encapsulates prompt building logic for the Gemini service.
+    
+    This class is responsible for constructing comprehensive system instructions
+    that guide the AI's behavior as a digital D&D Game Master. It manages the
+    complex hierarchy of instructions and ensures proper ordering and integration.
+    
+    Key Responsibilities:
+    - Build core system instructions in proper precedence order
+    - Add character-related instructions conditionally
+    - Include selected prompt types (narrative, mechanics)
+    - Add system reference instructions (D&D SRD)
+    - Generate companion and background summary instructions
+    - Manage world content integration
+    - Ensure debug instructions are properly included
+    
+    Instruction Hierarchy (in order of loading):
+    1. Master directive (establishes authority)
+    2. Game state instructions (data structure compliance)
+    3. Debug instructions (technical functionality)
+    4. Character template (conditional)
+    5. Selected prompts (narrative/mechanics)
+    6. System references (D&D SRD)
+    7. World content (conditional)
+    
+    The class ensures that instructions are loaded in the correct order to
+    prevent "instruction fatigue" and maintain proper AI behavior hierarchy.
+    """
 
     def __init__(self, game_state=None):
-        """Initialize the PromptBuilder.
-
+        """
+        Initialize the PromptBuilder.
+        
         Args:
-            game_state: Optional GameState used for dynamic instructions.
+            game_state (GameState, optional): GameState object used for dynamic 
+                instruction generation, companion lists, and story summaries.
+                If None, static fallback instructions will be used.
         """
         self.game_state = game_state
     
@@ -457,6 +524,30 @@ def _select_model_for_continuation(user_input_count):
         return DEFAULT_MODEL
 
 
+def _parse_gemini_response(raw_response_text, context="general"):
+    """
+    Centralized JSON parsing logic for all Gemini responses.
+    Handles JSON extraction, parsing, and fallback logic.
+    
+    Args:
+        raw_response_text: Raw text from Gemini API
+        context: Context of the parse ("general", "planning_block", etc.)
+    
+    Returns:
+        tuple: (narrative_text, structured_data) where:
+               - narrative_text is clean text for display
+               - structured_data is parsed data (NarrativeResponse or None)
+    """
+    # Log raw response for debugging
+    logging_util.debug(f"[{context}] Raw Gemini response: {raw_response_text[:500]}...")
+    
+    # Use the existing robust parsing logic
+    response_text, structured_response = parse_structured_response(raw_response_text)
+    
+    
+    return response_text, structured_response
+
+
 def _process_structured_response(raw_response_text, expected_entities):
     """
     Process structured JSON response and validate entity coverage.
@@ -468,7 +559,8 @@ def _process_structured_response(raw_response_text, expected_entities):
     Returns:
         tuple: (response_text, structured_response) where structured_response is NarrativeResponse or None
     """
-    response_text, structured_response = parse_structured_response(raw_response_text)
+    # Use centralized parsing logic
+    response_text, structured_response = _parse_gemini_response(raw_response_text, context="structured_response")
     
     # Validate structured response coverage
     if isinstance(structured_response, NarrativeResponse):
@@ -479,12 +571,8 @@ def _process_structured_response(raw_response_text, expected_entities):
         if not coverage_validation['schema_valid']:
             logging_util.warning(f"STRUCTURED_GENERATION: Missing from schema: {coverage_validation['missing_from_schema']}")
         
-        # Append state updates to response text if present
-        if hasattr(structured_response, 'state_updates') and structured_response.state_updates:
-            import json
-            state_updates_text = f"\n\n[STATE_UPDATES_PROPOSED]\n{json.dumps(structured_response.state_updates, indent=2)}\n[END_STATE_UPDATES_PROPOSED]"
-            response_text = response_text + state_updates_text
-            logging_util.info("Appended state updates from structured response to response text")
+        # State updates are now handled via structured_response object only
+        # Legacy STATE_UPDATES_PROPOSED text blocks are no longer used in JSON mode
     else:
         logging_util.warning("STRUCTURED_GENERATION: Failed to parse JSON response, falling back to plain text")
     
@@ -517,18 +605,8 @@ def _validate_entity_tracking(response_text, expected_entities, game_state):
             for warning in validation_result.warnings:
                 logging_util.warning(f"Validation warning: {warning}")
     
-    # Add validation context to the response for debugging
-    if game_state.debug_mode and expected_entities:
-        debug_validation = (
-            f"\n\n[DEBUG_VALIDATION_START]\n"
-            f"Entity Tracking Validation Result:\n"
-            f"- Expected entities: {expected_entities}\n"
-            f"- Found entities: {validation_result.entities_found}\n"
-            f"- Missing entities: {validation_result.entities_missing}\n"
-            f"- Confidence: {validation_result.confidence:.2f}\n"
-            f"[DEBUG_VALIDATION_END]"
-        )
-        response_text += debug_validation
+    # Debug validation is now handled via structured_response.debug_info
+    # No longer append debug content to narrative text in JSON mode
     
     return response_text
 
@@ -547,8 +625,8 @@ def _log_token_count(model_name, user_prompt_contents, system_instruction_text=N
             # The system instruction is a single string, so it needs to be wrapped in a list for the API
             system_tokens = client.models.count_tokens(model=model_name, contents=[system_instruction_text]).total_tokens
 
-        total_tokens = user_prompt_tokens + system_tokens
-        logging_util.info(f"--- Sending {total_tokens} tokens to the API. (Prompt: {user_prompt_tokens}, System: {system_tokens}) ---")
+        total_tokens = (user_prompt_tokens or 0) + (system_tokens or 0)
+        logging_util.info(f"Sending {total_tokens} tokens to API (Prompt: {user_prompt_tokens or 0}, System: {system_tokens or 0})")
 
     except Exception as e:
         logging_util.warning(f"Could not count tokens before API call: {e}")
@@ -577,17 +655,15 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             models_to_try.append(fallback_model)
     
     if current_prompt_text_for_logging:
-        logging_util.info(f"--- Calling Gemini API with current prompt: {str(current_prompt_text_for_logging)[:1000]}... ---")
+        logging_util.info(f"Calling Gemini API with prompt: {str(current_prompt_text_for_logging)[:500]}...")
 
-    # Log both character and estimated token counts for transition period
-    
-    # Collect all prompt text for token counting
+    # Log token estimate for prompt
     all_prompt_text = [p for p in prompt_contents if isinstance(p, str)]
     if system_instruction_text:
         all_prompt_text.append(system_instruction_text)
     
     combined_text = ' '.join(all_prompt_text)
-    log_with_tokens("--- Calling Gemini API with prompt", combined_text, logging_util)
+    log_with_tokens("Calling Gemini API", combined_text, logging_util)
 
     last_error = None
     
@@ -597,9 +673,9 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             _log_token_count(current_model, prompt_contents, system_instruction_text)
             
             if attempt > 0:
-                logging_util.warning(f"--- Attempting fallback model #{attempt}: {current_model} (after {attempt} failed attempts) ---")
+                logging_util.warning(f"Attempting fallback model: {current_model}")
             else:
-                logging_util.info(f"--- Attempting primary model: {current_model} ---")
+                logging_util.info(f"Using model: {current_model}")
 
             generation_config_params = {
                 "max_output_tokens": MAX_TOKENS,
@@ -613,7 +689,7 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             # Use reduced token limit for JSON mode to ensure proper completion
             generation_config_params["max_output_tokens"] = JSON_MODE_MAX_TOKENS
             if attempt == 0:  # Only log once
-                logging_util.info(f"--- Using JSON response mode with reduced token limit ({JSON_MODE_MAX_TOKENS}) ---")
+                logging_util.info(f"Using JSON response mode with {JSON_MODE_MAX_TOKENS} token limit")
             
             # Pass the system instruction to the generate_content call
             if system_instruction_text:
@@ -626,9 +702,7 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             )
             
             if attempt > 0:
-                logging_util.warning(f"--- SUCCESS: Fallback model {current_model} worked after {attempt} failed attempts ---")
-            else:
-                logging_util.info(f"--- SUCCESS: Primary model {current_model} worked ---")
+                logging_util.info(f"Fallback model {current_model} succeeded")
             
             return response
             
@@ -641,7 +715,7 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
             
             # Check if the exception has a status_code attribute
             if hasattr(e, 'status_code'):
-                status_code = e.status_code
+                status_code = getattr(e, 'status_code', None)
             # Check if it's a ServerError with the status in the message
             elif '503 UNAVAILABLE' in error_message:
                 status_code = 503
@@ -651,22 +725,22 @@ def _call_gemini_api_with_model_cycling(prompt_contents, model_name, current_pro
                 status_code = 400
             
             if status_code == 503:  # Service unavailable
-                logging_util.warning(f"--- Model {current_model} overloaded (503), trying next model... ---")
+                logging_util.warning(f"Model {current_model} overloaded (503), trying next model")
                 continue
             elif status_code == 429:  # Rate limit
-                logging_util.warning(f"--- Model {current_model} rate limited (429), trying next model... ---")
+                logging_util.warning(f"Model {current_model} rate limited (429), trying next model")
                 continue
             elif status_code == 400 and "not found" in error_message.lower():  # Model not found
-                logging_util.warning(f"--- Model {current_model} not found (400), trying next model... ---")
+                logging_util.warning(f"Model {current_model} not found (400), trying next model")
                 continue
             else:
                 # For other errors, don't continue cycling - raise immediately
-                logging_util.error(f"--- Non-recoverable error with model {current_model}: {e} ---")
+                logging_util.error(f"Non-recoverable error with model {current_model}: {e}")
                 raise e
     
     # If we get here, all models failed
-    logging_util.error(f"--- ALL MODELS FAILED: Tried {len(models_to_try)} models: {models_to_try} ---")
-    logging_util.error(f"--- Last error: {last_error} ---")
+    logging_util.error(f"All models failed: {models_to_try}")
+    logging_util.error(f"Last error: {last_error}")
     
     # Ensure we have a meaningful error to raise
     if last_error is None:
@@ -702,7 +776,7 @@ def _get_text_from_response(response):
     except Exception as e:
         logging_util.error(f"Unexpected error in _get_text_from_response: {e}")
     
-    logging_util.warning(f"--- Response did not contain valid text. Full response object: {response} ---")
+    logging_util.warning(f"Response did not contain valid text. Response object: {response}")
     return "[System Message: The model returned a non-text response. Please check the logs for details.]"
 
 def _get_context_stats(context, model_name, current_game_state: GameState):
@@ -717,8 +791,9 @@ def _get_context_stats(context, model_name, current_game_state: GameState):
     actual_tokens = "N/A"
     try:
         client = get_client()
-        parts = [types.Part(text=entry.get(constants.KEY_TEXT, '')) for entry in context]
-        count_response = client.models.count_tokens(model=model_name, contents=parts)
+        # Use simple text strings for token counting
+        text_contents = [entry.get(constants.KEY_TEXT, '') for entry in context]
+        count_response = client.models.count_tokens(model=model_name, contents=text_contents)
         actual_tokens = count_response.total_tokens
     except Exception as e:
         logging_util.warning(f"Could not count tokens for context stats: {e}")
@@ -778,7 +853,14 @@ def _truncate_context(story_context, max_chars: int, model_name: str, current_ga
 
 @log_exceptions
 def get_initial_story(prompt, selected_prompts=None, generate_companions=False, use_default_world=False):
-    """Generates the initial story part, including character, narrative, and mechanics instructions."""
+    """
+    Generates the initial story part, including character, narrative, and mechanics instructions.
+    
+    Returns:
+        GeminiResponse: Custom response object containing:
+            - narrative_text: Clean text for display (guaranteed to be clean narrative)
+            - structured_response: Parsed JSON with state updates, entities, etc.
+    """
 
     if selected_prompts is None:
         selected_prompts = [] 
@@ -906,18 +988,20 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     model_to_use = TEST_MODEL if os.environ.get('TESTING') else DEFAULT_MODEL
     logging_util.info(f"Using model: {model_to_use} for initial story generation.")
 
-    response = _call_gemini_api(contents, model_to_use, current_prompt_text_for_logging=prompt, 
-                              system_instruction_text=system_instruction_final)
-    raw_response_text = _get_text_from_response(response)
+    # Call Gemini API - returns raw Gemini API response object
+    api_response = _call_gemini_api(contents, model_to_use, current_prompt_text_for_logging=prompt, 
+                                  system_instruction_text=system_instruction_final)
+    # Extract text from raw API response object
+    raw_response_text = _get_text_from_response(api_response)
     
-    # Process structured response for consistency
-    response_text, structured_response = _process_structured_response(raw_response_text, expected_entities or [])
+    # Create GeminiResponse from raw response, which handles all parsing internally
+    gemini_response = GeminiResponse.create(raw_response_text)
     
     # --- ENTITY VALIDATION FOR INITIAL STORY ---
     if expected_entities:
         validator = NarrativeSyncValidator()
         validation_result = validator.validate(
-            narrative_text=response_text,
+            narrative_text=gemini_response.narrative_text,
             expected_entities=expected_entities,
             location='Starting Location'
         )
@@ -927,7 +1011,14 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
             # For initial story, we'll log but not retry to avoid complexity
             # The continue_story function will handle retry logic for subsequent interactions
     
-    return GeminiResponse.create(response_text, structured_response, raw_response_text)
+    # Log GeminiResponse creation for debugging
+    logging_util.debug(f"Created GeminiResponse with narrative_text length: {len(gemini_response.narrative_text)}")
+    
+    # Return our custom GeminiResponse object (not raw API response)
+    # This object contains:
+    # - narrative_text: Clean text for display (guaranteed to be clean narrative)
+    # - structured_response: Parsed JSON structure with state updates, entities, etc.
+    return gemini_response
 
 def _validate_and_enforce_planning_block(response_text, user_input, game_state, chosen_model, system_instruction):
     """
@@ -1008,7 +1099,11 @@ Full narrative context:
             current_prompt_text_for_logging="Planning block generation",
             system_instruction_text=system_instruction
         )
-        planning_block = _get_text_from_response(planning_response)
+        raw_planning_response = _get_text_from_response(planning_response)
+        
+        # Use centralized parsing for planning block
+        planning_text, _ = _parse_gemini_response(raw_planning_response, context="planning_block")
+        planning_block = planning_text
         
         # Ensure it starts with newlines and the header
         if not planning_block.startswith("\n\n--- PLANNING BLOCK ---"):
@@ -1039,7 +1134,9 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
         use_default_world: Whether to include world content in system instructions
         
     Returns:
-        The AI's response text
+        GeminiResponse: Custom response object containing:
+            - narrative_text: Clean text for display (guaranteed to be clean narrative)
+            - structured_response: Parsed JSON with state updates, entities, etc.
     """
     
     # Calculate user input count for model selection (count existing user entries + current input)
@@ -1179,13 +1276,16 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     
     # ALWAYS use structured JSON output for consistent response format
     # This ensures state updates, planning blocks, and narrative are properly structured
-    response = _call_gemini_api([full_prompt], chosen_model, 
-                              current_prompt_text_for_logging=current_prompt_text, 
-                              system_instruction_text=system_instruction_final)
-    raw_response_text = _get_text_from_response(response)
+    # Call Gemini API - returns raw Gemini API response object
+    api_response = _call_gemini_api([full_prompt], chosen_model, 
+                                  current_prompt_text_for_logging=current_prompt_text, 
+                                  system_instruction_text=system_instruction_final)
+    # Extract text from raw API response object
+    raw_response_text = _get_text_from_response(api_response)
     
-    # Process structured response (handles both entity tracking and non-entity cases)
-    response_text, structured_response = _process_structured_response(raw_response_text, expected_entities or [])
+    # Create initial GeminiResponse from raw response
+    gemini_response = GeminiResponse.create(raw_response_text)
+    response_text = gemini_response.narrative_text
     
     # Validate entity tracking if enabled
     if expected_entities:
@@ -1212,7 +1312,10 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
                 response = _call_gemini_api([prompt], chosen_model, 
                                           current_prompt_text_for_logging=current_prompt_text,
                                           system_instruction_text=system_instruction_final)
-                return _get_text_from_response(response)
+                raw_json = _get_text_from_response(response)
+                # Parse JSON and return only narrative text for dual-pass generator
+                narrative_text, _ = _process_structured_response(raw_json, expected_entities or [])
+                return narrative_text
             
             # Use dual-pass generator to fix missing entities
             dual_pass_result = dual_pass_generator.generate_with_dual_pass(
@@ -1251,7 +1354,23 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
             response_text, user_input, current_game_state, chosen_model, system_instruction_final
         )
     
-    return GeminiResponse.create(response_text, structured_response, raw_response_text)
+    # If response was modified (by dual-pass or planning block), recreate GeminiResponse
+    if response_text != gemini_response.narrative_text:
+        # Create a new response with the modified text
+        gemini_response = GeminiResponse(
+            narrative_text=response_text,
+            structured_response=gemini_response.structured_response,
+            model=gemini_response.model
+        )
+    
+    # Log GeminiResponse creation for debugging
+    logging_util.debug(f"Created GeminiResponse with narrative_text length: {len(gemini_response.narrative_text)}")
+    
+    # Return our custom GeminiResponse object (not raw API response)
+    # This object contains:
+    # - narrative_text: Clean text for display (guaranteed to be clean narrative)
+    # - structured_response: Parsed JSON structure with state updates, entities, etc.
+    return gemini_response
 
 def _get_static_prompt_parts(current_game_state: GameState, story_context: list):
     """Helper to generate the non-timeline parts of the prompt."""

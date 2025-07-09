@@ -1,6 +1,32 @@
 """
-Debug mode command parser for WorldArchitect.AI.
-Handles parsing and validation of debug mode commands from user input.
+Debug Mode Command Parser
+
+This module provides robust parsing and validation of debug mode commands from user input.
+Debug mode allows users to see behind-the-scenes information including DM commentary,
+dice rolls, resource tracking, and state changes.
+
+Key Features:
+- Comprehensive pattern matching for enable/disable commands
+- Conversational command support ("please enable debug mode")
+- Negative pattern filtering to avoid false matches
+- State change messaging and validation
+- God mode restriction (debug commands only work in god mode)
+
+Architecture:
+- Static class methods for stateless parsing
+- Regex-based pattern matching with extensive coverage
+- Normalized input processing for consistent matching
+- Separate enable/disable pattern sets for clarity
+
+Usage:
+    # Parse debug command
+    command_type, should_update = DebugModeParser.parse_debug_command(user_input, mode)
+    
+    # Quick check if input is debug command
+    is_debug = DebugModeParser.is_debug_toggle_command(user_input, mode)
+    
+    # Get appropriate system message
+    message = DebugModeParser.get_state_update_message(command_type, new_state)
 """
 import re
 from typing import Tuple, Optional

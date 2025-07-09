@@ -114,6 +114,18 @@ class TestDebugModeE2E(unittest.TestCase):
         mock_gemini_response.debug_tags_present = {"dm_notes": True, "dice_rolls": True, "state_changes": False}
         mock_gemini_response.state_updates = {}
         mock_gemini_response.structured_response = None
+        # Mock get_narrative_text to return stripped version when debug_mode=False
+        def mock_get_narrative_text(debug_mode=True):
+            if debug_mode:
+                return ai_response_with_debug
+            else:
+                # Strip debug content
+                import re
+                text = ai_response_with_debug
+                text = re.sub(r'\[DEBUG_START\].*?\[DEBUG_END\]', '', text, flags=re.DOTALL)
+                text = re.sub(r'\[DEBUG_ROLL_START\].*?\[DEBUG_ROLL_END\]', '', text, flags=re.DOTALL)
+                return text.strip()
+        mock_gemini_response.get_narrative_text = MagicMock(side_effect=mock_get_narrative_text)
 
         with patch('gemini_service.continue_story', return_value=mock_gemini_response):
             response = self.client.post(
@@ -163,6 +175,18 @@ class TestDebugModeE2E(unittest.TestCase):
         mock_gemini_response.debug_tags_present = {"dm_notes": True, "dice_rolls": True, "state_changes": False}
         mock_gemini_response.state_updates = {}
         mock_gemini_response.structured_response = None
+        # Mock get_narrative_text to return stripped version when debug_mode=False
+        def mock_get_narrative_text(debug_mode=True):
+            if debug_mode:
+                return ai_response_with_debug
+            else:
+                # Strip debug content
+                import re
+                text = ai_response_with_debug
+                text = re.sub(r'\[DEBUG_START\].*?\[DEBUG_END\]', '', text, flags=re.DOTALL)
+                text = re.sub(r'\[DEBUG_ROLL_START\].*?\[DEBUG_ROLL_END\]', '', text, flags=re.DOTALL)
+                return text.strip()
+        mock_gemini_response.get_narrative_text = MagicMock(side_effect=mock_get_narrative_text)
 
         with patch('gemini_service.continue_story', return_value=mock_gemini_response):
             response = self.client.post(

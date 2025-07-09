@@ -39,6 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.values(views).forEach(v => v.classList.remove('active-view'));
         if(views[viewName]) {
             views[viewName].classList.add('active-view');
+            
+            // Setup campaign type handlers when showing new campaign view
+            if (viewName === 'newCampaign') {
+                setupCampaignTypeHandlers();
+            }
         }
     };
 
@@ -58,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
             campaignTitleInput.value = "My Epic Adventure"; // Your default title
         }
         if (campaignPromptTextarea) {
-            campaignPromptTextarea.value = "A brave knight in a land of dragons."; // Your default prompt
+            campaignPromptTextarea.value = window.DRAGON_KNIGHT_CAMPAIGN; // Default Dragon Knight prompt
         }
         if (narrativeCheckbox) {
             narrativeCheckbox.checked = true; // Default checked
@@ -67,6 +72,72 @@ document.addEventListener('DOMContentLoaded', () => {
             mechanicsCheckbox.checked = true; // Default checked
         }
         console.log("New campaign form reset to defaults.");
+    }
+
+    // Dragon Knight campaign content - defined once to avoid duplication
+    window.DRAGON_KNIGHT_CAMPAIGN = `You are Ser Arion, a 16 year old honorable knight on your first mission, sworn to protect the vast Celestial Imperium. For decades, the Empire has been ruled by the iron-willed Empress Sariel, a ruthless tyrant who uses psychic power to crush dissent. While her methods are terrifying, her reign has brought undeniable benefits: the roads are safe, trade flourishes, and the common people no longer starve or fear bandits. You are a product of this "Silent Peace," and your oath binds you to the security and prosperity it provides.
+
+Your loyalty is now brutally tested. You have been ordered to slaughter a settlement of innocent refugees whose very existence has been deemed a threat to the Empress's perfect, unyielding order. As you wrestle with this monstrous command, a powerful, new voice enters your mind—Aurum, the Gilded King, a magnificent gold dragon long thought to be a myth. He appears as a champion of freedom, urging you to defy the Empress's "soulless cage" and fight for a world of choice and glorious struggle.
+
+You are now caught between two powerful and morally grey forces. Do you uphold your oath and commit an atrocity, believing the sacrifice of a few is worth the peace and safety of millions? Or do you break your vow and join the arrogant dragon's chaotic crusade, plunging the world back into violence for a chance at true freedom? This single choice will define your honor and your path in an empire where security is bought with blood.`;
+
+    // Dragon Knight campaign content loader
+    async function loadDragonKnightCampaignContent() {
+        console.log('Dragon Knight campaign content loaded (hardcoded)');
+        return window.DRAGON_KNIGHT_CAMPAIGN;
+    }
+    
+    // Handle campaign type radio button changes
+    function setupCampaignTypeHandlers() {
+        const dragonKnightRadio = document.getElementById('dragonKnightCampaign');
+        const customRadio = document.getElementById('customCampaign');
+        const campaignPromptTextarea = document.getElementById('campaign-prompt');
+        
+        if (!dragonKnightRadio || !customRadio || !campaignPromptTextarea) return;
+        
+        // Load Dragon Knight content on page load (since it's default)
+        if (dragonKnightRadio.checked) {
+            campaignPromptTextarea.value = window.DRAGON_KNIGHT_CAMPAIGN;
+            campaignPromptTextarea.readOnly = true;
+            
+            // Also ensure default world is checked and disabled on initial load
+            const defaultWorldCheckbox = document.getElementById('use-default-world');
+            if (defaultWorldCheckbox) {
+                defaultWorldCheckbox.checked = true;
+                defaultWorldCheckbox.disabled = true;
+            }
+        } else if (customRadio.checked) {
+            campaignPromptTextarea.value = '';
+            campaignPromptTextarea.readOnly = false;
+        }
+        
+        dragonKnightRadio.addEventListener('change', async (e) => {
+            if (e.target.checked) {
+                campaignPromptTextarea.readOnly = true;
+                campaignPromptTextarea.value = window.DRAGON_KNIGHT_CAMPAIGN;
+                
+                // Force default world checkbox to be checked when Dragon Knight is selected
+                const defaultWorldCheckbox = document.getElementById('use-default-world');
+                if (defaultWorldCheckbox) {
+                    defaultWorldCheckbox.checked = true;
+                    defaultWorldCheckbox.disabled = true; // Disable to prevent unchecking
+                }
+            }
+        });
+        
+        customRadio.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                campaignPromptTextarea.readOnly = false;
+                campaignPromptTextarea.value = '';
+                campaignPromptTextarea.focus();
+                
+                // Re-enable default world checkbox when custom campaign is selected
+                const defaultWorldCheckbox = document.getElementById('use-default-world');
+                if (defaultWorldCheckbox) {
+                    defaultWorldCheckbox.disabled = false; // Re-enable checkbox
+                }
+            }
+        });
     }
 
     let handleRouteChange = () => {
@@ -100,7 +171,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const appendToStory = (actor, text, mode = null, debugMode = false, sequenceId = null) => {
         const storyContainer = document.getElementById('story-content');
-        const entryEl = document.createElement('p');
+        const entryEl = document.createElement('div');
+        entryEl.className = 'story-entry';
+        
         let label = '';
         if (actor === 'gemini') {
             label = sequenceId ? `Scene #${sequenceId}` : 'Story';
@@ -125,10 +198,132 @@ document.addEventListener('DOMContentLoaded', () => {
                 .replace(/\[DEBUG_STATE_END\]/g, '</div>')
                 .replace(/\[DEBUG_ROLL_START\]/g, '<div class="debug-rolls"><strong>🎲 Dice Roll:</strong> ')
                 .replace(/\[DEBUG_ROLL_END\]/g, '</div>');
+            
+            // Parse and convert planning block choices to buttons
+            processedText = parsePlanningBlocks(processedText);
         }
         
-        entryEl.innerHTML = `<strong>${label}:</strong> ${processedText}`;
+        entryEl.innerHTML = `<p><strong>${label}:</strong> ${processedText}</p>`;
         storyContainer.appendChild(entryEl);
+        
+        // Add click handlers to any choice buttons we just added
+        if (actor === 'gemini') {
+            const choiceButtons = entryEl.querySelectorAll('.choice-button');
+            choiceButtons.forEach(button => {
+                button.addEventListener('click', handleChoiceClick);
+            });
+        }
+    };
+    
+    // Handler for choice button clicks
+    const handleChoiceClick = async (e) => {
+        const button = e.currentTarget;
+        const choiceText = button.getAttribute('data-choice-text');
+        const choiceId = button.getAttribute('data-choice-id');
+        const userInputEl = document.getElementById('user-input');
+        const interactionForm = document.getElementById('interaction-form');
+        
+        if (!userInputEl || !interactionForm) return;
+        
+        // Handle custom choice differently
+        if (choiceId === 'Custom' || choiceText === 'custom') {
+            // Clear the input and focus it for custom text
+            userInputEl.value = '';
+            userInputEl.focus();
+            userInputEl.placeholder = 'Type your custom action here...';
+            
+            // Scroll to the input area
+            userInputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Don't disable buttons for custom option
+            return;
+        }
+        
+        // For predefined choices, disable all buttons
+        document.querySelectorAll('.choice-button').forEach(btn => {
+            btn.disabled = true;
+        });
+        
+        // Set the choice text in the input field
+        userInputEl.value = choiceText;
+        
+        // Submit the form programmatically
+        const submitEvent = new Event('submit', { cancelable: true, bubbles: true });
+        interactionForm.dispatchEvent(submitEvent);
+    };
+    
+    // Helper function to parse planning blocks and create buttons
+    const parsePlanningBlocks = (text) => {
+        // Pattern to match choice format: **[ActionWord_Number]:** Description OR numbered format: 1. **Action:** Description
+        const bracketPattern = /\*\*\[([^\]]+)\]:\*\*\s*([^*\n]+(?:\n(?!\*\*\[)[^\n]*)*)/g;
+        const numberedPattern = /^\d+\.\s*\*\*([^:]+):\*\*\s*(.+?)(?=^\d+\.|$)/gm;
+        
+        // Find all choices in the text
+        const choices = [];
+        let match;
+        
+        // First try bracket pattern: **[Action_1]:** Description
+        while ((match = bracketPattern.exec(text)) !== null) {
+            choices.push({
+                id: match[1],
+                fullText: match[0],
+                description: match[2].trim()
+            });
+        }
+        
+        // If no bracket pattern found, try numbered pattern: 1. **Action:** Description
+        if (choices.length === 0) {
+            while ((match = numberedPattern.exec(text)) !== null) {
+                choices.push({
+                    id: match[1].trim(),
+                    fullText: match[0],
+                    description: match[2].trim()
+                });
+            }
+        }
+        
+        // If we found choices, create a planning block section
+        if (choices.length > 0) {
+            // Find where the choices start in the text
+            const firstChoiceIndex = text.indexOf(choices[0].fullText);
+            let narrativeText = text.substring(0, firstChoiceIndex).trim();
+            
+            // Remove planning block marker if present
+            const planningBlockMarker = '--- PLANNING BLOCK ---';
+            const markerIndex = narrativeText.lastIndexOf(planningBlockMarker);
+            if (markerIndex >= 0) {
+                narrativeText = narrativeText.substring(0, markerIndex).trim();
+            }
+            
+            // Create the choice buttons HTML
+            let choicesHtml = '<div class="planning-block-choices">';
+            choices.forEach(choice => {
+                // Escape the choice text for HTML attribute
+                const escapedText = `${choice.id}: ${choice.description}`.replace(/"/g, '&quot;');
+                choicesHtml += `
+                    <button class="choice-button" data-choice-id="${choice.id}" data-choice-text="${escapedText}">
+                        <span class="choice-id">[${choice.id}]</span>
+                        <span class="choice-description">${choice.description}</span>
+                    </button>
+                `;
+            });
+            
+            // Add custom text option
+            choicesHtml += `
+                <button class="choice-button choice-button-custom" data-choice-id="Custom" data-choice-text="custom">
+                    <span class="choice-id">[Custom]</span>
+                    <span class="choice-description">Type your own action...</span>
+                </button>
+            `;
+            
+            choicesHtml += '</div>';
+            
+            // Return narrative text followed by choice buttons
+            return narrativeText + choicesHtml;
+        }
+        
+        // No choices found, return text as-is
+        return text;
     };
 
     // --- Data Fetching and Rendering ---
@@ -214,7 +409,30 @@ document.addEventListener('DOMContentLoaded', () => {
         showSpinner('loading');
         try {
             const { data } = await fetchApi(`/api/campaigns/${campaignId}`);
-            document.getElementById('game-title').innerText = data.campaign.title;
+            const gameTitleElement = document.getElementById('game-title');
+            gameTitleElement.innerText = data.campaign.title;
+            
+            // Initialize inline editor for campaign title
+            if (window.InlineEditor) {
+                new InlineEditor(gameTitleElement, {
+                    maxLength: 100,
+                    minLength: 1,
+                    placeholder: 'Enter campaign title...',
+                    saveFn: async (newTitle) => {
+                        // Save the new title via API
+                        await fetchApi(`/api/campaigns/${campaignId}`, {
+                            method: 'PATCH',
+                            body: JSON.stringify({ title: newTitle })
+                        });
+                        console.log('Campaign title updated successfully');
+                    },
+                    onError: (error) => {
+                        console.error('Failed to update campaign title:', error);
+                        alert('Failed to update campaign title. Please try again.');
+                    }
+                });
+            }
+            
             const storyContainer = document.getElementById('story-content');
             storyContainer.innerHTML = '';
             
@@ -246,15 +464,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
+
     // --- Event Listeners ---
     document.getElementById('new-campaign-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         
         showSpinner('newCampaign');
-        const prompt = document.getElementById('campaign-prompt').value;
+        let prompt = document.getElementById('campaign-prompt').value;
         const title = document.getElementById('campaign-title').value;
         const selectedPrompts = Array.from(document.querySelectorAll('input[name="selectedPrompts"]:checked')).map(checkbox => checkbox.value);
         const customOptions = Array.from(document.querySelectorAll('input[name="customOptions"]:checked')).map(checkbox => checkbox.value);
+        
+        // Check if Dragon Knight campaign is selected
+        const dragonKnightRadio = document.getElementById('dragonKnightCampaign');
+        const isDragonKnight = dragonKnightRadio && dragonKnightRadio.checked;
+        
+        // Dragon Knight campaigns always use default world
+        if (isDragonKnight) {
+            console.log('Dragon Knight campaign selected - ensuring default world is used');
+            // Make sure defaultWorld is in customOptions
+            if (!customOptions.includes('defaultWorld')) {
+                customOptions.push('defaultWorld');
+            }
+        }
         try {
             const { data } = await fetchApi('/api/campaigns', { 
                 method: 'POST', 
@@ -349,9 +581,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (debugIndicator) {
                     debugIndicator.style.display = data.debug_mode ? 'block' : 'none';
                 }
+                
+                // Re-enable all choice buttons now that we have a new response
+                document.querySelectorAll('.choice-button').forEach(btn => {
+                    btn.disabled = false;
+                });
             } catch (error) {
                 console.error("Interaction failed:", error);
                 appendToStory('system', 'Sorry, an error occurred. Please try again.');
+                // Re-enable choice buttons even on error
+                document.querySelectorAll('.choice-button').forEach(btn => {
+                    btn.disabled = false;
+                });
             } finally {
                 localSpinner.style.display = 'none';
                 if (window.loadingMessages) {
@@ -563,6 +804,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('download-txt-btn')?.addEventListener('click', () => downloadFile('txt'));
     document.getElementById('download-pdf-btn')?.addEventListener('click', () => downloadFile('pdf'));
     document.getElementById('download-docx-btn')?.addEventListener('click', () => downloadFile('docx'));
+    
     
     // Theme integration
     window.addEventListener('themeChanged', (e) => {

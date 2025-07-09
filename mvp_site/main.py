@@ -1,23 +1,58 @@
-# Diagnostic edit to test file system access.
+"""
+WorldArchitect.AI - Main Flask Application
+
+This is the primary Flask application entry point for WorldArchitect.AI, an AI-powered
+tabletop RPG platform that serves as a digital D&D 5e Game Master.
+
+Architecture:
+- Flask web server with CORS support
+- Firebase authentication and Firestore database
+- Gemini AI service integration for story generation
+- Real-time game state management
+- Document export functionality
+- Debug mode and god-mode commands for testing
+
+Key Components:
+- Campaign management (create, read, update, delete)
+- Interactive story generation with user input
+- Game state synchronization and validation
+- Export campaigns to PDF/DOCX/TXT formats
+- Authentication and authorization
+- Test command runners for UI and HTTP testing
+
+Dependencies:
+- Flask: Web framework
+- Firebase: Authentication and database
+- Gemini AI: Story generation and game logic
+- Bootstrap: Frontend CSS framework
+- Various custom services for game logic
+"""
+
+# Standard library imports
 import os
 import sys
 import uuid
-import re
 import subprocess
 import argparse
 from functools import wraps
+import json
+import collections
+import traceback
+
+# Flask and web imports
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
+
+# Firebase imports
 import firebase_admin
 from firebase_admin import auth
-import traceback
+
+# Local service imports
 import document_generator
 import logging_util
 from game_state import GameState
 from debug_mode_parser import DebugModeParser
 import constants
-import json
-import collections
 from firestore_service import update_state_with_changes, json_default_serializer, _truncate_log_json
 from token_utils import log_with_tokens
 
@@ -54,93 +89,31 @@ DEFAULT_TEST_USER = 'test-user'
 # --- END CONSTANTS ---
 
 
-class StateHelper:
-    """
-    Helper class for state-related operations.
-    Consolidates debug content stripping and state cleanup functions.
-    """
-
-    @staticmethod
-    def strip_debug_content(text):
-        """
-        Strip debug content from AI response text while preserving the rest.
-        Removes content between debug tags: [DEBUG_START/END], [DEBUG_ROLL_START/END], [DEBUG_STATE_START/END]
-        Also removes [STATE_UPDATES_PROPOSED] blocks which are internal state management.
-
-        Args:
-            text: The raw text containing debug content
-
-        Returns:
-            str: Text with debug content removed
-        """
-        return strip_debug_content(text)
-
-    @staticmethod
-    def strip_state_updates_only(text):
-        """
-        Strip only [STATE_UPDATES_PROPOSED] blocks while preserving other debug content.
-        Used when user has debug mode enabled but we still want to hide internal state updates.
-
-        Args:
-            text: The raw text containing state updates
-
-        Returns:
-            str: Text with state updates removed
-        """
-        return strip_state_updates_only(text)
-
-    @staticmethod
-    def strip_other_debug_content(text):
-        """
-        Strip all debug content EXCEPT [STATE_UPDATES_PROPOSED] blocks.
-        Used for extracting state updates while removing other debug information.
-
-        Args:
-            text: The raw text containing debug content
-
-        Returns:
-            str: Text with only state updates remaining
-        """
-        return strip_other_debug_content(text)
-
-    @staticmethod
-    def apply_automatic_combat_cleanup(state_dict, proposed_changes):
-        """
-        Automatically clean up combat state when combat ends.
-
-        Args:
-            state_dict: Current game state dictionary
-            proposed_changes: Proposed state changes
-
-        Returns:
-            dict: Updated state dictionary with combat cleanup applied
-        """
-        return apply_automatic_combat_cleanup(state_dict, proposed_changes)
-
-    @staticmethod
-    def cleanup_legacy_state(state_dict):
-        """
-        Clean up legacy state issues like __DELETE__ tokens and str() conversions.
-
-        Args:
-            state_dict: Game state dictionary to clean
-
-        Returns:
-            tuple: (cleaned_dict, was_cleaned, num_cleaned)
-        """
-        return _cleanup_legacy_state(state_dict)
 
 
 def _prepare_game_state(user_id, campaign_id):
     """
     Load and prepare game state, including legacy cleanup.
+    
+    This function handles the initialization and cleanup of game state data from Firestore.
+    It performs automatic migration of legacy state structures and returns a clean GameState object.
+    
+    Key Responsibilities:
+    - Fetches game state from Firestore
+    - Ensures valid GameState object initialization
+    - Performs legacy state cleanup (removes deprecated fields)
+    - Updates Firestore with cleaned state if necessary
+    - Logs cleanup operations for debugging
 
     Args:
-        user_id: User ID
-        campaign_id: Campaign ID
+        user_id (str): Firebase user ID
+        campaign_id (str): Campaign identifier from Firestore
 
     Returns:
         tuple: (current_game_state, was_cleaned, num_cleaned)
+            - current_game_state: GameState object ready for use
+            - was_cleaned: boolean indicating if cleanup was performed
+            - num_cleaned: integer count of cleaned entries
     """
     current_game_state_doc = firestore_service.get_campaign_game_state(user_id, campaign_id)
 
@@ -151,7 +124,7 @@ def _prepare_game_state(user_id, campaign_id):
         current_game_state = GameState()
 
     # Perform cleanup on a dictionary copy
-    cleaned_state_dict, was_cleaned, num_cleaned = StateHelper.cleanup_legacy_state(current_game_state.to_dict())
+    cleaned_state_dict, was_cleaned, num_cleaned = _cleanup_legacy_state(current_game_state.to_dict())
     if was_cleaned:
         # If cleaned, update the main object from the cleaned dictionary
         current_game_state = GameState.from_dict(cleaned_state_dict)
@@ -195,7 +168,7 @@ def _handle_set_command(user_input, current_game_state, user_id, campaign_id):
     logging_util.info(f"GOD_MODE_SET state BEFORE update:\\n{_truncate_log_json(current_state_dict_before_update)}")
 
     updated_state = update_state_with_changes(current_state_dict_before_update, proposed_changes)
-    updated_state = StateHelper.apply_automatic_combat_cleanup(updated_state, proposed_changes)
+    updated_state = apply_automatic_combat_cleanup(updated_state, proposed_changes)
     logging_util.info(f"GOD_MODE_SET state AFTER update:\\n{_truncate_log_json(updated_state)}")
 
     firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
@@ -259,7 +232,7 @@ def _handle_update_state_command(user_input, user_id, campaign_id):
 
         # Perform an update
         updated_state_dict = update_state_with_changes(current_state_dict, state_changes)
-        updated_state_dict = StateHelper.apply_automatic_combat_cleanup(updated_state_dict, state_changes)
+        updated_state_dict = apply_automatic_combat_cleanup(updated_state_dict, state_changes)
 
         # Convert back to GameState object after the update to validate
         final_game_state = GameState.from_dict(updated_state_dict)
@@ -279,7 +252,7 @@ def _handle_update_state_command(user_input, user_id, campaign_id):
 
 
 
-def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response,
+def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response_obj,
                                    structured_response, mode, story_context, campaign_id, user_id):
     """
     Apply state changes from AI response and prepare final response.
@@ -296,16 +269,22 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
 
     Returns:
         Flask response with JSON structure
+        
+    Note: This function handles two types of debug content:
+        1. Legacy debug tags embedded in narrative text - shown/hidden based on debug_mode
+        2. Structured debug_info field - always included when present (frontend decides display)
     """
-    # Process narrative text based on debug mode
+    # Check if debug mode is enabled
     debug_mode_enabled = hasattr(current_game_state, 'debug_mode') and current_game_state.debug_mode
-    if debug_mode_enabled:
-        # Show all content including debug tags
-        final_narrative = gemini_response
+    
+    # Get narrative text with debug content handled based on debug mode
+    # GeminiResponse now handles debug content stripping internally
+    if hasattr(gemini_response_obj, 'get_narrative_text'):
+        final_narrative = gemini_response_obj.get_narrative_text(debug_mode=debug_mode_enabled)
     else:
-        # Strip debug content when debug mode is disabled
-        final_narrative = StateHelper.strip_debug_content(gemini_response)
-
+        # Fallback for string responses (shouldn't happen with current code)
+        final_narrative = gemini_response_obj
+    
     # Build response data structure
     response_data = {
         KEY_SUCCESS: True,
@@ -323,10 +302,10 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
         # Entity tracking fields used by frontend
         response_data['entities_mentioned'] = getattr(structured_response, 'entities_mentioned', [])
         response_data['location_confirmed'] = getattr(structured_response, 'location_confirmed', 'Unknown')
-
-    # Add debug information only if debug mode is enabled
-    if debug_mode_enabled:
-        if structured_response and hasattr(structured_response, 'debug_info'):
+        
+        # Always include structured debug_info if present (separate from legacy debug tags)
+        # Frontend will use debug_mode flag to decide whether to display debug_info
+        if hasattr(structured_response, 'debug_info') and structured_response.debug_info:
             response_data['debug_info'] = structured_response.debug_info
 
     if proposed_changes:
@@ -350,7 +329,7 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
 
         # Update state with changes
         updated_state_dict = update_state_with_changes(current_game_state.to_dict(), proposed_changes)
-        updated_state_dict = StateHelper.apply_automatic_combat_cleanup(updated_state_dict, proposed_changes)
+        updated_state_dict = apply_automatic_combat_cleanup(updated_state_dict, proposed_changes)
 
         logging_util.info(f"New complete game state for campaign {campaign_id}:\\n{truncate_game_state_for_logging(updated_state_dict)}")
 
@@ -366,74 +345,6 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
     return jsonify(response_data)
 
 
-def strip_debug_content(text):
-    """
-    Strip debug content from AI response text while preserving the rest.
-    Removes content between debug tags: [DEBUG_START/END], [DEBUG_ROLL_START/END], [DEBUG_STATE_START/END]
-    Also removes [STATE_UPDATES_PROPOSED] blocks which are internal state management.
-
-    Args:
-        text (str): The full AI response with debug content
-
-    Returns:
-        str: The response with debug content removed
-    """
-    if not text:
-        return text
-
-    # Use regex for proper pattern matching - same patterns as frontend
-    processed_text = re.sub(r'\[DEBUG_START\][\s\S]*?\[DEBUG_END\]', '', text)
-    processed_text = re.sub(r'\[DEBUG_STATE_START\][\s\S]*?\[DEBUG_STATE_END\]', '', processed_text)
-    processed_text = re.sub(r'\[DEBUG_ROLL_START\][\s\S]*?\[DEBUG_ROLL_END\]', '', processed_text)
-    # Also strip STATE_UPDATES_PROPOSED blocks which are internal state management
-    processed_text = re.sub(r'\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
-    # Handle malformed STATE_UPDATES_PROPOSED blocks (missing opening characters)
-    processed_text = re.sub(r'S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
-
-    return processed_text
-
-
-def strip_state_updates_only(text):
-    """
-    Strip only STATE_UPDATES_PROPOSED blocks from text, preserving all other debug content.
-    This ensures that internal state management blocks are never shown to users, even in debug mode.
-
-    Args:
-        text (str): The full AI response text
-
-    Returns:
-        str: The response with STATE_UPDATES_PROPOSED blocks removed
-    """
-    if not text:
-        return text
-
-    # Remove only STATE_UPDATES_PROPOSED blocks - these should never be shown to users
-    processed_text = re.sub(r'\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', text)
-    # Also handle malformed blocks where the opening characters might be missing
-    processed_text = re.sub(r'S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
-    return processed_text
-
-
-def strip_other_debug_content(text):
-    """
-    Strip all debug content EXCEPT STATE_UPDATES_PROPOSED blocks from text.
-    Used when debug mode is disabled to hide DM commentary and dice rolls.
-
-    Args:
-        text (str): The full AI response text
-
-    Returns:
-        str: The response with debug content (except state updates) removed
-    """
-    if not text:
-        return text
-
-    # Strip debug content but NOT STATE_UPDATES_PROPOSED (already handled separately)
-    processed_text = re.sub(r'\[DEBUG_START\][\s\S]*?\[DEBUG_END\]', '', text)
-    processed_text = re.sub(r'\[DEBUG_STATE_START\][\s\S]*?\[DEBUG_STATE_END\]', '', processed_text)
-    processed_text = re.sub(r'\[DEBUG_ROLL_START\][\s\S]*?\[DEBUG_ROLL_END\]', '', processed_text)
-
-    return processed_text
 
 
 def _handle_debug_mode_command(user_input, mode, current_game_state, user_id, campaign_id):
@@ -635,6 +546,32 @@ def parse_set_command(payload_str: str) -> dict:
     return proposed_changes
 
 def create_app():
+    """
+    Create and configure the Flask application.
+    
+    This function initializes the Flask application with all necessary configuration,
+    middleware, and route handlers. It sets up CORS, authentication, database connections,
+    and all API endpoints.
+    
+    Key Configuration:
+    - Static file serving from 'static' folder
+    - CORS enabled for all /api/* routes
+    - Testing mode configuration from environment
+    - Firebase Admin SDK initialization
+    - Authentication decorator for protected routes
+    
+    Routes Configured:
+    - GET /api/campaigns - List user's campaigns
+    - GET /api/campaigns/<id> - Get specific campaign
+    - POST /api/campaigns - Create new campaign
+    - PATCH /api/campaigns/<id> - Update campaign
+    - POST /api/campaigns/<id>/interaction - Handle user interactions
+    - GET /api/campaigns/<id>/export - Export campaign documents
+    - /* - Frontend SPA fallback
+    
+    Returns:
+        Flask: Configured Flask application instance
+    """
     app = Flask(__name__, static_folder='static')
     CORS(app, resources=CORS_RESOURCES)
 
@@ -726,6 +663,7 @@ def create_app():
                 generate_companions=generate_companions,
                 use_default_world=use_default_world
             )
+            
             
             campaign_id = firestore_service.create_campaign(
                 user_id, title, prompt, opening_story_response.narrative_text, initial_game_state, selected_prompts, use_default_world
@@ -822,6 +760,8 @@ def create_app():
             selected_prompts = campaign.get(KEY_SELECTED_PROMPTS, [])
             use_default_world = campaign.get('use_default_world', False)
             gemini_response_obj = gemini_service.continue_story(user_input, mode, story_context, current_game_state, selected_prompts, use_default_world)
+            
+            
 
             # 3a. Verify debug content generation for monitoring
             debug_tags_found = gemini_response_obj.debug_tags_present
@@ -858,7 +798,7 @@ def create_app():
                         logging_util.warning(f"  {i}. {discrepancy}")
 
             # Apply state changes and return response
-            return _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response_obj.narrative_text,
+            return _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response_obj,
                                                   gemini_response_obj.structured_response, mode, story_context, campaign_id, user_id)
 
         except Exception as e:
@@ -941,7 +881,6 @@ def create_app():
             traceback.print_exc()
             return jsonify({KEY_ERROR: 'An unexpected error occurred during export.', KEY_DETAILS: str(e)}), 500
 
-
     # --- Frontend Serving ---
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
@@ -960,34 +899,34 @@ def run_god_command(campaign_id, user_id, action, command_string=None):
         firebase_admin.initialize_app()
 
     if action == 'ask':
-        print(f"Fetching current state for campaign: {campaign_id}")
+        logging_util.info(f"Fetching current state for campaign: {campaign_id}")
         current_game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
         if not current_game_state:
-            print("No game state found for this campaign.")
+            logging_util.info("No game state found for this campaign.")
             return
 
         # Pretty-print the JSON to the console
         state_json = json.dumps(current_game_state.to_dict(), indent=2, default=json_default_serializer)
-        print(state_json)
+        logging_util.info(f"Current game state:\n{state_json}")
         return
 
     elif action == 'set':
         if not command_string:
-            print("Error: The 'set' action requires a --command_string.")
+            logging_util.error("The 'set' action requires a --command_string.")
             return
 
         if not command_string.strip().startswith("GOD_MODE_SET:"):
-            print("Error: Command string must start with GOD_MODE_SET:")
+            logging_util.error("Command string must start with GOD_MODE_SET:")
             return
 
         payload_str = command_string.strip()[len("GOD_MODE_SET:"):].strip()
         proposed_changes = parse_set_command(payload_str)
 
         if not proposed_changes:
-            print("Command contained no valid changes.")
+            logging_util.warning("Command contained no valid changes.")
             return
 
-        print(f"Applying changes to campaign: {campaign_id}")
+        logging_util.info(f"Applying changes to campaign: {campaign_id}")
 
         current_game_state_doc = firestore_service.get_campaign_game_state(user_id, campaign_id)
         current_state_dict = current_game_state_doc.to_dict() if current_game_state_doc else GameState().to_dict()
@@ -997,10 +936,10 @@ def run_god_command(campaign_id, user_id, action, command_string=None):
         firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
 
         log_message = format_state_changes(proposed_changes, for_html=False)
-        print(f"Update successful:\\n{log_message}")
+        logging_util.info(f"Update successful:\n{log_message}")
 
     else:
-        print(f"Error: Unknown god-command action '{action}'. Use 'set' or 'ask'.")
+        logging_util.error(f"Unknown god-command action '{action}'. Use 'set' or 'ask'.")
 
 
 def run_test_command(command):
@@ -1014,54 +953,54 @@ def run_test_command(command):
         # Run browser tests with mock APIs
         test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_ui', 'run_all_browser_tests.py')
         if os.path.exists(test_runner):
-            print("🌐 Running WorldArchitect.AI Browser Tests (Mock APIs)...")
-            print("   Using real browser automation with mocked backend")
+            logging_util.info("🌐 Running WorldArchitect.AI Browser Tests (Mock APIs)...")
+            logging_util.info("   Using real browser automation with mocked backend")
             result = subprocess.run([sys.executable, test_runner])
             sys.exit(result.returncode)
         else:
-            print(f"❌ Test runner not found: {test_runner}")
+            logging_util.error(f"Test runner not found: {test_runner}")
             sys.exit(1)
 
     elif command == 'testuif':
         # Run browser tests with REAL APIs
         test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_ui', 'run_all_browser_tests.py')
         if os.path.exists(test_runner):
-            print("🌐 Running WorldArchitect.AI Browser Tests (REAL APIs)...")
-            print("⚠️  WARNING: These tests use REAL APIs and cost money!")
+            logging_util.info("🌐 Running WorldArchitect.AI Browser Tests (REAL APIs)...")
+            logging_util.warning("⚠️  WARNING: These tests use REAL APIs and cost money!")
             env = os.environ.copy()
             env['REAL_APIS'] = 'true'
             result = subprocess.run([sys.executable, test_runner], env=env)
             sys.exit(result.returncode)
         else:
-            print(f"❌ Test runner not found: {test_runner}")
+            logging_util.error(f"Test runner not found: {test_runner}")
             sys.exit(1)
 
     elif command == 'testhttp':
         # Run HTTP tests with mock APIs
         test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_http', 'run_all_http_tests.py')
         if os.path.exists(test_runner):
-            print("🔗 Running WorldArchitect.AI HTTP Tests (Mock APIs)...")
-            print("   Using direct HTTP requests with mocked backend")
+            logging_util.info("🔗 Running WorldArchitect.AI HTTP Tests (Mock APIs)...")
+            logging_util.info("   Using direct HTTP requests with mocked backend")
             result = subprocess.run([sys.executable, test_runner])
             sys.exit(result.returncode)
         else:
-            print(f"❌ Test runner not found: {test_runner}")
+            logging_util.error(f"Test runner not found: {test_runner}")
             sys.exit(1)
 
     elif command == 'testhttpf':
         # Run HTTP tests with REAL APIs
         test_runner = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'testing_http', 'testing_full', 'run_all_full_tests.py')
         if os.path.exists(test_runner):
-            print("🔗 Running WorldArchitect.AI HTTP Tests (REAL APIs)...")
-            print("⚠️  WARNING: These tests use REAL APIs and cost money!")
+            logging_util.info("🔗 Running WorldArchitect.AI HTTP Tests (REAL APIs)...")
+            logging_util.warning("⚠️  WARNING: These tests use REAL APIs and cost money!")
             result = subprocess.run([sys.executable, test_runner])
             sys.exit(result.returncode)
         else:
-            print(f"❌ Full API test runner not found: {test_runner}")
+            logging_util.error(f"Full API test runner not found: {test_runner}")
             sys.exit(1)
 
     else:
-        print(f"❌ Unknown test command: {command}")
+        logging_util.error(f"Unknown test command: {command}")
         sys.exit(1)
 
 
@@ -1106,7 +1045,7 @@ if __name__ == "__main__":
         if args.command == 'serve':
             app = create_app()
             port = int(os.environ.get('PORT', 8080))
-            print(f"Development server running: http://localhost:{port}")
+            logging_util.info(f"Development server running: http://localhost:{port}")
             app.run(host='0.0.0.0', port=port, debug=True)
         elif args.command == 'testui':
             run_test_command('testui')

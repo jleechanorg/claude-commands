@@ -30,11 +30,10 @@ def demonstrate_red_phase():
     mock_structured_response = MagicMock()
     raw_response = '{"narrative": "Your adventure begins..."}'
     
-    gemini_response = GeminiResponse.create(
-        narrative_text=narrative_text,
-        structured_response=mock_structured_response,
-        raw_response=raw_response
-    )
+    # Create a raw JSON response
+    raw_json_response = '{"narrative": "Your adventure begins in a bustling tavern...", "entities_mentioned": [], "location_confirmed": "Tavern", "state_updates": {}, "debug_info": {}}'
+    
+    gemini_response = GeminiResponse.create(raw_json_response)
     
     print(f"✅ get_initial_story() returns: {type(gemini_response).__name__}")
     print(f"✅ GeminiResponse.narrative_text: '{gemini_response.narrative_text[:50]}...'")
@@ -67,11 +66,10 @@ def demonstrate_green_phase():
     mock_structured_response = MagicMock()
     raw_response = '{"narrative": "Your adventure begins..."}'
     
-    gemini_response = GeminiResponse.create(
-        narrative_text=narrative_text,
-        structured_response=mock_structured_response,
-        raw_response=raw_response
-    )
+    # Create a raw JSON response
+    raw_json_response = '{"narrative": "Your adventure begins in a bustling tavern...", "entities_mentioned": [], "location_confirmed": "Tavern", "state_updates": {}, "debug_info": {}}'
+    
+    gemini_response = GeminiResponse.create(raw_json_response)
     
     print(f"✅ get_initial_story() returns: {type(gemini_response).__name__}")
     print()

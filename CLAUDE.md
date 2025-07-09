@@ -32,6 +32,21 @@
    - ❌ NEVER pretend to run separate agents or workers when you can't
    - ❌ NEVER simulate what "would happen" - test it or admit you can't
 
+🚨 **ANTI-HALLUCINATION MEASURES**: Extract evidence before making claims
+   - ✅ ALWAYS extract direct quotes/code/errors before analysis
+   - ✅ State "I don't have enough information" when uncertain
+   - ✅ Base all conclusions on extracted evidence, not assumptions
+   - ❌ NEVER fabricate information, statistics, or outputs
+   - ❌ NEVER guess at error messages or code behavior
+   - ⚠️ If uncertain about any aspect, explicitly acknowledge it
+
+🚨 **UNCERTAINTY ACKNOWLEDGMENT**: You are explicitly permitted to:
+   - ✅ Say "I don't know" when information is uncertain
+   - ✅ Admit limitations in your knowledge or access
+   - ✅ Request clarification when instructions are ambiguous
+   - ✅ Decline tasks outside your capabilities
+   - ✅ Ask for help rather than attempting impossible tasks
+
 🚨 **NO EXCUSES FOR TEST FAILURES**: When asked to fix tests, FIX THEM ALL
    - ❌ NEVER say "pre-existing issues" or "unrelated to our changes"
    - ❌ NEVER settle for partial fixes (97/99 is NOT acceptable)
@@ -39,17 +54,73 @@
    - ✅ ALWAYS fix ALL failing tests to 100% pass rate
    - ✅ ALWAYS take ownership of test failures, especially in new code
 
+
+🚨 **EVIDENCE-BASED APPROACH**: Core principles for all analysis
+   - ✅ Extract exact error messages/code snippets before analyzing
+   - ✅ Show actual output before suggesting fixes
+   - ✅ Reference specific line numbers when debugging
+   - 🔍 All claims must trace to specific evidence
+
+🚨 **QUICK QUALITY CHECK** (⚡): For debugging/complex tasks, verify:
+   - 🔍 Evidence shown? (errors, code, output)
+   - ✓ Claims match evidence?
+   - ⚠️ Uncertainties marked?
+   - ➡️ Next steps clear?
+
+## Self-Learning Protocol
+
+🚨 **MANDATORY**: Continuously learn from corrections and self-realizations:
+
+### Automatic Learning Triggers
+1. **User corrections** - When user corrects a mistake, immediately document it
+2. **Self-corrections** - When you realize "Oh, I should have...", document it
+3. **Failed attempts** - When something doesn't work, learn why
+4. **Pattern recognition** - When you repeat a mistake, create a rule
+
+### Learning Process
+1. **Detect** - Recognize correction/mistake (yours or user's)
+2. **Analyze** - Understand what went wrong and why
+3. **Document** - Update appropriate file:
+   - **CLAUDE.md** - Critical rules with 🚨 marker
+   - **.claude/learnings.md** - Detailed categorized learnings
+   - **.cursor/rules/lessons.mdc** - Technical lessons
+4. **Apply** - Use the learning immediately in current session
+
+### /learn Command
+- **Usage**: `/learn [optional: specific learning]`
+- **Purpose**: Explicitly capture learnings or review recent corrections
+- **Example**: `/learn playwright is installed in venv`
+
+### Self-Correction Indicators
+When you say these, ALWAYS document the learning:
+- "Let me correct that..." / "Let me fix that..."
+- "Oh, I should have..." / "Actually, I need to..."
+- "My mistake..." / "I was wrong about..."
+- "I see the issue..." / "The problem is..."
+
+### Error Recovery Protocol
+When mistakes occur:
+1. **Immediately acknowledge** the error without excuses
+2. **Explain what went wrong** with specific details
+3. **Provide corrected information** based on evidence
+4. **Document the learning** via /learn or file updates
+5. **Implement additional verification** to prevent recurrence
+
+**Learning Categories** → `.claude/learnings.md`
+
 ## Claude Code Specific Behavior
 
 1. **Directory Context**: Operates in worktree directory shown in environment
 2. **Tool Usage**: File ops, bash commands, web tools available
-3. **Test Execution**: Use `vpython` with `TESTING=true`
+3. **Test Execution**: Use `source venv/bin/activate && python` with `TESTING=true` (NOT vpython)
 4. **File Paths**: Always absolute paths
 5. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
-7. 🚨 **BRANCH DISCIPLINE**: ❌ NEVER switch git branches unless user explicitly requests it | Work on current branch only | Ask before any `git checkout` operations
-8. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
-9. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
+7. 🚨 **DATE INTERPRETATION**: Environment date format is YYYY-MM-DD where MM is the month number (01=Jan, 07=July)
+8. 🚨 **BRANCH DISCIPLINE**: ❌ NEVER switch git branches unless user explicitly requests it | Work on current branch only | Ask before any `git checkout` operations
+9. 🚨 **DEV BRANCH PROTECTION**: ❌ NEVER make changes in dev[timestamp] branches | These are protective branches only | Always create descriptive branches for actual work
+10. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
+11. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
    - **OPEN** = Work In Progress (WIP) - NOT completed
    - **MERGED** = Completed and integrated into main branch  
    - **CLOSED** = Abandoned or rejected - NOT completed
@@ -67,12 +138,27 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 - Quick reference → `.cursor/rules/quick_reference.md`
 - Progress tracking → `roadmap/templates/progress_tracking_template.md`
 - Directory structure → `/directory_structure.md`
+- **AI Assistant Guide**: → `mvp_site/README_FOR_AI.md` (CRITICAL system architecture for AI assistants)
+- **📋 MVP Site Architecture**: → `mvp_site/README.md` (comprehensive codebase overview)
+- **📋 Code Review & File Responsibilities**: → `mvp_site/CODE_REVIEW_SUMMARY.md` (detailed file-by-file analysis)
 
 ## Core Principles & Interaction
 
 **Work Approach**:
 Clarify before acting | User instructions = law | ❌ delete without permission | Leave working code alone |
 Focus on primary goal | Propose before implementing | Summarize key takeaways | Externalize all knowledge
+
+**Branch Status Protocol**:
+🚨 **MANDATORY**: Always include current git branch in every response
+- ✅ Format: `[Branch: branch-name]` at start or end of response
+- ✅ Use `git branch --show-current` to get current branch
+- ✅ Essential for context awareness and avoiding branch confusion
+
+**Response Modes**: 
+- Default: Structured analysis with <thinking>, <analysis>, <response> format for complex tasks
+- For simple queries: Direct concise answers
+- Override to concise: "be brief", "short answer", "concise mode"
+- Re-evaluate: Week of July 15, 2025
 
 **Rule Management**:
 "Add to rules" → CLAUDE.md | Technical lessons → lessons.mdc | General = rules | Specific = lessons
@@ -133,6 +219,19 @@ Use docstrings, proper JS loading
 ❌ Global `document.addEventListener('click')` without approval | Test workflows after modifications |
 Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Analysis + execution required
 
+### File Placement Rules (🚨 HARD RULE)
+🚨 **NEVER add new files directly to mvp_site/** without explicit user permission
+- ❌ NEVER create test files, documentation, or scripts directly in mvp_site/
+- ✅ If unsure, add content to roadmap/scratchpad_[branch].md instead
+- ✅ Ask user where to place new files before creating them
+- **Exception**: Only when user explicitly requests file creation in mvp_site/
+
+🚨 **MANDATORY: Review codebase documentation before mvp_site/ changes**:
+- ✅ ALWAYS check `mvp_site/README.md` for architecture understanding
+- ✅ ALWAYS check `mvp_site/CODE_REVIEW_SUMMARY.md` for file responsibilities
+- ✅ Understand component responsibilities before modifying existing files
+- ✅ Consider impact on related components when making changes
+
 ### Browser vs HTTP Testing (🚨 HARD RULE)
 **CRITICAL DISTINCTION**: Never confuse browser automation with HTTP simulation
 - 🚨 **testing_ui/**: ONLY real browser automation using Playwright | ❌ NEVER use `requests` library here
@@ -152,7 +251,37 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
   - ✅ If browser tests can't run, say "Cannot take screenshots - Playwright not installed"
 
 ### Browser Test Execution Protocol (🚨 MANDATORY STEPS)
-When asked to run browser tests, follow these steps IN ORDER:
+
+🚨 **CRITICAL**: Playwright IS installed in venv! Stop assuming it isn't!
+- ✅ Playwright works perfectly when venv is activated
+- ❌ NEVER say "Playwright isn't installed"
+- ❌ NEVER create simulated tests as a workaround
+
+#### Preferred Method - Using run_ui_tests.sh
+**ALWAYS use the test runner script when available:**
+```bash
+# Run all UI tests with mock APIs (recommended for testing)
+./run_ui_tests.sh mock
+
+# Run all UI tests with real APIs (costs money!)
+./run_ui_tests.sh
+
+# Run specific test file
+TESTING=true vpython testing_ui/test_specific_file.py
+```
+
+**The run_ui_tests.sh script handles:**
+- ✅ Virtual environment activation
+- ✅ Playwright installation verification
+- ✅ Browser dependency checks
+- ✅ Test server startup with proper ports
+- ✅ Parallel test execution
+- ✅ Proper cleanup on exit
+- ✅ Screenshot directory setup
+- ✅ Comprehensive result reporting
+
+#### Manual Method (if script unavailable)
+When asked to run browser tests manually, follow these steps IN ORDER:
 
 1. **Check Playwright Installation**
    ```bash
@@ -198,7 +327,7 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 
 2. **Start Test Server (if needed)**
    ```bash
-   TESTING=true PORT=8086 vpython mvp_site/main.py serve &
+   TESTING=true PORT=8086 python mvp_site/main.py serve &
    sleep 3
    curl -s http://localhost:8086 || echo "Note: Using different port or external server"
    ```
@@ -206,7 +335,7 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 
 3. **Run HTTP Test**
    ```bash
-   TESTING=true vpython testing_http/test_name.py
+   TESTING=true python testing_http/test_name.py
    ```
    - ✅ Report actual HTTP responses/errors
    - ❌ NEVER pretend requests succeeded
@@ -232,12 +361,13 @@ When asked to run HTTP tests, follow these steps IN ORDER:
    - `./run_tests.sh --coverage` - Use existing test runner with coverage
 
 ### Current Coverage Baseline (January 2025)
-**Last Accurate Measurement**: 59% overall coverage (16,023 statements, 6,542 missing)
-- `main.py`: 85% (after Phase 8 completion)
-- `firestore_service.py`: 80% (after Phase 7 completion)
-- `gemini_service.py`: 85% (after Phase 6 completion)
-- `game_state.py`: 91% (excellent coverage)
-- **Utility modules**: 8-33% (critical gaps - Phase 9 target)
+**Last Accurate Measurement**: 67% overall coverage (21,031 statements, 6,975 missing)
+- `main.py`: 74% (550 statements, 144 missing)
+- `firestore_service.py`: 64% (254 statements, 91 missing)
+- `gemini_service.py`: 70% (594 statements, 178 missing)
+- `game_state.py`: 90% (169 statements, 17 missing - excellent!)
+- **Integration tests**: 0% (not run by default - use --integration flag)
+- **Mock services**: 32-36% (expected for mock objects)
 
 ## Git Workflow
 
@@ -260,6 +390,30 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 2. **Verify PR context**: When user says "push to the PR" without number, ask which PR
 3. **Use existing branches**: Check if work should go to existing PR before creating new
 4. **Never assume**: If ambiguous, ask for clarification rather than creating duplicate work
+
+🚨 **Auto-Conflict Resolution**: ⚠️ AUTOMATIC conflict resolution available:
+1. **GitHub Actions**: Automatically runs on PR creation/push and resolves common conflicts
+2. **Manual script**: Use `./resolve_conflicts.sh` to resolve conflicts for current PR
+3. **Smart resolution**: Preserves learning content, handles common patterns in learnings.md and CLAUDE.md
+4. **Fallback**: If auto-resolution fails, manual intervention required
+
+🚨 **BRANCH PROTECTION PROTOCOL**: ⚠️ MANDATORY branch usage rules:
+1. **dev[timestamp] branches**: ❌ NEVER make changes directly in these branches
+   - These are protective branches to prevent accidental main pushes
+   - Used ONLY for initial isolation from main branch
+   - If found on one, immediately create new descriptive branch for actual work
+   - Clean up by deleting after switching to proper branch
+
+2. **Branch Creation Rules**:
+   - ✅ ALWAYS create descriptive branches: `feature/task-description`, `fix/issue-name`, `update/component-name`
+   - ✅ Use existing feature branches when continuing related work
+   - ❌ NEVER use dev[timestamp] branches for actual development
+   - ❌ NEVER make commits directly in dev[timestamp] branches
+
+3. **Branch Cleanup Protocol**:
+   - When leaving a dev[timestamp] branch: delete it immediately
+   - Use `git branch -D dev[timestamp]` to clean up
+   - Only keep meaningful, descriptive branches
 
 **Commit Format**: → `.cursor/rules/examples.md`
 
@@ -331,6 +485,60 @@ When debugging display/output issues:
    - Frontend often adds labels/prefixes for display
    - "Scene #", "Turn:", "Player:" etc. are usually UI additions
    - Raw data rarely contains display formatting
+5. **Document Analysis Protocol**:
+   - ✅ Extract exact error messages/code snippets FIRST
+   - ✅ Analyze ONLY based on extracted evidence
+   - ✅ Cite specific line numbers and file paths
+   - ✅ Each debugging claim must reference actual output
+   - ✅ Base all debugging claims on actual behavior, not theory
+   - ❌ NEVER skip the extraction step
+   - ❌ NEVER analyze what you haven't seen
+   - ❌ NEVER suggest fixes without understanding the actual error
+
+### Evidence Classification
+When presenting information, classify sources:
+1. **Primary** (🔍): Actual code/errors/output - "The error shows: `TypeError at line 45`"
+2. **Secondary** (📚): Docs/comments - "According to Flask docs..."
+3. **General** (💡): Patterns/practices - "This typically indicates..."
+4. **Speculation** (❓): Theories - "This might be caused by..."
+
+### Debugging Validation Checklist
+For all debugging sessions:
+- [ ] Error messages extracted verbatim with context
+- [ ] Relevant code shown with file:line references
+- [ ] Root cause identified based on evidence (not guessed)
+- [ ] Fix tested/verified or marked as "proposed"
+- [ ] Edge cases considered ("What if X is null?")
+- [ ] Rollback plan provided if fix might break things
+
+### Iterative Debugging Method
+When fixes aren't working:
+1. 🔍 **Minimal case** - Reproduce with simplest example
+2. 🔧 **Simple first** - Try easiest fix before complex ones
+3. ✅ **Verify broadly** - Test fix in multiple scenarios
+4. 🔄 **Refine** - Adjust based on edge cases
+5. 📝 **Document** - Record what worked and why
+
+### Reasoning Transparency
+When debugging/analyzing:
+- Show the "why": "This error typically appears when..."
+- Connect dots: "Since X shows Y, this indicates Z"
+- Mark assumptions: "Assuming standard Flask setup..."
+
+### Complex Problem Breakdown
+For multi-faceted issues:
+1. **Decompose**: Break into smaller sub-problems
+2. **Prioritize**: Address most likely/impactful first
+3. **Validate**: Test each assumption explicitly
+4. **Synthesize**: Combine findings into solution
+
+### Handling Information Conflicts
+When sources disagree:
+- 🔍 **Code wins**: Implementation trumps documentation
+- 📚 **Version check**: "Docs for v2.0, but code uses v1.5"
+- 🤝 **Show both**: "Docs say X, but code does Y"
+- ❓ **Flag uncertainty**: "Conflicting info about..."
+- 🔬 **Test to verify**: "Let me check which is correct"
 
 ### Critical Rules
 - **Data Corruption**: Treat as systemic | Search ALL similar patterns | "One bug = many bugs"
@@ -351,6 +559,18 @@ When debugging display/output issues:
 Use `/list` to display all available slash commands with descriptions.
 
 **Command Documentation**: → `.claude/commands/`
+
+🚨 **SLASH COMMAND ENFORCEMENT**: 
+- `/e` or `/execute` MUST follow exact protocol in `.claude/commands/execute.md`
+- NEVER treat `/e` as regular request - always use milestone protocol
+- MANDATORY steps: Context check → Subagent analysis → User approval → Milestone execution
+- ❌ NEVER skip protocol steps or treat as normal task execution
+
+**Chained Commands Support**:
+- `/e /think` - Execute with ultrathink mode enabled
+- `/e /think [task]` - Execute task with maximum thinking budget
+- Commands can be chained with space separation
+- First command determines primary mode, subsequent commands modify behavior
 
 **Command Examples**: → `.cursor/rules/examples.md`
 

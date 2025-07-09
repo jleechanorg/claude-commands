@@ -12,6 +12,13 @@ from json_utils import (
     extract_field_value
 )
 
+# Precompiled regex patterns for better performance
+ENTITIES_MENTIONED_PATTERN = re.compile(r'"entities_mentioned"\s*:\s*\[(.*?)\]', re.DOTALL)
+ENTITY_STRING_PATTERN = re.compile(r'"([^"]*)"')
+STATE_UPDATES_PATTERN = re.compile(r'"state_updates"\s*:\s*(\{.*?\})', re.DOTALL)
+DEBUG_INFO_PATTERN = re.compile(r'"debug_info"\s*:\s*(\{.*?\})', re.DOTALL)
+TEXT_CONTENT_PATTERN = re.compile(r':\s*"([^"]+)')
+
 
 class RobustJSONParser:
     """
@@ -53,7 +60,7 @@ class RobustJSONParser:
                     return result, True
         except json.JSONDecodeError:
             pass
-        except Exception as e:
+        except (ValueError, KeyError, TypeError) as e:
             logging_util.debug(f"JSON boundary fix failed: {e}")
             pass
         
@@ -65,7 +72,7 @@ class RobustJSONParser:
             return result, True
         except json.JSONDecodeError:
             pass
-        except Exception as e:
+        except (ValueError, KeyError, TypeError) as e:
             logging_util.debug(f"JSON completion failed: {e}")
             pass
         
@@ -75,7 +82,7 @@ class RobustJSONParser:
             if extracted:
                 logging_util.info("Successfully extracted fields from malformed JSON")
                 return extracted, True
-        except Exception as e:
+        except (ValueError, KeyError, TypeError, AttributeError) as e:
             logging_util.debug(f"Field extraction failed: {e}")
             pass
         
@@ -88,7 +95,7 @@ class RobustJSONParser:
                 return result, True
         except json.JSONDecodeError:
             pass
-        except Exception as e:
+        except (ValueError, KeyError, TypeError) as e:
             logging_util.debug(f"Aggressive fix failed: {e}")
             pass
         
@@ -117,16 +124,12 @@ class RobustJSONParser:
             result['narrative'] = narrative
         
         # Extract entities_mentioned array
-        entities_match = re.search(
-            r'"entities_mentioned"\s*:\s*\[(.*?)\]',
-            text,
-            re.DOTALL
-        )
+        entities_match = ENTITIES_MENTIONED_PATTERN.search(text)
         if entities_match:
             entities_str = entities_match.group(1)
             # Parse entity list
             entities = []
-            for match in re.finditer(r'"([^"]*)"', entities_str):
+            for match in ENTITY_STRING_PATTERN.finditer(entities_str):
                 entities.append(match.group(1))
             result['entities_mentioned'] = entities
         
@@ -134,6 +137,35 @@ class RobustJSONParser:
         location = extract_field_value(text, 'location_confirmed')
         if location is not None:
             result['location_confirmed'] = location
+        
+        # Extract god_mode_response field (critical for god mode commands)
+        god_mode_response = extract_field_value(text, 'god_mode_response')
+        if god_mode_response is not None:
+            result['god_mode_response'] = god_mode_response
+        
+        # Extract state_updates object (try to preserve state changes)
+        state_updates_match = STATE_UPDATES_PATTERN.search(text)
+        if state_updates_match:
+            try:
+                import json
+                state_updates_str = state_updates_match.group(1)
+                state_updates = json.loads(state_updates_str)
+                result['state_updates'] = state_updates
+            except json.JSONDecodeError:
+                # If the object is malformed, just set empty dict
+                result['state_updates'] = {}
+        
+        # Extract debug_info object (try to preserve debug information)
+        debug_info_match = DEBUG_INFO_PATTERN.search(text)
+        if debug_info_match:
+            try:
+                import json
+                debug_info_str = debug_info_match.group(1)
+                debug_info = json.loads(debug_info_str)
+                result['debug_info'] = debug_info
+            except json.JSONDecodeError:
+                # If the object is malformed, just set empty dict
+                result['debug_info'] = {}
         
         return result if result else None
     
@@ -144,7 +176,7 @@ class RobustJSONParser:
         if not extracted:
             # If we can't extract anything, try to at least get some text
             # Look for any substantial text content
-            text_match = re.search(r':\s*"([^"]+)', text)
+            text_match = TEXT_CONTENT_PATTERN.search(text)
             if text_match:
                 extracted = {'narrative': text_match.group(1)}
             else:

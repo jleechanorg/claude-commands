@@ -17,8 +17,14 @@ fi
 
 echo "🔄 Starting integration process..."
 
-# Check for unmerged changes on current branch
+# Stop test server for current branch if running
 current_branch=$(git branch --show-current)
+if [ "$current_branch" != "main" ]; then
+    echo "🛑 Stopping test server for branch '$current_branch'..."
+    ./test_server_manager.sh stop "$current_branch" 2>/dev/null || true
+fi
+
+# Check for unmerged changes on current branch
 should_delete_branch=false
 if [ "$current_branch" != "main" ]; then
     echo "⚠️  WARNING: You are on branch '$current_branch'"

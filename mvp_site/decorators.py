@@ -1,9 +1,28 @@
+"""
+Decorators Module
+
+This module provides utility decorators for common cross-cutting concerns in the application.
+Currently focuses on exception logging to provide consistent error handling across services.
+
+Key Features:
+- Exception logging with full context (function name, args, kwargs)
+- Stack trace preservation for debugging
+- Consistent error message formatting
+- Logger integration with emoji-enhanced logging
+
+Usage:
+    @log_exceptions
+    def my_function():
+        # Function logic here
+        pass
+"""
+
 import functools
 import logging_util
 import traceback
 
 # Get a logger instance for this module
-logger = logging_util.getLogger(__name__) # Assuming this was meant to be __name__ for module-level logger
+logger = logging_util.getLogger(__name__)
 
 def log_exceptions(func):
     """A decorator that wraps a function in a try-except block

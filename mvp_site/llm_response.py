@@ -24,7 +24,6 @@ class LLMResponse(ABC):
     
     # Core response content (required for all providers)
     narrative_text: str  # Clean narrative text for display
-    raw_response: str    # Original response before processing
     provider: str        # LLM provider name (e.g., "gemini", "openai", "claude")
     model: str          # Specific model used (e.g., "gemini-2.5-flash")
     
@@ -120,13 +119,14 @@ class GeminiLLMResponse(LLMResponse):
             # Check for non-empty debug content
             debug_tags['dm_notes'] = bool(debug_info.get('dm_notes'))
             debug_tags['dice_rolls'] = bool(debug_info.get('dice_rolls'))
-            debug_tags['state_changes'] = '[DEBUG_STATE_START]' in self.raw_response
+            # Check for state changes in the structured response
+            debug_tags['state_changes'] = bool(self.structured_response.state_updates)
         
         return debug_tags
     
     @classmethod
     def create(cls, narrative_text: str, structured_response: Optional[NarrativeResponse], 
-               raw_response: str, model: str = "gemini-2.5-flash") -> 'GeminiLLMResponse':
+               model: str = "gemini-2.5-flash") -> 'GeminiLLMResponse':
         """
         Create a GeminiLLMResponse with automatic debug tag detection.
         
@@ -134,7 +134,6 @@ class GeminiLLMResponse(LLMResponse):
         """
         return cls(
             narrative_text=narrative_text,
-            raw_response=raw_response,
             provider="gemini",
             model=model,
             structured_response=structured_response
@@ -170,7 +169,7 @@ class GeminiLLMResponse(LLMResponse):
 
 
 # Factory function for creating provider-specific responses
-def create_llm_response(provider: str, narrative_text: str, raw_response: str, 
+def create_llm_response(provider: str, narrative_text: str, 
                        model: str, structured_response: Optional[NarrativeResponse] = None,
                        **kwargs) -> LLMResponse:
     """
@@ -179,7 +178,6 @@ def create_llm_response(provider: str, narrative_text: str, raw_response: str,
     Args:
         provider: LLM provider name ("gemini", "openai", "claude", etc.)
         narrative_text: Clean narrative text for display
-        raw_response: Original response before processing
         model: Specific model used
         structured_response: Parsed structured response (if available)
         **kwargs: Additional provider-specific arguments
@@ -195,7 +193,6 @@ def create_llm_response(provider: str, narrative_text: str, raw_response: str,
     if provider == "gemini":
         return GeminiLLMResponse(
             narrative_text=narrative_text,
-            raw_response=raw_response,
             provider=provider,
             model=model,
             structured_response=structured_response,

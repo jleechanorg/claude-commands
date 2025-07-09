@@ -4,7 +4,7 @@
 
 **Action**: Display current context usage with detailed breakdown and optimization recommendations
 
-**Usage**: `/context` or `/est`
+**Usage**: `/context` or `/con`
 
 **Implementation**: 
 - Analyze current conversation context usage

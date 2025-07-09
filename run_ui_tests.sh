@@ -132,7 +132,7 @@ FAILED=0
 FAILED_TESTS=()
 PIDS=()
 TEST_RESULTS=()
-MAX_PARALLEL=3
+MAX_PARALLEL=1
 
 echo "🚀 Starting ${#BROWSER_TESTS[@]} tests with max $MAX_PARALLEL concurrent..."
 

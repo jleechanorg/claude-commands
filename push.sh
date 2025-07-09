@@ -31,3 +31,14 @@ echo "Pushing changes to GitHub..."
 git push
 
 echo "Push complete."
+
+# Start test server for current branch
+current_branch=$(git branch --show-current)
+if [ "$current_branch" != "main" ]; then
+    echo ""
+    echo "🚀 Starting test server for branch '$current_branch'..."
+    ./test_server_manager.sh start "$current_branch"
+else
+    echo ""
+    echo "ℹ️  Skipping test server startup for main branch"
+fi

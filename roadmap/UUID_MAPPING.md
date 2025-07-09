@@ -73,7 +73,20 @@
 - **TASK-013**: Derek feedback implementation
 
 ### Tech Optimization (TASK-072)
-- **TASK-072**: Evaluate CodeRabbit AI Code Review Tool (Scheduled: January 19, 2025)
+- **TASK-072**: Evaluate CodeRabbit AI Code Review Tool (Scheduled: July 19, 2025)
+
+### New Infrastructure & Optimization Tasks (TASK-146 to TASK-154)
+- **TASK-146**: Firebase Write/Read Verification
+- **TASK-147**: Browser Test Mock Mode Support
+- **TASK-148**: Game State Debug Tool
+- **TASK-149**: Browser Test Cron with Email
+- **TASK-150**: Rename vpython to vpython.sh
+- **TASK-151**: Claude Best Practices Integration
+- **TASK-152**: Single Source of Truth Analysis
+- **TASK-153**: Pydantic Version Upgrade
+- **TASK-154**: Campaign Tuning via God Mode
+- **TASK-155**: Evaluate Alignment Change Mechanic
+- **TASK-156**: Planning Block Choice Buttons (COMPLETED)
 
 ## Cross-Reference Notes
 
