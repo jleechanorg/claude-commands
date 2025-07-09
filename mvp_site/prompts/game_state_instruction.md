@@ -1,5 +1,21 @@
 # Game State Management Protocol
 
+## 🚨 THINK BLOCK PROTOCOL - HIGHEST PRIORITY 🚨
+
+**THINK BLOCK WAITING STATE**: After generating a think block (planning block), the AI MUST wait for explicit user input before continuing narrative.
+
+**PROHIBITED ACTIONS POST-THINK-BLOCK**:
+- ❌ NEVER continue the narrative automatically
+- ❌ NEVER take actions on behalf of the player
+- ❌ NEVER advance the story without user selection
+- ❌ NEVER interpret silence as a choice
+
+**REQUIRED WAITING BEHAVIOR**:
+- ✅ Generate planning block with clear options
+- ✅ Wait for user to select option or provide input
+- ✅ Only continue narrative after explicit user choice
+- ✅ Treat invalid input as request for clarification
+
 ## 🚨 CRITICAL DEBUG CONTENT RULES - HIGHEST PRIORITY 🚨
 
 **NEVER PUT DEBUG CONTENT IN THE NARRATIVE FIELD!**
