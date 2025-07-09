@@ -48,6 +48,12 @@ class TestStructuredFieldsIntegration(unittest.TestCase):
             }
         }
     
+    def tearDown(self):
+        """Clean up after each test"""
+        # Reset the app context
+        if hasattr(self, 'app_context'):
+            self.app_context.pop()
+    
     @patch('gemini_service.genai.Client')
     @patch('firestore_service.firestore')
     def test_structured_fields_full_flow(self, mock_firestore, mock_genai_client):
