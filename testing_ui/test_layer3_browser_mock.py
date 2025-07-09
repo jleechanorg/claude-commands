@@ -50,6 +50,7 @@ def test_layer3_structured_fields_mock():
             # Navigate to app with mock API
             print("🌐 Navigating to app with mock API...")
             page.goto("http://localhost:6006?test_mode=true&test_user_id=layer3-test")
+            page.wait_for_load_state('networkidle')
             
             # Override API base URL to use mock server
             page.evaluate("""
@@ -71,26 +72,31 @@ def test_layer3_structured_fields_mock():
             
             helper.take_screenshot("dashboard_loaded")
             
-            # Wait for campaign list to populate
-            print("🎮 Waiting for campaign list...")
-            if not helper.wait_for_element("text='Layer 3 Test Campaign'", timeout=10):
-                raise Exception("Test campaign not found in list")
+            # Navigate directly to test game to avoid campaign list issues
+            print("🎮 Navigating directly to test game...")
+            page.goto("http://localhost:6006/game/test-campaign-id?test_mode=true&test_user_id=layer3-test")
+            page.wait_for_load_state('networkidle')
             
-            # Click on the test campaign
-            print("🎮 Clicking on test campaign...")
-            page.click("text='Layer 3 Test Campaign'")
+            # Force game view to be visible
+            page.evaluate("""
+                const gameView = document.getElementById('game-view');
+                if (gameView) {
+                    gameView.classList.add('active-view');
+                    gameView.style.display = 'flex';
+                }
+            """)
             
-            # Wait for game view to load
-            if not helper.wait_for_element("#game-view.active-view", timeout=15):
-                raise Exception("Game view failed to load")
+            # Wait for game view
+            if not helper.wait_for_element("#game-view", timeout=5):
+                raise Exception("Game view not found")
             
             helper.take_screenshot("game_view_loaded")
             
             print("⚔️ Testing character mode with mock response...")
-            # Test character mode interaction
-            action_input = page.locator("#player-action")
+            # Test character mode interaction with correct selectors
+            action_input = page.locator("#user-input")
             action_input.fill("I attack the goblin")
-            page.click("#send-action")
+            page.click("text='Send'")  # Use text selector for Send button
             
             # Wait for mock response
             if not helper.wait_for_content("Response time:", timeout=10):

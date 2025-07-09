@@ -76,11 +76,14 @@ def test_layer3_schema_and_ui():
         try:
             # Navigate directly to campaign
             print(f"Navigating to campaign {campaign_id}...")
-            page.goto(f"{BASE_URL}/campaign/{campaign_id}?test_mode=true&test_user_id=test-layer3")
+            page.goto(f"{BASE_URL}/game/{campaign_id}?test_mode=true&test_user_id=test-layer3")
             page.wait_for_load_state('networkidle')
             
-            # Wait for story content
-            page.wait_for_selector('.story-entry, #story-content', timeout=10000)
+            # Wait for game view to be active
+            page.wait_for_selector('#game-view.active-view', timeout=15000)
+            
+            # Wait for story content area
+            page.wait_for_selector('#story-content', timeout=10000)
             time.sleep(2)
             
             # Take screenshot
