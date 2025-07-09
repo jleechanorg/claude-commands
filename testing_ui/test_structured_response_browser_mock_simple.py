@@ -40,7 +40,7 @@ def test_structured_response_display():
                 # Alternative: might already be in game view
                 
             # Enable debug mode if not already
-            debug_toggle = page.locator('#toggle-debug-mode')
+            debug_toggle = page.locator('#debug-toggle')
             if debug_toggle.count() > 0:
                 # Check if already checked
                 if not debug_toggle.is_checked():

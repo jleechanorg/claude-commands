@@ -280,7 +280,7 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
         
         // Add session header if present (always at the top)
         if (actor === 'gemini' && fullData && fullData.session_header) {
-            html += `<div class="session-header" style="background-color: #f0f0f0; padding: 10px; margin-bottom: 10px; font-family: monospace; white-space: pre-wrap; border-radius: 5px;">${fullData.session_header}</div>`;
+            html += `<div class="session-header">${fullData.session_header}</div>`;
         }
         
         // Process debug content - backend now handles stripping based on debug_mode
