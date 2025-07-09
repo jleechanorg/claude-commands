@@ -149,10 +149,13 @@ Clarify before acting | User instructions = law | ❌ delete without permission 
 Focus on primary goal | Propose before implementing | Summarize key takeaways | Externalize all knowledge
 
 **Branch Status Protocol**:
-🚨 **MANDATORY**: Always include current git branch in every response
-- ✅ Format: `[Branch: branch-name]` at start or end of response
-- ✅ Use `git branch --show-current` to get current branch
-- ✅ Essential for context awareness and avoiding branch confusion
+🚨 **MANDATORY**: Always include complete git status header in every response
+- ✅ Format: `[Local: branch-name | Remote: origin/branch-name | PR: #123 https://github.com/jleechan2015/worldarchitect.ai/pull/123]`
+- ✅ Use `git branch --show-current` for local branch
+- ✅ Use `git rev-parse --abbrev-ref @{upstream}` for remote branch (if exists)
+- ✅ Use `gh pr view --json number,url` to get PR info (if exists)
+- ✅ If no PR exists, show `PR: none`
+- ✅ Essential for complete context awareness and avoiding branch confusion
 
 **Response Modes**: 
 - Default: Structured analysis with <thinking>, <analysis>, <response> format for complex tasks
