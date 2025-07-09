@@ -194,6 +194,11 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 ### Browser Test Execution Protocol (🚨 MANDATORY STEPS)
 
+🚨 **CRITICAL**: Playwright IS installed in venv! Stop assuming it isn't!
+- ✅ Playwright works perfectly when venv is activated
+- ❌ NEVER say "Playwright isn't installed"
+- ❌ NEVER create simulated tests as a workaround
+
 #### Preferred Method - Using run_ui_tests.sh
 **ALWAYS use the test runner script when available:**
 ```bash
@@ -264,7 +269,7 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 
 2. **Start Test Server (if needed)**
    ```bash
-   TESTING=true PORT=8086 vpython mvp_site/main.py serve &
+   TESTING=true PORT=8086 python mvp_site/main.py serve &
    sleep 3
    curl -s http://localhost:8086 || echo "Note: Using different port or external server"
    ```
@@ -272,7 +277,7 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 
 3. **Run HTTP Test**
    ```bash
-   TESTING=true vpython testing_http/test_name.py
+   TESTING=true python testing_http/test_name.py
    ```
    - ✅ Report actual HTTP responses/errors
    - ❌ NEVER pretend requests succeeded
@@ -298,12 +303,13 @@ When asked to run HTTP tests, follow these steps IN ORDER:
    - `./run_tests.sh --coverage` - Use existing test runner with coverage
 
 ### Current Coverage Baseline (January 2025)
-**Last Accurate Measurement**: 59% overall coverage (16,023 statements, 6,542 missing)
-- `main.py`: 85% (after Phase 8 completion)
-- `firestore_service.py`: 80% (after Phase 7 completion)
-- `gemini_service.py`: 85% (after Phase 6 completion)
-- `game_state.py`: 91% (excellent coverage)
-- **Utility modules**: 8-33% (critical gaps - Phase 9 target)
+**Last Accurate Measurement**: 67% overall coverage (21,031 statements, 6,975 missing)
+- `main.py`: 74% (550 statements, 144 missing)
+- `firestore_service.py`: 64% (254 statements, 91 missing)
+- `gemini_service.py`: 70% (594 statements, 178 missing)
+- `game_state.py`: 90% (169 statements, 17 missing - excellent!)
+- **Integration tests**: 0% (not run by default - use --integration flag)
+- **Mock services**: 32-36% (expected for mock objects)
 
 ## Git Workflow
 
