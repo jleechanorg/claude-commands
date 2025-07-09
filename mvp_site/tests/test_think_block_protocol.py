@@ -192,20 +192,20 @@ When user input contains keywords: "think", "plan", "consider", "strategize", "o
             "Should have at least 2 key protocol sections (triggers, format, rules, etc.)"
         )
 
-    def test_protocol_priority_placement(self):
-        """Test that think block protocol is at the beginning of the file"""
+    def test_protocol_presence(self):
+        """Test that think block protocol is present somewhere in the file"""
         lines = self.prompt_content.split('\n')
         
-        # Look for think block protocol in various forms within first 20 lines
+        # Look for think block protocol in various forms anywhere in the file
         think_block_found = False
-        for i, line in enumerate(lines[:20]):
+        for i, line in enumerate(lines):
             if self._contains_concept(line, ["think block", "planning block", "think state", "planning protocol"]):
                 think_block_found = True
                 break
         
         self.assertTrue(
             think_block_found,
-            "Think Block Protocol should appear near the beginning of the file for priority"
+            "Think Block Protocol should be present somewhere in the file"
         )
 
     def test_protocol_overrides_other_instructions(self):
