@@ -1,0 +1,139 @@
+# Advanced Claude Code Action Configuration Example
+# Copy this to claude-code.yml and modify as needed
+
+name: Claude Code Assistant (Advanced)
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened]
+  pull_request:
+    types: [opened]
+  # Auto-review new PRs
+  pull_request_target:
+    types: [opened, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  actions: read
+  checks: read  # For CI status checks
+
+jobs:
+  claude-code:
+    runs-on: ubuntu-latest
+    name: Claude Code Action
+    
+    # Only run for allowed users (optional security measure)
+    if: |
+      github.event_name != 'issue_comment' || 
+      contains(fromJSON('["jleechan2015", "trusted-user-2", "trusted-user-3"]'), github.event.comment.user.login)
+    
+    steps:
+      - name: Claude Code Action
+        uses: anthropics/claude-code-action@beta
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          
+          # Core Configuration
+          trigger_phrase: "@claude"
+          max_turns: 5  # Allow more conversation turns
+          timeout_minutes: 45  # Longer timeout for complex tasks
+          base_branch: main
+          
+          # File restrictions (optional)
+          # Only allow Claude to modify certain files
+          allowed_file_patterns: |
+            mvp_site/**/*.py
+            mvp_site/**/*.js
+            mvp_site/**/*.html
+            testing_*/**/*.py
+            *.md
+            
+          # Prevent modifications to sensitive files
+          disallowed_file_patterns: |
+            .github/workflows/**
+            **/secrets/**
+            **/credentials/**
+            .env*
+            
+          # Custom commands (optional)
+          # Define shortcuts for common tasks
+          command_aliases: |
+            test: TESTING=true vpython mvp_site/run_tests.py
+            lint: ./run_lint.sh
+            format: black mvp_site/
+            coverage: ./coverage.sh
+          
+          # Auto-review configuration
+          auto_review_prs: true
+          auto_review_prompt: |
+            Review this PR for:
+            1. Code quality and style consistency
+            2. Potential bugs or security issues
+            3. Test coverage
+            4. Adherence to CLAUDE.md guidelines
+            
+          # Enhanced system prompt
+          system_prompt: |
+            You are Claude, an AI assistant for WorldArchitect.AI development.
+            
+            Project Overview:
+            - AI-powered tabletop RPG platform (D&D 5e)
+            - Stack: Python 3.11, Flask, Gunicorn, Gemini API, Firebase Firestore
+            - Frontend: Vanilla JS with Bootstrap
+            - Deployment: Docker on Google Cloud Run
+            
+            Key Guidelines:
+            - ALWAYS follow rules in CLAUDE.md
+            - Use 'TESTING=true vpython' for all tests
+            - Import logging_util, never standard logging
+            - Run tests before marking tasks complete
+            - Main directories: mvp_site/, testing_http/, testing_ui/
+            
+            Common Commands:
+            - Run tests: TESTING=true vpython mvp_site/run_tests.py
+            - Run specific test: TESTING=true vpython mvp_site/tests/test_game_state.py
+            - Check coverage: ./coverage.sh
+            - Deploy: ./deploy.sh (only if requested)
+            
+            When fixing tests:
+            - Fix ALL failing tests, not just some
+            - Never blame "pre-existing issues"
+            - Aim for 100% pass rate
+            
+          # CI Integration
+          wait_for_ci: true  # Wait for CI checks before making changes
+          respect_ci_failures: true  # Don't push if CI is failing
+          
+          # Metrics and logging
+          log_usage: true
+          metrics_webhook: ${{ secrets.METRICS_WEBHOOK_URL }}  # Optional
+          
+  # Optional: Post-action summary
+  summarize:
+    needs: claude-code
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Post Summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const summary = `Claude Code Action completed. [View logs](${runUrl})`;
+            
+            // Only post if we're in a PR context
+            if (context.issue.number) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: summary
+              });
+            }

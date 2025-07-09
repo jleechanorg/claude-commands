@@ -78,6 +78,7 @@ class TestDebugLogging(unittest.TestCase):
         mock_gemini_response.debug_tags_present = {'dm_notes': True, 'dice_rolls': True, 'state_changes': True}
         mock_gemini_response.state_updates = {}
         mock_gemini_response.structured_response = None
+        mock_gemini_response.get_narrative_text = MagicMock(return_value=ai_response)
         
         with patch('gemini_service.continue_story', return_value=mock_gemini_response):
             with self.assertLogs(level='INFO') as log:
@@ -112,6 +113,7 @@ class TestDebugLogging(unittest.TestCase):
         mock_gemini_response.debug_tags_present = {'dm_notes': False, 'dice_rolls': False, 'state_changes': False}
         mock_gemini_response.state_updates = {}
         mock_gemini_response.structured_response = None
+        mock_gemini_response.get_narrative_text = MagicMock(return_value=ai_response)
         
         with patch('gemini_service.continue_story', return_value=mock_gemini_response):
             with self.assertLogs(level='WARNING') as log:
@@ -150,6 +152,7 @@ class TestDebugLogging(unittest.TestCase):
         mock_gemini_response.debug_tags_present = {'dm_notes': False, 'dice_rolls': True, 'state_changes': False}
         mock_gemini_response.state_updates = {}
         mock_gemini_response.structured_response = None
+        mock_gemini_response.get_narrative_text = MagicMock(return_value=ai_response)
         
         with patch('gemini_service.continue_story', return_value=mock_gemini_response):
             with self.assertLogs(level='INFO') as log:

@@ -53,7 +53,7 @@ class TestLukeCampaignGodModeJsonBug(unittest.TestCase):
         self.assertIn("Luke Skywalker", structured_response.entities_mentioned)
         
         # Test 4: Create GeminiResponse object as it would be in the real system
-        gemini_response = GeminiResponse.create(narrative_text, structured_response, luke_campaign_raw_response)
+        gemini_response = GeminiResponse.create(luke_campaign_raw_response)
         
         # Test 5: GeminiResponse.narrative_text should be clean (no JSON)
         self.assertNotIn('"god_mode_response":', gemini_response.narrative_text)
@@ -116,11 +116,8 @@ class TestLukeCampaignGodModeJsonBug(unittest.TestCase):
     "debug_info": {"dm_notes": ["God mode test"]}
 }'''
         
-        # Step 1: Parse structured response (this is what happens in gemini_service.py)
-        narrative_text, structured_response = parse_structured_response(raw_ai_response)
-        
-        # Step 2: Create GeminiResponse (this is what happens in gemini_service.py)
-        gemini_response = GeminiResponse.create(narrative_text, structured_response, raw_ai_response)
+        # Create GeminiResponse using new API (this is what happens in gemini_service.py)
+        gemini_response = GeminiResponse.create(raw_ai_response)
         
         # Step 3: Check that narrative_text is clean (this is what gets displayed)
         self.assertEqual(gemini_response.narrative_text, "The force is strong with this one.")

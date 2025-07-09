@@ -67,6 +67,7 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 - Quick reference → `.cursor/rules/quick_reference.md`
 - Progress tracking → `roadmap/templates/progress_tracking_template.md`
 - Directory structure → `/directory_structure.md`
+- **AI Assistant Guide**: → `mvp_site/README_FOR_AI.md` (CRITICAL system architecture for AI assistants)
 
 ## Core Principles & Interaction
 
@@ -133,6 +134,13 @@ Use docstrings, proper JS loading
 ❌ Global `document.addEventListener('click')` without approval | Test workflows after modifications |
 Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Analysis + execution required
 
+### File Placement Rules (🚨 HARD RULE)
+🚨 **NEVER add new files directly to mvp_site/** without explicit user permission
+- ❌ NEVER create test files, documentation, or scripts directly in mvp_site/
+- ✅ If unsure, add content to roadmap/scratchpad_[branch].md instead
+- ✅ Ask user where to place new files before creating them
+- **Exception**: Only when user explicitly requests file creation in mvp_site/
+
 ### Browser vs HTTP Testing (🚨 HARD RULE)
 **CRITICAL DISTINCTION**: Never confuse browser automation with HTTP simulation
 - 🚨 **testing_ui/**: ONLY real browser automation using Playwright | ❌ NEVER use `requests` library here
@@ -152,7 +160,32 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
   - ✅ If browser tests can't run, say "Cannot take screenshots - Playwright not installed"
 
 ### Browser Test Execution Protocol (🚨 MANDATORY STEPS)
-When asked to run browser tests, follow these steps IN ORDER:
+
+#### Preferred Method - Using run_ui_tests.sh
+**ALWAYS use the test runner script when available:**
+```bash
+# Run all UI tests with mock APIs (recommended for testing)
+./run_ui_tests.sh mock
+
+# Run all UI tests with real APIs (costs money!)
+./run_ui_tests.sh
+
+# Run specific test file
+TESTING=true vpython testing_ui/test_specific_file.py
+```
+
+**The run_ui_tests.sh script handles:**
+- ✅ Virtual environment activation
+- ✅ Playwright installation verification
+- ✅ Browser dependency checks
+- ✅ Test server startup with proper ports
+- ✅ Parallel test execution
+- ✅ Proper cleanup on exit
+- ✅ Screenshot directory setup
+- ✅ Comprehensive result reporting
+
+#### Manual Method (if script unavailable)
+When asked to run browser tests manually, follow these steps IN ORDER:
 
 1. **Check Playwright Installation**
    ```bash
@@ -353,7 +386,7 @@ Use `/list` to display all available slash commands with descriptions.
 **Command Documentation**: → `.claude/commands/`
 
 **Special Commands**:
-- `/think` - Maximum thinking budget | Append "ultrathink" to trigger Claude's highest computation level
+- `/think` - Maximum thinking budget with ultrathink mode enabled by default
 - `/execute` or `/e` - 🚨 **NOW WITH MANDATORY 5-MINUTE MILESTONES** - Execute tasks with automatic progress tracking, scratchpad updates every 5 minutes, and incremental PR pushes
 
 **Command Examples**: → `.cursor/rules/examples.md`

@@ -12,7 +12,34 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from gemini_service import PromptBuilder, _build_debug_instructions
-from main import StateHelper
+from gemini_response import GeminiResponse
+
+# Create StateHelper wrapper for test compatibility
+class StateHelper:
+    """Test wrapper for state helper functions."""
+    
+    @staticmethod
+    def strip_debug_content(text):
+        """Strip debug content from text."""
+        return GeminiResponse._strip_debug_content(text)
+    
+    @staticmethod
+    def strip_state_updates_only(text):
+        """Strip only state updates from text."""
+        return GeminiResponse._strip_state_updates_only(text)
+    
+    @staticmethod
+    def apply_automatic_combat_cleanup(state_dict, changes_dict):
+        """Delegate to main.apply_automatic_combat_cleanup."""
+        from main import apply_automatic_combat_cleanup
+        return apply_automatic_combat_cleanup(state_dict, changes_dict)
+    
+    @staticmethod
+    def cleanup_legacy_state(state_dict):
+        """Delegate to main._cleanup_legacy_state."""
+        from main import _cleanup_legacy_state
+        return _cleanup_legacy_state(state_dict)
+
 from firestore_service import MissionHandler
 
 

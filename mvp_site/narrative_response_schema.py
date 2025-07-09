@@ -155,6 +155,9 @@ def _combine_god_mode_and_narrative(god_mode_response: str, narrative: Optional[
 
 def parse_structured_response(response_text: str) -> tuple[str, NarrativeResponse]:
     """
+    Parse structured response and check for JSON bug issues.
+    """
+    """
     Parse structured JSON response from LLM
     
     Returns:
@@ -187,6 +190,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 json_content = content
                 logging_util.info("Extracted JSON from generic code block")
     
+    
     # Use the robust parser on the extracted content
     parsed_data, was_incomplete = parse_llm_json_response(json_content)
     
@@ -196,6 +200,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
         logging_util.info(f"Recovered from incomplete JSON response. Narrative length: {narrative_len} characters (~{token_count} tokens)")
     
     # Create NarrativeResponse from parsed data
+    
     if parsed_data:
         try:
             validated_response = NarrativeResponse(**parsed_data)
@@ -210,7 +215,6 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 
         except (ValueError, TypeError) as e:
             # NarrativeResponse creation failed
-            logging_util.error(f"Failed to create NarrativeResponse: {e}")
             # Check for god_mode_response first
             god_mode_response = parsed_data.get('god_mode_response')
             if god_mode_response:
@@ -238,10 +242,10 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
                 return combined_response, fallback_response
             
             # Return the narrative if we at least got that
-            narrative = parsed_data.get('narrative', response_text)
-            # Handle null narrative
+            narrative = parsed_data.get('narrative')
+            # Handle null or missing narrative - use empty string instead of raw JSON
             if narrative is None:
-                narrative = response_text
+                narrative = ''
             # Extract only the fields we know about, let **kwargs handle the rest
             known_fields = {
                 'narrative': narrative,
@@ -276,6 +280,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     # Remove JSON-like structures and format for readability
     cleaned_text = response_text
     
+    
     # Safer approach: Only clean if it's clearly malformed JSON
     # Check multiple indicators to avoid corrupting valid narrative text
     is_likely_json = (
@@ -284,6 +289,7 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
         (cleaned_text.strip().endswith('}') or cleaned_text.strip().endswith('"')) and
         cleaned_text.count('"') >= 4  # At least 2 key-value pairs
     )
+    
     
     if is_likely_json:
         # Apply cleanup only to confirmed JSON-like text
@@ -313,11 +319,39 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
             logging_util.warning("Applied minimal cleanup to JSON-like text without narrative field")
     
     # Final fallback response
+    
     fallback_response = NarrativeResponse(
         narrative=cleaned_text,
         entities_mentioned=[],
         location_confirmed="Unknown"
     )
+    
+    # Final check for JSON artifacts in returned text
+    if '"narrative":' in cleaned_text or '"god_mode_response":' in cleaned_text:
+        
+        # Try to extract narrative value one more time with more aggressive pattern
+        narrative_match = NARRATIVE_PATTERN.search(cleaned_text)
+        if narrative_match:
+            cleaned_text = narrative_match.group(1)
+            # Unescape JSON string escapes
+            cleaned_text = cleaned_text.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+        else:
+            # Final aggressive cleanup
+            cleaned_text = JSON_STRUCTURE_PATTERN.sub('', cleaned_text)  # Remove braces and brackets
+            cleaned_text = JSON_KEY_QUOTES_PATTERN.sub(r'\1:', cleaned_text)  # Remove quotes from keys
+            cleaned_text = JSON_COMMA_SEPARATOR_PATTERN.sub('. ', cleaned_text)  # Replace JSON comma separators
+            cleaned_text = cleaned_text.replace('\\n', '\n')  # Convert \n to actual newlines
+            cleaned_text = cleaned_text.replace('\\"', '"')  # Unescape quotes
+            cleaned_text = cleaned_text.replace('\\\\', '\\')  # Unescape backslashes
+            cleaned_text = WHITESPACE_PATTERN.sub(' ', cleaned_text)  # Normalize spaces
+            cleaned_text = cleaned_text.strip()
+        
+        # Update the fallback response with cleaned text
+        fallback_response = NarrativeResponse(
+            narrative=cleaned_text,
+            entities_mentioned=[],
+            location_confirmed="Unknown"
+        )
     
     return cleaned_text, fallback_response
 

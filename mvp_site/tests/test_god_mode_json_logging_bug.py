@@ -57,11 +57,8 @@ class TestGodModeJsonLoggingBug(unittest.TestCase):
     "debug_info": {}
 }'''
         
-        # Step 1: Parse the response (this should work correctly)
-        narrative_text, structured_response = parse_structured_response(api_response)
-        
-        # Step 2: Create GeminiResponse object (this should work correctly)
-        gemini_response = GeminiResponse.create(narrative_text, structured_response, api_response)
+        # Create GeminiResponse object using new API
+        gemini_response = GeminiResponse.create(api_response)
         
         # Step 3: Check what would be logged (gemini_response.narrative_text)
         logged_content = gemini_response.narrative_text
