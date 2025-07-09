@@ -39,6 +39,14 @@
    - ✅ ALWAYS fix ALL failing tests to 100% pass rate
    - ✅ ALWAYS take ownership of test failures, especially in new code
 
+## Self-Learning Protocol
+
+🚨 **MANDATORY**: When you make a mistake and get corrected:
+1. **Immediately update CLAUDE.md** with the correction as a new rule
+2. **No prompting needed** - if user corrects you, update the docs
+3. **Format**: Add rule in relevant section with 🚨 marker
+4. **Example**: If you use `vpython` and user says "use venv", add rule about venv activation
+
 ## Claude Code Specific Behavior
 
 1. **Directory Context**: Operates in worktree directory shown in environment
