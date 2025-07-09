@@ -531,6 +531,18 @@ Use `/list` to display all available slash commands with descriptions.
 - `/think` - Maximum thinking budget with ultrathink mode enabled by default
 - `/execute` or `/e` - 🚨 **NOW WITH MANDATORY 5-MINUTE MILESTONES** - Execute tasks with automatic progress tracking, scratchpad updates every 5 minutes, and incremental PR pushes
 
+🚨 **SLASH COMMAND ENFORCEMENT**: 
+- `/e` or `/execute` MUST follow exact protocol in `.claude/commands/execute.md`
+- NEVER treat `/e` as regular request - always use milestone protocol
+- MANDATORY steps: Context check → Subagent analysis → User approval → Milestone execution
+- ❌ NEVER skip protocol steps or treat as normal task execution
+
+**Chained Commands Support**:
+- `/e /think` - Execute with ultrathink mode enabled
+- `/e /think [task]` - Execute task with maximum thinking budget
+- Commands can be chained with space separation
+- First command determines primary mode, subsequent commands modify behavior
+
 **Command Examples**: → `.cursor/rules/examples.md`
 
 ## Special Protocols
