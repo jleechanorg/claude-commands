@@ -1,3 +1,31 @@
+"""
+Firestore Service - Database Operations and Game State Management
+
+This module provides comprehensive database operations for WorldArchitect.AI,
+including campaign management, game state synchronization, and robust data handling.
+
+Key Responsibilities:
+- Campaign CRUD operations (Create, Read, Update, Delete)
+- Game state serialization and persistence
+- Complex state update processing with merge logic
+- Mission management and data conversion
+- Defensive programming patterns for data integrity
+- JSON serialization utilities for Firestore compatibility
+
+Architecture:
+- Uses Firebase Firestore for data persistence
+- Implements robust state update mechanisms
+- Provides mission handling with smart conversion
+- Includes comprehensive error handling and logging
+- Supports legacy data cleanup and migration
+
+Dependencies:
+- Firebase Admin SDK for Firestore operations
+- Custom GameState class for state management
+- NumericFieldConverter for data type handling
+- Logging utilities for comprehensive debugging
+"""
+
 import collections.abc
 import datetime
 import json
@@ -211,11 +239,41 @@ def _handle_string_to_dict_update(state_to_update: dict, key: str, value) -> boo
 
 def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
     """
-    Recursively updates a state dictionary with a changes dictionary.
-    - Handles explicit appends via {'append': ...} syntax.
-    - Safeguards 'core_memories' from being overwritten, converting attempts into a safe append.
-    - Merges nested dictionaries recursively.
-    - Overwrites all other values.
+    Recursively updates a state dictionary with a changes dictionary using intelligent merge logic.
+    
+    This is the core function for applying AI-generated state updates to the game state.
+    It implements sophisticated handling for different data types and update patterns.
+    
+    Key Features:
+    - Explicit append syntax: {'append': [items]} for safe list operations
+    - Core memories safeguard: Prevents accidental overwrite of important game history
+    - Recursive dictionary merging: Deep merge for nested objects
+    - DELETE_TOKEN support: Allows removal of specific fields
+    - Mission smart conversion: Handles various mission data formats
+    - Numeric field conversion: Ensures proper data types
+    - Defensive programming: Validates data structures before operations
+    
+    Update Patterns Handled:
+    1. DELETE_TOKEN - Removes fields marked for deletion
+    2. Explicit append - Safe list operations with deduplication
+    3. Core memories safeguard - Protects critical game history
+    4. Mission conversion - Handles dict-to-list conversion for missions
+    5. Dictionary merging - Recursive merge for nested structures
+    6. String-to-dict preservation - Maintains existing dict structures
+    7. Simple overwrite - Default behavior for primitive values
+    
+    Args:
+        state_to_update (dict): The current game state to modify
+        changes (dict): Changes to apply (typically from AI response)
+        
+    Returns:
+        dict: Updated state dictionary with changes applied
+        
+    Example Usage:
+        current_state = {"health": 100, "items": ["sword"]}
+        changes = {"health": 80, "items": {"append": ["potion"]}}
+        result = update_state_with_changes(current_state, changes)
+        # Result: {"health": 80, "items": ["sword", "potion"]}
     """
     logging_util.info(f"--- update_state_with_changes: applying changes:\\n{_truncate_log_json(changes)}")
     

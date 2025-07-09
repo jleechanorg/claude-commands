@@ -1,22 +1,58 @@
-# Diagnostic edit to test file system access.
+"""
+WorldArchitect.AI - Main Flask Application
+
+This is the primary Flask application entry point for WorldArchitect.AI, an AI-powered
+tabletop RPG platform that serves as a digital D&D 5e Game Master.
+
+Architecture:
+- Flask web server with CORS support
+- Firebase authentication and Firestore database
+- Gemini AI service integration for story generation
+- Real-time game state management
+- Document export functionality
+- Debug mode and god-mode commands for testing
+
+Key Components:
+- Campaign management (create, read, update, delete)
+- Interactive story generation with user input
+- Game state synchronization and validation
+- Export campaigns to PDF/DOCX/TXT formats
+- Authentication and authorization
+- Test command runners for UI and HTTP testing
+
+Dependencies:
+- Flask: Web framework
+- Firebase: Authentication and database
+- Gemini AI: Story generation and game logic
+- Bootstrap: Frontend CSS framework
+- Various custom services for game logic
+"""
+
+# Standard library imports
 import os
 import sys
 import uuid
 import subprocess
 import argparse
 from functools import wraps
+import json
+import collections
+import traceback
+
+# Flask and web imports
 from flask import Flask, request, jsonify, send_from_directory, send_file
 from flask_cors import CORS
+
+# Firebase imports
 import firebase_admin
 from firebase_admin import auth
-import traceback
+
+# Local service imports
 import document_generator
 import logging_util
 from game_state import GameState
 from debug_mode_parser import DebugModeParser
 import constants
-import json
-import collections
 from firestore_service import update_state_with_changes, json_default_serializer, _truncate_log_json
 from token_utils import log_with_tokens
 
@@ -58,13 +94,26 @@ DEFAULT_TEST_USER = 'test-user'
 def _prepare_game_state(user_id, campaign_id):
     """
     Load and prepare game state, including legacy cleanup.
+    
+    This function handles the initialization and cleanup of game state data from Firestore.
+    It performs automatic migration of legacy state structures and returns a clean GameState object.
+    
+    Key Responsibilities:
+    - Fetches game state from Firestore
+    - Ensures valid GameState object initialization
+    - Performs legacy state cleanup (removes deprecated fields)
+    - Updates Firestore with cleaned state if necessary
+    - Logs cleanup operations for debugging
 
     Args:
-        user_id: User ID
-        campaign_id: Campaign ID
+        user_id (str): Firebase user ID
+        campaign_id (str): Campaign identifier from Firestore
 
     Returns:
         tuple: (current_game_state, was_cleaned, num_cleaned)
+            - current_game_state: GameState object ready for use
+            - was_cleaned: boolean indicating if cleanup was performed
+            - num_cleaned: integer count of cleaned entries
     """
     current_game_state_doc = firestore_service.get_campaign_game_state(user_id, campaign_id)
 
@@ -497,6 +546,32 @@ def parse_set_command(payload_str: str) -> dict:
     return proposed_changes
 
 def create_app():
+    """
+    Create and configure the Flask application.
+    
+    This function initializes the Flask application with all necessary configuration,
+    middleware, and route handlers. It sets up CORS, authentication, database connections,
+    and all API endpoints.
+    
+    Key Configuration:
+    - Static file serving from 'static' folder
+    - CORS enabled for all /api/* routes
+    - Testing mode configuration from environment
+    - Firebase Admin SDK initialization
+    - Authentication decorator for protected routes
+    
+    Routes Configured:
+    - GET /api/campaigns - List user's campaigns
+    - GET /api/campaigns/<id> - Get specific campaign
+    - POST /api/campaigns - Create new campaign
+    - PATCH /api/campaigns/<id> - Update campaign
+    - POST /api/campaigns/<id>/interaction - Handle user interactions
+    - GET /api/campaigns/<id>/export - Export campaign documents
+    - /* - Frontend SPA fallback
+    
+    Returns:
+        Flask: Configured Flask application instance
+    """
     app = Flask(__name__, static_folder='static')
     CORS(app, resources=CORS_RESOURCES)
 
