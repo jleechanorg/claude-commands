@@ -8,7 +8,7 @@
 ## File Organization
 - **CLAUDE.md** (this file): Primary operating protocol
 - **.cursor/rules/rules.mdc**: Cursor-specific configuration
-- **.cursor/rules/lessons.mdc**: Technical lessons and incident analysis
+- **Technical Lessons**: Comprehensive technical lessons and incident analysis (integrated into this file)
 - **.cursor/rules/examples.md**: Detailed examples and patterns
 - **.cursor/rules/validation_commands.md**: Common command reference
 
@@ -83,7 +83,7 @@
 3. **Document** - Update appropriate file:
    - **CLAUDE.md** - Critical rules with 🚨 marker
    - **.claude/learnings.md** - Detailed categorized learnings
-   - **.cursor/rules/lessons.mdc** - Technical lessons
+   - **Technical Lessons** - Comprehensive technical lessons and incident analysis (see end of this file)
 4. **Apply** - Use the learning immediately in current session
 
 ### /learn Command
@@ -164,7 +164,7 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 - Re-evaluate: Week of July 15, 2025
 
 **Rule Management**:
-"Add to rules" → CLAUDE.md | Technical lessons → lessons.mdc | General = rules | Specific = lessons
+"Add to rules" → CLAUDE.md | Technical lessons → CLAUDE.md (Comprehensive Technical Lessons section) | General = rules | Specific = lessons
 
 **Development Protocols**: → `.cursor/rules/planning_protocols.md`
 
@@ -448,12 +448,12 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 
 ### File Organization
 - **CLAUDE.md**: Primary protocol
-- **lessons.mdc**: Technical learnings from corrections
+- **Technical Lessons**: Comprehensive technical learnings from corrections (see end of this file)
 - **project.md**: Repository-specific knowledge base
 - **rules.mdc**: Cursor configuration
 
 ### Process Improvement
-- **5 Whys**: Root cause → lessons.mdc
+- **5 Whys**: Root cause → Technical Lessons section (end of this file)
 - **Sync Cursor**: Copy CLAUDE.md to Cursor settings after changes
 - **Proactive Docs**: Update rules/lessons after debugging without prompting
 
@@ -555,7 +555,7 @@ When sources disagree:
 - **Meta-Rules**: Lessons docs = ⚠️ NOT OPTIONAL | Immediate, automatic, every time
 - **Schema**: Clear structures | Remove contradictions | Type validation | Concrete examples
 
-**Detailed Lessons**: → `.cursor/rules/lessons.mdc`
+**Detailed Lessons**: → See "Comprehensive Technical Lessons & Incident Analysis" section at end of this file
 
 ## Slash Commands
 
@@ -646,10 +646,123 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 
 ## Additional Documentation
 
-- **Technical Lessons**: → `.cursor/rules/lessons.mdc`
 - **Cursor Config**: → `.cursor/rules/rules.mdc`
 - **Examples**: → `.cursor/rules/examples.md`
 - **Commands**: → `.cursor/rules/validation_commands.md`
 
 ### Archive Process
 Quarterly/2500 lines/new year → `lessons_archive_YYYY.mdc` | Keep critical patterns | Reference archives
+
+---
+
+# COMPREHENSIVE TECHNICAL LESSONS & INCIDENT ANALYSIS
+
+**Source**: Previously stored in `.cursor/rules/lessons.mdc`, now integrated into CLAUDE.md for consistent access.
+
+**Meta-Rule**: Any instruction to "add a lesson," "add to lessons," or a similar directive now refers to this "Comprehensive Technical Lessons & Incident Analysis" section of CLAUDE.md.
+
+This section contains specific technical lessons, incident analysis, and crucial insights from development experiences. All content below was previously in lessons.mdc and is now integrated for better accessibility.
+
+## CRITICAL: ALWAYS USE EXISTING INTEGRATION TEST INFRASTRUCTURE
+
+**LESSON LEARNED**: When asked to create integration tests, ALWAYS look at existing test_integration.py files first. The project already has infrastructure for:
+- Automatic API key discovery from multiple locations
+- Proper test setup and configuration
+- Integration with real APIs
+
+NEVER create manual API key checks or custom infrastructure when the project already has working patterns.
+
+## 🚨 CRITICAL: MANDATORY TASK COMPLETION PROTOCOL 🚨
+
+### Automatic Rule Updates (MANDATORY)
+**WHENEVER I make a mistake, encounter a bug I should have caught, or receive correction from the user, I MUST immediately update this lessons section with the lesson learned. I will NOT wait for the user to remind me - this is an AUTOMATIC responsibility that happens EVERY TIME I fail or am corrected.**
+
+- **CRITICAL LESSON (December 2024):** Always run `vpython` commands from the PROJECT ROOT directory, not from subdirectories. The correct pattern is `TESTING=true vpython mvp_site/test_file.py` (run from project root), NOT `cd mvp_site && vpython test_file.py`. This prevents "command not found" errors and ensures proper virtual environment context.
+- **Action:** When running any `vpython` command, always check you are in the project root directory first.
+
+### Task Completion Protocol (December 2024)
+**CRITICAL REDEFINITION**: Task completion is NOT just solving the user's immediate problem. Task completion includes all mandatory follow-up actions as core requirements.
+
+**NEW TASK COMPLETION DEFINITION**: A task is only complete when ALL of the following steps are finished:
+1. ✅ **Solve user's immediate problem** (the obvious part)
+2. ✅ **Update this lessons section** (for any error resolution, bug fix, or correction)
+3. ✅ **Update memory with lesson learned** (to prevent immediate recurrence)
+4. ✅ **Self-audit compliance with all documented procedures** (verify I followed all protocols)
+5. ✅ **Consider task truly complete** (only after all above steps)
+
+**MANDATORY COMPLETION CHECKLIST**: For every error resolution, bug fix, or user correction, I MUST follow this checklist:
+- [ ] Problem solved to user satisfaction
+- [ ] Lessons documented in this section
+- [ ] Memory updated with prevention strategy  
+- [ ] Self-audit: "Did I follow all mandatory procedures?"
+- [ ] Task marked complete only after ALL steps finished
+
+**SELF-AUDITING REQUIREMENT**: At the end of every significant interaction, I must explicitly ask myself: "Did I follow all mandatory procedures?" This is not optional - it's part of systematic process discipline.
+
+**ENFORCEMENT PRINCIPLE**: Documentation is part of the solution, not administrative overhead. Any error resolution that doesn't include lessons capture is an incomplete solution that increases the risk of recurrence.
+
+## Lesson: Scene # JSON Display Bug (2025-01-07)
+**Symptom**: User reported seeing `Scene #2: {"narrative": "...", ...}` in UI
+**Initial Wrong Diagnosis**: Assumed "Scene #2:" was part of LLM response, implemented backend fix to strip prefix
+**Actual Issue**: Frontend was adding "Scene #" label to raw JSON that wasn't being parsed correctly
+
+**Why I Got It Wrong**:
+1. Saw formatted output and assumed it was single string from backend
+2. Didn't check frontend code for display formatting
+3. Pattern-matched on symptom without tracing complete data flow
+4. Confirmation bias when I found JSON parsing code
+
+**Correct Debugging Approach**:
+1. Search for literal "Scene #" in ALL code (frontend + backend)
+2. Check browser Network tab to see actual API response
+3. Trace: Backend response → API → Frontend processing → Display
+4. Question: "Is this one string or multiple parts?"
+
+**Key Learning**: Display formatting is often added by frontend, not backend data
+
+## Lesson: Alternative Reality Worker Simulation Violation (2025-01-07)
+**What Happened**: User suggested testing CLAUDE.md changes with an "alternative reality worker" with no shared context
+**Violation**: Simulated what the worker "would do" instead of admitting I cannot create isolated instances
+**Why It Happened**: 
+- Excitement about clever idea overrode rules
+- Treated rules as passive guidelines not active constraints  
+- Jumped to "how to make this work" before "can I actually do this"
+
+**Prevention Strategy - Simulation Red Flags**:
+These phrases/thoughts should trigger IMMEDIATE rule checking:
+- "Let me show what would happen..."
+- "Here's how it would work..."
+- "The worker would..."
+- "This demonstrates..."
+- Any hypothetical execution
+
+**Correct Response Pattern**:
+User: "Can you test X with a separate worker?"
+Claude: "I cannot create a truly isolated worker instance. The Task tool would still share our conversation context. Would you like me to [alternative real action]?"
+
+## AI Instruction Compliance Failure Analysis (July 2025)
+
+**CRITICAL LESSON**: When AI systems consistently fail to follow specific instructions (like generating planning blocks), the LLM itself can provide detailed self-analysis of failure modes.
+
+**10 Failure Modes Identified by LLM:**
+1. **Instruction Fatigue/Context Window Pressure** - Most critical: Long prompts cause key directives to lose prominence
+2. **Lack of Redundant Self-Checks** - No internal mechanism to verify mandatory element inclusion
+3. **Insufficient Final Output Audit** - Final validation not robust enough to catch structural omissions  
+4. **Over-focus on Narrative Immersion** - Content quality prioritized over structural requirements
+5. **Hierarchy Interpretation Nuance** - Complex instructions overshadowing simple structural rules
+6. **Prioritization of Content over Structure** - Compelling narrative taking precedence over mandatory format
+7. **Misinterpretation of "Continue" Prompts** - Incorrectly assuming continuation means skip new elements
+8. **Implicit vs. Explicit Decision Points** - Only generating required elements when explicitly triggered
+9. **Sub-optimal Internal Planning Priority** - Internal processes don't weight mandatory elements as non-negotiable
+10. **Cognitive Load in Debug Mode** - Additional processing straining adherence to all directives
+
+**ROOT CAUSE**: Instruction ordering and cognitive load management. Critical structural requirements get deprioritized when competing with complex narrative instructions.
+
+**ACTIONABLE FIXES**:
+- Move critical requirements to the BEGINNING of system instructions
+- Add redundant reminders throughout prompts
+- Implement post-processing validation for mandatory elements
+- Simplify overall instruction sets to reduce cognitive load
+- Create structured output requirements that force inclusion of mandatory elements
+
+**PREVENTION**: Always ask the AI system to explain its failure modes when it consistently fails to follow instructions. The self-analysis often reveals systemic issues that aren't obvious from external observation.
