@@ -12,6 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main')
     
+    permissions:
+      contents: write      # Required for git operations and pushing commits
+      pull-requests: write # Required for gh pr commands (list, view, comment)
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
