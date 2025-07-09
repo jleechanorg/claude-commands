@@ -39,11 +39,44 @@
    - ✅ ALWAYS fix ALL failing tests to 100% pass rate
    - ✅ ALWAYS take ownership of test failures, especially in new code
 
+## Self-Learning Protocol
+
+🚨 **MANDATORY**: Continuously learn from corrections and self-realizations:
+
+### Automatic Learning Triggers
+1. **User corrections** - When user corrects a mistake, immediately document it
+2. **Self-corrections** - When you realize "Oh, I should have...", document it
+3. **Failed attempts** - When something doesn't work, learn why
+4. **Pattern recognition** - When you repeat a mistake, create a rule
+
+### Learning Process
+1. **Detect** - Recognize correction/mistake (yours or user's)
+2. **Analyze** - Understand what went wrong and why
+3. **Document** - Update appropriate file:
+   - **CLAUDE.md** - Critical rules with 🚨 marker
+   - **.claude/learnings.md** - Detailed categorized learnings
+   - **.cursor/rules/lessons.mdc** - Technical lessons
+4. **Apply** - Use the learning immediately in current session
+
+### /learn Command
+- **Usage**: `/learn [optional: specific learning]`
+- **Purpose**: Explicitly capture learnings or review recent corrections
+- **Example**: `/learn playwright is installed in venv`
+
+### Self-Correction Indicators
+When you say these, ALWAYS document the learning:
+- "Let me correct that..." / "Let me fix that..."
+- "Oh, I should have..." / "Actually, I need to..."
+- "My mistake..." / "I was wrong about..."
+- "I see the issue..." / "The problem is..."
+
+**Learning Categories** → `.claude/learnings.md`
+
 ## Claude Code Specific Behavior
 
 1. **Directory Context**: Operates in worktree directory shown in environment
 2. **Tool Usage**: File ops, bash commands, web tools available
-3. **Test Execution**: Use `vpython` with `TESTING=true`
+3. **Test Execution**: Use `source venv/bin/activate && python` with `TESTING=true` (NOT vpython)
 4. **File Paths**: Always absolute paths
 5. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
