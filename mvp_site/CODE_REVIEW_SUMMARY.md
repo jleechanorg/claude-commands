@@ -165,13 +165,21 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 - `run_god_command()` - Direct CLI god-mode operations
 - `run_test_command()` - Test runner integration
 
-**Responsibilities**: Too many - needs refactoring
-- API route handling
-- Authentication middleware
-- State management
-- Document export
-- Test command execution
-- God-mode operations
+**Responsibilities**:
+- **Flask Application Factory**: Application initialization and configuration management
+- **API Route Orchestration**: HTTP endpoint handling for all campaign and game operations
+- **Authentication Middleware**: User token validation and session management
+- **Campaign Management**: CRUD operations for campaign creation, retrieval, and updates
+- **Game State Coordination**: Orchestrating state updates between AI service and database
+- **Story Continuation Processing**: Managing user input and AI response generation workflow
+- **Document Export Services**: PDF, DOCX, and text format campaign document generation
+- **God-Mode Command Processing**: Debug and administrative command execution
+- **Test Command Integration**: Development and testing command execution
+- **Error Handling and Logging**: Centralized error response and logging coordination
+- **File Upload Management**: Campaign import and file handling operations
+- **Database Transaction Coordination**: Managing complex multi-step database operations
+- **AI Service Integration**: Coordinating with Gemini service for story generation
+- **State Validation and Cleanup**: Ensuring data integrity and legacy state migration
 
 #### 2. Database Service (firestore_service.py - 467 lines)
 **Purpose**: Database operations and complex state management
