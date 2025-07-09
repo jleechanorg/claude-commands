@@ -2,6 +2,6 @@
 
 **Alias for**: `/context`
 
-**Usage**: `/est` or `/context`
+**Usage**: `/con` or `/context`
 
 See [context.md](./context.md) for full documentation.
