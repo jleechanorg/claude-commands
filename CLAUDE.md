@@ -141,6 +141,7 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 - **AI Assistant Guide**: → `mvp_site/README_FOR_AI.md` (CRITICAL system architecture for AI assistants)
 - **📋 MVP Site Architecture**: → `mvp_site/README.md` (comprehensive codebase overview)
 - **📋 Code Review & File Responsibilities**: → `mvp_site/CODE_REVIEW_SUMMARY.md` (detailed file-by-file analysis)
+- **Browser Test Mode**: → `mvp_site/testing_ui/README_TEST_MODE.md` (How to bypass auth in browser tests)
 
 ## Core Principles & Interaction
 
@@ -309,7 +310,18 @@ When asked to run browser tests manually, follow these steps IN ORDER:
    - ✅ Continue only if server responds
    - ❌ FULL STOP if fails - report: "Cannot start test server"
 
-4. **Run Browser Test**
+4. **Navigate with Test Mode URL Parameters**
+   🚨 **CRITICAL**: Browser tests MUST use test mode URL parameters to bypass authentication:
+   ```
+   http://localhost:6006?test_mode=true&test_user_id=test-user-123
+   ```
+   - `test_mode=true` - Enables frontend test authentication bypass
+   - `test_user_id=test-user-123` - Sets the test user ID (optional, defaults to 'test-user')
+   - Without these parameters, you'll be stuck at the sign-in page!
+   - The frontend detects these parameters and adds test headers to all API calls
+   - See `mvp_site/testing_ui/README_TEST_MODE.md` for complete details
+
+5. **Run Browser Test**
    ```bash
    TESTING=true vpython testing_ui/test_name.py
    ```
