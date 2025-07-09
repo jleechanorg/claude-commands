@@ -1,4 +1,4 @@
-name: Claude Code Assistant
+name: Claude PR Assistant
 
 on:
   issue_comment:
@@ -6,37 +6,34 @@ on:
   pull_request_review_comment:
     types: [created]
   issues:
-    types: [opened]
-  pull_request:
-    types: [opened]
-
-permissions:
-  contents: write
-  pull-requests: write
-  issues: write
-  actions: read
+    types: [opened, assigned]
+  pull_request_review:
+    types: [submitted]
 
 jobs:
-  claude-code:
+  claude-code-action:
+    if: |
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
     runs-on: ubuntu-latest
-    name: Claude Code Action
-    
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
     steps:
-      # The Claude Code Action handles checkout internally
-      # We should NOT add our own checkout step
-      - name: Claude Code Action
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude PR Action
         uses: anthropics/claude-code-action@beta
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          # OAuth alternative (for Pro/Max users):
-          # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          
-          # Configuration
-          trigger_phrase: "@claude"
-          max_turns: 3
-          timeout_minutes: 30
-          base_branch: main
+          timeout_minutes: "30"
           
           # Custom instructions for WorldArchitect.AI context
           custom_instructions: |
