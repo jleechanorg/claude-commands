@@ -57,9 +57,10 @@ class TestPromptLoading(unittest.TestCase):
         
         prompts_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'prompts')
         
-        # 1. Get all .md files from the filesystem
+        # 1. Get all .md files from the filesystem (excluding README files)
         try:
-            disk_files = {f for f in os.listdir(prompts_dir) if f.endswith('.md')}
+            disk_files = {f for f in os.listdir(prompts_dir) 
+                         if f.endswith('.md') and f.lower() != 'readme.md'}
         except FileNotFoundError:
             self.fail(f"Prompts directory not found at {prompts_dir}")
 
