@@ -92,3 +92,15 @@ The fix will be tested when:
 
 ## Status
 ✅ **COMPLETE** - Fix implemented and ready for PR
+
+## Update: Fixed Duplicate Workflow Runs
+The workflow was running twice because it had two triggers:
+1. `pull_request` events
+2. `push` events to non-main branches
+
+This caused redundant runs. Fixed by:
+- Removing the `push` trigger entirely
+- Removing the conditional logic for detecting PR number from push events
+- Simplifying to only run on pull_request events (opened, synchronize, reopened)
+
+Now the workflow will only run once per PR event, saving CI resources.
