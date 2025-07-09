@@ -60,6 +60,15 @@ When I say these phrases, I'm recognizing a mistake:
 - ✅ **VERIFIED**: Successfully tested Firebase campaign creation and Gemini story generation
 - ✅ **REAL RESULTS**: Firebase stored campaign `dss3zJKUrBAnOOwPZqPw`, Gemini generated full story response with game mechanics
 
+### 2025-07-09 - Git Merge Conflict Resolution
+- ✅ **CRITICAL**: GitHub shows conflicts when your branch is behind the latest main, even if local merge seems clean
+- ✅ **BRANCH AWARENESS**: Always verify which branch your PR is associated with - was on wrong branch initially
+- ✅ **REBASE > MERGE**: For PRs, `git rebase origin/main` provides cleaner history than merge commits
+- ✅ **FORCE PUSH SAFETY**: Use `--force-with-lease` instead of `--force` to prevent overwriting others' work
+- ✅ **CONFLICT RESOLUTION**: Understand what each side represents (HEAD vs incoming commit)
+- ✅ **DIVERGENCE PATTERNS**: "Your branch and 'origin/branch' have diverged" means rebase/merge needed
+- ✅ **GITHUB BEHAVIOR**: GitHub compares against current main, not main at time of branching
+
 ## What Actually Works (Proven by Tests)
 
 ### Browser Testing Capabilities
@@ -78,6 +87,8 @@ When I say these phrases, I'm recognizing a mistake:
 - ❌ "Can't use real Firebase" → FIREBASE IS AVAILABLE FOR TESTING
 - ❌ "Can't use real Gemini" → GEMINI API IS AVAILABLE FOR TESTING
 - ❌ "Costs too much money" → TESTING WITH REAL APIS IS PERMITTED
+- ❌ "Conflicts are resolved locally" → CHECK GITHUB FOR REAL STATUS
+- ❌ "Local merge worked" → GITHUB MIGHT STILL SHOW CONFLICTS
 
 ## Coverage Analysis
 
@@ -103,6 +114,50 @@ When I say these phrases, I'm recognizing a mistake:
 5. **API/SDK Usage** - Correct imports and methods
 6. **Git Workflow** - Branch management, PR process
 7. **Testing Protocols** - How to properly run tests
+8. **Merge Conflict Resolution** - Proper rebase/merge techniques
+
+## Git Merge Conflict Resolution Protocol
+
+### Quick Reference Commands
+```bash
+# 1. Verify correct branch
+git branch --show-current
+gh pr list --state open --author @me
+
+# 2. Check for divergence
+git fetch origin
+git status
+git log --oneline origin/main ^HEAD | head -5
+
+# 3. Rebase against main
+git rebase origin/main
+# (resolve conflicts manually)
+git add <resolved_files>
+git rebase --continue
+
+# 4. Force push safely
+git push origin <branch> --force-with-lease
+
+# 5. Verify on GitHub
+gh pr view <number>
+```
+
+### Conflict Resolution Strategy
+1. **Identify the conflict sections**: Look for `<<<<<<< HEAD`, `=======`, `>>>>>>> commit`
+2. **Understand what each side represents**: HEAD = your branch, commit = incoming changes
+3. **Make informed decisions**: Don't just pick one side - often need to combine both
+4. **Test the resolution**: Ensure functionality still works after resolving
+5. **Remove all conflict markers**: No `<<<<<<<`, `=======`, or `>>>>>>>` should remain
+
+### When to Rebase vs Merge
+- **Rebase**: For PRs, cleaner history, when you want to "replay" your changes on top of main
+- **Merge**: When you want to preserve the branching history, for feature branches
+
+### GitHub Behavior Understanding
+- GitHub always compares your PR branch against the **current** main branch
+- Even if your local branch merges cleanly with your local main, GitHub might show conflicts
+- This happens when main has moved forward since you last synced
+- The solution is to rebase/merge against the latest main and force push
 
 ---
 *Auto-updated when Claude learns from corrections*

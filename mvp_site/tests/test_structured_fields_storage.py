@@ -18,6 +18,18 @@ def test_structured_fields_storage():
     user_id = "test-user"
     campaign_id = "test-campaign"
     
+    # Create a campaign first
+    mock_firestore_service.get_mock_firestore_client().set_campaign_data(
+        user_id,
+        campaign_id,
+        {
+            'id': campaign_id,
+            'title': 'Test Campaign',
+            'prompt': 'Test prompt',
+            'selected_prompts': ['narrative']
+        }
+    )
+    
     # Test structured fields data
     structured_fields = {
         'session_header': 'Test session header with stats',

@@ -183,10 +183,17 @@ class TestDebugMode(unittest.TestCase):
             # Response should be clean narrative without embedded tags
             self.assertNotIn('[DEBUG_START]', data.get('response', ''), "Response should not contain legacy debug tags")
             
-            # Verify full response was saved to database
-            mock_firestore_service.add_story_entry.assert_called_with(
-                self.mock_user_id, self.mock_campaign_id, 'gemini', mock_response
-            )
+            # Verify full response was saved to database with structured fields
+            mock_firestore_service.add_story_entry.assert_called()
+            call_args = mock_firestore_service.add_story_entry.call_args
+            self.assertEqual(call_args[0][0], self.mock_user_id)
+            self.assertEqual(call_args[0][1], self.mock_campaign_id)
+            self.assertEqual(call_args[0][2], 'gemini')
+            self.assertEqual(call_args[0][3], mock_response)
+            # Verify structured_fields are included
+            self.assertIn('structured_fields', call_args[1])
+            structured_fields = call_args[1]['structured_fields']
+            self.assertIn('debug_info', structured_fields)
     
     @patch('main.firestore_service')
     def test_enhanced_dice_roll_display(self, mock_firestore_service):
@@ -305,9 +312,12 @@ class TestDebugMode(unittest.TestCase):
             self.assertIn('debug_info', data, "debug_info should always be included when present")
             
             # Verify full response (with debug content) was saved to database
-            mock_firestore_service.add_story_entry.assert_called_with(
-                self.mock_user_id, self.mock_campaign_id, 'gemini', mock_response
-            )
+            mock_firestore_service.add_story_entry.assert_called()
+            call_args = mock_firestore_service.add_story_entry.call_args
+            self.assertEqual(call_args[0][0], self.mock_user_id)
+            self.assertEqual(call_args[0][1], self.mock_campaign_id)
+            self.assertEqual(call_args[0][2], 'gemini')
+            self.assertEqual(call_args[0][3], mock_response)
     
     @patch('main.firestore_service')
     def test_debug_mode_only_in_god_mode(self, mock_firestore_service):
