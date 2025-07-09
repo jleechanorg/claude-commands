@@ -1,3 +1,40 @@
+"""
+Gemini Service - AI Integration and Response Processing
+
+This module provides comprehensive AI service integration for WorldArchitect.AI,
+handling all aspects of story generation, prompt construction, and response processing.
+
+Key Responsibilities:
+- Gemini AI client management and model selection
+- System instruction building and prompt construction  
+- Entity tracking and narrative validation
+- JSON response parsing and structured data handling
+- Model fallback and error handling
+- Planning block enforcement and debug content management
+- Token counting and context management
+
+Architecture:
+- Uses Google Generative AI (Gemini) for story generation
+- Implements robust prompt building with PromptBuilder class
+- Provides entity tracking with multiple mitigation strategies
+- Includes comprehensive error handling and model cycling
+- Supports both initial story generation and continuation
+- Manages complex state interactions and validation
+
+Key Classes:
+- PromptBuilder: Constructs system instructions and prompts
+- GeminiResponse: Custom response object with parsed data
+- EntityPreloader: Pre-loads entity context for tracking
+- EntityInstructionGenerator: Creates entity-specific instructions
+- DualPassGenerator: Retry mechanism for entity tracking
+
+Dependencies:
+- Google Generative AI SDK for Gemini API calls
+- Custom entity tracking and validation modules
+- Game state management for context
+- Token utilities for cost management
+"""
+
 import os
 from google import genai
 from google.genai import types
@@ -169,13 +206,43 @@ def _add_world_instructions_to_system(system_instruction_parts):
 
 
 class PromptBuilder:
-    """Encapsulates prompt building logic for the Gemini service."""
+    """
+    Encapsulates prompt building logic for the Gemini service.
+    
+    This class is responsible for constructing comprehensive system instructions
+    that guide the AI's behavior as a digital D&D Game Master. It manages the
+    complex hierarchy of instructions and ensures proper ordering and integration.
+    
+    Key Responsibilities:
+    - Build core system instructions in proper precedence order
+    - Add character-related instructions conditionally
+    - Include selected prompt types (narrative, mechanics)
+    - Add system reference instructions (D&D SRD)
+    - Generate companion and background summary instructions
+    - Manage world content integration
+    - Ensure debug instructions are properly included
+    
+    Instruction Hierarchy (in order of loading):
+    1. Master directive (establishes authority)
+    2. Game state instructions (data structure compliance)
+    3. Debug instructions (technical functionality)
+    4. Character template (conditional)
+    5. Selected prompts (narrative/mechanics)
+    6. System references (D&D SRD)
+    7. World content (conditional)
+    
+    The class ensures that instructions are loaded in the correct order to
+    prevent "instruction fatigue" and maintain proper AI behavior hierarchy.
+    """
 
     def __init__(self, game_state=None):
-        """Initialize the PromptBuilder.
-
+        """
+        Initialize the PromptBuilder.
+        
         Args:
-            game_state: Optional GameState used for dynamic instructions.
+            game_state (GameState, optional): GameState object used for dynamic 
+                instruction generation, companion lists, and story summaries.
+                If None, static fallback instructions will be used.
         """
         self.game_state = game_state
     

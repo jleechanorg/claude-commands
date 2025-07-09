@@ -1,3 +1,42 @@
+"""
+Document Generation System
+
+This module handles the generation of campaign documents in multiple formats (PDF, DOCX, TXT).
+It processes story logs from campaigns and converts them into formatted, exportable documents
+suitable for sharing or archiving.
+
+Key Features:
+- Multi-format export (PDF, DOCX, TXT)
+- Story context processing and formatting
+- Custom font support for better typography
+- Actor labeling system (Story, God, Main Character)
+- Consistent formatting across all export formats
+
+Architecture:
+- Format-specific generation functions
+- Shared story text processing
+- Configurable styling constants
+- Safe file handling with cleanup
+
+Usage:
+    # Generate PDF document
+    generate_pdf(story_text, output_path, campaign_title)
+    
+    # Generate DOCX document
+    generate_docx(story_text, output_path, campaign_title)
+    
+    # Generate TXT document
+    generate_txt(story_text, output_path, campaign_title)
+    
+    # Process story log for export
+    story_text = get_story_text_from_context(story_log)
+
+Dependencies:
+- fpdf: PDF generation library
+- python-docx: DOCX document creation
+- DejaVu Sans font: Custom font for better Unicode support
+"""
+
 import os
 from fpdf import FPDF, XPos, YPos
 from docx import Document
