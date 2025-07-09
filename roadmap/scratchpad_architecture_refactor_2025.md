@@ -2,51 +2,179 @@
 
 ## Current Task: Comprehensive Structured Fields Testing
 
-### Testing Plan
+### COMPREHENSIVE TEST PLAN: Structured Fields End-to-End
 
-**Problem**: User reported that structured fields (narrative, debug_info, planning_blocks, etc.) are not displaying properly in the UI. Need comprehensive unit tests to verify the complete flow from Gemini response to UI display.
+**Problem Statement**: Ensure structured fields (session_header, planning_block, dice_rolls, resources, debug_info) flow correctly from raw Gemini API response through all layers to frontend display.
 
-**Test Coverage Goals**:
-1. **structured_fields_utils.py** - Unit tests for extraction function
-2. **main.py interaction endpoint** - Tests that structured fields are properly extracted and returned
-3. **Frontend JS** - Tests for appendToStory with structured fields rendering
-4. **Integration test** - Full flow with mock Gemini + mock Firebase
-5. **End-to-end validation** - Verify fields pass through all layers
+### Data Flow Architecture
 
-### Implementation Plan
+```
+1. Raw Gemini API Response (JSON)
+   ↓
+2. GeminiResponse Object (Python)
+   ↓
+3. NarrativeResponse Object (structured_response attribute)
+   ↓
+4. structured_fields_utils.extract_structured_fields()
+   ↓
+5. main.py /interaction endpoint processing
+   ↓
+6. JSON Response to Frontend
+   ↓
+7. app.js receives and processes response
+   ↓
+8. generateStructuredFieldsHTML() creates HTML
+   ↓
+9. appendToStory() renders in DOM
+```
 
-**Phase 1: Unit Tests**
-- [ ] test_structured_fields_utils.py - Test extract_structured_fields function
-- [ ] test_main_interaction_endpoint.py - Test /api/campaigns/ID/interaction with structured fields
-- [ ] test_frontend_structured_fields.js - Test UI rendering of structured fields
+### Layer-by-Layer Test Requirements
 
-**Phase 2: Integration Tests**
-- [ ] test_structured_fields_integration.py - Full flow with mocks
-- [ ] test_structured_fields_e2e.py - End-to-end validation
+#### Layer 1: Raw Gemini Response → GeminiResponse Object
+**File**: `test_gemini_response_structured_fields.py`
+- Test parsing of raw JSON with all structured fields present
+- Test parsing with missing structured fields
+- Test parsing with malformed structured fields
+- Test data type preservation (strings, lists, dicts)
+- Test edge cases: empty strings, empty lists, null values
 
-**Phase 3: Validation**
-- [ ] Run all tests to ensure 100% pass rate
-- [ ] Run integration test with real UI to verify fields display
+#### Layer 2: GeminiResponse → NarrativeResponse
+**File**: `test_narrative_response_extraction.py`
+- Test structured_response attribute population
+- Test field mapping correctness
+- Test None handling for missing fields
+- Test type validation for each field
+
+#### Layer 3: NarrativeResponse → Extraction
+**File**: `test_structured_fields_utils.py` ✅ (Already exists)
+- Test extract_structured_fields function
+- Test None input handling
+- Test missing attribute handling
+- Test data type preservation
+
+#### Layer 4: main.py Endpoint Processing
+**File**: `test_main_interaction_structured_fields.py` ✅ (Already created)
+- Test structured fields included in response
+- Test fields passed to firestore
+- Test empty/missing field handling
+- Test data type preservation in JSON
+
+#### Layer 5: Frontend Reception & Processing
+**File**: `test_frontend_structured_fields.js`
+**Test Cases**:
+1. **Data Reception Tests**:
+   - Mock API response with all fields
+   - Verify fields extracted correctly
+   - Test missing field handling
+   - Test data type preservation
+
+2. **generateStructuredFieldsHTML() Tests**:
+   - Test HTML generation for each field type
+   - Test empty field handling
+   - Test debug mode on/off behavior
+   - Test XSS prevention (HTML escaping)
+
+3. **appendToStory() Tests**:
+   - Test session header rendering (top position)
+   - Test planning block rendering (bottom position)
+   - Test dice rolls list rendering
+   - Test resources rendering
+   - Test debug info rendering (only in debug mode)
+   - Test choice button generation from planning blocks
+
+4. **Edge Cases**:
+   - Very long text in fields
+   - Special characters/emojis
+   - Nested objects in debug_info
+   - Arrays with mixed types
+
+#### Layer 6: Integration Tests
+**File**: `test_structured_fields_integration.py`
+- Full flow test with mocked Gemini service
+- Verify data integrity through all layers
+- Test error propagation
+- Performance testing for large responses
+
+#### Layer 7: End-to-End Browser Tests
+**File**: `test_structured_fields_e2e.py` (Playwright)
+- Real browser testing
+- Visual verification of rendered fields
+- Interaction testing (choice buttons)
+- Screenshot capture for visual regression
+- Test responsive layout
+
+### Special Test Scenarios
+
+#### Debug Mode Testing
+- Fields shown/hidden based on debug_mode flag
+- Debug info only visible when debug_mode=true
+- Debug tags properly styled
+- State updates visualization
+
+#### Planning Block Interaction
+- Choice buttons properly generated
+- Click handlers attached correctly
+- Custom choice option works
+- Disabled state after selection
+
+#### Error Resilience
+- Graceful degradation for missing fields
+- No JavaScript errors on malformed data
+- Fallback displays for failed renders
+
+### Test Data Requirements
+
+#### Mock Data Sets
+1. **Complete Response**: All fields populated with realistic data
+2. **Minimal Response**: Only narrative text, no structured fields
+3. **Debug Response**: Full debug information included
+4. **Combat Response**: Dice rolls and resources emphasized
+5. **Planning Response**: Multiple choice options
+6. **Edge Case Response**: Very long text, special characters
+
+### Implementation Priority
+
+**Phase 1: Backend Completion** ✅
+- [x] test_main_interaction_structured_fields.py (4 tests passing)
+
+**Phase 2: Frontend Unit Tests** 🚧
+- [ ] test_frontend_structured_fields.js
+- [ ] Mock fetchApi responses
+- [ ] Test each rendering function
+- [ ] Test user interactions
+
+**Phase 3: Integration Tests**
+- [ ] test_structured_fields_integration.py
+- [ ] End-to-end data flow validation
+- [ ] Performance benchmarks
+
+**Phase 4: Browser Tests**
+- [ ] test_structured_fields_e2e.py
+- [ ] Visual regression tests
+- [ ] Cross-browser compatibility
+
+### Success Criteria
+
+1. **100% Test Coverage**: All structured field code paths tested
+2. **Data Integrity**: Fields maintain type and content through all layers
+3. **Visual Accuracy**: Frontend displays match design specs
+4. **Performance**: <100ms processing time for structured fields
+5. **Error Handling**: No crashes or JS errors on edge cases
+6. **User Experience**: Smooth interactions with planning choices
 
 ### Current Status
-- ✅ Added structured_fields_utils.py module
-- ✅ Updated main.py to use structured fields extraction
-- ✅ Fixed structured_fields_utils.py to handle None values properly
-- ✅ Created test_main_interaction_structured_fields.py with proper mocking
-- ✅ First test passes - structured fields properly extracted and returned
-- ❌ Three tests failing due to Mock object issues (debug_tags_present not properly mocked)
-- ❌ Missing JS unit tests
-- ❌ Missing integration tests
-
-### Issues Found
-1. **debug_tags_present Mock Issue**: Other tests not properly mocking debug_tags_present as dictionary
-2. **Response Format**: Structured fields returned directly in response, not under 'structured_fields' key
-3. **Empty Fields Handling**: Need to check correct behavior when no structured fields present
+- ✅ Backend tests complete (test_main_interaction_structured_fields.py - 4 tests passing)
+- ✅ Structured fields confirmed working in backend
+- ✅ All 129 unit tests passing
+- 🚧 Frontend JS tests planned
+- ⏳ Integration tests pending
+- ⏳ E2E browser tests pending
 
 ### Next Steps
-1. Fix remaining failing tests in test_main_interaction_structured_fields.py
-2. Create frontend JS tests
-3. Create integration test with mocks
-4. Run all tests and verify functionality
+1. Create test_frontend_structured_fields.js with comprehensive test cases
+2. Set up Jest/Mocha test runner for frontend tests
+3. Create mock data fixtures for consistent testing
+4. Implement integration tests
+5. Set up Playwright for E2E tests
 
 ### Branch: architecture_refactor_2025
