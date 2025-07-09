@@ -333,6 +333,12 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 3. **Use existing branches**: Check if work should go to existing PR before creating new
 4. **Never assume**: If ambiguous, ask for clarification rather than creating duplicate work
 
+🚨 **Auto-Conflict Resolution**: ⚠️ AUTOMATIC conflict resolution available:
+1. **GitHub Actions**: Automatically runs on PR creation/push and resolves common conflicts
+2. **Manual script**: Use `./resolve_conflicts.sh` to resolve conflicts for current PR
+3. **Smart resolution**: Preserves learning content, handles common patterns in learnings.md and CLAUDE.md
+4. **Fallback**: If auto-resolution fails, manual intervention required
+
 **Commit Format**: → `.cursor/rules/examples.md`
 
 ## Environment, Tooling & Scripts
