@@ -353,7 +353,7 @@ Use `/list` to display all available slash commands with descriptions.
 **Command Documentation**: → `.claude/commands/`
 
 **Special Commands**:
-- `/think` - Maximum thinking budget | Append "ultrathink" to trigger Claude's highest computation level
+- `/think` - **ALWAYS uses sequential thinking with maximum computation budget** | Systematic problem-solving with step-by-step reasoning and deepest analysis
 - `/execute` or `/e` - 🚨 **NOW WITH MANDATORY 5-MINUTE MILESTONES** - Execute tasks with automatic progress tracking, scratchpad updates every 5 minutes, and incremental PR pushes
 
 **Command Examples**: → `.cursor/rules/examples.md`
