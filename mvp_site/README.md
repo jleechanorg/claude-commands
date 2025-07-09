@@ -4,6 +4,8 @@
 
 This directory contains the core application code for WorldArchitect.AI, an AI-powered tabletop RPG platform that serves as a digital D&D 5e Game Master. The application uses Flask for the backend API and vanilla JavaScript with Bootstrap for the frontend.
 
+**📋 [Comprehensive Code Review & File Responsibilities →](CODE_REVIEW_SUMMARY.md)**
+
 ## Architecture
 
 ### Backend (Python/Flask)

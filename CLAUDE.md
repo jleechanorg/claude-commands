@@ -139,6 +139,8 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 - Progress tracking → `roadmap/templates/progress_tracking_template.md`
 - Directory structure → `/directory_structure.md`
 - **AI Assistant Guide**: → `mvp_site/README_FOR_AI.md` (CRITICAL system architecture for AI assistants)
+- **📋 MVP Site Architecture**: → `mvp_site/README.md` (comprehensive codebase overview)
+- **📋 Code Review & File Responsibilities**: → `mvp_site/CODE_REVIEW_SUMMARY.md` (detailed file-by-file analysis)
 
 ## Core Principles & Interaction
 
@@ -223,6 +225,12 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - ✅ If unsure, add content to roadmap/scratchpad_[branch].md instead
 - ✅ Ask user where to place new files before creating them
 - **Exception**: Only when user explicitly requests file creation in mvp_site/
+
+🚨 **MANDATORY: Review codebase documentation before mvp_site/ changes**:
+- ✅ ALWAYS check `mvp_site/README.md` for architecture understanding
+- ✅ ALWAYS check `mvp_site/CODE_REVIEW_SUMMARY.md` for file responsibilities
+- ✅ Understand component responsibilities before modifying existing files
+- ✅ Consider impact on related components when making changes
 
 ### Browser vs HTTP Testing (🚨 HARD RULE)
 **CRITICAL DISTINCTION**: Never confuse browser automation with HTTP simulation

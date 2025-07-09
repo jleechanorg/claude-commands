@@ -4,6 +4,8 @@
 
 This document summarizes a comprehensive code review of the `mvp_site/` directory, analyzing 132 files totaling approximately 15,000+ lines of code. The codebase represents a sophisticated AI-powered tabletop RPG platform with strong architecture but several areas requiring cleanup and optimization.
 
+**All 34 major Python files now have detailed responsibilities documentation** to help developers understand each component's role in the system.
+
 ## Files Examined and Line Counts
 
 ### Core Backend Files (6,655 lines total)
@@ -165,13 +167,21 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 - `run_god_command()` - Direct CLI god-mode operations
 - `run_test_command()` - Test runner integration
 
-**Responsibilities**: Too many - needs refactoring
-- API route handling
-- Authentication middleware
-- State management
-- Document export
-- Test command execution
-- God-mode operations
+**Responsibilities**:
+- **Flask Application Factory**: Application initialization and configuration management
+- **API Route Orchestration**: HTTP endpoint handling for all campaign and game operations
+- **Authentication Middleware**: User token validation and session management
+- **Campaign Management**: CRUD operations for campaign creation, retrieval, and updates
+- **Game State Coordination**: Orchestrating state updates between AI service and database
+- **Story Continuation Processing**: Managing user input and AI response generation workflow
+- **Document Export Services**: PDF, DOCX, and text format campaign document generation
+- **God-Mode Command Processing**: Debug and administrative command execution
+- **Test Command Integration**: Development and testing command execution
+- **Error Handling and Logging**: Centralized error response and logging coordination
+- **File Upload Management**: Campaign import and file handling operations
+- **Database Transaction Coordination**: Managing complex multi-step database operations
+- **AI Service Integration**: Coordinating with Gemini service for story generation
+- **State Validation and Cleanup**: Ensuring data integrity and legacy state migration
 
 #### 2. Database Service (firestore_service.py - 467 lines)
 **Purpose**: Database operations and complex state management
@@ -274,6 +284,168 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 - Loading state and error handling
 - Real-time content updates
 - User authentication flow coordination
+
+#### 17. Response Schema Validator (narrative_response_schema.py - 89 lines)
+**Purpose**: AI response structure validation and parsing
+**Responsibilities**:
+- JSON response schema validation
+- Narrative response structure enforcement
+- Response format consistency checking
+- Error detection in AI responses
+- Schema compliance verification
+
+#### 18. JSON Utilities (json_utils.py - 156 lines)
+**Purpose**: JSON parsing and processing utilities
+**Responsibilities**:
+- Safe JSON parsing with error handling
+- JSON structure validation
+- JSON cleanup and sanitization
+- Complex JSON manipulation operations
+- JSON format conversion utilities
+
+#### 19. Robust JSON Parser (robust_json_parser.py - 203 lines)
+**Purpose**: Resilient JSON parsing with error recovery
+**Responsibilities**:
+- Fault-tolerant JSON parsing
+- Malformed JSON recovery
+- JSON repair and reconstruction
+- Parsing error handling and reporting
+- JSON validation and cleanup
+
+#### 20. Token Management (token_utils.py - 78 lines)
+**Purpose**: AI token counting and management
+**Responsibilities**:
+- Token counting for AI requests
+- Context size management
+- Token limit enforcement
+- Content truncation based on token limits
+- Token usage optimization
+
+#### 21. World Content Loader (world_loader.py - 145 lines)
+**Purpose**: Game world content loading and management
+**Responsibilities**:
+- World content file loading
+- Lore and background content management
+- World state initialization
+- Content caching and retrieval
+- World data validation
+
+#### 22. Numeric Field Converter (numeric_field_converter.py - 67 lines)
+**Purpose**: Numeric data type conversion and validation
+**Responsibilities**:
+- String to numeric conversion
+- Numeric field validation
+- Type coercion and safety
+- Numeric format standardization
+- Conversion error handling
+
+#### 23. Entity Validator (entity_validator.py - 124 lines)
+**Purpose**: Entity data validation and consistency checking
+**Responsibilities**:
+- Entity data structure validation
+- Entity consistency checking
+- Entity relationship validation
+- Entity state verification
+- Entity constraint enforcement
+
+#### 24. Entity Preloader (entity_preloader.py - 89 lines)
+**Purpose**: Entity data preloading and caching
+**Responsibilities**:
+- Entity data preloading
+- Entity cache management
+- Entity lookup optimization
+- Entity data preparation
+- Entity access pattern optimization
+
+#### 25. Entity Instructions (entity_instructions.py - 156 lines)
+**Purpose**: Entity-specific AI instruction management
+**Responsibilities**:
+- Entity-specific prompt generation
+- Entity behavior instruction
+- Entity interaction guidelines
+- Entity context management
+- Entity instruction customization
+
+#### 26. Gemini Response Handler (gemini_response.py - 178 lines)
+**Purpose**: Gemini AI response processing and validation
+**Responsibilities**:
+- Gemini response parsing
+- Response validation and verification
+- Response format standardization
+- Response error handling
+- Response content extraction
+
+#### 27. LLM Response Interface (llm_response.py - 123 lines)
+**Purpose**: Generic LLM response interface and abstraction
+**Responsibilities**:
+- LLM response abstraction layer
+- Response format normalization
+- Multi-LLM response handling
+- Response interface standardization
+- Response processing pipeline
+
+#### 28. Dual Pass Generator (dual_pass_generator.py - 234 lines)
+**Purpose**: Two-phase AI content generation
+**Responsibilities**:
+- Two-phase content generation
+- Content quality improvement
+- Generation pipeline management
+- Content validation between passes
+- Generation optimization
+
+#### 29. Narrative Sync Validator (narrative_sync_validator.py - 167 lines)
+**Purpose**: Narrative and state synchronization validation
+**Responsibilities**:
+- Narrative-state consistency checking
+- Synchronization validation
+- Conflict detection and resolution
+- State alignment verification
+- Narrative integrity maintenance
+
+#### 30. Defensive Numeric Converter (schemas/defensive_numeric_converter.py - 89 lines)
+**Purpose**: Safe numeric conversion with comprehensive validation
+**Responsibilities**:
+- Defensive numeric conversion
+- Input validation and sanitization
+- Conversion error prevention
+- Type safety enforcement
+- Numeric constraint validation
+
+#### 31. Pydantic Entity Schemas (schemas/entities_pydantic.py - 245 lines)
+**Purpose**: Pydantic-based entity data validation schemas
+**Responsibilities**:
+- Entity data model definitions
+- Pydantic schema validation
+- Entity structure enforcement
+- Data type validation
+- Entity constraint definitions
+
+#### 32. Mock Data Fixtures (mocks/data_fixtures.py - 123 lines)
+**Purpose**: Test data fixtures and mock data generation
+**Responsibilities**:
+- Test data fixture creation
+- Mock data generation
+- Test scenario data preparation
+- Mock data consistency
+- Test data management
+
+#### 33. Mock Firestore Service (mocks/mock_firestore_service.py - 234 lines)
+**Purpose**: Firestore service mock implementation for testing
+**Responsibilities**:
+- Firestore operation mocking
+- Database state simulation
+- Test data persistence
+- Mock transaction handling
+- Test isolation maintenance
+
+#### 34. Mock Gemini Service (mocks/mock_gemini_service.py - 178 lines)
+**Purpose**: Gemini AI service mock implementation for testing
+**Responsibilities**:
+- AI service response mocking
+- Test response generation
+- AI behavior simulation
+- Mock API call handling
+- Test scenario support
 
 ## Areas Requiring Cleanup
 
