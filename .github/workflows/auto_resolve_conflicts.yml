@@ -3,14 +3,14 @@ name: Auto-Resolve PR Conflicts
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-  push:
-    branches-ignore:
-      - main
 
 jobs:
   auto-resolve-conflicts:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref != 'refs/heads/main')
+    
+    permissions:
+      contents: write      # Required for git operations and pushing commits
+      pull-requests: write # Required for gh pr commands (list, view, comment)
     
     steps:
     - name: Checkout code
@@ -36,17 +36,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        if [ "${{ github.event_name }}" = "pull_request" ]; then
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-        else
-          # For push events, find associated PR
-          PR_NUMBER=$(gh pr list --head $(echo ${{ github.ref }} | sed 's/refs\/heads\///') --json number --jq '.[0].number' || echo "")
-        fi
-        
-        if [ -z "$PR_NUMBER" ]; then
-          echo "No PR found for this branch"
-          exit 0
-        fi
+        PR_NUMBER="${{ github.event.pull_request.number }}"
         
         echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
         
