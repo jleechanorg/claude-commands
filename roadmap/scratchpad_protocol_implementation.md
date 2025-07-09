@@ -125,6 +125,50 @@ TRIGGERS → PROTOCOL CHECKS
 - [ ] Document any issues
 ```
 
+### 6. Cognitive Load Reduction Strategies
+
+#### Visual Hierarchy
+- 🚨 **CRITICAL**: Life-or-death rules (NEVER simulate, ALWAYS verify)
+- ⚠️ **MANDATORY**: Must follow but not critical (PR workflow, test all)
+- ✅ **BEST PRACTICE**: Strongly recommended (concise output, uncertainty OK)
+- 💡 **HELPFUL**: Good to know (archive process, command shortcuts)
+
+#### Context-Aware Rules
+Show only relevant rules based on current task:
+- **Editing files**: Show verify rules, import rules, file placement
+- **Running tests**: Show test protocols, coverage requirements
+- **Creating PR**: Show git workflow, commit format, PR checklist
+- **Debugging**: Show evidence extraction, debugging protocol
+
+#### Progressive Disclosure
+```
+Level 1: CLAUDE_CORE.md (10 rules - always visible)
+   ↓
+Level 2: Task-specific rules (5-10 rules - shown when relevant)
+   ↓  
+Level 3: Full CLAUDE.md (2000+ lines - reference only)
+```
+
+#### Memory Aids
+- **VESTS**: Verify, Evidence, Simulate-never, Test-all, Say-uncertain
+- **BEFORE**: Branch-check, Evidence-extract, Fix-all, Output-minimal, Read-first, Edit-after
+- **Visual patterns**: 🚨 = Stop, ⚠️ = Caution, ✅ = Go, ❌ = Never
+
+#### Decision Trees
+```
+About to edit file?
+├─ YES → Did you read it first?
+│  ├─ YES → Proceed with edit
+│  └─ NO → STOP - Read first
+└─ NO → Continue with current task
+
+Test failing?
+├─ Can reproduce locally?
+│  ├─ YES → Extract error → Debug
+│  └─ NO → Check environment
+└─ Is it "minor"? → NO - Fix it
+```
+
 ### 3. Tool Integration
 - Build protocol checking into TodoWrite templates
 - Never edit without reading first (already enforced)
@@ -156,23 +200,99 @@ TRIGGERS → PROTOCOL CHECKS
 - **Every correction**: Update relevant rule file
 - **Every session**: Review protocol adherence
 
+### 7. Anti-Patterns Gallery
+
+#### Anti-Pattern: "Assuming Without Verifying"
+**Violation Example**:
+```
+User: "Add ultrathink to the command"
+Bad: *immediately edits file to add ultrathink*
+Good: *reads file first, discovers ultrathink already exists*
+```
+**Consequence**: Duplicate code, confused user, wasted time
+**Correct Approach**: ALWAYS read current state before editing
+
+#### Anti-Pattern: "Simulating When Stuck"
+**Violation Example**:
+```
+Error: "Playwright not installed"
+Bad: *creates fake test output in text file*
+Good: "Cannot run browser tests - Playwright not installed"
+```
+**Consequence**: Broken trust, hidden failures, cascading issues
+**Correct Approach**: Admit limitations immediately
+
+#### Anti-Pattern: "Skipping Evidence Extraction"
+**Violation Example**:
+```
+User: "Fix the error in the login"
+Bad: "The error is probably due to..."
+Good: *extracts actual error* "TypeError at auth.py:45 - 'NoneType' has no attribute 'id'"
+```
+**Consequence**: Wrong fixes, wasted debugging time
+**Correct Approach**: Extract first, analyze second
+
+#### Anti-Pattern: "Partial Test Success"
+**Violation Example**:
+```
+Test results: 97/99 passing
+Bad: "Tests mostly pass, just 2 minor failures"
+Good: *investigates failures* "2 tests fail due to missing mock data"
+```
+**Consequence**: Broken builds, regression bugs
+**Correct Approach**: 100% pass rate or it's not done
+
+#### Anti-Pattern: "Tool Boundary Violations"
+**Violation Example**:
+```
+Task: Write browser test for login
+Bad: *uses requests.post() to simulate login*
+Good: *uses Playwright to click buttons and fill forms*
+```
+**Consequence**: Fake tests that don't catch real UI bugs
+**Correct Approach**: Browser tests = browser automation
+
 ## Implementation Plan
 
 ### Phase 1: CLAUDE.md Updates
 - [ ] Move PRE-ACTION CHECKPOINT to top of file
-- [ ] Create simple 3-question trigger
+- [ ] Create CLAUDE_CORE.md file with 10 essential rules
 - [ ] Add protocol checking to common workflows
 - [ ] Build verification into TodoWrite templates
+- [ ] Add decision trees to relevant sections
 
 ### Phase 2: Habit Formation
 - [ ] Practice trigger-based habits for 1 week
 - [ ] Document compliance/non-compliance
 - [ ] Adjust protocols based on what actually works
 
-### Phase 3: Reinforcement
+### Phase 3: Reinforcement  
 - [ ] Regular review of protocol compliance
 - [ ] Feedback loop for improvement
 - [ ] Integration with existing tools
+
+## Verification Protocol
+
+### Success Metrics
+1. **Pre-Action Checkpoint Usage**: Track % of actions with verification
+2. **Simulation Incidents**: Count fake outputs (target: 0)
+3. **Evidence Extraction Rate**: % of debug sessions with proper extraction
+4. **Test Success Standards**: % of sessions achieving 100% pass rate
+5. **Protocol Violations**: Daily count of rule breaks
+
+### Weekly Review Questions
+- Which protocols were followed consistently?
+- Which were ignored under pressure?
+- What patterns trigger non-compliance?
+- Which forcing functions actually work?
+- What needs simplification?
+
+### Continuous Improvement
+- Document violations in lessons.mdc
+- Update CLAUDE_CORE.md based on patterns
+- Refine checklists based on usage
+- Strengthen working forcing functions
+- Remove/revise ineffective rules
 
 ## Next Steps
 

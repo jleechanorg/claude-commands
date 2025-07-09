@@ -653,3 +653,38 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 
 ### Archive Process
 Quarterly/2500 lines/new year → `lessons_archive_YYYY.mdc` | Keep critical patterns | Reference archives
+
+## API Timeout Prevention (🚨)
+
+**MANDATORY**: Prevent API timeouts with these strategies:
+
+### Operation Size Management
+- **Break large edits**: Use MultiEdit with 3-4 focused edits max
+- **Limit sequential thinking**: 5-6 thoughts instead of 8+
+- **File reading**: Use offset/limit for huge files
+
+### Response Optimization
+- **Concise responses**: Essential with /think mode active
+- **Bullet points**: Prefer over verbose paragraphs
+- **Minimal output**: Only what's requested
+
+### Tool Call Efficiency
+- **Batch operations**: Group related tool calls
+- **Avoid redundancy**: Don't re-read unchanged files
+- **Smart search**: Use Grep/Glob instead of reading entire directories
+
+### Sequential Thinking Best Practices
+- **Start small**: Begin with 4-5 totalThoughts
+- **Expand carefully**: Use needsMoreThoughts only if essential
+- **Concise thoughts**: Keep each thought focused
+- **Avoid branching**: Unless specifically needed
+
+### Edit Strategy
+- **MultiEdit**: For large changes, use multiple targeted edits
+- **Section targeting**: Modify specific sections, not entire files
+- **Incremental updates**: Break massive changes across messages
+
+### Timing Awareness
+- **Server load**: Timeouts correlate with system load
+- **Complex operations**: /think + sequential thinking adds overhead
+- **Work distribution**: Split very large tasks across multiple messages
