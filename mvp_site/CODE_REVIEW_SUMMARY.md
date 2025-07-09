@@ -29,11 +29,119 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 - **4 authentication test files**
 - **2 combat mechanics tests**
 
+#### Test Infrastructure Responsibilities:
+- **Unit Testing**: Individual component testing and validation
+- **Integration Testing**: End-to-end workflow testing
+- **API Testing**: Backend endpoint validation
+- **Frontend Testing**: UI component and interaction testing
+- **Authentication Testing**: User authentication and security validation
+- **State Management Testing**: Game state consistency and validation
+- **AI Response Testing**: Gemini service integration validation
+- **Error Handling Testing**: Edge case and error condition testing
+- **Performance Testing**: Response time and resource usage validation
+
 ### Supporting Files (2,000+ lines estimated)
 - **Prompt files**: 6 AI instruction files in prompts/
 - **Entity tracking**: Multiple validation and tracking modules
 - **Utility modules**: JSON parsing, token management, decorators
 - **Mock services**: Test fixtures and mock implementations
+
+#### 6. Constants Module (constants.py - 174 lines)
+**Purpose**: Centralized configuration and shared constants
+**Responsibilities**:
+- System-wide configuration constants
+- File paths and directory structure definitions
+- API configuration and limits
+- Default values and settings
+- Environment-specific configurations
+
+#### 7. Logging Utility (logging_util.py - 208 lines)
+**Purpose**: Centralized logging configuration and utilities
+**Responsibilities**:
+- Unified logging configuration across application
+- Log formatting and output management
+- Error tracking and debugging support
+- Performance monitoring and metrics
+- Log level management
+
+#### 8. Decorators Module (decorators.py - 52 lines)
+**Purpose**: Cross-cutting concerns and utility decorators
+**Responsibilities**:
+- Exception logging and error handling
+- Function execution tracking
+- Common decorator patterns
+- Error context preservation
+
+#### 9. Debug Mode Parser (debug_mode_parser.py - 173 lines)
+**Purpose**: Debug mode command parsing and validation
+**Responsibilities**:
+- Debug command interpretation and validation
+- User input parsing for debug features
+- Debug mode state management
+- Command syntax validation
+- Error handling for invalid commands
+
+#### 10. Entity Tracking System (entity_tracking.py - 30 lines)
+**Purpose**: Entity tracking and validation for narrative generation
+**Responsibilities**:
+- Character and NPC entity tracking
+- Entity state validation
+- Narrative consistency checking
+- Entity relationship management
+
+#### 11. Document Generator (document_generator.py)
+**Purpose**: Campaign document generation in multiple formats
+**Responsibilities**:
+- PDF document generation
+- DOCX document creation
+- Text format export
+- Document formatting and styling
+- Export workflow management
+
+#### 12. API Communication (static/api.js - ~400 lines)
+**Purpose**: Frontend API communication layer
+**Responsibilities**:
+- HTTP request/response handling
+- API endpoint management
+- Error handling and retry logic
+- Request/response formatting
+- Authentication token management
+
+#### 13. Authentication Handler (static/auth.js - ~300 lines)
+**Purpose**: Frontend authentication management
+**Responsibilities**:
+- Firebase authentication integration
+- User session management
+- Login/logout flow handling
+- Token refresh and validation
+- Authentication state tracking
+
+#### 14. Main Stylesheet (static/style.css - ~800 lines)
+**Purpose**: Application styling and theme management
+**Responsibilities**:
+- Base application styling
+- Theme system implementation
+- Responsive design patterns
+- Component-specific styles
+- Cross-browser compatibility
+
+#### 15. Mock Services (mocks/ directory)
+**Purpose**: Test fixtures and mock implementations
+**Responsibilities**:
+- Mock Firebase/Firestore service implementation
+- Mock Gemini AI service for testing
+- Test data fixtures and sample data
+- Test isolation and repeatability
+- Development environment mocking
+
+#### 16. AI Prompt System (prompts/ directory)
+**Purpose**: AI instruction and behavior management
+**Responsibilities**:
+- AI personality and behavior definition
+- Game mechanics instruction
+- Narrative style guidelines
+- System instruction hierarchy
+- D&D 5e rule implementation
 
 ## Architecture Analysis
 
@@ -81,6 +189,16 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 - Legacy state cleanup
 - Defensive programming patterns
 
+**Responsibilities**:
+- Firebase/Firestore database operations
+- Campaign data management (CRUD operations)
+- Game state persistence and retrieval
+- Complex state merging and updates
+- Mission data format conversion
+- Story log management
+- Data validation and integrity
+- Legacy data cleanup and migration
+
 #### 3. AI Service (gemini_service.py - 1,449 lines)
 **Purpose**: AI integration and sophisticated response processing
 **Public Methods**:
@@ -97,6 +215,15 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 - JSON mode enforcement for structured responses
 - Debug content management
 
+**Responsibilities**:
+- Gemini AI client management and model selection
+- System instruction building and prompt construction
+- Entity tracking and narrative validation
+- JSON response parsing and structured data handling
+- Model fallback and error handling
+- Planning block enforcement and debug content management
+- Token counting and context management
+
 #### 4. Game State Management (game_state.py - 373 lines)
 **Purpose**: Core state validation and game logic
 **Public Methods**:
@@ -111,6 +238,16 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 - Consistency validation between narrative and state
 - Time tracking consolidation
 - Legacy data migration
+
+**Responsibilities**:
+- Core game state data structure management
+- Game state serialization and deserialization
+- Combat state management and lifecycle
+- Character and entity state tracking
+- Time and resource management
+- State validation and consistency checks
+- Legacy state data migration
+- Combat cleanup and automation
 
 #### 5. Frontend Application (static/app.js - ~2,000+ lines)
 **Purpose**: Single-page application logic and UI management
@@ -127,6 +264,16 @@ This document summarizes a comprehensive code review of the `mvp_site/` director
 - Real-time form validation
 - Theme switching
 - Loading state management
+
+**Responsibilities**:
+- Single-page application navigation and routing
+- Campaign creation wizard flow management
+- User interface state management
+- Form validation and submission handling
+- Theme switching and UI customization
+- Loading state and error handling
+- Real-time content updates
+- User authentication flow coordination
 
 ## Areas Requiring Cleanup
 
