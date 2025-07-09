@@ -119,8 +119,7 @@ When mistakes occur:
 5. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
 7. 🚨 **DATE INTERPRETATION**: Environment date format is YYYY-MM-DD where MM is the month number (01=Jan, 07=July)
-8. 🚨 **BRANCH DISCIPLINE**: ❌ NEVER switch git branches unless user explicitly requests it | Work on current branch only | Ask before any `git checkout` operations
-9. 🚨 **BRANCH PROTECTION**: See "Branch Protection Protocol" section below for dev[timestamp] rules
+8. 🚨 **BRANCH RULES**: See consolidated "Branch & Push Rules" in Git Workflow section
 10. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
 11. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
    - **OPEN** = Work In Progress (WIP) - NOT completed
@@ -150,14 +149,7 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 Clarify before acting | User instructions = law | ❌ delete without permission | Leave working code alone |
 Focus on primary goal | Propose before implementing | Summarize key takeaways | Externalize all knowledge
 
-**Branch Status Protocol**:
-🚨 **MANDATORY**: Always include complete git status header in every response
-- ✅ Format: `[Local: branch-name | Remote: origin/branch-name | PR: #123 https://github.com/jleechan2015/worldarchitect.ai/pull/123]`
-- ✅ Use `git branch --show-current` for local branch
-- ✅ Use `git rev-parse --abbrev-ref @{upstream}` for remote branch (if exists)
-- ✅ Use `gh pr view --json number,url` to get PR info (if exists)
-- ✅ If no PR exists, show `PR: none`
-- ✅ Essential for complete context awareness and avoiding branch confusion
+**Branch Status Protocol**: → See "Branch & Push Rules" in Git Workflow section
 
 **Response Modes**: 
 - Default: Structured analysis with <thinking>, <analysis>, <response> format for complex tasks
@@ -379,49 +371,74 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 
 ## Git Workflow
 
+### General Git Workflow
+
 | Rule | Description | Commands/Actions |
 |------|-------------|------------------|
-| **Main = Truth** | Use `git show main:<file>` for originals | ❌ push to main (except roadmap/sprint files) |
+| **Main = Truth** | Use `git show main:<file>` for originals | Work from main baseline |
 | **PR Workflow** | All changes via PRs | `gh pr create` + test results in description |
-| **Branch Safety** | Verify before push | `git push origin HEAD:branch-name` |
-| **Integration** | Fresh branch after merge | `./integrate.sh` |
 | **Pre-PR Check** | Verify commits/files | → `.cursor/rules/validation_commands.md` |
 | **Post-Merge** | Check unpushed files | `git status` → follow-up PR if needed |
-| **Progress Track** | Scratchpad + JSON | `roadmap/scratchpad_[branch].md` + `tmp/milestone_*.json` |
+| **Progress Track** | Scratchpad + JSON | `roadmap/scratchpad_[branch-name].md` + `tmp/milestone_*.json` |
 | **PR Testing** | Apply PRs locally | `gh pr checkout <PR#>` |
-| **Roadmap Exception** | Direct push allowed | Only: roadmap/*.md, sprint_*.md |
+| **Integration** | Fresh branch after merge | `./integrate.sh` |
 
-🚨 **No Main Push**: ✅ `git push origin HEAD:feature` | ❌ `git push origin main`
+### 🚨 Branch & Push Rules (CONSOLIDATED)
 
-🚨 **PR Context Management**: ⚠️ MANDATORY before creating new branches/PRs:
-1. **Check git status**: `git status` and `git branch` to see current work
-2. **Verify PR context**: When user says "push to the PR" without number, ask which PR
-3. **Use existing branches**: Check if work should go to existing PR before creating new
-4. **Never assume**: If ambiguous, ask for clarification rather than creating duplicate work
+#### Main Branch Protection
+- 🚨 **No Main Push**: ❌ `git push origin main` | ✅ `git push origin HEAD:feature-branch`
+- **Roadmap Exception**: Direct push allowed ONLY for: `roadmap/*.md`, `sprint_*.md`
+- **All other changes**: MUST go through PRs
 
-🚨 **Auto-Conflict Resolution**: ⚠️ AUTOMATIC conflict resolution available:
+#### Branch Discipline
+- 🚨 **NEVER switch branches** unless user explicitly requests it
+- **Work on current branch only**
+- **Ask before ANY** `git checkout` operations
+
+#### Branch Status Protocol
+- 🚨 **MANDATORY**: Include git status in EVERY response
+- ✅ **Format**: `[Local: branch-name | Remote: origin/branch-name | PR: #123 https://github.com/jleechan2015/worldarchitect.ai/pull/123]`
+- ✅ **Commands**:
+  - Local: `git branch --show-current`
+  - Remote: `git rev-parse --abbrev-ref @{upstream}` (if exists)
+  - PR: `gh pr view --json number,url` (if exists)
+- ✅ Show `PR: none` if no PR exists
+
+#### dev[timestamp] Branch Protection
+- 🚨 **NEVER make changes** in dev[timestamp] branches
+- **Purpose**: Protective branches to prevent accidental main pushes
+- **Usage**: ONLY for initial isolation from main
+- **Action when found on one**:
+  1. Immediately create new descriptive branch
+  2. Switch to new branch
+  3. Delete dev[timestamp] branch with `git branch -D dev[timestamp]`
+
+#### Branch Creation & Naming
+- ✅ **ALWAYS use descriptive names**:
+  - `feature/task-description`
+  - `fix/issue-name`
+  - `update/component-name`
+- ✅ **Use existing branches** when continuing related work
+- ❌ **NEVER use dev[timestamp]** for actual development
+
+#### PR Context Management
+- 🚨 **Before creating new branches/PRs**:
+  1. Check current status: `git status` and `git branch`
+  2. Verify PR context: Ask which PR if user says "push to the PR"
+  3. Check existing work before creating new branches
+  4. Never assume - ask for clarification
+
+#### Branch Safety
+- **Verify before push**: Always use `git push origin HEAD:branch-name`
+- **Check remote**: Verify push success with `gh pr view` or `git log origin/branch`
+
+### Auto-Conflict Resolution
+
+🚨 **Automatic conflict resolution available**:
 1. **GitHub Actions**: Automatically runs on PR creation/push and resolves common conflicts
 2. **Manual script**: Use `./resolve_conflicts.sh` to resolve conflicts for current PR
 3. **Smart resolution**: Preserves learning content, handles common patterns in CLAUDE.md integrated sections
 4. **Fallback**: If auto-resolution fails, manual intervention required
-
-🚨 **BRANCH PROTECTION PROTOCOL**: ⚠️ MANDATORY branch usage rules:
-1. **dev[timestamp] branches**: ❌ NEVER make changes directly in these branches
-   - These are protective branches to prevent accidental main pushes
-   - Used ONLY for initial isolation from main branch
-   - If found on one, immediately create new descriptive branch for actual work
-   - Clean up by deleting after switching to proper branch
-
-2. **Branch Creation Rules**:
-   - ✅ ALWAYS create descriptive branches: `feature/task-description`, `fix/issue-name`, `update/component-name`
-   - ✅ Use existing feature branches when continuing related work
-   - ❌ NEVER use dev[timestamp] branches for actual development
-   - ❌ NEVER make commits directly in dev[timestamp] branches
-
-3. **Branch Cleanup Protocol**:
-   - When leaving a dev[timestamp] branch: delete it immediately
-   - Use `git branch -D dev[timestamp]` to clean up
-   - Only keep meaningful, descriptive branches
 
 **Commit Format**: → `.cursor/rules/examples.md`
 
@@ -449,7 +466,9 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 ## Knowledge Management
 
 ### Scratchpad Protocol (⚠️)
-`roadmap/scratchpad_[branch].md`: Goal | Plan | State | Next | Context | Branch info
+`roadmap/scratchpad_[branch-name].md`: Goal | Plan | State | Next | Context | Branch info
+- Use actual branch name (e.g., `scratchpad_feature_new-api.md`)
+- Replace `/` with `_` in branch names for valid filenames
 
 ### File Organization
 - **CLAUDE.md**: Primary protocol (includes all integrated lessons and learnings)
