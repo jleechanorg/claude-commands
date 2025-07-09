@@ -41,11 +41,36 @@
 
 ## Self-Learning Protocol
 
-🚨 **MANDATORY**: When you make a mistake and get corrected:
-1. **Immediately update CLAUDE.md** with the correction as a new rule
-2. **No prompting needed** - if user corrects you, update the docs
-3. **Format**: Add rule in relevant section with 🚨 marker
-4. **Example**: If you use `vpython` and user says "use venv", add rule about venv activation
+🚨 **MANDATORY**: Continuously learn from corrections and self-realizations:
+
+### Automatic Learning Triggers
+1. **User corrections** - When user corrects a mistake, immediately document it
+2. **Self-corrections** - When you realize "Oh, I should have...", document it
+3. **Failed attempts** - When something doesn't work, learn why
+4. **Pattern recognition** - When you repeat a mistake, create a rule
+
+### Learning Process
+1. **Detect** - Recognize correction/mistake (yours or user's)
+2. **Analyze** - Understand what went wrong and why
+3. **Document** - Update appropriate file:
+   - **CLAUDE.md** - Critical rules with 🚨 marker
+   - **.claude/learnings.md** - Detailed categorized learnings
+   - **.cursor/rules/lessons.mdc** - Technical lessons
+4. **Apply** - Use the learning immediately in current session
+
+### /learn Command
+- **Usage**: `/learn [optional: specific learning]`
+- **Purpose**: Explicitly capture learnings or review recent corrections
+- **Example**: `/learn playwright is installed in venv`
+
+### Self-Correction Indicators
+When you say these, ALWAYS document the learning:
+- "Let me correct that..." / "Let me fix that..."
+- "Oh, I should have..." / "Actually, I need to..."
+- "My mistake..." / "I was wrong about..."
+- "I see the issue..." / "The problem is..."
+
+**Learning Categories** → `.claude/learnings.md`
 
 ## Claude Code Specific Behavior
 
