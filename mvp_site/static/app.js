@@ -625,7 +625,9 @@ const appendToStory = (actor, text, mode = null, debugMode = false, sequenceId =
                     method: 'POST', body: JSON.stringify({ input: userInput, mode }),
                 });
                 // Use user_scene_number from backend response
-                appendToStory('gemini', data.response, null, data.debug_mode || false, data.user_scene_number, data);
+                // Use 'narrative' field if available (per schema), fall back to 'response' for compatibility
+                const narrativeText = data.narrative || data.response;
+                appendToStory('gemini', narrativeText, null, data.debug_mode || false, data.user_scene_number, data);
                 timerInfo.textContent = `Response time: ${duration}s`;
                 
                 // Update debug mode indicator if present

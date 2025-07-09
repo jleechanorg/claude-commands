@@ -289,7 +289,8 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
     # Build response data structure
     response_data = {
         KEY_SUCCESS: True,
-        KEY_RESPONSE: final_narrative,
+        KEY_RESPONSE: final_narrative,  # Keep for backward compatibility
+        'narrative': final_narrative,    # Add narrative field per schema
         'debug_mode': debug_mode_enabled,
         'sequence_id': len(story_context) + 2
     }
