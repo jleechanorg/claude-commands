@@ -118,8 +118,9 @@ When mistakes occur:
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
 7. 🚨 **DATE INTERPRETATION**: Environment date format is YYYY-MM-DD where MM is the month number (01=Jan, 07=July)
 8. 🚨 **BRANCH DISCIPLINE**: ❌ NEVER switch git branches unless user explicitly requests it | Work on current branch only | Ask before any `git checkout` operations
-9. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
-10. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
+9. 🚨 **DEV BRANCH PROTECTION**: ❌ NEVER make changes in dev[timestamp] branches | These are protective branches only | Always create descriptive branches for actual work
+10. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
+11. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
    - **OPEN** = Work In Progress (WIP) - NOT completed
    - **MERGED** = Completed and integrated into main branch  
    - **CLOSED** = Abandoned or rejected - NOT completed
@@ -381,6 +382,24 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 2. **Manual script**: Use `./resolve_conflicts.sh` to resolve conflicts for current PR
 3. **Smart resolution**: Preserves learning content, handles common patterns in learnings.md and CLAUDE.md
 4. **Fallback**: If auto-resolution fails, manual intervention required
+
+🚨 **BRANCH PROTECTION PROTOCOL**: ⚠️ MANDATORY branch usage rules:
+1. **dev[timestamp] branches**: ❌ NEVER make changes directly in these branches
+   - These are protective branches to prevent accidental main pushes
+   - Used ONLY for initial isolation from main branch
+   - If found on one, immediately create new descriptive branch for actual work
+   - Clean up by deleting after switching to proper branch
+
+2. **Branch Creation Rules**:
+   - ✅ ALWAYS create descriptive branches: `feature/task-description`, `fix/issue-name`, `update/component-name`
+   - ✅ Use existing feature branches when continuing related work
+   - ❌ NEVER use dev[timestamp] branches for actual development
+   - ❌ NEVER make commits directly in dev[timestamp] branches
+
+3. **Branch Cleanup Protocol**:
+   - When leaving a dev[timestamp] branch: delete it immediately
+   - Use `git branch -D dev[timestamp]` to clean up
+   - Only keep meaningful, descriptive branches
 
 **Commit Format**: → `.cursor/rules/examples.md`
 
