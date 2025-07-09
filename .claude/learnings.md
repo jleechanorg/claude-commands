@@ -39,7 +39,53 @@ When I say these phrases, I'm recognizing a mistake:
 - "Actually, I need to..." → Update relevant section
 - "My mistake..." → Learn and document
 
+## Code Quality & Duplication
+
+### Import Statement Patterns
+- ❌ **REPEATED MISTAKE**: Using modules without importing them (e.g., `os` and `sys`)
+- ✅ **FIX**: Always verify imports at top of file before using modules
+- 🚨 **CRITICAL**: This pattern appears in multiple test files across PRs
+- **Example**: `test_think_block_protocol.py` uses `os.path` without `import os`
+
+### CSS/Styling Duplication
+- ❌ **REPEATED MISTAKE**: Defining unused CSS selectors (e.g., `.planning-block-header` never used)
+- ❌ **REPEATED MISTAKE**: Hardcoding inline styles in JavaScript instead of CSS classes
+- ✅ **FIX**: Audit CSS files for unused selectors before PR submission
+- ✅ **FIX**: Move inline styles to CSS classes for maintainability
+- **Example**: `app.js` line 118 uses inline styles instead of CSS classes
+
+### DRY Principle Violations
+- ❌ **PATTERN**: Code duplication across similar functions/files
+- ❌ **PATTERN**: Copy-paste code without consolidating common logic
+- ❌ **SPECIFIC MISTAKES**: Hardcoded dictionary keys instead of constants (e.g., 'session_header', 'planning_block')
+- ❌ **SPECIFIC MISTAKES**: Duplicate structured fields extraction code in multiple places
+- ❌ **SPECIFIC MISTAKES**: Duplicate HTML generation logic instead of helper functions
+- ❌ **SPECIFIC MISTAKES**: Duplicate documentation/schemas instead of single source of truth
+- ✅ **FIX**: Extract common patterns into utility functions
+- ✅ **FIX**: Use module-level constants for repeated strings
+- ✅ **FIX**: Create extraction methods for structured fields
+- ✅ **FIX**: Create HTML generation helpers for UI components
+- 🚨 **ENFORCEMENT**: Always check for similar existing code before writing new
+
+### File Organization Anti-Patterns
+- ❌ **REPEATED MISTAKE**: Creating test files without checking existing test structure
+- ❌ **REPEATED MISTAKE**: Adding files to wrong directories (especially mvp_site/)
+- ❌ **SPECIFIC MISTAKE**: Creating random directories (e.g., worldarchitect/) without justification
+- ✅ **FIX**: Follow existing project structure patterns
+- ✅ **FIX**: Ask user for file placement when uncertain
+- ✅ **FIX**: Remove unnecessary directory structures before PR submission
+
 ## Recent Self-Learnings
+
+### 2025-01-09
+- ✅ **REPEATED MISTAKES IN PR #447**: Import statements, unused CSS, inline styles
+- ✅ **PATTERN**: Same types of mistakes appear across multiple files in single PR
+- ✅ **LEARNING**: Need systematic code quality checklist before PR submission
+- ✅ **LEARNING**: Copilot reviewer identifies patterns I should catch proactively
+- ✅ **USER COMMENTS SHOW MORE DUPLICATION**: Constants vs strings, extraction methods, duplicate docs
+- ✅ **PATTERN**: I create duplicated code across files instead of extracting utilities
+- ✅ **PATTERN**: I hardcode strings instead of using constants
+- ✅ **PATTERN**: I create mysterious directories without user approval
 
 ### 2025-01-08
 - ✅ Created overly complex Python-based self-learning system when simple documentation updates work better
@@ -68,6 +114,16 @@ When I say these phrases, I'm recognizing a mistake:
 - ✅ **CONFLICT RESOLUTION**: Understand what each side represents (HEAD vs incoming commit)
 - ✅ **DIVERGENCE PATTERNS**: "Your branch and 'origin/branch' have diverged" means rebase/merge needed
 - ✅ **GITHUB BEHAVIOR**: GitHub compares against current main, not main at time of branching
+
+### 2025-07-09 - Test Failure Patterns and Mock Service Updates
+- ✅ **MOCK SERVICE EVOLUTION**: When adding new parameters to service methods, ALL mock services must be updated
+- ✅ **SIGNATURE MISMATCH**: Tests fail when mock functions don't match production signatures
+- ✅ **MODULE-LEVEL FUNCTIONS**: Some tests import mock services as modules, requiring module-level delegation functions
+- ✅ **TEST ISOLATION**: Tests need proper setup - campaigns must exist before adding story entries
+- ✅ **ASSERTION PATTERNS**: Use `assert_called()` + `call_args` instead of `assert_called_with()` for flexible parameter checking
+- ✅ **SIDE EFFECT FUNCTIONS**: Mock side_effect functions must match the exact signature of the real function
+- ✅ **BACKWARDS COMPATIBILITY**: When adding optional parameters, ensure they're truly optional with defaults
+- ✅ **CI vs LOCAL**: Tests passing locally doesn't guarantee CI success - always push and verify GitHub Actions
 
 ## What Actually Works (Proven by Tests)
 

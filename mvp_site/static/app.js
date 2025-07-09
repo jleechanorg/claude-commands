@@ -169,7 +169,42 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
         }
     };
     
-    const appendToStory = (actor, text, mode = null, debugMode = false, sequenceId = null, fullData = null) => {
+    // Helper function to generate HTML for structured fields
+const generateStructuredFieldsHTML = (fullData, debugMode) => {
+    let html = '';
+    
+    // Add dice rolls if present
+    if (fullData.dice_rolls && fullData.dice_rolls.length > 0) {
+        html += '<div class="dice-rolls">';
+        html += '<strong>🎲 Dice Rolls:</strong><ul>';
+        fullData.dice_rolls.forEach(roll => {
+            html += `<li>${roll}</li>`;
+        });
+        html += '</ul></div>';
+    }
+    
+    // Add resources if present
+    if (fullData.resources) {
+        html += `<div class="resources"><strong>📊 Resources:</strong> ${fullData.resources}</div>`;
+    }
+    
+    // Add planning block if present (always at the bottom)
+    if (fullData.planning_block) {
+        html += `<div class="planning-block">${fullData.planning_block}</div>`;
+    }
+    
+    // Add debug info if in debug mode
+    if (debugMode && fullData.debug_info && Object.keys(fullData.debug_info).length > 0) {
+        html += '<div class="debug-info">';
+        html += '<strong>🔍 Debug Info:</strong><br>';
+        html += '<pre>' + JSON.stringify(fullData.debug_info, null, 2) + '</pre>';
+        html += '</div>';
+    }
+    
+    return html;
+};
+
+const appendToStory = (actor, text, mode = null, debugMode = false, sequenceId = null, fullData = null) => {
         const storyContainer = document.getElementById('story-content');
         const entryEl = document.createElement('div');
         entryEl.className = 'story-entry';
@@ -214,33 +249,11 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
         // Add the main narrative
         html += `<p><strong>${label}:</strong> ${processedText}</p>`;
         
-        // Add dice rolls if present
-        if (actor === 'gemini' && fullData && fullData.dice_rolls && fullData.dice_rolls.length > 0) {
-            html += '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;">';
-            html += '<strong>🎲 Dice Rolls:</strong><ul style="margin: 5px 0; padding-left: 20px;">';
-            fullData.dice_rolls.forEach(roll => {
-                html += `<li>${roll}</li>`;
-            });
-            html += '</ul></div>';
+        // Add structured fields for AI responses
+        if (actor === 'gemini' && fullData) {
+            html += generateStructuredFieldsHTML(fullData, debugMode);
         }
         
-        // Add resources if present
-        if (actor === 'gemini' && fullData && fullData.resources) {
-            html += `<div class="resources" style="background-color: #fff3cd; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>📊 Resources:</strong> ${fullData.resources}</div>`;
-        }
-        
-        // Add planning block if present (always at the bottom)
-        if (actor === 'gemini' && fullData && fullData.planning_block) {
-            html += `<div class="planning-block" style="background-color: #e3f2fd; padding: 10px; margin-top: 10px; border-radius: 5px; white-space: pre-wrap;">${fullData.planning_block}</div>`;
-        }
-        
-        // Add debug info if in debug mode
-        if (actor === 'gemini' && debugMode && fullData && fullData.debug_info && Object.keys(fullData.debug_info).length > 0) {
-            html += '<div class="debug-info" style="background-color: #f5f5f5; padding: 10px; margin-top: 10px; border-radius: 5px; font-size: 0.9em;">';
-            html += '<strong>🔍 Debug Info:</strong><br>';
-            html += '<pre style="margin: 5px 0;">' + JSON.stringify(fullData.debug_info, null, 2) + '</pre>';
-            html += '</div>';
-        }
         
         entryEl.innerHTML = html;
         storyContainer.appendChild(entryEl);

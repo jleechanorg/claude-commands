@@ -11,29 +11,7 @@ The following are FORBIDDEN in the `narrative` field:
 - ❌ [STATE_UPDATES_PROPOSED]...[END_STATE_UPDATES_PROPOSED] blocks
 - ❌ Any debug tags or markers
 
-**CORRECT STRUCTURE:**
-```json
-{
-    "narrative": "You swing your sword in a wide arc, the blade catching the torchlight as it slices through the air. The goblin tries to dodge but isn't quick enough - your sword bites deep into its shoulder, drawing a pained shriek. Dark blood spatters the cavern floor as the creature staggers backward, clutching its wound.",
-    "session_header": "[SESSION_HEADER]\nTimestamp: 1492 DR, Ches 20, 10:00\nLocation: Goblin Cave\nStatus: Lvl 2 Fighter | HP: 15/18 (Temp: 0) | XP: 450/900 | Gold: 25gp\nResources: HD: 2/2 | Second Wind: 0/1 | Action Surge: 1/1\nConditions: None | Exhaustion: 0 | Inspiration: No | Potions: 1",
-    "planning_block": "--- PLANNING BLOCK ---\nWhat would you like to do next?\n1. **Attack again:** Strike the goblin with your sword\n2. **Defend:** Raise your shield and prepare for the goblin's counterattack\n3. **Use Second Wind:** Recover some hit points\n4. **Other:** Describe a different action you'd like to take.",
-    "dice_rolls": ["Attack roll: 1d20+3 = 15+3 = 18 (Hit, AC 15)", "Damage: 1d8+3 = 5+3 = 8 slashing damage"],
-    "resources": "HD: 2/2, Second Wind: 0/1, Action Surge: 1/1, Potions: 1",
-    "entities_mentioned": ["goblin"],
-    "location_confirmed": "Goblin Cave",
-    "state_updates": {
-        "npc_data": {
-            "goblin_1": {
-                "hp_current": 3
-            }
-        }
-    },
-    "debug_info": {
-        "dm_notes": ["I chose to have the goblin attempt a dodge to make the combat feel more dynamic, rather than just standing still. The shoulder wound gives a specific injury location for narrative consistency."],
-        "state_rationale": "Reduced goblin HP from 11 to 3 due to 8 damage taken"
-    }
-}
-```
+**CORRECT STRUCTURE:** See `mvp_site/narrative_response_schema.py` for the complete JSON schema definition.
 
 **WRONG DEBUG HANDLING:**
 ```json

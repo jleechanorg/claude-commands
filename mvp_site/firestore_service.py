@@ -442,16 +442,16 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None, structured_fie
     
     # Add structured fields if provided (for AI responses)
     if structured_fields:
-        if structured_fields.get('session_header'):
-            base_entry_data['session_header'] = structured_fields['session_header']
-        if structured_fields.get('planning_block'):
-            base_entry_data['planning_block'] = structured_fields['planning_block']
-        if structured_fields.get('dice_rolls'):
-            base_entry_data['dice_rolls'] = structured_fields['dice_rolls']
-        if structured_fields.get('resources'):
-            base_entry_data['resources'] = structured_fields['resources']
-        if structured_fields.get('debug_info'):
-            base_entry_data['debug_info'] = structured_fields['debug_info']
+        if structured_fields.get(constants.FIELD_SESSION_HEADER):
+            base_entry_data[constants.FIELD_SESSION_HEADER] = structured_fields[constants.FIELD_SESSION_HEADER]
+        if structured_fields.get(constants.FIELD_PLANNING_BLOCK):
+            base_entry_data[constants.FIELD_PLANNING_BLOCK] = structured_fields[constants.FIELD_PLANNING_BLOCK]
+        if structured_fields.get(constants.FIELD_DICE_ROLLS):
+            base_entry_data[constants.FIELD_DICE_ROLLS] = structured_fields[constants.FIELD_DICE_ROLLS]
+        if structured_fields.get(constants.FIELD_RESOURCES):
+            base_entry_data[constants.FIELD_RESOURCES] = structured_fields[constants.FIELD_RESOURCES]
+        if structured_fields.get(constants.FIELD_DEBUG_INFO):
+            base_entry_data[constants.FIELD_DEBUG_INFO] = structured_fields[constants.FIELD_DEBUG_INFO]
     
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     for i, chunk in enumerate(chunks):

@@ -197,6 +197,9 @@ When working with test runners/harnesses:
 - Treat existing code as template | String constants: module-level (>1x) or constants.py (cross-file)
 - **SOLID Principles**: Single Responsibility Principle (one reason to change), Open/Closed Principle
 - **DRY principle** | Defensive programming: `isinstance()` validation
+- **Code Duplication Prevention**: Check for existing similar code before writing new | Extract common patterns to utilities | Audit for unused CSS/imports
+- **Constants Over Strings**: Use constants.py for repeated keys/values | Never hardcode 'session_header', 'planning_block' etc. | Module-level constants for >1x usage
+- **Extraction Methods**: Create utility functions for duplicate logic | Extract structured field operations | HTML generation helpers for repeated UI patterns
 - **Separation of Concerns**: Domain logic separate from data layer, utility functions isolated
 - **Import Organization**: All imports at file top, sorted (stdlib → third-party → local)
 - **No Inline Imports**: Never import inside functions/methods/classes

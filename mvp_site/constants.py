@@ -28,6 +28,14 @@ KEY_MODE = 'mode'
 KEY_TEXT = 'text'
 KEY_TITLE = 'title'
 KEY_FORMAT = 'format'
+
+# --- STRUCTURED FIELDS ---
+# Used for AI response structured data fields
+FIELD_SESSION_HEADER = 'session_header'
+FIELD_PLANNING_BLOCK = 'planning_block'
+FIELD_DICE_ROLLS = 'dice_rolls'
+FIELD_RESOURCES = 'resources'
+FIELD_DEBUG_INFO = 'debug_info'
 KEY_USER_INPUT = "user_input"
 KEY_SELECTED_PROMPTS = "selected_prompts"
 
