@@ -43,7 +43,7 @@
 
 1. **Directory Context**: Operates in worktree directory shown in environment
 2. **Tool Usage**: File ops, bash commands, web tools available
-3. **Test Execution**: Use `vpython` with `TESTING=true`
+3. **Test Execution**: Use `source venv/bin/activate && python` with `TESTING=true` (NOT vpython)
 4. **File Paths**: Always absolute paths
 5. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
