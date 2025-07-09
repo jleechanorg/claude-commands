@@ -54,13 +54,12 @@
    - ✅ ALWAYS fix ALL failing tests to 100% pass rate
    - ✅ ALWAYS take ownership of test failures, especially in new code
 
-🚨 **EVIDENCE-BASED DEVELOPMENT**: Extract first, analyze second
+
+🚨 **EVIDENCE-BASED APPROACH**: Core principles for all analysis
    - ✅ Extract exact error messages/code snippets before analyzing
    - ✅ Show actual output before suggesting fixes
    - ✅ Reference specific line numbers when debugging
-   - ✅ Base all debugging claims on actual behavior, not theory
-   - ❌ NEVER analyze what you haven't seen
-   - ❌ NEVER suggest fixes without understanding the actual error
+   - 🔍 All claims must trace to specific evidence
 
 🚨 **QUICK QUALITY CHECK** (⚡): For debugging/complex tasks, verify:
    - 🔍 Evidence shown? (errors, code, output)
@@ -458,7 +457,10 @@ When debugging display/output issues:
    - ✅ Analyze ONLY based on extracted evidence
    - ✅ Cite specific line numbers and file paths
    - ✅ Each debugging claim must reference actual output
+   - ✅ Base all debugging claims on actual behavior, not theory
    - ❌ NEVER skip the extraction step
+   - ❌ NEVER analyze what you haven't seen
+   - ❌ NEVER suggest fixes without understanding the actual error
 
 ### Evidence Classification
 When presenting information, classify sources:
