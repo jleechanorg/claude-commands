@@ -169,7 +169,64 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
         }
     };
     
-    const appendToStory = (actor, text, mode = null, debugMode = false, sequenceId = null) => {
+    // Helper function to generate HTML for structured fields
+    const generateStructuredFieldsHTML = (fullData, debugMode) => {
+        let html = '';
+        
+        // Handle god_mode_response if present
+        if (fullData.god_mode_response) {
+            html += `<div class="god-mode-response" style="background-color: #f0e6ff; padding: 10px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #9b59b6;">`;
+            html += `<strong>🔮 God Mode:</strong> ${fullData.god_mode_response}`;
+            html += `</div>`;
+        }
+        
+        // Extract dice rolls from debug_info when in debug mode
+        if (debugMode && fullData.debug_info && fullData.debug_info.dice_rolls && fullData.debug_info.dice_rolls.length > 0) {
+            html += '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;">';
+            html += '<strong>🎲 Dice Rolls:</strong><ul style="margin: 5px 0; padding-left: 20px;">';
+            fullData.debug_info.dice_rolls.forEach(roll => {
+                html += `<li>${roll}</li>`;
+            });
+            html += '</ul></div>';
+        }
+        
+        // Extract resources from debug_info when in debug mode
+        if (debugMode && fullData.debug_info && fullData.debug_info.resources) {
+            html += `<div class="resources" style="background-color: #fff3cd; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>📊 Resources:</strong> ${fullData.debug_info.resources}</div>`;
+        }
+        
+        // Add entities mentioned
+        if (fullData.entities_mentioned && fullData.entities_mentioned.length > 0) {
+            html += `<div class="entities" style="background-color: #e7f3ff; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>👥 Entities:</strong> ${fullData.entities_mentioned.join(', ')}</div>`;
+        }
+        
+        // Add location confirmed
+        if (fullData.location_confirmed && fullData.location_confirmed !== 'Unknown') {
+            html += `<div class="location" style="background-color: #f0f8ff; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>📍 Location:</strong> ${fullData.location_confirmed}</div>`;
+        }
+        
+        // Add state updates in debug mode
+        if (debugMode && fullData.state_updates && Object.keys(fullData.state_updates).length > 0) {
+            html += '<div class="state-updates" style="background-color: #f5f5f5; padding: 10px; margin-top: 10px; border-radius: 5px; font-size: 0.9em;">';
+            html += '<strong>🔧 State Updates:</strong><br>';
+            html += '<pre style="margin: 5px 0; font-size: 0.85em;">' + JSON.stringify(fullData.state_updates, null, 2) + '</pre>';
+            html += '</div>';
+        }
+        
+        // Add DM notes if present
+        if (debugMode && fullData.debug_info && fullData.debug_info.dm_notes && fullData.debug_info.dm_notes.length > 0) {
+            html += '<div class="dm-notes" style="background-color: #f8f4ff; padding: 10px; margin-top: 10px; border-radius: 5px; font-style: italic;">';
+            html += '<strong>📝 DM Notes:</strong><ul style="margin: 5px 0; padding-left: 20px;">';
+            fullData.debug_info.dm_notes.forEach(note => {
+                html += `<li>${note}</li>`;
+            });
+            html += '</ul></div>';
+        }
+        
+        return html;
+    };
+    
+    const appendToStory = (actor, text, mode = null, debugMode = false, sequenceId = null, fullData = null) => {
         const storyContainer = document.getElementById('story-content');
         const entryEl = document.createElement('div');
         entryEl.className = 'story-entry';
@@ -203,7 +260,15 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
             processedText = parsePlanningBlocks(processedText);
         }
         
-        entryEl.innerHTML = `<p><strong>${label}:</strong> ${processedText}</p>`;
+        // Build the HTML with narrative
+        let html = `<p><strong>${label}:</strong> ${processedText}</p>`;
+        
+        // Add structured fields for AI responses
+        if (actor === 'gemini' && fullData) {
+            html += generateStructuredFieldsHTML(fullData, debugMode);
+        }
+        
+        entryEl.innerHTML = html;
         storyContainer.appendChild(entryEl);
         
         // Add click handlers to any choice buttons we just added
@@ -446,7 +511,7 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
             }
             
             // Render story with debug mode awareness
-            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode, debugMode, entry.user_scene_number));
+            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode, debugMode, entry.user_scene_number, entry));
             
             // Add a slight delay to allow rendering before scrolling
             console.log("Attempting to scroll after content append, with a slight delay."); // RESTORED console.log
@@ -573,7 +638,7 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
                     method: 'POST', body: JSON.stringify({ input: userInput, mode }),
                 });
                 // Use user_scene_number from backend response
-                appendToStory('gemini', data.response, null, data.debug_mode || false, data.user_scene_number);
+                appendToStory('gemini', data.response, null, data.debug_mode || false, data.user_scene_number, data);
                 timerInfo.textContent = `Response time: ${duration}s`;
                 
                 // Update debug mode indicator if present
