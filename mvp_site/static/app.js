@@ -169,7 +169,7 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
         }
     };
     
-    const appendToStory = (actor, text, mode = null, debugMode = false, sequenceId = null) => {
+    const appendToStory = (actor, text, mode = null, debugMode = false, sequenceId = null, fullData = null) => {
         const storyContainer = document.getElementById('story-content');
         const entryEl = document.createElement('div');
         entryEl.className = 'story-entry';
@@ -179,6 +179,14 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
             label = sequenceId ? `Scene #${sequenceId}` : 'Story';
         } else { // actor is 'user'
             label = mode === 'character' ? 'Main Character' : (mode === 'god' ? 'God' : 'You');
+        }
+        
+        // Build the full response HTML
+        let html = '';
+        
+        // Add session header if present (always at the top)
+        if (actor === 'gemini' && fullData && fullData.session_header) {
+            html += `<div class="session-header" style="background-color: #f0f0f0; padding: 10px; margin-bottom: 10px; font-family: monospace; white-space: pre-wrap; border-radius: 5px;">${fullData.session_header}</div>`;
         }
         
         // Process debug content - backend now handles stripping based on debug_mode
@@ -203,7 +211,38 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
             processedText = parsePlanningBlocks(processedText);
         }
         
-        entryEl.innerHTML = `<p><strong>${label}:</strong> ${processedText}</p>`;
+        // Add the main narrative
+        html += `<p><strong>${label}:</strong> ${processedText}</p>`;
+        
+        // Add dice rolls if present
+        if (actor === 'gemini' && fullData && fullData.dice_rolls && fullData.dice_rolls.length > 0) {
+            html += '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;">';
+            html += '<strong>🎲 Dice Rolls:</strong><ul style="margin: 5px 0; padding-left: 20px;">';
+            fullData.dice_rolls.forEach(roll => {
+                html += `<li>${roll}</li>`;
+            });
+            html += '</ul></div>';
+        }
+        
+        // Add resources if present
+        if (actor === 'gemini' && fullData && fullData.resources) {
+            html += `<div class="resources" style="background-color: #fff3cd; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>📊 Resources:</strong> ${fullData.resources}</div>`;
+        }
+        
+        // Add planning block if present (always at the bottom)
+        if (actor === 'gemini' && fullData && fullData.planning_block) {
+            html += `<div class="planning-block" style="background-color: #e3f2fd; padding: 10px; margin-top: 10px; border-radius: 5px; white-space: pre-wrap;">${fullData.planning_block}</div>`;
+        }
+        
+        // Add debug info if in debug mode
+        if (actor === 'gemini' && debugMode && fullData && fullData.debug_info && Object.keys(fullData.debug_info).length > 0) {
+            html += '<div class="debug-info" style="background-color: #f5f5f5; padding: 10px; margin-top: 10px; border-radius: 5px; font-size: 0.9em;">';
+            html += '<strong>🔍 Debug Info:</strong><br>';
+            html += '<pre style="margin: 5px 0;">' + JSON.stringify(fullData.debug_info, null, 2) + '</pre>';
+            html += '</div>';
+        }
+        
+        entryEl.innerHTML = html;
         storyContainer.appendChild(entryEl);
         
         // Add click handlers to any choice buttons we just added
@@ -573,7 +612,7 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
                     method: 'POST', body: JSON.stringify({ input: userInput, mode }),
                 });
                 // Use user_scene_number from backend response
-                appendToStory('gemini', data.response, null, data.debug_mode || false, data.user_scene_number);
+                appendToStory('gemini', data.response, null, data.debug_mode || false, data.user_scene_number, data);
                 timerInfo.textContent = `Response time: ${duration}s`;
                 
                 // Update debug mode indicator if present
