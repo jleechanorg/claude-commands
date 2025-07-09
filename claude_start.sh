@@ -16,8 +16,28 @@ if [ $DAYS_DIFF -gt 30 ]; then
     echo ""
 fi
 
-FLAGS="--dangerously-skip-permissions --continue"
+# Check if there's an existing conversation to continue
+# Claude stores conversations in ~/.claude/projects/ directories
+# Claude converts slashes, underscores, and dots to hyphens in directory names
+PROJECT_DIR_NAME=$(pwd | sed 's/[\/._]/-/g')
+CLAUDE_PROJECT_DIR="$HOME/.claude/projects/${PROJECT_DIR_NAME}"
 
+# Check if the project directory exists and has conversation files
+# Using find to check for .jsonl files as a more reliable method
+if find "$HOME/.claude/projects" -maxdepth 1 -type d -name "${PROJECT_DIR_NAME}" 2>/dev/null | grep -q .; then
+    if find "$HOME/.claude/projects/${PROJECT_DIR_NAME}" -name "*.jsonl" -type f 2>/dev/null | grep -q .; then
+        echo "Found existing conversation(s) in this project directory"
+        FLAGS="--dangerously-skip-permissions --continue"
+    else
+        echo "Project directory exists but no conversations found"
+        FLAGS="--dangerously-skip-permissions"
+    fi
+else
+    echo "No existing conversations found for this project"
+    FLAGS="--dangerously-skip-permissions"
+fi
+
+echo ""
 echo "Select mode:"
 echo "1) Worker (Sonnet 4)"
 echo "2) Default"
