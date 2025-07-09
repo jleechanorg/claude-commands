@@ -146,6 +146,12 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 Clarify before acting | User instructions = law | ❌ delete without permission | Leave working code alone |
 Focus on primary goal | Propose before implementing | Summarize key takeaways | Externalize all knowledge
 
+**Branch Status Protocol**:
+🚨 **MANDATORY**: Always include current git branch in every response
+- ✅ Format: `[Branch: branch-name]` at start or end of response
+- ✅ Use `git branch --show-current` to get current branch
+- ✅ Essential for context awareness and avoiding branch confusion
+
 **Response Modes**: 
 - Default: Structured analysis with <thinking>, <analysis>, <response> format for complex tasks
 - For simple queries: Direct concise answers
