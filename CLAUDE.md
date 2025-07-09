@@ -112,7 +112,7 @@ When mistakes occur:
 
 1. **Directory Context**: Operates in worktree directory shown in environment
 2. **Tool Usage**: File ops, bash commands, web tools available
-3. **Test Execution**: Use `source venv/bin/activate && python` with `TESTING=true` (NOT vpython)
+3. **Test Execution**: Use `source venv/bin/activate && python` with `TESTING=true`
 4. **File Paths**: Always absolute paths
 5. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
@@ -270,7 +270,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 ./run_ui_tests.sh
 
 # Run specific test file
-TESTING=true vpython testing_ui/test_specific_file.py
+source venv/bin/activate && TESTING=true python testing_ui/test_specific_file.py
 ```
 
 **The run_ui_tests.sh script handles:**
@@ -288,21 +288,21 @@ When asked to run browser tests manually, follow these steps IN ORDER:
 
 1. **Check Playwright Installation**
    ```bash
-   vpython -c "import playwright" || echo "STOP: Playwright not installed"
+   source venv/bin/activate && python -c "import playwright" || echo "STOP: Playwright not installed"
    ```
    - ✅ Continue only if import succeeds
    - ❌ FULL STOP if not installed - report: "Cannot run browser tests - Playwright not installed"
 
 2. **Verify Browser Dependencies**
    ```bash
-   vpython -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); p.chromium.launch(headless=True); p.stop()" || echo "STOP: Browser deps missing"
+   source venv/bin/activate && python -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); p.chromium.launch(headless=True); p.stop()" || echo "STOP: Browser deps missing"
    ```
    - ✅ Continue only if browser launches
    - ❌ FULL STOP if fails - report: "Cannot launch browsers - missing system dependencies"
 
 3. **Start Test Server**
    ```bash
-   TESTING=true PORT=6006 vpython mvp_site/main.py serve &
+   source venv/bin/activate && TESTING=true PORT=6006 python mvp_site/main.py serve &
    sleep 3
    curl -s http://localhost:6006 || echo "STOP: Server not running"
    ```
@@ -311,7 +311,7 @@ When asked to run browser tests manually, follow these steps IN ORDER:
 
 4. **Run Browser Test**
    ```bash
-   TESTING=true vpython testing_ui/test_name.py
+   source venv/bin/activate && TESTING=true python testing_ui/test_name.py
    ```
    - ✅ Report actual results/errors
    - ❌ NEVER create fake output
@@ -323,7 +323,7 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 
 1. **Verify Test Environment**
    ```bash
-   vpython -c "import requests" || echo "STOP: requests library not installed"
+   source venv/bin/activate && python -c "import requests" || echo "STOP: requests library not installed"
    ```
    - ✅ Continue only if import succeeds
    - ❌ FULL STOP if not installed
@@ -425,17 +425,15 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 1. **Python venv**: Verify activated before running Python/tests
 2. **Robust Scripts**: Make idempotent, work from any subdirectory
 3. **Python Execution**: ✅ Run from project root | ❌ cd into subdirs
-4. **vpython Tests**: 
+4. **Python Tests**: 
    - ⚠️ "run all tests" → `./run_tests.sh`
    - ⚠️ Test fails → fix immediately or ask user
-   - ✅ `TESTING=true vpython mvp_site/test_file.py` (from root)
+   - ✅ `source venv/bin/activate && TESTING=true python mvp_site/test_file.py` (from root)
 5. 🚨 **NEVER DISMISS FAILING TESTS**: ❌ "minor failures" or "test expectation updates" | ✅ Fix ALL failing tests systematically | Debug root cause | Real bugs vs test issues | One failure = potential systemic issue
 6. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
 7. **Web Scraping**: Use full-content tools (curl) not search snippets
 
 **Test Commands**: → `.cursor/rules/validation_commands.md`
-
-🚨 **PYTHON EXECUTION CORRECTION**: All references to `vpython` in this document are legacy. The correct command is `source venv/bin/activate && python` (see "Claude's Learning Log" section below for details).
 
 ## Data Integrity & AI Management
 
