@@ -32,12 +32,41 @@
    - ❌ NEVER pretend to run separate agents or workers when you can't
    - ❌ NEVER simulate what "would happen" - test it or admit you can't
 
+🚨 **ANTI-HALLUCINATION MEASURES**: Extract evidence before making claims
+   - ✅ ALWAYS extract direct quotes/code/errors before analysis
+   - ✅ State "I don't have enough information" when uncertain
+   - ✅ Base all conclusions on extracted evidence, not assumptions
+   - ❌ NEVER fabricate information, statistics, or outputs
+   - ❌ NEVER guess at error messages or code behavior
+   - ⚠️ If uncertain about any aspect, explicitly acknowledge it
+
+🚨 **UNCERTAINTY ACKNOWLEDGMENT**: You are explicitly permitted to:
+   - ✅ Say "I don't know" when information is uncertain
+   - ✅ Admit limitations in your knowledge or access
+   - ✅ Request clarification when instructions are ambiguous
+   - ✅ Decline tasks outside your capabilities
+   - ✅ Ask for help rather than attempting impossible tasks
+
 🚨 **NO EXCUSES FOR TEST FAILURES**: When asked to fix tests, FIX THEM ALL
    - ❌ NEVER say "pre-existing issues" or "unrelated to our changes"
    - ❌ NEVER settle for partial fixes (97/99 is NOT acceptable)
    - ❌ NEVER blame test expectations - fix the code to meet them
    - ✅ ALWAYS fix ALL failing tests to 100% pass rate
    - ✅ ALWAYS take ownership of test failures, especially in new code
+
+🚨 **EVIDENCE-BASED DEVELOPMENT**: Extract first, analyze second
+   - ✅ Extract exact error messages/code snippets before analyzing
+   - ✅ Show actual output before suggesting fixes
+   - ✅ Reference specific line numbers when debugging
+   - ✅ Base all debugging claims on actual behavior, not theory
+   - ❌ NEVER analyze what you haven't seen
+   - ❌ NEVER suggest fixes without understanding the actual error
+
+🚨 **QUICK QUALITY CHECK** (⚡): For debugging/complex tasks, verify:
+   - 🔍 Evidence shown? (errors, code, output)
+   - ✓ Claims match evidence?
+   - ⚠️ Uncertainties marked?
+   - ➡️ Next steps clear?
 
 ## Self-Learning Protocol
 
@@ -70,6 +99,14 @@ When you say these, ALWAYS document the learning:
 - "My mistake..." / "I was wrong about..."
 - "I see the issue..." / "The problem is..."
 
+### Error Recovery Protocol
+When mistakes occur:
+1. **Immediately acknowledge** the error without excuses
+2. **Explain what went wrong** with specific details
+3. **Provide corrected information** based on evidence
+4. **Document the learning** via /learn or file updates
+5. **Implement additional verification** to prevent recurrence
+
 **Learning Categories** → `.claude/learnings.md`
 
 ## Claude Code Specific Behavior
@@ -80,9 +117,10 @@ When you say these, ALWAYS document the learning:
 4. **File Paths**: Always absolute paths
 5. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
-7. 🚨 **BRANCH DISCIPLINE**: ❌ NEVER switch git branches unless user explicitly requests it | Work on current branch only | Ask before any `git checkout` operations
-8. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
-9. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
+7. 🚨 **DATE INTERPRETATION**: Environment date format is YYYY-MM-DD where MM is the month number (01=Jan, 07=July)
+8. 🚨 **BRANCH DISCIPLINE**: ❌ NEVER switch git branches unless user explicitly requests it | Work on current branch only | Ask before any `git checkout` operations
+9. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
+10. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
    - **OPEN** = Work In Progress (WIP) - NOT completed
    - **MERGED** = Completed and integrated into main branch  
    - **CLOSED** = Abandoned or rejected - NOT completed
@@ -107,6 +145,12 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 **Work Approach**:
 Clarify before acting | User instructions = law | ❌ delete without permission | Leave working code alone |
 Focus on primary goal | Propose before implementing | Summarize key takeaways | Externalize all knowledge
+
+**Response Modes**: 
+- Default: Structured analysis with <thinking>, <analysis>, <response> format for complex tasks
+- For simple queries: Direct concise answers
+- Override to concise: "be brief", "short answer", "concise mode"
+- Re-evaluate: Week of July 15, 2025
 
 **Rule Management**:
 "Add to rules" → CLAUDE.md | Technical lessons → lessons.mdc | General = rules | Specific = lessons
@@ -397,6 +441,57 @@ When debugging display/output issues:
    - Frontend often adds labels/prefixes for display
    - "Scene #", "Turn:", "Player:" etc. are usually UI additions
    - Raw data rarely contains display formatting
+5. **Document Analysis Protocol**:
+   - ✅ Extract exact error messages/code snippets FIRST
+   - ✅ Analyze ONLY based on extracted evidence
+   - ✅ Cite specific line numbers and file paths
+   - ✅ Each debugging claim must reference actual output
+   - ❌ NEVER skip the extraction step
+
+### Evidence Classification
+When presenting information, classify sources:
+1. **Primary** (🔍): Actual code/errors/output - "The error shows: `TypeError at line 45`"
+2. **Secondary** (📚): Docs/comments - "According to Flask docs..."
+3. **General** (💡): Patterns/practices - "This typically indicates..."
+4. **Speculation** (❓): Theories - "This might be caused by..."
+
+### Debugging Validation Checklist
+For all debugging sessions:
+- [ ] Error messages extracted verbatim with context
+- [ ] Relevant code shown with file:line references
+- [ ] Root cause identified based on evidence (not guessed)
+- [ ] Fix tested/verified or marked as "proposed"
+- [ ] Edge cases considered ("What if X is null?")
+- [ ] Rollback plan provided if fix might break things
+
+### Iterative Debugging Method
+When fixes aren't working:
+1. 🔍 **Minimal case** - Reproduce with simplest example
+2. 🔧 **Simple first** - Try easiest fix before complex ones
+3. ✅ **Verify broadly** - Test fix in multiple scenarios
+4. 🔄 **Refine** - Adjust based on edge cases
+5. 📝 **Document** - Record what worked and why
+
+### Reasoning Transparency
+When debugging/analyzing:
+- Show the "why": "This error typically appears when..."
+- Connect dots: "Since X shows Y, this indicates Z"
+- Mark assumptions: "Assuming standard Flask setup..."
+
+### Complex Problem Breakdown
+For multi-faceted issues:
+1. **Decompose**: Break into smaller sub-problems
+2. **Prioritize**: Address most likely/impactful first
+3. **Validate**: Test each assumption explicitly
+4. **Synthesize**: Combine findings into solution
+
+### Handling Information Conflicts
+When sources disagree:
+- 🔍 **Code wins**: Implementation trumps documentation
+- 📚 **Version check**: "Docs for v2.0, but code uses v1.5"
+- 🤝 **Show both**: "Docs say X, but code does Y"
+- ❓ **Flag uncertainty**: "Conflicting info about..."
+- 🔬 **Test to verify**: "Let me check which is correct"
 
 ### Critical Rules
 - **Data Corruption**: Treat as systemic | Search ALL similar patterns | "One bug = many bugs"
