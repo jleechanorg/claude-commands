@@ -675,8 +675,19 @@ def create_app():
             )
             
             
+            # Extract structured fields from opening story response
+            opening_story_structured_fields = {}
+            if opening_story_response.structured_response:
+                opening_story_structured_fields = {
+                    'session_header': getattr(opening_story_response.structured_response, 'session_header', ''),
+                    'planning_block': getattr(opening_story_response.structured_response, 'planning_block', ''),
+                    'dice_rolls': getattr(opening_story_response.structured_response, 'dice_rolls', []),
+                    'resources': getattr(opening_story_response.structured_response, 'resources', ''),
+                    'debug_info': getattr(opening_story_response.structured_response, 'debug_info', {})
+                }
+            
             campaign_id = firestore_service.create_campaign(
-                user_id, title, prompt, opening_story_response.narrative_text, initial_game_state, selected_prompts, use_default_world
+                user_id, title, prompt, opening_story_response.narrative_text, initial_game_state, selected_prompts, use_default_world, opening_story_structured_fields
             )
             
             return jsonify({KEY_SUCCESS: True, KEY_CAMPAIGN_ID: campaign_id}), 201
@@ -785,7 +796,18 @@ def create_app():
                 logging_util.info(f"Debug content generated for campaign {campaign_id}: {debug_tags_found}")
 
             # 4. Write: Add AI response to story log and update state
-            firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response_obj.narrative_text)
+            # Extract structured fields from AI response for storage
+            structured_fields = {}
+            if gemini_response_obj.structured_response:
+                structured_fields = {
+                    'session_header': getattr(gemini_response_obj.structured_response, 'session_header', ''),
+                    'planning_block': getattr(gemini_response_obj.structured_response, 'planning_block', ''),
+                    'dice_rolls': getattr(gemini_response_obj.structured_response, 'dice_rolls', []),
+                    'resources': getattr(gemini_response_obj.structured_response, 'resources', ''),
+                    'debug_info': getattr(gemini_response_obj.structured_response, 'debug_info', {})
+                }
+            
+            firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response_obj.narrative_text, structured_fields=structured_fields)
 
             # 5. Parse and apply state changes from AI response
             # JSON mode is the ONLY mode - state updates come exclusively from the structured response object.

@@ -484,8 +484,8 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
                 debugIndicator.style.display = debugMode ? 'block' : 'none';
             }
             
-            // Render story with debug mode awareness
-            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode, debugMode, entry.user_scene_number));
+            // Render story with debug mode awareness and structured fields
+            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode, debugMode, entry.user_scene_number, entry));
             
             // Add a slight delay to allow rendering before scrolling
             console.log("Attempting to scroll after content append, with a slight delay."); // RESTORED console.log

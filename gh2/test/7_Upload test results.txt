@@ -1,0 +1,23 @@
+﻿2025-07-08T20:03:44.5466877Z ##[group]Run actions/upload-artifact@v4
+2025-07-08T20:03:44.5467176Z with:
+2025-07-08T20:03:44.5467361Z   name: test-results
+2025-07-08T20:03:44.5467667Z   path: mvp_site/test-results/
+mvp_site/coverage.xml
+mvp_site/*.log
+
+2025-07-08T20:03:44.5468003Z   retention-days: 30
+2025-07-08T20:03:44.5468207Z   if-no-files-found: warn
+2025-07-08T20:03:44.5468417Z   compression-level: 6
+2025-07-08T20:03:44.5468619Z   overwrite: false
+2025-07-08T20:03:44.5468819Z   include-hidden-files: false
+2025-07-08T20:03:44.5469025Z env:
+2025-07-08T20:03:44.5469256Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.13/x64
+2025-07-08T20:03:44.5469655Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib/pkgconfig
+2025-07-08T20:03:44.5470061Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+2025-07-08T20:03:44.5470406Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+2025-07-08T20:03:44.5470757Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.13/x64
+2025-07-08T20:03:44.5471109Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.13/x64/lib
+2025-07-08T20:03:44.5471422Z ##[endgroup]
+2025-07-08T20:03:44.7748987Z ##[warning]No files were found with the provided path: mvp_site/test-results/
+mvp_site/coverage.xml
+mvp_site/*.log. No artifacts will be uploaded.

@@ -1,0 +1,59 @@
+Browser Test Authentication Bypass Mechanism
+===========================================
+
+How browser tests bypass authentication:
+
+1. SERVER SIDE (main.py):
+   - When TESTING=true is set in environment, Flask app.config['TESTING'] = True
+   - The @check_token decorator checks for test mode:
+     ```python
+     if app.config.get('TESTING') and request.headers.get('X-Test-Bypass-Auth', '').lower() == 'true':
+         kwargs['user_id'] = request.headers.get('X-Test-User-ID', 'test-user')
+         return f(*args, **kwargs)  # Skip Firebase auth verification
+     ```
+
+2. CLIENT SIDE (auth.js):
+   - Checks URL for test_mode=true parameter:
+     ```javascript
+     const testMode = urlParams.get('test_mode') === 'true';
+     ```
+   - If test mode, sets window.testAuthBypass:
+     ```javascript
+     window.testAuthBypass = {
+       enabled: true,
+       userId: testUserId
+     };
+     ```
+   - Skips Firebase initialization
+   - Dispatches 'testModeReady' event
+
+3. API CALLS (api.js):
+   - fetchApi() checks for test bypass:
+     ```javascript
+     if (window.testAuthBypass && window.testAuthBypass.enabled) {
+         defaultHeaders = {
+             'X-Test-Bypass-Auth': 'true',
+             'X-Test-User-ID': window.testAuthBypass.userId,
+             'Content-Type': 'application/json'
+         };
+     }
+     ```
+
+4. UI NAVIGATION (app.js):
+   - handleRouteChange skips auth check in test mode:
+     ```javascript
+     if (!isTestMode) {
+         if (!firebase.auth().currentUser) { 
+             showView('auth'); 
+             return; 
+         }
+     }
+     ```
+
+COMPLETE FLOW FOR BROWSER TESTS:
+1. Start server with: TESTING=true PORT=6006 vpython mvp_site/main.py serve
+2. Navigate to: http://localhost:6006?test_mode=true&test_user_id=test-user-123
+3. Page loads without showing sign-in, all API calls include bypass headers
+4. Server accepts requests without Firebase token verification
+
+This allows Playwright tests to interact with the full UI without needing real authentication.
