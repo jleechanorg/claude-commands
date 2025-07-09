@@ -190,3 +190,194 @@ a.navbar-brand:hover {
     opacity: 0.8;
     color: inherit;
 }
+
+/* ========== STRUCTURED FIELDS STYLING ========== */
+
+/* Session Header - Gray background with monospace font */
+.session-header {
+    background-color: #f0f0f0;
+    padding: 10px;
+    margin-bottom: 10px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    border-radius: 5px;
+}
+
+/* God Mode Response - Purple border with emphasis */
+.god-mode-response {
+    border: 2px solid #9b59b6;
+    background-color: rgba(155, 89, 182, 0.05);
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 8px;
+}
+
+.god-mode-response pre {
+    margin: 10px 0 0 0;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    overflow-x: auto;
+}
+
+/* Entities Mentioned - Light blue background */
+.entities-mentioned {
+    background-color: #e7f3ff;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border-left: 4px solid #2196F3;
+}
+
+.entities-mentioned ul {
+    margin: 5px 0 0 20px;
+    padding: 0;
+}
+
+/* Location Confirmed - Alice blue background */
+.location-confirmed {
+    background-color: #f0f8ff;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border-left: 4px solid #4169e1;
+}
+
+/* Dice Rolls - Light green background */
+.dice-rolls {
+    background-color: #e8f4e8;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border-left: 4px solid #4caf50;
+}
+
+.dice-rolls ul {
+    margin: 5px 0 0 20px;
+    padding: 0;
+}
+
+/* Resources - Yellow background */
+.resources {
+    background-color: #fff3cd;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border-left: 4px solid #ffc107;
+}
+
+/* State Updates - Light gray background */
+.state-updates {
+    background-color: #f5f5f5;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border-left: 4px solid #9e9e9e;
+}
+
+.state-updates pre {
+    margin: 5px 0 0 0;
+    background-color: rgba(255, 255, 255, 0.5);
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+/* Planning Block - Light blue background */
+.planning-block {
+    background-color: #e3f2fd;
+    padding: 15px;
+    margin: 15px 0;
+    border-radius: 5px;
+    border-left: 4px solid #2196f3;
+    white-space: pre-wrap;
+}
+
+/* Debug Info - Light gray with nested sections */
+.debug-info {
+    background-color: #f8f9fa;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+}
+
+/* DM Notes - Light purple background */
+.dm-notes {
+    background-color: #f8f4ff;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border-left: 4px solid #9c27b0;
+}
+
+.dm-notes ul {
+    margin: 5px 0 0 20px;
+    padding: 0;
+}
+
+/* State Rationale - Light yellow background */
+.state-rationale {
+    background-color: #fff8e7;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border-left: 4px solid #ff9800;
+}
+
+/* Dark theme adjustments for structured fields */
+[data-bs-theme="dark"] .session-header {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+}
+
+[data-bs-theme="dark"] .god-mode-response {
+    background-color: rgba(155, 89, 182, 0.1);
+    border-color: #b47cce;
+}
+
+[data-bs-theme="dark"] .entities-mentioned {
+    background-color: rgba(33, 150, 243, 0.1);
+    color: #e0e0e0;
+}
+
+[data-bs-theme="dark"] .location-confirmed {
+    background-color: rgba(65, 105, 225, 0.1);
+    color: #e0e0e0;
+}
+
+[data-bs-theme="dark"] .dice-rolls {
+    background-color: rgba(76, 175, 80, 0.1);
+    color: #e0e0e0;
+}
+
+[data-bs-theme="dark"] .resources {
+    background-color: rgba(255, 193, 7, 0.1);
+    color: #e0e0e0;
+}
+
+[data-bs-theme="dark"] .state-updates {
+    background-color: rgba(158, 158, 158, 0.1);
+    color: #e0e0e0;
+}
+
+[data-bs-theme="dark"] .planning-block {
+    background-color: rgba(33, 150, 243, 0.1);
+    color: #e0e0e0;
+}
+
+[data-bs-theme="dark"] .debug-info {
+    background-color: rgba(248, 249, 250, 0.05);
+    border-color: #495057;
+    color: #e0e0e0;
+}
+
+[data-bs-theme="dark"] .dm-notes {
+    background-color: rgba(156, 39, 176, 0.1);
+    color: #e0e0e0;
+}
+
+[data-bs-theme="dark"] .state-rationale {
+    background-color: rgba(255, 152, 0, 0.1);
+    color: #e0e0e0;
+}

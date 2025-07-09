@@ -173,6 +173,33 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
 const generateStructuredFieldsHTML = (fullData, debugMode) => {
     let html = '';
     
+    // Add god mode response if present (highest priority, replaces narrative)
+    if (fullData.god_mode_response) {
+        html += '<div class="god-mode-response">';
+        html += '<strong>🔮 God Mode Response:</strong>';
+        html += `<pre>${fullData.god_mode_response}</pre>`;
+        html += '</div>';
+    }
+    
+    // Add entities mentioned if present
+    if (fullData.entities_mentioned && fullData.entities_mentioned.length > 0) {
+        html += '<div class="entities-mentioned">';
+        html += '<strong>👥 Entities:</strong>';
+        html += '<ul>';
+        fullData.entities_mentioned.forEach(entity => {
+            html += `<li>${entity}</li>`;
+        });
+        html += '</ul>';
+        html += '</div>';
+    }
+    
+    // Add location confirmed if present
+    if (fullData.location_confirmed && fullData.location_confirmed !== 'Unknown') {
+        html += '<div class="location-confirmed">';
+        html += `<strong>📍 Location:</strong> ${fullData.location_confirmed}`;
+        html += '</div>';
+    }
+    
     // Add dice rolls if present
     if (fullData.dice_rolls && fullData.dice_rolls.length > 0) {
         html += '<div class="dice-rolls">';
@@ -188,6 +215,16 @@ const generateStructuredFieldsHTML = (fullData, debugMode) => {
         html += `<div class="resources"><strong>📊 Resources:</strong> ${fullData.resources}</div>`;
     }
     
+    // Add state updates if present (visible in debug mode or when significant)
+    if (fullData.state_updates && Object.keys(fullData.state_updates).length > 0) {
+        if (debugMode || (fullData.state_updates.npc_data && Object.keys(fullData.state_updates.npc_data).length > 0)) {
+            html += '<div class="state-updates">';
+            html += '<strong>🔧 State Updates:</strong>';
+            html += '<pre>' + JSON.stringify(fullData.state_updates, null, 2) + '</pre>';
+            html += '</div>';
+        }
+    }
+    
     // Add planning block if present (always at the bottom)
     if (fullData.planning_block) {
         html += `<div class="planning-block">${fullData.planning_block}</div>`;
@@ -196,8 +233,30 @@ const generateStructuredFieldsHTML = (fullData, debugMode) => {
     // Add debug info if in debug mode
     if (debugMode && fullData.debug_info && Object.keys(fullData.debug_info).length > 0) {
         html += '<div class="debug-info">';
-        html += '<strong>🔍 Debug Info:</strong><br>';
-        html += '<pre>' + JSON.stringify(fullData.debug_info, null, 2) + '</pre>';
+        html += '<strong>🔍 Debug Info:</strong>';
+        
+        // Show DM notes if present
+        if (fullData.debug_info.dm_notes && fullData.debug_info.dm_notes.length > 0) {
+            html += '<div class="dm-notes"><strong>📝 DM Notes:</strong><ul>';
+            fullData.debug_info.dm_notes.forEach(note => {
+                html += `<li>${note}</li>`;
+            });
+            html += '</ul></div>';
+        }
+        
+        // Show state rationale if present
+        if (fullData.debug_info.state_rationale) {
+            html += `<div class="state-rationale"><strong>💭 State Rationale:</strong> ${fullData.debug_info.state_rationale}</div>`;
+        }
+        
+        // Show raw debug info for anything else
+        const debugCopy = {...fullData.debug_info};
+        delete debugCopy.dm_notes;
+        delete debugCopy.state_rationale;
+        if (Object.keys(debugCopy).length > 0) {
+            html += '<pre>' + JSON.stringify(debugCopy, null, 2) + '</pre>';
+        }
+        
         html += '</div>';
     }
     
