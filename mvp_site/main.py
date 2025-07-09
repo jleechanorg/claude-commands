@@ -59,6 +59,7 @@ from token_utils import log_with_tokens
 # --- Service Imports ---
 import gemini_service
 import firestore_service
+import structured_fields_utils
 
 # --- CONSTANTS ---
 # API Configuration
@@ -288,7 +289,8 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
     # Build response data structure
     response_data = {
         KEY_SUCCESS: True,
-        KEY_RESPONSE: final_narrative,
+        KEY_RESPONSE: final_narrative,  # Keep for backward compatibility
+        'narrative': final_narrative,    # Add narrative field per schema
         'debug_mode': debug_mode_enabled,
         'sequence_id': len(story_context) + 2
     }
@@ -303,10 +305,15 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
         response_data['entities_mentioned'] = getattr(structured_response, 'entities_mentioned', [])
         response_data['location_confirmed'] = getattr(structured_response, 'location_confirmed', 'Unknown')
         
-        # Always include structured debug_info if present (separate from legacy debug tags)
+        # Always include new always-visible fields
+        response_data['session_header'] = getattr(structured_response, 'session_header', '')
+        response_data['planning_block'] = getattr(structured_response, 'planning_block', '')
+        response_data['dice_rolls'] = getattr(structured_response, 'dice_rolls', [])
+        response_data['resources'] = getattr(structured_response, 'resources', '')
+        
+        # Always include structured debug_info (separate from legacy debug tags)
         # Frontend will use debug_mode flag to decide whether to display debug_info
-        if hasattr(structured_response, 'debug_info') and structured_response.debug_info:
-            response_data['debug_info'] = structured_response.debug_info
+        response_data['debug_info'] = getattr(structured_response, 'debug_info', {})
 
     if proposed_changes:
         # Track last story mode sequence ID
@@ -620,8 +627,13 @@ def create_app():
             # Include game state for debug mode status
             game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
             game_state_dict = game_state.to_dict() if game_state else {}
+            
+            # Apply hybrid debug processing to story entries for backward compatibility
+            debug_mode = game_state_dict.get('debug_mode', False)
+            from debug_hybrid_system import process_story_for_display
+            processed_story = process_story_for_display(story, debug_mode)
 
-            return jsonify({KEY_CAMPAIGN: campaign, KEY_STORY: story, 'game_state': game_state_dict})
+            return jsonify({KEY_CAMPAIGN: campaign, KEY_STORY: processed_story, 'game_state': game_state_dict})
         except Exception as e:
             return jsonify({KEY_SUCCESS: False, KEY_ERROR: str(e), KEY_TRACEBACK: traceback.format_exc()}), 500
         # --- END RESTORED BLOCK ---
@@ -665,8 +677,11 @@ def create_app():
             )
             
             
+            # Extract structured fields from opening story response
+            opening_story_structured_fields = structured_fields_utils.extract_structured_fields(opening_story_response)
+            
             campaign_id = firestore_service.create_campaign(
-                user_id, title, prompt, opening_story_response.narrative_text, initial_game_state, selected_prompts, use_default_world
+                user_id, title, prompt, opening_story_response.narrative_text, initial_game_state, selected_prompts, use_default_world, opening_story_structured_fields
             )
             
             return jsonify({KEY_SUCCESS: True, KEY_CAMPAIGN_ID: campaign_id}), 201
@@ -775,7 +790,10 @@ def create_app():
                 logging_util.info(f"Debug content generated for campaign {campaign_id}: {debug_tags_found}")
 
             # 4. Write: Add AI response to story log and update state
-            firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response_obj.narrative_text)
+            # Extract structured fields from AI response for storage
+            structured_fields = structured_fields_utils.extract_structured_fields(gemini_response_obj)
+            
+            firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response_obj.narrative_text, structured_fields=structured_fields)
 
             # 5. Parse and apply state changes from AI response
             # JSON mode is the ONLY mode - state updates come exclusively from the structured response object.

@@ -31,6 +31,7 @@ import datetime
 import json
 import logging_util
 
+import constants
 from decorators import log_exceptions
 from firebase_admin import firestore
 from game_state import GameState
@@ -432,13 +433,27 @@ def get_campaign_by_id(user_id, campaign_id):
 
 
 @log_exceptions
-def add_story_entry(user_id, campaign_id, actor, text, mode=None):
+def add_story_entry(user_id, campaign_id, actor, text, mode=None, structured_fields=None):
     db = get_db()
     story_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
     text_bytes = text.encode('utf-8')
     chunks = [text_bytes[i:i + MAX_TEXT_BYTES] for i in range(0, len(text_bytes), MAX_TEXT_BYTES)]
     base_entry_data = {'actor': actor}
     if mode: base_entry_data['mode'] = mode
+    
+    # Add structured fields if provided (for AI responses)
+    if structured_fields:
+        if structured_fields.get(constants.FIELD_SESSION_HEADER):
+            base_entry_data[constants.FIELD_SESSION_HEADER] = structured_fields[constants.FIELD_SESSION_HEADER]
+        if structured_fields.get(constants.FIELD_PLANNING_BLOCK):
+            base_entry_data[constants.FIELD_PLANNING_BLOCK] = structured_fields[constants.FIELD_PLANNING_BLOCK]
+        if structured_fields.get(constants.FIELD_DICE_ROLLS):
+            base_entry_data[constants.FIELD_DICE_ROLLS] = structured_fields[constants.FIELD_DICE_ROLLS]
+        if structured_fields.get(constants.FIELD_RESOURCES):
+            base_entry_data[constants.FIELD_RESOURCES] = structured_fields[constants.FIELD_RESOURCES]
+        if structured_fields.get(constants.FIELD_DEBUG_INFO):
+            base_entry_data[constants.FIELD_DEBUG_INFO] = structured_fields[constants.FIELD_DEBUG_INFO]
+    
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     for i, chunk in enumerate(chunks):
         entry_data = base_entry_data.copy()
@@ -449,7 +464,7 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None):
     story_ref.update({'last_played': timestamp})
 
 @log_exceptions
-def create_campaign(user_id, title, initial_prompt, opening_story, initial_game_state: dict, selected_prompts=None, use_default_world=False):
+def create_campaign(user_id, title, initial_prompt, opening_story, initial_game_state: dict, selected_prompts=None, use_default_world=False, opening_story_structured_fields=None):
     db = get_db()
     campaigns_collection = db.collection('users').document(user_id).collection('campaigns')
     
@@ -473,7 +488,7 @@ def create_campaign(user_id, title, initial_prompt, opening_story, initial_game_
     # You might want to make this mode configurable or infer it.
     add_story_entry(user_id, campaign_ref.id, 'user', initial_prompt, mode='god')
     
-    add_story_entry(user_id, campaign_ref.id, 'gemini', opening_story)
+    add_story_entry(user_id, campaign_ref.id, 'gemini', opening_story, structured_fields=opening_story_structured_fields)
     
     return campaign_ref.id
 

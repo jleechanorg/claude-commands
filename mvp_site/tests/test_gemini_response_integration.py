@@ -79,7 +79,12 @@ class TestGeminiResponseIntegration(unittest.TestCase):
         # Create a raw JSON response that would come from Gemini API
         raw_json_response = '{"narrative": "Your adventure begins in a bustling tavern...", "entities_mentioned": [], "location_confirmed": "Tavern", "state_updates": {}, "debug_info": {}}'
         
-        gemini_response_obj = GeminiResponse.create(raw_json_response)
+        # Parse JSON and create GeminiResponse object
+        import json
+        from narrative_response_schema import NarrativeResponse
+        parsed_json = json.loads(raw_json_response)
+        structured_response = NarrativeResponse(**parsed_json)
+        gemini_response_obj = GeminiResponse.create_from_structured_response(structured_response)
         
         # Mock get_initial_story to return actual GeminiResponse object
         mock_gemini_service.get_initial_story.return_value = gemini_response_obj
@@ -137,7 +142,12 @@ class TestGeminiResponseIntegration(unittest.TestCase):
         
         # Act: Create GeminiResponse
         raw_json_response = '{"narrative": "Test narrative", "entities_mentioned": [], "location_confirmed": "Unknown", "state_updates": {}, "debug_info": {}}'
-        gemini_response = GeminiResponse.create(raw_json_response)
+        # Parse JSON and create GeminiResponse object
+        import json
+        from narrative_response_schema import NarrativeResponse
+        parsed_json = json.loads(raw_json_response)
+        structured_response = NarrativeResponse(**parsed_json)
+        gemini_response = GeminiResponse.create_from_structured_response(structured_response)
         
         # Assert: Verify required interface
         self.assertTrue(hasattr(gemini_response, 'narrative_text'), 

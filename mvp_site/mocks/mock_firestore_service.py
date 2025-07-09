@@ -165,7 +165,7 @@ class MockFirestoreClient:
         
         return campaign_id
     
-    def add_story_entry(self, user_id: str, campaign_id: str, actor: str, text: str, mode: str = None):
+    def add_story_entry(self, user_id: str, campaign_id: str, actor: str, text: str, mode: str = None, structured_fields: Dict[str, Any] = None):
         """Add a story entry to the campaign log."""
         self.operation_count += 1
         self.last_operation = f"add_story_entry({user_id}, {campaign_id}, {actor})"
@@ -183,6 +183,19 @@ class MockFirestoreClient:
             "sequence_id": next_seq_id,
             "timestamp": datetime.datetime.now(datetime.timezone.utc)
         }
+        
+        # Add structured fields if provided
+        if structured_fields:
+            if structured_fields.get('session_header'):
+                entry['session_header'] = structured_fields['session_header']
+            if structured_fields.get('planning_block'):
+                entry['planning_block'] = structured_fields['planning_block']
+            if structured_fields.get('dice_rolls'):
+                entry['dice_rolls'] = structured_fields['dice_rolls']
+            if structured_fields.get('resources'):
+                entry['resources'] = structured_fields['resources']
+            if structured_fields.get('debug_info'):
+                entry['debug_info'] = structured_fields['debug_info']
         
         story_log.append(entry)
     
@@ -237,4 +250,15 @@ mock_firestore_client = MockFirestoreClient()
 
 def get_mock_firestore_client():
     """Get the global mock Firestore client instance."""
-    return mock_firestore_client 
+    return mock_firestore_client
+
+
+# Module-level functions that delegate to the global instance
+def add_story_entry(user_id: str, campaign_id: str, actor: str, text: str, mode: str = None, structured_fields: Dict[str, Any] = None):
+    """Add a story entry to the campaign log."""
+    return mock_firestore_client.add_story_entry(user_id, campaign_id, actor, text, mode, structured_fields)
+
+
+def get_campaign_by_id(user_id: str, campaign_id: str):
+    """Get a campaign by ID."""
+    return mock_firestore_client.get_campaign_by_id(user_id, campaign_id)

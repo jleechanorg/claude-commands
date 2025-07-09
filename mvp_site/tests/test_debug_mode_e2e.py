@@ -94,7 +94,7 @@ class TestDebugModeE2E(unittest.TestCase):
         
         # Track what gets saved to database
         saved_responses = []
-        def capture_story_entry(user_id, campaign_id, actor, text, mode=None):
+        def capture_story_entry(user_id, campaign_id, actor, text, mode=None, structured_fields=None):
             if actor == 'gemini':
                 saved_responses.append(text)
         

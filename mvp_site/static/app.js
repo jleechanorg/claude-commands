@@ -173,59 +173,96 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
     const generateStructuredFieldsHTML = (fullData, debugMode) => {
         let html = '';
         
-        // Handle god_mode_response if present
+        // Add god mode response if present (highest priority, replaces narrative)
         if (fullData.god_mode_response) {
-            html += `<div class="god-mode-response" style="background-color: #f0e6ff; padding: 10px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #9b59b6;">`;
-            html += `<strong>🔮 God Mode:</strong> ${fullData.god_mode_response}`;
-            html += `</div>`;
+            html += '<div class="god-mode-response">';
+            html += '<strong>🔮 God Mode Response:</strong>';
+            html += `<pre>${fullData.god_mode_response}</pre>`;
+            html += '</div>';
         }
         
-        // Extract dice rolls from debug_info when in debug mode
-        if (debugMode && fullData.debug_info && fullData.debug_info.dice_rolls && fullData.debug_info.dice_rolls.length > 0) {
-            html += '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;">';
-            html += '<strong>🎲 Dice Rolls:</strong><ul style="margin: 5px 0; padding-left: 20px;">';
-            fullData.debug_info.dice_rolls.forEach(roll => {
+        // Add entities mentioned if present
+        if (fullData.entities_mentioned && fullData.entities_mentioned.length > 0) {
+            html += '<div class="entities-mentioned">';
+            html += '<strong>👥 Entities:</strong>';
+            html += '<ul>';
+            fullData.entities_mentioned.forEach(entity => {
+                html += `<li>${entity}</li>`;
+            });
+            html += '</ul>';
+            html += '</div>';
+        }
+        
+        // Add location confirmed if present
+        if (fullData.location_confirmed && fullData.location_confirmed !== 'Unknown') {
+            html += '<div class="location-confirmed">';
+            html += `<strong>📍 Location:</strong> ${fullData.location_confirmed}`;
+            html += '</div>';
+        }
+        
+        // Add dice rolls if present
+        if (fullData.dice_rolls && fullData.dice_rolls.length > 0) {
+            html += '<div class="dice-rolls">';
+            html += '<strong>🎲 Dice Rolls:</strong><ul>';
+            fullData.dice_rolls.forEach(roll => {
                 html += `<li>${roll}</li>`;
             });
             html += '</ul></div>';
         }
         
-        // Extract resources from debug_info when in debug mode
-        if (debugMode && fullData.debug_info && fullData.debug_info.resources) {
-            html += `<div class="resources" style="background-color: #fff3cd; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>📊 Resources:</strong> ${fullData.debug_info.resources}</div>`;
+        // Add resources if present
+        if (fullData.resources) {
+            html += `<div class="resources"><strong>📊 Resources:</strong> ${fullData.resources}</div>`;
         }
         
-        // Add entities mentioned
-        if (fullData.entities_mentioned && fullData.entities_mentioned.length > 0) {
-            html += `<div class="entities" style="background-color: #e7f3ff; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>👥 Entities:</strong> ${fullData.entities_mentioned.join(', ')}</div>`;
+        // Add state updates if present (visible in debug mode or when significant)
+        if (fullData.state_updates && Object.keys(fullData.state_updates).length > 0) {
+            if (debugMode || (fullData.state_updates.npc_data && Object.keys(fullData.state_updates.npc_data).length > 0)) {
+                html += '<div class="state-updates">';
+                html += '<strong>🔧 State Updates:</strong>';
+                html += '<pre>' + JSON.stringify(fullData.state_updates, null, 2) + '</pre>';
+                html += '</div>';
+            }
         }
         
-        // Add location confirmed
-        if (fullData.location_confirmed && fullData.location_confirmed !== 'Unknown') {
-            html += `<div class="location" style="background-color: #f0f8ff; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>📍 Location:</strong> ${fullData.location_confirmed}</div>`;
+        // Add planning block if present (always at the bottom)
+        if (fullData.planning_block) {
+            html += `<div class="planning-block">${fullData.planning_block}</div>`;
         }
         
-        // Add state updates in debug mode
-        if (debugMode && fullData.state_updates && Object.keys(fullData.state_updates).length > 0) {
-            html += '<div class="state-updates" style="background-color: #f5f5f5; padding: 10px; margin-top: 10px; border-radius: 5px; font-size: 0.9em;">';
-            html += '<strong>🔧 State Updates:</strong><br>';
-            html += '<pre style="margin: 5px 0; font-size: 0.85em;">' + JSON.stringify(fullData.state_updates, null, 2) + '</pre>';
+        // Add debug info if in debug mode
+        if (debugMode && fullData.debug_info && Object.keys(fullData.debug_info).length > 0) {
+            html += '<div class="debug-info">';
+            html += '<strong>🔍 Debug Info:</strong>';
+            
+            // Show DM notes if present
+            if (fullData.debug_info.dm_notes && fullData.debug_info.dm_notes.length > 0) {
+                html += '<div class="dm-notes"><strong>📝 DM Notes:</strong><ul>';
+                fullData.debug_info.dm_notes.forEach(note => {
+                    html += `<li>${note}</li>`;
+                });
+                html += '</ul></div>';
+            }
+            
+            // Show state rationale if present
+            if (fullData.debug_info.state_rationale) {
+                html += `<div class="state-rationale"><strong>💭 State Rationale:</strong> ${fullData.debug_info.state_rationale}</div>`;
+            }
+            
+            // Show raw debug info for anything else
+            const debugCopy = {...fullData.debug_info};
+            delete debugCopy.dm_notes;
+            delete debugCopy.state_rationale;
+            if (Object.keys(debugCopy).length > 0) {
+                html += '<pre>' + JSON.stringify(debugCopy, null, 2) + '</pre>';
+            }
+            
             html += '</div>';
-        }
-        
-        // Add DM notes if present
-        if (debugMode && fullData.debug_info && fullData.debug_info.dm_notes && fullData.debug_info.dm_notes.length > 0) {
-            html += '<div class="dm-notes" style="background-color: #f8f4ff; padding: 10px; margin-top: 10px; border-radius: 5px; font-style: italic;">';
-            html += '<strong>📝 DM Notes:</strong><ul style="margin: 5px 0; padding-left: 20px;">';
-            fullData.debug_info.dm_notes.forEach(note => {
-                html += `<li>${note}</li>`;
-            });
-            html += '</ul></div>';
         }
         
         return html;
     };
-    
+
     const appendToStory = (actor, text, mode = null, debugMode = false, sequenceId = null, fullData = null) => {
         const storyContainer = document.getElementById('story-content');
         const entryEl = document.createElement('div');
@@ -236,6 +273,14 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
             label = sequenceId ? `Scene #${sequenceId}` : 'Story';
         } else { // actor is 'user'
             label = mode === 'character' ? 'Main Character' : (mode === 'god' ? 'God' : 'You');
+        }
+        
+        // Build the full response HTML
+        let html = '';
+        
+        // Add session header if present (always at the top)
+        if (actor === 'gemini' && fullData && fullData.session_header) {
+            html += `<div class="session-header">${fullData.session_header}</div>`;
         }
         
         // Process debug content - backend now handles stripping based on debug_mode
@@ -260,8 +305,8 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
             processedText = parsePlanningBlocks(processedText);
         }
         
-        // Build the HTML with narrative
-        let html = `<p><strong>${label}:</strong> ${processedText}</p>`;
+        // Add the main narrative
+        html += `<p><strong>${label}:</strong> ${processedText}</p>`;
         
         // Add structured fields for AI responses
         if (actor === 'gemini' && fullData) {
@@ -510,7 +555,7 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
                 debugIndicator.style.display = debugMode ? 'block' : 'none';
             }
             
-            // Render story with debug mode awareness
+            // Render story with debug mode awareness and structured fields
             data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode, debugMode, entry.user_scene_number, entry));
             
             // Add a slight delay to allow rendering before scrolling
@@ -638,7 +683,9 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
                     method: 'POST', body: JSON.stringify({ input: userInput, mode }),
                 });
                 // Use user_scene_number from backend response
-                appendToStory('gemini', data.response, null, data.debug_mode || false, data.user_scene_number, data);
+                // Use 'narrative' field if available (per schema), fall back to 'response' for compatibility
+                const narrativeText = data.narrative || data.response;
+                appendToStory('gemini', narrativeText, null, data.debug_mode || false, data.user_scene_number, data);
                 timerInfo.textContent = `Response time: ${duration}s`;
                 
                 // Update debug mode indicator if present
