@@ -1,5 +1,7 @@
 ---
-alwaysApply: false
+description: 
+globs: 
+alwaysApply: true
 ---
 # Lessons Learned & Best Practices
 

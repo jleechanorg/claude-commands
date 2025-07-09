@@ -1,4 +1,6 @@
 ---
+description: Cursor-specific configuration and behavior
+globs: 
 alwaysApply: true
 ---
 # Cursor Editor Specific Configuration

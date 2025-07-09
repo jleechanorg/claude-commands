@@ -38,7 +38,6 @@ Dependencies:
 """
 
 import os
-import logging
 from fpdf import FPDF, XPos, YPos
 from docx import Document
 import constants
@@ -114,11 +113,11 @@ def generate_pdf(story_text, output_filepath, campaign_title=""):
             # The 'uni=True' parameter is crucial for UTF-8 support with FPDF.
             pdf.add_font(CUSTOM_FONT_NAME, '', font_path)
             font_family = CUSTOM_FONT_NAME
-            logging.info("DejaVuSans.ttf found and loaded.")
+            print("INFO: DejaVuSans.ttf found and loaded.")
         else:
             raise RuntimeError("Font file not found in any expected location")
     except (RuntimeError, FileNotFoundError):
-        logging.warning("DejaVuSans.ttf not found. Falling back to core font. Non-ASCII characters may not render correctly.")
+        print("WARNING: DejaVuSans.ttf not found. Falling back to core font. Non-ASCII characters may not render correctly.")
         # If the custom font fails, we stick with the default Helvetica.
         pass
 

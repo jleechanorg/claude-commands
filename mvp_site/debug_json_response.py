@@ -110,8 +110,9 @@ if __name__ == "__main__":
     incomplete_json = '''{"narrative": "[SESSION_HEADER]\\nTimestamp: Year 1620, Kythorn, Day 10, 02:05 PM\\nLocation: The Eastern March, on the road to the Dragon's Tooth mountains.\\nStatus: Lvl 1 Fighter/Paladin | HP: 12/12 | Gold: 25gp\\nResources:\\n- Hero Points: 1/1\\n\\nSir Andrew ignored Gareth's probing question, his focus narrowing back to the mission. He folded the map with crisp, efficient movements and tucked it away. His duty was clear; the feelings of his companions were secondary variables. He turned to the other two members of his small company, his expression a mask of command.\\n\\n\\"Report,\\" he said, his voice flat and devoid of warmth. He looked first to Kiera Varrus, the scout, whose cynical eyes were already scanning the treacherous path ahead.\\n\\nKiera spat on the ground, pulling her leather hood tighter against the wind. \\"It's a goat track at best, Sir Knight. Not a proper road. The ground is loose shale, easy to turn an ankle or alert anything hiding in the rocks.\\" She squinted at the mountains.'''
     
     fixed_json, was_incomplete = fix_incomplete_json(incomplete_json)
-    logging_util.info(f"JSON fix result - incomplete: {was_incomplete}, success: {fixed_json is not None}")
+    print(f"Was incomplete: {was_incomplete}")
+    print(f"Fixed JSON: {json.dumps(fixed_json, indent=2) if fixed_json else 'Failed to fix'}")
     
     if fixed_json:
         is_valid, missing, truncated = validate_json_response(fixed_json)
-        logging_util.info(f"JSON validation - valid: {is_valid}, missing fields: {len(missing)}, truncated: {truncated}")
+        print(f"Valid: {is_valid}, Missing: {missing}, Truncated: {truncated}")
