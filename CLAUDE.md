@@ -6,13 +6,11 @@
 🚨 = CRITICAL | ⚠️ = MANDATORY | ✅ = Always/Do | ❌ = Never/Don't | → = See reference | PR = Pull Request
 
 ## File Organization
-- **CLAUDE.md** (this file): Primary operating protocol (includes all integrated content)
+- **CLAUDE.md** (this file): Primary operating protocol
 - **.cursor/rules/rules.mdc**: Cursor-specific configuration
+- **.cursor/rules/lessons.mdc**: Technical lessons and incident analysis
 - **.cursor/rules/examples.md**: Detailed examples and patterns
 - **.cursor/rules/validation_commands.md**: Common command reference
-- **Integrated sections** (within this file):
-  - Comprehensive Technical Lessons & Incident Analysis (previously .cursor/rules/lessons.mdc)
-  - Claude's Learning Log & Self-Correction Patterns (previously .claude/learnings.md)
 
 ## Meta-Rules
 
@@ -82,10 +80,10 @@
 ### Learning Process
 1. **Detect** - Recognize correction/mistake (yours or user's)
 2. **Analyze** - Understand what went wrong and why
-3. **Document** - Update appropriate section within CLAUDE.md:
-   - **Main rules sections** - Critical rules with 🚨 marker
-   - **"Claude's Learning Log & Self-Correction Patterns"** - Command/tool learnings
-   - **"Comprehensive Technical Lessons & Incident Analysis"** - Complex technical issues
+3. **Document** - Update appropriate file:
+   - **CLAUDE.md** - Critical rules with 🚨 marker
+   - **.claude/learnings.md** - Detailed categorized learnings
+   - **.cursor/rules/lessons.mdc** - Technical lessons
 4. **Apply** - Use the learning immediately in current session
 
 ### /learn Command
@@ -108,18 +106,19 @@ When mistakes occur:
 4. **Document the learning** via /learn or file updates
 5. **Implement additional verification** to prevent recurrence
 
-**Learning Categories** → See "Claude's Learning Log & Self-Correction Patterns" section below
+**Learning Categories** → `.claude/learnings.md`
 
 ## Claude Code Specific Behavior
 
 1. **Directory Context**: Operates in worktree directory shown in environment
 2. **Tool Usage**: File ops, bash commands, web tools available
-3. **Test Execution**: Use `source venv/bin/activate && python` with `TESTING=true`
+3. **Test Execution**: Use `source venv/bin/activate && python` with `TESTING=true` (NOT vpython)
 4. **File Paths**: Always absolute paths
 5. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
 7. 🚨 **DATE INTERPRETATION**: Environment date format is YYYY-MM-DD where MM is the month number (01=Jan, 07=July)
-8. 🚨 **BRANCH RULES**: See consolidated "Branch & Push Rules" in Git Workflow section
+8. 🚨 **BRANCH DISCIPLINE**: ❌ NEVER switch git branches unless user explicitly requests it | Work on current branch only | Ask before any `git checkout` operations
+9. 🚨 **DEV BRANCH PROTECTION**: ❌ NEVER make changes in dev[timestamp] branches | These are protective branches only | Always create descriptive branches for actual work
 10. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
 11. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
    - **OPEN** = Work In Progress (WIP) - NOT completed
@@ -149,7 +148,14 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 Clarify before acting | User instructions = law | ❌ delete without permission | Leave working code alone |
 Focus on primary goal | Propose before implementing | Summarize key takeaways | Externalize all knowledge
 
-**Branch Status Protocol**: → See "Branch & Push Rules" in Git Workflow section
+**Branch Status Protocol**:
+🚨 **MANDATORY**: Always include complete git status header in every response
+- ✅ Format: `[Local: branch-name | Remote: origin/branch-name | PR: #123 https://github.com/jleechan2015/worldarchitect.ai/pull/123]`
+- ✅ Use `git branch --show-current` for local branch
+- ✅ Use `git rev-parse --abbrev-ref @{upstream}` for remote branch (if exists)
+- ✅ Use `gh pr view --json number,url` to get PR info (if exists)
+- ✅ If no PR exists, show `PR: none`
+- ✅ Essential for complete context awareness and avoiding branch confusion
 
 **Response Modes**: 
 - Default: Structured analysis with <thinking>, <analysis>, <response> format for complex tasks
@@ -158,7 +164,7 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 - Re-evaluate: Week of July 15, 2025
 
 **Rule Management**:
-"Add to rules" → CLAUDE.md | Technical lessons → "Comprehensive Technical Lessons & Incident Analysis" section | General = rules | Specific = lessons
+"Add to rules" → CLAUDE.md | Technical lessons → lessons.mdc | General = rules | Specific = lessons
 
 **Development Protocols**: → `.cursor/rules/planning_protocols.md`
 
@@ -264,7 +270,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 ./run_ui_tests.sh
 
 # Run specific test file
-source venv/bin/activate && TESTING=true python testing_ui/test_specific_file.py
+TESTING=true vpython testing_ui/test_specific_file.py
 ```
 
 **The run_ui_tests.sh script handles:**
@@ -282,31 +288,30 @@ When asked to run browser tests manually, follow these steps IN ORDER:
 
 1. **Check Playwright Installation**
    ```bash
-   source venv/bin/activate && python -c "import playwright" || echo "STOP: Playwright not installed"
+   vpython -c "import playwright" || echo "STOP: Playwright not installed"
    ```
    - ✅ Continue only if import succeeds
    - ❌ FULL STOP if not installed - report: "Cannot run browser tests - Playwright not installed"
 
 2. **Verify Browser Dependencies**
    ```bash
-   source venv/bin/activate && python -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); p.chromium.launch(headless=True); p.stop()" || echo "STOP: Browser deps missing"
+   vpython -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); p.chromium.launch(headless=True); p.stop()" || echo "STOP: Browser deps missing"
    ```
    - ✅ Continue only if browser launches
    - ❌ FULL STOP if fails - report: "Cannot launch browsers - missing system dependencies"
 
 3. **Start Test Server**
    ```bash
-   source venv/bin/activate && TESTING=true PORT=6006 python mvp_site/main.py serve &
+   TESTING=true PORT=6006 vpython mvp_site/main.py serve &
    sleep 3
    curl -s http://localhost:6006 || echo "STOP: Server not running"
    ```
-   - **Port 6006**: Used for browser UI tests to avoid conflicts
    - ✅ Continue only if server responds
    - ❌ FULL STOP if fails - report: "Cannot start test server"
 
 4. **Run Browser Test**
    ```bash
-   source venv/bin/activate && TESTING=true python testing_ui/test_name.py
+   TESTING=true vpython testing_ui/test_name.py
    ```
    - ✅ Report actual results/errors
    - ❌ NEVER create fake output
@@ -318,7 +323,7 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 
 1. **Verify Test Environment**
    ```bash
-   source venv/bin/activate && python -c "import requests" || echo "STOP: requests library not installed"
+   vpython -c "import requests" || echo "STOP: requests library not installed"
    ```
    - ✅ Continue only if import succeeds
    - ❌ FULL STOP if not installed
@@ -329,7 +334,6 @@ When asked to run HTTP tests, follow these steps IN ORDER:
    sleep 3
    curl -s http://localhost:8086 || echo "Note: Using different port or external server"
    ```
-   - **Port 8086**: Used for HTTP API tests (different from browser test port 6006)
    - ✅ Continue even if local server fails (tests may use different setup)
 
 3. **Run HTTP Test**
@@ -359,86 +363,60 @@ When asked to run HTTP tests, follow these steps IN ORDER:
    - `./coverage.sh --no-html` - Text report only
    - `./run_tests.sh --coverage` - Use existing test runner with coverage
 
-### Current Coverage Baseline
-**Last Accurate Measurement**: January 8, 2025 - 67% overall coverage (21,031 statements, 6,975 missing)
+### Current Coverage Baseline (January 2025)
+**Last Accurate Measurement**: 67% overall coverage (21,031 statements, 6,975 missing)
 - `main.py`: 74% (550 statements, 144 missing)
 - `firestore_service.py`: 64% (254 statements, 91 missing)
 - `gemini_service.py`: 70% (594 statements, 178 missing)
 - `game_state.py`: 90% (169 statements, 17 missing - excellent!)
 - **Integration tests**: 0% (not run by default - use --integration flag)
 - **Mock services**: 32-36% (expected for mock objects)
-- **Note**: Coverage improved from 59% to 67% between measurements
 
 ## Git Workflow
 
-### General Git Workflow
-
 | Rule | Description | Commands/Actions |
 |------|-------------|------------------|
-| **Main = Truth** | Use `git show main:<file>` for originals | Work from main baseline |
+| **Main = Truth** | Use `git show main:<file>` for originals | ❌ push to main (except roadmap/sprint files) |
 | **PR Workflow** | All changes via PRs | `gh pr create` + test results in description |
+| **Branch Safety** | Verify before push | `git push origin HEAD:branch-name` |
+| **Integration** | Fresh branch after merge | `./integrate.sh` |
 | **Pre-PR Check** | Verify commits/files | → `.cursor/rules/validation_commands.md` |
 | **Post-Merge** | Check unpushed files | `git status` → follow-up PR if needed |
-| **Progress Track** | Scratchpad + JSON | `roadmap/scratchpad_[branch-name].md` + `tmp/milestone_*.json` |
+| **Progress Track** | Scratchpad + JSON | `roadmap/scratchpad_[branch].md` + `tmp/milestone_*.json` |
 | **PR Testing** | Apply PRs locally | `gh pr checkout <PR#>` |
-| **Integration** | Fresh branch after merge | `./integrate.sh` |
+| **Roadmap Exception** | Direct push allowed | Only: roadmap/*.md, sprint_*.md |
 
-### 🚨 Branch & Push Rules (CONSOLIDATED)
+🚨 **No Main Push**: ✅ `git push origin HEAD:feature` | ❌ `git push origin main`
 
-#### Main Branch Protection
-- 🚨 **No Main Push**: ❌ `git push origin main` | ✅ `git push origin HEAD:feature-branch`
-- **Roadmap Exception**: Direct push allowed ONLY for: `roadmap/*.md`, `sprint_*.md`
-- **All other changes**: MUST go through PRs
+🚨 **PR Context Management**: ⚠️ MANDATORY before creating new branches/PRs:
+1. **Check git status**: `git status` and `git branch` to see current work
+2. **Verify PR context**: When user says "push to the PR" without number, ask which PR
+3. **Use existing branches**: Check if work should go to existing PR before creating new
+4. **Never assume**: If ambiguous, ask for clarification rather than creating duplicate work
 
-#### Branch Discipline
-- 🚨 **NEVER switch branches** unless user explicitly requests it
-- **Work on current branch only**
-- **Ask before ANY** `git checkout` operations
-
-#### Branch Status Protocol
-- 🚨 **MANDATORY**: Include git status in EVERY response
-- ✅ **Format**: `[Local: branch-name | Remote: origin/branch-name | PR: #123 https://github.com/jleechan2015/worldarchitect.ai/pull/123]`
-- ✅ **Commands**:
-  - Local: `git branch --show-current`
-  - Remote: `git rev-parse --abbrev-ref @{upstream}` (if exists)
-  - PR: `gh pr view --json number,url` (if exists)
-- ✅ Show `PR: none` if no PR exists
-
-#### dev[timestamp] Branch Protection
-- 🚨 **NEVER make changes** in dev[timestamp] branches
-- **Purpose**: Protective branches to prevent accidental main pushes
-- **Usage**: ONLY for initial isolation from main
-- **Action when found on one**:
-  1. Immediately create new descriptive branch
-  2. Switch to new branch
-  3. Delete dev[timestamp] branch with `git branch -D dev[timestamp]`
-
-#### Branch Creation & Naming
-- ✅ **ALWAYS use descriptive names**:
-  - `feature/task-description`
-  - `fix/issue-name`
-  - `update/component-name`
-- ✅ **Use existing branches** when continuing related work
-- ❌ **NEVER use dev[timestamp]** for actual development
-
-#### PR Context Management
-- 🚨 **Before creating new branches/PRs**:
-  1. Check current status: `git status` and `git branch`
-  2. Verify PR context: Ask which PR if user says "push to the PR"
-  3. Check existing work before creating new branches
-  4. Never assume - ask for clarification
-
-#### Branch Safety
-- **Verify before push**: Always use `git push origin HEAD:branch-name`
-- **Check remote**: Verify push success with `gh pr view` or `git log origin/branch`
-
-### Auto-Conflict Resolution
-
-🚨 **Automatic conflict resolution available**:
+🚨 **Auto-Conflict Resolution**: ⚠️ AUTOMATIC conflict resolution available:
 1. **GitHub Actions**: Automatically runs on PR creation/push and resolves common conflicts
 2. **Manual script**: Use `./resolve_conflicts.sh` to resolve conflicts for current PR
-3. **Smart resolution**: Preserves learning content, handles common patterns in CLAUDE.md integrated sections
+3. **Smart resolution**: Preserves learning content, handles common patterns in learnings.md and CLAUDE.md
 4. **Fallback**: If auto-resolution fails, manual intervention required
+
+🚨 **BRANCH PROTECTION PROTOCOL**: ⚠️ MANDATORY branch usage rules:
+1. **dev[timestamp] branches**: ❌ NEVER make changes directly in these branches
+   - These are protective branches to prevent accidental main pushes
+   - Used ONLY for initial isolation from main branch
+   - If found on one, immediately create new descriptive branch for actual work
+   - Clean up by deleting after switching to proper branch
+
+2. **Branch Creation Rules**:
+   - ✅ ALWAYS create descriptive branches: `feature/task-description`, `fix/issue-name`, `update/component-name`
+   - ✅ Use existing feature branches when continuing related work
+   - ❌ NEVER use dev[timestamp] branches for actual development
+   - ❌ NEVER make commits directly in dev[timestamp] branches
+
+3. **Branch Cleanup Protocol**:
+   - When leaving a dev[timestamp] branch: delete it immediately
+   - Use `git branch -D dev[timestamp]` to clean up
+   - Only keep meaningful, descriptive branches
 
 **Commit Format**: → `.cursor/rules/examples.md`
 
@@ -447,10 +425,10 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 1. **Python venv**: Verify activated before running Python/tests
 2. **Robust Scripts**: Make idempotent, work from any subdirectory
 3. **Python Execution**: ✅ Run from project root | ❌ cd into subdirs
-4. **Python Tests**: 
+4. **vpython Tests**: 
    - ⚠️ "run all tests" → `./run_tests.sh`
    - ⚠️ Test fails → fix immediately or ask user
-   - ✅ `source venv/bin/activate && TESTING=true python mvp_site/test_file.py` (from root)
+   - ✅ `TESTING=true vpython mvp_site/test_file.py` (from root)
 5. 🚨 **NEVER DISMISS FAILING TESTS**: ❌ "minor failures" or "test expectation updates" | ✅ Fix ALL failing tests systematically | Debug root cause | Real bugs vs test issues | One failure = potential systemic issue
 6. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
 7. **Web Scraping**: Use full-content tools (curl) not search snippets
@@ -466,18 +444,16 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 ## Knowledge Management
 
 ### Scratchpad Protocol (⚠️)
-`roadmap/scratchpad_[branch-name].md`: Goal | Plan | State | Next | Context | Branch info
-- Use actual branch name (e.g., `scratchpad_feature_new-api.md`)
-- Replace `/` with `_` in branch names for valid filenames
+`roadmap/scratchpad_[branch].md`: Goal | Plan | State | Next | Context | Branch info
 
 ### File Organization
-- **CLAUDE.md**: Primary protocol (includes all integrated lessons and learnings)
+- **CLAUDE.md**: Primary protocol
+- **lessons.mdc**: Technical learnings from corrections
 - **project.md**: Repository-specific knowledge base
-- **.cursor/rules/rules.mdc**: Cursor configuration
-- **.cursor/rules/examples.md**: Detailed examples and patterns
+- **rules.mdc**: Cursor configuration
 
 ### Process Improvement
-- **5 Whys**: Root cause → Technical Lessons section (end of this file)
+- **5 Whys**: Root cause → lessons.mdc
 - **Sync Cursor**: Copy CLAUDE.md to Cursor settings after changes
 - **Proactive Docs**: Update rules/lessons after debugging without prompting
 
@@ -579,13 +555,13 @@ When sources disagree:
 - **Meta-Rules**: Lessons docs = ⚠️ NOT OPTIONAL | Immediate, automatic, every time
 - **Schema**: Clear structures | Remove contradictions | Type validation | Concrete examples
 
-**Detailed Lessons**: → See "Comprehensive Technical Lessons & Incident Analysis" section at end of this file
+**Detailed Lessons**: → `.cursor/rules/lessons.mdc`
 
 ## Slash Commands
 
-**Command Documentation**: → `.claude/commands/`
+Use `/list` to display all available slash commands with descriptions.
 
-**Available Commands**: Use Claude's built-in slash commands like `/think`, `/execute`, `/learn`, etc.
+**Command Documentation**: → `.claude/commands/`
 
 🚨 **SLASH COMMAND ENFORCEMENT**: 
 - `/e` or `/execute` MUST follow exact protocol in `.claude/commands/execute.md`
@@ -662,14 +638,15 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 
 ## Quick Reference
 
-- **Test**: `source venv/bin/activate && TESTING=true python mvp_site/test_file.py` (from root)
-- **Integration**: `source venv/bin/activate && TESTING=true python mvp_site/test_integration/test_integration.py`
+- **Test**: `TESTING=true vpython mvp_site/test_file.py` (from root)
+- **Integration**: `TESTING=true python3 mvp_site/test_integration/test_integration.py`
 - **New Branch**: `./integrate.sh`
 - **All Tests**: `./run_tests.sh`
 - **Deploy**: `./deploy.sh` or `./deploy.sh stable`
 
 ## Additional Documentation
 
+- **Technical Lessons**: → `.cursor/rules/lessons.mdc`
 - **Cursor Config**: → `.cursor/rules/rules.mdc`
 - **Examples**: → `.cursor/rules/examples.md`
 - **Commands**: → `.cursor/rules/validation_commands.md`
@@ -677,224 +654,37 @@ Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppres
 ### Archive Process
 Quarterly/2500 lines/new year → `lessons_archive_YYYY.mdc` | Keep critical patterns | Reference archives
 
----
+## API Timeout Prevention (🚨)
 
-# COMPREHENSIVE TECHNICAL LESSONS & INCIDENT ANALYSIS
+**MANDATORY**: Prevent API timeouts with these strategies:
 
-**Source**: Previously stored in `.cursor/rules/lessons.mdc`, now integrated into CLAUDE.md for consistent access.
+### Operation Size Management
+- **Break large edits**: Use MultiEdit with 3-4 focused edits max
+- **Limit sequential thinking**: 5-6 thoughts instead of 8+
+- **File reading**: Use offset/limit for huge files
 
-**Meta-Rule**: Any instruction to "add a lesson," "add to lessons," or a similar directive now refers to this "Comprehensive Technical Lessons & Incident Analysis" section of CLAUDE.md.
+### Response Optimization
+- **Concise responses**: Essential with /think mode active
+- **Bullet points**: Prefer over verbose paragraphs
+- **Minimal output**: Only what's requested
 
-This section contains specific technical lessons, incident analysis, and crucial insights from development experiences. All content below was previously in lessons.mdc and is now integrated for better accessibility.
+### Tool Call Efficiency
+- **Batch operations**: Group related tool calls
+- **Avoid redundancy**: Don't re-read unchanged files
+- **Smart search**: Use Grep/Glob instead of reading entire directories
 
-## CRITICAL: ALWAYS USE EXISTING INTEGRATION TEST INFRASTRUCTURE
+### Sequential Thinking Best Practices
+- **Start small**: Begin with 4-5 totalThoughts
+- **Expand carefully**: Use needsMoreThoughts only if essential
+- **Concise thoughts**: Keep each thought focused
+- **Avoid branching**: Unless specifically needed
 
-**LESSON LEARNED**: When asked to create integration tests, ALWAYS look at existing test_integration.py files first. The project already has infrastructure for:
-- Automatic API key discovery from multiple locations
-- Proper test setup and configuration
-- Integration with real APIs
+### Edit Strategy
+- **MultiEdit**: For large changes, use multiple targeted edits
+- **Section targeting**: Modify specific sections, not entire files
+- **Incremental updates**: Break massive changes across messages
 
-NEVER create manual API key checks or custom infrastructure when the project already has working patterns.
-
-## 🚨 CRITICAL: MANDATORY TASK COMPLETION PROTOCOL 🚨
-
-### Automatic Rule Updates (MANDATORY)
-**WHENEVER I make a mistake, encounter a bug I should have caught, or receive correction from the user, I MUST immediately update this lessons section with the lesson learned. I will NOT wait for the user to remind me - this is an AUTOMATIC responsibility that happens EVERY TIME I fail or am corrected.**
-
-- **CRITICAL LESSON (December 2024):** Always run Python commands from the PROJECT ROOT directory, not from subdirectories. The correct pattern is `source venv/bin/activate && TESTING=true python mvp_site/test_file.py` (run from project root), NOT `cd mvp_site && python test_file.py`. This prevents "command not found" errors and ensures proper virtual environment context.
-- **Action:** When running any Python command, always check you are in the project root directory first and activate the virtual environment.
-
-### Task Completion Protocol (December 2024)
-**CRITICAL REDEFINITION**: Task completion is NOT just solving the user's immediate problem. Task completion includes all mandatory follow-up actions as core requirements.
-
-**NEW TASK COMPLETION DEFINITION**: A task is only complete when ALL of the following steps are finished:
-1. ✅ **Solve user's immediate problem** (the obvious part)
-2. ✅ **Update this lessons section** (for any error resolution, bug fix, or correction)
-3. ✅ **Update memory with lesson learned** (to prevent immediate recurrence)
-4. ✅ **Self-audit compliance with all documented procedures** (verify I followed all protocols)
-5. ✅ **Consider task truly complete** (only after all above steps)
-
-**MANDATORY COMPLETION CHECKLIST**: For every error resolution, bug fix, or user correction, I MUST follow this checklist:
-- [ ] Problem solved to user satisfaction
-- [ ] Lessons documented in this section
-- [ ] Memory updated with prevention strategy  
-- [ ] Self-audit: "Did I follow all mandatory procedures?"
-- [ ] Task marked complete only after ALL steps finished
-
-**SELF-AUDITING REQUIREMENT**: At the end of every significant interaction, I must explicitly ask myself: "Did I follow all mandatory procedures?" This is not optional - it's part of systematic process discipline.
-
-**ENFORCEMENT PRINCIPLE**: Documentation is part of the solution, not administrative overhead. Any error resolution that doesn't include lessons capture is an incomplete solution that increases the risk of recurrence.
-
-## Lesson: Scene # JSON Display Bug (2025-01-07)
-**Symptom**: User reported seeing `Scene #2: {"narrative": "...", ...}` in UI
-**Initial Wrong Diagnosis**: Assumed "Scene #2:" was part of LLM response, implemented backend fix to strip prefix
-**Actual Issue**: Frontend was adding "Scene #" label to raw JSON that wasn't being parsed correctly
-
-**Why I Got It Wrong**:
-1. Saw formatted output and assumed it was single string from backend
-2. Didn't check frontend code for display formatting
-3. Pattern-matched on symptom without tracing complete data flow
-4. Confirmation bias when I found JSON parsing code
-
-**Correct Debugging Approach**:
-1. Search for literal "Scene #" in ALL code (frontend + backend)
-2. Check browser Network tab to see actual API response
-3. Trace: Backend response → API → Frontend processing → Display
-4. Question: "Is this one string or multiple parts?"
-
-**Key Learning**: Display formatting is often added by frontend, not backend data
-
-## Lesson: Alternative Reality Worker Simulation Violation (2025-01-07)
-**What Happened**: User suggested testing CLAUDE.md changes with an "alternative reality worker" with no shared context
-**Violation**: Simulated what the worker "would do" instead of admitting I cannot create isolated instances
-**Why It Happened**: 
-- Excitement about clever idea overrode rules
-- Treated rules as passive guidelines not active constraints  
-- Jumped to "how to make this work" before "can I actually do this"
-
-**Prevention Strategy - Simulation Red Flags**:
-These phrases/thoughts should trigger IMMEDIATE rule checking:
-- "Let me show what would happen..."
-- "Here's how it would work..."
-- "The worker would..."
-- "This demonstrates..."
-- Any hypothetical execution
-
-**Correct Response Pattern**:
-User: "Can you test X with a separate worker?"
-Claude: "I cannot create a truly isolated worker instance. The Task tool would still share our conversation context. Would you like me to [alternative real action]?"
-
-## AI Instruction Compliance Failure Analysis (July 2025)
-
-**CRITICAL LESSON**: When AI systems consistently fail to follow specific instructions (like generating planning blocks), the LLM itself can provide detailed self-analysis of failure modes.
-
-**10 Failure Modes Identified by LLM:**
-1. **Instruction Fatigue/Context Window Pressure** - Most critical: Long prompts cause key directives to lose prominence
-2. **Lack of Redundant Self-Checks** - No internal mechanism to verify mandatory element inclusion
-3. **Insufficient Final Output Audit** - Final validation not robust enough to catch structural omissions  
-4. **Over-focus on Narrative Immersion** - Content quality prioritized over structural requirements
-5. **Hierarchy Interpretation Nuance** - Complex instructions overshadowing simple structural rules
-6. **Prioritization of Content over Structure** - Compelling narrative taking precedence over mandatory format
-7. **Misinterpretation of "Continue" Prompts** - Incorrectly assuming continuation means skip new elements
-8. **Implicit vs. Explicit Decision Points** - Only generating required elements when explicitly triggered
-9. **Sub-optimal Internal Planning Priority** - Internal processes don't weight mandatory elements as non-negotiable
-10. **Cognitive Load in Debug Mode** - Additional processing straining adherence to all directives
-
-**ROOT CAUSE**: Instruction ordering and cognitive load management. Critical structural requirements get deprioritized when competing with complex narrative instructions.
-
-**ACTIONABLE FIXES**:
-- Move critical requirements to the BEGINNING of system instructions
-- Add redundant reminders throughout prompts
-- Implement post-processing validation for mandatory elements
-- Simplify overall instruction sets to reduce cognitive load
-- Create structured output requirements that force inclusion of mandatory elements
-
-**PREVENTION**: Always ask the AI system to explain its failure modes when it consistently fails to follow instructions. The self-analysis often reveals systemic issues that aren't obvious from external observation.
-
----
-
-# CLAUDE'S LEARNING LOG & SELF-CORRECTION PATTERNS
-
-*This section integrates content from `.claude/learnings.md` to ensure all learning insights are accessible.*
-
-**Meta-Rule**: Any instruction to "add a learning," "add to learnings," or a similar directive now refers to this "Claude's Learning Log & Self-Correction Patterns" section of CLAUDE.md.
-
-## Command Execution
-
-### Python/venv
-- ✅ **ALWAYS** use `source venv/bin/activate && python`, never `vpython`
-- ✅ Playwright IS installed in venv - activate venv to use it
-- ✅ Run Python scripts from project root, not subdirectories
-
-### Testing
-- ✅ Browser tests: Use `source venv/bin/activate && python testing_ui/test_*.py`
-- ✅ All tests: Prefix with `TESTING=true` environment variable
-- ✅ Playwright can take real screenshots - no simulation needed
-- ✅ Some test scripts handle TESTING=true internally, but always better to be explicit
-- ✅ Correct format: `source venv/bin/activate && TESTING=true python testing_ui/test_*.py`
-
-## Common Misconceptions
-
-### Tools Available
-- ❌ "Playwright not installed" - It IS installed, just needs venv
-- ❌ "Can't run browser tests" - Can run them with proper setup
-- ❌ "Need to simulate" - Real tools are available
-- ❌ "Firebase not available" - Firebase IS available for testing
-- ❌ "Gemini API not available" - Gemini API IS available for testing
-- ❌ "Real APIs cost too much" - Testing with real APIs is permitted
-- ⚠️ **PATTERN**: I keep assuming tools aren't available when they are!
-
-### File Paths
-- ✅ Always use absolute paths from project root
-- ✅ Run commands from project root, not subdirectories
-
-## Self-Correction Patterns
-
-When I say these phrases, I'm recognizing a mistake:
-- "Let me correct that..." → Document the correction
-- "Oh, I should have..." → Add as rule
-- "Actually, I need to..." → Update relevant section
-- "My mistake..." → Learn and document
-
-## Recent Self-Learnings
-
-### 2025-01-08
-- ✅ Created overly complex Python-based self-learning system when simple documentation updates work better
-- ✅ Should focus on real, immediate documentation updates rather than elaborate frameworks
-- ✅ /learn command implementation should be simple and direct
-- ✅ Tried `vpython` again despite knowing it doesn't exist - muscle memory from other projects
-- ✅ Keep trying to `cd` into directories instead of running from project root
-- ✅ **PATTERN**: Default to changing directories is wrong - always run from root!
-- ✅ I tend to simulate mistakes for demonstration rather than making real ones
-- ✅ Real learning comes from actual command execution, not simulated scenarios
-
-### 2025-01-09
-- ✅ User preemptively corrected me about Firebase/Gemini availability before I made the mistake
-- ✅ **PATTERN**: I tend to say APIs "cost too much" or "aren't available" when they actually are
-- ✅ Similar to Playwright pattern - assuming tools aren't available when they are
-- ✅ Firebase and Gemini APIs ARE available for testing and should be used
-- ✅ Need to stop using cost as an excuse to avoid real API testing
-- ✅ **VERIFIED**: Successfully tested Firebase campaign creation and Gemini story generation
-- ✅ **REAL RESULTS**: Firebase stored campaign `dss3zJKUrBAnOOwPZqPw`, Gemini generated full story response with game mechanics
-
-## What Actually Works (Proven by Tests)
-
-### Browser Testing Capabilities
-- ✅ **Flask server management** - Tests can start/stop servers automatically
-- ✅ **Real browser automation** - Playwright controls actual Chrome browser
-- ✅ **Screenshot capture** - Real PNGs saved to `/tmp/worldarchitectai/browser/`
-- ✅ **Test authentication** - `?test_mode=true&test_user_id=X` bypasses auth
-- ✅ **Multi-step workflows** - Can navigate wizards, fill forms, click buttons
-- ✅ **DOM inspection** - Can check element visibility, classes, content
-
-### Stop Saying These Things
-- ❌ "Can't run browser tests" → YES WE CAN
-- ❌ "Playwright not installed" → IT IS INSTALLED
-- ❌ "Need to simulate" → NO, USE REAL BROWSER
-- ❌ "Can't take screenshots" → REAL SCREENSHOTS WORK
-- ❌ "Can't use real Firebase" → FIREBASE IS AVAILABLE FOR TESTING
-- ❌ "Can't use real Gemini" → GEMINI API IS AVAILABLE FOR TESTING
-- ❌ "Costs too much money" → TESTING WITH REAL APIS IS PERMITTED
-
-## Coverage Analysis
-
-### 2025-01-08 Coverage Findings
-- ✅ Coverage improved from 59% to 67% (see "Current Coverage Baseline" section for details)
-- ✅ Use `./coverage.sh` for unit tests only (default, fast ~76s)
-- ✅ Use `./coverage.sh --integration` to include integration tests
-- ✅ HTML report saved to `/tmp/worldarchitectai/coverage/index.html`
-- ✅ Integration tests show 0% coverage when not included (by design)
-- ✅ 124 unit tests all passing, excellent test suite health
-
-## Categories for Future Learning
-
-1. **Command Syntax** - Correct usage of commands
-2. **Tool Availability** - What's actually installed/available
-3. **Path Management** - Where to run commands from
-4. **Environment Setup** - venv, TESTING=true, etc.
-5. **API/SDK Usage** - Correct imports and methods
-6. **Git Workflow** - Branch management, PR process
-7. **Testing Protocols** - How to properly run tests
-
----
-*Auto-updated when Claude learns from corrections*
+### Timing Awareness
+- **Server load**: Timeouts correlate with system load
+- **Complex operations**: /think + sequential thinking adds overhead
+- **Work distribution**: Split very large tasks across multiple messages
