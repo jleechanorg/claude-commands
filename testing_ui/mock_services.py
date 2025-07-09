@@ -79,30 +79,52 @@ def create_mock_api_server():
                 self.end_headers()
         
         def do_GET(self):
-            if '/api/campaigns/' in self.path:
-                # Mock campaign data
-                campaign_data = {
-                    "success": True,
-                    "data": {
-                        "campaign": {"title": "Layer 3 Test Campaign"},
-                        "story": [
+            if '/api/campaigns' in self.path and '/interaction' not in self.path:
+                if self.path == '/api/campaigns':
+                    # Mock campaign list
+                    campaign_list = {
+                        "success": True,
+                        "data": [
                             {
-                                "actor": "gemini",
-                                "text": "Welcome to the test campaign.",
-                                "mode": None,
-                                "user_scene_number": 1,
-                                **MOCK_STRUCTURED_FIELDS_RESPONSE
+                                "id": "test-campaign-id",
+                                "title": "Layer 3 Test Campaign",
+                                "last_played": "2025-07-09T18:00:00Z",
+                                "initial_prompt": "Test campaign for Layer 3 mock testing..."
                             }
-                        ],
-                        "game_state": {"debug_mode": True}
+                        ]
                     }
-                }
-                
-                self.send_response(200)
-                self.send_header('Content-type', 'application/json') 
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
-                self.wfile.write(json.dumps(campaign_data).encode('utf-8'))
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json') 
+                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(campaign_list).encode('utf-8'))
+                elif '/api/campaigns/' in self.path:
+                    # Mock individual campaign data
+                    campaign_data = {
+                        "success": True,
+                        "data": {
+                            "campaign": {"title": "Layer 3 Test Campaign"},
+                            "story": [
+                                {
+                                    "actor": "gemini",
+                                    "text": "Welcome to the test campaign.",
+                                    "mode": None,
+                                    "user_scene_number": 1,
+                                    **MOCK_STRUCTURED_FIELDS_RESPONSE
+                                }
+                            ],
+                            "game_state": {"debug_mode": True}
+                        }
+                    }
+                    
+                    self.send_response(200)
+                    self.send_header('Content-type', 'application/json') 
+                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.end_headers()
+                    self.wfile.write(json.dumps(campaign_data).encode('utf-8'))
+                else:
+                    self.send_response(404)
+                    self.end_headers()
             else:
                 self.send_response(404)
                 self.end_headers()
