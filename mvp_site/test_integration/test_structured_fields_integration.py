@@ -122,10 +122,6 @@ class TestStructuredFieldsIntegration(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         response_data = json.loads(response.data.decode('utf-8'))
         
-        # Debug print
-        if 'error' in response_data:
-            print(f"Error in response: {response_data}")
-        
         # Verify structured fields in API response
         self.assertEqual(response_data[constants.FIELD_SESSION_HEADER], self.structured_fields[constants.FIELD_SESSION_HEADER])
         self.assertEqual(response_data[constants.FIELD_PLANNING_BLOCK], self.structured_fields[constants.FIELD_PLANNING_BLOCK])
