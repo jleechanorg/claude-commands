@@ -48,6 +48,7 @@ from game_state import GameState
 import constants
 from entity_tracking import SceneManifest, create_from_game_state
 from narrative_sync_validator import NarrativeSyncValidator
+from schemas.entities_pydantic import sanitize_entity_name_for_id
 from narrative_response_schema import (
     create_structured_prompt_injection, 
     parse_structured_response,
@@ -938,7 +939,7 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
                 'hp': 10,
                 'max_hp': 10,
                 'level': 1,
-                'string_id': f"pc_{pc_name.lower().replace(' ', '_')}_001"
+                'string_id': f"pc_{sanitize_entity_name_for_id(pc_name)}_001"
             },
             'npc_data': {},
             'world_data': {'current_location_name': 'The throne room'},

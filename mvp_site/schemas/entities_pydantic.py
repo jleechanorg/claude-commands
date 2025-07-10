@@ -12,6 +12,43 @@ from datetime import datetime
 from .defensive_numeric_converter import DefensiveNumericConverter
 
 
+def sanitize_entity_name_for_id(name: str) -> str:
+    """Sanitize a name to create a valid entity ID component.
+    
+    Converts special characters to underscores to ensure compatibility
+    with entity ID validation patterns.
+    
+    Args:
+        name: Raw entity name (e.g., "Cazador's Spawn")
+        
+    Returns:
+        Sanitized name suitable for entity ID (e.g., "cazadors_spawn")
+    """
+    if not name:
+        return name
+        
+    import re
+    
+    # Convert to lowercase
+    name = name.lower()
+    
+    # Replace apostrophes and spaces with underscores
+    name = name.replace("'", "").replace(" ", "_").replace("-", "_")
+    
+    # Replace any non-ASCII or non-word characters with underscores
+    # \w includes letters, digits, and underscore, but also non-ASCII in Python
+    # So we use explicit ASCII ranges
+    name = re.sub(r'[^a-z0-9_]', '_', name)
+    
+    # Remove duplicate underscores
+    name = re.sub(r'_+', '_', name)
+    
+    # Strip leading/trailing underscores
+    name = name.strip('_')
+    
+    return name
+
+
 class EntityType(Enum):
     """Entity type enumeration"""
     PLAYER_CHARACTER = "pc"
@@ -457,7 +494,10 @@ def create_from_game_state(game_state: Dict[str, Any],
     pc_name = pc_data.get("name", "Unknown")
     
     # Use existing string_id if present, otherwise generate one
-    pc_entity_id = pc_data.get("string_id", f"pc_{pc_name.lower().replace(' ', '_')}_001")
+    if 'string_id' in pc_data:
+        pc_entity_id = pc_data['string_id']
+    else:
+        pc_entity_id = f"pc_{sanitize_entity_name_for_id(pc_name)}_001"
     
     pc = PlayerCharacter(
         entity_id=pc_entity_id,
@@ -475,7 +515,10 @@ def create_from_game_state(game_state: Dict[str, Any],
     for idx, (npc_key, npc_info) in enumerate(npc_data.items()):
         if npc_info.get("present", True):
             # Use existing string_id if present, otherwise generate one using the key
-            npc_entity_id = npc_info.get("string_id", f"npc_{npc_key.lower().replace(' ', '_')}_{idx+1:03d}")
+            if 'string_id' in npc_info:
+                npc_entity_id = npc_info['string_id']
+            else:
+                npc_entity_id = f"npc_{sanitize_entity_name_for_id(npc_key)}_{idx+1:03d}"
             
             # Use "name" field if present, otherwise fall back to the key
             npc_display_name = npc_info.get("name", npc_key)

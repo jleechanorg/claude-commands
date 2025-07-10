@@ -35,7 +35,9 @@ if DEPS_AVAILABLE:
 
     # Get test configuration from the shared library
     TEST_MODEL_OVERRIDE = IntegrationTestSetup.TEST_MODEL_OVERRIDE
-    TEST_SELECTED_PROMPTS = IntegrationTestSetup.TEST_SELECTED_PROMPTS
+    # Configuration for test prompts - represents all checkboxes being selected
+    TEST_SELECTED_PROMPTS = ['narrative', 'mechanics']  # All user-selectable prompts
+    TEST_CUSTOM_OPTIONS = ['companions', 'defaultWorld']  # Additional test options
     USE_TIMEOUT = IntegrationTestSetup.USE_TIMEOUT
 
     # Mock system instructions
@@ -309,105 +311,405 @@ class TestInteractionIntegration(unittest.TestCase):
         print("✅ Comprehensive deep merge test with all Python types completed successfully!")
         print(f"Final test data structure has {len(test_data)} root keys with complex nesting preserved")
 
-    def test_sequential_story_commands_evolve_state(self):
+    def test_story_progression_smoke_test(self):
         """
-        Milestone 4: Verify that sequential story commands progressively evolve game state.
-        Tests the full story progression pipeline with state tracking.
+        Quick smoke test: Verify basic story progression works.
+        Lightweight test that ensures the story system responds to commands.
         """
-        # Set up initial character state with more flexible structure
-        initial_setup = 'GOD_MODE_SET: player_character_data = {"name": "Aria", "level": 1, "gold": 50, "exp": 0}'
-        self._run_god_command('set', initial_setup)
-        
-        # Capture initial state
-        initial_state_json = self._run_god_command('ask')
-        initial_state = json.loads(initial_state_json)
-        
-        # Get initial values from wherever they are stored
-        pc_data = initial_state['player_character_data']
-        initial_gold = pc_data.get('gold', 0)
-        initial_exp = pc_data.get('exp', 0)
-        
-        # Also check in attributes/stats subdictionary if present
-        if 'attributes' in pc_data and isinstance(pc_data['attributes'], dict):
-            initial_gold = pc_data['attributes'].get('gold', initial_gold)
-            initial_exp = pc_data['attributes'].get('exp', initial_exp)
-        elif 'stats' in pc_data and isinstance(pc_data['stats'], dict):
-            initial_gold = pc_data['stats'].get('gold', initial_gold)
-            initial_exp = pc_data['stats'].get('exp', initial_exp)
-        
-        # First story command: Find treasure
-        first_command = (
-            "Aria explores an ancient tomb and discovers a hidden treasure chest containing 100 gold pieces "
-            "and gains 50 experience points from overcoming the tomb's challenges. Update her stats."
+        # Simple story command
+        story_command = (
+            "I explore the nearby forest and discover an ancient artifact. "
+            "What do I find?"
         )
         
-        first_response = self.client.post(
+        response = self.client.post(
             f'/api/campaigns/{self.campaign_id}/interaction',
             headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
-            data=json.dumps({'input': first_command, 'mode': 'character'})
-        )
-        self.assertEqual(first_response.status_code, 200)
-        
-        # Check state after first command
-        after_first_json = self._run_god_command('ask')
-        after_first_state = json.loads(after_first_json)
-        
-        # Verify character structure is maintained
-        self.assertIn('player_character_data', after_first_state)
-        self.assertEqual(after_first_state['player_character_data']['name'], 'Aria')
-        
-        # Log the state for debugging
-        first_pc_data = after_first_state['player_character_data']
-        print(f"PC data after first command: {first_pc_data}")
-        
-        # Second story command: Battle and level up
-        second_command = (
-            "Aria encounters a fierce dragon guardian. After an epic battle, she defeats it and gains 150 more experience points, "
-            "leveling up to level 2. She also finds a magical sword worth 200 gold. Update her progression."
+            data=json.dumps({'input': story_command, 'mode': 'character'})
         )
         
-        second_response = self.client.post(
+        # Verify response
+        self.assertEqual(response.status_code, 200)
+        response_data = response.get_json()
+        self.assertIn('response', response_data)
+        self.assertIsInstance(response_data['response'], str)
+        self.assertGreater(len(response_data['response']), 50, "Story response should be substantive")
+        
+        # Verify the response contains story elements
+        response_text = response_data['response'].lower()
+        story_keywords = ['forest', 'artifact', 'discover', 'find', 'ancient']
+        found_keywords = sum(1 for keyword in story_keywords if keyword in response_text)
+        self.assertGreater(found_keywords, 0, "Response should relate to the story command")
+        
+        print("✅ Story progression smoke test passed!")
+
+
+class BaseCampaignIntegrationTest(unittest.TestCase):
+    """Base class for campaign integration tests with shared functionality.
+    
+    Provides common test setup, teardown, and utility methods for testing
+    different campaign types with real Gemini/Firebase integration.
+    """
+    
+    # Override these in subclasses
+    CAMPAIGN_PROMPT = ""
+    CAMPAIGN_TITLE = "Test Campaign"
+    USER_ID_SUFFIX = "test-user"
+    
+    @classmethod
+    def setUpClass(cls):
+        """Create campaign for all tests to share."""
+        if not DEPS_AVAILABLE:
+            return
+        cls.app = create_app()
+        cls.app.config['TESTING'] = True
+        cls.client = cls.app.test_client()
+        cls.user_id = f'test-{cls.USER_ID_SUFFIX}'
+        
+        # Create campaign with subclass-specific prompt
+        create_response = cls.client.post(
+            '/api/campaigns',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': cls.user_id},
+            data=json.dumps({
+                'prompt': cls.CAMPAIGN_PROMPT,
+                'title': cls.CAMPAIGN_TITLE,
+                'selected_prompts': TEST_SELECTED_PROMPTS,  # ['narrative', 'mechanics'] - all checkboxes checked
+                'custom_options': TEST_CUSTOM_OPTIONS  # Additional options for complete testing
+            })
+        )
+        assert create_response.status_code == 201, f"Failed to create {cls.CAMPAIGN_TITLE}"
+        create_data = create_response.get_json()
+        cls.campaign_id = create_data.get('campaign_id')
+        assert cls.campaign_id is not None
+    
+    @classmethod
+    def tearDownClass(cls):
+        """Clean up the campaign after all tests complete."""
+        if not DEPS_AVAILABLE or not hasattr(cls, 'campaign_id') or not cls.campaign_id:
+            return
+        try:
+            # Note: The API doesn't provide a delete endpoint, so we leave campaigns
+            # This is acceptable for test data as it helps with debugging
+            pass
+        except Exception as e:
+            print(f"Warning: Could not clean up campaign {cls.campaign_id}: {e}")
+
+    def setUp(self):
+        """Check dependencies and use shared campaign."""
+        if not DEPS_AVAILABLE:
+            self.fail("CRITICAL FAILURE: Integration test dependencies missing.")
+        
+        self.app = self.__class__.app
+        self.client = self.__class__.client
+        self.user_id = self.__class__.user_id
+        self.campaign_id = self.__class__.campaign_id
+
+    def _run_god_command(self, action, command_string=None):
+        """Helper function to run the god-command script and return its output."""
+        # Use vpython wrapper to ensure virtual environment is activated
+        # project_root is mvp_site, so go up one level to find vpython
+        real_project_root = os.path.dirname(project_root)
+        vpython_script = os.path.join(real_project_root, "vpython")
+        script_path = os.path.join(project_root, "main.py")
+        base_command = [
+            vpython_script, script_path, "god-command",
+            action,
+            "--campaign_id", self.campaign_id,
+            "--user_id", self.user_id
+        ]
+        if command_string:
+            base_command.extend(["--command_string", command_string])
+        
+        # Set TESTING environment variable
+        env = os.environ.copy()
+        env["TESTING"] = "true"
+        
+        result = subprocess.run(base_command, capture_output=True, text=True, cwd=real_project_root, env=env)
+        self.assertEqual(result.returncode, 0, f"god-command {action} failed: {result.stderr}")
+
+        # The JSON output is in stderr (logging), not stdout (vpython messages)
+        if action == 'ask':
+            combined_output = result.stderr  # JSON is logged to stderr
+            json_start = combined_output.find('{')
+            json_end = combined_output.rfind('}') + 1
+            if json_start != -1 and json_end > json_start:
+                json_text = combined_output[json_start:json_end]
+                return json_text
+            else:
+                self.fail(f"Could not find valid JSON in god-command output. Output: {combined_output[:500]}")
+        
+        return result.stdout.strip()
+
+    def start_campaign_story(self):
+        """Common method to start the campaign story."""
+        return self.client.post(
             f'/api/campaigns/{self.campaign_id}/interaction',
             headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
-            data=json.dumps({'input': second_command, 'mode': 'character'})
+            data=json.dumps({'input': 'Begin the story.', 'mode': 'character'})
         )
-        self.assertEqual(second_response.status_code, 200)
+
+    def send_character_action(self, action_text):
+        """Send a character mode action to the campaign."""
+        return self.client.post(
+            f'/api/campaigns/{self.campaign_id}/interaction',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({'input': action_text, 'mode': 'character'})
+        )
+
+    def get_game_state(self):
+        """Get the current game state as a parsed JSON object."""
+        state_json = self._run_god_command('ask')
+        return json.loads(state_json)
+
+    def assert_character_created(self, expected_name, expected_class=None, expected_alignment=None):
+        """Common assertion for character creation."""
+        state = self.get_game_state()
+        self.assertIn('player_character_data', state)
+        pc_data = state['player_character_data']
         
-        # Check final state after second command
-        final_state_json = self._run_god_command('ask')
-        final_state = json.loads(final_state_json)
+        # Basic character data
+        self.assertEqual(pc_data.get('name'), expected_name, f"Character should be named {expected_name}")
+        self.assertEqual(pc_data.get('level'), 1, "Character should be level 1")
         
-        # Verify progressive evolution
-        self.assertIn('player_character_data', final_state)
-        self.assertEqual(final_state['player_character_data']['name'], 'Aria')
+        if expected_class:
+            if isinstance(expected_class, list):
+                self.assertIn(pc_data.get('class'), expected_class, f"Character should be one of {expected_class}")
+            else:
+                self.assertEqual(pc_data.get('class'), expected_class, f"Character should be {expected_class}")
         
-        final_pc_data = final_state['player_character_data']
-        print(f"PC data after second command: {final_pc_data}")
+        if expected_alignment:
+            self.assertEqual(pc_data.get('alignment'), expected_alignment, f"Character should be {expected_alignment}")
         
-        # Verify that state has evolved - check for these fields in various locations
-        # They might be at root level or in attributes/stats subdictionary
-        has_level = ('level' in final_pc_data or 
-                    ('attributes' in final_pc_data and 'level' in final_pc_data.get('attributes', {})) or
-                    ('stats' in final_pc_data and 'level' in final_pc_data.get('stats', {})))
-        has_gold = ('gold' in final_pc_data or 
-                   ('attributes' in final_pc_data and 'gold' in final_pc_data.get('attributes', {})) or
-                   ('stats' in final_pc_data and 'gold' in final_pc_data.get('stats', {})) or
-                   ('resources' in final_pc_data and 'gold' in final_pc_data.get('resources', {})))
-        has_exp = ('exp' in final_pc_data or 'experience' in final_pc_data or
-                  ('attributes' in final_pc_data and ('exp' in final_pc_data.get('attributes', {}) or 'experience' in final_pc_data.get('attributes', {}))) or
-                  ('stats' in final_pc_data and ('exp' in final_pc_data.get('stats', {}) or 'experience' in final_pc_data.get('stats', {}))))
+        # Core fields - these may vary based on campaign type
+        # For now, just verify the basic required fields
+        required_fields = ['name', 'level', 'class']
+        for field in required_fields:
+            self.assertIn(field, pc_data, f"Character missing required field: {field}")
         
-        # At least some progression fields should exist
-        self.assertTrue(has_level or has_gold or has_exp, 
-                       f"Expected level, gold, or exp fields in character data. Got: {final_pc_data}")
+        return pc_data
+
+    def assert_combat_active(self):
+        """Common assertion for combat state."""
+        state = self.get_game_state()
+        combat_state = state.get('combat_state', {})
+        self.assertTrue(combat_state.get('in_combat', False), "Combat state should be active")
         
-        # Verify we have core memories tracking the adventure
-        if 'core_memories' in final_state['player_character_data']:
-            memories = final_state['player_character_data']['core_memories']
-            self.assertIsInstance(memories, list)
-            print(f"Adventure memories: {memories}")
+        combatants = combat_state.get('combatants', [])
+        self.assertGreater(len(combatants), 1, "Should have multiple combatants")
         
-        print("✅ Sequential story progression test completed successfully!")
+        return combat_state, combatants
+
+    def assert_story_progression(self, expected_elements):
+        """Check that story elements are captured in core memories."""
+        state = self.get_game_state()
+        custom_state = state.get('custom_campaign_state', {})
+        core_memories = custom_state.get('core_memories', [])
+        
+        self.assertGreater(len(core_memories), 1, "Should have multiple core memories tracking story progression")
+        
+        # Check for expected story elements
+        memory_text = ' '.join(core_memories).lower()
+        found_elements = sum(1 for element in expected_elements if element.lower() in memory_text)
+        
+        self.assertGreater(found_elements, len(expected_elements) // 2, 
+                          f"Expected at least half of {expected_elements} in memories. Memories: {core_memories}")
+        
+        return core_memories
+
+
+class TestDefaultDragonKnightCampaign(BaseCampaignIntegrationTest):
+    """Test the Dragon Knight campaign with character creation, combat, and story progression.
+    
+    Uses real system prompts with 'all checkboxes checked' configuration:
+    - narrative: Story guidance and character development
+    - mechanics: Combat rules and game mechanics
+    
+    This simulates the complete user experience with full system prompts.
+    """
+    
+    CAMPAIGN_PROMPT = """You are Ser Arion, a 16 year old honorable knight on your first mission, sworn to protect the vast Celestial Imperium. For decades, the Empire has been ruled by the iron-willed Empress Sariel, a ruthless tyrant who uses psychic power to crush dissent. While her methods are terrifying, her reign has brought undeniable benefits: the roads are safe, trade flourishes, and the common people no longer starve or fear bandits. You are a product of this "Silent Peace," and your oath binds you to the security and prosperity it provides.
+
+Your loyalty is now brutally tested. You have been ordered to slaughter a settlement of innocent refugees whose very existence has been deemed a threat to the Empress's perfect, unyielding order. As you wrestle with this monstrous command, a powerful, new voice enters your mind—Aurum, the Gilded King, a magnificent gold dragon long thought to be a myth. He appears as a champion of freedom, urging you to defy the Empress's "soulless cage" and fight for a world of choice and glorious struggle.
+
+You are now caught between two powerful and morally grey forces. Do you uphold your oath and commit an atrocity, believing the sacrifice of a few is worth the peace and safety of millions? Or do you break your vow and join the arrogant dragon's chaotic crusade, plunging the world back into violence for a chance at true freedom? This single choice will define your honor and your path in an empire where security is bought with blood."""
+    
+    CAMPAIGN_TITLE = "Dragon Knight Test Campaign"
+    USER_ID_SUFFIX = "dragon-knight-user"
+
+    def test_dragon_knight_character_creation(self):
+        """Test automatic character creation when starting the Dragon Knight campaign."""
+        # Start the story - LLM automatically creates the character
+        response = self.start_campaign_story()
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify character creation using base class helper
+        pc_data = self.assert_character_created('Ser Arion', ['Knight', 'Paladin'], 'Lawful Good')
+        
+        print(f"✅ Character auto-creation test passed - Ser Arion created with all required fields")
+
+    def test_dragon_knight_combat_encounter(self):
+        """Test combat mechanics and state management in Dragon Knight campaign."""
+        # Start story and make choices
+        self.start_campaign_story()
+        self.send_character_action('I choose to listen to Aurum the Gilded King. I will not slaughter these innocent refugees.')
+        
+        # Trigger combat
+        combat_prompt = (
+            'Suddenly, Imperial Guards arrive to enforce the Empress\'s order. "Surrender, traitor!" they shout. '
+            'I draw my sword and prepare to fight them in combat. I attack the lead guard!'
+        )
+        response = self.send_character_action(combat_prompt)
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify combat using base class helper
+        combat_state, combatants = self.assert_combat_active()
+        
+        # Additional specific checks
+        player_combatant = next((c for c in combatants if c.get('side') == 'player' and c.get('name') == 'Ser Arion'), None)
+        self.assertIsNotNone(player_combatant, "Ser Arion should be in combat")
+        self.assertIn('hp_current', player_combatant, "Player should have current HP")
+        self.assertIn('hp_max', player_combatant, "Player should have max HP")
+        
+        print(f"✅ Combat test passed - Combat active with {len(combatants)} combatants")
+
+    def test_dragon_knight_story_progression(self):
+        """Test narrative choices and story progression through Dragon Knight campaign."""
+        # Start the story using base class helper
+        self.start_campaign_story()
+        
+        # Make narrative choices using base class helper
+        choices = [
+            ("I choose to listen to Aurum the Gilded King. I will not slaughter these innocent refugees. "
+             "I sheath my sword and stand with the dragon against the Empress."),
+            ('I approach Theron and Elara. "The dragon offers freedom from the Empress\'s tyranny. '
+             'Will you stand with me against her forces?" I try to rally the refugees to our cause.'),
+            ('Suddenly, Imperial Guards arrive to enforce the Empress\'s order. "Surrender, traitor!" they shout. '
+             'I draw my sword and prepare to fight them in combat. I attack the lead guard!')
+        ]
+        
+        for choice in choices:
+            response = self.send_character_action(choice)
+            self.assertEqual(response.status_code, 200)
+        
+        # Verify story progression using base class helper
+        expected_elements = ['arion', 'choice', 'dragon', 'aurum', 'refugees']
+        core_memories = self.assert_story_progression(expected_elements)
+        
+        # Verify combat was triggered using base class helper
+        combat_state, combatants = self.assert_combat_active()
+        
+        print(f"✅ Story progression test passed - {len(core_memories)} memories, combat active with {len(combatants)} combatants")
+
+
+class TestBG3AstarionCampaign(BaseCampaignIntegrationTest):
+    """Test the BG3 Astarion custom campaign with character creation and story progression.
+    
+    This tests a custom Baldur's Gate 3 inspired campaign where the player is Astarion,
+    the vampire spawn, testing custom character prompts and story integration.
+    """
+    
+    CAMPAIGN_PROMPT = """You are Astarion, a vampire spawn who has just escaped from his cruel master Cazador after 200 years of servitude. The illithid tadpole in your brain has somehow freed you from Cazador's compulsion, but you still bear the scars of centuries of torture and manipulation.
+
+You find yourself in a small village at dusk, your newfound freedom both exhilarating and terrifying. The hunger for blood gnaws at you, but for the first time in centuries, you can choose whether to feed. A young woman walks alone down a dark alley, humming softly to herself.
+
+As you struggle with your vampiric nature and the weight of your past, you must decide: Will you embrace the monster Cazador made you, or fight against your dark impulses to forge a new path? Your choice here will define whether you remain a slave to your nature or become truly free."""
+    
+    CAMPAIGN_TITLE = "BG3 Astarion Test Campaign"
+    USER_ID_SUFFIX = "bg3-astarion-user"
+
+    def test_astarion_character_creation(self):
+        """Test automatic character creation for Astarion campaign."""
+        # Start the story - LLM automatically creates Astarion
+        response = self.start_campaign_story()
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify character creation - Astarion should be a Rogue or similar
+        pc_data = self.assert_character_created('Astarion', ['Rogue', 'Vampire Spawn', 'Ranger'], None)
+        
+        # Check for vampire-specific traits
+        traits_text = str(pc_data.get('traits', [])) + ' ' + str(pc_data.get('race', '')) + ' ' + str(pc_data.get('subrace', ''))
+        self.assertTrue('vampire' in traits_text.lower() or 'undead' in traits_text.lower(), 
+                       f"Astarion should have vampire/undead traits. Got: {traits_text}")
+        
+        print(f"✅ Astarion character creation test passed")
+
+    def test_astarion_story_progression_full(self):
+        """Test complete narrative arc with three choices and combat for Astarion."""
+        # Start story
+        self.start_campaign_story()
+        
+        # Narrative Choice 1: Resist the hunger (moral choice)
+        choice_1 = (
+            "I clench my fists and turn away from the woman. 'No,' I whisper to myself. "
+            "'I am not Cazador's puppet anymore. I will not feed on innocents.' "
+            "I retreat into the shadows, fighting the hunger."
+        )
+        response_1 = self.send_character_action(choice_1)
+        self.assertEqual(response_1.status_code, 200)
+        
+        # Narrative Choice 2: Seek alternative sustenance
+        choice_2 = (
+            "I search the village outskirts for animals - rats, birds, anything to quell this hunger. "
+            "'There must be another way,' I tell myself. I find a stray dog and reluctantly feed, "
+            "hating myself but refusing to harm innocents."
+        )
+        response_2 = self.send_character_action(choice_2)
+        self.assertEqual(response_2.status_code, 200)
+        
+        # Narrative Choice 3: Trigger combat with vampire hunters or Cazador's minions
+        choice_3 = (
+            "Suddenly, I sense familiar presences - vampire spawn, my former 'siblings' sent by Cazador! "
+            "'Come back to master, brother,' they hiss from the shadows. 'Never!' I snarl, "
+            "drawing my daggers. 'I'll die before I return to him!' I attack the nearest spawn!"
+        )
+        response_3 = self.send_character_action(choice_3)
+        self.assertEqual(response_3.status_code, 200)
+        
+        # Verify story progression - check for key story beats
+        expected_elements = ['astarion', 'cazador', 'hunger', 'vampire', 'siblings']
+        core_memories = self.assert_story_progression(expected_elements)
+        
+        # Verify combat was triggered
+        combat_state, combatants = self.assert_combat_active()
+        
+        # Check for Astarion in combat
+        astarion = next((c for c in combatants if c.get('name') == 'Astarion'), None)
+        self.assertIsNotNone(astarion, "Astarion should be in combat")
+        
+        print(f"✅ Astarion full story progression test passed - {len(core_memories)} memories, combat with {len(combatants)} combatants")
+
+    def test_astarion_combat_mechanics(self):
+        """Test combat mechanics when vampire hunters attack Astarion."""
+        # Start story and make initial choice
+        self.start_campaign_story()
+        self.send_character_action("I resist the urge to feed and look for another way.")
+        
+        # Trigger combat with vampire hunters (avoiding apostrophes in entity names)
+        combat_trigger = (
+            "A group of vampire hunters bursts into the alley! 'Found one!' their leader shouts. "
+            "'Die, monster!' They draw silver weapons and attack. I have no choice but to defend myself. "
+            "I draw my daggers and strike at the lead hunter!"
+        )
+        response = self.send_character_action(combat_trigger)
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify combat state
+        combat_state, combatants = self.assert_combat_active()
+        
+        # Check for Astarion in combat
+        astarion = next((c for c in combatants if c.get('name') == 'Astarion'), None)
+        self.assertIsNotNone(astarion, "Astarion should be in combat")
+        self.assertEqual(astarion.get('side'), 'player', "Astarion should be on player side")
+        
+        # Check for enemy combatants (hunters)
+        enemy_combatants = [c for c in combatants if c.get('side') == 'enemy']
+        self.assertGreater(len(enemy_combatants), 0, "Should have enemy combatants")
+        
+        # Verify Astarion has proper combat stats
+        self.assertIn('hp_current', astarion, "Astarion should have current HP")
+        self.assertIn('hp_max', astarion, "Astarion should have max HP")
+        
+        print(f"✅ Astarion combat mechanics test passed - Fighting {len(combatants)} combatants")
 
 
 if __name__ == '__main__':
