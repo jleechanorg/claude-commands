@@ -227,7 +227,8 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
         
         // Add planning block if present (always at the bottom)
         if (fullData.planning_block) {
-            html += `<div class="planning-block">${fullData.planning_block}</div>`;
+            const parsedPlanningBlock = parsePlanningBlocks(fullData.planning_block);
+            html += `<div class="planning-block">${parsedPlanningBlock}</div>`;
         }
         
         // Add debug info if in debug mode
@@ -364,31 +365,50 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
     
     // Helper function to parse planning blocks and create buttons
     const parsePlanningBlocks = (text) => {
-        // Pattern to match choice format: **[ActionWord_Number]:** Description OR numbered format: 1. **Action:** Description
-        const bracketPattern = /\*\*\[([^\]]+)\]:\*\*\s*([^*\n]+(?:\n(?!\*\*\[)[^\n]*)*)/g;
-        const numberedPattern = /^\d+\.\s*\*\*([^:]+):\*\*\s*(.+?)(?=^\d+\.|$)/gm;
-        
-        // Find all choices in the text
         const choices = [];
-        let match;
+        const lines = text.split('\n');
         
-        // First try bracket pattern: **[Action_1]:** Description
-        while ((match = bracketPattern.exec(text)) !== null) {
-            choices.push({
-                id: match[1],
-                fullText: match[0],
-                description: match[2].trim()
-            });
-        }
-        
-        // If no bracket pattern found, try numbered pattern: 1. **Action:** Description
-        if (choices.length === 0) {
-            while ((match = numberedPattern.exec(text)) !== null) {
-                choices.push({
-                    id: match[1].trim(),
-                    fullText: match[0],
-                    description: match[2].trim()
-                });
+        // Parse line by line looking for choice patterns
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            
+            // Skip empty lines and non-choice lines
+            if (!line) continue;
+            
+            // Check for numbered format: "1. **ActionName** - Description"
+            if (/^\d+\./.test(line)) {
+                const parts = line.split('**');
+                if (parts.length >= 3) {
+                    // Extract: ["1. ", "ActionName", " - Description"]
+                    const actionId = parts[1].trim();
+                    const afterAction = parts[2];
+                    
+                    // Look for dash separator
+                    const dashIndex = afterAction.indexOf(' - ');
+                    if (dashIndex > -1) {
+                        const description = afterAction.substring(dashIndex + 3).trim();
+                        choices.push({
+                            id: actionId,
+                            fullText: line,
+                            description: description
+                        });
+                    }
+                }
+            }
+            
+            // Check for bracket format: "**[ActionName]:** Description"
+            else if (line.includes('**[') && line.includes(']:**')) {
+                const startBracket = line.indexOf('**[');
+                const endBracket = line.indexOf(']:**');
+                if (startBracket < endBracket) {
+                    const actionId = line.substring(startBracket + 3, endBracket);
+                    const description = line.substring(endBracket + 4).trim();
+                    choices.push({
+                        id: actionId,
+                        fullText: line,
+                        description: description
+                    });
+                }
             }
         }
         
@@ -410,21 +430,13 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
             choices.forEach(choice => {
                 // Escape the choice text for HTML attribute
                 const escapedText = `${choice.id}: ${choice.description}`.replace(/"/g, '&quot;');
-                choicesHtml += `
-                    <button class="choice-button" data-choice-id="${choice.id}" data-choice-text="${escapedText}">
-                        <span class="choice-id">[${choice.id}]</span>
-                        <span class="choice-description">${choice.description}</span>
-                    </button>
-                `;
+                // Show both action ID and description as button text
+                const buttonText = `${choice.id}: ${choice.description}`;
+                choicesHtml += `<button class="choice-button" data-choice-id="${choice.id}" data-choice-text="${escapedText}" title="${choice.description}">${buttonText}</button>`;
             });
             
             // Add custom text option
-            choicesHtml += `
-                <button class="choice-button choice-button-custom" data-choice-id="Custom" data-choice-text="custom">
-                    <span class="choice-id">[Custom]</span>
-                    <span class="choice-description">Type your own action...</span>
-                </button>
-            `;
+            choicesHtml += `<button class="choice-button choice-button-custom" data-choice-id="Custom" data-choice-text="custom" title="Type your own action">Custom Action</button>`;
             
             choicesHtml += '</div>';
             
