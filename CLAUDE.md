@@ -47,6 +47,18 @@
    - ✅ Decline tasks outside your capabilities
    - ✅ Ask for help rather than attempting impossible tasks
 
+🚨 **ENHANCED ANTI-HALLUCINATION PROTOCOL**: Advanced verification strategies
+   - ✅ **Triple-Check Rule**: Before claiming anything works, verify 3x independently
+   - ✅ **Source Attribution**: Always cite specific files, line numbers, or command outputs
+   - ✅ **Uncertainty Quantification**: Use phrases like "appears to be", "likely", "based on X evidence"
+   - ✅ **Contradiction Detection**: Flag when evidence conflicts with assumptions
+   - ✅ **Explicit Assumption Marking**: Clearly label all assumptions as such
+   - ✅ **Evidence Hierarchy**: Primary (direct observation) > Secondary (documentation) > Tertiary (inference)
+   - ❌ NEVER claim understanding without demonstrating it through specific examples
+   - ❌ NEVER state facts without providing the source or method of verification
+   - ❌ NEVER make confident predictions about untested scenarios
+   - ⚠️ When forced to make educated guesses, explicitly label them as "speculation based on X"
+
 🚨 **NO EXCUSES FOR TEST FAILURES**: When asked to fix tests, FIX THEM ALL
    - ❌ NEVER say "pre-existing issues" or "unrelated to our changes"
    - ❌ NEVER settle for partial fixes (97/99 is NOT acceptable)
