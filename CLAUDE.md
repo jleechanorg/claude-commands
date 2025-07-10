@@ -604,7 +604,8 @@ Use `/list` to display all available slash commands with descriptions.
 
 **Command Aliases**:
 - `/tddf` - Alias for `/4layer` (Test-Driven Development Four-layer protocol)
-- Both commands execute identical four-layer TDD testing protocol
+- `/nb` - Alias for `/newbranch` (Create new branch from latest main)
+- Both commands execute identical protocols as their full command names
 
 **Command Examples**: → `.cursor/rules/examples.md`
 
