@@ -173,6 +173,8 @@ Most of the time, you should provide specific, contextual choices.
 - Includes pros/cons analysis for each option
 - Character's confidence assessment
 - NEVER takes narrative actions - only presents thoughts and options
+- DON'T interpret think-block input as action commands - generate planning instead
+- MUST NOT take action on think-block requests - provide internal thought only
 
 ### 🚨 CRITICAL: CamelCase Choice IDs
 
