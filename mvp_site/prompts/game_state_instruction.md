@@ -133,16 +133,22 @@ Conditions: [Active conditions with duration] | Exhaustion: [0-6] | Inspiration:
 
 **REQUIRED: Every STORY MODE response must include the planning block in the planning_block field.**
 
-**Planning Block Format Requirements:**
-- Each numbered option MUST start with a CamelCase choice ID
-- Format: `1. **CamelCaseID** - Description of the action`
-- Examples: **AttackGoblin**, **SearchChest**, **TalkToGuard**, **CastFireball**
-- This ID is used for tracking player choices in the system
+### Two Types of Planning Blocks
 
-### Planning Block Rules:
+**1. Standard Planning Block** - Used for all normal STORY MODE responses
+- Presents 3-5 actionable choices for what to do next
+- Simple format with choice ID and description
+- Always includes an "Other" option
 
-**🚨 CRITICAL: CamelCase Choice IDs**
-Every numbered choice in a planning block MUST start with a CamelCase identifier:
+**2. Deep Think Planning Block** - Triggered by keywords: "think", "plan", "consider", "strategize", "options"
+- Shows character's internal thought process
+- Includes pros/cons analysis for each option
+- Character's confidence assessment
+- NEVER takes narrative actions - only presents thoughts and options
+
+### 🚨 CRITICAL: CamelCase Choice IDs
+
+Every numbered choice MUST start with a CamelCase identifier:
 - ✅ CORRECT: `1. **AttackGoblin** - Draw your sword and charge`
 - ❌ WRONG: `1. **Attack the goblin** - Draw your sword and charge`
 - ❌ WRONG: `1. **attack_goblin** - Draw your sword and charge`
@@ -150,22 +156,22 @@ Every numbered choice in a planning block MUST start with a CamelCase identifier
 
 The CamelCase ID is used by the system for choice tracking and analytics.
 
-**1. Deep Think Blocks (triggered by "think", "plan", "consider", "strategize", "options"):**
-- Generate ONLY character's internal thoughts with pros/cons
-- NEVER take narrative actions when these keywords are used
-- DON'T interpret think commands as story actions - generate planning instead
-- Present 3-5 options with character's subjective assessment
+### Planning Block Templates
 
-**2. Standard Choice Blocks (all other STORY MODE responses):**
-- Present 3-5 actionable choices
-- Always include an "Other" option
-
-### Planning Block Templates:
-
-**Deep Think Block (for think/plan keywords):**
+**1. Standard Planning Block (default for all STORY MODE responses):**
 ```
 --- PLANNING BLOCK ---
-[Character's internal monologue]
+What would you like to do next?
+1. **InvestigateNoise** - Check out that strange sound from the cellar
+2. **QuestionInnkeeper** - Ask the barkeep about recent unusual events
+3. **RestAndRecover** - Get a room and rest for the night
+4. **OtherAction** - You can also describe a different action you'd like to take.
+```
+
+**2. Deep Think Planning Block (ONLY when player uses think/plan/consider/strategize/options):**
+```
+--- PLANNING BLOCK ---
+[Character's internal monologue goes here - their thoughts about the situation]
 
 I see several options before me:
 
@@ -187,15 +193,12 @@ I see several options before me:
 4. **OtherAction** - I could also try something else entirely.
 ```
 
-**Standard Choice Block (regular responses):**
-```
---- PLANNING BLOCK ---
-What would you like to do next?
-1. **InvestigateNoise** - Check out that strange sound from the cellar
-2. **QuestionInnkeeper** - Ask the barkeep about recent unusual events
-3. **RestAndRecover** - Get a room and rest for the night
-4. **OtherAction** - You can also describe a different action you'd like to take.
-```
+**Key Differences in Deep Think Blocks:**
+- ✅ Includes character's internal monologue before the options
+- ✅ Each option has Pros/Cons/Confidence analysis
+- ✅ Shows character's subjective assessment
+- ❌ Does NOT advance the narrative or take actions
+- ❌ Does NOT describe what happens - only what character is thinking
 
 **FORBIDDEN:**
 - Do NOT add any fields beyond those specified above
