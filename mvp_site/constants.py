@@ -169,13 +169,16 @@ USER_SELECTABLE_PROMPTS = [
     PROMPT_TYPE_MECHANICS
 ]
 
-# --- CHARACTER CREATION ---
+# --- CHARACTER DESIGN ---
 # Reminder text injected into initial prompt when mechanics is enabled
-CHARACTER_CREATION_REMINDER = """
-🔥 CRITICAL REMINDER: Since mechanics is enabled, you MUST start with character creation! 🔥
-Before generating ANY story content or background narrative, present the character creation options exactly as specified in the Campaign Initialization section of the mechanics instructions.
-DO NOT create a character or start the story - let the player choose their character creation method first!
-IMPORTANT: During character creation, numeric responses (1, 2, 3, etc.) are selections from the presented list, NOT story continuation requests.
-Use the clean [CHARACTER CREATION - Step X of 7] format without DM notes or debug blocks.
+CHARACTER_DESIGN_REMINDER = """
+🔥 CRITICAL REMINDER: Since mechanics is enabled, you MUST start with character design! 🔥
+FIRST: Check if the player has specified a character in their prompt (e.g., "play as Astarion", "I want to be a knight", etc.)
+- If YES: Acknowledge their character choice and flesh it out with D&D mechanics following the "When Character is Pre-Specified" protocol
+- If NO: Present the standard character design options exactly as specified in the Campaign Initialization section
+
+DO NOT design a character or start the story - work with the player to establish their character first!
+IMPORTANT: During character design, numeric responses (1, 2, 3, etc.) are selections from the presented list, NOT story continuation requests.
+Use the clean [CHARACTER DESIGN - Step X of 7] format without DM notes or debug blocks.
 IMPORTANT: State updates must be included in a JSON field, not in the narrative text.
 """.strip()

@@ -176,10 +176,10 @@ class TestConstants(unittest.TestCase):
 
     def test_character_creation_constants(self):
         """Test character creation constants."""
-        self.assertIsInstance(constants.CHARACTER_CREATION_REMINDER, str)
-        self.assertIn("CRITICAL REMINDER", constants.CHARACTER_CREATION_REMINDER)
-        self.assertIn("mechanics is enabled", constants.CHARACTER_CREATION_REMINDER)
-        self.assertIn("character creation", constants.CHARACTER_CREATION_REMINDER)
+        self.assertIsInstance(constants.CHARACTER_DESIGN_REMINDER, str)
+        self.assertIn("CRITICAL REMINDER", constants.CHARACTER_DESIGN_REMINDER)
+        self.assertIn("mechanics is enabled", constants.CHARACTER_DESIGN_REMINDER)
+        self.assertIn("character design", constants.CHARACTER_DESIGN_REMINDER)
     
     def test_mode_switching_constants(self):
         """Test mode switching detection constants."""

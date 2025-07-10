@@ -11,7 +11,10 @@ from playwright.sync_api import sync_playwright
 # Add project root to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from testing_ui.browser_test_helpers import BrowserTestHelper
+# Import test utilities
+sys.path.append(os.path.dirname(__file__))
+from test_data_utils import create_test_campaign
+from test_ui_helpers import capture_structured_fields_sequence
 
 def test_layer3_working():
     """Working Layer 3 test with direct HTML injection."""

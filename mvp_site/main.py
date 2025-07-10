@@ -87,6 +87,35 @@ KEY_RESPONSE = 'response'
 # Roles & Modes
 DEFAULT_TEST_USER = 'test-user'
 
+# Campaign Generation Constants
+RANDOM_CHARACTERS = [
+    "A brave warrior seeking to prove their worth in battle",
+    "A cunning rogue with a mysterious past and hidden agenda", 
+    "A wise wizard devoted to uncovering ancient magical secrets",
+    "A noble paladin sworn to protect the innocent from evil",
+    "A skilled ranger who knows the wilderness like no other",
+    "A charismatic bard who weaves magic through music and stories",
+    "A devout cleric blessed with divine power to heal and smite",
+    "A fierce barbarian driven by primal instincts and tribal honor",
+    "A stealthy monk trained in martial arts and inner discipline",
+    "A nature-loving druid who can shapeshift and command beasts"
+]
+
+RANDOM_SETTINGS = [
+    "The bustling city of Waterdeep, where intrigue and adventure await around every corner",
+    "The mystical Feywild, a realm where magic runs wild and reality bends to emotion",
+    "The treacherous Underdark, a vast network of caverns filled with dangerous creatures",
+    "The frozen lands of Icewind Dale, where survival means everything in the harsh tundra",
+    "The desert kingdom of Calimshan, where genies and merchants rule with equal power",
+    "The pirate-infested Sword Coast, where gold and glory are won by blade and cunning",
+    "The haunted moors of Barovia, trapped in eternal mist and ruled by dark powers",
+    "The floating city of Sharn, where magic and technology create vertical neighborhoods",
+    "The jungle continent of Chult, where ancient ruins hide deadly secrets and treasures",
+    "The war-torn kingdom of Cyre, struggling to rebuild after magical devastation"
+]
+
+DRAGON_KNIGHT_NARRATIVE = """You are Ser Arion, a 16 year old honorable knight on your first mission, sworn to protect the vast Celestial Imperium. For decades, the Empire has been ruled by the iron-willed Empress Sariel, a ruthless tyrant who uses psychic power to crush dissent. While her methods are terrifying, her reign has brought undeniable benefits: the roads are safe, commerce thrives, and the Imperium has never been stronger. But dark whispers speak of the Dragon Knights - an ancient order that once served the realm before mysteriously vanishing. As you journey through this morally complex world, you must decide: will you serve the tyrant who brings order, or seek a different path?"""
+
 # --- END CONSTANTS ---
 
 
@@ -552,6 +581,63 @@ def parse_set_command(payload_str: str) -> dict:
 
     return proposed_changes
 
+def _build_campaign_prompt(character, setting, description, campaign_type, old_prompt):
+    """
+    Build campaign prompt from character, setting, and description parameters.
+    
+    This function handles all combinations of character, setting, and description inputs:
+    - Provided inputs are used as-is
+    - Empty/None inputs are replaced with randomly generated content
+    - Dragon Knight campaigns use a fixed narrative regardless of inputs
+    - Backward compatibility with old_prompt format is maintained
+    
+    Args:
+        character (str): Character description or None/empty
+        setting (str): Setting description or None/empty  
+        description (str): Campaign description or None/empty
+        campaign_type (str): Type of campaign ('dragon-knight', 'custom', etc.)
+        old_prompt (str): Legacy prompt format for backward compatibility
+        
+    Returns:
+        str: Constructed campaign prompt with proper character/setting/description format
+    """
+    import random
+    
+    # Normalize inputs: convert None to empty string and strip whitespace
+    character = (character or '').strip()
+    setting = (setting or '').strip()
+    description = (description or '').strip()
+    old_prompt = (old_prompt or '').strip()
+    
+    # Dragon Knight campaigns use fixed narrative regardless of other inputs
+    if campaign_type == 'dragon-knight':
+        return DRAGON_KNIGHT_NARRATIVE
+    
+    # Build new format prompt - use provided fields or generate random content
+    prompt_parts = []
+    
+    # Character: use provided or generate random
+    if character:
+        prompt_parts.append(f"Character: {character}")
+    else:
+        prompt_parts.append(f"Character: {random.choice(RANDOM_CHARACTERS)}")
+    
+    # Setting: use provided or generate random
+    if setting:
+        prompt_parts.append(f"Setting: {setting}")
+    else:
+        prompt_parts.append(f"Setting: {random.choice(RANDOM_SETTINGS)}")
+    
+    # Description: only include if provided
+    if description:
+        prompt_parts.append(f"Campaign Description: {description}")
+    
+    # Backward compatibility: use old_prompt only if no new format fields provided
+    if not character and not setting and not description and old_prompt:
+        return old_prompt
+    
+    return "\n".join(prompt_parts)
+
 def create_app():
     """
     Create and configure the Flask application.
@@ -642,18 +728,35 @@ def create_app():
     @check_token
     def create_campaign_route(user_id):
         data = request.get_json()
-        prompt, title = data.get(KEY_PROMPT), data.get(constants.KEY_TITLE)
+        
+        # Handle both new (character/setting/description) and old (prompt) formats
+        character = data.get('character', '')
+        setting = data.get('setting', '')
+        description = data.get('description', '')
+        old_prompt = data.get(KEY_PROMPT, '')
+        title = data.get(constants.KEY_TITLE)
         selected_prompts = data.get(KEY_SELECTED_PROMPTS, [])
         custom_options = data.get('custom_options', [])
+        campaign_type = data.get('campaign_type', 'custom')
+        
+        # Construct prompt from provided parameters
+        try:
+            prompt = _build_campaign_prompt(character, setting, description, campaign_type, old_prompt)
+        except ValueError as e:
+            return jsonify({KEY_ERROR: str(e)}), 400
         
         # Validate required fields
-        if not prompt:
-            return jsonify({KEY_ERROR: 'Prompt is required'}), 400
         if not title:
             return jsonify({KEY_ERROR: 'Title is required'}), 400
         
         # Debug logging
-        app.logger.info(f"Received custom_options: {custom_options}")
+        app.logger.info(f"Received campaign creation request:")
+        app.logger.info(f"  Campaign type: {campaign_type}")
+        app.logger.info(f"  Character: {character}")
+        app.logger.info(f"  Setting: {setting}")
+        app.logger.info(f"  Description: {description}")
+        app.logger.info(f"  Custom options: {custom_options}")
+        app.logger.info(f"  Selected prompts: {selected_prompts}")
 
         # Always use D&D system (Destiny system removed)
         attribute_system = constants.ATTRIBUTE_SYSTEM_DND

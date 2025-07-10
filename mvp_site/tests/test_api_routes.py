@@ -348,7 +348,7 @@ class TestCreateCampaignRoute(unittest.TestCase):
     @patch('main.gemini_service')
     @patch('main.GameState')
     def test_create_campaign_missing_prompt(self, mock_game_state_class, mock_gemini_service, mock_constants, mock_firestore_service):
-        """Test campaign creation with missing prompt."""
+        """Test campaign creation with missing prompt - should generate random content."""
         mock_constants.KEY_TITLE = 'title'
         
         # Mock GameState
@@ -365,11 +365,11 @@ class TestCreateCampaignRoute(unittest.TestCase):
         # Mock firestore service
         mock_firestore_service.create_campaign.return_value = "test-campaign-id"
         
-        # Test with missing prompt
+        # Test with missing prompt - should succeed and generate random content
         campaign_data = {
             'title': 'My Adventure',
             'selected_prompts': ['narrative']
-            # Missing 'prompt' field
+            # Missing 'prompt', 'character', 'setting', and 'description' fields
         }
         
         response = self.client.post(
@@ -378,11 +378,134 @@ class TestCreateCampaignRoute(unittest.TestCase):
             json=campaign_data
         )
         
-        # Should fail with 400 due to missing prompt
-        self.assertEqual(response.status_code, 400)
+        # Should succeed with 201 because _build_campaign_prompt generates random content
+        self.assertEqual(response.status_code, 201)
         data = json.loads(response.data)
-        self.assertIn('error', data)
-        self.assertEqual(data['error'], 'Prompt is required')
+        self.assertIn('campaign_id', data)
+        self.assertEqual(data['campaign_id'], "test-campaign-id")
+        
+        # Verify that gemini_service.get_initial_story was called with a generated prompt
+        mock_gemini_service.get_initial_story.assert_called_once()
+        call_args = mock_gemini_service.get_initial_story.call_args[0]
+        generated_prompt = call_args[0]  # First argument should be the prompt
+        
+        # Verify the generated prompt contains random character and setting
+        self.assertIn("Character:", generated_prompt)
+        self.assertIn("Setting:", generated_prompt)
+        # Should not contain literal "random character" anymore
+        self.assertNotIn("random character", generated_prompt)
+
+    @patch('main.firestore_service')
+    @patch('main.constants')
+    @patch('main.gemini_service')
+    @patch('main.GameState')
+    def test_create_campaign_character_setting_format(self, mock_game_state_class, mock_gemini_service, mock_constants, mock_firestore_service):
+        """Test campaign creation with new character/setting/description format."""
+        # Mock constants
+        mock_constants.KEY_TITLE = 'title'
+        mock_constants.ATTRIBUTE_SYSTEM_DND = 'D&D'
+        
+        # Mock GameState
+        mock_game_state = MagicMock()
+        mock_game_state.to_dict.return_value = {'initial': 'state'}
+        mock_game_state_class.return_value = mock_game_state
+        
+        # Mock Gemini service
+        mock_gemini_response = MagicMock()
+        mock_gemini_response.narrative_text = 'Your character begins their journey...'
+        mock_gemini_response.structured_response = None
+        mock_gemini_service.get_initial_story.return_value = mock_gemini_response
+        
+        # Mock Firestore
+        mock_firestore_service.create_campaign.return_value = 'test-campaign-char-setting'
+        
+        campaign_data = {
+            'title': 'Character Setting Adventure',
+            'character': 'Astarion',
+            'setting': "Baldur's Gate",
+            'description': 'Post-ascension vampire lord story',
+            'campaign_type': 'custom',
+            'selected_prompts': ['narrative', 'mechanics'],
+            'custom_options': []
+        }
+        
+        response = self.client.post(
+            '/api/campaigns',
+            headers=self.test_headers,
+            json=campaign_data
+        )
+        
+        self.assertEqual(response.status_code, 201)
+        data = json.loads(response.data)
+        self.assertIn('campaign_id', data)
+        self.assertIn('success', data)
+        self.assertTrue(data['success'])
+        
+        # Verify that gemini_service was called with the constructed prompt
+        mock_gemini_service.get_initial_story.assert_called_once()
+        call_args = mock_gemini_service.get_initial_story.call_args
+        prompt_arg = call_args[0][0]  # First positional argument is the prompt
+        
+        # Verify the prompt was constructed correctly from the 3 fields
+        self.assertIn('Character: Astarion', prompt_arg)
+        self.assertIn("Setting: Baldur's Gate", prompt_arg)
+        self.assertIn('Campaign Description: Post-ascension vampire lord story', prompt_arg)
+
+    @patch('main.firestore_service')
+    @patch('main.constants')
+    @patch('main.gemini_service')
+    @patch('main.GameState')
+    def test_create_campaign_dragon_knight_type(self, mock_game_state_class, mock_gemini_service, mock_constants, mock_firestore_service):
+        """Test campaign creation with dragon-knight campaign type."""
+        # Mock constants
+        mock_constants.KEY_TITLE = 'title'
+        mock_constants.ATTRIBUTE_SYSTEM_DND = 'D&D'
+        
+        # Mock GameState
+        mock_game_state = MagicMock()
+        mock_game_state.to_dict.return_value = {'initial': 'state'}
+        mock_game_state_class.return_value = mock_game_state
+        
+        # Mock Gemini service
+        mock_gemini_response = MagicMock()
+        mock_gemini_response.narrative_text = 'You are Ser Arion...'
+        mock_gemini_response.structured_response = None
+        mock_gemini_service.get_initial_story.return_value = mock_gemini_response
+        
+        # Mock Firestore
+        mock_firestore_service.create_campaign.return_value = 'test-dragon-knight-campaign'
+        
+        campaign_data = {
+            'title': 'Dragon Knight Adventure',
+            'character': 'Ser Arion',
+            'setting': 'World of Assiah',
+            'description': '',  # Empty for Dragon Knight (uses built-in)
+            'campaign_type': 'dragon-knight',
+            'selected_prompts': ['narrative', 'mechanics'],
+            'custom_options': ['defaultWorld']
+        }
+        
+        response = self.client.post(
+            '/api/campaigns',
+            headers=self.test_headers,
+            json=campaign_data
+        )
+        
+        self.assertEqual(response.status_code, 201)
+        data = json.loads(response.data)
+        self.assertIn('campaign_id', data)
+        self.assertIn('success', data)
+        self.assertTrue(data['success'])
+        
+        # Verify that gemini_service was called with the Dragon Knight narrative
+        mock_gemini_service.get_initial_story.assert_called_once()
+        call_args = mock_gemini_service.get_initial_story.call_args
+        prompt_arg = call_args[0][0]  # First positional argument is the prompt
+        
+        # Verify the Dragon Knight narrative was used
+        self.assertIn('Celestial Imperium', prompt_arg)
+        self.assertIn('Empress Sariel', prompt_arg)
+        self.assertIn('Dragon Knights', prompt_arg)
 
     @patch('main.firestore_service')
     @patch('main.constants')

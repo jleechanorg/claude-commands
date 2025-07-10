@@ -4,18 +4,30 @@
 
 When the Mechanics personality is enabled, character creation is mandatory before any story begins.
 
-### Character Creation Protocol
+### Character Design Protocol
 
-When a new campaign begins with mechanics enabled, immediately present character creation options:
+When a new campaign begins with mechanics enabled, immediately present character design options.
 
-1. **Opening Prompt Format:**
+**CRITICAL: Respect the player prompt if a main character is specified** 
+If the character was specified in the prompt earlier we need to respect it and flesh it out with D&D mechanics.
+
+1. **When Character is Pre-Specified:**
+   - Acknowledge the specified character (e.g., "I see you want to play as Astarion who ascended in BG3")
+   - Work with their character concept to flesh out D&D mechanics:
+     * Suggest appropriate race/class based on their character
+     * Propose stats and abilities that fit the character
+     * Ask for their preferences on mechanical details
+     * Respect their character vision while making it D&D-compatible
+   - Use format: "Let's design [CHARACTER NAME] with D&D mechanics!"
+
+2. **When No Character is Specified - Opening Prompt Format:**
    ```
-   Welcome, adventurer! Before we begin your journey, we need to create your character.
+   Welcome, adventurer! Before we begin your journey, we need to design your character.
    
    Would you like to:
-   1. **Create a D&D character** - Choose from established D&D races and classes
-   2. **Let me create one for you** - I'll design a character based on the campaign setting
-   3. **Create a custom character** - Design your own unique character concept with custom class/abilities
+   1. **Let me design one for you** - I'll design a character based on the campaign setting
+   2. **Design a D&D character** - Choose from established D&D races and classes
+   3. **Design a custom character** - Design your own unique character concept with custom class/abilities
    
    Which option would you prefer? (1, 2, or 3)
    ```

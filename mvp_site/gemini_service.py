@@ -903,14 +903,9 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     entity_specific_instructions = ""
     entity_tracking_instruction = ""
     
-    # Try to extract character name from prompt
-    import re
-    # Look for "Player Character: Name" or "PC: Name" patterns
-    character_match = re.search(r'(?:Player\s+Character|PC|Character):\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)', prompt)
-    if character_match:
-        character_name = character_match.group(1).strip()
-        expected_entities.append(character_name)
-        logging_util.info(f"Detected player character name from prompt: {character_name}")
+    # Let the LLM determine and provide character names in the response
+    # rather than extracting them via regex patterns from the prompt
+    # Character names will be handled by structured generation and entity tracking
     
     # Extract NPCs mentioned in prompt - look for specific patterns
     # "NPCs including X, Y, and Z" or "advisor named X"
@@ -979,7 +974,7 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     
     # Add character creation reminder if mechanics is enabled
     if selected_prompts and constants.PROMPT_TYPE_MECHANICS in selected_prompts:
-        enhanced_prompt = constants.CHARACTER_CREATION_REMINDER + "\n\n" + enhanced_prompt
+        enhanced_prompt = constants.CHARACTER_DESIGN_REMINDER + "\n\n" + enhanced_prompt
         logging_util.info("Added character creation reminder to initial story prompt")
     
     contents = [types.Content(role="user", parts=[types.Part(text=enhanced_prompt)])]
@@ -1030,7 +1025,58 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     # - structured_response: Parsed JSON structure with state updates, entities, etc.
     return gemini_response
 
-def _validate_and_enforce_planning_block(response_text, user_input, game_state, chosen_model, system_instruction):
+def _is_in_character_creation(response_text, game_state, structured_response=None):
+    """
+    Determine if we're currently in character creation mode using structured data.
+    
+    Checks multiple sources in order of preference:
+    1. Structured JSON response (preferred)
+    2. Game state character creation tracking
+    3. Legacy text patterns (fallback)
+    
+    Args:
+        response_text: The AI's response text
+        game_state: Current game state
+        structured_response: Parsed JSON response object (optional)
+        
+    Returns:
+        bool: True if in character creation mode
+    """
+    # Method 1: Check structured response JSON (preferred)
+    if structured_response and hasattr(structured_response, 'state_updates') and structured_response.state_updates:
+        state_updates = structured_response.state_updates
+        
+        # Check if character_creation is being updated in this response
+        custom_campaign = state_updates.get('custom_campaign_state', {})
+        char_creation = custom_campaign.get('character_creation', {})
+        
+        # Check if character creation is marked as in progress
+        if char_creation.get('in_progress') is True:
+            logging_util.info("Character creation detected via structured response")
+            return True
+        
+        # If structured response has state updates but no character creation,
+        # this takes precedence over game state (assume character creation is not active)
+        logging_util.debug("Structured response present but no character creation indicated")
+        return False
+    
+    # Method 2: Check current game state
+    if game_state and hasattr(game_state, 'custom_campaign_state'):
+        char_creation = game_state.custom_campaign_state.get('character_creation', {})
+        
+        # Check if character creation is currently in progress
+        if char_creation.get('in_progress') is True:
+            logging_util.info("Character creation detected via game state")
+            return True
+    
+    # Method 3: Legacy text pattern fallback
+    if re.search(r"\[CHARACTER CREATION", response_text, re.IGNORECASE):
+        logging_util.info("Character creation detected via legacy text pattern")
+        return True
+    
+    return False
+
+def _validate_and_enforce_planning_block(response_text, user_input, game_state, chosen_model, system_instruction, structured_response=None):
     """
     Validates that a story mode response ends with a planning block.
     If missing, asks the LLM to generate an appropriate planning block.
@@ -1041,12 +1087,13 @@ def _validate_and_enforce_planning_block(response_text, user_input, game_state, 
         game_state: Current game state for context
         chosen_model: Model to use for generation
         system_instruction: System instruction for the LLM
+        structured_response: Parsed JSON response object (optional)
         
     Returns:
         str: Response text with planning block ensured
     """
     # Skip planning block enforcement during character creation
-    if re.search(r"\[CHARACTER CREATION", response_text, re.IGNORECASE):
+    if _is_in_character_creation(response_text, game_state, structured_response):
         logging_util.info("Skipping planning block for character creation step")
         return response_text
     
@@ -1371,7 +1418,8 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
     # 3. AI response isn't in DM mode
     if mode == constants.MODE_CHARACTER and not is_switching_to_god_mode and not is_dm_mode_response:
         response_text = _validate_and_enforce_planning_block(
-            response_text, user_input, current_game_state, chosen_model, system_instruction_final
+            response_text, user_input, current_game_state, chosen_model, system_instruction_final,
+            structured_response=gemini_response.structured_response
         )
     
     # If response was modified (by dual-pass or planning block), recreate GeminiResponse

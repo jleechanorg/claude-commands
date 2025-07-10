@@ -74,30 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("New campaign form reset to defaults.");
     }
 
-    // Dragon Knight campaign content - defined once to avoid duplication
-    window.DRAGON_KNIGHT_CAMPAIGN = `You are Ser Arion, a 16 year old honorable knight on your first mission, sworn to protect the vast Celestial Imperium. For decades, the Empire has been ruled by the iron-willed Empress Sariel, a powerful sovereign who maintains order through psychic abilities. While her methods are controversial, her reign has brought undeniable benefits: the roads are safe, trade flourishes, and the common people no longer starve or fear bandits. You are a product of this "Silent Peace," and your oath binds you to the security and prosperity it provides.
+    // Dragon Knight campaign content is now handled by the Python backend
 
-As a newly-sworn knight in the "Argent Eaglets," you serve under the stern Prefect Gratian in the northern province of Winter-Mourn. The land here is harsh, but the Imperial roads are perfectly maintained—a testament to the Empire's efficiency. Your family, House Valerion, has served the Empire loyally for generations, and you carry their legacy in your finely-crafted plate armor and ancestral sword, "Duty's Edge."
-
-The world you inhabit has a rich and complex history. Millennia ago, the Creator and their children, the Seraphim, brought order to a chaotic world. They built the great city of Aeterna and established laws that bound reality itself. But then came the Great Vanishing—the Creator and all pure-blooded Seraphim disappeared without explanation, leaving their half-celestial descendants, the Empyrean bloodline, to maintain their legacy.
-
-What followed was an age of ideological conflict. The twin brothers Raziel and Lucifer, two of the most powerful beings in existence, fought over the future of creation. Lucifer championed freedom and broke the chains that bound the lesser races, while Raziel sought to preserve order and stability. Their war reshaped the world.
-
-Years later, the legendary warrior Alexiel rose to prominence. Known as the "Mortal Star," she was a complex figure—a peerless fighter who helped end the great war but ultimately sacrificed herself to save her daughter. That daughter would grow to become Empress Sariel, transforming from a traumatized youth into the calculating ruler who now commands the Silent Throne.
-
-Under Sariel's rule, the Imperium has expanded to encompass nearly half the known world. The fractured remnants of old rebellions have been pushed to the blighted southern lands. Trade routes flourish under Imperial protection, and for the first time in generations, common citizens live without fear of war or famine. Yet this peace comes at a price—a world of perfect order is also a world without passion or rebellion.
-
-Beyond the borders of the Empire, other powers stir. In the frozen north, ancient forces that have slumbered for centuries begin to wake. From the black salt flats of the south, whispers speak of gathering darkness. The elven forests of the Sylvan Remnant view Imperial expansion with growing alarm. And throughout the land, those who remember the old ways of freedom plot in shadow.
-
-Your character begins with the traditional abilities of a paladin—divine sense that helps detect supernatural threats, and the healing touch that can mend wounds. Your oath to the Empire grants you these nascent holy powers, channeled through your dedication to law and order.
-
-As you embark on your first major deployment, you carry not just your house's expectations, but the weight of an empire's future. The choices you make will determine whether the Silent Peace endures, or whether the world will once again know the chaos of war. In this morally complex world, there are no easy answers—only the consequences of your decisions and the honor by which you live.`;
-
-    // Dragon Knight campaign content loader
-    async function loadDragonKnightCampaignContent() {
-        console.log('Dragon Knight campaign content loaded (hardcoded)');
-        return window.DRAGON_KNIGHT_CAMPAIGN;
-    }
+    // Dragon Knight campaign content is handled by the Python backend
+    // No need for client-side content loading
     
     // Handle campaign type radio button changes
     function setupCampaignTypeHandlers() {
@@ -580,7 +560,14 @@ As you embark on your first major deployment, you carry not just your house's ex
             }
             
             // Render story with debug mode awareness and structured fields
-            data.story.forEach(entry => appendToStory(entry.actor, entry.text, entry.mode, debugMode, entry.user_scene_number, entry));
+            // Filter out god-mode entries (internal prompts) from display
+            data.story.forEach(entry => {
+                // Skip god-mode entries unless we're in debug mode
+                if (entry.mode === 'god' && !debugMode) {
+                    return;
+                }
+                appendToStory(entry.actor, entry.text, entry.mode, debugMode, entry.user_scene_number, entry);
+            });
             
             // Add a slight delay to allow rendering before scrolling
             console.log("Attempting to scroll after content append, with a slight delay."); // RESTORED console.log
@@ -604,7 +591,9 @@ As you embark on your first major deployment, you carry not just your house's ex
         e.preventDefault();
         
         showSpinner('newCampaign');
-        let prompt = document.getElementById('campaign-prompt').value;
+        const character = document.getElementById('character-input').value;
+        const setting = document.getElementById('setting-input').value;
+        const description = document.getElementById('description-input').value;
         const title = document.getElementById('campaign-title').value;
         const selectedPrompts = Array.from(document.querySelectorAll('input[name="selectedPrompts"]:checked')).map(checkbox => checkbox.value);
         const customOptions = Array.from(document.querySelectorAll('input[name="customOptions"]:checked')).map(checkbox => checkbox.value);
@@ -624,7 +613,15 @@ As you embark on your first major deployment, you carry not just your house's ex
         try {
             const { data } = await fetchApi('/api/campaigns', { 
                 method: 'POST', 
-                body: JSON.stringify({ prompt, title, selected_prompts: selectedPrompts, custom_options: customOptions }) 
+                body: JSON.stringify({ 
+                    character, 
+                    setting, 
+                    description,
+                    title, 
+                    selected_prompts: selectedPrompts, 
+                    custom_options: customOptions,
+                    campaign_type: isDragonKnight ? 'dragon-knight' : 'custom'
+                }) 
             });
             
             // Complete progress bar if wizard is active

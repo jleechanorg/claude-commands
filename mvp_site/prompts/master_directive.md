@@ -21,9 +21,9 @@ These instructions form the core operational framework and MUST be loaded before
 These define the fundamental game rules:
 
 3. **`mechanics_system_instruction.md`** - System integration
-   - Authority over: Character creation (when mechanics enabled), dice rolling, leveling tiers, mechanical processes
+   - Authority over: Character design (when mechanics enabled), dice rolling, leveling tiers, mechanical processes
    - Defers to: dnd_srd_instruction.md for core mechanics
-   - Special role: Triggers mandatory character creation when mechanics checkbox is selected
+   - Special role: Triggers mandatory character design when mechanics checkbox is selected
 
 ### 3. NARRATIVE FRAMEWORK (Load Third)
 These guide storytelling and interaction:
@@ -38,7 +38,7 @@ These are reference formats:
 5. **`character_template.md`** - Character personality and narrative data
    - Authority over: Character depth requirements and personality templates
    - Load when: Detailed NPC development needed
-   - Note: Character creation process is handled by mechanics_system_instruction.md
+   - Note: Character design process is handled by mechanics_system_instruction.md
 
 ## Core File Dependencies
 
@@ -50,7 +50,7 @@ These are reference formats:
 **Context-Dependent Files:**
 4. `narrative_system_instruction.md` - When storytelling needed
 5. `mechanics_system_instruction.md` - When mechanical resolution needed
-6. `character_template.md` - When character creation/development needed
+6. `character_template.md` - When character design/development needed
 
 ## Conflict Resolution Rules
 
@@ -99,11 +99,11 @@ When starting a new campaign, follow this exact sequence:
 
 1. **Load Instructions** (in hierarchy order per this document)
 2. **Check Mechanics Checkbox**:
-   - If ENABLED: Character creation is MANDATORY (see below)
+   - If ENABLED: Character design is MANDATORY (see below)
    - If DISABLED: Skip to step 4
-3. **Character Creation** (when mechanics enabled):
+3. **Character Design** (when mechanics enabled):
    - STOP before any narrative or background
-   - Present character creation options FIRST
+   - Present character design options FIRST
    - Wait for player to create/approve character
    - Only proceed after character is finalized
 4. **World Background**:
@@ -114,9 +114,10 @@ When starting a new campaign, follow this exact sequence:
    - Present initial scene
    - Provide planning block with options
 
-### Character Creation Authority
+### Character Design Authority
 
-When mechanics is enabled, `mechanics_system_instruction.md` has absolute authority over character creation timing and process. The character creation MUST happen before any story narrative begins.
+When mechanics is enabled, `mechanics_system_instruction.md` has absolute authority over character design timing and process. The character design MUST happen before any story narrative begins.
+**CRITICAL: The character design process still needs to respect the main character prompt from the player if specified**
 
 ## D&D 5E SRD System Authority
 
@@ -150,9 +151,9 @@ This campaign uses **D&D 5E System Reference Document (SRD) rules exclusively**.
 - Version 1.0: Initial hierarchy establishment
 - Version 1.1: Simplified to D&D 5E SRD-only system
 - Version 1.2: Added universal naming rules and banned names enforcement
-- Version 1.3: Added Campaign Initialization Protocol and character creation flow
+- Version 1.3: Added Campaign Initialization Protocol and character design flow
 - Version 1.4: Added player override authority for names and absolute transparency requirement
-- Version 1.5: Added mandatory pre-generation check for banned names during ALL character creation (PCs and NPCs)
+- Version 1.5: Added mandatory pre-generation check for banned names during ALL character design (PCs and NPCs)
 - Future versions will be marked with clear changelog
 
 ## CRITICAL REMINDERS

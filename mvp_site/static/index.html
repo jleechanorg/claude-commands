@@ -125,20 +125,34 @@
                 <div class="mb-3">
                     <label class="form-label">Campaign Type</label>
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="campaignType" id="dragonKnightCampaign" value="dragon-knight" checked>
+                        <input class="form-check-input" type="radio" name="campaignType" id="dragonKnightCampaign" value="dragon-knight">
                         <label class="form-check-label" for="dragonKnightCampaign">
                             Use Dragon Knight Campaign <small class="text-muted">(Recommended starter campaign)</small>
                         </label>
                     </div>
                     <div class="form-check">
-                        <input class="form-check-input" type="radio" name="campaignType" id="customCampaign" value="custom">
+                        <input class="form-check-input" type="radio" name="campaignType" id="customCampaign" value="custom" checked>
                         <label class="form-check-label" for="customCampaign">
                             Create Custom Campaign
                         </label>
                     </div>
                 </div>
                 
-                <div class="mb-3"><label for="campaign-prompt" class="form-label">Describe your world. For inspiration you can pick you favorite movie, book or tv show, favorite character, and describe a scenario where you get to make an important decision.</label><textarea class="form-control" id="campaign-prompt" rows="10" readonly></textarea></div>
+                <div class="mb-3">
+                    <label for="character-input" class="form-label">Character you want to play</label>
+                    <input type="text" class="form-control" id="character-input" placeholder="Random character (auto-generate)" />
+                </div>
+                
+                <div class="mb-3">
+                    <label for="setting-input" class="form-label">Setting/world for your adventure</label>
+                    <input type="text" class="form-control" id="setting-input" placeholder="Random fantasy D&D world (auto-generate)" />
+                </div>
+                
+                <div class="mb-3">
+                    <label for="description-input" class="form-label">Campaign description/premise</label>
+                    <textarea class="form-control" id="description-input" rows="3" placeholder="Describe your campaign concept, goals, or story premise (optional)"></textarea>
+                    <div class="form-text">Optional: Describe what kind of adventure or story you want to experience</div>
+                </div>
                 
                 <div class="mb-3">
                     <label class="form-label">Choose your AI's expertise:</label>

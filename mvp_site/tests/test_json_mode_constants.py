@@ -14,12 +14,12 @@ class TestJSONModeConstants(unittest.TestCase):
     """Test suite for JSON mode constant updates"""
     
     def test_character_creation_reminder_no_state_updates(self):
-        """Test that CHARACTER_CREATION_REMINDER doesn't instruct to include STATE_UPDATES_PROPOSED"""
-        reminder = constants.CHARACTER_CREATION_REMINDER
+        """Test that CHARACTER_DESIGN_REMINDER doesn't instruct to include STATE_UPDATES_PROPOSED"""
+        reminder = constants.CHARACTER_DESIGN_REMINDER
         
         # Should NOT contain the old instruction
         self.assertNotIn("[STATE_UPDATES_PROPOSED]", reminder,
-                        "CHARACTER_CREATION_REMINDER should not instruct to include STATE_UPDATES_PROPOSED blocks")
+                        "CHARACTER_DESIGN_REMINDER should not instruct to include STATE_UPDATES_PROPOSED blocks")
         self.assertNotIn("MANDATORY: Include [STATE_UPDATES_PROPOSED]", reminder,
                         "Should not have mandatory STATE_UPDATES_PROPOSED instruction")
         
@@ -31,11 +31,11 @@ class TestJSONModeConstants(unittest.TestCase):
         
     def test_character_creation_reminder_maintains_other_instructions(self):
         """Test that other important instructions are still present"""
-        reminder = constants.CHARACTER_CREATION_REMINDER
+        reminder = constants.CHARACTER_DESIGN_REMINDER
         
         # Should still have these important instructions
         self.assertIn("CRITICAL REMINDER", reminder)
-        self.assertIn("character creation", reminder)
+        self.assertIn("character design", reminder)
         self.assertIn("numeric responses", reminder)
         self.assertIn("selections from the presented list", reminder)
 

@@ -17,7 +17,6 @@ class CampaignWizard {
     if (this.isEnabled) {
       this.setupWizard();
       this.setupEventListeners();
-      console.log('🧙‍♂️ Campaign Wizard activated');
     }
   }
 
@@ -230,18 +229,41 @@ class CampaignWizard {
               </div>
             </div>
 
-            <div class="mb-4">
-              <label for="wizard-campaign-prompt" class="form-label">
-                <span id="wizard-prompt-label">Campaign Description</span>
-              </label>
+            <!-- Character Input -->
+            <div class="mb-4" id="wizard-character-section">
+              <label for="wizard-character-input" class="form-label">Character you want to play</label>
+              <input type="text" 
+                     class="form-control" 
+                     id="wizard-character-input" 
+                     placeholder="Random character (auto-generate)">
+              <div class="form-text">Leave blank for a randomly generated character</div>
+            </div>
+
+            <!-- Setting Input -->
+            <div class="mb-4" id="wizard-setting-section">
+              <label for="wizard-setting-input" class="form-label">Setting/world for your adventure</label>
+              <input type="text" 
+                     class="form-control" 
+                     id="wizard-setting-input" 
+                     placeholder="Random fantasy D&D world (auto-generate)">
+              <div class="form-text">Leave blank for a randomly generated world</div>
+            </div>
+
+            <!-- Campaign Description Input (Custom Campaigns Only) -->
+            <div class="mb-4" id="wizard-description-section">
+              <label for="wizard-description-input" class="form-label">Campaign description/premise</label>
               <textarea class="form-control" 
-                        id="wizard-campaign-prompt" 
-                        rows="4"
-                        placeholder=""
-                        readonly
-                        required></textarea>
-              <div class="form-text" id="wizard-prompt-help">
-                This campaign uses the pre-written Dragon Knight story. Switch to Custom Campaign to write your own.
+                        id="wizard-description-input" 
+                        rows="3"
+                        placeholder="Describe your campaign concept, goals, or story premise (optional)"></textarea>
+              <div class="form-text">Optional: Describe what kind of adventure or story you want to experience</div>
+            </div>
+
+            <!-- Dragon Knight Description (shown only for Dragon Knight) -->
+            <div class="mb-4" id="wizard-dragon-knight-description" style="display: none;">
+              <label class="form-label">Campaign Description</label>
+              <div class="alert alert-info">
+                Play as Ser Arion, a young knight in a morally complex empire. The Dragon Knight campaign features rich lore, political intrigue, and difficult choices between order and freedom.
               </div>
             </div>
           </div>
@@ -452,27 +474,53 @@ class CampaignWizard {
   }
 
   async handleCampaignTypeChange(type) {
-    const promptTextarea = document.getElementById('wizard-campaign-prompt');
-    const promptLabel = document.getElementById('wizard-prompt-label');
-    const promptHelp = document.getElementById('wizard-prompt-help');
+    const characterInput = document.getElementById('wizard-character-input');
+    const settingInput = document.getElementById('wizard-setting-input');
+    const dragonKnightDesc = document.getElementById('wizard-dragon-knight-description');
+    const descriptionSection = document.getElementById('wizard-description-section');
     
     // Update visual selection
     document.querySelectorAll('.campaign-type-card').forEach(card => {
       card.classList.toggle('selected', card.dataset.type === type);
     });
     
+    // Always show character/setting inputs for both campaign types
+    const characterSection = document.getElementById('wizard-character-section');
+    const settingSection = document.getElementById('wizard-setting-section');
+    if (characterSection) characterSection.style.display = 'block';
+    if (settingSection) settingSection.style.display = 'block';
+    
     if (type === 'dragon-knight') {
-      promptTextarea.readOnly = true;
-      // Use the Dragon Knight campaign content from app.js
-      promptTextarea.value = window.DRAGON_KNIGHT_CAMPAIGN || "A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.";
-      promptLabel.textContent = 'Campaign Description';
-      promptHelp.textContent = 'This campaign uses the pre-written Dragon Knight story. Switch to Custom Campaign to write your own.';
+      // Show Dragon Knight description, hide custom description
+      if (dragonKnightDesc) dragonKnightDesc.style.display = 'block';
+      if (descriptionSection) descriptionSection.style.display = 'none';
+      
+      // Set default Dragon Knight values (user can modify these)
+      if (characterInput) {
+        characterInput.value = 'Ser Arion';
+        characterInput.placeholder = 'Default: Ser Arion (you can change this)';
+      }
+      if (settingInput) {
+        settingInput.value = 'World of Assiah';
+        settingInput.placeholder = 'Default: World of Assiah (you can change this)';
+      }
     } else {
-      promptTextarea.readOnly = false;
-      promptTextarea.value = '';
-      promptLabel.textContent = 'Describe Your World';
-      promptHelp.textContent = 'For inspiration, pick your favorite movie, book, or TV show. Describe a scenario where you get to make important decisions.';
-      promptTextarea.focus();
+      // Hide Dragon Knight description, show custom description for Custom Campaign
+      if (dragonKnightDesc) dragonKnightDesc.style.display = 'none';
+      if (descriptionSection) descriptionSection.style.display = 'block';
+      
+      // Clear values and reset placeholders for custom campaign
+      if (characterInput) {
+        characterInput.value = '';
+        characterInput.placeholder = 'Random character (auto-generate)';
+      }
+      if (settingInput) {
+        settingInput.value = '';
+        settingInput.placeholder = 'Random fantasy D&D world (auto-generate)';
+      }
+      
+      // Focus on character input
+      if (characterInput) characterInput.focus();
     }
     
     this.updatePreview();
@@ -621,9 +669,22 @@ class CampaignWizard {
   collectFormData() {
     const isDragonKnight = document.getElementById('wizard-dragonKnightCampaign')?.checked;
     const useDefaultWorld = document.getElementById('wizard-default-world')?.checked;
+    
+    // Description is now handled by the Python backend for both campaign types
+    // For custom campaigns, use the user-entered description
+    // For Dragon Knight campaigns, the backend provides the rich lore
+    let description = '';
+    if (!isDragonKnight) {
+      // Only send description for custom campaigns
+      description = document.getElementById('wizard-description-input')?.value || '';
+    }
+    // Dragon Knight description is handled by the backend in _build_campaign_prompt()
+    
     return {
       title: document.getElementById('wizard-campaign-title')?.value || '',
-      prompt: document.getElementById('wizard-campaign-prompt')?.value || '',
+      character: document.getElementById('wizard-character-input')?.value || '',
+      setting: document.getElementById('wizard-setting-input')?.value || '',
+      description: description,
       selectedPrompts: [
         ...(document.getElementById('wizard-narrative')?.checked ? ['narrative'] : []),
         ...(document.getElementById('wizard-mechanics')?.checked ? ['mechanics'] : []),
@@ -632,7 +693,7 @@ class CampaignWizard {
         ...(document.getElementById('wizard-companions')?.checked ? ['companions'] : []),
         ...(useDefaultWorld ? ['defaultWorld'] : []),
       ],
-      campaignType: isDragonKnight ? 'dragon-knight' : 'custom'
+      campaign_type: isDragonKnight ? 'dragon-knight' : 'custom'
     };
   }
 
@@ -877,10 +938,23 @@ class CampaignWizard {
 
     // Set basic fields
     const titleInput = originalForm.querySelector('#campaign-title');
-    const promptInput = originalForm.querySelector('#campaign-prompt');
+    const characterInput = originalForm.querySelector('#character-input');
+    const settingInput = originalForm.querySelector('#setting-input');
+    const descriptionInput = originalForm.querySelector('#description-input');
     
     if (titleInput) titleInput.value = data.title;
-    if (promptInput) promptInput.value = data.prompt;
+    if (characterInput) characterInput.value = data.character;
+    if (settingInput) settingInput.value = data.setting;
+    if (descriptionInput) descriptionInput.value = data.description || '';
+
+    // Set campaign type
+    if (data.campaign_type === 'dragon-knight') {
+      const dragonKnightRadio = originalForm.querySelector('#dragonKnightCampaign');
+      if (dragonKnightRadio) dragonKnightRadio.checked = true;
+    } else {
+      const customRadio = originalForm.querySelector('#customCampaign');
+      if (customRadio) customRadio.checked = true;
+    }
 
     // Set checkboxes
     originalForm.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
