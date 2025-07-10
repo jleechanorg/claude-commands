@@ -87,6 +87,8 @@
 - **TASK-154**: Campaign Tuning via God Mode
 - **TASK-155**: Evaluate Alignment Change Mechanic
 - **TASK-156**: Planning Block Choice Buttons (COMPLETED)
+- **TASK-157**: AI Realm Evaluation - Research platform for integration/inspiration
+- **TASK-158**: MCP Instruction Compliance Tracking - Fork Invariant MCP-scan for automatic CLAUDE.md rule enforcement
 
 ## Cross-Reference Notes
 
