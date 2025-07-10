@@ -1,6 +1,6 @@
 # Game State Management Protocol
 
-This protocol defines how to manage game state using structured JSON for both input and output. See `mvp_site/narrative_response_schema.py` for the complete JSON schema definition.
+This protocol defines how to manage game state using structured JSON for both input and output. The system expects a specific JSON structure with required fields for narrative content, game state updates, and player choices.
 
 ## CRITICAL: JSON Communication Protocol
 
