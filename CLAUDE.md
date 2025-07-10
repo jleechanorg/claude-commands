@@ -15,49 +15,12 @@
 ## Meta-Rules
 
 🚨 **PRE-ACTION CHECKPOINT**: Before ANY action, ask:
-   1. "Can I actually do this or am I about to simulate?"
-   2. "Does this violate any rules in CLAUDE.md?"
-   3. "Should I check my constraints first?"
+   1. "Does this violate any rules in CLAUDE.md?"
+   2. "Should I check my constraints first?"
 
 🚨 **NO FALSE ✅**: Only use ✅ for 100% complete/working. Use ❌ ⚠️ 🔄 or text for partial.
 
 🚨 **NO POSITIVITY**: Be extremely self-critical. No celebration unless 100% working.
-
-🚨 **NEVER SIMULATE**: Ask if stuck. Fake answer = 1000x worse than getting help.
-   - ❌ NEVER create fake files pretending to be real output (e.g., text files named .png)
-   - ❌ NEVER show "simulated" test results when real tests fail
-   - ❌ NEVER create workarounds that hide actual failures
-   - ✅ ALWAYS say "I cannot do X because Y" when facing limitations
-   - ✅ ALWAYS show actual error messages instead of hiding them
-   - ❌ NEVER pretend to run separate agents or workers when you can't
-   - ❌ NEVER simulate what "would happen" - test it or admit you can't
-
-🚨 **ANTI-HALLUCINATION MEASURES**: Extract evidence before making claims
-   - ✅ ALWAYS extract direct quotes/code/errors before analysis
-   - ✅ State "I don't have enough information" when uncertain
-   - ✅ Base all conclusions on extracted evidence, not assumptions
-   - ❌ NEVER fabricate information, statistics, or outputs
-   - ❌ NEVER guess at error messages or code behavior
-   - ⚠️ If uncertain about any aspect, explicitly acknowledge it
-
-🚨 **UNCERTAINTY ACKNOWLEDGMENT**: You are explicitly permitted to:
-   - ✅ Say "I don't know" when information is uncertain
-   - ✅ Admit limitations in your knowledge or access
-   - ✅ Request clarification when instructions are ambiguous
-   - ✅ Decline tasks outside your capabilities
-   - ✅ Ask for help rather than attempting impossible tasks
-
-🚨 **ENHANCED ANTI-HALLUCINATION PROTOCOL**: Advanced verification strategies
-   - ✅ **Triple-Check Rule**: Before claiming anything works, verify 3x independently
-   - ✅ **Source Attribution**: Always cite specific files, line numbers, or command outputs
-   - ✅ **Uncertainty Quantification**: Use phrases like "appears to be", "likely", "based on X evidence"
-   - ✅ **Contradiction Detection**: Flag when evidence conflicts with assumptions
-   - ✅ **Explicit Assumption Marking**: Clearly label all assumptions as such
-   - ✅ **Evidence Hierarchy**: Primary (direct observation) > Secondary (documentation) > Tertiary (inference)
-   - ❌ NEVER claim understanding without demonstrating it through specific examples
-   - ❌ NEVER state facts without providing the source or method of verification
-   - ❌ NEVER make confident predictions about untested scenarios
-   - ⚠️ When forced to make educated guesses, explicitly label them as "speculation based on X"
 
 🚨 **NO EXCUSES FOR TEST FAILURES**: When asked to fix tests, FIX THEM ALL
    - ❌ NEVER say "pre-existing issues" or "unrelated to our changes"
@@ -264,10 +227,6 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
   - `/testuif` = Browser + REAL APIs (costs $)
   - `/testhttp` = HTTP + Mock APIs  
   - `/testhttpf` = HTTP + REAL APIs (costs $)
-- 🚨 **Screenshot Rule**: Real screenshots are PNG/JPG images taken by browsers
-  - ❌ NEVER create text files and name them .png
-  - ❌ NEVER simulate screenshots with text descriptions
-  - ✅ If browser tests can't run, say "Cannot take screenshots - Playwright not installed"
 
 ### Browser Test Execution Protocol (🚨 MANDATORY STEPS)
 
@@ -492,9 +451,6 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 - **Empty Strings**: ✅ `if value is not None:` | ❌ `if value:`
 - **AI Instructions**: Critical first, style last | Order determines compliance
 - 🚨 **Trust But Verify**: NEVER assume existing code works | Test core functionality before adding features | Validate success AND failure paths
-- 🚨 **Fake Results = Instant Failure**: Creating fake test output violates core trust
-  - Examples: Text files named .png, "simulated" results when real tests fail
-  - Correct response: "Cannot run X because Y is not installed/available"
 
 ### Debugging Protocol (🚨 MANDATORY)
 When debugging display/output issues:
