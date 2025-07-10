@@ -12,20 +12,23 @@
 
 /* Individual choice button */
 .choice-button {
-    display: inline-block;
-    margin-right: 0.3rem;
-    margin-bottom: 0.2rem;
-    padding: 0.1rem 0.3rem;
-    text-align: center;
+    display: block;
+    width: 100%;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 1rem;
+    text-align: left;
     background: #f8f9fa;
     border: 1px solid #dee2e6;
-    border-radius: 2px;
+    border-radius: 3px;
     cursor: pointer;
     transition: all 0.15s ease;
-    font-size: 0.75rem;
-    line-height: 1.1;
-    color: #495057;
+    line-height: 1.4;
+    color: #212529;
     box-shadow: none;
+}
+
+.choice-button:last-child {
+    margin-bottom: 0;
 }
 
 .choice-button:hover {

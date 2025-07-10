@@ -430,8 +430,8 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
             choices.forEach(choice => {
                 // Escape the choice text for HTML attribute
                 const escapedText = `${choice.id}: ${choice.description}`.replace(/"/g, '&quot;');
-                // Show the description as button text, not the action ID
-                const buttonText = choice.description || choice.id;
+                // Show both action ID and description as button text
+                const buttonText = `${choice.id}: ${choice.description}`;
                 choicesHtml += `<button class="choice-button" data-choice-id="${choice.id}" data-choice-text="${escapedText}" title="${choice.description}">${buttonText}</button>`;
             });
             
