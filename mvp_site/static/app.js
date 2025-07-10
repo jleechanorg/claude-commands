@@ -227,7 +227,8 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
         
         // Add planning block if present (always at the bottom)
         if (fullData.planning_block) {
-            html += `<div class="planning-block">${fullData.planning_block}</div>`;
+            const parsedPlanningBlock = parsePlanningBlocks(fullData.planning_block);
+            html += `<div class="planning-block">${parsedPlanningBlock}</div>`;
         }
         
         // Add debug info if in debug mode
