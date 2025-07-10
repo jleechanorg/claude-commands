@@ -618,7 +618,7 @@ Entities can have multiple status conditions from this list:
 
 **CRITICAL: You MUST propose state updates in EVERY response, including during character creation.**
 
-**Initial State**: Immediately after you generate the initial campaign premise, the main character, the world, and any key NPCs, you **must** consolidate all of that information into a single, comprehensive `[STATE_UPDATES_PROPOSED]` block.
+**Initial State**: Immediately after you generate the initial campaign premise, the main character, the world, and any key NPCs, you **must** consolidate all of that information into the `state_updates` field of your JSON response.
 
 **Character Creation**: During character creation, you MUST track progress with state updates at every step. Even before the character is complete, track the creation process in custom_campaign_state.
 
@@ -629,9 +629,17 @@ This first block should not be an "update" but a "creation." It must contain all
 - `custom_campaign_state`: Initial premise, campaign configuration, and custom tracking fields
 - `world_time`: The starting date and time
 
-**Example of an Initial State Block:**
-```
-[STATE_UPDATES_PROPOSED]
+**Example of Initial State in JSON Response:**
+```json
+{
+  "narrative": "Your story begins in the kingdom of Eldoria...",
+  "session_header": "[SESSION_HEADER]\nTimestamp: Day 1, Dawn\nLocation: Castle Throne Room\nStatus: Beginning Adventure",
+  "planning_block": "--- PLANNING BLOCK ---\nWhat would you like to do?\n1. **Speak to the King**\n2. **Explore the castle**\n3. **Other**: Describe your action",
+  "dice_rolls": [],
+  "resources": "HD: 3/3, Lay on Hands: 25/25, Spells: L1 3/3, L2 2/2",
+  "entities_mentioned": ["King Theron", "Sir Kaelan"],
+  "location_confirmed": "Castle Throne Room",
+  "state_updates":
 {
   "game_state_version": 1,
   "player_character_data": {
@@ -682,8 +690,12 @@ This first block should not be an "update" but a "creation." It must contain all
     "attribute_system": "dnd"  // Default system, can be customized for campaign setting
   },
   "migration_status": "FRESH_INSTALL"
+  },
+  "debug_info": {
+    "dm_notes": ["Created initial world state with King Theron and Sir Kaelan"],
+    "state_rationale": "Establishing the initial campaign world and player character"
+  }
 }
-[END_STATE_UPDATES_PROPOSED]
 ```
 
 This initial state dump is **not optional**. It is the foundation of the entire campaign. After providing this block, you can then proceed with the first narrative scene.
@@ -758,42 +770,64 @@ By following these principles, you ensure the game state remains clean, accurate
 ## 5. Examples:
 
 ### Example 1: Creating a New Quest and Updating XP
-```
-[STATE_UPDATES_PROPOSED]
+```json
 {
-  "player_character_data": {
-    "xp_current": 250
-  },
-  "quests": {
-    "ancient_ruins": {
-      "status": "Discovered",
-      "objective": "Find the Sunstone."
+  "narrative": "The old sage marks the location of the ancient ruins on your map. 'The Sunstone lies within,' he whispers.",
+  "session_header": "[SESSION_HEADER]\nTimestamp: Day 3, Noon\nLocation: Sage's Tower\nStatus: Quest Received",
+  "planning_block": "--- PLANNING BLOCK ---\nWhat would you like to do?\n1. **Ask about the ruins**\n2. **Head to the ruins immediately**\n3. **Other**: Describe your action",
+  "dice_rolls": [],
+  "resources": "HD: 3/3, Lay on Hands: 25/25, Spells: L1 3/3, L2 2/2",
+  "entities_mentioned": ["Old Sage"],
+  "location_confirmed": "Sage's Tower",
+  "state_updates": {
+    "player_character_data": {
+      "xp_current": 250
+    },
+    "quests": {
+      "ancient_ruins": {
+        "status": "Discovered",
+        "objective": "Find the Sunstone."
+      }
     }
+  },
+  "debug_info": {
+    "dm_notes": ["New quest added for ancient ruins"],
+    "state_rationale": "Player completed minor task and discovered new quest"
   }
 }
-[END_STATE_UPDATES_PROPOSED]
 ```
 
 ### Example 2: Updating an NPC and Deleting an Item
 
-```
-[STATE_UPDATES_PROPOSED]
+```json
 {
-  "npc_data": {
+  "narrative": "Thorgon nods solemnly. 'You've earned my trust,' he says. 'I will help you.' You hand him the health potion as promised.",
+  "session_header": "[SESSION_HEADER]\nTimestamp: Day 3, Afternoon\nLocation: Thorgon's Forge\nStatus: Alliance Formed",
+  "planning_block": "--- PLANNING BLOCK ---\nWhat would you like to do?\n1. **Ask Thorgon about the quest**\n2. **Request weapons or armor**\n3. **Other**: Describe your action",
+  "dice_rolls": [],
+  "resources": "HD: 3/3, Lay on Hands: 25/25, Spells: L1 3/3, L2 2/2",
+  "entities_mentioned": ["Thorgon"],
+  "location_confirmed": "Thorgon's Forge",
+  "state_updates": {
+    "npc_data": {
       "Thorgon": {
         "status": "Agreed to help the player.",
         "is_hostile": false
       }
-  },
-  "player_character_data": {
+    },
+    "player_character_data": {
       "inventory": {
-          "items": {
-              "health_potion": "__DELETE__"
-          }
+        "items": {
+          "health_potion": "__DELETE__"
+        }
       }
+    }
+  },
+  "debug_info": {
+    "dm_notes": ["NPC alliance formed through successful negotiation"],
+    "state_rationale": "Thorgon becomes ally, health potion given as gesture of trust"
   }
 }
-[END_STATE_UPDATES_PROPOSED]
 ```
 
 ## 6. State Discrepancy and Recovery Protocol
@@ -875,20 +909,31 @@ The `time_of_day` field MUST always match the `hour` field according to this map
 - **18-19**: "Evening"
 - **20-23**: "Night"
 
-**CRITICAL**: When updating time, you MUST update BOTH the numeric fields AND the time_of_day description together:
+**CRITICAL**: When updating time, you MUST update BOTH the numeric fields AND the time_of_day description together in the state_updates field:
 ```json
-[STATE_UPDATES_PROPOSED]
 {
-  "world_data": {
-    "world_time": {
-      "hour": 21,
-      "minute": 30,
-      "second": 0,
-      "time_of_day": "Night"
+  "narrative": "The sun sets behind the mountains as darkness falls.",
+  "session_header": "[SESSION_HEADER]\nTimestamp: Day 3, Night\nLocation: Mountain Pass\nStatus: Traveling",
+  "planning_block": "--- PLANNING BLOCK ---\nWhat would you like to do?\n1. **Make camp for the night**\n2. **Continue traveling in darkness**\n3. **Other**: Describe your action",
+  "dice_rolls": [],
+  "resources": "HD: 3/3, Lay on Hands: 25/25, Spells: L1 3/3, L2 2/2",
+  "entities_mentioned": [],
+  "location_confirmed": "Mountain Pass",
+  "state_updates": {
+    "world_data": {
+      "world_time": {
+        "hour": 21,
+        "minute": 30,
+        "second": 0,
+        "time_of_day": "Night"
+      }
     }
+  },
+  "debug_info": {
+    "dm_notes": ["Time advanced due to travel"],
+    "state_rationale": "Several hours of travel, now nighttime"
   }
 }
-[END_STATE_UPDATES_PROPOSED]
 ```
 
 **NEVER** update just the hour without also updating time_of_day. They must ALWAYS be synchronized.
@@ -935,21 +980,32 @@ To add a new memory, you must propose a state update that **appends** a new stri
 **CRITICAL:** The system includes a safeguard to prevent accidental data loss. It will intelligently append new items to `core_memories` even if you format the request incorrectly. However, you should always use the correct format below.
 
 **Example: Appending a new Core Memory**
-```
-[STATE_UPDATES_PROPOSED]
+```json
 {
-  "custom_campaign_state": {
-    "core_memories": {
-      "append": "Itachi awakens Rinnegan (Critical Success)."
+  "narrative": "As the battle reaches its climax, Itachi's eyes suddenly transform. The legendary Rinnegan spirals appear!",
+  "session_header": "[SESSION_HEADER]\nTimestamp: Day 5, Evening\nLocation: Hidden Valley\nStatus: Epic Battle",
+  "planning_block": "--- PLANNING BLOCK ---\nWhat would you like to do?\n1. **Test your new powers**\n2. **End the battle decisively**\n3. **Other**: Describe your action",
+  "dice_rolls": ["Awakening Roll: 1d20 = 20 (Critical Success!)"],
+  "resources": "HD: 1/3, Spells: L1 1/3, L2 0/2, Chakra: 5/50",
+  "entities_mentioned": ["Itachi"],
+  "location_confirmed": "Hidden Valley",
+  "state_updates": {
+    "custom_campaign_state": {
+      "core_memories": {
+        "append": "Itachi awakens Rinnegan (Critical Success)."
+      }
     }
+  },
+  "debug_info": {
+    "dm_notes": ["Critical success on awakening roll triggers legendary transformation"],
+    "state_rationale": "Major campaign milestone achieved, adding to core memories"
   }
 }
-[END_STATE_UPDATES_PROPOSED]
 ```
 
 This is the only way to add new memories. The system will automatically add your summary as a new item in the list.
 
-**VERY IMPORTANT: The only valid way to propose state changes is by providing a nested JSON object inside the `[STATE_UPDATES_PROPOSED]` block. Do NOT use dot notation (e.g., `"player_character_data.gold": 500`). This is an old, deprecated format. Always use nested objects as shown in all examples in this document.**
+**VERY IMPORTANT: The only valid way to propose state changes is by providing a nested JSON object inside the `state_updates` field of your JSON response. Do NOT use dot notation (e.g., `"player_character_data.gold": 500`). This is an old, deprecated format. Always use nested objects as shown in all examples in this document.**
 
 ## CRITICAL: State Update Formatting Rules
 
