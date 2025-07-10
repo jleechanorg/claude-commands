@@ -122,7 +122,7 @@ Conditions: [Active conditions with duration] | Exhaustion: [0-6] | Inspiration:
 
 ## Planning Block Protocol
 
-**🔥 CRITICAL: EVERY STORY MODE RESPONSE MUST PUT THE PLANNING BLOCK IN planning_block field! 🔥**
+**REQUIRED: Every STORY MODE response must include the planning block in the planning_block field.**
 
 ### Planning Block Rules:
 
