@@ -752,21 +752,8 @@ By following these principles, you ensure the game state remains clean, accurate
 
 ## 5. Examples:
 
-**JSON Response Structure Reference:**
-Each response must be a complete JSON object with these fields:
-```json
-{
-  "narrative": "Story text that players see",
-  "session_header": "[SESSION_HEADER] with timestamp, location, status",
-  "planning_block": "--- PLANNING BLOCK ---\nWhat would you like to do next?\n1. **ExamineClues** - Search for evidence in the room\n2. **InterrogateWitness** - Question the nervous merchant\n3. **PursueThief** - Chase after the fleeing figure\n4. **OtherAction** - Try something different",
-  "dice_rolls": ["Array of dice roll results"],
-  "resources": "Resource tracking string",
-  "entities_mentioned": ["Array of entity names"],
-  "location_confirmed": "Current location",
-  "state_updates": { /* State changes go here */ },
-  "debug_info": { "dm_notes": [], "state_rationale": "" }
-}
-```
+**Quick JSON Reference:**
+See the complete JSON structure with all field descriptions at the beginning of this document.
 
 The following examples focus on the `state_updates` field only:
 
