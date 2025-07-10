@@ -430,21 +430,11 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
             choices.forEach(choice => {
                 // Escape the choice text for HTML attribute
                 const escapedText = `${choice.id}: ${choice.description}`.replace(/"/g, '&quot;');
-                choicesHtml += `
-                    <button class="choice-button" data-choice-id="${choice.id}" data-choice-text="${escapedText}">
-                        <span class="choice-id">[${choice.id}]</span>
-                        <span class="choice-description">${choice.description}</span>
-                    </button>
-                `;
+                choicesHtml += `<button class="choice-button" data-choice-id="${choice.id}" data-choice-text="${escapedText}" title="${choice.description}">${choice.id}</button>`;
             });
             
             // Add custom text option
-            choicesHtml += `
-                <button class="choice-button choice-button-custom" data-choice-id="Custom" data-choice-text="custom">
-                    <span class="choice-id">[Custom]</span>
-                    <span class="choice-description">Type your own action...</span>
-                </button>
-            `;
+            choicesHtml += `<button class="choice-button choice-button-custom" data-choice-id="Custom" data-choice-text="custom" title="Type your own action">Custom</button>`;
             
             choicesHtml += '</div>';
             
