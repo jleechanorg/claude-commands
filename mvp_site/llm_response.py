@@ -104,6 +104,9 @@ class GeminiLLMResponse(LLMResponse):
         # Auto-detect debug tags if not provided
         if not self.debug_tags_present:
             self.debug_tags_present = self._detect_debug_tags()
+        
+        # Check for deprecated/old tag formats
+        self._detect_old_tags()
     
     def _detect_debug_tags(self) -> Dict[str, bool]:
         """Detect debug content in structured response."""
@@ -123,6 +126,87 @@ class GeminiLLMResponse(LLMResponse):
             debug_tags['state_changes'] = bool(self.structured_response.state_updates)
         
         return debug_tags
+    
+    def _detect_old_tags(self) -> Dict[str, List[str]]:
+        """
+        Detect old/deprecated tag formats in the response and log warnings.
+        
+        Returns:
+            Dict mapping tag types to lists of found occurrences
+        """
+        old_tags_found = {
+            'state_updates_proposed': [],
+            'debug_blocks': [],
+            'other_deprecated': []
+        }
+        
+        # Define patterns to search for
+        patterns = {
+            'state_updates_proposed': [
+                r'\[STATE_UPDATES_PROPOSED\]',
+                r'\[END_STATE_UPDATES_PROPOSED\]'
+            ],
+            'debug_blocks': [
+                r'\[DEBUG_START\]',
+                r'\[DEBUG_END\]',
+                r'\[DEBUG_STATE_START\]',
+                r'\[DEBUG_STATE_END\]',
+                r'\[DEBUG_ROLL_START\]',
+                r'\[DEBUG_ROLL_END\]'
+            ],
+            'other_deprecated': [
+                r'\[ENTITY_TRACKING_ENABLED\]',
+                r'\[PRE_JSON_MODE\]'
+            ]
+        }
+        
+        # Check narrative text
+        if self.narrative_text:
+            for tag_type, pattern_list in patterns.items():
+                for pattern in pattern_list:
+                    import re
+                    matches = re.findall(pattern, self.narrative_text)
+                    if matches:
+                        old_tags_found[tag_type].extend(matches)
+                        logging.warning(
+                            f"Deprecated tag found in narrative: {pattern} "
+                            f"(found {len(matches)} times). These should not appear in narrative field."
+                        )
+        
+        # Check structured response if available
+        if self.structured_response:
+            # Convert to string to search (this is a bit hacky but effective)
+            try:
+                import json
+                response_str = json.dumps(self.structured_response.dict() if hasattr(self.structured_response, 'dict') else str(self.structured_response))
+                for tag_type, pattern_list in patterns.items():
+                    for pattern in pattern_list:
+                        import re
+                        matches = re.findall(pattern, response_str)
+                        if matches:
+                            old_tags_found[tag_type].extend(matches)
+                            logging.warning(
+                                f"Deprecated tag found in structured response: {pattern} "
+                                f"(found {len(matches)} times). Use proper JSON fields instead."
+                            )
+            except Exception as e:
+                logging.debug(f"Could not check structured response for old tags: {e}")
+        
+        # Log summary if any old tags found
+        total_found = sum(len(tags) for tags in old_tags_found.values())
+        if total_found > 0:
+            logging.error(
+                f"DEPRECATED TAGS DETECTED: Found {total_found} deprecated tags in response. "
+                "Update prompts to use proper JSON format. Details: "
+                f"{dict((k, len(v)) for k, v in old_tags_found.items() if v)}"
+            )
+            
+            # Store in processing metadata for tracking
+            if self.processing_metadata is None:
+                self.processing_metadata = {}
+            self.processing_metadata['deprecated_tags_found'] = old_tags_found
+        
+        return old_tags_found
     
     @classmethod
     def create(cls, narrative_text: str, structured_response: Optional[NarrativeResponse], 

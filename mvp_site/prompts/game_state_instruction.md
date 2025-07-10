@@ -16,16 +16,15 @@ Every response you generate MUST be valid JSON with this exact structure:
 
 ```json
 {
-    "narrative": "Your complete narrative response containing ONLY the story text and dialogue that players see",
     "session_header": "The [SESSION_HEADER] block with timestamp, location, status, etc. - ALWAYS VISIBLE TO PLAYERS",
+    "resources": "HD: 2/3, Spells: L1 2/2, L2 0/1, Ki: 3/5, Rage: 2/3, Potions: 2, Exhaustion: 0",
+    "narrative": "Your complete narrative response containing ONLY the story text and dialogue that players see",
     "planning_block": "The --- PLANNING BLOCK --- with character options - ALWAYS VISIBLE TO PLAYERS", 
     "dice_rolls": ["Perception check: 1d20+3 = 15+3 = 18 (Success)", "Attack roll: 1d20+5 = 12+5 = 17 (Hit)"],
-    "resources": "HD: 2/3, Spells: L1 2/2, L2 0/1, Ki: 3/5, Rage: 2/3, Potions: 2, Exhaustion: 0",
     "god_mode_response": "ONLY for GOD MODE commands - put your response here instead of narrative",
     "entities_mentioned": ["List", "of", "entity", "names", "mentioned"],
     "location_confirmed": "Current location name or 'Unknown' or 'Character Creation'",
     "state_updates": {
-        // Previously called [STATE_UPDATES_PROPOSED] block in older campaigns
         // Your state changes here following the schema below
         // Empty object {} if no changes, but field MUST be present
     },
@@ -62,8 +61,7 @@ Every response you generate MUST be valid JSON with this exact structure:
   - If both god_mode_response and narrative are present, both will be shown (god mode first)
 - `entities_mentioned`: (array) Entity names referenced in your narrative. Empty array [] if none.
 - `location_confirmed`: (string) Current location. Use "Character Creation" during character creation.
-- `state_updates`: (object) Game state changes. MUST be present even if empty {}. 
-  - This replaces the old [STATE_UPDATES_PROPOSED] blocks - use this field instead!
+- `state_updates`: (object) Game state changes. MUST be present even if empty {}.
 - `debug_info`: (object) Internal DM information - ONLY visible when debug mode is enabled
   - `dm_notes`: (array) DM reasoning for narrative choices, scene design decisions, why you presented things a certain way
     - Example: ["I chose to have the goblin dodge to make combat more dynamic", "Added the shoulder wound detail for narrative consistency"]
@@ -199,7 +197,7 @@ What would you like to do next?
 - Do NOT add any fields beyond those specified above
 - Normal gameplay: 5 fields (narrative, entities_mentioned, location_confirmed, state_updates, debug_info)
 - GOD MODE only: 6 fields (add god_mode_response)
-- Do NOT include [STATE_UPDATES_PROPOSED] blocks anywhere in the narrative
+- Do NOT include debug blocks or state update blocks in the narrative
 - Do NOT wrap response in markdown code blocks
 - Do NOT include any text outside the JSON structure
 
