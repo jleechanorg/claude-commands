@@ -1,25 +1,6 @@
 # Game State Management Protocol
 
-## 🚨 CRITICAL DEBUG CONTENT RULES - HIGHEST PRIORITY 🚨
-
-**NEVER PUT DEBUG CONTENT IN THE NARRATIVE FIELD!**
-
-The following are FORBIDDEN in the `narrative` field:
-- ❌ [DEBUG_START]...[DEBUG_END] blocks
-- ❌ [DEBUG_STATE_START]...[DEBUG_STATE_END] blocks
-- ❌ [DEBUG_ROLL_START]...[DEBUG_ROLL_END] blocks
-- ❌ [STATE_UPDATES_PROPOSED]...[END_STATE_UPDATES_PROPOSED] blocks
-- ❌ Any debug tags or markers
-
-**CORRECT STRUCTURE:** See `mvp_site/narrative_response_schema.py` for the complete JSON schema definition.
-
-**WRONG DEBUG HANDLING:**
-```json
-{
-    "narrative": "You swing! [DEBUG_START]Roll: 18[DEBUG_END] Hit!",  // ❌ NEVER DO THIS
-    "debug_info": {}
-}
-```
+This protocol defines how to manage game state using structured JSON for both input and output. See `mvp_site/narrative_response_schema.py` for the complete JSON schema definition.
 
 ## CRITICAL: JSON Communication Protocol
 
