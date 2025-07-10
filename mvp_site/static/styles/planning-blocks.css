@@ -1,13 +1,24 @@
 /* Planning Block Choice Buttons Styling */
 
-/* Container for planning block choices */
+/* Aggressively collapse vertical space below planning block choices */
 .planning-block-choices {
-    margin-top: 0.2rem;
-    margin-bottom: 0.2rem;
-    padding: 0.2rem;
-    background-color: rgba(0, 0, 0, 0.02);
-    border-radius: 2px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.planning-block-choices + div,
+.planning-block-choices + form,
+.planning-block-choices + input,
+.planning-block-choices + .form-group,
+.planning-block-choices + .input-group {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Remove margin from parent if present */
+.planning-block-choices:parent {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
 }
 
 /* Individual choice button */
@@ -28,7 +39,7 @@
 }
 
 .choice-button:last-child {
-    margin-bottom: 0;
+    margin-bottom: 0.1rem;
 }
 
 .choice-button:hover {
