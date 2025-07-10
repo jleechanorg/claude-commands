@@ -2,28 +2,28 @@
 
 /* Container for planning block choices */
 .planning-block-choices {
-    margin-top: 0.3rem;
-    margin-bottom: 0.3rem;
-    padding: 0.3rem;
+    margin-top: 0.2rem;
+    margin-bottom: 0.2rem;
+    padding: 0.2rem;
     background-color: rgba(0, 0, 0, 0.02);
-    border-radius: 3px;
+    border-radius: 2px;
     border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 /* Individual choice button */
 .choice-button {
     display: inline-block;
-    margin-right: 0.5rem;
-    margin-bottom: 0.3rem;
-    padding: 0.15rem 0.4rem;
+    margin-right: 0.3rem;
+    margin-bottom: 0.2rem;
+    padding: 0.1rem 0.3rem;
     text-align: center;
     background: #f8f9fa;
     border: 1px solid #dee2e6;
-    border-radius: 3px;
+    border-radius: 2px;
     cursor: pointer;
     transition: all 0.15s ease;
-    font-size: 0.8rem;
-    line-height: 1.2;
+    font-size: 0.75rem;
+    line-height: 1.1;
     color: #495057;
     box-shadow: none;
 }
@@ -173,13 +173,13 @@
 /* Responsive design */
 @media (max-width: 768px) {
     .choice-button {
-        padding: 0.1rem 0.3rem;
-        font-size: 0.75rem;
-        margin-right: 0.3rem;
-        margin-bottom: 0.2rem;
+        padding: 0.08rem 0.25rem;
+        font-size: 0.7rem;
+        margin-right: 0.25rem;
+        margin-bottom: 0.15rem;
     }
     
     .planning-block-choices {
-        padding: 0.2rem;
+        padding: 0.15rem;
     }
 }
