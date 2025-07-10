@@ -191,6 +191,17 @@ Based on your instructions:
 3. Run full test suite after each phase
 4. Keep detailed migration notes
 
+## Future Improvements to Consider
+
+### Mode Name CamelCase Standardization
+- Consider changing mode declarations to use CamelCase for consistency:
+  - `[Mode: STORY MODE]` → `[Mode: StoryMode]`
+  - `[Mode: DM MODE]` → `[Mode: DmMode]`
+  - `[Mode: GOD MODE]` → `[Mode: GodMode]`
+- This would match the CamelCase pattern used for planning block choices
+- Would require careful migration to avoid breaking existing games
+- Consider as part of larger JSON standardization effort
+
 ## Success Criteria
 - [ ] All tests pass with new JSON structure
 - [ ] Debug info properly filtered based on mode
