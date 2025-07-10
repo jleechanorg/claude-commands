@@ -364,9 +364,9 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
     
     // Helper function to parse planning blocks and create buttons
     const parsePlanningBlocks = (text) => {
-        // Pattern to match choice format: **[ActionWord_Number]:** Description OR numbered format: 1. **Action:** Description
+        // Pattern to match choice format: **[ActionWord_Number]:** Description OR numbered format: 1. **Action** - Description
         const bracketPattern = /\*\*\[([^\]]+)\]:\*\*\s*([^*\n]+(?:\n(?!\*\*\[)[^\n]*)*)/g;
-        const numberedPattern = /^\d+\.\s*\*\*([^:]+):\*\*\s*(.+?)(?=^\d+\.|$)/gm;
+        const numberedPattern = /^\d+\.\s*\*\*([^*]+)\*\*\s*-\s*(.+?)(?=^\d+\.|$)/gm;
         
         // Find all choices in the text
         const choices = [];
