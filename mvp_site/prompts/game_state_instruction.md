@@ -18,19 +18,19 @@ Every response you generate MUST be valid JSON with this exact structure:
 {
     "session_header": "The [SESSION_HEADER] block with timestamp, location, status, etc. - ALWAYS VISIBLE TO PLAYERS",
     "resources": "HD: 2/3, Spells: L1 2/2, L2 0/1, Ki: 3/5, Rage: 2/3, Potions: 2, Exhaustion: 0",
-    "location_confirmed": "Current location name or 'Unknown' or 'Character Creation'",
-    "dice_rolls": ["Perception check: 1d20+3 = 15+3 = 18 (Success)", "Attack roll: 1d20+5 = 12+5 = 17 (Hit)"],
     "narrative": "Your complete narrative response containing ONLY the story text and dialogue that players see",
     "planning_block": "The --- PLANNING BLOCK --- with character options - ALWAYS VISIBLE TO PLAYERS", 
+    "dice_rolls": ["Perception check: 1d20+3 = 15+3 = 18 (Success)", "Attack roll: 1d20+5 = 12+5 = 17 (Hit)"],
     "god_mode_response": "ONLY for GOD MODE commands - put your response here instead of narrative",
+    "entities_mentioned": ["List", "of", "entity", "names", "mentioned"],
+    "location_confirmed": "Current location name or 'Unknown' or 'Character Creation'",
+    "state_updates": {
+        // Your state changes here following the schema below
+        // Empty object {} if no changes, but field MUST be present
+    },
     "debug_info": {
         "dm_notes": ["DM thoughts about the scene", "Rule considerations"],
-        "entities_mentioned": ["List", "of", "entity", "names", "mentioned"],
-        "state_rationale": "Explanation of why you made certain state changes",
-        "state_updates": {
-            // Your state changes here following the schema below
-            // Empty object {} if no changes, but field MUST be present
-        },
+        "state_rationale": "Explanation of why you made certain state changes"
     }
 }
 ```
@@ -870,6 +870,9 @@ The `time_of_day` field MUST always match the `hour` field according to this map
 
 This is critical for tracking time-sensitive quests and creating a realistic world.
 
+**URGENT: Your last attempt to update state used a deprecated command (`GOD_MODE_UPDATE_STATE`) and failed. You MUST now use `GOD_MODE_SET:`.**
+
+For example, instead of sending a single giant, invalid JSON blob, you must convert it to the following correct format:
 
 ## NEW: The Core Memory Log Protocol
 
@@ -917,7 +920,7 @@ To add a new memory, you must propose a state update that **appends** a new stri
 
 This is the only way to add new memories. The system will automatically add your summary as a new item in the list.
 
-**IMPORTANT: State changes must be structured as nested JSON objects inside the `state_updates` field. Use the nested object structure shown in all examples.**
+**VERY IMPORTANT: The only valid way to propose state changes is by providing a nested JSON object inside the `state_updates` field of your JSON response. Do NOT use dot notation (e.g., `"player_character_data.gold": 500`). This is an old, deprecated format. Always use nested objects as shown in all examples in this document.**
 
 ## CRITICAL: State Update Formatting Rules
 
@@ -939,6 +942,9 @@ Your goal is to propose a JSON "patch" that updates the game state. For maximum 
       }
     }
     ```
+
+*   **DEPRECATED AND FORBIDDEN (Dot Notation):**
+    Do NOT use dot notation keys like `"player_character_data.inventory.gold"`. This format is deprecated and will cause errors. Always use the nested object structure shown above.
 
 *   **Be Precise:** Only include keys for values that have actually changed.
 *   **Use `__DELETE__` to Remove:** To remove a key from the state entirely, set its value to the special string `__DELETE__`.
