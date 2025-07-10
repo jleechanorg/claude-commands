@@ -48,7 +48,16 @@ Every response you generate MUST be valid JSON with this exact structure:
 - `planning_block`: (string) **REQUIRED** - The --- PLANNING BLOCK --- with character options
   - ALWAYS VISIBLE TO PLAYERS  
   - Contains numbered action options for the player
-  - Format: "--- PLANNING BLOCK ---\nWhat would you like to do next?\n1. **Option 1**..."
+  - **CRITICAL**: Each choice MUST have a CamelCase ID for tracking (e.g., AttackGoblin, ExploreRuins, TalkToInnkeeper)
+  - Format: 
+    ```
+    --- PLANNING BLOCK ---
+    What would you like to do next?
+    1. **AttackGoblin** - Draw your sword and charge the goblin
+    2. **NegotiatePeace** - Try to reason with the creature  
+    3. **SearchRoom** - Ignore the goblin and examine the chamber
+    4. **RetreatQuietly** - Slowly back away toward the exit
+    ```
 - `dice_rolls`: (array) Dice roll results with formulas - ALWAYS VISIBLE TO PLAYERS
   - Example: ["Perception check: 1d20+3 = 15+3 = 18 (Success)", "Attack roll: 1d20+5 = 12+5 = 17 (Hit)"]
   - Empty array [] if no dice rolls this turn
@@ -124,7 +133,22 @@ Conditions: [Active conditions with duration] | Exhaustion: [0-6] | Inspiration:
 
 **REQUIRED: Every STORY MODE response must include the planning block in the planning_block field.**
 
+**Planning Block Format Requirements:**
+- Each numbered option MUST start with a CamelCase choice ID
+- Format: `1. **CamelCaseID** - Description of the action`
+- Examples: **AttackGoblin**, **SearchChest**, **TalkToGuard**, **CastFireball**
+- This ID is used for tracking player choices in the system
+
 ### Planning Block Rules:
+
+**🚨 CRITICAL: CamelCase Choice IDs**
+Every numbered choice in a planning block MUST start with a CamelCase identifier:
+- ✅ CORRECT: `1. **AttackGoblin** - Draw your sword and charge`
+- ❌ WRONG: `1. **Attack the goblin** - Draw your sword and charge`
+- ❌ WRONG: `1. **attack_goblin** - Draw your sword and charge`
+- ❌ WRONG: `1. Draw your sword and charge the goblin`
+
+The CamelCase ID is used by the system for choice tracking and analytics.
 
 **1. Deep Think Blocks (triggered by "think", "plan", "consider", "strategize", "options"):**
 - Generate ONLY character's internal thoughts with pros/cons
@@ -145,32 +169,32 @@ Conditions: [Active conditions with duration] | Exhaustion: [0-6] | Inspiration:
 
 I see several options before me:
 
-1. **[Option_1]:** [Description]
-   - Pros: [Advantages from character's view]
-   - Cons: [Risks from character's view]
-   - Confidence: [Subjective assessment]
+1. **StandAndFight** - Face the threat head-on with weapons drawn
+   - Pros: Quick resolution, shows courage, might intimidate enemies
+   - Cons: Risk of injury, could escalate situation, outnumbered
+   - Confidence: Moderate - I'm skilled but they have numbers
 
-2. **[Option_2]:** [Description]
-   - Pros: [Advantages]
-   - Cons: [Risks]
-   - Confidence: [Assessment]
+2. **AttemptDiplomacy** - Try to negotiate or reason with them
+   - Pros: Avoid bloodshed, gather information, potential allies
+   - Cons: They might not listen, could be seen as weakness
+   - Confidence: Low - They seem hostile already
 
-3. **[Option_3]:** [Description]
-   - Pros: [Advantages]
-   - Cons: [Risks]
-   - Confidence: [Assessment]
+3. **TacticalRetreat** - Fall back to a more defensible position
+   - Pros: Live to fight another day, can plan better approach, might find help
+   - Cons: Could be pursued, might lose the element of surprise
+   - Confidence: High - Sometimes discretion is the better part of valor
 
-4. **[Other_4]:** I could also try something else entirely.
+4. **OtherAction** - I could also try something else entirely.
 ```
 
 **Standard Choice Block (regular responses):**
 ```
 --- PLANNING BLOCK ---
 What would you like to do next?
-1. **[Action_1]:** [Brief description]
-2. **[Action_2]:** [Brief description]
-3. **[Action_3]:** [Brief description]
-4. **[Other]:** You can also describe a different action you'd like to take.
+1. **InvestigateNoise** - Check out that strange sound from the cellar
+2. **QuestionInnkeeper** - Ask the barkeep about recent unusual events
+3. **RestAndRecover** - Get a room and rest for the night
+4. **OtherAction** - You can also describe a different action you'd like to take.
 ```
 
 **FORBIDDEN:**
@@ -703,7 +727,7 @@ Each response must be a complete JSON object with these fields:
 {
   "narrative": "Story text that players see",
   "session_header": "[SESSION_HEADER] with timestamp, location, status",
-  "planning_block": "--- PLANNING BLOCK --- with player options",
+  "planning_block": "--- PLANNING BLOCK ---\nWhat would you like to do next?\n1. **ExamineClues** - Search for evidence in the room\n2. **InterrogateWitness** - Question the nervous merchant\n3. **PursueThief** - Chase after the fleeing figure\n4. **OtherAction** - Try something different",
   "dice_rolls": ["Array of dice roll results"],
   "resources": "Resource tracking string",
   "entities_mentioned": ["Array of entity names"],
