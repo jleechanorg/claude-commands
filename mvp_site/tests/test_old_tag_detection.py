@@ -3,10 +3,14 @@
 Test for detection of old/deprecated tag formats in LLM responses.
 """
 
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import unittest
 from unittest.mock import patch
 import logging
-from llm_response import GeminiLLMResponse
+from gemini_response import GeminiResponse
 from narrative_response_schema import NarrativeResponse
 
 
@@ -31,10 +35,10 @@ class TestOldTagDetection(unittest.TestCase):
         What would you like to do?
         """
         
-        with patch('llm_response.logging.warning') as mock_warning, \
-             patch('llm_response.logging.error') as mock_error:
+        with patch('gemini_response.logging.warning') as mock_warning, \
+             patch('gemini_response.logging.error') as mock_error:
             
-            response = GeminiLLMResponse(
+            response = GeminiResponse(
                 narrative_text=narrative_with_old_tags,
                 provider="gemini",
                 model="test-model"
@@ -60,8 +64,8 @@ class TestOldTagDetection(unittest.TestCase):
         You hit for 8 damage!
         """
         
-        with patch('llm_response.logging.warning') as mock_warning:
-            response = GeminiLLMResponse(
+        with patch('gemini_response.logging.warning') as mock_warning:
+            response = GeminiResponse(
                 narrative_text=narrative_with_debug,
                 provider="gemini",
                 model="test-model"
@@ -79,10 +83,10 @@ class TestOldTagDetection(unittest.TestCase):
         The atmosphere is lively with patrons enjoying their evening.
         """
         
-        with patch('llm_response.logging.warning') as mock_warning, \
-             patch('llm_response.logging.error') as mock_error:
+        with patch('gemini_response.logging.warning') as mock_warning, \
+             patch('gemini_response.logging.error') as mock_error:
             
-            response = GeminiLLMResponse(
+            response = GeminiResponse(
                 narrative_text=clean_narrative,
                 provider="gemini",
                 model="test-model"
@@ -104,7 +108,7 @@ class TestOldTagDetection(unittest.TestCase):
         [END_STATE_UPDATES_PROPOSED]
         """
         
-        response = GeminiLLMResponse(
+        response = GeminiResponse(
             narrative_text=narrative_with_multiple_tags,
             provider="gemini",
             model="test-model"
@@ -136,8 +140,8 @@ class TestOldTagDetection(unittest.TestCase):
             }
         )
         
-        with patch('llm_response.logging.warning') as mock_warning:
-            response = GeminiLLMResponse(
+        with patch('gemini_response.logging.warning') as mock_warning:
+            response = GeminiResponse(
                 narrative_text="Clean narrative",
                 provider="gemini",
                 model="test-model",

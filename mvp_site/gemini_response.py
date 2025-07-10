@@ -1,9 +1,8 @@
 """
 Gemini Response objects for clean architecture between AI service and main application.
-
-DEPRECATED: This module is kept for backwards compatibility. 
-New code should use llm_response.py for the unified LLMResponse interface.
 """
+
+import json
 
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
@@ -11,16 +10,11 @@ import logging
 import re
 from narrative_response_schema import NarrativeResponse
 
-# Import the new unified response classes
-from llm_response import GeminiLLMResponse as _GeminiLLMResponse
-
-
-class GeminiResponse(_GeminiLLMResponse):
+class GeminiResponse:
     """
-    DEPRECATED: Backwards compatibility class for existing GeminiResponse usage.
+    Gemini Response wrapper for clean architecture between AI service and main application.
     
-    This class inherits from GeminiLLMResponse to maintain API compatibility
-    while providing the new unified interface.
+    Provides structured response handling with backward compatibility.
     """
     
     def __init__(self, narrative_text: str, 
@@ -30,21 +24,27 @@ class GeminiResponse(_GeminiLLMResponse):
                  provider: str = "gemini",
                  model: str = "gemini-2.5-flash"):
         """
-        Backwards compatible constructor for GeminiResponse.
+        Initialize GeminiResponse.
         
-        Maintains the old interface while using the new unified structure.
+        Args:
+            narrative_text: The clean narrative text from the response
+            structured_response: Optional parsed NarrativeResponse object
+            debug_tags_present: Dictionary indicating which debug tags were found
+            processing_metadata: Additional metadata about response processing
+            provider: LLM provider name (default: "gemini")
+            model: Model identifier
         """
-        # Store the raw narrative text separately
+        self.narrative_text = narrative_text
+        self.structured_response = structured_response
+        self.debug_tags_present = debug_tags_present or {}
+        self.processing_metadata = processing_metadata or {}
+        self.provider = provider
+        self.model = model
         self._raw_narrative_text = narrative_text
         
-        super().__init__(
-            narrative_text=narrative_text,
-            provider=provider,
-            model=model,
-            structured_response=structured_response,
-            debug_tags_present=debug_tags_present,
-            processing_metadata=processing_metadata
-        )
+        # Detect old tags if not already done
+        if debug_tags_present is None:
+            self._detect_old_tags()
     
     # Maintain backwards compatibility for property access
     @property 
@@ -95,6 +95,98 @@ class GeminiResponse(_GeminiLLMResponse):
             return self.structured_response.resources or ""
         return ""
     
+    def _detect_old_tags(self) -> Dict[str, List[str]]:
+        """
+        Detect deprecated tag patterns in the response and log warnings.
+        
+        This helps identify when the LLM is still using old patterns that should
+        be replaced with proper JSON fields.
+        
+        Returns:
+            Dictionary mapping tag types to lists of found instances
+        """
+        old_tags_found = {
+            'state_updates_proposed': [],
+            'debug_blocks': [],
+            'other_deprecated': []
+        }
+        
+        patterns = {
+            'state_updates_proposed': [
+                r'\[STATE_UPDATES_PROPOSED\]',
+                r'\[END_STATE_UPDATES_PROPOSED\]',
+                r'S?TATE_UPDATES_PROPOSED\]'  # Malformed variants
+            ],
+            'debug_blocks': [
+                r'\[DEBUG_START\]',
+                r'\[DEBUG_END\]',
+                r'\[DEBUG_STATE_START\]',
+                r'\[DEBUG_STATE_END\]',
+                r'\[DEBUG_ROLL_START\]',
+                r'\[DEBUG_ROLL_END\]'
+            ],
+            'other_deprecated': [
+                r'\[ENTITY_TRACKING_ENABLED\]',
+                r'\[PRE_JSON_MODE\]'
+            ]
+        }
+        
+        # Check narrative text
+        if self.narrative_text:
+            for tag_type, pattern_list in patterns.items():
+                for pattern in pattern_list:
+                    import re
+                    matches = re.findall(pattern, self.narrative_text)
+                    if matches:
+                        old_tags_found[tag_type].extend(matches)
+                        logging.warning(
+                            f"Deprecated tag found in narrative: {pattern} "
+                            f"(found {len(matches)} times). These should not appear in narrative field."
+                        )
+        
+        # Check structured response if available
+        if self.structured_response:
+            # Convert to string to search (this is a bit hacky but effective)
+            try:
+                import json
+                # Handle different response types
+                if hasattr(self.structured_response, 'dict'):
+                    response_dict = self.structured_response.dict()
+                elif hasattr(self.structured_response, '__dict__'):
+                    response_dict = self.structured_response.__dict__
+                else:
+                    response_dict = str(self.structured_response)
+                    
+                response_str = json.dumps(response_dict)
+                for tag_type, pattern_list in patterns.items():
+                    for pattern in pattern_list:
+                        import re
+                        matches = re.findall(pattern, response_str)
+                        if matches:
+                            old_tags_found[tag_type].extend(matches)
+                            logging.warning(
+                                f"Deprecated tag found in structured response: {pattern} "
+                                f"(found {len(matches)} times). Use proper JSON fields instead."
+                            )
+            except Exception as e:
+                logging.debug(f"Could not check structured response for old tags: {e}")
+        
+        # Log summary if any old tags found
+        total_found = sum(len(tags) for tags in old_tags_found.values())
+        if total_found > 0:
+            logging.error(
+                f"DEPRECATED TAGS DETECTED: Found {total_found} deprecated tags in response. "
+                "Update prompts to use proper JSON format. Details: "
+                f"{dict((k, len(v)) for k, v in old_tags_found.items() if v)}"
+            )
+            
+            # Store in processing metadata for tracking
+            if self.processing_metadata is None:
+                self.processing_metadata = {}
+            self.processing_metadata['deprecated_tags_found'] = old_tags_found
+        
+        return old_tags_found
+    
     def get_narrative_text(self, debug_mode: bool = False) -> str:
         """
         Get the narrative text with debug content handled based on debug mode.
@@ -120,6 +212,34 @@ class GeminiResponse(_GeminiLLMResponse):
             return True
         
         return False
+    
+    def get_state_updates(self) -> Dict[str, Any]:
+        """Get state updates from structured response."""
+        if self.structured_response and hasattr(self.structured_response, 'state_updates'):
+            return self.structured_response.state_updates or {}
+        
+        # JSON mode is required - log error if no structured response
+        if not self.structured_response:
+            logging.error("ERROR: No structured response available for state updates. JSON mode is required.")
+        return {}
+    
+    def get_entities_mentioned(self) -> List[str]:
+        """Get entities mentioned from structured response."""
+        if self.structured_response and hasattr(self.structured_response, 'entities_mentioned'):
+            return self.structured_response.entities_mentioned or []
+        return []
+    
+    def get_location_confirmed(self) -> str:
+        """Get confirmed location from structured response."""
+        if self.structured_response and hasattr(self.structured_response, 'location_confirmed'):
+            return self.structured_response.location_confirmed or 'Unknown'
+        return 'Unknown'
+    
+    def get_debug_info(self) -> Dict[str, Any]:
+        """Get debug info from structured response."""
+        if self.structured_response and hasattr(self.structured_response, 'debug_info'):
+            return self.structured_response.debug_info or {}
+        return {}
     
     @staticmethod
     def _strip_debug_content(text: str) -> str:
