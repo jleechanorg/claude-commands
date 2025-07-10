@@ -629,47 +629,23 @@ This first block should not be an "update" but a "creation." It must contain all
 - `custom_campaign_state`: Initial premise, campaign configuration, and custom tracking fields
 - `world_time`: The starting date and time
 
-**Example of Initial State in JSON Response:**
+**Example - Initial State Creation:**
+The `state_updates` field should contain all initial world data:
 ```json
-{
-  "narrative": "Your story begins in the kingdom of Eldoria...",
-  "session_header": "[SESSION_HEADER]\nTimestamp: Day 1, Dawn\nLocation: Castle Throne Room\nStatus: Beginning Adventure",
-  "planning_block": "--- PLANNING BLOCK ---\nWhat would you like to do?\n1. **Speak to the King**\n2. **Explore the castle**\n3. **Other**: Describe your action",
-  "dice_rolls": [],
-  "resources": "HD: 3/3, Lay on Hands: 25/25, Spells: L1 3/3, L2 2/2",
-  "entities_mentioned": ["King Theron", "Sir Kaelan"],
-  "location_confirmed": "Castle Throne Room",
-  "state_updates":
-{
+"state_updates": {
   "game_state_version": 1,
   "player_character_data": {
-    // Follow complete format from Character Entity Schema section above
     "string_id": "pc_kaelan_001",
     "name": "Sir Kaelan the Adamant",
     "level": 5,
     "class": "Paladin",
-    "alignment": "Lawful Good",
-    "mbti": "INFJ",
-    "hp_current": 49,
-    "hp_max": 49,
-    "armor_class": 18,
-    "attributes": { "strength": 18, "dexterity": 10, "constitution": 16, "intelligence": 12, "wisdom": 14, "charisma": 16 },
-    "proficiency_bonus": 3,
-    // ... plus all other fields per entity schema
+    // ... complete character data per entity schema
   },
   "npc_data": {
     "King Theron": {
-      // Follow complete NPC format from entity_schema_instruction.md
       "string_id": "npc_theron_001",
       "role": "King of Eldoria",
-      "class": "Noble",
-      "mbti": "ISFP",
-      "level": 8,
-      "hp_current": 55,
-      "hp_max": 55,
-      "armor_class": 15,
-      "attributes": { "strength": 13, "dexterity": 12, "constitution": 14, "intelligence": 16, "wisdom": 15, "charisma": 18 },
-      // ... plus all other NPC fields per entity schema
+      // ... complete NPC data per entity schema
     }
   },
   "world_data": {
@@ -686,15 +662,10 @@ This first block should not be an "update" but a "creation." It must contain all
     "time_of_day": "Morning"
   },
   "custom_campaign_state": {
-    "premise": "A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.",
-    "attribute_system": "dnd"  // Default system, can be customized for campaign setting
+    "premise": "A brave knight in a land of dragons...",
+    "attribute_system": "dnd"
   },
   "migration_status": "FRESH_INSTALL"
-  },
-  "debug_info": {
-    "dm_notes": ["Created initial world state with King Theron and Sir Kaelan"],
-    "state_rationale": "Establishing the initial campaign world and player character"
-  }
 }
 ```
 
@@ -769,63 +740,54 @@ By following these principles, you ensure the game state remains clean, accurate
 
 ## 5. Examples:
 
-### Example 1: Creating a New Quest and Updating XP
+**JSON Response Structure Reference:**
+Each response must be a complete JSON object with these fields:
 ```json
 {
-  "narrative": "The old sage marks the location of the ancient ruins on your map. 'The Sunstone lies within,' he whispers.",
-  "session_header": "[SESSION_HEADER]\nTimestamp: Day 3, Noon\nLocation: Sage's Tower\nStatus: Quest Received",
-  "planning_block": "--- PLANNING BLOCK ---\nWhat would you like to do?\n1. **Ask about the ruins**\n2. **Head to the ruins immediately**\n3. **Other**: Describe your action",
-  "dice_rolls": [],
-  "resources": "HD: 3/3, Lay on Hands: 25/25, Spells: L1 3/3, L2 2/2",
-  "entities_mentioned": ["Old Sage"],
-  "location_confirmed": "Sage's Tower",
-  "state_updates": {
-    "player_character_data": {
-      "xp_current": 250
-    },
-    "quests": {
-      "ancient_ruins": {
-        "status": "Discovered",
-        "objective": "Find the Sunstone."
-      }
-    }
+  "narrative": "Story text that players see",
+  "session_header": "[SESSION_HEADER] with timestamp, location, status",
+  "planning_block": "--- PLANNING BLOCK --- with player options",
+  "dice_rolls": ["Array of dice roll results"],
+  "resources": "Resource tracking string",
+  "entities_mentioned": ["Array of entity names"],
+  "location_confirmed": "Current location",
+  "state_updates": { /* State changes go here */ },
+  "debug_info": { "dm_notes": [], "state_rationale": "" }
+}
+```
+
+The following examples focus on the `state_updates` field only:
+
+### Example 1: Creating a New Quest and Updating XP
+```json
+"state_updates": {
+  "player_character_data": {
+    "xp_current": 250
   },
-  "debug_info": {
-    "dm_notes": ["New quest added for ancient ruins"],
-    "state_rationale": "Player completed minor task and discovered new quest"
+  "quests": {
+    "ancient_ruins": {
+      "status": "Discovered",
+      "objective": "Find the Sunstone."
+    }
   }
 }
 ```
 
 ### Example 2: Updating an NPC and Deleting an Item
-
 ```json
-{
-  "narrative": "Thorgon nods solemnly. 'You've earned my trust,' he says. 'I will help you.' You hand him the health potion as promised.",
-  "session_header": "[SESSION_HEADER]\nTimestamp: Day 3, Afternoon\nLocation: Thorgon's Forge\nStatus: Alliance Formed",
-  "planning_block": "--- PLANNING BLOCK ---\nWhat would you like to do?\n1. **Ask Thorgon about the quest**\n2. **Request weapons or armor**\n3. **Other**: Describe your action",
-  "dice_rolls": [],
-  "resources": "HD: 3/3, Lay on Hands: 25/25, Spells: L1 3/3, L2 2/2",
-  "entities_mentioned": ["Thorgon"],
-  "location_confirmed": "Thorgon's Forge",
-  "state_updates": {
-    "npc_data": {
-      "Thorgon": {
-        "status": "Agreed to help the player.",
-        "is_hostile": false
-      }
-    },
-    "player_character_data": {
-      "inventory": {
-        "items": {
-          "health_potion": "__DELETE__"
-        }
-      }
+"state_updates": {
+  "npc_data": {
+    "Thorgon": {
+      "status": "Agreed to help the player.",
+      "is_hostile": false
     }
   },
-  "debug_info": {
-    "dm_notes": ["NPC alliance formed through successful negotiation"],
-    "state_rationale": "Thorgon becomes ally, health potion given as gesture of trust"
+  "player_character_data": {
+    "inventory": {
+      "items": {
+        "health_potion": "__DELETE__"
+      }
+    }
   }
 }
 ```
@@ -909,29 +871,16 @@ The `time_of_day` field MUST always match the `hour` field according to this map
 - **18-19**: "Evening"
 - **20-23**: "Night"
 
-**CRITICAL**: When updating time, you MUST update BOTH the numeric fields AND the time_of_day description together in the state_updates field:
+**CRITICAL**: When updating time, you MUST update BOTH the numeric fields AND the time_of_day description together:
 ```json
-{
-  "narrative": "The sun sets behind the mountains as darkness falls.",
-  "session_header": "[SESSION_HEADER]\nTimestamp: Day 3, Night\nLocation: Mountain Pass\nStatus: Traveling",
-  "planning_block": "--- PLANNING BLOCK ---\nWhat would you like to do?\n1. **Make camp for the night**\n2. **Continue traveling in darkness**\n3. **Other**: Describe your action",
-  "dice_rolls": [],
-  "resources": "HD: 3/3, Lay on Hands: 25/25, Spells: L1 3/3, L2 2/2",
-  "entities_mentioned": [],
-  "location_confirmed": "Mountain Pass",
-  "state_updates": {
-    "world_data": {
-      "world_time": {
-        "hour": 21,
-        "minute": 30,
-        "second": 0,
-        "time_of_day": "Night"
-      }
+"state_updates": {
+  "world_data": {
+    "world_time": {
+      "hour": 21,
+      "minute": 30,
+      "second": 0,
+      "time_of_day": "Night"
     }
-  },
-  "debug_info": {
-    "dm_notes": ["Time advanced due to travel"],
-    "state_rationale": "Several hours of travel, now nighttime"
   }
 }
 ```
@@ -981,24 +930,11 @@ To add a new memory, you must propose a state update that **appends** a new stri
 
 **Example: Appending a new Core Memory**
 ```json
-{
-  "narrative": "As the battle reaches its climax, Itachi's eyes suddenly transform. The legendary Rinnegan spirals appear!",
-  "session_header": "[SESSION_HEADER]\nTimestamp: Day 5, Evening\nLocation: Hidden Valley\nStatus: Epic Battle",
-  "planning_block": "--- PLANNING BLOCK ---\nWhat would you like to do?\n1. **Test your new powers**\n2. **End the battle decisively**\n3. **Other**: Describe your action",
-  "dice_rolls": ["Awakening Roll: 1d20 = 20 (Critical Success!)"],
-  "resources": "HD: 1/3, Spells: L1 1/3, L2 0/2, Chakra: 5/50",
-  "entities_mentioned": ["Itachi"],
-  "location_confirmed": "Hidden Valley",
-  "state_updates": {
-    "custom_campaign_state": {
-      "core_memories": {
-        "append": "Itachi awakens Rinnegan (Critical Success)."
-      }
+"state_updates": {
+  "custom_campaign_state": {
+    "core_memories": {
+      "append": "Itachi awakens Rinnegan (Critical Success)."
     }
-  },
-  "debug_info": {
-    "dm_notes": ["Critical success on awakening roll triggers legendary transformation"],
-    "state_rationale": "Major campaign milestone achieved, adding to core memories"
   }
 }
 ```
