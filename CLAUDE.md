@@ -590,6 +590,10 @@ Use `/list` to display all available slash commands with descriptions.
 - Commands can be chained with space separation
 - First command determines primary mode, subsequent commands modify behavior
 
+**Command Aliases**:
+- `/tddf` - Alias for `/4layer` (Test-Driven Development Four-layer protocol)
+- Both commands execute identical four-layer TDD testing protocol
+
 **Command Examples**: → `.cursor/rules/examples.md`
 
 ## Special Protocols
