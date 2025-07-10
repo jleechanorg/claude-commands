@@ -155,7 +155,7 @@ During character creation, use this clean format:
 What is your choice?
 ```
 
-**CRITICAL: When entity tracking is enabled (JSON mode), state updates will be included in the structured JSON response (previously [STATE_UPDATES_PROPOSED] block), NOT in the narrative text. The narrative field should contain ONLY the story/dialogue text that users see.**
+**CRITICAL: State updates MUST be included in the structured JSON response under the "state_updates" field, NOT in the narrative text. The narrative field should contain ONLY the story/dialogue text that users see. NEVER include debug blocks or state update blocks in the narrative field.**
 
 ## Part 1.5: D&D 5E Class Progression Rules
 

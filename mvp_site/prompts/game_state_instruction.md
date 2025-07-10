@@ -1,25 +1,6 @@
 # Game State Management Protocol
 
-## 🚨 CRITICAL DEBUG CONTENT RULES - HIGHEST PRIORITY 🚨
-
-**NEVER PUT DEBUG CONTENT IN THE NARRATIVE FIELD!**
-
-The following are FORBIDDEN in the `narrative` field:
-- ❌ [DEBUG_START]...[DEBUG_END] blocks
-- ❌ [DEBUG_STATE_START]...[DEBUG_STATE_END] blocks
-- ❌ [DEBUG_ROLL_START]...[DEBUG_ROLL_END] blocks
-- ❌ [STATE_UPDATES_PROPOSED]...[END_STATE_UPDATES_PROPOSED] blocks
-- ❌ Any debug tags or markers
-
-**CORRECT STRUCTURE:** See `mvp_site/narrative_response_schema.py` for the complete JSON schema definition.
-
-**WRONG DEBUG HANDLING:**
-```json
-{
-    "narrative": "You swing! [DEBUG_START]Roll: 18[DEBUG_END] Hit!",  // ❌ NEVER DO THIS
-    "debug_info": {}
-}
-```
+This protocol defines how to manage game state using structured JSON for both input and output. The system expects a specific JSON structure with required fields for narrative content, game state updates, and player choices.
 
 ## CRITICAL: JSON Communication Protocol
 
@@ -35,16 +16,15 @@ Every response you generate MUST be valid JSON with this exact structure:
 
 ```json
 {
-    "narrative": "Your complete narrative response containing ONLY the story text and dialogue that players see",
     "session_header": "The [SESSION_HEADER] block with timestamp, location, status, etc. - ALWAYS VISIBLE TO PLAYERS",
+    "resources": "HD: 2/3, Spells: L1 2/2, L2 0/1, Ki: 3/5, Rage: 2/3, Potions: 2, Exhaustion: 0",
+    "narrative": "Your complete narrative response containing ONLY the story text and dialogue that players see",
     "planning_block": "The --- PLANNING BLOCK --- with character options - ALWAYS VISIBLE TO PLAYERS", 
     "dice_rolls": ["Perception check: 1d20+3 = 15+3 = 18 (Success)", "Attack roll: 1d20+5 = 12+5 = 17 (Hit)"],
-    "resources": "HD: 2/3, Spells: L1 2/2, L2 0/1, Ki: 3/5, Rage: 2/3, Potions: 2, Exhaustion: 0",
     "god_mode_response": "ONLY for GOD MODE commands - put your response here instead of narrative",
     "entities_mentioned": ["List", "of", "entity", "names", "mentioned"],
     "location_confirmed": "Current location name or 'Unknown' or 'Character Creation'",
     "state_updates": {
-        // Previously called [STATE_UPDATES_PROPOSED] block in older campaigns
         // Your state changes here following the schema below
         // Empty object {} if no changes, but field MUST be present
     },
@@ -68,7 +48,16 @@ Every response you generate MUST be valid JSON with this exact structure:
 - `planning_block`: (string) **REQUIRED** - The --- PLANNING BLOCK --- with character options
   - ALWAYS VISIBLE TO PLAYERS  
   - Contains numbered action options for the player
-  - Format: "--- PLANNING BLOCK ---\nWhat would you like to do next?\n1. **Option 1**..."
+  - **CRITICAL**: Each choice MUST have a CamelCase ID for tracking (e.g., AttackGoblin, ExploreRuins, TalkToInnkeeper)
+  - Format: 
+    ```
+    --- PLANNING BLOCK ---
+    What would you like to do next?
+    1. **AttackGoblin** - Draw your sword and charge the goblin
+    2. **NegotiatePeace** - Try to reason with the creature  
+    3. **SearchRoom** - Ignore the goblin and examine the chamber
+    4. **RetreatQuietly** - Slowly back away toward the exit
+    ```
 - `dice_rolls`: (array) Dice roll results with formulas - ALWAYS VISIBLE TO PLAYERS
   - Example: ["Perception check: 1d20+3 = 15+3 = 18 (Success)", "Attack roll: 1d20+5 = 12+5 = 17 (Hit)"]
   - Empty array [] if no dice rolls this turn
@@ -81,8 +70,7 @@ Every response you generate MUST be valid JSON with this exact structure:
   - If both god_mode_response and narrative are present, both will be shown (god mode first)
 - `entities_mentioned`: (array) Entity names referenced in your narrative. Empty array [] if none.
 - `location_confirmed`: (string) Current location. Use "Character Creation" during character creation.
-- `state_updates`: (object) Game state changes. MUST be present even if empty {}. 
-  - This replaces the old [STATE_UPDATES_PROPOSED] blocks - use this field instead!
+- `state_updates`: (object) Game state changes. MUST be present even if empty {}.
 - `debug_info`: (object) Internal DM information - ONLY visible when debug mode is enabled
   - `dm_notes`: (array) DM reasoning for narrative choices, scene design decisions, why you presented things a certain way
     - Example: ["I chose to have the goblin dodge to make combat more dynamic", "Added the shoulder wound detail for narrative consistency"]
@@ -119,22 +107,8 @@ The narrative field contains ONLY the story prose that players read - no meta co
   - Set `narrative` to empty string "" if no additional narration needed
 - No session header or planning block needed
 - Respond as an omniscient game master making direct changes
-- Example response structure:
-```json
-{
-    "narrative": "",
-    "god_mode_response": "A mystical fog rolls in from the mountains. The temperature drops suddenly.",
-    "entities_mentioned": [],
-    "location_confirmed": "Unknown Forest",
-    "state_updates": {
-        "environment": {
-            "weather": "foggy",
-            "temperature": "cold"
-        }
-    },
-    "debug_info": {}
-}
-```
+- GOD MODE responses still require all mandatory fields
+- Use empty strings/arrays for fields not needed in GOD MODE
 
 ## Session Header Format
 
@@ -145,16 +119,10 @@ In STORY MODE, ALWAYS put this session header in the session_header field:
 Timestamp: [Year] [Era], [Month] [Day], [Time]
 Location: [Current Location Name]
 Status: Lvl [X] [Class] | HP: [current]/[max] (Temp: [X]) | XP: [current]/[needed] | Gold: [X]gp
-Resources: HD: [remaining]/[total] | Spells: L1 [remaining]/[total], L2 [remaining]/[total] | [Class Features]
-Conditions: [Active conditions with duration] | Exhaustion: [0-6] | Inspiration: [Yes/No] | Potions: [X]
+Conditions: [Active conditions with duration] | Exhaustion: [0-6] | Inspiration: [Yes/No]
 ```
 
-**Session Header Examples:**
-- Fighter: `Resources: HD: 2/4 | Second Wind: 1/1 | Action Surge: 0/1 | Indomitable: 1/1`
-- Paladin (Level 1): `Resources: HD: 1/1 | Lay on Hands: 5/5 | No Spells Yet (Level 2+)`
-- Paladin (Level 2+): `Resources: HD: 2/4 | Spells: L1 3/4, L2 1/2 | Lay on Hands: 15/20 | Channel Div: 1/1`
-- Monk: `Resources: HD: 2/3 | Ki: 2/5 | Stunning Strike: Available`
-- Wizard: `Resources: HD: 3/3 | Spells: L1 2/4, L2 2/3, L3 2/2 | Arcane Recovery: 0/1`
+**Note:** Resource tracking (HD, spells, class features) now goes in the separate `resources` field, not in the session header.
 
 **IMPORTANT: Spell Slot Display Format**
 - Show REMAINING spell slots, not used: `remaining = total - used`
@@ -163,62 +131,108 @@ Conditions: [Active conditions with duration] | Exhaustion: [0-6] | Inspiration:
 
 ## Planning Block Protocol
 
-**🔥 CRITICAL: EVERY STORY MODE RESPONSE MUST PUT THE PLANNING BLOCK IN planning_block field! 🔥**
+**REQUIRED: Every STORY MODE response must include the planning block in the planning_block field.**
 
-### Planning Block Rules:
+### Why Planning Blocks Are Required
 
-**1. Deep Think Blocks (triggered by "think", "plan", "consider", "strategize", "options"):**
-- Generate ONLY character's internal thoughts with pros/cons
-- NEVER take narrative actions when these keywords are used
-- DON'T interpret think commands as story actions - generate planning instead
-- Present 3-5 options with character's subjective assessment
+In STORY MODE (in-character gameplay), each response advances the narrative and creates a new game state. The planning block:
+- Gives players agency by presenting clear choices
+- Moves the story forward based on player decisions
+- Prevents the game from stalling without direction
+- Creates natural story branches and consequences
 
-**2. Standard Choice Blocks (all other STORY MODE responses):**
-- Present 3-5 actionable choices
-- Always include an "Other" option
+### Planning Block Flexibility
 
-### Planning Block Templates:
+While most situations warrant specific choices, sometimes a simple continuation is appropriate:
 
-**Deep Think Block (for think/plan keywords):**
+**Minimal Planning Block (use sparingly - only when no clear choices exist):**
 ```
 --- PLANNING BLOCK ---
-[Character's internal monologue]
-
-I see several options before me:
-
-1. **[Option_1]:** [Description]
-   - Pros: [Advantages from character's view]
-   - Cons: [Risks from character's view]
-   - Confidence: [Subjective assessment]
-
-2. **[Option_2]:** [Description]
-   - Pros: [Advantages]
-   - Cons: [Risks]
-   - Confidence: [Assessment]
-
-3. **[Option_3]:** [Description]
-   - Pros: [Advantages]
-   - Cons: [Risks]
-   - Confidence: [Assessment]
-
-4. **[Other_4]:** I could also try something else entirely.
+What would you like to do?
+1. **Continue** - See what happens next
+2. **CustomAction** - Describe what you'd like to do
 ```
 
-**Standard Choice Block (regular responses):**
+Use this ONLY when:
+- The scene is purely transitional (e.g., "You wake up the next morning")
+- The player just asked an open-ended question requiring their input
+- No obvious action choices present themselves
+- The narrative naturally pauses for player direction
+
+Most of the time, you should provide specific, contextual choices.
+
+### Two Types of Full Planning Blocks
+
+**1. Standard Planning Block** - Used for all normal STORY MODE responses
+- Presents 3-5 actionable choices for what to do next
+- Simple format with choice ID and description
+- Always includes an "Other" option
+
+**2. Deep Think Planning Block** - Triggered by keywords: "think", "plan", "consider", "strategize", "options"
+- Shows character's internal thought process
+- Includes pros/cons analysis for each option
+- Character's confidence assessment
+- NEVER takes narrative actions - only presents thoughts and options
+- DON'T interpret think-block input as action commands - generate planning instead
+- MUST NOT take action on think-block requests - provide internal thought only
+
+### 🚨 CRITICAL: CamelCase Choice IDs
+
+Every numbered choice MUST start with a CamelCase identifier:
+- ✅ CORRECT: `1. **AttackGoblin** - Draw your sword and charge`
+- ❌ WRONG: `1. **Attack the goblin** - Draw your sword and charge`
+- ❌ WRONG: `1. **attack_goblin** - Draw your sword and charge`
+- ❌ WRONG: `1. Draw your sword and charge the goblin`
+
+The CamelCase ID is used by the system for choice tracking and analytics.
+
+### Planning Block Templates
+
+**1. Standard Planning Block (default for all STORY MODE responses):**
 ```
 --- PLANNING BLOCK ---
 What would you like to do next?
-1. **[Action_1]:** [Brief description]
-2. **[Action_2]:** [Brief description]
-3. **[Action_3]:** [Brief description]
-4. **[Other]:** You can also describe a different action you'd like to take.
+1. **InvestigateNoise** - Check out that strange sound from the cellar
+2. **QuestionInnkeeper** - Ask the barkeep about recent unusual events
+3. **RestAndRecover** - Get a room and rest for the night
+4. **OtherAction** - You can also describe a different action you'd like to take.
 ```
+
+**2. Deep Think Planning Block (ONLY when player uses think/plan/consider/strategize/options):**
+```
+--- PLANNING BLOCK ---
+[Character's internal monologue goes here - their thoughts about the situation]
+
+I see several options before me:
+
+1. **StandAndFight** - Face the threat head-on with weapons drawn
+   - Pros: Quick resolution, shows courage, might intimidate enemies
+   - Cons: Risk of injury, could escalate situation, outnumbered
+   - Confidence: Moderate - I'm skilled but they have numbers
+
+2. **AttemptDiplomacy** - Try to negotiate or reason with them
+   - Pros: Avoid bloodshed, gather information, potential allies
+   - Cons: They might not listen, could be seen as weakness
+   - Confidence: Low - They seem hostile already
+
+3. **TacticalRetreat** - Fall back to a more defensible position
+   - Pros: Live to fight another day, can plan better approach, might find help
+   - Cons: Could be pursued, might lose the element of surprise
+   - Confidence: High - Sometimes discretion is the better part of valor
+
+4. **OtherAction** - I could also try something else entirely.
+```
+
+**Key Differences in Deep Think Blocks:**
+- ✅ Includes character's internal monologue before the options
+- ✅ Each option has Pros/Cons/Confidence analysis
+- ✅ Shows character's subjective assessment
+- ❌ Does NOT advance the narrative or take actions
+- ❌ Does NOT describe what happens - only what character is thinking
 
 **FORBIDDEN:**
 - Do NOT add any fields beyond those specified above
-- Normal gameplay: 5 fields (narrative, entities_mentioned, location_confirmed, state_updates, debug_info)
-- GOD MODE only: 6 fields (add god_mode_response)
-- Do NOT include [STATE_UPDATES_PROPOSED] blocks anywhere in the narrative
+- Do NOT include debug blocks or state update blocks in the narrative
 - Do NOT wrap response in markdown code blocks
 - Do NOT include any text outside the JSON structure
 
@@ -618,7 +632,7 @@ Entities can have multiple status conditions from this list:
 
 **CRITICAL: You MUST propose state updates in EVERY response, including during character creation.**
 
-**Initial State**: Immediately after you generate the initial campaign premise, the main character, the world, and any key NPCs, you **must** consolidate all of that information into a single, comprehensive `[STATE_UPDATES_PROPOSED]` block.
+**Initial State**: Immediately after you generate the initial campaign premise, the main character, the world, and any key NPCs, you **must** consolidate all of that information into the `state_updates` field of your JSON response.
 
 **Character Creation**: During character creation, you MUST track progress with state updates at every step. Even before the character is complete, track the creation process in custom_campaign_state.
 
@@ -629,39 +643,23 @@ This first block should not be an "update" but a "creation." It must contain all
 - `custom_campaign_state`: Initial premise, campaign configuration, and custom tracking fields
 - `world_time`: The starting date and time
 
-**Example of an Initial State Block:**
-```
-[STATE_UPDATES_PROPOSED]
-{
+**Example - Initial State Creation:**
+The `state_updates` field should contain all initial world data:
+```json
+"state_updates": {
   "game_state_version": 1,
   "player_character_data": {
-    // Follow complete format from Character Entity Schema section above
     "string_id": "pc_kaelan_001",
     "name": "Sir Kaelan the Adamant",
     "level": 5,
     "class": "Paladin",
-    "alignment": "Lawful Good",
-    "mbti": "INFJ",
-    "hp_current": 49,
-    "hp_max": 49,
-    "armor_class": 18,
-    "attributes": { "strength": 18, "dexterity": 10, "constitution": 16, "intelligence": 12, "wisdom": 14, "charisma": 16 },
-    "proficiency_bonus": 3,
-    // ... plus all other fields per entity schema
+    // ... complete character data per entity schema
   },
   "npc_data": {
     "King Theron": {
-      // Follow complete NPC format from entity_schema_instruction.md
       "string_id": "npc_theron_001",
       "role": "King of Eldoria",
-      "class": "Noble",
-      "mbti": "ISFP",
-      "level": 8,
-      "hp_current": 55,
-      "hp_max": 55,
-      "armor_class": 15,
-      "attributes": { "strength": 13, "dexterity": 12, "constitution": 14, "intelligence": 16, "wisdom": 15, "charisma": 18 },
-      // ... plus all other NPC fields per entity schema
+      // ... complete NPC data per entity schema
     }
   },
   "world_data": {
@@ -678,12 +676,11 @@ This first block should not be an "update" but a "creation." It must contain all
     "time_of_day": "Morning"
   },
   "custom_campaign_state": {
-    "premise": "A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.",
-    "attribute_system": "dnd"  // Default system, can be customized for campaign setting
+    "premise": "A brave knight in a land of dragons...",
+    "attribute_system": "dnd"
   },
   "migration_status": "FRESH_INSTALL"
 }
-[END_STATE_UPDATES_PROPOSED]
 ```
 
 This initial state dump is **not optional**. It is the foundation of the entire campaign. After providing this block, you can then proceed with the first narrative scene.
@@ -757,10 +754,14 @@ By following these principles, you ensure the game state remains clean, accurate
 
 ## 5. Examples:
 
+**Quick JSON Reference:**
+See the complete JSON structure with all field descriptions at the beginning of this document.
+
+The following examples focus on the `state_updates` field only:
+
 ### Example 1: Creating a New Quest and Updating XP
-```
-[STATE_UPDATES_PROPOSED]
-{
+```json
+"state_updates": {
   "player_character_data": {
     "xp_current": 250
   },
@@ -771,34 +772,30 @@ By following these principles, you ensure the game state remains clean, accurate
     }
   }
 }
-[END_STATE_UPDATES_PROPOSED]
 ```
 
 ### Example 2: Updating an NPC and Deleting an Item
-
-```
-[STATE_UPDATES_PROPOSED]
-{
+```json
+"state_updates": {
   "npc_data": {
-      "Thorgon": {
-        "status": "Agreed to help the player.",
-        "is_hostile": false
-      }
+    "Thorgon": {
+      "status": "Agreed to help the player.",
+      "is_hostile": false
+    }
   },
   "player_character_data": {
-      "inventory": {
-          "items": {
-              "health_potion": "__DELETE__"
-          }
+    "inventory": {
+      "items": {
+        "health_potion": "__DELETE__"
       }
+    }
   }
 }
-[END_STATE_UPDATES_PROPOSED]
 ```
 
 ## 6. State Discrepancy and Recovery Protocol
 
-This is a critical protocol for maintaining game integrity. If you detect that the `CURRENT GAME STATE` you have received is severely out of sync with the state you expect based on your previously proposed updates, you must initiate this recovery protocol.
+This is a critical protocol for maintaining game integrity. If you detect that the `CURRENT GAME STATE` you have received is severely out of sync with what it should be based on the story context, you must initiate this recovery protocol.
 
 1.  **Halt the Story:** Do not proceed with the user's requested action or continue the narrative. The immediate priority is to correct the game state.
 2.  **Identify Discrepancies:** In your response, clearly and concisely list the key discrepancies you have found between the `CURRENT GAME STATE` you received and the state you expected. For example, mention missing NPCs, incorrect player stats, or absent inventory items.
@@ -877,8 +874,7 @@ The `time_of_day` field MUST always match the `hour` field according to this map
 
 **CRITICAL**: When updating time, you MUST update BOTH the numeric fields AND the time_of_day description together:
 ```json
-[STATE_UPDATES_PROPOSED]
-{
+"state_updates": {
   "world_data": {
     "world_time": {
       "hour": 21,
@@ -888,7 +884,6 @@ The `time_of_day` field MUST always match the `hour` field according to this map
     }
   }
 }
-[END_STATE_UPDATES_PROPOSED]
 ```
 
 **NEVER** update just the hour without also updating time_of_day. They must ALWAYS be synchronized.
@@ -897,9 +892,6 @@ The `time_of_day` field MUST always match the `hour` field according to this map
 
 This is critical for tracking time-sensitive quests and creating a realistic world.
 
-**URGENT: Your last attempt to update state used a deprecated command (`GOD_MODE_UPDATE_STATE`) and failed. You MUST now use `GOD_MODE_SET:`.**
-
-For example, instead of sending a single giant, invalid JSON blob, you must convert it to the following correct format:
 
 ## NEW: The Core Memory Log Protocol
 
@@ -935,21 +927,19 @@ To add a new memory, you must propose a state update that **appends** a new stri
 **CRITICAL:** The system includes a safeguard to prevent accidental data loss. It will intelligently append new items to `core_memories` even if you format the request incorrectly. However, you should always use the correct format below.
 
 **Example: Appending a new Core Memory**
-```
-[STATE_UPDATES_PROPOSED]
-{
+```json
+"state_updates": {
   "custom_campaign_state": {
     "core_memories": {
       "append": "Itachi awakens Rinnegan (Critical Success)."
     }
   }
 }
-[END_STATE_UPDATES_PROPOSED]
 ```
 
 This is the only way to add new memories. The system will automatically add your summary as a new item in the list.
 
-**VERY IMPORTANT: The only valid way to propose state changes is by providing a nested JSON object inside the `[STATE_UPDATES_PROPOSED]` block. Do NOT use dot notation (e.g., `"player_character_data.gold": 500`). This is an old, deprecated format. Always use nested objects as shown in all examples in this document.**
+**IMPORTANT: State changes must be structured as nested JSON objects inside the `state_updates` field. Use the nested object structure shown in all examples.**
 
 ## CRITICAL: State Update Formatting Rules
 
@@ -972,8 +962,6 @@ Your goal is to propose a JSON "patch" that updates the game state. For maximum 
     }
     ```
 
-*   **DEPRECATED AND FORBIDDEN (Dot Notation):**
-    Do NOT use dot notation keys like `"player_character_data.inventory.gold"`. This format is deprecated and will cause errors. Always use the nested object structure shown above.
 
 *   **Be Precise:** Only include keys for values that have actually changed.
 *   **Use `__DELETE__` to Remove:** To remove a key from the state entirely, set its value to the special string `__DELETE__`.
