@@ -3,6 +3,7 @@ import os
 import json
 import sys
 import subprocess
+from unittest.mock import patch
 
 # Add the project root to the Python path to allow for imports
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -49,6 +50,24 @@ if DEPS_AVAILABLE:
     # Register cleanup on exit
     import atexit
     atexit.register(lambda: test_setup.cleanup())
+
+
+def create_mock_gemini_response(narrative="Test response", planning_block=None, state_updates=None):
+    """Create a mock response that mimics Gemini API structure."""
+    response_data = {
+        "narrative": narrative
+    }
+    
+    if planning_block:
+        response_data["planning_block"] = planning_block
+    
+    if state_updates:
+        response_data["state_updates"] = state_updates
+    
+    # Create a mock response object
+    mock_response = type('MockResponse', (), {})()
+    mock_response.text = json.dumps(response_data)
+    return mock_response
 
 
 def run_god_command(test_instance, action, command_string=None):
@@ -105,12 +124,29 @@ def run_god_command(test_instance, action, command_string=None):
 
 
 class TestInteractionIntegration(unittest.TestCase):
+    """Integration tests with mocked Gemini API calls for faster execution."""
 
     @classmethod
-    def setUpClass(cls):
+    @patch('gemini_service._call_gemini_api')
+    def setUpClass(cls, mock_gemini_api):
         """Create one campaign for all tests to share."""
         if not DEPS_AVAILABLE:
             return  # Skip setup if dependencies missing - individual tests will fail
+        
+        # Mock the initial campaign creation response
+        mock_gemini_api.return_value = create_mock_gemini_response(
+            narrative="Welcome to the land of dragons. You are a brave knight facing a choice.",
+            planning_block="What would you like to do?\n1. **FaceTheDragon:** Confront the dragon\n2. **SeekAllies:** Look for allies\n3. **Other:** Something else",
+            state_updates={
+                "player_character_data": {
+                    "name": "Test Knight",
+                    "class": "Fighter",
+                    "level": 1,
+                    "hp_max": 10,
+                    "hp_current": 10
+                }
+            }
+        )
         cls.app = create_app()
         cls.app.config['TESTING'] = True
         cls.client = cls.app.test_client()
@@ -159,11 +195,27 @@ class TestInteractionIntegration(unittest.TestCase):
         finally:
             test_setup.cancel_timeout()  # Cancel timeout
 
-    def test_ai_state_update_is_merged_correctly(self):
+    @patch('gemini_service._call_gemini_api')
+    def test_ai_state_update_is_merged_correctly(self, mock_gemini_api):
         """
         Milestone 2: Verify that an AI-proposed update is merged without data loss.
         Uses a specific prompt designed to trigger state changes.
         """
+        # Mock the API response with state updates
+        mock_gemini_api.return_value = create_mock_gemini_response(
+            narrative="You drink the magical potion and feel your strength surge! You also find 50 gold pieces.",
+            state_updates={
+                "player_character_data": {
+                    "attributes": {
+                        "strength": 13  # Increased from 10
+                    },
+                    "resources": {
+                        "gold": 50
+                    }
+                }
+            }
+        )
+        
         # Don't pre-set conflicting state - let the AI work with the natural campaign state
         # Just verify we have a character to work with
         initial_state_json = run_god_command(self, 'ask')
@@ -339,11 +391,19 @@ class TestInteractionIntegration(unittest.TestCase):
         print("✅ Comprehensive deep merge test with all Python types completed successfully!")
         print(f"Final test data structure has {len(test_data)} root keys with complex nesting preserved")
 
-    def test_story_progression_smoke_test(self):
+    @patch('gemini_service._call_gemini_api')
+    def test_story_progression_smoke_test(self, mock_gemini_api):
         """
         Quick smoke test: Verify basic story progression works.
         Lightweight test that ensures the story system responds to commands.
         """
+        # Mock the API response for story progression
+        mock_gemini_api.return_value = create_mock_gemini_response(
+            narrative="You venture deeper into the ancient forest, the canopy above filtering the sunlight into dancing patterns. "
+                     "As you push through the undergrowth, you discover an ancient artifact - a crystalline orb that pulses "
+                     "with an otherworldly light. The artifact seems to resonate with magical energy."
+        )
+        
         # Simple story command
         story_command = (
             "I explore the nearby forest and discover an ancient artifact. "
