@@ -4,7 +4,7 @@
 
 **Action**: List EVERY comment individually, apply changes, commit, and post replies to show resolution
 
-**Usage**: `/review [PR#]` or `/copilot [PR#]`
+**Usage**: `/review [PR#]`
 
 **Enhanced Implementation**: 
 1. **Extract ALL Comments**:

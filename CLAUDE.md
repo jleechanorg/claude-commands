@@ -424,6 +424,11 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 5. 🚨 **NEVER DISMISS FAILING TESTS**: ❌ "minor failures" or "test expectation updates" | ✅ Fix ALL failing tests systematically | Debug root cause | Real bugs vs test issues | One failure = potential systemic issue
 6. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
 7. **Web Scraping**: Use full-content tools (curl) not search snippets
+8. **Log Files Location**: 
+   - ✅ Logs are in `/tmp/worldarchitectai_logs/[branch-name].log`
+   - ✅ Branch-specific logs: e.g., `/tmp/worldarchitectai_logs/feature-enhanced-character-codesign.log`
+   - ✅ Use `strings /tmp/worldarchitectai_logs/[branch].log | grep -i "pattern"` for binary log files
+   - ✅ Check current branch with `git branch --show-current` to find correct log file
 
 **Test Commands**: → `.cursor/rules/validation_commands.md`
 

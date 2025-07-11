@@ -386,6 +386,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                     }
                 }
+                // Check for simple numbered format: "1. ActionName" (without bold markers)
+                else if (/^\d+\.\s+.+/.test(line) && !line.includes('**')) {
+                    const match = line.match(/^(\d+)\.\s+(.+)$/);
+                    if (match) {
+                        const actionId = match[2].trim();
+                        choices.push({
+                            id: actionId,
+                            fullText: line,
+                            description: actionId // Use action ID as description for simple format
+                        });
+                    }
+                }
             }
             
             // Check for bracket format: "**[ActionName]:** Description"

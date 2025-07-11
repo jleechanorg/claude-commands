@@ -50,6 +50,60 @@ if DEPS_AVAILABLE:
     import atexit
     atexit.register(lambda: test_setup.cleanup())
 
+
+def run_god_command(test_instance, action, command_string=None):
+    """Shared helper function to run god-command script and return output."""
+    # Use sys.executable to ensure we're using the python from the venv
+    python_executable = sys.executable
+    script_path = os.path.join(project_root, "main.py")
+    base_command = [
+        python_executable, script_path, "god-command",
+        action,
+        "--campaign_id", test_instance.campaign_id,
+        "--user_id", test_instance.user_id
+    ]
+    if command_string:
+        base_command.extend(["--command_string", command_string])
+    
+    # Set TESTING environment variable
+    env = os.environ.copy()
+    env["TESTING"] = "true"
+    
+    # Run the god-command from the original directory
+    result = subprocess.run(base_command, capture_output=True, text=True, cwd=project_root, env=env)
+    test_instance.assertEqual(result.returncode, 0, f"god-command {action} failed: {result.stderr}")
+
+    # The god-command logs JSON to stderr (via logging_util.info), not stdout
+    if action == 'ask':
+        # Look for JSON in stderr output
+        output = result.stderr
+        # Find the line that starts with "Current game state:"
+        lines = output.split('\n')
+        json_lines = []
+        capturing = False
+        for line in lines:
+            if 'Current game state:' in line:
+                capturing = True
+                continue
+            if capturing:
+                json_lines.append(line)
+        
+        # Join the JSON lines and parse
+        json_text = '\n'.join(json_lines).strip()
+        if json_text:
+            return json_text
+        else:
+            # Fallback: try to find JSON block directly
+            json_start = output.find('{')
+            json_end = output.rfind('}') + 1
+            if json_start != -1 and json_end > json_start:
+                return output[json_start:json_end]
+            else:
+                test_instance.fail(f"No JSON found in god-command output: {output}")
+    
+    return result.stderr
+
+
 class TestInteractionIntegration(unittest.TestCase):
 
     @classmethod
@@ -88,32 +142,6 @@ class TestInteractionIntegration(unittest.TestCase):
         # NOTE: For now we leave Firestore docs in place for manual inspection.
         pass
 
-    def _run_god_command(self, action, command_string=None):
-        """Helper function to run the god-command script and return its output."""
-        # Use sys.executable to ensure we're using the python from the venv
-        python_executable = sys.executable
-        script_path = os.path.join(project_root, "main.py")
-        base_command = [
-            python_executable, script_path, "god-command",
-            action,
-            "--campaign_id", self.campaign_id,
-            "--user_id", self.user_id
-        ]
-        if command_string:
-            base_command.extend(["--command_string", command_string])
-        
-        # Run the god-command from the original directory
-        result = subprocess.run(base_command, capture_output=True, text=True, cwd=project_root)
-        self.assertEqual(result.returncode, 0, f"god-command {action} failed: {result.stderr}")
-
-        # The god-command 'ask' prints an info line before the JSON. Extract the JSON block.
-        output = result.stdout.strip()
-        if action == 'ask':
-            json_start = output.find('{')
-            json_text = output[json_start:] if json_start != -1 else output
-            return json_text
-        return output
-
     def test_new_campaign_creates_initial_state(self):
         """
         Milestone 1: Verify that a new campaign generates an initial game state.
@@ -122,7 +150,7 @@ class TestInteractionIntegration(unittest.TestCase):
         test_setup.set_timeout(60)  # 60 second timeout
         try:
             # Fetch the state from the shared campaign to verify it was created correctly
-            state_json = self._run_god_command('ask')
+            state_json = run_god_command(self, 'ask')
             game_state = json.loads(state_json)
 
             # Basic sanity assertions. We cannot predict the exact content, but the structure should exist.
@@ -138,7 +166,7 @@ class TestInteractionIntegration(unittest.TestCase):
         """
         # Don't pre-set conflicting state - let the AI work with the natural campaign state
         # Just verify we have a character to work with
-        initial_state_json = self._run_god_command('ask')
+        initial_state_json = run_god_command(self, 'ask')
         initial_state = json.loads(initial_state_json)
         self.assertIn('player_character_data', initial_state)
 
@@ -163,7 +191,7 @@ class TestInteractionIntegration(unittest.TestCase):
         self.assertEqual(interaction_response.status_code, 200)
 
         # Verify the AI made the requested changes
-        final_state_json = self._run_god_command('ask')
+        final_state_json = run_god_command(self, 'ask')
         final_state = json.loads(final_state_json)
         
         # Check that the AI made some stat changes (we can't predict exact values with natural state)
@@ -247,30 +275,30 @@ class TestInteractionIntegration(unittest.TestCase):
         }
         
         initial_set_command = f'GOD_MODE_SET: test_data = {json.dumps(complex_initial_state)}'
-        self._run_god_command('set', initial_set_command)
+        run_god_command(self, 'set', initial_set_command)
 
         # Test 1: Deep nested update (3 levels deep)
         update_set_command = 'GOD_MODE_SET: test_data.level1_dict.level2_dict.level3_string = "updated_deep_value"'
-        self._run_god_command('set', update_set_command)
+        run_god_command(self, 'set', update_set_command)
         
         # Test 2: Add new nested structure
         add_new_command = 'GOD_MODE_SET: test_data.level1_dict.level2_dict.level3_new_dict = {"brand_new": "nested_value", "number": 999}'
-        self._run_god_command('set', add_new_command)
+        run_god_command(self, 'set', add_new_command)
         
         # Test 3: Update list at level 2
         update_list_command = 'GOD_MODE_SET: test_data.level1_dict.level2_list = ["x", "y", "z", "new_item"]'
-        self._run_god_command('set', update_list_command)
+        run_god_command(self, 'set', update_list_command)
         
         # Test 4: Update root level value
         update_root_command = 'GOD_MODE_SET: test_data.level1_string = "updated_root_value"'
-        self._run_god_command('set', update_root_command)
+        run_god_command(self, 'set', update_root_command)
         
         # Test 5: Add completely new root level structure
         add_root_command = 'GOD_MODE_SET: test_data.new_root_dict = {"deeply": {"nested": {"value": "success", "types": [1, 2.5, true, null]}}}'
-        self._run_god_command('set', add_root_command)
+        run_god_command(self, 'set', add_root_command)
         
         # Verify all changes were applied correctly
-        final_state_json = self._run_god_command('ask')
+        final_state_json = run_god_command(self, 'ask')
         final_state = json.loads(final_state_json)
         
         test_data = final_state['test_data']
@@ -404,42 +432,6 @@ class BaseCampaignIntegrationTest(unittest.TestCase):
         self.user_id = self.__class__.user_id
         self.campaign_id = self.__class__.campaign_id
 
-    def _run_god_command(self, action, command_string=None):
-        """Helper function to run the god-command script and return its output."""
-        # Use vpython wrapper to ensure virtual environment is activated
-        # project_root is mvp_site, so go up one level to find vpython
-        real_project_root = os.path.dirname(project_root)
-        vpython_script = os.path.join(real_project_root, "vpython")
-        script_path = os.path.join(project_root, "main.py")
-        base_command = [
-            vpython_script, script_path, "god-command",
-            action,
-            "--campaign_id", self.campaign_id,
-            "--user_id", self.user_id
-        ]
-        if command_string:
-            base_command.extend(["--command_string", command_string])
-        
-        # Set TESTING environment variable
-        env = os.environ.copy()
-        env["TESTING"] = "true"
-        
-        result = subprocess.run(base_command, capture_output=True, text=True, cwd=real_project_root, env=env)
-        self.assertEqual(result.returncode, 0, f"god-command {action} failed: {result.stderr}")
-
-        # The JSON output is in stderr (logging), not stdout (vpython messages)
-        if action == 'ask':
-            combined_output = result.stderr  # JSON is logged to stderr
-            json_start = combined_output.find('{')
-            json_end = combined_output.rfind('}') + 1
-            if json_start != -1 and json_end > json_start:
-                json_text = combined_output[json_start:json_end]
-                return json_text
-            else:
-                self.fail(f"Could not find valid JSON in god-command output. Output: {combined_output[:500]}")
-        
-        return result.stdout.strip()
-
     def start_campaign_story(self):
         """Common method to start the campaign story."""
         return self.client.post(
@@ -458,7 +450,7 @@ class BaseCampaignIntegrationTest(unittest.TestCase):
 
     def get_game_state(self):
         """Get the current game state as a parsed JSON object."""
-        state_json = self._run_god_command('ask')
+        state_json = run_god_command(self, 'ask')
         return json.loads(state_json)
 
     def assert_character_created(self, expected_name, expected_class=None, expected_alignment=None):
@@ -710,6 +702,290 @@ As you struggle with your vampiric nature and the weight of your past, you must 
         self.assertIn('hp_max', astarion, "Astarion should have max HP")
         
         print(f"✅ Astarion combat mechanics test passed - Fighting {len(combatants)} combatants")
+
+    def test_character_creation_ai_generated_with_specified_character(self):
+        """Test AIGenerated path with a pre-specified character (e.g., Geralt of Rivia)"""
+        # Create campaign with specified character
+        create_response = self.client.post(
+            '/api/campaigns',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({
+                'prompt': 'I want to play as Geralt of Rivia, the legendary witcher',
+                'title': 'Witcher Campaign',
+                'selected_prompts': ['narrative', 'mechanics']
+            })
+        )
+        self.assertEqual(create_response.status_code, 201)
+        campaign_id = create_response.get_json()['campaign_id']
+        
+        # First interaction should recognize Geralt and offer design options
+        interact_response = self.client.post(
+            f'/api/campaigns/{campaign_id}/interact',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({'input': '1'})  # Select AIGenerated
+        )
+        self.assertEqual(interact_response.status_code, 200)
+        response_data = interact_response.get_json()
+        
+        # Verify character recognition
+        self.assertIn('Geralt', response_data['response'], "Should recognize Geralt")
+        
+        # Verify complete character sheet is shown
+        response_text = response_data['response']
+        self.assertIn('CHARACTER SHEET', response_text, "Should show character sheet")
+        self.assertIn('STR:', response_text, "Should show STR score")
+        self.assertIn('DEX:', response_text, "Should show DEX score")
+        self.assertIn('CON:', response_text, "Should show CON score")
+        self.assertIn('INT:', response_text, "Should show INT score")
+        self.assertIn('WIS:', response_text, "Should show WIS score")
+        self.assertIn('CHA:', response_text, "Should show CHA score")
+        self.assertIn('Equipment:', response_text, "Should show equipment")
+        
+        # Verify planning block
+        self.assertIn('--- PLANNING BLOCK ---', response_text, "Should have planning block")
+        
+        # Approve the character
+        approve_response = self.client.post(
+            f'/api/campaigns/{campaign_id}/interact',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({'input': '1'})  # Approve character
+        )
+        self.assertEqual(approve_response.status_code, 200)
+        
+        # Verify character data is stored
+        final_state_json = run_god_command(self, 'ask', campaign_id=campaign_id)
+        final_state = json.loads(final_state_json)
+        pc_data = final_state.get('player_character_data', {})
+        
+        self.assertEqual(pc_data.get('name'), 'Geralt', "Character name should be Geralt")
+        self.assertIn('class', pc_data, "Should have character class")
+        self.assertIn('hp_max', pc_data, "Should have max HP")
+        
+        print("✅ AIGenerated path with specified character test passed")
+
+    def test_character_creation_ai_generated_no_character(self):
+        """Test AIGenerated path without pre-specified character"""
+        # Create campaign without specified character
+        create_response = self.client.post(
+            '/api/campaigns',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({
+                'prompt': 'A dark fantasy world filled with ancient magic',
+                'title': 'Dark Fantasy Campaign',
+                'selected_prompts': ['narrative', 'mechanics']
+            })
+        )
+        self.assertEqual(create_response.status_code, 201)
+        campaign_id = create_response.get_json()['campaign_id']
+        
+        # First interaction should offer generic character creation
+        interact_response = self.client.post(
+            f'/api/campaigns/{campaign_id}/interact',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({'input': '1'})  # Select AIGenerated
+        )
+        self.assertEqual(interact_response.status_code, 200)
+        response_data = interact_response.get_json()
+        
+        # Verify generic greeting
+        response_text = response_data['response']
+        self.assertIn('CHARACTER SHEET', response_text, "Should show character sheet")
+        
+        # Verify all required character elements
+        self.assertIn('Race:', response_text, "Should show race")
+        self.assertIn('Class:', response_text, "Should show class")
+        self.assertIn('Level:', response_text, "Should show level")
+        self.assertIn('Background:', response_text, "Should show background")
+        self.assertIn('Why This Character:', response_text, "Should explain choices")
+        
+        print("✅ AIGenerated path without character test passed")
+
+    def test_character_creation_standard_dnd_path(self):
+        """Test StandardD&D path with step-by-step choices"""
+        # Create campaign
+        create_response = self.client.post(
+            '/api/campaigns',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({
+                'prompt': 'Classic D&D adventure',
+                'title': 'Standard D&D Campaign',
+                'selected_prompts': ['narrative', 'mechanics']
+            })
+        )
+        self.assertEqual(create_response.status_code, 201)
+        campaign_id = create_response.get_json()['campaign_id']
+        
+        # Select StandardD&D option
+        interact_response = self.client.post(
+            f'/api/campaigns/{campaign_id}/interact',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({'input': '2'})  # Select StandardD&D
+        )
+        self.assertEqual(interact_response.status_code, 200)
+        response_data = interact_response.get_json()
+        
+        # Should present race options
+        response_text = response_data['response']
+        self.assertIn('Human', response_text, "Should list Human race")
+        self.assertIn('Elf', response_text, "Should list Elf race")
+        self.assertIn('Dwarf', response_text, "Should list Dwarf race")
+        
+        # Select Human (option 1)
+        race_response = self.client.post(
+            f'/api/campaigns/{campaign_id}/interact',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({'input': '1'})  # Select Human
+        )
+        self.assertEqual(race_response.status_code, 200)
+        
+        # Should now present class options
+        class_text = race_response.get_json()['response']
+        self.assertIn('Fighter', class_text, "Should list Fighter class")
+        self.assertIn('Wizard', class_text, "Should list Wizard class")
+        
+        print("✅ StandardD&D path test passed")
+
+    def test_character_creation_custom_class_path(self):
+        """Test CustomClass path with unique character concept"""
+        # Create campaign with custom character idea
+        create_response = self.client.post(
+            '/api/campaigns',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({
+                'prompt': 'I want to play as a time-traveling chronomancer',
+                'title': 'Custom Character Campaign',
+                'selected_prompts': ['narrative', 'mechanics']
+            })
+        )
+        self.assertEqual(create_response.status_code, 201)
+        campaign_id = create_response.get_json()['campaign_id']
+        
+        # Select CustomClass option
+        interact_response = self.client.post(
+            f'/api/campaigns/{campaign_id}/interact',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({'input': '3'})  # Select CustomClass
+        )
+        self.assertEqual(interact_response.status_code, 200)
+        response_data = interact_response.get_json()
+        
+        # Should acknowledge custom concept
+        response_text = response_data['response']
+        self.assertIn('chronomancer', response_text.lower(), "Should acknowledge chronomancer concept")
+        
+        # Should ask for more details or present custom mechanics
+        self.assertIn('--- PLANNING BLOCK ---', response_text, "Should have planning block")
+        
+        print("✅ CustomClass path test passed")
+
+    def test_character_creation_numeric_input_handling(self):
+        """Test that numeric inputs are correctly interpreted during character creation"""
+        # Create campaign
+        create_response = self.client.post(
+            '/api/campaigns',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({
+                'prompt': 'Test numeric input handling',
+                'title': 'Numeric Input Test',
+                'selected_prompts': ['narrative', 'mechanics']
+            })
+        )
+        self.assertEqual(create_response.status_code, 201)
+        campaign_id = create_response.get_json()['campaign_id']
+        
+        # Send numeric input "2" - should select StandardD&D, not continue story
+        interact_response = self.client.post(
+            f'/api/campaigns/{campaign_id}/interact',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({'input': '2'})
+        )
+        self.assertEqual(interact_response.status_code, 200)
+        response_data = interact_response.get_json()
+        
+        # Verify it interpreted as option selection, not story continuation
+        response_text = response_data['response']
+        # Should present race/class options, not continue story
+        races_presented = any(race in response_text for race in ['Human', 'Elf', 'Dwarf', 'Halfling'])
+        self.assertTrue(races_presented, "Numeric input should trigger StandardD&D path, not story continuation")
+        
+        print("✅ Numeric input handling test passed")
+
+    def test_character_creation_final_approval_enforcement(self):
+        """Test that final approval step is always presented"""
+        # Create campaign
+        create_response = self.client.post(
+            '/api/campaigns',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({
+                'prompt': 'Test final approval',
+                'title': 'Approval Test',
+                'selected_prompts': ['narrative', 'mechanics']
+            })
+        )
+        self.assertEqual(create_response.status_code, 201)
+        campaign_id = create_response.get_json()['campaign_id']
+        
+        # Select AIGenerated
+        interact_response = self.client.post(
+            f'/api/campaigns/{campaign_id}/interact',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({'input': '1'})
+        )
+        self.assertEqual(interact_response.status_code, 200)
+        response_data = interact_response.get_json()
+        
+        # Verify final approval options are presented
+        response_text = response_data['response']
+        self.assertIn('Would you like to', response_text, "Should ask for approval")
+        approval_options = [
+            'Play as this character',
+            'Make changes',
+            'Start over'
+        ]
+        for option in approval_options:
+            self.assertIn(option, response_text, f"Should include '{option}' option")
+        
+        print("✅ Final approval enforcement test passed")
+
+    def test_character_creation_shows_campaign_summary(self):
+        """Test that character creation displays full campaign summary"""
+        # Create campaign with all options
+        create_response = self.client.post(
+            '/api/campaigns',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({
+                'prompt': 'I want to play as Drizzt Do\'Urden in the Underdark',
+                'title': 'Drizzt\'s Journey',
+                'selected_prompts': ['narrative', 'mechanics']
+            })
+        )
+        self.assertEqual(create_response.status_code, 201)
+        campaign_id = create_response.get_json()['campaign_id']
+        
+        # First interaction should show campaign summary
+        interact_response = self.client.post(
+            f'/api/campaigns/{campaign_id}/interact',
+            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
+            data=json.dumps({'input': ''})  # Empty input to see initial response
+        )
+        self.assertEqual(interact_response.status_code, 200)
+        response_data = interact_response.get_json()
+        response_text = response_data['response']
+        
+        # Verify campaign summary is shown
+        self.assertIn('CAMPAIGN SUMMARY', response_text, "Should show campaign summary header")
+        self.assertIn('Title:', response_text, "Should show title field")
+        self.assertIn('Character:', response_text, "Should show character field")
+        self.assertIn('Setting:', response_text, "Should show setting field")
+        self.assertIn('Description:', response_text, "Should show description field")
+        self.assertIn('AI Personalities:', response_text, "Should show personalities")
+        self.assertIn('Options:', response_text, "Should show options")
+        
+        # Verify specific content
+        self.assertIn('Drizzt', response_text, "Should show character name")
+        self.assertIn('Narrative, Mechanics', response_text, "Should list active personalities")
+        
+        print("✅ Campaign summary display test passed")
 
 
 if __name__ == '__main__':

@@ -29,10 +29,11 @@ class TestAlwaysJSONMode(unittest.TestCase):
         self.game_state.npc_data = {}
         
         with patch('gemini_service._call_gemini_api') as mock_api:
-            # Mock the API response - include planning block to avoid duplicate generation
+            # Mock the API response - JSON-first with separate planning block field
             mock_response = MagicMock()
             mock_response.text = json.dumps({
-                "narrative": "Welcome to character creation!\n\n--- PLANNING BLOCK ---\nWhat would you like to do?\n1. **[Create_1]:** Create your character\n2. **[Skip_2]:** Skip character creation",
+                "narrative": "Welcome to character creation!",
+                "planning_block": "What would you like to do?\n1. **[Create_1]:** Create your character\n2. **[Skip_2]:** Skip character creation",
                 "entities_mentioned": [],
                 "location_confirmed": "Character Creation",
                 "state_updates": {
@@ -60,12 +61,17 @@ class TestAlwaysJSONMode(unittest.TestCase):
             self.assertTrue(mock_api.called, 
                           "API should have been called (JSON mode is always enabled)")
             
-            # Verify we got a clean GeminiResponse with narrative text (not JSON)
+            # Verify we got a clean GeminiResponse with JSON-first structure
             self.assertIsNotNone(result)
-            # The narrative should include the planning block
+            # The narrative should be clean (no planning block in narrative_text)
             self.assertIn("Welcome to character creation!", result.narrative_text)
-            self.assertIn("--- PLANNING BLOCK ---", result.narrative_text)
+            self.assertNotIn("--- PLANNING BLOCK ---", result.narrative_text)  # Should be in separate field
             self.assertNotIn('"narrative":', result.narrative_text)  # Should be clean text, not JSON
+            
+            # Planning block should be in structured response
+            self.assertIsNotNone(result.structured_response)
+            self.assertIn("Create_1", result.structured_response.planning_block)
+            self.assertIn("Skip_2", result.structured_response.planning_block)
             
     def test_json_mode_with_entities(self):
         """Test that JSON mode is used when entities are present"""

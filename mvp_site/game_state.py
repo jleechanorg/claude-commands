@@ -89,7 +89,7 @@ class GameState:
             hp_current = pc_data.get('hp_current')
             hp_max = pc_data.get('hp_max')
             
-            if hp_current is not None and hp_max is not None:
+            if hp_current is not None and hp_max is not None and hp_max > 0:
                 # Check for unconscious/death vs HP mismatch
                 if 'unconscious' in narrative_lower or 'lies unconscious' in narrative_lower:
                     if hp_current > 0:
@@ -108,6 +108,16 @@ class GameState:
                 elif hp_percentage > 90:  # Healthy
                     if any(word in narrative_lower for word in ['wounded', 'injured', 'bleeding', 'dying', 'unconscious']):
                         discrepancies.append(f"Narrative describes character as injured but state shows healthy ({hp_current}/{hp_max} HP)")
+            elif hp_current is not None and hp_max == 0:
+                # Skip validation only during character creation when HP is not yet initialized
+                campaign_state = self.world_data.get('campaign_state', '')
+                character_creation = self.custom_campaign_state.get('character_creation', {})
+                is_character_creation = (
+                    campaign_state == 'character_creation' or 
+                    character_creation.get('in_progress', False)
+                )
+                if not is_character_creation:
+                    discrepancies.append(f"Character has invalid HP state: {hp_current}/{hp_max} (hp_max should not be 0 outside character creation)")
         
         # Check location consistency
         current_location = self.world_data.get('current_location_name') or self.world_data.get('current_location')

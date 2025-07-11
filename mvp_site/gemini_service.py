@@ -1025,56 +1025,8 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     # - structured_response: Parsed JSON structure with state updates, entities, etc.
     return gemini_response
 
-def _is_in_character_creation(response_text, game_state, structured_response=None):
-    """
-    Determine if we're currently in character creation mode using structured data.
-    
-    Checks multiple sources in order of preference:
-    1. Structured JSON response (preferred)
-    2. Game state character creation tracking
-    3. Legacy text patterns (fallback)
-    
-    Args:
-        response_text: The AI's response text
-        game_state: Current game state
-        structured_response: Parsed JSON response object (optional)
-        
-    Returns:
-        bool: True if in character creation mode
-    """
-    # Method 1: Check structured response JSON (preferred)
-    if structured_response and hasattr(structured_response, 'state_updates') and structured_response.state_updates:
-        state_updates = structured_response.state_updates
-        
-        # Check if character_creation is being updated in this response
-        custom_campaign = state_updates.get('custom_campaign_state', {})
-        char_creation = custom_campaign.get('character_creation', {})
-        
-        # Check if character creation is marked as in progress
-        if char_creation.get('in_progress') is True:
-            logging_util.info("Character creation detected via structured response")
-            return True
-        
-        # If structured response has state updates but no character creation,
-        # this takes precedence over game state (assume character creation is not active)
-        logging_util.debug("Structured response present but no character creation indicated")
-        return False
-    
-    # Method 2: Check current game state
-    if game_state and hasattr(game_state, 'custom_campaign_state'):
-        char_creation = game_state.custom_campaign_state.get('character_creation', {})
-        
-        # Check if character creation is currently in progress
-        if char_creation.get('in_progress') is True:
-            logging_util.info("Character creation detected via game state")
-            return True
-    
-    # Method 3: Legacy text pattern fallback
-    if re.search(r"\[CHARACTER CREATION", response_text, re.IGNORECASE):
-        logging_util.info("Character creation detected via legacy text pattern")
-        return True
-    
-    return False
+# Note: _is_in_character_creation function removed as we now include planning blocks
+# during character creation for better interactivity
 
 def _validate_and_enforce_planning_block(response_text, user_input, game_state, chosen_model, system_instruction, structured_response=None):
     """
@@ -1092,10 +1044,9 @@ def _validate_and_enforce_planning_block(response_text, user_input, game_state, 
     Returns:
         str: Response text with planning block ensured
     """
-    # Skip planning block enforcement during character creation
-    if _is_in_character_creation(response_text, game_state, structured_response):
-        logging_util.info("Skipping planning block for character creation step")
-        return response_text
+    # Note: We now INCLUDE planning blocks during character creation for interactivity
+    # The previous behavior of skipping them has been removed to support
+    # interactive character creation with player choices
     
     # Skip planning block if user is switching to god/dm mode
     if any(phrase in user_input.lower() for phrase in constants.MODE_SWITCH_PHRASES):
@@ -1108,11 +1059,15 @@ def _validate_and_enforce_planning_block(response_text, user_input, game_state, 
         return response_text
     
     # Check if response already contains a planning block
-    if "--- PLANNING BLOCK ---" in response_text:
-        logging_util.info("Planning block found in response")
+    # JSON-FIRST: Only check structured response (this is the authoritative source)
+    if structured_response and hasattr(structured_response, 'planning_block') and structured_response.planning_block and structured_response.planning_block.strip():
+        logging_util.info("Planning block found in JSON structured response")
         return response_text
     
-    logging_util.warning("PLANNING_BLOCK_MISSING: Story mode response missing required planning block")
+    # REMOVED LEGACY FALLBACK: No longer check response text for planning blocks
+    # The JSON field is authoritative - if it's empty, we generate content regardless of text
+    
+    logging_util.warning("⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block")
     
     # Determine if we need a deep think block based on keywords
     think_keywords = ['think', 'plan', 'consider', 'strategize', 'options']
@@ -1139,7 +1094,30 @@ They are asking to think/plan/consider their options. Generate ONLY a planning b
 Full narrative context:
 {response_text}"""
     else:
-        planning_prompt = f"""
+        # Check if this is character creation approval step
+        is_character_approval = (
+            "[CHARACTER CREATION" in response_text and 
+            "CHARACTER SHEET" in response_text and
+            ("Would you like to play as this character" in response_text or
+             "What is your choice?" in response_text or
+             "approve this character" in response_text.lower())
+        )
+        
+        if is_character_approval:
+            planning_prompt = f"""
+CRITICAL: This is the CHARACTER CREATION APPROVAL step.
+
+The player has just been shown a complete character sheet and needs to approve it before starting the adventure.
+
+Generate ONLY a planning block with these EXACT options:
+1. **PlayCharacter:** Begin the adventure!
+2. **MakeChanges:** Tell me what you'd like to adjust
+3. **StartOver:** Design a completely different character
+
+Full narrative context:
+{response_text}"""
+        else:
+            planning_prompt = f"""
 CRITICAL: Generate planning options ONLY for {pc_name} in {current_location}.
 DO NOT reference other characters, campaigns, or unrelated narrative elements.
 
@@ -1166,14 +1144,37 @@ Full narrative context:
         if not planning_block.startswith("\n\n--- PLANNING BLOCK ---"):
             planning_block = "\n\n" + planning_block.strip()
         
-        # Append the planning block
+        # PRIMARY: Update structured_response.planning_block (this is what frontend uses)
+        if structured_response and isinstance(structured_response, NarrativeResponse):
+            # Extract just the planning block content (without header)
+            clean_planning_block = planning_text.strip()  # Use planning_text directly, not planning_block
+            if clean_planning_block:
+                structured_response.planning_block = clean_planning_block
+                logging_util.info(f"Updated structured_response.planning_block with {len(clean_planning_block)} characters")
+            else:
+                # Fallback content for empty generation
+                structured_response.planning_block = "What would you like to do next?\n1. **[Continue]:** Continue with your current course of action.\n2. **[Explore]:** Explore your surroundings.\n3. **[Other]:** Describe a different action you'd like to take."
+                logging_util.info("Used fallback content for structured_response.planning_block")
+        
+        # SECONDARY: Update response_text for backward compatibility only
+        if not planning_block.startswith("\n\n--- PLANNING BLOCK ---"):
+            planning_block = "\n\n--- PLANNING BLOCK ---\n" + planning_text.strip()
         response_text = response_text + planning_block
+        
         logging_util.info(f"Added LLM-generated {'deep think' if needs_deep_think else 'standard'} planning block")
         
     except Exception as e:
         logging_util.error(f"Failed to generate planning block: {e}")
-        # Fallback to a minimal generic block
-        response_text = response_text + "\n\n--- PLANNING BLOCK ---\nWhat would you like to do next?\n1. **[Continue_1]:** Continue with your current course of action.\n2. **[Explore_2]:** Explore your surroundings.\n3. **[Other_3]:** Describe a different action you'd like to take."
+        
+        # PRIMARY: Update structured_response.planning_block with fallback
+        fallback_content = "What would you like to do next?\n1. **[Continue]:** Continue with your current course of action.\n2. **[Explore]:** Explore your surroundings.\n3. **[Other]:** Describe a different action you'd like to take."
+        if structured_response and isinstance(structured_response, NarrativeResponse):
+            structured_response.planning_block = fallback_content
+            logging_util.info("Updated structured_response.planning_block with fallback content")
+        
+        # SECONDARY: Update response_text for backward compatibility
+        fallback_block = "\n\n--- PLANNING BLOCK ---\n" + fallback_content
+        response_text = response_text + fallback_block
     
     return response_text
 
@@ -1393,7 +1394,14 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
             )
             
             if dual_pass_result.final_narrative:
+                # PRIMARY: Update structured_response.narrative (this is what frontend uses)
+                if structured_response and isinstance(structured_response, NarrativeResponse):
+                    structured_response.narrative = dual_pass_result.final_narrative
+                    logging_util.info("Updated structured_response.narrative with dual-pass result")
+                
+                # SECONDARY: Update response_text for backward compatibility only
                 response_text = dual_pass_result.final_narrative
+                
                 # Calculate injected entities from the difference between passes
                 injected_count = len(dual_pass_result.total_entities_found) - len(dual_pass_result.first_pass.entities_found)
                 logging_util.info(f"ENTITY_TRACKING_RETRY: Dual-pass succeeded. "
@@ -1401,8 +1409,9 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
             else:
                 logging_util.error("ENTITY_TRACKING_RETRY: Dual-pass generation failed")
         
-        # Use the common validation function to add debug info if needed
-        response_text = _validate_entity_tracking(response_text, expected_entities, current_game_state)
+        # Use the common validation function for entity tracking validation
+        # (No longer modifies response_text - validation goes to logs only)
+        _validate_entity_tracking(response_text, expected_entities, current_game_state)
     
     # Validate and enforce planning block for story mode
     # Check if user is switching to god mode with their input
@@ -1422,14 +1431,9 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
             structured_response=gemini_response.structured_response
         )
     
-    # If response was modified (by dual-pass or planning block), recreate GeminiResponse
-    if response_text != gemini_response.narrative_text:
-        # Create a new response with the modified text
-        gemini_response = GeminiResponse(
-            narrative_text=response_text,
-            structured_response=gemini_response.structured_response,
-            model=gemini_response.model
-        )
+    # MODERNIZED: No longer recreate GeminiResponse based on response_text modifications
+    # The structured_response is now the authoritative source, response_text is for backward compatibility only
+    # The frontend uses gemini_response.structured_response directly, not narrative_text
     
     # Log GeminiResponse creation for debugging
     logging_util.debug(f"Created GeminiResponse with narrative_text length: {len(gemini_response.narrative_text)}")
