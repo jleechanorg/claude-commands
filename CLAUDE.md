@@ -558,10 +558,24 @@ Use `/list` to display all available slash commands with descriptions.
 **Command Documentation**: → `.claude/commands/`
 
 🚨 **SLASH COMMAND ENFORCEMENT**: 
-- `/e` or `/execute` MUST follow exact protocol in `.claude/commands/execute.md`
-- NEVER treat `/e` as regular request - always use milestone protocol
-- MANDATORY steps: Context check → Subagent analysis → User approval → Milestone execution
-- ❌ NEVER skip protocol steps or treat as normal task execution
+- `/e` or `/execute` MUST follow simplified protocol in `.claude/commands/execute.md`
+- NEVER treat `/e` as regular request - always use TodoWrite circuit breaker
+- MANDATORY: TodoWrite checklist → Present plan → Wait for approval → Execute
+- ❌ NEVER skip the TodoWrite circuit breaker
+
+🚨 **EXECUTE COMMAND CIRCUIT BREAKER**: When seeing `/e` or `/execute`:
+- ✅ IMMEDIATELY use TodoWrite tool with this EXACT checklist:
+  ```
+  ## EXECUTE PROTOCOL CHECKLIST
+  - [ ] Context check: ___% remaining
+  - [ ] Complexity assessment: Low/Medium/High
+  - [ ] Subagents needed? Yes/No (Why: ___)
+  - [ ] Execution plan presented to user
+  - [ ] User approval received: YES/NO
+  ```
+- ❌ NEVER start ANY work until "User approval received" is checked YES
+- ❌ NEVER skip TodoWrite - it's the circuit breaker that prevents premature execution
+- ⚠️ Breaking this = bypassing critical safety protocol
 
 **Chained Commands Support**:
 - `/e /think` - Execute with ultrathink mode enabled
