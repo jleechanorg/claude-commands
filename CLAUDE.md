@@ -2,6 +2,29 @@
 
 **Primary rules file for AI collaboration on WorldArchitect.AI**
 
+## 🚨 CRITICAL: MANDATORY BRANCH HEADER PROTOCOL
+
+**EVERY SINGLE RESPONSE MUST START WITH THIS HEADER - NO EXCEPTIONS:**
+
+```
+[Local: <branch> | Remote: <upstream> | PR: <number> <url>]
+```
+
+**Required Commands to Generate Header:**
+- `git branch --show-current` - Get local branch
+- `git rev-parse --abbrev-ref @{upstream} 2>/dev/null || echo "no upstream"` - Get remote
+- `gh pr list --head $(git branch --show-current) --json number,url` - Get PR info
+
+**Examples:**
+- `[Local: main | Remote: origin/main | PR: none]`
+- `[Local: feature-x | Remote: origin/main | PR: #123 https://github.com/user/repo/pull/123]`
+
+**❌ NEVER SKIP THIS HEADER - USER WILL CALL YOU OUT IMMEDIATELY**
+
+**🚨 PRE-RESPONSE CHECKPOINT**: Before writing ANY response, ask:
+1. "Did I include the mandatory branch header?"
+2. "Does this violate any other rules in CLAUDE.md?"
+
 ## Legend
 🚨 = CRITICAL | ⚠️ = MANDATORY | ✅ = Always/Do | ❌ = Never/Don't | → = See reference | PR = Pull Request
 
@@ -125,13 +148,11 @@ Clarify before acting | User instructions = law | ❌ delete without permission 
 Focus on primary goal | Propose before implementing | Summarize key takeaways | Externalize all knowledge
 
 **Branch Status Protocol**:
-🚨 **MANDATORY**: Always include complete git status header in every response
-- ✅ Format: `[Local: branch-name | Remote: origin/branch-name | PR: #123 https://github.com/jleechan2015/worldarchitect.ai/pull/123]`
-- ✅ Use `git branch --show-current` for local branch
-- ✅ Use `git rev-parse --abbrev-ref @{upstream}` for remote branch (if exists)
-- ✅ Use `gh pr view --json number,url` to get PR info (if exists)
-- ✅ If no PR exists, show `PR: none`
-- ✅ Essential for complete context awareness and avoiding branch confusion
+🚨 **CRITICAL ENFORCEMENT**: See top of document for mandatory header protocol
+- ❌ NEVER start a response without the branch header
+- ✅ Header commands and format documented at top of CLAUDE.md
+- 🚨 **USER EXPECTATION**: Missing header = immediate callout from user
+- ✅ This is the #1 most violated rule - extreme vigilance required
 
 **Response Modes**: 
 - Default: Structured analysis with <thinking>, <analysis>, <response> format for complex tasks
