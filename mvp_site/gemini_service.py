@@ -1137,8 +1137,16 @@ Full narrative context:
         raw_planning_response = _get_text_from_response(planning_response)
         
         # Use centralized parsing for planning block
-        planning_text, _ = _parse_gemini_response(raw_planning_response, context="planning_block")
-        planning_block = planning_text
+        planning_text, structured_planning_response = _parse_gemini_response(raw_planning_response, context="planning_block")
+        
+        # If we got a structured response with planning_block field, use that
+        if (structured_planning_response and 
+            hasattr(structured_planning_response, 'planning_block') and 
+            structured_planning_response.planning_block):
+            planning_block = structured_planning_response.planning_block
+        else:
+            # Otherwise use the raw text
+            planning_block = planning_text
         
         # Ensure it starts with newlines and the header
         if not planning_block.startswith("\n\n--- PLANNING BLOCK ---"):
@@ -1146,8 +1154,12 @@ Full narrative context:
         
         # PRIMARY: Update structured_response.planning_block (this is what frontend uses)
         if structured_response and isinstance(structured_response, NarrativeResponse):
-            # Extract just the planning block content (without header)
-            clean_planning_block = planning_text.strip()  # Use planning_text directly, not planning_block
+            # Use the actual planning block content we extracted
+            clean_planning_block = planning_block.strip()
+            # Remove the header if present
+            if clean_planning_block.startswith("--- PLANNING BLOCK ---"):
+                clean_planning_block = clean_planning_block.replace("--- PLANNING BLOCK ---", "").strip()
+            
             if clean_planning_block:
                 structured_response.planning_block = clean_planning_block
                 logging_util.info(f"Updated structured_response.planning_block with {len(clean_planning_block)} characters")
@@ -1158,7 +1170,7 @@ Full narrative context:
         
         # SECONDARY: Update response_text for backward compatibility only
         if not planning_block.startswith("\n\n--- PLANNING BLOCK ---"):
-            planning_block = "\n\n--- PLANNING BLOCK ---\n" + planning_text.strip()
+            planning_block = "\n\n--- PLANNING BLOCK ---\n" + planning_block.strip()
         response_text = response_text + planning_block
         
         logging_util.info(f"Added LLM-generated {'deep think' if needs_deep_think else 'standard'} planning block")

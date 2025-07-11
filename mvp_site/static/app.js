@@ -294,8 +294,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 .replace(/\[DEBUG_ROLL_START\]/g, '<div class="debug-rolls"><strong>🎲 Dice Roll:</strong> ')
                 .replace(/\[DEBUG_ROLL_END\]/g, '</div>');
             
-            // Parse and convert planning block choices to buttons
-            processedText = parsePlanningBlocks(processedText);
+            // REMOVED: Planning blocks are now handled via structured JSON field only
+            // processedText = parsePlanningBlocks(processedText);
         }
         
         // Add the main narrative

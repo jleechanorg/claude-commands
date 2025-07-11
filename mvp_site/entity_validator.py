@@ -7,6 +7,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 import re
 import logging_util
+from entity_utils import filter_unknown_entities
 logger = logging_util.getLogger(__name__)
 
 
@@ -56,6 +57,9 @@ class EntityValidator:
         Validate that expected entities are present in the narrative.
         Returns detailed validation result with retry suggestions.
         """
+        # Filter out 'Unknown' from expected entities - it's not a real entity
+        expected_entities = filter_unknown_entities(expected_entities)
+        
         narrative_lower = narrative_text.lower()
         found_entities = []
         missing_entities = []

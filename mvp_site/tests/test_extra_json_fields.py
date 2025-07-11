@@ -43,6 +43,8 @@ class TestExtraJSONFields(unittest.TestCase):
         # Should extract just the narrative, not the full JSON
         self.assertIsNotNone(narrative)
         self.assertIn("Welcome, adventurer!", narrative)
+        # Planning blocks are no longer extracted from narrative - they must come from JSON
+        # The entire narrative including choices should be preserved
         self.assertIn("Which option would you prefer?", narrative)
         
         # Should NOT contain JSON structure
@@ -57,6 +59,8 @@ class TestExtraJSONFields(unittest.TestCase):
         self.assertIsNotNone(response.state_updates)
         self.assertIsNotNone(response.debug_info)
         self.assertIn('dm_notes', response.debug_info)
+        # Planning block should be empty since it's not in the JSON
+        self.assertEqual(response.planning_block, "")
         
     def test_narrative_response_with_debug_info(self):
         """Test that NarrativeResponse properly handles debug_info field"""

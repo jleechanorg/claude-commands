@@ -8,6 +8,7 @@ import json
 import logging_util
 import re
 from robust_json_parser import parse_llm_json_response
+# Planning block extraction from narrative is deprecated - blocks should only come from JSON
 
 # Precompiled regex patterns for better performance
 JSON_MARKDOWN_PATTERN = re.compile(r'```json\s*\n?(.*?)\n?```', re.DOTALL)
@@ -221,6 +222,10 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
     
     if parsed_data:
         try:
+            # Planning blocks should only come from JSON field, not extracted from narrative
+            narrative = parsed_data.get('narrative', '')
+            planning_block = parsed_data.get('planning_block', '')
+            
             validated_response = NarrativeResponse(**parsed_data)
             # If god_mode_response is present, return both god mode response and narrative
             if hasattr(validated_response, 'god_mode_response') and validated_response.god_mode_response:
@@ -264,16 +269,21 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
             # Handle null or missing narrative - use empty string instead of raw JSON
             if narrative is None:
                 narrative = ''
+            
+            # Planning blocks should only come from JSON field
+            planning_block = parsed_data.get('planning_block', '')
+            
             # Extract only the fields we know about, let **kwargs handle the rest
             known_fields = {
                 'narrative': narrative,
                 'entities_mentioned': parsed_data.get('entities_mentioned', []),
                 'location_confirmed': parsed_data.get('location_confirmed') or 'Unknown',
                 'state_updates': parsed_data.get('state_updates', {}),
-                'debug_info': parsed_data.get('debug_info', {})
+                'debug_info': parsed_data.get('debug_info', {}),
+                'planning_block': planning_block
             }
             # Pass any other fields as kwargs
-            extra_fields = {k: v for k, v in parsed_data.items() if k not in known_fields}
+            extra_fields = {k: v for k, v in parsed_data.items() if k not in known_fields and k != 'planning_block'}
             fallback_response = NarrativeResponse(**known_fields, **extra_fields)
             return narrative, fallback_response
     

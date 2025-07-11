@@ -7,6 +7,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
 import logging_util
 from entity_validator import EntityValidator, ValidationResult
+from entity_utils import filter_unknown_entities
 
 logger = logging_util.getLogger(__name__)
 
@@ -73,6 +74,10 @@ class DualPassGenerator:
             DualPassResult with both passes and final narrative
         """
         logger.info("Starting dual-pass generation")
+        
+        # Filter out 'Unknown' from expected entities - it's not a real entity
+        expected_entities = filter_unknown_entities(expected_entities)
+        logger.info(f"Filtered expected entities: {expected_entities}")
         
         # PASS 1: Initial narrative generation
         logger.info("Pass 1: Generating initial narrative")
