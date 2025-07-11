@@ -3,6 +3,19 @@
 # Always uses --dangerously-skip-permissions and prompts for model choice
 # Model updated: July 6th, 2025
 
+# Check if MCP servers are installed by checking if claude mcp list returns any servers
+MCP_SERVERS=$(claude mcp list 2>/dev/null | grep -E "^\s*-" | wc -l)
+if [ "$MCP_SERVERS" -eq 0 ]; then
+    echo "🔧 MCP servers not detected. Installing..."
+    if [ -f "./claude_mcp.sh" ]; then
+        bash ./claude_mcp.sh
+        echo ""
+    else
+        echo "⚠️  claude_mcp.sh not found in current directory"
+        echo ""
+    fi
+fi
+
 # Check if it's been a month since model was last updated
 LAST_UPDATE="2025-07-06"
 CURRENT_DATE=$(date +%Y-%m-%d)
