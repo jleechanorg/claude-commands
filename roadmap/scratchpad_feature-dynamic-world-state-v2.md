@@ -586,6 +586,320 @@ class PromptEnhancer:
 ## Branch: feature/dynamic-world-state-v2
 ## PR: #501 - https://github.com/jleechan2015/worldarchitect.ai/pull/501
 
+## Current UI Integration Strategy (Based on Codebase Analysis)
+
+### Discovered Architecture
+- **SPA with API**: Single-page app using vanilla JS + Flask API
+- **No Templates**: All rendering happens client-side in JavaScript
+- **Story Display**: Content shown in `#story-content` div
+- **appendToStory()**: Main function that adds narrative to UI
+
+### Integration Points Identified
+
+#### 1. Story Entry Enhancement
+```javascript
+// app.js - Extend existing appendToStory function
+function appendToStory(content, isUser = false) {
+    const storyEntry = document.createElement('div');
+    storyEntry.className = 'story-entry ' + (isUser ? 'user-entry' : 'ai-entry');
+    
+    // ... existing narrative rendering ...
+    
+    // NEW: Add world event indicators
+    if (content.world_events && content.world_events.length > 0) {
+        const indicator = document.createElement('div');
+        indicator.className = 'world-event-indicator';
+        indicator.innerHTML = `
+            <i class="fas fa-globe"></i>
+            <span>${content.world_events.length} world change${content.world_events.length > 1 ? 's' : ''}</span>
+        `;
+        indicator.onclick = () => showEventDetails(content.world_events);
+        storyEntry.appendChild(indicator);
+    }
+    
+    document.getElementById('story-content').appendChild(storyEntry);
+}
+```
+
+#### 2. API Response Enhancement
+```python
+# main.py - Minimal change to interaction endpoint
+@app.route('/api/campaigns/<campaign_id>/interaction', methods=['POST'])
+def handle_interaction(user_id, campaign_id):
+    # ... existing code through AI response generation ...
+    
+    # NEW: Extract world events if feature enabled
+    campaign_settings = campaign_data.get('settings', {})
+    if campaign_settings.get('dynamic_world_state', {}).get('enabled', False):
+        from world_state.application import event_recorder
+        events = event_recorder.extract_events_from_interaction(
+            user_input=user_input,
+            ai_response=ai_response,
+            game_state=game_state,
+            story_context=story
+        )
+        # Add to response
+        structured_fields['world_events'] = [e.to_dict() for e in events]
+        # Store events
+        event_recorder.store_events(campaign_id, events)
+    
+    return jsonify(response_data)
+```
+
+#### 3. CSS for World State Elements
+```css
+/* style.css additions */
+.world-event-indicator {
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 4px;
+    font-size: 0.875rem;
+    color: #6366f1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.world-event-indicator:hover {
+    background: rgba(99, 102, 241, 0.2);
+}
+
+/* Post-session recap overlay */
+.session-recap-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+```
+
+### Four-Layer Implementation Plan
+
+#### Layer 1: Domain Layer
+```python
+# mvp_site/world_state/domain/__init__.py
+from dataclasses import dataclass
+from datetime import datetime
+from typing import List, Dict, Any
+import uuid
+
+@dataclass
+class WorldEvent:
+    event_type: str  # NPC_DEATH, ALLIANCE_FORMED, etc.
+    affected_entities: List[str]
+    changes: Dict[str, Any]
+    narrative_reference: str  # Links to story entry
+    cascade_effects: List[str] = None
+    event_id: str = None
+    timestamp: datetime = None
+    
+    def __post_init__(self):
+        if not self.event_id:
+            self.event_id = str(uuid.uuid4())
+        if not self.timestamp:
+            self.timestamp = datetime.utcnow()
+    
+    def to_dict(self):
+        return {
+            'event_id': self.event_id,
+            'event_type': self.event_type,
+            'affected_entities': self.affected_entities,
+            'changes': self.changes,
+            'timestamp': self.timestamp.isoformat()
+        }
+```
+
+#### Layer 2: Application Layer
+```python
+# mvp_site/world_state/application/event_recorder.py
+from typing import List
+import re
+from ..domain import WorldEvent
+
+class EventRecorderService:
+    def extract_events_from_interaction(self, user_input, ai_response, game_state, story_context):
+        """Extract world events from gameplay interaction"""
+        events = []
+        
+        # Extract from narrative
+        narrative = ai_response.get('narrative', '')
+        
+        # Death detection
+        death_patterns = [
+            r'(\w+) (?:dies|is killed|perishes|falls)',
+            r'You (?:kill|slay|defeat) (\w+)',
+            r'(\w+) is (?:dead|deceased|no more)'
+        ]
+        
+        for pattern in death_patterns:
+            matches = re.findall(pattern, narrative, re.IGNORECASE)
+            for match in matches:
+                entity = match[0] if isinstance(match, tuple) else match
+                if entity in game_state.get('npc_data', {}):
+                    events.append(WorldEvent(
+                        event_type='NPC_DEATH',
+                        affected_entities=[entity],
+                        changes={'status': 'deceased'},
+                        narrative_reference=f"scene_{len(story_context)}"
+                    ))
+        
+        # Alliance/relationship changes
+        alliance_patterns = [
+            r'(\w+) (?:joins your party|becomes your ally)',
+            r'alliance with (\w+)',
+            r'(\w+) pledges loyalty'
+        ]
+        
+        for pattern in alliance_patterns:
+            matches = re.findall(pattern, narrative, re.IGNORECASE)
+            for match in matches:
+                entity = match[0] if isinstance(match, tuple) else match
+                events.append(WorldEvent(
+                    event_type='ALLIANCE_FORMED',
+                    affected_entities=[entity, 'player'],
+                    changes={'relationship': 'allied'},
+                    narrative_reference=f"scene_{len(story_context)}"
+                ))
+        
+        return events
+```
+
+#### Layer 3: Infrastructure Layer
+```python
+# mvp_site/world_state/infrastructure/firestore_repository.py
+from ..domain import WorldEvent
+from firestore_service import db
+
+class FirestoreEventRepository:
+    def __init__(self):
+        self.collection = 'world_events'
+    
+    def save_events(self, campaign_id: str, events: List[WorldEvent]):
+        """Save events to Firestore"""
+        batch = db.batch()
+        
+        for event in events:
+            doc_ref = db.collection(self.collection).document()
+            batch.set(doc_ref, {
+                'campaign_id': campaign_id,
+                **event.to_dict()
+            })
+        
+        batch.commit()
+    
+    def get_events_for_recap(self, campaign_id: str, session_num: int):
+        """Get events for session recap"""
+        # Query events for this session
+        return db.collection(self.collection).where(
+            'campaign_id', '==', campaign_id
+        ).where(
+            'session_num', '==', session_num
+        ).get()
+```
+
+#### Layer 4: Presentation Layer
+```javascript
+// mvp_site/static/js/world-state-ui.js
+class WorldStateUI {
+    constructor() {
+        this.events = [];
+    }
+    
+    showEventDetails(events) {
+        // Simple modal for phase 1
+        const modal = document.createElement('div');
+        modal.className = 'world-event-modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <h3>World Changes</h3>
+                <ul>
+                    ${events.map(e => `
+                        <li>
+                            <i class="fas fa-${this.getEventIcon(e.event_type)}"></i>
+                            ${this.formatEvent(e)}
+                        </li>
+                    `).join('')}
+                </ul>
+                <button onclick="this.parentElement.parentElement.remove()">Close</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+    
+    getEventIcon(eventType) {
+        const icons = {
+            'NPC_DEATH': 'skull',
+            'ALLIANCE_FORMED': 'handshake',
+            'LOCATION_DISCOVERED': 'map-marker',
+            'ITEM_ACQUIRED': 'gem'
+        };
+        return icons[eventType] || 'circle';
+    }
+    
+    formatEvent(event) {
+        const formatters = {
+            'NPC_DEATH': e => `${e.affected_entities[0]} has died`,
+            'ALLIANCE_FORMED': e => `Alliance formed with ${e.affected_entities[0]}`,
+            'LOCATION_DISCOVERED': e => `Discovered ${e.affected_entities[0]}`,
+            'ITEM_ACQUIRED': e => `Acquired ${e.affected_entities[0]}`
+        };
+        return formatters[event.event_type]?.(event) || event.event_type;
+    }
+}
+
+// Initialize
+const worldStateUI = new WorldStateUI();
+window.showEventDetails = (events) => worldStateUI.showEventDetails(events);
+```
+
+### Progressive Rollout Plan
+
+#### Week 1: Foundation
+1. Create domain models
+2. Basic event extraction
+3. Simple UI indicators
+
+#### Week 2: Storage & Retrieval  
+1. Firestore integration
+2. Event querying
+3. Session detection
+
+#### Week 3: Post-Session Recap
+1. Detect session end
+2. Generate recap data
+3. Display recap overlay
+
+#### Week 4: World History Tab
+1. Add tab to UI
+2. Event timeline view
+3. Basic filtering
+
+### Feature Flags
+```python
+# Campaign settings structure
+{
+    "dynamic_world_state": {
+        "enabled": false,  # Master switch
+        "features": {
+            "event_indicators": true,
+            "post_session_recap": false,
+            "world_history_tab": false,
+            "relationship_graph": false
+        },
+        "event_retention_days": 90,
+        "max_events_per_session": 100
+    }
+}
+```
+
 ## UI/UX Design and Placement
 
 ### UI Features Overview

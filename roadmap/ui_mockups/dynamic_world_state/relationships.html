@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorldArchitect.AI - NPC Relationships</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+    <link href="relationships.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid p-4">
+        <div class="world-state-dashboard">
+            <h1 class="dashboard-title">
+                <i class="fas fa-project-diagram"></i> NPC Relationships
+                <span class="campaign-name">The Dragon's Prophecy</span>
+            </h1>
+
+            <!-- Relationship Controls -->
+            <div class="relationship-controls mb-4">
+                <div class="btn-group" role="group">
+                    <button class="btn btn-outline-primary">Timeline</button>
+                    <button class="btn btn-outline-primary active">Relationships</button>
+                    <button class="btn btn-outline-primary">Consequences</button>
+                    <button class="btn btn-outline-primary">World Map</button>
+                </div>
+                <div class="relationship-filters">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="showAllies" checked>
+                        <label class="form-check-label" for="showAllies">
+                            <i class="fas fa-handshake text-success"></i> Allies
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="showEnemies" checked>
+                        <label class="form-check-label" for="showEnemies">
+                            <i class="fas fa-skull text-danger"></i> Enemies
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="showNeutral" checked>
+                        <label class="form-check-label" for="showNeutral">
+                            <i class="fas fa-balance-scale text-secondary"></i> Neutral
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Relationship Graph Container -->
+            <div class="relationship-graph-container">
+                <div class="graph-canvas">
+                    <!-- Player Node (Center) -->
+                    <div class="relationship-node player-node" style="left: 50%; top: 50%;">
+                        <div class="node-avatar">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="node-name">You</div>
+                        <div class="node-title">The Chosen One</div>
+                    </div>
+
+                    <!-- Allied NPCs -->
+                    <div class="relationship-node ally-node" style="left: 30%; top: 20%;">
+                        <div class="node-avatar">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="node-name">Sir Aldwin</div>
+                        <div class="node-title">Knight Captain</div>
+                        <div class="trust-meter">
+                            <div class="trust-fill" style="width: 85%;"></div>
+                        </div>
+                        <div class="relationship-status">Trusted Ally</div>
+                    </div>
+
+                    <div class="relationship-node ally-node" style="left: 70%; top: 25%;">
+                        <div class="node-avatar">
+                            <i class="fas fa-hat-wizard"></i>
+                        </div>
+                        <div class="node-name">Elara Moonwhisper</div>
+                        <div class="node-title">Court Wizard</div>
+                        <div class="trust-meter">
+                            <div class="trust-fill" style="width: 65%;"></div>
+                        </div>
+                        <div class="relationship-status">Cautious Friend</div>
+                    </div>
+
+                    <!-- Enemy NPCs -->
+                    <div class="relationship-node enemy-node" style="left: 20%; top: 60%;">
+                        <div class="node-avatar">
+                            <i class="fas fa-crown"></i>
+                        </div>
+                        <div class="node-name">Baron Blackwood</div>
+                        <div class="node-title">Usurper</div>
+                        <div class="trust-meter enemy">
+                            <div class="trust-fill" style="width: 95%;"></div>
+                        </div>
+                        <div class="relationship-status">Sworn Enemy</div>
+                        <div class="status-indicator deceased">
+                            <i class="fas fa-skull"></i> Deceased
+                        </div>
+                    </div>
+
+                    <div class="relationship-node enemy-node" style="left: 80%; top: 65%;">
+                        <div class="node-avatar">
+                            <i class="fas fa-dragon"></i>
+                        </div>
+                        <div class="node-name">Malthrax</div>
+                        <div class="node-title">Ancient Dragon</div>
+                        <div class="trust-meter enemy">
+                            <div class="trust-fill" style="width: 100%;"></div>
+                        </div>
+                        <div class="relationship-status">Hostile</div>
+                    </div>
+
+                    <!-- Neutral NPCs -->
+                    <div class="relationship-node neutral-node" style="left: 50%; top: 15%;">
+                        <div class="node-avatar">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                        <div class="node-name">Marcus Goldhand</div>
+                        <div class="node-title">Merchant Prince</div>
+                        <div class="trust-meter neutral">
+                            <div class="trust-fill" style="width: 50%;"></div>
+                        </div>
+                        <div class="relationship-status">Business Associate</div>
+                    </div>
+
+                    <!-- Connection Lines -->
+                    <svg class="relationship-connections">
+                        <!-- Ally connections -->
+                        <line class="connection-line ally" x1="50%" y1="50%" x2="30%" y2="20%"></line>
+                        <line class="connection-line ally" x1="50%" y1="50%" x2="70%" y2="25%"></line>
+                        
+                        <!-- Enemy connections -->
+                        <line class="connection-line enemy" x1="50%" y1="50%" x2="20%" y2="60%"></line>
+                        <line class="connection-line enemy" x1="50%" y1="50%" x2="80%" y2="65%"></line>
+                        
+                        <!-- Neutral connections -->
+                        <line class="connection-line neutral" x1="50%" y1="50%" x2="50%" y2="15%"></line>
+                        
+                        <!-- Inter-NPC connections -->
+                        <line class="connection-line inter-npc ally" x1="30%" y1="20%" x2="70%" y2="25%"></line>
+                        <line class="connection-line inter-npc enemy" x1="70%" y1="25%" x2="80%" y2="65%"></line>
+                    </svg>
+                </div>
+
+                <!-- Legend -->
+                <div class="graph-legend">
+                    <div class="legend-item">
+                        <div class="legend-line ally"></div>
+                        <span>Allied</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-line enemy"></div>
+                        <span>Hostile</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-line neutral"></div>
+                        <span>Neutral</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-line inter-npc"></div>
+                        <span>NPC Relations</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Relationship Details Panel -->
+            <div class="relationship-details mt-4">
+                <h3>Recent Relationship Changes</h3>
+                <div class="relationship-timeline">
+                    <div class="relationship-event">
+                        <div class="event-icon positive">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                        <div class="event-content">
+                            <h5>Trust Increased with Sir Aldwin</h5>
+                            <p>You saved his life in the Battle of Broken Bridge</p>
+                            <span class="event-time">3 hours ago</span>
+                        </div>
+                    </div>
+                    
+                    <div class="relationship-event">
+                        <div class="event-icon negative">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="event-content">
+                            <h5>Elara Moonwhisper Grows Suspicious</h5>
+                            <p>Your use of forbidden magic has not gone unnoticed</p>
+                            <span class="event-time">1 day ago</span>
+                        </div>
+                    </div>
+                    
+                    <div class="relationship-event">
+                        <div class="event-icon critical">
+                            <i class="fas fa-skull"></i>
+                        </div>
+                        <div class="event-content">
+                            <h5>Baron Blackwood Eliminated</h5>
+                            <p>The usurper has fallen, but his followers seek revenge</p>
+                            <span class="event-time">2 days ago</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Faction Standings -->
+            <div class="faction-standings mt-4">
+                <h3>Faction Standings</h3>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="faction-card">
+                            <div class="faction-header">
+                                <i class="fas fa-chess-rook"></i>
+                                <h4>The Silver Hand</h4>
+                            </div>
+                            <div class="faction-meter">
+                                <div class="meter-labels">
+                                <span>Hostile</span>
+                                    <span>Neutral</span>
+                                    <span>Allied</span>
+                                </div>
+                                <div class="meter-bar">
+                                    <div class="meter-fill positive" style="width: 75%;"></div>
+                                    <div class="meter-marker"></div>
+                                </div>
+                            </div>
+                            <p class="faction-description">Elite knights dedicated to justice</p>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="faction-card">
+                            <div class="faction-header">
+                                <i class="fas fa-mask"></i>
+                                <h4>Shadow Guild</h4>
+                            </div>
+                            <div class="faction-meter">
+                                <div class="meter-labels">
+                                    <span>Hostile</span>
+                                    <span>Neutral</span>
+                                    <span>Allied</span>
+                                </div>
+                                <div class="meter-bar">
+                                    <div class="meter-fill negative" style="width: 25%;"></div>
+                                    <div class="meter-marker"></div>
+                                </div>
+                            </div>
+                            <p class="faction-description">Mysterious thieves and information brokers</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
