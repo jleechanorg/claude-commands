@@ -23,9 +23,6 @@ gemini_api_key.txt
 local_api_key.txt
 *_api_key.txt
 
-# Claude Code MCP Configuration
-.mcp.json
-
 # User data and uploads
 usage_tracking2.json
 uploads/
