@@ -1500,14 +1500,13 @@ def _get_current_turn_prompt(user_input, mode):
         is_think_command = any(keyword in user_input_lower for keyword in think_keywords)
         
         if is_think_command:
-            # Emphasize planning for think commands
-            prompt_template = "Main character: {user_input}. Generate the character's INTERNAL THOUGHTS ONLY with a deep think planning block. " \
-                "DO NOT take any narrative actions. End with '--- PLANNING BLOCK ---' containing pros/cons analysis."
+            # Emphasize planning for think commands (planning block handled separately in JSON)
+            prompt_template = "Main character: {user_input}. Generate the character's INTERNAL THOUGHTS ONLY with pros/cons analysis. " \
+                "DO NOT take any narrative actions. Focus on strategic thinking and option evaluation."
         else:
-            # Standard story continuation with planning block reminder
+            # Standard story continuation (planning block handled separately in JSON)
             prompt_template = "Main character: {user_input}. Continue the story in about {word_count} words and " \
-                "add details for narrative, descriptions of scenes, character dialog, character emotions. " \
-                "MANDATORY: End your response with '--- PLANNING BLOCK ---' containing options for the player."
+                "add details for narrative, descriptions of scenes, character dialog, character emotions."
         return prompt_template.format(user_input=user_input, word_count=TARGET_WORD_COUNT)
     else: # god mode
         prompt_template = "GOD MODE: {user_input}"
