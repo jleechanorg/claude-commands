@@ -1,13 +1,32 @@
 # Code Review Command
 
-**Purpose**: Process ALL PR comments systematically with proper tracking and replies
+**Purpose**: Process ALL PR comments systematically with proper tracking and replies using enhanced analysis
 
 **Action**: List EVERY comment individually, apply changes, commit, and post replies to show resolution
 
-**Usage**: `/review [PR#]`
+**Usage**: 
+- `/review` - Automatically reviews the PR associated with current branch
+- `/review [PR#]` - Reviews specific PR number
+- (automatically enables ultrathink mode for thorough analysis)
+
+**Enhanced Analysis**: Uses `/think` mode by default for deep code review analysis, ensuring comprehensive understanding of comments, context, and optimal solutions
+
+**Thinking Protocol**:
+- **Deep Analysis**: Use sequential thinking to understand comment context and implications
+- **Solution Planning**: Think through multiple approaches before implementing fixes
+- **Impact Assessment**: Consider ripple effects of changes across the codebase
+- **Test Strategy**: Plan comprehensive testing approach for each fix
+
+**Auto-Detection Protocol**:
+1. **Current Branch PR Detection**:
+   - Use `git branch --show-current` to get current branch
+   - Use `gh pr list --head $(git branch --show-current)` to find associated PR
+   - If no PR found, report "No PR found for current branch [branch-name]"
+   - If multiple PRs found, use the most recent (first in list)
 
 **Enhanced Implementation**: 
-1. **Extract ALL Comments**:
+1. **Extract ALL Comments** (with thoughtful analysis):
+   - Auto-detect PR number or use provided PR#
    - Use `gh pr view <PR#> --comments` to get general comments
    - Use `gh api repos/owner/repo/pulls/<PR#>/comments` for inline code comments
    - Include "suppressed" and "low confidence" Copilot comments
@@ -59,3 +78,9 @@
 - Generate before/after summary showing all addressed issues
 - Create commit messages that reference specific comment IDs
 - Post follow-up summary comment with complete resolution matrix
+
+**Branch Integration**:
+- Automatically works with current working branch and its associated PR
+- No need to remember or look up PR numbers for current work
+- Seamlessly integrates with branch-based development workflow
+- Falls back to manual PR specification when needed

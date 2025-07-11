@@ -3,17 +3,33 @@
 # integrate.sh - Updates from main and creates fresh dev branch
 # This script implements the standard integration pattern for the project
 # 
-# Usage: ./integrate.sh [--force]
+# Usage: ./integrate.sh [branch-name] [--force]
+#   branch-name: Optional custom branch name (default: dev{timestamp})
 #   --force: Override hard stops for uncommitted/unpushed changes
+#
+# Examples:
+#   ./integrate.sh              # Creates dev{timestamp} branch
+#   ./integrate.sh feature/foo  # Creates feature/foo branch
+#   ./integrate.sh --force      # Force mode with dev{timestamp}
+#   ./integrate.sh newb --force # Creates newb branch in force mode
 
 set -e  # Exit on any error
 
-# Check for force flag
+# Parse arguments
 FORCE_MODE=false
-if [[ "$1" == "--force" ]]; then
-    FORCE_MODE=true
-    echo "🚨 FORCE MODE: Overriding safety checks"
-fi
+CUSTOM_BRANCH_NAME=""
+
+for arg in "$@"; do
+    if [[ "$arg" == "--force" ]]; then
+        FORCE_MODE=true
+        echo "🚨 FORCE MODE: Overriding safety checks"
+    else
+        # First non-force argument is the branch name
+        if [ -z "$CUSTOM_BRANCH_NAME" ]; then
+            CUSTOM_BRANCH_NAME="$arg"
+        fi
+    fi
+done
 
 echo "🔄 Starting integration process..."
 
@@ -91,12 +107,17 @@ if [ -n "$unpushed_branches" ]; then
     echo ""
 fi
 
-echo "4. Creating timestamp for unique branch name..."
-timestamp=$(date +%s)
-branch_name="dev${timestamp}"
-echo "   New branch will be: $branch_name"
+echo "4. Determining branch name..."
+if [ -n "$CUSTOM_BRANCH_NAME" ]; then
+    branch_name="$CUSTOM_BRANCH_NAME"
+    echo "   Using custom branch name: $branch_name"
+else
+    timestamp=$(date +%s)
+    branch_name="dev${timestamp}"
+    echo "   Using timestamp-based branch name: $branch_name"
+fi
 
-echo "5. Creating fresh dev branch from main..."
+echo "5. Creating fresh branch from main..."
 git checkout -b "$branch_name"
 
 # Delete the old branch if it was clean
