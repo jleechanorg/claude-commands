@@ -380,6 +380,12 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 3. **Use existing branches**: Check if work should go to existing PR before creating new
 4. **Never assume**: If ambiguous, ask for clarification rather than creating duplicate work
 
+🚨 **PR VERIFICATION PROTOCOL**: ⚠️ CRITICAL before updating any PR:
+1. **Always verify current state**: Use `git branch --show-current` and `gh pr list --head $(git branch --show-current)` before PR operations
+2. **Extract current context**: Context from previous sessions may be stale - get fresh git/PR state rather than relying on memory
+3. **Match branch to PR**: Ensure you're updating the PR associated with the current working branch
+4. **Evidence-based approach**: Follow CLAUDE.md evidence extraction protocols - get actual PR numbers, don't assume
+
 🚨 **Auto-Conflict Resolution**: ⚠️ AUTOMATIC conflict resolution available:
 1. **GitHub Actions**: Automatically runs on PR creation/push and resolves common conflicts
 2. **Manual script**: Use `./resolve_conflicts.sh` to resolve conflicts for current PR

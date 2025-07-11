@@ -2,21 +2,53 @@
 
 # run_ui_tests.sh - Complete UI/Browser Test Runner for WorldArchitect.AI
 # This script handles all the setup and execution for browser tests
-# Usage: ./run_ui_tests.sh [mock]
-#   mock: Use mock APIs (Firebase/Gemini) instead of real APIs
+# Usage: ./run_ui_tests.sh [mode]
+#   mode:
+#     mock        - Use mock implementations for BOTH Firebase and Gemini
+#     mock-gemini - Use mock Gemini but REAL Firebase (default for cost savings)
+#     real        - Use REAL implementations for both services (costs money!)
+#   
+# Default (no argument): mock-gemini mode
 
 set -e  # Exit on any error
 
-# Check for mock mode
-MOCK_MODE=false
-if [[ "$1" == "mock" ]]; then
-    MOCK_MODE=true
-    echo "🚀 WorldArchitect.AI UI Test Runner (MOCK MODE)"
-    echo "=============================================="
-else
-    echo "🚀 WorldArchitect.AI UI Test Runner (REAL APIs)"
-    echo "=============================================="
-fi
+# Determine mock mode
+MODE="${1:-mock-gemini}"  # Default to mock-gemini if no argument
+
+case "$MODE" in
+    "mock")
+        echo "🚀 WorldArchitect.AI UI Test Runner (FULL MOCK MODE)"
+        echo "==============================================" 
+        echo "📌 Both Firebase and Gemini will be mocked - no API costs!"
+        export USE_MOCK_FIREBASE=true
+        export USE_MOCK_GEMINI=true
+        ;;
+    "mock-gemini")
+        echo "🚀 WorldArchitect.AI UI Test Runner (MOCK GEMINI + REAL FIREBASE)"
+        echo "==============================================" 
+        echo "📌 Gemini will be mocked (no AI costs)"
+        echo "🔥 Firebase will be REAL (database operations will persist)"
+        export USE_MOCK_FIREBASE=false
+        export USE_MOCK_GEMINI=true
+        ;;
+    "real")
+        echo "🚀 WorldArchitect.AI UI Test Runner (REAL APIs)"
+        echo "==============================================" 
+        echo "⚠️  WARNING: Real APIs will be used - this costs money!"
+        echo "🔥 Firebase: REAL"
+        echo "🤖 Gemini: REAL (costs per API call)"
+        export USE_MOCK_FIREBASE=false
+        export USE_MOCK_GEMINI=false
+        ;;
+    *)
+        echo "❌ Invalid mode: $MODE"
+        echo "Usage: $0 [mock|mock-gemini|real]"
+        echo "  mock        - Mock both Firebase and Gemini"
+        echo "  mock-gemini - Mock Gemini, use real Firebase (default)"
+        echo "  real        - Use real APIs for everything"
+        exit 1
+        ;;
+esac
 
 # 1. Activate virtual environment
 echo "🔧 Activating virtual environment..."
@@ -60,12 +92,17 @@ mkdir -p "$SCREENSHOT_DIR"
 echo "✅ Screenshots will be saved to: $SCREENSHOT_DIR"
 
 # 5. Start test server in background
-if $MOCK_MODE; then
-    echo "🏃 Starting test server with MOCK APIs..."
-    export USE_MOCKS=true
+echo "🏃 Starting test server..."
+echo "   Configuration:"
+if [[ "$USE_MOCK_FIREBASE" == "true" ]]; then
+    echo "   ✓ Firebase: Using in-memory mock"
 else
-    echo "🏃 Starting test server with REAL APIs..."
-    export USE_MOCKS=false
+    echo "   ⚠️  Firebase: Using REAL database"
+fi
+if [[ "$USE_MOCK_GEMINI" == "true" ]]; then
+    echo "   ✓ Gemini: Using predefined mock responses"
+else
+    echo "   ⚠️  Gemini: Using REAL API (incurs API charges)"
 fi
 
 TEST_PORT=6006
@@ -80,11 +117,8 @@ sleep 1
 python3 mvp_site/main.py serve &
 SERVER_PID=$!
 
-if $MOCK_MODE; then
-    echo "📍 Test server started (PID: $SERVER_PID) on port $TEST_PORT with MOCK APIs"
-else
-    echo "📍 Test server started (PID: $SERVER_PID) on port $TEST_PORT with REAL APIs"
-fi
+echo "📍 Test server started (PID: $SERVER_PID) on port $TEST_PORT"
+echo "   Mode: $MODE"
 
 # Wait for server to be ready
 echo "⏳ Waiting for server to be ready..."

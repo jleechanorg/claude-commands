@@ -209,6 +209,66 @@ class MockFirestoreClient:
             campaign["title"] = new_title
             campaign["last_played"] = datetime.datetime.now(datetime.timezone.utc)
     
+    def update_campaign(self, user_id: str, campaign_id: str, updates: Dict[str, Any]):
+        """Update a campaign with arbitrary updates."""
+        self.operation_count += 1
+        self.last_operation = f"update_campaign({user_id}, {campaign_id})"
+        
+        campaign = self.campaigns.get(user_id, {}).get(campaign_id)
+        if campaign:
+            campaign.update(updates)
+            campaign["last_played"] = datetime.datetime.now(datetime.timezone.utc)
+            return True
+        return False
+    
+    def delete_campaign(self, user_id: str, campaign_id: str):
+        """Delete a campaign and all associated data."""
+        self.operation_count += 1
+        self.last_operation = f"delete_campaign({user_id}, {campaign_id})"
+        
+        # Delete campaign
+        user_campaigns = self.campaigns.get(user_id, {})
+        if campaign_id in user_campaigns:
+            del user_campaigns[campaign_id]
+            
+            # Delete associated game state and story logs
+            state_key = f"{user_id}_{campaign_id}"
+            self.game_states.pop(state_key, None)
+            self.story_logs.pop(state_key, None)
+            return True
+        return False
+    
+    def get_game_state(self, user_id: str, campaign_id: str) -> Optional[Dict[str, Any]]:
+        """Get current game state as a dictionary."""
+        self.operation_count += 1
+        self.last_operation = f"get_game_state({user_id}, {campaign_id})"
+        
+        state_key = f"{user_id}_{campaign_id}"
+        return copy.deepcopy(self.game_states.get(state_key))
+    
+    def update_game_state(self, user_id: str, campaign_id: str, new_state: Dict[str, Any], interaction_type: str = "normal"):
+        """Update the game state."""
+        self.operation_count += 1
+        self.last_operation = f"update_game_state({user_id}, {campaign_id}, interaction_type={interaction_type})"
+        
+        state_key = f"{user_id}_{campaign_id}"
+        self.game_states[state_key] = copy.deepcopy(new_state)
+        return True
+    
+    def get_story_context(self, user_id: str, campaign_id: str, max_turns: int = 15, include_all: bool = False) -> List[Dict[str, Any]]:
+        """Get story context for a campaign."""
+        self.operation_count += 1
+        self.last_operation = f"get_story_context({user_id}, {campaign_id}, max_turns={max_turns})"
+        
+        state_key = f"{user_id}_{campaign_id}"
+        story_log = self.story_logs.get(state_key, [])
+        
+        if include_all:
+            return copy.deepcopy(story_log)
+        else:
+            # Return last max_turns entries
+            return copy.deepcopy(story_log[-max_turns:] if len(story_log) > max_turns else story_log)
+    
     def reset(self):
         """Reset the mock to initial state."""
         self.campaigns.clear()

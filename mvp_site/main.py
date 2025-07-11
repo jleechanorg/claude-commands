@@ -57,8 +57,30 @@ from firestore_service import update_state_with_changes, json_default_serializer
 from token_utils import log_with_tokens
 
 # --- Service Imports ---
-import gemini_service
-import firestore_service
+# Granular mock control - check individual service mock flags
+use_mock_gemini = os.environ.get('USE_MOCK_GEMINI', '').lower() in ['true', '1', 'yes']
+use_mock_firebase = os.environ.get('USE_MOCK_FIREBASE', '').lower() in ['true', '1', 'yes']
+
+# Legacy support - USE_MOCKS sets both if individual flags not set
+if os.environ.get('USE_MOCKS', '').lower() in ['true', '1', 'yes']:
+    # Only apply USE_MOCKS if individual flags aren't explicitly set
+    if 'USE_MOCK_GEMINI' not in os.environ:
+        use_mock_gemini = True
+    if 'USE_MOCK_FIREBASE' not in os.environ:
+        use_mock_firebase = True
+
+# Import Gemini service based on flag
+if use_mock_gemini:
+    from mocks import mock_gemini_service_wrapper as gemini_service
+else:
+    import gemini_service
+
+# Import Firestore service based on flag
+if use_mock_firebase:
+    from mocks import mock_firestore_service_wrapper as firestore_service
+else:
+    import firestore_service
+
 import structured_fields_utils
 
 # --- CONSTANTS ---
@@ -671,9 +693,29 @@ def create_app():
     # Set TESTING config from environment
     if os.environ.get('TESTING', '').lower() in ['true', '1', 'yes']:
         app.config['TESTING'] = True
-
-    if not firebase_admin._apps:
-        firebase_admin.initialize_app()
+    
+    # Store mock configuration in app config
+    app.config['USE_MOCK_GEMINI'] = use_mock_gemini
+    app.config['USE_MOCK_FIREBASE'] = use_mock_firebase
+    app.config['USE_MOCKS'] = use_mock_gemini and use_mock_firebase  # Both mocked
+    
+    # Log mock configuration
+    if use_mock_gemini or use_mock_firebase:
+        mock_status = []
+        if use_mock_gemini:
+            mock_status.append("Gemini=MOCK")
+        else:
+            mock_status.append("Gemini=REAL")
+        if use_mock_firebase:
+            mock_status.append("Firebase=MOCK")
+        else:
+            mock_status.append("Firebase=REAL")
+        logging_util.info(f"Service configuration: {', '.join(mock_status)}")
+    
+    # Initialize Firebase only if not using mock
+    if not use_mock_firebase:
+        if not firebase_admin._apps:
+            firebase_admin.initialize_app()
 
     def check_token(f):
         @wraps(f)

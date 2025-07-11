@@ -5,6 +5,8 @@ Provides realistic mocks for external dependencies like Gemini API and Firestore
 
 from .mock_gemini_service import MockGeminiClient, MockGeminiResponse
 from .mock_firestore_service import MockFirestoreClient, MockFirestoreDocument
+from . import mock_gemini_service_wrapper
+from . import mock_firestore_service_wrapper
 from .data_fixtures import (
     SAMPLE_CAMPAIGN,
     SAMPLE_GAME_STATE,
