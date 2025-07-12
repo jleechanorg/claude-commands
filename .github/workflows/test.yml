@@ -18,7 +18,7 @@ jobs:
     
     # Step 2: Set up Python (same version as your project)
     - name: Set up Python 3.11
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
     
@@ -31,51 +31,57 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
     
-    # Step 4: Install dependencies directly (no venv needed in CI)
+    # Step 4: Create virtual environment and install dependencies (required for vpython)
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
+        # Create virtual environment that vpython expects
+        python -m venv venv
+        source venv/bin/activate
+        
+        # Upgrade pip and install resolver tools
+        python -m pip install --upgrade pip setuptools wheel
+        
+        # Pin grpcio and grpcio-status to compatible versions
+        pip install grpcio==1.73.1 grpcio-status==1.73.1
+        
+        # Install protobuf first to avoid conflicts
+        pip install protobuf==4.25.3
+        
+        # Now install other requirements
         pip install -r mvp_site/requirements.txt
+        
+        # Verify vpython works
+        chmod +x vpython
+        ./vpython --version
     
-    # Step 5: Run tests directly with Python
+    # Step 5: Run tests using project's test runner
     - name: Run test suite
       run: |
-        # Find all test files in mvp_site/tests directory, excluding integration and manual tests
-        test_files=$(find mvp_site/tests -name "test_*.py" -type f ! -path "*/integration/*" ! -path "*/test_integration/*" ! -path "*/manual_tests/*" ! -name "*integration*" | sort)
+        # Activate the virtual environment
+        source venv/bin/activate
         
-        # Run each test file
-        failed_tests=0
-        total_tests=0
-        failed_list=""
+        # Use the project's established test runner script
+        chmod +x run_tests.sh
         
-        for test_file in $test_files; do
-          echo "Running $test_file..."
-          total_tests=$((total_tests + 1))
-          
-          if TESTING=true python "$test_file"; then
-            echo "✅ $test_file passed"
-          else
-            echo "❌ $test_file failed"
-            failed_tests=$((failed_tests + 1))
-            failed_list="$failed_list\n  - $test_file"
-          fi
-          echo "----------------------------------------"
-        done
+        echo "Running tests using project's run_tests.sh script..."
         
-        # Summary
-        echo ""
-        echo "========================================"
-        echo "TEST SUMMARY: $((total_tests - failed_tests))/$total_tests tests passed"
-        echo "========================================"
-        
-        if [ $failed_tests -gt 0 ]; then
+        # Run the full test suite
+        if ./run_tests.sh; then
           echo ""
-          echo "Failed tests:$failed_list"
+          echo "========================================"
+          echo "✅ ALL TESTS PASSED"
+          echo "========================================"
+        else
           echo ""
-          echo "Note: Some tests may fail in CI due to:"
+          echo "========================================"
+          echo "❌ SOME TESTS FAILED"
+          echo "========================================"
+          echo ""
+          echo "Note: Test failures in CI may be due to:"
           echo "  - Missing local services (e.g., test server)"
-          echo "  - Test isolation issues"
+          echo "  - Test isolation issues" 
           echo "  - Timing-sensitive tests"
+          echo "  - Environment differences"
           exit 1
         fi
       env:

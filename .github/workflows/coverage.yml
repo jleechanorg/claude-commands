@@ -1,0 +1,228 @@
+name: Python Test Coverage
+
+on:
+  pull_request:
+    paths:
+      - 'mvp_site/**/*.py'
+      - 'coverage.sh'
+      - '.github/workflows/coverage.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install coverage tool only
+      run: |
+        python -m pip install --upgrade pip
+        pip install coverage
+    
+    - name: Run coverage analysis
+      run: |
+        # Create a minimal virtual environment for compatibility with coverage.sh
+        python -m venv venv
+        source venv/bin/activate
+        pip install --upgrade pip
+        pip install -r mvp_site/requirements.txt
+        
+        # Run coverage analysis with HTML output for GitHub
+        echo "Running coverage analysis with HTML report generation..."
+        chmod +x coverage.sh
+        
+        # Run with HTML output (default behavior)
+        ./coverage.sh > coverage_output.txt 2>&1 || true
+        
+        # Also generate text output for PR comments
+        ./coverage.sh --no-html > coverage_text_output.txt 2>&1 || true
+        
+        # Extract coverage summary for PR comment
+        if [ -f /tmp/worldarchitectai/coverage/coverage.txt ]; then
+          cp /tmp/worldarchitectai/coverage/coverage.txt coverage_report.txt
+        elif [ -f mvp_site/coverage_report.txt ]; then
+          cp mvp_site/coverage_report.txt coverage_report.txt
+        else
+          echo "Coverage report not found in expected location" > coverage_report.txt
+          echo "=== COVERAGE OUTPUT ===" >> coverage_report.txt
+          cat coverage_text_output.txt >> coverage_report.txt
+        fi
+        
+        # Generate XML report if coverage data exists
+        if [ -f mvp_site/.coverage ]; then
+          cd mvp_site && python -m coverage xml -o ../coverage.xml && cd .. || true
+        fi
+        
+        # Extract coverage percentage for badge
+        if [ -f coverage_report.txt ]; then
+          COVERAGE_PCT=$(grep -oP 'TOTAL.*?\K\d+(?=%)' coverage_report.txt | head -1 || echo "0")
+          echo "COVERAGE_PERCENTAGE=$COVERAGE_PCT" >> $GITHUB_ENV
+          echo "Coverage: $COVERAGE_PCT%"
+        fi
+        
+        # Copy HTML report to workspace for artifact upload
+        if [ -d /tmp/worldarchitectai/coverage ]; then
+          cp -r /tmp/worldarchitectai/coverage ./coverage-html-report
+          echo "✅ HTML coverage report generated at: ./coverage-html-report/index.html"
+        fi
+        
+        # Show what files were created for debugging
+        echo "=== FILES CREATED ===" >> coverage_output.txt
+        ls -la coverage*.txt coverage*.xml coverage-html-report/ /tmp/worldarchitectai/coverage/ 2>&1 >> coverage_output.txt || true
+    
+    - name: Generate coverage comment
+      run: |
+        # Create a markdown comment with coverage results
+        cat > coverage_comment.md << 'EOF'
+        ## 📊 Python Test Coverage Report
+        
+        ### Coverage Summary
+        ```
+        EOF
+        
+        # Add coverage report if it exists
+        if [ -f coverage_report.txt ]; then
+          head -20 coverage_report.txt >> coverage_comment.md
+        else
+          echo "Coverage report generation failed. See logs for details." >> coverage_comment.md
+        fi
+        
+        cat >> coverage_comment.md << 'EOF'
+        ```
+        
+        EOF
+        
+        # Add visual coverage badge and chart
+        if [ -n "$COVERAGE_PERCENTAGE" ]; then
+          COLOR="red"
+          if [ "$COVERAGE_PERCENTAGE" -ge 80 ]; then
+            COLOR="brightgreen"
+          elif [ "$COVERAGE_PERCENTAGE" -ge 60 ]; then
+            COLOR="yellow"
+          elif [ "$COVERAGE_PERCENTAGE" -ge 40 ]; then
+            COLOR="orange"
+          fi
+          
+          echo "### 🎯 Coverage Visualization" >> coverage_comment.md
+          echo "" >> coverage_comment.md
+          echo "![Coverage Badge](https://img.shields.io/badge/coverage-${COVERAGE_PERCENTAGE}%25-${COLOR})" >> coverage_comment.md
+          echo "" >> coverage_comment.md
+          
+          # Add coverage chart using mermaid
+          echo '```mermaid' >> coverage_comment.md
+          echo 'pie title Code Coverage' >> coverage_comment.md
+          echo "    \"Covered\" : $COVERAGE_PERCENTAGE" >> coverage_comment.md
+          echo "    \"Uncovered\" : $((100 - COVERAGE_PERCENTAGE))" >> coverage_comment.md
+          echo '```' >> coverage_comment.md
+          echo "" >> coverage_comment.md
+        fi
+        
+        cat >> coverage_comment.md << 'EOF'
+        ### Test Execution Log
+        <details>
+        <summary>Click to view detailed test output</summary>
+        
+        ```
+        EOF
+        
+        # Add test output if it exists
+        if [ -f coverage_output.txt ]; then
+          tail -100 coverage_output.txt >> coverage_comment.md
+        else
+          echo "No test output captured." >> coverage_comment.md
+        fi
+        
+        cat >> coverage_comment.md << 'EOF'
+        ```
+        </details>
+        
+        ### 📋 Coverage Reports
+        - **🌐 View Online**: Coverage report will be available at GitHub Pages after deployment
+        - **📥 Download HTML**: Check the "coverage-html" artifact below for offline viewing
+        - **📄 Text Reports**: Check the "coverage-reports" artifact for XML and text reports
+        
+        ---
+        🤖 This report was generated automatically by the coverage workflow.
+        EOF
+        
+        # Debug: Show comment content
+        echo "=== COMMENT CONTENT ==="
+        cat coverage_comment.md
+        echo "=== END COMMENT ==="
+    
+    - name: Comment PR
+      uses: thollander/actions-comment-pull-request@fabd468d3a1a0b97feee5f6b9e499eab0dd903f6 # v2.5.0
+      with:
+        filePath: coverage_comment.md
+        comment_tag: coverage-report
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        pr_number: ${{ github.event.pull_request.number }}
+    
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-reports
+        path: |
+          coverage_report.txt
+          coverage.xml
+          coverage_output.txt
+          coverage-html-report/
+        retention-days: 30
+    
+    - name: Upload HTML Coverage Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-html
+        path: coverage-html-report/
+        retention-days: 30
+    
+    - name: Coverage status check
+      run: |
+        # Optional: Fail if coverage is too low
+        # Add coverage threshold checks here if needed
+        echo "Coverage analysis completed"
+    
+    - name: Generate Job Summary with Coverage Link
+      run: |
+        echo "## 📊 Coverage Report Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Add coverage percentage if available
+        if [ -f coverage_report.txt ]; then
+          echo "### Coverage Overview" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          head -n 20 coverage_report.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📥 Download Full HTML Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "The full interactive HTML coverage report is available as an artifact:" >> $GITHUB_STEP_SUMMARY
+        echo "1. Click on the **Summary** link at the top of this workflow run" >> $GITHUB_STEP_SUMMARY
+        echo "2. Download the **coverage-html** artifact" >> $GITHUB_STEP_SUMMARY
+        echo "3. Extract and open **index.html** in your browser" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "---" >> $GITHUB_STEP_SUMMARY
+        echo "*Note: GitHub doesn't allow direct HTML viewing for security reasons. The report must be downloaded.*" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Upload to Codecov for Visual Reports
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        fail_ci_if_error: false
+        verbose: true
+      continue-on-error: true
+  

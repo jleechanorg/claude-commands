@@ -11,15 +11,16 @@
 #
 # HTML output goes to: /tmp/worldarchitectai/coverage/
 
-# Use the vpython script in project root
-VPYTHON="$PWD/vpython"
+# Store project root before changing directories
+PROJECT_ROOT="$PWD"
 
 # Coverage output directory
 COVERAGE_DIR="/tmp/worldarchitectai/coverage"
 
-# Check if vpython exists
-if [ ! -f "$VPYTHON" ]; then
-    echo "Error: vpython script not found at $VPYTHON"
+# Check if virtual environment exists
+if [ ! -d "$PROJECT_ROOT/venv" ]; then
+    echo "Error: Virtual environment not found at $PROJECT_ROOT/venv"
+    echo "Please create it with: python3 -m venv venv"
     exit 1
 fi
 
@@ -77,6 +78,10 @@ mkdir -p "$COVERAGE_DIR"
 # Change to mvp_site directory
 cd mvp_site
 
+# Activate virtual environment
+print_status "Activating virtual environment..."
+source "$PROJECT_ROOT/venv/bin/activate"
+
 print_status "🧪 Running coverage analysis..."
 print_status "Setting TESTING=true for faster AI model usage"
 if [ "$generate_html" = true ]; then
@@ -94,13 +99,7 @@ fi
 # Check if coverage is installed
 print_status "Checking coverage installation..."
 
-# First, activate the virtual environment
-if ! source ../venv/bin/activate; then
-    print_error "Failed to activate virtual environment"
-    exit 1
-fi
-
-# Then check if coverage is importable
+# Check if coverage is importable (venv already activated)
 if ! python -c "import coverage" 2>/dev/null; then
     print_warning "Coverage tool not found. Installing..."
     if ! pip install coverage; then
@@ -155,7 +154,7 @@ start_time=$(date +%s)
 print_status "⏱️  Starting coverage analysis at $(date)"
 
 # Clear any previous coverage data
-source ../venv/bin/activate && coverage erase
+coverage erase
 
 # Initialize counters
 total_tests=0
@@ -169,7 +168,7 @@ for test_file in "${test_files[@]}"; do
         total_tests=$((total_tests + 1))
         echo -n "[$total_tests/${#test_files[@]}] Running: $test_file ... "
         
-        if TESTING=true source ../venv/bin/activate && coverage run --append --source=. "$test_file" >/dev/null 2>&1; then
+        if TESTING=true coverage run --append --source=. "$test_file" >/dev/null 2>&1; then
             passed_tests=$((passed_tests + 1))
             echo -e "${GREEN}✓${NC}"
         else
@@ -193,7 +192,7 @@ coverage_start_time=$(date +%s)
 
 # Generate terminal coverage report
 print_status "Generating text coverage report..."
-source ../venv/bin/activate && coverage report > "$COVERAGE_DIR/coverage_report.txt"
+coverage report > "$COVERAGE_DIR/coverage_report.txt"
 coverage_report_exit_code=$?
 
 # Display key coverage metrics
@@ -228,7 +227,7 @@ fi
 # Generate HTML report if enabled
 if [ "$generate_html" = true ]; then
     print_status "🌐 Generating HTML coverage report..."
-    if source ../venv/bin/activate && coverage html --directory="$COVERAGE_DIR"; then
+    if coverage html --directory="$COVERAGE_DIR"; then
         print_success "HTML coverage report generated in $COVERAGE_DIR/"
         print_status "Open $COVERAGE_DIR/index.html in your browser to view detailed coverage"
         
