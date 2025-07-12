@@ -4,9 +4,12 @@
 # Model updated: July 6th, 2025
 
 # Check if MCP servers are installed by checking if claude mcp list returns any servers
-MCP_SERVERS=$(claude mcp list 2>/dev/null | grep -E "^\s*-" | wc -l)
+echo "🔍 Checking MCP servers..."
+MCP_LIST=$(claude mcp list 2>/dev/null)
+MCP_SERVERS=$(echo "$MCP_LIST" | grep -E "^[a-zA-Z].*:" | wc -l)
+
 if [ "$MCP_SERVERS" -eq 0 ]; then
-    echo "🔧 MCP servers not detected. Installing..."
+    echo "🔧 No MCP servers detected. Installing..."
     if [ -f "./claude_mcp.sh" ]; then
         bash ./claude_mcp.sh
         echo ""
@@ -14,6 +17,13 @@ if [ "$MCP_SERVERS" -eq 0 ]; then
         echo "⚠️  claude_mcp.sh not found in current directory"
         echo ""
     fi
+else
+    echo "✅ Found $MCP_SERVERS MCP servers installed:"
+    echo "$MCP_LIST" | head -5
+    if [ "$MCP_SERVERS" -gt 5 ]; then
+        echo "... and $((MCP_SERVERS - 5)) more"
+    fi
+    echo ""
 fi
 
 # Check if it's been a month since model was last updated
