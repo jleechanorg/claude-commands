@@ -184,6 +184,57 @@
     color: #ff00ff;
 }
 
+/* Error state for planning blocks */
+.planning-block-error {
+    background-color: #fff3cd;
+    border: 1px solid #ffecb5;
+    color: #856404;
+    padding: 1rem;
+    margin: 0.5rem 0;
+    border-radius: 0.25rem;
+}
+
+.planning-block-error pre {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 0.5rem;
+    margin: 0.5rem 0;
+    border-radius: 0.25rem;
+    overflow-x: auto;
+    font-size: 0.875rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.theme-dark .planning-block-error {
+    background-color: #332701;
+    border-color: #664d03;
+    color: #ffecb5;
+}
+
+.theme-dark .planning-block-error pre {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Styling for malformed content within error blocks */
+.malformed-content {
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 0.75rem;
+    margin: 0.5rem 0;
+    border-radius: 0.25rem;
+    border-left: 4px solid #ffecb5;
+    font-family: monospace;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.theme-dark .malformed-content {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-left-color: #664d03;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
     .choice-button {

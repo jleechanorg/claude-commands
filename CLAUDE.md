@@ -187,6 +187,15 @@ When working with test runners/harnesses:
 - Use ⚠️ "Created but unverified" instead of ✅ "Complete" for untested code
 - Only use ✅ after seeing actual PASS/FAIL results from real test execution
 
+🚨 **NEVER SKIP TESTS WITHOUT EXPLICIT PERMISSION**:
+❌ NEVER skip or comment out tests without user's explicit agreement
+- If a test is failing, FIX it or ask user for permission to skip
+- ❌ NEVER use `@unittest.skip` or `pytest.mark.skip` without asking
+- ❌ NEVER comment out test methods or assertions without permission  
+- ❌ NEVER modify test expectations to make them pass without user approval
+- ✅ ALWAYS run ALL tests unless user explicitly says to skip specific ones
+- If tests are "not relevant to current task", still run them to ensure no regression
+
 ## Development Guidelines
 
 ### Code Standards
@@ -217,6 +226,56 @@ Use docstrings, proper JS loading
 - 🚨 **Output Contradiction Check**: If output shows failure indicators (❌, FAILED, ERROR) but summary shows success (✅, PASSED), STOP immediately and investigate
 - ⚠️ **Test Exit Codes**: Don't assume test scripts return proper exit codes | Parse output for success/failure strings | Verify detection logic before trusting results
 - ⚠️ **Dynamic Test Discovery**: ❌ NEVER hardcode test file lists in scripts | ✅ Use `find` or glob patterns to discover tests automatically | Update test runners to scan directories (e.g., `find testing_ui -name "test_*.py"`)
+
+### 🚨 MANDATORY TEST EXECUTION PROTOCOL
+
+**CRITICAL**: This protocol is NON-NEGOTIABLE for ALL `/execute` commands and test-related work.
+
+#### Pre-Completion Checklist
+Before marking ANY task complete, ALL boxes must be checked:
+- [ ] Run `./run_tests.sh` - MUST show "All tests passed! 🎉" (100% pass rate)
+- [ ] If browser tests requested - MUST run `./run_ui_tests.sh mock` and show 100% pass
+- [ ] If screenshots requested - MUST provide actual system screenshots (NOT mock demos)
+- [ ] Run `gh pr view <PR#> --json statusCheckRollup` - ALL checks must show SUCCESS
+
+#### Zero Tolerance Policy
+- ❌ **NO dismissing failures as "unrelated"** - Every failure is YOUR responsibility
+- ❌ **NO claiming completion with failing tests** - 146/147 is FAILURE, not success
+- ❌ **NO mock demos when real screenshots requested** - Fix the system, capture real output
+- ❌ **NO partial fixes** - ALL tests must pass, no exceptions
+- ❌ **NO "pre-existing issues" excuse** - Fix ALL failures regardless of origin
+
+#### Evidence Requirements
+MUST provide concrete evidence:
+- Test output showing exact pass/fail counts
+- Actual screenshots from running system (with timestamps)
+- GitHub checks status output
+- Specific error messages for ANY failure
+
+#### Failure Protocol
+When ANY test fails:
+1. **STOP** - Do not proceed with other tasks
+2. **FIX** - Debug and resolve EVERY failure
+3. **VERIFY** - Re-run entire test suite after fixes
+4. **EVIDENCE** - Show output proving 100% success
+5. **ONLY THEN** - Mark task as complete
+
+#### Test Execution Examples
+```bash
+# Backend tests - MUST show "All tests passed!"
+./run_tests.sh
+
+# UI tests - MUST complete without failures
+./run_ui_tests.sh mock
+
+# Integration tests - MUST pass if run
+TESTING=true python mvp_site/test_integration/test_integration.py
+
+# GitHub checks - MUST all be SUCCESS
+gh pr view <PR#> --json statusCheckRollup | jq '.statusCheckRollup[].conclusion'
+```
+
+**ENFORCEMENT**: Violating this protocol = immediate task failure. No excuses accepted.
 
 ### Safety & Security
 ❌ Global `document.addEventListener('click')` without approval | Test workflows after modifications |

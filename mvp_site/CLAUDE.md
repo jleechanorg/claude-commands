@@ -40,3 +40,12 @@ cd .. && TESTING=true vpython mvp_site/tests/test_integration.py
 - Always refer to `/CLAUDE.md` for the complete operating protocol
 - Technical lessons are in `.cursor/rules/lessons.mdc`
 - Cursor-specific configuration is in `.cursor/rules/rules.mdc`
+
+## File Addition Protocol
+
+- The AI must not create or propose new files unless strictly necessary for production, CI, or core test coverage.
+- Any new file must be:
+  - Essential for the main application, CI, or test infrastructure, **and**
+  - Justified with a clear reason in the PR or commit message.
+- Reference, demo, or exploratory files must be placed in `testing_ui/archive/` or a similar archive directory.
+- The AI must always suggest moving non-essential files to archive or deleting them, not adding them to the main repo.

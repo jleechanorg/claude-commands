@@ -1059,10 +1059,23 @@ def _validate_and_enforce_planning_block(response_text, user_input, game_state, 
         return response_text
     
     # Check if response already contains a planning block
-    # JSON-FIRST: Only check structured response (this is the authoritative source)
-    if structured_response and hasattr(structured_response, 'planning_block') and structured_response.planning_block and structured_response.planning_block.strip():
-        logging_util.info("Planning block found in JSON structured response")
-        return response_text
+    # JSON-ONLY: Only check structured response for JSON planning blocks
+    if structured_response and hasattr(structured_response, 'planning_block') and structured_response.planning_block:
+        planning_block = structured_response.planning_block
+        
+        # Only accept JSON format
+        if isinstance(planning_block, dict):
+            # JSON format - check if it has choices or thinking content
+            has_content = (planning_block.get('thinking', '').strip() or 
+                         (planning_block.get('choices') and len(planning_block.get('choices', {})) > 0))
+            
+            if has_content:
+                logging_util.info("Planning block found in JSON structured response")
+                return response_text
+        else:
+            # String format no longer supported
+            logging_util.error(f"❌ STRING PLANNING BLOCKS NO LONGER SUPPORTED: Found {type(planning_block).__name__} planning block, only JSON format is allowed")
+            # Continue to generate proper planning block below
     
     # REMOVED LEGACY FALLBACK: No longer check response text for planning blocks
     # The JSON field is authoritative - if it's empty, we generate content regardless of text

@@ -1,8 +1,3 @@
----
-description: Technical lessons and specific incident analysis
-globs: 
-alwaysApply: true
----
 # Lessons Learned & Best Practices
 
 **Meta-Rule:** Any instruction to "add a lesson," "add to lessons," or a similar directive refers specifically to this file: `.cursor/rules/lessons.mdc`.
@@ -1303,3 +1298,29 @@ vulture . --min-confidence 80 --exclude="*/venv/*,*/tests/*"
 2. Fail builds if new dead code is introduced
 3. Generate reports on potential dead code for regular review
 4. Exclude known false positives via configuration file
+
+### Lesson: Avoid Unnecessary New Files
+
+**Incident:** Multiple PRs added demo, reference, or one-off test files to core directories, cluttering the repo and making maintenance harder.
+
+**Lesson:** New files should only be added if essential for production, CI, or robust test coverage. All other files must be archived or deleted.
+
+**Action:** Updated `rules.md` and `CLAUDE.md` to require justification for new files and to enforce archival of non-essential files.
+
+1. Run dead code detection tools in CI
+2. Fail builds if new dead code is introduced
+3. Generate reports on potential dead code for regular review
+4. Exclude known false positives via configuration file
+
+### Lesson: Git Merge vs Rebase in Team Workflows
+
+**Incident:** Developers were unsure whether to use `git merge` or `git rebase` when pulling diverged branches.
+
+**Lesson:**
+- For this project, prefer `git merge` when integrating remote changes into your branch. This is safer, preserves history, and avoids rewriting commits that may have been shared.
+- Use `git rebase` only for solo work or when you are comfortable force-pushing and want a linear history.
+- Always communicate with collaborators before rebasing shared branches.
+
+**Action:**
+- Default to `git merge` for most team workflows.
+- Documented this policy in `.cursor/rules/lessons.mdc` for future reference.

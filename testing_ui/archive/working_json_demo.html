@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JSON Planning Blocks - Working Demo</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        /* Planning block styles from the actual app */
+        .planning-block-thinking {
+            font-style: italic;
+            color: #666;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+        
+        .planning-block-context {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        
+        .planning-block-choices {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .choice-button {
+            padding: 12px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.3s ease;
+            font-size: 16px;
+        }
+        
+        .choice-button:hover {
+            background: #45a049;
+            transform: translateX(5px);
+        }
+        
+        /* Risk level styling */
+        .risk-high { 
+            background: #f44336; 
+        }
+        .risk-high:hover { 
+            background: #d32f2f; 
+        }
+        
+        .risk-medium { 
+            background: #FF9800; 
+        }
+        .risk-medium:hover { 
+            background: #F57C00; 
+        }
+        
+        .risk-low { 
+            background: #4CAF50; 
+        }
+        .risk-low:hover { 
+            background: #45a049; 
+        }
+        
+        .risk-safe { 
+            background: #2196F3; 
+        }
+        .risk-safe:hover { 
+            background: #1976D2; 
+        }
+        
+        .choice-button-custom {
+            background: #9C27B0;
+        }
+        .choice-button-custom:hover {
+            background: #7B1FA2;
+        }
+        
+        .narrative {
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .session-header {
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+        
+        pre {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        
+        .selected {
+            opacity: 0.6;
+        }
+        
+        h1 { color: #333; }
+        h2 { color: #555; margin-top: 30px; }
+    </style>
+</head>
+<body>
+    <h1>🎮 WorldArchitect.AI - JSON Planning Blocks Demo</h1>
+    
+    <div class="container">
+        <h2>Working Example: Tavern Scene</h2>
+        
+        <div class="session-header">
+            [SESSION 1: THE MYSTERIOUS TAVERN] | Turn 3 | Level 1 Fighter | HP: 15/15
+        </div>
+        
+        <div class="narrative">
+            You push open the heavy wooden door of the Rusty Goblet tavern. The warm air inside carries the scent of ale and roasted meat. Several patrons look up as you enter - a hooded figure in the corner quickly looks away, while the barkeep gives you a welcoming nod. A bard strums a lute by the fireplace, and you notice a posting board covered in various notices and wanted posters.
+        </div>
+        
+        <div id="planning-block-1"></div>
+    </div>
+    
+    <div class="container">
+        <h2>Combat Example with Risk Levels</h2>
+        
+        <div class="session-header">
+            [COMBAT ENCOUNTER] | Round 1 | Goblin Ambush | HP: 12/15
+        </div>
+        
+        <div class="narrative">
+            Three goblins leap from the underbrush, crude weapons raised! You're caught off guard but manage to draw your sword just in time. The lead goblin snarls something in its guttural language while the others spread out to flank you.
+        </div>
+        
+        <div id="planning-block-2"></div>
+    </div>
+    
+    <div class="container">
+        <h2>JSON Structure</h2>
+        <pre id="json-display"></pre>
+    </div>
+
+    <script>
+        // Simplified version of parsePlanningBlocks function
+        function parsePlanningBlocks(planningBlock) {
+            if (!planningBlock || typeof planningBlock !== 'object') {
+                return '<div class="error">Invalid planning block format</div>';
+            }
+            
+            let html = '';
+            
+            // Add thinking text if present
+            if (planningBlock.thinking) {
+                html += `<div class="planning-block-thinking">${escapeHtml(planningBlock.thinking)}</div>`;
+            }
+            
+            // Add context if present
+            if (planningBlock.context) {
+                html += `<div class="planning-block-context">${escapeHtml(planningBlock.context)}</div>`;
+            }
+            
+            // Create choice buttons
+            if (planningBlock.choices && Object.keys(planningBlock.choices).length > 0) {
+                html += '<div class="planning-block-choices">';
+                
+                for (const [choiceKey, choice] of Object.entries(planningBlock.choices)) {
+                    if (!choice.text || !choice.description) continue;
+                    
+                    const riskLevel = choice.risk_level || 'low';
+                    const buttonText = `${escapeHtml(choice.text)}: ${escapeHtml(choice.description)}`;
+                    
+                    html += `<button class="choice-button risk-${riskLevel}" 
+                            data-choice-id="${escapeHtml(choiceKey)}" 
+                            data-choice-text="${escapeHtml(choice.text + ' - ' + choice.description)}"
+                            onclick="handleChoice('${escapeHtml(choiceKey)}', this)">
+                            ${buttonText}
+                    </button>`;
+                }
+                
+                // Add custom action button
+                html += `<button class="choice-button choice-button-custom" 
+                        data-choice-id="custom" 
+                        data-choice-text="custom"
+                        onclick="handleChoice('custom', this)">
+                        Custom Action
+                </button>`;
+                
+                html += '</div>';
+            }
+            
+            return html;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function handleChoice(choiceId, button) {
+            // Remove previous selections
+            document.querySelectorAll('.choice-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // Mark this button as selected
+            button.classList.add('selected');
+            
+            alert(`Selected: ${choiceId}\n\nIn the actual game, this would send the choice to the server.`);
+        }
+        
+        // Example data
+        const tavernExample = {
+            thinking: "The player has entered the tavern. I'll give them several options to explore different aspects of the location and interact with various NPCs.",
+            context: "This is a classic tavern scene with multiple plot hooks available.",
+            choices: {
+                approach_barkeep: {
+                    text: "Approach the Barkeep",
+                    description: "Order a drink and ask about local rumors",
+                    risk_level: "safe"
+                },
+                investigate_hooded_figure: {
+                    text: "Investigate Hooded Figure",
+                    description: "Cautiously approach the mysterious person in the corner",
+                    risk_level: "medium"
+                },
+                check_posting_board: {
+                    text: "Check the Posting Board",
+                    description: "Examine the notices and wanted posters",
+                    risk_level: "low"
+                },
+                listen_to_bard: {
+                    text: "Listen to the Bard",
+                    description: "Sit near the fireplace and enjoy the performance",
+                    risk_level: "safe"
+                }
+            }
+        };
+        
+        const combatExample = {
+            thinking: "Combat has begun! The player needs tactical options based on their position and the goblin formation.",
+            choices: {
+                charge_attack: {
+                    text: "Charge Attack",
+                    description: "Rush the lead goblin with a powerful strike",
+                    risk_level: "high"
+                },
+                defensive_stance: {
+                    text: "Defensive Stance",
+                    description: "Take a defensive position and wait for their attack",
+                    risk_level: "low"
+                },
+                tactical_retreat: {
+                    text: "Tactical Retreat",
+                    description: "Fall back to better terrain",
+                    risk_level: "medium"
+                },
+                intimidate: {
+                    text: "Intimidate",
+                    description: "Try to scare the goblins with a battle cry",
+                    risk_level: "medium"
+                }
+            }
+        };
+        
+        // Render the examples
+        document.getElementById('planning-block-1').innerHTML = parsePlanningBlocks(tavernExample);
+        document.getElementById('planning-block-2').innerHTML = parsePlanningBlocks(combatExample);
+        
+        // Show JSON structure
+        document.getElementById('json-display').textContent = JSON.stringify(tavernExample, null, 2);
+    </script>
+</body>
+</html>

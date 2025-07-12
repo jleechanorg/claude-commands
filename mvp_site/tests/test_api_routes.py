@@ -2,7 +2,7 @@ import unittest
 import json
 import tempfile
 import os
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import patch, MagicMock, Mock, mock_open
 from io import BytesIO
 
 # Mock firebase_admin before it's used in main
@@ -650,6 +650,80 @@ class TestCreateCampaignRoute(unittest.TestCase):
         call_args = mock_game_state_class.call_args
         custom_campaign_state = call_args[1]['custom_campaign_state']
         self.assertEqual(custom_campaign_state['attribute_system'], constants.ATTRIBUTE_SYSTEM_DND)
+
+    @patch('main.firestore_service')
+    @patch('main.gemini_service')
+    @patch('main.GameState')
+    def test_interaction_god_mode_response_included_in_api(self, mock_game_state_class, mock_gemini_service, mock_firestore_service):
+        """🔴 RED TEST: Verify god_mode_response is included in API response."""
+        
+        # Setup mocks
+        campaign_id = 'test-campaign-456'
+        mock_campaign = {'id': campaign_id, 'title': 'Test Campaign'}
+        mock_story = []
+        mock_firestore_service.get_campaign_by_id.return_value = (mock_campaign, mock_story)
+        
+        # Mock game state
+        mock_game_state_instance = Mock()
+        mock_game_state_instance.to_dict.return_value = {'hp': 100}
+        mock_game_state_instance.debug_mode = False  # Set debug_mode to a boolean, not MagicMock
+        mock_game_state_class.from_dict.return_value = mock_game_state_instance
+        mock_firestore_service.get_campaign_game_state.return_value = Mock(to_dict=lambda: {'hp': 100})
+        
+        # Create a mock GeminiResponse with god_mode_response
+        from gemini_response import GeminiResponse
+        from narrative_response_schema import NarrativeResponse
+        
+        mock_gemini_response = Mock(spec=GeminiResponse)
+        mock_gemini_response.get_narrative_text.return_value = "The battle continues!"
+        mock_gemini_response.narrative_text = "The battle continues!"
+        mock_gemini_response.state_updates = {}
+        mock_gemini_response.debug_tags_present = {'dm_notes': True}
+        
+        # Create structured response with god_mode_response
+        mock_structured_response = Mock(spec=NarrativeResponse)
+        mock_structured_response.session_header = "Battle Round 5"
+        mock_structured_response.narrative = "The battle continues!"
+        mock_structured_response.god_mode_response = "Behind the scenes: The dragon has 150 HP remaining and is planning a fire breath attack next turn."
+        mock_structured_response.planning_block = {"choices": {"attack": {"text": "Attack", "description": "Strike with weapon"}}}
+        mock_structured_response.dice_rolls = []
+        mock_structured_response.resources = ""
+        mock_structured_response.entities_mentioned = []
+        mock_structured_response.location_confirmed = "Battlefield"
+        mock_structured_response.state_updates = {}
+        mock_structured_response.debug_info = {}
+        
+        mock_gemini_response.structured_response = mock_structured_response
+        mock_gemini_service.continue_story.return_value = mock_gemini_response
+        
+        # Make the API call in god mode
+        response = self.client.post(
+            f'/api/campaigns/{campaign_id}/interaction',
+            json={
+                'input': 'I attack the dragon!',  # KEY_USER_INPUT is 'input' in main.py
+                'mode': 'god'  # God mode
+            },
+            headers=self.test_headers
+        )
+        
+        # Debug: Print response if not 200
+        if response.status_code != 200:
+            print(f"Response status: {response.status_code}")
+            print(f"Response data: {response.data}")
+            # Also check what mocks were called
+            print(f"continue_story called with mode: {mock_gemini_service.continue_story.call_args}")
+            print(f"structured_response attributes: {dir(mock_structured_response)}")
+        
+        # Assert response is successful
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        
+        # Verify god_mode_response is included in the API response
+        self.assertIn('god_mode_response', data)
+        self.assertEqual(
+            data['god_mode_response'], 
+            "Behind the scenes: The dragon has 150 HP remaining and is planning a fire breath attack next turn."
+        )
 
 
 if __name__ == '__main__':

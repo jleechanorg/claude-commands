@@ -219,8 +219,17 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Add planning block if present (always at the bottom)
         if (fullData.planning_block) {
-            const parsedPlanningBlock = parsePlanningBlocks(fullData.planning_block);
-            html += `<div class="planning-block">${parsedPlanningBlock}</div>`;
+            try {
+                const parsedPlanningBlock = parsePlanningBlocks(fullData.planning_block);
+                if (parsedPlanningBlock) {
+                    html += `<div class="planning-block">${parsedPlanningBlock}</div>`;
+                }
+            } catch (e) {
+                console.error('Error parsing planning block:', e);
+                // Show raw planning block as fallback
+                const escapedText = fullData.planning_block.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                html += `<div class="planning-block planning-block-error">Error parsing planning block. Raw content:<br><pre>${escapedText}</pre></div>`;
+            }
         }
         
         // Add debug info if in debug mode
@@ -355,102 +364,166 @@ document.addEventListener('DOMContentLoaded', () => {
         interactionForm.dispatchEvent(submitEvent);
     };
     
-    // Helper function to parse planning blocks and create buttons
-    const parsePlanningBlocks = (text) => {
-        const choices = [];
-        const lines = text.split('\n');
-        
-        // Parse line by line looking for choice patterns
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
-            
-            // Skip empty lines and non-choice lines
-            if (!line) continue;
-            
-            // Check for numbered format: "1. **ActionName** - Description"
-            if (/^\d+\./.test(line)) {
-                const parts = line.split('**');
-                if (parts.length >= 3) {
-                    // Extract: ["1. ", "ActionName", " - Description"]
-                    const actionId = parts[1].trim();
-                    const afterAction = parts[2];
-                    
-                    // Look for dash separator
-                    const dashIndex = afterAction.indexOf(' - ');
-                    if (dashIndex > -1) {
-                        const description = afterAction.substring(dashIndex + 3).trim();
-                        choices.push({
-                            id: actionId,
-                            fullText: line,
-                            description: description
-                        });
-                    }
-                }
-                // Check for simple numbered format: "1. ActionName" (without bold markers)
-                else if (/^\d+\.\s+.+/.test(line) && !line.includes('**')) {
-                    const match = line.match(/^(\d+)\.\s+(.+)$/);
-                    if (match) {
-                        const actionId = match[2].trim();
-                        choices.push({
-                            id: actionId,
-                            fullText: line,
-                            description: actionId // Use action ID as description for simple format
-                        });
-                    }
-                }
-            }
-            
-            // Check for bracket format: "**[ActionName]:** Description"
-            else if (line.includes('**[') && line.includes(']:**')) {
-                const startBracket = line.indexOf('**[');
-                const endBracket = line.indexOf(']:**');
-                if (startBracket < endBracket) {
-                    const actionId = line.substring(startBracket + 3, endBracket);
-                    const description = line.substring(endBracket + 4).trim();
-                    choices.push({
-                        id: actionId,
-                        fullText: line,
-                        description: description
-                    });
-                }
-            }
+    // Helper function to parse planning blocks and create buttons - JSON ONLY
+    const parsePlanningBlocks = (input) => {
+        // Robust error handling for edge cases
+        if (!input) {
+            console.log('parsePlanningBlocks: Empty or null planning block');
+            return '';
         }
         
-        // If we found choices, create a planning block section
-        if (choices.length > 0) {
-            // Find where the choices start in the text
-            const firstChoiceIndex = text.indexOf(choices[0].fullText);
-            let narrativeText = text.substring(0, firstChoiceIndex).trim();
-            
-            // Remove planning block marker if present
-            const planningBlockMarker = '--- PLANNING BLOCK ---';
-            const markerIndex = narrativeText.lastIndexOf(planningBlockMarker);
-            if (markerIndex >= 0) {
-                narrativeText = narrativeText.substring(0, markerIndex).trim();
-            }
-            
-            // Create the choice buttons HTML
-            let choicesHtml = '<div class="planning-block-choices">';
-            choices.forEach(choice => {
-                // Escape the choice text for HTML attribute
-                const escapedText = `${choice.id}: ${choice.description}`.replace(/"/g, '&quot;');
-                // Show both action ID and description as button text
-                const buttonText = `${choice.id}: ${choice.description}`;
-                choicesHtml += `<button class="choice-button" data-choice-id="${choice.id}" data-choice-text="${escapedText}" title="${choice.description}">${buttonText}</button>`;
-            });
-            
-            // Add custom text option
-            choicesHtml += `<button class="choice-button choice-button-custom" data-choice-id="Custom" data-choice-text="custom" title="Type your own action">Custom Action</button>`;
-            
-            choicesHtml += '</div>';
-            
-            // Return narrative text followed by choice buttons
-            return narrativeText + choicesHtml;
+        // JSON format - ONLY supported format
+        if (typeof input === 'object' && input !== null) {
+            return parsePlanningBlocksJson(input);
         }
         
-        // No choices found, return text as-is
-        return text;
+        // String format - NO LONGER SUPPORTED, but try to parse as malformed text
+        if (typeof input === 'string') {
+            console.error('❌ STRING PLANNING BLOCKS NO LONGER SUPPORTED: String planning blocks are deprecated. Only JSON format is allowed. Received:', input.substring(0, 100) + '...');
+            
+            // Try to extract readable content from malformed string for user experience
+            const decodedText = decodeHtmlEntities(input);
+            const cleanText = decodedText.replace(/[\r\n\t]+/g, ' ').trim();
+            
+            if (cleanText.length > 0) {
+                return `<div class="planning-block-error">
+                    <p><strong>⚠️ Malformed Planning Block Detected</strong></p>
+                    <p>The AI generated an invalid planning block format. Here's the readable content:</p>
+                    <div class="malformed-content">${sanitizeHtml(cleanText)}</div>
+                    <p><em>Please try again - this will be fixed in future responses.</em></p>
+                </div>`;
+            }
+            
+            return `<div class="planning-block-error">❌ Error: Planning block must be JSON object, not string. System needs to be updated to use JSON format.</div>`;
+        }
+        
+        // Invalid type - reject
+        console.error('❌ INVALID PLANNING BLOCK TYPE: Expected JSON object, got:', typeof input);
+        return `<div class="planning-block-error">❌ Error: Invalid planning block type. Expected JSON object with 'thinking' and 'choices' fields.</div>`;
     };
+    
+    // New function to handle JSON planning blocks
+    const parsePlanningBlocksJson = (planningBlock) => {
+        console.log('parsePlanningBlocks: Processing JSON format planning block');
+        
+        // Validate structure
+        if (!planningBlock.choices || typeof planningBlock.choices !== 'object') {
+            console.warn('parsePlanningBlocks: Invalid JSON structure - missing or invalid choices');
+            return planningBlock.thinking || '';
+        }
+        
+        const choices = planningBlock.choices;
+        const choiceKeys = Object.keys(choices);
+        
+        // If no choices, just return thinking text
+        if (choiceKeys.length === 0) {
+            console.log('parsePlanningBlocks: No choices in planning block');
+            return planningBlock.thinking || '';
+        }
+        
+        // Build HTML output
+        let html = '';
+        
+        // Add thinking text if present
+        if (planningBlock.thinking) {
+            const sanitizedThinking = sanitizeHtml(planningBlock.thinking);
+            html += `<div class="planning-block-thinking">${sanitizedThinking}</div>`;
+        }
+        
+        // Add context if present
+        if (planningBlock.context) {
+            const sanitizedContext = sanitizeHtml(planningBlock.context);
+            html += `<div class="planning-block-context">${sanitizedContext}</div>`;
+        }
+        
+        // Create choice buttons
+        html += '<div class="planning-block-choices">';
+        
+        choiceKeys.forEach(choiceKey => {
+            const choice = choices[choiceKey];
+            
+            // Validate choice structure
+            if (!choice || typeof choice !== 'object') {
+                console.warn(`parsePlanningBlocks: Invalid choice object for key: ${choiceKey}`);
+                return;
+            }
+            
+            if (!choice.text || !choice.description) {
+                console.warn(`parsePlanningBlocks: Choice missing required fields: ${choiceKey}`);
+                return;
+            }
+            
+            // Sanitize choice data
+            const safeKey = sanitizeIdentifier(choiceKey);
+            const safeText = sanitizeHtml(choice.text);
+            const safeDescription = sanitizeHtml(choice.description);
+            const riskLevel = choice.risk_level || 'low';
+            
+            // Create button text (text: description format)
+            const buttonText = `${safeText}: ${safeDescription}`;
+            
+            // Create data-choice-text for form submission (includes full choice data)
+            const choiceData = `${safeText} - ${safeDescription}`;
+            const escapedChoiceData = escapeHtmlAttribute(choiceData);
+            const escapedTitle = escapeHtmlAttribute(safeDescription);
+            
+            // Add risk level as CSS class for styling
+            const riskClass = `risk-${riskLevel}`;
+            
+            html += `<button class="choice-button ${riskClass}" ` +
+                    `data-choice-id="${safeKey}" ` +
+                    `data-choice-text="${escapedChoiceData}" ` +
+                    `title="${escapedTitle}">${buttonText}</button>`;
+        });
+        
+        // Add custom text option
+        html += `<button class="choice-button choice-button-custom" ` +
+                `data-choice-id="Custom" ` +
+                `data-choice-text="custom" ` +
+                `title="Type your own action">Custom Action</button>`;
+        
+        html += '</div>';
+        
+        return html;
+    };
+    
+    // Utility functions for sanitization and validation
+    const decodeHtmlEntities = (text) => {
+        if (!text) return '';
+        return text.toString()
+            .replace(/&#x27;/g, "'")
+            .replace(/&quot;/g, '"')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&');
+    };
+    
+    const sanitizeHtml = (text) => {
+        if (!text) return '';
+        // First decode any existing entities, then encode for safety
+        const decoded = decodeHtmlEntities(text);
+        return decoded
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;');
+    };
+    
+    const escapeHtmlAttribute = (text) => {
+        if (!text) return '';
+        return text.toString()
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#x27;');
+    };
+    
+    const sanitizeIdentifier = (text) => {
+        if (!text) return 'unknown';
+        // Keep only alphanumeric, underscore, and hyphen characters
+        return text.toString().replace(/[^a-zA-Z0-9_-]/g, '');
+    };
+    
 
     // --- Data Fetching and Rendering ---
     let renderCampaignList = async () => {

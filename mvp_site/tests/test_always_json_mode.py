@@ -33,7 +33,22 @@ class TestAlwaysJSONMode(unittest.TestCase):
             mock_response = MagicMock()
             mock_response.text = json.dumps({
                 "narrative": "Welcome to character creation!",
-                "planning_block": "What would you like to do?\n1. **[Create_1]:** Create your character\n2. **[Skip_2]:** Skip character creation",
+                "planning_block": {
+                    "thinking": "The player needs to begin character creation for their adventure.",
+                    "context": "This is the start of the character creation process.",
+                    "choices": {
+                        "create_character": {
+                            "text": "Create Character",
+                            "description": "Begin the character creation process",
+                            "risk_level": "safe"
+                        },
+                        "skip_creation": {
+                            "text": "Skip Creation",
+                            "description": "Skip character creation and use default",
+                            "risk_level": "safe"
+                        }
+                    }
+                },
                 "entities_mentioned": [],
                 "location_confirmed": "Character Creation",
                 "state_updates": {
@@ -68,10 +83,31 @@ class TestAlwaysJSONMode(unittest.TestCase):
             self.assertNotIn("--- PLANNING BLOCK ---", result.narrative_text)  # Should be in separate field
             self.assertNotIn('"narrative":', result.narrative_text)  # Should be clean text, not JSON
             
-            # Planning block should be in structured response
+            # Planning block should be in structured response as JSON object
             self.assertIsNotNone(result.structured_response)
-            self.assertIn("Create_1", result.structured_response.planning_block)
-            self.assertIn("Skip_2", result.structured_response.planning_block)
+            self.assertIsInstance(result.structured_response.planning_block, dict)
+            
+            # Check for choice structure in JSON format
+            planning_block = result.structured_response.planning_block
+            self.assertIn("choices", planning_block)
+            
+            # Check that choices exist (the exact keys may be converted to snake_case)
+            choices = planning_block.get("choices", {})
+            self.assertGreater(len(choices), 0, "Should have at least one choice")
+            
+            # Check for specific choices we mocked
+            choice_keys = list(choices.keys())
+            choice_texts = [choice.get("text", "") for choice in choices.values()]
+            
+            # Should have both create and skip choices
+            self.assertIn("create_character", choice_keys)
+            self.assertIn("skip_creation", choice_keys)
+            
+            # Verify choice structure
+            create_choice = choices["create_character"]
+            self.assertEqual(create_choice["text"], "Create Character")
+            self.assertEqual(create_choice["description"], "Begin the character creation process")
+            self.assertEqual(create_choice["risk_level"], "safe")
             
     def test_json_mode_with_entities(self):
         """Test that JSON mode is used when entities are present"""

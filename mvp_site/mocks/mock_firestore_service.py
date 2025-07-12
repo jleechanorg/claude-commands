@@ -83,6 +83,25 @@ class MockFirestoreClient:
         
         # Store sample story context
         self.story_logs[state_key] = copy.deepcopy(SAMPLE_STORY_CONTEXT)
+        
+        # Also add data for browser test user
+        browser_test_user_id = "browser-test-user"
+        browser_campaign = copy.deepcopy(SAMPLE_CAMPAIGN)
+        browser_campaign["user_id"] = browser_test_user_id
+        browser_campaign["id"] = "browser_test_campaign_123"
+        browser_campaign["title"] = "Browser Test Campaign"
+        browser_campaign["initialPrompt"] = "Test campaign for browser structured fields testing"
+        
+        browser_user_campaigns = self.campaigns.setdefault(browser_test_user_id, {})
+        browser_user_campaigns[browser_campaign["id"]] = browser_campaign
+        
+        # Store browser test game state and story
+        browser_state_key = f"{browser_test_user_id}_{browser_campaign['id']}"
+        self.game_states[browser_state_key] = copy.deepcopy(SAMPLE_GAME_STATE)
+        self.story_logs[browser_state_key] = copy.deepcopy(SAMPLE_STORY_CONTEXT)
+        
+        # Log for debugging
+        print(f"[MockFirestore] Added browser test campaign: {browser_campaign['id']} for user: {browser_test_user_id}")
     
     def get_campaigns_for_user(self, user_id: str) -> List[Dict[str, Any]]:
         """Get all campaigns for a user."""

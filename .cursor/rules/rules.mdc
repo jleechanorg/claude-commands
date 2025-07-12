@@ -49,6 +49,14 @@ After modifying any rules files, remind the user to copy the contents into the "
 - **Project Overview**: `.cursor/rules/project_overview.md` - Technical details
 - **Documentation Map**: `.cursor/rules/documentation_map.md` - File navigation
 
+## File Addition and Organization Policy
+
+- Do **not** add new files to the repository unless they are essential for production, CI, or robust test coverage.
+- All reference, demo, or one-off test files must be placed in `testing_ui/archive/` or a designated archive folder.
+- Obsolete, duplicate, or non-essential files should be deleted, not committed.
+- Any new file must be justified in the PR description, including its purpose and why it cannot be integrated into an existing file.
+- PR reviewers and AI agents must flag any unnecessary new files for removal or archival before merge. 
+
 ## Important Notes
 
 - This file should remain minimal and focused on Cursor-specific configuration

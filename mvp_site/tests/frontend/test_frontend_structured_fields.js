@@ -213,6 +213,28 @@ class StructuredFieldsTest {
     this.assert(!html.includes('🔍 Debug Info:'), 'Missing debug info field handled gracefully');
   }
 
+  // 🔴 RED TEST: God mode response should be displayed
+  async testGodModeResponseRendering() {
+    this.log('🔮 Testing god mode response rendering', 'info');
+
+    const dataWithGodMode = {
+      narrative: "Regular narrative text",
+      god_mode_response: "📝 DM Notes: User requested plot arcs. State rationale: No changes needed.",
+      entities_mentioned: ["player"],
+      location_confirmed: "tavern"
+    };
+
+    const html = this.window.generateStructuredFieldsHTML(dataWithGodMode, true);
+    
+    // 🔴 These should FAIL - god mode response should be rendered
+    this.assert(html.includes('🔮 God Mode Response:'), 'God mode response header displayed');
+    this.assert(html.includes('📝 DM Notes: User requested plot arcs'), 'God mode content displayed');
+    this.assert(html.includes('god-mode-response'), 'God mode CSS class applied');
+    
+    // Regular narrative should still be present
+    this.assert(html.includes('Regular narrative text'), 'Regular narrative still displayed');
+  }
+
   // Run all tests
   async runTests() {
     this.log('🚀 Starting Structured Fields Frontend Tests', 'info');
@@ -228,6 +250,7 @@ class StructuredFieldsTest {
     await this.testGenerateStructuredFieldsHTML();
     await this.testEmptyFieldsHandling();
     await this.testMissingFieldsHandling();
+    await this.testGodModeResponseRendering();
 
     return this.summarizeResults();
   }

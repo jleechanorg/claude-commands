@@ -105,7 +105,7 @@ else
     echo "   ⚠️  Gemini: Using REAL API (incurs API charges)"
 fi
 
-TEST_PORT=6006
+TEST_PORT=8088
 export TESTING=true
 export PORT=$TEST_PORT
 
@@ -141,7 +141,7 @@ cleanup() {
     kill $SERVER_PID 2>/dev/null || true
     echo "✅ Cleanup complete"
 }
-trap cleanup EXIT
+# trap cleanup EXIT
 
 # 7. Run the tests in parallel
 echo "🧪 Running browser tests in parallel..."
@@ -149,14 +149,14 @@ echo "======================================="
 
 # Automatically discover all test files in testing_ui/ directory
 BROWSER_TESTS=()
-if [ -d "testing_ui" ]; then
-    echo "🔍 Discovering test files in testing_ui/ directory..."
+if [ -d "testing_ui/core_tests/" ]; then
+    echo "🔍 Discovering test files in testing_ui/core_tests/ directory..."
     while IFS= read -r -d '' test_file; do
         BROWSER_TESTS+=("$test_file")
-    done < <(find testing_ui -name "test_*.py" -type f -print0 | sort -z)
+    done < <(find testing_ui/core_tests -name "test_*.py" -type f -print0 | sort -z)
     echo "✅ Found ${#BROWSER_TESTS[@]} test files"
 else
-    echo "❌ testing_ui/ directory not found"
+    echo "❌ testing_ui/core_tests/ directory not found"
     exit 1
 fi
 
@@ -272,6 +272,8 @@ if [ ${#FAILED_TESTS[@]} -gt 0 ]; then
         echo "   - $failed_test"
     done
 fi
+
+echo "\n📸 All screenshots saved in: $SCREENSHOT_DIR"
 
 # 9. Exit with appropriate code
 if [ $FAILED -eq 0 ]; then

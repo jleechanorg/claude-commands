@@ -60,7 +60,8 @@ class TestExtraJSONFields(unittest.TestCase):
         self.assertIsNotNone(response.debug_info)
         self.assertIn('dm_notes', response.debug_info)
         # Planning block should be empty since it's not in the JSON
-        self.assertEqual(response.planning_block, "")
+        # Planning block should be empty dict since it's not in the JSON
+        self.assertEqual(response.planning_block, {})
         
     def test_narrative_response_with_debug_info(self):
         """Test that NarrativeResponse properly handles debug_info field"""

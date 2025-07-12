@@ -98,7 +98,26 @@ What do you do?"""
         turn_summary="Sir Kaelan awakens in the Ancient Tavern and speaks with Gareth about the Lost Crown.",
         state_updates=state_updates,
         session_header="Mock Campaign Session",
-        planning_block="This is a mock planning block for testing.",
+        planning_block={
+            "thinking": "The player has just awakened in the tavern. Multiple paths forward are available.",
+            "choices": {
+                "talk_to_gareth": {
+                    "text": "Talk to Gareth",
+                    "description": "Ask the innkeeper about the Lost Crown and the map he mentioned",
+                    "risk_level": "safe"
+                },
+                "explore_tavern": {
+                    "text": "Explore Tavern",
+                    "description": "Look around the tavern for other patrons or clues",
+                    "risk_level": "safe"
+                },
+                "leave_immediately": {
+                    "text": "Leave Immediately",
+                    "description": "Exit the tavern without speaking to anyone",
+                    "risk_level": "low"
+                }
+            }
+        },
         dice_rolls=[],
         resources="Mock resources: 10 gold pieces"
     )
@@ -147,14 +166,42 @@ Your strike lands true, dealing damage to your enemy."""
 The world responds to your actions, and new possibilities unfold before you."""
         state_updates = {}
     
-    # Create response objects
-    narrative_response = NarrativeResponse(
-        narrative=narrative_text,
-        entities_mentioned=[],
-        location_confirmed="Unknown",
-        turn_summary="Action taken.",
-        state_updates=state_updates
-    )
+    # Import structured fields if available
+    try:
+        from .structured_fields_fixtures import FULL_STRUCTURED_RESPONSE
+    except ImportError:
+        FULL_STRUCTURED_RESPONSE = None
+    
+    # Add structured fields to the response
+    if FULL_STRUCTURED_RESPONSE:
+        # Use full structured fields from fixtures
+        narrative_response = NarrativeResponse(
+            narrative=narrative_text,
+            session_header=FULL_STRUCTURED_RESPONSE.get("session_header", "Session 1"),
+            planning_block=FULL_STRUCTURED_RESPONSE.get("planning_block", {}),
+            dice_rolls=FULL_STRUCTURED_RESPONSE.get("dice_rolls", []),
+            resources=FULL_STRUCTURED_RESPONSE.get("resources", ""),
+            npcs=FULL_STRUCTURED_RESPONSE.get("npcs", ""),
+            locations=FULL_STRUCTURED_RESPONSE.get("locations", ""),
+            lore=FULL_STRUCTURED_RESPONSE.get("lore", ""),
+            secrets=FULL_STRUCTURED_RESPONSE.get("secrets", ""),
+            god_mode_response=FULL_STRUCTURED_RESPONSE.get("god_mode_response", None),
+            debug_info=FULL_STRUCTURED_RESPONSE.get("debug_info", None),
+            entities_mentioned=[],
+            location_confirmed="Unknown",
+            turn_summary="Action taken.",
+            state_updates=state_updates
+        )
+    else:
+        # Fallback to basic response
+        narrative_response = NarrativeResponse(
+            narrative=narrative_text,
+            entities_mentioned=[],
+            location_confirmed="Unknown",
+            turn_summary="Action taken.",
+            state_updates=state_updates
+        )
+    
     response = GeminiResponse(
         narrative_text=narrative_text,
         structured_response=narrative_response

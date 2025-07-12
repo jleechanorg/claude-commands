@@ -362,6 +362,10 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
         response_data['dice_rolls'] = getattr(structured_response, 'dice_rolls', [])
         response_data['resources'] = getattr(structured_response, 'resources', '')
         
+        # Include god_mode_response when in god mode
+        if mode == constants.MODE_GOD and hasattr(structured_response, 'god_mode_response'):
+            response_data['god_mode_response'] = structured_response.god_mode_response
+        
         # Always include structured debug_info (separate from legacy debug tags)
         # Frontend will use debug_mode flag to decide whether to display debug_info
         response_data['debug_info'] = getattr(structured_response, 'debug_info', {})

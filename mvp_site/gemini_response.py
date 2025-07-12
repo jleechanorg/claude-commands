@@ -307,8 +307,6 @@ class GeminiResponse:
         # Remove [SESSION_HEADER] blocks (if they exist in narrative)
         text = re.sub(r'\[SESSION_HEADER\].*?(?=\n\n[A-Z]|\n\n[A-S]|\n\nT|\n\nU|\n\nV|\n\nW|\n\nX|\n\nY|\n\nZ|\n[A-Z][a-z])', '', text, flags=re.DOTALL)
         
-        # Remove --- PLANNING BLOCK --- sections (if they exist in narrative)
-        text = re.sub(r'--- PLANNING BLOCK ---.*?$', '', text, flags=re.DOTALL)
         
         # Remove [STATE_UPDATES_PROPOSED] blocks
         text = re.sub(r'\[STATE_UPDATES_PROPOSED\].*?\[END_STATE_UPDATES_PROPOSED\]', '', text, flags=re.DOTALL)
@@ -331,7 +329,6 @@ class GeminiResponse:
         return {
             'debug_start_end': '[DEBUG_START]' in text and '[DEBUG_END]' in text,
             'session_header': '[SESSION_HEADER]' in text,
-            'planning_block': '--- PLANNING BLOCK ---' in text,
             'state_updates': '[STATE_UPDATES_PROPOSED]' in text,
             'debug_rolls': '[DEBUG_ROLL_START]' in text,
         }

@@ -4,8 +4,16 @@ Provides realistic AI responses without making actual API calls.
 """
 import re
 import json
+from datetime import datetime
 from typing import Dict, Any, List
 from .data_fixtures import SAMPLE_AI_RESPONSES, SAMPLE_STATE_UPDATES
+try:
+    from .structured_fields_fixtures import FULL_STRUCTURED_RESPONSE, GOD_MODE_RESPONSE, MINIMAL_STRUCTURED_RESPONSE
+except ImportError:
+    # Fallback if fixtures not available
+    FULL_STRUCTURED_RESPONSE = None
+    GOD_MODE_RESPONSE = None
+    MINIMAL_STRUCTURED_RESPONSE = None
 
 
 class MockGeminiResponse:
@@ -123,6 +131,13 @@ class MockGeminiClient:
     
     def _generate_continue_story(self, prompt: str) -> str:
         """Generate a normal story continuation."""
+        # Check if we need to return structured JSON response
+        if FULL_STRUCTURED_RESPONSE and ("json" in prompt.lower() or "structured" in prompt.lower()):
+            # Check for god mode
+            if "god mode:" in prompt.lower() or "god:" in prompt.lower():
+                return json.dumps(GOD_MODE_RESPONSE, indent=2)
+            else:
+                return json.dumps(FULL_STRUCTURED_RESPONSE, indent=2)
         return SAMPLE_AI_RESPONSES["normal_response"]
     
     def _generate_hp_discrepancy(self, prompt: str) -> str:

@@ -29,7 +29,26 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         raw_response = json.dumps({
             "narrative": self.sample_narrative,
             "session_header": "Session 5: Into the Depths\nLevel 3 Rogue | HP: 25/30",
-            "planning_block": "**Available Actions:**\n1. Search for traps\n2. Move stealthily\n3. Light a torch",
+            "planning_block": {
+                "thinking": "The player is in a dark dungeon and needs to decide their approach.",
+                "choices": {
+                    "search_traps": {
+                        "text": "Search for Traps",
+                        "description": "Carefully examine the area for hidden dangers",
+                        "risk_level": "low"
+                    },
+                    "move_stealthily": {
+                        "text": "Move Stealthily",
+                        "description": "Sneak through the darkness quietly",
+                        "risk_level": "medium"
+                    },
+                    "light_torch": {
+                        "text": "Light a Torch",
+                        "description": "Illuminate the area but reveal your position",
+                        "risk_level": "medium"
+                    }
+                }
+            },
             "dice_rolls": ["Perception: 1d20+5 = 18", "Stealth: 1d20+8 = 22"],
             "resources": "HP: 25/30 | Spell Slots: 2/3 | Gold: 145",
             "debug_info": {
@@ -47,7 +66,12 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         # Verify all structured fields are parsed correctly
         structured = response.structured_response
         self.assertEqual(structured.session_header, "Session 5: Into the Depths\nLevel 3 Rogue | HP: 25/30")
-        self.assertEqual(structured.planning_block, "**Available Actions:**\n1. Search for traps\n2. Move stealthily\n3. Light a torch")
+        # Check planning block is JSON with expected structure
+        self.assertIsInstance(structured.planning_block, dict)
+        self.assertIn("thinking", structured.planning_block)
+        self.assertIn("choices", structured.planning_block)
+        self.assertIn("search_traps", structured.planning_block["choices"])
+        self.assertEqual(len(structured.planning_block["choices"]), 3)
         self.assertEqual(structured.dice_rolls, ["Perception: 1d20+5 = 18", "Stealth: 1d20+8 = 22"])
         self.assertEqual(structured.resources, "HP: 25/30 | Spell Slots: 2/3 | Gold: 145")
         self.assertIsInstance(structured.debug_info, dict)
@@ -72,7 +96,7 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         self.assertEqual(structured.dice_rolls, ["Initiative: 1d20+2 = 14"])
         
         # Missing fields should have defaults
-        self.assertEqual(structured.planning_block, "")
+        self.assertEqual(structured.planning_block, {})
         self.assertEqual(structured.resources, "")
         self.assertEqual(structured.debug_info, {})
     
@@ -81,7 +105,7 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         raw_response = json.dumps({
             "narrative": self.sample_narrative,
             "session_header": "",
-            "planning_block": "",
+            "planning_block": {},
             "dice_rolls": [],
             "resources": "",
             "debug_info": {}
@@ -92,7 +116,8 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         
         # All fields should exist with empty values
         self.assertEqual(structured.session_header, "")
-        self.assertEqual(structured.planning_block, "")
+        # Empty planning block gets default structure
+        self.assertEqual(structured.planning_block, {"thinking": "", "context": "", "choices": {}})
         self.assertEqual(structured.dice_rolls, [])
         self.assertEqual(structured.resources, "")
         self.assertEqual(structured.debug_info, {})
@@ -113,7 +138,7 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         
         # Null fields should be converted to appropriate defaults
         self.assertEqual(structured.session_header, "")
-        self.assertEqual(structured.planning_block, "")
+        self.assertEqual(structured.planning_block, {})
         self.assertEqual(structured.dice_rolls, [])
         self.assertEqual(structured.resources, "")
         self.assertEqual(structured.debug_info, {})
@@ -128,8 +153,8 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         response = GeminiResponse.create(raw_response)
         structured = response.structured_response
         
-        # The implementation stores the string as-is, not converting to list
-        self.assertEqual(structured.dice_rolls, "Attack: 1d20+5 = 18")
+        # The implementation now converts invalid types to empty list
+        self.assertEqual(structured.dice_rolls, [])
     
     def test_parse_complex_debug_info(self):
         """Test parsing complex nested debug_info"""
@@ -167,7 +192,26 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         raw_response = json.dumps({
             "narrative": self.sample_narrative,
             "session_header": "Session 10: \"The Dragon's Lair\"\n🐉 Boss Fight!",
-            "planning_block": "**Options:**\n• Attack with sword ⚔️\n• Cast fireball 🔥\n• Negotiate 💬",
+            "planning_block": {
+                "thinking": "The player faces a critical decision in combat.",
+                "choices": {
+                    "attack_sword": {
+                        "text": "Attack with Sword ⚔️",
+                        "description": "Strike with your enchanted blade",
+                        "risk_level": "medium"
+                    },
+                    "cast_fireball": {
+                        "text": "Cast Fireball 🔥",
+                        "description": "Unleash magical fire damage",
+                        "risk_level": "high"
+                    },
+                    "negotiate": {
+                        "text": "Negotiate 💬",
+                        "description": "Attempt diplomatic resolution",
+                        "risk_level": "low"
+                    }
+                }
+            },
             "dice_rolls": ["Attack → 1d20+7 = 19", "Damage ➤ 2d8+4 = 12"],
             "resources": "HP: ♥️ 45/60 | MP: ✨ 12/20"
         })
@@ -177,13 +221,28 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         
         # Special characters should be preserved
         self.assertIn("🐉", structured.session_header)
-        self.assertIn("⚔️", structured.planning_block)
+        # Check that special characters are preserved in JSON
+        self.assertIsInstance(structured.planning_block, dict)
+        self.assertIn("choices", structured.planning_block)
+        # Check that emoji is preserved in choice text
+        attack_choice = structured.planning_block["choices"]["attack_sword"]
+        self.assertIn("⚔️", attack_choice["text"])
         self.assertIn("→", structured.dice_rolls[0])
         self.assertIn("♥️", structured.resources)
     
     def test_parse_very_long_fields(self):
         """Test parsing fields with very long content"""
-        long_planning = "**Extensive Planning:**\n" + "\n".join([f"{i}. Option {i}" for i in range(1, 51)])
+        # Create a JSON planning block with many choices
+        long_planning = {
+            "thinking": "The player has many tactical options available.",
+            "choices": {}
+        }
+        for i in range(1, 51):
+            long_planning["choices"][f"option_{i}"] = {
+                "text": f"Option {i}",
+                "description": f"Description for option {i}",
+                "risk_level": "medium"
+            }
         long_resources = " | ".join([f"Resource{i}: {i*10}" for i in range(1, 21)])
         
         raw_response = json.dumps({
@@ -197,7 +256,11 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         structured = response.structured_response
         
         # Long content should be preserved
-        self.assertIn("50. Option 50", structured.planning_block)
+        # Check that long content is preserved in JSON
+        self.assertIsInstance(structured.planning_block, dict)
+        self.assertIn("choices", structured.planning_block)
+        self.assertIn("option_50", structured.planning_block["choices"])
+        self.assertEqual(structured.planning_block["choices"]["option_50"]["text"], "Option 50")
         self.assertIn("Resource20: 200", structured.resources)
         self.assertEqual(len(structured.dice_rolls), 10)
 

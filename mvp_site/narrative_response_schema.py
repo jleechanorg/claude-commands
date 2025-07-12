@@ -40,10 +40,10 @@ class NarrativeResponse:
         self.god_mode_response = god_mode_response
         
         # New always-visible fields
-        self.session_header = session_header or ""
-        self.planning_block = planning_block or ""
-        self.dice_rolls = dice_rolls or []
-        self.resources = resources or ""
+        self.session_header = self._validate_string_field(session_header, "session_header")
+        self.planning_block = self._validate_planning_block(planning_block)
+        self.dice_rolls = self._validate_list_field(dice_rolls, "dice_rolls")
+        self.resources = self._validate_string_field(resources, "resources")
         
         # Store any extra fields that Gemini might include (shouldn't be any now)
         self.extra_fields = kwargs
@@ -85,6 +85,194 @@ class NarrativeResponse:
             return {}
         
         return debug_info
+    
+    def _validate_string_field(self, value: Any, field_name: str) -> str:
+        """Validate a string field with null/type checking"""
+        if value is None:
+            return ""
+        
+        if not isinstance(value, str):
+            logging_util.warning(f"Invalid {field_name} type: {type(value).__name__}, expected str. Converting to string.")
+            try:
+                return str(value)
+            except Exception as e:
+                logging_util.error(f"Failed to convert {field_name} to string: {e}")
+                return ""
+        
+        return value
+    
+    def _validate_list_field(self, value: Any, field_name: str) -> List[str]:
+        """Validate a list field with null/type checking"""
+        if value is None:
+            return []
+        
+        if not isinstance(value, list):
+            logging_util.warning(f"Invalid {field_name} type: {type(value).__name__}, expected list. Using empty list.")
+            return []
+        
+        # Convert all items to strings
+        validated_list = []
+        for item in value:
+            if item is not None:
+                try:
+                    validated_list.append(str(item))
+                except Exception as e:
+                    logging_util.warning(f"Failed to convert {field_name} item to string: {e}")
+        
+        return validated_list
+    
+    def _validate_planning_block(self, planning_block: Any) -> Dict[str, Any]:
+        """Validate planning block content - JSON ONLY format"""
+        if planning_block is None:
+            return {}
+        
+        # JSON format - ONLY supported format
+        if isinstance(planning_block, dict):
+            return self._validate_planning_block_json(planning_block)
+        
+        # String format - NO LONGER SUPPORTED
+        if isinstance(planning_block, str):
+            logging_util.error(f"❌ STRING PLANNING BLOCKS NO LONGER SUPPORTED: String planning blocks are deprecated. Only JSON format is allowed. Received: {planning_block[:100]}...")
+            return {}
+        
+        # Invalid type - reject
+        logging_util.error(f"❌ INVALID PLANNING BLOCK TYPE: Expected dict (JSON object), got {type(planning_block).__name__}. Planning blocks must be JSON objects with 'thinking' and 'choices' fields.")
+        return {}
+    
+    def _validate_planning_block_json(self, planning_block: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate JSON-format planning block structure"""
+        validated = {}
+        
+        # Validate thinking field
+        thinking = planning_block.get("thinking", "")
+        if not isinstance(thinking, str):
+            thinking = str(thinking) if thinking is not None else ""
+        validated["thinking"] = thinking
+        
+        # Validate optional context field
+        context = planning_block.get("context", "")
+        if not isinstance(context, str):
+            context = str(context) if context is not None else ""
+        validated["context"] = context
+        
+        # Validate choices object
+        choices = planning_block.get("choices", {})
+        if not isinstance(choices, dict):
+            logging_util.warning("Planning block choices must be a dict object")
+            choices = {}
+        
+        validated_choices = {}
+        for choice_key, choice_data in choices.items():
+            # Validate choice key format (snake_case)
+            if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', choice_key):
+                logging_util.warning(f"Choice key '{choice_key}' is not a valid identifier, skipping")
+                continue
+            
+            # Validate choice data structure
+            if not isinstance(choice_data, dict):
+                logging_util.warning(f"Choice '{choice_key}' data must be a dict, skipping")
+                continue
+            
+            validated_choice = {}
+            
+            # Required: text field
+            text = choice_data.get("text", "")
+            if not isinstance(text, str):
+                text = str(text) if text is not None else ""
+            validated_choice["text"] = text
+            
+            # Required: description field
+            description = choice_data.get("description", "")
+            if not isinstance(description, str):
+                description = str(description) if description is not None else ""
+            validated_choice["description"] = description
+            
+            # Optional: risk_level field
+            risk_level = choice_data.get("risk_level", "low")
+            if risk_level not in ["safe", "low", "medium", "high"]:
+                risk_level = "low"
+            validated_choice["risk_level"] = risk_level
+            
+            # Optional: analysis field (for deep think blocks)
+            if "analysis" in choice_data:
+                analysis = choice_data["analysis"]
+                if isinstance(analysis, dict):
+                    validated_choice["analysis"] = analysis
+            
+            # Only add choice if it has both text and description
+            if validated_choice["text"] and validated_choice["description"]:
+                validated_choices[choice_key] = validated_choice
+            else:
+                logging_util.warning(f"Choice '{choice_key}' missing required text or description, skipping")
+        
+        validated["choices"] = validated_choices
+        
+        # Security check - sanitize any HTML/script content
+        validated = self._sanitize_planning_block_content(validated)
+        
+        return validated
+    
+    def _sanitize_planning_block_content(self, planning_block: Dict[str, Any]) -> Dict[str, Any]:
+        """Validate planning block content - remove dangerous scripts but preserve normal text"""
+        
+        def sanitize_string(value: str) -> str:
+            """Remove dangerous script tags but preserve normal apostrophes and quotes"""
+            if not isinstance(value, str):
+                return str(value)
+            
+            # Only remove actual script tags and dangerous HTML
+            # Don't escape normal apostrophes and quotes since frontend handles display
+            dangerous_patterns = [
+                r'<script[^>]*>.*?</script>',
+                r'<iframe[^>]*>.*?</iframe>',
+                r'<img[^>]*>',  # Remove all img tags (can have malicious attributes)
+                r'javascript:',
+                r'on\w+\s*=.*?[\s>]',  # event handlers like onclick= onerror=
+            ]
+            
+            import re
+            cleaned = value
+            for pattern in dangerous_patterns:
+                cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE | re.DOTALL)
+            
+            return cleaned
+        
+        sanitized = {}
+        
+        # Sanitize thinking
+        sanitized["thinking"] = sanitize_string(planning_block.get("thinking", ""))
+        
+        # Sanitize context
+        if "context" in planning_block:
+            sanitized["context"] = sanitize_string(planning_block["context"])
+        
+        # Sanitize choices
+        sanitized_choices = {}
+        for choice_key, choice_data in planning_block.get("choices", {}).items():
+            sanitized_choice = {}
+            sanitized_choice["text"] = sanitize_string(choice_data.get("text", ""))
+            sanitized_choice["description"] = sanitize_string(choice_data.get("description", ""))
+            sanitized_choice["risk_level"] = choice_data.get("risk_level", "low")
+            
+            # Keep analysis if present (but sanitize strings within it)
+            if "analysis" in choice_data:
+                analysis = choice_data["analysis"]
+                if isinstance(analysis, dict):
+                    sanitized_analysis = {}
+                    for key, value in analysis.items():
+                        if isinstance(value, str):
+                            sanitized_analysis[key] = sanitize_string(value)
+                        elif isinstance(value, list):
+                            sanitized_analysis[key] = [sanitize_string(item) if isinstance(item, str) else item for item in value]
+                        else:
+                            sanitized_analysis[key] = value
+                    sanitized_choice["analysis"] = sanitized_analysis
+            
+            sanitized_choices[choice_key] = sanitized_choice
+        
+        sanitized["choices"] = sanitized_choices
+        
+        return sanitized
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary"""

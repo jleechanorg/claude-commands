@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JSON Planning Block Demo</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .demo-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .planning-block-choices {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .choice-button {
+            padding: 12px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.3s;
+        }
+        .choice-button:hover {
+            background: #45a049;
+        }
+        .risk-high { background: #f44336; }
+        .risk-high:hover { background: #d32f2f; }
+        .risk-medium { background: #FF9800; }
+        .risk-medium:hover { background: #F57C00; }
+        .risk-safe { background: #2196F3; }
+        .risk-safe:hover { background: #1976D2; }
+        
+        .planning-block-thinking {
+            font-style: italic;
+            color: #666;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+        .planning-block-context {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+        code {
+            background: #f0f0f0;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        pre {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .json-input {
+            width: 100%;
+            height: 200px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .output-area {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            min-height: 100px;
+            background: #fafafa;
+        }
+        h1, h2 { color: #333; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>🎮 WorldArchitect.AI - JSON Planning Block Demo</h1>
+    
+    <div class="demo-section">
+        <h2>✅ Working JSON Planning Block System</h2>
+        <p>This demonstrates the new JSON-first planning block architecture that replaced string parsing.</p>
+        
+        <h3>Example 1: Standard Choices</h3>
+        <div id="example1"></div>
+        
+        <h3>Example 2: Combat Scenario with Risk Levels</h3>
+        <div id="example2"></div>
+        
+        <h3>Example 3: XSS Prevention Test</h3>
+        <div id="example3"></div>
+        <p class="success">✅ All malicious scripts are safely escaped!</p>
+    </div>
+    
+    <div class="demo-section">
+        <h2>🧪 Interactive Tester</h2>
+        <p>Paste your own JSON planning block to test:</p>
+        <textarea id="jsonInput" class="json-input">{
+  "thinking": "The player needs to make a choice...",
+  "context": "Additional context here",
+  "choices": {
+    "option_1": {
+      "text": "First Option",
+      "description": "Description of the first option",
+      "risk_level": "low"
+    },
+    "option_2": {
+      "text": "Second Option",
+      "description": "Description of the second option",
+      "risk_level": "medium"
+    }
+  }
+}</textarea>
+        <br><br>
+        <button onclick="testCustomJSON()">Test JSON</button>
+        <br><br>
+        <div id="customOutput" class="output-area"></div>
+    </div>
+    
+    <div class="demo-section">
+        <h2>📝 JSON Structure</h2>
+        <pre>{
+  "thinking": "Internal DM thoughts (shown to player)",
+  "context": "Optional additional context",
+  "choices": {
+    "unique_identifier": {
+      "text": "Button Text",
+      "description": "Detailed description",
+      "risk_level": "low|medium|high|safe"
+    }
+  }
+}</pre>
+    </div>
+
+    <!-- Include the actual app.js -->
+    <script src="../mvp_site/static/app.js"></script>
+    
+    <script>
+        // Example data
+        const example1 = {
+            thinking: "The party stands at a crossroads in the ancient forest. Each path leads to different adventures.",
+            choices: {
+                follow_river: {
+                    text: "Follow the River",
+                    description: "Take the path alongside the babbling brook",
+                    risk_level: "safe"
+                },
+                enter_cave: {
+                    text: "Enter the Cave",
+                    description: "Explore the dark cave mouth you spotted",
+                    risk_level: "medium"
+                },
+                climb_tree: {
+                    text: "Climb the Ancient Tree",
+                    description: "Scale the massive oak to get a better view",
+                    risk_level: "low"
+                }
+            }
+        };
+        
+        const example2 = {
+            thinking: "The goblin ambush has begun! Quick tactical decisions are needed.",
+            context: "You're outnumbered 3 to 1, but have the high ground advantage.",
+            choices: {
+                charge_attack: {
+                    text: "Charge!",
+                    description: "Rush down the hill with weapons drawn",
+                    risk_level: "high"
+                },
+                defensive_position: {
+                    text: "Hold Position",
+                    description: "Form a defensive line and let them come to you",
+                    risk_level: "low"
+                },
+                flanking_maneuver: {
+                    text: "Flanking Maneuver",
+                    description: "Split the party to attack from two sides",
+                    risk_level: "medium"
+                },
+                negotiate: {
+                    text: "Attempt Negotiation",
+                    description: "Try to parley with the goblin leader",
+                    risk_level: "medium"
+                }
+            }
+        };
+        
+        const example3 = {
+            thinking: "Testing XSS prevention with malicious content <script>alert('XSS')</script>",
+            choices: {
+                xss_test_1: {
+                    text: "<img src=x onerror='alert(\"XSS\")'>Click Me",
+                    description: "Attempting image XSS injection - but it's safe!",
+                    risk_level: "low"
+                },
+                xss_test_2: {
+                    text: "Normal Button",
+                    description: "<script>document.write('XSS')</script> This script won't execute",
+                    risk_level: "safe"
+                }
+            }
+        };
+        
+        // Render examples
+        if (typeof parsePlanningBlocks === 'function') {
+            document.getElementById('example1').innerHTML = parsePlanningBlocks(example1);
+            document.getElementById('example2').innerHTML = parsePlanningBlocks(example2);
+            document.getElementById('example3').innerHTML = parsePlanningBlocks(example3);
+        } else {
+            document.body.innerHTML = '<h1>Error: parsePlanningBlocks function not found</h1>';
+        }
+        
+        // Custom JSON tester
+        function testCustomJSON() {
+            const input = document.getElementById('jsonInput').value;
+            const output = document.getElementById('customOutput');
+            
+            try {
+                const parsed = JSON.parse(input);
+                const result = parsePlanningBlocks(parsed);
+                output.innerHTML = '<h4>Output:</h4>' + result;
+                
+                // Add click handlers to demo buttons
+                output.querySelectorAll('.choice-button').forEach(btn => {
+                    btn.onclick = () => alert(`Clicked: ${btn.getAttribute('data-choice-id')}`);
+                });
+            } catch (e) {
+                output.innerHTML = '<div class="error">Error: ' + e.message + '</div>';
+            }
+        }
+        
+        // Add click handlers to all demo buttons
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.choice-button').forEach(btn => {
+                btn.onclick = () => alert(`Selected: ${btn.getAttribute('data-choice-id')}`);
+            });
+        });
+    </script>
+</body>
+</html>

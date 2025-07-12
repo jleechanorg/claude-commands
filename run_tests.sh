@@ -16,12 +16,13 @@
 
 # Note: Not using 'set -e' so we can run all tests even if some fail
 
-# Use the vpython script in project root
-VPYTHON="$PWD/vpython"
+# Store project root before changing directories
+PROJECT_ROOT="$PWD"
 
-# Check if vpython exists
-if [ ! -f "$VPYTHON" ]; then
-    echo "Error: vpython script not found at $VPYTHON"
+# Check if virtual environment exists
+if [ ! -d "$PROJECT_ROOT/venv" ]; then
+    echo "Error: Virtual environment not found at $PROJECT_ROOT/venv"
+    echo "Please create it with: python3 -m venv venv"
     exit 1
 fi
 
@@ -57,6 +58,10 @@ fi
 
 # Change to mvp_site directory
 cd mvp_site
+
+# Activate virtual environment
+print_status "Activating virtual environment..."
+source "$PROJECT_ROOT/venv/bin/activate"
 
 print_status "Running tests in mvp_site directory..."
 print_status "Setting TESTING=true for faster AI model usage"
@@ -98,13 +103,7 @@ if [ "$enable_coverage" = true ]; then
     # Check if coverage is installed
     print_status "Checking coverage installation..."
     
-    # First, activate the virtual environment
-    if ! source ../venv/bin/activate; then
-        print_error "Failed to activate virtual environment"
-        exit 1
-    fi
-    
-    # Then check if coverage is importable
+    # Check if coverage is importable (venv already activated)
     if ! python -c "import coverage" 2>/dev/null; then
         print_warning "Coverage tool not found. Installing..."
         if ! pip install coverage; then
@@ -117,7 +116,7 @@ if [ "$enable_coverage" = true ]; then
     fi
     
     # Clear any previous coverage data
-    source ../venv/bin/activate && coverage erase
+    coverage erase
     
     print_warning "Coverage mode: Running tests SEQUENTIALLY (not parallel) for accurate tracking"
 else
@@ -191,7 +190,7 @@ run_test() {
         # Choose command based on coverage mode
         if [ "$enable_coverage" = true ]; then
             # Run with coverage
-            if TESTING=true source ../venv/bin/activate && coverage run --append --source=. "$VPYTHON" "$test_file" >"$output_file" 2>&1; then
+            if TESTING=true coverage run --append --source=. "$test_file" >"$output_file" 2>&1; then
                 echo "PASS" > "$status_file"
                 print_success "$test_file completed successfully"
             else
@@ -200,7 +199,7 @@ run_test() {
             fi
         else
             # Run without coverage (normal mode)
-            if TESTING=true "$VPYTHON" "$test_file" >"$output_file" 2>&1; then
+            if TESTING=true python "$test_file" >"$output_file" 2>&1; then
                 echo "PASS" > "$status_file"
                 print_success "$test_file completed successfully"
             else

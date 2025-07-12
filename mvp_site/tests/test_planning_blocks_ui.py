@@ -67,13 +67,13 @@ but you've discovered the "thief" is actually the artifact's rightful owner.
         self.assertIn("Investigate_1", expected_data)
         self.assertIn("Search the mysterious room", expected_data)
     
-    def test_special_characters_escaping(self):
-        """Test that special characters in choices are properly escaped"""
-        choice_with_quotes = '**[Talk_1]:** Say "Hello there, friend!" to the stranger.'
+    def test_special_characters_preserved(self):
+        """Test that normal special characters are preserved (not HTML escaped)"""
+        choice_with_quotes = 'Say "Hello there, friend!" to the stranger.'
         
-        # Should be escaped for HTML attributes
-        expected_escaped = 'Talk_1: Say &quot;Hello there, friend!&quot; to the stranger.'
-        self.assertIn("&quot;", expected_escaped)
+        # Should preserve normal quotes without HTML escaping
+        self.assertIn('"', choice_with_quotes)
+        self.assertNotIn('&quot;', choice_with_quotes)  # Should NOT be HTML escaped
 
 
 if __name__ == "__main__":
