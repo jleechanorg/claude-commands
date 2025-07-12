@@ -435,7 +435,7 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 
 ## Environment, Tooling & Scripts
 
-1. **Python venv**: Verify activated before running Python/tests
+1. **Python venv**: Verify activated before running Python/tests | If missing/corrupted → `VENV_SETUP.md`
 2. **Robust Scripts**: Make idempotent, work from any subdirectory
 3. **Python Execution**: ✅ Run from project root | ❌ cd into subdirs
 4. **vpython Tests**: 

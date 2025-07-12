@@ -45,17 +45,20 @@ WorldArchitect.AI is a revolutionary AI-powered platform that serves as your dig
 ```bash
 # Clone the repository
 git clone https://github.com/your-repo/worldarchitect-ai.git
-cd worldarchitect-ai/mvp_site
+cd worldarchitect-ai
 
-# Install dependencies
-pip install -r requirements.txt
+# Set up virtual environment (see VENV_SETUP.md for detailed instructions)
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r mvp_site/requirements.txt
 
 # Set up environment variables
 cp .env.example .env
 # Edit .env with your API keys
 
-# Run locally
-python main.py
+# Run locally using vpython script
+./vpython mvp_site/main.py serve
 ```
 
 ### Docker Deployment
@@ -89,10 +92,16 @@ For a comprehensive understanding of the platform, including detailed architectu
 
 ```bash
 # Run all tests
-TESTING=true vpython -m pytest
+./run_tests.sh
 
 # Run with coverage
-TESTING=true vpython -m pytest --cov=. --cov-report=html
+./run_tests.sh --coverage
+
+# Run integration tests
+./run_tests.sh --integration
+
+# Run specific test with vpython
+TESTING=true ./vpython mvp_site/test_file.py
 ```
 
 ## 🤝 Contributing
