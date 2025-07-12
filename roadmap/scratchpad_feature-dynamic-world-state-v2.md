@@ -1103,6 +1103,129 @@ Complete mockups demonstrating all UI integration patterns:
 - **Responsive**: Mobile-first design considerations
 - **Dark Theme Support**: Overlays use dark theme for immersion
 
+## PR Breakdown Plan for Implementation
+
+### Foundation Phase (Domain Layer)
+
+**PR 1: Project Structure & Core Event Model** (~200 lines)
+- Directory structure setup (`mvp_site/world_state/domain/`)
+- `EventType` enum with all event types
+- `WorldEvent` class with validation
+- Comprehensive tests for WorldEvent
+- *Value: Establishes foundation for all future work*
+
+**PR 2: Entity Versioning System** (~250 lines)
+- `VersionedEntity` class for version tracking
+- `StateChange` class for recording changes
+- History tracking and retrieval
+- Tests for version management
+- *Value: Core versioning capability*
+
+**PR 3: Invalidation Rules Model** (~200 lines)
+- `InvalidationRule` class
+- Pattern matching logic
+- Time-based and event-based triggers
+- Tests for rule evaluation
+- *Value: Foundation for state expiration*
+
+### Application Layer Phase
+
+**PR 4: Event Recording Service** (~300 lines)
+- `EventRecorderService` class
+- Extract events from narrative using regex
+- Death detection, alliance detection
+- Comprehensive tests with sample narratives
+- *Value: Can start detecting events*
+
+**PR 5: Basic Event Storage** (~250 lines)
+- `EventRepository` interface
+- `MockEventRepository` for testing
+- `FirestoreEventRepository` implementation
+- CRUD operations and queries
+- *Value: Events can be persisted*
+
+**PR 6: State Reconstruction MVP** (~300 lines)
+- `StateReconstructionService` basic implementation
+- Reconstruct state from events
+- Performance tests (<100ms target)
+- *Value: Core feature working end-to-end*
+
+### Integration Phase
+
+**PR 7: Game State Integration** (~250 lines)
+- `GameStateEventAdapter` to hook into existing system
+- Feature flag setup in campaign settings
+- Modify `handle_interaction` to extract events
+- Integration tests
+- *Value: Events generated from gameplay*
+
+**PR 8: API Response Enhancement** (~200 lines)
+- Add `world_events` to interaction response
+- Only when feature flag enabled
+- Backwards compatible
+- API tests
+- *Value: Frontend can receive events*
+
+### UI Phase (Minimal MVP)
+
+**PR 9: Frontend Event Indicators** (~250 lines)
+- CSS for `.world-event-indicator`
+- Modify `appendToStory()` to show indicators
+- Basic modal to display events
+- `world-state-ui.js` foundation
+- *Value: Players see world changes*
+
+**PR 10: Session Detection & Storage** (~200 lines)
+- Detect session boundaries
+- Store session number with events
+- Session statistics calculation
+- *Value: Enables session recaps*
+
+### Enhancement Phase (Optional)
+
+**PR 11: Post-Session Recap** (~350 lines)
+- Session recap overlay UI
+- Event summary generation
+- Statistics display
+- *Value: Major feature - session summaries*
+
+**PR 12: Invalidation Engine** (~300 lines)
+- `InvalidationEngine` implementation
+- Process rules and cascades
+- Time-based expiration
+- *Value: World state becomes dynamic*
+
+**PR 13: Advanced State Reconstruction** (~300 lines)
+- Caching layer for performance
+- State snapshots
+- Rollback capability
+- *Value: Scalability improvements*
+
+**PR 14: World History Tab** (~400 lines)
+- New tab in campaign UI
+- Timeline visualization
+- Event filtering and search
+- *Value: Full event exploration*
+
+### Rollout Strategy
+
+**Phase 1 (PRs 1-6)**: Backend foundation - no user impact
+**Phase 2 (PRs 7-9)**: Basic integration - feature flag protected
+**Phase 3 (PRs 10-11)**: Session recaps - first major user feature
+**Phase 4 (PRs 12-14)**: Advanced features - premium tier
+
+### Key Benefits of This Split:
+
+1. **Each PR is reviewable** - All under 400 lines
+2. **Progressive value** - Each PR adds functionality
+3. **Feature flag protection** - Safe rollout
+4. **Clear dependencies** - PRs build logically
+5. **Early user value** - Basic indicators in PR 9
+6. **Testable chunks** - Each PR has its own tests
+
+### First PR to Start:
+Start with **PR 1: Project Structure & Core Event Model** as it creates the foundation everything else builds on.
+
 ## Context Links
 - Original design: PR #294
 - Complete specification: This document (scratchpad)
@@ -1113,3 +1236,4 @@ Complete mockups demonstrating all UI integration patterns:
 - UI/UX design: Complete with HTML mockups
 - Interactive mockups: PR #504 (MERGED)
 - Marketing & metrics: Defined
+- PR Breakdown: 14 PRs planned
