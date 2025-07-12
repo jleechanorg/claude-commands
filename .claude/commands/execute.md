@@ -2,30 +2,47 @@
 
 **Purpose**: Strategic planning and execution of complex tasks with comprehensive subagent coordination
 
-**Usage**: `/execute` or `/e` or `/plan` (alias)
+**Usage**: 
+- `/plan` - Preview plan and wait for approval before execution
+- `/execute` or `/e` - Use best judgment and execute immediately
 
-**Note**: The `/plan` command is now an alias for `/execute` - all planning and execution functionality has been consolidated here for a unified workflow.
-
-🚨 **MANDATORY PLAN PRESENTATION**: Both `/plan` and `/execute` MUST present the complete strategic plan to the user and wait for explicit approval before any execution begins.
+**Command Differences**:
+- **`/plan`**: Presents complete strategic plan and waits for explicit user approval before execution
+- **`/execute` and `/e`**: Uses best judgment to analyze task and execute immediately without requiring approval
 
 ## 🚨 MANDATORY 3-PHASE PROTOCOL
 
 ### Phase 1: Circuit Breaker
 🚨 **MANDATORY**: Use TodoWrite circuit breaker checklist:
+
+**Core Checklist (shared by all commands)**:
 ```
-## EXECUTE PROTOCOL CHECKLIST
+## EXECUTE PROTOCOL CHECKLIST - CORE
 - [ ] Context check: ___% remaining  
 - [ ] Task complexity assessment: Low/Medium/High
+- [ ] Execution approach: Direct/Subagent (Why: ___)
+- [ ] Checkpoint frequency: Every 5 min OR 3-5 files
+- [ ] Scratchpad location: roadmap/scratchpad_[branch].md
+- [ ] PR update strategy: Push at each checkpoint
+```
+
+**Additional items by command**:
+
+**`/plan` only**:
+```
 - [ ] Subagent strategy needed? Yes/No (Why: ___)
 - [ ] Git worktree strategy confirmed: Yes/No
-- [ ] Checkpoint frequency confirmed: Every 5 min OR 3-5 files
-- [ ] Scratchpad location identified: roadmap/scratchpad_[branch].md
-- [ ] PR update strategy: Push at each checkpoint
 - [ ] Parallel execution strategy: Yes/No (Why: ___)
 - [ ] Worktree usage justified: Yes/No (Why: ___)
 - [ ] Subagent coordination plan: ___
 - [ ] 🚨 MANDATORY: Complete plan presented to user: YES/NO
 - [ ] User approval received: YES/NO
+```
+
+**`/execute` and `/e` only**:
+```
+- [ ] Best judgment strategy determined: ___
+- [ ] Ready to execute immediately: YES
 ```
 
 ### Phase 2: Strategic Analysis & Planning
@@ -143,11 +160,19 @@ Task: "Migrate database schema with data preservation"
 - Reason: Each step requires results from previous step
 ```
 
-### Phase 3: Execution (ONLY after approval)
+### Phase 3: Execution
+
+**For `/plan` command (ONLY after approval)**:
 - **STOP HERE** - Do not proceed without explicit user approval
 - Wait for explicit user approval of the plan
 - Address any user questions or modifications
 - Only proceed after "YES" approval received
+
+**For `/execute` and `/e` commands (immediate execution)**:
+- Use best judgment to determine optimal execution strategy
+- Proceed immediately based on complexity assessment
+- Apply appropriate subagent strategy if beneficial
+- Follow checkpoint frequency requirements
 
 **Execution Modes**:
 - **Direct Mode**: 
@@ -190,27 +215,33 @@ Task: "Migrate database schema with data preservation"
 - Documents decision history
 - Maintains PR momentum
 
-## Example Flow
-```
-User: /e implement JSON backend support
-Assistant: I'll implement JSON backend support. Using TodoWrite for the circuit breaker:
+## Example Flows
 
-[Shows TodoWrite checklist with all items filled out]
+**`/plan` Flow (with approval)**:
+```
+User: /plan implement JSON backend support
+Assistant: I'll plan JSON backend support implementation. Using TodoWrite:
+
+[Shows PLAN TodoWrite checklist with all items filled out]
 
 ## Plan Overview
-
 1. **Analyze current JSON handling** (10 min)
-   - Review existing JSON parsing
-   - CHECKPOINT after analysis
-
-2. **Implement improvements** (20 min)
-   - Add validation
-   - CHECKPOINT after 3 files or 5 min
-
+2. **Implement improvements** (20 min) 
 3. **Add tests** (15 min)
-   - Unit and integration tests
-   - CHECKPOINT after test files
 
 Shall I proceed?
 
 User: Yes
+Assistant: [Begins execution]
+```
+
+**`/execute` or `/e` Flow (immediate execution)**:
+```
+User: /e implement JSON backend support
+Assistant: I'll implement JSON backend support using best judgment. TodoWrite assessment:
+
+[Shows EXECUTE TodoWrite checklist with immediate execution decision]
+
+Based on complexity assessment: Medium complexity, direct execution approach.
+[Immediately begins implementation with regular checkpoints]
+```
