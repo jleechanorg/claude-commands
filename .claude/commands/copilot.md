@@ -1,68 +1,99 @@
 # GitHub Copilot Comments Command
 
-**Purpose**: Focus exclusively on GitHub Copilot bot suggestions and automated code review comments
+**Purpose**: Make PR mergeable by resolving ALL GitHub comments and fixing ALL failing tests
 
 **Usage**: `/copilot [PR#]`
 
-**Action**: Extract and address only GitHub Copilot automated suggestions
+**Action**: Comprehensive PR cleanup - address ALL automated suggestions, bot comments, and test failures
 
 **Implementation**:
-1. **Extract Copilot Comments Only**:
-   - Filter for comments from `github-actions[bot]` or `copilot[bot]`
+1. **Extract ALL Bot Comments**:
+   - Filter for comments from `github-actions[bot]`, `copilot[bot]`, and other bots
    - Include both high and low confidence suggestions
    - Include "suppressed" suggestions that are normally hidden
-   - Focus on automated code quality suggestions
+   - Extract inline code review comments AND general PR comments
+   
+2. **Check Test Status**:
+   - Run `gh pr checks <PR#>` to see failing tests
+   - Identify specific test failures from CI/CD output
+   - Track both unit test and integration test failures
+   - Note any linting or type checking errors
 
-2. **Categorize Copilot Suggestions**:
+3. **Categorize ALL Issues**:
+   - **Test Failures**: Unit tests, integration tests, UI tests
+   - **Build Errors**: Compilation, linting, type checking
    - **Security**: Potential security vulnerabilities
    - **Performance**: Code optimization suggestions
    - **Style**: Code formatting and consistency
    - **Logic**: Potential bugs or logic errors
    - **Best Practices**: Language-specific improvements
 
-3. **Display Format**:
+4. **Display Format**:
    ```
-   COPILOT SUGGESTION #1 (High Confidence)
+   TEST FAILURE #1
+   Test: test_game_state.py::test_invalid_hp
+   Error: AssertionError: Expected exception not raised
+   Status: ❌ Not fixed
+   
+   COPILOT SUGGESTION #2 (High Confidence)
    File: main.py:655
    Type: Logic Error
    Suggestion: Consider simplifying the guard by treating all non-positive hp_max values
    Status: ❌ Not addressed
    ```
 
-4. **Quick Fix Protocol**:
-   - Apply obvious improvements immediately
-   - Flag complex suggestions for discussion
-   - Skip style-only changes unless critical
-   - Focus on security and logic fixes first
+5. **Fix Priority Order**:
+   1. **Failing Tests** - MUST fix ALL to make PR mergeable
+   2. **Build/Lint Errors** - Required for CI to pass
+   3. **Security Issues** - Critical vulnerabilities
+   4. **Logic Errors** - Bugs that affect functionality
+   5. **Performance** - Optimization opportunities
+   6. **Style/Best Practices** - Nice to have but not blocking
 
-5. **Response Format**:
-   - ✅ **APPLIED**: Suggestion implemented as recommended
+6. **Response Format**:
+   - ✅ **FIXED**: Test now passes / Issue resolved
    - 🔄 **MODIFIED**: Implemented with adjustments
-   - ❌ **SKIPPED**: Not applicable or intentionally ignored
-   - 🤔 **NEEDS REVIEW**: Requires human decision
+   - ❌ **BLOCKED**: Cannot fix due to external dependency
+   - 🤔 **NEEDS DISCUSSION**: Requires design decision
+
+**🚨 GOAL: Make PR Mergeable**:
+- ALL tests must pass (100% success rate)
+- ALL CI/CD checks must be green
+- ALL critical bot suggestions addressed
+- NO blocking issues remaining
 
 **Key Differences from /review**:
-- Only processes automated bot suggestions
-- Faster, focused on quick wins
-- No manual review comments
-- No comprehensive code review
-- Emphasis on automated tooling feedback
+- Focused on making PR mergeable, not comprehensive review
+- Prioritizes test failures and CI/CD blockers
+- Addresses ALL automated feedback (not just Copilot)
+- Faster turnaround for getting PR ready to merge
+- No manual review comments unless blocking merge
 
 **Example Output**:
 ```
-Found 5 GitHub Copilot suggestions:
+PR #523 Mergeability Report:
 
-1. [SECURITY] File: auth.py:45
-   "Potential SQL injection vulnerability"
-   → ✅ APPLIED: Switched to parameterized queries
+❌ FAILING TESTS (3):
+1. test_game_state.py::test_invalid_hp - AssertionError
+   → ✅ FIXED: Added validation for negative HP values
+2. test_integration.py::test_api_auth - 401 Unauthorized
+   → ✅ FIXED: Updated test headers with proper auth tokens
+3. test_ui_login.py::test_signin_flow - Timeout
+   → ✅ FIXED: Increased wait time for page load
 
-2. [STYLE] File: utils.js:120
-   "Use const instead of let for immutable variable"
-   → ❌ SKIPPED: Minor style issue, not critical
+⚠️ GITHUB BOT SUGGESTIONS (5):
+1. [SECURITY] auth.py:45 - "Potential SQL injection"
+   → ✅ FIXED: Switched to parameterized queries
+2. [LOGIC] game_state.py:255 - "Division by zero possible"
+   → ✅ FIXED: Added guard clause for hp_max > 0
+3. [STYLE] utils.js:120 - "Use const instead of let"
+   → ❌ SKIPPED: Non-blocking style issue
+4. [DUPLICATION] execute.md:82 - "Redundant checkpoint info"
+   → ✅ FIXED: Consolidated duplicate sections
+5. [PERFORMANCE] main.py:340 - "Inefficient loop"
+   → 🔄 MODIFIED: Optimized with list comprehension
 
-3. [LOGIC] File: game_state.py:255
-   "Division by zero possible when hp_max is 0"
-   → ✅ APPLIED: Added guard clause for hp_max > 0
+✅ PR STATUS: All blockers resolved - ready to merge!
 ```
 
-**For Full PR Review**: Use `/review [PR#]` for comprehensive review including all comments, tests, and systematic fixes.
+**For Comprehensive Code Review**: Use `/review [PR#]` for detailed analysis beyond merge requirements.
