@@ -637,8 +637,8 @@ Entities can have multiple status conditions from this list:
 **Character Creation**: During character creation, you MUST track progress with state updates at every step. Even before the character is complete, track the creation process in custom_campaign_state.
 
 This first block should not be an "update" but a "creation." It must contain all the initial data for:
-- `player_character_data`: Full character data per `entity_schema_instruction.md` format
-- `npc_data`: NPC profiles per `entity_schema_instruction.md` format
+- `player_character_data`: Full character data per entity schema format
+- `npc_data`: NPC profiles per entity schema format
 - `world_data`: Key locations, political situation, and foundational world-building elements
 - `custom_campaign_state`: Initial premise, campaign configuration, and custom tracking fields
 - `world_time`: The starting date and time

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-/learn command implementation
-Analyzes and documents learnings from corrections and mistakes
+Enhanced /learn command implementation
+Analyzes and documents learnings from corrections and mistakes using sequential thinking
+Supports automatic CLAUDE.md proposals and learning PR creation
 """
 
 import re
 import sys
+import subprocess
 from pathlib import Path
 from datetime import datetime
 

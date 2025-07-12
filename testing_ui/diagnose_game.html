@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WorldArchitect.AI Diagnostics</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { margin: 20px 0; padding: 10px; border: 1px solid #ccc; }
+        .data { background: #f0f0f0; padding: 10px; font-family: monospace; }
+        button { margin: 5px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>WorldArchitect.AI Browser Storage Diagnostics</h1>
+    
+    <div class="section">
+        <h2>LocalStorage Data:</h2>
+        <div id="localStorage" class="data">Checking...</div>
+    </div>
+    
+    <div class="section">
+        <h2>SessionStorage Data:</h2>
+        <div id="sessionStorage" class="data">Checking...</div>
+    </div>
+    
+    <div class="section">
+        <h2>Game-Related Keys Found:</h2>
+        <div id="gameKeys" class="data">Checking...</div>
+    </div>
+    
+    <div class="section">
+        <h2>Actions:</h2>
+        <button onclick="clearAll()">Clear All Storage</button>
+        <button onclick="clearGameData()">Clear Game Data Only</button>
+        <button onclick="goToMainSite()">Go to Main Site</button>
+        <button onclick="goToTestMode()">Go to Test Mode</button>
+        <button onclick="quickClearAndReload()">Quick Clear & Reload</button>
+    </div>
+    
+    <div class="section">
+        <h2>Current URL:</h2>
+        <div id="currentUrl" class="data"></div>
+    </div>
+    
+    <script>
+        // Display current URL
+        document.getElementById('currentUrl').textContent = window.location.href;
+        
+        // Check localStorage
+        const localData = {};
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            localData[key] = localStorage.getItem(key);
+        }
+        document.getElementById('localStorage').textContent = JSON.stringify(localData, null, 2) || 'Empty';
+        
+        // Check sessionStorage
+        const sessionData = {};
+        for (let i = 0; i < sessionStorage.length; i++) {
+            const key = sessionStorage.key(i);
+            sessionData[key] = sessionStorage.getItem(key);
+        }
+        document.getElementById('sessionStorage').textContent = JSON.stringify(sessionData, null, 2) || 'Empty';
+        
+        // Find game-related keys
+        const gameKeys = [];
+        const gamePatterns = ['campaign', 'game', 'state', 'story', 'character', 'arion', 'dragon'];
+        
+        for (const key in localData) {
+            if (gamePatterns.some(pattern => key.toLowerCase().includes(pattern))) {
+                gameKeys.push(`localStorage: ${key}`);
+            }
+        }
+        
+        for (const key in sessionData) {
+            if (gamePatterns.some(pattern => key.toLowerCase().includes(pattern))) {
+                gameKeys.push(`sessionStorage: ${key}`);
+            }
+        }
+        
+        document.getElementById('gameKeys').textContent = gameKeys.length > 0 ? gameKeys.join('\n') : 'No game-related keys found';
+        
+        function clearAll() {
+            localStorage.clear();
+            sessionStorage.clear();
+            alert('All storage cleared! Refreshing page...');
+            location.reload();
+        }
+        
+        function clearGameData() {
+            // Clear game-related keys
+            const keysToRemove = [];
+            
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (gamePatterns.some(pattern => key.toLowerCase().includes(pattern))) {
+                    keysToRemove.push({storage: 'local', key: key});
+                }
+            }
+            
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                if (gamePatterns.some(pattern => key.toLowerCase().includes(pattern))) {
+                    keysToRemove.push({storage: 'session', key: key});
+                }
+            }
+            
+            keysToRemove.forEach(item => {
+                if (item.storage === 'local') {
+                    localStorage.removeItem(item.key);
+                } else {
+                    sessionStorage.removeItem(item.key);
+                }
+            });
+            
+            alert(`Cleared ${keysToRemove.length} game-related keys! Refreshing...`);
+            location.reload();
+        }
+        
+        function goToMainSite() {
+            // Get current port from URL or default to 6006
+            const currentPort = window.location.port || '6006';
+            window.location.href = `http://localhost:${currentPort}`;
+        }
+        
+        function goToTestMode() {
+            // Get current port from URL or default to 6006
+            const currentPort = window.location.port || '6006';
+            window.location.href = `http://localhost:${currentPort}?test_mode=true&test_user_id=test-user-123`;
+        }
+        
+        function quickClearAndReload() {
+            // Simple clear function like the old test_clear_storage.html
+            localStorage.clear();
+            sessionStorage.clear();
+            alert('Storage cleared! Redirecting to main site...');
+            goToMainSite();
+        }
+    </script>
+</body>
+</html>

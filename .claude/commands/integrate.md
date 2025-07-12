@@ -15,7 +15,8 @@
 - `/integrate feature/my-feature` - Creates feature/my-feature branch
 - `/integrate fix/bug-123 --force` - Creates fix/bug-123 branch, overriding checks
 
-**Implementation**: 
+**Enhanced Implementation**: 
+- **Auto-Learning**: Automatically trigger `/learn` to capture insights from completed work
 - Stop test server for current branch (if running)
 - Execute `./integrate.sh` script with optional branch name
 - Creates new branch from latest main
@@ -23,6 +24,7 @@
 - Pulls latest changes from main
 - Sets up custom or timestamp-based branch naming
 - Cleans up branch-specific test server resources
+- **Learning Documentation**: Capture and document patterns from previous branch work
 
 **Test Server Integration**:
 - Automatically stops test server for current branch before integration

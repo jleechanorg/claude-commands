@@ -110,7 +110,7 @@ When mistakes occur:
 
 1. **Directory Context**: Operates in worktree directory shown in environment
 2. **Tool Usage**: File ops, bash commands, web tools available
-3. **Test Execution**: Use `source venv/bin/activate && python` with `TESTING=true` (NOT vpython)
+3. **Test Execution**: Use `TESTING=true vpython` from project root
 4. **File Paths**: Always absolute paths
 5. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
@@ -610,12 +610,44 @@ Use `/list` to display all available slash commands with descriptions.
 - `/plan` - Alias for `/execute` (Consolidated planning and execution workflow)
 - All aliases execute identical protocols as their full command names
 
+⚠️ **ENHANCED /learn WORKFLOW**: Flexible branching options for learning capture
+   - ✅ Offer choice: "Include in current PR" vs "Clean branch from main"
+   - ✅ Bundle related learning changes with current work when contextually appropriate
+   - ✅ Create independent learning PRs for isolated improvements
+   - 🔍 Evidence: User request for workflow flexibility and clean branch options
+
 **Command Examples**: → `.cursor/rules/examples.md`
 
 ## Special Protocols
 
-### GitHub Copilot Comments (⚠️)
-Reply to EVERY comment | Status: Fixed/Acknowledged/Future | ❌ ignore "suppressed"
+### GitHub PR Comment Response Protocol (⚠️)
+**MANDATORY**: Systematically address ALL PR comments from all sources
+
+#### Comment Sources to Check
+1. **Inline Comments**: `gh api repos/owner/repo/pulls/PR#/comments`
+2. **General Comments**: `gh pr view PR# --comments`
+3. **Review Comments**: `gh api repos/owner/repo/pulls/PR#/reviews`
+4. **Copilot Comments**: Include "suppressed" and "low confidence" feedback
+
+#### Response Requirements
+- **✅ RESOLVED**: Comment fully addressed with code changes
+- **🔄 ACKNOWLEDGED**: Comment noted, will address in follow-up
+- **📝 CLARIFICATION**: Need more details from commenter
+- **❌ DECLINED**: Won't implement with clear reasoning
+
+#### Implementation Protocol
+1. **Extract ALL comments** systematically using API calls
+2. **Address each comment** with specific changes or responses
+3. **Reply to each comment** on GitHub with status and explanation
+4. **Update tracking** in commit messages referencing comment resolution
+5. **Post summary** showing all comments addressed
+
+#### Auto-Response Triggers
+- When user says "look at github comments" - immediately extract and address
+- When creating PRs - proactively check for existing feedback
+- When user mentions "comments" or "feedback" - check PR comments
+
+**Critical Rule**: ❌ NEVER ignore any comment type, including "suppressed" Copilot feedback
 
 ### Code Review Protocol (`/review` `/copilot`) (⚠️)
 **MANDATORY**: When reviewing PRs, list EVERY SINGLE comment explicitly:

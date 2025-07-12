@@ -8,13 +8,40 @@ This directory contains the core application code for WorldArchitect.AI, an AI-p
 
 ## Architecture
 
+### 📁 File Placement Guidelines
+
+**🚨 CRITICAL**: Do not create new directories without explicit permission. Follow these guidelines:
+
+#### Testing Files
+- **Browser Tests**: `/testing_ui/` (project root) - Playwright browser automation tests
+- **HTTP Tests**: `/testing_http/` (project root) - HTTP API endpoint tests  
+- **MVP Site Browser Tests**: `mvp_site/testing_ui/` - Browser tests specific to MVP site
+- **Integration Tests**: `mvp_site/test_integration/` - Cross-component integration tests
+- **Unit Tests**: `mvp_site/tests/` - Individual component unit tests
+
+#### Development Tools
+- **Scripts**: `/tools/` (project root) - Development and utility scripts
+- **Diagnostic Tools**: `/testing_ui/` - Browser diagnostic and debugging tools
+
+#### Documentation
+- **Project Documentation**: `/` (project root) - README, CLAUDE.md, setup guides
+- **Roadmap & Planning**: `/roadmap/` - Project planning and milestone documentation
+- **Code Documentation**: `mvp_site/` - Architecture and component-specific docs
+
+#### Source Code
+- **Core Application**: `mvp_site/` - All production application code
+- **Static Assets**: `mvp_site/static/` - CSS, JS, images, themes
+- **AI Prompts**: `mvp_site/prompts/` - AI system instructions and templates
+
+**Rule**: When in doubt about file placement, ask for clarification rather than creating new directories.
+
 ### Backend (Python/Flask)
-- **main.py** (985 lines) - Primary Flask application entry point
-- **firestore_service.py** (467 lines) - Database operations and state management
-- **gemini_service.py** (1,449 lines) - AI service integration and response processing
-- **game_state.py** (373 lines) - Core game state management and validation
-- **constants.py** (174 lines) - Shared constants and configuration
-- **logging_util.py** (208 lines) - Centralized logging with emoji enhancement
+- **main.py** (1,222 lines) - Primary Flask application entry point
+- **firestore_service.py** (539 lines) - Database operations and state management
+- **gemini_service.py** (1,598 lines) - AI service integration and response processing
+- **game_state.py** (382 lines) - Core game state management and validation
+- **constants.py** (184 lines) - Shared constants and configuration
+- **logging_util.py** (207 lines) - Centralized logging with emoji enhancement
 
 ### Frontend (JavaScript/HTML/CSS)
 - **static/index.html** - Main HTML template
