@@ -3,6 +3,26 @@
 # Always uses --dangerously-skip-permissions and prompts for model choice
 # Model updated: July 6th, 2025
 
+# Parse command line arguments
+FORCE_CLEAN=false
+REMAINING_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -c|--clean)
+            FORCE_CLEAN=true
+            shift
+            ;;
+        *)
+            REMAINING_ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+# Restore remaining arguments
+set -- "${REMAINING_ARGS[@]}"
+
 # Check if MCP servers are installed by checking if claude mcp list returns any servers
 echo "🔍 Checking MCP servers..."
 MCP_LIST=$(claude mcp list 2>/dev/null)
@@ -45,19 +65,25 @@ fi
 PROJECT_DIR_NAME=$(pwd | sed 's/[\/._]/-/g')
 CLAUDE_PROJECT_DIR="$HOME/.claude/projects/${PROJECT_DIR_NAME}"
 
-# Check if the project directory exists and has conversation files
-# Using find to check for .jsonl files as a more reliable method
-if find "$HOME/.claude/projects" -maxdepth 1 -type d -name "${PROJECT_DIR_NAME}" 2>/dev/null | grep -q .; then
-    if find "$HOME/.claude/projects/${PROJECT_DIR_NAME}" -name "*.jsonl" -type f 2>/dev/null | grep -q .; then
-        echo "Found existing conversation(s) in this project directory"
-        FLAGS="--dangerously-skip-permissions --continue"
+# Check if --clean flag was passed
+if [ "$FORCE_CLEAN" = true ]; then
+    echo "🧹 Starting fresh conversation (--clean flag detected)"
+    FLAGS="--dangerously-skip-permissions"
+else
+    # Check if the project directory exists and has conversation files
+    # Using find to check for .jsonl files as a more reliable method
+    if find "$HOME/.claude/projects" -maxdepth 1 -type d -name "${PROJECT_DIR_NAME}" 2>/dev/null | grep -q .; then
+        if find "$HOME/.claude/projects/${PROJECT_DIR_NAME}" -name "*.jsonl" -type f 2>/dev/null | grep -q .; then
+            echo "Found existing conversation(s) in this project directory"
+            FLAGS="--dangerously-skip-permissions --continue"
+        else
+            echo "Project directory exists but no conversations found"
+            FLAGS="--dangerously-skip-permissions"
+        fi
     else
-        echo "Project directory exists but no conversations found"
+        echo "No existing conversations found for this project"
         FLAGS="--dangerously-skip-permissions"
     fi
-else
-    echo "No existing conversations found for this project"
-    FLAGS="--dangerously-skip-permissions"
 fi
 
 echo ""
