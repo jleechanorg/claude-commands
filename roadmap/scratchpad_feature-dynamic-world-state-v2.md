@@ -1050,6 +1050,59 @@ campaign_settings = {
 }
 ```
 
+## UI Mockups Created (PR #504)
+
+### Interactive HTML/CSS Prototypes
+Complete mockups demonstrating all UI integration patterns:
+
+1. **Campaign Integration** (`/tmp/worldarchitectai/mocks/world_mocks/campaign_real_ui.html`)
+   - World event indicators inline with story
+   - Floating widget showing recent events
+   - Mini timeline visualization
+   - Non-intrusive design matching actual UI
+
+2. **Session Recap** (`/tmp/worldarchitectai/mocks/world_mocks/session_recap_real.html`)
+   - Post-session overlay with dark theme
+   - Session statistics and achievements
+   - Major world changes highlighted
+   - Consequence tracking visualization
+
+3. **World History Tab** (`/tmp/worldarchitectai/mocks/world_mocks/world_history_tab.html`)
+   - Full timeline with filtering and search
+   - Event categorization (Combat, Social, Discovery)
+   - Statistics dashboard (147 events, 23 major changes, etc.)
+   - Session separation markers
+
+4. **Timeline Integration** (`/tmp/worldarchitectai/mocks/world_mocks/timeline_integration.html`)
+   - Two-column layout: story + live timeline
+   - Interactive highlighting between timeline and story
+   - Sticky sidebar that follows scroll
+   - Bi-directional navigation
+
+5. **Mobile Responsive** (`/tmp/worldarchitectai/mocks/world_mocks/mobile_responsive.html`)
+   - Floating action button (FAB) for world state
+   - Bottom slide-up panel
+   - Touch-optimized timeline
+   - Responsive layout for all screen sizes
+
+6. **Component Library**
+   - Timeline View (`timeline_view.html`) - Zoomable timeline component
+   - Relationships Graph (`relationships.html`) - NPC network visualization
+   - In-Game Panel (`ingame_panel.html`) - Collapsible side panel
+
+### Mockup Index
+- Main index: `/tmp/worldarchitectai/mocks/world_mocks/index.html`
+- Links to all mockups with descriptions
+- Technical implementation notes
+- Integration strategy overview
+
+### Key Design Decisions from Mockups
+- **Progressive Enhancement**: Works without JavaScript, enhanced with it
+- **Non-intrusive**: Features don't disrupt core gameplay
+- **Multiple Access Patterns**: Widget, tab, sidebar, overlay approaches
+- **Responsive**: Mobile-first design considerations
+- **Dark Theme Support**: Overlays use dark theme for immersion
+
 ## Context Links
 - Original design: PR #294
 - Complete specification: This document (scratchpad)
@@ -1057,5 +1110,6 @@ campaign_settings = {
 - Technical architecture: Defined
 - Four-layer plan: Complete
 - TDD approach: Detailed
-- UI/UX design: Complete
+- UI/UX design: Complete with HTML mockups
+- Interactive mockups: PR #504 (MERGED)
 - Marketing & metrics: Defined
