@@ -49,7 +49,30 @@ if [ "$remote" != "no upstream" ]; then
     fi
 fi
 
+# Try to find PR for current branch first
 pr_info=$(gh pr list --head "$local_branch" --json number,url 2>/dev/null || echo "[]")
+
+# If no PR found for current branch, try to find related PRs
+if [ "$pr_info" = "[]" ]; then
+    # Look for PRs that might be related to commits from this branch
+    # Get recent commits and search for PRs containing those commits
+    recent_commits=$(git log --format="%H" -10 2>/dev/null || echo "")
+    if [ -n "$recent_commits" ]; then
+        # Search all open PRs for any that might contain our commits
+        all_prs=$(gh pr list --state open --json number,url,headRefName 2>/dev/null || echo "[]")
+        if [ "$all_prs" != "[]" ]; then
+            # Look for PRs where we might have pushed commits
+            for commit in $recent_commits; do
+                for pr_branch in $(echo "$all_prs" | jq -r '.[].headRefName' 2>/dev/null); do
+                    if git merge-base --is-ancestor "$commit" "origin/$pr_branch" 2>/dev/null; then
+                        pr_info=$(echo "$all_prs" | jq "[.[] | select(.headRefName == \"$pr_branch\")]" 2>/dev/null)
+                        break 2
+                    fi
+                done
+            done
+        fi
+    fi
+fi
 
 if [ "$pr_info" = "[]" ]; then
     pr_text="none"

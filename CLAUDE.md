@@ -513,8 +513,8 @@ Use `/list` to display all available slash commands with descriptions.
 - Subagents are expensive and should be used judiciously
 
 **Chained Commands Support**:
-- `/e /think` - Execute with ultrathink mode enabled
-- `/e /think [task]` - Execute task with maximum thinking budget
+- `/e /think` - Execute with light thinking mode (4 thoughts) enabled  
+- `/e /think ultra [task]` - Execute task with maximum thinking budget (12+ thoughts)
 - Commands can be chained with space separation
 - First command determines primary mode, subsequent commands modify behavior
 
