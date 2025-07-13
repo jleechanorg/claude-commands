@@ -43,7 +43,11 @@ def test_api_structure():
         # Create campaign
         response = requests.post(
             f'{BASE_URL}/api/campaigns',
-            headers={'X-Test-User-Id': 'test-123', 'Content-Type': 'application/json'},
+            headers={
+                'X-Test-Bypass-Auth': 'true',
+                'X-Test-User-ID': 'test-123',
+                'Content-Type': 'application/json'
+            },
             json={'title': 'Test', 'prompt': 'Test campaign', 'campaign_type': 'custom'}
         )
         campaign_data = response.json()
@@ -56,8 +60,12 @@ def test_api_structure():
         # Test interaction
         response = requests.post(
             f'{BASE_URL}/api/campaigns/{campaign_id}/interaction',
-            headers={'X-Test-User-Id': 'test-123', 'Content-Type': 'application/json'},
-            json={'input_text': 'I attack with my sword!', 'mode': 'character', 'debug_mode': True}
+            headers={
+                'X-Test-Bypass-Auth': 'true',
+                'X-Test-User-ID': 'test-123',
+                'Content-Type': 'application/json'
+            },
+            json={'input': 'I attack with my sword!', 'mode': 'character', 'debug_mode': True}
         )
         
         data = response.json()
@@ -89,8 +97,12 @@ def test_api_structure():
         print("\n=== 🔴 TESTING GOD MODE RESPONSE ===")
         god_response = requests.post(
             f'{BASE_URL}/api/campaigns/{campaign_id}/interaction',
-            headers={'X-Test-User-Id': 'test-123', 'Content-Type': 'application/json'},
-            json={'input_text': 'GOD: give me plot suggestions', 'mode': 'character'}
+            headers={
+                'X-Test-Bypass-Auth': 'true',
+                'X-Test-User-ID': 'test-123',
+                'Content-Type': 'application/json'
+            },
+            json={'input': 'GOD_ASK_STATE', 'mode': 'character'}
         )
         
         if god_response.status_code == 200:

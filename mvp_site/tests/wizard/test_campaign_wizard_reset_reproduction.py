@@ -40,8 +40,13 @@ class CampaignWizardResetReproductionTest(unittest.TestCase):
         if not SELENIUM_AVAILABLE:
             return
             
-        # Set up test server
-        cls.server_port = 8766
+        # Set up test server - use dynamic port to avoid conflicts
+        import socket
+        sock = socket.socket()
+        sock.bind(('', 0))
+        cls.server_port = sock.getsockname()[1]
+        sock.close()
+        
         cls.server_thread = None
         cls.start_test_server()
         

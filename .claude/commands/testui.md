@@ -1,14 +1,19 @@
 # Browser Tests (Mock) Command
 
-**Purpose**: Run REAL browser tests with mock APIs (free)
+**Purpose**: Run REAL browser tests with mock APIs using Puppeteer MCP by default
 
-**Action**: Execute browser automation tests using Playwright with mocked API responses
+**Action**: Execute browser automation tests using Puppeteer MCP (preferred) or Playwright fallback
 
-**Usage**: `/testui`
+**Usage**: `/testui [mode]`
 
-**Action**: Run the UI test script with mock APIs and ALWAYS report the 3 critical confirmations:
+**Default Action in Claude Code CLI**: Run with Puppeteer MCP for optimal integration:
 
 ```bash
+./run_ui_tests.sh mock --puppeteer
+```
+
+**Fallback**: If MCP unavailable, use Playwright:
+```bash  
 ./run_ui_tests.sh mock
 ```
 
@@ -31,9 +36,15 @@ After test execution, ALWAYS explicitly confirm these 3 points:
    - Report mock AI mode was active
 
 **CRITICAL REQUIREMENTS**:
-- 🚨 **REAL browser automation only** - Must use Playwright
+- 🚨 **REAL browser automation only** - Must use Puppeteer MCP (preferred) or Playwright
 - 🚨 **NO HTTP simulation** - This is browser testing, not API testing  
 - 🚨 **Mock APIs** - Uses mocked external API responses (free)
-- 🚨 **Real screenshots** - PNG/JPG images taken by browsers, never text files
+- 🚨 **Real screenshots** - PNG/JPG images or visual captures, never text files
 - ❌ **NEVER simulate** - If browser tests can't run, report honestly
-- ✅ **ALWAYS list screenshot paths** - Show exact file locations generated
+- ✅ **ALWAYS provide visual evidence** - Screenshots through MCP or file paths
+
+**PUPPETEER MCP BENEFITS** (Claude Code CLI default):
+- ✅ **No dependencies** - Works immediately without setup
+- ✅ **Visual capture** - Built-in screenshot functionality  
+- ✅ **Real browsers** - Actual Chrome/Chromium automation
+- ✅ **Direct integration** - Native Claude Code environment support

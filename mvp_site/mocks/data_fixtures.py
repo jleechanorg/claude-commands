@@ -75,7 +75,8 @@ SAMPLE_GAME_STATE = {
         "last_story_mode_sequence_id": 5
     },
     "last_state_update_timestamp": datetime.datetime(2023, 6, 15, 14, 45, 0, tzinfo=datetime.timezone.utc),
-    "migration_status": "MIGRATED"
+    "migration_status": "MIGRATED",
+    "debug_mode": True
 }
 
 # Sample story context
@@ -205,4 +206,4 @@ DISCREPANCY_SCENARIOS = {
         "narrative": "With the dragon finally defeated and the treasure secured, the quest was complete.",
         "expected_discrepancies": 2
     }
-} 
+}

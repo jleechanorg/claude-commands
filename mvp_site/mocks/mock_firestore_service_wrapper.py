@@ -11,7 +11,7 @@ from datetime import datetime
 from firebase_admin import firestore
 
 # Module constants from the real service
-DELETE_FIELD = firestore.DELETE_FIELD
+DELETE_FIELD = object()  # Simple sentinel for mock
 
 # Module-level client instance
 _client = None
@@ -87,12 +87,34 @@ def update_state_with_changes(user_id, campaign_id, state_changes, interaction_t
         return client.update_game_state(user_id, campaign_id, merged_state, interaction_type)
     return False
 
+def get_campaign_game_state(user_id, campaign_id):
+    """Get the current game state for a campaign (compatibility with real service)."""
+    # Use the mock client's get_campaign_game_state method which returns a MockFirestoreDocument
+    client = get_client()
+    return client.get_campaign_game_state(user_id, campaign_id)
+
+def update_campaign_game_state(user_id, campaign_id, state_dict):
+    """Update the current game state for a campaign (compatibility with real service)."""
+    client = get_client()
+    return client.update_campaign_game_state(user_id, campaign_id, state_dict)
+
 # --- Story Management Functions ---
 
 def add_story_entry(user_id, campaign_id, story_entry, structured_fields=None):
     """Add a story entry to the log."""
     client = get_client()
-    return client.add_story_entry(user_id, campaign_id, story_entry, structured_fields)
+    # If story_entry is a dict, extract fields; else treat as text
+    if isinstance(story_entry, dict):
+        actor = story_entry.get('actor', 'user')
+        text = story_entry.get('text', '')
+        mode = story_entry.get('mode', 'character')
+    else:
+        actor = 'user'
+        text = story_entry if story_entry is not None else ""
+        mode = 'character'
+    if structured_fields is None:
+        structured_fields = {}
+    return client.add_story_entry(user_id, campaign_id, actor, text, mode, structured_fields)
 
 def get_story_context(user_id, campaign_id, max_turns=15, include_all=False):
     """Get story context for a campaign."""

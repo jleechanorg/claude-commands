@@ -2,18 +2,40 @@
 
 # run_ui_tests.sh - Complete UI/Browser Test Runner for WorldArchitect.AI
 # This script handles all the setup and execution for browser tests
-# Usage: ./run_ui_tests.sh [mode]
+# Usage: ./run_ui_tests.sh [mode] [--puppeteer]
 #   mode:
 #     mock        - Use mock implementations for BOTH Firebase and Gemini
 #     mock-gemini - Use mock Gemini but REAL Firebase (default for cost savings)
 #     real        - Use REAL implementations for both services (costs money!)
 #   
+#   --puppeteer   - Use Puppeteer MCP instead of Playwright (requires Claude Code CLI)
+#   
 # Default (no argument): mock-gemini mode
 
 set -e  # Exit on any error
 
-# Determine mock mode
-MODE="${1:-mock-gemini}"  # Default to mock-gemini if no argument
+# Parse arguments
+MODE=""
+USE_PUPPETEER=false
+
+# Refactored argument parsing for correctness
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --puppeteer)
+            USE_PUPPETEER=true
+            shift
+            ;;
+        *)
+            if [[ -z "$MODE" ]]; then
+                MODE="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Set default mode if not specified
+MODE="${MODE:-mock-gemini}"
 
 case "$MODE" in
     "mock")
@@ -69,8 +91,12 @@ python3 -c "import playwright; print('✅ Playwright module found')" || {
 }
 
 # 3. Verify browser dependencies
-echo "🌐 Verifying browser dependencies..."
-python3 -c "
+if [[ "$USE_PUPPETEER" == "true" ]]; then
+    echo "🤖 Using Puppeteer MCP - skipping Playwright dependencies"
+    echo "   Note: Puppeteer MCP requires Claude Code CLI environment"
+else
+    echo "🌐 Verifying Playwright browser dependencies..."
+    python3 -c "
 from playwright.sync_api import sync_playwright
 try:
     with sync_playwright() as p:
@@ -84,6 +110,7 @@ except Exception as e:
     echo "❌ Browser dependencies missing. Installing..."
     playwright install chromium
 }
+fi
 
 # 4. Create screenshot directory
 echo "📸 Setting up screenshot directory..."
@@ -143,21 +170,43 @@ cleanup() {
 }
 # trap cleanup EXIT
 
-# 7. Run the tests in parallel
-echo "🧪 Running browser tests in parallel..."
-echo "======================================="
-
-# Automatically discover all test files in testing_ui/ directory
-BROWSER_TESTS=()
-if [ -d "testing_ui/core_tests/" ]; then
-    echo "🔍 Discovering test files in testing_ui/core_tests/ directory..."
-    while IFS= read -r -d '' test_file; do
-        BROWSER_TESTS+=("$test_file")
-    done < <(find testing_ui/core_tests -name "test_*.py" -type f -print0 | sort -z)
-    echo "✅ Found ${#BROWSER_TESTS[@]} test files"
+# 7. Run the tests
+if [[ "$USE_PUPPETEER" == "true" ]]; then
+    echo "🤖 Puppeteer MCP Mode - Manual Execution Required"
+    echo "================================================="
+    echo ""
+    echo "🔧 Server running on: http://localhost:$PORT"
+    echo "🧪 Test URL: http://localhost:$PORT?test_mode=true&test_user_id=test-user-123"
+    echo ""
+    echo "Available Puppeteer tests:"
+    echo "• testing_ui/test_structured_fields_puppeteer.py"
+    echo ""
+    echo "💡 To run Puppeteer tests, use Claude Code CLI with MCP tools:"
+    echo "   1. Navigate to test URL"
+    echo "   2. Execute test steps via Puppeteer MCP functions"
+    echo "   3. Capture screenshots for validation"
+    echo ""
+    echo "⏳ Server will remain running... Press Ctrl+C to stop"
+    
+    # Keep server running for manual testing
+    wait $SERVER_PID
+    exit 0
 else
-    echo "❌ testing_ui/core_tests/ directory not found"
-    exit 1
+    echo "🧪 Running Playwright browser tests in parallel..."
+    echo "=================================================="
+    
+    # Automatically discover all test files in testing_ui/ directory
+    BROWSER_TESTS=()
+    if [ -d "testing_ui/core_tests/" ]; then
+        echo "🔍 Discovering test files in testing_ui/core_tests/ directory..."
+        while IFS= read -r -d '' test_file; do
+            BROWSER_TESTS+=("$test_file")
+        done < <(find testing_ui/core_tests -name "test_*.py" -type f -print0 | sort -z)
+        echo "✅ Found ${#BROWSER_TESTS[@]} test files"
+    else
+        echo "❌ testing_ui/core_tests/ directory not found"
+        exit 1
+    fi
 fi
 
 # Create parallel execution with limited concurrency

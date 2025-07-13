@@ -109,6 +109,12 @@
    - **CLOSED** = Abandoned or rejected - NOT completed
    - ❌ NEVER mark tasks as completed just because PR exists
    - ✅ ONLY mark completed when PR state = "MERGED"
+12. 🚨 **PUPPETEER MCP DEFAULT**: ⚠️ MANDATORY - When running in Claude Code CLI:
+   - ✅ ALWAYS use Puppeteer MCP for browser automation by default
+   - ✅ Automatically add --puppeteer flag to all UI test commands
+   - ✅ Use MCP functions instead of Playwright for browser tests
+   - ❌ NEVER default to Playwright when MCP tools are available
+   - Benefits: No dependencies, real browsers, visual screenshots, Claude Code integration
 
 ## Project Overview
 
@@ -279,32 +285,55 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 ### Browser vs HTTP Testing (🚨 HARD RULE)
 **CRITICAL DISTINCTION**: Never confuse browser automation with HTTP simulation
-- 🚨 **testing_ui/**: ONLY real browser automation using Playwright | ❌ NEVER use `requests` library here
-- 🚨 **testing_http/**: ONLY HTTP requests using `requests` library | ❌ NEVER use Playwright here
-- ⚠️ **/testui and /testuif**: MUST use real Playwright browser automation | NO HTTP simulation
+- 🚨 **testing_ui/**: ONLY real browser automation using **Puppeteer MCP** (default) or Playwright | ❌ NEVER use `requests` library here
+- 🚨 **testing_http/**: ONLY HTTP requests using `requests` library | ❌ NEVER use browser automation here
+- ⚠️ **/testui and /testuif**: MUST use real browser automation (Puppeteer MCP preferred) | NO HTTP simulation
 - ⚠️ **/testhttp and /testhttpf**: MUST use HTTP requests | NO browser automation
 - ✅ **/testi**: HTTP requests are acceptable (integration testing)
 - **Red Flag**: If writing "browser tests" with `requests.get()`, STOP immediately
 
+- **Command Structure** (Claude Code CLI defaults to Puppeteer MCP):
+  - `/testui` = Browser (Puppeteer MCP) + Mock APIs
+  - `/testuif` = Browser (Puppeteer MCP) + REAL APIs (costs $)
+  - `/testhttp` = HTTP + Mock APIs  
+  - `/testhttpf` = HTTP + REAL APIs (costs $)
+
+
 ### Browser Test Execution Protocol (🚨 MANDATORY STEPS)
 
-🚨 **CRITICAL**: Playwright IS installed in venv! Stop assuming it isn't!
+🚨 **PREFERRED**: Use Puppeteer MCP for browser automation in Claude Code CLI!
+- ✅ Puppeteer MCP provides real browser automation without dependency issues
+- ✅ Built-in screenshot capture and JavaScript execution
+- ✅ Direct integration with Claude Code environment
+- ❌ NEVER use HTTP simulation when browser automation is requested
+
+🚨 **FALLBACK**: Playwright IS installed in venv if Puppeteer MCP unavailable!
 - ✅ Playwright works perfectly when venv is activated
 - ❌ NEVER say "Playwright isn't installed"
 - ❌ NEVER create simulated tests as a workaround
 - ✅ ALWAYS use headless=True for browser tests to avoid UI timeouts
 - 🔍 Evidence: Headless mode confirmed working in `/tmp/worldarchitectai/browser/wizard_red_green/`
 
-#### Preferred Method - Using run_ui_tests.sh
-**ALWAYS use the test runner script when available:**
+#### Preferred Method - Using run_ui_tests.sh with Puppeteer MCP
+**ALWAYS use Puppeteer MCP in Claude Code CLI:**
 ```bash
-# Run all UI tests with mock APIs (recommended for testing)
+# Default: Run all UI tests with Puppeteer MCP + mock APIs (recommended)
+./run_ui_tests.sh mock --puppeteer
+
+# Run with real APIs using Puppeteer MCP (costs money!)
+./run_ui_tests.sh real --puppeteer
+
+# Manual Puppeteer MCP test execution (preferred for debugging)
+# Start server: ./run_ui_tests.sh mock --puppeteer
+# Then use MCP functions in Claude Code CLI for browser automation
+```
+
+#### Fallback Method - Using Playwright (when MCP unavailable)
+```bash
+# Fallback to Playwright if MCP tools not available
 ./run_ui_tests.sh mock
 
-# Run all UI tests with real APIs (costs money!)
-./run_ui_tests.sh
-
-# Run specific test file
+# Run specific test file with Playwright
 TESTING=true vpython testing_ui/test_specific_file.py
 ```
 
@@ -549,10 +578,11 @@ Use `/list` to display all available slash commands with descriptions.
 **HARD RULE - NO SIMULATION FOR BROWSER TESTS**:
 - 🚨 **NEVER create HTTP simulation tests for `/testuif` or browser automation**
 - ✅ `/testi` - HTTP requests are fine (integration testing via API endpoints)
-- ✅ `/testuif` - MUST use real Playwright browser automation (NO HTTP simulation)
+- ✅ `/testuif` - MUST use real browser automation (Puppeteer MCP preferred, Playwright fallback)
 - ❌ **STOP SIMULATING** - User explicitly demanded real browsers for UI testing
 - **Browser tests require**: Actual page navigation, element clicking, form filling, screenshot capture
 - **If auth blocks browser tests**: Implement frontend test mode bypass, NOT HTTP simulation
+- **Claude Code CLI**: Automatically use Puppeteer MCP with --puppeteer flag for all browser tests
 
 ### PR References (⚠️)
 **MANDATORY**: When discussing PRs, ALWAYS include the full GitHub URL
