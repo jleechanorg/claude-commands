@@ -71,25 +71,11 @@
 
 ## Self-Learning Protocol
 
-🚨 **AUTO-LEARN**: Document corrections immediately when:
-- User corrects a mistake
-- Self-realizing "Oh, I should have..."
-- Something fails
-- Pattern repeats
+🚨 **AUTO-LEARN**: Document corrections immediately when: User corrects | Self-realizing "Oh, I should have..." | Something fails | Pattern repeats
 
-### Learning Process
-1. **Detect** - Recognize correction/mistake (yours or user's)
-2. **Analyze** - Understand what went wrong and why
-3. **Document** - Update appropriate file:
-   - **CLAUDE.md** - Critical rules with 🚨 marker
-   - **.claude/learnings.md** - Detailed categorized learnings
-   - **.cursor/rules/lessons.mdc** - Technical lessons
-4. **Apply** - Use the learning immediately in current session
+**Process**: Detect → Analyze → Document (CLAUDE.md/learnings.md/lessons.mdc) → Apply
 
-### /learn Command
-- **Usage**: `/learn [optional: specific learning]`
-- **Purpose**: Explicitly capture learnings or review recent corrections
-- **Example**: `/learn playwright is installed in venv`
+**/learn Command**: `/learn [optional: specific learning]` - Capture learnings explicitly
 
 ## Claude Code Specific Behavior
 
@@ -171,19 +157,11 @@ When working with test runners/harnesses:
 4. **Exit Code Distrust**: Don't rely solely on process exit codes - parse actual output
 5. **Contradiction = Bug**: Any mismatch between test output and summary is CRITICAL bug
 
-🚨 **MANDATORY TEST EXECUTION BEFORE COMPLETION**:
-❌ NEVER claim test completion without executing at least ONE test successfully
-- Before any ✅ "tests complete", run at least one test to verify framework works
-- If dependencies missing (Playwright, etc.), FULL STOP - report "Cannot complete - X not installed"
-- Use ⚠️ "Created but unverified" instead of ✅ "Complete" for untested code
-- Only use ✅ after seeing actual PASS/FAIL results from real test execution
-
-🚨 **TEST EXECUTION RULES**:
-- ✅ Run tests before marking ANY task complete
-- ❌ NEVER skip/modify tests without explicit permission
-- ❌ NEVER claim "tests complete" without running them
-- ✅ Report missing dependencies honestly ("Cannot run - X not installed")
-- ✅ Fix ALL failures - no partial success (146/147 = FAILURE)
+🚨 **TEST EXECUTION RULES**: 
+- ✅ Run tests before marking ANY task complete | Fix ALL failures - no partial success (146/147 = FAILURE)
+- ❌ NEVER claim "tests complete" without running them | NEVER skip/modify tests without permission
+- ⚠️ If dependencies missing, FULL STOP - report "Cannot complete - X not installed"
+- ✅ Only use ✅ after seeing actual PASS/FAIL results from real test execution
 
 ## Development Guidelines
 
@@ -220,49 +198,15 @@ Use docstrings, proper JS loading
 
 **CRITICAL**: This protocol is NON-NEGOTIABLE for ALL `/execute` commands and test-related work.
 
-#### Pre-Completion Checklist
-Before marking ANY task complete, ALL boxes must be checked:
-- [ ] Run `./run_tests.sh` - MUST show "All tests passed! 🎉" (100% pass rate)
-- [ ] If browser tests requested - MUST run `./run_ui_tests.sh mock` and show 100% pass
-- [ ] If screenshots requested - MUST provide actual system screenshots (NOT mock demos)
-- [ ] Run `gh pr view <PR#> --json statusCheckRollup` - ALL checks must show SUCCESS
+**Pre-Completion Checklist**: Run `./run_tests.sh` (100% pass) | `./run_ui_tests.sh mock` if UI | Real screenshots if requested | GitHub checks SUCCESS
 
-#### Zero Tolerance Policy
-- ❌ **NO dismissing failures as "unrelated"** - Every failure is YOUR responsibility
-- ❌ **NO claiming completion with failing tests** - 146/147 is FAILURE, not success
-- ❌ **NO mock demos when real screenshots requested** - Fix the system, capture real output
-- ❌ **NO partial fixes** - ALL tests must pass, no exceptions
-- ❌ **NO "pre-existing issues" excuse** - Fix ALL failures regardless of origin
+**Zero Tolerance**: ❌ NO dismissing failures | NO partial fixes | NO "pre-existing issues" excuse | Fix ALL failures
 
-#### Evidence Requirements
-MUST provide concrete evidence:
-- Test output showing exact pass/fail counts
-- Actual screenshots from running system (with timestamps)
-- GitHub checks status output
-- Specific error messages for ANY failure
+**Evidence Required**: Test output with counts | Actual screenshots | GitHub checks | Error messages
 
-#### Failure Protocol
-When ANY test fails:
-1. **STOP** - Do not proceed with other tasks
-2. **FIX** - Debug and resolve EVERY failure
-3. **VERIFY** - Re-run entire test suite after fixes
-4. **EVIDENCE** - Show output proving 100% success
-5. **ONLY THEN** - Mark task as complete
+**Failure Protocol**: STOP → FIX → VERIFY → EVIDENCE → THEN complete
 
-#### Test Execution Examples
-```bash
-# Backend tests - MUST show "All tests passed!"
-./run_tests.sh
-
-# UI tests - MUST complete without failures
-./run_ui_tests.sh mock
-
-# Integration tests - MUST pass if run
-TESTING=true python mvp_site/test_integration/test_integration.py
-
-# GitHub checks - MUST all be SUCCESS
-gh pr view <PR#> --json statusCheckRollup | jq '.statusCheckRollup[].conclusion'
-```
+**Test Commands**: `./run_tests.sh` (backend) | `./run_ui_tests.sh mock` (UI) | GitHub checks via `gh pr view`
 
 **ENFORCEMENT**: Violating this protocol = immediate task failure. No excuses accepted.
 
@@ -299,54 +243,16 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
   - `/testhttpf` = HTTP + REAL APIs (costs $)
 
 
-### Browser Test Execution Protocol (🚨 MANDATORY STEPS)
+### Browser Test Execution Protocol (🚨 MANDATORY)
 
-🚨 **PREFERRED**: Use Puppeteer MCP for browser automation in Claude Code CLI!
-- ✅ Puppeteer MCP provides real browser automation without dependency issues
-- ✅ Built-in screenshot capture and JavaScript execution
-- ✅ Direct integration with Claude Code environment
-- ❌ NEVER use HTTP simulation when browser automation is requested
+🚨 **PREFERRED**: Puppeteer MCP in Claude Code CLI - Real browsers, no dependencies, built-in screenshots
+🚨 **FALLBACK**: Playwright IS installed in venv! Use headless=True | ❌ NEVER say "not installed"
 
-🚨 **FALLBACK**: Playwright IS installed in venv if Puppeteer MCP unavailable!
-- ✅ Playwright works perfectly when venv is activated
-- ❌ NEVER say "Playwright isn't installed"
-- ❌ NEVER create simulated tests as a workaround
-- ✅ ALWAYS use headless=True for browser tests to avoid UI timeouts
-- 🔍 Evidence: Headless mode confirmed working in `/tmp/worldarchitectai/browser/wizard_red_green/`
+**Commands**: `./run_ui_tests.sh mock --puppeteer` (default) | `./run_ui_tests.sh mock` (Playwright fallback)
 
-#### Preferred Method - Using run_ui_tests.sh with Puppeteer MCP
-**ALWAYS use Puppeteer MCP in Claude Code CLI:**
-```bash
-# Default: Run all UI tests with Puppeteer MCP + mock APIs (recommended)
-./run_ui_tests.sh mock --puppeteer
+**Test Mode URL**: `http://localhost:6006?test_mode=true&test_user_id=test-user-123` - Required for auth bypass!
 
-# Run with real APIs using Puppeteer MCP (costs money!)
-./run_ui_tests.sh real --puppeteer
-
-# Manual Puppeteer MCP test execution (preferred for debugging)
-# Start server: ./run_ui_tests.sh mock --puppeteer
-# Then use MCP functions in Claude Code CLI for browser automation
-```
-
-#### Fallback Method - Using Playwright (when MCP unavailable)
-```bash
-# Fallback to Playwright if MCP tools not available
-./run_ui_tests.sh mock
-
-# Run specific test file with Playwright
-TESTING=true vpython testing_ui/test_specific_file.py
-```
-
-**Navigate with Test Mode URL Parameters**:
-🚨 **CRITICAL**: Browser tests MUST use test mode URL parameters to bypass authentication:
-```
-http://localhost:6006?test_mode=true&test_user_id=test-user-123
-```
-- `test_mode=true` - Enables frontend test authentication bypass
-- `test_user_id=test-user-123` - Sets the test user ID
-- Without these parameters, you'll be stuck at the sign-in page!
-
-**Manual steps**: → `.cursor/rules/test_protocols.md`
+**Details**: → `.cursor/rules/test_protocols.md`
 
 ### Coverage Analysis Protocol (⚠️)
 **MANDATORY**: When analyzing test coverage:
@@ -372,11 +278,7 @@ http://localhost:6006?test_mode=true&test_user_id=test-user-123
 
 🚨 **No Main Push**: ✅ `git push origin HEAD:feature` | ❌ `git push origin main`
 
-🚨 **PR Context Management**: ⚠️ MANDATORY before creating new branches/PRs:
-1. **Check git status**: `git status` and `git branch` to see current work
-2. **Verify PR context**: When user says "push to the PR" without number, ask which PR
-3. **Use existing branches**: Check if work should go to existing PR before creating new
-4. **Never assume**: If ambiguous, ask for clarification rather than creating duplicate work
+🚨 **PR Context Management**: Verify before creating PRs - Check git status | Ask which PR if ambiguous | Use existing branches
 
 🚨 **Branch Protection Rules**:
 - ❌ NEVER use dev[timestamp] branches for actual development
@@ -395,12 +297,7 @@ http://localhost:6006?test_mode=true&test_user_id=test-user-123
    - ⚠️ Test fails → fix immediately or ask user
    - ✅ `TESTING=true vpython mvp_site/test_file.py` (from root)
 5. 🚨 **NEVER DISMISS FAILING TESTS**: ❌ "minor failures" or "test expectation updates" | ✅ Fix ALL failing tests systematically | Debug root cause | Real bugs vs test issues | One failure = potential systemic issue
-6. 🚨 **NEVER SKIP TESTS WITHOUT EXPLICIT PERMISSION**:
-   ❌ NEVER skip or comment out tests without user's explicit agreement
-   - If a test is failing, FIX it or ask user for permission to skip
-   - ❌ NEVER use `@unittest.skip` or `pytest.mark.skip` without asking
-   - ❌ NEVER comment out test methods or assertions without permission
-   - ✅ ALWAYS run ALL tests unless user explicitly says to skip specific ones
+6. 🚨 **NEVER SKIP TESTS WITHOUT EXPLICIT PERMISSION**: Fix failing tests or ask permission | No `@unittest.skip` without approval
 6. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
 7. **Web Scraping**: Use full-content tools (curl) not search snippets
 8. **Log Files Location**: 
@@ -457,26 +354,19 @@ http://localhost:6006?test_mode=true&test_user_id=test-user-123
 - 💡 **General**: Patterns/practices - "This typically indicates..."
 - ❓ **Speculation**: Theories - "This might be caused by..."
 
-**Debug Checklist**:
-- [ ] Error messages extracted verbatim with context
-- [ ] Relevant code shown with file:line references
-- [ ] Root cause identified based on evidence (not guessed)
-- [ ] Fix tested/verified or marked as "proposed"
-- [ ] Edge cases considered ("What if X is null?")
+**Debug Checklist**: Extract errors verbatim | Show code with file:line | Identify root cause from evidence | Test fix | Consider edge cases
 
 **Details**: → `.cursor/rules/debugging_guide.md`
 
 ### Critical Rules
 - **Data Corruption**: Treat as systemic | Search ALL similar patterns | "One bug = many bugs"
-- **Temp Fixes**: ⚠️ Flag immediately | Propose permanent fix NOW | Run sustainability checklist
+- **Temp Fixes**: ⚠️ Flag immediately | Propose permanent fix NOW
 - **Task Complete**: Problem solved + Docs updated + Memory updated + Self-audit + THEN done
-- **Test Truth**: Names must match implementation | Verify modules/dependencies | Test rejection cases
-- **Integration First**: ❌ test disconnected code | Verify prerequisites | Propose correct sequence
-- **Analysis + Execution**: Both required | Red flags: blind execution, ignoring blockers
+- **Test Truth**: Names must match implementation | Verify modules/dependencies
+- **Integration First**: ❌ test disconnected code | Verify prerequisites
+- **Analysis + Execution**: Both required | No blind execution
 
-### Enforcement
-- **Meta-Rules**: Lessons docs = ⚠️ NOT OPTIONAL | Immediate, automatic, every time
-- **Schema**: Clear structures | Remove contradictions | Type validation | Concrete examples
+**Enforcement**: Lessons docs = ⚠️ NOT OPTIONAL | Immediate, automatic, every time
 
 **Detailed Lessons**: → `.cursor/rules/lessons.mdc`
 
@@ -506,11 +396,7 @@ Use `/list` to display all available slash commands with descriptions.
 - ❌ NEVER skip TodoWrite - it's the circuit breaker that prevents premature execution
 - ⚠️ Breaking this = bypassing critical safety protocol
 
-**Why This Matters**:
-- User may not be ready for immediate execution
-- Complex tasks need proper planning
-- Context budget must be managed carefully
-- Subagents are expensive and should be used judiciously
+**Why**: Prevents premature execution | Manages context budget | Controls subagent costs
 
 **Chained Commands Support**:
 - `/e /think` - Execute with light thinking mode (4 thoughts) enabled  
@@ -537,17 +423,9 @@ Use `/list` to display all available slash commands with descriptions.
 ### GitHub PR Comment Response Protocol (⚠️)
 **MANDATORY**: Systematically address ALL PR comments from all sources
 
-#### Comment Sources to Check
-1. **Inline Comments**: `gh api repos/owner/repo/pulls/PR#/comments`
-2. **General Comments**: `gh pr view PR# --comments`
-3. **Review Comments**: `gh api repos/owner/repo/pulls/PR#/reviews`
-4. **Copilot Comments**: Include "suppressed" and "low confidence" feedback
+**Comment Sources**: Inline (`gh api`) | General (`gh pr view`) | Reviews | Copilot (include "suppressed")
 
-#### Response Requirements
-- **✅ RESOLVED**: Comment fully addressed with code changes
-- **🔄 ACKNOWLEDGED**: Comment noted, will address in follow-up
-- **📝 CLARIFICATION**: Need more details from commenter
-- **❌ DECLINED**: Won't implement with clear reasoning
+**Response Status**: ✅ RESOLVED | 🔄 ACKNOWLEDGED | 📝 CLARIFICATION | ❌ DECLINED
 
 **Critical Rule**: ❌ NEVER ignore any comment type, including "suppressed" Copilot feedback
 
@@ -560,38 +438,20 @@ Use `/list` to display all available slash commands with descriptions.
 - Import once at top, reference throughout module
 - For import conflicts: use `as` aliases, not inline imports
 
-🚨 **NO TRY/EXCEPT FOR IMPORTS EVER** - Critical Rule
-- ❌ NEVER wrap imports in try/except blocks
-- ❌ NEVER use "graceful handling" of missing dependencies
-- ✅ ALL dependencies MUST be in requirements.txt and properly installed
-- ✅ Import failures should cause immediate, obvious errors
-
-**Why this matters:**
-- Try/except imports hide missing dependencies in CI
-- Causes silent test failures and deployment issues
-- Makes dependency management invisible and unreliable
+🚨 **NO TRY/EXCEPT FOR IMPORTS EVER**: ❌ NEVER wrap imports in try/except | ALL dependencies MUST be in requirements.txt | Import failures should break loudly
+**Why**: Hides missing dependencies in CI | Causes silent failures | Makes dep management unreliable
 
 ### API Error Prevention (🚨)
 ❌ Print code/file content | ✅ Use file_path:line_number | Keep responses concise
 
 ### Browser Testing vs HTTP Testing (🚨)
-**HARD RULE - NO SIMULATION FOR BROWSER TESTS**:
-- 🚨 **NEVER create HTTP simulation tests for `/testuif` or browser automation**
-- ✅ `/testi` - HTTP requests are fine (integration testing via API endpoints)
-- ✅ `/testuif` - MUST use real browser automation (Puppeteer MCP preferred, Playwright fallback)
-- ❌ **STOP SIMULATING** - User explicitly demanded real browsers for UI testing
-- **Browser tests require**: Actual page navigation, element clicking, form filling, screenshot capture
-- **If auth blocks browser tests**: Implement frontend test mode bypass, NOT HTTP simulation
-- **Claude Code CLI**: Automatically use Puppeteer MCP with --puppeteer flag for all browser tests
+**HARD RULE**: NO HTTP simulation for browser tests!
+- `/testuif` = Real browser automation (Puppeteer MCP/Playwright) | `/testi` = HTTP requests OK
+- Browser tests require: Page navigation, element clicks, form fills, screenshots
+- Auth bypass: Use test mode URL params, NOT HTTP simulation
 
 ### PR References (⚠️)
-**MANDATORY**: When discussing PRs, ALWAYS include the full GitHub URL
-- ✅ Format: "PR #123: https://github.com/jleechan2015/worldarchitect.ai/pull/123"
-- ✅ Use `gh pr view <PR#> --web` to get URL quickly
-- ❌ Never reference PRs by number only
-- **Repository URL**: https://github.com/jleechan2015/worldarchitect.ai
-
-
+**MANDATORY**: Include full GitHub URL - Format: "PR #123: https://github.com/jleechan2015/worldarchitect.ai/pull/123"
 
 
 ## Project-Specific
@@ -621,35 +481,9 @@ Quarterly/2500 lines/new year → `lessons_archive_YYYY.mdc` | Keep critical pat
 
 ## API Timeout Prevention (🚨)
 
-**MANDATORY**: Prevent API timeouts with these strategies:
-
-### Operation Size Management
-- **Break large edits**: Use MultiEdit with 3-4 focused edits max
-- **Limit sequential thinking**: 5-6 thoughts instead of 8+
-- **File reading**: Use offset/limit for huge files
-
-### Response Optimization
-- **Concise responses**: Essential with /think mode active
-- **Bullet points**: Prefer over verbose paragraphs
-- **Minimal output**: Only what's requested
-
-### Tool Call Efficiency
-- **Batch operations**: Group related tool calls
-- **Avoid redundancy**: Don't re-read unchanged files
-- **Smart search**: Use Grep/Glob instead of reading entire directories
-
-### Sequential Thinking Best Practices
-- **Start small**: Begin with 4-5 totalThoughts
-- **Expand carefully**: Use needsMoreThoughts only if essential
-- **Concise thoughts**: Keep each thought focused
-- **Avoid branching**: Unless specifically needed
-
-### Edit Strategy
-- **MultiEdit**: For large changes, use multiple targeted edits
-- **Section targeting**: Modify specific sections, not entire files
-- **Incremental updates**: Break massive changes across messages
-
-### Timing Awareness
-- **Server load**: Timeouts correlate with system load
-- **Complex operations**: /think + sequential thinking adds overhead
-- **Work distribution**: Split very large tasks across multiple messages
+**MANDATORY**: Prevent API timeouts:
+- **Edits**: MultiEdit with 3-4 max | Target sections, not whole files
+- **Thinking**: 5-6 thoughts max | Concise | No unnecessary branching
+- **Responses**: Bullet points | Minimal output | Essential info only
+- **Tools**: Batch calls | Smart search (Grep/Glob) | Avoid re-reads
+- **Complex tasks**: Split across messages | Monitor server load
