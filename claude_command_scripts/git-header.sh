@@ -17,8 +17,22 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Change to git root to ensure commands work properly
-cd "$git_root" || exit 1
+# Find the script's actual location relative to git root
+script_dir="$git_root"
+if [ -d "$git_root/claude_command_scripts" ]; then
+    script_dir="$git_root"
+elif [ -d "$git_root/worktree_roadmap/claude_command_scripts" ]; then
+    script_dir="$git_root/worktree_roadmap"
+else
+    # Search for the script in any subdirectory
+    found_script=$(find "$git_root" -name "git-header.sh" -type f 2>/dev/null | head -1)
+    if [ -n "$found_script" ]; then
+        script_dir=$(dirname "$(dirname "$found_script")")
+    fi
+fi
+
+# Change to the directory containing claude_command_scripts
+cd "$script_dir" || cd "$git_root" || exit 1
 
 local_branch=$(git branch --show-current)
 remote=$(git rev-parse --abbrev-ref @{upstream} 2>/dev/null || echo "no upstream")
