@@ -287,23 +287,29 @@ echo ""
 # Core MCP Servers Installation
 echo -e "${BLUE}📊 Installing Core MCP Servers...${NC}"
 
-echo -e "\n${BLUE}1/6 Setting up GitHub MCP Server...${NC}"
+echo -e "\n${BLUE}1/8 Setting up GitHub MCP Server...${NC}"
 add_mcp_server "github-server" "@modelcontextprotocol/server-github"
 
-echo -e "\n${BLUE}2/6 Setting up File System MCP Server...${NC}"
+echo -e "\n${BLUE}2/8 Setting up File System MCP Server...${NC}"
 add_mcp_server "filesystem-server" "@modelcontextprotocol/server-filesystem" ~/Documents ~/Desktop ~/Downloads ~/Projects
 
-echo -e "\n${BLUE}3/6 Setting up Sequential Thinking MCP Server...${NC}"
+echo -e "\n${BLUE}3/8 Setting up Sequential Thinking MCP Server...${NC}"
 add_mcp_server "sequential-thinking" "@modelcontextprotocol/server-sequential-thinking"
 
-echo -e "\n${BLUE}4/6 Setting up Memory MCP Server...${NC}"
+echo -e "\n${BLUE}4/8 Setting up Memory MCP Server...${NC}"
 add_mcp_server "memory-server" "@modelcontextprotocol/server-memory"
 
-echo -e "\n${BLUE}5/6 Setting up Puppeteer MCP Server...${NC}"
+echo -e "\n${BLUE}5/8 Setting up Puppeteer MCP Server...${NC}"
 add_mcp_server "puppeteer-server" "@modelcontextprotocol/server-puppeteer"
 
-echo -e "\n${BLUE}6/6 Setting up Brave Search MCP Server...${NC}"
+echo -e "\n${BLUE}6/8 Setting up Brave Search MCP Server...${NC}"
 add_mcp_server "brave-search" "@modelcontextprotocol/server-brave-search"
+
+echo -e "\n${BLUE}7/8 Setting up Context7 MCP Server...${NC}"
+add_mcp_server "context7" "@upstash/context7-mcp"
+
+echo -e "\n${BLUE}8/8 Setting up Gemini CLI MCP Server...${NC}"
+add_mcp_server "gemini-cli-mcp" "@yusukedev/gemini-cli-mcp"
 
 # Optional: Notion Server (if available)
 echo -e "\n${BLUE}📝 Checking for Notion MCP Server...${NC}"
