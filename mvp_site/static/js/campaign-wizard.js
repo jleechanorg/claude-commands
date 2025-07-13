@@ -4,6 +4,13 @@
  */
 
 class CampaignWizard {
+  // Default/fallback values
+  static DEFAULT_TITLE = 'My Epic Adventure';
+  static DEFAULT_DRAGON_KNIGHT_DESCRIPTION = 'A brave knight...';
+  static DEFAULT_CUSTOM_DESCRIPTION = '(none)';
+  static DEFAULT_DRAGON_KNIGHT_CHARACTER = 'Ser Arion (default)';
+  static DEFAULT_CUSTOM_CHARACTER = 'Auto-generated';
+
   constructor() {
     this.currentStep = 1;
     this.totalSteps = 4;
@@ -205,8 +212,8 @@ class CampaignWizard {
               <div class="campaign-type-cards">
                 <div class="campaign-type-card selected" data-type="dragon-knight">
                   <input class="form-check-input" type="radio" name="wizardCampaignType" 
-                         id="wizard-dragonKnightCampaign" value="dragon-knight" checked>
-                  <label class="campaign-type-label" for="wizard-dragonKnightCampaign">
+                         id="wizard-dragon-knight-campaign" value="dragon-knight" checked>
+                  <label class="campaign-type-label" for="wizard-dragon-knight-campaign">
                     <div class="campaign-type-icon">🐲</div>
                     <div class="campaign-type-content">
                       <h5>Dragon Knight Campaign</h5>
@@ -358,6 +365,9 @@ class CampaignWizard {
                     <strong>Title:</strong> <span id="preview-title">My Epic Adventure</span>
                   </div>
                   <div class="preview-item">
+                    <strong>Character:</strong> <span id="preview-character">Auto-generated</span>
+                  </div>
+                  <div class="preview-item">
                     <strong>Description:</strong> <span id="preview-description">A brave knight...</span>
                   </div>
                   <div class="preview-item">
@@ -428,6 +438,8 @@ class CampaignWizard {
         this.updatePreview('title', e.target.value);
       } else if (e.target.matches('#wizard-campaign-prompt')) {
         this.updatePreview('description', e.target.value);
+      } else if (e.target.matches('#wizard-character-input')) {
+        this.updatePreview('character', e.target.value);
       }
     });
 
@@ -467,7 +479,7 @@ class CampaignWizard {
   }
 
   async loadInitialCampaignContent() {
-    const dragonKnightRadio = document.getElementById('wizard-dragonKnightCampaign');
+    const dragonKnightRadio = document.getElementById('wizard-dragon-knight-campaign');
     if (dragonKnightRadio && dragonKnightRadio.checked) {
       await this.handleCampaignTypeChange('dragon-knight');
     }
@@ -631,43 +643,77 @@ class CampaignWizard {
     return isValid;
   }
 
+  // Helper functions for formatting
+  _formatDescription(desc, isDragonKnight) {
+    let descDisplay = desc && desc.trim() ? desc.trim() : (isDragonKnight ? CampaignWizard.DEFAULT_DRAGON_KNIGHT_DESCRIPTION : CampaignWizard.DEFAULT_CUSTOM_DESCRIPTION);
+    return descDisplay.length > 50 ? descDisplay.substring(0, 50) + '...' : descDisplay;
+  }
+
+  _formatCharacter(character, isDragonKnight) {
+    return character && character.trim() ? character.trim() : (isDragonKnight ? CampaignWizard.DEFAULT_DRAGON_KNIGHT_CHARACTER : CampaignWizard.DEFAULT_CUSTOM_CHARACTER);
+  }
+
   updatePreview(field, value) {
+    // Cache DOM elements
+    const isDragonKnight = document.getElementById('wizard-dragon-knight-campaign')?.checked;
+    const previewTitle = document.getElementById('preview-title');
+    const previewDescription = document.getElementById('preview-description');
+    const previewCharacter = document.getElementById('preview-character');
+    const previewPersonalities = document.getElementById('preview-personalities');
+    const previewOptions = document.getElementById('preview-options');
+    const wizardCampaignTitle = document.getElementById('wizard-campaign-title');
+    const wizardCampaignPrompt = document.getElementById('wizard-campaign-prompt');
+    const wizardDescriptionInput = document.getElementById('wizard-description-input');
+    const wizardCharacterInput = document.getElementById('wizard-character-input');
+    const wizardNarrative = document.getElementById('wizard-narrative');
+    const wizardMechanics = document.getElementById('wizard-mechanics');
+    const wizardCompanions = document.getElementById('wizard-companions');
+    const wizardDefaultWorld = document.getElementById('wizard-default-world');
+
     if (field === 'title') {
-      document.getElementById('preview-title').textContent = value || 'My Epic Adventure';
+      if (previewTitle) previewTitle.textContent = value || CampaignWizard.DEFAULT_TITLE;
     } else if (field === 'description') {
-      const truncated = value ? (value.substring(0, 50) + '...') : 'A brave knight...';
-      document.getElementById('preview-description').textContent = truncated;
+      let descValue;
+      if (isDragonKnight) {
+        descValue = value;
+      } else {
+        descValue = wizardDescriptionInput?.value || '';
+      }
+      if (previewDescription) previewDescription.textContent = this._formatDescription(descValue, isDragonKnight);
+    } else if (field === 'character') {
+      if (previewCharacter) previewCharacter.textContent = this._formatCharacter(value, isDragonKnight);
     } else {
       // Update all fields
-      const title = document.getElementById('wizard-campaign-title')?.value || 'My Epic Adventure';
-      let description = document.getElementById('wizard-campaign-prompt')?.value || 'A brave knight...';
-      
-      // Check if default world is selected and show preview
-      const useDefaultWorld = document.getElementById('wizard-default-world')?.checked;
-      if (useDefaultWorld && (description === 'A brave knight...' || description.trim() === '')) {
-        description = 'Ser Arion Dragon Knight Campaign (Default World Selected)';
+      const title = wizardCampaignTitle?.value || CampaignWizard.DEFAULT_TITLE;
+      let description;
+      if (isDragonKnight) {
+        description = wizardCampaignPrompt?.value || '';
+      } else {
+        description = wizardDescriptionInput?.value || '';
       }
-      
-      document.getElementById('preview-title').textContent = title;
-      document.getElementById('preview-description').textContent = 
-        description.length > 50 ? description.substring(0, 50) + '...' : description;
-
+      const character = wizardCharacterInput?.value || '';
+      if (previewTitle) previewTitle.textContent = title;
+      if (previewCharacter) previewCharacter.textContent = this._formatCharacter(character, isDragonKnight);
+      if (previewDescription) previewDescription.textContent = this._formatDescription(description, isDragonKnight);
       // Update personalities
       const personalities = [];
-      if (document.getElementById('wizard-narrative')?.checked) personalities.push('Narrative');
-      if (document.getElementById('wizard-mechanics')?.checked) personalities.push('Mechanics');
-      document.getElementById('preview-personalities').textContent = personalities.join(', ') || 'None selected';
-
+      if (wizardNarrative?.checked) personalities.push('Narrative');
+      if (wizardMechanics?.checked) personalities.push('Mechanics');
+      if (previewPersonalities) previewPersonalities.textContent = personalities.join(', ') || 'None selected';
       // Update options
       const options = [];
-      if (document.getElementById('wizard-companions')?.checked) options.push('Companions');
-      if (document.getElementById('wizard-default-world')?.checked) options.push('Dragon Knight World');
-      document.getElementById('preview-options').textContent = options.join(', ') || 'None selected';
+      if (wizardCompanions?.checked) options.push('Companions');
+      if (isDragonKnight) {
+        options.push('Dragon Knight World');
+      } else if (wizardDefaultWorld?.checked) {
+        options.push('Default World');
+      }
+      if (previewOptions) previewOptions.textContent = options.join(', ') || 'None selected';
     }
   }
 
   collectFormData() {
-    const isDragonKnight = document.getElementById('wizard-dragonKnightCampaign')?.checked;
+    const isDragonKnight = document.getElementById('wizard-dragon-knight-campaign')?.checked;
     const useDefaultWorld = document.getElementById('wizard-default-world')?.checked;
     
     // Description is now handled by the Python backend for both campaign types

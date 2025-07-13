@@ -292,6 +292,8 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - ✅ Playwright works perfectly when venv is activated
 - ❌ NEVER say "Playwright isn't installed"
 - ❌ NEVER create simulated tests as a workaround
+- ✅ ALWAYS use headless=True for browser tests to avoid UI timeouts
+- 🔍 Evidence: Headless mode confirmed working in `/tmp/worldarchitectai/browser/wizard_red_green/`
 
 #### Preferred Method - Using run_ui_tests.sh
 **ALWAYS use the test runner script when available:**

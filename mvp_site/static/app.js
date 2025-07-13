@@ -617,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    let resumeCampaign = async (campaignId) => {
+    let resumeCampaign = async (campaignId, retryCount = 0) => {
         showSpinner('loading');
         try {
             const { data } = await fetchApi(`/api/campaigns/${campaignId}`);
@@ -648,6 +648,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const storyContainer = document.getElementById('story-content');
             storyContainer.innerHTML = '';
             
+            // Validate story data
+            if (!data.story || !Array.isArray(data.story)) {
+                console.error('Invalid or missing story data:', data);
+                storyContainer.innerHTML = '<div class="alert alert-warning">No story content found. Please try refreshing the page.</div>';
+                return;
+            }
+            
             // Check if we have game state with debug mode
             const debugMode = data.game_state?.debug_mode || false;
             
@@ -658,14 +665,42 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // Render story with debug mode awareness and structured fields
+            console.log(`Loading campaign ${campaignId} - Story entries: ${data.story.length}, Debug mode: ${debugMode}`);
+            
             // Filter out god-mode entries (internal prompts) from display
+            let visibleEntries = 0;
             data.story.forEach(entry => {
                 // Skip god-mode entries unless we're in debug mode
                 if (entry.mode === 'god' && !debugMode) {
+                    console.log('Skipping god mode entry:', entry.text.substring(0, 50) + '...');
                     return;
                 }
+                visibleEntries++;
                 appendToStory(entry.actor, entry.text, entry.mode, debugMode, entry.user_scene_number, entry);
             });
+            
+            console.log(`Displayed ${visibleEntries} story entries out of ${data.story.length} total`);
+            
+            // Check for empty story display
+            if (visibleEntries === 0 && data.story.length > 0) {
+                console.warn('All story entries were filtered out! Debug mode:', debugMode);
+                console.warn('Story entries:', data.story);
+                storyContainer.innerHTML = '<div class="alert alert-info">No visible story content. This may be due to debug mode filtering.</div>';
+            } else if (data.story.length === 0 || (data.story.length === 1 && data.story[0].mode === 'god')) {
+                // If no story or only the initial god mode prompt, retry a few times
+                // This handles Firestore eventual consistency issues
+                if (retryCount < 3) {
+                    console.warn(`Story data incomplete (attempt ${retryCount + 1}/3), retrying in 1 second...`);
+                    hideSpinner();
+                    setTimeout(() => {
+                        resumeCampaign(campaignId, retryCount + 1);
+                    }, 1000);
+                    return;
+                } else {
+                    console.error('No story entries after retries. Story:', data.story);
+                    storyContainer.innerHTML = '<div class="alert alert-danger">Campaign is still loading. Please refresh the page in a few seconds.</div>';
+                }
+            }
             
             // Add a slight delay to allow rendering before scrolling
             console.log("Attempting to scroll after content append, with a slight delay."); // RESTORED console.log
@@ -728,7 +763,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             history.pushState({ campaignId: data.campaign_id }, '', `/game/${data.campaign_id}`);
-            handleRouteChange();
+            
+            // Add a small delay to ensure Firestore data is available
+            // This helps with eventual consistency issues
+            setTimeout(() => {
+                console.log('Loading newly created campaign after delay...');
+                handleRouteChange();
+            }, 500); // 500ms delay
             
         } catch (error) {
             console.error("Error creating campaign:", error);
