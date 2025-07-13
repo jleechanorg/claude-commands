@@ -13,6 +13,8 @@ from playwright.sync_api import TimeoutError
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from browser_test_base import BrowserTestBase
+from browser_test_helpers import BrowserTestHelper
+from testing_ui.config import BASE_URL
 
 
 class CampaignCreationTest(BrowserTestBase):
@@ -24,46 +26,32 @@ class CampaignCreationTest(BrowserTestBase):
     def run_test(self, page):
         """Run the campaign creation test."""
         try:
+            # Initialize browser test helper
+            helper = BrowserTestHelper(page, BASE_URL)
+            
+            # Navigate with proper test authentication
+            helper.navigate_with_test_auth()
+            helper.wait_for_auth_bypass()
+            
             # Take initial screenshot
-            self.take_screenshot(page, "creation_01_homepage")
+            helper.take_screenshot("creation_01_homepage")
             
-            # Look for "New Campaign" or "Create Campaign" button
-            print("🎮 Looking for campaign creation button...")
+            # Look for "Start New Campaign" button (corrected button text)
+            print("🎮 Looking for 'Start New Campaign' button...")
             
-            # Debug: show current views
-            views = ["auth-view", "dashboard-view", "new-campaign-view", "game-view"]
-            for view in views:
-                is_active = page.evaluate(f"document.getElementById('{view}')?.classList.contains('active-view')")
-                print(f"   View #{view}: active={is_active}")
-            
-            # Try multiple selectors for campaign creation button
-            button_selectors = [
-                "text=New Campaign",
-                "button:has-text('New Campaign')",
-                "#new-campaign-btn",
-                ".new-campaign-button",
-                "text=Create Campaign",
-                "button:has-text('Create Campaign')"
-            ]
-            
-            button_found = False
-            for selector in button_selectors:
-                if page.is_visible(selector):
-                    print(f"✅ Found button with selector: {selector}")
-                    page.click(selector)
-                    button_found = True
-                    break
-            
-            if not button_found:
-                # Take screenshot to debug
-                self.take_screenshot(page, "creation_02_no_button_found")
-                print("❌ Could not find campaign creation button")
-                print("📸 Screenshot saved to help debug")
+            try:
+                # Wait for dashboard to load and click the Start New Campaign button
+                page.wait_for_selector("#go-to-new-campaign", timeout=10000)
+                page.click("#go-to-new-campaign")
+                print("✅ Clicked 'Start New Campaign' button")
+            except:
+                helper.take_screenshot("creation_02_button_not_found")
+                print("❌ Could not find 'Start New Campaign' button")
                 return False
             
-            # Wait for campaign creation form or modal
+            # Wait for campaign creation form to load
             page.wait_for_load_state("networkidle")
-            self.take_screenshot(page, "creation_03_campaign_form")
+            helper.take_screenshot("creation_03_campaign_form")
             
             # Fill in campaign details
             print("📝 Filling campaign details...")
@@ -92,7 +80,7 @@ class CampaignCreationTest(BrowserTestBase):
                 
                 # Keep clicking through wizard steps until we reach launch
                 for i in range(3):  # Steps 2, 3, 4
-                    self.take_screenshot(page, f"creation_wizard_step_{i+2}")
+                    helper.take_screenshot(f"creation_wizard_step_{i+2}")
                     
                     # Check if we're on the launch step
                     if page.is_visible("#launch-campaign") or page.is_visible("button:has-text('Begin Adventure')"):
@@ -135,9 +123,9 @@ class CampaignCreationTest(BrowserTestBase):
             
             # Check if we successfully created the campaign
             try:
-                page.wait_for_selector("#game-view.active-view", timeout=10000)
+                page.wait_for_selector("#game-view", timeout=10000)
                 print("✅ Game view is active - campaign created!")
-                self.take_screenshot(page, "creation_04_game_view")
+                helper.take_screenshot("creation_04_game_view")
                 
                 # Check for campaign elements
                 # (Add any specific validation here)
@@ -145,7 +133,7 @@ class CampaignCreationTest(BrowserTestBase):
                 campaign_created = True
             except TimeoutError:
                 print("⚠️  Game view not active, checking other states...")
-                self.take_screenshot(page, "creation_04_timeout_state")
+                helper.take_screenshot("creation_04_timeout_state")
                 
                 # Check which view is currently active
                 current_view = page.evaluate("""
@@ -166,7 +154,7 @@ class CampaignCreationTest(BrowserTestBase):
             
             # Wait for character creation form
             page.wait_for_load_state("networkidle")
-            self.take_screenshot(page, "creation_05_character_form")
+            helper.take_screenshot("creation_05_character_form")
             
             # Fill character details if form is visible
             if page.is_visible("#character-name") or page.is_visible("input[name='characterName']"):
@@ -174,18 +162,18 @@ class CampaignCreationTest(BrowserTestBase):
                 print("   ✅ Filled character name")
             
             page.wait_for_load_state("networkidle")
-            self.take_screenshot(page, "creation_06_final_state")
+            helper.take_screenshot("creation_06_final_state")
             
             print("✅ Browser test completed successfully!")
             return True
             
         except TimeoutError as e:
             print(f"❌ Timeout error: {e}")
-            self.take_screenshot(page, "creation_error_timeout")
+            helper.take_screenshot("creation_error_timeout")
             return False
         except Exception as e:
             print(f"❌ Test failed: {e}")
-            self.take_screenshot(page, "creation_error_general")
+            helper.take_screenshot("creation_error_general")
             return False
 
 

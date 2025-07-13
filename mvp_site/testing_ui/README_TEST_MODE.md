@@ -73,6 +73,59 @@ with sync_playwright() as p:
     # All API calls will now work without authentication
 ```
 
+## Browser Test Helper Library
+
+A standardized helper library (`testing_ui/browser_test_helpers.py`) provides common browser test operations:
+
+### Features
+
+- **Standardized authentication bypass** with `navigate_with_test_auth()`
+- **5-step campaign creation wizard** navigation with navbar overlay workarounds
+- **Debug utilities** for analyzing element visibility and CSS states
+- **Screenshot capture** at each wizard step
+- **JavaScript workarounds** for form elements hidden by navbar
+
+### Usage
+
+```python
+from testing_ui.browser_test_helpers import BrowserTestHelper
+
+# Initialize helper
+helper = BrowserTestHelper(page, "http://localhost:8088")
+
+# Navigate with test auth
+helper.navigate_with_test_auth()
+helper.wait_for_auth_bypass()
+
+# Create a campaign (handles 5-step wizard)
+success = helper.create_test_campaign(
+    campaign_title="My Test Campaign",
+    debug_mode=True  # Enables screenshots and detailed logging
+)
+
+# Take screenshots
+helper.take_screenshot("test_state")
+
+# Debug element issues
+helper.debug_element_state("#campaign-title", "Campaign Title Field")
+```
+
+### Campaign Creation Wizard Steps
+
+The helper navigates through all 5 steps:
+1. **Basics** - Campaign title and settings
+2. **AI Style** - AI behavior preferences  
+3. **Options** - Game options
+4. **Launch** - Begin adventure button
+5. **Campaign View** - Wait for game to load
+
+### Common Issues Resolved
+
+1. **Navbar Overlay**: JavaScript direct value setting when elements are covered
+2. **Duplicate Buttons**: Specific selectors for launch button (#launch-campaign)
+3. **Form Visibility**: Scroll and wait strategies for hidden elements
+4. **Wizard Navigation**: Proper step-by-step progression with waits
+
 ## Security Notes
 
 - Test mode ONLY works when server is started with `TESTING=true`

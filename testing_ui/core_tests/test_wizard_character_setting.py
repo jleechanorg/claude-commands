@@ -13,6 +13,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from screenshot_utils import take_screenshot
 from test_ui_util import run_ui_test, navigate_to_page, navigate_wizard_to_step, capture_api_request, enable_console_logging
 from test_ui_helpers import fill_form_field, scroll_to_element
+from testing_ui.config import BASE_URL
 
 def test_wizard_character_setting(page, test_name):
     """Test the wizard with character and setting inputs"""

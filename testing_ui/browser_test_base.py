@@ -10,13 +10,12 @@ import time
 import subprocess
 import psutil
 from playwright.sync_api import sync_playwright, Page, Browser, BrowserContext
+from testing_ui.config import BASE_URL, SCREENSHOT_DIR
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Standard configuration
-BASE_URL = "http://localhost:6006"
-SCREENSHOT_DIR = "/tmp/worldarchitectai/browser"
 TEST_USER_ID = "browser-test-user"
 
 
@@ -64,7 +63,7 @@ class FlaskServerManager:
         print("   🚀 Starting fresh Flask server with TESTING=true...")
         env = os.environ.copy()
         env['TESTING'] = 'true'
-        env['PORT'] = '6006'
+        env['PORT'] = '8088'
         
         with open(self.log_file, 'w') as log:
             self.process = subprocess.Popen(

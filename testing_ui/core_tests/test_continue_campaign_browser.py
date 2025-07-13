@@ -13,6 +13,7 @@ from playwright.sync_api import TimeoutError
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from browser_test_base import BrowserTestBase
+from testing_ui.config import BASE_URL
 
 
 class ContinueCampaignTest(BrowserTestBase):

@@ -47,9 +47,13 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     client = get_client()
     logging_util.info("Mock Gemini Service: get_initial_story called")
     
-    # Use the imported classes
-    
-    narrative_text = """Sir Kaelan the Adamant awakens in the dimly lit Ancient Tavern, the scent of ale and wood smoke filling his nostrils. The mysterious key from his dungeon escape weighs heavy in his pocket. Gareth the innkeeper approaches with a knowing smile.
+    # Import structured response fixture for initial story
+    try:
+        from .structured_fields_fixtures import INITIAL_CAMPAIGN_RESPONSE
+        # Use the narrative from the initial campaign response
+        narrative_text = INITIAL_CAMPAIGN_RESPONSE.get("narrative", "Default narrative text")
+    except ImportError:
+        narrative_text = """Sir Kaelan the Adamant awakens in the dimly lit Ancient Tavern, the scent of ale and wood smoke filling his nostrils. The mysterious key from his dungeon escape weighs heavy in his pocket. Gareth the innkeeper approaches with a knowing smile.
 
 "Ah, Sir Kaelan! Word travels fast in these parts. I hear you seek the Lost Crown. Dangerous business, that. But perhaps... perhaps I can help."
 
@@ -58,69 +62,64 @@ Gareth leans in closer, his voice dropping to a whisper. "There's an old map in 
 What do you do?"""
     
     # Create NarrativeResponse object with proper parameters
-    state_updates = {
-        "player": {
-            "name": "Sir Kaelan the Adamant",
-            "class": "Fighter",
-            "level": 1,
-            "hp": 10,
-            "max_hp": 10,
-            "conditions": []
-        },
-        "location": "Ancient Tavern",
-        "time_of_day": "evening",
-        "npcs": [
-            {
-                "name": "Gareth",
-                "role": "Innkeeper",
-                "disposition": "Friendly"
+    # Use structured fields from fixture if available
+    if 'INITIAL_CAMPAIGN_RESPONSE' in locals():
+        narrative_response = NarrativeResponse(
+            narrative=narrative_text,
+            session_header=INITIAL_CAMPAIGN_RESPONSE.get("session_header", "[SESSION_HEADER]\nTimestamp: Unknown\nLocation: Character Creation\nStatus: Creating Character"),
+            resources=INITIAL_CAMPAIGN_RESPONSE.get("resources", "None"),
+            planning_block=INITIAL_CAMPAIGN_RESPONSE.get("planning_block", {}),
+            dice_rolls=INITIAL_CAMPAIGN_RESPONSE.get("dice_rolls", []),
+            god_mode_response=INITIAL_CAMPAIGN_RESPONSE.get("god_mode_response", ""),
+            entities_mentioned=INITIAL_CAMPAIGN_RESPONSE.get("entities_mentioned", []),
+            location_confirmed=INITIAL_CAMPAIGN_RESPONSE.get("location_confirmed", "Character Creation"),
+            state_updates=INITIAL_CAMPAIGN_RESPONSE.get("state_updates", {}),
+            debug_info=INITIAL_CAMPAIGN_RESPONSE.get("debug_info", {}),
+            turn_summary="Initial campaign creation"
+        )
+    else:
+        # Fallback with basic structure
+        state_updates = {
+            "world_data": {
+                "current_location_name": "Character Creation"
+            },
+            "custom_campaign_state": {
+                "campaign_title": "Test Campaign",
+                "character_name": "Ser Arion",
+                "setting": "Assiah"
             }
-        ],
-        "items": [
-            {
-                "name": "Mysterious Key",
-                "description": "An ornate key found during your dungeon escape"
-            }
-        ],
-        "active_quests": [
-            {
-                "name": "Find the Lost Crown",
-                "description": "Seek out the legendary Lost Crown",
-                "status": "active"
-            }
-        ]
-    }
-    
-    narrative_response = NarrativeResponse(
-        narrative=narrative_text,
-        entities_mentioned=["Sir Kaelan the Adamant", "Gareth"],
-        location_confirmed="Ancient Tavern",
-        turn_summary="Sir Kaelan awakens in the Ancient Tavern and speaks with Gareth about the Lost Crown.",
-        state_updates=state_updates,
-        session_header="Mock Campaign Session",
-        planning_block={
-            "thinking": "The player has just awakened in the tavern. Multiple paths forward are available.",
-            "choices": {
-                "talk_to_gareth": {
-                    "text": "Talk to Gareth",
-                    "description": "Ask the innkeeper about the Lost Crown and the map he mentioned",
-                    "risk_level": "safe"
-                },
-                "explore_tavern": {
-                    "text": "Explore Tavern",
-                    "description": "Look around the tavern for other patrons or clues",
-                    "risk_level": "safe"
-                },
-                "leave_immediately": {
-                    "text": "Leave Immediately",
-                    "description": "Exit the tavern without speaking to anyone",
-                    "risk_level": "low"
+        }
+        
+        narrative_response = NarrativeResponse(
+            narrative=narrative_text,
+            entities_mentioned=[],
+            location_confirmed="Character Creation", 
+            turn_summary="Campaign creation started.",
+            state_updates=state_updates,
+            session_header="[SESSION_HEADER]\nTimestamp: Unknown\nLocation: Character Creation\nStatus: Creating Character",
+            planning_block={
+                "thinking": "The player has specified a character. Present character creation options.",
+                "choices": {
+                    "ai_generated": {
+                        "text": "AI Generated Character",
+                        "description": "Let the AI create a complete D&D 5e character sheet.",
+                        "risk_level": "safe"
+                    },
+                    "custom_class": {
+                        "text": "Custom Class Creation",
+                        "description": "Design unique custom mechanics.",
+                        "risk_level": "safe"
+                    },
+                    "standard_dnd": {
+                        "text": "Standard D&D Creation",
+                        "description": "Choose from standard D&D 5e options.",
+                        "risk_level": "safe"
+                    }
                 }
-            }
-        },
-        dice_rolls=[],
-        resources="Mock resources: 10 gold pieces"
-    )
+            },
+            dice_rolls=[],
+            resources="None"
+        )
     
     # Create GeminiResponse object
     response = GeminiResponse(

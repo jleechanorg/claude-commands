@@ -10,6 +10,7 @@ import time
 import os
 import signal
 import sys
+from testing_ui.config import BASE_URL
 
 def test_api_structure():
     # Start test server
@@ -30,7 +31,7 @@ def test_api_structure():
     # Verify server is up
     for i in range(10):
         try:
-            requests.get('http://localhost:8088/health')
+            requests.get(f'{BASE_URL}/health')
             break
         except:
             if i == 9:
@@ -41,7 +42,7 @@ def test_api_structure():
     try:
         # Create campaign
         response = requests.post(
-            'http://localhost:8088/api/campaigns',
+            f'{BASE_URL}/api/campaigns',
             headers={'X-Test-User-Id': 'test-123', 'Content-Type': 'application/json'},
             json={'title': 'Test', 'prompt': 'Test campaign', 'campaign_type': 'custom'}
         )
@@ -54,7 +55,7 @@ def test_api_structure():
         
         # Test interaction
         response = requests.post(
-            f'http://localhost:8088/api/campaigns/{campaign_id}/interaction',
+            f'{BASE_URL}/api/campaigns/{campaign_id}/interaction',
             headers={'X-Test-User-Id': 'test-123', 'Content-Type': 'application/json'},
             json={'input_text': 'I attack with my sword!', 'mode': 'character', 'debug_mode': True}
         )
@@ -87,7 +88,7 @@ def test_api_structure():
         # 🔴 RED TEST: Test God Mode specifically
         print("\n=== 🔴 TESTING GOD MODE RESPONSE ===")
         god_response = requests.post(
-            f'http://localhost:8088/api/campaigns/{campaign_id}/interaction',
+            f'{BASE_URL}/api/campaigns/{campaign_id}/interaction',
             headers={'X-Test-User-Id': 'test-123', 'Content-Type': 'application/json'},
             json={'input_text': 'GOD: give me plot suggestions', 'mode': 'character'}
         )

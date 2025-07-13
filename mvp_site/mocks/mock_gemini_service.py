@@ -102,32 +102,69 @@ class MockGeminiClient:
     
     def _generate_initial_story(self, prompt: str) -> str:
         """Generate an initial story response."""
-        return """Sir Kaelan the Adamant awakens in the dimly lit Ancient Tavern, the scent of ale and wood smoke filling his nostrils. The mysterious key from his dungeon escape weighs heavy in his pocket. Gareth the innkeeper approaches with a knowing smile.
+        # Return structured JSON response for campaign creation
+        initial_response = {
+            "session_header": "[SESSION_HEADER]\nTimestamp: Unknown\nLocation: Character Creation\nStatus: Creating Character",
+            "resources": "None",
+            "narrative": """You are Ser Arion, a 16 year old honorable knight on your first mission, sworn to protect the vast Celestial Imperium. For decades, the Empire has been ruled by the iron-willed Empress Sariel, a ruthless tyrant who uses psychic power to crush dissent. While her methods are terrifying, her reign has brought undeniable benefits: the roads are safe, commerce thrives, and the Imperium has never been stronger. But dark whispers speak of the Dragon Knights - an ancient order that once served the realm before mysteriously vanishing. As you journey through this morally complex world, you must decide: will you serve the tyrant who brings order, or seek a different path?
 
-"Ah, Sir Kaelan! Word travels fast in these parts. I hear you seek the Lost Crown. Dangerous business, that. But perhaps... perhaps I can help."
+Scene #1: [CHARACTER CREATION - Step 1]
 
-[STATE_UPDATES_PROPOSED]
-{
-    "player_character_data": {
-        "hp_current": 100,
-        "location_discovered": "Ancient Tavern"
-    },
-    "world_data": {
-        "current_location_name": "Ancient Tavern",
-        "world_time": {
-            "hour": 18,
-            "minute": 30,
-            "second": 0,
-            "time_of_day": "Evening"
+CAMPAIGN SUMMARY
+================
+Title: Celestial Imperium: Order Under Tyranny
+Character: Ser Arion
+Setting: Assiah
+Description: You are Ser Arion, a 16 year old honorable knight on your first mission, sworn to protect the vast Celestial Imperium. For decades, the Empire has been ruled by the iron-willed Empress Sariel, a ruthless tyrant who uses psychic power to crush dissent. While her methods are terrifying, her reign has brought undeniable benefits: the roads are safe, commerce thrives, and the Imperium has never been stronger. But dark whispers speak of the Dragon Knights - an ancient order that once served the realm before mysteriously vanishing. As you journey through this morally complex world, you must decide: will you serve the tyrant who brings order, or seek a different path?
+AI Personalities: Narrative, Mechanics
+Options: Companions, Modified World
+
+Now, how would you like to design Ser Arion using D&D 5e mechanics?
+1. **[AIGenerated]:** I'll create a complete D&D version of Ser Arion based on his description and the world lore.
+2. **[StandardDND]:** You choose Ser Arion's race (Human, given context) and class (Fighter, Paladin, etc.) from D&D options.
+3. **[CustomClass]:** We'll create custom mechanics for Ser Arion's unique knightly abilities within the Celestial Imperium.
+
+Which option would you prefer? (1, 2, or 3)""",
+            "planning_block": {
+                "thinking": "The player has specified a character. I need to present the character creation options to flesh out Ser Arion's D&D 5e mechanics, while strictly avoiding any narrative or in-world descriptions during this meta-game phase.",
+                "choices": {
+                    "ai_generated": {
+                        "text": "AI Generated Character",
+                        "description": "Let the AI create a complete D&D 5e character sheet for Ser Arion.",
+                        "risk_level": "safe"
+                    },
+                    "custom_class": {
+                        "text": "Custom Class Creation",
+                        "description": "Work with the AI to design unique custom mechanics for Ser Arion's knightly abilities.",
+                        "risk_level": "safe"
+                    },
+                    "standard_dnd": {
+                        "text": "Standard D&D Creation",
+                        "description": "Choose Ser Arion's race (Human) and class from standard D&D 5e options.",
+                        "risk_level": "safe"
+                    }
+                }
+            },
+            "dice_rolls": [],
+            "god_mode_response": "",
+            "entities_mentioned": [],
+            "location_confirmed": "Character Creation",
+            "state_updates": {
+                "world_data": {
+                    "current_location_name": "Character Creation"
+                },
+                "custom_campaign_state": {
+                    "campaign_title": "Celestial Imperium: Order Under Tyranny",
+                    "character_name": "Ser Arion",
+                    "setting": "Assiah"
+                }
+            },
+            "debug_info": {
+                "dm_notes": ["Initial state creation, setting character creation in progress and recording campaign summary and initial state."],
+                "state_rationale": "Initial state creation, setting character creation in progress and recording campaign summary and initial state."
+            }
         }
-    },
-    "custom_campaign_state": {
-        "core_memories": {
-            "append": ["Awakened in the Ancient Tavern", "Met Gareth the innkeeper who knows about the crown"]
-        }
-    }
-}
-[END_STATE_UPDATES_PROPOSED]"""
+        return json.dumps(initial_response, indent=2)
     
     def _generate_continue_story(self, prompt: str) -> str:
         """Generate a normal story continuation."""

@@ -13,6 +13,8 @@ from playwright.sync_api import Page, TimeoutError
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from browser_test_base import BrowserTestBase, SCREENSHOT_DIR
+from browser_test_helpers import BrowserTestHelper
+from testing_ui.config import BASE_URL
 
 
 class StructuredFieldsTest(BrowserTestBase):
@@ -39,26 +41,24 @@ class StructuredFieldsTest(BrowserTestBase):
         ]
         
         try:
+            # Initialize browser test helper
+            helper = BrowserTestHelper(page, BASE_URL)
+            
+            # Navigate with proper test authentication
+            helper.navigate_with_test_auth()
+            helper.wait_for_auth_bypass()
+            
             # Take initial screenshot
-            self.take_screenshot(page, "01_homepage")
+            helper.take_screenshot("01_homepage")
             
             # Wait a bit for campaigns to load
             page.wait_for_timeout(3000)
             
-            # Try to use the first available campaign if any exist
-            campaign_items = page.locator(".list-group-item[data-campaign-id]")
-            if campaign_items.count() > 0:
-                print("📌 Found existing campaign, using it...")
-                campaign_items.first.click()
-                page.wait_for_timeout(3000)
-            else:
-                # Create new campaign only if none exist
-                print("🎮 Creating new test campaign for structured fields...")
-                test_campaign_name = f"Structured Fields Test {int(time.time())}"
-                
-                if not self._create_test_campaign(page, test_campaign_name):
-                    print("❌ Failed to create test campaign")
-                    return False
+            # Use helper to create test campaign
+            print("🎮 Creating test campaign for structured fields...")
+            if not helper.create_test_campaign("Structured Fields Test"):
+                print("❌ Failed to create test campaign with helper")
+                return False
             
             # Skip old campaign selection logic - commented out for now
             """
@@ -144,30 +144,26 @@ class StructuredFieldsTest(BrowserTestBase):
             
             # Wait for game view
             try:
-                page.wait_for_selector("#game-view.active-view", timeout=20000)
+                page.wait_for_selector("#game-view", timeout=20000)
                 print("✅ Game view loaded")
             except:
-                # Try alternate game view check
-                if page.is_visible("#game-view"):
-                    print("✅ Game view visible (not necessarily active)")
-                else:
-                    print("❌ Game view not found")
-                    return False
+                print("❌ Game view not found")
+                return False
             
-            self.take_screenshot(page, "02_game_view")
+            helper.take_screenshot("02_game_view")
             
             # Test 1: Character mode - all standard fields
             print("\n📝 Test 1: Character mode with standard fields")
-            field_results = self._test_character_mode_fields(page)
+            field_results = self._test_character_mode_fields(page, helper)
             
             # Test 2: God mode - special god_mode_response field
             print("\n🔮 Test 2: God mode response field")
-            god_mode_result = self._test_god_mode_response(page)
+            god_mode_result = self._test_god_mode_response(page, helper)
             field_results['god_mode_response'] = god_mode_result
             
             # Test 3: Debug mode - verify debug_info visibility
             print("\n🐛 Test 3: Debug mode fields")
-            debug_result = self._test_debug_mode(page)
+            debug_result = self._test_debug_mode(page, helper)
             field_results['debug_info'] = field_results.get('debug_info', False) or debug_result
             
             # Final summary
@@ -183,13 +179,13 @@ class StructuredFieldsTest(BrowserTestBase):
                     all_passed = False
             
             # Take final screenshot
-            self.take_screenshot(page, "10_final_summary", full_page=True)
+            helper.take_screenshot("10_final_summary")
             
             return all_passed
             
         except Exception as e:
             print(f"❌ Test failed: {e}")
-            self.take_screenshot(page, "error_state")
+            helper.take_screenshot("error_state")
             return False
     
     def _create_test_campaign(self, page: Page, campaign_name: str) -> bool:
@@ -275,7 +271,7 @@ class StructuredFieldsTest(BrowserTestBase):
             print(f"❌ Error creating campaign: {e}")
             return False
     
-    def _test_character_mode_fields(self, page: Page) -> dict:
+    def _test_character_mode_fields(self, page: Page, helper: BrowserTestHelper) -> dict:
         """Test standard character mode fields."""
         results = {}
         
@@ -284,14 +280,10 @@ class StructuredFieldsTest(BrowserTestBase):
         send_button = page.locator("#send-action, button:has-text('Send')").first
         
         if action_input.count() > 0 and send_button.count() > 0:
-            action_input.fill("I attack the goblin with my sword and cast shield spell!")
-            send_button.click()
+            helper.send_game_interaction("I attack the goblin with my sword and cast shield spell!")
+            helper.wait_for_ai_response()
             
-            # Wait for response
-            print("⏳ Waiting for AI response...")
-            page.wait_for_timeout(10000)
-            
-            self.take_screenshot(page, "03_character_response")
+            helper.take_screenshot("03_character_response")
             
             # Check each field
             field_selectors = {
@@ -324,20 +316,17 @@ class StructuredFieldsTest(BrowserTestBase):
         
         return results
     
-    def _test_god_mode_response(self, page: Page) -> bool:
+    def _test_god_mode_response(self, page: Page, helper: BrowserTestHelper) -> bool:
         """Test god mode response field."""
         action_input = page.locator("#player-action, #user-input, textarea[name='user-input']").first
         send_button = page.locator("#send-action, button:has-text('Send')").first
         
         if action_input.count() > 0 and send_button.count() > 0:
             # Send god mode command
-            action_input.fill("GOD MODE: Create a magical artifact in the room")
-            send_button.click()
+            helper.send_game_interaction("GOD MODE: Create a magical artifact in the room", mode="god")
+            helper.wait_for_ai_response()
             
-            print("⏳ Waiting for god mode response...")
-            page.wait_for_timeout(10000)
-            
-            self.take_screenshot(page, "05_god_mode_response")
+            helper.take_screenshot("05_god_mode_response")
             
             # Check for god_mode_response field
             god_selectors = [
@@ -363,7 +352,7 @@ class StructuredFieldsTest(BrowserTestBase):
         
         return False
     
-    def _test_debug_mode(self, page: Page) -> bool:
+    def _test_debug_mode(self, page: Page, helper: BrowserTestHelper) -> bool:
         """Test debug info visibility."""
         # Toggle debug mode if available
         debug_toggle = page.locator("#debug-toggle, .debug-toggle, button:has-text('Debug')")

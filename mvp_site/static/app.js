@@ -219,24 +219,27 @@ document.addEventListener('DOMContentLoaded', () => {
             html += '</div>';
         }
         
-        // Add dice rolls if present
+        // Add dice rolls (always show)
+        console.log('🎲 Processing dice_rolls:', fullData.dice_rolls, 'type:', typeof fullData.dice_rolls);
         if (fullData.dice_rolls && fullData.dice_rolls.length > 0) {
-            html += '<div class="dice-rolls">';
+            console.log('🎲 Showing dice rolls with content');
+            html += '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;">';
             html += '<strong>🎲 Dice Rolls:</strong><ul>';
             fullData.dice_rolls.forEach(roll => {
                 html += `<li>${roll}</li>`;
             });
             html += '</ul></div>';
-        } else if (fullData.dice_rolls && fullData.dice_rolls.length === 0) {
-            // Show empty dice rolls for consistency
-            html += '<div class="dice-rolls"><strong>🎲 Dice Rolls:</strong> <em>None</em></div>';
+        } else {
+            // Always show dice rolls section, display "None" when empty or missing
+            console.log('🎲 Showing dice rolls as None');
+            html += '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>🎲 Dice Rolls:</strong> <em>None</em></div>';
         }
         
-        // Add resources if present (check for undefined/null, but allow empty string)
-        if (fullData.resources !== undefined && fullData.resources !== null && fullData.resources !== 'undefined') {
-            const resourceText = fullData.resources || '<em>None</em>';
-            html += `<div class="resources"><strong>📊 Resources:</strong> ${resourceText}</div>`;
-        }
+        // Add resources (always show)
+        const resourceText = (fullData.resources !== undefined && fullData.resources !== null && fullData.resources !== 'undefined' && fullData.resources !== '') 
+            ? fullData.resources 
+            : '<em>None</em>';
+        html += `<div class="resources" style="background-color: #fff3cd; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>📊 Resources:</strong> ${resourceText}</div>`;
         
         // Add state updates if present (visible in debug mode or when significant)
         if (fullData.state_updates && Object.keys(fullData.state_updates).length > 0) {
@@ -253,13 +256,13 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const parsedPlanningBlock = parsePlanningBlocks(fullData.planning_block);
                 if (parsedPlanningBlock) {
-                    html += `<div class="planning-block">${parsedPlanningBlock}</div>`;
+                    html += `<div class="planning-block" style="background-color: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 5px;">${parsedPlanningBlock}</div>`;
                 }
             } catch (e) {
                 console.error('Error parsing planning block:', e);
                 // Show raw planning block as fallback
                 const escapedText = fullData.planning_block.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                html += `<div class="planning-block planning-block-error">Error parsing planning block. Raw content:<br><pre>${escapedText}</pre></div>`;
+                html += `<div class="planning-block planning-block-error" style="background-color: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 5px;">Error parsing planning block. Raw content:<br><pre>${escapedText}</pre></div>`;
             }
         }
         
@@ -356,8 +359,12 @@ document.addEventListener('DOMContentLoaded', () => {
         html += `<p><strong>${label}:</strong> ${processedText}</p>`;
         
         // Add structured fields for AI responses
+        console.log('🔍 Checking structured fields condition - actor:', actor, 'fullData exists:', !!fullData);
         if (actor === 'gemini' && fullData) {
+            console.log('✅ Adding structured fields for Gemini response');
             html += generateStructuredFieldsHTML(fullData, debugMode);
+        } else {
+            console.log('❌ Skipping structured fields - not a Gemini response with data');
         }
         
         entryEl.innerHTML = html;
