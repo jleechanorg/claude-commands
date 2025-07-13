@@ -71,11 +71,13 @@
 
 ## Self-Learning Protocol
 
-🚨 **AUTO-LEARN**: Document corrections immediately when:
-- User corrects a mistake
-- Self-realizing "Oh, I should have..."
-- Something fails
-- Pattern repeats
+🚨 **MANDATORY**: Continuously learn from corrections and self-realizations:
+
+### Automatic Learning Triggers
+1. **User corrections** - When user corrects a mistake, immediately document it
+2. **Self-corrections** - When you realize "Oh, I should have...", document it
+3. **Failed attempts** - When something doesn't work, learn why
+4. **Pattern recognition** - When you repeat a mistake, create a rule
 
 ### Learning Process
 1. **Detect** - Recognize correction/mistake (yours or user's)
@@ -90,6 +92,23 @@
 - **Usage**: `/learn [optional: specific learning]`
 - **Purpose**: Explicitly capture learnings or review recent corrections
 - **Example**: `/learn playwright is installed in venv`
+
+### Self-Correction Indicators
+When you say these, ALWAYS document the learning:
+- "Let me correct that..." / "Let me fix that..."
+- "Oh, I should have..." / "Actually, I need to..."
+- "My mistake..." / "I was wrong about..."
+- "I see the issue..." / "The problem is..."
+
+### Error Recovery Protocol
+When mistakes occur:
+1. **Immediately acknowledge** the error without excuses
+2. **Explain what went wrong** with specific details
+3. **Provide corrected information** based on evidence
+4. **Document the learning** via /learn or file updates
+5. **Implement additional verification** to prevent recurrence
+
+**Learning Categories** → `.claude/learnings.md`
 
 ## Claude Code Specific Behavior
 
@@ -172,12 +191,14 @@ When working with test runners/harnesses:
 - Use ⚠️ "Created but unverified" instead of ✅ "Complete" for untested code
 - Only use ✅ after seeing actual PASS/FAIL results from real test execution
 
-🚨 **TEST EXECUTION RULES**:
-- ✅ Run tests before marking ANY task complete
-- ❌ NEVER skip/modify tests without explicit permission
-- ❌ NEVER claim "tests complete" without running them
-- ✅ Report missing dependencies honestly ("Cannot run - X not installed")
-- ✅ Fix ALL failures - no partial success (146/147 = FAILURE)
+🚨 **NEVER SKIP TESTS WITHOUT EXPLICIT PERMISSION**:
+❌ NEVER skip or comment out tests without user's explicit agreement
+- If a test is failing, FIX it or ask user for permission to skip
+- ❌ NEVER use `@unittest.skip` or `pytest.mark.skip` without asking
+- ❌ NEVER comment out test methods or assertions without permission  
+- ❌ NEVER modify test expectations to make them pass without user approval
+- ✅ ALWAYS run ALL tests unless user explicitly says to skip specific ones
+- If tests are "not relevant to current task", still run them to ensure no regression
 
 ## Development Guidelines
 
@@ -285,6 +306,11 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - ⚠️ **/testhttp and /testhttpf**: MUST use HTTP requests | NO browser automation
 - ✅ **/testi**: HTTP requests are acceptable (integration testing)
 - **Red Flag**: If writing "browser tests" with `requests.get()`, STOP immediately
+- **Command Structure**:
+  - `/testui` = Browser + Mock APIs
+  - `/testuif` = Browser + REAL APIs (costs $)
+  - `/testhttp` = HTTP + Mock APIs  
+  - `/testhttpf` = HTTP + REAL APIs (costs $)
 
 ### Browser Test Execution Protocol (🚨 MANDATORY STEPS)
 
@@ -306,16 +332,92 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 TESTING=true vpython testing_ui/test_specific_file.py
 ```
 
-**Navigate with Test Mode URL Parameters**:
-🚨 **CRITICAL**: Browser tests MUST use test mode URL parameters to bypass authentication:
-```
-http://localhost:6006?test_mode=true&test_user_id=test-user-123
-```
-- `test_mode=true` - Enables frontend test authentication bypass
-- `test_user_id=test-user-123` - Sets the test user ID
-- Without these parameters, you'll be stuck at the sign-in page!
+**The run_ui_tests.sh script handles:**
+- ✅ Virtual environment activation
+- ✅ Playwright installation verification
+- ✅ Browser dependency checks
+- ✅ Test server startup with proper ports
+- ✅ Parallel test execution
+- ✅ Proper cleanup on exit
+- ✅ Screenshot directory setup
+- ✅ Comprehensive result reporting
 
-**Manual steps**: → `.cursor/rules/test_protocols.md`
+#### Manual Method (if script unavailable)
+When asked to run browser tests manually, follow these steps IN ORDER:
+
+1. **Check Playwright Installation**
+   ```bash
+   vpython -c "import playwright" || echo "STOP: Playwright not installed"
+   ```
+   - ✅ Continue only if import succeeds
+   - ❌ FULL STOP if not installed - report: "Cannot run browser tests - Playwright not installed"
+
+2. **Verify Browser Dependencies**
+   ```bash
+   vpython -c "from playwright.sync_api import sync_playwright; p = sync_playwright().start(); p.chromium.launch(headless=True); p.stop()" || echo "STOP: Browser deps missing"
+   ```
+   - ✅ Continue only if browser launches
+   - ❌ FULL STOP if fails - report: "Cannot launch browsers - missing system dependencies"
+
+3. **Start Test Server**
+   ```bash
+   TESTING=true PORT=6006 vpython mvp_site/main.py serve &
+   sleep 3
+   curl -s http://localhost:6006 || echo "STOP: Server not running"
+   ```
+   - ✅ Continue only if server responds
+   - ❌ FULL STOP if fails - report: "Cannot start test server"
+
+4. **Navigate with Test Mode URL Parameters**
+   🚨 **CRITICAL**: Browser tests MUST use test mode URL parameters to bypass authentication:
+   ```
+   http://localhost:6006?test_mode=true&test_user_id=test-user-123
+   ```
+   - `test_mode=true` - Enables frontend test authentication bypass
+   - `test_user_id=test-user-123` - Sets the test user ID (optional, defaults to 'test-user')
+   - Without these parameters, you'll be stuck at the sign-in page!
+   - The frontend detects these parameters and adds test headers to all API calls
+   - See `mvp_site/testing_ui/README_TEST_MODE.md` for complete details
+
+5. **Run Browser Test**
+   ```bash
+   TESTING=true vpython testing_ui/test_name.py
+   ```
+   - ✅ Report actual results/errors
+   - ❌ NEVER create fake output
+
+**GOLDEN RULE**: Stop at first failure. Never proceed to simulate missing components.
+
+### HTTP Test Execution Protocol (⚠️ MANDATORY STEPS)
+When asked to run HTTP tests, follow these steps IN ORDER:
+
+1. **Verify Test Environment**
+   ```bash
+   vpython -c "import requests" || echo "STOP: requests library not installed"
+   ```
+   - ✅ Continue only if import succeeds
+   - ❌ FULL STOP if not installed
+
+2. **Start Test Server (if needed)**
+   ```bash
+   TESTING=true PORT=8086 python mvp_site/main.py serve &
+   sleep 3
+   curl -s http://localhost:8086 || echo "Note: Using different port or external server"
+   ```
+   - ✅ Continue even if local server fails (tests may use different setup)
+
+3. **Run HTTP Test**
+   ```bash
+   TESTING=true python testing_http/test_name.py
+   ```
+   - ✅ Report actual HTTP responses/errors
+   - ❌ NEVER pretend requests succeeded
+
+### General Test Protocol (🚨 APPLIES TO ALL TESTS)
+1. **Environment Check First**: Verify ALL dependencies before attempting test
+2. **Fail Fast**: Stop at first missing dependency
+3. **Honest Reporting**: State exactly what failed and why
+4. **No Workarounds**: Don't create alternatives that hide the real issue
 
 ### Coverage Analysis Protocol (⚠️)
 **MANDATORY**: When analyzing test coverage:
@@ -323,7 +425,22 @@ http://localhost:6006?test_mode=true&test_user_id=test-user-123
 2. **NEVER use**: Manual `coverage run` commands on individual test files
 3. **Verify full test suite**: Ensure all 94+ test files are included in coverage analysis
 4. **Report source**: Always mention "Coverage from full test suite via run_tests.sh"
-5. **HTML location**: `/tmp/worldarchitectai/coverage/index.html`
+5. **Expected timing**: ~10 seconds total (6s tests + 4s report generation)
+6. **HTML location**: `/tmp/worldarchitectai/coverage/index.html`
+7. **Usage patterns**:
+   - `./coverage.sh` - Unit tests with HTML report (default)
+   - `./coverage.sh --integration` - Include integration tests
+   - `./coverage.sh --no-html` - Text report only
+   - `./run_tests.sh --coverage` - Use existing test runner with coverage
+
+### Current Coverage Baseline (January 2025)
+**Last Accurate Measurement**: 67% overall coverage (21,031 statements, 6,975 missing)
+- `main.py`: 74% (550 statements, 144 missing)
+- `firestore_service.py`: 64% (254 statements, 91 missing)
+- `gemini_service.py`: 70% (594 statements, 178 missing)
+- `game_state.py`: 90% (169 statements, 17 missing - excellent!)
+- **Integration tests**: 0% (not run by default - use --integration flag)
+- **Mock services**: 32-36% (expected for mock objects)
 
 ## Git Workflow
 
@@ -347,10 +464,35 @@ http://localhost:6006?test_mode=true&test_user_id=test-user-123
 3. **Use existing branches**: Check if work should go to existing PR before creating new
 4. **Never assume**: If ambiguous, ask for clarification rather than creating duplicate work
 
-🚨 **Branch Protection Rules**:
-- ❌ NEVER use dev[timestamp] branches for actual development
-- ✅ Create descriptive branches: `feature/task-description`, `fix/issue-name`, `update/component-name`
-- ✅ Auto-conflict resolution available: `./resolve_conflicts.sh`
+🚨 **PR VERIFICATION PROTOCOL**: ⚠️ CRITICAL before updating any PR:
+1. **Always verify current state**: Use `git branch --show-current` and `gh pr list --head $(git branch --show-current)` before PR operations
+2. **Extract current context**: Context from previous sessions may be stale - get fresh git/PR state rather than relying on memory
+3. **Match branch to PR**: Ensure you're updating the PR associated with the current working branch
+4. **Evidence-based approach**: Follow CLAUDE.md evidence extraction protocols - get actual PR numbers, don't assume
+
+🚨 **Auto-Conflict Resolution**: ⚠️ AUTOMATIC conflict resolution available:
+1. **GitHub Actions**: Automatically runs on PR creation/push and resolves common conflicts
+2. **Manual script**: Use `./resolve_conflicts.sh` to resolve conflicts for current PR
+3. **Smart resolution**: Preserves learning content, handles common patterns in learnings.md and CLAUDE.md
+4. **Fallback**: If auto-resolution fails, manual intervention required
+
+🚨 **BRANCH PROTECTION PROTOCOL**: ⚠️ MANDATORY branch usage rules:
+1. **dev[timestamp] branches**: ❌ NEVER make changes directly in these branches
+   - These are protective branches to prevent accidental main pushes
+   - Used ONLY for initial isolation from main branch
+   - If found on one, immediately create new descriptive branch for actual work
+   - Clean up by deleting after switching to proper branch
+
+2. **Branch Creation Rules**:
+   - ✅ ALWAYS create descriptive branches: `feature/task-description`, `fix/issue-name`, `update/component-name`
+   - ✅ Use existing feature branches when continuing related work
+   - ❌ NEVER use dev[timestamp] branches for actual development
+   - ❌ NEVER make commits directly in dev[timestamp] branches
+
+3. **Branch Cleanup Protocol**:
+   - When leaving a dev[timestamp] branch: delete it immediately
+   - Use `git branch -D dev[timestamp]` to clean up
+   - Only keep meaningful, descriptive branches
 
 **Commit Format**: → `.cursor/rules/examples.md`
 
@@ -364,12 +506,6 @@ http://localhost:6006?test_mode=true&test_user_id=test-user-123
    - ⚠️ Test fails → fix immediately or ask user
    - ✅ `TESTING=true vpython mvp_site/test_file.py` (from root)
 5. 🚨 **NEVER DISMISS FAILING TESTS**: ❌ "minor failures" or "test expectation updates" | ✅ Fix ALL failing tests systematically | Debug root cause | Real bugs vs test issues | One failure = potential systemic issue
-6. 🚨 **NEVER SKIP TESTS WITHOUT EXPLICIT PERMISSION**:
-   ❌ NEVER skip or comment out tests without user's explicit agreement
-   - If a test is failing, FIX it or ask user for permission to skip
-   - ❌ NEVER use `@unittest.skip` or `pytest.mark.skip` without asking
-   - ❌ NEVER comment out test methods or assertions without permission
-   - ✅ ALWAYS run ALL tests unless user explicitly says to skip specific ones
 6. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
 7. **Web Scraping**: Use full-content tools (curl) not search snippets
 8. **Log Files Location**: 
@@ -412,28 +548,78 @@ http://localhost:6006?test_mode=true&test_user_id=test-user-123
 - 🚨 **Trust But Verify**: NEVER assume existing code works | Test core functionality before adding features | Validate success AND failure paths
 
 ### Debugging Protocol (🚨 MANDATORY)
+When debugging display/output issues:
+1. **Trace Complete Data Flow**: Backend → API → Frontend → Display
+   - ❌ NEVER assume formatting comes from backend without checking
+   - ✅ ALWAYS check where labels/prefixes are added (often frontend)
+   - ✅ Search for literal strings in BOTH backend (.py) AND frontend (.js/.html)
+2. **Question Assumptions**:
+   - "Is this one string or multiple parts combined?"
+   - "Where is formatting added - data layer or presentation layer?"
+   - "What does the raw API response actually look like?"
+3. **Verify Before Fixing**:
+   - ✅ Use browser DevTools Network tab to see actual API responses
+   - ✅ Add logging at multiple points to trace data transformation
+   - ✅ Test hypothesis with minimal changes first
+   - ❌ NEVER implement complex fixes based on assumptions
+4. **Common Patterns**:
+   - Frontend often adds labels/prefixes for display
+   - "Scene #", "Turn:", "Player:" etc. are usually UI additions
+   - Raw data rarely contains display formatting
+5. **Document Analysis Protocol**:
+   - ✅ Extract exact error messages/code snippets FIRST
+   - ✅ Analyze ONLY based on extracted evidence
+   - ✅ Cite specific line numbers and file paths
+   - ✅ Each debugging claim must reference actual output
+   - ✅ Base all debugging claims on actual behavior, not theory
+   - ❌ NEVER skip the extraction step
+   - ❌ NEVER analyze what you haven't seen
+   - ❌ NEVER suggest fixes without understanding the actual error
 
-**Core Process**: Extract evidence → Analyze → Verify → Fix
+### Evidence Classification
+When presenting information, classify sources:
+1. **Primary** (🔍): Actual code/errors/output - "The error shows: `TypeError at line 45`"
+2. **Secondary** (📚): Docs/comments - "According to Flask docs..."
+3. **General** (💡): Patterns/practices - "This typically indicates..."
+4. **Speculation** (❓): Theories - "This might be caused by..."
 
-**Data Flow Tracing**: Backend → API → Frontend → Display
-- ❌ NEVER assume formatting comes from backend without checking
-- ✅ ALWAYS check where labels/prefixes are added (often frontend)
-- ✅ Search for literal strings in BOTH backend (.py) AND frontend (.js/.html)
-
-**Evidence Classification**:
-- 🔍 **Primary**: Actual code/errors/output - "The error shows: `TypeError at line 45`"
-- 📚 **Secondary**: Docs/comments - "According to Flask docs..."
-- 💡 **General**: Patterns/practices - "This typically indicates..."
-- ❓ **Speculation**: Theories - "This might be caused by..."
-
-**Debug Checklist**:
+### Debugging Validation Checklist
+For all debugging sessions:
 - [ ] Error messages extracted verbatim with context
 - [ ] Relevant code shown with file:line references
 - [ ] Root cause identified based on evidence (not guessed)
 - [ ] Fix tested/verified or marked as "proposed"
 - [ ] Edge cases considered ("What if X is null?")
+- [ ] Rollback plan provided if fix might break things
 
-**Details**: → `.cursor/rules/debugging_guide.md`
+### Iterative Debugging Method
+When fixes aren't working:
+1. 🔍 **Minimal case** - Reproduce with simplest example
+2. 🔧 **Simple first** - Try easiest fix before complex ones
+3. ✅ **Verify broadly** - Test fix in multiple scenarios
+4. 🔄 **Refine** - Adjust based on edge cases
+5. 📝 **Document** - Record what worked and why
+
+### Reasoning Transparency
+When debugging/analyzing:
+- Show the "why": "This error typically appears when..."
+- Connect dots: "Since X shows Y, this indicates Z"
+- Mark assumptions: "Assuming standard Flask setup..."
+
+### Complex Problem Breakdown
+For multi-faceted issues:
+1. **Decompose**: Break into smaller sub-problems
+2. **Prioritize**: Address most likely/impactful first
+3. **Validate**: Test each assumption explicitly
+4. **Synthesize**: Combine findings into solution
+
+### Handling Information Conflicts
+When sources disagree:
+- 🔍 **Code wins**: Implementation trumps documentation
+- 📚 **Version check**: "Docs for v2.0, but code uses v1.5"
+- 🤝 **Show both**: "Docs say X, but code does Y"
+- ❓ **Flag uncertainty**: "Conflicting info about..."
+- 🔬 **Test to verify**: "Let me check which is correct"
 
 ### Critical Rules
 - **Data Corruption**: Treat as systemic | Search ALL similar patterns | "One bug = many bugs"
@@ -475,12 +661,6 @@ Use `/list` to display all available slash commands with descriptions.
 - ❌ NEVER skip TodoWrite - it's the circuit breaker that prevents premature execution
 - ⚠️ Breaking this = bypassing critical safety protocol
 
-**Why This Matters**:
-- User may not be ready for immediate execution
-- Complex tasks need proper planning
-- Context budget must be managed carefully
-- Subagents are expensive and should be used judiciously
-
 **Chained Commands Support**:
 - `/e /think` - Execute with ultrathink mode enabled
 - `/e /think [task]` - Execute task with maximum thinking budget
@@ -518,7 +698,35 @@ Use `/list` to display all available slash commands with descriptions.
 - **📝 CLARIFICATION**: Need more details from commenter
 - **❌ DECLINED**: Won't implement with clear reasoning
 
+#### Implementation Protocol
+1. **Extract ALL comments** systematically using API calls
+2. **Address each comment** with specific changes or responses
+3. **Reply to each comment** on GitHub with status and explanation
+4. **Update tracking** in commit messages referencing comment resolution
+5. **Post summary** showing all comments addressed
+
+#### Auto-Response Triggers
+- When user says "look at github comments" - immediately extract and address
+- When creating PRs - proactively check for existing feedback
+- When user mentions "comments" or "feedback" - check PR comments
+
 **Critical Rule**: ❌ NEVER ignore any comment type, including "suppressed" Copilot feedback
+
+### Code Review Protocol (`/review` `/copilot`) (⚠️)
+**MANDATORY**: When reviewing PRs, list EVERY SINGLE comment explicitly:
+1. Use `gh pr view <PR#> --comments` to get ALL comments
+2. Use `gh api repos/owner/repo/pulls/<PR#>/comments` for inline comments
+3. List each comment with:
+   - Author (user vs bot)
+   - File:Line if applicable
+   - Full comment text
+   - Status: ✅ Addressed / ❌ Not addressed / 🔄 Partially addressed
+4. Include "suppressed" and "low confidence" comments
+5. Extract comments from ALL sources:
+   - PR review comments
+   - Inline code comments
+   - Issue comments
+   - Bot suggestions
 
 ### Import Rules (🚨 CRITICAL)
 **ALL imports MUST be at module level with NO try/except wrappers**
@@ -532,13 +740,16 @@ Use `/list` to display all available slash commands with descriptions.
 🚨 **NO TRY/EXCEPT FOR IMPORTS EVER** - Critical Rule
 - ❌ NEVER wrap imports in try/except blocks
 - ❌ NEVER use "graceful handling" of missing dependencies
+- ❌ NEVER create fallback imports or mock objects for missing deps
 - ✅ ALL dependencies MUST be in requirements.txt and properly installed
 - ✅ Import failures should cause immediate, obvious errors
+- ✅ Missing dependencies should break CI/CD pipeline loudly
 
 **Why this matters:**
 - Try/except imports hide missing dependencies in CI
 - Causes silent test failures and deployment issues
 - Makes dependency management invisible and unreliable
+- Creates false sense of security with "optional" dependencies
 
 ### API Error Prevention (🚨)
 ❌ Print code/file content | ✅ Use file_path:line_number | Keep responses concise
