@@ -162,7 +162,8 @@ class TestStructuredFieldsUtils(unittest.TestCase):
             constants.FIELD_PLANNING_BLOCK,
             constants.FIELD_DICE_ROLLS,
             constants.FIELD_RESOURCES,
-            constants.FIELD_DEBUG_INFO
+            constants.FIELD_DEBUG_INFO,
+            constants.FIELD_GOD_MODE_RESPONSE
         }
         self.assertEqual(set(result.keys()), expected_keys)
     

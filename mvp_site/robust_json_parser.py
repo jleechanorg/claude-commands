@@ -11,6 +11,7 @@ from json_utils import (
     extract_json_boundaries,
     extract_field_value
 )
+import constants
 
 # Precompiled regex patterns for better performance
 ENTITIES_MENTIONED_PATTERN = re.compile(r'"entities_mentioned"\s*:\s*\[(.*?)\]', re.DOTALL)
@@ -139,9 +140,9 @@ class RobustJSONParser:
             result['location_confirmed'] = location
         
         # Extract god_mode_response field (critical for god mode commands)
-        god_mode_response = extract_field_value(text, 'god_mode_response')
+        god_mode_response = extract_field_value(text, constants.FIELD_GOD_MODE_RESPONSE)
         if god_mode_response is not None:
-            result['god_mode_response'] = god_mode_response
+            result[constants.FIELD_GOD_MODE_RESPONSE] = god_mode_response
         
         # Extract state_updates object (try to preserve state changes)
         state_updates_match = STATE_UPDATES_PATTERN.search(text)

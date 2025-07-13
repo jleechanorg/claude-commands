@@ -36,6 +36,7 @@ FIELD_PLANNING_BLOCK = 'planning_block'
 FIELD_DICE_ROLLS = 'dice_rolls'
 FIELD_RESOURCES = 'resources'
 FIELD_DEBUG_INFO = 'debug_info'
+FIELD_GOD_MODE_RESPONSE = 'god_mode_response'
 KEY_USER_INPUT = "user_input"
 KEY_SELECTED_PROMPTS = "selected_prompts"
 

@@ -205,11 +205,11 @@ a.navbar-brand:hover {
 
 /* God Mode Response - Purple border with emphasis */
 .god-mode-response {
-    border: 2px solid #9b59b6;
-    background-color: rgba(155, 89, 182, 0.05);
-    padding: 15px;
+    background-color: #f8f4ff;
+    padding: 10px;
     margin: 10px 0;
-    border-radius: 8px;
+    border-radius: 5px;
+    border-left: 4px solid #9c27b0;
 }
 
 .god-mode-response pre {
@@ -332,8 +332,8 @@ a.navbar-brand:hover {
 }
 
 [data-bs-theme="dark"] .god-mode-response {
-    background-color: rgba(155, 89, 182, 0.1);
-    border-color: #b47cce;
+    background-color: rgba(156, 39, 176, 0.1);
+    color: #e0e0e0;
 }
 
 [data-bs-theme="dark"] .entities-mentioned {
@@ -380,4 +380,9 @@ a.navbar-brand:hover {
 [data-bs-theme="dark"] .state-rationale {
     background-color: rgba(255, 152, 0, 0.1);
     color: #e0e0e0;
+}
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
 }

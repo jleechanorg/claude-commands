@@ -364,7 +364,7 @@ def _apply_state_changes_and_respond(proposed_changes, current_game_state, gemin
         
         # Include god_mode_response when in god mode
         if mode == constants.MODE_GOD and hasattr(structured_response, 'god_mode_response'):
-            response_data['god_mode_response'] = structured_response.god_mode_response
+            response_data[constants.FIELD_GOD_MODE_RESPONSE] = structured_response.god_mode_response
         
         # Always include structured debug_info (separate from legacy debug tags)
         # Frontend will use debug_mode flag to decide whether to display debug_info
@@ -764,6 +764,19 @@ def create_app():
             debug_mode = game_state_dict.get('debug_mode', False)
             from debug_hybrid_system import process_story_for_display
             processed_story = process_story_for_display(story, debug_mode)
+            
+            # Debug logging for structured fields
+            logging_util.info(f"Campaign {campaign_id} story entries: {len(processed_story)}")
+            for i, entry in enumerate(processed_story[:3]):  # Log first 3 entries
+                if entry.get('actor') == constants.ACTOR_GEMINI:
+                    fields = [k for k in entry.keys() if k not in ['text', 'actor', 'mode', 'timestamp', 'part']]
+                    logging_util.info(f"Entry {i} structured fields: {fields}")
+                    if 'god_mode_response' in entry:
+                        logging_util.info(f"  god_mode_response: {entry['god_mode_response'][:50]}...")
+                    if 'resources' in entry:
+                        logging_util.info(f"  resources: {entry['resources']}")
+                    if 'dice_rolls' in entry:
+                        logging_util.info(f"  dice_rolls: {entry['dice_rolls']}")
 
             return jsonify({KEY_CAMPAIGN: campaign, KEY_STORY: processed_story, 'game_state': game_state_dict})
         except Exception as e:
@@ -941,7 +954,6 @@ def create_app():
             # 4. Write: Add AI response to story log and update state
             # Extract structured fields from AI response for storage
             structured_fields = structured_fields_utils.extract_structured_fields(gemini_response_obj)
-            
             firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response_obj.narrative_text, structured_fields=structured_fields)
 
             # 5. Parse and apply state changes from AI response

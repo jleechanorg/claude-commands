@@ -434,6 +434,16 @@ def get_campaign_by_id(user_id, campaign_id):
 
 @log_exceptions
 def add_story_entry(user_id, campaign_id, actor, text, mode=None, structured_fields=None):
+    """Add a story entry to Firestore.
+    
+    Args:
+        user_id: User ID
+        campaign_id: Campaign ID
+        actor: Actor type ('user' or 'gemini')
+        text: Story text content
+        mode: Optional mode (e.g., 'god', 'character')
+        structured_fields: Required dict for AI responses containing structured response fields
+    """
     db = get_db()
     story_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
     text_bytes = text.encode('utf-8')
@@ -441,18 +451,18 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None, structured_fie
     base_entry_data = {'actor': actor}
     if mode: base_entry_data['mode'] = mode
     
-    # Add structured fields if provided (for AI responses)
+    # For AI responses, structured_fields should always be provided
+    # Save ALL fields from structured_fields to Firestore
     if structured_fields:
-        if structured_fields.get(constants.FIELD_SESSION_HEADER):
-            base_entry_data[constants.FIELD_SESSION_HEADER] = structured_fields[constants.FIELD_SESSION_HEADER]
-        if structured_fields.get(constants.FIELD_PLANNING_BLOCK):
-            base_entry_data[constants.FIELD_PLANNING_BLOCK] = structured_fields[constants.FIELD_PLANNING_BLOCK]
-        if structured_fields.get(constants.FIELD_DICE_ROLLS):
-            base_entry_data[constants.FIELD_DICE_ROLLS] = structured_fields[constants.FIELD_DICE_ROLLS]
-        if structured_fields.get(constants.FIELD_RESOURCES):
-            base_entry_data[constants.FIELD_RESOURCES] = structured_fields[constants.FIELD_RESOURCES]
-        if structured_fields.get(constants.FIELD_DEBUG_INFO):
-            base_entry_data[constants.FIELD_DEBUG_INFO] = structured_fields[constants.FIELD_DEBUG_INFO]
+        # Simply merge all structured fields into base_entry_data
+        # This ensures we capture any field that Gemini provides
+        for field_name, field_value in structured_fields.items():
+            # Skip None values to avoid storing null fields
+            if field_value is not None:
+                base_entry_data[field_name] = field_value
+    elif actor == constants.ACTOR_GEMINI:
+        # Log warning if AI response missing structured fields
+        logging_util.warning(f"AI response missing structured_fields for campaign {campaign_id}")
     
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     for i, chunk in enumerate(chunks):

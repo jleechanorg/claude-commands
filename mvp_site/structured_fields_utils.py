@@ -24,7 +24,8 @@ def extract_structured_fields(gemini_response_obj):
             constants.FIELD_PLANNING_BLOCK: getattr(gemini_response_obj.structured_response, constants.FIELD_PLANNING_BLOCK, '') or '',
             constants.FIELD_DICE_ROLLS: getattr(gemini_response_obj.structured_response, constants.FIELD_DICE_ROLLS, []) or [],
             constants.FIELD_RESOURCES: getattr(gemini_response_obj.structured_response, constants.FIELD_RESOURCES, '') or '',
-            constants.FIELD_DEBUG_INFO: getattr(gemini_response_obj.structured_response, constants.FIELD_DEBUG_INFO, {}) or {}
+            constants.FIELD_DEBUG_INFO: getattr(gemini_response_obj.structured_response, constants.FIELD_DEBUG_INFO, {}) or {},
+            constants.FIELD_GOD_MODE_RESPONSE: getattr(gemini_response_obj.structured_response, constants.FIELD_GOD_MODE_RESPONSE, '') or ''
         }
     
     return structured_fields

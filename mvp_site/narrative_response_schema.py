@@ -345,19 +345,31 @@ ENTITY TRACKING NOTES:
 
 def _combine_god_mode_and_narrative(god_mode_response: str, narrative: Optional[str]) -> str:
     """
-    Helper function to combine god_mode_response and narrative fields.
+    Helper function to handle god_mode_response and narrative fields.
+    
+    Rules:
+    - If BOTH present: return only narrative (god_mode_response shown separately in structured fields)
+    - If ONLY god_mode_response: return god_mode_response (also shown in structured fields)  
+    - If ONLY narrative: return narrative
     
     Args:
         god_mode_response: The god mode response text
-        narrative: Optional narrative text (may be None or empty)
+        narrative: Optional narrative text
         
     Returns:
-        Combined response with god_mode_response first, then narrative if present
+        Main story text for display
     """
-    combined_response = god_mode_response
+    # If both are present, return only narrative (avoid duplication)
+    if narrative and narrative.strip() and god_mode_response:
+        return narrative
+    # If only narrative, return it
     if narrative and narrative.strip():
-        combined_response += "\n\n" + narrative
-    return combined_response
+        return narrative
+    # If only god_mode_response, return it
+    if god_mode_response:
+        return god_mode_response
+    # If neither, return empty string
+    return ""
 
 
 def parse_structured_response(response_text: str) -> tuple[str, NarrativeResponse]:

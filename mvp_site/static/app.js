@@ -165,11 +165,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const generateStructuredFieldsHTML = (fullData, debugMode) => {
         let html = '';
         
+        // Debug log to see what data is available
+        if (fullData && Object.keys(fullData).length > 0) {
+            const fields = Object.keys(fullData).filter(key => 
+                key !== 'text' && key !== 'actor' && key !== 'mode' && 
+                key !== 'timestamp' && key !== 'part' && key !== 'sequence_id' && 
+                key !== 'user_scene_number'
+            );
+            if (fields.length > 0) {
+                console.log('Structured fields available:', fields);
+                // Log the actual values of key fields
+                console.log('Field values:', {
+                    god_mode_response: fullData.god_mode_response ? 
+                        `${fullData.god_mode_response.substring(0, 50)}...` : 'undefined',
+                    session_header: fullData.session_header || 'undefined',
+                    dice_rolls: fullData.dice_rolls || 'undefined',
+                    resources: fullData.resources || 'undefined',
+                    entities_mentioned: fullData.entities_mentioned || 'undefined',
+                    location_confirmed: fullData.location_confirmed || 'undefined'
+                });
+            }
+        }
+        
         // Add god mode response if present (highest priority, replaces narrative)
-        if (fullData.god_mode_response) {
+        if (fullData.god_mode_response && fullData.god_mode_response !== 'undefined' && fullData.god_mode_response !== '') {
+            // Properly escape HTML entities to preserve formatting
+            const escapedResponse = fullData.god_mode_response
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
             html += '<div class="god-mode-response">';
             html += '<strong>🔮 God Mode Response:</strong>';
-            html += `<pre>${fullData.god_mode_response}</pre>`;
+            html += `<pre>${escapedResponse}</pre>`;
             html += '</div>';
         }
         
@@ -200,11 +227,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 html += `<li>${roll}</li>`;
             });
             html += '</ul></div>';
+        } else if (fullData.dice_rolls && fullData.dice_rolls.length === 0) {
+            // Show empty dice rolls for consistency
+            html += '<div class="dice-rolls"><strong>🎲 Dice Rolls:</strong> <em>None</em></div>';
         }
         
-        // Add resources if present
-        if (fullData.resources) {
-            html += `<div class="resources"><strong>📊 Resources:</strong> ${fullData.resources}</div>`;
+        // Add resources if present (check for undefined/null, but allow empty string)
+        if (fullData.resources !== undefined && fullData.resources !== null && fullData.resources !== 'undefined') {
+            const resourceText = fullData.resources || '<em>None</em>';
+            html += `<div class="resources"><strong>📊 Resources:</strong> ${resourceText}</div>`;
         }
         
         // Add state updates if present (visible in debug mode or when significant)
@@ -262,6 +293,15 @@ document.addEventListener('DOMContentLoaded', () => {
             html += '</div>';
         }
         
+        // Debug log the generated HTML
+        if (html) {
+            console.log('Generated structured fields HTML length:', html.length);
+            console.log('HTML includes god_mode_response:', html.includes('god-mode-response'));
+            console.log('HTML includes resources:', html.includes('resources'));
+            console.log('HTML includes dice-rolls:', html.includes('dice-rolls'));
+            console.log('HTML includes session-header:', html.includes('session-header'));
+        }
+        
         return html;
     };
 
@@ -281,8 +321,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let html = '';
         
         // Add session header if present (always at the top)
-        if (actor === 'gemini' && fullData && fullData.session_header) {
-            html += `<div class="session-header">${fullData.session_header}</div>`;
+        if (actor === 'gemini' && fullData && fullData.session_header && fullData.session_header !== 'undefined') {
+            // Escape HTML entities for safety
+            const escapedHeader = fullData.session_header
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            html += `<div class="session-header">${escapedHeader}</div>`;
         }
         
         // Process debug content - backend now handles stripping based on debug_mode

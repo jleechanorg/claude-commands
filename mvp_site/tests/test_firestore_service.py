@@ -8,6 +8,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import logging_util
+import constants
 
 # Mock firebase_admin before importing the service
 mock_firestore = MagicMock()
@@ -352,6 +353,172 @@ class TestNumericFieldConversion(unittest.TestCase):
         
         # Should remain as string since it can't be converted
         self.assertEqual(updated_state['player_character_data']['hp_current'], 'not-a-number')
+
+
+class TestStructuredFieldsSaving(unittest.TestCase):
+    """Test that all structured fields are saved to Firestore"""
+    
+    def setUp(self):
+        """Set up test environment with mocked Firestore"""
+        self.mock_db = MagicMock()
+        self.mock_users_collection = MagicMock()
+        self.mock_user_doc = MagicMock()
+        self.mock_campaigns_collection = MagicMock()
+        self.mock_campaign_doc = MagicMock()
+        self.mock_story_collection = MagicMock()
+        
+        # Set up the chain of mocks for users/user_id/campaigns/campaign_id structure
+        self.mock_db.collection.return_value = self.mock_users_collection
+        self.mock_users_collection.document.return_value = self.mock_user_doc
+        self.mock_user_doc.collection.return_value = self.mock_campaigns_collection
+        self.mock_campaigns_collection.document.return_value = self.mock_campaign_doc
+        self.mock_campaign_doc.collection.return_value = self.mock_story_collection
+        
+        # Mock the update method for last_played timestamp
+        self.mock_campaign_doc.update = MagicMock()
+        
+        # Patch get_db to return our mock
+        self.patcher = patch('firestore_service.get_db', return_value=self.mock_db)
+        self.patcher.start()
+        
+    def tearDown(self):
+        """Clean up patches"""
+        self.patcher.stop()
+    
+    def test_all_structured_fields_saved_to_firestore(self):
+        """Test that all fields from structured_fields are saved to Firestore"""
+        # Import constants to get field names
+        import constants
+        
+        # Create comprehensive structured_fields dict with all 10 fields
+        structured_fields = {
+            constants.FIELD_SESSION_HEADER: "Battle Round 5",
+            constants.FIELD_PLANNING_BLOCK: {
+                "thinking": "The player is in combat...",
+                "choices": {
+                    "attack": {"text": "Attack", "description": "Strike with weapon"},
+                    "defend": {"text": "Defend", "description": "Raise shield"}
+                }
+            },
+            constants.FIELD_DICE_ROLLS: ["Attack roll: 18", "Damage: 12"],
+            constants.FIELD_RESOURCES: "HP: 45/60, MP: 20/30",
+            constants.FIELD_GOD_MODE_RESPONSE: "Behind the scenes: Dragon has 150 HP",
+            constants.FIELD_DEBUG_INFO: {"combat_round": 5, "enemy_ac": 16},
+            'entities_mentioned': ["Dragon", "Player", "Guard"],
+            'location_confirmed': "Dragon's Lair",
+            'state_updates': {
+                'player_character_data': {'hp_current': 45},
+                'npc_data': {'Dragon': {'hp_current': 150}}
+            },
+            'turn_summary': "Player attacked the dragon for 12 damage"
+        }
+        
+        # Call add_story_entry with all structured fields
+        from firestore_service import add_story_entry
+        add_story_entry(
+            user_id="test-user",
+            campaign_id="test-campaign",
+            actor=constants.ACTOR_GEMINI,
+            text="The dragon roars in pain as your sword strikes true!",
+            mode="combat",
+            structured_fields=structured_fields
+        )
+        
+        # Verify story collection add was called
+        self.mock_story_collection.add.assert_called()
+        
+        # Get the data that was passed to Firestore
+        call_args = self.mock_story_collection.add.call_args[0][0]
+        
+        # Verify all structured fields were saved
+        self.assertEqual(call_args['actor'], 'gemini')
+        self.assertEqual(call_args['mode'], 'combat')
+        self.assertEqual(call_args[constants.FIELD_SESSION_HEADER], "Battle Round 5")
+        self.assertEqual(call_args[constants.FIELD_PLANNING_BLOCK]['thinking'], "The player is in combat...")
+        self.assertEqual(call_args[constants.FIELD_DICE_ROLLS], ["Attack roll: 18", "Damage: 12"])
+        self.assertEqual(call_args[constants.FIELD_RESOURCES], "HP: 45/60, MP: 20/30")
+        self.assertEqual(call_args[constants.FIELD_GOD_MODE_RESPONSE], "Behind the scenes: Dragon has 150 HP")
+        self.assertEqual(call_args[constants.FIELD_DEBUG_INFO]['combat_round'], 5)
+        self.assertEqual(call_args['entities_mentioned'], ["Dragon", "Player", "Guard"])
+        self.assertEqual(call_args['location_confirmed'], "Dragon's Lair")
+        self.assertEqual(call_args['state_updates']['player_character_data']['hp_current'], 45)
+        self.assertEqual(call_args['turn_summary'], "Player attacked the dragon for 12 damage")
+        
+        # Verify timestamp was added
+        self.assertIn('timestamp', call_args)
+        
+    def test_none_fields_not_saved(self):
+        """Test that None values in structured_fields are not saved to Firestore"""
+        import constants
+        
+        # Create structured_fields with some None values
+        structured_fields = {
+            constants.FIELD_SESSION_HEADER: "Turn 1",
+            constants.FIELD_PLANNING_BLOCK: None,  # None value
+            constants.FIELD_DICE_ROLLS: [],
+            constants.FIELD_RESOURCES: None,  # None value
+            constants.FIELD_GOD_MODE_RESPONSE: None,  # None value
+            'entities_mentioned': ["Player"],
+            'location_confirmed': "Town Square"
+        }
+        
+        from firestore_service import add_story_entry
+        add_story_entry(
+            user_id="test-user",
+            campaign_id="test-campaign",
+            actor=constants.ACTOR_GEMINI,
+            text="You stand in the town square.",
+            structured_fields=structured_fields
+        )
+        
+        # Get the data that was passed to Firestore
+        call_args = self.mock_story_collection.add.call_args[0][0]
+        
+        # Verify None fields were not saved
+        self.assertNotIn(constants.FIELD_PLANNING_BLOCK, call_args)
+        self.assertNotIn(constants.FIELD_RESOURCES, call_args)
+        self.assertNotIn(constants.FIELD_GOD_MODE_RESPONSE, call_args)
+        
+        # Verify non-None fields were saved
+        self.assertEqual(call_args[constants.FIELD_SESSION_HEADER], "Turn 1")
+        self.assertEqual(call_args[constants.FIELD_DICE_ROLLS], [])
+        self.assertEqual(call_args['entities_mentioned'], ["Player"])
+        self.assertEqual(call_args['location_confirmed'], "Town Square")
+    
+    def test_warning_logged_for_missing_structured_fields(self):
+        """Test that a warning is logged when AI response lacks structured_fields"""
+        from firestore_service import add_story_entry
+        
+        with patch('firestore_service.logging_util.warning') as mock_warning:
+            add_story_entry(
+                user_id="test-user",
+                campaign_id="test-campaign",
+                actor=constants.ACTOR_GEMINI,  # AI actor
+                text="Some AI response",
+                structured_fields=None  # Missing structured fields
+            )
+            
+            # Verify warning was logged
+            mock_warning.assert_called_once()
+            warning_message = mock_warning.call_args[0][0]
+            self.assertIn("AI response missing structured_fields", warning_message)
+            self.assertIn("test-campaign", warning_message)
+    
+    def test_no_warning_for_user_entries(self):
+        """Test that no warning is logged for user entries without structured_fields"""
+        from firestore_service import add_story_entry
+        
+        with patch('firestore_service.logging_util.warning') as mock_warning:
+            add_story_entry(
+                user_id="test-user",
+                campaign_id="test-campaign",
+                actor="user",  # User actor
+                text="User input",
+                structured_fields=None  # OK for user entries
+            )
+            
+            # Verify no warning was logged
+            mock_warning.assert_not_called()
 
 
 if __name__ == '__main__':

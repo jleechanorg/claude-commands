@@ -6,6 +6,9 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from narrative_response_schema import parse_structured_response
+from unittest.mock import patch, MagicMock
+import constants
+import firestore_service
 
 
 class TestGodModeResponseField(unittest.TestCase):
@@ -144,12 +147,13 @@ class TestGodModeResponseField(unittest.TestCase):
         
         narrative, response_obj = parse_structured_response(response)
         
-        # Should only return god_mode_response, no extra newlines
+        # Should return god_mode_response when only god_mode_response is present
         self.assertEqual(narrative, "The world trembles at your command.")
-        self.assertNotIn("\n\n", narrative)
+        # Response object should also have god_mode_response
+        self.assertEqual(response_obj.god_mode_response, "The world trembles at your command.")
         
     def test_combined_god_mode_and_narrative(self):
-        """Test that both god_mode_response and narrative are returned when both present."""
+        """Test that only narrative is returned when both god_mode_response and narrative are present."""
         both_fields_response = '''{
             "narrative": "Meanwhile, in the mortal realm, the players sense a change...",
             "god_mode_response": "The deity grants your wish. A shimmering portal opens.",
@@ -161,13 +165,72 @@ class TestGodModeResponseField(unittest.TestCase):
         
         narrative, response_obj = parse_structured_response(both_fields_response)
         
-        # Should include both god_mode_response first, then narrative
-        self.assertIn("The deity grants your wish", narrative)
-        self.assertIn("Meanwhile, in the mortal realm", narrative)
-        # God mode response should come first
-        self.assertTrue(narrative.startswith("The deity grants your wish"))
+        # Should return only narrative - god_mode_response is passed separately to frontend
+        self.assertEqual(narrative, "Meanwhile, in the mortal realm, the players sense a change...")
+        self.assertNotIn("The deity grants your wish", narrative)
+        # Response object should have both fields separately
         self.assertEqual(response_obj.god_mode_response, "The deity grants your wish. A shimmering portal opens.")
         self.assertEqual(response_obj.narrative, "Meanwhile, in the mortal realm, the players sense a change...")
+
+    def test_god_mode_response_saved_to_firestore(self):
+        """Test that god_mode_response is saved to Firestore via add_story_entry."""
+        god_response = {
+            "narrative": "",
+            "god_mode_response": "A test god mode response for Firestore.",
+            "entities_mentioned": [],
+            "location_confirmed": "Test Location",
+            "state_updates": {},
+            "debug_info": {}
+        }
+        with patch("firestore_service.add_story_entry") as mock_add_story_entry:
+            from firestore_service import add_story_entry
+            add_story_entry("user123", "camp456", "gemini", god_response["god_mode_response"], structured_fields=god_response)
+            called_args, called_kwargs = mock_add_story_entry.call_args
+            self.assertIn("god_mode_response", called_kwargs["structured_fields"])
+            self.assertEqual(called_kwargs["structured_fields"]["god_mode_response"], "A test god mode response for Firestore.")
+
+
+class TestGodModeResponseIntegration(unittest.TestCase):
+    def test_all_structured_fields_are_saved_in_firestore(self):
+        # Patch the full Firestore chain
+        mock_db = MagicMock()
+        mock_users_collection = MagicMock()
+        mock_user_doc = MagicMock()
+        mock_campaigns_collection = MagicMock()
+        mock_campaign_doc = MagicMock()
+        mock_story_collection = MagicMock()
+
+        # Chain the calls
+        mock_db.collection.return_value = mock_users_collection
+        mock_users_collection.document.return_value = mock_user_doc
+        mock_user_doc.collection.return_value = mock_campaigns_collection
+        mock_campaigns_collection.document.return_value = mock_campaign_doc
+        mock_campaign_doc.collection.return_value = mock_story_collection
+
+        with patch('firestore_service.get_db', return_value=mock_db):
+            structured_fields = {
+                constants.FIELD_SESSION_HEADER: "Session header value",
+                constants.FIELD_PLANNING_BLOCK: "Planning block value",
+                constants.FIELD_DICE_ROLLS: [1, 2, 3],
+                constants.FIELD_RESOURCES: "Resource value",
+                constants.FIELD_DEBUG_INFO: {"debug": True},
+                constants.FIELD_GOD_MODE_RESPONSE: "Integration test god mode response"
+            }
+            firestore_service.add_story_entry(
+                user_id="user123",
+                campaign_id="camp456",
+                actor=constants.ACTOR_GEMINI,
+                text="Some narrative",
+                structured_fields=structured_fields
+            )
+
+            # Check that add() was called with all structured fields present
+            self.assertTrue(mock_story_collection.add.called)
+            add_call_args, add_call_kwargs = mock_story_collection.add.call_args
+            written_data = add_call_args[0]
+            for field, value in structured_fields.items():
+                self.assertIn(field, written_data)
+                self.assertEqual(written_data[field], value)
 
 
 if __name__ == '__main__':

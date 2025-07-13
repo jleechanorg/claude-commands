@@ -88,7 +88,11 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
             "debug_info": {}
         }'''
         narrative2, obj2 = parse_structured_response(response2)
-        self.assertEqual(narrative2, "Lightning strikes!\n\nThe mortal realm trembles.")
+        # Should return only narrative when both are present
+        self.assertEqual(narrative2, "The mortal realm trembles.")
+        # Response object should have both fields separately
+        self.assertEqual(obj2.god_mode_response, "Lightning strikes!")
+        self.assertEqual(obj2.narrative, "The mortal realm trembles.")
         
         # Path 3: god_mode_response with whitespace-only narrative
         response3 = '''{
@@ -179,8 +183,12 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
             "debug_info": {}
         }'''
         narrative2, obj2 = parse_structured_response(response2)
-        self.assertIn("Divine power flows through you.", narrative2)
-        self.assertIn("The mortal realm responds to your will.", narrative2)
+        # Should return only narrative - god_mode_response is passed separately to frontend
+        self.assertEqual(narrative2, "The mortal realm responds to your will.")
+        self.assertNotIn("Divine power flows through you.", narrative2)
+        # Response object should have both fields separately
+        self.assertEqual(obj2.god_mode_response, "Divine power flows through you.")
+        self.assertEqual(obj2.narrative, "The mortal realm responds to your will.")
         
         # Edge case 3: Very long content in both fields
         long_text = "A" * 1000
@@ -193,7 +201,12 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
             "debug_info": {{}}
         }}'''
         narrative3, obj3 = parse_structured_response(response3)
-        self.assertEqual(len(narrative3), 2002)  # 1000 + 1000 + "\n\n"
+        # Should return only narrative when both are present
+        self.assertEqual(len(narrative3), 1000)  # Only narrative, not combined
+        self.assertEqual(narrative3, long_text)
+        # Response object should have both fields separately
+        self.assertEqual(obj3.god_mode_response, long_text)
+        self.assertEqual(obj3.narrative, long_text)
         
     def test_hasattr_safety(self):
         """Test the hasattr checks work correctly."""
@@ -233,8 +246,12 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
         
         # Branch: Both narrative and god_mode_response with content
         test5 = '{"narrative": "Story continues", "god_mode_response": "God acts", "entities_mentioned": [], "location_confirmed": "Unknown", "state_updates": {}, "debug_info": {}}'
-        n5, _ = parse_structured_response(test5)
-        self.assertEqual(n5, "God acts\n\nStory continues")
+        n5, obj5 = parse_structured_response(test5)
+        # Should return only narrative when both are present
+        self.assertEqual(n5, "Story continues")
+        # Response object should have both fields separately
+        self.assertEqual(obj5.god_mode_response, "God acts")
+        self.assertEqual(obj5.narrative, "Story continues")
 
 
 if __name__ == '__main__':

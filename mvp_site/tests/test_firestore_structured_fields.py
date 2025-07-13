@@ -200,13 +200,13 @@ class TestFirestoreStructuredFields(unittest.TestCase):
         story_add_calls = mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value.collection.return_value.add.call_args_list
         story_data = story_add_calls[0][0][0]
         
-        # Only non-empty fields should be included
+        # Non-None fields should be included
         self.assertEqual(story_data[constants.FIELD_SESSION_HEADER], 'Valid header')
+        self.assertEqual(story_data[constants.FIELD_DICE_ROLLS], [])  # Empty list is saved
+        self.assertEqual(story_data[constants.FIELD_RESOURCES], '')  # Empty string is saved
         
-        # Empty/None fields should not be included
+        # Only None fields should be excluded
         self.assertNotIn(constants.FIELD_PLANNING_BLOCK, story_data)  # None
-        self.assertNotIn(constants.FIELD_DICE_ROLLS, story_data)  # Empty list
-        self.assertNotIn(constants.FIELD_RESOURCES, story_data)  # Empty string
         self.assertNotIn(constants.FIELD_DEBUG_INFO, story_data)  # None
 
 
