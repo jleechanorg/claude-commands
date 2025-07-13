@@ -17,13 +17,17 @@
 # Note: Not using 'set -e' so we can run all tests even if some fail
 
 # Store project root before changing directories
-PROJECT_ROOT="$PWD"
+PROJECT_ROOT="$(cd "$(dirname "$0")"; pwd)"
 
-# Check if virtual environment exists
+# Check if virtual environment exists, create if not
 if [ ! -d "$PROJECT_ROOT/venv" ]; then
-    echo "Error: Virtual environment not found at $PROJECT_ROOT/venv"
-    echo "Please create it with: python3 -m venv venv"
-    exit 1
+    echo "Virtual environment not found at $PROJECT_ROOT/venv"
+    echo "Creating virtual environment..."
+    if ! python3 -m venv "$PROJECT_ROOT/venv"; then
+        echo "Error: Failed to create virtual environment."
+        exit 1
+    fi
+    echo "Virtual environment created successfully."
 fi
 
 # Colors for output
@@ -62,6 +66,8 @@ cd mvp_site
 # Activate virtual environment
 print_status "Activating virtual environment..."
 source "$PROJECT_ROOT/venv/bin/activate"
+
+pip install -r requirements.txt
 
 print_status "Running tests in mvp_site directory..."
 print_status "Setting TESTING=true for faster AI model usage"
@@ -299,7 +305,7 @@ if [ "$enable_coverage" = true ]; then
         # Show key file coverage
         echo
         echo "Key Files Coverage:"
-        grep -E "(main\.py|gemini_service\.py|game_state\.py|firestore_service\.py)" "$coverage_dir/coverage_report.txt" | head -10
+        grep -E "(main\\.py|gemini_service\\.py|game_state\\.py|firestore_service\\.py)" "$coverage_dir/coverage_report.txt" | head -10
         
         echo "----------------------------------------"
     else
