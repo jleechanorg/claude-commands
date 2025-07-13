@@ -1,4 +1,4 @@
-# V1 campaign summary
+# Campaign summary
 
 You are Ser Arion, a 16 year old honorable knight on your first mission, sworn to protect the vast Celestial Imperium. For decades, the Empire has been ruled by the iron-willed Empress Sariel, a ruthless tyrant who uses psychic power to crush dissent. While her methods are terrifying, her reign has brought undeniable benefits: the roads are safe, trade flourishes, and the common people no longer starve or fear bandits. You are a product of this "Silent Peace," and your oath binds you to the security and prosperity it provides.
 
@@ -8,9 +8,7 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
 
 See world history section below and then campaign details for more info on this scenario.
 
-# V1 World History
-
-## The Definitive History of the World of Assiah (Evil Empress Canon)
+# World History
 
 ### The Age of Dominion: The Divine Order (Ancient Past, Pre-Gambit Era)
 
