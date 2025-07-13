@@ -173,5 +173,19 @@
       "Bash(git lfs:*)"
     ],
     "deny": []
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./claude_command_scripts/git-header.sh",
+            "description": "Auto-generate branch header for CLAUDE.md compliance"
+          }
+        ]
+      }
+    ]
   }
 }

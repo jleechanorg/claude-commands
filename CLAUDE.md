@@ -10,10 +10,14 @@
 [Local: <branch> | Remote: <upstream> | PR: <number> <url>]
 ```
 
-**Required Commands to Generate Header:**
-- `git branch --show-current` - Get local branch
-- `git rev-parse --abbrev-ref @{upstream} 2>/dev/null || echo "no upstream"` - Get remote
-- `gh pr list --head $(git branch --show-current) --json number,url` - Get PR info
+**Header Generation Methods:**
+- **PREFERRED:** Use `/header` command (single command: `./claude_command_scripts/git-header.sh`)
+- **Manual:** Run individual commands:
+  - `git branch --show-current` - Get local branch
+  - `git rev-parse --abbrev-ref @{upstream} 2>/dev/null || echo "no upstream"` - Get remote
+  - `gh pr list --head $(git branch --show-current) --json number,url` - Get PR info
+
+**🎯 Memory Aid:** The `/header` command reduces 3 commands to 1, making compliance effortless and helping build the habit of "header first, then respond".
 
 **Examples:**
 - `[Local: main | Remote: origin/main | PR: none]`
