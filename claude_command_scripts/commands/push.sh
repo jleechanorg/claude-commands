@@ -171,11 +171,74 @@ else
     echo "  PR: None (run 'gh pr create' to create)"
 fi
 
-# 6. Optional: Start test server for web projects
-if [[ -f "./run_test_server.sh" ]]; then
+# 6. Smart test server management for web projects
+if [[ -f "mvp_site/main.py" ]]; then
+    echo -e "\n${GREEN}🖥️  Test Server Management${NC}"
+    echo "==============================="
+    
+    # Port management configuration
+    BASE_PORT=8081
+    MAX_PORTS=10
+    
+    # Function to find available port starting from 8081
+    find_available_port() {
+        local port=$BASE_PORT
+        while [ $port -lt $((BASE_PORT + MAX_PORTS)) ]; do
+            if ! lsof -i:$port > /dev/null 2>&1; then
+                echo $port
+                return 0
+            fi
+            port=$((port + 1))
+        done
+        return 1
+    }
+    
+    # Function to list running servers
+    list_running_servers() {
+        local servers=$(ps aux | grep -E "python.*main.py.*serve" | grep -v grep || true)
+        if [ -n "$servers" ]; then
+            echo -e "${YELLOW}📊 Currently running servers:${NC}"
+            echo "$servers" | while read -r line; do
+                local pid=$(echo "$line" | awk '{print $2}')
+                local port=$(lsof -p $pid 2>/dev/null | grep LISTEN | awk '{print $9}' | cut -d: -f2 | head -1 || echo "unknown")
+                echo "  🔹 PID: $pid | Port: $port"
+            done
+            echo ""
+        fi
+    }
+    
+    # Function to offer server cleanup
+    offer_cleanup() {
+        local servers=$(ps aux | grep -E "python.*main.py.*serve" | grep -v grep || true)
+        if [ -n "$servers" ]; then
+            echo -e "${YELLOW}🧹 Options to manage conflicting servers:${NC}"
+            echo "  [1] Show detailed server list: ps aux | grep 'main.py.*serve'"
+            echo "  [2] Kill specific server: kill <PID>"
+            echo "  [3] Kill all servers: pkill -f 'main.py.*serve'"
+            echo ""
+        fi
+    }
+    
+    # Check for available port
+    available_port=$(find_available_port)
+    if [[ $? -eq 0 ]]; then
+        echo -e "${GREEN}✅ Available port found: $available_port${NC}"
+        echo ""
+        echo -e "${YELLOW}🚀 Start test server with:${NC}"
+        echo "  TESTING=true PORT=$available_port python mvp_site/main.py serve"
+        echo ""
+        echo -e "${YELLOW}🌐 Then access at:${NC}"
+        echo "  http://localhost:$available_port?test_mode=true&test_user_id=test-user-123"
+        
+        # Show any existing servers
+        list_running_servers
+    else
+        echo -e "${RED}❌ No available ports in range $BASE_PORT-$((BASE_PORT + MAX_PORTS - 1))${NC}"
+        echo ""
+        list_running_servers
+        offer_cleanup
+    fi
+elif [[ -f "./run_test_server.sh" ]]; then
     echo -e "\n${YELLOW}💡 Start test server with:${NC}"
     echo "  ./run_test_server.sh"
-elif [[ -f "mvp_site/main.py" ]]; then
-    echo -e "\n${YELLOW}💡 Start test server with:${NC}"
-    echo "  TESTING=true PORT=6006 python mvp_site/main.py serve"
 fi
