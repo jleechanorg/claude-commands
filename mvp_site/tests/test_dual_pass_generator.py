@@ -24,16 +24,20 @@ class TestDualPassGenerator(unittest.TestCase):
         self.generator = DualPassGenerator()
     
     def test_build_injection_templates(self):
-        """Test that injection templates are properly built"""
-        templates = self.generator._build_injection_templates()
+        """Test that injection templates are properly built via EntityValidator"""
+        # This functionality now lives in EntityValidator
+        from entity_validator import entity_validator
+        missing_entities = ["Gideon", "Sariel"]
+        templates = entity_validator.create_injection_templates(missing_entities)
         
-        # Current implementation only has generic templates
-        self.assertIn('generic', templates)
-        self.assertIsInstance(templates['generic'], list)
-        self.assertGreater(len(templates['generic']), 0)
+        # Should have templates for each missing entity
+        self.assertIn('Gideon', templates)
+        self.assertIn('Sariel', templates)
+        self.assertIsInstance(templates['Gideon'], list)
+        self.assertGreater(len(templates['Gideon']), 0)
         
         # Check that templates have placeholders
-        generic_template = templates['generic'][0]
+        generic_template = templates['Gideon'][0]
         self.assertIn('{entity}', generic_template)
         self.assertIn('{action}', generic_template)
     

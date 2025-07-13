@@ -728,14 +728,28 @@ Use `/list` to display all available slash commands with descriptions.
    - Issue comments
    - Bot suggestions
 
-### Import Rules (⚠️)
-**CRITICAL**: ALL imports MUST be at module level (top of file)
+### Import Rules (🚨 CRITICAL)
+**ALL imports MUST be at module level with NO try/except wrappers**
 - ✅ Top of module only - after docstring, before any code
 - ❌ NEVER inside functions, methods, or class definitions
-- ❌ NEVER inside try/except blocks (except for import fallbacks)
+- 🚨 **NEVER inside try/except blocks** - this hides dependency issues
 - ❌ NEVER conditional imports inside if statements
 - Import once at top, reference throughout module
 - For import conflicts: use `as` aliases, not inline imports
+
+🚨 **NO TRY/EXCEPT FOR IMPORTS EVER** - Critical Rule
+- ❌ NEVER wrap imports in try/except blocks
+- ❌ NEVER use "graceful handling" of missing dependencies
+- ❌ NEVER create fallback imports or mock objects for missing deps
+- ✅ ALL dependencies MUST be in requirements.txt and properly installed
+- ✅ Import failures should cause immediate, obvious errors
+- ✅ Missing dependencies should break CI/CD pipeline loudly
+
+**Why this matters:**
+- Try/except imports hide missing dependencies in CI
+- Causes silent test failures and deployment issues
+- Makes dependency management invisible and unreliable
+- Creates false sense of security with "optional" dependencies
 
 ### API Error Prevention (🚨)
 ❌ Print code/file content | ✅ Use file_path:line_number | Keep responses concise

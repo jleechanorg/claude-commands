@@ -42,21 +42,7 @@ class DualPassGenerator:
     
     def __init__(self):
         self.validator = EntityValidator()
-        self.entity_injection_templates = self._build_injection_templates()
-    
-    def _build_injection_templates(self) -> Dict[str, List[str]]:
-        """Build templates for injecting missing entities"""
-        # Use only generic templates that work for any campaign
-        return {
-            'generic': [
-                "{entity}, who had been present but silent, {action}.",
-                "Nearby, {entity} {action}, adding their perspective to the scene.",
-                "{entity} steps forward and {action}.",
-                "{entity}'s voice cuts through: '{dialogue}'",
-                "From across the room, {entity} {action}.",
-                "{entity} looks up from their position and {action}."
-            ]
-        }
+        # REFACTORED: Use EntityValidator's injection templates instead of duplicating
     
     def generate_with_dual_pass(self, initial_prompt: str, expected_entities: List[str],
                                location: Optional[str] = None,
@@ -201,25 +187,16 @@ class DualPassGenerator:
     
     def create_entity_injection_snippet(self, entity: str, location: Optional[str] = None,
                                       context: str = "responds to the situation") -> str:
-        """Create a snippet to inject a missing entity"""
-        entity_lower = entity.lower()
+        """Create a snippet to inject a missing entity (REFACTORED: uses EntityValidator templates)"""
+        # Use EntityValidator's injection templates instead of duplicating logic
+        template_dict = self.validator.create_injection_templates([entity], {"location": location, "context": context})
         
-        # Find appropriate template
-        template_key = 'generic'
-        for key in self.entity_injection_templates:
-            if key in entity_lower:
-                template_key = key
-                break
-        
-        templates = self.entity_injection_templates[template_key]
-        
-        # Choose template based on context
-        if template_key == 'generic':
-            template = templates[0]  # Use first generic template
-            return template.format(entity=entity, action=context)
+        if entity in template_dict:
+            template = template_dict[entity][0]  # Use first template for this entity
+            return template.format(entity=entity, action=context, dialogue="responds appropriately")
         else:
-            template = templates[0]  # Use first specific template
-            return template.format(action=context, context=location or "the current situation")
+            # Fallback if no templates found
+            return f"{entity} {context}."
 
 
 class AdaptiveEntityInjector:
