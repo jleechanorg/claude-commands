@@ -22,6 +22,33 @@ cd "$git_root" || exit 1
 
 local_branch=$(git branch --show-current)
 remote=$(git rev-parse --abbrev-ref @{upstream} 2>/dev/null || echo "no upstream")
+
+# Get local changes status
+modified_count=$(git status --porcelain | grep -E "^ M|^MM|^AM" | wc -l)
+staged_count=$(git status --porcelain | grep -E "^M |^A |^D |^R |^C " | wc -l)
+untracked_count=$(git status --porcelain | grep "^??" | wc -l)
+
+# Build local status string
+local_status=""
+if [ "$modified_count" -gt 0 ] || [ "$staged_count" -gt 0 ] || [ "$untracked_count" -gt 0 ]; then
+    status_parts=()
+    [ "$staged_count" -gt 0 ] && status_parts+=("${staged_count}S")
+    [ "$modified_count" -gt 0 ] && status_parts+=("${modified_count}M")
+    [ "$untracked_count" -gt 0 ] && status_parts+=("${untracked_count}U")
+    local_status=" ($(IFS=, ; echo "${status_parts[*]}"))"
+else
+    local_status=" (clean)"
+fi
+
+# Get unpushed commits count
+unpushed_count=0
+if [ "$remote" != "no upstream" ]; then
+    unpushed_count=$(git rev-list --count HEAD..."$remote" 2>/dev/null || echo "0")
+    if [ "$unpushed_count" -gt 0 ]; then
+        remote="$remote (+$unpushed_count)"
+    fi
+fi
+
 pr_info=$(gh pr list --head "$local_branch" --json number,url 2>/dev/null || echo "[]")
 
 if [ "$pr_info" = "[]" ]; then
@@ -103,14 +130,14 @@ if [ "$1" = "--with-api" ] || [ "$1" = "--monitor" ]; then
             fi
         fi
         
-        echo "[Local: $local_branch | Remote: $remote | PR: $pr_text]"
+        echo "[Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]"
         echo "[API: ${requests_remaining:-?}/${requests_limit:-50} requests (${remaining_percent:-?}% remaining) | Reset: $(format_time "$requests_reset")]"
         
         rm -f /tmp/claude_headers.tmp
     else
-        echo "[Local: $local_branch | Remote: $remote | PR: $pr_text]"
+        echo "[Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]"
         echo "[API: Error getting rate limits]"
     fi
 else
-    echo "[Local: $local_branch | Remote: $remote | PR: $pr_text]"
+    echo "[Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]"
 fi
