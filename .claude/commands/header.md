@@ -1,37 +1,42 @@
 # Header Command
 
-**Purpose**: Generate and display the mandatory branch header for CLAUDE.md compliance
+**Purpose**: Generate and display the mandatory branch header for CLAUDE.md compliance with session usage info
 
-**Usage**: `/header`
+**Usage**: `/header` or `/usage`
 
-**Action**: Execute single script to generate the required branch header
+**Action**: Execute single script to generate the required branch header with API usage statistics
 
 ## Implementation
 
-**Single Command**: `./claude_command_scripts/git-header.sh`
+**Single Command**: `./claude_command_scripts/git-header.sh --with-api`
 
 This script automatically:
 1. Gets local branch name
 2. Gets remote upstream info  
 3. Gets PR information
-4. Formats everything into the required header
+4. Gets Claude API usage statistics (remaining sessions out of 50)
+5. Formats everything into the required header
 
 **Benefits**:
-- ✅ **One command instead of three** - Reduces cognitive load
+- ✅ **One command with usage info** - Shows sessions remaining out of monthly 50
 - ✅ **Automatic formatting** - Prevents formatting errors
 - ✅ **Error handling** - Gracefully handles missing upstreams/PRs
+- ✅ **Usage awareness** - Never run out of sessions unexpectedly
 - ✅ **Consistent output** - Same format every time
 
 ## Output Format
 
-Generates the mandatory header format:
+Generates the mandatory header format with API usage:
 ```
 [Local: <branch> | Remote: <upstream> | PR: <number> <url>]
+[API: <remaining>/<limit> requests (<percentage>% remaining) | Reset: <time>]
 ```
 
 Examples:
 - `[Local: main | Remote: origin/main | PR: none]`
+- `[API: 49/50 requests (98% remaining) | Reset: 15:08:12]`
 - `[Local: feature-x | Remote: origin/main | PR: #123 https://github.com/user/repo/pull/123]`
+- `[API: 25/50 requests (50% remaining) | Reset: 08:30:45]`
 
 ## Usage in Workflow
 
