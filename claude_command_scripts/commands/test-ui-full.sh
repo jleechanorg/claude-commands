@@ -116,10 +116,31 @@ else
     fi
     echo "✓ Playwright is installed"
     
+    # Find available port starting from 8081
+    BASE_PORT=8081
+    MAX_PORTS=10
+    find_available_port() {
+        local port=$BASE_PORT
+        while [ $port -lt $((BASE_PORT + MAX_PORTS)) ]; do
+            if ! lsof -i:$port > /dev/null 2>&1; then
+                echo $port
+                return 0
+            fi
+            port=$((port + 1))
+        done
+        return 1
+    }
+    
+    REAL_PORT=$(find_available_port)
+    if [[ $? -ne 0 ]]; then
+        echo -e "${RED}❌ No available ports in range $BASE_PORT-$((BASE_PORT + MAX_PORTS - 1))${NC}"
+        exit 1
+    fi
+    
     # Start REAL server (no TESTING=true)
-    echo -e "\n${GREEN}🚀 Starting REAL server on port 6006...${NC}"
+    echo -e "\n${GREEN}🚀 Starting REAL server on port $REAL_PORT...${NC}"
     echo -e "${YELLOW}⚠️  Server running with REAL APIs${NC}"
-    PORT=6006 vpython mvp_site/main.py serve &
+    PORT=$REAL_PORT vpython mvp_site/main.py serve &
     SERVER_PID=$!
     
     # Wait for server

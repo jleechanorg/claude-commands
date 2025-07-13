@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # localserver.sh - Start a local WorldArchitect.AI server on an available port
-# This script finds an available port starting from 6006 and runs the Flask server
+# This script finds an available port starting from 8081 and runs the Flask server
 
 set -e  # Exit on error
 
@@ -112,7 +112,7 @@ check_port() {
 
 # Function to find available port
 find_available_port() {
-    local start_port=${1:-6006}
+    local start_port=${1:-8081}
     local port=$start_port
     local max_attempts=10
     
@@ -169,7 +169,7 @@ else
 fi
 
 # Find available port
-PORT=$(find_available_port 6006)
+PORT=$(find_available_port 8081)
 if [ $? -ne 0 ]; then
     exit 1
 fi

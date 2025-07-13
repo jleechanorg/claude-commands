@@ -5,7 +5,7 @@
 set -e
 
 # Configuration
-BASE_PORT=6006
+BASE_PORT=8081
 MAX_SERVERS=10
 PID_DIR="/tmp/worldarchitectai_servers"
 LOG_DIR="/tmp/worldarchitectai_logs"
