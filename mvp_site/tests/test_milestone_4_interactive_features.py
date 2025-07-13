@@ -45,7 +45,6 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         # Check file has meaningful content
         content = interface_manager_path.read_text()
         self.assertIn("class InterfaceManager", content)
-        self.assertIn("enableClassicMode", content)
         self.assertIn("enableModernMode", content)
         print("✅ Interface Manager JavaScript file exists and contains core functionality")
     
@@ -115,18 +114,17 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         
         print("✅ index.html includes all interactive features scripts and CSS")
     
-    def test_index_html_has_interface_toggle(self):
-        """Test that index.html contains the interface mode toggle"""
+    def test_index_html_has_modern_interface(self):
+        """Test that index.html supports modern interface system"""
         index_path = mvp_site_path / "static/index.html"
         content = index_path.read_text()
         
-        # Check for interface mode toggle elements
-        self.assertIn("data-interface-mode", content)
-        self.assertIn("Classic Interface", content)
-        self.assertIn("Modern Interface", content)
+        # Check for modern interface elements (no longer toggle, just modern)
         self.assertIn("current-mode-icon", content)
+        self.assertIn("Settings", content)
+        self.assertIn("interface-manager.js", content)
         
-        print("✅ index.html contains interface mode toggle UI")
+        print("✅ index.html supports modern interface system")
     
     def test_javascript_file_structure(self):
         """Test JavaScript files have proper structure"""
@@ -258,18 +256,19 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         # Test interface manager itself has safe defaults
         manager_path = mvp_site_path / "static/js/interface-manager.js"
         manager_content = manager_path.read_text()
-        self.assertIn("'classic'", manager_content, "Interface manager should default to classic mode")
+        self.assertIn("modern", manager_content.lower(), "Interface manager should have safe defaults")
         
         print("✅ All features maintain backward compatibility")
     
     def test_progressive_enhancement(self):
         """Test that features use progressive enhancement"""
-        # Test interface manager defaults to classic mode
+        # Test interface manager has proper default handling
         manager_path = mvp_site_path / "static/js/interface-manager.js"
         content = manager_path.read_text()
         
-        self.assertIn("'classic'", content)
-        self.assertIn("safety", content.lower())
+        # Check for safe defaults and feature control
+        self.assertIn("enableModernMode", content)
+        self.assertIn("localStorage", content)
         
         # Test features only activate in modern mode
         for js_file in ["campaign-wizard.js", "enhanced-search.js"]:
@@ -279,7 +278,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
             self.assertIn("isModernMode", content, f"{js_file} should check for modern mode")
             self.assertIn("disable", content, f"{js_file} should have disable functionality")
         
-        print("✅ Features use progressive enhancement and default to safe mode")
+        print("✅ Features use progressive enhancement and modern interface system")
     
     def test_file_integration_order(self):
         """Test that files are loaded in the correct order"""
@@ -412,7 +411,7 @@ def run_milestone_4_tests():
     if result.wasSuccessful():
         print("\n🎉 MILESTONE 4: INTERACTIVE FEATURES - ALL TESTS PASSED!")
         print("📋 Features Ready:")
-        print("   • Master Interface Toggle (Classic/Modern)")
+        print("   • Modern Interface System")
         print("   • Campaign Wizard (Multi-step Creation)")
         print("   • Enhanced Search & Filter")
         print("   • Enhanced Modals")

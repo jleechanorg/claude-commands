@@ -30,11 +30,11 @@ def test_settings_theme():
         current_settings = response.json()
         print("✅ Current settings retrieved:")
         print(f"   Theme: {current_settings.get('theme', 'default')}")
-        print(f"   Interface: {current_settings.get('interface', 'classic')}")
+        print(f"   Interface: {current_settings.get('interface', 'modern')}")
     else:
         print(f"⚠️ Settings endpoint not available: {response.status_code}")
         # Try local storage simulation
-        current_settings = {'theme': 'light', 'interface': 'classic'}
+        current_settings = {'theme': 'light', 'interface': 'modern'}
     
     # Test 2: Theme changes
     print("\n2️⃣ Testing theme changes...")
@@ -60,7 +60,7 @@ def test_settings_theme():
     
     # Test 3: Interface mode changes
     print("\n3️⃣ Testing interface mode changes...")
-    interfaces = ['classic', 'modern']
+    interfaces = ['modern']
     
     for interface in interfaces:
         print(f"\n  Setting interface to: {interface}")

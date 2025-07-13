@@ -202,7 +202,7 @@ const VisualValidator = {
             } else {
                 VisualValidator.results.failed.push({
                     test: 'Modern Mode Default',
-                    details: `Current mode: ${interfaceMode || 'classic'}`
+                    details: `Current mode: ${interfaceMode || 'modern'}`
                 });
                 console.error('❌ Modern mode is not default');
                 return false;
@@ -352,7 +352,7 @@ const VisualValidator = {
                 height: window.innerHeight
             },
             theme: document.body.getAttribute('data-theme') || 'default',
-            mode: document.body.getAttribute('data-interface-mode') || 'classic',
+            mode: document.body.getAttribute('data-interface-mode') || 'modern',
             elements: {
                 buttons: document.querySelectorAll('.btn').length,
                 checkboxes: document.querySelectorAll('input[type="checkbox"]').length,

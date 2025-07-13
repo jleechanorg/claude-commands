@@ -867,7 +867,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
             '/api/campaigns',
             headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
             data=json.dumps({
-                'prompt': 'Classic D&D adventure',
+                'prompt': 'Standard D&D adventure',
                 'title': 'Standard D&D Campaign',
                 'selected_prompts': ['narrative', 'mechanics']
             })
