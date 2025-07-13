@@ -161,97 +161,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
     
-    // Helper function to generate HTML for structured fields
-    const generateStructuredFieldsHTML = (fullData, debugMode) => {
+    // Helper function for elements 2-4: location, resources, dice rolls
+    const generateStructuredFieldsPreNarrative = (fullData, debugMode) => {
         let html = '';
-        
-        // Debug log to see what data is available
-        if (fullData && Object.keys(fullData).length > 0) {
-            const fields = Object.keys(fullData).filter(key => 
-                key !== 'text' && key !== 'actor' && key !== 'mode' && 
-                key !== 'timestamp' && key !== 'part' && key !== 'sequence_id' && 
-                key !== 'user_scene_number'
-            );
-            if (fields.length > 0) {
-                console.log('Structured fields available:', fields);
-                // Log the actual values of key fields
-                console.log('Field values:', {
-                    god_mode_response: fullData.god_mode_response ? 
-                        `${fullData.god_mode_response.substring(0, 50)}...` : 'undefined',
-                    session_header: fullData.session_header || 'undefined',
-                    dice_rolls: fullData.dice_rolls || 'undefined',
-                    resources: fullData.resources || 'undefined',
-                    entities_mentioned: fullData.entities_mentioned || 'undefined',
-                    location_confirmed: fullData.location_confirmed || 'undefined'
-                });
-            }
+
+        // 2. Location confirmed
+        if (fullData.location_confirmed && fullData.location_confirmed !== 'Unknown') {
+            html += '<div class="location-confirmed">';
+            html += `<strong>📍 Location:</strong> ${sanitizeHtml(fullData.location_confirmed)}`;
+            html += '</div>';
         }
-        
-        // Add god mode response if present (highest priority, replaces narrative)
+
+        // 3. Resources (always show)
+        const resourceText = (fullData.resources !== undefined && fullData.resources !== null && fullData.resources !== 'undefined' && fullData.resources !== '') 
+            ? sanitizeHtml(fullData.resources)
+            : '<em>None</em>';
+        html += `<div class="resources" style="background-color: #fff3cd; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>📊 Resources:</strong> ${resourceText}</div>`;
+
+        // 4. Dice rolls (always show)
+        if (fullData.dice_rolls && Array.isArray(fullData.dice_rolls) && fullData.dice_rolls.length > 0) {
+            html += '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;">';
+            html += '<strong>🎲 Dice Rolls:</strong><ul>';
+            fullData.dice_rolls.forEach(roll => {
+                html += `<li>${sanitizeHtml(roll)}</li>`;
+            });
+            html += '</ul></div>';
+        } else {
+            html += '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>🎲 Dice Rolls:</strong> <em>None</em></div>';
+        }
+
+        // 5. God mode response (if present, before narrative)
         if (fullData.god_mode_response && fullData.god_mode_response !== 'undefined' && fullData.god_mode_response !== '') {
-            // Properly escape HTML entities to preserve formatting
-            const escapedResponse = fullData.god_mode_response
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
+            const escapedResponse = sanitizeHtml(fullData.god_mode_response);
             html += '<div class="god-mode-response">';
             html += '<strong>🔮 God Mode Response:</strong>';
             html += `<pre>${escapedResponse}</pre>`;
             html += '</div>';
         }
-        
-        // Add entities mentioned if present
-        if (fullData.entities_mentioned && fullData.entities_mentioned.length > 0) {
-            html += '<div class="entities-mentioned">';
-            html += '<strong>👥 Entities:</strong>';
-            html += '<ul>';
-            fullData.entities_mentioned.forEach(entity => {
-                html += `<li>${entity}</li>`;
-            });
-            html += '</ul>';
-            html += '</div>';
-        }
-        
-        // Add location confirmed if present
-        if (fullData.location_confirmed && fullData.location_confirmed !== 'Unknown') {
-            html += '<div class="location-confirmed">';
-            html += `<strong>📍 Location:</strong> ${fullData.location_confirmed}`;
-            html += '</div>';
-        }
-        
-        // Add dice rolls (always show)
-        console.log('🎲 Processing dice_rolls:', fullData.dice_rolls, 'type:', typeof fullData.dice_rolls);
-        if (fullData.dice_rolls && fullData.dice_rolls.length > 0) {
-            console.log('🎲 Showing dice rolls with content');
-            html += '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;">';
-            html += '<strong>🎲 Dice Rolls:</strong><ul>';
-            fullData.dice_rolls.forEach(roll => {
-                html += `<li>${roll}</li>`;
-            });
-            html += '</ul></div>';
-        } else {
-            // Always show dice rolls section, display "None" when empty or missing
-            console.log('🎲 Showing dice rolls as None');
-            html += '<div class="dice-rolls" style="background-color: #e8f4e8; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>🎲 Dice Rolls:</strong> <em>None</em></div>';
-        }
-        
-        // Add resources (always show)
-        const resourceText = (fullData.resources !== undefined && fullData.resources !== null && fullData.resources !== 'undefined' && fullData.resources !== '') 
-            ? fullData.resources 
-            : '<em>None</em>';
-        html += `<div class="resources" style="background-color: #fff3cd; padding: 8px; margin: 10px 0; border-radius: 5px;"><strong>📊 Resources:</strong> ${resourceText}</div>`;
-        
-        // Add state updates if present (visible in debug mode or when significant)
-        if (fullData.state_updates && Object.keys(fullData.state_updates).length > 0) {
-            if (debugMode || (fullData.state_updates.npc_data && Object.keys(fullData.state_updates.npc_data).length > 0)) {
-                html += '<div class="state-updates">';
-                html += '<strong>🔧 State Updates:</strong>';
-                html += '<pre>' + JSON.stringify(fullData.state_updates, null, 2) + '</pre>';
-                html += '</div>';
-            }
-        }
-        
-        // Add planning block if present (always at the bottom)
+
+        return html;
+    };
+
+    // Helper function for elements 7-10: planning block, entities, state updates, debug info
+    const generateStructuredFieldsPostNarrative = (fullData, debugMode) => {
+        let html = '';
+
+        // 7. Planning block (always at the bottom if present)
         if (fullData.planning_block) {
             try {
                 const parsedPlanningBlock = parsePlanningBlocks(fullData.planning_block);
@@ -260,116 +215,122 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (e) {
                 console.error('Error parsing planning block:', e);
-                // Show raw planning block as fallback
-                const escapedText = fullData.planning_block.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const escapedText = String(fullData.planning_block).replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 html += `<div class="planning-block planning-block-error" style="background-color: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 5px;">Error parsing planning block. Raw content:<br><pre>${escapedText}</pre></div>`;
             }
         }
-        
-        // Add debug info if in debug mode
+
+        // 8. Entities
+        if (fullData.entities_mentioned && Array.isArray(fullData.entities_mentioned) && fullData.entities_mentioned.length > 0) {
+            html += '<div class="entities-mentioned">';
+            html += '<strong>👥 Entities:</strong>';
+            html += '<ul>';
+            fullData.entities_mentioned.forEach(entity => {
+                html += `<li>${sanitizeHtml(entity)}</li>`;
+            });
+            html += '</ul>';
+            html += '</div>';
+        }
+
+        // 9. State updates (visible in debug mode or when significant)
+        if (fullData.state_updates && Object.keys(fullData.state_updates).length > 0) {
+            if (debugMode || (fullData.state_updates.npc_data && Object.keys(fullData.state_updates.npc_data).length > 0)) {
+                html += '<div class="state-updates">';
+                html += '<strong>🔧 State Updates:</strong>';
+                html += '<pre>' + sanitizeHtml(JSON.stringify(fullData.state_updates, null, 2)) + '</pre>';
+                html += '</div>';
+            }
+        }
+
+        // 10. Debug info (only in debug mode)
         if (debugMode && fullData.debug_info && Object.keys(fullData.debug_info).length > 0) {
             html += '<div class="debug-info">';
             html += '<strong>🔍 Debug Info:</strong>';
-            
+
             // Show DM notes if present
             if (fullData.debug_info.dm_notes && fullData.debug_info.dm_notes.length > 0) {
                 html += '<div class="dm-notes"><strong>📝 DM Notes:</strong><ul>';
                 fullData.debug_info.dm_notes.forEach(note => {
-                    html += `<li>${note}</li>`;
+                    html += `<li>${sanitizeHtml(note)}</li>`;
                 });
                 html += '</ul></div>';
             }
-            
+
             // Show state rationale if present
             if (fullData.debug_info.state_rationale) {
-                html += `<div class="state-rationale"><strong>💭 State Rationale:</strong> ${fullData.debug_info.state_rationale}</div>`;
+                html += `<div class="state-rationale"><strong>💭 State Rationale:</strong> ${sanitizeHtml(fullData.debug_info.state_rationale)}</div>`;
             }
-            
+
             // Show raw debug info for anything else
             const debugCopy = {...fullData.debug_info};
             delete debugCopy.dm_notes;
             delete debugCopy.state_rationale;
             if (Object.keys(debugCopy).length > 0) {
-                html += '<pre>' + JSON.stringify(debugCopy, null, 2) + '</pre>';
+                html += '<pre>' + sanitizeHtml(JSON.stringify(debugCopy, null, 2)) + '</pre>';
             }
-            
+
             html += '</div>';
         }
-        
-        // Debug log the generated HTML
-        if (html) {
-            console.log('Generated structured fields HTML length:', html.length);
-            console.log('HTML includes god_mode_response:', html.includes('god-mode-response'));
-            console.log('HTML includes resources:', html.includes('resources'));
-            console.log('HTML includes dice-rolls:', html.includes('dice-rolls'));
-            console.log('HTML includes session-header:', html.includes('session-header'));
-        }
-        
+
         return html;
+    };
+
+    // Unified function to generate all structured fields (pre and post narrative)
+    const generateStructuredFieldsHTML = (fullData, debugMode) => {
+        return generateStructuredFieldsPreNarrative(fullData, debugMode) + generateStructuredFieldsPostNarrative(fullData, debugMode);
     };
 
     const appendToStory = (actor, text, mode = null, debugMode = false, sequenceId = null, fullData = null) => {
         const storyContainer = document.getElementById('story-content');
         const entryEl = document.createElement('div');
         entryEl.className = 'story-entry';
-        
+
         let label = '';
         if (actor === 'gemini') {
             label = sequenceId ? `Scene #${sequenceId}` : 'Story';
         } else { // actor is 'user'
             label = mode === 'character' ? 'Main Character' : (mode === 'god' ? 'God' : 'You');
         }
-        
-        // Build the full response HTML
+
+        // Build the full response HTML in the correct order
         let html = '';
-        
-        // Add session header if present (always at the top)
+
+        // 1. Session header (always at the top, with escaping)
         if (actor === 'gemini' && fullData && fullData.session_header && fullData.session_header !== 'undefined') {
-            // Escape HTML entities for safety
-            const escapedHeader = fullData.session_header
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
+            const escapedHeader = sanitizeHtml(fullData.session_header);
             html += `<div class="session-header">${escapedHeader}</div>`;
         }
-        
+
         // Process debug content - backend now handles stripping based on debug_mode
-        // Frontend only needs to style debug content when present
         let processedText = text;
         if (actor === 'gemini') {
-            // Style STATE_UPDATES_PROPOSED blocks when present (only in debug mode)
             processedText = text
                 .replace(/\[STATE_UPDATES_PROPOSED\]/g, '<div class="debug-content"><strong>🔧 STATE UPDATES PROPOSED:</strong><br><pre>')
-                .replace(/\[END_STATE_UPDATES_PROPOSED\]/g, '</pre></div>');
-            
-            // Then style other debug content that is present
-            processedText = processedText
+                .replace(/\[END_STATE_UPDATES_PROPOSED\]/g, '</pre></div>')
                 .replace(/\[DEBUG_START\]/g, '<div class="debug-content"><strong>🔍 DM Notes:</strong> ')
                 .replace(/\[DEBUG_END\]/g, '</div>')
                 .replace(/\[DEBUG_STATE_START\]/g, '<div class="debug-content"><strong>⚙️ State Changes:</strong> ')
                 .replace(/\[DEBUG_STATE_END\]/g, '</div>')
                 .replace(/\[DEBUG_ROLL_START\]/g, '<div class="debug-rolls"><strong>🎲 Dice Roll:</strong> ')
                 .replace(/\[DEBUG_ROLL_END\]/g, '</div>');
-            
-            // REMOVED: Planning blocks are now handled via structured JSON field only
-            // processedText = parsePlanningBlocks(processedText);
         }
-        
-        // Add the main narrative
-        html += `<p><strong>${label}:</strong> ${processedText}</p>`;
-        
-        // Add structured fields for AI responses
-        console.log('🔍 Checking structured fields condition - actor:', actor, 'fullData exists:', !!fullData);
+
+        // 2-5. Structured fields before narrative (location, resources, dice rolls, god_mode_response)
         if (actor === 'gemini' && fullData) {
-            console.log('✅ Adding structured fields for Gemini response');
-            html += generateStructuredFieldsHTML(fullData, debugMode);
-        } else {
-            console.log('❌ Skipping structured fields - not a Gemini response with data');
+            html += generateStructuredFieldsPreNarrative(fullData, debugMode);
         }
-        
+
+        // 6. Main narrative
+        html += `<p><strong>${label}:</strong> ${processedText}</p>`;
+
+        // 7-10. Structured fields after narrative (planning block, entities, state updates, debug info)
+        if (actor === 'gemini' && fullData) {
+            html += generateStructuredFieldsPostNarrative(fullData, debugMode);
+        }
+
         entryEl.innerHTML = html;
         storyContainer.appendChild(entryEl);
-        
+
         // Add click handlers to any choice buttons we just added
         if (actor === 'gemini') {
             const choiceButtons = entryEl.querySelectorAll('.choice-button');
