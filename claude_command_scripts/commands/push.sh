@@ -102,7 +102,60 @@ else
     echo -e "${YELLOW}⚠️  No test script found${NC}"
 fi
 
-# 3. Push to remote
+# 3. Analyze PR coherence
+echo -e "\n${GREEN}🔍 Analyzing PR coherence...${NC}"
+
+# Get list of changed files
+changed_files=$(git diff --name-only origin/main...HEAD 2>/dev/null || git diff --name-only main...HEAD)
+
+if [[ -n "$changed_files" ]]; then
+    file_count=$(echo "$changed_files" | wc -l)
+    echo "Files to be pushed: $file_count"
+    
+    # Categorize files
+    categories=()
+    
+    # Check for different file categories
+    if echo "$changed_files" | grep -q "\.py$"; then categories+=("Python"); fi
+    if echo "$changed_files" | grep -q "\.js$"; then categories+=("JavaScript"); fi
+    if echo "$changed_files" | grep -q "\.css$"; then categories+=("CSS"); fi
+    if echo "$changed_files" | grep -q "\.html$"; then categories+=("HTML"); fi
+    if echo "$changed_files" | grep -q "\.md$"; then categories+=("Documentation"); fi
+    if echo "$changed_files" | grep -q "test_"; then categories+=("Tests"); fi
+    if echo "$changed_files" | grep -q "^scripts/"; then categories+=("Scripts"); fi
+    if echo "$changed_files" | grep -q "^docs/"; then categories+=("Docs"); fi
+    if echo "$changed_files" | grep -q "CLAUDE\.md\|\.gitignore\|requirements\.txt"; then categories+=("Config"); fi
+    
+    category_count=${#categories[@]}
+    
+    # Warn if PR seems to have unrelated changes
+    if [[ $category_count -gt 2 ]] || [[ $file_count -gt 10 ]]; then
+        echo -e "${YELLOW}⚠️  PR contains $file_count files across $category_count categories${NC}"
+        echo "Categories: ${categories[*]}"
+        echo ""
+        echo "Files:"
+        echo "$changed_files" | head -20
+        if [[ $file_count -gt 20 ]]; then
+            echo "... and $((file_count - 20)) more files"
+        fi
+        echo ""
+        echo -e "${YELLOW}Consider splitting into multiple focused PRs:${NC}"
+        echo "  - One PR per feature/fix"
+        echo "  - Group related changes together"
+        echo "  - Keep PRs small and reviewable"
+        echo ""
+        read -p "Continue with push? [y/N] " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo -e "${RED}Push cancelled${NC}"
+            exit 0
+        fi
+    else
+        echo "✓ PR appears focused ($category_count categories)"
+    fi
+fi
+
+# 4. Push to remote
 echo -e "\n${GREEN}📤 Pushing to remote...${NC}"
 
 if [[ -z "$remote_branch" ]]; then
@@ -114,7 +167,7 @@ else
     git push origin "$current_branch"
 fi
 
-# 4. Check for existing PR
+# 5. Check for existing PR
 echo -e "\n${GREEN}🔍 Checking for pull request...${NC}"
 
 pr_info=$(gh pr list --head "$current_branch" --json number,url,state --limit 1 2>/dev/null || echo "[]")
@@ -160,7 +213,7 @@ else
     echo "  gh pr create"
 fi
 
-# 5. Summary
+# 6. Summary
 echo -e "\n${GREEN}✅ Push complete!${NC}"
 echo "  Branch: $current_branch"
 echo "  Remote: origin/$current_branch"
@@ -171,7 +224,7 @@ else
     echo "  PR: None (run 'gh pr create' to create)"
 fi
 
-# 6. Smart test server management for web projects
+# 7. Smart test server management for web projects
 if [[ -f "mvp_site/main.py" ]]; then
     echo -e "\n${GREEN}🖥️  Test Server Management${NC}"
     echo "==============================="
