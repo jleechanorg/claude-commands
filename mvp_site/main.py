@@ -140,7 +140,6 @@ RANDOM_SETTINGS = [
     "The war-torn kingdom of Cyre, struggling to rebuild after magical devastation"
 ]
 
-DRAGON_KNIGHT_NARRATIVE = """You are Ser Arion, a 16 year old honorable knight on your first mission, sworn to protect the vast Celestial Imperium. For decades, the Empire has been ruled by the iron-willed Empress Sariel, a ruthless tyrant who uses psychic power to crush dissent. While her methods are terrifying, her reign has brought undeniable benefits: the roads are safe, commerce thrives, and the Imperium has never been stronger. But dark whispers speak of the Dragon Knights - an ancient order that once served the realm before mysteriously vanishing. As you journey through this morally complex world, you must decide: will you serve the tyrant who brings order, or seek a different path?"""
 
 # --- END CONSTANTS ---
 
@@ -611,21 +610,19 @@ def parse_set_command(payload_str: str) -> dict:
 
     return proposed_changes
 
-def _build_campaign_prompt(character, setting, description, campaign_type, old_prompt):
+def _build_campaign_prompt(character, setting, description, old_prompt):
     """
     Build campaign prompt from character, setting, and description parameters.
     
     This function handles all combinations of character, setting, and description inputs:
     - Provided inputs are used as-is
     - Empty/None inputs are replaced with randomly generated content
-    - Dragon Knight campaigns use a fixed narrative regardless of inputs
     - Backward compatibility with old_prompt format is maintained
     
     Args:
         character (str): Character description or None/empty
         setting (str): Setting description or None/empty  
         description (str): Campaign description or None/empty
-        campaign_type (str): Type of campaign ('dragon-knight', 'custom', etc.)
         old_prompt (str): Legacy prompt format for backward compatibility
         
     Returns:
@@ -638,10 +635,6 @@ def _build_campaign_prompt(character, setting, description, campaign_type, old_p
     setting = (setting or '').strip()
     description = (description or '').strip()
     old_prompt = (old_prompt or '').strip()
-    
-    # Dragon Knight campaigns use fixed narrative regardless of other inputs
-    if campaign_type == 'dragon-knight':
-        return DRAGON_KNIGHT_NARRATIVE
     
     # Build new format prompt - use provided fields or generate random content
     prompt_parts = []
@@ -852,11 +845,10 @@ def create_app():
         title = data.get(constants.KEY_TITLE)
         selected_prompts = data.get(KEY_SELECTED_PROMPTS, [])
         custom_options = data.get('custom_options', [])
-        campaign_type = data.get('campaign_type', 'custom')
         
         # Construct prompt from provided parameters
         try:
-            prompt = _build_campaign_prompt(character, setting, description, campaign_type, old_prompt)
+            prompt = _build_campaign_prompt(character, setting, description, old_prompt)
         except ValueError as e:
             return jsonify({KEY_ERROR: str(e)}), 400
         
@@ -866,7 +858,6 @@ def create_app():
         
         # Debug logging
         app.logger.info(f"Received campaign creation request:")
-        app.logger.info(f"  Campaign type: {campaign_type}")
         app.logger.info(f"  Character: {character}")
         app.logger.info(f"  Setting: {setting}")
         app.logger.info(f"  Description: {description}")

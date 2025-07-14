@@ -6,7 +6,7 @@
 class CampaignWizard {
   // Default/fallback values
   static DEFAULT_TITLE = 'My Epic Adventure';
-  static DEFAULT_DRAGON_KNIGHT_DESCRIPTION = 'A brave knight...';
+  static DEFAULT_DRAGON_KNIGHT_DESCRIPTION = `You are Ser Arion, a 16 year old honorable knight on your first mission, sworn to protect the vast Celestial Imperium. For decades, the Empire has been ruled by the iron-willed Empress Sariel, a ruthless tyrant who uses psychic power to crush dissent. While her methods are terrifying, her reign has brought undeniable benefits: the roads are safe, commerce thrives, and the Imperium has never been stronger. But dark whispers speak of the Dragon Knights - an ancient order that once served the realm before mysteriously vanishing. As you journey through this morally complex world, you must decide: will you serve the tyrant who brings order, or seek a different path?`;
   static DEFAULT_CUSTOM_DESCRIPTION = '(none)';
   static DEFAULT_DRAGON_KNIGHT_CHARACTER = 'Ser Arion (default)';
   static DEFAULT_CUSTOM_CHARACTER = 'Auto-generated';
@@ -258,12 +258,19 @@ class CampaignWizard {
 
             <!-- Campaign Description Input (Custom Campaigns Only) -->
             <div class="mb-4" id="wizard-description-section">
-              <label for="wizard-description-input" class="form-label">Campaign description/premise</label>
-              <textarea class="form-control" 
-                        id="wizard-description-input" 
-                        rows="3"
-                        placeholder="Describe your campaign concept, goals, or story premise (optional)"></textarea>
-              <div class="form-text">Optional: Describe what kind of adventure or story you want to experience</div>
+              <div class="d-flex justify-content-between align-items-center">
+                <label for="wizard-description-input" class="form-label">Campaign description prompt</label>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="wizard-toggle-description" aria-expanded="true" aria-controls="wizard-description-container">
+                  <i class="bi bi-chevron-up"></i> Collapse
+                </button>
+              </div>
+              <div id="wizard-description-container" class="collapse show">
+                <textarea class="form-control scrollable-textarea" 
+                          id="wizard-description-input" 
+                          rows="8"
+                          placeholder="Describe your campaign concept, goals, or story premise (optional)"></textarea>
+                <div class="form-text">Optional: Describe what kind of adventure or story you want to experience. This field can handle very long prompts.</div>
+              </div>
             </div>
 
             <!-- Dragon Knight Description (shown only for Dragon Knight) -->
@@ -415,6 +422,9 @@ class CampaignWizard {
     nextBtn?.addEventListener('click', () => this.nextStep());
     launchBtn?.addEventListener('click', () => this.launchCampaign());
 
+    // Setup collapsible description
+    UIUtils.setupCollapsibleDescription('wizard-toggle-description', 'wizard-description-container');
+
     // Step indicator clicks
     document.querySelectorAll('.step-indicator').forEach(indicator => {
       indicator.addEventListener('click', (e) => {
@@ -478,6 +488,7 @@ class CampaignWizard {
     this.loadInitialCampaignContent();
   }
 
+
   async loadInitialCampaignContent() {
     const dragonKnightRadio = document.getElementById('wizard-dragon-knight-campaign');
     if (dragonKnightRadio && dragonKnightRadio.checked) {
@@ -503,9 +514,15 @@ class CampaignWizard {
     if (settingSection) settingSection.style.display = 'block';
     
     if (type === 'dragon-knight') {
-      // Show Dragon Knight description, hide custom description
-      if (dragonKnightDesc) dragonKnightDesc.style.display = 'block';
-      if (descriptionSection) descriptionSection.style.display = 'none';
+      // For Dragon Knight, use the custom description field but pre-fill it
+      if (dragonKnightDesc) dragonKnightDesc.style.display = 'none';
+      if (descriptionSection) descriptionSection.style.display = 'block';
+      
+      // Pre-fill the description with Dragon Knight narrative
+      const descriptionInput = document.getElementById('wizard-description-input');
+      if (descriptionInput) {
+        descriptionInput.value = CampaignWizard.DEFAULT_DRAGON_KNIGHT_DESCRIPTION;
+      }
       
       // Set default Dragon Knight values (user can modify these)
       if (characterInput) {
@@ -517,11 +534,16 @@ class CampaignWizard {
         settingInput.placeholder = 'Default: World of Assiah (you can change this)';
       }
     } else {
-      // Hide Dragon Knight description, show custom description for Custom Campaign
+      // Show custom description for Custom Campaign
       if (dragonKnightDesc) dragonKnightDesc.style.display = 'none';
       if (descriptionSection) descriptionSection.style.display = 'block';
       
-      // Clear values and reset placeholders for custom campaign
+      // Clear description and values for custom campaign
+      const descriptionInput = document.getElementById('wizard-description-input');
+      if (descriptionInput) {
+        descriptionInput.value = '';
+      }
+      
       if (characterInput) {
         characterInput.value = '';
         characterInput.placeholder = 'Random character (auto-generate)';
@@ -716,15 +738,8 @@ class CampaignWizard {
     const isDragonKnight = document.getElementById('wizard-dragon-knight-campaign')?.checked;
     const useDefaultWorld = document.getElementById('wizard-default-world')?.checked;
     
-    // Description is now handled by the Python backend for both campaign types
-    // For custom campaigns, use the user-entered description
-    // For Dragon Knight campaigns, the backend provides the rich lore
-    let description = '';
-    if (!isDragonKnight) {
-      // Only send description for custom campaigns
-      description = document.getElementById('wizard-description-input')?.value || '';
-    }
-    // Dragon Knight description is handled by the backend in _build_campaign_prompt()
+    // Both Dragon Knight and Custom campaigns use the description field
+    const description = document.getElementById('wizard-description-input')?.value || '';
     
     return {
       title: document.getElementById('wizard-campaign-title')?.value || '',
@@ -738,8 +753,7 @@ class CampaignWizard {
       customOptions: [
         ...(document.getElementById('wizard-companions')?.checked ? ['companions'] : []),
         ...(useDefaultWorld ? ['defaultWorld'] : []),
-      ],
-      campaign_type: isDragonKnight ? 'dragon-knight' : 'custom'
+      ]
     };
   }
 
@@ -993,14 +1007,7 @@ class CampaignWizard {
     if (settingInput) settingInput.value = data.setting;
     if (descriptionInput) descriptionInput.value = data.description || '';
 
-    // Set campaign type
-    if (data.campaign_type === 'dragon-knight') {
-      const dragonKnightRadio = originalForm.querySelector('#dragonKnightCampaign');
-      if (dragonKnightRadio) dragonKnightRadio.checked = true;
-    } else {
-      const customRadio = originalForm.querySelector('#customCampaign');
-      if (customRadio) customRadio.checked = true;
-    }
+    // Campaign type is now determined by description content, not explicit field
 
     // Set checkboxes
     originalForm.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {

@@ -141,9 +141,16 @@
                 </div>
                 
                 <div class="mb-3">
-                    <label for="description-input" class="form-label">Campaign description/premise</label>
-                    <textarea class="form-control" id="description-input" rows="3" placeholder="Describe your campaign concept, goals, or story premise (optional)"></textarea>
-                    <div class="form-text">Optional: Describe what kind of adventure or story you want to experience</div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <label for="description-input" class="form-label">Campaign description prompt</label>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="toggle-description" aria-expanded="true" aria-controls="description-container">
+                            <i class="bi bi-chevron-up"></i> Collapse
+                        </button>
+                    </div>
+                    <div id="description-container" class="collapse show">
+                        <textarea class="form-control scrollable-textarea" id="description-input" rows="8" placeholder="Describe your campaign concept, goals, or story premise (optional)"></textarea>
+                        <div class="form-text">Optional: Describe what kind of adventure or story you want to experience. This field can handle very long prompts.</div>
+                    </div>
                 </div>
                 
                 <div class="mb-3">
@@ -266,6 +273,7 @@
     <script src="/static/js/interface-manager.js"></script>
     <script src="/static/js/theme-manager.js"></script>
     <script src="/static/js/animation-helpers.js"></script>
+    <script src="/static/js/ui-utils.js"></script>
     <script src="/static/js/campaign-wizard.js"></script>
     <script src="/static/js/enhanced-search.js"></script>
     <!-- Enhanced Components temporarily disabled due to layout conflicts

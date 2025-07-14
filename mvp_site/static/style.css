@@ -4,6 +4,12 @@
     cursor: pointer; 
 }
 
+/* Scrollable textarea styling */
+.scrollable-textarea {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
 #story-content p {
     white-space: pre-wrap;
     margin-bottom: 1rem;

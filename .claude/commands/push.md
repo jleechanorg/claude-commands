@@ -7,6 +7,11 @@
 **Usage**: `/push`
 
 **Implementation**: 
+- Check for untracked files
+- If untracked files exist, offer to include them:
+  - Analyze if they're related to current PR work
+  - Suggest adding test files, docs, or supporting scripts
+  - Allow selection of files to include
 - Perform virtual agent review of changes
 - Check for code quality issues
 - Verify tests pass
@@ -34,3 +39,21 @@
 - Server accessible at http://localhost:[port]
 - Logs stored in /tmp/worldarchitectai_logs/[branch].log
 - Server can be stopped with `/integrate` or manually
+
+**Untracked Files Handling**:
+- Intelligently detects untracked files
+- Analyzes file context:
+  - Test files matching PR work (e.g., test_*.py, test_*.js)
+  - Documentation updates related to changes
+  - Supporting scripts or utilities
+  - Temporary or debug files to ignore
+- Interactive options:
+  1. **Add all relevant** - Add files that appear related to PR
+  2. **Select specific** - Choose individual files
+  3. **Skip** - Continue without adding
+  4. **Abort** - Cancel push to review files
+- Auto-suggests commit messages:
+  - "Add JavaScript unit tests for [feature]"
+  - "Add browser tests for [functionality]"
+  - "Add supporting test utilities"
+- Remembers choices for similar files in future

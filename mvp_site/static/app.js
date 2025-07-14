@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Setup campaign type handlers when showing new campaign view
             if (viewName === 'newCampaign') {
                 setupCampaignTypeHandlers();
+                UIUtils.setupCollapsibleDescription('toggle-description', 'description-container');
             }
         }
     };
@@ -74,39 +75,33 @@ document.addEventListener('DOMContentLoaded', () => {
         console.log("New campaign form reset to defaults.");
     }
 
-    // Dragon Knight campaign content is now handled by the Python backend
-
-    // Dragon Knight campaign content is handled by the Python backend
-    // No need for client-side content loading
+    // Dragon Knight campaign narrative
+    const DRAGON_KNIGHT_NARRATIVE = `You are Ser Arion, a 16 year old honorable knight on your first mission, sworn to protect the vast Celestial Imperium. For decades, the Empire has been ruled by the iron-willed Empress Sariel, a ruthless tyrant who uses psychic power to crush dissent. While her methods are terrifying, her reign has brought undeniable benefits: the roads are safe, commerce thrives, and the Imperium has never been stronger. But dark whispers speak of the Dragon Knights - an ancient order that once served the realm before mysteriously vanishing. As you journey through this morally complex world, you must decide: will you serve the tyrant who brings order, or seek a different path?`;
     
     // Handle campaign type radio button changes
     function setupCampaignTypeHandlers() {
         const dragonKnightRadio = document.getElementById('dragonKnightCampaign');
         const customRadio = document.getElementById('customCampaign');
-        const campaignPromptTextarea = document.getElementById('campaign-prompt');
+        const descriptionTextarea = document.getElementById('description-input');
         
-        if (!dragonKnightRadio || !customRadio || !campaignPromptTextarea) return;
+        if (!dragonKnightRadio || !customRadio || !descriptionTextarea) return;
         
-        // Load Dragon Knight content on page load (since it's default)
+        // Load Dragon Knight content on page load if it's checked
         if (dragonKnightRadio.checked) {
-            campaignPromptTextarea.value = window.DRAGON_KNIGHT_CAMPAIGN;
-            campaignPromptTextarea.readOnly = true;
+            descriptionTextarea.value = DRAGON_KNIGHT_NARRATIVE;
             
-            // Also ensure default world is checked and disabled on initial load
+            // Also ensure default world is checked when Dragon Knight is selected
             const defaultWorldCheckbox = document.getElementById('use-default-world');
             if (defaultWorldCheckbox) {
                 defaultWorldCheckbox.checked = true;
-                defaultWorldCheckbox.disabled = true;
+                defaultWorldCheckbox.disabled = true; // Disable to prevent unchecking
             }
-        } else if (customRadio.checked) {
-            campaignPromptTextarea.value = '';
-            campaignPromptTextarea.readOnly = false;
         }
         
         dragonKnightRadio.addEventListener('change', async (e) => {
             if (e.target.checked) {
-                campaignPromptTextarea.readOnly = true;
-                campaignPromptTextarea.value = window.DRAGON_KNIGHT_CAMPAIGN;
+                // Pre-fill the description with Dragon Knight narrative
+                descriptionTextarea.value = DRAGON_KNIGHT_NARRATIVE;
                 
                 // Force default world checkbox to be checked when Dragon Knight is selected
                 const defaultWorldCheckbox = document.getElementById('use-default-world');
@@ -119,9 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         customRadio.addEventListener('change', (e) => {
             if (e.target.checked) {
-                campaignPromptTextarea.readOnly = false;
-                campaignPromptTextarea.value = '';
-                campaignPromptTextarea.focus();
+                // Clear the description for custom campaigns
+                descriptionTextarea.value = '';
+                descriptionTextarea.focus();
                 
                 // Re-enable default world checkbox when custom campaign is selected
                 const defaultWorldCheckbox = document.getElementById('use-default-world');
@@ -131,6 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
 
     let handleRouteChange = () => {
         // In test mode, skip auth check
@@ -780,8 +776,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     description,
                     title, 
                     selected_prompts: selectedPrompts, 
-                    custom_options: customOptions,
-                    campaign_type: isDragonKnight ? 'dragon-knight' : 'custom'
+                    custom_options: customOptions
                 }) 
             });
             

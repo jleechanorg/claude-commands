@@ -2,14 +2,13 @@
 Test suite for _build_campaign_prompt function using Test-Driven Development.
 
 This module tests all combinations of character, setting, and description inputs,
-including edge cases and special campaign types like Dragon Knight.
+including edge cases and backward compatibility.
 
 The function should:
 1. Generate random content when inputs are empty/None
 2. Use provided inputs when available  
-3. Handle Dragon Knight campaigns specially
-4. Support backward compatibility with old_prompt
-5. Validate inputs and raise errors appropriately
+3. Support backward compatibility with old_prompt
+4. Validate inputs and raise errors appropriately
 """
 
 import unittest
@@ -27,7 +26,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
     
     def test_all_empty_inputs_should_generate_random_content(self):
         """When all inputs are empty, should generate random character and setting."""
-        result = _build_campaign_prompt('', '', '', 'custom', '')
+        result = _build_campaign_prompt('', '', '', '')
         
         # Should not contain literal "random character" string
         self.assertNotIn('random character', result.lower())
@@ -48,7 +47,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
     
     def test_none_inputs_should_generate_random_content(self):
         """When all inputs are None, should generate random character and setting."""
-        result = _build_campaign_prompt(None, None, None, 'custom', None)
+        result = _build_campaign_prompt(None, None, None, None)
         
         # Should contain actual character and setting content
         self.assertIn('Character:', result)
@@ -60,7 +59,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
     def test_character_only_provided(self):
         """When only character is provided, should use it and generate random setting."""
         character = "A brave warrior from the northern kingdoms"
-        result = _build_campaign_prompt(character, '', '', 'custom', '')
+        result = _build_campaign_prompt(character, '', '', '')
         
         # Should use provided character
         self.assertIn(f'Character: {character}', result)
@@ -75,7 +74,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
     def test_setting_only_provided(self):
         """When only setting is provided, should generate random character and use setting."""
         setting = "A mystical realm where magic and technology coexist"
-        result = _build_campaign_prompt('', setting, '', 'custom', '')
+        result = _build_campaign_prompt('', setting, '', '')
         
         # Should generate random character, not literal text
         self.assertIn('Character:', result)
@@ -90,7 +89,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
     def test_description_only_provided(self):
         """When only description is provided, should generate random character and setting."""
         description = "An epic quest to save the world from ancient evil"
-        result = _build_campaign_prompt('', '', description, 'custom', '')
+        result = _build_campaign_prompt('', '', description, '')
         
         # Should generate random character and setting
         self.assertIn('Character:', result)
@@ -105,7 +104,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
         """When character and setting are provided, should use both."""
         character = "A cunning rogue with a mysterious past"
         setting = "The sprawling city of Waterdeep"
-        result = _build_campaign_prompt(character, setting, '', 'custom', '')
+        result = _build_campaign_prompt(character, setting, '', '')
         
         # Should use both provided inputs
         self.assertIn(f'Character: {character}', result)
@@ -118,7 +117,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
         """When character and description are provided, should use both and generate setting."""
         character = "A wise wizard seeking ancient knowledge"
         description = "A journey through forgotten libraries and dangerous ruins"
-        result = _build_campaign_prompt(character, '', description, 'custom', '')
+        result = _build_campaign_prompt(character, '', description, '')
         
         # Should use provided character and description
         self.assertIn(f'Character: {character}', result)
@@ -132,7 +131,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
         """When setting and description are provided, should use both and generate character."""
         setting = "The frozen wastelands of the north"
         description = "Survive the harsh winter and uncover ancient secrets"
-        result = _build_campaign_prompt('', setting, description, 'custom', '')
+        result = _build_campaign_prompt('', setting, description, '')
         
         # Should use provided setting and description
         self.assertIn(f'Setting: {setting}', result)
@@ -147,7 +146,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
         character = "A paladin devoted to justice"
         setting = "The kingdom of Baldur's Gate"
         description = "Restore peace to a war-torn land"
-        result = _build_campaign_prompt(character, setting, description, 'custom', '')
+        result = _build_campaign_prompt(character, setting, description, '')
         
         # Should use all provided inputs
         self.assertIn(f'Character: {character}', result)
@@ -159,29 +158,26 @@ class TestBuildCampaignPrompt(unittest.TestCase):
         self.assertEqual(len(lines), 3)
     
     def test_dragon_knight_campaign_type(self):
-        """Dragon Knight campaigns should use fixed narrative regardless of inputs."""
-        # Test with various inputs - should all return Dragon Knight narrative
-        result1 = _build_campaign_prompt('', '', '', 'dragon-knight', '')
-        result2 = _build_campaign_prompt('Some character', 'Some setting', 'Some desc', 'dragon-knight', '')
+        """Dragon Knight campaign type is now ignored - handled by frontend pre-filling description."""
+        # Test that campaign_type='dragon-knight' no longer triggers special behavior
+        result1 = _build_campaign_prompt('', '', '', '')
+        result2 = _build_campaign_prompt('Some character', 'Some setting', 'Some desc', '')
         
-        # Both should return identical Dragon Knight narrative
-        self.assertEqual(result1, result2)
+        # Should NOT return identical results (different inputs, different outputs)
+        self.assertNotEqual(result1, result2)
         
-        # Should contain Dragon Knight specific content
-        self.assertIn('Ser Arion', result1)
-        self.assertIn('16 year old', result1)
-        self.assertIn('Empress Sariel', result1)
-        self.assertIn('Dragon Knights', result1)
-        self.assertIn('Celestial Imperium', result1)
-        
-        # Should NOT contain Character:/Setting: format
-        self.assertNotIn('Character:', result1)
-        self.assertNotIn('Setting:', result1)
+        # Should use normal format with provided inputs
+        self.assertIn('Character:', result2)
+        self.assertIn('Some character', result2)
+        self.assertIn('Setting:', result2)
+        self.assertIn('Some setting', result2)
+        self.assertIn('Campaign Description:', result2)
+        self.assertIn('Some desc', result2)
     
     def test_backward_compatibility_with_old_prompt(self):
         """Should use old_prompt when provided and new fields are empty."""
         old_prompt = "This is a legacy campaign prompt format"
-        result = _build_campaign_prompt('', '', '', 'custom', old_prompt)
+        result = _build_campaign_prompt('', '', '', old_prompt)
         
         self.assertEqual(result, old_prompt)
     
@@ -189,7 +185,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
         """When new fields are provided, should ignore old_prompt."""
         character = "A test character"
         old_prompt = "This should be ignored"
-        result = _build_campaign_prompt(character, '', '', 'custom', old_prompt)
+        result = _build_campaign_prompt(character, '', '', old_prompt)
         
         # Should use new format
         self.assertIn(f'Character: {character}', result)
@@ -199,7 +195,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
     
     def test_no_inputs_provided_generates_random_content(self):
         """When no inputs provided, should generate random character and setting."""
-        result = _build_campaign_prompt('', '', '', 'custom', '')
+        result = _build_campaign_prompt('', '', '', '')
         
         # Should generate random content
         self.assertIn('Character:', result)
@@ -211,7 +207,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
     
     def test_all_none_inputs_generates_random_content(self):
         """When all inputs are None, should generate random character and setting."""
-        result = _build_campaign_prompt(None, None, None, 'custom', None)
+        result = _build_campaign_prompt(None, None, None, None)
         
         # Should generate random content
         self.assertIn('Character:', result)
@@ -223,7 +219,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
     
     def test_whitespace_only_inputs_treated_as_empty(self):
         """Whitespace-only inputs should be treated as empty."""
-        result = _build_campaign_prompt('   ', '\t', '\n', 'custom', '  ')
+        result = _build_campaign_prompt('   ', '\t', '\n', '  ')
         
         # Should generate random content, not use whitespace
         self.assertIn('Character:', result)
@@ -235,7 +231,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
         # Generate multiple random prompts - test with more iterations for better chance of variation
         results = []
         for _ in range(20):  # Increase iterations to improve chance of getting different results
-            result = _build_campaign_prompt('', '', '', 'custom', '')
+            result = _build_campaign_prompt('', '', '', '')
             results.append(result)
         
         # Should not all be identical (random generation should vary)
@@ -247,7 +243,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
         character = "Fixed character for testing"
         results = []
         for _ in range(20):  # Increase iterations to improve chance of getting different results
-            result = _build_campaign_prompt(character, '', '', 'custom', '')
+            result = _build_campaign_prompt(character, '', '', '')
             results.append(result)
         
         # Should not all be identical (random generation should vary)
@@ -260,7 +256,7 @@ class TestBuildCampaignPrompt(unittest.TestCase):
         setting = "A realm with émojis 🐉 and ñoñó"
         description = "Description with <tags> and [brackets] {curly}"
         
-        result = _build_campaign_prompt(character, setting, description, 'custom', '')
+        result = _build_campaign_prompt(character, setting, description, '')
         
         # Should preserve all special characters
         self.assertIn(character, result)
@@ -273,26 +269,22 @@ class TestBuildCampaignPrompt(unittest.TestCase):
         long_setting = "B" * 1000    # Very long setting description
         long_description = "C" * 1000  # Very long campaign description
         
-        result = _build_campaign_prompt(long_character, long_setting, long_description, 'custom', '')
+        result = _build_campaign_prompt(long_character, long_setting, long_description, '')
         
         # Should preserve full length inputs
         self.assertIn(long_character, result)
         self.assertIn(long_setting, result)
         self.assertIn(long_description, result)
     
-    def test_campaign_type_case_sensitivity(self):
-        """Campaign type matching should be case sensitive."""
-        # Test various cases of "dragon-knight"
-        result_lower = _build_campaign_prompt('', '', '', 'dragon-knight', '')
-        result_upper = _build_campaign_prompt('', '', '', 'DRAGON-KNIGHT', '')
-        result_mixed = _build_campaign_prompt('', '', '', 'Dragon-Knight', '')
+    def test_campaign_type_removed(self):
+        """Campaign type parameter has been removed - frontend handles Dragon Knight pre-filling."""
+        # Test that we can build prompts without campaign_type parameter
+        result = _build_campaign_prompt('Hero', 'Fantasy', 'Epic quest', '')
         
-        # Only exact lowercase should trigger Dragon Knight narrative
-        self.assertIn('Ser Arion', result_lower)
-        
-        # Other cases should use regular format
-        self.assertNotIn('Ser Arion', result_upper)
-        self.assertNotIn('Ser Arion', result_mixed)
+        # Should use the provided inputs in standard format
+        self.assertIn('Character: Hero', result)
+        self.assertIn('Setting: Fantasy', result)
+        self.assertIn('Campaign Description: Epic quest', result)
 
 
 if __name__ == '__main__':
