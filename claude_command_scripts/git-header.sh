@@ -37,30 +37,24 @@ cd "$script_dir" || cd "$git_root" || exit 1
 local_branch=$(git branch --show-current)
 remote=$(git rev-parse --abbrev-ref @{upstream} 2>/dev/null || echo "no upstream")
 
-# Get local changes status
-modified_count=$(git status --porcelain | grep -E "^ M|^MM|^AM" | wc -l)
-staged_count=$(git status --porcelain | grep -E "^M |^A |^D |^R |^C " | wc -l)
-untracked_count=$(git status --porcelain | grep "^??" | wc -l)
-
-# Build local status string
+# Get sync status between local and remote
 local_status=""
-if [ "$modified_count" -gt 0 ] || [ "$staged_count" -gt 0 ] || [ "$untracked_count" -gt 0 ]; then
-    status_parts=()
-    [ "$staged_count" -gt 0 ] && status_parts+=("${staged_count}S")
-    [ "$modified_count" -gt 0 ] && status_parts+=("${modified_count}M")
-    [ "$untracked_count" -gt 0 ] && status_parts+=("${untracked_count}U")
-    local_status=" ($(IFS=, ; echo "${status_parts[*]}"))"
-else
-    local_status=" (clean)"
-fi
-
-# Get unpushed commits count
-unpushed_count=0
 if [ "$remote" != "no upstream" ]; then
-    unpushed_count=$(git rev-list --count HEAD..."$remote" 2>/dev/null || echo "0")
-    if [ "$unpushed_count" -gt 0 ]; then
-        remote="$remote (+$unpushed_count)"
+    # Count commits ahead and behind
+    ahead_count=$(git rev-list --count "$remote"..HEAD 2>/dev/null || echo "0")
+    behind_count=$(git rev-list --count HEAD.."$remote" 2>/dev/null || echo "0")
+    
+    if [ "$ahead_count" -eq 0 ] && [ "$behind_count" -eq 0 ]; then
+        local_status=" (synced)"
+    elif [ "$ahead_count" -gt 0 ] && [ "$behind_count" -eq 0 ]; then
+        local_status=" (ahead $ahead_count)"
+    elif [ "$ahead_count" -eq 0 ] && [ "$behind_count" -gt 0 ]; then
+        local_status=" (behind $behind_count)"
+    else
+        local_status=" (diverged +$ahead_count -$behind_count)"
     fi
+else
+    local_status=" (no remote)"
 fi
 
 # Find PR for current branch only (no complex commit searching)

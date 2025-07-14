@@ -430,16 +430,45 @@ Use `/list` to display all available slash commands with descriptions.
 **Critical Rule**: ❌ NEVER ignore any comment type, including "suppressed" Copilot feedback
 
 ### Import Rules (🚨 CRITICAL)
-**ALL imports MUST be at module level with NO try/except wrappers**
-- ✅ Top of module only - after docstring, before any code
-- ❌ NEVER inside functions, methods, or class definitions
+**🚨 ZERO TOLERANCE: ALL imports MUST be at module level - NO EXCEPTIONS**
+
+**✅ CORRECT Import Pattern:**
+```python
+# Standard library imports (at top of file)
+import os
+import sys
+import subprocess
+import logging
+
+def my_function():
+    # Use imported modules here
+    subprocess.check_output(...)
+    logging.info(...)
+```
+
+**❌ FORBIDDEN Inline Import Pattern:**
+```python
+def my_function():
+    import subprocess  # ❌ NEVER DO THIS
+    import logging     # ❌ NEVER DO THIS
+    subprocess.check_output(...)
+```
+
+**🚨 CRITICAL RULES:**
+- ✅ **Top of module only** - after docstring, before any code
+- ❌ **NEVER inside functions, methods, or class definitions**
 - 🚨 **NEVER inside try/except blocks** - this hides dependency issues
-- ❌ NEVER conditional imports inside if statements
-- Import once at top, reference throughout module
-- For import conflicts: use `as` aliases, not inline imports
+- ❌ **NEVER conditional imports** inside if statements
+- ✅ **Import once at top**, reference throughout module
+- ✅ For import conflicts: use `as` aliases, not inline imports
 
 🚨 **NO TRY/EXCEPT FOR IMPORTS EVER**: ❌ NEVER wrap imports in try/except | ALL dependencies MUST be in requirements.txt | Import failures should break loudly
 **Why**: Hides missing dependencies in CI | Causes silent failures | Makes dep management unreliable
+
+**⚠️ Common Violations to Watch For:**
+- Functions with `import` statements inside them
+- Conditional imports based on environment variables
+- Try/except wrapped imports to "handle missing dependencies"
 
 ### API Error Prevention (🚨)
 ❌ Print code/file content | ✅ Use file_path:line_number | Keep responses concise

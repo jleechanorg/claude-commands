@@ -38,6 +38,7 @@ from functools import wraps
 import json
 import collections
 import traceback
+import logging
 
 # Flask and web imports
 from flask import Flask, request, jsonify, send_from_directory, send_file
@@ -91,6 +92,9 @@ CORS_RESOURCES = {r"/api/*": {"origins": "*"}}
 HEADER_AUTH = 'Authorization'
 HEADER_TEST_BYPASS = 'X-Test-Bypass-Auth'
 HEADER_TEST_USER_ID = 'X-Test-User-ID'
+
+# Logging Configuration
+LOG_DIRECTORY = "/tmp/worldarchitectai_logs"
 
 # Request/Response Data Keys (specific to main.py)
 KEY_PROMPT = 'prompt'
@@ -671,12 +675,8 @@ def setup_file_logging():
     Creates branch-specific log files in /tmp/worldarchitectai_logs/{branch}.log
     and configures logging_util to write to both console and file.
     """
-    import subprocess
-    import logging
-    
     # Create log directory
-    log_dir = "/tmp/worldarchitectai_logs"
-    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(LOG_DIRECTORY, exist_ok=True)
     
     # Get current branch name
     try:
@@ -689,7 +689,7 @@ def setup_file_logging():
         branch = "unknown"
     
     # Configure file logging using standard logging module
-    log_file = os.path.join(log_dir, f"{branch}.log")
+    log_file = os.path.join(LOG_DIRECTORY, f"{branch}.log")
     
     # Clear any existing handlers
     root_logger = logging.getLogger()
