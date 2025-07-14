@@ -47,20 +47,23 @@ def main():
             page.screenshot(path=green_path)
             print(f"\n✅ GREEN SCREENSHOT: {green_path}")
             
-            # Show what's displayed
+            # Show what's displayed and validate using shared utilities
             character_text = page.locator("#preview-character").text_content()
             options_text = page.locator("#preview-options").text_content()
             description_text = page.locator("#preview-description").text_content()
             
-            print(f"\n✅ GREEN TEST - FIXED:")
+            print(f"\n✅ GREEN TEST - FIXED (shared validation):")
             print(f"   Character: '{character_text}'")
             print(f"   Description: '{description_text}'") 
             print(f"   Options: '{options_text}'")
             
-            if "Dragon Knight World" in options_text:
-                print(f"\n   ❌ Still buggy: Shows 'Dragon Knight World' for custom campaign!")
-            else:
-                print(f"\n   ✅ FIXED: Shows '{options_text}' instead of 'Dragon Knight World'!")
+            # Use shared validation function for all content
+            all_content = f"{character_text} {options_text} {description_text}"
+            try:
+                validate_no_dragon_knight_in_custom(all_content, "browser")
+                print(f"\n   ✅ FIXED: No Dragon Knight content detected (shared validation)!")
+            except AssertionError as e:
+                print(f"\n   ❌ Still buggy: {e}")
             
         except Exception as e:
             print(f"\n❌ Error: {str(e)}")

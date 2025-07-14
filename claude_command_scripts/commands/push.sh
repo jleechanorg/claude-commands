@@ -29,12 +29,15 @@ show_help() {
     echo "Usage: $0 [options]"
     echo ""
     echo "Options:"
-    echo "  -h, --help    Show this help message"
+    echo "  -h, --help      Show this help message"
+    echo "  --sync          Run all tests synchronously (default: async core HTTP tests)"
+    echo "  --no-http       Skip HTTP tests entirely"
+    echo "  --test-only     Run tests only, don't push (for testing the test functionality)"
     echo ""
     echo "Description:"
     echo "  This script provides a comprehensive push workflow that:"
     echo "  1. Validates working directory is clean"
-    echo "  2. Runs tests if available"
+    echo "  2. Runs core HTTP tests (async) + backend tests if available"
     echo "  3. Pushes to remote with proper upstream tracking"
     echo "  4. Updates or creates PR with test results"
     echo "  5. Provides test server instructions"
@@ -51,10 +54,27 @@ show_help() {
 }
 
 # Parse command line arguments
-if [[ $# -gt 0 ]]; then
+SYNC_TESTS=false
+SKIP_HTTP_TESTS=false
+TEST_ONLY=false
+
+while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help)
             show_help
+            exit 0
+            ;;
+        --sync)
+            SYNC_TESTS=true
+            shift
+            ;;
+        --no-http)
+            SKIP_HTTP_TESTS=true
+            shift
+            ;;
+        --test-only)
+            TEST_ONLY=true
+            shift
             ;;
         *)
             echo "Unknown option: $1"
@@ -62,7 +82,7 @@ if [[ $# -gt 0 ]]; then
             exit 1
             ;;
     esac
-fi
+done
 
 echo -e "${BLUE}🚀 Push Workflow${NC}"
 echo "=================="
@@ -70,36 +90,99 @@ echo "=================="
 # 1. Pre-push checks
 echo -e "\n${GREEN}🔍 Running pre-push checks...${NC}"
 
-# Check for uncommitted changes
-if ! git diff --quiet || ! git diff --cached --quiet; then
-    echo -e "${RED}❌ Uncommitted changes detected!${NC}"
-    git status --short
-    echo ""
-    echo "Please commit your changes first:"
-    echo "  git add ."
-    echo "  git commit -m 'description'"
-    exit 1
+# Check for uncommitted changes (skip in test-only mode)
+if [[ "$TEST_ONLY" != "true" ]]; then
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        echo -e "${RED}❌ Uncommitted changes detected!${NC}"
+        git status --short
+        echo ""
+        echo "Please commit your changes first:"
+        echo "  git add ."
+        echo "  git commit -m 'description'"
+        exit 1
+    fi
+    echo "✓ Working directory clean"
+else
+    echo "⚠️  Skipping working directory check (test-only mode)"
 fi
 
 # Get branch info
 current_branch=$(git branch --show-current)
 remote_branch=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
 
-echo "✓ Working directory clean"
 echo "  Branch: $current_branch"
 
-# 2. Run tests if available
-if [[ -f "./run_tests.sh" ]]; then
-    echo -e "\n${GREEN}🧪 Running tests...${NC}"
-    if ./run_tests.sh; then
-        echo "✓ All tests passed"
-    else
-        echo -e "${RED}❌ Tests failed!${NC}"
-        echo "Fix failing tests before pushing"
-        exit 1
+# 2. Run tests (HTTP + Backend)
+echo -e "\n${GREEN}🧪 Running pre-push tests...${NC}"
+
+if [[ "$SYNC_TESTS" == "true" ]]; then
+    # Synchronous mode: run all tests sequentially
+    echo "Running in synchronous mode..."
+    
+    # Run HTTP tests first
+    if [[ "$SKIP_HTTP_TESTS" != "true" ]] && [[ -f "./claude_command_scripts/commands/test-http.sh" ]]; then
+        echo -e "\n${BLUE}🔌 Running core HTTP tests...${NC}"
+        if ! ./claude_command_scripts/commands/test-http.sh --core; then
+            echo -e "${RED}❌ HTTP tests failed!${NC}"
+            exit 1
+        fi
     fi
+    
+    # Run backend tests
+    if [[ -f "./run_tests.sh" ]]; then
+        echo -e "\n${BLUE}🔬 Running backend tests...${NC}"
+        if ! ./run_tests.sh; then
+            echo -e "${RED}❌ Backend tests failed!${NC}"
+            exit 1
+        fi
+    fi
+    
 else
-    echo -e "${YELLOW}⚠️  No test script found${NC}"
+    # Asynchronous mode (default): run HTTP tests in background, backend tests foreground
+    
+    # Start HTTP tests in background
+    if [[ "$SKIP_HTTP_TESTS" != "true" ]] && [[ -f "./claude_command_scripts/commands/test-http.sh" ]]; then
+        echo -e "\n${BLUE}🔌 Starting core HTTP tests (async)...${NC}"
+        ./claude_command_scripts/commands/test-http.sh --core > /tmp/push_http_tests.log 2>&1 &
+        HTTP_TEST_PID=$!
+        echo "✓ HTTP tests running in background (PID: $HTTP_TEST_PID)"
+    else
+        HTTP_TEST_PID=""
+    fi
+    
+    # Run backend tests in foreground
+    if [[ -f "./run_tests.sh" ]]; then
+        echo -e "\n${BLUE}🔬 Running backend tests...${NC}"
+        if ! ./run_tests.sh; then
+            echo -e "${RED}❌ Backend tests failed!${NC}"
+            if [[ -n "$HTTP_TEST_PID" ]]; then
+                kill $HTTP_TEST_PID 2>/dev/null || true
+            fi
+            exit 1
+        fi
+        echo "✓ Backend tests passed"
+    fi
+    
+    # Wait for and check HTTP tests
+    if [[ -n "$HTTP_TEST_PID" ]]; then
+        echo -e "\n${BLUE}⏳ Waiting for HTTP tests to complete...${NC}"
+        if wait $HTTP_TEST_PID; then
+            echo "✓ HTTP tests passed"
+        else
+            echo -e "${RED}❌ HTTP tests failed!${NC}"
+            echo "HTTP test output:"
+            cat /tmp/push_http_tests.log || true
+            exit 1
+        fi
+    fi
+fi
+
+echo -e "${GREEN}✅ All tests passed!${NC}"
+
+# Exit if test-only mode
+if [[ "$TEST_ONLY" == "true" ]]; then
+    echo -e "\n${BLUE}🔚 Test-only mode: Stopping here (no push/PR operations)${NC}"
+    exit 0
 fi
 
 # 3. Analyze PR coherence

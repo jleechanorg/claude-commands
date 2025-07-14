@@ -4,6 +4,7 @@ Structured fields campaign creation test using Puppeteer MCP.
 
 This test validates the complete campaign creation workflow using
 Puppeteer browser automation through Claude Code's MCP integration.
+Now uses shared utilities for test data and validation.
 """
 import os
 import sys
@@ -12,55 +13,27 @@ import subprocess
 from typing import Optional
 import urllib.request
 
-def setup_test_environment():
-    """Set up environment for browser testing."""
-    os.environ["TESTING"] = "true"
-    os.environ["USE_MOCK_FIREBASE"] = "true"
-    os.environ["USE_MOCK_GEMINI"] = "true"
-    os.environ["PORT"] = "6006"
+# Add the project root to the Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-def start_test_server() -> subprocess.Popen:
-    """Start the test server."""
-    print("🚀 Starting test server...")
-    
-    # Try vpython first, fallback to python
-    try:
-        server_process = subprocess.Popen(
-            ["vpython", "mvp_site/main.py", "serve"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=os.getcwd()
-        )
-    except FileNotFoundError:
-        # Fallback to direct python with venv
-        server_process = subprocess.Popen(
-            ["python", "mvp_site/main.py", "serve"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=os.getcwd(),
-            env={**os.environ, "PATH": "./venv/bin:" + os.environ.get("PATH", "")}
-        )
-    
-    print("⏳ Waiting for server to start...")
-    port = int(os.environ.get("PORT", "6006"))
-    for i in range(30):
-        try:
-            with urllib.request.urlopen(f"http://localhost:{port}") as resp:
-                if resp.status == 200:
-                    print("✅ Server is ready")
-                    break
-        except Exception:
-            pass
-        time.sleep(1)
-    else:
-        print(f"❌ Server failed to start on port {port}")
-        server_process.terminate()
-        server_process.wait()
-        raise RuntimeError(f"Server did not start on port {port}")
-    
-    return server_process
+# Import shared testing utilities
+from testing_ui.testing_shared import (
+    TEST_SCENARIOS,
+    CAMPAIGN_TEST_DATA,
+    generate_test_user_id,
+    get_test_url,
+    setup_test_environment,
+    start_test_server,
+    ensure_screenshot_dir,
+    validate_browser_element_text,
+    validate_no_hardcoded_text
+)
 
-def test_structured_fields_creation():
+# Use shared setup_test_environment from testing_shared
+
+# Use shared start_test_server from testing_shared
+
+def test_structured_fields_creation_with_shared_utilities():
     """
     Test the complete structured fields campaign creation workflow.
     
@@ -77,27 +50,36 @@ def test_structured_fields_creation():
     
     print("🎭 Starting Puppeteer MCP structured fields test...")
     
-    # Test data
-    test_data = {
-        "title": "Puppeteer Structured Test Campaign",
-        "character": "Zara the Mystical Ranger",
-        "setting": "The Ethereal Realms of Shadowmere",
-        "description": ("A mystical adventure where ancient spirits have begun "
-                       "awakening across the land, threatening the balance between "
-                       "the physical and ethereal realms. The heroes must discover "
-                       "the source of this disturbance and restore harmony before "
-                       "both worlds collide.")
-    }
+    # Use shared test data from testing_shared
+    scenario = TEST_SCENARIOS["structured_fields_test"]
+    test_data = scenario["campaign_data"]
+    expected_character = scenario["expected_character"]
     
-    # Setup and start server
-    setup_test_environment()
-    server_process = start_test_server()
+    print(f"📋 Using shared test data:")
+    print(f"   Title: {test_data['title']}")
+    print(f"   Character: {test_data['character_name']}")
+    print(f"   Setting: {test_data['setting']}")
+    print(f"   Expected: {expected_character}")
+    
+    # Setup and start server using shared utilities
+    setup_test_environment(use_real_api=False, port="6006")
+    server_process = start_test_server("6006")
+    
+    # Generate test user ID and URLs using shared utilities
+    test_user_id = generate_test_user_id("structured-fields-browser")
+    base_url = get_test_url("browser", test_user_id, "structured_fields")
+    
+    # Ensure screenshot directory exists
+    screenshot_dir = ensure_screenshot_dir("structured_fields")
+    print(f"📸 Screenshots will be saved to: {screenshot_dir}")
     
     try:
-        print("📋 Test Steps:")
+        print("📋 Test Steps (using shared utilities):")
         print("1. Navigate to application with test mode")
         print("2. Click 'Start New Campaign'")
-        print("3. Fill campaign title")
+        print("3. Fill campaign title using shared test data")
+        print("4. Validate results using shared validation functions")
+        print(f"5. URL: {base_url}")
         print("4. Select 'Custom Campaign'")
         print("5. Fill character name")
         print("6. Fill setting/world")
@@ -141,27 +123,30 @@ def validate_campaign_summary(expected_data: dict) -> bool:
     return True
 
 if __name__ == "__main__":
-    print("🧪 Structured Fields Puppeteer Test")
-    print("=" * 50)
+    print("🧪 Structured Fields Puppeteer Test (With Shared Utilities)")
+    print("=" * 60)
     
     if len(sys.argv) > 1 and sys.argv[1] == "--help":
         print("Usage: python test_structured_fields_puppeteer.py")
         print("       python test_structured_fields_puppeteer.py --validate-only")
         print("")
         print("This test validates structured fields campaign creation using Puppeteer MCP.")
+        print("Now uses shared utilities from testing_shared.py for test data and validation.")
         print("It should be run within Claude Code CLI where MCP tools are available.")
         sys.exit(0)
     
     if len(sys.argv) > 1 and sys.argv[1] == "--validate-only":
-        # Just validate the test framework
-        print("✅ Test framework validation passed")
+        # Just validate the test framework with shared utilities
+        print("✅ Test framework validation passed (shared utilities loaded)")
+        print(f"✅ Available test scenarios: {list(TEST_SCENARIOS.keys())}")
         sys.exit(0)
     
     try:
-        success = test_structured_fields_creation()
+        success = test_structured_fields_creation_with_shared_utilities()
         if success:
-            print("\n🎉 Structured fields test framework ready!")
+            print("\n🎉 Structured fields test framework ready (with shared utilities)!")
             print("   Execute browser automation through Claude Code CLI with Puppeteer MCP")
+            print("   Test data and validation logic shared with HTTP version")
             sys.exit(0)
         else:
             print("\n❌ Test setup failed")

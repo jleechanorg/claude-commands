@@ -22,6 +22,7 @@ show_help() {
     echo "  --specific FILE  Run a specific test file only"
     echo "  --verbose        Show detailed test output"
     echo "  --port PORT      Use specific port (default: 8086)"
+    echo "  --core           Run only core HTTP tests (fast subset)"
     echo ""
     echo "Description:"
     echo "  This script runs HTTP/API tests using requests library with mock responses:"
@@ -47,6 +48,7 @@ show_help() {
 SPECIFIC_TEST=""
 VERBOSE=false
 PORT=8086
+CORE_ONLY=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -64,6 +66,10 @@ while [[ $# -gt 0 ]]; do
         --port)
             PORT="$2"
             shift 2
+            ;;
+        --core)
+            CORE_ONLY=true
+            shift
             ;;
         *)
             echo "Unknown option: $1"
@@ -92,7 +98,7 @@ fi
 
 # Start test server
 echo -e "\n${GREEN}🚀 Starting test server on port $PORT...${NC}"
-TESTING=true PORT=$PORT vpython mvp_site/main.py serve &
+source venv/bin/activate && TESTING=true PORT=$PORT python mvp_site/main.py serve &
 SERVER_PID=$!
 
 # Wait for server
@@ -107,11 +113,30 @@ fi
 echo "✓ Test server running on http://localhost:$PORT (mock mode)"
 
 # Run tests
-echo -e "\n${GREEN}🧪 Running HTTP tests...${NC}"
+if [[ "$CORE_ONLY" == "true" ]]; then
+    echo -e "\n${GREEN}🧪 Running core HTTP tests (fast subset)...${NC}"
+else
+    echo -e "\n${GREEN}🧪 Running HTTP tests...${NC}"
+fi
 
 # Determine tests
 if [[ -n "$SPECIFIC_TEST" ]]; then
     test_files="testing_http/$SPECIFIC_TEST"
+elif [[ "$CORE_ONLY" == "true" ]]; then
+    # Core tests: essential API contract tests for fast feedback
+    core_tests=(
+        "test_campaign_creation_http.py"
+        "test_campaign_creation.py"
+        "test_character_creation.py"
+        "test_config.py"
+    )
+    test_files=""
+    for test in "${core_tests[@]}"; do
+        if [[ -f "testing_http/$test" ]]; then
+            test_files="$test_files testing_http/$test"
+        fi
+    done
+    test_files=$(echo $test_files | tr ' ' '\n' | sort)
 else
     test_files=$(find testing_http -name "test_*.py" -type f 2>/dev/null | sort)
 fi
@@ -141,7 +166,7 @@ for test_file in $test_files; do
     export TEST_SERVER_URL="http://localhost:$PORT"
     
     if [[ "$VERBOSE" == "true" ]]; then
-        if TESTING=true vpython "$test_file"; then
+        if source venv/bin/activate && TESTING=true python "$test_file"; then
             PASSED_TESTS=$((PASSED_TESTS + 1))
             echo -e "${GREEN}✅ PASSED${NC}"
         else
@@ -149,7 +174,7 @@ for test_file in $test_files; do
             echo -e "${RED}❌ FAILED${NC}"
         fi
     else
-        if TESTING=true vpython "$test_file" > /tmp/test_output.log 2>&1; then
+        if source venv/bin/activate && TESTING=true python "$test_file" > /tmp/test_output.log 2>&1; then
             PASSED_TESTS=$((PASSED_TESTS + 1))
             echo -e "${GREEN}✅ PASSED${NC}"
         else

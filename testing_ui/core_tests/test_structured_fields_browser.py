@@ -2,6 +2,7 @@
 """
 Core browser test for all structured response fields from game_state_instruction.md.
 Tests and captures screenshots of all 10 fields that can be sent by the LLM.
+Now uses shared utilities for test data and validation.
 """
 
 import os
@@ -15,6 +16,17 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from browser_test_base import BrowserTestBase, SCREENSHOT_DIR
 from browser_test_helpers import BrowserTestHelper
 from testing_ui.config import BASE_URL
+
+# Import shared testing utilities
+from testing_ui.testing_shared import (
+    TEST_SCENARIOS,
+    CAMPAIGN_TEST_DATA,
+    generate_test_user_id,
+    get_test_url,
+    validate_browser_element_text,
+    validate_no_hardcoded_text,
+    ensure_screenshot_dir
+)
 
 
 class StructuredFieldsTest(BrowserTestBase):
@@ -40,12 +52,26 @@ class StructuredFieldsTest(BrowserTestBase):
             'debug_info'
         ]
         
+        # Use shared test scenario and data
+        scenario = TEST_SCENARIOS["structured_fields_test"]
+        campaign_data = scenario["campaign_data"]
+        expected_character = scenario["expected_character"]
+        
+        # Generate test user ID using shared utility
+        test_user_id = generate_test_user_id("structured-fields-browser")
+        
+        print(f"🧪 Testing structured fields with shared utilities:")
+        print(f"   Character: {campaign_data['character_name']}")
+        print(f"   Setting: {campaign_data['setting']}")
+        print(f"   Expected: {expected_character}")
+        print(f"   User ID: {test_user_id}")
+        
         try:
             # Initialize browser test helper
             helper = BrowserTestHelper(page, BASE_URL)
             
-            # Navigate with proper test authentication
-            helper.navigate_with_test_auth()
+            # Navigate with proper test authentication using shared user ID
+            helper.navigate_with_test_auth(test_user_id=test_user_id)
             helper.wait_for_auth_bypass()
             
             # Take initial screenshot
