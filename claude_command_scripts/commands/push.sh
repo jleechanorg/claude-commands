@@ -312,36 +312,8 @@ if [[ -f "mvp_site/main.py" ]]; then
     echo -e "\n${GREEN}🖥️  Test Server Management${NC}"
     echo "==============================="
     
-    # Port management configuration
-    BASE_PORT=8081
-    MAX_PORTS=10
-    
-    # Function to find available port starting from 8081
-    find_available_port() {
-        local port=$BASE_PORT
-        while [ $port -lt $((BASE_PORT + MAX_PORTS)) ]; do
-            if ! lsof -i:$port > /dev/null 2>&1; then
-                echo $port
-                return 0
-            fi
-            port=$((port + 1))
-        done
-        return 1
-    }
-    
-    # Function to list running servers
-    list_running_servers() {
-        local servers=$(ps aux | grep -E "python.*main.py.*serve" | grep -v grep || true)
-        if [ -n "$servers" ]; then
-            echo -e "${YELLOW}📊 Currently running servers:${NC}"
-            echo "$servers" | while read -r line; do
-                local pid=$(echo "$line" | awk '{print $2}')
-                local port=$(lsof -p $pid 2>/dev/null | grep LISTEN | awk '{print $9}' | cut -d: -f2 | head -1 || echo "unknown")
-                echo "  🔹 PID: $pid | Port: $port"
-            done
-            echo ""
-        fi
-    }
+    # Source shared port utilities
+    source "$(dirname "$0")/../port-utils.sh"
     
     # Function to offer server cleanup
     offer_cleanup() {

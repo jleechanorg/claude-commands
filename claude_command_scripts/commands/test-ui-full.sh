@@ -116,20 +116,8 @@ else
     fi
     echo "✓ Playwright is installed"
     
-    # Find available port starting from 8081
-    BASE_PORT=8081
-    MAX_PORTS=10
-    find_available_port() {
-        local port=$BASE_PORT
-        while [ $port -lt $((BASE_PORT + MAX_PORTS)) ]; do
-            if ! lsof -i:$port > /dev/null 2>&1; then
-                echo $port
-                return 0
-            fi
-            port=$((port + 1))
-        done
-        return 1
-    }
+    # Source shared port utilities
+    source "$(dirname "$0")/../port-utils.sh"
     
     REAL_PORT=$(find_available_port)
     if [[ $? -ne 0 ]]; then

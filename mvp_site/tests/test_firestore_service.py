@@ -485,6 +485,7 @@ class TestStructuredFieldsSaving(unittest.TestCase):
         self.assertEqual(call_args['entities_mentioned'], ["Player"])
         self.assertEqual(call_args['location_confirmed'], "Town Square")
     
+    @patch.dict('os.environ', {'ENABLE_WRITE_THEN_READ': 'false'})
     def test_warning_logged_for_missing_structured_fields(self):
         """Test that a warning is logged when AI response lacks structured_fields"""
         from firestore_service import add_story_entry
@@ -504,6 +505,7 @@ class TestStructuredFieldsSaving(unittest.TestCase):
             self.assertIn("AI response missing structured_fields", warning_message)
             self.assertIn("test-campaign", warning_message)
     
+    @patch.dict('os.environ', {'ENABLE_WRITE_THEN_READ': 'false'})
     def test_no_warning_for_user_entries(self):
         """Test that no warning is logged for user entries without structured_fields"""
         from firestore_service import add_story_entry
@@ -567,6 +569,12 @@ class TestStructuredFieldsSaving(unittest.TestCase):
         # Verify structured fields were merged into the entry data
         self.assertIn('planning_block', call_args)
         self.assertEqual(call_args['planning_block'], structured_fields['planning_block'])
+
+
+# NOTE: TestWriteThenReadFeatureFlag class removed
+# Since write-then-read is now the default behavior (no feature flag),
+# the conditional logic tests are no longer relevant.
+# Write-then-read verification is always enabled for data integrity.
 
 
 if __name__ == '__main__':

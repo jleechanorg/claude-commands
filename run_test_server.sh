@@ -5,21 +5,18 @@
 set -e
 
 # Configuration
-TEST_PORT=6006
 PID_FILE="/tmp/worldarchitectai_test_server.pid"
 LOG_FILE="/tmp/worldarchitectai_test_server.log"
 VENV_PATH="venv/bin/activate"
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+# Source shared port utilities
+source "$(dirname "$0")/claude_command_scripts/port-utils.sh"
 
 # Function to check if server is running
 is_running() {
     if [ -f "$PID_FILE" ]; then
-        PID=$(cat "$PID_FILE")
+        PID_PORT=$(cat "$PID_FILE")
+        PID=$(echo "$PID_PORT" | cut -d: -f1)
         if ps -p "$PID" > /dev/null 2>&1; then
             return 0
         else
@@ -41,10 +38,17 @@ start_server() {
         return 1
     fi
     
-    # Clean up any existing processes on the port
-    echo "🧹 Cleaning up port $TEST_PORT..."
-    lsof -ti:$TEST_PORT | xargs kill -9 2>/dev/null || true
-    sleep 1
+    # Find available port
+    echo "🔍 Finding available port..."
+    TEST_PORT=$(find_available_port)
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}❌ Could not find available port${NC}"
+        return 1
+    fi
+    echo "✅ Found available port: $TEST_PORT"
+    
+    # Update log file name to include port
+    LOG_FILE="/tmp/worldarchitectai_test_server_$TEST_PORT.log"
     
     # Activate virtual environment
     if [ -f "$VENV_PATH" ]; then
@@ -62,7 +66,7 @@ start_server() {
     
     echo "📝 Environment variables set:"
     echo "   TESTING=$TESTING"
-    echo "   PORT=$PORT"
+    echo "   PORT=$PORT ($TEST_PORT)"
     echo "   USE_MOCKS=$USE_MOCKS"
     
     # Start the server in background
@@ -70,8 +74,8 @@ start_server() {
     nohup python3 mvp_site/main.py serve > "$LOG_FILE" 2>&1 &
     SERVER_PID=$!
     
-    # Save PID
-    echo $SERVER_PID > "$PID_FILE"
+    # Save PID and port info
+    echo "$SERVER_PID:$TEST_PORT" > "$PID_FILE"
     
     # Wait for server to be ready
     echo "⏳ Waiting for server to be ready..."
@@ -103,7 +107,8 @@ stop_server() {
     echo -e "${YELLOW}🛑 Stopping WorldArchitect.AI Test Server${NC}"
     
     if is_running; then
-        PID=$(cat "$PID_FILE")
+        PID_PORT=$(cat "$PID_FILE")
+        PID=$(echo "$PID_PORT" | cut -d: -f1)
         echo "   Killing process $PID..."
         kill $PID 2>/dev/null || true
         sleep 2
@@ -120,17 +125,24 @@ stop_server() {
         echo "⚠️  Server is not running"
     fi
     
-    # Also clean up any processes on the port
-    lsof -ti:$TEST_PORT | xargs kill -9 2>/dev/null || true
+    # Also clean up any processes on ports 8081-8090 range
+    for port in $(seq $BASE_PORT $((BASE_PORT + MAX_PORTS - 1))); do
+        lsof -ti:$port | xargs kill -9 2>/dev/null || true
+    done
 }
 
 # Function to check server status
 check_status() {
     if is_running; then
-        PID=$(cat "$PID_FILE")
+        PID_PORT=$(cat "$PID_FILE")
+        PID=$(echo "$PID_PORT" | cut -d: -f1)
+        STORED_PORT=$(echo "$PID_PORT" | cut -d: -f2)
+        LOG_FILE="/tmp/worldarchitectai_test_server_$STORED_PORT.log"
+        
         echo -e "${GREEN}✅ Server is running${NC}"
         echo "   PID: $PID"
-        echo "   URL: http://localhost:$TEST_PORT"
+        echo "   Port: $STORED_PORT"
+        echo "   URL: http://localhost:$STORED_PORT"
         echo "   Log: $LOG_FILE"
         
         # Show recent log entries

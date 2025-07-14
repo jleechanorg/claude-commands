@@ -222,6 +222,16 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - ✅ Ask user where to place new files before creating them
 - **Exception**: Only when user explicitly requests file creation in mvp_site/
 
+🚨 **CRITICAL: AVOID CREATING NEW TEST FILES AT ALL COSTS**
+- ✅ **ALWAYS add tests to existing test files** (e.g., test_firestore_service.py, test_main.py)
+- ✅ **Add new test classes** to existing files rather than creating new files
+- ✅ **Extend existing test classes** with new test methods when appropriate
+- ❌ **NEVER create test_new_feature.py** - add tests to test_existing_module.py instead
+- ❌ **NEVER create isolated test files** unless absolutely critical for CI/production
+- **Why**: Reduces file proliferation, maintains test organization, easier maintenance
+- **Pattern**: New feature → Add tests to corresponding existing test file
+- **Example**: Testing firestore changes → Add to test_firestore_service.py
+
 🚨 **MANDATORY: Review codebase documentation before mvp_site/ changes**:
 - ✅ ALWAYS check `mvp_site/README.md` for architecture understanding
 - ✅ ALWAYS check `mvp_site/CODE_REVIEW_SUMMARY.md` for file responsibilities

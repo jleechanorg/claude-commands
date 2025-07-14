@@ -90,20 +90,8 @@ if [[ -f "./run_ui_tests.sh" ]]; then
         # For specific test, we'll need to run manually
         echo -e "${YELLOW}⚠️  Specific test requested - running manually${NC}"
         
-        # Find available port starting from 8081
-        BASE_PORT=8081
-        MAX_PORTS=10
-        find_available_port() {
-            local port=$BASE_PORT
-            while [ $port -lt $((BASE_PORT + MAX_PORTS)) ]; do
-                if ! lsof -i:$port > /dev/null 2>&1; then
-                    echo $port
-                    return 0
-                fi
-                port=$((port + 1))
-            done
-            return 1
-        }
+        # Source shared port utilities
+        source "$(dirname "$0")/../port-utils.sh"
         
         TEST_PORT=$(find_available_port)
         if [[ $? -ne 0 ]]; then
@@ -148,19 +136,7 @@ else
     echo "✓ Playwright is installed"
     
     # 4. Start test server with smart port detection
-    BASE_PORT=8081
-    MAX_PORTS=10
-    find_available_port() {
-        local port=$BASE_PORT
-        while [ $port -lt $((BASE_PORT + MAX_PORTS)) ]; do
-            if ! lsof -i:$port > /dev/null 2>&1; then
-                echo $port
-                return 0
-            fi
-            port=$((port + 1))
-        done
-        return 1
-    }
+    source "$(dirname "$0")/../port-utils.sh"
     
     TEST_PORT=$(find_available_port)
     if [[ $? -ne 0 ]]; then

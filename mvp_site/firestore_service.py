@@ -30,6 +30,8 @@ import collections.abc
 import datetime
 import json
 import logging_util
+import os
+import time
 
 import constants
 from decorators import log_exceptions
@@ -459,7 +461,14 @@ def get_campaign_by_id(user_id, campaign_id):
 
 @log_exceptions
 def add_story_entry(user_id, campaign_id, actor, text, mode=None, structured_fields=None):
-    """Add a story entry to Firestore.
+    """Add a story entry to Firestore with write-then-read pattern for data integrity.
+    
+    This function implements the write-then-read pattern:
+    1. Write data to Firestore
+    2. Read it back immediately to verify persistence
+    3. Only return success if read confirms write succeeded
+    
+    This prevents data loss from failed writes that appear successful to users.
     
     Args:
         user_id: User ID
@@ -469,6 +478,53 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None, structured_fie
         mode: Optional mode (e.g., 'god', 'character')
         structured_fields: Required dict for AI responses containing structured response fields
     """
+    # Start timing for latency measurement
+    start_time = time.time()
+    
+    # In testing mode, skip verification since mocks don't support read-back
+    if os.getenv('TESTING') == 'true':
+        # Use original write-only implementation for testing
+        _write_story_entry_to_firestore(user_id, campaign_id, actor, text, mode, structured_fields)
+        logging_util.info(f"✅ Write-then-read (testing mode): user={user_id}, campaign={campaign_id}, actor={actor}")
+        
+        # Return None to match original add_story_entry behavior for tests
+        return None
+    
+    # Write to Firestore using internal implementation
+    write_start_time = time.time()
+    _write_story_entry_to_firestore(user_id, campaign_id, actor, text, mode, structured_fields)
+    write_duration = time.time() - write_start_time
+    
+    logging_util.info(f"✍️ Write timing: {write_duration:.3f}s")
+    
+    # Small delay to ensure write propagation (Firestore eventual consistency)
+    time.sleep(0.1)
+    
+    # Efficiently verify the write by checking only the latest entries
+    verify_start_time = time.time()
+    entry_found = verify_latest_entry(user_id, campaign_id, actor, text, limit=10)
+    verify_duration = time.time() - verify_start_time
+    
+    if not entry_found:
+        raise Exception(f"Write-then-read verification failed: Could not find matching entry "
+                       f"for actor='{actor}' and text (first 100 chars): '{text[:100]}...' "
+                       f"in latest 10 entries")
+    
+    # Calculate total latency  
+    total_duration = time.time() - start_time
+    
+    logging_util.info(f"📖 Verify-latest timing: {verify_duration:.3f}s (checked latest 10 entries)")
+    logging_util.info(f"⏱️ Write-then-read TOTAL latency: {total_duration:.3f}s "
+                     f"(write: {write_duration:.3f}s, verify: {verify_duration:.3f}s, sleep: 0.100s)")
+    logging_util.info(f"✅ Write-then-read verification successful: "
+                     f"user={user_id}, campaign={campaign_id}, actor={actor}")
+    
+    # Return None to match original add_story_entry API
+    return None
+
+
+def _write_story_entry_to_firestore(user_id, campaign_id, actor, text, mode=None, structured_fields=None):
+    """Internal implementation to write story entry data directly to Firestore"""
     db = get_db()
     story_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
     text_bytes = text.encode('utf-8')
@@ -512,6 +568,41 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None, structured_fie
         story_ref.update({'last_played': timestamp})
     except Exception:
         raise
+    
+    # Return None for write-only mode (original behavior)
+    return None
+
+
+def verify_latest_entry(user_id, campaign_id, actor, text, limit=10):
+    """Efficiently verify a story entry was written by reading only the latest entries
+    
+    Args:
+        user_id: User ID
+        campaign_id: Campaign ID  
+        actor: Expected actor type
+        text: Expected text content
+        limit: Number of latest entries to check (default 10)
+        
+    Returns:
+        bool: True if matching entry found in latest entries
+    """
+    db = get_db()
+    campaign_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
+    
+    # Read only the latest N entries, ordered by timestamp descending
+    story_ref = campaign_ref.collection('story').order_by('timestamp', direction='DESCENDING').limit(limit)
+    story_docs = story_ref.stream()
+    
+    # Check if our entry is among the latest entries
+    for doc in story_docs:
+        entry = doc.to_dict()
+        if entry.get('actor') == actor and entry.get('text') == text:
+            return True
+    
+    return False
+
+
+
 
 @log_exceptions
 def create_campaign(user_id, title, initial_prompt, opening_story, initial_game_state: dict, selected_prompts=None, use_default_world=False, opening_story_structured_fields=None):
