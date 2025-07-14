@@ -196,6 +196,19 @@ This validation suite checks:
 - ✓ Error handling is enabled
 - ✓ Naming conventions are followed
 
+### 📤 `/handoff` → `handoff.sh`
+**Purpose**: Structured task handoff with complete documentation
+```bash
+./claude_command_scripts/commands/handoff.sh task_name "description"
+./claude_command_scripts/commands/handoff.sh logging_fix "Add file logging configuration"
+```
+- Creates handoff-[task] branch with analysis
+- Generates complete scratchpad with implementation plan
+- Creates GitHub PR with ready-to-implement status
+- Updates roadmap.md with task tracking
+- Provides copy-paste worker prompt
+- Returns you to your original working branch
+
 ## Future Commands
 
 Planned scripts for other commands:
