@@ -168,7 +168,7 @@ while IFS= read -r -d '' file; do
 done < <(find . -name "*end2end*.py" -type f \
     ! -path "./venv/*" \
     ! -path "./node_modules/*" \
-    ! -path "./mvp_site/mvp_site/tests/test_end2end/run_end2end_tests.py" \
+    ! -path "./mvp_site/tests/test_end2end/run_end2end_tests.py" \
     -print0)
 
 # Also include specific integration test patterns
