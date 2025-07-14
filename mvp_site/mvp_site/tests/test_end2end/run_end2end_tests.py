@@ -11,13 +11,13 @@ import unittest
 import sys
 import os
 
-# Add the mvp_site directory to the path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Add the mvp_site directory to the path (same as test files)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 
-# Import all test modules
-from tests import test_create_campaign_end2end
-from tests import test_continue_story_end2end
-from tests import test_visit_campaign_end2end
+# Import all test modules using fully qualified imports  
+from mvp_site.mvp_site.tests.test_end2end import test_create_campaign_end2end_fixed as test_create_campaign_end2end
+from mvp_site.mvp_site.tests.test_end2end import test_continue_story_end2end_fixed as test_continue_story_end2end
+from mvp_site.mvp_site.tests.test_end2end import test_visit_campaign_end2end_fixed as test_visit_campaign_end2end
 
 def run_tests():
     """Run all end-to-end integration tests."""

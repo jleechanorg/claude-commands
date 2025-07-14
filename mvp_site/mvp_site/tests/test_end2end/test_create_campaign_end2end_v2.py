@@ -15,7 +15,7 @@ os.environ['TESTING'] = 'true'
 os.environ['GEMINI_API_KEY'] = 'test-api-key'
 
 # Add the parent directory to the path to import main
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 
 from main import create_app, HEADER_TEST_BYPASS, HEADER_TEST_USER_ID
 import constants
