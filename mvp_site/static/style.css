@@ -293,6 +293,43 @@ a.navbar-brand:hover {
     white-space: pre-wrap;
 }
 
+/* Planning block choice buttons - simplified design */
+.planning-block-choices {
+    margin-top: 10px;
+    margin-bottom: 0;
+}
+
+.choice-button {
+    display: block;
+    width: 100%;
+    margin-bottom: 0.5rem;
+    padding: 0.75rem;
+    text-align: left;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: pre-wrap;
+    font-family: inherit;
+    color: #212529;
+}
+
+.choice-button:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.choice-button:active {
+    background: #dee2e6;
+}
+
+.planning-block-thinking {
+    margin-bottom: 0.5rem;
+    font-style: italic;
+    opacity: 0.8;
+}
+
 /* Debug Info - Light gray with nested sections */
 .debug-info {
     background-color: #f8f9fa;
@@ -364,6 +401,25 @@ a.navbar-brand:hover {
 [data-bs-theme="dark"] .planning-block {
     background-color: rgba(33, 150, 243, 0.1);
     color: #e0e0e0;
+}
+
+[data-bs-theme="dark"] .choice-button {
+    background: #343a40;
+    border-color: #495057;
+    color: #e0e0e0;
+}
+
+[data-bs-theme="dark"] .choice-button:hover {
+    background: #495057;
+    border-color: #6c757d;
+}
+
+[data-bs-theme="dark"] .choice-button:active {
+    background: #6c757d;
+}
+
+[data-bs-theme="dark"] .planning-block-thinking {
+    color: #adb5bd;
 }
 
 [data-bs-theme="dark"] .debug-info {
