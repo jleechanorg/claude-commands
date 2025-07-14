@@ -20,6 +20,7 @@
 - `/coverage` - Generate test coverage reports
 - `/push` - Smart git push with conflict detection
 - `/review` - Automated code review process
+- `/archreview` or `/arch` - Architecture and design review with dual-perspective analysis
 
 **Implementation**: 
 - Display all available slash commands
