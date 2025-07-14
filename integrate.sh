@@ -122,9 +122,38 @@ git checkout -b "$branch_name"
 
 # Delete the old branch if it was clean
 if [ "$should_delete_branch" = true ] && [ "$current_branch" != "main" ]; then
-    echo "6. Deleting clean branch '$current_branch'..."
-    git branch -d "$current_branch"
-    echo "✅ Deleted clean branch '$current_branch'"
+    echo "6. Checking if branch '$current_branch' can be safely deleted..."
+    
+    # Check multiple conditions to determine if branch is safe to delete
+    branch_can_be_deleted=false
+    deletion_reason=""
+    
+    # Check 1: Is it merged into local main?
+    if git branch --merged main | grep -q "^[[:space:]]*$current_branch$"; then
+        branch_can_be_deleted=true
+        deletion_reason="merged into local main"
+    # Check 2: Is it merged into remote main?
+    elif git ls-remote --heads origin | grep -q "refs/heads/$current_branch" && \
+         git branch -r --merged origin/main | grep -q "origin/$current_branch"; then
+        branch_can_be_deleted=true
+        deletion_reason="merged into remote main"
+    # Check 3: Does it have a merged PR?
+    elif command -v gh >/dev/null 2>&1 && \
+         gh pr list --state merged --head "$current_branch" --json number -q '.[0].number' >/dev/null 2>&1; then
+        branch_can_be_deleted=true
+        deletion_reason="has merged PR"
+    fi
+    
+    if [ "$branch_can_be_deleted" = true ]; then
+        echo "   ✓ Branch is safe to delete ($deletion_reason)"
+        echo "   Deleting branch '$current_branch'..."
+        git branch -D "$current_branch"
+        echo "✅ Deleted clean branch '$current_branch'"
+    else
+        echo "⚠️  Branch '$current_branch' could not be verified as merged"
+        echo "   The branch was clean locally but may have unmerged changes"
+        echo "   To force delete: git branch -D $current_branch"
+    fi
 fi
 
 echo "✅ Integration complete! You are now on a fresh '$branch_name' branch with latest main changes."
