@@ -6,6 +6,9 @@ Note: This is a data fixtures file, not a test file.
 It provides sample data for other tests to use.
 """
 import datetime
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import constants
 
 # Sample campaign data

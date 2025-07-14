@@ -6,6 +6,9 @@ import datetime
 import copy
 from typing import Dict, Any, List, Optional
 from .data_fixtures import SAMPLE_CAMPAIGN, SAMPLE_GAME_STATE, SAMPLE_STORY_CONTEXT
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import constants
 
 

@@ -808,6 +808,7 @@ def create_app():
     def get_campaign(user_id, campaign_id):
         # --- RESTORED TRY-EXCEPT BLOCK ---
         try:
+            logging_util.info(f"🎮 LOADING GAME PAGE: user={user_id}, campaign={campaign_id}")
             campaign, story = firestore_service.get_campaign_by_id(user_id, campaign_id)
             if not campaign: return jsonify({KEY_ERROR: 'Campaign not found'}), 404
 
@@ -986,6 +987,7 @@ def create_app():
             if not campaign: return jsonify({KEY_ERROR: 'Campaign not found'}), 404
 
             # 2. Add user's action to the story log
+            logging_util.info(f"📝 ADDING USER STORY ENTRY: user={user_id}, campaign={campaign_id}, mode={mode}, input_length={len(user_input)}")
             firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_USER, user_input, mode)
 
             # 3. Process: Get AI response, passing in the current state
@@ -1009,6 +1011,9 @@ def create_app():
             # 4. Write: Add AI response to story log and update state
             # Extract structured fields from AI response for storage
             structured_fields = structured_fields_utils.extract_structured_fields(gemini_response_obj)
+            logging_util.info(f"📝 ADDING AI STORY ENTRY: user={user_id}, campaign={campaign_id}, "
+                             f"narrative_length={len(gemini_response_obj.narrative_text)}, "
+                             f"structured_fields_count={len(structured_fields) if structured_fields else 0}")
             firestore_service.add_story_entry(user_id, campaign_id, constants.ACTOR_GEMINI, gemini_response_obj.narrative_text, structured_fields=structured_fields)
 
             # 5. Parse and apply state changes from AI response
@@ -1032,6 +1037,8 @@ def create_app():
                         logging_util.warning(f"  {i}. {discrepancy}")
 
             # Apply state changes and return response
+            logging_util.info(f"✅ STORY INTERACTION COMPLETE: user={user_id}, campaign={campaign_id}, "
+                             f"mode={mode}, response_ready=True")
             return _apply_state_changes_and_respond(proposed_changes, current_game_state, gemini_response_obj,
                                                   gemini_response_obj.structured_response, mode, story_context, campaign_id, user_id)
 

@@ -472,21 +472,51 @@ document.addEventListener('DOMContentLoaded', () => {
             const safeDescription = sanitizeHtml(choice.description);
             const riskLevel = choice.risk_level || 'low';
             
-            // Create button text (text: description format)
-            const buttonText = `${safeText}: ${safeDescription}`;
-            
-            // Create data-choice-text for form submission (includes full choice data)
-            const choiceData = `${safeText} - ${safeDescription}`;
-            const escapedChoiceData = escapeHtmlAttribute(choiceData);
-            const escapedTitle = escapeHtmlAttribute(safeDescription);
-            
-            // Add risk level as CSS class for styling
-            const riskClass = `risk-${riskLevel}`;
-            
-            html += `<button class="choice-button ${riskClass}" ` +
-                    `data-choice-id="${safeKey}" ` +
-                    `data-choice-text="${escapedChoiceData}" ` +
-                    `title="${escapedTitle}">${buttonText}</button>`;
+            // Check if this is a deep think mode choice with analysis
+            if (choice.analysis && typeof choice.analysis === 'object') {
+                // Deep think mode - render expanded format with pros/cons
+                const analysis = choice.analysis;
+                const safePros = Array.isArray(analysis.pros) ? analysis.pros.map(p => sanitizeHtml(p)) : [];
+                const safeCons = Array.isArray(analysis.cons) ? analysis.cons.map(c => sanitizeHtml(c)) : [];
+                const safeConfidence = analysis.confidence ? sanitizeHtml(analysis.confidence) : '';
+                
+                // Create choice data for form submission
+                const choiceData = `${safeText} - ${safeDescription}`;
+                const escapedChoiceData = escapeHtmlAttribute(choiceData);
+                
+                // Add deep-think class for enhanced styling
+                const riskClass = `risk-${riskLevel} deep-think-choice`;
+                
+                html += `<div class="choice-container deep-think-choice">
+                    <button class="choice-button choice-button-expanded ${riskClass}" 
+                            data-choice-id="${safeKey}" 
+                            data-choice-text="${escapedChoiceData}">
+                        <div class="choice-header">
+                            <strong>${safeText}</strong>
+                        </div>
+                        <div class="choice-description">${safeDescription}</div>
+                        <div class="choice-analysis">
+                            <div class="analysis-content">
+                                ${safePros.length > 0 ? `<strong>✅ Pros:</strong><br>${safePros.map(pro => `• ${pro}`).join('<br>')}<br><br>` : ''}
+                                ${safeCons.length > 0 ? `<strong>❌ Cons:</strong><br>${safeCons.map(con => `• ${con}`).join('<br>')}<br><br>` : ''}
+                                ${safeConfidence ? `<strong>🎯 Assessment:</strong><br>${safeConfidence}` : ''}
+                            </div>
+                        </div>
+                    </button>
+                </div>`;
+            } else {
+                // Standard mode - render simple button format
+                const buttonText = `${safeText}: ${safeDescription}`;
+                const choiceData = `${safeText} - ${safeDescription}`;
+                const escapedChoiceData = escapeHtmlAttribute(choiceData);
+                const escapedTitle = escapeHtmlAttribute(safeDescription);
+                const riskClass = `risk-${riskLevel}`;
+                
+                html += `<button class="choice-button ${riskClass}" ` +
+                        `data-choice-id="${safeKey}" ` +
+                        `data-choice-text="${escapedChoiceData}" ` +
+                        `title="${escapedTitle}">${buttonText}</button>`;
+            }
         });
         
         // Add custom text option

@@ -301,10 +301,13 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 6. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
 7. **Web Scraping**: Use full-content tools (curl) not search snippets
 8. **Log Files Location**: 
-   - ✅ Logs are in `/tmp/worldarchitectai_logs/[branch-name].log`
-   - ✅ Branch-specific logs: e.g., `/tmp/worldarchitectai_logs/feature-enhanced-character-codesign.log`
-   - ✅ Use `strings /tmp/worldarchitectai_logs/[branch].log | grep -i "pattern"` for binary log files
-   - ✅ Check current branch with `git branch --show-current` to find correct log file
+   - ✅ **Server logs are in `/tmp/worldarchitectai_logs/`** with subfolders/files named by branch
+   - ✅ **Branch-specific logs**: `/tmp/worldarchitectai_logs/[branch-name].log`
+   - ✅ **Current branch log**: `/tmp/worldarchitectai_logs/$(git branch --show-current).log`
+   - ✅ **Log commands**: `tail -f /tmp/worldarchitectai_logs/[branch].log` for real-time monitoring
+   - ✅ **Search logs**: `grep -i "pattern" /tmp/worldarchitectai_logs/[branch].log`
+   - ✅ **Binary logs**: Use `strings /tmp/worldarchitectai_logs/[branch].log | grep -i "pattern"`
+   - ✅ **Find current log**: `git branch --show-current` then check corresponding log file
 
 **Test Commands**: → `.cursor/rules/validation_commands.md`
 

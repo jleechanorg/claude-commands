@@ -26,3 +26,11 @@
 - Include purpose and brief description for each
 - Show command aliases where applicable
 - Provide usage examples
+
+## Testing Commands (Real-Mode Testing Framework)
+- `/teste` - Run end-to-end tests with mock services (fast, free)
+- `/tester` - Run end-to-end tests with real services (costs money) 
+- `/testerc` - Run end-to-end tests with real services + data capture
+
+## Other Commands
+- Additional slash commands as defined in other .md files in this directory

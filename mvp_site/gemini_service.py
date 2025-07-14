@@ -373,7 +373,7 @@ class PromptBuilder:
             "\n**CRITICAL REMINDER FOR STORY CONTINUATION**\n"
             "1. **MANDATORY PLANNING BLOCK**: Every STORY MODE response MUST end with '--- PLANNING BLOCK ---'\n"
             "2. **Think Commands**: If the user says 'think', 'plan', 'consider', 'strategize', or 'options', "
-            "generate ONLY internal thoughts with a deep think block (pros/cons). DO NOT take narrative actions.\n"
+            "generate ONLY internal thoughts with a deep think block. Each choice MUST have an 'analysis' field with 'pros' array, 'cons' array, and 'confidence' string. DO NOT take narrative actions.\n"
             "3. **Standard Responses**: All other responses should include narrative continuation followed by "
             "a standard planning block with 3-4 action options.\n"
             "4. **Never Skip**: The planning block is MANDATORY - never end a response without one.\n\n"
@@ -1222,6 +1222,15 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
             - structured_response: Parsed JSON with state updates, entities, etc.
     """
     
+    # 🚨 DEBUG: Log user input analysis for multiple command detection
+    user_input_lower = user_input.lower()
+    main_char_think_count = user_input_lower.count("main character: think")
+    if main_char_think_count > 0:
+        logging_util.info(f"📝 CONTINUE_STORY INPUT: Found {main_char_think_count} 'Main Character: think' patterns")
+        if main_char_think_count > 1:
+            logging_util.warning(f"🚨 MULTIPLE THINK COMMANDS IN SINGLE INPUT: User submitted {main_char_think_count} think commands. "
+                                f"Current system will process as single response - user may expect {main_char_think_count} separate entries!")
+    
     # Calculate user input count for model selection (count existing user entries + current input)
     user_input_count = len([entry for entry in (story_context or []) if entry.get(constants.KEY_ACTOR) == constants.ACTOR_USER]) + 1
     
@@ -1516,6 +1525,27 @@ def _get_static_prompt_parts(current_game_state: GameState, story_context: list)
 
     return checkpoint_block, core_memories_summary, sequence_id_list_string
 
+def _extract_multiple_think_commands(user_input):
+    """
+    Extract multiple 'Main Character: think' commands from user input.
+    
+    Returns:
+        list: List of individual think commands, or [user_input] if no multiple commands found
+    """
+    # Look for the pattern "Main Character: think on what to do next" or similar
+    import re
+    
+    # Pattern to match "Main Character: think..." commands
+    think_pattern = r'Main Character:\s*think[^\n]*'
+    matches = re.findall(think_pattern, user_input, re.IGNORECASE)
+    
+    if len(matches) > 1:
+        logging_util.info(f"🔍 EXTRACTED {len(matches)} THINK COMMANDS: {matches}")
+        return matches
+    else:
+        # No multiple commands found, return original input
+        return [user_input]
+
 def _get_current_turn_prompt(user_input, mode):
     """Helper to generate the text for the user's current action."""
     if mode == 'character':
@@ -1524,10 +1554,31 @@ def _get_current_turn_prompt(user_input, mode):
         user_input_lower = user_input.lower()
         is_think_command = any(keyword in user_input_lower for keyword in think_keywords)
         
+        # 🚨 DEBUG: Check for multiple think commands
+        think_command_count = 0
+        for keyword in think_keywords:
+            think_command_count += user_input_lower.count(keyword)
+        
+        # Look for explicit "Main Character: think" patterns
+        main_char_think_pattern = "main character: think"
+        main_char_think_count = user_input_lower.count(main_char_think_pattern)
+        
+        logging_util.info(f"🔍 THINK COMMAND ANALYSIS: Total think keywords: {think_command_count}, "
+                         f"'Main Character: think' patterns: {main_char_think_count}, "
+                         f"Input length: {len(user_input)} chars")
+        
+        if main_char_think_count > 1:
+            logging_util.warning(f"⚠️ MULTIPLE THINK COMMANDS DETECTED: Found {main_char_think_count} "
+                                f"'Main Character: think' patterns in single input. "
+                                f"This may require separate processing!")
+        
         if is_think_command:
             # Emphasize planning for think commands (planning block handled separately in JSON)
-            prompt_template = "Main character: {user_input}. Generate the character's INTERNAL THOUGHTS ONLY with pros/cons analysis. " \
-                "DO NOT take any narrative actions. Focus on strategic thinking and option evaluation."
+            prompt_template = "Main character: {user_input}. Generate the character's internal thoughts and strategic analysis. " \
+                "NARRATIVE: Write the character's inner thoughts and contemplation as narrative text. " \
+                "PLANNING: Generate detailed analysis in the planning block with pros/cons for each option. " \
+                "DO NOT take any physical actions or advance the scene. Focus on mental deliberation only. " \
+                "CRITICAL: Each choice in the planning block MUST include an 'analysis' field with 'pros' array, 'cons' array, and 'confidence' string."
         else:
             # Standard story continuation (planning block handled separately in JSON)
             prompt_template = "Main character: {user_input}. Continue the story in about {word_count} words and " \

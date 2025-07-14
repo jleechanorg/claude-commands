@@ -178,6 +178,161 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         self.assertTrue(fake_genai_client.models.generate_content.called)
         
     @patch('firebase_admin.firestore.client')
+    @patch('google.genai.Client')
+    def test_continue_story_deep_think_mode(self, mock_genai_client_class, mock_firestore_client):
+        """Test continuing a story with deep think mode - validates string format for pros/cons."""
+        
+        # Set up fake Firestore
+        fake_firestore = FakeFirestoreClient()
+        mock_firestore_client.return_value = fake_firestore
+        
+        # Pre-populate campaign data in the correct location
+        user_doc = fake_firestore.collection('users').document(self.test_user_id)
+        campaign_doc = user_doc.collection('campaigns').document(self.test_campaign_id)
+        campaign_doc.set(self.mock_campaign_data)
+        
+        # Pre-populate game state
+        game_state_doc = fake_firestore.document(f'campaigns/{self.test_campaign_id}/game_state')
+        game_state_doc.set(self.mock_game_state.to_dict())
+        
+        # Pre-populate story entries
+        story_collection = fake_firestore.collection(f'campaigns/{self.test_campaign_id}/story')
+        for entry in self.mock_story_entries:
+            story_collection.add(entry)
+        
+        # Set up fake Gemini client
+        fake_genai_client = MagicMock()
+        mock_genai_client_class.return_value = fake_genai_client
+        fake_genai_client.models.count_tokens.return_value = FakeTokenCount(1000)
+        
+        # Mock Gemini response with deep think mode analysis (STRING FORMAT)
+        response_json = json.dumps({
+            "narrative": "I need to think carefully about this situation. The dragon is massive and dangerous...",
+            "planning_block": {
+                "thinking": "This is a critical moment. I need to weigh my options carefully before acting.",
+                "choices": {
+                    "attack_head_on": {
+                        "text": "Attack Head-On", 
+                        "description": "Charge forward with sword raised",
+                        "risk_level": "high",
+                        "analysis": {
+                            "pros": ["Quick resolution", "Shows courage", "Might catch dragon off-guard"],
+                            "cons": ["High risk of injury", "Could provoke rage", "Uses up stamina"],
+                            "confidence": "Low - this seems reckless but could work"
+                        }
+                    },
+                    "defensive_approach": {
+                        "text": "Defensive Approach",
+                        "description": "Circle carefully and look for weaknesses", 
+                        "risk_level": "medium",
+                        "analysis": {
+                            "pros": ["Safer approach", "Allows observation", "Preserves energy"],
+                            "cons": ["Takes longer", "Dragon might attack first", "Could appear weak"],
+                            "confidence": "Moderate - tactical but may lose initiative"
+                        }
+                    },
+                    "attempt_diplomacy": {
+                        "text": "Attempt Diplomacy",
+                        "description": "Try to communicate with the dragon",
+                        "risk_level": "low", 
+                        "analysis": {
+                            "pros": ["Could avoid combat entirely", "Might gain valuable information", "Shows wisdom"],
+                            "cons": ["Dragon might not be intelligent", "Could be seen as weakness", "Wastes time if fails"],
+                            "confidence": "High - worth trying before violence"
+                        }
+                    }
+                }
+            },
+            "state_updates": {
+                "thinking_mode": {
+                    "active": True,
+                    "depth": "deep"
+                }
+            }
+        })
+        fake_genai_client.models.generate_content.return_value = FakeGeminiResponse(response_json)
+        
+        # Create interaction data with "think" command to trigger deep think mode
+        think_interaction_data = {
+            "input": "I need to think about my options here",
+            "mode": "character"
+        }
+        
+        # Make the API request
+        response = self.client.post(
+            f'/api/campaigns/{self.test_campaign_id}/interaction',
+            data=json.dumps(think_interaction_data),
+            content_type='application/json',
+            headers=self.test_headers
+        )
+        
+        # Assert response
+        self.assertEqual(response.status_code, 200)
+        response_data = json.loads(response.data)
+        
+        # Verify response structure
+        self.assertIsInstance(response_data, dict)
+        self.assertTrue(response_data['success'])
+        
+        # Verify narrative contains thinking content
+        self.assertIn("think carefully", response_data['narrative'])
+        
+        # Verify planning block structure
+        self.assertIn('planning_block', response_data)
+        planning_block = response_data['planning_block']
+        self.assertIn('thinking', planning_block)
+        self.assertIn('choices', planning_block)
+        
+        # Verify deep think analysis fields are present and in STRING format
+        choices = planning_block['choices']
+        
+        # Test attack_head_on choice analysis
+        attack_choice = choices['attack_head_on']
+        self.assertIn('analysis', attack_choice)
+        attack_analysis = attack_choice['analysis']
+        
+        # Assert pros/cons are ARRAYS (user wants bullet points)
+        self.assertIsInstance(attack_analysis['pros'], list)
+        self.assertIsInstance(attack_analysis['cons'], list)
+        self.assertIsInstance(attack_analysis['confidence'], str)
+        
+        # Verify content (case-sensitive)
+        self.assertIn("Quick resolution", attack_analysis['pros'])
+        self.assertIn("Shows courage", attack_analysis['pros'])
+        self.assertIn("High risk of injury", attack_analysis['cons'])
+        self.assertIn("Low - this seems reckless", attack_analysis['confidence'])
+        
+        # Test defensive_approach choice analysis
+        defensive_choice = choices['defensive_approach']
+        defensive_analysis = defensive_choice['analysis']
+        
+        # Assert array format and content
+        self.assertIsInstance(defensive_analysis['pros'], list)
+        self.assertIsInstance(defensive_analysis['cons'], list)
+        self.assertIn("Safer approach", defensive_analysis['pros'])
+        self.assertIn("Takes longer", defensive_analysis['cons'])
+        self.assertIn("Moderate", defensive_analysis['confidence'])
+        
+        # Test diplomacy choice analysis
+        diplomacy_choice = choices['attempt_diplomacy']
+        diplomacy_analysis = diplomacy_choice['analysis']
+        
+        # Assert array format and content
+        self.assertIsInstance(diplomacy_analysis['pros'], list)
+        self.assertIsInstance(diplomacy_analysis['cons'], list)
+        self.assertIn("Could avoid combat entirely", diplomacy_analysis['pros'])
+        self.assertIn("Dragon might not be intelligent", diplomacy_analysis['cons'])
+        self.assertIn("High - worth trying", diplomacy_analysis['confidence'])
+        
+        # Verify state updates
+        self.assertIn('state_updates', response_data)
+        self.assertTrue(response_data['state_updates']['thinking_mode']['active'])
+        self.assertEqual(response_data['state_updates']['thinking_mode']['depth'], 'deep')
+        
+        # Verify Gemini was called
+        self.assertTrue(fake_genai_client.models.generate_content.called)
+        
+    @patch('firebase_admin.firestore.client')
     def test_continue_story_unauthorized(self, mock_firestore_client):
         """Test continuing a story for a campaign owned by another user."""
         

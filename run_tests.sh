@@ -71,6 +71,7 @@ pip install -r requirements.txt
 
 print_status "Running tests in mvp_site directory..."
 print_status "Setting TESTING=true for faster AI model usage"
+print_status "TEST_MODE=${TEST_MODE:-mock} (Real-Mode Testing Framework)"
 
 # Parse command line arguments
 include_integration=false
@@ -196,7 +197,7 @@ run_test() {
         # Choose command based on coverage mode
         if [ "$enable_coverage" = true ]; then
             # Run with coverage
-            if TESTING=true coverage run --append --source=. "$test_file" >"$output_file" 2>&1; then
+            if TESTING=true TEST_MODE="${TEST_MODE:-mock}" coverage run --append --source=. "$test_file" >"$output_file" 2>&1; then
                 echo "PASS" > "$status_file"
                 print_success "$test_file completed successfully"
             else
@@ -205,7 +206,7 @@ run_test() {
             fi
         else
             # Run without coverage (normal mode)
-            if TESTING=true python "$test_file" >"$output_file" 2>&1; then
+            if TESTING=true TEST_MODE="${TEST_MODE:-mock}" python "$test_file" >"$output_file" 2>&1; then
                 echo "PASS" > "$status_file"
                 print_success "$test_file completed successfully"
             else

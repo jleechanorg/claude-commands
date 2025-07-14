@@ -386,3 +386,165 @@ pre {
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* Deep Think Mode Planning Block Styles */
+.choice-container {
+    margin: 0;
+}
+
+.choice-button-expanded {
+    width: 100%;
+    padding: 2px 3px;
+    border: 1px solid #007bff;
+    border-radius: 0;
+    background-color: #f8f9fa;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    font-size: 0.95em;
+}
+
+.choice-button-expanded:hover {
+    background-color: #e9ecef;
+    border-color: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.choice-header {
+    font-size: 0.97em;
+    margin: 0;
+}
+
+.choice-description {
+    margin: 0;
+    font-size: 0.91em;
+    line-height: 1.1;
+    color: #495057;
+    font-style: italic;
+}
+
+.choice-analysis {
+    margin: 0;
+    padding: 0;
+    border-top: none;
+}
+
+.pros-cons-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    margin: 0;
+    align-items: start;
+}
+
+.pros-section, .cons-section {
+    background-color: #fff;
+    padding: 0 2px;
+    border-radius: 0;
+    border: 1px solid #e9ecef;
+    font-size: 0.89em;
+    margin: 0;
+}
+
+.pros-section {
+    border-left: 2px solid #28a745;
+}
+
+.cons-section {
+    border-left: 2px solid #dc3545;
+}
+
+.analysis-label {
+    font-weight: bold;
+    font-size: 0.82em;
+    display: block;
+    margin: 0;
+}
+
+.analysis-list {
+    margin: 0;
+    padding-left: 5px;
+    font-size: 0.75em;
+    line-height: 1.1;
+}
+
+.analysis-list li {
+    margin: 0;
+    padding: 0;
+}
+
+.confidence-section {
+    background-color: #fff3cd;
+    padding: 0 2px;
+    border-radius: 0;
+    border-left: 2px solid #ffc107;
+    margin: 0;
+    font-size: 0.89em;
+}
+
+.confidence-text {
+    font-style: italic;
+    margin-left: 2px;
+}
+
+/* Dark theme support for deep think mode */
+[data-bs-theme="dark"] .choice-button-expanded {
+    background-color: #343a40;
+    border-color: #6c757d;
+    color: #e0e0e0;
+    font-size: 0.95em;
+    border-radius: 0;
+}
+
+[data-bs-theme="dark"] .choice-button-expanded:hover {
+    background-color: #495057;
+    border-color: #adb5bd;
+}
+
+[data-bs-theme="dark"] .choice-header {
+    color: #6fb3f5;
+    margin: 0;
+}
+
+[data-bs-theme="dark"] .choice-description {
+    color: #adb5bd;
+    font-size: 0.91em;
+    margin: 0;
+    line-height: 1.1;
+}
+
+[data-bs-theme="dark"] .pros-section,
+[data-bs-theme="dark"] .cons-section,
+[data-bs-theme="dark"] .confidence-section {
+    background-color: #495057;
+    border-color: #6c757d;
+    color: #e0e0e0;
+    padding: 0 2px;
+    border-radius: 0;
+    font-size: 0.89em;
+    margin: 0;
+}
+
+[data-bs-theme="dark"] .choice-analysis {
+    border-color: #6c757d;
+    margin: 0;
+    padding: 0;
+}
+
+/* Single blue analysis content section */
+.analysis-content {
+    background-color: #e3f2fd;
+    padding: 8px;
+    margin-top: 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    line-height: 1.4;
+    border-left: 3px solid #2196f3;
+}
+
+[data-bs-theme="dark"] .analysis-content {
+    background-color: #1e3a5f;
+    color: #e0e0e0;
+    border-left: 3px solid #64b5f6;
+}

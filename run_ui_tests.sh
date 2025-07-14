@@ -44,6 +44,7 @@ case "$MODE" in
         echo "📌 Both Firebase and Gemini will be mocked - no API costs!"
         export USE_MOCK_FIREBASE=true
         export USE_MOCK_GEMINI=true
+        export TEST_MODE="${TEST_MODE:-mock}"
         ;;
     "mock-gemini")
         echo "🚀 WorldArchitect.AI UI Test Runner (MOCK GEMINI + REAL FIREBASE)"
@@ -52,6 +53,7 @@ case "$MODE" in
         echo "🔥 Firebase will be REAL (database operations will persist)"
         export USE_MOCK_FIREBASE=false
         export USE_MOCK_GEMINI=true
+        export TEST_MODE="${TEST_MODE:-mock}"
         ;;
     "real")
         echo "🚀 WorldArchitect.AI UI Test Runner (REAL APIs)"
@@ -61,13 +63,15 @@ case "$MODE" in
         echo "🤖 Gemini: REAL (costs per API call)"
         export USE_MOCK_FIREBASE=false
         export USE_MOCK_GEMINI=false
+        export TEST_MODE="${TEST_MODE:-real}"
         ;;
     *)
         echo "❌ Invalid mode: $MODE"
-        echo "Usage: $0 [mock|mock-gemini|real]"
+        echo "Usage: $0 [mock|mock-gemini|real] [--puppeteer]"
         echo "  mock        - Mock both Firebase and Gemini"
         echo "  mock-gemini - Mock Gemini, use real Firebase (default)"
         echo "  real        - Use real APIs for everything"
+        echo "  --puppeteer - Use Puppeteer MCP instead of Playwright"
         exit 1
         ;;
 esac
@@ -77,6 +81,7 @@ echo "🔧 Activating virtual environment..."
 if [ -f "venv/bin/activate" ]; then
     source venv/bin/activate
     echo "✅ Virtual environment activated"
+    echo "🧪 Real-Mode Testing Framework: TEST_MODE=$TEST_MODE"
 else
     echo "❌ Virtual environment not found at venv/bin/activate"
     exit 1
