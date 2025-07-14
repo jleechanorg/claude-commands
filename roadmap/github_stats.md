@@ -2,7 +2,7 @@
 
 ## Overview (June 15 - July 14, 2025)
 - **Total Commits**: 1,244 over 29 days
-- **Merged PRs**: 378+ (with 572 total PRs in repository)
+- **Merged PRs**: 572 total PRs
 - **Lines Changed**: 6,994,318 (3.6M added + 3.4M deleted)
 - **Files Modified**: 14,278
 
