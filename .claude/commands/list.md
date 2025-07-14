@@ -7,6 +7,7 @@
 **Usage**: `/list`
 
 **Available Commands**:
+- `/pr [task]` - End-to-end implementation from idea to working PR
 - `/handoff [task] [description]` - Create structured task handoff with PR and worker prompt
 - `/execute` or `/e` - Execute tasks with TodoWrite circuit breaker
 - `/think [mode]` - Enable sequential thinking for complex analysis
@@ -18,7 +19,8 @@
 - `/testuif` - Run browser tests with real APIs
 - `/testhttp` - Run HTTP tests with mock APIs
 - `/coverage` - Generate test coverage reports
-- `/push` - Smart git push with conflict detection
+- `/push` - Smart git push with PR creation/update and test server
+- `/pushlite` or `/pushl` - Simple push without automation
 - `/review` - Automated code review process
 - `/archreview` or `/arch` - Architecture and design review with dual-perspective analysis
 
