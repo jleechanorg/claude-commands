@@ -682,7 +682,9 @@ def setup_file_logging():
         branch = "unknown"
     
     # Configure file logging using standard logging module
-    log_file = os.path.join(LOG_DIRECTORY, f"{branch}.log")
+    # Convert forward slashes to underscores for valid filename
+    safe_branch = branch.replace('/', '_')
+    log_file = os.path.join(LOG_DIRECTORY, f"{safe_branch}.log")
     
     # Clear any existing handlers
     root_logger = logging.getLogger()

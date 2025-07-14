@@ -28,7 +28,7 @@ sys.modules['firebase_admin.firestore'] = mock_firestore
 sys.modules['firebase_admin.auth'] = mock_auth
 
 
-from main import create_app, DEFAULT_TEST_USER, HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, parse_set_command, format_state_changes
+from main import create_app, DEFAULT_TEST_USER, HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, parse_set_command, format_state_changes, setup_file_logging
 from firestore_service import _truncate_log_json as truncate_game_state_for_logging
 from game_state import GameState
 
@@ -384,6 +384,28 @@ player.class = "Warrior\""""
         self.assertIn("truncated", result)
         lines = result.split('\n')
         self.assertEqual(len(lines), 5)  # Should be max_lines (including truncation message)
+
+    @patch('main.subprocess.check_output')
+    @patch('main.os.makedirs')
+    @patch('main.logging.FileHandler')
+    @patch('main.logging_util.info')
+    @patch('main.logging.getLogger')
+    def test_setup_file_logging_with_slash_in_branch_name(self, mock_get_logger, mock_logging_util_info, mock_file_handler, mock_makedirs, mock_subprocess):
+        """Test that branch names with forward slashes are converted to underscores in log filenames."""
+        # Mock git branch command to return a branch name with forward slash
+        mock_subprocess.return_value = "fix/god-mode-planning-blocks"
+        
+        # Mock logger and its handlers
+        mock_logger = MagicMock()
+        mock_logger.handlers = []
+        mock_get_logger.return_value = mock_logger
+        
+        # Call the function
+        setup_file_logging()
+        
+        # Verify that the FileHandler was called with the converted filename
+        expected_log_path = os.path.join("/tmp/worldarchitectai_logs", "fix_god-mode-planning-blocks.log")
+        mock_file_handler.assert_called_once_with(expected_log_path)
 
 
 if __name__ == '__main__':
