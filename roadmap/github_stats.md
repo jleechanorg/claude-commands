@@ -1,15 +1,17 @@
 # GitHub Development Statistics Analysis
 
-## Overview (June 15 - July 14, 2025)
-- **Total Commits**: 1,244 over 29 days
-- **Merged PRs**: 572 total PRs
-- **Lines Changed**: 6,994,318 (3.6M added + 3.4M deleted)
-- **Files Modified**: 14,278
+## Actual Development Statistics (June 15 - July 14, 2025)
 
-## Daily Averages
+### Real Code Changes (Excluding Vendor/Generated Files)
+- **Total Commits**: 1,244 over 29 days
+- **Merged PRs**: 378+ (with 572 total PRs in repository)
+- **Lines Changed**: 570,285 (404K added + 166K deleted)
+- **Files Modified**: 3,749
+
+## Daily Averages (Actual Code)
 - **Commits per day**: 42.9
-- **PRs per day**: 13.0
-- **Lines changed per day**: 241,183
+- **PRs per day**: 19.7
+- **Lines changed per day**: 19,665 (real code)
 
 ## Productivity Patterns
 
@@ -43,11 +45,11 @@
 - **Core code**: 939,351 lines (Python, JS, HTML, CSS, etc.)
 - **Total project**: 3,442,451 lines (including JSON data files)
 
-### Change Velocity Ratios
-- **vs Core Code**: 7.4:1 (changed 7.4x the core codebase)
-- **vs Total Project**: 2.0:1 (changed 2x the entire project)
+### Change Velocity Ratios (Actual)
+- **vs Core Code**: 0.6:1 (changed 60% of the core codebase)
+- **vs Total Project**: 0.17:1 (changed 17% of total project)
 
-This indicates high iteration and refactoring rather than just additions.
+This indicates healthy iteration and development, not excessive churn.
 
 ## Development Patterns Analysis
 
@@ -142,4 +144,29 @@ This indicates high iteration and refactoring rather than just additions.
 
 ## Conclusion
 
-Your development velocity is unprecedented for a solo developer, with no comparable benchmarks found. The 13 PRs/day rate appears unique in the industry. However, the high change-to-codebase ratio (2:1) and multiple fix commits suggest opportunity for architectural improvements to reduce rework and achieve the desired 2x productivity increase.
+After filtering out vendor files and generated content:
+- Your actual development velocity of **19,665 lines/day** is still impressive but realistic
+- The 0.6:1 change ratio shows healthy iteration without excessive churn
+- 13 PRs/day remains high, suggesting a micro-PR workflow that could benefit from consolidation
+- The "feeling slow" likely comes from PR fragmentation rather than low productivity
+
+---
+
+## Appendix: Total Numbers (Including All Files)
+
+For completeness, here are the raw statistics including vendor files, generated content, and large data files:
+
+### Raw Statistics
+- **Total Lines Changed**: 6,994,318 (3.6M added + 3.4M deleted)
+- **Total Files Modified**: 14,278
+- **Raw Lines per day**: 241,183
+- **Raw Change Ratios**: 7.4:1 vs core, 2.0:1 vs total
+
+### Noise Sources Identified
+- Virtual environment files (venv/): ~500K+ lines
+- Google API discovery cache: ~400K+ lines
+- Large data files (5e_SRD_All.md): 49K lines
+- Campaign text files: 33K lines
+- Temp/snapshot files: 56K lines
+
+These inflated the statistics by approximately 12x, masking your actual development patterns.
