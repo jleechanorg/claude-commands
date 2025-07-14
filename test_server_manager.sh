@@ -94,7 +94,7 @@ start_server() {
     # Set environment variables
     export TESTING=true
     export PORT=$port
-    export USE_MOCKS=true
+    export USE_MOCKS=false
     export BRANCH_NAME="$branch_name"
     
     # Start the server in background

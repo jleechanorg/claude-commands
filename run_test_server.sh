@@ -58,7 +58,7 @@ start_server() {
     # Set environment variables
     export TESTING=true
     export PORT=$TEST_PORT
-    export USE_MOCKS=true  # Change to false for real APIs
+    export USE_MOCKS=false  # Change to true for mock APIs
     
     echo "📝 Environment variables set:"
     echo "   TESTING=$TESTING"

@@ -664,6 +664,57 @@ def _build_campaign_prompt(character, setting, description, campaign_type, old_p
     
     return "\n".join(prompt_parts)
 
+def setup_file_logging():
+    """
+    Configure file logging for current git branch.
+    
+    Creates branch-specific log files in /tmp/worldarchitectai_logs/{branch}.log
+    and configures logging_util to write to both console and file.
+    """
+    import subprocess
+    import logging
+    
+    # Create log directory
+    log_dir = "/tmp/worldarchitectai_logs"
+    os.makedirs(log_dir, exist_ok=True)
+    
+    # Get current branch name
+    try:
+        branch = subprocess.check_output(
+            ["git", "branch", "--show-current"], 
+            cwd=os.path.dirname(__file__),
+            text=True
+        ).strip()
+    except:
+        branch = "unknown"
+    
+    # Configure file logging using standard logging module
+    log_file = os.path.join(log_dir, f"{branch}.log")
+    
+    # Clear any existing handlers
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+    
+    # Set up formatting
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    root_logger.addHandler(console_handler)
+    
+    # File handler
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setFormatter(formatter)
+    root_logger.addHandler(file_handler)
+    
+    # Set level
+    root_logger.setLevel(logging.INFO)
+    
+    logging_util.info(f"File logging configured: {log_file}")
+
+
 def create_app():
     """
     Create and configure the Flask application.
@@ -678,6 +729,7 @@ def create_app():
     - Testing mode configuration from environment
     - Firebase Admin SDK initialization
     - Authentication decorator for protected routes
+    - File logging to /tmp/worldarchitectai_logs/{branch}.log
     
     Routes Configured:
     - GET /api/campaigns - List user's campaigns
@@ -691,6 +743,9 @@ def create_app():
     Returns:
         Flask: Configured Flask application instance
     """
+    # Set up file logging before creating app
+    setup_file_logging()
+    
     app = Flask(__name__, static_folder='static')
     CORS(app, resources=CORS_RESOURCES)
 
