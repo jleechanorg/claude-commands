@@ -519,6 +519,54 @@ class TestStructuredFieldsSaving(unittest.TestCase):
             
             # Verify no warning was logged
             mock_warning.assert_not_called()
+    
+    def test_empty_narrative_with_structured_fields_creates_entry(self):
+        """Test that AI responses with empty narrative but structured_fields still create Firestore entries"""
+        from firestore_service import add_story_entry
+        
+        # Mock structured fields (like from a think command)
+        structured_fields = {
+            'planning_block': {
+                'thinking': 'Analyzing the situation...',
+                'choices': {
+                    'choice1': {
+                        'text': 'Option 1',
+                        'description': 'First option',
+                        'analysis': {
+                            'pros': ['Good', 'Better'],
+                            'cons': ['Bad'],
+                            'confidence': 'High'
+                        }
+                    }
+                }
+            }
+        }
+        
+        # Mock the add method to return a document reference
+        mock_doc_ref = MagicMock()
+        mock_doc_ref.id = "test-doc-id"
+        self.mock_story_collection.add.return_value = (None, mock_doc_ref)
+        
+        # This should not raise an error even with empty text
+        add_story_entry(
+            user_id="test-user",
+            campaign_id="test-campaign", 
+            actor=constants.ACTOR_GEMINI,  # AI actor
+            text="",  # Empty narrative (critical test case)
+            structured_fields=structured_fields
+        )
+        
+        # Verify that add was called (entry was created)
+        self.mock_story_collection.add.assert_called_once()
+        
+        # Verify the placeholder text was added
+        call_args = self.mock_story_collection.add.call_args[0][0]
+        self.assertEqual(call_args['text'], "[Internal thoughts and analysis - see planning block]")
+        self.assertEqual(call_args['actor'], constants.ACTOR_GEMINI)
+        
+        # Verify structured fields were merged into the entry data
+        self.assertIn('planning_block', call_args)
+        self.assertEqual(call_args['planning_block'], structured_fields['planning_block'])
 
 
 if __name__ == '__main__':

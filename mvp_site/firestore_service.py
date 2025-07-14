@@ -474,13 +474,10 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None, structured_fie
     text_bytes = text.encode('utf-8')
     chunks = [text_bytes[i:i + MAX_TEXT_BYTES] for i in range(0, len(text_bytes), MAX_TEXT_BYTES)]
     
-    # 🚨 CRITICAL FIX: Ensure AI responses with structured_fields always create Firestore entries
-    # Even if narrative text is empty, the structured_fields contain valuable data (planning blocks, etc.)
     if not chunks and actor == constants.ACTOR_GEMINI and structured_fields:
         # Create a single chunk with placeholder text for AI responses with empty narrative
         placeholder_text = "[Internal thoughts and analysis - see planning block]"
         chunks = [placeholder_text.encode('utf-8')]
-        logging_util.info(f"🔧 EMPTY_NARRATIVE_FIX: Added placeholder text for AI response with structured_fields")
     base_entry_data = {'actor': actor}
     if mode: base_entry_data['mode'] = mode
     
@@ -499,10 +496,6 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None, structured_fie
     
     timestamp = datetime.datetime.now(datetime.timezone.utc)
     
-    # 🚨 DEBUG: Log story entry creation details
-    logging_util.info(f"📝 CREATING STORY ENTRY: user={user_id}, campaign={campaign_id}, "
-                     f"actor={actor}, mode={mode}, text_length={len(text)}, chunks={len(chunks)}")
-    
     for i, chunk in enumerate(chunks):
         entry_data = base_entry_data.copy()
         entry_data['text'] = chunk.decode('utf-8')
@@ -510,19 +503,14 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None, structured_fie
         entry_data['part'] = i + 1
         
         try:
-            # Create the story entry and log success
-            doc_ref = story_ref.collection('story').add(entry_data)
-            doc_id = getattr(doc_ref[1], 'id', 'unknown') if hasattr(doc_ref, '__getitem__') else 'unknown'
-            logging_util.info(f"✅ STORY ENTRY CREATED: chunk {i+1}/{len(chunks)}, doc_id={doc_id}")
-        except Exception as e:
-            logging_util.error(f"❌ FAILED TO CREATE STORY ENTRY: chunk {i+1}/{len(chunks)}, error={str(e)}")
+            # Create the story entry
+            story_ref.collection('story').add(entry_data)
+        except Exception:
             raise  # Re-raise the exception to maintain original behavior
     
     try:
         story_ref.update({'last_played': timestamp})
-        logging_util.info(f"✅ CAMPAIGN LAST_PLAYED UPDATED: {timestamp}")
-    except Exception as e:
-        logging_util.error(f"❌ FAILED TO UPDATE LAST_PLAYED: error={str(e)}")
+    except Exception:
         raise
 
 @log_exceptions

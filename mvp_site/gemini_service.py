@@ -1222,14 +1222,11 @@ def continue_story(user_input, mode, story_context, current_game_state: GameStat
             - structured_response: Parsed JSON with state updates, entities, etc.
     """
     
-    # 🚨 DEBUG: Log user input analysis for multiple command detection
-    user_input_lower = user_input.lower()
-    main_char_think_count = user_input_lower.count("main character: think")
-    if main_char_think_count > 0:
-        logging_util.info(f"📝 CONTINUE_STORY INPUT: Found {main_char_think_count} 'Main Character: think' patterns")
-        if main_char_think_count > 1:
-            logging_util.warning(f"🚨 MULTIPLE THINK COMMANDS IN SINGLE INPUT: User submitted {main_char_think_count} think commands. "
-                                f"Current system will process as single response - user may expect {main_char_think_count} separate entries!")
+    # Check for multiple think commands in input using regex
+    think_pattern = r'Main Character:\s*think[^\n]*'
+    think_matches = re.findall(think_pattern, user_input, re.IGNORECASE)
+    if len(think_matches) > 1:
+        logging_util.warning(f"Multiple think commands detected: {len(think_matches)}. Processing as single response.")
     
     # Calculate user input count for model selection (count existing user entries + current input)
     user_input_count = len([entry for entry in (story_context or []) if entry.get(constants.KEY_ACTOR) == constants.ACTOR_USER]) + 1
@@ -1532,15 +1529,11 @@ def _extract_multiple_think_commands(user_input):
     Returns:
         list: List of individual think commands, or [user_input] if no multiple commands found
     """
-    # Look for the pattern "Main Character: think on what to do next" or similar
-    import re
-    
     # Pattern to match "Main Character: think..." commands
     think_pattern = r'Main Character:\s*think[^\n]*'
     matches = re.findall(think_pattern, user_input, re.IGNORECASE)
     
     if len(matches) > 1:
-        logging_util.info(f"🔍 EXTRACTED {len(matches)} THINK COMMANDS: {matches}")
         return matches
     else:
         # No multiple commands found, return original input
@@ -1554,23 +1547,10 @@ def _get_current_turn_prompt(user_input, mode):
         user_input_lower = user_input.lower()
         is_think_command = any(keyword in user_input_lower for keyword in think_keywords)
         
-        # 🚨 DEBUG: Check for multiple think commands
-        think_command_count = 0
-        for keyword in think_keywords:
-            think_command_count += user_input_lower.count(keyword)
-        
-        # Look for explicit "Main Character: think" patterns
-        main_char_think_pattern = "main character: think"
-        main_char_think_count = user_input_lower.count(main_char_think_pattern)
-        
-        logging_util.info(f"🔍 THINK COMMAND ANALYSIS: Total think keywords: {think_command_count}, "
-                         f"'Main Character: think' patterns: {main_char_think_count}, "
-                         f"Input length: {len(user_input)} chars")
-        
-        if main_char_think_count > 1:
-            logging_util.warning(f"⚠️ MULTIPLE THINK COMMANDS DETECTED: Found {main_char_think_count} "
-                                f"'Main Character: think' patterns in single input. "
-                                f"This may require separate processing!")
+        # Check for multiple "Main Character: think" patterns using regex
+        think_pattern = r'Main Character:\s*think[^\n]*'
+        think_matches = re.findall(think_pattern, user_input, re.IGNORECASE)
+        main_char_think_count = len(think_matches)
         
         if is_think_command:
             # Emphasize planning for think commands (planning block handled separately in JSON)

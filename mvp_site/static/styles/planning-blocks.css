@@ -1,5 +1,10 @@
 /* Planning Block Choice Buttons Styling */
 
+/* Thinking text paragraph styling */
+.planning-block-thinking {
+    margin-bottom: 0.5rem;
+}
+
 /* Aggressively collapse vertical space below planning block choices */
 .planning-block-choices {
     margin-bottom: 0 !important;

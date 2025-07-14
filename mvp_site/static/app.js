@@ -474,36 +474,34 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Check if this is a deep think mode choice with analysis
             if (choice.analysis && typeof choice.analysis === 'object') {
-                // Deep think mode - render expanded format with pros/cons
+                // Deep think mode - render as plain text button with multi-line content
                 const analysis = choice.analysis;
                 const safePros = Array.isArray(analysis.pros) ? analysis.pros.map(p => sanitizeHtml(p)) : [];
                 const safeCons = Array.isArray(analysis.cons) ? analysis.cons.map(c => sanitizeHtml(c)) : [];
                 const safeConfidence = analysis.confidence ? sanitizeHtml(analysis.confidence) : '';
                 
-                // Create choice data for form submission
+                // Build multi-line button text
+                let buttonText = `${safeText}: ${safeDescription}`;
+                if (safePros.length > 0) {
+                    buttonText += `\nPros: ${safePros.join(', ')}`;
+                }
+                if (safeCons.length > 0) {
+                    buttonText += `\nCons: ${safeCons.join(', ')}`;
+                }
+                if (safeConfidence) {
+                    buttonText += `\nAssessment: ${safeConfidence}`;
+                }
+                
                 const choiceData = `${safeText} - ${safeDescription}`;
                 const escapedChoiceData = escapeHtmlAttribute(choiceData);
+                const escapedTitle = escapeHtmlAttribute(safeDescription);
+                const riskClass = `risk-${riskLevel}`;
                 
-                // Add deep-think class for enhanced styling
-                const riskClass = `risk-${riskLevel} deep-think-choice`;
-                
-                html += `<div class="choice-container deep-think-choice">
-                    <button class="choice-button choice-button-expanded ${riskClass}" 
-                            data-choice-id="${safeKey}" 
-                            data-choice-text="${escapedChoiceData}">
-                        <div class="choice-header">
-                            <strong>${safeText}</strong>
-                        </div>
-                        <div class="choice-description">${safeDescription}</div>
-                        <div class="choice-analysis">
-                            <div class="analysis-content">
-                                ${safePros.length > 0 ? `<strong>✅ Pros:</strong><br>${safePros.map(pro => `• ${pro}`).join('<br>')}<br><br>` : ''}
-                                ${safeCons.length > 0 ? `<strong>❌ Cons:</strong><br>${safeCons.map(con => `• ${con}`).join('<br>')}<br><br>` : ''}
-                                ${safeConfidence ? `<strong>🎯 Assessment:</strong><br>${safeConfidence}` : ''}
-                            </div>
-                        </div>
-                    </button>
-                </div>`;
+                html += `<button class="choice-button ${riskClass}" ` +
+                        `data-choice-id="${safeKey}" ` +
+                        `data-choice-text="${escapedChoiceData}" ` +
+                        `title="${escapedTitle}" ` +
+                        `style="white-space: pre-wrap; text-align: left;">${buttonText}</button>`;
             } else {
                 // Standard mode - render simple button format
                 const buttonText = `${safeText}: ${safeDescription}`;

@@ -175,6 +175,7 @@ When working with test runners/harnesses:
 - **Separation of Concerns**: Domain logic separate from data layer, utility functions isolated
 - **Import Organization**: All imports at file top, sorted (stdlib → third-party → local)
 - **No Inline Imports**: Never import inside functions/methods/classes
+- **No Temporary Comments**: Avoid comments like `🚨 CRITICAL FIX`, `TODO TEMPORARY`, `# FIXME`, `# HACK` | These indicate incomplete work | Code should be self-documenting | Use clear variable/function names instead | Example: Instead of `# TODO TEMPORARY - fix this later`, write proper error handling
 
 ### Gemini SDK
 ✅ `from google import genai` | ✅ `client = genai.Client(api_key=api_key)`
@@ -284,6 +285,23 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - ❌ NEVER use dev[timestamp] branches for actual development
 - ✅ Create descriptive branches: `feature/task-description`, `fix/issue-name`, `update/component-name`
 - ✅ Auto-conflict resolution available: `./resolve_conflicts.sh`
+
+🚨 **MERGE CONFLICT RESOLUTION PROTOCOL**: ⚠️ MANDATORY for all merge conflicts
+1. **Analyze Before Resolving**: Run `git show HEAD~1:file` and `git show main:file` to understand both versions
+2. **Critical File Assessment**: Is this a high-risk file? (CSS, main app logic, configs, schemas)
+3. **Impact Analysis**: What features/users depend on this file? What's the blast radius?
+4. **Preserve Functionality**: Default to preserving existing functionality, only add new features
+5. **Test Resolution**: Verify the merged result works before committing
+6. **Document Decision**: Log what was preserved vs. changed and why
+
+**🚨 CRITICAL FILES requiring extra care during conflicts:**
+- `mvp_site/static/style.css` - Main stylesheet affecting all UI
+- `mvp_site/main.py` - Core application logic
+- Configuration files, database schemas, authentication modules
+- Any file affecting user experience or system stability
+
+**❌ NEVER**: Accept conflict resolution without understanding what each side contains
+**✅ ALWAYS**: Understand the purpose and impact before choosing resolution strategy
 
 **Commit Format**: → `.cursor/rules/examples.md`
 
