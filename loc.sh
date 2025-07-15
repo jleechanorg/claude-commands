@@ -1,20 +1,19 @@
 #!/bin/bash
 
 # ==============================================================================
-# Git Line Counter Script
+# Enhanced Line Counter Script
 #
 # Description:
-# This script calculates the number of lines of code added by a specific author
-# in the last month for given file types (.py, .js, .html). It provides a
-# breakdown per file type and a total sum.
+# This script provides comprehensive line count analysis for a codebase:
+# 1. Total lines by file type (.py, .js, .html)
+# 2. Test vs non-test code breakdown
+# 3. Git contribution analysis by author (optional)
 #
 # Usage:
-# 1. Save this file as `git-stats.sh` in your project's root directory.
-# 2. Give it execute permissions: `chmod +x git-stats.sh`
-# 3. Run it from the terminal: `./git-stats.sh`
-#
-# You can also pass an author's email as an argument to override the default.
-# Example: `./git-stats.sh "other-user@example.com"`
+# ./loc.sh                  # Show codebase statistics
+# ./loc.sh --git            # Include git contribution analysis
+# ./loc.sh --git <email>    # Git analysis for specific author
+# ./loc.sh --help           # Show this help
 # ==============================================================================
 
 # --- Configuration ---
@@ -25,66 +24,160 @@ FILE_TYPES=("py" "js" "html")
 # Time frame for the log search.
 TIME_FRAME="1 month ago"
 
-# --- Script Logic ---
+# Parse command line arguments
+SHOW_GIT_STATS=false
+AUTHOR_EMAIL=""
+TARGET_DIR="mvp_site"
 
-# Determine the author to search for.
-# Use the first script argument if provided, otherwise use the git config.
-if [ -n "$1" ]; then
-    AUTHOR_EMAIL="$1"
-else
-    AUTHOR_EMAIL=$(git config user.email)
-fi
-
-# Check if the author email was found.
-if [ -z "$AUTHOR_EMAIL" ]; then
-    echo "Error: Could not determine Git author email."
-    echo "Please set it using: git config --global user.email 'your.email@example.com'"
-    echo "Or pass it as an argument: ./git-stats.sh 'your.email@example.com'"
-    exit 1
-fi
-
-echo "📊 Counting lines added by '$AUTHOR_EMAIL' since '$TIME_FRAME'..."
-echo "========================================================================"
-
-# Initialize total lines counter
-TOTAL_LINES_ADDED=0
-
-# Associative array to hold lines added per file type
-declare -A lines_by_type
-
-# --- Main processing loop ---
-# Iterate over each defined file type.
-for ext in "${FILE_TYPES[@]}"; do
-    # Use git log to get the numerical stats for commits matching the criteria.
-    # --author: Filters commits by the specified author email.
-    # --since:  Filters commits to the specified time frame.
-    # --pretty=tformat: Suppresses all commit metadata to get a clean output.
-    # --numstat: Provides lines added, lines deleted, and file path.
-    # -- "*.${ext}": A pathspec to filter for files with the current extension.
-    #
-    # The output is piped to awk:
-    # awk script '{s+=$1} END {print s+0}' sums the first column (lines added).
-    # 's+0' ensures that if there are no results, it prints 0 instead of an empty line.
-    lines_added=$(git log --author="$AUTHOR_EMAIL" --since="$TIME_FRAME" --pretty=tformat: --numstat -- "*.$ext" | awk '{s+=$1} END {print s+0}')
-    
-    # Store the result in the associative array
-    lines_by_type[$ext]=$lines_added
-    
-    # Add the count for the current file type to the grand total.
-    TOTAL_LINES_ADDED=$((TOTAL_LINES_ADDED + lines_added))
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --git)
+            SHOW_GIT_STATS=true
+            shift
+            if [[ $# -gt 0 && ! "$1" =~ ^-- ]]; then
+                AUTHOR_EMAIL="$1"
+                shift
+            fi
+            ;;
+        --help|-h)
+            echo "Usage: $0 [options]"
+            echo "Options:"
+            echo "  --git          Include git contribution analysis"
+            echo "  --git <email>  Git analysis for specific author"
+            echo "  --help         Show this help"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
 done
 
+# --- Main Analysis Functions ---
 
-# --- Display Results ---
+# Function to count lines in files
+count_lines() {
+    local pattern="$1"
+    local files=$(find "$TARGET_DIR" -type f -name "$pattern" ! -path "*/__pycache__/*" ! -path "*/.pytest_cache/*" ! -path "*/node_modules/*" 2>/dev/null)
+    if [ -z "$files" ]; then
+        echo "0"
+    else
+        echo "$files" | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}'
+    fi
+}
 
+# Function to count test vs non-test lines
+count_test_vs_nontest() {
+    local ext="$1"
+    local test_lines=$(find "$TARGET_DIR" -type f -name "*.$ext" ! -path "*/__pycache__/*" ! -path "*/.pytest_cache/*" ! -path "*/node_modules/*" 2>/dev/null | grep -i test | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+    local nontest_lines=$(find "$TARGET_DIR" -type f -name "*.$ext" ! -path "*/__pycache__/*" ! -path "*/.pytest_cache/*" ! -path "*/node_modules/*" 2>/dev/null | grep -v -i test | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+    
+    # Handle empty results
+    test_lines=${test_lines:-0}
+    nontest_lines=${nontest_lines:-0}
+    
+    echo "$test_lines $nontest_lines"
+}
+
+# --- Codebase Statistics ---
+
+echo "📊 Codebase Statistics for $TARGET_DIR"
+echo "========================================================================"
+echo ""
+
+# Initialize totals
+total_test_lines=0
+total_nontest_lines=0
+total_all_lines=0
+
+# Associative arrays for storing results
+declare -A test_lines_by_type
+declare -A nontest_lines_by_type
+declare -A total_lines_by_type
+
+# Calculate lines for each file type
+for ext in "${FILE_TYPES[@]}"; do
+    read test_count nontest_count <<< $(count_test_vs_nontest "$ext")
+    test_lines_by_type[$ext]=$test_count
+    nontest_lines_by_type[$ext]=$nontest_count
+    total_lines_by_type[$ext]=$((test_count + nontest_count))
+    
+    total_test_lines=$((total_test_lines + test_count))
+    total_nontest_lines=$((total_nontest_lines + nontest_count))
+    total_all_lines=$((total_all_lines + test_count + nontest_count))
+done
+
+# Display results by file type
 echo "📈 Breakdown by File Type:"
 echo "-----------------------------------"
+printf "%-12s %10s %10s %10s %8s\n" "Type" "Test" "Non-Test" "Total" "Test %"
+echo "-----------------------------------"
 
-# Print the results for each file type
-printf "%-15s: %d lines\n" "Python (.py)" "${lines_by_type[py]}"
-printf "%-15s: %d lines\n" "JavaScript (.js)" "${lines_by_type[js]}"
-printf "%-15s: %d lines\n" "HTML (.html)" "${lines_by_type[html]}"
+for ext in "${FILE_TYPES[@]}"; do
+    test_count=${test_lines_by_type[$ext]}
+    nontest_count=${nontest_lines_by_type[$ext]}
+    total_count=${total_lines_by_type[$ext]}
+    
+    if [ $total_count -gt 0 ]; then
+        test_percentage=$(( (test_count * 100) / total_count ))
+    else
+        test_percentage=0
+    fi
+    
+    case $ext in
+        py) type_name="Python" ;;
+        js) type_name="JavaScript" ;;
+        html) type_name="HTML" ;;
+        *) type_name="$ext" ;;
+    esac
+    
+    printf "%-12s %10d %10d %10d %7d%%\n" "$type_name" "$test_count" "$nontest_count" "$total_count" "$test_percentage"
+done
 
 echo "-----------------------------------"
-printf "✅ Total Lines Added: %d lines\n" "$TOTAL_LINES_ADDED"
+printf "%-12s %10d %10d %10d %7d%%\n" "TOTAL" "$total_test_lines" "$total_nontest_lines" "$total_all_lines" "$(( (total_test_lines * 100) / total_all_lines ))"
 echo "========================================================================"
+
+# --- Git Statistics (optional) ---
+
+if [ "$SHOW_GIT_STATS" = true ]; then
+    echo ""
+    echo "📊 Git Contribution Analysis"
+    echo "========================================================================"
+    
+    # Determine author email
+    if [ -z "$AUTHOR_EMAIL" ]; then
+        AUTHOR_EMAIL=$(git config user.email)
+    fi
+    
+    if [ -z "$AUTHOR_EMAIL" ]; then
+        echo "Error: Could not determine Git author email."
+        echo "Please specify with: ./loc.sh --git <email>"
+        exit 1
+    fi
+    
+    echo "Author: $AUTHOR_EMAIL"
+    echo "Since: $TIME_FRAME"
+    echo "-----------------------------------"
+    
+    # Initialize git stats
+    git_total=0
+    declare -A git_lines_by_type
+    
+    # Calculate git contributions
+    for ext in "${FILE_TYPES[@]}"; do
+        lines_added=$(git log --author="$AUTHOR_EMAIL" --since="$TIME_FRAME" --pretty=tformat: --numstat -- "*.$ext" | awk '{s+=$1} END {print s+0}')
+        git_lines_by_type[$ext]=$lines_added
+        git_total=$((git_total + lines_added))
+    done
+    
+    # Display git results
+    printf "%-15s: %d lines\n" "Python (.py)" "${git_lines_by_type[py]}"
+    printf "%-15s: %d lines\n" "JavaScript (.js)" "${git_lines_by_type[js]}"
+    printf "%-15s: %d lines\n" "HTML (.html)" "${git_lines_by_type[html]}"
+    echo "-----------------------------------"
+    printf "✅ Total Lines Added: %d lines\n" "$git_total"
+    echo "========================================================================"
+fi
