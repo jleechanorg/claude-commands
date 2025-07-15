@@ -385,6 +385,7 @@ class TestStructuredFieldsSaving(unittest.TestCase):
         """Clean up patches"""
         self.patcher.stop()
     
+    @patch.dict('os.environ', {'MOCK_SERVICES_MODE': 'true'})
     def test_all_structured_fields_saved_to_firestore(self):
         """Test that all fields from structured_fields are saved to Firestore"""
         # Import constants to get field names
@@ -447,6 +448,7 @@ class TestStructuredFieldsSaving(unittest.TestCase):
         # Verify timestamp was added
         self.assertIn('timestamp', call_args)
         
+    @patch.dict('os.environ', {'MOCK_SERVICES_MODE': 'true'})
     def test_none_fields_not_saved(self):
         """Test that None values in structured_fields are not saved to Firestore"""
         import constants
@@ -485,7 +487,7 @@ class TestStructuredFieldsSaving(unittest.TestCase):
         self.assertEqual(call_args['entities_mentioned'], ["Player"])
         self.assertEqual(call_args['location_confirmed'], "Town Square")
     
-    @patch.dict('os.environ', {'ENABLE_WRITE_THEN_READ': 'false'})
+    @patch.dict('os.environ', {'MOCK_SERVICES_MODE': 'true'})
     def test_warning_logged_for_missing_structured_fields(self):
         """Test that a warning is logged when AI response lacks structured_fields"""
         from firestore_service import add_story_entry
@@ -505,7 +507,7 @@ class TestStructuredFieldsSaving(unittest.TestCase):
             self.assertIn("AI response missing structured_fields", warning_message)
             self.assertIn("test-campaign", warning_message)
     
-    @patch.dict('os.environ', {'ENABLE_WRITE_THEN_READ': 'false'})
+    @patch.dict('os.environ', {'MOCK_SERVICES_MODE': 'true'})
     def test_no_warning_for_user_entries(self):
         """Test that no warning is logged for user entries without structured_fields"""
         from firestore_service import add_story_entry
@@ -522,6 +524,7 @@ class TestStructuredFieldsSaving(unittest.TestCase):
             # Verify no warning was logged
             mock_warning.assert_not_called()
     
+    @patch.dict('os.environ', {'MOCK_SERVICES_MODE': 'true'})
     def test_empty_narrative_with_structured_fields_creates_entry(self):
         """Test that AI responses with empty narrative but structured_fields still create Firestore entries"""
         from firestore_service import add_story_entry

@@ -3,6 +3,8 @@ Fake Firestore implementation for testing.
 Returns real data structures instead of Mock objects to avoid JSON serialization issues.
 """
 
+import datetime
+
 
 class FakeFirestoreDocument:
     """Fake Firestore document that behaves like the real thing."""
@@ -69,7 +71,9 @@ class FakeFirestoreCollection:
         """Add a new document with auto-generated ID."""
         doc = self.document()  # This creates a doc with auto-generated ID
         doc.set(data)
-        return doc
+        # Return tuple like real Firestore: (timestamp, doc_ref)
+        fake_timestamp = datetime.datetime.now(datetime.timezone.utc)
+        return (fake_timestamp, doc)
     
     def order_by(self, field, direction=None):
         """Mock order_by for queries."""

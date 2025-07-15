@@ -14,6 +14,17 @@ import firestore_service
 class TestGodModeResponseField(unittest.TestCase):
     """Test god_mode_response field handling."""
     
+    def setUp(self):
+        """Set up test environment"""
+        # Set mock services mode to skip verification for unit tests
+        os.environ['MOCK_SERVICES_MODE'] = 'true'
+    
+    def tearDown(self):
+        """Clean up test environment"""
+        # Clean up environment variable
+        if 'MOCK_SERVICES_MODE' in os.environ:
+            del os.environ['MOCK_SERVICES_MODE']
+    
     def test_god_mode_response_field_used(self):
         """Test that god_mode_response field is used when present."""
         god_response = '''{
@@ -191,6 +202,18 @@ class TestGodModeResponseField(unittest.TestCase):
 
 
 class TestGodModeResponseIntegration(unittest.TestCase):
+    
+    def setUp(self):
+        """Set up test environment"""
+        # Set mock services mode to skip verification for unit tests
+        os.environ['MOCK_SERVICES_MODE'] = 'true'
+    
+    def tearDown(self):
+        """Clean up test environment"""
+        # Clean up environment variable
+        if 'MOCK_SERVICES_MODE' in os.environ:
+            del os.environ['MOCK_SERVICES_MODE']
+    
     def test_all_structured_fields_are_saved_in_firestore(self):
         # Patch the full Firestore chain
         mock_db = MagicMock()

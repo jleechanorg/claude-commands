@@ -101,6 +101,13 @@
    - ✅ Use MCP functions instead of Playwright for browser tests
    - ❌ NEVER default to Playwright when MCP tools are available
    - Benefits: No dependencies, real browsers, visual screenshots, Claude Code integration
+- 🚨 **CONTEXT7 MCP PROACTIVE USAGE**: ⚠️ MANDATORY - When encountering API/library issues:
+   - ✅ ALWAYS use Context7 MCP for accurate API documentation when facing errors
+   - ✅ **Pattern**: Error occurs → Use `mcp__context7__resolve-library-id` → Get docs with `mcp__context7__get-library-docs`
+   - ✅ Search for specific error patterns, method signatures, or usage examples
+   - ✅ **Example**: Firestore transaction errors → Get google-cloud-firestore docs → Find correct API usage
+   - ❌ NEVER guess API usage or rely on outdated assumptions
+   - Benefits: Up-to-date docs, correct syntax, real working examples, eliminates trial-and-error
 
 ## Project Overview
 

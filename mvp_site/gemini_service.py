@@ -519,7 +519,9 @@ def _select_model_for_continuation(user_input_count):
     Returns:
         str: Model name to use
     """
-    if os.environ.get('TESTING'):
+    # Use test model in mock services mode for faster/cheaper testing
+    mock_mode = (os.environ.get('MOCK_SERVICES_MODE') == 'true')
+    if mock_mode:
         return TEST_MODEL
     else:
         return DEFAULT_MODEL
@@ -981,7 +983,9 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     
     # --- MODEL SELECTION ---
     # Use default model for all operations.
-    model_to_use = TEST_MODEL if os.environ.get('TESTING') else DEFAULT_MODEL
+    # Use test model in mock services mode for faster/cheaper testing
+    mock_mode = (os.environ.get('MOCK_SERVICES_MODE') == 'true')
+    model_to_use = TEST_MODEL if mock_mode else DEFAULT_MODEL
     logging_util.info(f"Using model: {model_to_use} for initial story generation.")
 
     # Call Gemini API - returns raw Gemini API response object

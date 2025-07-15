@@ -481,34 +481,51 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None, structured_fie
     # Start timing for latency measurement
     start_time = time.time()
     
-    # In testing mode, skip verification since mocks don't support read-back
-    if os.getenv('TESTING') == 'true':
+    # In mock services mode, skip verification since mocks don't support read-back
+    # NOTE: Can't rely on fakes alone - even perfect fakes add 0.9s latency per test
+    # Unit tests need to be fast, so bypassing verification entirely is correct
+    mock_mode = (os.getenv('MOCK_SERVICES_MODE') == 'true')
+    if mock_mode:
         # Use original write-only implementation for testing
         _write_story_entry_to_firestore(user_id, campaign_id, actor, text, mode, structured_fields)
-        logging_util.info(f"✅ Write-then-read (testing mode): user={user_id}, campaign={campaign_id}, actor={actor}")
+        logging_util.info(f"✅ Write-then-read (mock mode): user={user_id}, campaign={campaign_id}, actor={actor}")
         
-        # Return None to match original add_story_entry behavior for tests
+        # Return None to match original add_story_entry behavior for mock tests
         return None
     
-    # Write to Firestore using internal implementation
+    # Write to Firestore and capture document ID for verification
     write_start_time = time.time()
-    _write_story_entry_to_firestore(user_id, campaign_id, actor, text, mode, structured_fields)
+    document_id = _write_story_entry_to_firestore(user_id, campaign_id, actor, text, mode, structured_fields)
     write_duration = time.time() - write_start_time
     
-    logging_util.info(f"✍️ Write timing: {write_duration:.3f}s")
+    logging_util.info(f"✍️ Write completed: {write_duration:.3f}s, document_id: {document_id}")
     
-    # Small delay to ensure write propagation (Firestore eventual consistency)
-    time.sleep(0.1)
-    
-    # Efficiently verify the write by checking only the latest entries
+    # Direct document verification using document ID (much more reliable than text matching)
     verify_start_time = time.time()
-    entry_found = verify_latest_entry(user_id, campaign_id, actor, text, limit=10)
+    entry_found = False
+    
+    # Try verification with progressive delays for Firestore eventual consistency
+    # NOTE: Keeping synchronous sleep - Flask is sync, async would require major refactor
+    for attempt in range(constants.VERIFICATION_MAX_ATTEMPTS):
+        delay = constants.VERIFICATION_INITIAL_DELAY + (attempt * constants.VERIFICATION_DELAY_INCREMENT)
+        time.sleep(delay)
+        
+        logging_util.debug(f"🔍 VERIFICATION: Attempt {attempt + 1}/{constants.VERIFICATION_MAX_ATTEMPTS} after {delay}s delay")
+        entry_found = verify_document_by_id(user_id, campaign_id, document_id, actor)
+        
+        if entry_found:
+            logging_util.info(f"✅ VERIFICATION: Found document {document_id} on attempt {attempt + 1}")
+            break
+        
+        if attempt < constants.VERIFICATION_MAX_ATTEMPTS - 1:
+            logging_util.debug(f"⚠️ VERIFICATION: Attempt {attempt + 1} failed, retrying...")
+    
     verify_duration = time.time() - verify_start_time
     
     if not entry_found:
-        raise Exception(f"Write-then-read verification failed: Could not find matching entry "
-                       f"for actor='{actor}' and text (first 100 chars): '{text[:100]}...' "
-                       f"in latest 10 entries")
+        logging_util.error(f"❌ VERIFICATION: All {constants.VERIFICATION_MAX_ATTEMPTS} attempts failed after {verify_duration:.3f}s")
+        raise Exception(f"Write-then-read verification failed: Could not find document '{document_id}' "
+                       f"for actor='{actor}' after {constants.VERIFICATION_MAX_ATTEMPTS} attempts")
     
     # Calculate total latency  
     total_duration = time.time() - start_time
@@ -524,7 +541,14 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None, structured_fie
 
 
 def _write_story_entry_to_firestore(user_id, campaign_id, actor, text, mode=None, structured_fields=None):
-    """Internal implementation to write story entry data directly to Firestore"""
+    """Internal implementation to write story entry data directly to Firestore
+    
+    Writes story entries using the standard collection.add() method without transactions.
+    Text is automatically chunked if it exceeds Firestore's size limits.
+    
+    Returns:
+        str: Document ID of the first chunk (used for verification)
+    """
     db = get_db()
     story_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
     text_bytes = text.encode('utf-8')
@@ -550,7 +574,9 @@ def _write_story_entry_to_firestore(user_id, campaign_id, actor, text, mode=None
         # Log warning if AI response missing structured fields
         logging_util.warning(f"AI response missing structured_fields for campaign {campaign_id}")
     
+    # Simple and reliable write with document ID capture
     timestamp = datetime.datetime.now(datetime.timezone.utc)
+    document_id = None
     
     for i, chunk in enumerate(chunks):
         entry_data = base_entry_data.copy()
@@ -559,8 +585,33 @@ def _write_story_entry_to_firestore(user_id, campaign_id, actor, text, mode=None
         entry_data['part'] = i + 1
         
         try:
-            # Create the story entry
-            story_ref.collection('story').add(entry_data)
+            # Create the story entry and capture document ID
+            add_result = story_ref.collection('story').add(entry_data)
+            # Handle both real Firestore (returns tuple) and mock (returns doc directly)
+            if isinstance(add_result, tuple):
+                doc_ref = add_result[1]  # Real Firestore: (Timestamp, DocumentReference)
+            else:
+                doc_ref = add_result  # Mock Firestore: doc_ref directly
+            
+            if i == 0:  # Store the first chunk's document ID for verification
+                if doc_ref and hasattr(doc_ref, 'id'):
+                    document_id = doc_ref.id
+                    logging_util.debug(f"✍️ WRITE: Created document {document_id} with actor='{actor}'")
+                else:
+                    # CRITICAL: This should never happen in production!
+                    mock_mode = (os.getenv('MOCK_SERVICES_MODE') == 'true')
+                    logging_util.error(f"🚨 CRITICAL: doc_ref missing .id attribute! "
+                                     f"mock_mode={mock_mode}, doc_ref={doc_ref}, "
+                                     f"add_result={add_result}, type={type(add_result)}")
+                    
+                    if mock_mode:
+                        # Generate mock ID for tests
+                        document_id = f"mock-doc-{user_id}-{campaign_id}-{hash(actor + text) % 10000}"
+                        logging_util.debug(f"✍️ WRITE: Mock document {document_id} with actor='{actor}'")
+                    else:
+                        # Production failure - this is a real error
+                        raise Exception(f"Firestore add() failed to return valid document reference. "
+                                       f"add_result={add_result}, type={type(add_result)}")
         except Exception:
             raise  # Re-raise the exception to maintain original behavior
     
@@ -569,8 +620,52 @@ def _write_story_entry_to_firestore(user_id, campaign_id, actor, text, mode=None
     except Exception:
         raise
     
-    # Return None for write-only mode (original behavior)
-    return None
+    # Return document ID for verification (fallback if not set)
+    # NOTE: Need fallback ID for verification logic - None would cause immediate failure
+    return document_id or f"fallback-doc-{user_id}-{campaign_id}-{hash(str(timestamp)) % 10000}"
+
+
+def verify_document_by_id(user_id, campaign_id, document_id, expected_actor):
+    """Verify a story entry was written by directly reading the document by ID
+    
+    Args:
+        user_id: User ID
+        campaign_id: Campaign ID  
+        document_id: Document ID to verify
+        expected_actor: Expected actor type for validation
+        
+    Returns:
+        bool: True if document exists and has correct actor
+    """
+    if not document_id:
+        logging_util.error("🔍 VERIFICATION: No document_id provided")
+        return False
+        
+    try:
+        db = get_db()
+        campaign_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
+        doc_ref = campaign_ref.collection('story').document(document_id)
+        
+        # Direct document read by ID
+        doc = doc_ref.get()
+        
+        if not doc.exists:
+            logging_util.warning(f"🔍 VERIFICATION: Document {document_id} does not exist")
+            return False
+        
+        entry = doc.to_dict()
+        actual_actor = entry.get('actor', constants.ACTOR_UNKNOWN)
+        
+        
+        if actual_actor == expected_actor:
+            return True
+        else:
+            logging_util.warning(f"🔄 VERIFICATION: Actor mismatch - expected '{expected_actor}', got '{actual_actor}'")
+            return False
+            
+    except Exception as e:
+        logging_util.error(f"❌ VERIFICATION: Error reading document {document_id}: {str(e)}")
+        return False
 
 
 def verify_latest_entry(user_id, campaign_id, actor, text, limit=10):
@@ -593,10 +688,16 @@ def verify_latest_entry(user_id, campaign_id, actor, text, limit=10):
     story_ref = campaign_ref.collection('story').order_by('timestamp', direction='DESCENDING').limit(limit)
     story_docs = story_ref.stream()
     
+    
+    entries_found = []
     # Check if our entry is among the latest entries
-    for doc in story_docs:
+    for i, doc in enumerate(story_docs):
         entry = doc.to_dict()
-        if entry.get('actor') == actor and entry.get('text') == text:
+        entry_actor = entry.get('actor', constants.ACTOR_UNKNOWN)
+        entry_text = entry.get('text', 'NO_TEXT')
+        
+        # Check for exact match
+        if entry_actor == actor and entry_text == text:
             return True
     
     return False

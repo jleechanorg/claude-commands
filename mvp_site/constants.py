@@ -9,6 +9,7 @@ import os
 # Used to identify the source of a story entry
 ACTOR_USER = 'user'
 ACTOR_GEMINI = 'gemini'
+ACTOR_UNKNOWN = 'NO_ACTOR'  # Default when actor is missing from data
 
 
 # --- INTERACTION MODES ---
@@ -18,6 +19,13 @@ MODE_GOD = 'god'
 
 # Mode switching detection phrases
 MODE_SWITCH_PHRASES = ['god mode', 'dm mode', 'gm mode', 'enter dm mode', 'enter god mode']
+
+
+# --- VERIFICATION ---
+# Write-then-read verification retry settings
+VERIFICATION_MAX_ATTEMPTS = 3
+VERIFICATION_INITIAL_DELAY = 0.1  # seconds
+VERIFICATION_DELAY_INCREMENT = 0.2  # seconds per attempt
 MODE_SWITCH_SIMPLE = ['god mode', 'god', 'dm mode', 'dm']
 
 

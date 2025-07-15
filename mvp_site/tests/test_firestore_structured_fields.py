@@ -18,6 +18,17 @@ from firestore_service import add_story_entry
 class TestFirestoreStructuredFields(unittest.TestCase):
     """Test structured fields handling in firestore_service"""
     
+    def setUp(self):
+        """Set up test environment"""
+        # Set mock services mode to skip verification for unit tests
+        os.environ['MOCK_SERVICES_MODE'] = 'true'
+    
+    def tearDown(self):
+        """Clean up test environment"""
+        # Clean up environment variable
+        if 'MOCK_SERVICES_MODE' in os.environ:
+            del os.environ['MOCK_SERVICES_MODE']
+    
     @patch('firestore_service.get_db')
     def test_add_story_entry_with_structured_fields(self, mock_get_db):
         """Test add_story_entry properly stores structured fields"""

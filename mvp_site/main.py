@@ -774,7 +774,9 @@ def create_app():
     def check_token(f):
         @wraps(f)
         def wrap(*args, **kwargs):
-            if app.config.get('TESTING') and request.headers.get(HEADER_TEST_BYPASS, '').lower() == 'true':
+            # Check for auth skip mode (for testing with real services)
+            auth_skip_enabled = (app.config.get('TESTING') or os.getenv('AUTH_SKIP_MODE') == 'true')
+            if auth_skip_enabled and request.headers.get(HEADER_TEST_BYPASS, '').lower() == 'true':
                 kwargs['user_id'] = request.headers.get(HEADER_TEST_USER_ID, DEFAULT_TEST_USER)
                 return f(*args, **kwargs)
             if not request.headers.get(HEADER_AUTH): return jsonify({KEY_MESSAGE: 'No token provided'}), 401
