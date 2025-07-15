@@ -779,3 +779,160 @@ def update_campaign_title(user_id, campaign_id, new_title):
     campaign_ref = db.collection('users').document(user_id).collection('campaigns').document(campaign_id)
     campaign_ref.update({'title': new_title})
     return True
+
+
+# --- HEADER COMPLIANCE TRACKING ---
+@log_exceptions
+def track_header_compliance(session_id, response_text, has_header):
+    """Track header compliance for a Claude response."""
+    if not session_id:
+        raise ValueError("Session ID is required for compliance tracking.")
+    
+    db = get_db()
+    compliance_ref = db.collection(constants.HEADER_COMPLIANCE_COLLECTION)
+    
+    compliance_data = {
+        'session_id': session_id,
+        'timestamp': firestore.SERVER_TIMESTAMP,
+        'has_header': has_header,
+        'response_preview': response_text[:100] if response_text else "",
+        'created_at': firestore.SERVER_TIMESTAMP
+    }
+    
+    try:
+        compliance_ref.add(compliance_data)
+        logging_util.info(f"Tracked header compliance for session {session_id}: has_header={has_header}")
+    except Exception as e:
+        logging_util.error(f"Failed to track header compliance for session {session_id}: {e}", exc_info=True)
+        raise
+
+
+@log_exceptions
+def get_session_compliance_rate(session_id):
+    """Calculate compliance rate for a session."""
+    if not session_id:
+        return 0.0
+    
+    db = get_db()
+    compliance_ref = db.collection(constants.HEADER_COMPLIANCE_COLLECTION)
+    
+    try:
+        # Get all compliance records for this session
+        docs = compliance_ref.where('session_id', '==', session_id).stream()
+        
+        total_responses = 0
+        compliant_responses = 0
+        
+        for doc in docs:
+            data = doc.to_dict()
+            total_responses += 1
+            if data.get('has_header', False):
+                compliant_responses += 1
+        
+        if total_responses == 0:
+            return 1.0  # No data yet, assume compliant
+        
+        compliance_rate = compliant_responses / total_responses
+        logging_util.info(f"Session {session_id} compliance rate: {compliance_rate:.2f} ({compliant_responses}/{total_responses})")
+        
+        return compliance_rate
+        
+    except Exception as e:
+        logging_util.error(f"Failed to calculate compliance rate for session {session_id}: {e}", exc_info=True)
+        return 0.0
+
+
+@log_exceptions
+def get_session_compliance_stats(session_id):
+    """Get detailed compliance statistics for a session."""
+    if not session_id:
+        return {
+            'total_responses': 0,
+            'compliant_responses': 0,
+            'compliance_rate': 0.0,
+            'recent_violations': []
+        }
+    
+    db = get_db()
+    compliance_ref = db.collection(constants.HEADER_COMPLIANCE_COLLECTION)
+    
+    try:
+        # Get all compliance records for this session, ordered by timestamp
+        docs = compliance_ref.where('session_id', '==', session_id).order_by('timestamp', direction=firestore.Query.DESCENDING).stream()
+        
+        total_responses = 0
+        compliant_responses = 0
+        recent_violations = []
+        
+        for doc in docs:
+            data = doc.to_dict()
+            total_responses += 1
+            
+            if data.get('has_header', False):
+                compliant_responses += 1
+            else:
+                # Track recent violations (last 5)
+                if len(recent_violations) < 5:
+                    recent_violations.append({
+                        'timestamp': data.get('timestamp'),
+                        'response_preview': data.get('response_preview', '')
+                    })
+        
+        compliance_rate = compliant_responses / total_responses if total_responses > 0 else 1.0
+        
+        return {
+            'total_responses': total_responses,
+            'compliant_responses': compliant_responses,
+            'compliance_rate': compliance_rate,
+            'recent_violations': recent_violations
+        }
+        
+    except Exception as e:
+        logging_util.error(f"Failed to get compliance stats for session {session_id}: {e}", exc_info=True)
+        return {
+            'total_responses': 0,
+            'compliant_responses': 0,
+            'compliance_rate': 0.0,
+            'recent_violations': []
+        }
+
+
+@log_exceptions
+def get_global_compliance_stats():
+    """Get global compliance statistics across all sessions."""
+    db = get_db()
+    compliance_ref = db.collection(constants.HEADER_COMPLIANCE_COLLECTION)
+    
+    try:
+        # Get all compliance records
+        docs = compliance_ref.stream()
+        
+        total_responses = 0
+        compliant_responses = 0
+        sessions = set()
+        
+        for doc in docs:
+            data = doc.to_dict()
+            total_responses += 1
+            sessions.add(data.get('session_id'))
+            
+            if data.get('has_header', False):
+                compliant_responses += 1
+        
+        compliance_rate = compliant_responses / total_responses if total_responses > 0 else 1.0
+        
+        return {
+            'total_responses': total_responses,
+            'compliant_responses': compliant_responses,
+            'compliance_rate': compliance_rate,
+            'unique_sessions': len(sessions)
+        }
+        
+    except Exception as e:
+        logging_util.error(f"Failed to get global compliance stats: {e}", exc_info=True)
+        return {
+            'total_responses': 0,
+            'compliant_responses': 0,
+            'compliance_rate': 0.0,
+            'unique_sessions': 0
+        }

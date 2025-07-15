@@ -408,5 +408,153 @@ player.class = "Warrior\""""
         mock_file_handler.assert_called_once_with(expected_log_path)
 
 
+class TestComplianceAPI(unittest.TestCase):
+    """Test header compliance API endpoints."""
+    
+    def setUp(self):
+        """Set up a test client for the Flask application."""
+        self.app = create_app()
+        self.app.config['TESTING'] = True
+        self.client = self.app.test_client()
+        self.test_headers = {
+            HEADER_TEST_BYPASS: 'true',
+            HEADER_TEST_USER_ID: DEFAULT_TEST_USER
+        }
+    
+    @patch('claude_service.get_compliance_status')
+    def test_get_compliance_status_success(self, mock_get_compliance_status):
+        """Test successful compliance status retrieval."""
+        # Mock the get_compliance_status function
+        mock_get_compliance_status.return_value = {
+            'compliance_rate': 0.85,
+            'is_compliant': True,
+            'total_responses': 20,
+            'compliant_responses': 17
+        }
+        
+        session_id = 'test-session-123'
+        response = self.client.get(
+            f'/api/compliance-status/{session_id}',
+            headers=self.test_headers
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertTrue(data['success'])
+        self.assertEqual(data['session_id'], session_id)
+        self.assertEqual(data['compliance_rate'], 0.85)
+        self.assertTrue(data['is_compliant'])
+        self.assertEqual(data['total_responses'], 20)
+        self.assertEqual(data['compliant_responses'], 17)
+        
+        # Verify the service was called correctly
+        mock_get_compliance_status.assert_called_once_with(session_id)
+    
+    @patch('claude_service.get_compliance_status')
+    def test_get_compliance_status_low_compliance(self, mock_get_compliance_status):
+        """Test compliance status with low compliance rate."""
+        # Mock low compliance
+        mock_get_compliance_status.return_value = {
+            'compliance_rate': 0.60,
+            'is_compliant': False,
+            'total_responses': 10,
+            'compliant_responses': 6
+        }
+        
+        session_id = 'test-session-456'
+        response = self.client.get(
+            f'/api/compliance-status/{session_id}',
+            headers=self.test_headers
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertTrue(data['success'])
+        self.assertEqual(data['compliance_rate'], 0.60)
+        self.assertFalse(data['is_compliant'])
+    
+    def test_get_compliance_status_unauthorized(self):
+        """Test compliance status endpoint without auth."""
+        session_id = 'test-session-789'
+        response = self.client.get(f'/api/compliance-status/{session_id}')
+        
+        # Should return 401 without auth headers in test mode
+        self.assertEqual(response.status_code, 401)
+    
+    @patch('claude_service.get_compliance_status')
+    def test_get_compliance_status_error(self, mock_get_compliance_status):
+        """Test compliance status endpoint error handling."""
+        # Mock an error
+        mock_get_compliance_status.side_effect = Exception("Database connection failed")
+        
+        session_id = 'test-session-error'
+        response = self.client.get(
+            f'/api/compliance-status/{session_id}',
+            headers=self.test_headers
+        )
+        
+        self.assertEqual(response.status_code, 500)
+        data = json.loads(response.data)
+        self.assertIn('error', data)
+        self.assertEqual(data['error'], 'Failed to get compliance status')
+        self.assertIn('Database connection failed', data['details'])
+    
+    @patch('claude_service.get_compliance_status')
+    def test_get_compliance_status_different_sessions(self, mock_get_compliance_status):
+        """Test compliance status for different sessions."""
+        # Mock different compliance rates for different sessions
+        def mock_get_status(session_id):
+            if session_id == 'high-compliance-session':
+                return {
+                    'compliance_rate': 0.95,
+                    'is_compliant': True,
+                    'total_responses': 40,
+                    'compliant_responses': 38
+                }
+            elif session_id == 'low-compliance-session':
+                return {
+                    'compliance_rate': 0.50,
+                    'is_compliant': False,
+                    'total_responses': 10,
+                    'compliant_responses': 5
+                }
+            else:
+                return {
+                    'compliance_rate': 0.0,
+                    'is_compliant': False,
+                    'total_responses': 0,
+                    'compliant_responses': 0
+                }
+        
+        mock_get_compliance_status.side_effect = mock_get_status
+        
+        # Test high compliance session
+        response = self.client.get(
+            '/api/compliance-status/high-compliance-session',
+            headers=self.test_headers
+        )
+        data = json.loads(response.data)
+        self.assertEqual(data['compliance_rate'], 0.95)
+        self.assertTrue(data['is_compliant'])
+        
+        # Test low compliance session
+        response = self.client.get(
+            '/api/compliance-status/low-compliance-session',
+            headers=self.test_headers
+        )
+        data = json.loads(response.data)
+        self.assertEqual(data['compliance_rate'], 0.50)
+        self.assertFalse(data['is_compliant'])
+        
+        # Test new session
+        response = self.client.get(
+            '/api/compliance-status/new-session',
+            headers=self.test_headers
+        )
+        data = json.loads(response.data)
+        self.assertEqual(data['compliance_rate'], 0.0)
+        self.assertEqual(data['total_responses'], 0)
+
+
 if __name__ == '__main__':
     unittest.main() 

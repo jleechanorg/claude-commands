@@ -580,5 +580,140 @@ class TestStructuredFieldsSaving(unittest.TestCase):
 # Write-then-read verification is always enabled for data integrity.
 
 
+class TestHeaderComplianceTracking(unittest.TestCase):
+    """Test header compliance tracking functionality."""
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        self.mock_db = MagicMock()
+        self.mock_collection = MagicMock()
+        self.mock_db.collection.return_value = self.mock_collection
+        
+    @patch('firestore_service.get_db')
+    def test_track_header_compliance_success(self, mock_get_db):
+        """Test successful compliance tracking."""
+        mock_get_db.return_value = self.mock_db
+        
+        session_id = 'test_session_123'
+        response_text = '[Local: main | Remote: origin/main | PR: none]\nHello world'
+        has_header = True
+        
+        # Call the function
+        firestore_service.track_header_compliance(session_id, response_text, has_header)
+        
+        # Verify database operations
+        self.mock_db.collection.assert_called_once_with(constants.HEADER_COMPLIANCE_COLLECTION)
+        self.mock_collection.add.assert_called_once()
+        
+        # Verify the data structure
+        call_args = self.mock_collection.add.call_args[0][0]
+        self.assertEqual(call_args['session_id'], session_id)
+        self.assertEqual(call_args['has_header'], has_header)
+        self.assertEqual(call_args['response_preview'], response_text[:100])
+        
+    @patch('firestore_service.get_db')
+    def test_track_header_compliance_missing_session(self, mock_get_db):
+        """Test error handling for missing session ID."""
+        with self.assertRaises(ValueError):
+            firestore_service.track_header_compliance('', 'response', True)
+            
+    @patch('firestore_service.get_db')
+    def test_get_session_compliance_rate_success(self, mock_get_db):
+        """Test successful compliance rate calculation."""
+        mock_get_db.return_value = self.mock_db
+        
+        # Mock compliance records
+        mock_docs = [
+            MagicMock(to_dict=lambda: {'has_header': True}),
+            MagicMock(to_dict=lambda: {'has_header': False}),
+            MagicMock(to_dict=lambda: {'has_header': True})
+        ]
+        self.mock_collection.where.return_value.stream.return_value = mock_docs
+        
+        session_id = 'test_session_123'
+        
+        # Call the function
+        result = firestore_service.get_session_compliance_rate(session_id)
+        
+        # Verify result (2 out of 3 compliant = 0.667)
+        self.assertAlmostEqual(result, 0.667, places=2)
+        
+        # Verify database query
+        self.mock_collection.where.assert_called_once_with('session_id', '==', session_id)
+        
+    @patch('firestore_service.get_db')
+    def test_get_session_compliance_rate_no_data(self, mock_get_db):
+        """Test compliance rate when no data exists."""
+        mock_get_db.return_value = self.mock_db
+        self.mock_collection.where.return_value.stream.return_value = []
+        
+        result = firestore_service.get_session_compliance_rate('nonexistent_session')
+        
+        # Should return 1.0 (100%) when no data exists
+        self.assertEqual(result, 1.0)
+        
+    @patch('firestore_service.get_db')
+    def test_get_session_compliance_stats_success(self, mock_get_db):
+        """Test successful compliance statistics retrieval."""
+        mock_get_db.return_value = self.mock_db
+        
+        # Mock compliance records with timestamps
+        mock_docs = [
+            MagicMock(to_dict=lambda: {
+                'has_header': True,
+                'timestamp': 'mock_timestamp_1',
+                'response_preview': 'Response 1'
+            }),
+            MagicMock(to_dict=lambda: {
+                'has_header': False,
+                'timestamp': 'mock_timestamp_2',
+                'response_preview': 'Response 2'
+            })
+        ]
+        self.mock_collection.where.return_value.order_by.return_value.stream.return_value = mock_docs
+        
+        session_id = 'test_session_123'
+        
+        # Call the function
+        result = firestore_service.get_session_compliance_stats(session_id)
+        
+        # Verify result structure
+        self.assertEqual(result['total_responses'], 2)
+        self.assertEqual(result['compliant_responses'], 1)
+        self.assertEqual(result['compliance_rate'], 0.5)
+        self.assertEqual(len(result['recent_violations']), 1)
+        
+    @patch('firestore_service.get_db')
+    def test_get_global_compliance_stats_success(self, mock_get_db):
+        """Test global compliance statistics retrieval."""
+        mock_get_db.return_value = self.mock_db
+        
+        # Mock compliance records from different sessions
+        mock_docs = [
+            MagicMock(to_dict=lambda: {
+                'has_header': True,
+                'session_id': 'session_1'
+            }),
+            MagicMock(to_dict=lambda: {
+                'has_header': False,
+                'session_id': 'session_1'
+            }),
+            MagicMock(to_dict=lambda: {
+                'has_header': True,
+                'session_id': 'session_2'
+            })
+        ]
+        self.mock_collection.stream.return_value = mock_docs
+        
+        # Call the function
+        result = firestore_service.get_global_compliance_stats()
+        
+        # Verify result structure
+        self.assertEqual(result['total_responses'], 3)
+        self.assertEqual(result['compliant_responses'], 2)
+        self.assertAlmostEqual(result['compliance_rate'], 0.667, places=2)
+        self.assertEqual(result['unique_sessions'], 2)
+
+
 if __name__ == '__main__':
     unittest.main()

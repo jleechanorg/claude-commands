@@ -1117,6 +1117,80 @@ def create_app():
             traceback.print_exc()
             return jsonify({KEY_ERROR: 'An unexpected error occurred during export.', KEY_DETAILS: str(e)}), 500
 
+    # --- Header Compliance Tracking ---
+    @app.route('/api/track-compliance', methods=['POST'])
+    @check_token
+    def track_compliance(user_id):
+        """Track header compliance for a Claude response."""
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({KEY_ERROR: 'No data provided'}), 400
+            
+            session_id = data.get('session_id')
+            response_text = data.get('response_text', '')
+            has_header = data.get('has_header', False)
+            
+            if not session_id:
+                return jsonify({KEY_ERROR: 'Session ID is required'}), 400
+            
+            # Import claude_service here to avoid circular imports
+            from claude_service import process_claude_response
+            
+            # Process the response and track compliance
+            result = process_claude_response(session_id, response_text)
+            
+            return jsonify({
+                'success': True,
+                'compliance_rate': result['compliance_rate'],
+                'has_header': result['has_header'],
+                'total_responses': result.get('total_responses', 0)
+            })
+            
+        except Exception as e:
+            logging_util.error(f"Error tracking compliance: {e}")
+            return jsonify({KEY_ERROR: 'Failed to track compliance', KEY_DETAILS: str(e)}), 500
+
+    @app.route('/api/compliance-status/<session_id>', methods=['GET'])
+    @check_token
+    def get_compliance_status(user_id, session_id):
+        """Get compliance status for a session."""
+        try:
+            from claude_service import get_compliance_status
+            
+            status = get_compliance_status(session_id)
+            
+            return jsonify({
+                'success': True,
+                'session_id': session_id,
+                'compliance_rate': status['compliance_rate'],
+                'is_compliant': status['is_compliant'],
+                'total_responses': status['total_responses'],
+                'compliant_responses': status['compliant_responses']
+            })
+            
+        except Exception as e:
+            logging_util.error(f"Error getting compliance status: {e}")
+            return jsonify({KEY_ERROR: 'Failed to get compliance status', KEY_DETAILS: str(e)}), 500
+
+    @app.route('/api/compliance-stats', methods=['GET'])
+    @check_token
+    def get_global_compliance_stats(user_id):
+        """Get global compliance statistics."""
+        try:
+            from firestore_service import get_global_compliance_stats
+            
+            stats = get_global_compliance_stats()
+            
+            return jsonify({
+                'success': True,
+                'global_stats': stats
+            })
+            
+        except Exception as e:
+            logging_util.error(f"Error getting global compliance stats: {e}")
+            return jsonify({KEY_ERROR: 'Failed to get global compliance stats', KEY_DETAILS: str(e)}), 500
+
     # --- Frontend Serving ---
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
