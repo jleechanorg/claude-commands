@@ -23,6 +23,21 @@ import main
 class TestGameState(unittest.TestCase):
     """Test cases for the GameState class."""
     
+    def test_validate_checkpoint_consistency_dict_location_bug(self):
+        """Test that validate_checkpoint_consistency handles dict location objects correctly."""
+        # Create a GameState with dict location (reproduces bug)
+        gs = GameState()
+        gs.world_data = {
+            'current_location': {'name': 'Forest', 'type': 'outdoor'},  # Dict, not string
+            'current_location_name': None
+        }
+        
+        # This should not raise AttributeError
+        discrepancies = gs.validate_checkpoint_consistency("The character is in the forest")
+        
+        # Should handle dict gracefully and not crash
+        self.assertIsInstance(discrepancies, list)
+    
     def test_debug_mode_default_true(self):
         """Test that debug_mode defaults to True per PR changes."""
         gs = GameState()

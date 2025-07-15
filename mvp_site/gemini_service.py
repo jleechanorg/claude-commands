@@ -98,6 +98,25 @@ MAX_TOKENS = 50000
 TEMPERATURE = 0.9
 TARGET_WORD_COUNT = 300
 # Add a safety margin for JSON responses
+
+# Fallback content constants to avoid code duplication
+FALLBACK_PLANNING_BLOCK_VALIDATION = {
+    "thinking": "The AI response was incomplete. Here are some default options:",
+    "choices": {
+        "Continue": "Continue with your current course of action.",
+        "Explore": "Explore your surroundings.",
+        "Other": "Describe a different action you'd like to take."
+    }
+}
+
+FALLBACK_PLANNING_BLOCK_EXCEPTION = {
+    "thinking": "Failed to generate planning block. Here are some default options:",
+    "choices": {
+        "Continue": "Continue with your current course of action.",
+        "Explore": "Explore your surroundings.",
+        "Other": "Describe a different action you'd like to take."
+    }
+}
 JSON_MODE_MAX_TOKENS = 50000  # Reduced limit when using JSON mode for reliability
 MAX_INPUT_TOKENS = 750000 
 SAFE_CHAR_LIMIT = MAX_INPUT_TOKENS * 4
@@ -1032,33 +1051,69 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
 # Note: _is_in_character_creation function removed as we now include planning blocks
 # during character creation for better interactivity
 
-def _validate_and_enforce_planning_block(response_text, user_input, game_state, chosen_model, system_instruction, structured_response=None):
+def _log_api_response_safely(response_text, context="", max_length=400):
     """
-    Validates that a story mode response ends with a planning block.
-    If missing, asks the LLM to generate an appropriate planning block.
+    Log API response content safely with truncation and redaction.
     
     Args:
-        response_text: The AI's response text
+        response_text: The response content to log
+        context: Context description for the log
+        max_length: Maximum length to log (default 400 chars)
+    """
+    if not response_text:
+        logging_util.warning(f"🔍 API_RESPONSE_DEBUG ({context}): Response is empty or None")
+        return
+    
+    # Convert to string safely
+    response_str = str(response_text)
+    
+    # Log basic info
+    logging_util.info(f"🔍 API_RESPONSE_DEBUG ({context}): Length: {len(response_str)} chars")
+    
+    # Log truncated content for debugging
+    if len(response_str) <= max_length:
+        logging_util.info(f"🔍 API_RESPONSE_DEBUG ({context}): Content: {response_str}")
+    else:
+        half_length = max_length // 2
+        start_content = response_str[:half_length]
+        end_content = response_str[-half_length:]
+        logging_util.info(f"🔍 API_RESPONSE_DEBUG ({context}): Content: {start_content}...[{len(response_str) - max_length} chars omitted]...{end_content}")
+
+
+def _validate_and_enforce_planning_block(response_text, user_input, game_state, chosen_model, system_instruction, structured_response=None):
+    """
+    CRITICAL: Validates that structured_response.planning_block exists and is valid JSON.
+    The structured_response.planning_block field is the PRIMARY and AUTHORITATIVE source.
+    
+    If missing or invalid, asks the LLM to generate an appropriate planning block.
+    
+    Args:
+        response_text: The AI's response text (for context only)
         user_input: The user's input to determine if deep think block is needed
         game_state: Current game state for context
         chosen_model: Model to use for generation
         system_instruction: System instruction for the LLM
-        structured_response: Parsed JSON response object (optional)
+        structured_response: NarrativeResponse object to update (REQUIRED)
         
     Returns:
-        str: Response text with planning block ensured
+        str: Response text with planning block added (for backward compatibility only)
     """
+    # Handle None response_text gracefully
+    if response_text is None:
+        logging_util.warning("🔍 VALIDATION_INPUT: Response text is None, returning empty string")
+        return ""
+    
     # Note: We now INCLUDE planning blocks during character creation for interactivity
     # The previous behavior of skipping them has been removed to support
     # interactive character creation with player choices
     
     # Skip planning block if user is switching to god/dm mode
-    if any(phrase in user_input.lower() for phrase in constants.MODE_SWITCH_PHRASES):
+    if user_input and any(phrase in user_input.lower() for phrase in constants.MODE_SWITCH_PHRASES):
         logging_util.info("User switching to god/dm mode - skipping planning block")
         return response_text
     
     # Skip planning block if AI response indicates mode switch
-    if "[Mode: DM MODE]" in response_text or "[Mode: GOD MODE]" in response_text:
+    if response_text and ("[Mode: DM MODE]" in response_text or "[Mode: GOD MODE]" in response_text):
         logging_util.info("Response indicates mode switch - skipping planning block")
         return response_text
     
@@ -1112,12 +1167,16 @@ Full narrative context:
 {response_text}"""
     else:
         # Check if this is character creation approval step
+        response_lower = response_text.lower()
         is_character_approval = (
-            "[CHARACTER CREATION" in response_text and 
-            "CHARACTER SHEET" in response_text and
-            ("Would you like to play as this character" in response_text or
-             "What is your choice?" in response_text or
-             "approve this character" in response_text.lower())
+            "[character creation" in response_lower and 
+            "character sheet" in response_lower and
+            ("would you like to play as this character" in response_lower or
+             "what is your choice?" in response_lower or
+             "approve this character" in response_lower or
+             # Handle truncated responses that contain character creation elements
+             ("**why this character:**" in response_lower and 
+              ("ability scores:" in response_lower or "equipment:" in response_lower or "background:" in response_lower)))
         )
         
         if is_character_approval:
@@ -1145,6 +1204,9 @@ Full narrative context:
     
     # Generate planning block using LLM
     try:
+        logging_util.info(f"🔍 PLANNING_BLOCK_REGENERATION: Sending prompt to API")
+        logging_util.info(f"🔍 PLANNING_BLOCK_PROMPT: {planning_prompt[:200]}...")
+        
         planning_response = _call_gemini_api(
             [planning_prompt], 
             chosen_model, 
@@ -1153,56 +1215,111 @@ Full narrative context:
         )
         raw_planning_response = _get_text_from_response(planning_response)
         
+        # CRITICAL LOGGING: Log what we actually received from API
+        _log_api_response_safely(raw_planning_response, "PLANNING_BLOCK_RAW_RESPONSE")
+        
         # Use centralized parsing for planning block
+        logging_util.info(f"🔍 PLANNING_BLOCK_PARSING: Attempting to parse response")
         planning_text, structured_planning_response = _parse_gemini_response(raw_planning_response, context="planning_block")
+        
+        # Log parsing results
+        logging_util.info(f"🔍 PLANNING_BLOCK_PARSING_RESULT: planning_text length: {len(planning_text) if planning_text else 0}")
+        logging_util.info(f"🔍 PLANNING_BLOCK_PARSING_RESULT: structured_response exists: {structured_planning_response is not None}")
         
         # If we got a structured response with planning_block field, use that
         if (structured_planning_response and 
             hasattr(structured_planning_response, 'planning_block') and 
             structured_planning_response.planning_block):
             planning_block = structured_planning_response.planning_block
+            logging_util.info(f"🔍 PLANNING_BLOCK_SOURCE: Using structured_response.planning_block (type: {type(planning_block)})")
+            _log_api_response_safely(str(planning_block), "PLANNING_BLOCK_STRUCTURED_CONTENT")
         else:
             # Otherwise use the raw text
             planning_block = planning_text
+            logging_util.info(f"🔍 PLANNING_BLOCK_SOURCE: Using raw planning_text (length: {len(planning_block) if planning_block else 0})")
+            _log_api_response_safely(planning_block, "PLANNING_BLOCK_RAW_CONTENT")
         
-        # Ensure it starts with newlines and the header
-        if not planning_block.startswith("\n\n--- PLANNING BLOCK ---"):
-            planning_block = "\n\n" + planning_block.strip()
+        # Handle both string and dict planning blocks
+        if isinstance(planning_block, str):
+            # Ensure it starts with newlines and the header for backward compatibility
+            if not planning_block.startswith("\n\n--- PLANNING BLOCK ---"):
+                planning_block = "\n\n" + planning_block.strip()
         
         # PRIMARY: Update structured_response.planning_block (this is what frontend uses)
         if structured_response and isinstance(structured_response, NarrativeResponse):
-            # Use the actual planning block content we extracted
-            clean_planning_block = planning_block.strip()
-            # Remove the header if present
-            if clean_planning_block.startswith("--- PLANNING BLOCK ---"):
-                clean_planning_block = clean_planning_block.replace("--- PLANNING BLOCK ---", "").strip()
-            
-            if clean_planning_block:
-                structured_response.planning_block = clean_planning_block
-                logging_util.info(f"Updated structured_response.planning_block with {len(clean_planning_block)} characters")
-            else:
-                # Fallback content for empty generation
-                structured_response.planning_block = "What would you like to do next?\n1. **[Continue]:** Continue with your current course of action.\n2. **[Explore]:** Explore your surroundings.\n3. **[Other]:** Describe a different action you'd like to take."
-                logging_util.info("Used fallback content for structured_response.planning_block")
+            if isinstance(planning_block, dict):
+                # Already in JSON format
+                structured_response.planning_block = planning_block
+                logging_util.info("Updated structured_response.planning_block with JSON content")
+            elif isinstance(planning_block, str):
+                # Use the actual planning block content we extracted
+                clean_planning_block = planning_block.strip()
+                # Remove the header if present
+                if clean_planning_block.startswith("--- PLANNING BLOCK ---"):
+                    clean_planning_block = clean_planning_block.replace("--- PLANNING BLOCK ---", "").strip()
+                
+                if clean_planning_block:
+                    # Try to parse the LLM-generated content as structured choices
+                    logging_util.info(f"🔍 VALIDATION_SUCCESS: String planning block passed validation (length: {len(clean_planning_block)})")
+                    
+                    # Attempt to parse the string content as structured choices
+                    try:
+                        # Try to parse as JSON first
+                        parsed_content = json.loads(clean_planning_block)
+                        if isinstance(parsed_content, dict) and "choices" in parsed_content:
+                            structured_response.planning_block = parsed_content
+                            logging_util.info("Updated structured_response.planning_block with parsed JSON content")
+                        else:
+                            # If it's not structured JSON, treat as raw content but preserve it
+                            structured_response.planning_block = {
+                                "thinking": "Generated planning block based on current situation:",
+                                "raw_content": clean_planning_block
+                            }
+                            logging_util.info("Updated structured_response.planning_block with raw LLM content preserved")
+                    except (json.JSONDecodeError, ValueError):
+                        # If JSON parsing fails, preserve the raw content
+                        structured_response.planning_block = {
+                            "thinking": "Generated planning block based on current situation:",
+                            "raw_content": clean_planning_block
+                        }
+                        logging_util.info("Updated structured_response.planning_block with raw LLM content (JSON parse failed)")
+                else:
+                    # Log validation failure details
+                    logging_util.warning(f"🔍 VALIDATION_FAILURE: String planning block failed validation")
+                    logging_util.warning(f"🔍 VALIDATION_FAILURE: Original planning_block type: {type(planning_block)}")
+                    logging_util.warning(f"🔍 VALIDATION_FAILURE: Original planning_block content: {repr(planning_block)}")
+                    logging_util.warning(f"🔍 VALIDATION_FAILURE: clean_planning_block after processing: {repr(clean_planning_block)}")
+                    
+                    # Fallback content for empty generation - use JSON format
+                    structured_response.planning_block = FALLBACK_PLANNING_BLOCK_VALIDATION
+                    logging_util.info("Used fallback JSON content for structured_response.planning_block")
         
         # SECONDARY: Update response_text for backward compatibility only
-        if not planning_block.startswith("\n\n--- PLANNING BLOCK ---"):
-            planning_block = "\n\n--- PLANNING BLOCK ---\n" + planning_block.strip()
-        response_text = response_text + planning_block
+        if isinstance(planning_block, str):
+            if not planning_block.startswith("\n\n--- PLANNING BLOCK ---"):
+                planning_block = "\n\n--- PLANNING BLOCK ---\n" + planning_block.strip()
+            response_text = response_text + planning_block
         
         logging_util.info(f"Added LLM-generated {'deep think' if needs_deep_think else 'standard'} planning block")
         
     except Exception as e:
-        logging_util.error(f"Failed to generate planning block: {e}")
+        logging_util.error(f"🔍 PLANNING_BLOCK_EXCEPTION: Failed to generate planning block: {e}")
+        logging_util.error(f"🔍 PLANNING_BLOCK_EXCEPTION: Exception type: {type(e)}")
+        logging_util.error(f"🔍 PLANNING_BLOCK_EXCEPTION: Exception details: {repr(e)}")
         
-        # PRIMARY: Update structured_response.planning_block with fallback
-        fallback_content = "What would you like to do next?\n1. **[Continue]:** Continue with your current course of action.\n2. **[Explore]:** Explore your surroundings.\n3. **[Other]:** Describe a different action you'd like to take."
+        # Log traceback for debugging
+        import traceback
+        logging_util.error(f"🔍 PLANNING_BLOCK_EXCEPTION: Traceback: {traceback.format_exc()}")
+        
+        # PRIMARY: Update structured_response.planning_block with fallback in JSON format
+        fallback_content = FALLBACK_PLANNING_BLOCK_EXCEPTION
         if structured_response and isinstance(structured_response, NarrativeResponse):
             structured_response.planning_block = fallback_content
-            logging_util.info("Updated structured_response.planning_block with fallback content")
+            logging_util.info("🔍 FALLBACK_USED: Updated structured_response.planning_block with fallback JSON content due to exception")
         
         # SECONDARY: Update response_text for backward compatibility
-        fallback_block = "\n\n--- PLANNING BLOCK ---\n" + fallback_content
+        fallback_text = "What would you like to do next?\n1. **[Continue]:** Continue with your current course of action.\n2. **[Explore]:** Explore your surroundings.\n3. **[Other]:** Describe a different action you'd like to take."
+        fallback_block = "\n\n--- PLANNING BLOCK ---\n" + fallback_text
         response_text = response_text + fallback_block
     
     return response_text

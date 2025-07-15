@@ -122,8 +122,15 @@ class GameState:
         # Check location consistency
         current_location = self.world_data.get('current_location_name') or self.world_data.get('current_location')
         if current_location:
-            # Check for explicit location mismatches
-            location_lower = current_location.lower()
+            # Handle dict location objects by extracting name
+            if isinstance(current_location, dict):
+                current_location = current_location.get('name', '')
+            
+            # Ensure we have a string before calling lower()
+            if isinstance(current_location, str):
+                location_lower = current_location.lower()
+            else:
+                location_lower = str(current_location).lower()
             
             # If narrative mentions being in a specific place that doesn't match state
             if 'forest' in narrative_lower and 'tavern' in location_lower:

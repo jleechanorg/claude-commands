@@ -79,9 +79,22 @@ class RobustJSONParser:
         
         # Strategy 4: Extract fields individually using regex
         try:
+            # Log the malformed JSON content for debugging
+            logging_util.warning(f"🔍 MALFORMED_JSON_DETECTED: Attempting field extraction from malformed JSON")
+            logging_util.debug(f"🔍 MALFORMED_JSON_CONTENT: Length: {len(text)} chars")
+            
+            # Log sample of malformed content (safely truncated)
+            if len(text) <= 800:
+                logging_util.debug(f"🔍 MALFORMED_JSON_CONTENT: {text}")
+            else:
+                start_content = text[:400]
+                end_content = text[-400:]
+                logging_util.debug(f"🔍 MALFORMED_JSON_CONTENT: {start_content}...[{len(text) - 800} chars omitted]...{end_content}")
+                
             extracted = RobustJSONParser._extract_fields(text)
             if extracted:
                 logging_util.info("Successfully extracted fields from malformed JSON")
+                logging_util.info(f"🔍 EXTRACTED_FIELDS: {list(extracted.keys())}")
                 return extracted, True
         except (ValueError, KeyError, TypeError, AttributeError) as e:
             logging_util.debug(f"Field extraction failed: {e}")
