@@ -106,17 +106,50 @@ show_popup() {
     powershell.exe -Command "[System.Windows.Forms.MessageBox]::Show('$message', 'Claude API Critical Alert', 'OK', 'Warning')" >/dev/null 2>&1 &
 }
 
+# Check for bashrc alias setup
+check_bashrc_alias() {
+    local git_root=$(git rev-parse --show-toplevel 2>/dev/null)
+    local script_path="$git_root/claude_command_scripts/git-header.sh"
+    
+    # Check if alias exists in bashrc
+    if ! grep -q "alias.*git-header" ~/.bashrc 2>/dev/null; then
+        echo "⚠️  WARNING: git-header alias not found in ~/.bashrc"
+        echo "   Add this line to your ~/.bashrc for reliable access:"
+        echo "   alias git-header='bash $script_path'"
+        echo "   Then run: source ~/.bashrc"
+        echo ""
+    fi
+}
+
+# Run bashrc check on every execution
+check_bashrc_alias
+
 # Get Claude API rate limit info if requested
 if [ "$1" = "--with-api" ] || [ "$1" = "--monitor" ]; then
+    # Check for API key in environment
+    if [ -z "$CLAUDE_API_KEY" ]; then
+        echo "[Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]"
+        echo "[API: Error - CLAUDE_API_KEY environment variable not set]"
+        exit 0
+    fi
+    
     response=$(curl -s -D /tmp/claude_headers.tmp https://api.anthropic.com/v1/messages \
-      --header "x-api-key: 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" \
+      --header "x-api-key: $CLAUDE_API_KEY" \
       --header "anthropic-version: 2023-06-01" \
       --header "content-type: application/json" \
       --data '{
-        "model": "claude-opus-4-20250514",
-        "max_tokens": 50,
-        "messages": [{"role": "user", "content": "ping"}]
+        "model": "claude-3-opus-20240229",
+        "max_tokens": 10,
+        "messages": [{"role": "user", "content": "test"}]
       }' 2>/dev/null)
+    
+    # Check for authentication errors
+    if echo "$response" | grep -q "authentication_error"; then
+        echo "[Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]"
+        echo "[API: Authentication failed - Get valid API key from console.anthropic.com]"
+        rm -f /tmp/claude_headers.tmp
+        exit 0
+    fi
     
     if [ -f /tmp/claude_headers.tmp ]; then
         requests_reset=$(grep -i 'anthropic-ratelimit-requests-reset:' /tmp/claude_headers.tmp | cut -d' ' -f2- | tr -d '\r')
