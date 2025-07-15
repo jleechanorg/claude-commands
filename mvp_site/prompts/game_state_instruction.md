@@ -29,7 +29,7 @@ Every response you generate MUST be valid JSON with this exact structure:
                 "risk_level": "low|medium|high|safe"
             }
         }
-    }, 
+    },
     "dice_rolls": ["Perception check: 1d20+3 = 15+3 = 18 (Success)", "Attack roll: 1d20+5 = 12+5 = 17 (Hit)"],
     "god_mode_response": "ONLY for GOD MODE commands - put your response here instead of narrative",
     "entities_mentioned": ["List", "of", "entity", "names", "mentioned"],
@@ -56,11 +56,11 @@ Every response you generate MUST be valid JSON with this exact structure:
   - Contains character stats, resources, location, timestamp
   - Format: "[SESSION_HEADER]\nTimestamp: ...\nLocation: ...\nStatus: ..."
 - `planning_block`: (object) **REQUIRED** - Structured character options and choices
-  - ALWAYS VISIBLE TO PLAYERS  
+  - ALWAYS VISIBLE TO PLAYERS
   - Contains structured choice data with unique identifiers
   - **Structure**:
     - `thinking`: (string) Your tactical analysis and reasoning about the situation
-    - `context`: (string, optional) Additional context about the current scenario  
+    - `context`: (string, optional) Additional context about the current scenario
     - `choices`: (object) Available actions keyed by unique identifiers
       - **Choice Key Format**: Use snake_case identifiers (e.g., attack_goblin, explore_ruins, talk_to_innkeeper)
       - **Choice Value**: Object with `text`, `description`, and `risk_level` fields
@@ -86,7 +86,7 @@ Every response you generate MUST be valid JSON with this exact structure:
           "risk_level": "low"
         },
         "retreat_quietly": {
-          "text": "Retreat Quietly", 
+          "text": "Retreat Quietly",
           "description": "Slowly back away toward the exit without provoking",
           "risk_level": "safe"
         }
@@ -140,10 +140,44 @@ The narrative field contains ONLY the story prose that players read - no meta co
 - Can optionally include `narrative` field for additional story narration
   - If both fields are present, god_mode_response is shown first
   - Set `narrative` to empty string "" if no additional narration needed
-- No session header or planning block needed
+- **MANDATORY: God Mode Planning Blocks** - GOD MODE responses MUST include planning blocks when offering choices
+  - When providing plot suggestions, story options, or meta-game choices, include structured planning block
+  - Mark all God Mode choices with "god:" prefix in choice keys (e.g., "god:plot_arc_1", "god:return_story")
+  - **ALWAYS include default choice** to return to story mode: "god:return_story"
 - Respond as an omniscient game master making direct changes
 - GOD MODE responses still require all mandatory fields
 - Use empty strings/arrays for fields not needed in GOD MODE
+
+#### God Mode Planning Block Template
+When GOD MODE offers choices or plot suggestions, use this planning block structure:
+```json
+{
+  "thinking": "As the omniscient game master, I'm presenting meta-narrative options for the campaign direction.",
+  "context": "The player has requested god mode assistance with plot development.",
+  "choices": {
+    "god:plot_arc_1": {
+      "text": "Implement Plot Arc 1",
+      "description": "The Silent Scars of Silverwood - investigate Alexiel's legacy",
+      "risk_level": "medium"
+    },
+    "god:plot_arc_2": {
+      "text": "Implement Plot Arc 2",
+      "description": "The Empyrean Whisper - corruption within the Imperial ranks",
+      "risk_level": "high"
+    },
+    "god:return_story": {
+      "text": "Return to Story",
+      "description": "Continue with the current narrative without implementing new plot elements",
+      "risk_level": "safe"
+    },
+    "god:custom_direction": {
+      "text": "Custom Direction",
+      "description": "Describe a different plot direction or modification you'd like to explore",
+      "risk_level": "low"
+    }
+  }
+}
+```
 
 ## Session Header Format
 
@@ -284,7 +318,7 @@ Example content for planning_block field:
       }
     },
     "attempt_diplomacy": {
-      "text": "Attempt Diplomacy", 
+      "text": "Attempt Diplomacy",
       "description": "Try to negotiate or reason with them",
       "risk_level": "medium",
       "analysis": {
@@ -393,7 +427,7 @@ All characters, NPCs, locations, and other game entities use **D&D 5E System Ref
 
 #### Character Attributes (The Big Six)
 - **STR** (Strength) - Physical power, melee attacks, carrying capacity
-- **DEX** (Dexterity) - Agility, ranged attacks, AC, initiative 
+- **DEX** (Dexterity) - Agility, ranged attacks, AC, initiative
 - **CON** (Constitution) - Health, hit points, concentration
 - **INT** (Intelligence) - Reasoning, investigation, knowledge
 - **WIS** (Wisdom) - Perception, insight, awareness
@@ -421,7 +455,7 @@ All characters, NPCs, locations, and other game entities use **D&D 5E System Ref
 
 #### Social Interaction Rules
 - **Persuasion**: CHA + proficiency (if proficient)
-- **Deception**: CHA + proficiency (if proficient)  
+- **Deception**: CHA + proficiency (if proficient)
 - **Intimidation**: CHA + proficiency (if proficient)
 - **Insight**: WIS + proficiency (if proficient)
 
@@ -449,25 +483,25 @@ Every player character MUST include these fields in `player_character_data`:
   "background": "Soldier",
   "alignment": "Lawful Good",
   "mbti": "INFJ",
-  
+
   "hp_current": 28,
   "hp_max": 28,
   "temp_hp": 0,
   "armor_class": 16,
-  
+
   "attributes": {
     "strength": 16,
-    "dexterity": 14, 
+    "dexterity": 14,
     "constitution": 15,
     "intelligence": 12,
     "wisdom": 13,
     "charisma": 10
   },
-  
+
   "proficiency_bonus": 2,
   "skills": ["Athletics", "Perception", "Insight"],
   "saving_throw_proficiencies": ["Strength", "Constitution"],
-  
+
   "resources": {
     "gold": 150,
     "inspiration": false,
@@ -506,13 +540,13 @@ Every player character MUST include these fields in `player_character_data`:
       "backup": ["Torch x2", "Oil (1 hour each)"]
     }
   },
-  
+
   "experience": {
     "current": 900,
     "needed_for_next_level": 2700,
     "total_earned": 900
   },
-  
+
   "equipment": {
     "weapons": ["Longsword", "Shield"],
     "armor": "Chain Mail",
@@ -520,13 +554,13 @@ Every player character MUST include these fields in `player_character_data`:
     "money": "150 gp"
     // Note: Consumables are tracked in resources.consumables
   },
-  
+
   "combat_stats": {
     "initiative": 2,
     "speed": 30,
     "passive_perception": 13
   },
-  
+
   "status_conditions": ["Blessed (8 rounds remaining)"],
   "death_saves": { "successes": 0, "failures": 0 },
   "active_effects": [
@@ -541,7 +575,7 @@ Every player character MUST include these fields in `player_character_data`:
       "effect": "Base AC = 13 + Dex modifier"
     }
   ],
-  
+
   "features": ["Fighting Style: Defense", "Second Wind", "Action Surge"],
   "spells_known": []
 }
@@ -623,16 +657,16 @@ NPCs in `npc_data` should be stored by their display name as the key, with this 
     "faction": "faction_royalty_001",
     "mbti": "ISFP",
     "attitude_to_party": "neutral",
-    
+
     "level": 10,
     "class": "Noble",
     "hp_current": 65,
     "hp_max": 65,
     "armor_class": 15,
-    
+
     "gender": "male",
     "age": 45,
-    
+
     "attributes": {
       "strength": 13,
       "dexterity": 12,
@@ -641,22 +675,22 @@ NPCs in `npc_data` should be stored by their display name as the key, with this 
       "wisdom": 15,
       "charisma": 18
     },
-    
+
     "combat_stats": {
       "initiative": 1,
       "speed": 30,
       "passive_perception": 15
     },
-    
+
     "present": true,
     "conscious": true,
     "hidden": false,
     "status": "Concerned about kingdom",
-    
+
     "relationships": {
       "pc_kaelan_001": "cautious respect"
     },
-    
+
     "knowledge": ["kingdom politics", "dragon threat"],
     "recent_actions": ["summoned heroes", "offered quest"]
   }
@@ -954,7 +988,7 @@ The `world_time` object now contains BOTH structured time AND descriptive time-o
 ### Time-of-Day Mapping (MANDATORY)
 The `time_of_day` field MUST always match the `hour` field according to this mapping:
 - **0-4**: "Deep Night"
-- **5-6**: "Dawn"  
+- **5-6**: "Dawn"
 - **7-11**: "Morning"
 - **12-13**: "Midday"
 - **14-17**: "Afternoon"
@@ -1067,9 +1101,9 @@ The `custom_campaign_state` object is used for tracking narrative progress and c
     *   `title`: A human-readable title.
     *   `status`: A string indicating progress (e.g., "accepted", "in_progress", "completed").
     *   `objective`: A string describing the next step.
-    
+
     **To add new missions or update existing ones:**
-    
+
     ✅ **REQUIRED METHOD - List of mission objects:**
     ```json
     {
@@ -1091,7 +1125,7 @@ The `custom_campaign_state` object is used for tracking narrative progress and c
       }
     }
     ```
-    
+
     ❌ **INVALID FORMAT - Never use dictionary format:**
     The following format is INCORRECT and will cause errors:
     ```json
@@ -1106,7 +1140,7 @@ The `custom_campaign_state` object is used for tracking narrative progress and c
       }
     }
     ```
-    
+
     **Important Rules:**
     - `active_missions` MUST ALWAYS be an array (list) of mission objects
     - Each mission object MUST include: `mission_id`, `title`, `status`, and `objective`
@@ -1252,9 +1286,9 @@ You MUST adhere to the following data type rules. Failure to do so will corrupt 
 3.  **`npc_data` is ALWAYS a DICTIONARY.**
     -   The keys are the unique names of NPCs.
     -   The values are DICTIONARIES containing the NPC's data sheet.
-    
+
     **To update NPC status or information:**
-    
+
     ✅ **PREFERRED METHOD - Update specific fields:**
     ```json
     {
@@ -1270,7 +1304,7 @@ You MUST adhere to the following data type rules. Failure to do so will corrupt 
       }
     }
     ```
-    
+
     ⚠️ **TOLERATED BUT NOT RECOMMENDED - String updates:**
     If you provide a string, it will be converted to a status update:
     ```json
@@ -1281,7 +1315,7 @@ You MUST adhere to the following data type rules. Failure to do so will corrupt 
     }
     ```
     This becomes: `{"status": "defeated"}` while preserving other NPC data.
-    
+
     ✅ **To remove an NPC entirely:**
     ```json
     {

@@ -7,11 +7,11 @@ set -e
 # Set test mode environment
 export TEST_MODE=real
 
-# Check for required environment variables (updated naming)
-if [[ -z "$TEST_GEMINI_API_KEY" ]]; then
-    echo "❌ ERROR: TEST_GEMINI_API_KEY not set"
+# Check for required environment variables
+if [[ -z "$GEMINI_API_KEY" ]]; then
+    echo "❌ ERROR: GEMINI_API_KEY not set"
     echo "💡 Set up test environment:"
-    echo "   export TEST_GEMINI_API_KEY=your_test_api_key"
+    echo "   export GEMINI_API_KEY=your_api_key"
     echo "   export TEST_FIRESTORE_PROJECT=worldarchitect-test  # optional"
     exit 1
 fi

@@ -163,8 +163,8 @@ class NarrativeResponse:
         
         validated_choices = {}
         for choice_key, choice_data in choices.items():
-            # Validate choice key format (snake_case)
-            if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', choice_key):
+            # Validate choice key format (snake_case, allowing god: prefix)
+            if not re.match(r'^(god:)?[a-zA-Z_][a-zA-Z0-9_]*$', choice_key):
                 logging_util.warning(f"Choice key '{choice_key}' is not a valid identifier, skipping")
                 continue
             

@@ -259,7 +259,16 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
   - `/testuif` = Browser (Puppeteer MCP) + REAL APIs (costs $)
   - `/testhttp` = HTTP + Mock APIs  
   - `/testhttpf` = HTTP + REAL APIs (costs $)
+  - `/tester` = End-to-end tests with REAL APIs (user decides cost)
 
+### Real API Testing Protocol (🚨 MANDATORY)
+**NEVER push back or suggest alternatives when user requests real API testing**:
+- ✅ User decides if real API costs are acceptable - respect their choice
+- ✅ `/tester`, `/testuif`, `/testhttpf` commands are valid user requests
+- ✅ Real API testing provides valuable validation that mocks cannot
+- ❌ NEVER suggest mock alternatives unless specifically asked
+- ❌ NEVER warn about costs unless the command requires confirmation prompts
+- **User autonomy**: User controls their API usage and testing approach
 
 ### Browser Test Execution Protocol (🚨 MANDATORY)
 

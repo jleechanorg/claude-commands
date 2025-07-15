@@ -81,8 +81,8 @@ if [[ "$TEST_MODE" == "real" || "$TEST_MODE" == "capture" ]]; then
     # Check for required environment variables
     missing_vars=()
     
-    if [[ -z "$TEST_GEMINI_API_KEY" ]]; then
-        missing_vars+=("TEST_GEMINI_API_KEY")
+    if [[ -z "$GEMINI_API_KEY" ]]; then
+        missing_vars+=("GEMINI_API_KEY")
     fi
     
     if [[ -z "$TEST_FIRESTORE_PROJECT" ]]; then
@@ -97,14 +97,14 @@ if [[ "$TEST_MODE" == "real" || "$TEST_MODE" == "capture" ]]; then
         done
         print_error ""
         print_error "Setup instructions:"
-        print_error "  export TEST_GEMINI_API_KEY=your_test_api_key"
+        print_error "  export GEMINI_API_KEY=your_api_key"
         print_error "  export TEST_FIRESTORE_PROJECT=your_test_project  # optional"
         exit 1
     fi
     
     print_success "Real service configuration validated"
     print_status "Firestore Project: $TEST_FIRESTORE_PROJECT"
-    print_status "Gemini API Key: ${TEST_GEMINI_API_KEY:0:10}***"
+    print_status "Gemini API Key: ${GEMINI_API_KEY:0:10}***"
 fi
 
 # Set up capture directory for capture mode
@@ -142,7 +142,7 @@ export TESTING=true
 # For real/capture modes, set service configuration
 if [[ "$TEST_MODE" == "real" || "$TEST_MODE" == "capture" ]]; then
     export FIREBASE_PROJECT_ID="$TEST_FIRESTORE_PROJECT"
-    export GEMINI_API_KEY="$TEST_GEMINI_API_KEY"
+    # GEMINI_API_KEY already set and validated above
 fi
 
 print_status "Environment configured:"
