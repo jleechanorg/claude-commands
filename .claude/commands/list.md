@@ -11,6 +11,7 @@
 - `/handoff [task] [description]` - Create structured task handoff with PR and worker prompt
 - `/execute` or `/e` - Execute tasks with TodoWrite circuit breaker
 - `/think [mode]` - Enable sequential thinking for complex analysis
+- `/thinku` - Direct alias for `/think ultra` (maximum-depth analysis)
 - `/learn [topic]` - Capture learnings and update documentation
 - `/header` - Get git branch status for mandatory response header
 - `/newbranch` or `/nb` - Create new branch from latest main
