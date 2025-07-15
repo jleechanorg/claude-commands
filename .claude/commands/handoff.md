@@ -40,6 +40,40 @@ Creates:
 - Key files and implementation approach identified
 - Testing strategy defined
 
-## Output
+## Output Format
 
-Returns a formatted worker prompt that can be copy-pasted to hand off the task.
+**Primary Output**: Copy-paste ready worker prompt with:
+- Setup instructions (worktree navigation, branch checkout)
+- Task context and goals
+- Implementation plan and timeline
+- Success criteria and testing requirements
+- File locations and specifications
+
+**Example Output**:
+```
+🎯 WORKER PROMPT (Copy-paste ready)
+
+TASK: [task_name]
+SETUP:
+1. Switch to worktree: cd /path/to/worktree_roadmap
+2. Checkout handoff branch: git checkout handoff-[task_name]
+3. Read specification: roadmap/scratchpad_handoff_[task_name].md
+
+GOAL: [clear objective]
+IMPLEMENTATION: [detailed steps]
+SUCCESS CRITERIA: [measurable outcomes]
+TIMELINE: [estimated hours]
+FILES: [key files to create/modify]
+
+START: Read the handoff scratchpad for complete details
+```
+
+**Additional Outputs**:
+- Handoff branch with complete specification
+- PR with implementation details
+- Updated roadmap entry
+- Clean branch for continued work
+
+## Copy-Paste Instructions
+
+The command generates a formatted prompt that can be directly copied and pasted to hand off work to another developer or AI assistant. The prompt includes all necessary context, setup steps, and implementation guidance for immediate task continuation.
