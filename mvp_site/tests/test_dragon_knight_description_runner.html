@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dragon Knight Description Length Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #6f42c1, #e83e8c);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .test-controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .run-button {
+            background: #6c757d !important;
+            color: white !important;
+            border: 2px solid #6c757d !important;
+            padding: 15px 30px !important;
+            font-size: 18px !important;
+            font-weight: bold !important;
+            border-radius: 8px !important;
+            cursor: pointer !important;
+            margin: 10px 10px 10px 0 !important;
+            display: inline-block !important;
+            text-decoration: none !important;
+            min-width: 200px !important;
+            text-align: center !important;
+        }
+        
+        .run-button:hover {
+            background: #545b62 !important;
+        }
+        
+        .test-results {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .result-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .result-pass { background-color: #d4edda; color: #155724; }
+        .result-fail { background-color: #f8d7da; color: #721c24; }
+        .result-info { background-color: #d1ecf1; color: #0c5460; }
+        
+        .summary {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .summary-fail { background-color: #f8d7da; color: #721c24; }
+        .summary-pass { background-color: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🐲 Dragon Knight Description Length Test</h1>
+        <p>Testing that the longer Dragon Knight description is properly handled</p>
+    </div>
+
+    <div class="test-controls">
+        <h3>Test Controls</h3>
+        <button class="run-button" onclick="runTests()">🧪 Run All Tests</button>
+        <button class="run-button" onclick="clearResults()" style="background: #6c757d !important; border-color: #6c757d !important;">🗑️ Clear Results</button>
+    </div>
+
+    <div class="test-results">
+        <h3>Test Results</h3>
+        <div id="test-summary"></div>
+        <div id="test-log"></div>
+    </div>
+
+    <!-- Load the CampaignWizard class first -->
+    <script src="../static/js/campaign-wizard.js"></script>
+    
+    <!-- Simple test framework -->
+    <script>
+        class SimpleTestRunner {
+            constructor() {
+                this.results = [];
+                this.passed = 0;
+                this.failed = 0;
+                this.total = 0;
+            }
+            
+            expect(actual) {
+                return {
+                    toBeDefined: () => this.assert(actual !== undefined, `Expected ${actual} to be defined`),
+                    toContain: (expected) => this.assert(actual.includes(expected), `Expected "${actual}" to contain "${expected}"`),
+                    toBe: (expected) => this.assert(actual === expected, `Expected ${actual} to be ${expected}`),
+                    toBeGreaterThan: (expected) => this.assert(actual > expected, `Expected ${actual} to be greater than ${expected}`),
+                    toBeLessThanOrEqual: (expected) => this.assert(actual <= expected, `Expected ${actual} to be less than or equal to ${expected}`),
+                    not: {
+                        toContain: (expected) => this.assert(!actual.includes(expected), `Expected "${actual}" to not contain "${expected}"`)
+                    }
+                };
+            }
+            
+            assert(condition, message) {
+                this.total++;
+                if (condition) {
+                    this.passed++;
+                    this.log('pass', `✅ ${message}`);
+                } else {
+                    this.failed++;
+                    this.log('fail', `❌ ${message}`);
+                }
+                return condition;
+            }
+            
+            log(type, message) {
+                const timestamp = new Date().toLocaleTimeString();
+                this.results.push({
+                    type: type,
+                    message: message,
+                    timestamp: timestamp
+                });
+            }
+            
+            describe(description, testFn) {
+                this.log('info', `🧪 ${description}`);
+                testFn();
+            }
+            
+            it(description, testFn) {
+                this.log('info', `  📋 ${description}`);
+                try {
+                    testFn();
+                } catch (error) {
+                    this.failed++;
+                    this.total++;
+                    this.log('fail', `❌ Error: ${error.message}`);
+                }
+            }
+            
+            getResults() {
+                return {
+                    results: this.results,
+                    passed: this.passed,
+                    failed: this.failed,
+                    total: this.total
+                };
+            }
+            
+            clear() {
+                this.results = [];
+                this.passed = 0;
+                this.failed = 0;
+                this.total = 0;
+            }
+        }
+        
+        let testRunner = new SimpleTestRunner();
+        
+        function runTests() {
+            clearResults();
+            testRunner.clear();
+            
+            // Mock DOM elements needed for testing
+            document.body.innerHTML += `
+                <div id="test-mock-container" style="display: none;">
+                    <div id="new-campaign-form">
+                        <input id="campaign-title" />
+                        <input id="character-input" />
+                        <input id="setting-input" />
+                        <textarea id="description-input"></textarea>
+                        <input type="checkbox" id="generate-companions" />
+                    </div>
+                    <div class="interface-mode-controls">
+                        <button id="modern-mode-btn" class="btn btn-primary active">Modern</button>
+                    </div>
+                </div>
+            `;
+            
+            // Mock window.interfaceManager
+            window.interfaceManager = {
+                isModernMode: () => true
+            };
+            
+            // Run tests
+            testRunner.describe('Dragon Knight Campaign Description Length', () => {
+                let campaignWizard;
+                
+                // Setup
+                campaignWizard = new CampaignWizard();
+                
+                testRunner.it('should handle long Dragon Knight description without errors', () => {
+                    const description = CampaignWizard.DEFAULT_DRAGON_KNIGHT_DESCRIPTION;
+                    
+                    testRunner.expect(description).toBeDefined();
+                    testRunner.expect(description).not.toContain('[PLACEHOLDER');
+                    testRunner.expect(description.length).toBeGreaterThan(1000);
+                    testRunner.expect(description).toContain('Ser Arion');
+                    testRunner.expect(description).toContain('Celestial Imperium');
+                    testRunner.expect(description).toContain('Empress Sariel');
+                    testRunner.expect(description).toContain('Dragon Knights');
+                });
+                
+                testRunner.it('should properly format long descriptions in preview', () => {
+                    const longDescription = CampaignWizard.DEFAULT_DRAGON_KNIGHT_DESCRIPTION;
+                    const formatted = campaignWizard._formatDescription(longDescription, true);
+                    
+                    testRunner.expect(formatted.length).toBeLessThanOrEqual(53);
+                    testRunner.expect(formatted).toContain('...');
+                });
+                
+                testRunner.it('should handle description length validation', () => {
+                    const description = CampaignWizard.DEFAULT_DRAGON_KNIGHT_DESCRIPTION;
+                    
+                    testRunner.expect(description.length).toBeGreaterThan(0);
+                    testRunner.expect(description).not.toContain('undefined');
+                    testRunner.expect(description).not.toContain('null');
+                    testRunner.expect(description).not.toContain('[object Object]');
+                });
+            });
+            
+            // Display results
+            displayResults(testRunner.getResults());
+            
+            // Cleanup
+            const mockContainer = document.getElementById('test-mock-container');
+            if (mockContainer) {
+                mockContainer.remove();
+            }
+            delete window.interfaceManager;
+        }
+        
+        function displayResults(results) {
+            const summaryDiv = document.getElementById('test-summary');
+            const logDiv = document.getElementById('test-log');
+            
+            // Display summary
+            let summaryClass = results.failed > 0 ? 'summary-fail' : 'summary-pass';
+            let summaryIcon = results.failed > 0 ? '❌' : '✅';
+            let summaryText = results.failed > 0 ? 'TESTS FAILED' : 'ALL TESTS PASSED';
+            
+            summaryDiv.innerHTML = `
+                <div class="summary ${summaryClass}">
+                    ${summaryIcon} ${summaryText}<br>
+                    Total: ${results.total} | ✅ Passed: ${results.passed} | ❌ Failed: ${results.failed}
+                </div>
+            `;
+            
+            // Display detailed log
+            results.results.forEach(result => {
+                const div = document.createElement('div');
+                div.className = `result-item result-${result.type}`;
+                div.textContent = `[${result.timestamp}] ${result.message}`;
+                logDiv.appendChild(div);
+            });
+        }
+        
+        function clearResults() {
+            document.getElementById('test-summary').innerHTML = '';
+            document.getElementById('test-log').innerHTML = '';
+        }
+        
+        // Auto-load message
+        window.addEventListener('load', () => {
+            console.log('🐲 Dragon Knight Description Length Test Runner loaded');
+        });
+    </script>
+</body>
+</html>
