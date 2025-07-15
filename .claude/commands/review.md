@@ -25,7 +25,14 @@
    - If multiple PRs found, use the most recent (first in list)
 
 **Enhanced Implementation**: 
-1. **Extract ALL Comments** (with thoughtful analysis):
+1. **PR Content Validation** (CRITICAL FIRST STEP):
+   - Use `gh api repos/owner/repo/pulls/<PR#>/files --jq '.[].filename'` to get actual PR files
+   - Compare PR contents against local implementation claims
+   - **FLAG IMMEDIATELY**: If documented features exist locally but NOT in PR
+   - **STOP REVIEW**: If PR contents don't match what's being reviewed
+   - Only proceed after confirming PR contains expected implementation files
+
+2. **Extract ALL Comments** (with thoughtful analysis):
    - Auto-detect PR number or use provided PR#
    - Use `gh pr view <PR#> --comments` to get general comments
    - Use `gh api repos/owner/repo/pulls/<PR#>/comments` for inline code comments

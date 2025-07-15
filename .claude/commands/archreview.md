@@ -23,10 +23,15 @@
 
 ## Review Process
 
-**Phase 1: Context Gathering**
-1. **Codebase Analysis**: Examine current state, recent changes, and architectural patterns
-2. **Documentation Review**: Check existing architecture docs and design decisions
-3. **Dependencies Analysis**: Review external dependencies and integrations
+**Phase 1: Context Gathering & Validation**
+1. **PR Content Validation** (if reviewing a PR/branch):
+   - Use `gh api repos/owner/repo/pulls/<PR#>/files --jq '.[].filename'` to get actual PR files
+   - Compare claimed capabilities against actual PR contents
+   - **CRITICAL CHECK**: Verify implementation files exist in PR, not just documentation
+   - **STOP IMMEDIATELY**: If documentation claims features that aren't in the PR
+2. **Codebase Analysis**: Examine current state, recent changes, and architectural patterns
+3. **Documentation Review**: Check existing architecture docs and design decisions
+4. **Dependencies Analysis**: Review external dependencies and integrations
 
 **Phase 2: Claude Analysis** (Primary Architecture Perspective)
 - **Structural Analysis**: Code organization, module boundaries, coupling/cohesion
