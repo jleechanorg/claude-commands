@@ -1,66 +1,104 @@
-# /pr Command
+# PR Command - Complete Development Lifecycle
 
-End-to-end implementation from idea to working pull request.
+**Purpose**: Complete development lifecycle from thinking through to PR review
 
-## Usage
+**Usage**: `/pr` - Think, execute, push, review, and handle feedback
+
+## 🚨 COMPLETE PR WORKFLOW
+
+This command conceptually combines the functionality of: `/think /execute /push /review /copilot`
+
+### Phase 1: Think (/think)
+
+**Strategic thinking about the task**:
+- Analyze the problem deeply
+- Consider multiple approaches
+- Identify potential challenges
+- Plan implementation strategy
+
+### Phase 2: Execute (/execute)
+
+**Implement the solution**:
+- Use realistic execution protocol
+- Consider subagents for parallel work
+- Work through implementation systematically
+- Test and validate as we go
+
+### Phase 3: Push (/push)
+
+**Create PR with comprehensive details**:
+- Commit all changes
+- Push to remote branch
+- Create detailed PR description
+- Include test results and screenshots
+
+### Phase 4: Review (/review)
+
+**Comprehensive code review**:
+- Analyze code quality
+- Check for potential issues
+- Verify test coverage
+- Document any concerns
+
+### Phase 5: Copilot (/copilot)
+
+**Address automated feedback**:
+- Handle GitHub bot comments
+- Fix failing tests
+- Address security/performance suggestions
+- Make PR mergeable
+
+## Command Combination
+
+**The `/pr` command works with the universal command composition system**:
+- Uses meta-prompt approach to combine all five commands
+- Leverages Claude's natural language processing
+- Maintains context across all phases
+- Provides comprehensive development experience
+
+## Example Flow
+
+**`/pr` Flow**:
 ```
-/pr [task_description]
+User: /pr implement user login validation
+Assistant: I detected these commands: /think /execute /push /review /copilot and will combine them intelligently.
+
+Phase 1 - Think:
+[Deep analysis of login validation requirements]
+
+Phase 2 - Execute:
+[Implementation with optional subagents]
+
+Phase 3 - Push:
+[Create PR with comprehensive description]
+
+Phase 4 - Review:
+[Comprehensive code review]
+
+Phase 5 - Copilot:
+[Address automated feedback and make PR mergeable]
 ```
 
-## What it does
+## Key Benefits
 
-Takes a task description and handles the complete implementation cycle:
+- ✅ **Complete lifecycle** - from concept to mergeable PR
+- ✅ **Integrated workflow** - all phases work together
+- ✅ **Combo command support** - uses universal composition system
+- ✅ **Realistic execution** - based on actual capabilities
+- ✅ **Comprehensive coverage** - thinking, implementation, review, feedback
 
-1. **Analysis**: Understands the task and existing codebase
-2. **Planning**: Creates implementation approach
-3. **Implementation**: Writes the actual code changes
-4. **Testing**: Creates/updates tests and ensures they pass
-5. **Validation**: Runs all tests until 100% passing
-6. **PR Creation**: Creates a complete PR ready for review
+## When to Use
 
-## Examples
+**Perfect for**:
+- Feature development requiring full lifecycle
+- Complex implementations needing thorough review
+- PR preparation for important changes
+- Complete development workflow automation
+- Tasks requiring strategic thinking and comprehensive execution
 
-```
-/pr "Add logging configuration to main.py"
-/pr "Fix bug where user names are not validated"
-/pr "Add dark mode toggle to settings page"
-```
-
-## Process Flow
-
-1. Creates feature branch: `feature/[task-name]`
-2. Analyzes codebase to understand context
-3. Implements solution following project patterns
-4. Writes/updates relevant tests
-5. Runs test suite until all tests pass
-6. Creates comprehensive PR with:
-   - Implementation summary
-   - Test results (must be passing)
-   - Files changed with explanations
-   - Any breaking changes noted
-
-## Requirements
-
-- Clear task description
-- Task scope should be reasonable (not "rewrite entire app")
-- Existing tests should be passing before starting
-
-## Safeguards
-
-- Complexity limits to prevent overly broad changes
-- User confirmation required for:
-  - Major refactoring (>10 files)
-  - Breaking changes
-  - Deletion of existing functionality
-- Automatic fallback to `/handoff` if task is too complex
-
-## Output
-
-Returns the PR URL and summary of implementation.
-
-## Comparison with Other Commands
-
-- **`/pr`**: Complete implementation from idea to PR
-- **`/handoff`**: Only planning/analysis, PR for someone else to implement  
-- **`/push`**: For manually completed work, creates/updates PR
-- **`/execute`**: General task execution without PR creation
+**Alternative commands**:
+- `/execute` - Just implementation
+- `/plan` - Implementation with approval
+- `/push` - Just create PR
+- `/review` - Just code review
+- `/copilot` - Just handle feedback

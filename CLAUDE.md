@@ -56,6 +56,14 @@
    - ✅ ALWAYS fix ALL failing tests to 100% pass rate
    - ✅ ALWAYS take ownership of test failures, especially in new code
 
+🚨 **TRUST USER CAPABILITY**: Focus on execution accuracy over complexity concerns
+   - ✅ Provide clear, actionable guidance for complex commands
+   - ✅ Focus on areas where protocol execution may be challenging
+   - ✅ Be honest about personal limitations and areas for improvement
+   - ✅ Trust user's ability to handle complexity; focus on improving execution
+   - ❌ Avoid generic advice about "command overload" or "cognitive load"
+   - ❌ Avoid patronizing about user interface complexity or learning curves
+
 
 🚨 **EVIDENCE-BASED APPROACH**: Core principles for all analysis
    - ✅ Extract exact error messages/code snippets before analyzing
@@ -108,6 +116,13 @@
    - ✅ **Example**: Firestore transaction errors → Get google-cloud-firestore docs → Find correct API usage
    - ❌ NEVER guess API usage or rely on outdated assumptions
    - Benefits: Up-to-date docs, correct syntax, real working examples, eliminates trial-and-error
+13. 🚨 **GITHUB TOOL PRIORITY**: ⚠️ MANDATORY - Tool hierarchy for GitHub operations:
+   - ✅ **PRIMARY**: GitHub MCP tools (`mcp__github-server__*`) for all GitHub operations
+   - ✅ **SECONDARY**: `gh` CLI as fallback when MCP fails or unavailable
+   - ✅ **TERTIARY**: Slash commands (e.g., `/copilot`) - user wants them to work but don't wait/assume completion
+   - ❌ NEVER wait for slash commands to complete when MCP tools can provide immediate results
+   - ✅ **Pattern**: Try MCP first → Fall back to `gh` CLI → Slash commands are bonus, not dependency
+   - Benefits: Immediate results, reliable API access, no command completion uncertainty
 
 ## Project Overview
 
@@ -536,8 +551,12 @@ Use `/list` to display all available slash commands with descriptions.
 **Command Aliases**:
 - `/tddf` - Alias for `/4layer` (Test-Driven Development Four-layer protocol)
 - `/nb` - Alias for `/newbranch` (Create new branch from latest main)
-- `/plan` - Alias for `/execute` (Consolidated planning and execution workflow)
-- All aliases execute identical protocols as their full command names
+
+**Command Differentiation** (NOT aliases):
+- `/execute` or `/e` - Realistic implementation with optional subagents (no approval)
+- `/plan` - Same as `/execute` but with mandatory approval (requires TodoWrite circuit breaker)
+
+**Both commands use realistic execution with optional Task-based subagents when beneficial**
 
 ⚠️ **ENHANCED /learn WORKFLOW**: Flexible branching options for learning capture
    - ✅ Offer choice: "Include in current PR" vs "Clean branch from main"
