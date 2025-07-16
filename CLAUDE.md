@@ -371,6 +371,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 | **Main = Truth** | Use `git show main:<file>` for originals | ❌ push to main (except roadmap/sprint files) |
 | **PR Workflow** | All changes via PRs | `gh pr create` + test results in description |
 | **Branch Safety** | Verify before push | `git push origin HEAD:branch-name` |
+| **🚨 Upstream Tracking** | Set tracking to avoid "no upstream" in headers | `git push -u origin branch-name` OR `git branch --set-upstream-to=origin/branch-name` |
 | **Integration** | Fresh branch after merge | `./integrate.sh` |
 | **Pre-PR Check** | Verify commits/files | → `.cursor/rules/validation_commands.md` |
 | **Post-Merge** | Check unpushed files | `git status` → follow-up PR if needed |
