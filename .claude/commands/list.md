@@ -24,6 +24,7 @@
 - `/pushlite` or `/pushl` - Simple push without automation
 - `/review` - Automated code review process
 - `/archreview` or `/arch` - Architecture and design review with dual-perspective analysis
+- `/reviewdeep` or `/reviewd` - Deep review with ultra thinking mode (12-point analysis)
 
 **Implementation**: 
 - Display all available slash commands
