@@ -104,7 +104,17 @@ extract_bot_comments() {
     }]' 2>/dev/null || echo "[]")
     
     # Combine all comments safely
-    all_comments=$(printf '%s\n%s' "$inline_comments" "$general_comments" | jq -s 'add // []' 2>/dev/null || echo "[]")
+    # Write to temp files to avoid complex shell quoting issues
+    temp_inline=$(mktemp)
+    temp_general=$(mktemp)
+    echo "$inline_comments" > "$temp_inline"
+    echo "$general_comments" > "$temp_general"
+    
+    # Combine arrays using jq
+    all_comments=$(jq -s '.[0] + .[1]' "$temp_inline" "$temp_general" 2>/dev/null || echo "[]")
+    
+    # Cleanup
+    rm -f "$temp_inline" "$temp_general"
     
     echo "$all_comments"
 }
@@ -116,6 +126,7 @@ check_ci_status() {
     echo -e "${BLUE}🔍 Checking CI status...${NC}"
     
     # Get all check runs using PR view (more reliable)
+    # Use direct array access to statusCheckRollup
     checks=$(gh pr view "$pr_number" --json statusCheckRollup | jq '.statusCheckRollup // []')
     
     # Filter failed and cancelled checks
@@ -138,28 +149,32 @@ categorize_issues() {
     style_issues=0
     performance_issues=0
     
-    # Analyze comments
-    while IFS= read -r comment; do
-        if [[ -n "$comment" && "$comment" != "null" ]]; then
-            body=$(echo "$comment" | jq -r '.body // ""' | tr '[:upper:]' '[:lower:]')
-            
-            if [[ "$body" =~ (security|vulnerability|injection|xss) ]]; then
-                ((security_issues++))
-            elif [[ "$body" =~ (test|spec|assert|expect) ]]; then
-                ((test_failures++))
-            elif [[ "$body" =~ (logic|bug|error|exception) ]]; then
-                ((logic_errors++))
-            elif [[ "$body" =~ (performance|optimization|slow|efficient) ]]; then
-                ((performance_issues++))
-            else
-                ((style_issues++))
+    # Analyze comments with better error handling
+    if [[ "$comments" != "[]" && "$comments" != "null" ]]; then
+        while IFS= read -r comment; do
+            if [[ -n "$comment" && "$comment" != "null" ]]; then
+                body=$(echo "$comment" | jq -r '.body // ""' 2>/dev/null | tr '[:upper:]' '[:lower:]')
+                
+                if [[ "$body" =~ (security|vulnerability|injection|xss) ]]; then
+                    ((security_issues++))
+                elif [[ "$body" =~ (test|spec|assert|expect) ]]; then
+                    ((test_failures++))
+                elif [[ "$body" =~ (logic|bug|error|exception) ]]; then
+                    ((logic_errors++))
+                elif [[ "$body" =~ (performance|optimization|slow|efficient) ]]; then
+                    ((performance_issues++))
+                else
+                    ((style_issues++))
+                fi
             fi
-        fi
-    done < <(echo "$comments" | jq -c '.[]?' 2>/dev/null || echo "")
+        done < <(echo "$comments" | jq -c '.[]' 2>/dev/null || echo "")
+    fi
     
-    # Count CI test failures  
-    ci_test_failures=$(echo "$failed_checks" | jq '[.[] | select(.name // .checkName // "" | test("test|spec"; "i"))] | length')
-    test_failures=$((test_failures + ci_test_failures))
+    # Count CI test failures with better error handling
+    if [[ "$failed_checks" != "[]" && "$failed_checks" != "null" ]]; then
+        ci_test_failures=$(echo "$failed_checks" | jq '[.[] | select(.name // .checkName // "" | test("test|spec"; "i"))] | length' 2>/dev/null || echo "0")
+        test_failures=$((test_failures + ci_test_failures))
+    fi
     
     # Display summary
     echo "Issue Summary:"
