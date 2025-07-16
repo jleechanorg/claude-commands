@@ -253,6 +253,7 @@
 
 ### Research & Future Items
 - **TASK-158** 🟡 MCP Instruction Compliance Tracking (3-4 hrs) - Fork Invariant MCP-scan for automatic CLAUDE.md rule enforcement and failure rate measurement
+- **HANDOFF-LEARN-MEMORY** 🟡 Integrate Memory MCP with /learn command (4 hrs) - PR #633 HANDOFF READY
 - **MCP Integration**: Context7 and Sequential Thinking setup for Claude Code CLI
 - **Optimization Tools**: Traycer evaluation, Claude best practices research
 - **Advanced Features**: Demo site branch, advanced state exploration

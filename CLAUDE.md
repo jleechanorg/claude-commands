@@ -81,9 +81,9 @@
 
 🚨 **AUTO-LEARN**: Document corrections immediately when: User corrects | Self-realizing "Oh, I should have..." | Something fails | Pattern repeats
 
-**Process**: Detect → Analyze → Document (CLAUDE.md/learnings.md/lessons.mdc) → Apply
+**Process**: Detect → Analyze → Document (CLAUDE.md/learnings.md/lessons.mdc) → Apply → Persist to Memory MCP
 
-**/learn Command**: `/learn [optional: specific learning]` - Capture learnings explicitly
+**/learn Command**: `/learn [optional: specific learning]` - Capture learnings explicitly with Memory MCP integration for persistent knowledge graph storage
 
 ## Claude Code Specific Behavior
 
@@ -559,10 +559,13 @@ Use `/list` to display all available slash commands with descriptions.
 
 **Both commands use realistic execution with optional Task-based subagents when beneficial**
 
-⚠️ **ENHANCED /learn WORKFLOW**: Flexible branching options for learning capture
+⚠️ **ENHANCED /learn WORKFLOW**: Flexible branching options for learning capture with Memory MCP integration
    - ✅ Offer choice: "Include in current PR" vs "Clean branch from main"
    - ✅ Bundle related learning changes with current work when contextually appropriate
    - ✅ Create independent learning PRs for isolated improvements
+   - ✅ **Memory MCP Integration**: Persist learnings to knowledge graph with entity creation and relations
+   - ✅ **Duplicate Detection**: Search existing graph before creating new entities
+   - ✅ **Cross-Conversation Persistence**: Learnings survive beyond current session
    - 🔍 Evidence: User request for workflow flexibility and clean branch options
 
 **Command Examples**: → `.cursor/rules/examples.md`
