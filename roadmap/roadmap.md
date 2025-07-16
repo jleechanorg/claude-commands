@@ -5,6 +5,16 @@
 
 ## 🎯 WHAT TO DO NOW (Quick Navigation)
 
+### 🚨 CRITICAL PRIORITY: Memory MCP Header Compliance MVP
+**Status**: Ready for Implementation  
+**Branch**: handoff-memory_impl  
+**Timeline**: 1 week MVP  
+**Goal**: 90% reduction in user `/header` commands
+
+**Problem**: Static CLAUDE.md fails - user types `/header` ~10x/day despite rules
+**Solution**: Dynamic enforcement with Memory MCP learning
+**Files**: `roadmap/scratchpad_handoff_memory_impl.md`, `WORKER_PROMPT_MEMORY_IMPL.md`
+
 ### Active WIP Tasks (Check PR status)
 - **TASK-001a** 🔴 Malformed JSON investigation - PR #296 OPEN
 - **TASK-006a** 🟡 Editable campaign names - PR #301 OPEN

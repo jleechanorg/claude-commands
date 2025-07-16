@@ -1,0 +1,88 @@
+{
+  "patterns": [
+    {
+      "pattern_type": "correction",
+      "content": "Always use --puppeteer flag for browser tests in Claude Code CLI",
+      "context": "Browser testing setup discussion",
+      "confidence": 0.9,
+      "timestamp": "2025-07-14T10:00:00",
+      "source": "user_correction",
+      "examples": [
+        "--puppeteer for browser automation"
+      ],
+      "tags": [
+        "testing",
+        "browser",
+        "puppeteer",
+        "critical"
+      ]
+    },
+    {
+      "pattern_type": "preference",
+      "content": "User prefers TodoWrite checklist before any execution",
+      "context": "Command execution workflow",
+      "confidence": 0.8,
+      "timestamp": "2025-07-14T09:30:00",
+      "source": "user_feedback",
+      "examples": [
+        "TodoWrite circuit breaker"
+      ],
+      "tags": [
+        "workflow",
+        "execution",
+        "planning"
+      ]
+    },
+    {
+      "pattern_type": "workflow",
+      "content": "For complex tasks, use subagent coordination with worktrees",
+      "context": "Architecture implementation discussion",
+      "confidence": 0.85,
+      "timestamp": "2025-07-14T09:00:00",
+      "source": "successful_execution",
+      "examples": [
+        "subagent parallel execution"
+      ],
+      "tags": [
+        "execution",
+        "complexity",
+        "subagents",
+        "workflow"
+      ]
+    },
+    {
+      "pattern_type": "technical",
+      "content": "Checkpoint frequency should be every 3-5 files for medium complexity tasks",
+      "context": "Progress tracking discussion",
+      "confidence": 0.75,
+      "timestamp": "2025-07-14T08:30:00",
+      "source": "process_improvement",
+      "examples": [
+        "checkpoint every 5 minutes"
+      ],
+      "tags": [
+        "checkpoints",
+        "frequency",
+        "progress"
+      ]
+    },
+    {
+      "pattern_type": "correction",
+      "content": "Use test_mode=true&test_user_id=test-user-123 for UI tests",
+      "context": "UI testing authentication bypass",
+      "confidence": 0.9,
+      "timestamp": "2025-07-14T08:00:00",
+      "source": "user_correction",
+      "examples": [
+        "test mode URL parameters"
+      ],
+      "tags": [
+        "testing",
+        "ui",
+        "authentication",
+        "critical"
+      ]
+    }
+  ],
+  "last_updated": "2025-07-14T10:58:17.110949"
+}

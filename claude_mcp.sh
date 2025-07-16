@@ -297,7 +297,54 @@ echo -e "\n${BLUE}3/8 Setting up Sequential Thinking MCP Server...${NC}"
 add_mcp_server "sequential-thinking" "@modelcontextprotocol/server-sequential-thinking"
 
 echo -e "\n${BLUE}4/8 Setting up Memory MCP Server...${NC}"
-add_mcp_server "memory-server" "@modelcontextprotocol/server-memory"
+# Create memory data directory in user's home
+mkdir -p ~/.cache/mcp-memory
+echo -e "${BLUE}  📁 Memory data directory: ~/.cache/mcp-memory/${NC}"
+
+# Configure memory server with custom data path
+MEMORY_PATH="$HOME/.cache/mcp-memory/memory.json"
+echo -e "${BLUE}  📁 Memory file path: $MEMORY_PATH${NC}"
+
+# Remove existing memory server to reconfigure
+claude mcp remove "memory-server" -s user >/dev/null 2>&1 || true
+
+# Add memory server with environment variable configuration
+echo -e "${BLUE}  🔗 Adding memory server with custom configuration...${NC}"
+add_output=$(claude mcp add --scope user "memory-server" "$NPX_PATH" "@modelcontextprotocol/server-memory" --env "MEMORY_FILE_PATH=$MEMORY_PATH" 2>&1)
+add_exit_code=$?
+
+if [ $add_exit_code -eq 0 ]; then
+    echo -e "${GREEN}  ✅ Successfully configured memory server with custom path${NC}"
+    log_with_timestamp "Successfully added memory server with custom path: $MEMORY_PATH"
+else
+    echo -e "${YELLOW}  ⚠️ Environment variable method failed, trying fallback...${NC}"
+    log_with_timestamp "Environment variable method failed: $add_output"
+    
+    # Fallback: use standard add but create a symlink or wrapper script
+    echo -e "${BLUE}  🔄 Using fallback configuration method...${NC}"
+    
+    # Create wrapper script that sets the environment variable
+    WRAPPER_SCRIPT="$HOME/.cache/mcp-memory/memory-server-wrapper.sh"
+    cat > "$WRAPPER_SCRIPT" << 'EOF'
+#!/bin/bash
+export MEMORY_FILE_PATH="$HOME/.cache/mcp-memory/memory.json"
+exec npx @modelcontextprotocol/server-memory "$@"
+EOF
+    chmod +x "$WRAPPER_SCRIPT"
+    
+    # Add server using the wrapper script
+    fallback_output=$(claude mcp add --scope user "memory-server" "$WRAPPER_SCRIPT" 2>&1)
+    fallback_exit_code=$?
+    
+    if [ $fallback_exit_code -eq 0 ]; then
+        echo -e "${GREEN}  ✅ Successfully added memory server with wrapper script${NC}"
+        log_with_timestamp "Successfully added memory server with wrapper script"
+    else
+        echo -e "${RED}  ❌ Both methods failed for memory server${NC}"
+        log_error_details "claude mcp add wrapper" "memory-server" "$fallback_output"
+        echo -e "${YELLOW}  💡 You may need to manually configure the memory server${NC}"
+    fi
+fi
 
 echo -e "\n${BLUE}5/8 Setting up Puppeteer MCP Server...${NC}"
 add_mcp_server "puppeteer-server" "@modelcontextprotocol/server-puppeteer"
