@@ -613,6 +613,12 @@ Use `/list` to display all available slash commands with descriptions.
 
 **Critical Rule**: ❌ NEVER ignore any comment type, including "suppressed" Copilot feedback
 
+🚨 **DATA LOSS WARNINGS**: Treat all data loss warnings from CodeRabbit/Copilot as CRITICAL
+- ❌ NEVER dismiss data integrity concerns as "intentional design"
+- ✅ ALWAYS implement proper validation before conflict resolution
+- ✅ ALWAYS treat data corruption warnings as highest priority
+- 🔍 Evidence: CodeRabbit data loss warning prevented silent corruption in backup script
+
 ### Import Rules (🚨 CRITICAL)
 **🚨 ZERO TOLERANCE: ALL imports MUST be at module level - NO EXCEPTIONS**
 
