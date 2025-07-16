@@ -1191,6 +1191,97 @@ def create_app():
             logging_util.error(f"Error getting global compliance stats: {e}")
             return jsonify({KEY_ERROR: 'Failed to get global compliance stats', KEY_DETAILS: str(e)}), 500
 
+    @app.route('/api/track-push-compliance', methods=['POST'])
+    @check_token
+    def track_push_compliance(user_id):
+        """Track push compliance for a git push operation."""
+        try:
+            data = request.get_json()
+            session_id = data.get('session_id')
+            command_text = data.get('command_text', '')
+            verification_output = data.get('verification_output', '')
+            
+            if not session_id:
+                return jsonify({KEY_ERROR: 'Session ID is required'}), 400
+            
+            # Process the push compliance
+            from claude_service import process_push_compliance
+            result = process_push_compliance(session_id, command_text, verification_output)
+            
+            return jsonify({
+                'success': True,
+                'push_compliance_rate': result['push_compliance_rate'],
+                'has_push_command': result['has_push_command'],
+                'push_verified': result['push_verified'],
+                'push_command': result['push_command'],
+                'verification_command': result['verification_command']
+            })
+            
+        except Exception as e:
+            logging_util.error(f"Error tracking push compliance: {e}")
+            return jsonify({KEY_ERROR: 'Failed to track push compliance', KEY_DETAILS: str(e)}), 500
+
+    @app.route('/api/push-compliance-status/<session_id>', methods=['GET'])
+    @check_token
+    def get_push_compliance_status(user_id, session_id):
+        """Get push compliance status for a session."""
+        try:
+            from claude_service import get_push_compliance_status
+            
+            status = get_push_compliance_status(session_id)
+            
+            return jsonify({
+                'success': True,
+                'session_id': session_id,
+                'compliance_rate': status['compliance_rate'],
+                'is_compliant': status['is_compliant'],
+                'total_pushes': status['total_pushes'],
+                'verified_pushes': status['verified_pushes']
+            })
+            
+        except Exception as e:
+            logging_util.error(f"Error getting push compliance status: {e}")
+            return jsonify({KEY_ERROR: 'Failed to get push compliance status', KEY_DETAILS: str(e)}), 500
+
+    @app.route('/api/push-compliance-stats', methods=['GET'])
+    @check_token
+    def get_global_push_compliance_stats(user_id):
+        """Get global push compliance statistics."""
+        try:
+            from firestore_service import get_global_push_compliance_stats
+            
+            stats = get_global_push_compliance_stats()
+            
+            return jsonify({
+                'success': True,
+                'global_push_stats': stats
+            })
+            
+        except Exception as e:
+            logging_util.error(f"Error getting global push compliance stats: {e}")
+            return jsonify({KEY_ERROR: 'Failed to get global push compliance stats', KEY_DETAILS: str(e)}), 500
+
+    @app.route('/api/push-compliance-alert/<session_id>', methods=['GET'])
+    @check_token
+    def get_push_compliance_alert(user_id, session_id):
+        """Get push compliance alert for a session."""
+        try:
+            from claude_service import get_push_compliance_status, generate_push_compliance_alert
+            
+            status = get_push_compliance_status(session_id)
+            alert = generate_push_compliance_alert(status['compliance_rate'])
+            
+            return jsonify({
+                'success': True,
+                'session_id': session_id,
+                'alert': alert,
+                'compliance_rate': status['compliance_rate']
+            })
+            
+        except Exception as e:
+            logging_util.error(f"Error getting push compliance alert: {e}")
+            return jsonify({KEY_ERROR: 'Failed to get push compliance alert', KEY_DETAILS: str(e)}), 500
+
     # --- Frontend Serving ---
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')

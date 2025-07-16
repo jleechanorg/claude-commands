@@ -249,6 +249,10 @@
         margin-bottom: 0.15rem;
     }
     
+    .choice-id {
+        font-size: 0.7rem;
+    }
+    
     .planning-block-choices {
         padding: 0.15rem;
     }

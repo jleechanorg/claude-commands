@@ -709,13 +709,11 @@ class TestCreateCampaignRoute(unittest.TestCase):
             headers=self.test_headers
         )
         
-        # Debug: Print response if not 200
+        # Debug: Check response if not 200
         if response.status_code != 200:
-            print(f"Response status: {response.status_code}")
-            print(f"Response data: {response.data}")
-            # Also check what mocks were called
-            print(f"continue_story called with mode: {mock_gemini_service.continue_story.call_args}")
-            print(f"structured_response attributes: {dir(mock_structured_response)}")
+            # Response status and data would be logged here
+            # Mock calls can be checked in assertions
+            pass
         
         # Assert response is successful
         self.assertEqual(response.status_code, 200)

@@ -346,7 +346,8 @@ if [[ -f "mvp_site/main.py" ]]; then
         list_running_servers
         offer_cleanup
     fi
-elif [[ -f "./run_test_server.sh" ]]; then
+elif [[ -f "./test_server_manager.sh" ]]; then
     echo -e "\n${YELLOW}💡 Start test server with:${NC}"
-    echo "  ./run_test_server.sh"
+    echo "  ./claude_command_scripts/commands/testserver.sh start"
+    echo "  # or use: ./test_server_manager.sh start"
 fi

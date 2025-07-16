@@ -198,3 +198,14 @@ IMPORTANT: State updates must be included in a JSON field, not in the narrative 
 HEADER_COMPLIANCE_COLLECTION = 'header_compliance'
 HEADER_PATTERN = r'^\[Local: .+ \| Remote: .+ \| PR: .+\]'
 MIN_COMPLIANCE_RATE = 0.8  # 80% compliance threshold
+
+# --- PUSH COMPLIANCE ---
+# Push compliance tracking constants
+PUSH_COMPLIANCE_COLLECTION = 'push_compliance'
+MIN_PUSH_COMPLIANCE_RATE = 0.8  # 80% push compliance threshold
+PUSH_VERIFICATION_COMMANDS = [
+    'gh pr view',
+    'git log origin/',
+    'git ls-remote origin',
+    'git branch -r'
+]

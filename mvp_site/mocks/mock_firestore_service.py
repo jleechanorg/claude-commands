@@ -104,7 +104,7 @@ class MockFirestoreClient:
         self.story_logs[browser_state_key] = copy.deepcopy(SAMPLE_STORY_CONTEXT)
         
         # Log for debugging
-        print(f"[MockFirestore] Added browser test campaign: {browser_campaign['id']} for user: {browser_test_user_id}")
+        # Browser test campaign added for user
     
     def get_campaigns_for_user(self, user_id: str) -> List[Dict[str, Any]]:
         """Get all campaigns for a user."""

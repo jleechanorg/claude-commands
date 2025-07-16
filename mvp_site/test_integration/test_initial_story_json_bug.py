@@ -21,8 +21,7 @@ class TestInitialStoryJsonBug(unittest.TestCase):
         # Create a test prompt similar to the user's
         test_prompt = "You are Nolan's son from the TV show Invincible. Play as Mark Grayson discovering his powers."
         
-        print(f"\nTesting initial story generation...")
-        print(f"Prompt: {test_prompt}")
+        # Testing initial story generation
         
         try:
             # Call the initial story generation
@@ -33,11 +32,8 @@ class TestInitialStoryJsonBug(unittest.TestCase):
                 use_default_world=False
             )
             
-            print(f"\nResponse type: {type(response)}")
-            print(f"Narrative text preview: {response.narrative_text[:200]}...")
-            
-            if hasattr(response, 'raw_response'):
-                print(f"Raw response preview: {response.raw_response[:200]}...")
+            # Response type and preview would be logged here for debugging
+            # Narrative text preview and raw response preview available for inspection
             
             # Check for JSON artifacts in the narrative_text
             narrative_has_json = (
@@ -46,7 +42,7 @@ class TestInitialStoryJsonBug(unittest.TestCase):
                 '"entities_mentioned":' in response.narrative_text
             )
             
-            print(f"Contains JSON artifacts: {narrative_has_json}")
+            # Check for JSON artifacts in narrative
             
             # The critical test
             self.assertNotIn('"narrative":', response.narrative_text, 
