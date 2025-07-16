@@ -12,6 +12,8 @@
    - Include both high and low confidence suggestions
    - Include "suppressed" suggestions that are normally hidden
    - Extract inline code review comments AND general PR comments
+   - **CRITICAL**: Use `gh api repos/owner/repo/pulls/PR#/comments` for inline review comments
+   - **Note**: `gh pr view --json comments` misses Copilot's inline suggestions
    
 2. **Check Test Status**:
    - Run `gh pr checks <PR#>` to see failing tests

@@ -13,6 +13,9 @@ from json_utils import (
 )
 import constants
 
+# Content length threshold for logging - prevents excessive log output
+CONTENT_LENGTH_THRESHOLD = 800
+
 # Precompiled regex patterns for better performance
 ENTITIES_MENTIONED_PATTERN = re.compile(r'"entities_mentioned"\s*:\s*\[(.*?)\]', re.DOTALL)
 ENTITY_STRING_PATTERN = re.compile(r'"([^"]*)"')
@@ -84,12 +87,13 @@ class RobustJSONParser:
             logging_util.debug(f"🔍 MALFORMED_JSON_CONTENT: Length: {len(text)} chars")
             
             # Log sample of malformed content (safely truncated)
-            if len(text) <= 800:
+            if len(text) <= CONTENT_LENGTH_THRESHOLD:
                 logging_util.debug(f"🔍 MALFORMED_JSON_CONTENT: {text}")
             else:
-                start_content = text[:400]
-                end_content = text[-400:]
-                logging_util.debug(f"🔍 MALFORMED_JSON_CONTENT: {start_content}...[{len(text) - 800} chars omitted]...{end_content}")
+                half_threshold = CONTENT_LENGTH_THRESHOLD // 2
+                start_content = text[:half_threshold]
+                end_content = text[-half_threshold:]
+                logging_util.debug(f"🔍 MALFORMED_JSON_CONTENT: {start_content}...[{len(text) - CONTENT_LENGTH_THRESHOLD} chars omitted]...{end_content}")
                 
             extracted = RobustJSONParser._extract_fields(text)
             if extracted:

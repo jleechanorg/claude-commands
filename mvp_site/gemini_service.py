@@ -100,22 +100,20 @@ TARGET_WORD_COUNT = 300
 # Add a safety margin for JSON responses
 
 # Fallback content constants to avoid code duplication
+DEFAULT_CHOICES = {
+    "Continue": "Continue with your current course of action.",
+    "Explore": "Explore your surroundings.",
+    "Other": "Describe a different action you'd like to take."
+}
+
 FALLBACK_PLANNING_BLOCK_VALIDATION = {
     "thinking": "The AI response was incomplete. Here are some default options:",
-    "choices": {
-        "Continue": "Continue with your current course of action.",
-        "Explore": "Explore your surroundings.",
-        "Other": "Describe a different action you'd like to take."
-    }
+    "choices": DEFAULT_CHOICES
 }
 
 FALLBACK_PLANNING_BLOCK_EXCEPTION = {
     "thinking": "Failed to generate planning block. Here are some default options:",
-    "choices": {
-        "Continue": "Continue with your current course of action.",
-        "Explore": "Explore your surroundings.",
-        "Other": "Describe a different action you'd like to take."
-    }
+    "choices": DEFAULT_CHOICES
 }
 JSON_MODE_MAX_TOKENS = 50000  # Reduced limit when using JSON mode for reliability
 MAX_INPUT_TOKENS = 750000 
@@ -1202,6 +1200,11 @@ Generate ONLY a planning block using the standard_choice_block template format f
 Full narrative context:
 {response_text}"""
     
+    # Early return if planning block is already set
+    if structured_response and structured_response.planning_block:
+        logging_util.info("🔍 PLANNING_BLOCK_SKIPPED: structured_response.planning_block is already set, skipping API call")
+        return response_text
+    
     # Generate planning block using LLM
     try:
         logging_util.info(f"🔍 PLANNING_BLOCK_REGENERATION: Sending prompt to API")
@@ -1318,7 +1321,10 @@ Full narrative context:
             logging_util.info("🔍 FALLBACK_USED: Updated structured_response.planning_block with fallback JSON content due to exception")
         
         # SECONDARY: Update response_text for backward compatibility
-        fallback_text = "What would you like to do next?\n1. **[Continue]:** Continue with your current course of action.\n2. **[Explore]:** Explore your surroundings.\n3. **[Other]:** Describe a different action you'd like to take."
+        fallback_text = "What would you like to do next?\n" + "\n".join([
+            f"{i+1}. **[{choice}]:** {description}" 
+            for i, (choice, description) in enumerate(DEFAULT_CHOICES.items())
+        ])
         fallback_block = "\n\n--- PLANNING BLOCK ---\n" + fallback_text
         response_text = response_text + fallback_block
     

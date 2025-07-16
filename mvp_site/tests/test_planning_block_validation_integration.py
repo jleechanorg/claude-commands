@@ -66,7 +66,8 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         mock_call_api.return_value = "mock_api_response"
         mock_get_text.return_value = "Generated planning block content"
         mock_parse.return_value = ("Generated planning block content", self.structured_response)
-        self.structured_response.planning_block = "Generated planning block content"
+        # Don't set planning_block before the call - it should be None to trigger regeneration
+        self.structured_response.planning_block = None
         
         response_text = "Normal story response without planning block"
         
@@ -85,6 +86,34 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         
         # Verify API response logging was called
         self.assertTrue(any("🔍 PLANNING_BLOCK_PROMPT:" in str(call) for call in mock_logging.info.call_args_list))
+
+    @patch('gemini_service.logging_util')
+    @patch('gemini_service._call_gemini_api')
+    def test_planning_block_early_return_when_already_set(self, mock_call_api, mock_logging):
+        """Test early return when planning_block is already set."""
+        # Setup structured response with planning_block already set
+        self.structured_response.planning_block = "Existing planning block content"
+        
+        response_text = "Normal story response"
+        
+        # Call the function
+        result = _validate_and_enforce_planning_block(
+            response_text,
+            "test input",
+            self.game_state,
+            "test-model",
+            "test instruction",
+            self.structured_response
+        )
+        
+        # Verify early return logging was called
+        mock_logging.info.assert_any_call("🔍 PLANNING_BLOCK_SKIPPED: structured_response.planning_block is already set, skipping API call")
+        
+        # Verify API was NOT called due to early return
+        mock_call_api.assert_not_called()
+        
+        # Verify response_text is returned unchanged
+        self.assertEqual(result, response_text)
 
     @patch('gemini_service.logging_util')
     @patch('gemini_service._call_gemini_api')

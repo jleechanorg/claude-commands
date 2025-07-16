@@ -93,7 +93,7 @@ You begin with Level 1 Paladin abilities: Divine Sense and Lay on Hands. Your oa
 
   constructor() {
     this.currentStep = 1;
-    this.totalSteps = 4;
+    this.totalSteps = 3;
     this.formData = {};
     this.isEnabled = false;
     this.init();
@@ -246,9 +246,9 @@ You begin with Level 1 Paladin abilities: Divine Sense and Lay on Hands. Your oa
             <div class="progress-bar progress-bar-striped progress-bar-animated" 
                  id="wizard-progress-bar" 
                  role="progressbar" 
-                 style="width: 25%"></div>
+                 style="width: ${100/this.totalSteps}%"></div>
           </div>
-          <div class="step-indicators mt-2 d-flex justify-content-between">
+          <div class="step-indicators mt-2 d-flex justify-content-around">
             <div class="step-indicator active" data-step="1">
               <div class="step-circle">1</div>
               <div class="step-label">Basics</div>
@@ -259,10 +259,6 @@ You begin with Level 1 Paladin abilities: Divine Sense and Lay on Hands. Your oa
             </div>
             <div class="step-indicator" data-step="3">
               <div class="step-circle">3</div>
-              <div class="step-label">Options</div>
-            </div>
-            <div class="step-indicator" data-step="4">
-              <div class="step-circle">4</div>
               <div class="step-label">Launch</div>
             </div>
           </div>
@@ -370,14 +366,14 @@ You begin with Level 1 Paladin abilities: Divine Sense and Lay on Hands. Your oa
             
             <div class="row">
               <div class="col-md-4 mb-3">
-                <div class="card personality-card" data-personality="narrative">
+                <div class="card option-card" data-option="defaultWorld">
                   <div class="card-body text-center">
-                    <div class="personality-icon">🎭</div>
-                    <h5 class="card-title">Narrative Flair</h5>
-                    <p class="card-text">Rich storytelling, character development, and immersive descriptions.</p>
+                    <div class="personality-icon">🌍</div>
+                    <h5 class="card-title">Default Fantasy World</h5>
+                    <p class="card-text">Use the Celestial Wars/Assiah setting with rich lore and characters.</p>
                     <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="wizard-narrative" checked>
-                      <label class="form-check-label" for="wizard-narrative">Enable</label>
+                      <input class="form-check-input" type="checkbox" id="wizard-default-world" checked>
+                      <label class="form-check-label" for="wizard-default-world">Use default world</label>
                     </div>
                   </div>
                 </div>
@@ -413,35 +409,8 @@ You begin with Level 1 Paladin abilities: Divine Sense and Lay on Hands. Your oa
             </div>
           </div>
 
-          <!-- Step 3: Custom Options -->
+          <!-- Step 3: Launch -->
           <div class="wizard-step" data-step="3">
-            <h3 class="step-title">🎮 Campaign Options</h3>
-            <p class="step-description">Customize your adventure with these optional features.</p>
-            
-            <div class="row">
-              <div class="col-md-6 mb-4">
-                <div class="card option-card" data-option="defaultWorld">
-                  <div class="card-body">
-                    <div class="d-flex align-items-start">
-                      <div class="option-icon me-3">🌍</div>
-                      <div class="flex-grow-1">
-                        <h5 class="card-title">Default Fantasy World</h5>
-                        <p class="card-text">Use the Celestial Wars/Assiah setting with rich lore and characters.</p>
-                        <div class="form-check">
-                          <input class="form-check-input" type="checkbox" id="wizard-default-world" checked>
-                          <label class="form-check-label" for="wizard-default-world">Use default world</label>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-            </div>
-          </div>
-
-          <!-- Step 4: Launch -->
-          <div class="wizard-step" data-step="4">
             <h3 class="step-title">🚀 Ready to Launch!</h3>
             <p class="step-description">Review your settings and start your adventure.</p>
             
@@ -483,7 +452,7 @@ You begin with Level 1 Paladin abilities: Divine Sense and Lay on Hands. Your oa
           </button>
           
           <div class="step-counter">
-            Step <span id="current-step-num">1</span> of <span id="total-steps-num">4</span>
+            Step <span id="current-step-num">1</span> of <span id="total-steps-num">${this.totalSteps}</span>
           </div>
           
           <button type="button" class="btn btn-primary" id="wizard-next">
@@ -556,6 +525,17 @@ You begin with Level 1 Paladin abilities: Divine Sense and Lay on Hands. Your oa
 
     // Personality card selection
     document.querySelectorAll('.personality-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (!e.target.matches('input')) {
+          const checkbox = card.querySelector('input[type="checkbox"]');
+          checkbox.checked = !checkbox.checked;
+          this.updatePreview();
+        }
+      });
+    });
+    
+    // Option card selection (for default world checkbox)
+    document.querySelectorAll('.option-card').forEach(card => {
       card.addEventListener('click', (e) => {
         if (!e.target.matches('input')) {
           const checkbox = card.querySelector('input[type="checkbox"]');
@@ -768,7 +748,6 @@ You begin with Level 1 Paladin abilities: Divine Sense and Lay on Hands. Your oa
     const wizardCampaignPrompt = document.getElementById('wizard-campaign-prompt');
     const wizardDescriptionInput = document.getElementById('wizard-description-input');
     const wizardCharacterInput = document.getElementById('wizard-character-input');
-    const wizardNarrative = document.getElementById('wizard-narrative');
     const wizardMechanics = document.getElementById('wizard-mechanics');
     const wizardCompanions = document.getElementById('wizard-companions');
     const wizardDefaultWorld = document.getElementById('wizard-default-world');
@@ -788,19 +767,13 @@ You begin with Level 1 Paladin abilities: Divine Sense and Lay on Hands. Your oa
     } else {
       // Update all fields
       const title = wizardCampaignTitle?.value || CampaignWizard.DEFAULT_TITLE;
-      let description;
-      if (isDragonKnight) {
-        description = wizardCampaignPrompt?.value || '';
-      } else {
-        description = wizardDescriptionInput?.value || '';
-      }
+      let description = wizardDescriptionInput?.value || '';
       const character = wizardCharacterInput?.value || '';
       if (previewTitle) previewTitle.textContent = title;
       if (previewCharacter) previewCharacter.textContent = this._formatCharacter(character, isDragonKnight);
       if (previewDescription) previewDescription.textContent = this._formatDescription(description, isDragonKnight);
-      // Update personalities
-      const personalities = [];
-      if (wizardNarrative?.checked) personalities.push('Narrative');
+      // Update personalities - Narrative is always enabled
+      const personalities = ['Narrative'];
       if (wizardMechanics?.checked) personalities.push('Mechanics');
       if (previewPersonalities) previewPersonalities.textContent = personalities.join(', ') || 'None selected';
       // Update options
@@ -828,7 +801,7 @@ You begin with Level 1 Paladin abilities: Divine Sense and Lay on Hands. Your oa
       setting: document.getElementById('wizard-setting-input')?.value || '',
       description: description,
       selectedPrompts: [
-        ...(document.getElementById('wizard-narrative')?.checked ? ['narrative'] : []),
+        'narrative', // Always include narrative
         ...(document.getElementById('wizard-mechanics')?.checked ? ['mechanics'] : []),
       ],
       customOptions: [
@@ -1044,7 +1017,6 @@ You begin with Level 1 Paladin abilities: Divine Sense and Lay on Hands. Your oa
     
     // Reset all checkboxes to default (checked)
     const checkboxes = [
-      'wizard-narrative',
       'wizard-mechanics', 
       'wizard-companions',
       'wizard-default-world'

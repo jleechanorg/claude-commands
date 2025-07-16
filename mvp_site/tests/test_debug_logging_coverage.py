@@ -237,7 +237,7 @@ class TestDebugLoggingCoverage(unittest.TestCase):
         
         # Test with malformed unicode
         try:
-            malformed_unicode = b'\x80\x81\x82'.decode('latin1')  # Invalid UTF-8
+            malformed_unicode = "\udc80\udc81\udc82"  # Invalid surrogate pairs
             _log_api_response_safely(malformed_unicode, "malformed_test")
         except Exception as e:
             self.fail(f"Debug logging crashed with malformed unicode: {e}")

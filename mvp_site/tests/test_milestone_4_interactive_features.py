@@ -188,7 +188,6 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         # Check for step content
         self.assertIn("Campaign Basics", content)
         self.assertIn("AI's Expertise", content)
-        self.assertIn("Campaign Options", content)
         self.assertIn("Ready to Launch", content)
         
         print("✅ Campaign wizard generates proper HTML structure")
