@@ -6,7 +6,9 @@
 
 **Action**: Comprehensive PR cleanup - address ALL automated suggestions, bot comments, and test failures
 
-**Implementation**:
+**Enhanced Shell Script**: Now includes `claude_command_scripts/commands/copilot.sh` for automated analysis and fixing
+
+**Implementation** (Automated via Shell Script):
 1. **Extract ALL Bot Comments**:
    - Filter for comments from `github-actions[bot]`, `copilot[bot]`, and other bots
    - Include both high and low confidence suggestions
@@ -15,8 +17,9 @@
    - **CRITICAL**: Use `gh api repos/owner/repo/pulls/PR#/comments` for inline review comments
    - **Note**: `gh pr view --json comments` misses Copilot's inline suggestions
    
-2. **Check Test Status**:
-   - Run `gh pr checks <PR#>` to see failing tests
+2. **Check Test Status** (Enhanced):
+   - Use `gh pr view --json statusCheckRollup` for reliable CI status
+   - Run local tests to identify root causes
    - Identify specific test failures from CI/CD output
    - Track both unit test and integration test failures
    - Note any linting or type checking errors
@@ -97,5 +100,23 @@ PR #523 Mergeability Report:
 
 ✅ PR STATUS: All blockers resolved - ready to merge!
 ```
+
+**Shell Script Usage**:
+```bash
+# Auto-detect PR from current branch
+./claude_command_scripts/commands/copilot.sh
+
+# Analyze specific PR
+./claude_command_scripts/commands/copilot.sh 123
+
+# Get help
+./claude_command_scripts/commands/copilot.sh --help
+```
+
+**Automatic Fixes Included**:
+- Merge conflict resolution via `git merge origin/main`
+- Import error fixes via `pip install -r requirements.txt`
+- Code formatting via `black` and `isort` (if available)
+- Security pattern detection and basic remediation
 
 **For Comprehensive Code Review**: Use `/review [PR#]` for detailed analysis beyond merge requirements.

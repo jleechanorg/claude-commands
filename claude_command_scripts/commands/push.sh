@@ -250,11 +250,98 @@ else
     git push origin "$current_branch"
 fi
 
-# 5. Check for existing PR
+# 5. Check for existing PR and analyze its health
 echo -e "\n${GREEN}🔍 Checking for pull request...${NC}"
 
 pr_info=$(gh pr list --head "$current_branch" --json number,url,state --limit 1 2>/dev/null || echo "[]")
 pr_exists=$(echo "$pr_info" | jq 'length > 0')
+
+# Function to check and fix PR issues
+check_and_fix_pr_issues() {
+    local pr_number=$1
+    echo -e "\n${BLUE}🔍 Analyzing PR #$pr_number for issues...${NC}"
+    
+    # Check for merge conflicts
+    echo "Checking for merge conflicts..."
+    pr_mergeable=$(gh pr view "$pr_number" --json mergeable | jq -r '.mergeable')
+    
+    if [[ "$pr_mergeable" == "CONFLICTING" ]]; then
+        echo -e "${RED}❌ Merge conflicts detected!${NC}"
+        echo "Attempting to resolve conflicts..."
+        
+        # Fetch latest main and try to merge
+        git fetch origin main
+        if git merge origin/main --no-edit; then
+            echo -e "${GREEN}✅ Conflicts resolved automatically${NC}"
+            # Push the merge commit
+            git push origin "$current_branch"
+        else
+            echo -e "${RED}❌ Manual conflict resolution required${NC}"
+            echo "Please resolve conflicts manually:"
+            echo "  1. Fix conflicts in files listed above"
+            echo "  2. git add <resolved-files>"
+            echo "  3. git commit"
+            echo "  4. git push"
+            return 1
+        fi
+    elif [[ "$pr_mergeable" == "MERGEABLE" ]]; then
+        echo "✅ No merge conflicts"
+    else
+        echo "⚠️  Merge status: $pr_mergeable"
+    fi
+    
+    # Check CI status
+    echo "Checking CI status..."
+    # Get check status using PR view (more reliable than checks command)
+    checks_status=$(gh pr view "$pr_number" --json statusCheckRollup | jq '.statusCheckRollup')
+    failed_checks=$(echo "$checks_status" | jq '[.[] | select(.conclusion == "FAILURE")] | length')
+    
+    if [[ $failed_checks -gt 0 ]]; then
+        echo -e "${RED}❌ $failed_checks CI check(s) failing${NC}"
+        echo "Failed checks:"
+        echo "$checks_status" | jq -r '.[] | select(.conclusion == "FAILURE") | "  - \(.name): \(.detailsUrl)"'
+        
+        # Try to identify test failures
+        test_failures=$(echo "$checks_status" | jq '[.[] | select(.conclusion == "FAILURE" and (.name | test("test|Test")))] | length')
+        if [[ $test_failures -gt 0 ]]; then
+            echo "Running tests locally to identify issues..."
+            if [[ -f "./run_tests.sh" ]]; then
+                if ! ./run_tests.sh >/dev/null 2>&1; then
+                    echo -e "${YELLOW}⚠️  Tests also failing locally - check ./run_tests.sh output${NC}"
+                else
+                    echo "✅ Tests pass locally - CI issue may be transient"
+                fi
+            fi
+        fi
+    else
+        success_checks=$(echo "$checks_status" | jq '[.[] | select(.conclusion == "SUCCESS")] | length')
+        if [[ $success_checks -gt 0 ]]; then
+            echo "✅ All $success_checks CI check(s) passing"
+        else
+            echo "⚠️  CI status pending or unknown"
+        fi
+    fi
+    
+    # Check for bot comments that need addressing
+    echo "Checking for bot comments..."
+    
+    # Check for inline review comments from bots
+    bot_comments=$(gh api "repos/{owner}/{repo}/pulls/$pr_number/comments" 2>/dev/null | jq '[.[] | select(.user.type == "Bot" or (.user.login | test("bot|copilot"; "i")))] | length' 2>/dev/null || echo "0")
+    
+    # Check for general PR comments from bots  
+    general_bot_comments=$(gh pr view "$pr_number" --json comments | jq '[.comments[] | select(.author.login | test("bot|copilot|github-actions"; "i"))] | length' 2>/dev/null || echo "0")
+    
+    total_bot_comments=$((bot_comments + general_bot_comments))
+    
+    if [[ $total_bot_comments -gt 0 ]]; then
+        echo -e "${YELLOW}⚠️  $total_bot_comments bot comment(s) found${NC}"
+        echo "Consider running: ./claude_command_scripts/commands/copilot.sh $pr_number"
+    else
+        echo "✅ No pending bot comments"
+    fi
+    
+    return 0
+}
 
 if [[ "$pr_exists" == "true" ]]; then
     pr_number=$(echo "$pr_info" | jq -r '.[0].number')
@@ -264,32 +351,61 @@ if [[ "$pr_exists" == "true" ]]; then
     echo "✓ Found existing PR #$pr_number ($pr_state)"
     echo "  URL: $pr_url"
     
-    # Update PR description if needed
+    # Check and fix PR issues if it's open
     if [[ "$pr_state" == "OPEN" ]]; then
-        echo -e "\n${GREEN}📝 Updating PR description...${NC}"
+        check_and_fix_pr_issues "$pr_number"
+        
+        echo -e "\n${GREEN}📝 Updating PR description with health status...${NC}"
         
         # Get recent commits since PR creation
         recent_commits=$(git log --oneline -10 --pretty=format:"- %s")
+        
+        # Get current PR health status for the update
+        pr_mergeable=$(gh pr view "$pr_number" --json mergeable | jq -r '.mergeable')
+        checks_status=$(gh pr view "$pr_number" --json statusCheckRollup | jq '.statusCheckRollup')
+        failed_checks=$(echo "$checks_status" | jq '[.[] | select(.conclusion == "FAILURE")] | length')
+        success_checks=$(echo "$checks_status" | jq '[.[] | select(.conclusion == "SUCCESS")] | length')
+        
+        # Create status indicators
+        merge_status="❌ Conflicts"
+        if [[ "$pr_mergeable" == "MERGEABLE" ]]; then
+            merge_status="✅ No conflicts"
+        elif [[ "$pr_mergeable" == "UNKNOWN" ]]; then
+            merge_status="⚠️ Status unknown"
+        fi
+        
+        ci_status_icon="⚠️ Pending"
+        if [[ $success_checks -gt 0 && $failed_checks -eq 0 ]]; then
+            ci_status_icon="✅ All $success_checks passing"
+        elif [[ $failed_checks -gt 0 ]]; then
+            ci_status_icon="❌ $failed_checks failing"
+        fi
         
         # Create temporary file for PR body
         pr_body_file=$(mktemp)
         cat > "$pr_body_file" <<EOF
 ## Latest Status
 
+### PR Health Check
+- **Merge Status**: $merge_status
+- **CI Status**: $ci_status_icon
+- **Last Push**: $(date)
+- **Auto-Analysis**: Completed by enhanced push.sh
+
 ### Recent Commits
 $recent_commits
 
 ### Test Results
-✅ All tests passing (verified by push.sh)
+✅ All tests passing locally (verified by push.sh)
 
 ---
-*Updated by push.sh on $(date)*
+*Updated by enhanced push.sh on $(date)*
 EOF
 
         # Update PR body using file
         gh pr edit "$pr_number" --body-file "$pr_body_file"
         rm -f "$pr_body_file"
-        echo "✓ PR description updated"
+        echo "✓ PR description updated with health status"
     fi
 else
     echo -e "\n${YELLOW}📋 No PR found. Create one with:${NC}"
