@@ -293,7 +293,7 @@ check_and_fix_pr_issues() {
     # Check CI status
     echo "Checking CI status..."
     # Get check status using PR view (more reliable than checks command)
-    checks_status=$(gh pr view "$pr_number" --json statusCheckRollup | jq '.statusCheckRollup')
+    checks_status=$(gh pr view "$pr_number" --json statusCheckRollup | jq '.statusCheckRollup // []')
     failed_checks=$(echo "$checks_status" | jq '[.[] | select(.conclusion == "FAILURE")] | length')
     
     if [[ $failed_checks -gt 0 ]]; then
@@ -326,7 +326,8 @@ check_and_fix_pr_issues() {
     echo "Checking for bot comments..."
     
     # Check for inline review comments from bots
-    bot_comments=$(gh api "repos/{owner}/{repo}/pulls/$pr_number/comments" 2>/dev/null | jq '[.[] | select(.user.type == "Bot" or (.user.login | test("bot|copilot"; "i")))] | length' 2>/dev/null || echo "0")
+    REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
+    bot_comments=$(gh api "repos/$REPO/pulls/$pr_number/comments" 2>/dev/null | jq '[.[] | select(.user.type == "Bot" or (.user.login | test("bot|copilot"; "i")))] | length' 2>/dev/null || echo "0")
     
     # Check for general PR comments from bots  
     general_bot_comments=$(gh pr view "$pr_number" --json comments | jq '[.comments[] | select(.author.login | test("bot|copilot|github-actions"; "i"))] | length' 2>/dev/null || echo "0")
@@ -362,7 +363,7 @@ if [[ "$pr_exists" == "true" ]]; then
         
         # Get current PR health status for the update
         pr_mergeable=$(gh pr view "$pr_number" --json mergeable | jq -r '.mergeable')
-        checks_status=$(gh pr view "$pr_number" --json statusCheckRollup | jq '.statusCheckRollup')
+        checks_status=$(gh pr view "$pr_number" --json statusCheckRollup | jq '.statusCheckRollup // []')
         failed_checks=$(echo "$checks_status" | jq '[.[] | select(.conclusion == "FAILURE")] | length')
         success_checks=$(echo "$checks_status" | jq '[.[] | select(.conclusion == "SUCCESS")] | length')
         
