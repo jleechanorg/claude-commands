@@ -197,6 +197,41 @@ a.navbar-brand:hover {
     color: inherit;
 }
 
+/* ========== CAMPAIGN LIST STYLING ========== */
+
+/* Ensure consistent campaign list layout between local and production */
+.list-group-item .d-flex {
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+}
+
+.list-group-item .d-flex > div:last-child {
+    display: flex !important;
+    align-items: center !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+}
+
+.list-group-item .edit-campaign-btn {
+    margin-right: 0.5rem !important;
+    flex-shrink: 0 !important;
+}
+
+.list-group-item .text-muted {
+    font-size: 0.875rem !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+}
+
+/* Ensure campaign title doesn't overflow */
+.list-group-item h5.mb-1 {
+    flex: 1 1 auto !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    margin-right: 1rem !important;
+}
+
 /* ========== STRUCTURED FIELDS STYLING ========== */
 
 /* Session Header - Gray background with monospace font */
