@@ -273,8 +273,9 @@ check_and_fix_pr_issues() {
         git fetch origin main
         if git merge origin/main --no-edit; then
             echo -e "${GREEN}✅ Conflicts resolved automatically${NC}"
-            # Push the merge commit
-            git push origin "$current_branch"
+            # Force push the merge commit (conflicts change history)
+            echo -e "${BLUE}🚀 Force pushing conflict resolution...${NC}"
+            git push --force-with-lease origin "$current_branch"
         else
             echo -e "${RED}❌ Manual conflict resolution required${NC}"
             echo "Please resolve conflicts manually:"

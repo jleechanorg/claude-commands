@@ -255,5 +255,85 @@ class TestServerManagementIntegration(unittest.TestCase):
                 continue
 
 
+class TestEnhancedGitHubCommands(unittest.TestCase):
+    """Test enhanced GitHub commands from PR #620."""
+    
+    # Script path constants for portability
+    PUSH_SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "../claude_command_scripts/commands/push.sh")
+    COPILOT_SCRIPT_PATH = os.path.join(os.path.dirname(__file__), "../claude_command_scripts/commands/copilot.sh")
+
+    def test_push_command_pr_health_check(self):
+        """Test that push command's check_and_fix_pr_issues function exists and handles errors gracefully."""
+        push_path = self.PUSH_SCRIPT_PATH
+        
+        # Verify push command exists
+        self.assertTrue(os.path.exists(push_path), "push.sh should exist in commands directory")
+        self.assertTrue(os.access(push_path, os.X_OK), "push.sh should be executable")
+        
+        # Test that the function definition exists in the script
+        with open(push_path, 'r') as f:
+            content = f.read()
+            self.assertIn('check_and_fix_pr_issues()', content, 
+                         "push.sh should contain check_and_fix_pr_issues function")
+            self.assertIn('pr_mergeable=$(gh pr view', content,
+                         "Function should check PR mergeable status")
+            self.assertIn('git merge origin/main', content,
+                         "Function should attempt conflict resolution")
+
+    def test_push_command_conflict_resolution_logic(self):
+        """Test push command conflict resolution logic structure."""
+        push_path = self.PUSH_SCRIPT_PATH
+        
+        with open(push_path, 'r') as f:
+            content = f.read()
+            
+            # Check for proper conflict detection
+            self.assertIn('CONFLICTING', content, 
+                         "Should detect CONFLICTING PR status")
+            self.assertIn('--force-with-lease', content,
+                         "Should use safe force push for conflict resolution")
+            self.assertIn('Conflicts resolved automatically', content,
+                         "Should report successful conflict resolution")
+            self.assertIn('Manual conflict resolution required', content,
+                         "Should handle manual resolution cases")
+
+    def test_push_command_ci_status_checking(self):
+        """Test push command CI status checking functionality."""
+        push_path = self.PUSH_SCRIPT_PATH
+        
+        with open(push_path, 'r') as f:
+            content = f.read()
+            
+            # Check for CI status monitoring
+            self.assertIn('statusCheckRollup', content,
+                         "Should check CI status via statusCheckRollup")
+            self.assertIn('conclusion == "FAILURE"', content,
+                         "Should detect failed CI checks")
+            self.assertIn('conclusion == "SUCCESS"', content,
+                         "Should detect successful CI checks")
+            self.assertIn('CI check(s) failing', content,
+                         "Should report CI failures")
+
+    def test_copilot_command_exists_and_functional(self):
+        """Test that copilot command exists and has expected functionality."""
+        copilot_path = self.COPILOT_SCRIPT_PATH
+        
+        # Verify copilot command exists
+        self.assertTrue(os.path.exists(copilot_path), "copilot.sh should exist in commands directory")
+        self.assertTrue(os.access(copilot_path, os.X_OK), "copilot.sh should be executable")
+        
+        # Test that key functions exist
+        with open(copilot_path, 'r') as f:
+            content = f.read()
+            self.assertIn('attempt_auto_fixes()', content,
+                         "copilot.sh should contain attempt_auto_fixes function")
+            self.assertIn('extract_bot_comments()', content,
+                         "copilot.sh should contain extract_bot_comments function")
+            self.assertIn('--force-with-lease', content,
+                         "copilot.sh should use safe force push")
+            self.assertIn('Applied $fixes_applied automatic fixes', content,
+                         "Should report number of applied fixes")
+
+
 if __name__ == '__main__':
     unittest.main()

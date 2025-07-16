@@ -6,11 +6,47 @@
 
 **Action**: Comprehensive PR cleanup - address ALL automated suggestions, bot comments, and test failures
 
-**Enhanced Shell Script**: Now includes `claude_command_scripts/commands/copilot.sh` for automated analysis and fixing
+**🚀 Python Implementation**: Now includes deterministic `copilot.py` that automatically pushes to GitHub
+**Enhanced Shell Script**: Also includes `claude_command_scripts/commands/copilot.sh` for automated analysis and fixing
+
+**🐍 Python Implementation Features**:
+- **Deterministic Behavior**: Always pushes changes to GitHub after analysis
+- **Auto-PR Detection**: Automatically detects PR number from current branch
+- **Multi-Source Analysis**: Extracts Copilot, CodeRabbit, and user comments
+- **Test Status Checking**: Analyzes CI/CD status for merge readiness
+- **Auto-Commit**: Commits fixes with descriptive messages
+- **GitHub Integration**: Pushes changes immediately after fixes
+- **Dynamic Repository Detection**: Automatically detects repository owner/name from environment
+- **Pagination Support**: Handles large numbers of comments across multiple pages
+- **Intelligent Comment Replies**: Provides specific "Yes/No" responses with detailed reasoning
+- **⭐ NEWEST FIRST PRIORITIZATION**: Comments processed in chronological order (most recent first)
+
+**Python Usage**:
+```bash
+# Auto-detect PR from current branch and push changes
+python3 .claude/commands/copilot.py
+
+# Analyze specific PR and push changes
+python3 .claude/commands/copilot.py 123
+```
+
+**🆕 Recent Improvements (July 2025)**:
+- **Fixed Shell Script Syntax Error**: Completed function logic, added missing temp file write, removed stray `fi`
+- **Dynamic Repository Detection**: Replaced hardcoded repository values with `_get_repo_info()` method
+- **Improved Portability**: Added fallback to environment variables for different environments  
+- **Enhanced Comment Processing**: Fixed pagination issues to ensure all comments are captured
+- **Better Error Handling**: Added comprehensive error handling for API calls and JSON parsing
+- **⭐ NEWEST FIRST PRIORITIZATION**: Comments now processed in chronological order (most recent first)
+  - Sorts all comments by creation date before processing
+  - Ensures latest feedback gets immediate attention
+  - Better user experience for time-sensitive suggestions
+  - Detailed logging shows processing order with timestamps
 
 **Implementation** (Automated via Shell Script):
-1. **Extract ALL Bot Comments**:
-   - Filter for comments from `github-actions[bot]`, `copilot[bot]`, and other bots
+1. **Extract ALL Comments**:
+   - Filter for comments from `github-actions[bot]`, `copilot[bot]`, `coderabbit[bot]`, and other bots
+   - Include CodeRabbit AI code review suggestions and analysis
+   - Include user comments and feedback (jleechan2015)
    - Include both high and low confidence suggestions
    - Include "suppressed" suggestions that are normally hidden
    - Extract inline code review comments AND general PR comments

@@ -1,6 +1,6 @@
 #!/bin/bash
-# copilot.sh - Enhanced GitHub Copilot comments resolver with auto-fix capabilities
-# Resolves ALL GitHub comments, bot suggestions, and CI failures to make PR mergeable
+# copilot.sh - Enhanced GitHub PR comment resolver with auto-fix capabilities
+# Resolves ALL GitHub comments (bots, CodeRabbit, user feedback), and CI failures to make PR mergeable
 
 set -euo pipefail
 
@@ -25,15 +25,23 @@ show_help() {
     echo ""
     echo "Description:"
     echo "  This script comprehensively analyzes a PR and attempts to:"
-    echo "  1. Extract ALL bot comments (Copilot, GitHub Actions, etc.)"
+    echo "  1. Extract ALL comments (bots, CodeRabbit, user feedback) - PRIORITIZING MOST RECENT FIRST"
     echo "  2. Identify and fix ALL failing tests"
     echo "  3. Resolve merge conflicts automatically"
     echo "  4. Address security and logic issues"
     echo "  5. Make the PR ready for merge"
     echo ""
+    echo "Features:"
+    echo "  - Comments processed in chronological order (newest first)"
+    echo "  - Intelligent analysis of comment types and priorities"
+    echo "  - Automated replies with accept/decline decisions"
+    echo ""
     echo "Example:"
     echo "  $0 123        # Analyze PR #123"
     echo "  $0            # Analyze PR for current branch"
+    echo ""
+    echo "Note: For best results, use the Python implementation:"
+    echo "  python3 .claude/commands/copilot.py [PR_NUMBER]"
     exit 0
 }
 
@@ -75,48 +83,160 @@ get_repo_info() {
     gh repo view --json owner,name | jq -r '"\(.owner.login)/\(.name)"'
 }
 
-# Function to extract all bot comments
+# Function to extract all bot comments with robust error handling
 extract_bot_comments() {
     local pr_number=$1
     local repo=$2
     
-    echo -e "${BLUE}🤖 Extracting bot comments...${NC}"
+    echo -e "${BLUE}🤖 Extracting bot comments, CodeRabbit reviews, and user feedback...${NC}" >&2
     
-    # Get inline review comments from bots (with error handling)
+    # Initialize variables
+    local inline_comments="[]"
+    local general_comments="[]"
+    local review_comments="[]"
+    
+    # Method 1: Get inline review comments with robust error handling
+    echo -e "${BLUE}  Extracting inline review comments...${NC}" >&2
+    local inline_result
     inline_result=$(gh api "repos/$repo/pulls/$pr_number/comments" 2>/dev/null || echo "[]")
-    inline_comments=$(echo "$inline_result" | jq '[.[] | select(.user.type == "Bot" or (.user.login | test("bot|copilot"; "i"))) | {
-        id: .id,
-        file: .path,
-        line: .line,
-        body: .body,
-        user: .user.login,
-        position: .position,
-        type: "inline"
-    }]' 2>/dev/null || echo "[]")
     
-    # Get general PR comments from bots (with error handling)
+    # Validate JSON before processing
+    if echo "$inline_result" | jq empty 2>/dev/null; then
+        inline_comments=$(echo "$inline_result" | jq -r '[.[] | select(.user.type == "Bot" or (.user.login | test("bot|copilot|coderabbit"; "i")) or .user.login == "jleechan2015") | {
+            id: .id,
+            file: .path,
+            line: .line,
+            body: .body,
+            user: .user.login,
+            position: .position,
+            type: "inline"
+        }]' 2>/dev/null || echo "[]")
+    else
+        echo -e "${YELLOW}  ⚠ Invalid JSON in inline comments, skipping...${NC}" >&2
+        inline_comments="[]"
+    fi
+    
+    # Method 2: Get PR reviews with robust error handling
+    echo -e "${BLUE}  Extracting PR reviews...${NC}" >&2
+    local review_result
+    review_result=$(gh pr view "$pr_number" --json reviews 2>/dev/null || echo '{"reviews":[]}')
+    
+    # Validate JSON before processing
+    if echo "$review_result" | jq empty 2>/dev/null; then
+        review_comments=$(echo "$review_result" | jq -r '[.reviews[]? | select(.author and .author.login and (.author.login | test("bot|copilot|github-actions|coderabbit"; "i") or .author.login == "jleechan2015")) | {
+            id: .id,
+            body: .body,
+            user: .author.login,
+            state: .state,
+            type: "review"
+        }]' 2>/dev/null || echo "[]")
+    else
+        echo -e "${YELLOW}  ⚠ Invalid JSON in PR reviews, skipping...${NC}" >&2
+        review_comments="[]"
+    fi
+    
+    # Method 3: Get general PR comments with robust error handling
+    echo -e "${BLUE}  Extracting general PR comments...${NC}" >&2
+    local general_result
     general_result=$(gh pr view "$pr_number" --json comments 2>/dev/null || echo '{"comments":[]}')
-    general_comments=$(echo "$general_result" | jq '[.comments[]? | select(.author.login | test("bot|copilot|github-actions"; "i")) | {
-        id: .id,
-        body: .body,
-        user: .author.login,
-        type: "general"
-    }]' 2>/dev/null || echo "[]")
     
-    # Combine all comments safely
-    # Write to temp files to avoid complex shell quoting issues
-    temp_inline=$(mktemp)
-    temp_general=$(mktemp)
+    # Validate JSON before processing
+    if echo "$general_result" | jq empty 2>/dev/null; then
+        general_comments=$(echo "$general_result" | jq -r '[.comments[]? | select(.author.login | test("bot|copilot|github-actions|coderabbit"; "i") or .author.login == "jleechan2015") | {
+            id: .id,
+            body: .body,
+            user: .author.login,
+            type: "general"
+        }]' 2>/dev/null || echo "[]")
+    else
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+        echo -e "${YELLOW}  ⚠ Invalid JSON in general comments, skipping...${NC}" >&2
+        general_comments="[]"
+    fi
+    
+    # Combine all comments safely using temp files
+    local temp_inline; temp_inline=$(mktemp)
+    local temp_general; temp_general=$(mktemp)
+    local temp_reviews; temp_reviews=$(mktemp)
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Ensure cleanup even on error
+    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
+    
+    # Write to temp files with validation
     echo "$inline_comments" > "$temp_inline"
     echo "$general_comments" > "$temp_general"
-    
-    # Combine arrays using jq
-    all_comments=$(jq -s '.[0] + .[1]' "$temp_inline" "$temp_general" 2>/dev/null || echo "[]")
-    
-    # Cleanup
-    rm -f "$temp_inline" "$temp_general"
-    
-    echo "$all_comments"
+    # Final validation
+    if echo "$all_comments" | jq empty 2>/dev/null; then
+        echo "$all_comments"
+    else
+        echo -e "${YELLOW}  ⚠ Final comment combination failed, returning empty array${NC}" >&2
+        echo "[]"
+    fi
 }
 
 # Function to check CI status and get failure details

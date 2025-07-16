@@ -95,9 +95,20 @@
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
 7. 🚨 **DATE INTERPRETATION**: Environment date format is YYYY-MM-DD where MM is the month number (01=Jan, 07=July)
 8. 🚨 **BRANCH DISCIPLINE**: ❌ NEVER switch git branches unless user explicitly requests it | Work on current branch only | Ask before any `git checkout` operations
-9. 🚨 **DEV BRANCH PROTECTION**: ❌ NEVER make changes in dev[timestamp] branches | These are protective branches only | Always create descriptive branches for actual work
-10. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
-11. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
+9. 🚨 **BRANCH CONTEXT VERIFICATION**: ⚠️ MANDATORY - Before ANY changes:
+   - ✅ ALWAYS ask "Which branch should I work on?" if ambiguous
+   - ✅ ALWAYS verify PR context before modifications 
+   - ✅ ALWAYS confirm destination before pushing changes
+   - ❌ NEVER assume current branch is correct without verification
+10. 🚨 **TOOL EXPLANATION VS EXECUTION**: ⚠️ MANDATORY distinction
+   - ✅ When user asks "does X tool do Y?", clearly state if you're explaining or executing
+   - ✅ If explaining capabilities, use "X tool CAN do Y" language
+   - ✅ If actually executing, use the tool and show results
+   - ❌ NEVER explain tool capabilities as if you executed them
+   - ⚠️ Example: "The /learn command can save to memory" vs "Saving to memory now..."
+11. 🚨 **DEV BRANCH PROTECTION**: ❌ NEVER make changes in dev[timestamp] branches | These are protective branches only | Always create descriptive branches for actual work
+12. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
+13. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
    - **OPEN** = Work In Progress (WIP) - NOT completed
    - **MERGED** = Completed and integrated into main branch  
    - **CLOSED** = Abandoned or rejected - NOT completed
@@ -152,6 +163,12 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 - ✅ Header commands and format documented at top of CLAUDE.md
 - 🚨 **USER EXPECTATION**: Missing header = immediate callout from user
 - ✅ This is the #1 most violated rule - extreme vigilance required
+
+🚨 **BRANCH MANAGEMENT PROTOCOL**: 
+- ❌ NEVER switch branches without explicit permission and announcement
+- ⚠️ ALWAYS confirm "Should I switch to branch X?" before checkout
+- ⚠️ ALWAYS announce "Switching from X to Y" during branch changes
+- ⚠️ ALWAYS verify branch context before making modifications
 
 **Response Modes**: 
 - Default: Structured analysis with <thinking>, <analysis>, <response> format for complex tasks
@@ -461,6 +478,14 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - **Empty Strings**: ✅ `if value is not None:` | ❌ `if value:`
 - **AI Instructions**: Critical first, style last | Order determines compliance
 - 🚨 **Trust But Verify**: NEVER assume existing code works | Test core functionality before adding features | Validate success AND failure paths
+
+### 🚨 **BRANCH CONFUSION ANTI-PATTERN**: Major failure pattern to avoid
+- ❌ Working on wrong branch due to lack of context verification
+- ❌ Creating conflicting PRs without checking user intent
+- ❌ Pushing changes to unintended destinations
+- ✅ ALWAYS verify branch context before making changes
+- ✅ ALWAYS confirm PR destination before pushing
+- **Evidence**: PR #627 vs PR #628 conflict incident - July 2025
 
 ### Debugging Protocol (🚨 MANDATORY)
 
