@@ -40,7 +40,7 @@ Examples:
 
 ## Usage in Workflow
 
-**Best Practice**: Use `/header` at the start of responses to:
+**Best Practice**: Use `/header` before ending responses to:
 - Generate the required header with **one command**
 - Create a reminder checkpoint to include it
 - Ensure consistent formatting with zero effort
@@ -53,13 +53,13 @@ Examples:
 - Perfect for developing muscle memory
 
 **Integration**: 
-- Start every response with `/header` (one simple command)
+- End every response with the header (one simple command)
 - Use when switching branches or tasks
-- Make it a habit: "header first, then respond"
+- Make it a habit: "content first, header last"
 
 ## Compliance Note
 
-This command helps fulfill the 🚨 CRITICAL requirement in CLAUDE.md that EVERY response must start with the branch header. The header provides essential context about:
+This command helps fulfill the 🚨 CRITICAL requirement in CLAUDE.md that EVERY response must end with the branch header. The header provides essential context about:
 - Current working branch
 - Remote tracking status  
 - Associated pull request (if any)

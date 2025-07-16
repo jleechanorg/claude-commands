@@ -48,6 +48,67 @@ def analyze_current_branch_architecture() -> Dict[str, Any]:
         }
 
 
+# Compatibility alias for tests
+def analyze_file_structure(filepath: str) -> Dict[str, Any]:
+    """
+    Alias for analyze_file_architecture to maintain test compatibility.
+    Returns simplified structure for test compatibility.
+    """
+    # Check if file exists and has content
+    if not os.path.exists(filepath):
+        return {'error': f'File not found: {filepath}'}
+    
+    try:
+        with open(filepath, 'r') as f:
+            content = f.read()
+        
+        # Check for empty file
+        if not content.strip():
+            return {
+                'error': f'Empty file: {filepath}',
+                'skipped': True
+            }
+        
+        # Check if it's a Python file for AST analysis
+        if not filepath.endswith('.py'):
+            return {
+                'error': f'Not a Python file: {filepath}',
+                'skipped': True
+            }
+        
+        # Try to parse as Python AST
+        import ast
+        try:
+            tree = ast.parse(content, filename=filepath)
+        except SyntaxError as e:
+            return {
+                'error': f'Syntax error at line {e.lineno}: {e.msg}',
+                'syntax_error': True
+            }
+        
+        # Success case - return expected structure
+        return {
+            'success': True,
+            'file': filepath,
+            'metrics': {
+                'lines': len(content.splitlines()),
+                'complexity': calculate_cyclomatic_complexity(tree),
+                'function_count': len([n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef)]),
+                'class_count': len([n for n in ast.walk(tree) if isinstance(n, ast.ClassDef)])
+            },
+            'functions': extract_functions_with_complexity(tree),
+            'imports': extract_import_dependencies(tree),
+            'classes': extract_classes_with_methods(tree),
+            'issues': find_architectural_issues(tree, filepath)
+        }
+        
+    except Exception as e:
+        return {
+            'error': f'Analysis failed: {str(e)}',
+            'failed': True
+        }
+
+
 def analyze_file_architecture(filepath: str) -> Dict[str, Any]:
     """Analyze specific file architecture with size optimization"""
     if not os.path.exists(filepath):
@@ -366,6 +427,258 @@ def main():
     if "No timeouts recorded" not in opt_report:
         print("\n📊 Optimization Report:")
         print(opt_report)
+
+
+# Additional compatibility functions for tests
+def calculate_cyclomatic_complexity(tree) -> int:
+    """Stub implementation for cyclomatic complexity calculation"""
+    import ast
+    
+    # Simple complexity calculation - count decision points
+    complexity = 1  # Base complexity
+    
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.If, ast.While, ast.For, ast.ExceptHandler, ast.With)):
+            complexity += 1
+        elif isinstance(node, ast.BoolOp):
+            complexity += len(node.values) - 1
+    
+    return complexity
+
+
+def extract_functions_with_complexity(tree) -> List[Dict[str, Any]]:
+    """Stub implementation for extracting functions with complexity"""
+    import ast
+    
+    functions = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            func_complexity = calculate_cyclomatic_complexity(node)
+            functions.append({
+                'name': node.name,
+                'line': getattr(node, 'lineno', 0),
+                'complexity': func_complexity,
+                'args_count': len(node.args.args) if hasattr(node, 'args') else 0
+            })
+    
+    return functions
+
+
+def extract_import_dependencies(tree) -> List[Dict[str, Any]]:
+    """Stub implementation for extracting import dependencies"""
+    import ast
+    
+    imports = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imports.append({
+                    'type': 'import',
+                    'module': alias.name,
+                    'line': getattr(node, 'lineno', 0)
+                })
+        elif isinstance(node, ast.ImportFrom):
+            module = getattr(node, 'module', '') or ''
+            for alias in node.names:
+                imports.append({
+                    'type': 'from_import',
+                    'module': module,
+                    'name': alias.name,
+                    'line': getattr(node, 'lineno', 0)
+                })
+    
+    return imports
+
+
+def extract_classes_with_methods(tree) -> List[Dict[str, Any]]:
+    """Stub implementation for extracting classes with methods"""
+    import ast
+    
+    classes = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef):
+            methods = []
+            for item in node.body:
+                if isinstance(item, ast.FunctionDef):
+                    # Check if method has @property decorator
+                    is_property = any(
+                        isinstance(dec, ast.Name) and dec.id == 'property'
+                        for dec in getattr(item, 'decorator_list', [])
+                    )
+                    # Check if method has @staticmethod decorator
+                    is_static = any(
+                        isinstance(dec, ast.Name) and dec.id == 'staticmethod'
+                        for dec in getattr(item, 'decorator_list', [])
+                    )
+                    # Check if method has @classmethod decorator
+                    is_class = any(
+                        isinstance(dec, ast.Name) and dec.id == 'classmethod'
+                        for dec in getattr(item, 'decorator_list', [])
+                    )
+                    methods.append({
+                        'name': item.name,
+                        'line': getattr(item, 'lineno', 0),
+                        'is_property': is_property,
+                        'is_static': is_static,
+                        'is_class': is_class
+                    })
+            
+            classes.append({
+                'name': node.name,
+                'line': getattr(node, 'lineno', 0),
+                'methods': methods,
+                'method_count': len(methods)
+            })
+    
+    return classes
+
+
+def find_architectural_issues(tree, filepath: str) -> List[Dict[str, Any]]:
+    """Stub implementation for finding architectural issues"""
+    import ast
+    issues = []
+    
+    # Check for high complexity functions
+    for node in ast.walk(tree):
+        if isinstance(node, ast.FunctionDef):
+            complexity = calculate_cyclomatic_complexity(node)
+            if complexity > 10:  # High complexity threshold
+                issues.append({
+                    'type': 'high_complexity',
+                    'location': f'{filepath}:{getattr(node, "lineno", 0)}',
+                    'message': f'Function {node.name} has high complexity ({complexity})',
+                    'severity': 'warning',
+                    'complexity': complexity,
+                    'function_name': node.name,
+                    'suggestion': f'Consider refactoring {node.name} to reduce complexity from {complexity} to under 10'
+                })
+    
+    return issues
+
+
+def generate_evidence_based_insights(analysis_results: List[Dict]) -> List[Dict]:
+    """Stub implementation for generating insights"""
+    insights = []
+    
+    # Analyze results for insights
+    complexity_insights = []
+    func_insights = []
+    
+    for result in analysis_results:
+        complexity = result.get('metrics', {}).get('complexity', 0)
+        func_count = result.get('metrics', {}).get('function_count', 0)
+        
+        if complexity > 10:
+            complexity_insight = {
+                'category': 'complexity',
+                'severity': 'warning',
+                'finding': f'High complexity detected in {result.get("file", "unknown file")}',
+                'evidence': [f'Complexity: {complexity}'],
+                'recommendation': 'Consider refactoring to reduce complexity',
+                'specific_actions': ['Break down complex functions', 'Extract helper methods', 'Simplify conditional logic']
+            }
+            insights.append(complexity_insight)
+            complexity_insights.append(complexity_insight)
+        
+        if func_count >= 5:  # Detect when function count is 5 or more
+            func_insight = {
+                'category': 'function_complexity',
+                'severity': 'info',
+                'finding': f'Multiple functions in {result.get("file", "unknown file")}',
+                'evidence': [f'Function count: {func_count}'],
+                'recommendation': 'Consider organizing functions logically',
+                'specific_actions': ['Group related functions', 'Create utility modules', 'Apply single responsibility principle']
+            }
+            insights.append(func_insight)
+            func_insights.append(func_insight)
+    
+    # If no specific insights, provide a general one
+    if not insights:
+        insights.append({
+            'category': 'general',
+            'severity': 'info',
+            'finding': 'Analysis completed successfully',
+            'evidence': ['No critical issues found'],
+            'recommendation': 'Code structure appears acceptable',
+            'specific_actions': ['Continue following best practices', 'Monitor for future complexity growth']
+        })
+    
+    return insights
+
+
+def format_analysis_for_arch_command(analysis_results: List[Dict], insights: List[Dict]) -> str:
+    """Stub implementation for formatting analysis"""
+    report = []
+    report.append("## Technical Analysis")
+    report.append("")
+    
+    if analysis_results:
+        report.append("### Files Analyzed")
+        for result in analysis_results:
+            file_name = result.get('file', 'unknown')
+            metrics = result.get('metrics', {})
+            report.append(f"- **{file_name}**:")
+            report.append(f"  - Complexity: {metrics.get('complexity', 0)}")
+            report.append(f"  - Functions: {metrics.get('function_count', 0)}")
+            report.append(f"  - Classes: {metrics.get('class_count', 0)}")
+        report.append("")
+    
+    if insights:
+        report.append("### Key Findings")
+        for insight in insights:
+            severity = insight.get('severity', 'info').upper()
+            finding = insight.get('finding', 'No details')
+            # Add severity emoji
+            emoji = '🚨' if severity in ['WARNING', 'HIGH'] else 'ℹ️' if severity == 'INFO' else '🔍'
+            report.append(f"- **{severity}** {emoji}: {finding}")
+        report.append("")
+    
+    report.append("---")
+    report.append("*Analysis provided by architecture command*")
+    
+    return "\n".join(report)
+
+
+def analyze_project_files(file_patterns: List[str]) -> Dict[str, Any]:
+    """Stub implementation for project analysis"""
+    import glob
+    
+    analysis_results = []
+    all_files = []
+    
+    # Collect files matching patterns
+    for pattern in file_patterns:
+        files = glob.glob(pattern, recursive=True)
+        all_files.extend(files)
+    
+    # Analyze each file
+    for filepath in all_files:
+        if filepath.endswith('.py'):
+            result = analyze_file_structure(filepath)
+            if result.get('success'):
+                analysis_results.append(result)
+    
+    # Generate insights
+    insights = generate_evidence_based_insights(analysis_results)
+    
+    # Count syntax errors
+    syntax_errors = 0
+    for filepath in all_files:
+        if filepath.endswith('.py'):
+            result = analyze_file_structure(filepath)
+            if result.get('syntax_error'):
+                syntax_errors += 1
+    
+    return {
+        'analysis_results': analysis_results,
+        'insights': insights,
+        'summary': {
+            'total_files': len(all_files),
+            'successful_analyses': len(analysis_results),
+            'insights_generated': len(insights),
+            'syntax_errors': syntax_errors
+        }
+    }
 
 
 if __name__ == "__main__":

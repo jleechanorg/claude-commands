@@ -4,7 +4,7 @@
 
 ## 🚨 CRITICAL: MANDATORY BRANCH HEADER PROTOCOL
 
-**EVERY SINGLE RESPONSE MUST START WITH THIS HEADER - NO EXCEPTIONS:**
+**EVERY SINGLE RESPONSE MUST END WITH THIS HEADER - NO EXCEPTIONS:**
 
 ```
 [Local: <branch> | Remote: <upstream> | PR: <number> <url>]
@@ -17,7 +17,7 @@
   - `git rev-parse --abbrev-ref @{upstream} 2>/dev/null || echo "no upstream"` - Get remote
   - `gh pr list --head $(git branch --show-current) --json number,url` - Get PR info
 
-**🎯 Memory Aid:** The `/header` command reduces 3 commands to 1, making compliance effortless and helping build the habit of "header first, then respond".
+**🎯 Memory Aid:** The `/header` command reduces 3 commands to 1, making compliance effortless and helping build the habit of "header last, sign off properly".
 
 **Examples:**
 - `[Local: main | Remote: origin/main | PR: none]`
@@ -25,8 +25,8 @@
 
 **❌ NEVER SKIP THIS HEADER - USER WILL CALL YOU OUT IMMEDIATELY**
 
-**🚨 PRE-RESPONSE CHECKPOINT**: Before writing ANY response, ask:
-1. "Did I include the mandatory branch header?"
+**🚨 POST-RESPONSE CHECKPOINT**: Before submitting ANY response, ask:
+1. "Did I include the mandatory branch header at the END?"
 2. "Does this violate any other rules in CLAUDE.md?"
 
 ## Legend
@@ -133,7 +133,7 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 
 **Branch Status Protocol**:
 🚨 **CRITICAL ENFORCEMENT**: See top of document for mandatory header protocol
-- ❌ NEVER start a response without the branch header
+- ❌ NEVER end a response without the branch header
 - ✅ Header commands and format documented at top of CLAUDE.md
 - 🚨 **USER EXPECTATION**: Missing header = immediate callout from user
 - ✅ This is the #1 most violated rule - extreme vigilance required

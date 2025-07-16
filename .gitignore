@@ -105,6 +105,12 @@ docs/coverage/
 *.bak
 *~
 .cache/
+temp/
+*_snapshot.txt
+
+# Large data files that shouldn't be tracked
+mvp_site/prompts/5e_SRD_All.md
+mvp_site/*_Campaign_*.txt
 
 # Environment files with sensitive data
 testing_ui/testing_full/.env

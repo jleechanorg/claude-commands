@@ -11,6 +11,14 @@ import urllib.request
 import requests
 from typing import Optional, Dict, Any, List
 
+# Module-level constants
+PROBLEMATIC_PHRASES = [
+    "ser arion",
+    "dragon knight", 
+    "celestial imperium",
+    "empress sariel"
+]
+
 # Test data constants
 CAMPAIGN_TEST_DATA = {
     "custom_campaign": {
@@ -247,7 +255,7 @@ def start_test_server(port="6006") -> Optional[subprocess.Popen]:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             cwd=os.getcwd(),
-            env={**os.environ, "PATH": "./venv/bin:" + os.environ.get("PATH", "")}
+            env={**os.environ, "PATH": os.path.join(os.getcwd(), "venv", "bin") + os.pathsep + os.environ.get("PATH", "")}
         )
     
     print("⏳ Waiting for server to start...")
@@ -277,14 +285,7 @@ def validate_no_dragon_knight_in_custom(page_content, test_mode="http"):
     content_lower = page_content.lower()
     
     # Check for Dragon Knight references that shouldn't be in custom campaigns
-    problematic_phrases = [
-        "ser arion",
-        "dragon knight", 
-        "celestial imperium",
-        "empress sariel"
-    ]
-    
-    for phrase in problematic_phrases:
+    for phrase in PROBLEMATIC_PHRASES:
         assert phrase not in content_lower, f"Found Dragon Knight default '{phrase}' in custom campaign: {page_content[:200]}..."
     
     return True
