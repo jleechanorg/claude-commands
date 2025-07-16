@@ -83,7 +83,7 @@
 
 **Process**: Detect → Analyze → Document (CLAUDE.md/learnings.md/lessons.mdc) → Apply → Persist to Memory MCP
 
-**/learn Command**: `/learn [optional: specific learning]` - Capture learnings explicitly with Memory MCP integration for persistent knowledge graph storage
+**/learn Command**: `/learn [optional: specific learning]` - The unified learning command with Memory MCP integration for persistent knowledge graph storage (consolidates all learning functionality)
 
 ## Claude Code Specific Behavior
 
@@ -559,14 +559,14 @@ Use `/list` to display all available slash commands with descriptions.
 
 **Both commands use realistic execution with optional Task-based subagents when beneficial**
 
-⚠️ **ENHANCED /learn WORKFLOW**: Flexible branching options for learning capture with Memory MCP integration
-   - ✅ Offer choice: "Include in current PR" vs "Clean branch from main"
-   - ✅ Bundle related learning changes with current work when contextually appropriate
-   - ✅ Create independent learning PRs for isolated improvements
-   - ✅ **Memory MCP Integration**: Persist learnings to knowledge graph with entity creation and relations
+⚠️ **UNIFIED /learn COMMAND**: Single consolidated command with Memory MCP integration
+   - ✅ **Command Consolidation**: ONE `/learn` command handles all learning functionality
+   - ✅ **Memory MCP Integration**: Persistent knowledge graph storage by default
+   - ✅ **No Variants**: Remove /learnmvp, /learn-enhanced, and other variant commands
+   - ✅ **Flexible Branching**: "Include in current PR" vs "Clean branch from main"
    - ✅ **Duplicate Detection**: Search existing graph before creating new entities
    - ✅ **Cross-Conversation Persistence**: Learnings survive beyond current session
-   - 🔍 Evidence: User request for workflow flexibility and clean branch options
+   - 🔍 Evidence: User said "i only want one /learn command and not some /learnmvp thing"
 
 **Command Examples**: → `.cursor/rules/examples.md`
 

@@ -1,8 +1,10 @@
 # /learn Command
 
-**Purpose**: Capture and document learnings from corrections and mistakes with enhanced analysis and persistent Memory MCP integration
+**Purpose**: The unified learning command that captures and documents learnings with Memory MCP integration for persistent knowledge storage
 
 **Usage**: `/learn [optional: specific learning or context]`
+
+**Note**: This is the single, unified `/learn` command. All learning functionality is consolidated here with Memory MCP integration as the default.
 
 **Enhanced Behavior**:
 1. **Sequential Thinking Analysis**: Use `/think` mode for deep pattern recognition and learning extraction

@@ -44,5 +44,4 @@
 {"type":"relation","from":"learn-memory-integration-test","to":"always_running_compliance_tracker","relationType":"relates_to"}
 {"type":"relation","from":"learn-memory-integration-test","to":"claude_cli_compliance_tracker","relationType":"applies_to"}
 {"type":"relation","from":"branch-header-upstream-tracking","to":"Header Compliance Violation","relationType":"relates_to"}
-{"type":"relation","from":"branch-header-upstream-tracking","to":"Incomplete Workflow Anti-Pattern","relationType":"caused_by"}test
-test-post-merge
+{"type":"relation","from":"branch-header-upstream-tracking","to":"Incomplete Workflow Anti-Pattern","relationType":"caused_by"}
