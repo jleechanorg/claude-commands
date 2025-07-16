@@ -219,6 +219,35 @@ Use docstrings, proper JS loading
 
 **ENFORCEMENT**: Violating this protocol = immediate task failure. No excuses accepted.
 
+### 🚨 SYSTEMATIC TEST FIXING METHODOLOGY
+
+**CRITICAL**: Lessons learned from achieving 100% pass rate (131/131) in PR #610 comprehensive test consolidation.
+
+🚨 **Test Fix Protocol - One Issue at a Time**:
+- ✅ Fix one specific test issue at a time (import errors, auth parsing, mock setup)
+- ✅ Run tests after each fix to prevent cascade failures and regression
+- ✅ Use targeted fixes rather than broad changes to avoid breaking other tests
+- ❌ NEVER attempt to fix multiple unrelated test issues simultaneously
+- **Evidence**: Successfully went from multiple failing files to 100% pass rate using this approach
+
+🚨 **Regression Prevention for Test Fixes**:
+- ⚠️ **Test-Only Fixes Preferred**: When goal is test pass rate, prefer fixing test infrastructure (mocks, imports, expectations) over modifying core application logic
+- ❌ **NEVER modify core application files** (main.py, schemas/, core services) when fixing test failures unless absolutely necessary
+- ✅ **Verify isolated impact**: If application changes needed, apply them in isolation and verify they don't break other tests
+- **Evidence**: Modifying main.py and schemas caused regression from "129 passed, 3 failed" to "116 passed, 16 failed"
+
+⚠️ **Function Name and Import Verification**:
+- ✅ **ALWAYS verify actual function names** in modules before writing import statements
+- ✅ Check both import statements AND function calls when fixing import errors
+- ✅ Use `grep` or `Read` tools to confirm function exists before importing
+- **Example**: Fixed `ImportError: cannot import name 'has_debug_content'` by verifying actual function name was `contains_debug_tags`
+
+✅ **API Response Consistency Protocol**:
+- ⚠️ **Standardize error keys**: Use consistent `KEY_ERROR` vs `KEY_MESSAGE` across entire API
+- ✅ **Verify response format**: Always verify API response format matches test expectations  
+- ✅ **Check both paths**: Verify both successful and error response formats when fixing API tests
+- **Example**: Fixed multiple auth tests by ensuring consistent use of `KEY_ERROR` for error responses
+
 ### Safety & Security
 ❌ Global `document.addEventListener('click')` without approval | Test workflows after modifications |
 Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Analysis + execution required
