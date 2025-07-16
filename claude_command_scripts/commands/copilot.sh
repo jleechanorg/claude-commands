@@ -116,7 +116,7 @@ check_ci_status() {
     echo -e "${BLUE}🔍 Checking CI status...${NC}"
     
     # Get all check runs using PR view (more reliable)
-    checks=$(gh pr view "$pr_number" --json statusCheckRollup | jq '.statusCheckRollup // []')
+    checks=$(gh pr view "$pr_number" --json statusCheckRollup | jq '.statusCheckRollup.checkRuns // []')
     
     # Filter failed and cancelled checks
     failed_checks=$(echo "$checks" | jq '[.[] | select(.conclusion == "FAILURE" or .conclusion == "CANCELLED")]')
