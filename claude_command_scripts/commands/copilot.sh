@@ -386,4 +386,17 @@ FIXES_APPLIED=$?
 # Generate final report
 generate_report "$PR_NUMBER" "$COMMENTS" "$FAILED_CHECKS" "$FIXES_APPLIED"
 
+# Force push any fixes to GitHub (as requested)
+if [[ $FIXES_APPLIED -eq 1 ]]; then
+    echo -e "\n${BLUE}🚀 Force pushing fixes to GitHub...${NC}"
+    CURRENT_BRANCH=$(git branch --show-current)
+    if git push --force-with-lease origin "$CURRENT_BRANCH"; then
+        echo -e "${GREEN}✅ Successfully force pushed fixes to GitHub${NC}"
+    else
+        echo -e "${RED}❌ Failed to force push changes${NC}"
+    fi
+else
+    echo -e "\n${BLUE}ℹ️  No fixes applied, skipping force push${NC}"
+fi
+
 echo -e "\n${GREEN}✅ Analysis complete!${NC}"
