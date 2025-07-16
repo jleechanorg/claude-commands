@@ -194,6 +194,22 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 **Logging**: ✅ `import logging_util` | ❌ `import logging` | Use project's unified logging
 Use docstrings, proper JS loading
 
+### Website Testing & Deployment Expectations (🚨 CRITICAL)
+🚨 **BRANCH ≠ WEBSITE**: ❌ NEVER assume branch changes are visible on websites without deployment
+- ✅ Check PR description first - many changes are tooling/CI/backend only
+- ✅ Feature branches need local server OR staging deployment for UI changes
+- ❌ NEVER expect developer tooling changes to affect website appearance
+- ✅ Production websites typically serve main branch only
+
+🚨 **"Website looks same" Protocol**: When user reports website unchanged after branch switch:
+1. ✅ Check PR description - what type of changes? (tooling vs UI)
+2. ✅ Ask: "What URL are you viewing?" (local vs production)
+3. ✅ Verify: User-facing changes or developer tooling improvements?
+4. ✅ For UI changes: Hard refresh (Ctrl+F5) + check local development server
+5. ✅ Explain: Branch switching ≠ deployment, many changes are non-visual
+
+**Common Non-Visual Changes**: CI improvements, push scripts, test harnesses, developer tooling, backend APIs, database changes
+
 ### Quality & Testing
 - File naming: descriptive, ❌ "red"/"green" | Methods <500 lines | Single responsibility
 - Integration tests: natural state, flexible assertions | Visual testing required
@@ -202,6 +218,20 @@ Use docstrings, proper JS loading
 - 🚨 **Output Contradiction Check**: If output shows failure indicators (❌, FAILED, ERROR) but summary shows success (✅, PASSED), STOP immediately and investigate
 - ⚠️ **Test Exit Codes**: Don't assume test scripts return proper exit codes | Parse output for success/failure strings | Verify detection logic before trusting results
 - ⚠️ **Dynamic Test Discovery**: ❌ NEVER hardcode test file lists in scripts | ✅ Use `find` or glob patterns to discover tests automatically | Update test runners to scan directories (e.g., `find testing_ui -name "test_*.py"`)
+
+### Website Testing & Deployment Expectations (🚨 CRITICAL)
+🚨 **BRANCH ≠ WEBSITE**: ❌ NEVER assume branch changes are visible on websites without deployment
+- ✅ Check PR description first - many changes are tooling/CI/backend/scripts only
+- ✅ Feature branches need local server OR staging deployment for UI changes  
+- ✅ Production websites typically serve main branch only
+- ❌ NEVER expect developer tooling changes to affect website appearance
+
+🚨 **"Website looks same" Protocol**:
+1. ✅ Check PR description - what type of changes? (tooling vs UI)
+2. ✅ Ask: "What URL are you viewing?" (local vs production)
+3. ✅ Verify: User-facing changes or developer tooling/CI/scripts?
+4. ✅ For UI changes: Hard refresh (Ctrl+F5) + check local development server
+5. ✅ Explain: Non-UI changes (scripts, CI, tests) won't change website appearance
 
 ### 🚨 MANDATORY TEST EXECUTION PROTOCOL
 
