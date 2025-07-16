@@ -29,6 +29,13 @@
 1. "Did I include the mandatory branch header at the END?"
 2. "Does this violate any other rules in CLAUDE.md?"
 
+**🚨 HEADER PR CONTEXT TRACKING**: Header must reflect actual work context, not just mechanical branch matching
+- ❌ NEVER show "PR: none" when work is related to existing PR context
+- ✅ ALWAYS consider actual work context when determining PR relevance
+- ✅ If working on feature related to PR #X, header should reference PR #X even if branch name differs
+- 🔍 Evidence: Recurring pattern of "PR: none" when user expects PR context to be tracked
+- ⚠️ This is a critical attention to detail compliance issue
+
 ## Legend
 🚨 = CRITICAL | ⚠️ = MANDATORY | ✅ = Always/Do | ❌ = Never/Don't | → = See reference | PR = Pull Request
 
