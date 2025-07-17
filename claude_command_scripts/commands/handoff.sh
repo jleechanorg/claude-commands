@@ -109,9 +109,32 @@ create_scratchpad() {
     local current_branch="$(get_current_branch)"
     local timestamp="$(date '+%Y-%m-%d %H:%M')"
     local filename="roadmap/scratchpad_handoff_${task_name}.md"
+    local handoff_branch="handoff-$task_name"
     
     cat > "$filename" << EOF
-# Scratchpad: ${task_name//_/ } (Title Case)
+# 🎯 WORKER PROMPT (Copy-paste ready)
+
+**TASK**: $description
+**SETUP**:
+1. Switch to worktree: \`cd /home/jleechan/projects/worldarchitect.ai/worktree_roadmap\`
+2. Checkout handoff branch: \`git checkout $handoff_branch\`
+3. Read specification: \`roadmap/scratchpad_handoff_${task_name}.md\`
+
+**GOAL**: $description
+
+**IMPLEMENTATION**: See detailed steps below
+
+**SUCCESS CRITERIA**: All acceptance criteria met (see Definition of Done)
+
+**TIMELINE**: TBD (see implementation plan)
+
+**FILES**: See "Files to Modify" section below
+
+**START**: Read the complete handoff specification below for implementation details
+
+---
+
+# Handoff Scratchpad: ${task_name//_/ } (Title Case)
 
 **Branch**: $current_branch  
 **Goal**: $description  
@@ -362,10 +385,7 @@ main() {
     local scratchpad_file
     scratchpad_file=$(create_scratchpad "$TASK_NAME" "$DESCRIPTION")
     
-    # Update roadmap
-    echo -e "${CYAN}🗺️  Updating roadmap...${NC}"
-    local task_id
-    task_id=$(update_roadmap "$TASK_NAME" "$DESCRIPTION")
+    # Note: Roadmap update moved to after PR creation for /r command integration
     
     # Create PR
     echo -e "${CYAN}🔀 Creating PR...${NC}"
@@ -376,6 +396,38 @@ main() {
         echo -e "${RED}❌ Failed to create PR${NC}"
         exit 1
     fi
+    
+    # Execute /r command to update roadmap
+    echo -e "${CYAN}🗺️  Executing /r command to update roadmap...${NC}"
+    
+    # Switch to main branch
+    git checkout main
+    git pull origin main
+    
+    # Update roadmap.md with handoff entry
+    local handoff_entry="- **HANDOFF-$TASK_NAME** 🔄 $DESCRIPTION - Ready for implementation (PR: $pr_url)"
+    
+    # Add entry to roadmap.md under "Next Priority Tasks"
+    if grep -q "### Next Priority Tasks" roadmap/roadmap.md; then
+        sed -i "/### Next Priority Tasks/a $handoff_entry" roadmap/roadmap.md
+    else
+        echo "$handoff_entry" >> roadmap/roadmap.md
+    fi
+    
+    # Commit roadmap changes
+    git add roadmap/roadmap.md
+    git commit -m "docs(roadmap): Add handoff task - $DESCRIPTION
+
+Handoff branch: $handoff_branch
+PR: $pr_url
+Scratchpad: $scratchpad_file
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+    
+    # Push to main
+    git push origin main
     
     # Switch back to original branch
     echo -e "${CYAN}🔄 Returning to original branch: $original_branch${NC}"
@@ -388,14 +440,15 @@ main() {
     echo "="*60
     echo -e "${CYAN}📋 Scratchpad:${NC} $scratchpad_file"
     echo -e "${CYAN}🔀 PR:${NC} $pr_url"
-    echo -e "${CYAN}🆔 Task ID:${NC} $task_id"
     echo -e "${CYAN}🌿 Handoff branch:${NC} $handoff_branch (pushed to remote)"
     echo -e "${CYAN}📍 Current branch:${NC} $original_branch (restored)"
+    echo -e "${CYAN}🗺️  Roadmap:${NC} Updated with handoff entry"
     echo ""
     echo "="*60
     echo -e "${GREEN}📤 WORKER PROMPT (Copy & Paste)${NC}"
     echo "="*60
-    generate_worker_prompt "$TASK_NAME" "$DESCRIPTION" "$pr_url" "$scratchpad_file"
+    echo -e "${CYAN}Note: Worker prompt is now at the top of scratchpad file${NC}"
+    echo -e "${CYAN}File: $scratchpad_file${NC}"
     echo ""
     echo -e "${GREEN}✅ Ready for delegation!${NC}"
 }
