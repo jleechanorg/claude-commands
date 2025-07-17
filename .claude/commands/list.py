@@ -28,7 +28,8 @@ def read_command_info(md_file):
                 break
         
         return title, purpose
-    except:
+    except (OSError, IOError, ValueError) as e:
+        print(f"Error reading file {md_file}: {e}", file=sys.stderr)
         return None, None
 
 def main():
