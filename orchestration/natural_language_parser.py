@@ -26,9 +26,9 @@ class NaturalLanguageParser:
         self.command_patterns = {
             # Task delegation patterns
             'delegate_task': [
-                r'(?:build|create|make|develop|implement)\s+(?:a\s+)?(.+)',
-                r'(?:please\s+)?(?:can\s+you\s+)?(?:build|create|make|develop|implement)\s+(.+)',
-                r'(?:i\s+need\s+)?(?:you\s+to\s+)?(?:build|create|make|develop|implement)\s+(.+)',
+                r'(?:build|create|make|develop|implement|enhance|improve|fix|update|modify)\s+(?:a\s+)?(.+)',
+                r'(?:please\s+)?(?:can\s+you\s+)?(?:build|create|make|develop|implement|enhance|improve|fix|update|modify)\s+(.+)',
+                r'(?:i\s+need\s+)?(?:you\s+to\s+)?(?:build|create|make|develop|implement|enhance|improve|fix|update|modify)\s+(.+)',
                 r'(?:task|job|work):\s*(.+)',
                 r'(?:delegate|assign|give)\s+(?:task|job|work)\s*:?\s*(.+)',
             ],

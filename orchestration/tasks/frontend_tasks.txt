@@ -1,0 +1,1 @@
+[2025-07-17 12:19:33] [MEDIUM] our /copilot command look at all github comments and not just the last 20

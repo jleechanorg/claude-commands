@@ -750,10 +750,8 @@ class GitHubCopilotProcessor:
         
         print(f"📊 TOTAL COMMENTS TO PROCESS: {len(all_comments)}")
         
-        # LIMIT TO LAST 20 COMMENTS (most recent first)
-        if len(all_comments) > 20:
-            all_comments = all_comments[:20]
-            print(f"⚠️ Processing only the last 20 comments (most recent)")
+        # Process ALL comments (no artificial limit)
+        print(f"✅ Processing all {len(all_comments)} comments (most recent first)")
         
         # Process each comment individually
         for i, comment in enumerate(all_comments, 1):
@@ -784,7 +782,10 @@ class GitHubCopilotProcessor:
         print(f"\n📊 FINAL RESULTS:")
         print(f"✅ Successful replies: {replies_posted}")
         print(f"❌ Failed replies: {len(failed_replies)}")
-        print(f"📈 Success rate: {replies_posted}/{len(all_comments)} ({replies_posted/len(all_comments)*100:.1f}%)")
+        if all_comments:
+            print(f"📈 Success rate: {replies_posted}/{len(all_comments)} ({replies_posted/len(all_comments)*100:.1f}%)")
+        else:
+            print(f"📈 Success rate: No comments to process")
         
         # Report failures explicitly
         if failed_replies:
