@@ -554,6 +554,7 @@ Use `/list` to display all available slash commands with descriptions.
 **Technical Revolution**: Instead of trying to build NLP in bash, leverage Claude's existing NLP capabilities through meta-prompts
 
 🚨 **SLASH COMMAND ENFORCEMENT**: 
+- 🚨 **NEVER BYPASS SLASH COMMANDS**: When user issues any slash command (`/handoff`, `/execute`, `/learn`, etc.), MUST follow the command's specific protocol exactly, not do regular work instead | Each command has defined workflows and outputs that user expects
 - `/e` or `/execute` MUST follow simplified protocol in `.claude/commands/execute.md`
 - NEVER treat `/e` as regular request - always use TodoWrite circuit breaker
 - MANDATORY: TodoWrite checklist → Present plan → Wait for approval → Execute
