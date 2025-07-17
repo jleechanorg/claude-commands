@@ -1,95 +1,76 @@
 #!/bin/bash
-# integrate.sh - Reliable integration workflow
-# Replaces unreliable /integrate command behavior with deterministic script
+# integrate.sh - Integration command wrapper for Claude Code
+# Calls the main ./integrate.sh script with proper argument handling
 
 set -euo pipefail
+
+# Get the project root directory (two levels up from this script)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
+BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Help function
+# Help function that matches the main script's capabilities
 show_help() {
-    echo "integrate.sh - Reliable integration workflow for Claude Code"
+    echo "integrate.sh - Integration command wrapper for Claude Code"
     echo ""
-    echo "Usage: $0 [options]"
+    echo "Usage: $0 [branch-name] [--force]"
     echo ""
     echo "Options:"
-    echo "  -h, --help    Show this help message"
+    echo "  -h, --help      Show this help message"
+    echo "  branch-name     Optional custom branch name (default: dev{timestamp})"
+    echo "  --force         Override safety checks for uncommitted/unpushed changes"
     echo ""
     echo "Description:"
-    echo "  This script provides a deterministic integration workflow that:"
-    echo "  1. Stashes any uncommitted changes"
-    echo "  2. Updates the main branch from origin"
-    echo "  3. Creates a new dev[timestamp] branch"
-    echo "  4. Provides clear next steps"
+    echo "  This wrapper calls the main ./integrate.sh script which provides:"
+    echo "  1. Stops test server for current branch (if running)"
+    echo "  2. Checks for uncommitted/unpushed changes (with --force override)"
+    echo "  3. Updates main branch from origin"
+    echo "  4. Creates new branch from latest main"
+    echo "  5. Cleans up merged branches automatically"
+    echo "  6. Provides comprehensive status reporting"
     echo ""
-    echo "Example:"
-    echo "  $0"
+    echo "Examples:"
+    echo "  $0                          # Creates dev{timestamp} branch"
+    echo "  $0 feature/my-feature       # Creates feature/my-feature branch"  
+    echo "  $0 --force                  # Force mode with dev{timestamp}"
+    echo "  $0 newbranch --force        # Creates newbranch in force mode"
     echo ""
     echo "Notes:"
-    echo "  - Uncommitted changes are automatically stashed with descriptive names"
-    echo "  - Uses 'git pull --rebase' to avoid merge commits"
-    echo "  - Creates timestamp-based branch names for uniqueness"
+    echo "  - Will stop with errors for uncommitted/unpushed changes (unless --force)"
+    echo "  - Automatically deletes clean merged branches"
+    echo "  - Sets up proper upstream tracking"
+    echo "  - Integrates with test server management"
     exit 0
 }
 
-# Parse command line arguments
+# Parse command line arguments to handle help
 if [[ $# -gt 0 ]]; then
     case "$1" in
         -h|--help)
             show_help
             ;;
-        *)
-            echo "Unknown option: $1"
-            echo "Use --help for usage information"
-            exit 1
-            ;;
     esac
 fi
 
-echo -e "${GREEN}🔄 Starting integration workflow...${NC}"
-
-# 1. Check for uncommitted changes
-if ! git diff --quiet || ! git diff --cached --quiet; then
-    echo -e "${YELLOW}📦 Stashing uncommitted changes...${NC}"
-    stash_message="integrate.sh auto-stash $(date +%Y%m%d_%H%M%S)"
-    git stash push -m "$stash_message"
-    echo "  Stashed as: $stash_message"
-else
-    echo "✓ Working directory clean"
-fi
-
-# 2. Save current branch name (for reference)
-current_branch=$(git branch --show-current)
-echo "  Current branch: $current_branch"
-
-# 3. Update main branch
-echo -e "\n${GREEN}📥 Updating main branch...${NC}"
-git checkout main
-
-# Pull with rebase to avoid merge commits
-git pull origin main --rebase
-
-# 4. Create new development branch
-timestamp=$(date +%Y%m%d%H%M%S)
-new_branch="dev${timestamp}"
-git checkout -b "$new_branch"
-
-# 5. Show summary
-echo -e "\n${GREEN}✅ Integration complete!${NC}"
-echo "  Previous branch: $current_branch"
-echo "  New branch: $new_branch"
+echo -e "${BLUE}🔄 /integrate - Integration Command Wrapper${NC}"
+echo "============================================="
 echo ""
-echo "Next steps:"
-echo "  - Start working on your feature"
-echo "  - When ready: git add . && git commit -m 'feat: description'"
-echo "  - Create PR: gh pr create"
 
-# Check if there was a stash
-if git stash list | grep -q "integrate.sh auto-stash"; then
-    echo -e "\n${YELLOW}💡 Note: You have stashed changes${NC}"
-    echo "  To restore: git stash pop"
+# Change to project root to ensure proper execution context
+cd "$PROJECT_ROOT"
+
+# Call the main integrate.sh script with all arguments passed through
+echo -e "${GREEN}📞 Calling main integration script: ./integrate.sh${NC}"
+if [[ $# -gt 0 ]]; then
+    echo "   Arguments: $*"
 fi
+echo ""
+
+# Execute the main integrate.sh script with all arguments
+exec "$PROJECT_ROOT/integrate.sh" "$@"
