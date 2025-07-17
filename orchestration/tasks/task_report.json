@@ -1,0 +1,40 @@
+{
+  "timestamp": "2025-07-17 10:05:59.413077",
+  "total_tasks": 0,
+  "pending_tasks": 0,
+  "assigned_tasks": 0,
+  "completed_tasks": 0,
+  "completion_rate": 0.0,
+  "agent_workload": {
+    "frontend-agent": {
+      "current_load": 0,
+      "max_concurrent": 2,
+      "utilization": 0.0,
+      "tasks": 0,
+      "task_list": []
+    },
+    "backend-agent": {
+      "current_load": 0,
+      "max_concurrent": 3,
+      "utilization": 0.0,
+      "tasks": 0,
+      "task_list": []
+    },
+    "testing-agent": {
+      "current_load": 0,
+      "max_concurrent": 2,
+      "utilization": 0.0,
+      "tasks": 0,
+      "task_list": []
+    }
+  },
+  "task_distribution": {
+    "frontend": 0,
+    "backend": 0,
+    "testing": 0,
+    "documentation": 0,
+    "infrastructure": 0,
+    "bugfix": 0,
+    "feature": 0
+  }
+}

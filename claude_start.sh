@@ -1,7 +1,8 @@
 #!/bin/bash
-# Enhanced Claude Code startup script with reliable MCP server detection
+# Enhanced Claude Code startup script with reliable MCP server detection and orchestration
 # Always uses --dangerously-skip-permissions and prompts for model choice
 # Model updated: July 12th, 2025
+# Orchestration support added: July 16th, 2025
 
 # Colors for output
 RED='\033[0;31m'
@@ -29,6 +30,71 @@ done
 
 # Restore remaining arguments
 set -- "${REMAINING_ARGS[@]}"
+
+# Function to check if orchestration is running
+is_orchestration_running() {
+    # Check if Redis is accessible
+    if ! command -v redis-cli >/dev/null 2>&1 || ! redis-cli ping &> /dev/null; then
+        return 1
+    fi
+    
+    # Check if orchestration agents exist
+    if tmux has-session -t opus-master 2>/dev/null; then
+        return 0
+    fi
+    
+    return 1
+}
+
+# Function to start orchestration in background
+start_orchestration_background() {
+    local SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    
+    # Check if orchestration directory exists
+    if [ ! -d "$SCRIPT_DIR/orchestration" ]; then
+        return 1
+    fi
+    
+    # Check if start script exists
+    if [ ! -f "$SCRIPT_DIR/orchestration/start_system.sh" ]; then
+        return 1
+    fi
+    
+    # Start orchestration silently in background
+    (
+        cd "$SCRIPT_DIR/orchestration"
+        
+        # Start Redis if not running
+        if ! redis-cli ping &> /dev/null; then
+            redis-server --daemonize yes --bind 127.0.0.1 --protected-mode yes &> /dev/null || true
+            sleep 1
+        fi
+        
+        # Start orchestration agents in quiet mode
+        ./start_system.sh --quiet start &> /dev/null &
+    )
+    
+    # Wait a moment for startup
+    sleep 2
+    
+    return 0
+}
+
+# Check and start orchestration if available
+echo -e "${BLUE}🔧 Checking orchestration system...${NC}"
+if is_orchestration_running; then
+    echo -e "${GREEN}✅ Orchestration system already running${NC}"
+else
+    if start_orchestration_background; then
+        if is_orchestration_running; then
+            echo -e "${GREEN}✅ Orchestration system started${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Orchestration optional - continuing without it${NC}"
+        fi
+    else
+        echo -e "${YELLOW}ℹ️  Orchestration not available${NC}"
+    fi
+fi
 
 # Enhanced MCP server detection with better error handling
 echo -e "${BLUE}🔍 Checking MCP servers...${NC}"
@@ -202,6 +268,15 @@ echo -e "${BLUE}Select mode:${NC}"
 echo -e "${GREEN}1) Worker (Sonnet 4)${NC}"
 echo -e "${BLUE}2) Default${NC}"
 read -p "Choice [2]: " choice
+
+# Show orchestration info if available
+if is_orchestration_running; then
+    echo ""
+    echo -e "${GREEN}💡 Orchestration commands available:${NC}"
+    echo -e "   • /orch status     - Check orchestration status"
+    echo -e "   • /orch Build X    - Delegate task to AI agents"
+    echo -e "   • /orch help       - Show orchestration help"
+fi
 
 case ${choice:-2} in
     1) 
