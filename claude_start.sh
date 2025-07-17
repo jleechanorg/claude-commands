@@ -80,21 +80,23 @@ start_orchestration_background() {
     return 0
 }
 
-# Check and start orchestration if available
-echo -e "${BLUE}🔧 Checking orchestration system...${NC}"
-if is_orchestration_running; then
-    echo -e "${GREEN}✅ Orchestration system already running${NC}"
-else
-    if start_orchestration_background; then
-        if is_orchestration_running; then
-            echo -e "${GREEN}✅ Orchestration system started${NC}"
-        else
-            echo -e "${YELLOW}⚠️  Orchestration optional - continuing without it${NC}"
-        fi
+# Function to check and start orchestration for non-worker modes
+check_orchestration() {
+    echo -e "${BLUE}🔧 Checking orchestration system...${NC}"
+    if is_orchestration_running; then
+        echo -e "${GREEN}✅ Orchestration system already running${NC}"
     else
-        echo -e "${YELLOW}ℹ️  Orchestration not available${NC}"
+        if start_orchestration_background; then
+            if is_orchestration_running; then
+                echo -e "${GREEN}✅ Orchestration system started${NC}"
+            else
+                echo -e "${YELLOW}⚠️  Orchestration optional - continuing without it${NC}"
+            fi
+        else
+            echo -e "${YELLOW}ℹ️  Orchestration not available${NC}"
+        fi
     fi
-fi
+}
 
 # Enhanced MCP server detection with better error handling
 echo -e "${BLUE}🔍 Checking MCP servers...${NC}"
@@ -267,16 +269,8 @@ echo ""
 echo -e "${BLUE}Select mode:${NC}"
 echo -e "${GREEN}1) Worker (Sonnet 4)${NC}"
 echo -e "${BLUE}2) Default${NC}"
+echo -e "${YELLOW}3) Opus 4 (Latest)${NC}"
 read -p "Choice [2]: " choice
-
-# Show orchestration info if available
-if is_orchestration_running; then
-    echo ""
-    echo -e "${GREEN}💡 Orchestration commands available:${NC}"
-    echo -e "   • /orch status     - Check orchestration status"
-    echo -e "   • /orch Build X    - Delegate task to AI agents"
-    echo -e "   • /orch help       - Show orchestration help"
-fi
 
 case ${choice:-2} in
     1) 
@@ -285,11 +279,52 @@ case ${choice:-2} in
         claude --model "$MODEL" $FLAGS "$@"
         ;;
     2) 
+        # Check orchestration for non-worker modes
+        check_orchestration
+        
+        # Show orchestration info if available
+        if is_orchestration_running; then
+            echo ""
+            echo -e "${GREEN}💡 Orchestration commands available:${NC}"
+            echo -e "   • /orch status     - Check orchestration status"
+            echo -e "   • /orch Build X    - Delegate task to AI agents"
+            echo -e "   • /orch help       - Show orchestration help"
+        fi
+        
         echo -e "${BLUE}🚀 Starting Claude Code with default settings...${NC}"
         claude $FLAGS "$@"
         ;;
+    3)
+        # Check orchestration for non-worker modes
+        check_orchestration
+        
+        # Show orchestration info if available
+        if is_orchestration_running; then
+            echo ""
+            echo -e "${GREEN}💡 Orchestration commands available:${NC}"
+            echo -e "   • /orch status     - Check orchestration status"
+            echo -e "   • /orch Build X    - Delegate task to AI agents"
+            echo -e "   • /orch help       - Show orchestration help"
+        fi
+        
+        MODEL="claude-opus-4-20250522"
+        echo -e "${YELLOW}🚀 Starting Claude Code with $MODEL (Latest Opus)...${NC}"
+        claude --model "$MODEL" $FLAGS "$@"
+        ;;
     *) 
         echo -e "${YELLOW}Invalid choice, using default${NC}"
+        # Check orchestration for non-worker modes
+        check_orchestration
+        
+        # Show orchestration info if available
+        if is_orchestration_running; then
+            echo ""
+            echo -e "${GREEN}💡 Orchestration commands available:${NC}"
+            echo -e "   • /orch status     - Check orchestration status"
+            echo -e "   • /orch Build X    - Delegate task to AI agents"
+            echo -e "   • /orch help       - Show orchestration help"
+        fi
+        
         claude $FLAGS "$@"
         ;;
 esac
