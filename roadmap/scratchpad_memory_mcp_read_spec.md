@@ -237,9 +237,43 @@ def before_response_hook(context):
 3. **Performance**: Read operations complete in <100ms
 4. **Reliability**: 99% uptime for read functionality
 
+## Portability Issues for Other Users
+
+### What Would Break:
+1. **Script Location**: `/home/jleechan/backup_memory.sh` hardcoded to your home directory
+2. **Clean Worktree**: `~/worldarchitect-backup` assumed to exist, no auto-creation
+3. **Cron Job**: Hourly backup not configured for new users
+4. **Git Permissions**: Assumes push access to `origin/main`, forks would push to wrong repo
+5. **MCP Configuration**: Assumes Memory MCP server running, `~/.cache/mcp-memory/memory.json` may not exist
+
+### Fix Plan:
+**Phase 1: Emergency Portability**
+- Move script to repo: `memory/backup_memory.sh`
+- Add environment variables: Remove hardcoded paths
+- Create setup script: One command to configure everything
+- Auto-create worktree: Don't assume it exists
+
+**Phase 2: Fork Support**
+- Detect forks: Check git remote URL
+- Local-only mode: Option for users without push access
+- Configuration file: `memory/config.json` for customization
+
+### Architecture Changes Needed:
+```
+memory/
+├── backup_memory.sh          # Moved from /home/jleechan/
+├── setup.sh                  # New: automated setup
+├── config.json               # New: configuration
+├── memory.json               # Existing
+└── README.md                 # Updated setup instructions
+```
+
+**Root Cause**: Classic "works on my machine" problem - too tightly coupled to specific environment.
+
 ## Next Steps
 
-1. Fix the backup script issue (uncommitted changes)
-2. Implement Phase 1 storage consolidation
+1. ✅ Fix the backup script issue (uncommitted changes)
+2. ✅ Implement Phase 1 storage consolidation
 3. Build mock read system for testing
 4. Gradually replace with real MCP calls
+5. **NEW**: Implement portability fixes for other users

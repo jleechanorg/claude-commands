@@ -74,6 +74,81 @@ fi
 
 echo ""
 
+# Memory backup system checks
+echo -e "${BLUE}🧠 Checking Memory MCP backup system...${NC}"
+
+# Check if memory backup script exists and is current
+MEMORY_BACKUP_SCRIPT="$HOME/backup_memory.sh"
+REPO_BACKUP_SCRIPT="./memory/backup_memory.sh"
+MEMORY_SETUP_SCRIPT="./memory/setup.sh"
+
+BACKUP_ISSUES=()
+
+# Check if backup script exists
+if [ ! -f "$MEMORY_BACKUP_SCRIPT" ]; then
+    BACKUP_ISSUES+=("❌ Backup script not found at $MEMORY_BACKUP_SCRIPT")
+elif [ ! -x "$MEMORY_BACKUP_SCRIPT" ]; then
+    BACKUP_ISSUES+=("❌ Backup script not executable")
+fi
+
+# Check if backup script is current (version check)
+if [ -f "$MEMORY_BACKUP_SCRIPT" ] && [ -f "$REPO_BACKUP_SCRIPT" ]; then
+    DEPLOYED_VERSION=$(grep "# VERSION:" "$MEMORY_BACKUP_SCRIPT" 2>/dev/null | cut -d' ' -f3 || echo "unknown")
+    REPO_VERSION=$(grep "# VERSION:" "$REPO_BACKUP_SCRIPT" 2>/dev/null | cut -d' ' -f3 || echo "unknown")
+    
+    if [ "$DEPLOYED_VERSION" != "$REPO_VERSION" ]; then
+        BACKUP_ISSUES+=("⚠️ Backup script version mismatch (deployed: $DEPLOYED_VERSION, repo: $REPO_VERSION)")
+    fi
+fi
+
+# Check if cron job exists
+if ! crontab -l 2>/dev/null | grep -q "backup_memory.sh"; then
+    BACKUP_ISSUES+=("❌ Cron job not configured for memory backups")
+fi
+
+# Check if memory directory exists
+if [ ! -d "$HOME/.cache/mcp-memory" ]; then
+    BACKUP_ISSUES+=("❌ Memory cache directory not found")
+fi
+
+# Check if backup worktree exists
+if [ ! -d "$HOME/worldarchitect-backup" ]; then
+    BACKUP_ISSUES+=("❌ Backup worktree not found")
+fi
+
+# Report status and offer to fix
+if [ ${#BACKUP_ISSUES[@]} -eq 0 ]; then
+    echo -e "${GREEN}✅ Memory backup system is properly configured${NC}"
+else
+    echo -e "${YELLOW}⚠️ Memory backup system issues detected:${NC}"
+    for issue in "${BACKUP_ISSUES[@]}"; do
+        echo -e "${YELLOW}  $issue${NC}"
+    done
+    
+    if [ -f "$MEMORY_SETUP_SCRIPT" ]; then
+        echo -e "${BLUE}💡 Would you like to run the setup script to fix these issues? (y/N)${NC}"
+        read -t 10 -p "Choice: " setup_choice
+        
+        case ${setup_choice:-n} in
+            y|Y|yes|YES)
+                echo -e "${BLUE}🔧 Running memory setup script...${NC}"
+                if bash "$MEMORY_SETUP_SCRIPT"; then
+                    echo -e "${GREEN}✅ Memory backup system setup completed${NC}"
+                else
+                    echo -e "${RED}❌ Setup failed. Please check the logs and try again.${NC}"
+                fi
+                ;;
+            *)
+                echo -e "${YELLOW}📝 Continuing without setup. You can run ./memory/setup.sh manually later.${NC}"
+                ;;
+        esac
+    else
+        echo -e "${YELLOW}📝 Setup script not found. Please check the memory/ directory.${NC}"
+    fi
+fi
+
+echo ""
+
 # Enhanced model date checking
 LAST_UPDATE="2025-07-12"  # Updated date
 CURRENT_DATE=$(date +%Y-%m-%d)
