@@ -126,6 +126,7 @@ fi
 
 # Claude
 export CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
+export CLAUDE_API_KEY='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'
 
 # Add keys if they are not already added (optional, if you use passphrases and want to add them once per login)
 # Check if specific keys are added, for example id_ed25519
@@ -133,9 +134,9 @@ export CLAUDE_CODE_MAX_OUTPUT_TOKENS=200000
 #   ssh-add ~/.ssh/id_ed25519
 # fi
 
-alias claudep='~/projects/worldarchitect.ai/claude_start.sh'
-alias csy='claude-squad -p "claude --dangerously-skip-permissions --verbose"'
+alias claudep='source ./claude_start.sh'
 alias cm='claude-monitor --plan max20 --timezone PST'
+alias git-header='bash /home/jleechan/projects/worldarchitect.ai/claude_command_scripts/git-header.sh'
 
 # Auto-navigate to WorldArchitect.AI project
 if [ \"\$PWD\" = \"\$HOME\" ]; then
@@ -143,7 +144,7 @@ if [ \"\$PWD\" = \"\$HOME\" ]; then
 fi
 alias wa='cd ~/projects/worldarchitect.ai'
 
-alias push="git add . && git commit -a -m \"a\" && git push"
+alias push="git add . ; git commit -a -m \"a\" ; git push"
 export GOOGLE_CLOUD_PROJECT="worldarchitecture-ai"
 alias deploy='~/projects/worldarchitect.ai/deploy.sh "$@"'
 alias commit='git commit -a -m "a" && git push'
@@ -178,4 +179,8 @@ vpython() {
 }
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 
-export PATH="$PATH:/home/jleechan/.local/bin"
+# don't need this since .profile has it
+# export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$HOME/.claude/local:$PATH"
+alias git-header='bash /home/jleechan/projects/worldarchitect.ai/worktree_roadmap/claude_command_scripts/git-header.sh'
+# Removed invalid NODE_OPTIONS - max-listeners is not a valid Node.js option
