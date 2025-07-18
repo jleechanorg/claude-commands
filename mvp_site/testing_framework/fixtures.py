@@ -3,22 +3,24 @@ Test fixtures for pytest and unittest integration with the Real-Mode Testing Fra
 Provides seamless switching between mock and real services based on TEST_MODE.
 """
 
-import pytest
-import unittest
 import os
-from typing import Generator, Optional
+import unittest
+from collections.abc import Generator
+
+import pytest
+
 from .factory import get_service_provider, reset_global_provider
 from .service_provider import TestServiceProvider
-
 
 # ============================================================================
 # PYTEST FIXTURES
 # ============================================================================
 
-@pytest.fixture(scope='function')
+
+@pytest.fixture(scope="function")
 def service_provider() -> Generator[TestServiceProvider, None, None]:
     """Provide appropriate service provider based on TEST_MODE.
-    
+
     Usage in pytest:
         def test_something(service_provider):
             firestore = service_provider.get_firestore()
@@ -31,31 +33,31 @@ def service_provider() -> Generator[TestServiceProvider, None, None]:
         provider.cleanup()
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def firestore_client(service_provider: TestServiceProvider):
     """Provide Firestore client (mock or real) based on TEST_MODE."""
     return service_provider.get_firestore()
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def gemini_client(service_provider: TestServiceProvider):
     """Provide Gemini client (mock or real) based on TEST_MODE."""
     return service_provider.get_gemini()
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def auth_service(service_provider: TestServiceProvider):
     """Provide auth service (mock or real) based on TEST_MODE."""
     return service_provider.get_auth()
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def test_mode() -> str:
     """Get current test mode from environment."""
-    return os.getenv('TEST_MODE', 'mock')
+    return os.getenv("TEST_MODE", "mock")
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def is_real_service(service_provider: TestServiceProvider) -> bool:
     """Check if using real services."""
     return service_provider.is_real_service
@@ -65,16 +67,17 @@ def is_real_service(service_provider: TestServiceProvider) -> bool:
 # UNITTEST BASE CLASSES
 # ============================================================================
 
+
 class BaseTestCase(unittest.TestCase):
     """Base test case with service provider integration.
-    
+
     Usage:
         class TestMyFeature(BaseTestCase):
             def test_something(self):
                 result = self.firestore.get_document('test/doc')
                 # Works with mock or real services
     """
-    
+
     def setUp(self):
         """Set up test with appropriate service provider."""
         self.provider = get_service_provider()
@@ -82,25 +85,25 @@ class BaseTestCase(unittest.TestCase):
         self.gemini = self.provider.get_gemini()
         self.auth = self.provider.get_auth()
         self.is_real = self.provider.is_real_service
-    
+
     def tearDown(self):
         """Clean up after test."""
-        if hasattr(self, 'provider'):
+        if hasattr(self, "provider"):
             self.provider.cleanup()
 
 
 class IsolatedTestCase(BaseTestCase):
     """Test case with isolated test environment.
-    
+
     Each test gets a fresh service provider to ensure complete isolation.
     Use when tests might interfere with each other.
     """
-    
+
     def setUp(self):
         """Set up with fresh provider and reset global state."""
         reset_global_provider()
         super().setUp()
-    
+
     def tearDown(self):
         """Clean up and reset global state."""
         super().tearDown()
@@ -111,15 +114,16 @@ class IsolatedTestCase(BaseTestCase):
 # HELPER FUNCTIONS FOR MANUAL SETUP
 # ============================================================================
 
-def setup_test_services(test_mode: Optional[str] = None) -> TestServiceProvider:
+
+def setup_test_services(test_mode: str | None = None) -> TestServiceProvider:
     """Manually set up test services for non-fixture usage.
-    
+
     Args:
         test_mode: Override TEST_MODE environment variable
-        
+
     Returns:
         Service provider instance
-        
+
     Usage:
         provider = setup_test_services('mock')
         try:
@@ -140,49 +144,51 @@ def cleanup_test_services(provider: TestServiceProvider) -> None:
 # MIGRATION HELPERS
 # ============================================================================
 
+
 def get_test_client_for_mode(test_mode: str = None):
     """Get appropriate test client based on mode.
-    
+
     Helper for gradually migrating existing tests.
     """
     if test_mode is None:
-        test_mode = os.getenv('TEST_MODE', 'mock')
-    
+        test_mode = os.getenv("TEST_MODE", "mock")
+
     provider = get_service_provider(test_mode)
     return {
-        'provider': provider,
-        'firestore': provider.get_firestore(),
-        'gemini': provider.get_gemini(),
-        'auth': provider.get_auth(),
-        'is_real': provider.is_real_service
+        "provider": provider,
+        "firestore": provider.get_firestore(),
+        "gemini": provider.get_gemini(),
+        "auth": provider.get_auth(),
+        "is_real": provider.is_real_service,
     }
 
 
 # ============================================================================
-# BACKWARDS COMPATIBILITY HELPERS  
+# BACKWARDS COMPATIBILITY HELPERS
 # ============================================================================
+
 
 class MockCompatibilityMixin:
     """Mixin to help existing tests work with new framework.
-    
+
     Provides mock-like attributes that delegate to service provider.
     """
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if not hasattr(self, 'provider'):
+        if not hasattr(self, "provider"):
             self.provider = get_service_provider()
-    
+
     @property
     def mock_firestore(self):
         """Compatibility property for tests expecting mock_firestore."""
         return self.provider.get_firestore()
-    
+
     @property
     def mock_gemini(self):
-        """Compatibility property for tests expecting mock_gemini.""" 
+        """Compatibility property for tests expecting mock_gemini."""
         return self.provider.get_gemini()
-    
+
     @property
     def mock_auth(self):
         """Compatibility property for tests expecting mock_auth."""
