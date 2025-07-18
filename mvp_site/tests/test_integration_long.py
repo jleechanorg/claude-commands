@@ -18,9 +18,11 @@ class TestIntegrationLong(unittest.TestCase):
 
     def test_long_integration_todo(self):
         """Reminder that this test needs implementation."""
-        self.assertTrue(True, "TODO: Implement long integration test for 15+ interactions")
+        self.assertTrue(
+            True, "TODO: Implement long integration test for 15+ interactions"
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("=== Long Integration Test Placeholder ===")
     unittest.main()

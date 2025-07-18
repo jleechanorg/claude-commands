@@ -2,12 +2,13 @@
 """
 Test entity name sanitization in gemini_service.py
 """
-import unittest
-import sys
+
 import os
+import sys
+import unittest
 
 # Add parent directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from gemini_service import sanitize_entity_name_for_id
 
@@ -26,11 +27,14 @@ class TestGeminiEntitySanitization(unittest.TestCase):
             ("Dr. Strange", "dr_strange"),
             ("The-Dark-Knight", "the_dark_knight"),
         ]
-        
+
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            self.assertEqual(result, expected, 
-                           f"Failed for '{input_name}': got '{result}', expected '{expected}'")
+            self.assertEqual(
+                result,
+                expected,
+                f"Failed for '{input_name}': got '{result}', expected '{expected}'",
+            )
 
     def test_multiple_apostrophes_and_quotes(self):
         """Test handling of multiple apostrophes and quotes"""
@@ -40,7 +44,7 @@ class TestGeminiEntitySanitization(unittest.TestCase):
             ("'Twas brillig", "twas_brillig"),
             ("Rock 'n' Roll", "rock_n_roll"),
         ]
-        
+
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
             self.assertEqual(result, expected)
@@ -56,7 +60,7 @@ class TestGeminiEntitySanitization(unittest.TestCase):
             ("Exclamation!", "exclamation"),
             ("Hash#Tag", "hash_tag"),
         ]
-        
+
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
             self.assertEqual(result, expected)
@@ -70,14 +74,17 @@ class TestGeminiEntitySanitization(unittest.TestCase):
             ("Ñoño", "o_o"),
             ("Zürich", "z_rich"),
             ("Москва", ""),  # Cyrillic - removed entirely
-            ("東京", ""),    # Japanese - removed entirely
+            ("東京", ""),  # Japanese - removed entirely
             ("🔥Fire🔥", "fire"),  # Emojis removed
         ]
-        
+
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            self.assertEqual(result, expected, 
-                           f"Failed for '{input_name}': got '{result}', expected '{expected}'")
+            self.assertEqual(
+                result,
+                expected,
+                f"Failed for '{input_name}': got '{result}', expected '{expected}'",
+            )
 
     def test_whitespace_handling(self):
         """Test various whitespace scenarios"""
@@ -90,7 +97,7 @@ class TestGeminiEntitySanitization(unittest.TestCase):
             ("   ", ""),  # Only spaces
             ("\t\n", ""),  # Only whitespace
         ]
-        
+
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
             self.assertEqual(result, expected)
@@ -104,7 +111,7 @@ class TestGeminiEntitySanitization(unittest.TestCase):
             ("Dot...Dot...Dot", "dot_dot_dot"),
             ("Mix___---___Special", "mix_special"),
         ]
-        
+
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
             self.assertEqual(result, expected)
@@ -113,18 +120,18 @@ class TestGeminiEntitySanitization(unittest.TestCase):
         """Test edge cases"""
         # Empty string
         self.assertEqual(sanitize_entity_name_for_id(""), "")
-        
+
         # Only special characters
         self.assertEqual(sanitize_entity_name_for_id("!@#$%^&*()"), "")
-        
+
         # Very long name
         long_name = "A" * 100 + " " + "B" * 100
         expected = "a" * 100 + "_" + "b" * 100
         self.assertEqual(sanitize_entity_name_for_id(long_name), expected)
-        
+
         # Numbers and underscores (valid chars)
         self.assertEqual(sanitize_entity_name_for_id("Agent_007"), "agent_007")
-        
+
         # Mixed case
         self.assertEqual(sanitize_entity_name_for_id("CamelCaseNAME"), "camelcasename")
 
@@ -141,41 +148,44 @@ class TestGeminiEntitySanitization(unittest.TestCase):
             ("GLaDOS", "glados"),
             ("HK-47", "hk_47"),
         ]
-        
+
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            self.assertEqual(result, expected, 
-                           f"Failed for '{input_name}': got '{result}', expected '{expected}'")
+            self.assertEqual(
+                result,
+                expected,
+                f"Failed for '{input_name}': got '{result}', expected '{expected}'",
+            )
 
     def test_integration_with_entity_id_format(self):
         """Test that sanitized names work with the entity ID format"""
         from schemas.entities_pydantic import NPC, HealthStatus
-        
+
         # These should all create valid entity IDs
         test_names = [
             "Cazador's Spawn",
             "Jean-Baptiste",
             "Dr. Moreau",
-            "The \"Chosen\" One",
+            'The "Chosen" One',
             "50% Dead",
         ]
-        
+
         for i, name in enumerate(test_names):
             sanitized = sanitize_entity_name_for_id(name)
-            entity_id = f"npc_{sanitized}_{i+1:03d}"
-            
+            entity_id = f"npc_{sanitized}_{i + 1:03d}"
+
             # This should not raise validation error
             npc = NPC(
                 entity_id=entity_id,
                 display_name=name,
                 health=HealthStatus(hp=10, hp_max=10),
                 current_location="loc_test_001",
-                gender="other"
+                gender="other",
             )
-            
+
             self.assertEqual(npc.entity_id, entity_id)
             self.assertEqual(npc.display_name, name)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

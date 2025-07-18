@@ -6,9 +6,10 @@ This test reproduces the exact issue where structured JSON is displayed
 instead of just the narrative content.
 """
 
-import unittest
-import sys
 import os
+import sys
+import unittest
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from narrative_response_schema import parse_structured_response
@@ -16,7 +17,7 @@ from narrative_response_schema import parse_structured_response
 
 class TestRawJsonDisplayBugReproduction(unittest.TestCase):
     """Test to reproduce the raw JSON display bug"""
-    
+
     def test_parse_structured_response_works_correctly(self):
         """
         This test confirms that parse_structured_response actually works fine.
@@ -41,21 +42,21 @@ class TestRawJsonDisplayBugReproduction(unittest.TestCase):
         "resources": "HD: 1/1"
     }
 }"""
-        
+
         # Parse the structured response - returns tuple (narrative_text, parsed_response)
         narrative_text, parsed_response = parse_structured_response(raw_json_response)
-        
+
         # The narrative_text should be JUST the narrative content, not the full JSON
         expected_narrative = "[Mode: STORY MODE]\n[CHARACTER CREATION - Step 2 of 7]\n\nExcellent choice! Character created successfully."
-        
+
         # This should pass - proving the parsing function works
         self.assertEqual(narrative_text, expected_narrative)
         self.assertNotIn('"narrative":', narrative_text, "Should not contain JSON keys")
-        
+
     def test_reproduce_actual_raw_json_display_bug(self):
         """
         GREEN TEST: Verify the fix for the raw JSON display bug.
-        
+
         This test demonstrates that raw JSON responses are properly parsed
         to extract just the narrative text for display to users.
         """
@@ -73,25 +74,34 @@ class TestRawJsonDisplayBugReproduction(unittest.TestCase):
         }
     }
 }"""
-        
+
         # The bug is that this raw JSON is being displayed directly to the user
         # instead of being parsed first. Let's simulate this:
-        
+
         # What the user SHOULD see (after parsing):
         expected_user_display = "[Mode: STORY MODE]\n[CHARACTER CREATION - Step 2 of 7]\n\nExcellent choice! Character created successfully."
-        
+
         # What the user SHOULD see (after fixing the bug):
         # FIX: Parse the raw JSON to extract just the narrative
         actual_user_display, _ = parse_structured_response(raw_json_that_user_sees)
-        
+
         # This assertion SHOULD PASS - proving the bug is fixed
-        self.assertEqual(actual_user_display, expected_user_display, 
-                        "FIX: User should see parsed narrative, not raw JSON!")
-        
+        self.assertEqual(
+            actual_user_display,
+            expected_user_display,
+            "FIX: User should see parsed narrative, not raw JSON!",
+        )
+
         # These should also fail if raw JSON is being displayed
-        self.assertNotIn('"narrative":', actual_user_display, "User should not see JSON keys")
-        self.assertNotIn('"entities_mentioned":', actual_user_display, "User should not see JSON keys")
+        self.assertNotIn(
+            '"narrative":', actual_user_display, "User should not see JSON keys"
+        )
+        self.assertNotIn(
+            '"entities_mentioned":',
+            actual_user_display,
+            "User should not see JSON keys",
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -1,8 +1,9 @@
 """Test that God mode responses include planning blocks when offering choices."""
 
-import unittest
-import sys
 import os
+import sys
+import unittest
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from narrative_response_schema import parse_structured_response
@@ -13,7 +14,7 @@ class TestGodModePlanningBlocks(unittest.TestCase):
 
     def test_god_mode_with_planning_block(self):
         """Test that God mode responses can include planning blocks."""
-        god_response_with_choices = '''{
+        god_response_with_choices = """{
             "narrative": "",
             "god_mode_response": "As the omniscient game master, I present several plot directions for your campaign.",
             "planning_block": {
@@ -46,13 +47,19 @@ class TestGodModePlanningBlocks(unittest.TestCase):
             "location_confirmed": "Unknown",
             "state_updates": {},
             "debug_info": {}
-        }'''
+        }"""
 
         narrative, response_obj = parse_structured_response(god_response_with_choices)
 
         # Should return the god_mode_response content
-        self.assertEqual(narrative, "As the omniscient game master, I present several plot directions for your campaign.")
-        self.assertEqual(response_obj.god_mode_response, "As the omniscient game master, I present several plot directions for your campaign.")
+        self.assertEqual(
+            narrative,
+            "As the omniscient game master, I present several plot directions for your campaign.",
+        )
+        self.assertEqual(
+            response_obj.god_mode_response,
+            "As the omniscient game master, I present several plot directions for your campaign.",
+        )
 
         # Should have planning block
         self.assertIsNotNone(response_obj.planning_block)
@@ -62,14 +69,21 @@ class TestGodModePlanningBlocks(unittest.TestCase):
         # Verify all God mode choices have "god:" prefix
         choices = response_obj.planning_block.get("choices", {})
         for choice_key in choices:
-            self.assertTrue(choice_key.startswith("god:"), f"Choice key '{choice_key}' must start with 'god:' prefix")
+            self.assertTrue(
+                choice_key.startswith("god:"),
+                f"Choice key '{choice_key}' must start with 'god:' prefix",
+            )
 
         # Verify mandatory "god:return_story" choice exists
-        self.assertIn("god:return_story", choices, "Must include 'god:return_story' as default choice")
+        self.assertIn(
+            "god:return_story",
+            choices,
+            "Must include 'god:return_story' as default choice",
+        )
 
     def test_god_mode_choices_all_have_prefix(self):
         """Test that all God mode choices use the god: prefix."""
-        god_response = '''{
+        god_response = """{
             "narrative": "",
             "god_mode_response": "Multiple paths lie before you.",
             "planning_block": {
@@ -93,7 +107,7 @@ class TestGodModePlanningBlocks(unittest.TestCase):
             "location_confirmed": "Unknown",
             "state_updates": {},
             "debug_info": {}
-        }'''
+        }"""
 
         narrative, response_obj = parse_structured_response(god_response)
 
@@ -103,7 +117,7 @@ class TestGodModePlanningBlocks(unittest.TestCase):
 
     def test_god_mode_without_planning_block(self):
         """Test that God mode responses without choices don't require planning blocks."""
-        god_response_no_choices = '''{
+        god_response_no_choices = """{
             "narrative": "",
             "god_mode_response": "The ancient artifact has been placed in the dungeon as requested.",
             "entities_mentioned": ["ancient artifact"],
@@ -116,18 +130,21 @@ class TestGodModePlanningBlocks(unittest.TestCase):
                 }
             },
             "debug_info": {}
-        }'''
+        }"""
 
         narrative, response_obj = parse_structured_response(god_response_no_choices)
 
         # Should work fine without planning block when no choices offered
-        self.assertEqual(narrative, "The ancient artifact has been placed in the dungeon as requested.")
+        self.assertEqual(
+            narrative,
+            "The ancient artifact has been placed in the dungeon as requested.",
+        )
         # Planning block should be empty dict when not provided
         self.assertEqual(response_obj.planning_block, {})
 
     def test_missing_return_story_choice(self):
         """Test detection of missing god:return_story choice."""
-        god_response_missing_default = '''{
+        god_response_missing_default = """{
             "narrative": "",
             "god_mode_response": "Choose your path.",
             "planning_block": {
@@ -147,9 +164,11 @@ class TestGodModePlanningBlocks(unittest.TestCase):
             "location_confirmed": "Unknown",
             "state_updates": {},
             "debug_info": {}
-        }'''
+        }"""
 
-        narrative, response_obj = parse_structured_response(god_response_missing_default)
+        narrative, response_obj = parse_structured_response(
+            god_response_missing_default
+        )
 
         # Should still parse successfully
         self.assertIsNotNone(response_obj.planning_block)
@@ -160,7 +179,7 @@ class TestGodModePlanningBlocks(unittest.TestCase):
 
     def test_planning_block_structure(self):
         """Test that God mode planning blocks follow the correct structure."""
-        god_response = '''{
+        god_response = """{
             "narrative": "",
             "god_mode_response": "Several narrative paths are available.",
             "planning_block": {
@@ -183,7 +202,7 @@ class TestGodModePlanningBlocks(unittest.TestCase):
             "location_confirmed": "Unknown",
             "state_updates": {},
             "debug_info": {}
-        }'''
+        }"""
 
         narrative, response_obj = parse_structured_response(god_response)
 
@@ -201,8 +220,10 @@ class TestGodModePlanningBlocks(unittest.TestCase):
             self.assertIn("description", choice_data)
             # risk_level is optional but if present should be valid
             if "risk_level" in choice_data:
-                self.assertIn(choice_data["risk_level"], ["safe", "low", "medium", "high"])
+                self.assertIn(
+                    choice_data["risk_level"], ["safe", "low", "medium", "high"]
+                )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
