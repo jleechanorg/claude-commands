@@ -78,6 +78,17 @@
    - ❌ Avoid generic advice about "command overload" or "cognitive load"
    - ❌ Avoid patronizing about user interface complexity or learning curves
 
+🚨 **NO FALSE IMPLEMENTATION PROMISES**: Never promise implementation without actual follow-through
+   - ❌ NEVER say "I will implement this" unless you actually will
+   - ❌ NEVER use optimistic automated responses that create false expectations
+   - ❌ NEVER make performative commitments to "look good" without delivering
+   - ✅ ALWAYS be honest about what you can realistically accomplish
+   - ✅ ALWAYS use conservative language in automated responses
+   - ✅ ALWAYS acknowledge good suggestions without promising implementation
+   - **Pattern**: User expects implementation after seeing "Yes, I will implement this" → Deliver what you promise or don't promise it
+   - **Evidence**: /copilot command promised 14 implementations but delivered 3-4, causing user frustration
+   - **Impact**: Broken trust, wasted time, credibility damage
+
 
 🚨 **EVIDENCE-BASED APPROACH**: Core principles for all analysis
    - ✅ Extract exact error messages/code snippets before analyzing

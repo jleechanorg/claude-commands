@@ -24,6 +24,7 @@ from pr_utils import (
     create_or_update_pr,
     ensure_pushed_to_remote
 )
+from lint_utils import run_lint_check, should_run_linting
 
 
 def get_git_status():
@@ -164,6 +165,20 @@ def main():
     # Step 2: Commit any uncommitted changes
     success, message = commit_changes()
     print(f"📝 {message}")
+    
+    # Step 2.5: Run linting checks (blocking)
+    if should_run_linting():
+        print("🔍 Running linting checks...")
+        lint_success, lint_message = run_lint_check("mvp_site", auto_fix=False)
+        print(f"📋 {lint_message}")
+        
+        if not lint_success:
+            print("❌ Linting issues must be fixed before push")
+            print("💡 Run './run_lint.sh mvp_site fix' to auto-fix issues")
+            print("💡 Or set SKIP_LINT=true to bypass")
+            return
+    else:
+        print("⏭️  Skipping linting (disabled)")
     
     # Step 3: Run tests
     print("🧪 Running tests...")

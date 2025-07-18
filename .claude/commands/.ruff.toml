@@ -1,0 +1,9 @@
+# Ignore security warnings for legitimate subprocess calls in command scripts
+[lint]
+ignore = [
+    "S603",  # subprocess call - legitimate CLI tool usage
+    "S607",  # subprocess with partial executable path - legitimate CLI tool usage  
+]
+
+# These are command-line interface scripts that legitimately call git and gh
+# The security warnings are false positives for these specific use cases

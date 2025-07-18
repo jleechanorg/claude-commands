@@ -22,6 +22,7 @@ Execute: `./claude_command_scripts/commands/pushlite.sh [arguments]`
 - **Lightweight Operation**: No test automation or server management
 - **Safety Checks**: Confirms actions before execution
 - **PR Integration**: Optional PR creation with auto-generated content
+- **Post-Push Linting**: Non-blocking code quality checks after successful push
 
 **Untracked Files Options**:
 1. **Add all** - Stages all untracked files with smart commit messages
@@ -35,8 +36,8 @@ Execute: `./claude_command_scripts/commands/pushlite.sh [arguments]`
 - Allows custom messages
 
 **Comparison with /push**:
-- **`/push`**: Full automation (CI replica, test validation, comprehensive setup)
-- **`/pushl`**: Minimal operation (git push + optional PR creation)
+- **`/push`**: Quality gate workflow (linting BEFORE push, blocks on failures, full automation)
+- **`/pushl`**: Fast iteration workflow (push FIRST, linting after, non-blocking)
 
 **Safety Features**:
 - Force push confirmation required

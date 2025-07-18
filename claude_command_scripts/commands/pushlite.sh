@@ -257,6 +257,28 @@ else
     fi
 fi
 
+# Run linting checks after successful push (non-blocking)
+if [[ "${SKIP_LINT:-false}" != "true" && -f "./run_lint.sh" ]]; then
+    echo -e "\n${BLUE}🔍 Running post-push linting checks...${NC}"
+    if [[ -x "./run_lint.sh" ]]; then
+        if ./run_lint.sh mvp_site; then
+            echo -e "${GREEN}✅ All linting checks passed${NC}"
+        else
+            echo -e "${YELLOW}⚠️ Some linting issues found${NC}"
+            echo -e "${CYAN}💡 Run './run_lint.sh mvp_site fix' to auto-fix issues${NC}"
+            echo -e "${CYAN}💡 Consider fixing before next push${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️ Lint script found but not executable${NC}"
+    fi
+else
+    if [[ "${SKIP_LINT:-false}" == "true" ]]; then
+        echo -e "\n${YELLOW}⏭️ Skipping post-push linting (SKIP_LINT=true)${NC}"
+    else
+        echo -e "\n${YELLOW}⏭️ Linting script not found, skipping${NC}"
+    fi
+fi
+
 # Create PR if requested
 if [[ "$CREATE_PR" == "true" ]]; then
     echo -e "\n${BLUE}📋 Creating Pull Request...${NC}"
