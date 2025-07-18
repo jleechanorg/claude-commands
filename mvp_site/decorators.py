@@ -18,11 +18,13 @@ Usage:
 """
 
 import functools
-import logging_util
 import traceback
+
+import logging_util
 
 # Get a logger instance for this module
 logger = logging_util.getLogger(__name__)
+
 
 def log_exceptions(func):
     """A decorator that wraps a function in a try-except block
@@ -34,6 +36,7 @@ def log_exceptions(func):
     Returns:
         callable: The wrapper function that includes exception logging.
     """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         """Wrapper function that executes the decorated function and logs exceptions.
@@ -67,4 +70,5 @@ def log_exceptions(func):
             logging_util.error(error_message, logger=logger)
             # Re-raise the exception so it can be handled by the calling code (e.g., the route)
             raise
+
     return wrapper

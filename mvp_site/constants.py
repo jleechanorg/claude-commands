@@ -7,18 +7,24 @@ import os
 
 # --- ACTORS ---
 # Used to identify the source of a story entry
-ACTOR_USER = 'user'
-ACTOR_GEMINI = 'gemini'
-ACTOR_UNKNOWN = 'NO_ACTOR'  # Default when actor is missing from data
+ACTOR_USER = "user"
+ACTOR_GEMINI = "gemini"
+ACTOR_UNKNOWN = "NO_ACTOR"  # Default when actor is missing from data
 
 
 # --- INTERACTION MODES ---
 # Used to determine the style of user input and AI response
-MODE_CHARACTER = 'character'
-MODE_GOD = 'god'
+MODE_CHARACTER = "character"
+MODE_GOD = "god"
 
 # Mode switching detection phrases
-MODE_SWITCH_PHRASES = ['god mode', 'dm mode', 'gm mode', 'enter dm mode', 'enter god mode']
+MODE_SWITCH_PHRASES = [
+    "god mode",
+    "dm mode",
+    "gm mode",
+    "enter dm mode",
+    "enter god mode",
+]
 
 
 # --- VERIFICATION ---
@@ -26,25 +32,25 @@ MODE_SWITCH_PHRASES = ['god mode', 'dm mode', 'gm mode', 'enter dm mode', 'enter
 VERIFICATION_MAX_ATTEMPTS = 3
 VERIFICATION_INITIAL_DELAY = 0.1  # seconds
 VERIFICATION_DELAY_INCREMENT = 0.2  # seconds per attempt
-MODE_SWITCH_SIMPLE = ['god mode', 'god', 'dm mode', 'dm']
+MODE_SWITCH_SIMPLE = ["god mode", "god", "dm mode", "dm"]
 
 
 # --- DICTIONARY KEYS ---
 # Used in request/response payloads and when passing data between services
-KEY_ACTOR = 'actor'
-KEY_MODE = 'mode'
-KEY_TEXT = 'text'
-KEY_TITLE = 'title'
-KEY_FORMAT = 'format'
+KEY_ACTOR = "actor"
+KEY_MODE = "mode"
+KEY_TEXT = "text"
+KEY_TITLE = "title"
+KEY_FORMAT = "format"
 
 # --- STRUCTURED FIELDS ---
 # Used for AI response structured data fields
-FIELD_SESSION_HEADER = 'session_header'
-FIELD_PLANNING_BLOCK = 'planning_block'
-FIELD_DICE_ROLLS = 'dice_rolls'
-FIELD_RESOURCES = 'resources'
-FIELD_DEBUG_INFO = 'debug_info'
-FIELD_GOD_MODE_RESPONSE = 'god_mode_response'
+FIELD_SESSION_HEADER = "session_header"
+FIELD_PLANNING_BLOCK = "planning_block"
+FIELD_DICE_ROLLS = "dice_rolls"
+FIELD_RESOURCES = "resources"
+FIELD_DEBUG_INFO = "debug_info"
+FIELD_GOD_MODE_RESPONSE = "god_mode_response"
 KEY_USER_INPUT = "user_input"
 KEY_SELECTED_PROMPTS = "selected_prompts"
 
@@ -59,21 +65,14 @@ ATTRIBUTE_SYSTEM_DND = "D&D"
 # D&D Attribute System
 DND_ATTRIBUTES = [
     "Strength",
-    "Dexterity", 
+    "Dexterity",
     "Constitution",
     "Intelligence",
     "Wisdom",
-    "Charisma"
+    "Charisma",
 ]
 
-DND_ATTRIBUTE_CODES = [
-    "STR",
-    "DEX",
-    "CON", 
-    "INT",
-    "WIS",
-    "CHA"
-]
+DND_ATTRIBUTE_CODES = ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
 
 # ARCHIVED: Destiny Attribute System (moved to prompt_archive/)
 # DESTINY_ATTRIBUTES = [
@@ -86,6 +85,7 @@ DND_ATTRIBUTE_CODES = [
 # Default attribute system for new campaigns
 DEFAULT_ATTRIBUTE_SYSTEM = ATTRIBUTE_SYSTEM_DND
 
+
 # Helper functions for attribute system validation
 def get_attributes_for_system(system):
     """Get the list of attributes for the given system."""
@@ -93,9 +93,9 @@ def get_attributes_for_system(system):
         return DND_ATTRIBUTES.copy()
     # elif system == ATTRIBUTE_SYSTEM_DESTINY: # Archived
     #     return DESTINY_ATTRIBUTES.copy()
-    else:
-        # Default to D&D for unknown systems
-        return DND_ATTRIBUTES.copy()
+    # Default to D&D for unknown systems
+    return DND_ATTRIBUTES.copy()
+
 
 def get_attribute_codes_for_system(system):
     """Get the list of attribute codes for the given system."""
@@ -103,26 +103,30 @@ def get_attribute_codes_for_system(system):
         return DND_ATTRIBUTE_CODES.copy()
     # elif system == ATTRIBUTE_SYSTEM_DESTINY: # Archived
     #     return DESTINY_ATTRIBUTES.copy()
-    else:
-        # Default to D&D for unknown systems
-        return DND_ATTRIBUTE_CODES.copy()
+    # Default to D&D for unknown systems
+    return DND_ATTRIBUTE_CODES.copy()
+
 
 def uses_charisma(system):
     """Check if the given system uses Charisma attribute."""
     return system == ATTRIBUTE_SYSTEM_DND
+
 
 def uses_big_five(system):
     """Check if the given system uses Big Five personality traits for social mechanics."""
     # return system == ATTRIBUTE_SYSTEM_DESTINY # Archived
     return False  # No current systems use Big Five
 
+
 # --- EXPORT FORMATS ---
-FORMAT_PDF = 'pdf'
-FORMAT_DOCX = 'docx'
-FORMAT_TXT = 'txt'
-MIMETYPE_PDF = 'application/pdf'
-MIMETYPE_DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-MIMETYPE_TXT = 'text/plain'
+FORMAT_PDF = "pdf"
+FORMAT_DOCX = "docx"
+FORMAT_TXT = "txt"
+MIMETYPE_PDF = "application/pdf"
+MIMETYPE_DOCX = (
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+)
+MIMETYPE_TXT = "text/plain"
 
 
 # --- PROMPT FILENAMES ---
@@ -155,15 +159,19 @@ PROMPT_TYPE_DND_SRD = "dnd_srd"
 # --- ARCHIVED PROMPT TYPES (for reference) ---
 # These prompt types have been archived:
 # PROMPT_TYPE_CALIBRATION = "calibration"
-# PROMPT_TYPE_DESTINY = "destiny_ruleset" 
+# PROMPT_TYPE_DESTINY = "destiny_ruleset"
 # PROMPT_TYPE_DUAL_SYSTEM_REFERENCE = "dual_system_reference"
 # PROMPT_TYPE_ATTRIBUTE_CONVERSION = "attribute_conversion"
 # PROMPT_TYPE_CHARACTER_SHEET = "character_sheet"
 
 # --- PROMPT PATHS ---
 PROMPTS_DIR = "prompts"
-NARRATIVE_SYSTEM_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "narrative_system_instruction.md")
-MECHANICS_SYSTEM_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "mechanics_system_instruction.md")
+NARRATIVE_SYSTEM_INSTRUCTION_PATH = os.path.join(
+    PROMPTS_DIR, "narrative_system_instruction.md"
+)
+MECHANICS_SYSTEM_INSTRUCTION_PATH = os.path.join(
+    PROMPTS_DIR, "mechanics_system_instruction.md"
+)
 CHARACTER_TEMPLATE_PATH = os.path.join(PROMPTS_DIR, "character_template.md")
 GAME_STATE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "game_state_instruction.md")
 # ENTITY_SCHEMA_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "entity_schema_instruction.md") # Integrated into game_state
@@ -173,10 +181,7 @@ DND_SRD_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "dnd_srd_instruction.md")
 # --- PROMPT LOADING ORDER ---
 # User-selectable prompts that are conditionally added based on campaign settings
 # These are loaded in this specific order when selected
-USER_SELECTABLE_PROMPTS = [
-    PROMPT_TYPE_NARRATIVE,
-    PROMPT_TYPE_MECHANICS
-]
+USER_SELECTABLE_PROMPTS = [PROMPT_TYPE_NARRATIVE, PROMPT_TYPE_MECHANICS]
 
 # --- CHARACTER DESIGN ---
 # Reminder text injected into initial prompt when mechanics is enabled

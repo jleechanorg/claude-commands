@@ -1,12 +1,12 @@
 """
 Centralized logging utility with emoji-enhanced messages.
 Provides consistent error and warning logging across the application.
-Supports both module-level convenience functions and logger-aware functions 
+Supports both module-level convenience functions and logger-aware functions
 that preserve logger context.
 """
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 # Export logging level constants
 CRITICAL = logging.CRITICAL
@@ -28,16 +28,18 @@ Logger = logging.Logger
 
 class LoggingUtil:
     """Centralized logging utility with emoji-enhanced messages."""
-    
+
     # Emoji constants
     ERROR_EMOJI = "🔥🔴"
     WARNING_EMOJI = "⚠️"
-    
+
     @staticmethod
-    def error(message: str, *args: Any, logger: Optional[logging.Logger] = None, **kwargs: Any) -> None:
+    def error(
+        message: str, *args: Any, logger: logging.Logger | None = None, **kwargs: Any
+    ) -> None:
         """
         Log an error message with fire and red dot emojis.
-        
+
         Args:
             message: The error message to log
             *args: Additional positional arguments for logging
@@ -49,12 +51,14 @@ class LoggingUtil:
             logger.error(enhanced_message, *args, **kwargs)
         else:
             logging.error(enhanced_message, *args, **kwargs)
-    
+
     @staticmethod
-    def warning(message: str, *args: Any, logger: Optional[logging.Logger] = None, **kwargs: Any) -> None:
+    def warning(
+        message: str, *args: Any, logger: logging.Logger | None = None, **kwargs: Any
+    ) -> None:
         """
         Log a warning message with warning emoji.
-        
+
         Args:
             message: The warning message to log
             *args: Additional positional arguments for logging
@@ -66,46 +70,46 @@ class LoggingUtil:
             logger.warning(enhanced_message, *args, **kwargs)
         else:
             logging.warning(enhanced_message, *args, **kwargs)
-    
+
     @staticmethod
     def get_error_prefix() -> str:
         """Get the error emoji prefix for manual use."""
         return LoggingUtil.ERROR_EMOJI
-    
+
     @staticmethod
     def get_warning_prefix() -> str:
         """Get the warning emoji prefix for manual use."""
         return LoggingUtil.WARNING_EMOJI
-    
+
     @staticmethod
     def info(message: str, *args: Any, **kwargs: Any) -> None:
         """
         Log an info message (no emoji modification).
-        
+
         Args:
             message: The info message to log
             *args: Additional positional arguments for logging
             **kwargs: Additional keyword arguments for logging
         """
         logging.info(message, *args, **kwargs)
-    
+
     @staticmethod
     def debug(message: str, *args: Any, **kwargs: Any) -> None:
         """
         Log a debug message (no emoji modification).
-        
+
         Args:
             message: The debug message to log
             *args: Additional positional arguments for logging
             **kwargs: Additional keyword arguments for logging
         """
         logging.debug(message, *args, **kwargs)
-    
+
     @staticmethod
     def critical(message: str, *args: Any, **kwargs: Any) -> None:
         """
         Log a critical message with double fire emoji.
-        
+
         Args:
             message: The critical message to log
             *args: Additional positional arguments for logging
@@ -113,12 +117,12 @@ class LoggingUtil:
         """
         enhanced_message = f"🔥🔥 {message}"
         logging.critical(enhanced_message, *args, **kwargs)
-    
+
     @staticmethod
     def exception(message: str, *args: Any, **kwargs: Any) -> None:
         """
         Log an exception message with traceback.
-        
+
         Args:
             message: The exception message to log
             *args: Additional positional arguments for logging
@@ -126,25 +130,25 @@ class LoggingUtil:
         """
         enhanced_message = f"{LoggingUtil.ERROR_EMOJI} {message}"
         logging.exception(enhanced_message, *args, **kwargs)
-    
+
     @staticmethod
     def basicConfig(**kwargs: Any) -> None:
         """
         Configure basic logging settings.
-        
+
         Args:
             **kwargs: Arguments to pass to logging.basicConfig
         """
         logging.basicConfig(**kwargs)
-    
+
     @staticmethod
-    def getLogger(name: Optional[str] = None) -> logging.Logger:
+    def getLogger(name: str | None = None) -> logging.Logger:
         """
         Get a logger instance.
-        
+
         Args:
             name: Logger name (optional)
-            
+
         Returns:
             Logger instance
         """
@@ -155,11 +159,11 @@ class LoggingUtil:
 def error(message: str, *args: Any, **kwargs: Any) -> None:
     """
     Log an error message with fire and red dot emojis.
-    
+
     Args:
         message: The error message to log
         *args: Additional positional arguments for logging
-        **kwargs: Additional keyword arguments for logging. 
+        **kwargs: Additional keyword arguments for logging.
                  Use logger=my_logger to preserve logger context.
     """
     LoggingUtil.error(message, *args, **kwargs)
@@ -168,7 +172,7 @@ def error(message: str, *args: Any, **kwargs: Any) -> None:
 def warning(message: str, *args: Any, **kwargs: Any) -> None:
     """
     Log a warning message with warning emoji.
-    
+
     Args:
         message: The warning message to log
         *args: Additional positional arguments for logging
@@ -203,6 +207,6 @@ def basicConfig(**kwargs: Any) -> None:
     LoggingUtil.basicConfig(**kwargs)
 
 
-def getLogger(name: Optional[str] = None) -> logging.Logger:
+def getLogger(name: str | None = None) -> logging.Logger:
     """Get a logger instance."""
     return LoggingUtil.getLogger(name)
