@@ -4,6 +4,9 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Security - GitHub token
+.token
+
 # Ignore Python virtual environments
 venv/
 mvp_site/venv/

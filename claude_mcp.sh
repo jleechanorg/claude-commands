@@ -241,14 +241,77 @@ add_mcp_server() {
     fi
 }
 
+# GitHub Token Configuration (for private repository access)
+# 
+# This script looks for a GitHub token in the following order:
+# 1. .token file in project root (recommended for security)
+# 2. GITHUB_PERSONAL_ACCESS_TOKEN environment variable
+# 3. Fallback hardcoded token (not recommended for production)
+#
+# To create .token file:
+#   echo "ghp_your_token_here" > .token
+#   chmod 600 .token  # Secure permissions
+#
+# Generate token at: https://github.com/settings/tokens
+# Required scopes: repo, read:org, read:user
+# 
+# NOTE: This script uses GitHub's NEW official MCP server (github/github-mcp-server)
+# which is HTTP-based and hosted remotely, replacing the old deprecated npm package
+
+# Try to load token from .token file first
+if [ -f ".token" ]; then
+    GITHUB_PERSONAL_ACCESS_TOKEN=$(cat .token | tr -d '\n\r')
+    echo -e "${GREEN}✅ GitHub token loaded from .token file${NC}"
+    log_with_timestamp "GitHub token loaded from .token file"
+elif [ -n "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
+    echo -e "${BLUE}📋 Using GITHUB_PERSONAL_ACCESS_TOKEN from environment${NC}"
+    log_with_timestamp "Using GITHUB_PERSONAL_ACCESS_TOKEN from environment"
+else
+    echo -e "${RED}❌ GITHUB_PERSONAL_ACCESS_TOKEN not set and .token file not found${NC}"
+    echo -e "${YELLOW}📋 To create .token file:${NC}"
+    echo -e "${YELLOW}   1. Generate token at: https://github.com/settings/tokens${NC}"
+    echo -e "${YELLOW}   2. Required scopes: repo, read:org, read:user${NC}"
+    echo -e "${YELLOW}   3. echo \"ghp_your_token_here\" > .token${NC}"
+    echo -e "${YELLOW}   4. chmod 600 .token${NC}"
+    echo -e "${YELLOW}   5. Re-run this script${NC}"
+    echo ""
+    echo -e "${RED}❌ Aborting to avoid unauthenticated execution${NC}"
+    log_with_timestamp "ERROR: No GitHub token found, aborting for security"
+    exit 1
+fi
+
+export GITHUB_PERSONAL_ACCESS_TOKEN
+
 # Function to check environment requirements
 check_github_requirements() {
-    if [ -z "$GITHUB_TOKEN" ]; then
-        echo -e "${YELLOW}⚠️ GitHub MCP server works better with GITHUB_TOKEN environment variable${NC}"
-        echo -e "${YELLOW}   You can set it with: export GITHUB_TOKEN=your_github_token${NC}"
+    if [ -z "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
+        echo -e "${YELLOW}⚠️ GitHub MCP server works better with GITHUB_PERSONAL_ACCESS_TOKEN environment variable${NC}"
+        echo -e "${YELLOW}   You can set it with: export GITHUB_PERSONAL_ACCESS_TOKEN=your_github_token${NC}"
         echo -e "${YELLOW}   Server will still work for public repositories without it${NC}"
+        echo -e "${YELLOW}   For private repos, generate token at: https://github.com/settings/tokens${NC}"
     else
-        echo -e "${GREEN}✅ GITHUB_TOKEN found - GitHub server will have full access${NC}"
+        echo -e "${GREEN}✅ GITHUB_PERSONAL_ACCESS_TOKEN found - GitHub remote server will have full access${NC}"
+        
+        # Test token validity using secure curl (prevents token exposure in process listings)
+        echo -e "${BLUE}  🔍 Testing GitHub token validity...${NC}"
+        
+        # Create temporary curl config to hide token from process listings
+        local curl_config=$(mktemp)
+        printf 'header = "Authorization: token %s"\n' "$GITHUB_PERSONAL_ACCESS_TOKEN" > "$curl_config"
+        
+        # Test token with secure curl configuration
+        if curl --silent --fail --config "$curl_config" --url https://api.github.com/user >/dev/null 2>&1; then
+            echo -e "${GREEN}  ✅ GitHub token is valid${NC}"
+            echo -e "${BLUE}  📡 Using GitHub's NEW official remote MCP server${NC}"
+            echo -e "${BLUE}  🔗 Server URL: https://api.githubcopilot.com/mcp/${NC}"
+        else
+            echo -e "${RED}  ❌ GitHub token appears to be invalid or expired${NC}"
+            echo -e "${YELLOW}  💡 Generate new token at: https://github.com/settings/tokens${NC}"
+            echo -e "${YELLOW}  💡 Required scopes: repo, read:org, read:user${NC}"
+        fi
+        
+        # Clean up temporary config file
+        rm -f "$curl_config"
     fi
 }
 
@@ -287,8 +350,41 @@ echo ""
 # Core MCP Servers Installation
 echo -e "${BLUE}📊 Installing Core MCP Servers...${NC}"
 
-echo -e "\n${BLUE}1/7 Setting up GitHub MCP Server...${NC}"
-add_mcp_server "github-server" "@modelcontextprotocol/server-github"
+echo -e "\n${BLUE}1/7 Setting up GitHub MCP Server (Official Remote)...${NC}"
+# GitHub released a new official MCP server that replaces @modelcontextprotocol/server-github
+# The new server is HTTP-based and hosted by GitHub for better reliability and features
+echo -e "${BLUE}🔧 Setting up github-server (NEW Official Remote HTTP Server)...${NC}"
+
+if server_already_exists "github-server"; then
+    echo -e "${GREEN}  ✅ Server github-server already exists, skipping installation${NC}"
+    log_with_timestamp "Server github-server already exists, skipping"
+    INSTALL_RESULTS["github-server"]="ALREADY_EXISTS"
+    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+else
+    echo -e "${BLUE}  🔗 Adding GitHub official remote MCP server...${NC}"
+    log_with_timestamp "Adding GitHub official remote MCP server"
+    
+    # Remove any old deprecated GitHub server first
+    claude mcp remove "github-server" >/dev/null 2>&1 || true
+    
+    # Add the new official GitHub HTTP MCP server
+    local add_output
+    add_output=$(claude mcp add-json --scope user "github-server" '{"type": "http", "url": "https://api.githubcopilot.com/mcp/", "authorization_token": "Bearer '"$GITHUB_PERSONAL_ACCESS_TOKEN"'"}' 2>&1)
+    local add_exit_code=$?
+    
+    if [ $add_exit_code -eq 0 ]; then
+        echo -e "${GREEN}  ✅ Successfully added GitHub remote MCP server${NC}"
+        log_with_timestamp "Successfully added GitHub remote MCP server"
+        INSTALL_RESULTS["github-server"]="SUCCESS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+    else
+        echo -e "${RED}  ❌ Failed to add GitHub remote MCP server${NC}"
+        log_error_details "claude mcp add-json" "github-server" "$add_output"
+        echo -e "${RED}  📋 Add error: $add_output${NC}"
+        INSTALL_RESULTS["github-server"]="ADD_FAILED"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+    fi
+fi
 
 echo -e "\n${BLUE}2/7 Setting up Sequential Thinking MCP Server...${NC}"
 add_mcp_server "sequential-thinking" "@modelcontextprotocol/server-sequential-thinking"
