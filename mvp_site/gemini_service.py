@@ -46,6 +46,7 @@ import re
 import datetime
 from game_state import GameState
 import constants
+from file_cache import read_file_cached
 from entity_tracking import SceneManifest, create_from_game_state
 from narrative_sync_validator import NarrativeSyncValidator
 from schemas.entities_pydantic import sanitize_entity_name_for_id
@@ -171,8 +172,7 @@ def _load_instruction_file(instruction_type):
         file_path = os.path.join(os.path.dirname(__file__), relative_path)
         
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read().strip()
+            content = read_file_cached(file_path).strip()
             # logging_util.info(f'Loaded prompt "{instruction_type}" from file: {os.path.basename(file_path)}')
             _loaded_instructions_cache[instruction_type] = content
         except FileNotFoundError:
@@ -1694,12 +1694,10 @@ if __name__ == "__main__":
         project_key_path = "gemini_api_key.txt"
         
         if os.path.exists(home_key_path):
-            with open(home_key_path, 'r') as f:
-                api_key = f.read().strip()
+            api_key = read_file_cached(home_key_path).strip()
             print(f"Successfully loaded API key from {home_key_path}")
         elif os.path.exists(project_key_path):
-            with open(project_key_path, 'r') as f:
-                api_key = f.read().strip()
+            api_key = read_file_cached(project_key_path).strip()
             print(f"Successfully loaded API key from {project_key_path}")
         else:
             print("\nERROR: API key not found in ~/.gemini_api_key.txt or gemini_api_key.txt")

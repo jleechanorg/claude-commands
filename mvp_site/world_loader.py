@@ -5,6 +5,7 @@ Loads world files and creates combined instruction content for AI system.
 
 import os
 import logging_util
+from file_cache import read_file_cached
 # World file paths - only used in this module
 # The world directory is now permanently located within mvp_site/world/
 WORLD_DIR = os.path.join(os.path.dirname(__file__), "world")
@@ -20,13 +21,7 @@ def load_banned_names():
         str: Banned names content or empty string if not found.
     """
     try:
-        # Load from dedicated banned_names.md file
-        with open(BANNED_NAMES_PATH, 'r', encoding='utf-8') as f:
-            banned_content = f.read().strip()
-            
-        char_count = len(banned_content)
-        token_count = char_count // 4  # Rough estimate
-        logging_util.info(f"Loaded banned names from {BANNED_NAMES_PATH}: {char_count} characters (~{token_count} tokens)")
+        banned_content = read_file_cached(BANNED_NAMES_PATH).strip()
         return banned_content
             
     except FileNotFoundError:
@@ -45,17 +40,9 @@ def load_world_content_for_system_instruction():
         str: Combined world content formatted for system instruction
     """
     try:
-        # Use the absolute path that is already constructed
-        world_path = WORLD_ASSIAH_PATH
-            
-        logging_util.info(f"Looking for world content at: {world_path}")
-        
-        # Load world content
-        with open(world_path, 'r', encoding='utf-8') as f:
-            world_content = f.read().strip()
-        char_count = len(world_content)
-        token_count = char_count // 4  # Rough estimate
-        logging_util.info(f"Loaded world content: {char_count} characters (~{token_count} tokens)")
+        # Load world content using cached file reader
+        logging_util.info(f"Looking for world content at: {WORLD_ASSIAH_PATH}")
+        world_content = read_file_cached(WORLD_ASSIAH_PATH).strip()
         
         # Load banned names list
         banned_names_content = load_banned_names()
