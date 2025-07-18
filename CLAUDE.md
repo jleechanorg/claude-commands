@@ -188,6 +188,45 @@ mcp__github-server__search_repositories(worldarchitect.ai)
 3. Restart MCP server: Remove and re-add github-server
 4. Test with direct function call
 
+## Orchestration System
+
+### 🚨 Agent Headless Operation (CRITICAL)
+Autonomous agents MUST use proper headless mode to avoid interactive prompts.
+
+- ✅ **Always use**: `claude -p "[task]" --output-format stream-json --verbose --dangerously-skip-permissions`
+- ❌ **Never use**: Interactive `claude code` mode for autonomous agents
+- 🔍 **Evidence**: Without `--dangerously-skip-permissions`, agents stuck on permission prompts forever
+- **Failed approaches**: Complex prompt automation, background threads - all failed
+
+### 🚨 Git Worktree Architecture (CRITICAL)
+Agents MUST work in isolated git worktrees to prevent branch conflicts.
+
+- ✅ **Always use**: `git worktree add -b <agent-branch> agent_workspace_<name> main`
+- ❌ **Never use**: `cp -r` to copy current directory (keeps wrong branch state)
+- 🔍 **Evidence**: Agent created PR #679 while user on PR #665 - complete independence
+- **Impact**: Enables agents to create separate PRs without conflicts
+- **Critical**: The `-b` flag creates a new branch, preventing accidental commits to main
+
+### ⚠️ Stream JSON Monitoring (MANDATORY)
+Always include for agent visibility and cost tracking.
+
+- ✅ **Command**: `--output-format stream-json --verbose` (both flags required)
+- **Benefits**: Real-time monitoring, cost tracking ($0.003-$0.050 per task)
+- **Requirement**: `--verbose` flag mandatory for stream-json to work
+
+### ✅ Context Warning Handling
+Ignore false positive warnings that don't affect agent performance.
+
+- ✅ **Agent instructions**: Explicitly tell agents to ignore "Context low" messages
+- 🔍 **Evidence**: Agents complete complex tasks despite warnings
+- **Pattern**: Add to agent instructions: "IGNORE context warnings - they are inaccurate"
+
+### ✅ Test File Creation
+Use workspace-relative paths for agent compatibility.
+- ✅ **Use**: Current directory or relative paths for test files
+- ❌ **Avoid**: Absolute paths like `/tmp/` (inaccessible from agent workspace)
+- 🔍 **Evidence**: Integration tests failed until switched from `/tmp/` to current directory
+
 ## Project Overview
 
 WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)

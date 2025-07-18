@@ -49,6 +49,59 @@ class FakeFirestoreClient:
 - `/mvp_site/tests/test_*_end2end_fixed.py` - Working end-to-end tests
 - `/mvp_site/tests/README_END2END_TESTS.md` - Pattern documentation
 
+## Orchestration System Breakthrough (January 2025)
+
+*See also: /CLAUDE.md ▸ Orchestration System for authoritative protocol*
+
+### Problem: Agents Stuck on Interactive Prompts
+**Symptoms**: Agents would sit forever at "Do you want to proceed?" prompts
+**Root Cause**: Claude CLI has interactive permission prompts in `claude code` mode
+**Failed Approaches**:
+- Complex prompt automation with background threads
+- Keystroke injection via tmux send-keys
+- Automatic prompt detection and response
+
+**Solution**: Use `claude -p` mode with proper flags:
+```bash
+claude -p "[task]" --output-format stream-json --verbose --dangerously-skip-permissions
+```
+
+**Key Insight**: The `--dangerously-skip-permissions` flag bypasses ALL interactive prompts
+
+**Stream JSON Requirements** (required flags for above command):
+- Must use `--verbose` flag with `--output-format stream-json`
+- Without verbose flag: "Error: When using --print, --output-format=stream-json requires --verbose"
+- Provides real-time execution monitoring and exact cost tracking
+
+### Problem: Agents Couldn't Create Independent PRs
+**Symptoms**: Agents working on copies of current branch, PR creation failed
+**Root Cause**: Using `cp -r` to copy directory kept the same git branch state
+**Evidence**: "a pull request for branch 'fix/orchestration-agent-management' already exists"
+
+**Solution**: Use git worktrees for complete isolation:
+```bash
+git worktree add -b <agent-branch> agent_workspace_<name> main
+```
+**Critical**: The `-b` flag creates a new branch, preventing accidental commits to main
+
+**Impact**: Agent created PR #679 while user was on PR #665 - complete independence
+
+### Context Warning False Positives
+- "Context low (0% remaining)" messages are inaccurate
+- Agents complete complex tasks successfully despite warnings
+- Solution: Explicitly instruct agents to ignore these warnings
+
+### Test File Path Constraints
+- Agents work in isolated workspaces
+- Cannot access absolute paths like `/tmp/` outside their workspace
+- Solution: Use current directory or relative paths for all file operations
+
+## Performance Metrics from Testing
+- Simple file creation: ~15-30 seconds, $0.00042
+- Complex PR workflow: 1-3 minutes, $0.0034
+- Real task (Opus model fix): ~2 minutes, ~$0.03
+- All tasks completed with 100% autonomy
+
 #### Results
 - ✅ **100% test pass rate** (153/153 tests) after switching to fake implementations
 - ✅ **True end-to-end testing** through all application layers
