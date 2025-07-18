@@ -5,10 +5,11 @@ PROOF: Puppeteer MCP Screenshot File Saver
 This script demonstrates that Puppeteer MCP works and saves actual screenshot files
 that you can verify exist. No fake claims - only real files with timestamps.
 """
+
 import os
 import subprocess
-import time
 from datetime import datetime
+
 
 def create_proof_directory():
     """Create a timestamped proof directory."""
@@ -18,13 +19,14 @@ def create_proof_directory():
     print(f"📁 Created proof directory: {proof_dir}")
     return proof_dir
 
+
 def take_proof_screenshot_with_playwright():
     """
     Take a proof screenshot using Playwright to demonstrate the concept.
     This creates an actual file you can verify exists.
     """
     proof_dir = create_proof_directory()
-    
+
     try:
         # Create a simple Playwright script to take a screenshot
         playwright_script = f"""
@@ -46,51 +48,53 @@ async def take_proof_screenshot():
 
 asyncio.run(take_proof_screenshot())
 """
-        
+
         # Write the script to a temporary file
         script_path = f"{proof_dir}/take_screenshot.py"
-        with open(script_path, 'w') as f:
+        with open(script_path, "w") as f:
             f.write(playwright_script)
-        
+
         # Execute the script
         print("📸 Taking proof screenshot with Playwright...")
         result = subprocess.run(
             ["python", script_path],
+            check=False,
             capture_output=True,
             text=True,
             cwd=os.getcwd(),
-            env={**os.environ, "PATH": "./venv/bin:" + os.environ.get("PATH", "")}
+            env={**os.environ, "PATH": "./venv/bin:" + os.environ.get("PATH", "")},
         )
-        
+
         if result.returncode == 0:
             print("✅ Screenshot captured successfully!")
             print(result.stdout)
-            
+
             # Verify the file exists
             screenshot_path = f"{proof_dir}/PROOF_screenshot.png"
             if os.path.exists(screenshot_path):
                 file_size = os.path.getsize(screenshot_path)
                 print(f"✅ VERIFIED: File exists at {screenshot_path}")
                 print(f"✅ File size: {file_size} bytes")
-                print(f"✅ Created: {datetime.fromtimestamp(os.path.getctime(screenshot_path))}")
+                print(
+                    f"✅ Created: {datetime.fromtimestamp(os.path.getctime(screenshot_path))}"
+                )
                 return screenshot_path
-            else:
-                print("❌ Screenshot file not found")
-                return None
-        else:
-            print("❌ Screenshot failed:")
-            print(result.stderr)
+            print("❌ Screenshot file not found")
             return None
-            
+        print("❌ Screenshot failed:")
+        print(result.stderr)
+        return None
+
     except Exception as e:
         print(f"❌ Error: {e}")
         return None
+
 
 def list_proof_files():
     """List all proof files to show they actually exist."""
     print("\n🔍 PROOF FILES VERIFICATION:")
     print("=" * 50)
-    
+
     for root, dirs, files in os.walk("/tmp"):
         for file in files:
             if "proof" in file.lower() and file.endswith(".png"):
@@ -106,6 +110,7 @@ def list_proof_files():
                 except:
                     pass
 
+
 if __name__ == "__main__":
     print("🔬 PUPPETEER MCP PROOF GENERATOR")
     print("=" * 50)
@@ -113,18 +118,18 @@ if __name__ == "__main__":
     print("This script creates ACTUAL screenshot files you can verify.")
     print("No fake claims - only real files with timestamps and file sizes.")
     print()
-    
+
     # Take proof screenshot
     screenshot_path = take_proof_screenshot_with_playwright()
-    
+
     if screenshot_path:
         print("\n🎉 SUCCESS! Proof screenshot created.")
         print(f"📁 File location: {screenshot_path}")
         print("\nYou can verify this file exists by running:")
         print(f"ls -la {screenshot_path}")
         print(f"file {screenshot_path}")
-    
+
     # List all proof files
     list_proof_files()
-    
+
     print("\n✅ PROOF COMPLETE - All files are real and verifiable!")

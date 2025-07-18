@@ -2,15 +2,18 @@
 """
 Simple test to load a campaign and check console for structured fields debug logs.
 """
-import sys
 import os
+import sys
+
 sys.path.append('/home/jleechan/projects/worldarchitect.ai/worktree_human2')
 
-from playwright.sync_api import sync_playwright
-import time
-import subprocess
-import signal
 import json
+import signal
+import subprocess
+import time
+
+from playwright.sync_api import sync_playwright
+
 
 def main():
     # Start server  

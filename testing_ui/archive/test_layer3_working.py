@@ -5,29 +5,28 @@ Working Layer 3 test - Browser + Mock structured fields with direct injection.
 
 import os
 import sys
-import json
+
 from playwright.sync_api import sync_playwright
 
 # Add project root to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 # Import test utilities
 sys.path.append(os.path.dirname(__file__))
-from test_data_utils import create_test_campaign
-from test_ui_helpers import capture_structured_fields_sequence
+
 
 def test_layer3_working():
     """Working Layer 3 test with direct HTML injection."""
-    
+
     print("=== Layer 3 Working Test ===")
-    
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
-        
+
         # Initialize helper
         helper = BrowserTestHelper("layer3_working", page)
-        
+
         try:
             # Create complete test HTML with structured fields
             test_html = """
@@ -196,28 +195,28 @@ What would you like to do next?
             </body>
             </html>
             """
-            
+
             # Load the test HTML
             page.set_content(test_html)
-            
+
             # Take initial screenshot
             helper.take_screenshot("full_page")
-            
+
             # Verify all structured fields are present
             field_checks = {
-                'session_header': '.session-header',
-                'god_mode_response': '.god-mode-response',
-                'entities_mentioned': '.entities-mentioned',
-                'location_confirmed': '.location-confirmed',
-                'dice_rolls': '.dice-rolls',
-                'resources': '.resources',
-                'state_updates': '.state-updates',
-                'planning_block': '.planning-block',
-                'debug_info': '.debug-info',
-                'dm_notes': '.dm-notes',
-                'state_rationale': '.state-rationale'
+                "session_header": ".session-header",
+                "god_mode_response": ".god-mode-response",
+                "entities_mentioned": ".entities-mentioned",
+                "location_confirmed": ".location-confirmed",
+                "dice_rolls": ".dice-rolls",
+                "resources": ".resources",
+                "state_updates": ".state-updates",
+                "planning_block": ".planning-block",
+                "debug_info": ".debug-info",
+                "dm_notes": ".dm-notes",
+                "state_rationale": ".state-rationale",
             }
-            
+
             print("🔍 Verifying structured fields presence...")
             found_fields = []
             for field_name, selector in field_checks.items():
@@ -227,23 +226,24 @@ What would you like to do next?
                     print(f"✅ {field_name} - Found and captured")
                 else:
                     print(f"❌ {field_name} - Not found")
-            
+
             # Final summary
             summary = helper.get_screenshot_summary()
-            print(f"\n✅ Layer 3 Working Test Complete!")
+            print("\n✅ Layer 3 Working Test Complete!")
             print(f"📁 Screenshots: {summary['screenshot_dir']}")
             print(f"📸 Total: {summary['total_screenshots']}")
             print(f"🎯 Fields found: {len(found_fields)}/11")
             print(f"📋 Found fields: {', '.join(found_fields)}")
-            
+
             return len(found_fields) >= 10
-            
+
         except Exception as e:
             print(f"❌ Layer 3 working test failed: {e}")
             helper.take_screenshot("error")
             return False
         finally:
             browser.close()
+
 
 if __name__ == "__main__":
     success = test_layer3_working()
