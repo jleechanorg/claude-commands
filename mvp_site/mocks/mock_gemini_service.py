@@ -8,12 +8,11 @@ from datetime import datetime
 from typing import Dict, Any, List
 from .data_fixtures import SAMPLE_AI_RESPONSES, SAMPLE_STATE_UPDATES
 try:
-    from .structured_fields_fixtures import FULL_STRUCTURED_RESPONSE, GOD_MODE_RESPONSE, MINIMAL_STRUCTURED_RESPONSE
+    from .structured_fields_fixtures import FULL_STRUCTURED_RESPONSE, GOD_MODE_RESPONSE
 except ImportError:
     # Fallback if fixtures not available
     FULL_STRUCTURED_RESPONSE = None
     GOD_MODE_RESPONSE = None
-    MINIMAL_STRUCTURED_RESPONSE = None
 
 
 class MockGeminiResponse:

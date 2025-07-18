@@ -29,6 +29,9 @@ def generate_content(prompt_parts, temperature=None, max_output_tokens=None,
                     response_schema=None, model_name=None):
     """
     Mock generate_content function that mimics the real service interface.
+    
+    Note: Parameters temperature, max_output_tokens, top_p, top_k, response_mime_type,
+    and response_schema are accepted for API compatibility but not used in mock.
     """
     client = get_client()
     

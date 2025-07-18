@@ -8,7 +8,6 @@ import os
 from typing import Dict, List, Any, Tuple
 from collections import defaultdict
 from datetime import datetime
-import difflib
 
 
 class CaptureAnalyzer:

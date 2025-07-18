@@ -234,6 +234,9 @@ def update_test_imports(test_module):
     Call this at the top of existing test files:
         from testing_framework.integration_utils import update_test_imports
         update_test_imports(__name__)
+        
+    Args:
+        test_module: The module name (typically __name__)
     """
     # This is a placeholder for future import manipulation if needed
     pass
