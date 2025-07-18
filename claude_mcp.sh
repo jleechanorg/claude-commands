@@ -287,16 +287,13 @@ echo ""
 # Core MCP Servers Installation
 echo -e "${BLUE}📊 Installing Core MCP Servers...${NC}"
 
-echo -e "\n${BLUE}1/8 Setting up GitHub MCP Server...${NC}"
+echo -e "\n${BLUE}1/7 Setting up GitHub MCP Server...${NC}"
 add_mcp_server "github-server" "@modelcontextprotocol/server-github"
 
-echo -e "\n${BLUE}2/8 Setting up File System MCP Server...${NC}"
-add_mcp_server "filesystem-server" "@modelcontextprotocol/server-filesystem" ~/Documents ~/Desktop ~/Downloads ~/Projects
-
-echo -e "\n${BLUE}3/8 Setting up Sequential Thinking MCP Server...${NC}"
+echo -e "\n${BLUE}2/7 Setting up Sequential Thinking MCP Server...${NC}"
 add_mcp_server "sequential-thinking" "@modelcontextprotocol/server-sequential-thinking"
 
-echo -e "\n${BLUE}4/8 Setting up Memory MCP Server...${NC}"
+echo -e "\n${BLUE}3/7 Setting up Memory MCP Server...${NC}"
 # Create memory data directory in user's home
 mkdir -p ~/.cache/mcp-memory
 echo -e "${BLUE}  📁 Memory data directory: ~/.cache/mcp-memory/${NC}"
@@ -346,20 +343,17 @@ EOF
     fi
 fi
 
-echo -e "\n${BLUE}5/8 Setting up Puppeteer MCP Server...${NC}"
+echo -e "\n${BLUE}4/7 Setting up Puppeteer MCP Server...${NC}"
 add_mcp_server "puppeteer-server" "@modelcontextprotocol/server-puppeteer"
 
-echo -e "\n${BLUE}6/8 Setting up Brave Search MCP Server...${NC}"
-add_mcp_server "brave-search" "@modelcontextprotocol/server-brave-search"
-
-echo -e "\n${BLUE}7/8 Setting up Context7 MCP Server...${NC}"
+echo -e "\n${BLUE}5/7 Setting up Context7 MCP Server...${NC}"
 add_mcp_server "context7" "@upstash/context7-mcp"
 
-echo -e "\n${BLUE}8/8 Setting up Gemini CLI MCP Server...${NC}"
+echo -e "\n${BLUE}6/7 Setting up Gemini CLI MCP Server...${NC}"
 add_mcp_server "gemini-cli-mcp" "@yusukedev/gemini-cli-mcp"
 
 # Optional: Notion Server (if available)
-echo -e "\n${BLUE}📝 Checking for Notion MCP Server...${NC}"
+echo -e "\n${BLUE}7/7 Checking for Notion MCP Server...${NC}"
 if package_exists "@notionhq/notion-mcp-server"; then
     add_mcp_server "notion-server" "@notionhq/notion-mcp-server"
 elif package_exists "@makenotion/notion-mcp-server"; then
