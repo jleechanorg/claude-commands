@@ -2,8 +2,9 @@
 Isolated unit test for debug content stripping functionality.
 Tests the strip_debug_content function without any Flask dependencies.
 """
-import unittest
+
 import re
+import unittest
 
 
 def strip_debug_content_isolated(text):
@@ -13,34 +14,53 @@ def strip_debug_content_isolated(text):
     """
     if not text:
         return text
-    
+
     # Remove DM commentary blocks
-    text = re.sub(r'\[DEBUG_START\].*?\[DEBUG_END\]', '', text, flags=re.DOTALL)
-    
+    text = re.sub(r"\[DEBUG_START\].*?\[DEBUG_END\]", "", text, flags=re.DOTALL)
+
     # Remove dice roll blocks
-    text = re.sub(r'\[DEBUG_ROLL_START\].*?\[DEBUG_ROLL_END\]', '', text, flags=re.DOTALL)
-    
+    text = re.sub(
+        r"\[DEBUG_ROLL_START\].*?\[DEBUG_ROLL_END\]", "", text, flags=re.DOTALL
+    )
+
     # Remove resource tracking blocks
-    text = re.sub(r'\[DEBUG_RESOURCES_START\].*?\[DEBUG_RESOURCES_END\]', '', text, flags=re.DOTALL)
-    
+    text = re.sub(
+        r"\[DEBUG_RESOURCES_START\].*?\[DEBUG_RESOURCES_END\]",
+        "",
+        text,
+        flags=re.DOTALL,
+    )
+
     # Remove state change explanation blocks
-    text = re.sub(r'\[DEBUG_STATE_START\].*?\[DEBUG_STATE_END\]', '', text, flags=re.DOTALL)
-    
+    text = re.sub(
+        r"\[DEBUG_STATE_START\].*?\[DEBUG_STATE_END\]", "", text, flags=re.DOTALL
+    )
+
     # Remove entity validation blocks
-    text = re.sub(r'\[DEBUG_VALIDATION_START\].*?\[DEBUG_VALIDATION_END\]', '', text, flags=re.DOTALL)
-    
+    text = re.sub(
+        r"\[DEBUG_VALIDATION_START\].*?\[DEBUG_VALIDATION_END\]",
+        "",
+        text,
+        flags=re.DOTALL,
+    )
+
     # Remove state updates proposed blocks
-    text = re.sub(r'\[STATE_UPDATES_PROPOSED\].*?\[/STATE_UPDATES_PROPOSED\]', '', text, flags=re.DOTALL)
-    
+    text = re.sub(
+        r"\[STATE_UPDATES_PROPOSED\].*?\[/STATE_UPDATES_PROPOSED\]",
+        "",
+        text,
+        flags=re.DOTALL,
+    )
+
     # Clean up any resulting multiple newlines
-    text = re.sub(r'\n{3,}', '\n\n', text)
-    
+    text = re.sub(r"\n{3,}", "\n\n", text)
+
     return text.strip()
 
 
 class TestDebugStrippingIsolated(unittest.TestCase):
     """Test debug content stripping in isolation."""
-    
+
     def setUp(self):
         """Set up test data."""
         self.sample_response = """
@@ -86,11 +106,11 @@ class TestDebugStrippingIsolated(unittest.TestCase):
         }
         [/STATE_UPDATES_PROPOSED]
         """
-    
+
     def test_strip_all_debug_content(self):
         """Test that all debug content is removed."""
         result = strip_debug_content_isolated(self.sample_response)
-        
+
         # Check that all debug tags are removed
         self.assertNotIn("[DEBUG_START]", result)
         self.assertNotIn("[DEBUG_END]", result)
@@ -102,31 +122,31 @@ class TestDebugStrippingIsolated(unittest.TestCase):
         self.assertNotIn("[DEBUG_STATE_END]", result)
         self.assertNotIn("[STATE_UPDATES_PROPOSED]", result)
         self.assertNotIn("[/STATE_UPDATES_PROPOSED]", result)
-        
+
         # Check that debug content is removed
         self.assertNotIn("key story location", result)
         self.assertNotIn("1d20+2 = 15+2 = 17", result)
         self.assertNotIn("0 EP used", result)
         self.assertNotIn("Adding NPC", result)
         self.assertNotIn("current_location_name", result)
-    
+
     def test_preserve_narrative_content(self):
         """Test that narrative content is preserved."""
         result = strip_debug_content_isolated(self.sample_response)
-        
+
         # Check that story content remains
         self.assertIn("You enter the ancient library", result)
         self.assertIn("Dust motes dance", result)
         self.assertIn("The librarian, an elderly elf", result)
         self.assertIn("Welcome, traveler", result)
         self.assertIn("She gestures to the vast collection", result)
-    
+
     def test_handle_empty_input(self):
         """Test handling of empty or None input."""
         self.assertEqual(strip_debug_content_isolated(""), "")
         self.assertEqual(strip_debug_content_isolated(None), None)
         self.assertEqual(strip_debug_content_isolated("   "), "")
-    
+
     def test_multiple_debug_blocks(self):
         """Test handling multiple debug blocks of same type."""
         multi_debug = """
@@ -140,22 +160,22 @@ class TestDebugStrippingIsolated(unittest.TestCase):
         [DEBUG_ROLL_START]Roll 2[DEBUG_ROLL_END]
         Text 5
         """
-        
+
         result = strip_debug_content_isolated(multi_debug)
-        
+
         # All debug content should be removed
         self.assertNotIn("Debug 1", result)
         self.assertNotIn("Debug 2", result)
         self.assertNotIn("Roll 1", result)
         self.assertNotIn("Roll 2", result)
-        
+
         # All text should remain
         self.assertIn("Text 1", result)
         self.assertIn("Text 2", result)
         self.assertIn("Text 3", result)
         self.assertIn("Text 4", result)
         self.assertIn("Text 5", result)
-    
+
     def test_nested_brackets(self):
         """Test handling of nested brackets in debug content."""
         nested = """
@@ -165,13 +185,13 @@ class TestDebugStrippingIsolated(unittest.TestCase):
         [DEBUG_END]
         Story end
         """
-        
+
         result = strip_debug_content_isolated(nested)
-        
+
         self.assertNotIn("nested brackets", result)
         self.assertIn("Story start", result)
         self.assertIn("Story end", result)
-    
+
     def test_multiline_debug_content(self):
         """Test handling of multiline debug content."""
         multiline = """
@@ -183,15 +203,15 @@ class TestDebugStrippingIsolated(unittest.TestCase):
         [DEBUG_STATE_END]
         End
         """
-        
+
         result = strip_debug_content_isolated(multiline)
-        
+
         self.assertNotIn("Line 1 of debug", result)
         self.assertNotIn("Line 2 of debug", result)
         self.assertNotIn("Line 3 of debug", result)
         self.assertIn("Beginning", result)
         self.assertIn("End", result)
-    
+
     def test_clean_up_extra_newlines(self):
         """Test that multiple newlines are cleaned up."""
         extra_newlines = """
@@ -208,14 +228,14 @@ class TestDebugStrippingIsolated(unittest.TestCase):
         
         End
         """
-        
+
         result = strip_debug_content_isolated(extra_newlines)
-        
+
         # Should not have more than 2 consecutive newlines
         self.assertNotIn("\n\n\n", result)
         self.assertIn("Start", result)
         self.assertIn("End", result)
-    
+
     def test_debug_validation_blocks(self):
         """Test removal of entity validation debug blocks."""
         validation = """
@@ -228,14 +248,14 @@ class TestDebugStrippingIsolated(unittest.TestCase):
         [DEBUG_VALIDATION_END]
         More story
         """
-        
+
         result = strip_debug_content_isolated(validation)
-        
+
         self.assertNotIn("Entity Tracking Validation", result)
         self.assertNotIn("Expected entities", result)
         self.assertIn("Story content", result)
         self.assertIn("More story", result)
-    
+
     def test_real_world_example(self):
         """Test with a realistic AI response."""
         real_response = """
@@ -273,16 +293,16 @@ class TestDebugStrippingIsolated(unittest.TestCase):
         }
         [/STATE_UPDATES_PROPOSED]
         """
-        
+
         result = strip_debug_content_isolated(real_response)
-        
+
         # Story should flow naturally without debug content
         self.assertIn("The morning sun breaks", result)
         self.assertIn("A cloaked figure bursts", result)
         self.assertIn("You notice blood", result)
         self.assertIn("Please, you must help me!", result)
         self.assertIn("they've taken my daughter!", result)
-        
+
         # No debug content should remain
         self.assertNotIn("quest hook", result)
         self.assertNotIn("1d20+3", result)
@@ -290,5 +310,5 @@ class TestDebugStrippingIsolated(unittest.TestCase):
         self.assertNotIn("mission_id", result)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
