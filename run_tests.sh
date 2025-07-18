@@ -165,6 +165,22 @@ if [ "$include_integration" = true ]; then
     fi
 fi
 
+# Also include .claude/commands tests if they exist
+if [ -d ".claude/commands/tests" ]; then
+    print_status "Including .claude/commands tests..."
+    while IFS= read -r -d '' file; do
+        test_files+=("$file")
+    done < <(find .claude/commands/tests -name "test_*.py" -type f -print0)
+fi
+
+# Also include orchestration tests if they exist
+if [ -d "orchestration/tests" ]; then
+    print_status "Including orchestration tests..."
+    while IFS= read -r -d '' file; do
+        test_files+=("$file")
+    done < <(find orchestration/tests -name "test_*.py" -type f -print0)
+fi
+
 # Check if any test files exist
 if [ ${#test_files[@]} -eq 0 ]; then
     if [ "$include_integration" = false ]; then

@@ -64,7 +64,7 @@ response=$(curl -s -D /tmp/claude_headers.tmp https://api.anthropic.com/v1/messa
   --header "x-api-key: $CLAUDE_API_KEY" \
   --header "anthropic-version: 2023-06-01" \
   --header "content-type: application/json" \
-  --data '{"model": "claude-3-opus-20240229", "max_tokens": 10, "messages": [{"role": "user", "content": "test"}]}')
+  --data '{"model": "claude-opus-4-20250514", "max_tokens": 10, "messages": [{"role": "user", "content": "test"}]}')
 ```
 
 ### Header Parsing Addition
