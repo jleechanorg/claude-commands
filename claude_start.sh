@@ -307,7 +307,7 @@ case ${choice:-2} in
             echo -e "   • /orch help       - Show orchestration help"
         fi
         
-        MODEL="claude-opus-4-20250522"
+        MODEL="claude-opus-4-20250514"
         echo -e "${YELLOW}🚀 Starting Claude Code with $MODEL (Latest Opus)...${NC}"
         claude --model "$MODEL" $FLAGS "$@"
         ;;
