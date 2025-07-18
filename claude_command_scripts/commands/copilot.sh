@@ -149,12 +149,6 @@ extract_bot_comments() {
             type: "general"
         }]' 2>/dev/null || echo "[]")
     else
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
         echo -e "${YELLOW}  ⚠ Invalid JSON in general comments, skipping...${NC}" >&2
         general_comments="[]"
     fi
@@ -167,69 +161,14 @@ extract_bot_comments() {
     # Ensure cleanup even on error
     trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
     
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
-    # Ensure cleanup even on error
-    trap 'rm -f "$temp_inline" "$temp_general" "$temp_reviews"' RETURN
-    
     # Write to temp files with validation
     echo "$inline_comments" > "$temp_inline"
     echo "$general_comments" > "$temp_general"
+    
+    # Combine all comments safely
+    local all_comments
+    all_comments=$(jq -s 'add' "$temp_inline" "$temp_general" 2>/dev/null || echo "[]")
+    
     # Final validation
     if echo "$all_comments" | jq empty 2>/dev/null; then
         echo "$all_comments"
@@ -461,6 +400,29 @@ generate_report() {
 # Main execution
 echo -e "${BLUE}🤖 GitHub Copilot PR Analyzer${NC}"
 echo "================================"
+
+# Run CI replica first to validate environment
+echo -e "\n${BLUE}🔄 Running CI environment replica to validate tests...${NC}"
+
+# Find CI replica script robustly
+CI_REPLICA_SCRIPT=""
+for script_path in "./run_ci_replica.sh" "../run_ci_replica.sh" "$(git rev-parse --show-toplevel 2>/dev/null)/run_ci_replica.sh"; do
+    if [[ -f "$script_path" && -x "$script_path" ]]; then
+        CI_REPLICA_SCRIPT="$script_path"
+        break
+    fi
+done
+
+if [[ -n "$CI_REPLICA_SCRIPT" ]]; then
+    if ! "$CI_REPLICA_SCRIPT" >/dev/null 2>&1; then
+        echo -e "${YELLOW}⚠️ CI replica tests failed - this may indicate CI issues in the PR${NC}"
+        echo "Continuing with PR analysis..."
+    else
+        echo "✓ CI replica tests passed - environment is healthy"
+    fi
+else
+    echo "⚠️ CI replica not available, proceeding with PR analysis"
+fi
 
 # Get PR number
 if [[ -z "$PR_NUMBER" ]]; then

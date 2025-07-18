@@ -34,15 +34,6 @@ fi
 # Change to the directory containing claude_command_scripts
 cd "$script_dir" || cd "$git_root" || exit 1
 
-# Get current directory relative to git root
-current_dir=$(pwd)
-relative_dir=$(realpath --relative-to="$git_root" "$current_dir" 2>/dev/null || echo ".")
-if [ "$relative_dir" = "." ]; then
-    dir_text="root"
-else
-    dir_text="$relative_dir"
-fi
-
 local_branch=$(git branch --show-current)
 remote=$(git rev-parse --abbrev-ref @{upstream} 2>/dev/null || echo "no upstream")
 
@@ -137,7 +128,7 @@ check_bashrc_alias
 if [ "$1" = "--with-api" ] || [ "$1" = "--monitor" ]; then
     # Check for API key in environment
     if [ -z "$CLAUDE_API_KEY" ]; then
-        echo "[Local: $local_branch$local_status | Remote: $remote | Dir: $dir_text | PR: $pr_text]"
+        echo "[Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]"
         echo "[API: Error - CLAUDE_API_KEY environment variable not set]"
         exit 0
     fi
@@ -154,7 +145,7 @@ if [ "$1" = "--with-api" ] || [ "$1" = "--monitor" ]; then
     
     # Check for authentication errors
     if echo "$response" | grep -q "authentication_error"; then
-        echo "[Local: $local_branch$local_status | Remote: $remote | Dir: $dir_text | PR: $pr_text]"
+        echo "[Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]"
         echo "[API: Authentication failed - Get valid API key from console.anthropic.com]"
         rm -f /tmp/claude_headers.tmp
         exit 0
@@ -181,14 +172,14 @@ if [ "$1" = "--with-api" ] || [ "$1" = "--monitor" ]; then
             fi
         fi
         
-        echo "[Local: $local_branch$local_status | Remote: $remote | Dir: $dir_text | PR: $pr_text]"
+        echo "[Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]"
         echo "[API: ${requests_remaining:-?}/${requests_limit:-50} requests (${remaining_percent:-?}% remaining) | Reset: $(format_time "$requests_reset")]"
         
         rm -f /tmp/claude_headers.tmp
     else
-        echo "[Local: $local_branch$local_status | Remote: $remote | Dir: $dir_text | PR: $pr_text]"
+        echo "[Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]"
         echo "[API: Error getting rate limits]"
     fi
 else
-    echo "[Local: $local_branch$local_status | Remote: $remote | Dir: $dir_text | PR: $pr_text]"
+    echo "[Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]"
 fi

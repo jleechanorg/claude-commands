@@ -12,6 +12,9 @@ test_venv/
 # Service account keys
 key.json
 
+# GitHub token file
+.token
+
 # IDE / OS specific
 .vscode/
 .idea/
@@ -114,3 +117,7 @@ mvp_site/*_Campaign_*.txt
 
 # Environment files with sensitive data
 testing_ui/testing_full/.env
+
+# Browser binaries (Chrome/ChromeDriver) - large files that exceed GitHub's 100MB limit
+chrome/
+chromedriver/

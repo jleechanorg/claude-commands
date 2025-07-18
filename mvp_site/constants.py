@@ -191,3 +191,6 @@ IMPORTANT: During character design, numeric responses (1, 2, 3, etc.) are select
 Use the clean [CHARACTER DESIGN - Step X of 7] format without DM notes or debug blocks.
 IMPORTANT: State updates must be included in a JSON field, not in the narrative text.
 """.strip()
+
+# Legacy alias for backwards compatibility with tests
+CHARACTER_CREATION_REMINDER = CHARACTER_DESIGN_REMINDER

@@ -926,27 +926,14 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     # rather than extracting them via regex patterns from the prompt
     # Character names will be handled by structured generation and entity tracking
     
-    # Extract NPCs mentioned in prompt - look for specific patterns
-    # "NPCs including X, Y, and Z" or "advisor named X"
-    npc_patterns = [
-        r'NPCs?\s+(?:including|such as)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:,\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)*)',
-        r'(?:advisor|companion|member)s?\s+(?:named?|called?)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)'
-    ]
-    
-    for pattern in npc_patterns:
-        matches = re.findall(pattern, prompt)
-        for match in matches:
-            # Split by commas if multiple NPCs listed
-            npc_names = [n.strip() for n in match.split(',')]
-            for npc in npc_names:
-                if npc and npc not in expected_entities and npc not in ['and', 'or', 'the', 'a', 'an']:
-                    expected_entities.append(npc)
-                    logging_util.info(f"Detected NPC from prompt: {npc}")
+    # Player character name should come from LLM structured response (player_character_data.name)
+    # NOT from fragile regex parsing of user prompts
     
     # Create a minimal initial game state for entity tracking
+    # Use default player character - actual name will come from LLM response
+    pc_name = "Player Character"
+    
     if expected_entities:
-        # Create minimal game state for entity tracking
-        pc_name = expected_entities[0] if expected_entities else "Unknown"
         initial_game_state = {
             'player_character_data': {
                 'name': pc_name,

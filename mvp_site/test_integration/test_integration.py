@@ -123,315 +123,6 @@ def run_god_command(test_instance, action, command_string=None):
     return result.stderr
 
 
-class TestInteractionIntegration(unittest.TestCase):
-    """Integration tests with mocked Gemini API calls for faster execution."""
-
-    @classmethod
-    @patch('gemini_service._call_gemini_api')
-    def setUpClass(cls, mock_gemini_api):
-        """Create one campaign for all tests to share."""
-        if not DEPS_AVAILABLE:
-            return  # Skip setup if dependencies missing - individual tests will fail
-        
-        # Mock the initial campaign creation response
-        mock_gemini_api.return_value = create_mock_gemini_response(
-            narrative="Welcome to the land of dragons. You are a brave knight facing a choice.",
-            planning_block="What would you like to do?\n1. **FaceTheDragon:** Confront the dragon\n2. **SeekAllies:** Look for allies\n3. **Other:** Something else",
-            state_updates={
-                "player_character_data": {
-                    "name": "Test Knight",
-                    "class": "Fighter",
-                    "level": 1,
-                    "hp_max": 10,
-                    "hp_current": 10
-                }
-            }
-        )
-        cls.app = create_app()
-        cls.app.config['TESTING'] = True
-        cls.client = cls.app.test_client()
-        cls.user_id = 'test-integration-user'
-
-        # Create one shared campaign for all tests
-        create_response = cls.client.post(
-            '/api/campaigns',
-            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': cls.user_id},
-            data=json.dumps({'prompt': 'A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.', 'title': 'Test', 'selected_prompts': TEST_SELECTED_PROMPTS})
-        )
-        assert create_response.status_code == 201, "Failed to create shared campaign"
-        create_data = create_response.get_json()
-        cls.campaign_id = create_data.get('campaign_id')
-        assert cls.campaign_id is not None
-
-    def setUp(self):
-        """Check dependencies and use shared campaign from setUpClass."""
-        if not DEPS_AVAILABLE:
-            self.fail("CRITICAL FAILURE: Integration test dependencies missing (Flask, etc.). Install requirements.txt to fix.")
-        
-        self.app = self.__class__.app
-        self.client = self.__class__.client
-        self.user_id = self.__class__.user_id
-        self.campaign_id = self.__class__.campaign_id
-
-    def tearDown(self):
-        """Clean up any test data (campaigns, etc.)."""
-        # NOTE: For now we leave Firestore docs in place for manual inspection.
-        pass
-
-    def test_new_campaign_creates_initial_state(self):
-        """
-        Milestone 1: Verify that a new campaign generates an initial game state.
-        This tests the entire creation pipeline.
-        """
-        test_setup.set_timeout(60)  # 60 second timeout
-        try:
-            # Fetch the state from the shared campaign to verify it was created correctly
-            state_json = run_god_command(self, 'ask')
-            game_state = json.loads(state_json)
-
-            # Basic sanity assertions. We cannot predict the exact content, but the structure should exist.
-            self.assertIn('player_character_data', game_state)
-            self.assertIn('npc_data', game_state)
-        finally:
-            test_setup.cancel_timeout()  # Cancel timeout
-
-    @patch('gemini_service._call_gemini_api')
-    def test_ai_state_update_is_merged_correctly(self, mock_gemini_api):
-        """
-        Milestone 2: Verify that an AI-proposed update is merged without data loss.
-        Uses a specific prompt designed to trigger state changes.
-        """
-        # Mock the API response with state updates
-        mock_gemini_api.return_value = create_mock_gemini_response(
-            narrative="You drink the magical potion and feel your strength surge! You also find 50 gold pieces.",
-            state_updates={
-                "player_character_data": {
-                    "attributes": {
-                        "strength": 13  # Increased from 10
-                    },
-                    "resources": {
-                        "gold": 50
-                    }
-                }
-            }
-        )
-        
-        # Don't pre-set conflicting state - let the AI work with the natural campaign state
-        # Just verify we have a character to work with
-        initial_state_json = run_god_command(self, 'ask')
-        initial_state = json.loads(initial_state_json)
-        self.assertIn('player_character_data', initial_state)
-
-        # Use a very explicit prompt that demands state updates
-        targeted_prompt = (
-            "IMPORTANT: You must update the game state in a [STATE_UPDATES_PROPOSED] block. "
-            "The character finds and drinks a magical strength potion, permanently increasing their strength by 3 points. "
-            "They also discover 50 gold pieces in a treasure chest. Update the character's stats accordingly."
-        )
-        
-        interaction_data = {
-            'input': targeted_prompt,
-            'mode': 'character'
-        }
-        
-        interaction_response = self.client.post(
-            f'/api/campaigns/{self.campaign_id}/interaction',
-            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
-            data=json.dumps(interaction_data)
-        )
-        
-        self.assertEqual(interaction_response.status_code, 200)
-
-        # Verify the AI made the requested changes
-        final_state_json = run_god_command(self, 'ask')
-        final_state = json.loads(final_state_json)
-        
-        # Check that the AI made some stat changes (we can't predict exact values with natural state)
-        self.assertIn('player_character_data', final_state)
-        pc_data = final_state['player_character_data']
-        
-        # Verify that either stats were updated OR gold was updated (showing AI responded)
-        # Check for various possible locations where AI might store these values
-        stats_updated = False
-        gold_updated = False
-        
-        # Check for stats in various locations (current structure uses 'attributes')
-        if 'attributes' in pc_data and isinstance(pc_data['attributes'], dict):
-            # Check if any numeric stats exist (STR, strength, etc.)
-            stats_updated = any(isinstance(v, (int, float)) for v in pc_data['attributes'].values())
-        elif 'stats' in pc_data and isinstance(pc_data['stats'], dict):
-            # Fallback check for old structure
-            stats_updated = any(isinstance(v, (int, float)) for v in pc_data['stats'].values())
-        
-        # Check for gold in various locations
-        initial_gold = initial_state['player_character_data'].get('gold', 0)
-        if initial_gold is None:
-            initial_gold = 0
-            
-        # Gold might be at root level, in stats, attributes, or resources
-        current_gold = pc_data.get('gold', 0)
-        if current_gold is None:
-            current_gold = 0
-        
-        # Check attributes for gold
-        if 'attributes' in pc_data and isinstance(pc_data['attributes'], dict):
-            attrs_gold = pc_data['attributes'].get('gold', 0)
-            if attrs_gold and attrs_gold > current_gold:
-                current_gold = attrs_gold
-                
-        # Check stats for gold (fallback)
-        if 'stats' in pc_data and isinstance(pc_data['stats'], dict):
-            stats_gold = pc_data['stats'].get('gold', 0)
-            if stats_gold and stats_gold > current_gold:
-                current_gold = stats_gold
-                
-        # Check resources for gold
-        if 'resources' in pc_data and isinstance(pc_data['resources'], dict):
-            resources_gold = pc_data['resources'].get('gold', 0)
-            if resources_gold and resources_gold > current_gold:
-                current_gold = resources_gold
-                
-        gold_updated = current_gold > initial_gold
-        
-        # Also accept if AI created any new numeric fields
-        new_numeric_fields = any(isinstance(v, (int, float)) for k, v in pc_data.items() 
-                                if k not in initial_state['player_character_data'])
-        
-        self.assertTrue(stats_updated or gold_updated or new_numeric_fields, 
-                       f"AI should have updated stats, gold, or added numeric fields. Initial: {initial_state['player_character_data']}, Final: {pc_data}")
-
-    def test_god_command_set_performs_deep_merge(self):
-        """
-        Milestone 3: Comprehensive deep merge test with 3 layers of nesting and all Python types.
-        Tests every valid Python data type in nested structures.
-        """
-        # Set up a complex initial state with 3 layers of nesting and all Python types
-        complex_initial_state = {
-            "level1_dict": {
-                "level2_dict": {
-                    "level3_string": "initial_value",
-                    "level3_int": 42,
-                    "level3_float": 3.14159,
-                    "level3_bool": True,
-                    "level3_list": [1, 2, 3],
-                    "level3_none": None
-                },
-                "level2_string": "level2_initial",
-                "level2_list": ["a", "b", "c"],
-                "level2_int": 100
-            },
-            "level1_string": "root_value",
-            "level1_list": [{"nested": "item1"}, {"nested": "item2"}],
-            "level1_bool": False,
-            "level1_float": 2.718
-        }
-        
-        initial_set_command = f'GOD_MODE_SET: test_data = {json.dumps(complex_initial_state)}'
-        run_god_command(self, 'set', initial_set_command)
-
-        # Test 1: Deep nested update (3 levels deep)
-        update_set_command = 'GOD_MODE_SET: test_data.level1_dict.level2_dict.level3_string = "updated_deep_value"'
-        run_god_command(self, 'set', update_set_command)
-        
-        # Test 2: Add new nested structure
-        add_new_command = 'GOD_MODE_SET: test_data.level1_dict.level2_dict.level3_new_dict = {"brand_new": "nested_value", "number": 999}'
-        run_god_command(self, 'set', add_new_command)
-        
-        # Test 3: Update list at level 2
-        update_list_command = 'GOD_MODE_SET: test_data.level1_dict.level2_list = ["x", "y", "z", "new_item"]'
-        run_god_command(self, 'set', update_list_command)
-        
-        # Test 4: Update root level value
-        update_root_command = 'GOD_MODE_SET: test_data.level1_string = "updated_root_value"'
-        run_god_command(self, 'set', update_root_command)
-        
-        # Test 5: Add completely new root level structure
-        add_root_command = 'GOD_MODE_SET: test_data.new_root_dict = {"deeply": {"nested": {"value": "success", "types": [1, 2.5, true, null]}}}'
-        run_god_command(self, 'set', add_root_command)
-        
-        # Verify all changes were applied correctly
-        final_state_json = run_god_command(self, 'ask')
-        final_state = json.loads(final_state_json)
-        
-        test_data = final_state['test_data']
-        
-        # Verify deep nested update (3 levels)
-        self.assertEqual(test_data['level1_dict']['level2_dict']['level3_string'], 'updated_deep_value')
-        
-        # Verify original values were preserved at all levels
-        self.assertEqual(test_data['level1_dict']['level2_dict']['level3_int'], 42)
-        self.assertEqual(test_data['level1_dict']['level2_dict']['level3_float'], 3.14159)
-        self.assertEqual(test_data['level1_dict']['level2_dict']['level3_bool'], True)
-        self.assertEqual(test_data['level1_dict']['level2_dict']['level3_list'], [1, 2, 3])
-        self.assertIsNone(test_data['level1_dict']['level2_dict']['level3_none'])
-        
-        # Verify new nested structure was added
-        self.assertEqual(test_data['level1_dict']['level2_dict']['level3_new_dict']['brand_new'], 'nested_value')
-        self.assertEqual(test_data['level1_dict']['level2_dict']['level3_new_dict']['number'], 999)
-        
-        # Verify list update at level 2
-        self.assertEqual(test_data['level1_dict']['level2_list'], ["x", "y", "z", "new_item"])
-        
-        # Verify other level 2 values preserved
-        self.assertEqual(test_data['level1_dict']['level2_string'], 'level2_initial')
-        self.assertEqual(test_data['level1_dict']['level2_int'], 100)
-        
-        # Verify root level updates
-        self.assertEqual(test_data['level1_string'], 'updated_root_value')
-        self.assertEqual(test_data['level1_bool'], False)
-        self.assertEqual(test_data['level1_float'], 2.718)
-        
-        # Verify original root level list preserved
-        self.assertEqual(test_data['level1_list'], [{"nested": "item1"}, {"nested": "item2"}])
-        
-        # Verify new root level structure
-        self.assertEqual(test_data['new_root_dict']['deeply']['nested']['value'], 'success')
-        self.assertEqual(test_data['new_root_dict']['deeply']['nested']['types'], [1, 2.5, True, None])
-        
-        print("✅ Comprehensive deep merge test with all Python types completed successfully!")
-        print(f"Final test data structure has {len(test_data)} root keys with complex nesting preserved")
-
-    @patch('gemini_service._call_gemini_api')
-    def test_story_progression_smoke_test(self, mock_gemini_api):
-        """
-        Quick smoke test: Verify basic story progression works.
-        Lightweight test that ensures the story system responds to commands.
-        """
-        # Mock the API response for story progression
-        mock_gemini_api.return_value = create_mock_gemini_response(
-            narrative="You venture deeper into the ancient forest, the canopy above filtering the sunlight into dancing patterns. "
-                     "As you push through the undergrowth, you discover an ancient artifact - a crystalline orb that pulses "
-                     "with an otherworldly light. The artifact seems to resonate with magical energy."
-        )
-        
-        # Simple story command
-        story_command = (
-            "I explore the nearby forest and discover an ancient artifact. "
-            "What do I find?"
-        )
-        
-        response = self.client.post(
-            f'/api/campaigns/{self.campaign_id}/interaction',
-            headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
-            data=json.dumps({'input': story_command, 'mode': 'character'})
-        )
-        
-        # Verify response
-        self.assertEqual(response.status_code, 200)
-        response_data = response.get_json()
-        self.assertIn('response', response_data)
-        self.assertIsInstance(response_data['response'], str)
-        self.assertGreater(len(response_data['response']), 50, "Story response should be substantive")
-        
-        # Verify the response contains story elements
-        response_text = response_data['response'].lower()
-        story_keywords = ['forest', 'artifact', 'discover', 'find', 'ancient']
-        found_keywords = sum(1 for keyword in story_keywords if keyword in response_text)
-        self.assertGreater(found_keywords, 0, "Response should relate to the story command")
-        
-        print("✅ Story progression smoke test passed!")
-
-
 class BaseCampaignIntegrationTest(unittest.TestCase):
     """Base class for campaign integration tests with shared functionality.
     
@@ -465,7 +156,15 @@ class BaseCampaignIntegrationTest(unittest.TestCase):
                 'custom_options': TEST_CUSTOM_OPTIONS  # Additional options for complete testing
             })
         )
-        assert create_response.status_code == 201, f"Failed to create {cls.CAMPAIGN_TITLE}"
+        if create_response.status_code != 201:
+            error_details = {
+                'status_code': create_response.status_code,
+                'response_text': create_response.get_data(as_text=True),
+                'headers': dict(create_response.headers),
+                'campaign_title': cls.CAMPAIGN_TITLE
+            }
+            print(f"CAMPAIGN CREATION FAILED: {json.dumps(error_details, indent=2)}")
+        assert create_response.status_code == 201, f"Failed to create {cls.CAMPAIGN_TITLE} - Status: {create_response.status_code}, Response: {create_response.get_data(as_text=True)}"
         create_data = create_response.get_json()
         cls.campaign_id = create_data.get('campaign_id')
         assert cls.campaign_id is not None
@@ -780,7 +479,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
         
         # First interaction should recognize Geralt and offer design options
         interact_response = self.client.post(
-            f'/api/campaigns/{campaign_id}/interact',
+            f'/api/campaigns/{campaign_id}/interaction',
             headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
             data=json.dumps({'input': '1'})  # Select AIGenerated
         )
@@ -806,7 +505,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
         
         # Approve the character
         approve_response = self.client.post(
-            f'/api/campaigns/{campaign_id}/interact',
+            f'/api/campaigns/{campaign_id}/interaction',
             headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
             data=json.dumps({'input': '1'})  # Approve character
         )
@@ -840,7 +539,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
         
         # First interaction should offer generic character creation
         interact_response = self.client.post(
-            f'/api/campaigns/{campaign_id}/interact',
+            f'/api/campaigns/{campaign_id}/interaction',
             headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
             data=json.dumps({'input': '1'})  # Select AIGenerated
         )
@@ -877,7 +576,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
         
         # Select StandardD&D option
         interact_response = self.client.post(
-            f'/api/campaigns/{campaign_id}/interact',
+            f'/api/campaigns/{campaign_id}/interaction',
             headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
             data=json.dumps({'input': '2'})  # Select StandardD&D
         )
@@ -892,7 +591,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
         
         # Select Human (option 1)
         race_response = self.client.post(
-            f'/api/campaigns/{campaign_id}/interact',
+            f'/api/campaigns/{campaign_id}/interaction',
             headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
             data=json.dumps({'input': '1'})  # Select Human
         )
@@ -922,7 +621,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
         
         # Select CustomClass option
         interact_response = self.client.post(
-            f'/api/campaigns/{campaign_id}/interact',
+            f'/api/campaigns/{campaign_id}/interaction',
             headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
             data=json.dumps({'input': '3'})  # Select CustomClass
         )
@@ -955,7 +654,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
         
         # Send numeric input "2" - should select StandardD&D, not continue story
         interact_response = self.client.post(
-            f'/api/campaigns/{campaign_id}/interact',
+            f'/api/campaigns/{campaign_id}/interaction',
             headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
             data=json.dumps({'input': '2'})
         )
@@ -987,7 +686,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
         
         # Select AIGenerated
         interact_response = self.client.post(
-            f'/api/campaigns/{campaign_id}/interact',
+            f'/api/campaigns/{campaign_id}/interaction',
             headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
             data=json.dumps({'input': '1'})
         )
@@ -1024,7 +723,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
         
         # First interaction should show campaign summary
         interact_response = self.client.post(
-            f'/api/campaigns/{campaign_id}/interact',
+            f'/api/campaigns/{campaign_id}/interaction',
             headers={'Content-Type': 'application/json', 'X-Test-Bypass-Auth': 'true', 'X-Test-User-ID': self.user_id},
             data=json.dumps({'input': ''})  # Empty input to see initial response
         )

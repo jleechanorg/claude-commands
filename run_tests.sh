@@ -142,6 +142,11 @@ done < <(find ./tests -name "test_*.py" -type f \
     ! -path "./tests/test_integration/*" \
     -print0)
 
+# Always include test_integration_mock.py from mvp_site/test_integration directory (fast mock tests)
+if [ -f "./mvp_site/test_integration/test_integration_mock.py" ]; then
+    test_files+=("./mvp_site/test_integration/test_integration_mock.py")
+fi
+
 # Also include test_integration directories if not in GitHub export mode
 if [ "$include_integration" = true ]; then
     # Check for test_integration in both root and tests/ directory

@@ -463,7 +463,9 @@ class GitHubCopilotProcessor:
     def verify_reply_posted(self, original_comment_id: int, expected_reply_content: str) -> bool:
         """Verify that a reply was actually posted to GitHub by querying the API."""
         try:
-            # Query GitHub API to check for replies to this comment
+            # Check both inline review comments AND general PR comments
+            
+            # First check inline review comments (for code review comments)
             result = subprocess.run([
                 'gh', 'api', 
                 f'repos/{self.repo_owner}/{self.repo_name}/pulls/{self.pr_number}/comments',
@@ -472,14 +474,33 @@ class GitHubCopilotProcessor:
             
             comments = json.loads(result.stdout)
             
-            # Look for replies to the original comment
+            # Look for replies to the original comment in review comments
             for comment in comments:
                 if comment.get('in_reply_to_id') == original_comment_id:
-                    # Check if the reply content matches (first 50 chars)
                     reply_body = comment.get('body', '')
                     if expected_reply_content[:50] in reply_body:
                         reply_id = comment.get('id')
                         print(f"✅ VERIFIED: Reply {reply_id} posted to comment {original_comment_id}")
+                        return True
+            
+            # Also check general PR comments (for discussion comments)
+            result = subprocess.run([
+                'gh', 'api', 
+                f'repos/{self.repo_owner}/{self.repo_name}/issues/{self.pr_number}/comments',
+                '--paginate'
+            ], capture_output=True, text=True, check=True)
+            
+            comments = json.loads(result.stdout)
+            
+            # Check if we just posted a new comment that contains our content
+            for comment in comments:
+                reply_body = comment.get('body', '')
+                if expected_reply_content[:50] in reply_body:
+                    # Check if this comment was posted very recently (last few seconds)
+                    created_at = comment.get('created_at', '')
+                    if created_at:
+                        reply_id = comment.get('id')
+                        print(f"✅ VERIFIED: Reply {reply_id} posted to PR comments")
                         return True
             
             print(f"❌ VERIFICATION FAILED: No reply found for comment {original_comment_id}")
@@ -732,21 +753,32 @@ class GitHubCopilotProcessor:
             print(f"🐰 Processing {len(filtered_coderabbit_comments)} CodeRabbit suggestions (excluding thank you messages)...")
             all_comments.extend(filtered_coderabbit_comments)
         
-        # Add user comments (but exclude my own replies)
+        # Add user comments (but exclude my own replies) - PRIORITIZE jleechan2015 comments
         user_comments = categorized_comments['user_comments']
         if user_comments:
             # Filter out jleechan2015 comments that look like automated replies
-            filtered_user_comments = []
+            jleechan_comments = []
+            other_user_comments = []
             for comment in user_comments:
                 user = comment.get('user', '')
                 body = comment.get('body', '')
                 # Skip if it's my comment and looks like an automated reply
                 if user == 'jleechan2015' and ('**Yes, I will implement this**' in body or '**No, I will not implement this**' in body or '**I need to evaluate this further**' in body):
                     continue
-                filtered_user_comments.append(comment)
+                # Separate jleechan2015 comments for priority handling
+                if user == 'jleechan2015':
+                    jleechan_comments.append(comment)
+                else:
+                    other_user_comments.append(comment)
             
-            print(f"👤 Processing {len(filtered_user_comments)} user comments (excluding my automated replies)...")
-            all_comments.extend(filtered_user_comments)
+            # Process jleechan2015 comments FIRST (highest priority)
+            if jleechan_comments:
+                print(f"⭐ Processing {len(jleechan_comments)} HIGH PRIORITY jleechan2015 comments FIRST...")
+                all_comments.extend(jleechan_comments)
+            
+            if other_user_comments:
+                print(f"👤 Processing {len(other_user_comments)} other user comments...")
+                all_comments.extend(other_user_comments)
         
         print(f"📊 TOTAL COMMENTS TO PROCESS: {len(all_comments)}")
         

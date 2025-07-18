@@ -63,6 +63,13 @@
    - ✅ ALWAYS fix ALL failing tests to 100% pass rate
    - ✅ ALWAYS take ownership of test failures, especially in new code
 
+🚨 **NO ASSUMPTIONS ABOUT RUNNING COMMANDS**: 
+   - ❌ NEVER explain what a command "will do" when it's already running
+   - ❌ NEVER make assumptions about command execution or results  
+   - ✅ ALWAYS wait for actual command output and results
+   - ✅ ALWAYS trust command execution and observe real behavior
+   - **Pattern**: User says "X is running..." → Wait for actual results, don't speculate
+
 🚨 **TRUST USER CAPABILITY**: Focus on execution accuracy over complexity concerns
    - ✅ Provide clear, actionable guidance for complex commands
    - ✅ Focus on areas where protocol execution may be challenging
@@ -141,6 +148,45 @@
    - ❌ NEVER wait for slash commands to complete when MCP tools can provide immediate results
    - ✅ **Pattern**: Try MCP first → Fall back to `gh` CLI → Slash commands are bonus, not dependency
    - Benefits: Immediate results, reliable API access, no command completion uncertainty
+
+### 🔧 **GitHub MCP Setup & Usage Guide** (⚠️ CRITICAL)
+
+🚨 **MANDATORY SETUP**: GitHub MCP requires proper token configuration for private repository access
+
+**📋 Token Configuration:**
+- ✅ **Token Location**: Set in `claude_mcp.sh` line ~247: `export GITHUB_TOKEN="your_token_here"`
+- ✅ **Current Token**: `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` (configured for jleechanorg access)
+- ✅ **Repository**: `jleechanorg/worldarchitect.ai` (private repository)
+- ✅ **Restart Required**: After token changes, restart MCP: `claude mcp remove github-server && claude mcp add --scope user github-server npx @modelcontextprotocol/server-github`
+
+**🔍 Private Repository Access Pattern:**
+- ❌ **NEVER use search** for private repositories (will always return "Not Found")
+- ✅ **ALWAYS use direct MCP functions** for private repos:
+  - `mcp__github-server__get_pull_request(owner, repo, pull_number)`
+  - `mcp__github-server__get_pull_request_comments(owner, repo, pull_number)`
+  - `mcp__github-server__list_pull_requests(owner, repo)`
+- ✅ **Search works** for public repositories only
+
+**🛠️ Troubleshooting GitHub MCP Issues:**
+1. **"Not Found" Error**: Check if repository is private (use direct API test: `curl -H "Authorization: token TOKEN" https://api.github.com/repos/owner/repo`)
+2. **"Validation Failed"**: Token lacks permissions or repository doesn't exist
+3. **Empty Results**: MCP server needs restart to pick up new token
+4. **Search Fails**: Use direct functions instead of search for private repos
+
+**📝 Example Usage:**
+```
+# ✅ CORRECT for private repo
+mcp__github-server__get_pull_request_comments(jleechanorg, worldarchitect.ai, 664)
+
+# ❌ WRONG for private repo  
+mcp__github-server__search_repositories(worldarchitect.ai)
+```
+
+**🔄 Token Update Process:**
+1. Update token in `claude_mcp.sh`
+2. Set environment: `export GITHUB_TOKEN="new_token"`  
+3. Restart MCP server: Remove and re-add github-server
+4. Test with direct function call
 
 ## Project Overview
 
@@ -554,7 +600,6 @@ Use `/list` to display all available slash commands with descriptions.
 **Technical Revolution**: Instead of trying to build NLP in bash, leverage Claude's existing NLP capabilities through meta-prompts
 
 🚨 **SLASH COMMAND ENFORCEMENT**: 
-- 🚨 **NEVER BYPASS SLASH COMMANDS**: When user issues any slash command (`/handoff`, `/execute`, `/learn`, etc.), MUST follow the command's specific protocol exactly, not do regular work instead | Each command has defined workflows and outputs that user expects
 - `/e` or `/execute` MUST follow simplified protocol in `.claude/commands/execute.md`
 - NEVER treat `/e` as regular request - always use TodoWrite circuit breaker
 - MANDATORY: TodoWrite checklist → Present plan → Wait for approval → Execute

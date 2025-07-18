@@ -15,44 +15,38 @@
 - `/pushl force` - Force pushes current branch (use with caution)
 
 **Implementation**:
-- Get current branch name with `git branch --show-current`
-- Check for untracked files with `git status --porcelain`
-- If untracked files exist, offer options:
-  - Add all untracked files and commit
-  - Select specific files to add
-  - Continue without adding (just push existing commits)
-  - Cancel push operation
-- Push to origin with `git push origin HEAD:branch-name`
-- Optionally create PR with `gh pr create` if `pr` argument provided
-- Skip test server management and other automation
-- Lightweight alternative to full `/push` command
+Execute: `./claude_command_scripts/commands/pushlite.sh [arguments]`
+
+**Key Features**:
+- **Smart Untracked File Handling**: Interactive options for untracked files
+- **Lightweight Operation**: No test automation or server management
+- **Safety Checks**: Confirms actions before execution
+- **PR Integration**: Optional PR creation with auto-generated content
+
+**Untracked Files Options**:
+1. **Add all** - Stages all untracked files with smart commit messages
+2. **Select files** - Choose specific files interactively
+3. **Continue** - Push without adding untracked files
+4. **Cancel** - Abort the push operation
+
+**Smart Commit Messages**:
+- Detects file types (tests, docs, scripts, CI tools)
+- Suggests appropriate commit messages
+- Allows custom messages
 
 **Comparison with /push**:
-- **`/push`**: Full automation (test server, validation, comprehensive setup)
-- **`/pushl`**: Minimal operation (just git push + optional PR creation)
+- **`/push`**: Full automation (CI replica, test validation, comprehensive setup)
+- **`/pushl`**: Minimal operation (git push + optional PR creation)
+
+**Safety Features**:
+- Force push confirmation required
+- Shows file counts and status
+- Validates remote access
+- Reports success/failure clearly
 
 **Use Cases**:
 - Quick documentation updates
 - Small fixes that don't need full test environment
-- When you want manual control over test server management
+- When you want manual control over automation
 - Fast iteration during development
-
-**Safety Features**:
-- Confirms branch name before pushing
-- Shows git status before push
-- Warns about untracked files
-- Reports push success/failure
-- Validates remote repository access
-
-**Untracked Files Handling**:
-- Lists untracked files if present
-- Offers interactive options:
-  1. **Add all** - Stages all untracked files for commit
-  2. **Select files** - Choose specific files to add
-  3. **Continue** - Push without adding untracked files
-  4. **Cancel** - Abort the push operation
-- Smart detection for PR-related files:
-  - Test files matching current branch work
-  - Documentation related to changes
-  - Supporting scripts or configurations
-- Suggests appropriate commit message based on file types
+- Adding CI tools, browser dependencies, or supporting files

@@ -554,9 +554,14 @@ def _write_story_entry_to_firestore(user_id, campaign_id, actor, text, mode=None
     text_bytes = text.encode('utf-8')
     chunks = [text_bytes[i:i + MAX_TEXT_BYTES] for i in range(0, len(text_bytes), MAX_TEXT_BYTES)]
     
-    if not chunks and actor == constants.ACTOR_GEMINI and structured_fields:
-        # Create a single chunk with placeholder text for AI responses with empty narrative
-        placeholder_text = "[Internal thoughts and analysis - see planning block]"
+    if not chunks:
+        # Handle empty text for both user and AI actors
+        if actor == constants.ACTOR_GEMINI and structured_fields:
+            # Create a single chunk with placeholder text for AI responses with empty narrative
+            placeholder_text = "[Internal thoughts and analysis - see planning block]"
+        else:
+            # Create a placeholder for empty user inputs
+            placeholder_text = "[Empty input]"
         chunks = [placeholder_text.encode('utf-8')]
     base_entry_data = {'actor': actor}
     if mode: base_entry_data['mode'] = mode

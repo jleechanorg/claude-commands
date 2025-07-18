@@ -1,26 +1,16 @@
 # Header Command
 
-**Purpose**: Generate mandatory branch header AND detect if previous response was missing it
+**Purpose**: Generate and display the mandatory branch header for CLAUDE.md compliance with session usage info
 
 **Usage**: `/header` or `/usage`
 
-**Action**: 
-1. Check if previous response was missing the mandatory header (compliance violation)
-2. If violation detected, save to Memory MCP for learning
-3. Generate the required branch header with API usage statistics
+**Action**: Execute single script to generate the required branch header with API usage statistics
 
 ## Implementation
 
-**Enhanced Process**:
-1. **Python script** checks for missing header in previous response
-2. **Memory MCP** saves violation if detected  
-3. **Shell script** generates the required header
+**Single Command**: `./claude_command_scripts/git-header.sh --with-api`
 
-**Commands**:
-- Check & save violation: `python3 .claude/commands/header_check.py`
-- Generate header: `./claude_command_scripts/git-header.sh --with-api`
-
-This automatically:
+This script automatically:
 1. Gets local branch name
 2. Gets remote upstream info  
 3. Gets PR information

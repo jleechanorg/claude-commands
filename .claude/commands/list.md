@@ -6,56 +6,36 @@
 
 **Usage**: `/list`
 
-## Implementation
+**Available Commands**:
+- `/pr [task]` - End-to-end implementation from idea to working PR
+- `/handoff [task] [description]` - Create structured task handoff with PR and worker prompt
+- `/execute` or `/e` - Execute tasks with TodoWrite circuit breaker
+- `/think [mode]` - Enable sequential thinking for complex analysis
+- `/thinku` - Direct alias for `/think ultra` (maximum-depth analysis)
+- `/learn [topic]` - Capture learnings and update documentation
+- `/header` - Get git branch status for mandatory response header
+- `/newbranch` or `/nb` - Create new branch from latest main
+- `/4layer` or `/tddf` - Test-driven development protocol
+- `/testui` - Run browser tests with mock APIs
+- `/testuif` - Run browser tests with real APIs
+- `/testhttp` - Run HTTP tests with mock APIs
+- `/coverage` - Generate test coverage reports
+- `/push` - Smart git push with PR creation/update and test server
+- `/pushlite` or `/pushl` - Simple push without automation
+- `/review` - Automated code review process
+- `/archreview` or `/arch` - Architecture and design review with dual-perspective analysis
+- `/reviewdeep` or `/reviewd` - Deep review with ultra thinking mode (12-point analysis)
 
-**Enhanced Process**:
-1. **Shell script** finds the commands directory from any git location
-2. **Python script** dynamically scans all .md files in the commands directory
-3. **Smart extraction** of command names and purposes from markdown documentation
-4. **Sorted output** of all available slash commands with clean formatting
+**Implementation**: 
+- Display all available slash commands
+- Include purpose and brief description for each
+- Show command aliases where applicable
+- Provide usage examples
 
-**Commands**:
-- Generate command list: `./claude_command_scripts/list.sh`
-- Direct Python execution: `python3 .claude/commands/list.py`
+## Testing Commands (Real-Mode Testing Framework)
+- `/teste` - Run end-to-end tests with mock services (fast, free)
+- `/tester` - Run end-to-end tests with real services (costs money) 
+- `/testerc` - Run end-to-end tests with real services + data capture
 
-This automatically:
-1. Finds the correct .claude/commands directory from any git location
-2. Scans all .md files for command definitions
-3. Extracts command names and purposes
-4. Provides sorted, formatted output of all available commands
-5. Works from any directory within the project (worktrees, subdirectories)
-
-**Benefits**:
-- ✅ **Always up-to-date** - Dynamically scans actual command files
-- ✅ **Location agnostic** - Works from any directory in the project
-- ✅ **Comprehensive** - Shows ALL available commands automatically
-- ✅ **Formatted output** - Clean, readable command list
-- ✅ **Maintenance-free** - No manual updates needed when commands change
-
-## Output Format
-
-Generates a comprehensive list of all available slash commands:
-```
-Available Slash Commands:
-- /arch - Short form of the Architecture Review command for quick access
-- /archreview - Conduct comprehensive architecture and design reviews
-- /bclean - Delete local branches without open GitHub PRs
-... (all commands listed dynamically)
-```
-
-## Usage in Workflow
-
-**Best Practice**: Use `/list` to:
-- See all available commands when starting work
-- Discover new commands that have been added
-- Get quick reminders of command purposes
-- Ensure you're using the most current command set
-
-**Integration**: 
-- Run whenever you need to see available commands
-- Use as a reference for command capabilities
-- Perfect for onboarding or when returning to the project
-
-## Compliance Note
-
-This command helps maintain awareness of all available slash commands in the Claude Code CLI system. It ensures you always have access to the most current command set without needing to manually maintain command lists.
+## Other Commands
+- Additional slash commands as defined in other .md files in this directory
