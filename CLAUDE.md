@@ -311,6 +311,15 @@ When working with test runners/harnesses:
 - Treat existing code as template | String constants: module-level (>1x) or constants.py (cross-file)
 - **SOLID Principles**: Single Responsibility Principle (one reason to change), Open/Closed Principle
 - **DRY principle** | Defensive programming: `isinstance()` validation
+
+### 🚨 Enhanced Feature Compatibility Protocol
+**CRITICAL**: When implementing sophisticated architectures:
+- ✅ **ALWAYS audit existing integration points** for compatibility  
+- ✅ **ALWAYS update filtering logic** for new data formats
+- ✅ **ALWAYS test both object creation AND string conversion**
+- ❌ **NEVER assume legacy filters** will work with new reply formats
+- ❌ **NEVER use str() on complex objects** without verifying output format
+- 🔍 **Evidence**: Copilot infinite loop + object repr posting (July 2025)
 - **Code Duplication Prevention**: Check for existing similar code before writing new | Extract common patterns to utilities | Audit for unused CSS/imports
 - **🚨 ALWAYS REUSE CODE**: ❌ NEVER duplicate code blocks, especially data structures | ✅ Create constants/utilities for repeated patterns | ✅ Extract duplicate logic to functions | Pattern: Find duplication → Create constant/function → Replace all instances
 - **Constants Over Strings**: Use constants.py for repeated keys/values | Never hardcode 'session_header', 'planning_block' etc. | Module-level constants for >1x usage
@@ -582,6 +591,12 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - **Empty Strings**: ✅ `if value is not None:` | ❌ `if value:`
 - **AI Instructions**: Critical first, style last | Order determines compliance
 - 🚨 **Trust But Verify**: NEVER assume existing code works | Test core functionality before adding features | Validate success AND failure paths
+
+### 🚨 **"SILENT BREAKING CHANGES" ANTI-PATTERN**: Major failure pattern to avoid
+- ❌ Implementing CommentResponse objects without updating str() usage
+- ❌ Creating new reply formats without updating filter patterns  
+- ✅ ALWAYS include backward compatibility testing for enhanced features
+- **Evidence**: Copilot infinite loop + object repr posting (July 2025)
 
 ### 🚨 **BRANCH CONFUSION ANTI-PATTERN**: Major failure pattern to avoid
 - ❌ Working on wrong branch due to lack of context verification
