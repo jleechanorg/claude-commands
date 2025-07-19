@@ -78,6 +78,17 @@
    - ❌ Avoid generic advice about "command overload" or "cognitive load"
    - ❌ Avoid patronizing about user interface complexity or learning curves
 
+🚨 **NO OVER-ENGINEERING**: Prevent building parallel inferior systems vs enhancing existing ones
+   - ✅ ALWAYS ask "Can the LLM handle this naturally?" before building parsers/analytics systems
+   - ✅ ALWAYS try enhancing existing systems before building parallel new ones  
+   - ✅ ALWAYS prioritize user workflow integration over technical sophistication
+   - ❌ NEVER build parallel command execution systems - enhance Claude Code CLI instead
+   - ❌ NEVER build complex parsing when LLM can understand intent naturally
+   - ❌ NEVER add analytics/tracking beyond core functionality needs
+   - **Pattern**: Trust LLM capabilities, enhance existing systems, prioritize immediate user value
+   - **Evidence**: Command composition over-engineering (PR #737) - a parallel command execution system was built instead of enhancing the existing Claude Code CLI. This led to unnecessary complexity, duplication of functionality, and reduced maintainability.
+   - **Root Causes**: LLM capability underestimation, perfectionist engineering, integration avoidance, demo-driven development
+
 🚨 **NO FALSE PROMISES**: Be honest about capabilities | Conservative language | Deliver or don't promise
 
 🚨 **USE LLM CAPABILITIES**: When designing command systems or natural language features:
