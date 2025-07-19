@@ -13,12 +13,25 @@ NC='\033[0m' # No Color
 
 # Parse command line arguments
 FORCE_CLEAN=false
+MODE=""
 REMAINING_ARGS=()
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         -c|--clean)
             FORCE_CLEAN=true
+            shift
+            ;;
+        -w|--worker)
+            MODE="worker"
+            shift
+            ;;
+        -d|--default)
+            MODE="default"
+            shift
+            ;;
+        -s|--supervisor)
+            MODE="supervisor"
             shift
             ;;
         *)
@@ -236,14 +249,63 @@ else
 fi
 
 echo ""
-echo -e "${BLUE}Select mode:${NC}"
-echo -e "${GREEN}1) Worker (Sonnet 4)${NC}"
-echo -e "${BLUE}2) Default${NC}"
-echo -e "${YELLOW}3) Opus 4 (Latest)${NC}"
-read -p "Choice [2]: " choice
 
-case ${choice:-2} in
+# If mode is specified via command line, use it directly
+if [ -n "$MODE" ]; then
+    case $MODE in
+        worker)
+            # Worker mode intentionally skips orchestration check
+            # Workers are meant to be lightweight and don't interact with orchestration
+            MODEL="claude-sonnet-4-20250514"
+            echo -e "${GREEN}🚀 Starting Claude Code in worker mode with $MODEL...${NC}"
+            claude --model "$MODEL" $FLAGS "$@"
+            ;;
+        default)
+            # Check orchestration for non-worker modes
+            check_orchestration
+            
+            # Show orchestration info if available
+            if is_orchestration_running; then
+                echo ""
+                echo -e "${GREEN}💡 Orchestration commands available:${NC}"
+                echo -e "   • /orch status     - Check orchestration status"
+                echo -e "   • /orch Build X    - Delegate task to AI agents"
+                echo -e "   • /orch help       - Show orchestration help"
+            fi
+            
+            echo -e "${BLUE}🚀 Starting Claude Code with default settings...${NC}"
+            claude $FLAGS "$@"
+            ;;
+        supervisor)
+            # Check orchestration for non-worker modes
+            check_orchestration
+            
+            # Show orchestration info if available
+            if is_orchestration_running; then
+                echo ""
+                echo -e "${GREEN}💡 Orchestration commands available:${NC}"
+                echo -e "   • /orch status     - Check orchestration status"
+                echo -e "   • /orch Build X    - Delegate task to AI agents"
+                echo -e "   • /orch help       - Show orchestration help"
+            fi
+            
+            MODEL="claude-opus-4-20250514"
+            echo -e "${YELLOW}🚀 Starting Claude Code with $MODEL (Latest Opus)...${NC}"
+            claude --model "$MODEL" $FLAGS "$@"
+            ;;
+    esac
+else
+    # If no mode specified, show interactive menu
+    echo -e "${BLUE}Select mode:${NC}"
+    echo -e "${GREEN}1) Worker (Sonnet 4)${NC}"
+    echo -e "${BLUE}2) Default${NC}"
+    echo -e "${YELLOW}3) Supervisor (Opus 4)${NC}"
+    read -p "Choice [2]: " choice
+
+    case ${choice:-2} in
     1) 
+        # Worker mode intentionally skips orchestration check
+        # Workers are meant to be lightweight and don't interact with orchestration
         MODEL="claude-sonnet-4-20250514"
         echo -e "${GREEN}🚀 Starting Claude Code in worker mode with $MODEL...${NC}"
         claude --model "$MODEL" $FLAGS "$@"
@@ -297,4 +359,5 @@ case ${choice:-2} in
         
         claude $FLAGS "$@"
         ;;
-esac
+    esac
+fi
