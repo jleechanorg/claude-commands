@@ -2,12 +2,13 @@
 """
 Configuration for real Gemini API testing
 """
-import os
+
 import logging
+import os
 
 # Model configuration
-DEFAULT_MODEL = 'gemini-2.5-flash'  # Fast and cheap for all operations
-TEST_MODEL = 'gemini-2.5-flash'  # Explicitly use for all tests
+DEFAULT_MODEL = "gemini-2.5-flash"  # Fast and cheap for all operations
+TEST_MODEL = "gemini-2.5-flash"  # Explicitly use for all tests
 
 # API Configuration
 MAX_TOKENS = 2000  # Limit output for cost control
@@ -24,28 +25,29 @@ WARNING_THRESHOLD_USD = 0.50  # Warn at 50% budget
 # Safety Settings (matching mvp_site)
 try:
     from google.genai import types
-    
+
     SAFETY_SETTINGS = [
         types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH, 
-            threshold=types.HarmBlockThreshold.BLOCK_NONE
+            category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+            threshold=types.HarmBlockThreshold.BLOCK_NONE,
         ),
         types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_HARASSMENT, 
-            threshold=types.HarmBlockThreshold.BLOCK_NONE
+            category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+            threshold=types.HarmBlockThreshold.BLOCK_NONE,
         ),
         types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, 
-            threshold=types.HarmBlockThreshold.BLOCK_NONE
+            category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+            threshold=types.HarmBlockThreshold.BLOCK_NONE,
         ),
         types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, 
-            threshold=types.HarmBlockThreshold.BLOCK_NONE
+            category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+            threshold=types.HarmBlockThreshold.BLOCK_NONE,
         ),
     ]
 except ImportError:
     # Fallback for environments without the SDK
     SAFETY_SETTINGS = []
+
 
 # API Key Management
 def get_api_key():
@@ -54,25 +56,29 @@ def get_api_key():
     api_key = os.environ.get("GEMINI_API_KEY")
     if api_key:
         return api_key
-    
+
     # Check home directory
     home_key_path = os.path.expanduser("~/.gemini_api_key.txt")
     if os.path.exists(home_key_path):
-        with open(home_key_path, "r") as f:
+        with open(home_key_path) as f:
             return f.read().strip()
-    
+
     # Check project root
-    project_key_path = os.path.join(os.path.dirname(__file__), "../../../gemini_api_key.txt")
+    project_key_path = os.path.join(
+        os.path.dirname(__file__), "../../../gemini_api_key.txt"
+    )
     if os.path.exists(project_key_path):
-        with open(project_key_path, "r") as f:
+        with open(project_key_path) as f:
             return f.read().strip()
-    
-    raise ValueError("No Gemini API key found. Set GEMINI_API_KEY or create ~/.gemini_api_key.txt")
+
+    raise ValueError(
+        "No Gemini API key found. Set GEMINI_API_KEY or create ~/.gemini_api_key.txt"
+    )
+
 
 # Logging Configuration
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 # Test Configuration
