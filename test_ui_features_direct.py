@@ -5,15 +5,17 @@ Direct test of UI features bypassing wizard.
 
 import os
 import time
+
 from playwright.sync_api import sync_playwright
-from datetime import datetime
 
 BASE_URL = "http://localhost:6006"
 SCREENSHOT_DIR = "/tmp/worldarchitectai/ui_fixes_direct"
 
+
 def setup_dirs():
     """Create screenshot directory."""
     os.makedirs(SCREENSHOT_DIR, exist_ok=True)
+
 
 def take_screenshot(page, name):
     """Take a screenshot."""
@@ -21,23 +23,24 @@ def take_screenshot(page, name):
     page.screenshot(path=filepath, full_page=False)
     print(f"📸 {name}")
 
+
 def main():
     print("🎯 Direct UI Features Test")
     print("=" * 50)
-    
+
     setup_dirs()
-    
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page(viewport={'width': 1280, 'height': 800})
-        
+        page = browser.new_page(viewport={"width": 1280, "height": 800})
+
         try:
             # Navigate with test mode
             print("\n1️⃣ Testing campaign form directly...")
             test_url = f"{BASE_URL}?test_mode=true&test_user_id=direct-test"
             page.goto(test_url)
             time.sleep(2)
-            
+
             # Directly show new campaign view
             page.evaluate("""
                 // Hide all views
@@ -55,7 +58,7 @@ def main():
                 }
             """)
             time.sleep(2)
-            
+
             # Check radio buttons
             radio_visible = page.evaluate("""
                 (() => {
@@ -63,10 +66,10 @@ def main():
                     return radios.length > 0;
                 })()
             """)
-            
+
             if radio_visible:
                 print("   ✅ Radio buttons found!")
-                
+
                 # Highlight radio section
                 page.evaluate("""
                     const radioSection = document.querySelector('input[name="campaignType"]')?.closest('.mb-3');
@@ -78,7 +81,7 @@ def main():
                 """)
                 time.sleep(0.5)
                 take_screenshot(page, "01_radio_buttons_visible")
-                
+
                 # Check Dragon Knight content
                 page.evaluate("""
                     const textarea = document.getElementById('campaign-prompt');
@@ -89,13 +92,13 @@ def main():
                 """)
                 time.sleep(0.5)
                 take_screenshot(page, "02_dragon_knight_content")
-                
+
                 # Click custom radio
                 custom_radio = page.query_selector("#customCampaign")
                 if custom_radio:
                     custom_radio.click()
                     time.sleep(1)
-                    
+
                     page.evaluate("""
                         const textarea = document.getElementById('campaign-prompt');
                         if (textarea) {
@@ -107,7 +110,7 @@ def main():
                     take_screenshot(page, "03_custom_campaign_editable")
             else:
                 print("   ❌ Radio buttons not found - checking wizard...")
-                
+
                 # Go to dashboard and use wizard
                 page.evaluate("""
                     document.querySelectorAll('.view').forEach(v => v.classList.remove('active-view'));
@@ -115,52 +118,54 @@ def main():
                     if (dashboardView) dashboardView.classList.add('active-view');
                 """)
                 time.sleep(1)
-                
+
                 # Click wizard button
-                wizard_btn = page.query_selector("button:has-text('Start New Campaign')")
+                wizard_btn = page.query_selector(
+                    "button:has-text('Start New Campaign')"
+                )
                 if wizard_btn:
                     wizard_btn.click()
                     time.sleep(2)
                     take_screenshot(page, "04_wizard_view")
-            
+
             # Test 2: Create campaign and test inline editing
             print("\n2️⃣ Creating campaign for inline edit test...")
-            
+
             # Use the regular form
             page.evaluate("""
                 document.querySelectorAll('.view').forEach(v => v.classList.remove('active-view'));
                 document.getElementById('new-campaign-view').classList.add('active-view');
             """)
             time.sleep(1)
-            
+
             # Fill form
             name_input = page.query_selector("#campaign-title")
             if name_input:
                 name_input.fill("Test Campaign for Inline Edit")
-            
+
             # Select custom to make it faster
             custom_radio = page.query_selector("#customCampaign")
             if custom_radio:
                 custom_radio.click()
                 time.sleep(0.5)
-            
+
             # Simple prompt
             prompt_textarea = page.query_selector("#campaign-prompt")
             if prompt_textarea:
                 prompt_textarea.fill("A simple test campaign")
-            
+
             # Submit
             submit_btn = page.query_selector("button[type='submit']")
             if submit_btn:
                 submit_btn.click()
                 print("   Creating campaign...")
                 time.sleep(8)
-            
+
             # Test inline editing
             game_view = page.query_selector("#game-view.active-view")
             if game_view:
                 print("\n3️⃣ Testing inline campaign name editing...")
-                
+
                 # Add inline editor if not present
                 page.evaluate("""
                     const title = document.getElementById('game-title');
@@ -175,7 +180,7 @@ def main():
                     }
                 """)
                 time.sleep(0.5)
-                
+
                 # Highlight title
                 page.evaluate("""
                     const title = document.getElementById('game-title');
@@ -190,7 +195,7 @@ def main():
                     }
                 """)
                 take_screenshot(page, "05_inline_edit_ready")
-                
+
                 # Test story reader
                 print("\n4️⃣ Testing story reader controls...")
                 story_btn = page.query_selector("#story-reader-toggle")
@@ -205,7 +210,7 @@ def main():
                     take_screenshot(page, "06_story_reader_button")
                 else:
                     print("   ❌ Story reader button not found")
-                
+
                 # Show download/share buttons
                 print("\n5️⃣ Showing download/share buttons...")
                 page.evaluate("""
@@ -220,17 +225,19 @@ def main():
                     });
                 """)
                 take_screenshot(page, "07_download_share_visible")
-            
+
             print(f"\n✅ Test complete! Screenshots in: {SCREENSHOT_DIR}")
-            
+
         except Exception as e:
             print(f"\n❌ Error: {e}")
             take_screenshot(page, "error_state")
             import traceback
+
             traceback.print_exc()
-        
+
         finally:
             browser.close()
+
 
 if __name__ == "__main__":
     main()

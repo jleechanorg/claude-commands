@@ -22,7 +22,6 @@ show_help() {
     echo ""
     echo "Options:"
     echo "  -h, --help      Show this help message"
-    echo "  --monitor       Run in monitor mode (detect issues without auto-fixing)"
     echo ""
     echo "Description:"
     echo "  This script comprehensively analyzes a PR and attempts to:"
@@ -48,16 +47,11 @@ show_help() {
 
 # Parse command line arguments
 PR_NUMBER=""
-MONITOR_MODE=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help)
             show_help
-            ;;
-        --monitor|--monitor-mode)
-            MONITOR_MODE="--monitor"
-            shift
             ;;
         [0-9]*)
             PR_NUMBER="$1"
@@ -402,12 +396,6 @@ generate_report() {
         fi
     fi
 }
-
-# If monitor mode is requested, use Python implementation directly
-if [[ -n "$MONITOR_MODE" ]]; then
-    echo -e "${BLUE}🔍 Running in monitor mode using Python implementation...${NC}"
-    exec python3 .claude/commands/copilot.py "$PR_NUMBER" "$MONITOR_MODE"
-fi
 
 # Main execution
 echo -e "${BLUE}🤖 GitHub Copilot PR Analyzer${NC}"

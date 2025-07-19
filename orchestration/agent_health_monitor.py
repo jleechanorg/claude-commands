@@ -4,31 +4,34 @@ Agent Health Monitor for Multi-Agent Orchestration System
 Monitors agent health, handles failures, and provides auto-recovery
 """
 
+import json
 import os
 import subprocess
 import time
-import json
-import redis
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
-from pathlib import Path
+from datetime import datetime, timedelta
+from typing import Any
+
+import redis
+
 
 @dataclass
 class AgentStatus:
     """Status of an individual agent"""
+
     name: str
     session_name: str
     status: str  # 'active', 'stopped', 'error', 'recovering'
     last_activity: datetime
     error_count: int
     uptime: timedelta
-    current_task: Optional[str] = None
+    current_task: str | None = None
     health_score: float = 1.0  # 0.0 to 1.0
+
 
 class AgentHealthMonitor:
     """Monitors and manages agent health"""
-    
+
     def __init__(self, orchestration_dir: str = None):
         self.orchestration_dir = orchestration_dir or os.path.dirname(__file__)
         self.tasks_dir = os.path.join(self.orchestration_dir, "tasks")
@@ -37,133 +40,148 @@ class AgentHealthMonitor:
         self.monitoring_interval = 30  # seconds
         self.max_error_count = 3
         self.startup_script = os.path.join(self.orchestration_dir, "start_system.sh")
-        
+
         # Initialize Redis connection
         self._init_redis()
-        
+
         # Define expected agents
         self.expected_agents = {
             "frontend-agent": {
                 "type": "frontend",
                 "specialization": "UI/React development",
-                "task_file": "frontend_tasks.txt"
+                "task_file": "frontend_tasks.txt",
             },
             "backend-agent": {
-                "type": "backend", 
+                "type": "backend",
                 "specialization": "API/Database development",
-                "task_file": "backend_tasks.txt"
+                "task_file": "backend_tasks.txt",
             },
             "testing-agent": {
                 "type": "testing",
                 "specialization": "Quality assurance",
-                "task_file": "testing_tasks.txt"
+                "task_file": "testing_tasks.txt",
             },
             "opus-master": {
                 "type": "orchestrator",
                 "specialization": "Task coordination",
-                "task_file": "shared_status.txt"
-            }
+                "task_file": "shared_status.txt",
+            },
         }
-    
+
     def _init_redis(self):
         """Initialize Redis connection"""
         try:
-            self.redis_client = redis.Redis(host='localhost', port=6379, db=0)
+            self.redis_client = redis.Redis(host="localhost", port=6379, db=0)
             self.redis_client.ping()
         except Exception as e:
             print(f"Redis connection failed: {e}")
             self.redis_client = None
-    
-    def get_tmux_sessions(self) -> List[str]:
+
+    def get_tmux_sessions(self) -> list[str]:
         """Get list of active tmux sessions"""
         try:
-            result = subprocess.run(['tmux', 'list-sessions'], 
-                                  capture_output=True, text=True)
+            result = subprocess.run(
+                ["tmux", "list-sessions"], check=False, capture_output=True, text=True
+            )
             if result.returncode == 0:
                 sessions = []
-                for line in result.stdout.strip().split('\n'):
-                    if line and ':' in line:
-                        session_name = line.split(':')[0]
+                for line in result.stdout.strip().split("\n"):
+                    if line and ":" in line:
+                        session_name = line.split(":")[0]
                         sessions.append(session_name)
                 return sessions
             return []
         except Exception as e:
             print(f"Error getting tmux sessions: {e}")
             return []
-    
+
     def is_agent_responsive(self, session_name: str) -> bool:
         """Check if agent is responsive via tmux"""
         try:
             # Try to capture recent output
-            result = subprocess.run([
-                'tmux', 'capture-pane', '-t', session_name, '-p', '-S', '-10'
-            ], capture_output=True, text=True)
-            
+            result = subprocess.run(
+                ["tmux", "capture-pane", "-t", session_name, "-p", "-S", "-10"],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
             if result.returncode == 0:
                 output = result.stdout.strip()
                 # Look for signs of activity or Claude prompt
-                return len(output) > 0 and ('claude' in output.lower() or 
-                                          'agent' in output.lower() or
-                                          '>' in output)
+                return len(output) > 0 and (
+                    "claude" in output.lower()
+                    or "agent" in output.lower()
+                    or ">" in output
+                )
             return False
         except Exception as e:
             print(f"Error checking agent responsiveness: {e}")
             return False
-    
+
     def get_agent_last_activity(self, session_name: str) -> datetime:
         """Get last activity timestamp for an agent"""
         try:
             # Get session info
-            result = subprocess.run([
-                'tmux', 'display-message', '-t', session_name, 
-                '-p', '#{session_activity}'
-            ], capture_output=True, text=True)
-            
+            result = subprocess.run(
+                [
+                    "tmux",
+                    "display-message",
+                    "-t",
+                    session_name,
+                    "-p",
+                    "#{session_activity}",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
             if result.returncode == 0:
                 # tmux returns activity in seconds since epoch
                 timestamp = int(result.stdout.strip())
                 return datetime.fromtimestamp(timestamp)
-            
+
             return datetime.now() - timedelta(hours=1)  # Default to old timestamp
         except Exception as e:
             print(f"Error getting agent activity: {e}")
             return datetime.now() - timedelta(hours=1)
-    
+
     def calculate_health_score(self, agent: AgentStatus) -> float:
         """Calculate health score for an agent"""
         base_score = 1.0
-        
+
         # Reduce score based on error count
         error_penalty = min(agent.error_count * 0.2, 0.8)
         base_score -= error_penalty
-        
+
         # Reduce score based on time since last activity
         inactive_time = datetime.now() - agent.last_activity
         if inactive_time > timedelta(minutes=30):
             inactivity_penalty = min(inactive_time.total_seconds() / 3600 * 0.1, 0.5)
             base_score -= inactivity_penalty
-        
+
         # Boost score if agent is active and has tasks
-        if agent.status == 'active' and agent.current_task:
+        if agent.status == "active" and agent.current_task:
             base_score += 0.1
-        
+
         return max(0.0, min(1.0, base_score))
-    
+
     def update_agent_status(self):
         """Update status of all agents"""
         active_sessions = self.get_tmux_sessions()
-        
+
         for agent_name, config in self.expected_agents.items():
             if agent_name in active_sessions:
                 # Agent session exists - check health
                 is_responsive = self.is_agent_responsive(agent_name)
                 last_activity = self.get_agent_last_activity(agent_name)
-                
+
                 if agent_name in self.agents:
                     # Update existing agent
                     agent = self.agents[agent_name]
                     agent.last_activity = last_activity
-                    agent.status = 'active' if is_responsive else 'error'
+                    agent.status = "active" if is_responsive else "error"
                     if not is_responsive:
                         agent.error_count += 1
                     agent.uptime = datetime.now() - (datetime.now() - agent.uptime)
@@ -172,162 +190,199 @@ class AgentHealthMonitor:
                     agent = AgentStatus(
                         name=agent_name,
                         session_name=agent_name,
-                        status='active' if is_responsive else 'error',
+                        status="active" if is_responsive else "error",
                         last_activity=last_activity,
                         error_count=0 if is_responsive else 1,
-                        uptime=timedelta(0)
+                        uptime=timedelta(0),
                     )
                     self.agents[agent_name] = agent
-                
+
                 # Update health score
                 agent.health_score = self.calculate_health_score(agent)
+            # Agent session not found
+            elif agent_name in self.agents:
+                self.agents[agent_name].status = "stopped"
+                self.agents[agent_name].error_count += 1
             else:
-                # Agent session not found
-                if agent_name in self.agents:
-                    self.agents[agent_name].status = 'stopped'
-                    self.agents[agent_name].error_count += 1
-                else:
-                    # Create stopped agent entry
-                    agent = AgentStatus(
-                        name=agent_name,
-                        session_name=agent_name,
-                        status='stopped',
-                        last_activity=datetime.now() - timedelta(hours=1),
-                        error_count=1,
-                        uptime=timedelta(0)
-                    )
-                    self.agents[agent_name] = agent
-    
+                # Create stopped agent entry
+                agent = AgentStatus(
+                    name=agent_name,
+                    session_name=agent_name,
+                    status="stopped",
+                    last_activity=datetime.now() - timedelta(hours=1),
+                    error_count=1,
+                    uptime=timedelta(0),
+                )
+                self.agents[agent_name] = agent
+
     def restart_agent(self, agent_name: str) -> bool:
         """Restart a failed agent"""
         try:
             config = self.expected_agents.get(agent_name)
             if not config:
                 return False
-            
+
             print(f"Restarting {agent_name}...")
-            
+
             # Kill existing session if it exists
-            subprocess.run(['tmux', 'kill-session', '-t', agent_name], 
-                         capture_output=True)
-            
+            subprocess.run(
+                ["tmux", "kill-session", "-t", agent_name],
+                check=False,
+                capture_output=True,
+            )
+
             # Wait a moment
             time.sleep(2)
-            
+
             # Restart based on agent type
-            if agent_name == 'opus-master':
-                subprocess.run([self.startup_script, 'start'], 
-                             capture_output=True)
+            if agent_name == "opus-master":
+                subprocess.run(
+                    [self.startup_script, "start"], check=False, capture_output=True
+                )
             else:
                 # Start Claude agent
                 project_root = os.path.dirname(self.orchestration_dir)
                 claude_path = "/home/jleechan/.claude/local/claude"
-                
-                subprocess.run([
-                    'tmux', 'new-session', '-d', '-s', agent_name,
-                    '-c', project_root, claude_path
-                ], capture_output=True)
-                
+
+                subprocess.run(
+                    [
+                        "tmux",
+                        "new-session",
+                        "-d",
+                        "-s",
+                        agent_name,
+                        "-c",
+                        project_root,
+                        claude_path,
+                    ],
+                    check=False,
+                    capture_output=True,
+                )
+
                 # Send initialization message
                 time.sleep(3)
-                subprocess.run([
-                    'tmux', 'send-keys', '-t', agent_name,
-                    f'I am the {config["type"].title()} Agent specialized in {config["specialization"]}.',
-                    'Enter'
-                ], capture_output=True)
-            
+                subprocess.run(
+                    [
+                        "tmux",
+                        "send-keys",
+                        "-t",
+                        agent_name,
+                        f"I am the {config['type'].title()} Agent specialized in {config['specialization']}.",
+                        "Enter",
+                    ],
+                    check=False,
+                    capture_output=True,
+                )
+
             # Update agent status
             if agent_name in self.agents:
-                self.agents[agent_name].status = 'recovering'
+                self.agents[agent_name].status = "recovering"
                 self.agents[agent_name].error_count = 0
-            
+
             print(f"✅ {agent_name} restarted successfully")
             return True
-            
+
         except Exception as e:
             print(f"❌ Failed to restart {agent_name}: {e}")
             return False
-    
-    def get_system_health(self) -> Dict[str, Any]:
+
+    def get_system_health(self) -> dict[str, Any]:
         """Get overall system health report"""
         total_agents = len(self.expected_agents)
-        active_agents = sum(1 for agent in self.agents.values() if agent.status == 'active')
-        avg_health = sum(agent.health_score for agent in self.agents.values()) / max(total_agents, 1)
-        
+        active_agents = sum(
+            1 for agent in self.agents.values() if agent.status == "active"
+        )
+        avg_health = sum(agent.health_score for agent in self.agents.values()) / max(
+            total_agents, 1
+        )
+
         return {
             "timestamp": datetime.now(),
             "total_agents": total_agents,
             "active_agents": active_agents,
             "stopped_agents": total_agents - active_agents,
             "average_health_score": avg_health,
-            "system_status": "healthy" if avg_health > 0.8 else "degraded" if avg_health > 0.5 else "critical",
-            "agents": {name: {
-                "status": agent.status,
-                "health_score": agent.health_score,
-                "last_activity": agent.last_activity.isoformat(),
-                "error_count": agent.error_count,
-                "uptime": str(agent.uptime)
-            } for name, agent in self.agents.items()}
+            "system_status": "healthy"
+            if avg_health > 0.8
+            else "degraded"
+            if avg_health > 0.5
+            else "critical",
+            "agents": {
+                name: {
+                    "status": agent.status,
+                    "health_score": agent.health_score,
+                    "last_activity": agent.last_activity.isoformat(),
+                    "error_count": agent.error_count,
+                    "uptime": str(agent.uptime),
+                }
+                for name, agent in self.agents.items()
+            },
         }
-    
+
     def auto_recover_failed_agents(self):
         """Automatically recover failed agents"""
         for agent_name, agent in self.agents.items():
-            if (agent.status in ['stopped', 'error'] and 
-                agent.error_count <= self.max_error_count):
+            if (
+                agent.status in ["stopped", "error"]
+                and agent.error_count <= self.max_error_count
+            ):
                 print(f"🔄 Auto-recovering {agent_name}...")
                 self.restart_agent(agent_name)
-    
+
     def save_health_report(self):
         """Save health report to file"""
         health_report = self.get_system_health()
-        
+
         # Save to tasks directory
         report_file = os.path.join(self.tasks_dir, "health_report.json")
-        with open(report_file, 'w') as f:
+        with open(report_file, "w") as f:
             json.dump(health_report, f, indent=2, default=str)
-        
+
         # Update shared status
         status_file = os.path.join(self.tasks_dir, "shared_status.txt")
-        with open(status_file, 'w') as f:
+        with open(status_file, "w") as f:
             f.write("=== Agent Status Dashboard ===\n")
             f.write(f"Updated: {datetime.now().strftime('%a %b %d %H:%M:%S %Z %Y')}\n")
             f.write(f"System Status: {health_report['system_status'].upper()}\n")
             f.write(f"Health Score: {health_report['average_health_score']:.2f}\n\n")
-            
-            for agent_name, agent_data in health_report['agents'].items():
-                emoji = "✅" if agent_data['status'] == 'active' else "❌"
-                f.write(f"{emoji} {agent_name}: {agent_data['status'].upper()} "
-                       f"(Health: {agent_data['health_score']:.2f})\n")
-            
-            f.write(f"\nConnection commands:\n")
+
+            for agent_name, agent_data in health_report["agents"].items():
+                emoji = "✅" if agent_data["status"] == "active" else "❌"
+                f.write(
+                    f"{emoji} {agent_name}: {agent_data['status'].upper()} "
+                    f"(Health: {agent_data['health_score']:.2f})\n"
+                )
+
+            f.write("\nConnection commands:\n")
             for agent_name in self.expected_agents:
                 f.write(f"  tmux attach -t {agent_name}\n")
-    
+
     def monitor_loop(self):
         """Main monitoring loop"""
         print("🔍 Agent Health Monitor starting...")
         print(f"Monitoring interval: {self.monitoring_interval} seconds")
-        
+
         while True:
             try:
                 # Update agent status
                 self.update_agent_status()
-                
+
                 # Auto-recover failed agents
                 self.auto_recover_failed_agents()
-                
+
                 # Save health report
                 self.save_health_report()
-                
+
                 # Display summary
                 health = self.get_system_health()
-                print(f"\n📊 System Health: {health['system_status'].upper()} "
-                      f"({health['active_agents']}/{health['total_agents']} agents active)")
-                
+                print(
+                    f"\n📊 System Health: {health['system_status'].upper()} "
+                    f"({health['active_agents']}/{health['total_agents']} agents active)"
+                )
+
                 # Wait for next cycle
                 time.sleep(self.monitoring_interval)
-                
+
             except KeyboardInterrupt:
                 print("\n🛑 Health monitor stopped by user")
                 break
@@ -335,10 +390,12 @@ class AgentHealthMonitor:
                 print(f"❌ Monitor error: {e}")
                 time.sleep(10)
 
+
 def main():
     """Main entry point"""
     monitor = AgentHealthMonitor()
     monitor.monitor_loop()
+
 
 if __name__ == "__main__":
     main()

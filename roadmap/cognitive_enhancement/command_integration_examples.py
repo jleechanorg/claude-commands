@@ -3,7 +3,7 @@
 Command Integration Examples
 ============================
 
-This module demonstrates how enhanced command wrappers integrate with the 
+This module demonstrates how enhanced command wrappers integrate with the
 existing .claude/commands/ structure and shows before/after examples of
 commands with memory integration.
 
@@ -14,26 +14,22 @@ Examples show:
 - Practical usage scenarios
 """
 
-import json
 import os
 import sys
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass
 
 # Import the cognitive enhancement framework
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from enhanced_execute_wrapper import EnhancedExecuteWrapper
+from enhanced_learn import LearningPattern
 from memory_aware_commands import MemoryAwareCommandProcessor
-from enhanced_learn import EnhancedLearner, LearningPattern
 
 
 class CommandIntegrationDemo:
     """Demonstrates command integration with memory patterns."""
-    
+
     def __init__(self):
         self.processor = MemoryAwareCommandProcessor()
         self.setup_example_patterns()
-    
+
     def setup_example_patterns(self):
         """Set up example patterns for demonstration."""
         example_patterns = [
@@ -45,7 +41,7 @@ class CommandIntegrationDemo:
                 timestamp="2025-07-14T10:00:00",
                 source="user_correction",
                 examples=["--puppeteer for browser automation"],
-                tags=["testing", "browser", "puppeteer", "critical"]
+                tags=["testing", "browser", "puppeteer", "critical"],
             ),
             LearningPattern(
                 pattern_type="preference",
@@ -53,9 +49,9 @@ class CommandIntegrationDemo:
                 context="Command execution workflow",
                 confidence=0.8,
                 timestamp="2025-07-14T09:30:00",
-                source="user_feedback", 
+                source="user_feedback",
                 examples=["TodoWrite circuit breaker"],
-                tags=["workflow", "execution", "planning"]
+                tags=["workflow", "execution", "planning"],
             ),
             LearningPattern(
                 pattern_type="workflow",
@@ -65,7 +61,7 @@ class CommandIntegrationDemo:
                 timestamp="2025-07-14T09:00:00",
                 source="successful_execution",
                 examples=["subagent parallel execution"],
-                tags=["execution", "complexity", "subagents", "workflow"]
+                tags=["execution", "complexity", "subagents", "workflow"],
             ),
             LearningPattern(
                 pattern_type="technical",
@@ -75,7 +71,7 @@ class CommandIntegrationDemo:
                 timestamp="2025-07-14T08:30:00",
                 source="process_improvement",
                 examples=["checkpoint every 5 minutes"],
-                tags=["checkpoints", "frequency", "progress"]
+                tags=["checkpoints", "frequency", "progress"],
             ),
             LearningPattern(
                 pattern_type="correction",
@@ -85,21 +81,21 @@ class CommandIntegrationDemo:
                 timestamp="2025-07-14T08:00:00",
                 source="user_correction",
                 examples=["test mode URL parameters"],
-                tags=["testing", "ui", "authentication", "critical"]
-            )
+                tags=["testing", "ui", "authentication", "critical"],
+            ),
         ]
-        
+
         # Add patterns to the learner
         for pattern in example_patterns:
             self.processor.learner.add_pattern(pattern)
-    
+
     def demo_before_after_execute(self):
         """Demonstrate before/after for execute command."""
         task = "implement browser testing for login functionality"
-        
+
         print("🔄 EXECUTE COMMAND ENHANCEMENT DEMO")
-        print("="*60)
-        
+        print("=" * 60)
+
         print("\n📋 BEFORE (Standard /execute):")
         print("-" * 40)
         standard_response = """I'll implement browser testing for login functionality.
@@ -114,19 +110,19 @@ class CommandIntegrationDemo:
 
 Beginning implementation..."""
         print(standard_response)
-        
+
         print("\n📋 AFTER (Memory-Enhanced /execute):")
         print("-" * 40)
         enhanced_response = self.processor.process_command("execute", task)
         print(enhanced_response)
-    
+
     def demo_before_after_testui(self):
         """Demonstrate before/after for testui command."""
         task = "test the user registration form"
-        
+
         print("\n🔄 TESTUI COMMAND ENHANCEMENT DEMO")
-        print("="*60)
-        
+        print("=" * 60)
+
         print("\n📋 BEFORE (Standard /testui):")
         print("-" * 40)
         standard_response = """I'll test the user registration form using browser automation.
@@ -134,54 +130,54 @@ Beginning implementation..."""
 Running UI tests with mock backend...
 Using Playwright for browser automation."""
         print(standard_response)
-        
+
         print("\n📋 AFTER (Memory-Enhanced /testui):")
         print("-" * 40)
         enhanced_response = self.processor.process_command("testui", task)
         print(enhanced_response)
-    
+
     def demo_pattern_guidance_impact(self):
         """Demonstrate how patterns guide specific decisions."""
-        
+
         print("\n🔄 PATTERN GUIDANCE IMPACT DEMO")
-        print("="*60)
-        
+        print("=" * 60)
+
         scenarios = [
             {
                 "task": "create comprehensive authentication system",
                 "pattern_impact": "High complexity → Subagent coordination recommended",
                 "without_patterns": "Direct implementation approach",
-                "with_patterns": "Subagent coordination with worktrees (learned pattern)"
+                "with_patterns": "Subagent coordination with worktrees (learned pattern)",
             },
             {
-                "task": "test browser functionality", 
+                "task": "test browser functionality",
                 "pattern_impact": "Critical correction → Must use --puppeteer flag",
                 "without_patterns": "Default Playwright usage",
-                "with_patterns": "--puppeteer flag applied (user correction)"
+                "with_patterns": "--puppeteer flag applied (user correction)",
             },
             {
                 "task": "build API endpoints",
                 "pattern_impact": "Checkpoint frequency → Every 3-5 files",
                 "without_patterns": "Standard 5-minute checkpoints",
-                "with_patterns": "Pattern-informed checkpoint frequency"
-            }
+                "with_patterns": "Pattern-informed checkpoint frequency",
+            },
         ]
-        
+
         for i, scenario in enumerate(scenarios, 1):
             print(f"\n📊 Scenario {i}: {scenario['task']}")
             print(f"Pattern Impact: {scenario['pattern_impact']}")
             print(f"❌ Without Memory: {scenario['without_patterns']}")
             print(f"✅ With Memory: {scenario['with_patterns']}")
-    
+
     def demo_command_file_integration(self):
         """Show how enhanced commands integrate with .claude/commands/ structure."""
-        
+
         print("\n🔄 COMMAND FILE INTEGRATION DEMO")
-        print("="*60)
-        
+        print("=" * 60)
+
         print("\n📁 Integration Approach:")
         print("-" * 30)
-        
+
         integration_plan = """
 1. **Enhanced Command Files**:
    - execute-enhanced.md → Memory-aware execute command
@@ -206,16 +202,16 @@ Using Playwright for browser automation."""
    - User choice between standard/enhanced
         """
         print(integration_plan)
-    
+
     def demo_learning_feedback_loop(self):
         """Demonstrate the learning feedback loop."""
-        
-        print("\n🔄 LEARNING FEEDBACK LOOP DEMO") 
-        print("="*60)
-        
+
+        print("\n🔄 LEARNING FEEDBACK LOOP DEMO")
+        print("=" * 60)
+
         print("\n📝 Scenario: User corrects command execution approach")
         print("-" * 50)
-        
+
         demo_flow = """
 1. **Initial Command**: /execute implement user dashboard
    
@@ -238,39 +234,39 @@ Using Playwright for browser automation."""
 7. **Result**: Consistent with user preferences without re-correction
         """
         print(demo_flow)
-        
+
         print("\n💡 Benefits:")
         print("- Reduces repeated corrections")
         print("- Builds user-specific preferences")
         print("- Improves response quality over time")
         print("- Creates personalized AI assistant behavior")
-    
+
     def demo_real_usage_scenarios(self):
         """Show real-world usage scenarios."""
-        
+
         print("\n🔄 REAL USAGE SCENARIOS")
-        print("="*60)
-        
+        print("=" * 60)
+
         scenarios = [
             {
                 "command": "/execute",
                 "task": "fix the JSON parsing error in API",
                 "memory_insights": [
                     "Previous JSON fixes used robust_json_parser.py",
-                    "User prefers defensive programming for JSON", 
-                    "Test JSON edge cases thoroughly"
+                    "User prefers defensive programming for JSON",
+                    "Test JSON edge cases thoroughly",
                 ],
-                "enhanced_approach": "Apply robust parsing + comprehensive tests"
+                "enhanced_approach": "Apply robust parsing + comprehensive tests",
             },
             {
-                "command": "/testui", 
+                "command": "/testui",
                 "task": "verify login form validation",
                 "memory_insights": [
                     "Always use test_mode=true for auth bypass",
                     "User prefers headless=True for CI tests",
-                    "Screenshot failures for debugging"
+                    "Screenshot failures for debugging",
                 ],
-                "enhanced_approach": "Test mode + headless + screenshot capture"
+                "enhanced_approach": "Test mode + headless + screenshot capture",
             },
             {
                 "command": "/learn",
@@ -278,32 +274,32 @@ Using Playwright for browser automation."""
                 "memory_insights": [
                     "User wants critical rules in CLAUDE.md",
                     "Technical details go in lessons.mdc",
-                    "Create separate PR for learning updates"
+                    "Create separate PR for learning updates",
                 ],
-                "enhanced_approach": "Categorize + appropriate file + clean PR"
-            }
+                "enhanced_approach": "Categorize + appropriate file + clean PR",
+            },
         ]
-        
+
         for scenario in scenarios:
             print(f"\n📋 Command: {scenario['command']} {scenario['task']}")
             print("Memory Insights:")
-            for insight in scenario['memory_insights']:
+            for insight in scenario["memory_insights"]:
                 print(f"  • {insight}")
             print(f"Enhanced Approach: {scenario['enhanced_approach']}")
-    
+
     def run_full_demo(self):
         """Run the complete demonstration."""
         print("🚀 ENHANCED COMMAND WRAPPERS DEMONSTRATION")
         print("=" * 80)
         print("Showing how memory pattern integration transforms command execution")
-        
+
         self.demo_before_after_execute()
         self.demo_before_after_testui()
         self.demo_pattern_guidance_impact()
         self.demo_command_file_integration()
         self.demo_learning_feedback_loop()
         self.demo_real_usage_scenarios()
-        
+
         print("\n🎯 SUMMARY")
         print("=" * 80)
         summary = """

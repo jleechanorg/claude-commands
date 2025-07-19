@@ -4,13 +4,14 @@ Real-time Orchestration Dashboard
 Provides a comprehensive view of the multi-agent system
 """
 
-import os
 import json
-import time
+import os
 import subprocess
+import time
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 
 class OrchestrationDashboard:
     """Real-time dashboard for agent orchestration system"""

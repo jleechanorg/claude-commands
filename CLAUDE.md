@@ -547,10 +547,9 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
    - ✅ `TESTING=true vpython mvp_site/test_file.py` (from root)
 5. 🚨 **NEVER DISMISS FAILING TESTS**: ❌ "minor failures" or "test expectation updates" | ✅ Fix ALL failing tests systematically | Debug root cause | Real bugs vs test issues | One failure = potential systemic issue
 6. 🚨 **NEVER SKIP TESTS WITHOUT EXPLICIT PERMISSION**: Fix failing tests or ask permission | No `@unittest.skip` without approval
-7. 🚨 **CI CONSISTENCY CRITICAL**: ⚠️ MANDATORY - All commands that run tests MUST use `run_ci_replica.sh` instead of `run_tests.sh` to simulate exact CI environment locally | This prevents "works locally but fails in CI" issues | `/push` and `/copilot` use CI environment simulation | Pattern: `run_ci_replica.sh` → sets CI env vars → calls `run_tests.sh`
-8. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
-9. **Web Scraping**: Use full-content tools (curl) not search snippets
-10. **Log Files Location**: 
+6. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
+7. **Web Scraping**: Use full-content tools (curl) not search snippets
+8. **Log Files Location**: 
    - ✅ **Server logs are in `/tmp/worldarchitectai_logs/`** with subfolders/files named by branch
    - ✅ **Branch-specific logs**: `/tmp/worldarchitectai_logs/[branch-name].log`
    - ✅ **Current branch log**: `/tmp/worldarchitectai_logs/$(git branch --show-current).log`
