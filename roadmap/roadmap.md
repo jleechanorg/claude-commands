@@ -20,6 +20,8 @@
 - **TASK-006a** 🟡 Editable campaign names - PR #301 OPEN
 - **HANDOFF-ARCH** 🟢 Real AST-based /arch implementation - PR #600 READY FOR HANDOFF  
 - **HANDOFF-MEMORY-CLEANUP** 🟢 Memory system cleanup and migration - PR #725 READY FOR HANDOFF
+- **HANDOFF-SELF-CRITICAL** 🟢 Self-critical Claude Code CLI - PR #747 READY FOR HANDOFF
+- **HANDOFF-SLASH-COMMANDS** 🟢 Enhance /handoff + create /commentreply - PR #755 READY FOR HANDOFF
 - **TASK-006b** 🟡 Background story pause button - PR #323 OPEN
 - **TASK-140** 🔴 Hard stop for integrity failures - PR #336 OPEN
 - **TASK-142** 🔴 Fix send button unclickable - PR #338 OPEN

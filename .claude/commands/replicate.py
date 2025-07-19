@@ -64,7 +64,7 @@ def get_current_repo_info() -> Tuple[str, str]:
         pass
     
     # Default fallback using environment variables
-    owner = os.getenv('DEFAULT_REPO_OWNER', 'jleechanorg')
+    owner = os.getenv('DEFAULT_REPO_OWNER', 'default-owner')
     repo = os.getenv('DEFAULT_REPO_NAME', 'worldarchitect.ai')
     return owner, repo
 
@@ -80,7 +80,8 @@ def fetch_pr_data(owner: str, repo: str, pr_number: int) -> Dict[str, Any]:
         try:
             return json.loads(result.stdout)
         except json.JSONDecodeError as e:
-            print(f"Error parsing PR data: {e}")
+            raw_response = result.stdout[:500]  # Truncate to 500 characters
+            print(f"Error parsing PR data: {e}. Raw response content (truncated): {raw_response}")
             sys.exit(1)
     except subprocess.CalledProcessError as e:
         print(f"Failed to fetch PR {pr_number} from {owner}/{repo}: {e.stderr}")
@@ -219,10 +220,11 @@ def create_progress_summary(pr_data: Dict[str, Any], analysis: Dict[str, Any], p
 def main():
     """Main entry point for the replicate command."""
     if len(sys.argv) < 2:
-        print("Usage: /replicate <PR_URL or PR_NUMBER>")
+        print("Usage: /replicate <PR_URL or PR_NUMBER> [--yes]")
         sys.exit(1)
     
     pr_ref = sys.argv[1]
+    non_interactive = "--yes" in sys.argv or "-y" in sys.argv
     
     # Parse PR reference
     try:
@@ -258,10 +260,13 @@ def main():
     
     # Ask for confirmation
     if plan:
-        response = input("\nProceed with replication? (y/n): ")
-        if response.lower() != 'y':
-            print("Replication cancelled.")
-            sys.exit(0)
+        if not non_interactive:
+            response = input("\nProceed with replication? (y/n): ")
+            if response.lower() != 'y':
+                print("Replication cancelled.")
+                sys.exit(0)
+        else:
+            print("\nAuto-proceeding with replication (--yes flag provided)...")
         
         print(FULL_IMPLEMENTATION_WARNING)
     else:

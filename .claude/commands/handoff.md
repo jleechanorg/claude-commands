@@ -17,7 +17,7 @@ Creates a structured handoff for another worker with PR, scratchpad, and worker 
    - Files to modify
    - Testing requirements
 3. **Creates PR**: With detailed description and ready-to-implement status
-4. **Updates Roadmap**: Adds entry to `roadmap/roadmap.md` 
+4. **Auto-Updates Roadmap**: Automatically uses `/r` command logic to add entry to `roadmap/roadmap.md` 
 5. **Generates Worker Prompt**: Copy-paste prompt for next worker
 6. **Creates Clean Branch**: `roadmap[timestamp]` for continued work
 
@@ -73,6 +73,31 @@ START: Read the handoff scratchpad for complete details
 - PR with implementation details
 - Updated roadmap entry
 - Clean branch for continued work
+
+## Implementation Details
+
+### Automatic Roadmap Update Process
+After creating the PR, the command automatically invokes `/r` logic:
+
+1. **Record current branch** for restoration
+2. **Switch to main branch**: `git checkout main`
+3. **Pull latest**: `git pull origin main` 
+4. **Add handoff entry** to `roadmap/roadmap.md` in "Active WIP Tasks" section:
+   ```
+   - **HANDOFF-[TASK_NAME]** 🟢 [description] - PR #[number] READY FOR HANDOFF
+   ```
+5. **Commit changes**: `git commit -m "docs(roadmap): Add handoff task [task_name]"`
+6. **Push to main**: `git push origin main`
+7. **Switch back**: `git checkout [original-branch]`
+
+### Task Name Format
+- Convert to uppercase: `logging_fix` → `LOGGING_FIX`
+- Prefix with `HANDOFF-`: `HANDOFF-LOGGING_FIX`
+
+### Error Handling
+- If roadmap update fails, continue with handoff but notify user
+- Validate PR number exists before adding to roadmap
+- Ensure clean git state before main branch operations
 
 ## Copy-Paste Instructions
 
