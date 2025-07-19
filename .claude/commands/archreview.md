@@ -2,11 +2,12 @@
 
 **Usage**: `/archreview [scope]` or `/arch [scope]`
 
-**Purpose**: Conduct comprehensive architecture and design reviews using dual-perspective analysis with Gemini MCP and Claude, enhanced by ultrathink methodology.
+**Purpose**: Conduct comprehensive architecture and design reviews using dual-perspective analysis with Gemini MCP and Claude, enhanced by thinking methodology.
 
 ## Architecture Review Protocol
 
-**Automatic Ultra-Think**: All architecture reviews use deep sequential thinking (`ultrathink` mode with 12+ thoughts) for thorough analysis by default.
+**Default Thinking Mode**: Architecture reviews use sequential thinking (4-6 thoughts) by default.
+**Ultra-Think Upgrade**: When combined with `/thinku`, automatically upgrades to deep analysis (12+ thoughts).
 
 **Dual-Perspective Analysis**: 
 1. **Claude Perspective**: System architecture, design patterns, maintainability, technical debt
@@ -23,7 +24,7 @@
 
 ## Review Process
 
-**Phase 1: Context Gathering & Validation**
+### Phase 1: Context Gathering & Validation
 1. **PR Content Validation** (if reviewing a PR/branch):
    - Use `gh api repos/owner/repo/pulls/<PR#>/files --jq '.[].filename'` to get actual PR files
    - Compare claimed capabilities against actual PR contents
@@ -33,41 +34,66 @@
 3. **Documentation Review**: Check existing architecture docs and design decisions
 4. **Dependencies Analysis**: Review external dependencies and integrations
 
-**Phase 2: Claude Analysis** (Primary Architecture Perspective)
+### Phase 2: Claude Primary, Gemini Consultant
+Claude leads the analysis with Gemini providing insights:
 - **Structural Analysis**: Code organization, module boundaries, coupling/cohesion
 - **Design Patterns**: Appropriate use of patterns, anti-patterns identification
 - **Maintainability**: Code clarity, documentation, test coverage
 - **Technical Debt**: Identify areas needing refactoring or improvement
 - **SOLID Principles**: Adherence to software engineering best practices
+- **Gemini Input**: Performance implications and alternative patterns
 
-**Phase 3: Gemini Analysis** (Alternative Perspective)
+### Phase 3: Gemini Primary, Claude Consultant
+Gemini leads with fresh perspective, Claude provides context:
 - **Performance Review**: Bottlenecks, optimization opportunities, scaling considerations
 - **Alternative Approaches**: Different architectural patterns or technologies
 - **Industry Standards**: Comparison with current best practices and trends
 - **Risk Assessment**: Potential failure points and mitigation strategies
 - **Innovation Opportunities**: Modern approaches and emerging patterns
+- **Claude Input**: Practical constraints and migration considerations
 
-**Phase 4: Synthesis & Recommendations**
-- **Consensus Findings**: Areas where both perspectives agree
-- **Conflicting Views**: Analysis of different recommendations with trade-offs
-- **Prioritized Action Items**: Critical, important, and nice-to-have improvements
-- **Implementation Roadmap**: Suggested order and approach for changes
+### Phase 4: Joint Evaluation & Final Recommendations
+Both perspectives collaborate to evaluate the proposed approach:
+- **ROI Analysis**: Cost vs benefit of proposed changes
+- **Complexity Assessment**: Is the solution overengineered?
+- **Pros and Cons**: Balanced view of each recommendation
+- **Initial vs Final**: Compare final approach against initial ideas
+- **Consensus Building**: Areas where both perspectives strongly agree
+- **Trade-off Analysis**: Where perspectives differ and why
+- **Prioritized Roadmap**: What to implement first based on value/effort
 
 ## Role Switching Protocol
 
-**Claude Role**: Primary Architect
-- Focus on current system understanding and practical implementation
-- Emphasize maintainability, readability, and team development velocity
-- Consider existing codebase constraints and migration paths
+**Phase 2: Claude Primary / Gemini Consultant**
+- **Claude leads**: Deep understanding of current system, practical constraints
+- **Claude focus**: Maintainability, team velocity, incremental improvements
+- **Gemini supports**: "What about performance?", "Consider this pattern", "Industry does X"
+- **Dynamic**: Claude proposes, Gemini challenges and enhances
 
-**Gemini Role**: Consulting Architect  
-- Focus on performance, scalability, and industry benchmarks
-- Suggest alternative approaches and newer technologies
-- Challenge existing decisions with fresh perspective
+**Phase 3: Gemini Primary / Claude Consultant**
+- **Gemini leads**: Fresh perspective, modern approaches, optimal solutions
+- **Gemini focus**: Performance, scalability, cutting-edge patterns
+- **Claude supports**: "That would break Y", "Migration path?", "Team skills?"
+- **Dynamic**: Gemini innovates, Claude grounds in reality
+
+**Phase 4: Equal Partnership**
+- **Both evaluate**: No primary/consultant roles
+- **Joint focus**: ROI, complexity, pragmatism
+- **Key questions**: 
+  - "Is this overengineered for the actual problem?"
+  - "What's the real benefit vs cost?"
+  - "Does this align with team capabilities?"
+  - "Quick wins vs long-term vision?"
 
 ## Implementation
 
-**Ultra-Think Integration**: Uses `mcp__sequential-thinking__sequentialthinking` with:
+**Thinking Integration**: Uses `mcp__sequential-thinking__sequentialthinking` with:
+
+**Default Mode** (with `/think` or standalone):
+- **Total Budget**: 4-6 thoughts for complete review
+- Balanced analysis across all phases
+
+**Ultra Mode** (when combined with `/thinku`):
 - **Initial Analysis**: 4-6 thoughts for context gathering
 - **Deep Review**: 8-12 thoughts for architectural analysis  
 - **Synthesis**: 4-6 thoughts for final recommendations
@@ -80,21 +106,35 @@
 # Architecture Review Report
 
 ## Executive Summary
-[Key findings and recommendations]
+[Overview of findings from all phases]
 
-## Claude Analysis (Primary)
-[Detailed structural and maintainability review]
+## Phase 1: Context & Current State
+[System understanding and scope definition]
 
-## Gemini Analysis (Alternative)  
-[Performance and innovation perspective]
+## Phase 2: Claude-Led Analysis (Gemini Consulting)
+### Primary Analysis (Claude)
+[Structural review, patterns, maintainability]
+### Consultant Insights (Gemini)
+[Performance considerations, alternatives suggested]
 
-## Synthesis
-[Combined recommendations with priorities]
+## Phase 3: Gemini-Led Analysis (Claude Consulting)  
+### Primary Analysis (Gemini)
+[Modern approaches, optimizations, innovations]
+### Consultant Reality Check (Claude)
+[Practical constraints, migration concerns]
+
+## Phase 4: Joint Evaluation
+### ROI Assessment
+[Cost vs benefit analysis of proposed changes]
+### Complexity Check
+[Is this overengineered? Just right? Too simple?]
+### Final Recommendations
+[Balanced approach considering all perspectives]
 
 ## Action Items
-- [ ] Critical: [High-priority fixes]
-- [ ] Important: [Medium-priority improvements]  
-- [ ] Enhancement: [Nice-to-have optimizations]
+- [ ] Quick Wins: [High-value, low-effort changes]
+- [ ] Strategic: [Important architectural improvements]  
+- [ ] Future Vision: [Long-term modernization goals]
 ```
 
 ## Examples

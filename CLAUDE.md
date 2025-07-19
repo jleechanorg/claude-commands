@@ -80,6 +80,13 @@
 
 🚨 **NO FALSE PROMISES**: Be honest about capabilities | Conservative language | Deliver or don't promise
 
+🚨 **USE LLM CAPABILITIES**: When designing command systems or natural language features:
+   - ❌ NEVER suggest keyword matching, regex patterns, or rule-based parsing
+   - ❌ NEVER propose "if word in text" simplistic approaches
+   - ✅ ALWAYS leverage LLM's natural language understanding
+   - ✅ ALWAYS trust the LLM to understand context, nuance, and intent
+   - **Pattern**: User intent → LLM understanding → Natural response
+   - **Anti-pattern**: Keywords → Rules → Rigid behavior
 
 🚨 **EVIDENCE-BASED APPROACH**: Core principles for all analysis
    - ✅ Extract exact error messages/code snippets before analyzing
