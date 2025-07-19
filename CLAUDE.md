@@ -374,9 +374,12 @@ Dedicated repositories for specialized functions work better than mixed-content.
 | **Post-Merge** | Check unpushed files | `git status` → follow-up PR if needed |
 | **Progress Track** | Scratchpad + JSON | `roadmap/scratchpad_[branch].md` + `tmp/milestone_*.json` |
 | **PR Testing** | Apply PRs locally | `gh pr checkout <PR#>` |
-| **Roadmap Exception** | Direct push allowed | Only: roadmap/*.md, sprint_*.md |
+| **Roadmap Updates** | Always create PR | All files require PR workflow |
 
 🚨 **No Main Push**: ✅ `git push origin HEAD:feature` | ❌ `git push origin main`
+   - **ALL changes require PR**: Including roadmap files, documentation, everything
+   - **Fresh branches from main**: Always create new branch from latest main for new work
+   - **Pattern**: `git checkout main && git pull && git checkout -b descriptive-name`
 
 🚨 **PR Context Management**: Verify before creating PRs - Check git status | Ask which PR if ambiguous | Use existing branches
 
