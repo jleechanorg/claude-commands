@@ -765,6 +765,7 @@ def my_function():
 
 🚨 **NO TRY/EXCEPT FOR IMPORTS EVER**: ❌ NEVER wrap imports in try/except | ALL dependencies MUST be in requirements.txt | Import failures should break loudly
 **Why**: Hides missing dependencies in CI | Causes silent failures | Makes dep management unreliable
+**Rule**: Import the modules or fail. No "optional" imports with try/except patterns.
 
 **⚠️ Common Violations to Watch For:**
 - Functions with `import` statements inside them
