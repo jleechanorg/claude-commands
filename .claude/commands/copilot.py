@@ -14,57 +14,25 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-# Import linting utilities and copilot modules
+# Import linting utilities
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from lint_utils import run_lint_check, should_run_linting
 
-# Import copilot modular architecture
-try:
-    from copilot_analyzer import CopilotAnalyzer
-    from copilot_implementer import CopilotImplementer
-    from copilot_verifier import CopilotVerifier
-    from copilot_reporter import CopilotReporter
-    from copilot_safety import SafetyChecker
-    MODULAR_ARCHITECTURE_AVAILABLE = True
-except ImportError as e:
-    print(f"⚠️  Modular architecture not available: {e}")
-    MODULAR_ARCHITECTURE_AVAILABLE = False
-
 
 class GitHubCopilotProcessor:
-    """Processes GitHub Copilot comments with deterministic behavior and optional monitor mode.
-    
-    In normal mode: Analyzes comments and automatically makes changes.
-    In monitor mode: Detects potential issues and warns without making changes.
-    """
+    """Processes GitHub Copilot comments with deterministic behavior and auto-push."""
 
-    def __init__(self, pr_number: str | None = None, monitor_mode: bool = False):
+    def __init__(self, pr_number: str | None = None):
         self.pr_number = pr_number
         self.current_branch: str | None = None
         self.changes_made = False
-        self.monitor_mode = monitor_mode  # New: monitor mode prevents auto-edits
-        self.push_to_github = not monitor_mode  # Don't push in monitor mode
+        self.push_to_github = True  # Always push by default
         self.comments_analyzed: list[str] = []
         self.fixes_applied: list[str] = []
-        self.warnings_found: list[str] = []  # Track warnings found in monitor mode
         self.replies_posted: list[int] = []  # Track replies posted to avoid duplicates
         self.repo_owner, self.repo_name = self._get_repo_info()
         self.api_delay = 2  # Delay between API calls to avoid rate limiting
         self.max_retries = 3  # Maximum retries for failed API calls
-        
-        # Initialize modular architecture components
-        if MODULAR_ARCHITECTURE_AVAILABLE:
-            self.analyzer = CopilotAnalyzer()
-            self.implementer = CopilotImplementer()
-            self.verifier = CopilotVerifier()
-            self.reporter = CopilotReporter()
-            self.safety = SafetyChecker()
-        else:
-            self.analyzer = None
-            self.implementer = None
-            self.verifier = None
-            self.reporter = None
-            self.safety = None
 
     def _get_repo_info(self) -> tuple[str, str]:
         """Get repository owner and name from git remote."""
@@ -274,12 +242,11 @@ class GitHubCopilotProcessor:
         return categorized
 
     def analyze_test_status(self) -> dict[str, Any]:
-        """Analyze test status and failures with detailed error logs."""
+        """Analyze test status and failures."""
         test_status: dict[str, Any] = {
             "passing": True,
             "failures": [],
             "ci_status": "unknown",
-            "error_details": [],
         }
 
         # Check GitHub CI status
@@ -295,93 +262,19 @@ class GitHubCopilotProcessor:
             checks = pr_data.get("statusCheckRollup", [])
 
             for check in checks:
-                if check.get("conclusion") == "FAILURE":
+                if check.get("state") == "FAILURE":
                     test_status["passing"] = False
-                    failure_info = {
-                        "name": check.get("name", "unknown"),
-                        "status": check.get("conclusion", "unknown"),
-                        "url": check.get("detailsUrl", ""),
-                    }
-                    
-                    # Fetch detailed error logs for failing tests
-                    error_details = self._fetch_ci_error_logs(check.get("detailsUrl", ""))
-                    if error_details:
-                        failure_info["error_details"] = error_details
-                        test_status["error_details"].extend(error_details)
-                    
-                    test_status["failures"].append(failure_info)
+                    test_status["failures"].append(
+                        {
+                            "name": check.get("name", "unknown"),
+                            "status": check.get("state", "unknown"),
+                            "url": check.get("targetUrl", ""),
+                        }
+                    )
         except (subprocess.CalledProcessError, json.JSONDecodeError):
             pass
 
         return test_status
-
-    def _fetch_ci_error_logs(self, details_url: str) -> list[str]:
-        """Fetch and parse CI error logs from GitHub Actions."""
-        if not details_url:
-            return []
-            
-        try:
-            # Extract run ID from details URL (e.g., .../runs/12345/...)
-            import re
-            run_id_match = re.search(r'/runs/(\d+)/', details_url)
-            if not run_id_match:
-                return []
-            
-            run_id = run_id_match.group(1)
-            
-            # Fetch the CI logs
-            log_result = subprocess.run(
-                ["gh", "run", "view", run_id, "--log"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            
-            # Parse logs for common error patterns
-            error_details = []
-            log_lines = log_result.stdout.split('\n')
-            
-            # Look for common error patterns
-            import_errors = set()
-            syntax_errors = []
-            dependency_errors = []
-            
-            for line in log_lines:
-                # Missing import errors
-                if "NameError: name '" in line and "' is not defined" in line:
-                    error_match = re.search(r"NameError: name '(\w+)' is not defined", line)
-                    if error_match:
-                        import_errors.add(error_match.group(1))
-                
-                # Syntax errors
-                if "SyntaxError:" in line or "IndentationError:" in line:
-                    syntax_errors.append(line.strip())
-                
-                # Dependency conflicts
-                if "requires" in line and "incompatible" in line:
-                    dependency_errors.append(line.strip())
-            
-            # Format error summary
-            if import_errors:
-                missing_imports = ", ".join(sorted(import_errors))
-                error_details.append(f"Missing imports: {missing_imports}")
-            
-            if syntax_errors:
-                error_details.append(f"Syntax errors: {len(syntax_errors)} found")
-            
-            if dependency_errors:
-                error_details.append("Dependency conflicts detected")
-            
-            # Get test summary if available
-            for line in log_lines:
-                if "Total tests:" in line and "Failed:" in line:
-                    error_details.append(line.strip())
-                    break
-            
-            return error_details[:5]  # Limit to top 5 error types
-            
-        except (subprocess.CalledProcessError, re.error, Exception):
-            return []
 
     def _generate_test_status_section(self, test_status: dict[str, Any]) -> list[str]:
         """Generate test status section of report."""
@@ -533,13 +426,6 @@ class GitHubCopilotProcessor:
             if not result.stdout.strip():
                 return False  # No changes to commit
 
-            if self.monitor_mode:
-                # In monitor mode, detect changes but don't commit
-                warning = f"Git changes detected that would be committed: {result.stdout.strip()}"
-                self.warnings_found.append(warning)
-                print(f"⚠️  Monitor mode: {warning}")
-                return False
-
             # Stage changes
             subprocess.run(["git", "add", "."], check=True)
 
@@ -560,8 +446,8 @@ class GitHubCopilotProcessor:
             return False
 
     def push_to_remote(self) -> bool:
-        """Push changes to GitHub remote (only if not in monitor mode)."""
-        if not self.changes_made or not self.push_to_github or self.monitor_mode:
+        """Push changes to GitHub remote."""
+        if not self.changes_made or not self.push_to_github:
             return False
 
         try:
@@ -708,76 +594,7 @@ class GitHubCopilotProcessor:
     def format_reply_content(
         self, comment: dict[str, Any], fix_status: str, details: str
     ) -> str:
-        """Format reply content for GitHub comments using modular architecture."""
-        if MODULAR_ARCHITECTURE_AVAILABLE and self.reporter:
-            # Use sophisticated modular architecture for reply generation
-            try:
-                # Convert GitHub comment dict to Comment dataclass
-                from copilot_analyzer import Comment, CommentType
-                
-                # Determine comment type based on comment structure
-                user = comment.get("user", "")
-                if comment.get("type") == "inline":
-                    comment_type = CommentType.INLINE
-                elif comment.get("type") == "review":
-                    comment_type = CommentType.REVIEW
-                else:
-                    comment_type = CommentType.GENERAL
-                
-                # Create Comment object
-                comment_obj = Comment(
-                    id=str(comment.get("id", "")),
-                    body=comment.get("body", ""),
-                    user=user,
-                    comment_type=comment_type,
-                    file_path=comment.get("path") or comment.get("file"),
-                    line_number=comment.get("line"),
-                )
-                
-                # Analyze comment with advanced categorization
-                analyzed_comment = self.analyzer.categorize_comment(comment_obj)
-                
-                # Generate appropriate response based on analysis
-                if analyzed_comment.implementability.value == "auto_fixable":
-                    if not self.monitor_mode:
-                        # Attempt implementation
-                        response = self.reporter.generate_implemented_response(
-                            analyzed_comment, []  # Implementation results would go here
-                        )
-                        self.fixes_applied.append(f"Auto-fixed: {analyzed_comment.body[:50]}...")
-                    else:
-                        # Monitor mode - just acknowledge
-                        response = self.reporter.generate_acknowledged_response(
-                            analyzed_comment, "Auto-fix available but monitor mode enabled"
-                        )
-                        self.warnings_found.append(f"Auto-fixable issue detected: {analyzed_comment.body[:50]}...")
-                elif analyzed_comment.implementability.value == "manual":
-                    response = self.reporter.generate_acknowledged_response(
-                        analyzed_comment, "Requires manual implementation"
-                    )
-                else:
-                    response = self.reporter.generate_declined_response(
-                        analyzed_comment, "Not applicable or subjective feedback"
-                    )
-                
-                # Convert CommentResponse to string
-                if hasattr(response, 'content'):
-                    return response.content
-                else:
-                    return str(response)
-                
-            except Exception as e:
-                print(f"⚠️  Modular architecture failed: {e}, falling back to basic reply")
-                import traceback
-                traceback.print_exc()
-        
-        # Fallback to basic implementation
-        return self._generate_basic_reply(comment, fix_status, details)
-    
-    def _generate_basic_reply(
-        self, comment: dict[str, Any], fix_status: str, details: str
-    ) -> str:
-        """Generate basic reply when modular architecture is unavailable."""
+        """Format reply content for GitHub comments with specific accept/decline decisions."""
         # Get intelligent decision analysis
         decision, reason, implementation_plan = self.analyze_comment_for_decision(
             comment
@@ -1198,20 +1015,11 @@ class GitHubCopilotProcessor:
             user = comment.get("user", "")
             body = comment.get("body", "")
 
-            # Skip automated replies (both old and new formats)
+            # Skip automated replies
             if user == "jleechan2015" and (
                 "**Yes, I will implement this**" in body
                 or "**No, I will not implement this**" in body
                 or "**I need to evaluate this further**" in body
-                or "✅ **This is a good suggestion**" in body
-                or "🔄 **ACKNOWLEDGED**:" in body
-                or "✅ **IMPLEMENTED**:" in body  
-                or "❌ **DECLINED**:" in body
-                or "CommentResponse(" in body
-                or "ResponseType." in body
-                or body.startswith("✅ **FIXED**:")
-                or body.startswith("🔄 **MODIFIED**:")
-                or body.startswith("❌ **BLOCKED**:")
             ):
                 continue
 
@@ -1444,34 +1252,19 @@ class GitHubCopilotProcessor:
         )
         self.update_pr_description(summary)
 
-        # Step 10: Run linting checks
-        if should_run_linting():
-            if self.monitor_mode:
-                print("🔍 Running linting checks in monitor mode...")
-                # In monitor mode, run lint check without auto-fix to detect issues
-                lint_success, lint_message = run_lint_check("mvp_site", auto_fix=False)
-                print(f"📋 {lint_message}")
-                
-                if not lint_success:
-                    warning = f"Linting issues detected: {lint_message}"
-                    self.warnings_found.append(warning)
-                    print(f"⚠️  {warning}")
-            elif self.changes_made:
-                print("🔍 Running linting checks before push...")
-                lint_success, lint_message = run_lint_check("mvp_site", auto_fix=True)
-                print(f"📋 {lint_message}")
+        # Step 10: Run linting before push (if changes made)
+        if self.changes_made and should_run_linting():
+            print("🔍 Running linting checks before push...")
+            lint_success, lint_message = run_lint_check("mvp_site", auto_fix=True)
+            print(f"📋 {lint_message}")
 
-                if not lint_success:
-                    print("⚠️  Some linting issues remain after auto-fix")
+            if not lint_success:
+                print("⚠️  Some linting issues remain after auto-fix")
 
-        # Step 11: Push to GitHub (only if not in monitor mode)
-        if self.changes_made and not self.monitor_mode:
+        # Step 11: Push to GitHub (deterministic behavior)
+        if self.changes_made:
             print("🚀 Pushing to GitHub...")
             self.push_to_remote()
-        elif self.monitor_mode and (self.changes_made or self.warnings_found):
-            print("🔍 Monitor mode: Changes or warnings detected but not applying automatically")
-            if self.warnings_found:
-                print(f"📊 Found {len(self.warnings_found)} potential issues to address")
 
         return report
 
@@ -1480,13 +1273,8 @@ def main() -> None:
     """Main function for command execution."""
     args = sys.argv[1:] if len(sys.argv) > 1 else []
     pr_number = args[0] if args else None
-    
-    # Check for monitor mode flag
-    monitor_mode = "--monitor" in args or "--monitor-mode" in args
-    if monitor_mode:
-        pr_number = [arg for arg in args if not arg.startswith("--")][0] if [arg for arg in args if not arg.startswith("--")] else None
 
-    processor = GitHubCopilotProcessor(pr_number, monitor_mode=monitor_mode)
+    processor = GitHubCopilotProcessor(pr_number)
     report = processor.run()
 
     print("\n" + report)
@@ -1494,19 +1282,11 @@ def main() -> None:
     # Display summary
     print("\n🎯 Command Summary:")
     print(f"✅ Analysis completed for PR #{processor.pr_number}")
-    if processor.monitor_mode:
-        print(f"⚠️  Monitor mode: {'Yes' if processor.monitor_mode else 'No'}")
-        print(f"⚠️  Warnings found: {len(processor.warnings_found)}")
-        if processor.warnings_found:
-            print("   Warning details:")
-            for warning in processor.warnings_found:
-                print(f"     - {warning}")
-    else:
-        print(f"✅ Changes made: {'Yes' if processor.changes_made else 'No'}")
-        print(f"✅ Replies posted: {len(processor.replies_posted)}")
-        print(
-            f"✅ Pushed to GitHub: {'Yes' if processor.changes_made and processor.push_to_github else 'No'}"
-        )
+    print(f"✅ Changes made: {'Yes' if processor.changes_made else 'No'}")
+    print(f"✅ Replies posted: {len(processor.replies_posted)}")
+    print(
+        f"✅ Pushed to GitHub: {'Yes' if processor.changes_made and processor.push_to_github else 'No'}"
+    )
 
 
 if __name__ == "__main__":
