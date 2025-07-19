@@ -78,16 +78,7 @@
    - ❌ Avoid generic advice about "command overload" or "cognitive load"
    - ❌ Avoid patronizing about user interface complexity or learning curves
 
-🚨 **NO FALSE IMPLEMENTATION PROMISES**: Never promise implementation without actual follow-through
-   - ❌ NEVER say "I will implement this" unless you actually will
-   - ❌ NEVER use optimistic automated responses that create false expectations
-   - ❌ NEVER make performative commitments to "look good" without delivering
-   - ✅ ALWAYS be honest about what you can realistically accomplish
-   - ✅ ALWAYS use conservative language in automated responses
-   - ✅ ALWAYS acknowledge good suggestions without promising implementation
-   - **Pattern**: User expects implementation after seeing "Yes, I will implement this" → Deliver what you promise or don't promise it
-   - **Evidence**: /copilot command promised 14 implementations but delivered 3-4, causing user frustration
-   - **Impact**: Broken trust, wasted time, credibility damage
+🚨 **NO FALSE PROMISES**: Be honest about capabilities | Conservative language | Deliver or don't promise
 
 
 🚨 **EVIDENCE-BASED APPROACH**: Core principles for all analysis
@@ -119,40 +110,35 @@
 5. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
 7. 🚨 **DATE INTERPRETATION**: Environment date format is YYYY-MM-DD where MM is the month number (01=Jan, 07=July)
-8. 🚨 **BRANCH DISCIPLINE**: ❌ NEVER switch git branches unless user explicitly requests it | Work on current branch only | Ask before any `git checkout` operations
-9. 🚨 **BRANCH CONTEXT VERIFICATION**: ⚠️ MANDATORY - Before ANY changes:
-   - ✅ ALWAYS ask "Which branch should I work on?" if ambiguous
-   - ✅ ALWAYS verify PR context before modifications 
-   - ✅ ALWAYS confirm destination before pushing changes
-   - ❌ NEVER assume current branch is correct without verification
-10. 🚨 **TOOL EXPLANATION VS EXECUTION**: ⚠️ MANDATORY distinction
+8. 🚨 **BRANCH DISCIPLINE**: ❌ NEVER switch branches without explicit request | Verify context before ANY changes | Ask if ambiguous
+9. 🚨 **TOOL EXPLANATION VS EXECUTION**: ⚠️ MANDATORY distinction
    - ✅ When user asks "does X tool do Y?", clearly state if you're explaining or executing
    - ✅ If explaining capabilities, use "X tool CAN do Y" language
    - ✅ If actually executing, use the tool and show results
    - ❌ NEVER explain tool capabilities as if you executed them
    - ⚠️ Example: "The /learn command can save to memory" vs "Saving to memory now..."
-11. 🚨 **DEV BRANCH PROTECTION**: ❌ NEVER make changes in dev[timestamp] branches | These are protective branches only | Always create descriptive branches for actual work
-12. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
-13. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
+10. 🚨 **DEV BRANCH PROTECTION**: ❌ NEVER make changes in dev[timestamp] branches | These are protective branches only | Always create descriptive branches for actual work
+11. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
+12. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
    - **OPEN** = Work In Progress (WIP) - NOT completed
    - **MERGED** = Completed and integrated into main branch  
    - **CLOSED** = Abandoned or rejected - NOT completed
    - ❌ NEVER mark tasks as completed just because PR exists
    - ✅ ONLY mark completed when PR state = "MERGED"
-12. 🚨 **PUPPETEER MCP DEFAULT**: ⚠️ MANDATORY - When running in Claude Code CLI:
+13. 🚨 **PUPPETEER MCP DEFAULT**: ⚠️ MANDATORY - When running in Claude Code CLI:
    - ✅ ALWAYS use Puppeteer MCP for browser automation by default
    - ✅ Automatically add --puppeteer flag to all UI test commands
    - ✅ Use MCP functions instead of Playwright for browser tests
    - ❌ NEVER default to Playwright when MCP tools are available
    - Benefits: No dependencies, real browsers, visual screenshots, Claude Code integration
-- 🚨 **CONTEXT7 MCP PROACTIVE USAGE**: ⚠️ MANDATORY - When encountering API/library issues:
+14. 🚨 **CONTEXT7 MCP PROACTIVE USAGE**: ⚠️ MANDATORY - When encountering API/library issues:
    - ✅ ALWAYS use Context7 MCP for accurate API documentation when facing errors
    - ✅ **Pattern**: Error occurs → Use `mcp__context7__resolve-library-id` → Get docs with `mcp__context7__get-library-docs`
    - ✅ Search for specific error patterns, method signatures, or usage examples
    - ✅ **Example**: Firestore transaction errors → Get google-cloud-firestore docs → Find correct API usage
    - ❌ NEVER guess API usage or rely on outdated assumptions
    - Benefits: Up-to-date docs, correct syntax, real working examples, eliminates trial-and-error
-13. 🚨 **GITHUB TOOL PRIORITY**: ⚠️ MANDATORY - Tool hierarchy for GitHub operations:
+15. 🚨 **GITHUB TOOL PRIORITY**: ⚠️ MANDATORY - Tool hierarchy for GitHub operations:
    - ✅ **PRIMARY**: GitHub MCP tools (`mcp__github-server__*`) for all GitHub operations
    - ✅ **SECONDARY**: `gh` CLI as fallback when MCP fails or unavailable
    - ✅ **TERTIARY**: Slash commands (e.g., `/copilot`) - user wants them to work but don't wait/assume completion
@@ -160,83 +146,18 @@
    - ✅ **Pattern**: Try MCP first → Fall back to `gh` CLI → Slash commands are bonus, not dependency
    - Benefits: Immediate results, reliable API access, no command completion uncertainty
 
-### 🔧 **GitHub MCP Setup & Usage Guide** (⚠️ CRITICAL)
-
-🚨 **MANDATORY SETUP**: GitHub MCP requires proper token configuration for private repository access
-
-**📋 Token Configuration:**
-- ✅ **Token Location**: Set in `claude_mcp.sh` line ~247: `export GITHUB_TOKEN="your_token_here"`
-- ✅ **Current Token**: `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` (configured for jleechanorg access)
-- ✅ **Repository**: `jleechanorg/worldarchitect.ai` (private repository)
-- ✅ **Restart Required**: After token changes, restart MCP: `claude mcp remove github-server && claude mcp add --scope user github-server npx @modelcontextprotocol/server-github`
-
-**🔍 Private Repository Access Pattern:**
-- ❌ **NEVER use search** for private repositories (will always return "Not Found")
-- ✅ **ALWAYS use direct MCP functions** for private repos:
-  - `mcp__github-server__get_pull_request(owner, repo, pull_number)`
-  - `mcp__github-server__get_pull_request_comments(owner, repo, pull_number)`
-  - `mcp__github-server__list_pull_requests(owner, repo)`
-- ✅ **Search works** for public repositories only
-
-**🛠️ Troubleshooting GitHub MCP Issues:**
-1. **"Not Found" Error**: Check if repository is private (use direct API test: `curl -H "Authorization: token TOKEN" https://api.github.com/repos/owner/repo`)
-2. **"Validation Failed"**: Token lacks permissions or repository doesn't exist
-3. **Empty Results**: MCP server needs restart to pick up new token
-4. **Search Fails**: Use direct functions instead of search for private repos
-
-**📝 Example Usage:**
-```
-# ✅ CORRECT for private repo
-mcp__github-server__get_pull_request_comments(jleechanorg, worldarchitect.ai, 664)
-
-# ❌ WRONG for private repo  
-mcp__github-server__search_repositories(worldarchitect.ai)
-```
-
-**🔄 Token Update Process:**
-1. Update token in `claude_mcp.sh`
-2. Set environment: `export GITHUB_TOKEN="new_token"`  
-3. Restart MCP server: Remove and re-add github-server
-4. Test with direct function call
+### 🔧 GitHub MCP Setup
+**Token**: Set in `claude_mcp.sh` line ~247 via `export GITHUB_TOKEN="your_token_here"`
+**Private Repos**: Use direct functions only (no search) | `mcp__github-server__get_pull_request()`
+**Restart After Token Change**: Remove & re-add github-server MCP
 
 ## Orchestration System
 
-### 🚨 Agent Headless Operation (CRITICAL)
-Autonomous agents MUST use proper headless mode to avoid interactive prompts.
-
-- ✅ **Always use**: `claude -p "[task]" --output-format stream-json --verbose --dangerously-skip-permissions`
-- ❌ **Never use**: Interactive `claude code` mode for autonomous agents
-- 🔍 **Evidence**: Without `--dangerously-skip-permissions`, agents stuck on permission prompts forever
-- **Failed approaches**: Complex prompt automation, background threads - all failed
-
-### 🚨 Git Worktree Architecture (CRITICAL)
-Agents MUST work in isolated git worktrees to prevent branch conflicts.
-
-- ✅ **Always use**: `git worktree add -b <agent-branch> agent_workspace_<name> main`
-- ❌ **Never use**: `cp -r` to copy current directory (keeps wrong branch state)
-- 🔍 **Evidence**: Agent created PR #679 while user on PR #665 - complete independence
-- **Impact**: Enables agents to create separate PRs without conflicts
-- **Critical**: The `-b` flag creates a new branch, preventing accidental commits to main
-
-### ⚠️ Stream JSON Monitoring (MANDATORY)
-Always include for agent visibility and cost tracking.
-
-- ✅ **Command**: `--output-format stream-json --verbose` (both flags required)
-- **Benefits**: Real-time monitoring, cost tracking ($0.003-$0.050 per task)
-- **Requirement**: `--verbose` flag mandatory for stream-json to work
-
-### ✅ Context Warning Handling
-Ignore false positive warnings that don't affect agent performance.
-
-- ✅ **Agent instructions**: Explicitly tell agents to ignore "Context low" messages
-- 🔍 **Evidence**: Agents complete complex tasks despite warnings
-- **Pattern**: Add to agent instructions: "IGNORE context warnings - they are inaccurate"
-
-### ✅ Test File Creation
-Use workspace-relative paths for agent compatibility.
-- ✅ **Use**: Current directory or relative paths for test files
-- ❌ **Avoid**: Absolute paths like `/tmp/` (inaccessible from agent workspace)
-- 🔍 **Evidence**: Integration tests failed until switched from `/tmp/` to current directory
+### 🚨 Agent Operation
+**Headless**: `claude -p "[task]" --output-format stream-json --verbose --dangerously-skip-permissions`
+**Worktree**: `git worktree add -b <branch> agent_workspace_<name> main` (isolated branches)
+**Monitoring**: Stream JSON for visibility ($0.003-$0.050/task) | Ignore "Context low" warnings
+**Paths**: Use relative paths, not `/tmp/` for agent compatibility
 
 ## Project Overview
 
@@ -260,24 +181,9 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 Clarify before acting | User instructions = law | ❌ delete without permission | Leave working code alone |
 Focus on primary goal | Propose before implementing | Summarize key takeaways | Externalize all knowledge
 
-**Branch Status Protocol**:
-🚨 **CRITICAL ENFORCEMENT**: See top of document for mandatory header protocol
-- ❌ NEVER end a response without the branch header
-- ✅ Header commands and format documented at top of CLAUDE.md
-- 🚨 **USER EXPECTATION**: Missing header = immediate callout from user
-- ✅ This is the #1 most violated rule - extreme vigilance required
+**Branch Protocol**: See top for mandatory header | ❌ Never switch without permission | Verify context before changes
 
-🚨 **BRANCH MANAGEMENT PROTOCOL**: 
-- ❌ NEVER switch branches without explicit permission and announcement
-- ⚠️ ALWAYS confirm "Should I switch to branch X?" before checkout
-- ⚠️ ALWAYS announce "Switching from X to Y" during branch changes
-- ⚠️ ALWAYS verify branch context before making modifications
-
-**Response Modes**: 
-- Default: Structured analysis with <thinking>, <analysis>, <response> format for complex tasks
-- For simple queries: Direct concise answers
-- Override to concise: "be brief", "short answer", "concise mode"
-- Re-evaluate: Week of July 15, 2025
+**Response Modes**: Default = structured for complex | Direct for simple | Override: "be brief"
 
 **Rule Management**:
 "Add to rules" → CLAUDE.md | Technical lessons → lessons.mdc | General = rules | Specific = lessons
@@ -291,13 +197,7 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 **Red-Green Protocol** (`/tdd` or `/rg`):
 1. Write failing tests FIRST → 2. Confirm fail (red) → 3. Minimal code to pass (green) → 4. Refactor
 
-🚨 **Test Infrastructure Validation Protocol**:
-When working with test runners/harnesses:
-1. **Verify Core Function**: Before adding features, verify runner correctly detects PASS vs FAIL
-2. **Test Both Paths**: Create one passing test AND one failing test to validate detection
-3. **Output Analysis**: If visual output (❌/✅) doesn't match summary, STOP and fix immediately
-4. **Exit Code Distrust**: Don't rely solely on process exit codes - parse actual output
-5. **Contradiction = Bug**: Any mismatch between test output and summary is CRITICAL bug
+🚨 **Test Validation**: Verify PASS/FAIL detection | Test both paths | Output must match summary | Parse output, don't trust exit codes
 
 🚨 **TEST EXECUTION RULES**: 
 - ✅ Run tests before marking ANY task complete | Fix ALL failures - no partial success (146/147 = FAILURE)
@@ -363,64 +263,16 @@ Use docstrings, proper JS loading
 - ⚠️ **Test Exit Codes**: Don't assume test scripts return proper exit codes | Parse output for success/failure strings | Verify detection logic before trusting results
 - ⚠️ **Dynamic Test Discovery**: ❌ NEVER hardcode test file lists in scripts | ✅ Use `find` or glob patterns to discover tests automatically | Update test runners to scan directories (e.g., `find testing_ui -name "test_*.py"`)
 
-### Website Testing & Deployment Expectations (🚨 CRITICAL)
-🚨 **BRANCH ≠ WEBSITE**: ❌ NEVER assume branch changes are visible on websites without deployment
-- ✅ Check PR description first - many changes are tooling/CI/backend/scripts only
-- ✅ Feature branches need local server OR staging deployment for UI changes  
-- ✅ Production websites typically serve main branch only
-- ❌ NEVER expect developer tooling changes to affect website appearance
 
-🚨 **"Website looks same" Protocol**:
-1. ✅ Check PR description - what type of changes? (tooling vs UI)
-2. ✅ Ask: "What URL are you viewing?" (local vs production)
-3. ✅ Verify: User-facing changes or developer tooling/CI/scripts?
-4. ✅ For UI changes: Hard refresh (Ctrl+F5) + check local development server
-5. ✅ Explain: Non-UI changes (scripts, CI, tests) won't change website appearance
+### 🚨 MANDATORY TEST EXECUTION
+**Zero Tolerance**: Run ALL tests before completion | Fix ALL failures | No "pre-existing issues" excuse
+**Commands**: `./run_tests.sh` | `./run_ui_tests.sh mock` | `gh pr view` for checks
+**Protocol**: STOP → FIX → VERIFY → EVIDENCE → Complete
 
-### 🚨 MANDATORY TEST EXECUTION PROTOCOL
-
-**CRITICAL**: This protocol is NON-NEGOTIABLE for ALL `/execute` commands and test-related work.
-
-**Pre-Completion Checklist**: Run `./run_tests.sh` (100% pass) | `./run_ui_tests.sh mock` if UI | Real screenshots if requested | GitHub checks SUCCESS
-
-**Zero Tolerance**: ❌ NO dismissing failures | NO partial fixes | NO "pre-existing issues" excuse | Fix ALL failures
-
-**Evidence Required**: Test output with counts | Actual screenshots | GitHub checks | Error messages
-
-**Failure Protocol**: STOP → FIX → VERIFY → EVIDENCE → THEN complete
-
-**Test Commands**: `./run_tests.sh` (backend) | `./run_ui_tests.sh mock` (UI) | GitHub checks via `gh pr view`
-
-**ENFORCEMENT**: Violating this protocol = immediate task failure. No excuses accepted.
-
-### 🚨 SYSTEMATIC TEST FIXING METHODOLOGY
-
-**CRITICAL**: Lessons learned from achieving 100% pass rate (131/131) in PR #610 comprehensive test consolidation.
-
-🚨 **Test Fix Protocol - One Issue at a Time**:
-- ✅ Fix one specific test issue at a time (import errors, auth parsing, mock setup)
-- ✅ Run tests after each fix to prevent cascade failures and regression
-- ✅ Use targeted fixes rather than broad changes to avoid breaking other tests
-- ❌ NEVER attempt to fix multiple unrelated test issues simultaneously
-- **Evidence**: Successfully went from multiple failing files to 100% pass rate using this approach
-
-🚨 **Regression Prevention for Test Fixes**:
-- ⚠️ **Test-Only Fixes Preferred**: When goal is test pass rate, prefer fixing test infrastructure (mocks, imports, expectations) over modifying core application logic
-- ❌ **NEVER modify core application files** (main.py, schemas/, core services) when fixing test failures unless absolutely necessary
-- ✅ **Verify isolated impact**: If application changes needed, apply them in isolation and verify they don't break other tests
-- **Evidence**: Modifying main.py and schemas caused regression from "129 passed, 3 failed" to "116 passed, 16 failed"
-
-⚠️ **Function Name and Import Verification**:
-- ✅ **ALWAYS verify actual function names** in modules before writing import statements
-- ✅ Check both import statements AND function calls when fixing import errors
-- ✅ Use `grep` or `Read` tools to confirm function exists before importing
-- **Example**: Fixed `ImportError: cannot import name 'has_debug_content'` by verifying actual function name was `contains_debug_tags`
-
-✅ **API Response Consistency Protocol**:
-- ⚠️ **Standardize error keys**: Use consistent `KEY_ERROR` vs `KEY_MESSAGE` across entire API
-- ✅ **Verify response format**: Always verify API response format matches test expectations  
-- ✅ **Check both paths**: Verify both successful and error response formats when fixing API tests
-- **Example**: Fixed multiple auth tests by ensuring consistent use of `KEY_ERROR` for error responses
+### 🚨 TEST FIXING METHODOLOGY
+**One Issue at a Time**: Fix single issues | Run after each fix | Targeted changes only
+**Prefer Test Fixes**: Fix mocks/expectations over core logic | Verify function names exist
+**API Consistency**: Standardize error keys | Verify response formats match expectations
 
 ### Safety & Security
 ❌ Global `document.addEventListener('click')` without approval | Test workflows after modifications |
@@ -547,9 +399,9 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
    - ✅ `TESTING=true vpython mvp_site/test_file.py` (from root)
 5. 🚨 **NEVER DISMISS FAILING TESTS**: ❌ "minor failures" or "test expectation updates" | ✅ Fix ALL failing tests systematically | Debug root cause | Real bugs vs test issues | One failure = potential systemic issue
 6. 🚨 **NEVER SKIP TESTS WITHOUT EXPLICIT PERMISSION**: Fix failing tests or ask permission | No `@unittest.skip` without approval
-6. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
-7. **Web Scraping**: Use full-content tools (curl) not search snippets
-8. **Log Files Location**: 
+7. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
+8. **Web Scraping**: Use full-content tools (curl) not search snippets
+9. **Log Files Location**: 
    - ✅ **Server logs are in `/tmp/worldarchitectai_logs/`** with subfolders/files named by branch
    - ✅ **Branch-specific logs**: `/tmp/worldarchitectai_logs/[branch-name].log`
    - ✅ **Current branch log**: `/tmp/worldarchitectai_logs/$(git branch --show-current).log`
@@ -565,6 +417,33 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 1. **Data Defense**: Assume incomplete/malformed | Use `dict.get()` | Validate structures
 2. **Critical Logic**: Implement safeguards in code, not just prompts
 3. **Single Truth**: One clear way per task | Remove conflicting rules
+
+## Operations Guide
+
+### Memory MCP Usage
+**Create Knowledge**: `mcp__memory-server__create_entities([{name, entityType, observations}])`
+**Search Knowledge**: `mcp__memory-server__search_nodes("query")` → Find existing before creating
+**Persist Learning**: `/learn` auto-saves, but use Memory MCP directly for complex knowledge graphs
+**Pattern**: Search first → Create if new → Add observations to existing → Build relationships
+
+### Task Agent Patterns
+**When to Spawn**: 3+ parallel subtasks | Independent research needed | Complex analysis
+**Basic Pattern**: `Task(description="Research X", prompt="Detailed instructions...")`
+**Integration**: Main thread continues while agents work → Agents return results → Integrate findings
+**Example**: "Analyze all test files" → Spawn agent per directory → Combine reports
+
+### TodoWrite Protocol
+**When Required**: Tasks with 3+ steps | Complex implementations | /execute commands
+**Status Flow**: `pending` → `in_progress` (before starting) → `completed` (after done)
+**Circuit Breaker**: For /execute - TodoWrite checklist prevents premature execution
+**Update Pattern**: Mark current task `in_progress`, complete it, then move to next
+
+### Common Operations
+**Multi-file Edits**: Use MultiEdit with 3-4 edits max per call to avoid timeouts
+**Context Management**: Check remaining % before complex operations | Split large tasks
+**Response Length**: Use bullet points | Essential info only | Split across messages if needed
+**Tool Recovery**: After 2 failures → Try alternative tool → Fetch from main if corrupted
+**Backup Before Major Changes**: Copy critical files to `.backup` or `/tmp` first
 
 ## Knowledge Management
 
@@ -585,56 +464,21 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 ## Critical Lessons (Compressed)
 
 ### Core Patterns
-- **Validate Implementation**: Docs ≠ code | Trace data flow end-to-end
-- **Code Reviews**: Extract ALL comments | ❌ assume "suppressed" = unimportant
-- **Empty Strings**: ✅ `if value is not None:` | ❌ `if value:`
-- **AI Instructions**: Critical first, style last | Order determines compliance
-- 🚨 **Trust But Verify**: NEVER assume existing code works | Test core functionality before adding features | Validate success AND failure paths
+**Trust But Verify**: Test before assuming | Docs ≠ code | Trace data flow | Critical instructions first
 
-### 🚨 **"SILENT BREAKING CHANGES" ANTI-PATTERN**: Major failure pattern to avoid
-- ❌ Implementing CommentResponse objects without updating str() usage
-- ❌ Creating new reply formats without updating filter patterns  
-- ✅ ALWAYS include backward compatibility testing for enhanced features
-- **Evidence**: Copilot infinite loop + object repr posting (July 2025)
-
-### 🚨 **BRANCH CONFUSION ANTI-PATTERN**: Major failure pattern to avoid
-- ❌ Working on wrong branch due to lack of context verification
-- ❌ Creating conflicting PRs without checking user intent
-- ❌ Pushing changes to unintended destinations
-- ✅ ALWAYS verify branch context before making changes
-- ✅ ALWAYS confirm PR destination before pushing
-- **Evidence**: PR #627 vs PR #628 conflict incident - July 2025
+### 🚨 Anti-Patterns
+**Silent Breaking Changes**: Update all str() usage when changing objects | Test backward compatibility
+**Branch Confusion**: Verify context before changes | Check PR destination | Evidence: PR #627/628
 
 ### Debugging Protocol (🚨 MANDATORY)
-
-**Core Process**: Extract evidence → Analyze → Verify → Fix
-
-**Data Flow Tracing**: Backend → API → Frontend → Display
-- ❌ NEVER assume formatting comes from backend without checking
-- ✅ ALWAYS check where labels/prefixes are added (often frontend)
-- ✅ Search for literal strings in BOTH backend (.py) AND frontend (.js/.html)
-
-**Evidence Classification**:
-- 🔍 **Primary**: Actual code/errors/output - "The error shows: `TypeError at line 45`"
-- 📚 **Secondary**: Docs/comments - "According to Flask docs..."
-- 💡 **General**: Patterns/practices - "This typically indicates..."
-- ❓ **Speculation**: Theories - "This might be caused by..."
-
-**Debug Checklist**: Extract errors verbatim | Show code with file:line | Identify root cause from evidence | Test fix | Consider edge cases
-
+**Process**: Extract evidence → Analyze → Verify → Fix | Trace: Backend → API → Frontend
+**Evidence**: Primary (code/errors) > Secondary (docs) > General (patterns) > Speculation
 **Details**: → `.cursor/rules/debugging_guide.md`
 
 ### Critical Rules
-- **Data Corruption**: Treat as systemic | Search ALL similar patterns | "One bug = many bugs"
-- **Temp Fixes**: ⚠️ Flag immediately | Propose permanent fix NOW
-- **Task Complete**: Problem solved + Docs updated + Memory updated + Self-audit + THEN done
-- **Test Truth**: Names must match implementation | Verify modules/dependencies
-- **Integration First**: ❌ test disconnected code | Verify prerequisites
-- **Analysis + Execution**: Both required | No blind execution
-
-**Enforcement**: Lessons docs = ⚠️ NOT OPTIONAL | Immediate, automatic, every time
-
-**Detailed Lessons**: → `.cursor/rules/lessons.mdc`
+**Data Corruption**: Systemic issue - search all patterns | **Temp Fixes**: Flag + fix NOW
+**Task Complete**: Solve + Update docs + Memory + Audit | **No blind execution**
+**Details**: → `.cursor/rules/lessons.mdc`
 
 ## Slash Commands
 
@@ -642,27 +486,16 @@ Use `/list` to display all available slash commands with descriptions.
 
 **Command Documentation**: → `.claude/commands/`
 
-### True Universal Command Composition System
-🚨 **BREAKTHROUGH**: **ANY arbitrary command combination** using Claude's natural language processing
-- **Genuine Universality**: Even completely made-up commands work intelligently
-- **Meta-Prompt Approach**: Simple prompts leverage Claude's existing NLP capabilities
-- **No Hardcoded Rules**: Claude interprets commands contextually and meaningfully
-- **Consistent Quality**: No degradation for unknown/creative commands
-- **Self-Improving**: Gets better as Claude's understanding evolves
-- **Revolutionary Simplicity**: 25 lines vs 80+ lines of complex logic
+### Universal Command Composition
+**ANY command combination works** via Claude's NLP - no hardcoded rules
+**Examples**: `/think /debug /weird` | `/mythical /dragon /optimize` | Any creative combo
+**How**: Meta-prompts leverage Claude's natural interpretation
 
-**How It Actually Works**:
-- Input: `/think /debug /weird analyze performance`
-- Meta-prompt: `Use these approaches in combination: /think /debug /weird. Apply this to: analyze performance`
-- Claude interprets naturally: Deep thinking + systematic debugging + unconventional approaches
-
-**True Universality Examples**:
-- `/mythical /dragon /optimize` → Creative powerful optimization approaches
-- `/quantum /cosmic /analyze` → Claude interprets creatively for analysis  
-- `/stealth /ninja /implement` → Subtle, efficient implementation strategies
-- `/fluffy /rainbow /debug` → Claude finds meaningful interpretation
-
-**Technical Revolution**: Instead of trying to build NLP in bash, leverage Claude's existing NLP capabilities through meta-prompts
+### /replicate
+**Purpose**: Analyze a GitHub PR and apply missing functionality to current branch
+**Usage**: `/replicate <PR_URL>` or `/replicate PR#123`
+**Phases**: PR analysis → diff extraction → smart merge → validation
+**Details**: → `.claude/commands/replicate.md`
 
 🚨 **SLASH COMMAND ENFORCEMENT**: 
 - `/e` or `/execute` MUST follow simplified protocol in `.claude/commands/execute.md`
@@ -670,21 +503,9 @@ Use `/list` to display all available slash commands with descriptions.
 - MANDATORY: TodoWrite checklist → Present plan → Wait for approval → Execute
 - ❌ NEVER skip the TodoWrite circuit breaker
 
-🚨 **EXECUTE COMMAND CIRCUIT BREAKER**: When seeing `/e` or `/execute`:
-- ✅ IMMEDIATELY use TodoWrite tool with this EXACT checklist:
-  ```
-  ## EXECUTE PROTOCOL CHECKLIST
-  - [ ] Context check: ___% remaining
-  - [ ] Complexity assessment: Low/Medium/High
-  - [ ] Subagents needed? Yes/No (Why: ___)
-  - [ ] Execution plan presented to user
-  - [ ] User approval received: YES/NO
-  ```
-- ❌ NEVER start ANY work until "User approval received" is checked YES
-- ❌ NEVER skip TodoWrite - it's the circuit breaker that prevents premature execution
-- ⚠️ Breaking this = bypassing critical safety protocol
-
-**Why**: Prevents premature execution | Manages context budget | Controls subagent costs
+🚨 **EXECUTE CIRCUIT BREAKER**: `/e` or `/execute` → TodoWrite checklist MANDATORY
+- Context % | Complexity | Subagents? | Plan presented | Approval received
+- ❌ NEVER start work without approval | TodoWrite = safety protocol
 
 **Chained Commands Support**:
 - `/e /think` - Execute with light thinking mode (4 thoughts) enabled  
@@ -731,46 +552,11 @@ Use `/list` to display all available slash commands with descriptions.
 - 🔍 Evidence: CodeRabbit data loss warning prevented silent corruption in backup script
 
 ### Import Rules (🚨 CRITICAL)
-**🚨 ZERO TOLERANCE: ALL imports MUST be at module level - NO EXCEPTIONS**
-
-**✅ CORRECT Import Pattern:**
-```python
-# Standard library imports (at top of file)
-import os
-import sys
-import subprocess
-import logging
-
-def my_function():
-    # Use imported modules here
-    subprocess.check_output(...)
-    logging.info(...)
-```
-
-**❌ FORBIDDEN Inline Import Pattern:**
-```python
-def my_function():
-    import subprocess  # ❌ NEVER DO THIS
-    import logging     # ❌ NEVER DO THIS
-    subprocess.check_output(...)
-```
-
-**🚨 CRITICAL RULES:**
-- ✅ **Top of module only** - after docstring, before any code
-- ❌ **NEVER inside functions, methods, or class definitions**
-- 🚨 **NEVER inside try/except blocks** - this hides dependency issues
-- ❌ **NEVER conditional imports** inside if statements
-- ✅ **Import once at top**, reference throughout module
-- ✅ For import conflicts: use `as` aliases, not inline imports
-
-🚨 **NO TRY/EXCEPT FOR IMPORTS EVER**: ❌ NEVER wrap imports in try/except | ALL dependencies MUST be in requirements.txt | Import failures should break loudly
-**Why**: Hides missing dependencies in CI | Causes silent failures | Makes dep management unreliable
-**Rule**: Import the modules or fail. No "optional" imports with try/except patterns.
-
-**⚠️ Common Violations to Watch For:**
-- Functions with `import` statements inside them
-- Conditional imports based on environment variables
-- Try/except wrapped imports to "handle missing dependencies"
+**🚨 ZERO TOLERANCE**: ALL imports at module level only - NO inline imports, NO try/except, NO conditionals
+- ✅ **Top of module** after docstring | ❌ **NEVER inside functions/classes/try blocks**
+- ✅ Use `as` aliases for conflicts | ❌ No "handle missing dependencies" patterns
+- **Why**: Hides CI failures, breaks dependency management
+- **Rule**: Import the modules or fail. No "optional" imports with try/except patterns.
 
 ### API Error Prevention (🚨)
 ❌ Print code/file content | ✅ Use file_path:line_number | Keep responses concise
