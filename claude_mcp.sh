@@ -242,105 +242,75 @@ add_mcp_server() {
 }
 
 # GitHub Token Configuration (for private repository access)
+# Uses centralized token loading system for better maintainability
 # 
-# This script looks for a GitHub token in the following order:
-# 1. .token file in project root (recommended for security)
-# 2. GITHUB_PERSONAL_ACCESS_TOKEN environment variable
-# 3. Fallback hardcoded token (not recommended for production)
-#
-# To create .token file:
-#   echo "ghp_your_token_here" > .token
-#   chmod 600 .token  # Secure permissions
-#
-# Generate token at: https://github.com/settings/tokens
-# Required scopes: repo, read:org, read:user
+# Generate tokens at:
+# - GitHub: https://github.com/settings/tokens (scopes: repo, read:org, read:user)
+# - Perplexity: https://www.perplexity.ai/settings/api
 # 
 # NOTE: This script uses GitHub's NEW official MCP server (github/github-mcp-server)
 # which is HTTP-based and hosted remotely, replacing the old deprecated npm package
 
-# Try to load tokens from .token file first (supports both GitHub and Perplexity)
-HOME_TOKEN_FILE="$HOME/.token"
-if [ -f "$HOME_TOKEN_FILE" ]; then
-    echo -e "${GREEN}✅ Loading tokens from $HOME_TOKEN_FILE${NC}"
-    log_with_timestamp "Loading tokens from $HOME_TOKEN_FILE"
+# Load centralized token helper
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TOKEN_HELPER="$SCRIPT_DIR/scripts/load_tokens.sh"
+
+if [ -f "$TOKEN_HELPER" ]; then
+    echo -e "${BLUE}📋 Loading tokens using centralized helper...${NC}"
+    log_with_timestamp "Using centralized token helper: $TOKEN_HELPER"
     
-    # Source the token file to load environment variables
-    source "$HOME_TOKEN_FILE"
+    # Source the token helper to load functions and tokens
+    source "$TOKEN_HELPER"
     
-    # Verify GitHub token is loaded
-    if [ -n "$GITHUB_TOKEN" ]; then
-        export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
-        echo -e "${GREEN}  ✅ GitHub token loaded${NC}"
-        log_with_timestamp "GitHub token loaded from .token file"
+    # Load tokens
+    if load_tokens; then
+        log_with_timestamp "Tokens loaded successfully via centralized helper"
     else
-        echo -e "${RED}  ❌ GitHub token not found in .token file${NC}"
+        echo -e "${RED}❌ Failed to load tokens via centralized helper${NC}"
+        echo -e "${YELLOW}💡 Run '$TOKEN_HELPER create' to create template token file${NC}"
+        echo -e "${YELLOW}💡 Run '$TOKEN_HELPER help' for more options${NC}"
+        log_with_timestamp "ERROR: Token loading failed, aborting for security"
+        exit 1
     fi
-    
-    # Verify Perplexity token is loaded
-    if [ -n "$PERPLEXITY_API_KEY" ]; then
-        export PERPLEXITY_API_KEY="$PERPLEXITY_API_KEY"
-        echo -e "${GREEN}  ✅ Perplexity API key loaded${NC}"
-        log_with_timestamp "Perplexity API key loaded from .token file"
-    else
-        echo -e "${YELLOW}  ⚠️ Perplexity API key not found in .token file${NC}"
-    fi
-    
-elif [ -f ".token" ]; then
-    # Fallback to local .token file (legacy support)
-    GITHUB_PERSONAL_ACCESS_TOKEN=$(cat .token | tr -d '\n\r')
-    echo -e "${GREEN}✅ GitHub token loaded from local .token file${NC}"
-    log_with_timestamp "GitHub token loaded from local .token file"
-elif [ -n "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
-    echo -e "${BLUE}📋 Using GITHUB_PERSONAL_ACCESS_TOKEN from environment${NC}"
-    log_with_timestamp "Using GITHUB_PERSONAL_ACCESS_TOKEN from environment"
 else
-    echo -e "${RED}❌ No token file found and GITHUB_PERSONAL_ACCESS_TOKEN not set${NC}"
-    echo -e "${YELLOW}📋 To create token file:${NC}"
-    echo -e "${YELLOW}   1. Generate GitHub token at: https://github.com/settings/tokens${NC}"
-    echo -e "${YELLOW}   2. Generate Perplexity token at: https://www.perplexity.ai/settings/api${NC}"
-    echo -e "${YELLOW}   3. Create ~/.token file with:${NC}"
-    echo -e "${YELLOW}      export GITHUB_TOKEN=\"ghp_your_github_token_here\"${NC}"
-    echo -e "${YELLOW}      export PERPLEXITY_API_KEY=\"pplx_your_perplexity_token_here\"${NC}"
-    echo -e "${YELLOW}   4. chmod 600 ~/.token${NC}"
-    echo -e "${YELLOW}   5. Re-run this script${NC}"
-    echo ""
-    echo -e "${RED}❌ Aborting to avoid unauthenticated execution${NC}"
-    log_with_timestamp "ERROR: No tokens found, aborting for security"
-    exit 1
+    echo -e "${YELLOW}⚠️ Centralized token helper not found, falling back to legacy method${NC}"
+    log_with_timestamp "WARNING: Token helper not found at $TOKEN_HELPER, using fallback"
+    
+    # Fallback to legacy token loading
+    HOME_TOKEN_FILE="$HOME/.token"
+    if [ -f "$HOME_TOKEN_FILE" ]; then
+        echo -e "${GREEN}✅ Loading tokens from $HOME_TOKEN_FILE${NC}"
+        source "$HOME_TOKEN_FILE"
+        export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
+    else
+        echo -e "${RED}❌ No token file found${NC}"
+        echo -e "${YELLOW}💡 Create ~/.token file with your tokens${NC}"
+        exit 1
+    fi
 fi
 
+# Ensure GITHUB_PERSONAL_ACCESS_TOKEN is exported for compatibility
 export GITHUB_PERSONAL_ACCESS_TOKEN
 
-# Function to check environment requirements
+# Function to check environment requirements  
 check_github_requirements() {
-    if [ -z "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
-        echo -e "${YELLOW}⚠️ GitHub MCP server works better with GITHUB_PERSONAL_ACCESS_TOKEN environment variable${NC}"
-        echo -e "${YELLOW}   You can set it with: export GITHUB_PERSONAL_ACCESS_TOKEN=your_github_token${NC}"
-        echo -e "${YELLOW}   Server will still work for public repositories without it${NC}"
-        echo -e "${YELLOW}   For private repos, generate token at: https://github.com/settings/tokens${NC}"
-    else
-        echo -e "${GREEN}✅ GITHUB_PERSONAL_ACCESS_TOKEN found - GitHub remote server will have full access${NC}"
+    if [ "$GITHUB_TOKEN_LOADED" = true ]; then
+        echo -e "${GREEN}✅ GitHub token loaded - GitHub remote server will have full access${NC}"
         
-        # Test token validity using secure curl (prevents token exposure in process listings)
+        # Test token validity using the centralized helper
         echo -e "${BLUE}  🔍 Testing GitHub token validity...${NC}"
-        
-        # Create temporary curl config to hide token from process listings
-        local curl_config=$(mktemp)
-        printf 'header = "Authorization: token %s"\n' "$GITHUB_PERSONAL_ACCESS_TOKEN" > "$curl_config"
-        
-        # Test token with secure curl configuration
-        if curl --silent --fail --config "$curl_config" --url https://api.github.com/user >/dev/null 2>&1; then
-            echo -e "${GREEN}  ✅ GitHub token is valid${NC}"
+        if test_github_token; then
             echo -e "${BLUE}  📡 Using GitHub's NEW official remote MCP server${NC}"
             echo -e "${BLUE}  🔗 Server URL: https://api.githubcopilot.com/mcp/${NC}"
-        else
-            echo -e "${RED}  ❌ GitHub token appears to be invalid or expired${NC}"
-            echo -e "${YELLOW}  💡 Generate new token at: https://github.com/settings/tokens${NC}"
-            echo -e "${YELLOW}  💡 Required scopes: repo, read:org, read:user${NC}"
         fi
-        
-        # Clean up temporary config file
-        rm -f "$curl_config"
+    elif [ -n "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
+        echo -e "${YELLOW}⚠️ GitHub token found but not validated by centralized helper${NC}"
+        echo -e "${YELLOW}   Server will work for public repositories${NC}"
+        echo -e "${YELLOW}   For private repos, ensure token has required scopes${NC}"
+    else
+        echo -e "${YELLOW}⚠️ No GitHub token found${NC}"
+        echo -e "${YELLOW}   Server will work for public repositories only${NC}"
+        echo -e "${YELLOW}   For private repos, add GITHUB_TOKEN to ~/.token file${NC}"
     fi
 }
 
@@ -396,14 +366,25 @@ else
     # Remove any old deprecated GitHub server first
     claude mcp remove "github-server" >/dev/null 2>&1 || true
     
-    # Add the new official GitHub HTTP MCP server
-    local add_output
-    add_output=$(claude mcp add-json --scope user "github-server" '{"type": "http", "url": "https://api.githubcopilot.com/mcp/", "authorization_token": "Bearer '"$GITHUB_PERSONAL_ACCESS_TOKEN"'"}' 2>&1)
-    local add_exit_code=$?
+    # Add the new official GitHub HTTP MCP server using environment variable approach
+    # This prevents token exposure in process listings
+    export GITHUB_MCP_CONFIG='{"type": "http", "url": "https://api.githubcopilot.com/mcp/", "authorization_token": "Bearer '"$GITHUB_PERSONAL_ACCESS_TOKEN"'"}'
     
-    if [ $add_exit_code -eq 0 ]; then
+    add_output=$(claude mcp add-json --scope user "github-server" "$GITHUB_MCP_CONFIG" 2>&1)
+    add_exit_code=$?
+    
+    # Clean up environment variable
+    unset GITHUB_MCP_CONFIG
+    
+    # Check if the server was actually added (success messages can sometimes have exit code 0)
+    if [ $add_exit_code -eq 0 ] && echo "$add_output" | grep -q "Added.*github-server"; then
         echo -e "${GREEN}  ✅ Successfully added GitHub remote MCP server${NC}"
         log_with_timestamp "Successfully added GitHub remote MCP server"
+        INSTALL_RESULTS["github-server"]="SUCCESS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+    elif [ $add_exit_code -eq 0 ]; then
+        echo -e "${GREEN}  ✅ GitHub server configuration completed${NC}"
+        log_with_timestamp "GitHub server configuration completed: $add_output"
         INSTALL_RESULTS["github-server"]="SUCCESS"
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
     else
