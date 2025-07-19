@@ -3,6 +3,8 @@
 # Usage: /orchestrate [task_description] or ./orchestrate.sh [task_description]
 # Works from any directory within a git repository or worktree
 
+set -euo pipefail
+
 # Find the git directory (works in worktrees and submodules)
 git rev-parse --git-dir >/dev/null 2>&1
 if [ $? -ne 0 ]; then

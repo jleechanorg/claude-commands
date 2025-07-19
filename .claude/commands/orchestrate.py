@@ -28,7 +28,43 @@ sys.path.insert(0, orchestration_path)
 
 class OrchestrationCLI:
     """Claude Code CLI integration for orchestration system."""
-
+    
+    # Configuration constants
+    MAX_FILES_LIMIT = 50  # Maximum files allowed in agent workspace
+    
+    def check_file_count(self, agent_dir: str) -> tuple[int, bool]:
+        """Check file count in agent workspace and return (count, within_limit)."""
+        try:
+            result = subprocess.run([
+                'find', agent_dir, '-name', '*.py', '-o', '-name', '*.sh', '-o', '-name', '*.md'
+            ], capture_output=True, text=True)
+            if result.returncode == 0:
+                file_count = len([line for line in result.stdout.strip().split('\n') if line])
+                within_limit = file_count <= self.MAX_FILES_LIMIT
+                return file_count, within_limit
+            return 0, True
+        except Exception:
+            return 0, True  # Assume OK if we can't check
+    
+    def get_default_branch(self) -> str:
+        """Get the default branch name dynamically."""
+        try:
+            # Get remote default branch
+            result = subprocess.run(['git', 'symbolic-ref', 'refs/remotes/origin/HEAD'], 
+                                  capture_output=True, text=True)
+            if result.returncode == 0:
+                return result.stdout.strip().split('/')[-1]
+            
+            # Fallback to common default branches
+            for branch in ['main', 'master', 'develop']:
+                result = subprocess.run(['git', 'show-ref', '--verify', '--quiet', f'refs/heads/{branch}'], 
+                                      capture_output=True)
+                if result.returncode == 0:
+                    return branch
+            
+            return 'main'  # Final fallback
+        except Exception:
+            return 'main'
     def __init__(self):
         # No fake parsers or planners - Claude is the real intelligence
         self.broker = None
@@ -172,37 +208,48 @@ class OrchestrationCLI:
             # Create agent working directory as subdir of current worktree
             current_dir = os.getcwd()
             agent_dir = os.path.join(current_dir, f"agent_workspace_{agent_name}")
-
-            # Create fresh worktree from main branch for agent
+            
+            # Verify we're in a git repository
+            git_check = subprocess.run(['git', 'rev-parse', '--git-dir'], capture_output=True)
+            if git_check.returncode != 0:
+                print(f"❌ Not in a git repository: {current_dir}")
+                return False
+            
+            # Create fresh worktree from default branch for agent
             # First create the directory
             os.makedirs(agent_dir, exist_ok=True)
-
-            # Create a git worktree from main branch
-            worktree_result = subprocess.run(
-                ["git", "worktree", "add", agent_dir, "main"],
-                capture_output=True,
-                text=True,
-                cwd=current_dir,
-            )
+            
+            # Get default branch dynamically
+            default_branch = self.get_default_branch()
+            
+            # Create a git worktree from default branch
+            worktree_result = subprocess.run(['git', 'worktree', 'add', agent_dir, default_branch], 
+                                           capture_output=True, text=True, cwd=current_dir)
             if worktree_result.returncode != 0:
-                # Fallback: copy current directory but checkout main
-                subprocess.run(
-                    ["cp", "-r", current_dir, f"{agent_dir}_temp"], capture_output=True
-                )
-                subprocess.run(
-                    ["mv", f"{agent_dir}_temp", agent_dir], capture_output=True
-                )
-                subprocess.run(
-                    ["git", "checkout", "main"], capture_output=True, cwd=agent_dir
-                )
-
+                # Fallback: copy current directory but checkout default branch
+                import shutil
+                shutil.copytree(current_dir, agent_dir, dirs_exist_ok=True)
+                subprocess.run(['git', 'checkout', default_branch], capture_output=True, cwd=agent_dir)
             # Build task instruction
             task_instruction = self._build_task_instruction(
                 task_description, current_branch, agent_dir
             )
 
             # Use claude -p with stream-json for proper headless execution with visible output
-            claude_cmd = f'{claude_path} -p "{task_instruction}" --output-format stream-json --verbose --dangerously-skip-permissions'
+            # Note: The --dangerously-skip-permissions flag is used here to bypass security checks
+            # for autonomous agent operation in a headless environment. This flag disables interactive
+            # prompts that could hang the process, but it also introduces significant security risks.
+            # Specifically, it allows the agent to execute tasks without verifying permissions, which
+            # could lead to unauthorized actions or execution of malicious code if the environment is
+            # compromised.
+            #
+            # Safer alternative: Use a secure environment variable to confirm the bypass explicitly.
+            # This ensures that the flag is only enabled in trusted environments.
+            skip_permissions_flag = os.getenv("CLAUDE_SKIP_PERMISSIONS", "false").lower() == "true"
+            if skip_permissions_flag:
+                claude_cmd = f'{claude_path} -p "{task_instruction}" --output-format stream-json --verbose --dangerously-skip-permissions'
+            else:
+                claude_cmd = f'{claude_path} -p "{task_instruction}" --output-format stream-json --verbose'
 
             # Create tmux session with proper headless Claude execution
             tmux_cmd = [
@@ -220,6 +267,7 @@ class OrchestrationCLI:
 
             result = subprocess.run(tmux_cmd, capture_output=True, text=True)
             if result.returncode != 0:
+                print(f"❌ Failed to create tmux session: {result.stderr}")
                 return False
             return True
 
@@ -230,16 +278,20 @@ class OrchestrationCLI:
         self, task_description: str, current_branch: str, agent_dir: str
     ) -> str:
         """Build the complete task instruction for the agent."""
+        default_branch = self.get_default_branch()
         return f"""I need you to complete this specific task: {task_description}
 
 WORKING ENVIRONMENT:
 - You are working in your own dedicated worktree: {agent_dir}
-- This is a fresh git worktree created from the main branch
-- You start on the main branch and should create a new feature branch
+- This is a fresh git worktree created from the {default_branch} branch
+- You start on the {default_branch} branch and should create a new feature branch
 - The user remains in their original directory working on: {current_branch}
+- Maximum {self.MAX_FILES_LIMIT} files allowed in workspace
+- CRITICAL: Validate file count regularly with: find . -name '*.py' -o -name '*.sh' -o -name '*.md' | wc -l
+- If approaching {self.MAX_FILES_LIMIT}, STOP and focus your implementation
 
 AUTONOMOUS WORKFLOW:
-1. Create a new feature branch: /nb (this will create a new branch from main)
+1. Create a new feature branch: /nb (this will create a new branch from {default_branch})
 2. Locate the relevant file and make the specific change requested
 3. Test that the change works correctly
 4. Run tests to ensure nothing breaks: ./run_tests.sh
@@ -254,6 +306,12 @@ IMPORTANT INSTRUCTIONS:
 - Your PR should only contain changes related to your specific focus area
 - IGNORE any "/compact" warnings about context - this is a known false positive
 - Continue working normally if you see "Context low" messages - they are inaccurate
+
+FILE LIMIT ENFORCEMENT:
+- Check file count after each significant change: find . -name '*.py' -o -name '*.sh' -o -name '*.md' | wc -l
+- If file count exceeds {self.MAX_FILES_LIMIT}, STOP immediately and focus your implementation
+- Remove non-essential files if approaching the limit
+- Your implementation must be complete within {self.MAX_FILES_LIMIT} files
 
 AUTONOMOUS OPERATION:
 - Work autonomously - make decisions and proceed without waiting

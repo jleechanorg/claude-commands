@@ -240,25 +240,32 @@ class AgentHealthMonitor:
                     [self.startup_script, "start"], check=False, capture_output=True
                 )
             else:
-                # Start Claude agent
-                project_root = os.path.dirname(self.orchestration_dir)
-                claude_path = "/home/jleechan/.claude/local/claude"
-
-                subprocess.run(
-                    [
-                        "tmux",
-                        "new-session",
-                        "-d",
-                        "-s",
-                        agent_name,
-                        "-c",
-                        project_root,
-                        claude_path,
-                    ],
-                    check=False,
-                    capture_output=True,
-                )
-
+                # Start Claude agent with portable path discovery
+                try:
+                    project_root = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
+                                                capture_output=True, text=True, check=True).stdout.strip()
+                except subprocess.CalledProcessError as e:
+                    print(f"⚠️ Warning: Failed to determine project root using 'git rev-parse': {e}")
+                    project_root = os.path.dirname(self.orchestration_dir)
+                
+                # Find Claude executable portably
+                claude_path = None
+                if 'CLAUDE_PATH' in os.environ and os.path.exists(os.environ['CLAUDE_PATH']):
+                    claude_path = os.environ['CLAUDE_PATH']
+                else:
+                    import shutil
+                    claude_path = shutil.which('claude')
+                    if not claude_path:
+                        claude_path = os.path.expanduser('~/.claude/local/claude')
+                
+                if not claude_path or not os.path.exists(claude_path):
+                    print(f"❌ Claude executable not found for agent {agent_name}")
+                    return False
+                
+                subprocess.run([
+                    'tmux', 'new-session', '-d', '-s', agent_name,
+                    '-c', project_root, claude_path
+                ], capture_output=True, check=False)
                 # Send initialization message
                 time.sleep(3)
                 subprocess.run(

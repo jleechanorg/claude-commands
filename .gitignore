@@ -127,3 +127,5 @@ testing_ui/testing_full/.env
 # Browser binaries (Chrome/ChromeDriver) - large files that exceed GitHub's 100MB limit
 chrome/
 chromedriver/
+agent_workspace_*
+orchestration/tasks/health_report.json
