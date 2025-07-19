@@ -258,25 +258,54 @@ add_mcp_server() {
 # NOTE: This script uses GitHub's NEW official MCP server (github/github-mcp-server)
 # which is HTTP-based and hosted remotely, replacing the old deprecated npm package
 
-# Try to load token from .token file first
-if [ -f ".token" ]; then
+# Try to load tokens from .token file first (supports both GitHub and Perplexity)
+HOME_TOKEN_FILE="$HOME/.token"
+if [ -f "$HOME_TOKEN_FILE" ]; then
+    echo -e "${GREEN}✅ Loading tokens from $HOME_TOKEN_FILE${NC}"
+    log_with_timestamp "Loading tokens from $HOME_TOKEN_FILE"
+    
+    # Source the token file to load environment variables
+    source "$HOME_TOKEN_FILE"
+    
+    # Verify GitHub token is loaded
+    if [ -n "$GITHUB_TOKEN" ]; then
+        export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
+        echo -e "${GREEN}  ✅ GitHub token loaded${NC}"
+        log_with_timestamp "GitHub token loaded from .token file"
+    else
+        echo -e "${RED}  ❌ GitHub token not found in .token file${NC}"
+    fi
+    
+    # Verify Perplexity token is loaded
+    if [ -n "$PERPLEXITY_API_KEY" ]; then
+        export PERPLEXITY_API_KEY="$PERPLEXITY_API_KEY"
+        echo -e "${GREEN}  ✅ Perplexity API key loaded${NC}"
+        log_with_timestamp "Perplexity API key loaded from .token file"
+    else
+        echo -e "${YELLOW}  ⚠️ Perplexity API key not found in .token file${NC}"
+    fi
+    
+elif [ -f ".token" ]; then
+    # Fallback to local .token file (legacy support)
     GITHUB_PERSONAL_ACCESS_TOKEN=$(cat .token | tr -d '\n\r')
-    echo -e "${GREEN}✅ GitHub token loaded from .token file${NC}"
-    log_with_timestamp "GitHub token loaded from .token file"
+    echo -e "${GREEN}✅ GitHub token loaded from local .token file${NC}"
+    log_with_timestamp "GitHub token loaded from local .token file"
 elif [ -n "$GITHUB_PERSONAL_ACCESS_TOKEN" ]; then
     echo -e "${BLUE}📋 Using GITHUB_PERSONAL_ACCESS_TOKEN from environment${NC}"
     log_with_timestamp "Using GITHUB_PERSONAL_ACCESS_TOKEN from environment"
 else
-    echo -e "${RED}❌ GITHUB_PERSONAL_ACCESS_TOKEN not set and .token file not found${NC}"
-    echo -e "${YELLOW}📋 To create .token file:${NC}"
-    echo -e "${YELLOW}   1. Generate token at: https://github.com/settings/tokens${NC}"
-    echo -e "${YELLOW}   2. Required scopes: repo, read:org, read:user${NC}"
-    echo -e "${YELLOW}   3. echo \"ghp_your_token_here\" > .token${NC}"
-    echo -e "${YELLOW}   4. chmod 600 .token${NC}"
+    echo -e "${RED}❌ No token file found and GITHUB_PERSONAL_ACCESS_TOKEN not set${NC}"
+    echo -e "${YELLOW}📋 To create token file:${NC}"
+    echo -e "${YELLOW}   1. Generate GitHub token at: https://github.com/settings/tokens${NC}"
+    echo -e "${YELLOW}   2. Generate Perplexity token at: https://www.perplexity.ai/settings/api${NC}"
+    echo -e "${YELLOW}   3. Create ~/.token file with:${NC}"
+    echo -e "${YELLOW}      export GITHUB_TOKEN=\"ghp_your_github_token_here\"${NC}"
+    echo -e "${YELLOW}      export PERPLEXITY_API_KEY=\"pplx_your_perplexity_token_here\"${NC}"
+    echo -e "${YELLOW}   4. chmod 600 ~/.token${NC}"
     echo -e "${YELLOW}   5. Re-run this script${NC}"
     echo ""
     echo -e "${RED}❌ Aborting to avoid unauthenticated execution${NC}"
-    log_with_timestamp "ERROR: No GitHub token found, aborting for security"
+    log_with_timestamp "ERROR: No tokens found, aborting for security"
     exit 1
 fi
 
@@ -350,7 +379,7 @@ echo ""
 # Core MCP Servers Installation
 echo -e "${BLUE}📊 Installing Core MCP Servers...${NC}"
 
-echo -e "\n${BLUE}1/7 Setting up GitHub MCP Server (Official Remote)...${NC}"
+echo -e "\n${BLUE}1/9 Setting up GitHub MCP Server (Official Remote)...${NC}"
 # GitHub released a new official MCP server that replaces @modelcontextprotocol/server-github
 # The new server is HTTP-based and hosted by GitHub for better reliability and features
 echo -e "${BLUE}🔧 Setting up github-server (NEW Official Remote HTTP Server)...${NC}"
@@ -386,10 +415,10 @@ else
     fi
 fi
 
-echo -e "\n${BLUE}2/7 Setting up Sequential Thinking MCP Server...${NC}"
+echo -e "\n${BLUE}2/9 Setting up Sequential Thinking MCP Server...${NC}"
 add_mcp_server "sequential-thinking" "@modelcontextprotocol/server-sequential-thinking"
 
-echo -e "\n${BLUE}3/7 Setting up Memory MCP Server...${NC}"
+echo -e "\n${BLUE}3/9 Setting up Memory MCP Server...${NC}"
 # Create memory data directory in user's home
 mkdir -p ~/.cache/mcp-memory
 echo -e "${BLUE}  📁 Memory data directory: ~/.cache/mcp-memory/${NC}"
@@ -439,17 +468,60 @@ EOF
     fi
 fi
 
-echo -e "\n${BLUE}4/7 Setting up Puppeteer MCP Server...${NC}"
+echo -e "\n${BLUE}4/9 Setting up Puppeteer MCP Server...${NC}"
 add_mcp_server "puppeteer-server" "@modelcontextprotocol/server-puppeteer"
 
-echo -e "\n${BLUE}5/7 Setting up Context7 MCP Server...${NC}"
+echo -e "\n${BLUE}5/9 Setting up Context7 MCP Server...${NC}"
 add_mcp_server "context7" "@upstash/context7-mcp"
 
-echo -e "\n${BLUE}6/7 Setting up Gemini CLI MCP Server...${NC}"
+echo -e "\n${BLUE}6/9 Setting up Gemini CLI MCP Server...${NC}"
 add_mcp_server "gemini-cli-mcp" "@yusukedev/gemini-cli-mcp"
 
+echo -e "\n${BLUE}7/9 Setting up Web Search MCP Servers...${NC}"
+echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
+
+# Remove existing web search servers to avoid conflicts
+claude mcp remove "web-search-duckduckgo" >/dev/null 2>&1 || true
+claude mcp remove "perplexity-ask" >/dev/null 2>&1 || true
+claude mcp remove "ddg-search" >/dev/null 2>&1 || true
+
+# Install DuckDuckGo search server (free, no API key)
+echo -e "\n${BLUE}  7a/9 DuckDuckGo Web Search (Free)...${NC}"
+echo -e "${GREEN}✅ DuckDuckGo search - completely free, no API key needed${NC}"
+echo -e "${BLUE}📋 Features: Web search, content fetching, privacy-focused${NC}"
+add_mcp_server "ddg-search" "@oevortex/ddg_search"
+
+# Install Perplexity search server (premium, requires API key)
+echo -e "\n${BLUE}  7b/9 Perplexity AI Search (Premium)...${NC}"
+if [ -n "$PERPLEXITY_API_KEY" ]; then
+    echo -e "${GREEN}✅ Perplexity API key found - installing premium search server${NC}"
+    echo -e "${BLUE}📋 Features: AI-powered search, real-time web research, advanced queries${NC}"
+    
+    # Add Perplexity server with API key
+    echo -e "${BLUE}    🔧 Installing Perplexity search server...${NC}"
+    add_output=$(claude mcp add --scope user "perplexity-ask" "npx" "server-perplexity-ask" --env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY" 2>&1)
+    add_exit_code=$?
+    
+    if [ $add_exit_code -eq 0 ]; then
+        echo -e "${GREEN}    ✅ Successfully added Perplexity search server${NC}"
+        log_with_timestamp "Successfully added Perplexity search server with API key"
+        INSTALL_RESULTS["perplexity-ask"]="SUCCESS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+    else
+        echo -e "${RED}    ❌ Failed to add Perplexity search server${NC}"
+        log_error_details "claude mcp add perplexity" "perplexity-ask" "$add_output"
+        INSTALL_RESULTS["perplexity-ask"]="ADD_FAILED"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+    fi
+else
+    echo -e "${YELLOW}⚠️ Perplexity API key not found - skipping premium server${NC}"
+    echo -e "${YELLOW}💡 Perplexity server provides AI-powered search with real-time web research${NC}"
+    echo -e "${YELLOW}💡 Add PERPLEXITY_API_KEY to ~/.token file to enable${NC}"
+    log_with_timestamp "Perplexity API key not found, skipping premium server installation"
+fi
+
 # Optional: Notion Server (if available)
-echo -e "\n${BLUE}7/7 Checking for Notion MCP Server...${NC}"
+echo -e "\n${BLUE}8/9 Checking for Notion MCP Server...${NC}"
 if package_exists "@notionhq/notion-mcp-server"; then
     add_mcp_server "notion-server" "@notionhq/notion-mcp-server"
 elif package_exists "@makenotion/notion-mcp-server"; then
