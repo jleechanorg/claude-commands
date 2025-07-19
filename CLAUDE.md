@@ -301,6 +301,15 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - ✅ Understand component responsibilities before modifying existing files
 - ✅ Consider impact on related components when making changes
 
+### 🚨 Repository Architecture Separation (CRITICAL)
+Dedicated repositories for specialized functions work better than mixed-content.
+
+- ✅ **Pattern**: Specialized systems → Dedicated repositories (memory backups, automation tools)
+- ✅ **Benefits**: Simplified workflows, focused automation, cleaner git history, specialized access control
+- 🔍 **Evidence**: Memory backup migration from mixed-content to dedicated repo improved automation and maintenance
+- **Application**: Memory backups, specialized tools, automated systems, CI/CD infrastructure
+- **Key**: Clean separation enables better automation and reduces main project complexity
+
 ### Browser vs HTTP Testing (🚨 HARD RULE)
 **CRITICAL DISTINCTION**: Never confuse browser automation with HTTP simulation
 - 🚨 **testing_ui/**: ONLY real browser automation using **Puppeteer MCP** (default) or Playwright | ❌ NEVER use `requests` library here
@@ -392,8 +401,13 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 1. **Python venv**: Verify activated before running Python/tests | If missing/corrupted → `VENV_SETUP.md`
 2. **Robust Scripts**: Make idempotent, work from any subdirectory
-3. **Python Execution**: ✅ Run from project root | ❌ cd into subdirs
-4. **vpython Tests**: 
+3. **Automation Setup Scripts**: Single setup script with validation, logging, health checks for production systems
+   - ✅ **Pattern**: Prerequisites check → Logging setup → Service configuration → Validation → Health check
+   - ✅ **Features**: Error handling, rollback capability, status reporting, documentation
+   - 🔍 **Evidence**: setup_automation.sh successfully deployed complete cron job + monitoring system
+   - **Application**: Cron jobs, service configuration, system initialization, deployment automation
+4. **Python Execution**: ✅ Run from project root | ❌ cd into subdirs
+5. **vpython Tests**: 
    - ⚠️ "run all tests" → `./run_tests.sh`
    - ⚠️ Test fails → fix immediately or ask user
    - ✅ `TESTING=true vpython mvp_site/test_file.py` (from root)
@@ -401,7 +415,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 6. 🚨 **NEVER SKIP TESTS WITHOUT EXPLICIT PERMISSION**: Fix failing tests or ask permission | No `@unittest.skip` without approval
 7. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
 8. **Web Scraping**: Use full-content tools (curl) not search snippets
-9. **Log Files Location**: 
+9. **Log Files Location**:
    - ✅ **Server logs are in `/tmp/worldarchitectai_logs/`** with subfolders/files named by branch
    - ✅ **Branch-specific logs**: `/tmp/worldarchitectai_logs/[branch-name].log`
    - ✅ **Current branch log**: `/tmp/worldarchitectai_logs/$(git branch --show-current).log`
