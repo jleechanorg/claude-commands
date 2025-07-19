@@ -117,14 +117,14 @@
 5. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
 7. 🚨 **DATE INTERPRETATION**: Environment date format is YYYY-MM-DD where MM is the month number (01=Jan, 07=July)
-8. 🚨 **BRANCH DISCIPLINE**: ❌ NEVER switch branches without explicit request | Verify context before ANY changes | Ask if ambiguous
+8. 🚨 **Branch Protocol**: → See "Git Workflow" section
 9. 🚨 **TOOL EXPLANATION VS EXECUTION**: ⚠️ MANDATORY distinction
    - ✅ When user asks "does X tool do Y?", clearly state if you're explaining or executing
    - ✅ If explaining capabilities, use "X tool CAN do Y" language
    - ✅ If actually executing, use the tool and show results
    - ❌ NEVER explain tool capabilities as if you executed them
    - ⚠️ Example: "The /learn command can save to memory" vs "Saving to memory now..."
-10. 🚨 **DEV BRANCH PROTECTION**: ❌ NEVER make changes in dev[timestamp] branches | These are protective branches only | Always create descriptive branches for actual work
+10. 🚨 **Dev Branch Protection**: → See "Git Workflow" section
 11. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
 12. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
    - **OPEN** = Work In Progress (WIP) - NOT completed
@@ -188,7 +188,7 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 Clarify before acting | User instructions = law | ❌ delete without permission | Leave working code alone |
 Focus on primary goal | Propose before implementing | Summarize key takeaways | Externalize all knowledge
 
-**Branch Protocol**: See top for mandatory header | ❌ Never switch without permission | Verify context before changes
+**Branch Protocol**: → See "Git Workflow" section
 
 **Response Modes**: Default = structured for complex | Direct for simple | Override: "be brief"
 
@@ -204,37 +204,19 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 **Red-Green Protocol** (`/tdd` or `/rg`):
 1. Write failing tests FIRST → 2. Confirm fail (red) → 3. Minimal code to pass (green) → 4. Refactor
 
-🚨 **Test Validation**: Verify PASS/FAIL detection | Test both paths | Output must match summary | Parse output, don't trust exit codes
-
-🚨 **TEST EXECUTION RULES**: 
-- ✅ Run tests before marking ANY task complete | Fix ALL failures - no partial success (146/147 = FAILURE)
-- ❌ NEVER claim "tests complete" without running them | NEVER skip/modify tests without permission
-- ⚠️ If dependencies missing, FULL STOP - report "Cannot complete - X not installed"
-- ✅ Only use ✅ after seeing actual PASS/FAIL results from real test execution
+🚨 **Testing Standards**: → See "Testing Protocol" section for complete rules
 
 ## Development Guidelines
 
 ### Code Standards
-- Treat existing code as template | String constants: module-level (>1x) or constants.py (cross-file)
-- **SOLID Principles**: Single Responsibility Principle (one reason to change), Open/Closed Principle
-- **DRY principle** | Defensive programming: `isinstance()` validation
+**Principles**: SOLID, DRY | **Templates**: Use existing code patterns | **Validation**: `isinstance()` checks
+**Constants**: Module-level (>1x) or constants.py (cross-file) | **Imports**: Module-level only, NO inline/try-except
 
-### 🚨 Enhanced Feature Compatibility Protocol
-**CRITICAL**: When implementing sophisticated architectures:
-- ✅ **ALWAYS audit existing integration points** for compatibility  
-- ✅ **ALWAYS update filtering logic** for new data formats
-- ✅ **ALWAYS test both object creation AND string conversion**
-- ❌ **NEVER assume legacy filters** will work with new reply formats
-- ❌ **NEVER use str() on complex objects** without verifying output format
-- 🔍 **Evidence**: Copilot infinite loop + object repr posting (July 2025)
-- **Code Duplication Prevention**: Check for existing similar code before writing new | Extract common patterns to utilities | Audit for unused CSS/imports
-- **🚨 ALWAYS REUSE CODE**: ❌ NEVER duplicate code blocks, especially data structures | ✅ Create constants/utilities for repeated patterns | ✅ Extract duplicate logic to functions | Pattern: Find duplication → Create constant/function → Replace all instances
-- **Constants Over Strings**: Use constants.py for repeated keys/values | Never hardcode 'session_header', 'planning_block' etc. | Module-level constants for >1x usage
-- **Extraction Methods**: Create utility functions for duplicate logic | Extract structured field operations | HTML generation helpers for repeated UI patterns
-- **Separation of Concerns**: Domain logic separate from data layer, utility functions isolated
-- **Import Organization**: All imports at file top, sorted (stdlib → third-party → local)
-- **No Inline Imports**: Never import inside functions/methods/classes
-- **No Temporary Comments**: Avoid comments like `🚨 CRITICAL FIX`, `TODO TEMPORARY`, `# FIXME`, `# HACK` | These indicate incomplete work | Code should be self-documenting | Use clear variable/function names instead | Example: Instead of `# TODO TEMPORARY - fix this later`, write proper error handling
+### Feature Compatibility
+**Critical**: Audit integration points | Update filters for new formats | Test object/string conversion
+**Always Reuse**: Check existing code | Extract patterns to utilities | No duplication
+**Organization**: Imports at top (stdlib → third-party → local) | Extract utilities | Separate concerns
+**No**: Inline imports, temp comments (TODO/FIXME), hardcoded strings | Use descriptive names
 
 ### Gemini SDK
 ✅ `from google import genai` | ✅ `client = genai.Client(api_key=api_key)`
@@ -252,34 +234,20 @@ Use docstrings, proper JS loading
 - ❌ NEVER expect developer tooling changes to affect website appearance
 - ✅ Production websites typically serve main branch only
 
-🚨 **"Website looks same" Protocol**: When user reports website unchanged after branch switch:
-1. ✅ Check PR description - what type of changes? (tooling vs UI)
-2. ✅ Ask: "What URL are you viewing?" (local vs production)
-3. ✅ Verify: User-facing changes or developer tooling improvements?
-4. ✅ For UI changes: Hard refresh (Ctrl+F5) + check local development server
-5. ✅ Explain: Branch switching ≠ deployment, many changes are non-visual
+🚨 **"Website looks same" Protocol**: Check PR type | Ask URL (local vs prod) | Hard refresh | Explain: branch ≠ deployment
 
-**Common Non-Visual Changes**: CI improvements, push scripts, test harnesses, developer tooling, backend APIs, database changes
-
-### Quality & Testing
-- File naming: descriptive, ❌ "red"/"green" | Methods <500 lines | Single responsibility
-- Integration tests: natural state, flexible assertions | Visual testing required
-- Dead code: use `vulture` | Test behavior not strings
-- 🚨 **Test Runner Validation**: When modifying test runners, MUST verify both PASS and FAIL detection | Create intentional failure case | Verify output matches actual result
-- 🚨 **Output Contradiction Check**: If output shows failure indicators (❌, FAILED, ERROR) but summary shows success (✅, PASSED), STOP immediately and investigate
-- ⚠️ **Test Exit Codes**: Don't assume test scripts return proper exit codes | Parse output for success/failure strings | Verify detection logic before trusting results
-- ⚠️ **Dynamic Test Discovery**: ❌ NEVER hardcode test file lists in scripts | ✅ Use `find` or glob patterns to discover tests automatically | Update test runners to scan directories (e.g., `find testing_ui -name "test_*.py"`)
+### Quality Standards
+**Files**: Descriptive names, <500 lines | **Tests**: Natural state, visual validation, dynamic discovery
+**Validation**: Verify PASS/FAIL detection | Parse output, don't trust exit codes | Stop on contradictions
 
 
-### 🚨 MANDATORY TEST EXECUTION
+### 🚨 Testing Protocol
 **Zero Tolerance**: Run ALL tests before completion | Fix ALL failures | No "pre-existing issues" excuse
-**Commands**: `./run_tests.sh` | `./run_ui_tests.sh mock` | `gh pr view` for checks
+**Commands**: `./run_tests.sh` | `./run_ui_tests.sh mock` | `gh pr view`
 **Protocol**: STOP → FIX → VERIFY → EVIDENCE → Complete
-
-### 🚨 TEST FIXING METHODOLOGY
-**One Issue at a Time**: Fix single issues | Run after each fix | Targeted changes only
-**Prefer Test Fixes**: Fix mocks/expectations over core logic | Verify function names exist
-**API Consistency**: Standardize error keys | Verify response formats match expectations
+**Validation**: Verify PASS/FAIL detection | Output must match summary | Parse output, don't trust exit codes
+**Methodology**: Fix one issue at a time | Run after each fix | Prefer test fixes over core logic
+**Rules**: ✅ Run before task completion | ❌ NEVER skip without permission | ✅ Only use ✅ after real results
 
 ### Safety & Security
 ❌ Global `document.addEventListener('click')` without approval | Test workflows after modifications |
@@ -292,30 +260,11 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - ✅ Ask user where to place new files before creating them
 - **Exception**: Only when user explicitly requests file creation in mvp_site/
 
-🚨 **CRITICAL: AVOID CREATING NEW TEST FILES AT ALL COSTS**
-- ✅ **ALWAYS add tests to existing test files** (e.g., test_firestore_service.py, test_main.py)
-- ✅ **Add new test classes** to existing files rather than creating new files
-- ✅ **Extend existing test classes** with new test methods when appropriate
-- ❌ **NEVER create test_new_feature.py** - add tests to test_existing_module.py instead
-- ❌ **NEVER create isolated test files** unless absolutely critical for CI/production
-- **Why**: Reduces file proliferation, maintains test organization, easier maintenance
-- **Pattern**: New feature → Add tests to corresponding existing test file
-- **Example**: Testing firestore changes → Add to test_firestore_service.py
+🚨 **Test File Policy**: Add to existing files, NEVER create new test files
+🚨 **Code Review**: Check README.md and CODE_REVIEW_SUMMARY.md before mvp_site/ changes
 
-🚨 **MANDATORY: Review codebase documentation before mvp_site/ changes**:
-- ✅ ALWAYS check `mvp_site/README.md` for architecture understanding
-- ✅ ALWAYS check `mvp_site/CODE_REVIEW_SUMMARY.md` for file responsibilities
-- ✅ Understand component responsibilities before modifying existing files
-- ✅ Consider impact on related components when making changes
-
-### 🚨 Repository Architecture Separation (CRITICAL)
-Dedicated repositories for specialized functions work better than mixed-content.
-
-- ✅ **Pattern**: Specialized systems → Dedicated repositories (memory backups, automation tools)
-- ✅ **Benefits**: Simplified workflows, focused automation, cleaner git history, specialized access control
-- 🔍 **Evidence**: Memory backup migration from mixed-content to dedicated repo improved automation and maintenance
-- **Application**: Memory backups, specialized tools, automated systems, CI/CD infrastructure
-- **Key**: Clean separation enables better automation and reduces main project complexity
+### Repository Separation
+**Pattern**: Specialized systems → Dedicated repos | **Benefits**: Cleaner automation, focused workflows
 
 ### Browser vs HTTP Testing (🚨 HARD RULE)
 **CRITICAL DISTINCTION**: Never confuse browser automation with HTTP simulation
@@ -383,27 +332,11 @@ Dedicated repositories for specialized functions work better than mixed-content.
 
 🚨 **PR Context Management**: Verify before creating PRs - Check git status | Ask which PR if ambiguous | Use existing branches
 
-🚨 **Branch Protection Rules**:
-- ❌ NEVER use dev[timestamp] branches for actual development
-- ✅ Create descriptive branches: `feature/task-description`, `fix/issue-name`, `update/component-name`
-- ✅ Auto-conflict resolution available: `./resolve_conflicts.sh`
+🚨 **Branch Protection**: ❌ NEVER switch without explicit request | ❌ NEVER use dev[timestamp] for development
+✅ Create descriptive branches | Verify context before changes | Ask if ambiguous
 
-🚨 **MERGE CONFLICT RESOLUTION PROTOCOL**: ⚠️ MANDATORY for all merge conflicts
-1. **Analyze Before Resolving**: Run `git show HEAD~1:file` and `git show main:file` to understand both versions
-2. **Critical File Assessment**: Is this a high-risk file? (CSS, main app logic, configs, schemas)
-3. **Impact Analysis**: What features/users depend on this file? What's the blast radius?
-4. **Preserve Functionality**: Default to preserving existing functionality, only add new features
-5. **Test Resolution**: Verify the merged result works before committing
-6. **Document Decision**: Log what was preserved vs. changed and why
-
-**🚨 CRITICAL FILES requiring extra care during conflicts:**
-- `mvp_site/static/style.css` - Main stylesheet affecting all UI
-- `mvp_site/main.py` - Core application logic
-- Configuration files, database schemas, authentication modules
-- Any file affecting user experience or system stability
-
-**❌ NEVER**: Accept conflict resolution without understanding what each side contains
-**✅ ALWAYS**: Understand the purpose and impact before choosing resolution strategy
+🚨 **Conflict Resolution**: Analyze both versions | Assess critical files | Test resolution | Document decisions
+**Critical Files**: CSS, main.py, configs, schemas | **Process**: `./resolve_conflicts.sh`
 
 **Commit Format**: → `.cursor/rules/examples.md`
 
@@ -421,8 +354,7 @@ Dedicated repositories for specialized functions work better than mixed-content.
    - ⚠️ "run all tests" → `./run_tests.sh`
    - ⚠️ Test fails → fix immediately or ask user
    - ✅ `TESTING=true vpython mvp_site/test_file.py` (from root)
-5. 🚨 **NEVER DISMISS FAILING TESTS**: ❌ "minor failures" or "test expectation updates" | ✅ Fix ALL failing tests systematically | Debug root cause | Real bugs vs test issues | One failure = potential systemic issue
-6. 🚨 **NEVER SKIP TESTS WITHOUT EXPLICIT PERMISSION**: Fix failing tests or ask permission | No `@unittest.skip` without approval
+5. 🚨 **Test Compliance**: → See "Testing Protocol" section
 7. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
 8. **Web Scraping**: Use full-content tools (curl) not search snippets
 9. **Log Files Location**:
@@ -506,57 +438,16 @@ Dedicated repositories for specialized functions work better than mixed-content.
 
 ## Slash Commands
 
-Use `/list` to display all available slash commands with descriptions.
+**Full Documentation**: → `.claude/commands/` | Use `/list` for available commands
 
-**Command Documentation**: → `.claude/commands/`
-
-### Universal Command Composition
-**ANY command combination works** via Claude's NLP - no hardcoded rules
-**Examples**: `/think /debug /weird` | `/mythical /dragon /optimize` | Any creative combo
-**How**: Meta-prompts leverage Claude's natural interpretation
-
-### /replicate
-**Purpose**: Analyze a GitHub PR and apply missing functionality to current branch
-**Usage**: `/replicate <PR_URL>` or `/replicate PR#123`
-**Phases**: PR analysis → diff extraction → smart merge → validation
-**Details**: → `.claude/commands/replicate.md`
-
-🚨 **SLASH COMMAND ENFORCEMENT**: 
-- `/e` or `/execute` MUST follow simplified protocol in `.claude/commands/execute.md`
-- NEVER treat `/e` as regular request - always use TodoWrite circuit breaker
-- MANDATORY: TodoWrite checklist → Present plan → Wait for approval → Execute
-- ❌ NEVER skip the TodoWrite circuit breaker
-
+### Critical Enforcement
 🚨 **EXECUTE CIRCUIT BREAKER**: `/e` or `/execute` → TodoWrite checklist MANDATORY
 - Context % | Complexity | Subagents? | Plan presented | Approval received
 - ❌ NEVER start work without approval | TodoWrite = safety protocol
 
-**Chained Commands Support**:
-- `/e /think` - Execute with light thinking mode (4 thoughts) enabled  
-- `/e /think ultra [task]` - Execute task with maximum thinking budget (12+ thoughts)
-- Commands can be chained with space separation
-- First command determines primary mode, subsequent commands modify behavior
-
-**Command Aliases**:
-- `/tddf` - Alias for `/4layer` (Test-Driven Development Four-layer protocol)
-- `/nb` - Alias for `/newbranch` (Create new branch from latest main)
-
-**Command Differentiation** (NOT aliases):
-- `/execute` or `/e` - Realistic implementation with optional subagents (no approval)
-- `/plan` - Same as `/execute` but with mandatory approval (requires TodoWrite circuit breaker)
-
-**Both commands use realistic execution with optional Task-based subagents when beneficial**
-
-⚠️ **UNIFIED /learn COMMAND**: Single consolidated command with Memory MCP integration
-   - ✅ **Command Consolidation**: ONE `/learn` command handles all learning functionality
-   - ✅ **Memory MCP Integration**: Persistent knowledge graph storage by default
-   - ✅ **No Variants**: Remove /learnmvp, /learn-enhanced, and other variant commands
-   - ✅ **Flexible Branching**: "Include in current PR" vs "Clean branch from main"
-   - ✅ **Duplicate Detection**: Search existing graph before creating new entities
-   - ✅ **Cross-Conversation Persistence**: Learnings survive beyond current session
-   - 🔍 Evidence: User said "i only want one /learn command and not some /learnmvp thing"
-
-**Command Examples**: → `.cursor/rules/examples.md`
+**Key Commands**: `/execute` (no approval) | `/plan` (requires approval) | `/replicate` (PR analysis)
+**Universal Composition**: ANY combination works via Claude's NLP
+**Unified Learning**: ONE `/learn` command with Memory MCP integration
 
 ## Special Protocols
 
@@ -575,12 +466,9 @@ Use `/list` to display all available slash commands with descriptions.
 - ✅ ALWAYS treat data corruption warnings as highest priority
 - 🔍 Evidence: CodeRabbit data loss warning prevented silent corruption in backup script
 
-### Import Rules (🚨 CRITICAL)
-**🚨 ZERO TOLERANCE**: ALL imports at module level only - NO inline imports, NO try/except, NO conditionals
-- ✅ **Top of module** after docstring | ❌ **NEVER inside functions/classes/try blocks**
-- ✅ Use `as` aliases for conflicts | ❌ No "handle missing dependencies" patterns
-- **Why**: Hides CI failures, breaks dependency management
-- **Rule**: Import the modules or fail. No "optional" imports with try/except patterns.
+### Import Protocol (🚨 CRITICAL)
+**Zero Tolerance**: Module-level only | No inline/try-except/conditionals | Use `as` for conflicts
+**Rule**: Import or fail - no "optional" patterns
 
 ### API Error Prevention (🚨)
 ❌ Print code/file content | ✅ Use file_path:line_number | Keep responses concise
