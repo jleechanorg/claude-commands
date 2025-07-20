@@ -86,13 +86,28 @@ mcp__github-server__create_pull_request_review(
 
 **Fallback Method - GitHub CLI:**
 ```bash
-# For inline comments (if MCP fails) - replace [PR_NUMBER] with actual number
-gh api repos/jleechanorg/worldarchitect.ai/pulls/[PR_NUMBER]/comments \
-  -f body="✅ FIXED: Applied your suggestion" \
-  -F in_reply_to="COMMENT_ID"
+# CORRECT: Create review with line-specific comments (if MCP fails)
+# 1. Create JSON file with review data
+cat > /tmp/review_response.json << 'EOF'
+{
+  "body": "✅ ADDRESSED: Applied all suggestions",
+  "event": "COMMENT", 
+  "comments": [
+    {
+      "path": "file.py",
+      "line": 123,
+      "body": "✅ FIXED: Applied your suggestion and updated the logic."
+    }
+  ]
+}
+EOF
 
-# For general PR comments
-gh pr comment [PR_NUMBER] --body "✅ ADDRESSED: All issues resolved"
+# 2. Submit the review
+gh api repos/jleechanorg/worldarchitect.ai/pulls/[PR_NUMBER]/reviews --input /tmp/review_response.json
+
+# WRONG: Don't use these (they create general comments, not line-specific):
+# gh pr comment [PR_NUMBER] --body "general response"
+# gh api .../pulls/[PR_NUMBER]/comments -f body="..." -F in_reply_to="ID"
 ```
 
 **Comment ID Reference**: Use `/tmp/copilot_pr_[PR_NUMBER]/comment_id_map.json` to find comment IDs

@@ -273,6 +273,21 @@ Use docstrings, proper JS loading
 ❌ Global `document.addEventListener('click')` without approval | Test workflows after modifications |
 Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Analysis + execution required
 
+### File Deletion Impact Protocol (🚨 CRITICAL)
+**Before deleting established files**: Run comprehensive reference search to avoid cascading cleanup
+- `grep -r "<filename>" .` for code references (replace "<filename>" with the actual term you're searching for)
+- `find . -name "*.md" -exec grep -l "<filename>" {} \;` for documentation (replace "<filename>" with the actual term you're searching for)  
+- Check: scripts, tests, configuration, imports, error messages, user guidance
+- **Budget 2-3x normal effort** for large file deletions due to cleanup cascade
+- **Evidence**: PR #722 required 36-file cleanup after deleting copilot.sh (695 lines)
+
+### Scope Management Protocol (⚠️ MANDATORY)  
+**Distinguish rewrite vs consolidation** to set proper effort expectations
+- **Consolidation**: Reorganizing existing functionality (preserve files, move/rename)
+- **Rewrite**: Replacing with new implementation (delete old, extensive cleanup needed)
+- ❌ NEVER use "consolidation" when you mean "rewrite" - causes scope underestimation
+- **Evidence**: PR #722 called "consolidation" but became Option 3 rewrite with extensive cleanup
+
 ### File Placement Rules (🚨 HARD RULE)
 🚨 **NEVER add new files directly to mvp_site/** without explicit user permission
 - ❌ NEVER create test files, documentation, or scripts directly in mvp_site/
