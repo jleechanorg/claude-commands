@@ -53,6 +53,9 @@ def get_available_commands():
             # Multi-agent & Orchestration
             "/orchestrate", "/orch", "/copilot", 
             
+            # Search & Research
+            "/perp",
+            
             # Comment Management
             "/commentr", "/commentreply",
             
@@ -98,6 +101,7 @@ def get_available_commands():
             "/newbranch": "Create new branch from latest main",
             "/review": "Process ALL PR comments systematically with tracking",
             "/replicate": "Analyze and replicate functionality from other PRs",
+            "/perp": "Multi-engine search across Claude, DuckDuckGo, and Perplexity with synthesized results",
             "/commentr": "Systematically address all GitHub PR comments with replies",
             "/commentreply": "Systematically address all GitHub PR comments with inline replies",
             "/context": "Show context usage percentage and breakdown",
