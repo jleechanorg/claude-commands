@@ -36,6 +36,15 @@
 - 🔍 Evidence: Recurring pattern of "PR: none" when user expects PR context to be tracked
 - ⚠️ This is a critical attention to detail compliance issue
 
+🚨 **COPILOT COMMAND AUTONOMOUS OPERATION**: ⚠️ MANDATORY
+- ✅ `/copilot` commands operate autonomously without user approval prompts
+- ✅ ALWAYS proceed with full analysis regardless of conflicts/issues detected  
+- ✅ Claude should automatically apply fixes and resolve issues without asking
+- ✅ Continue workflow through conflicts, CI failures, or other blockers
+- ❌ NEVER stop workflow for user confirmation during `/copilot` execution
+- ❌ No "proceed anyway?" or "continue with analysis?" prompts
+- **Purpose**: `/copilot` is designed for autonomous PR analysis and fixing
+
 ## Legend
 🚨 = CRITICAL | ⚠️ = MANDATORY | ✅ = Always/Do | ❌ = Never/Don't | → = See reference | PR = Pull Request
 
@@ -286,6 +295,13 @@ Use docstrings, proper JS loading
 **Zero Tolerance**: Run ALL tests before completion | Fix ALL failures | No "pre-existing issues" excuse
 **Commands**: `./run_tests.sh` | `./run_ui_tests.sh mock` | `gh pr view`
 **Protocol**: STOP → FIX → VERIFY → EVIDENCE → Complete
+
+🚨 **TEST WITH REAL CONFLICTS**: ⚠️ MANDATORY
+- ✅ ALWAYS test merge conflict detection with PRs that actually have conflicts
+- ✅ Use `gh pr view [PR] --json mergeable` to verify real conflict state before testing
+- ❌ NEVER assume conflict detection works based on testing with clean PRs only
+- 🔍 Evidence: PR #780 with real conflicts revealed false negative bug that clean PRs missed
+- **Why Critical**: Clean PRs won't expose detection failures - need real conflicts to validate
 **Validation**: Verify PASS/FAIL detection | Output must match summary | Parse output, don't trust exit codes
 **Methodology**: Fix one issue at a time | Run after each fix | Prefer test fixes over core logic
 **Rules**: ✅ Run before task completion | ❌ NEVER skip without permission | ✅ Only use ✅ after real results
@@ -297,7 +313,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 ### File Deletion Impact Protocol (🚨 CRITICAL)
 **Before deleting established files**: Run comprehensive reference search to avoid cascading cleanup
 - `grep -r "<filename>" .` for code references (replace "<filename>" with the actual term you're searching for)
-- `find . -name "*.md" -exec grep -l "<filename>" {} \;` for documentation (replace "<filename>" with the actual term you're searching for)  
+- `find . -name "*.md" -exec grep -l "<filename>" {} \;` for documentation (replace "<filename>" with the actual term you're searching for)
 - Check: scripts, tests, configuration, imports, error messages, user guidance
 - **Budget 2-3x normal effort** for large file deletions due to cleanup cascade
 - **Evidence**: PR #722 required 36-file cleanup after deleting copilot.sh (695 lines)
