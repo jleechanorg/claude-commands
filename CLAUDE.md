@@ -394,6 +394,15 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 🚨 **Conflict Resolution**: Analyze both versions | Assess critical files | Test resolution | Document decisions
 **Critical Files**: CSS, main.py, configs, schemas | **Process**: `./resolve_conflicts.sh`
 
+🚨 **COMMAND FAILURE TRANSPARENCY** (⚠️ MANDATORY): When user commands fail unexpectedly:
+   - ✅ Immediately explain what failed and why
+   - ✅ Show system messages/errors received  
+   - ✅ Explain resolution approach being taken
+   - ✅ Ask preference for alternatives (merge vs rebase, etc.)
+   - ❌ NEVER silently fix without explanation
+   - **Pattern**: Command fails > Explain > Show options > Get preference > Execute
+   - **Evidence**: Silent git merge resolution leads to "ignored comment" perception
+
 **Commit Format**: → `.cursor/rules/examples.md`
 
 ## Environment, Tooling & Scripts
