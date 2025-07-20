@@ -21,6 +21,7 @@ This document provides comprehensive documentation for all available slash comma
 **Key Commands**: `/execute` (no approval) | `/plan` (requires approval) | `/replicate` (PR analysis)
 **Universal Composition**: ANY combination works via Claude's NLP
 **Unified Learning**: ONE `/learn` command with Memory MCP integration
+**Memory Enhancement**: Commands `/think`, `/learn`, `/debug`, `/analyze`, `/fix` automatically integrate memory context (see CLAUDE.md)
 
 ## Command Architecture
 

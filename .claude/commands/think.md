@@ -25,6 +25,8 @@ Uses the `mcp__sequential-thinking__sequentialthinking` tool to:
 - Provide reasoning chains appropriate to the selected level
 - Handle multi-step solutions with context preservation
 
+**Memory Enhancement**: This command automatically searches memory context using Memory MCP for relevant past experiences, solutions, and insights to enhance reasoning quality. See CLAUDE.md Memory Enhancement Protocol for details.
+
 ## Examples
 
 ```

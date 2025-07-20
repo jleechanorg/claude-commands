@@ -172,6 +172,27 @@
    - ❌ NEVER wait for slash commands to complete when MCP tools can provide immediate results
    - ✅ **Pattern**: Try MCP first → Fall back to `gh` CLI → Slash commands are bonus, not dependency
    - Benefits: Immediate results, reliable API access, no command completion uncertainty
+16. 🚨 **MEMORY ENHANCEMENT PROTOCOL**: ⚠️ MANDATORY for specific commands
+- **Enhanced Commands**: `/think`, `/learn`, `/debug`, `/analyze`, `/fix`
+- **Execution Steps**:
+  1. ✅ **Extract key terms** from command arguments (entities, technical terms, PR references)
+  2. ✅ **Search Memory MCP**: Call `mcp__memory-server__search_nodes(query)` with extracted terms (MCP functions use double underscores as namespace separators)
+  3. ✅ **Log results**: Always show "🔍 Memory searched: X relevant memories found"
+  4. ✅ **Natural integration**: If memories found, incorporate context naturally into response
+  5. ❌ **Memory search is mandatory** for listed commands unless performance/availability exceptions apply (see constraints below)
+- **Transparency Requirements**:
+  - Show "🔍 Searching memory..." when search begins
+  - Report "📚 Found X relevant memories" or "💭 No relevant memories found"
+  - Indicate when response is enhanced: "📚 Enhanced with memory context"
+- **Performance Constraints**:
+  - Batch all terms into single search (not multiple calls)
+  - Skip if search would take >100ms with notice to user (100ms chosen as UX threshold for perceived instant response)
+  - Continue without enhancement if MCP unavailable (with notice)
+- **Integration Approach**:
+  - Use natural language understanding to weave context seamlessly
+  - Don't mechanically inject memory blocks
+  - Judge relevance using semantic understanding, not keyword matching
+  - Prioritize recent and relevant memories
 
 ### 🔧 GitHub MCP Setup
 **Token**: Set in `claude_mcp.sh` line ~247 via `export GITHUB_TOKEN="your_token_here"`
