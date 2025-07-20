@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Git header generator script
 # Usage: ./git-header.sh or git header (if aliased)
 # Works from any directory within a git repository or worktree
