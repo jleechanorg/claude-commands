@@ -24,7 +24,7 @@ NEW_BRANCH_MODE=false
 CUSTOM_BRANCH_NAME=""
 
 # First pass: look for --new-branch and get its optional value
-for i in "${!@}"; do
+for ((i=1; i<=$#; i++)); do
     if [[ "${!i}" == "--new-branch" ]]; then
         NEW_BRANCH_MODE=true
         echo "🌿 NEW BRANCH MODE: Will not delete current branch"
