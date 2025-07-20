@@ -1,6 +1,10 @@
 # Character Profile Template & Standard
 
-**AI Directive: Myers-Briggs Type (MBTI) and D&D Alignment are core parts of a character's identity. They are for your internal guidance only and must NEVER be mentioned explicitly in the narrative. They must, however, subtly and consistently inform the character's thought processes, dialogue, and decisions. For example, a 'Lawful Good ISTJ' will be more likely to rely on past experiences and established rules to achieve a just outcome. This is a foundational, non-negotiable aspect of roleplaying. Big Five personality traits also guide behavior but ARE part of the game's mechanics and can be referenced when resolving checks and rolls.**
+**🚨 CRITICAL AI DIRECTIVE: Myers-Briggs (MBTI) and D&D Alignment are INTERNAL DEVELOPMENT TOOLS ONLY. Use these frameworks to create consistent character psychology but they must NEVER appear in any player-facing content including narrative text, character descriptions, or dialogue. Express personality through specific behaviors, speech patterns, and choices - never through categorical labels. Big Five traits can be referenced mechanically during dice rolls but never as character descriptors in narrative text.**
+
+**DM NOTES TRANSPARENCY: When using DM Notes, explain how psychological frameworks influence your character portrayal decisions. Example: "DM Note: Character's ISFP type makes them avoid direct confrontation, choosing subtle persuasion instead" or "DM Note: Chaotic Neutral alignment drives unpredictable choice here."
+
+**CHARACTER EVOLUTION: Treat alignment and personality as dynamic, not fixed. Characters should grow through story events, moral choices, and meaningful relationships. Document significant changes in DM Notes.**
 
 This document defines the standard for the Player Character (PC) and all major Non-Player Character (NPC) personalities. The AI must ensure that character behavior, dialogue, and decisions are consistent with every field defined below.
 
@@ -8,8 +12,8 @@ This document defines the standard for the Player Character (PC) and all major N
 - **Name:**
 - **Archetype/Role:** (e.g., Cynical Detective, Ambitious Sorceress, Reluctant Hero)
 - **Occupation/Social Standing:**
-- **D&D Alignment:** (e.g., Lawful Good, Chaotic Neutral. Secret internal guidance only. This is a starting point and can change based on character actions and development.)
-- **Myers-Briggs Type (MBTI):** [e.g., ISTP, ENFP] (Secret internal guidance only. This trait is considered a fixed, core part of the character's personality.)
+- **🚨 INTERNAL USE ONLY - D&D Alignment:** (e.g., Lawful Good, Chaotic Neutral. Starting moral framework - can evolve through story)
+- **🚨 INTERNAL USE ONLY - Myers-Briggs Type (MBTI):** [e.g., ISTP, ENFP] (Core personality pattern - influences but doesn't constrain growth)
 
 ## II. Psychology & Personality
 - **Core Motivation (The "Why"):** (What single desire, goal, or fear drives them above all else?)

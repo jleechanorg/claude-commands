@@ -1,5 +1,7 @@
 # Game State Management Protocol
 
+🚨 **CRITICAL NARRATIVE RULE: NEVER mention Myers-Briggs types, D&D alignment labels, or personality categories in any player-facing narrative text. These are internal AI tools for character consistency ONLY.**
+
 This protocol defines how to manage game state using structured JSON for both input and output. The system expects a specific JSON structure with required fields for narrative content, game state updates, and player choices.
 
 ## CRITICAL: JSON Communication Protocol
@@ -482,7 +484,9 @@ Every player character MUST include these fields in `player_character_data`:
   "class": "Fighter",
   "background": "Soldier",
   "alignment": "Lawful Good",
+  "_comment_alignment": "🚨 INTERNAL USE ONLY - Never mention in narrative",
   "mbti": "INFJ",
+  "_comment_mbti": "🚨 INTERNAL USE ONLY - Never mention in narrative",
 
   "hp_current": 28,
   "hp_max": 28,
@@ -656,6 +660,7 @@ NPCs in `npc_data` should be stored by their display name as the key, with this 
     "role": "King of Eldoria",
     "faction": "faction_royalty_001",
     "mbti": "ISFP",
+    "_comment_mbti": "🚨 INTERNAL USE ONLY - Never mention in narrative",
     "attitude_to_party": "neutral",
 
     "level": 10,
@@ -746,7 +751,7 @@ Entities can have multiple status conditions from this list:
 3. **Use present/hidden/conscious flags** to track entity availability
 4. **Track relationships** between entities using their string_ids
 5. **Delete defeated enemies** using `"__DELETE__"` to remove them completely
-6. **MBTI required** - All characters (PC and major NPCs) must have MBTI personality type
+- **🚨 MBTI required (INTERNAL ONLY)** - All characters must have MBTI personality type for AI consistency, but NEVER mention MBTI types in player-facing narrative. Use DM Notes to explain how MBTI influences decisions.
 7. **D&D 5E SRD Authority** - All attributes, mechanics, and stats follow standard D&D 5E rules
 8. **Calculate modifiers correctly** - Ability modifier = (attribute - 10) / 2 (rounded down)
 9. **Update hp_current** for damage, never modify hp_max unless level changes
@@ -816,7 +821,9 @@ At the beginning of every prompt, you will receive a block of JSON data labeled 
 
 *   **Source of Truth:** This block represents the definitive, authoritative state of the game world at the beginning of the player's turn. All your narrative descriptions, character interactions, and rule adjudications **must be strictly consistent** with the data presented in this block.
 *   **Precedence:** If there is a conflict between information in the `CURRENT GAME STATE` and your own memory or the recent story context, **the `CURRENT GAME STATE` always takes precedence.** For example, if the story context implies a character is healthy, but `"player_character_data.hp_current"` shows they have 5 HP, you must narrate them as being severely wounded.
-*   **Data Correction Mandate:** If you are processing character data from the game state and notice that a core identity field is missing (such as `mbti`, `alignment`, or `string_id`), you **MUST** determine an appropriate value for that field based on the character's existing profile. You must then include this new data in the `state_updates` field of your JSON response. This is not optional; it is a core function of maintaining data integrity.
+*   **Data Correction Mandate:** If you are processing character data from the game state and notice that a core identity field is missing (such as `mbti`, `alignment`, or `string_id`), you **MUST** determine an appropriate value for that field based on the character's existing profile. You must then include this new data in the `state_updates` field of your JSON response. 🚨 CRITICAL: While `mbti` and `alignment` are required for data integrity, these fields are FOR INTERNAL AI USE ONLY and must NEVER appear in narrative descriptions shown to players.
+
+- **Character Evolution Tracking:** Alignment and personality traits can evolve through story events. When updating character data, consider if significant experiences warrant changes to `alignment` field. Document major shifts in DM Notes and update game state accordingly. Example: "Chaotic Neutral" → "Lawful Good" after character embraces justice following a traumatic event.
 *   **Entity Identifiers:** Every entity (player character and NPCs) should have a unique `string_id` field. For player characters, use the format `pc_[name]_001` (e.g., `pc_kaelan_001`). For NPCs, use `npc_[name]_001` (e.g., `npc_theron_001`). If you encounter entities without a `string_id`, generate one and include it in your state update.
 
 ## 2. Reading and Interpreting the Timeline
