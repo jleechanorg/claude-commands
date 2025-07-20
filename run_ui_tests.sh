@@ -2,13 +2,14 @@
 
 # run_ui_tests.sh - Complete UI/Browser Test Runner for WorldArchitect.AI
 # This script handles all the setup and execution for browser tests
-# Usage: ./run_ui_tests.sh [mode] [--puppeteer]
+# Usage: ./run_ui_tests.sh [mode] [--playwright|--puppeteer]
 #   mode:
 #     mock        - Use mock implementations for BOTH Firebase and Gemini
 #     mock-gemini - Use mock Gemini but REAL Firebase (default for cost savings)
 #     real        - Use REAL implementations for both services (costs money!)
 #   
-#   --puppeteer   - Use Puppeteer MCP instead of Playwright (requires Claude Code CLI)
+#   --playwright  - Use Playwright MCP (default, AI-optimized)
+#   --puppeteer   - Use Puppeteer MCP for Chrome-specific testing (requires Claude Code CLI)
 #   
 # Default (no argument): mock-gemini mode
 
@@ -17,12 +18,19 @@ set -e  # Exit on any error
 # Parse arguments
 MODE=""
 USE_PUPPETEER=false
+USE_PLAYWRIGHT=false
 
 # Refactored argument parsing for correctness
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --playwright)
+            USE_PLAYWRIGHT=true
+            USE_PUPPETEER=false
+            shift
+            ;;
         --puppeteer)
             USE_PUPPETEER=true
+            USE_PLAYWRIGHT=false
             shift
             ;;
         *)
@@ -67,11 +75,12 @@ case "$MODE" in
         ;;
     *)
         echo "❌ Invalid mode: $MODE"
-        echo "Usage: $0 [mock|mock-gemini|real] [--puppeteer]"
+        echo "Usage: $0 [mock|mock-gemini|real] [--playwright|--puppeteer]"
         echo "  mock        - Mock both Firebase and Gemini"
         echo "  mock-gemini - Mock Gemini, use real Firebase (default)"
         echo "  real        - Use real APIs for everything"
-        echo "  --puppeteer - Use Puppeteer MCP instead of Playwright"
+        echo "  --playwright - Use Playwright MCP (default)"
+        echo "  --puppeteer - Use Puppeteer MCP for Chrome-specific testing"
         exit 1
         ;;
 esac

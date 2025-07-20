@@ -1,13 +1,18 @@
 # Browser Tests (Mock) Command
 
-**Purpose**: Run REAL browser tests with mock APIs using Puppeteer MCP by default
+**Purpose**: Run REAL browser tests with mock APIs using Playwright MCP by default
 
-**Action**: Execute browser automation tests using Puppeteer MCP (preferred) or Playwright fallback
+**Action**: Execute browser automation tests using Playwright MCP (preferred) or Puppeteer MCP secondary
 
 **Usage**: `/testui [mode]`
 
-**Default Action in Claude Code CLI**: Run with Puppeteer MCP for optimal integration:
+**Default Action in Claude Code CLI**: Run with Playwright MCP for optimal AI-driven automation:
 
+```bash
+./run_ui_tests.sh mock --playwright
+```
+
+**Secondary**: For Chrome-specific testing, use Puppeteer MCP:
 ```bash
 ./run_ui_tests.sh mock --puppeteer
 ```

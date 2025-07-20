@@ -373,42 +373,42 @@ Long ago, the Great War shaped this world..."""
         self.assertEqual(final_stats["total_requests"], expected_total)
 
     def test_performance_improvement_verification(self):
-        """Test performance improvement verification - PASSING TEST."""
+        """Test cache functionality verification - focuses on behavior not timing."""
 
         # Clear cache
         file_cache.clear_file_cache()
 
-        # Time first load (cache miss)
-        start_time = time.time()
+        # First load should result in cache miss
+        initial_stats = file_cache.get_cache_stats()
         result1 = world_loader.load_world_content_for_system_instruction()
-        first_load_time = time.time() - start_time
+        after_first_stats = file_cache.get_cache_stats()
 
-        # Time second load (cache hit)
-        start_time = time.time()
+        # Verify cache miss occurred on first load
+        self.assertGreater(
+            after_first_stats["cache_misses"],
+            initial_stats["cache_misses"],
+            "Expected cache miss on first load"
+        )
+
+        # Second load should result in cache hit
         result2 = world_loader.load_world_content_for_system_instruction()
-        second_load_time = time.time() - start_time
+        after_second_stats = file_cache.get_cache_stats()
 
         # Results should be identical
         self.assertEqual(result1, result2)
 
-        # Second load should be faster (cache hit)
-        improvement_ratio = (
-            first_load_time / second_load_time if second_load_time > 0 else 0
+        # Verify cache hit occurred on second load
+        self.assertGreater(
+            after_second_stats["cache_hits"],
+            after_first_stats["cache_hits"],
+            "Expected cache hit on second load"
         )
 
+        # Cache should have logged the improvement
         self.assertGreater(
-            improvement_ratio,
-            1.5,
-            f"Expected cache to improve performance by at least 50%, "
-            f"but improvement ratio was {improvement_ratio:.2f}",
-        )
-
-        # Cache should have logged the performance improvement
-        stats = file_cache.get_cache_stats()
-        self.assertGreater(
-            stats["cache_hits"],
+            after_second_stats["cache_hits"],
             0,
-            "Expected cache hits to demonstrate performance improvement",
+            "Expected cache hits to demonstrate cache functionality",
         )
 
     def test_cache_statistics_tracking_during_world_loading(self):

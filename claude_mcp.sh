@@ -444,16 +444,19 @@ EOF
     fi
 fi
 
-echo -e "\n${BLUE}4/9 Setting up Puppeteer MCP Server...${NC}"
+echo -e "\n${BLUE}4/9 Setting up Playwright MCP Server (Microsoft Official)...${NC}"
+add_mcp_server "playwright-mcp" "@playwright/mcp"
+
+echo -e "\n${BLUE}5/9 Setting up Puppeteer MCP Server (Legacy Support)...${NC}"
 add_mcp_server "puppeteer-server" "@modelcontextprotocol/server-puppeteer"
 
-echo -e "\n${BLUE}5/9 Setting up Context7 MCP Server...${NC}"
+echo -e "\n${BLUE}6/9 Setting up Context7 MCP Server...${NC}"
 add_mcp_server "context7" "@upstash/context7-mcp"
 
-echo -e "\n${BLUE}6/9 Setting up Gemini CLI MCP Server...${NC}"
+echo -e "\n${BLUE}7/9 Setting up Gemini CLI MCP Server...${NC}"
 add_mcp_server "gemini-cli-mcp" "@yusukedev/gemini-cli-mcp"
 
-echo -e "\n${BLUE}7/9 Setting up Web Search MCP Servers...${NC}"
+echo -e "\n${BLUE}8/9 Setting up Web Search MCP Servers...${NC}"
 echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
 
 # Remove existing web search servers to avoid conflicts
@@ -462,13 +465,13 @@ claude mcp remove "perplexity-ask" >/dev/null 2>&1 || true
 claude mcp remove "ddg-search" >/dev/null 2>&1 || true
 
 # Install DuckDuckGo search server (free, no API key)
-echo -e "\n${BLUE}  7a/9 DuckDuckGo Web Search (Free)...${NC}"
+echo -e "\n${BLUE}  8a/9 DuckDuckGo Web Search (Free)...${NC}"
 echo -e "${GREEN}✅ DuckDuckGo search - completely free, no API key needed${NC}"
 echo -e "${BLUE}📋 Features: Web search, content fetching, privacy-focused${NC}"
 add_mcp_server "ddg-search" "@oevortex/ddg_search"
 
 # Install Perplexity search server (premium, requires API key)
-echo -e "\n${BLUE}  7b/9 Perplexity AI Search (Premium)...${NC}"
+echo -e "\n${BLUE}  8b/9 Perplexity AI Search (Premium)...${NC}"
 if [ -n "$PERPLEXITY_API_KEY" ]; then
     echo -e "${GREEN}✅ Perplexity API key found - installing premium search server${NC}"
     echo -e "${BLUE}📋 Features: AI-powered search, real-time web research, advanced queries${NC}"
@@ -497,7 +500,7 @@ else
 fi
 
 # Optional: Notion Server (if available)
-echo -e "\n${BLUE}8/9 Checking for Notion MCP Server...${NC}"
+echo -e "\n${BLUE}9/9 Checking for Notion MCP Server...${NC}"
 if package_exists "@notionhq/notion-mcp-server"; then
     add_mcp_server "notion-server" "@notionhq/notion-mcp-server"
 elif package_exists "@makenotion/notion-mcp-server"; then
