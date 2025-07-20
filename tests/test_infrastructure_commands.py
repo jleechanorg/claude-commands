@@ -302,7 +302,7 @@ class TestEnhancedGitHubCommands(unittest.TestCase):
         os.path.dirname(__file__), "../claude_command_scripts/commands/push.sh"
     )
     COPILOT_SCRIPT_PATH = os.path.join(
-        os.path.dirname(__file__), "../claude_command_scripts/commands/copilot.sh"
+        os.path.dirname(__file__), "../.claude/commands/copilot.py"
     )
 
     def test_push_command_pr_health_check(self):
@@ -387,32 +387,32 @@ class TestEnhancedGitHubCommands(unittest.TestCase):
         # Verify copilot command exists
         self.assertTrue(
             os.path.exists(copilot_path),
-            "copilot.sh should exist in commands directory",
+            "copilot.py should exist in .claude/commands directory",
         )
         self.assertTrue(
-            os.access(copilot_path, os.X_OK), "copilot.sh should be executable"
+            os.access(copilot_path, os.R_OK), "copilot.py should be readable"
         )
 
-        # Test that key functions exist
+        # Test that key Python classes and methods exist
         with open(copilot_path) as f:
             content = f.read()
             self.assertIn(
-                "attempt_auto_fixes()",
+                "class PRDataCollector",
                 content,
-                "copilot.sh should contain attempt_auto_fixes function",
+                "copilot.py should contain PRDataCollector class",
             )
             self.assertIn(
-                "extract_bot_comments()",
+                "fetch_all_comments",
                 content,
-                "copilot.sh should contain extract_bot_comments function",
+                "copilot.py should contain fetch_all_comments method",
             )
             self.assertIn(
-                "--force-with-lease", content, "copilot.sh should use safe force push"
+                "if __name__ == \"__main__\"", content, "copilot.py should be executable as script"
             )
             self.assertIn(
-                "Applied $fixes_applied automatic fixes",
+                "GitHub MCP",
                 content,
-                "Should report number of applied fixes",
+                "Should reference GitHub MCP integration",
             )
 
 

@@ -334,7 +334,11 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 | **Post-Merge** | Check unpushed files | `git status` → follow-up PR if needed |
 | **Progress Track** | Scratchpad + JSON | `roadmap/scratchpad_[branch].md` + `tmp/milestone_*.json` |
 | **PR Testing** | Apply PRs locally | `gh pr checkout <PR#>` |
+<<<<<<< HEAD
+| **🚨 ROADMAP PROTECTION** | NO direct main updates | ❌ ALL roadmap changes via PR only |
+=======
 | **Roadmap Updates** | Always create PR | All files require PR workflow |
+>>>>>>> origin/main
 
 🚨 **No Main Push**: ✅ `git push origin HEAD:feature` | ❌ `git push origin main`
    - **ALL changes require PR**: Including roadmap files, documentation, everything
@@ -346,8 +350,34 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 🚨 **Branch Protection**: ❌ NEVER switch without explicit request | ❌ NEVER use dev[timestamp] for development
 ✅ Create descriptive branches | Verify context before changes | Ask if ambiguous
 
+<<<<<<< HEAD
+🚨 **ROADMAP UPDATE PROTECTION**: ⚠️ MANDATORY - ALL roadmap changes via PR
+- ❌ **NEVER push roadmap changes directly to main** - old exception removed
+- ✅ **ALWAYS create PR for roadmap updates** - ensures review and tracking
+- ✅ **Include roadmap updates in feature PRs** when updating related tasks
+- **Why**: Roadmap changes need review, tracking, and integration with development workflow
+- **Evidence**: Direct main pushes bypass review process and lose change tracking
+
+🚨 **MERGE CONFLICT RESOLUTION PROTOCOL**: ⚠️ MANDATORY for all merge conflicts
+1. **Analyze Before Resolving**: Run `git show HEAD~1:file` and `git show main:file` to understand both versions
+2. **Critical File Assessment**: Is this a high-risk file? (CSS, main app logic, configs, schemas)
+3. **Impact Analysis**: What features/users depend on this file? What's the blast radius?
+4. **Preserve Functionality**: Default to preserving existing functionality, only add new features
+5. **Test Resolution**: Verify the merged result works before committing
+6. **Document Decision**: Log what was preserved vs. changed and why
+
+**🚨 CRITICAL FILES requiring extra care during conflicts:**
+- `mvp_site/static/style.css` - Main stylesheet affecting all UI
+- `mvp_site/main.py` - Core application logic
+- Configuration files, database schemas, authentication modules
+- Any file affecting user experience or system stability
+
+**❌ NEVER**: Accept conflict resolution without understanding what each side contains
+**✅ ALWAYS**: Understand the purpose and impact before choosing resolution strategy
+=======
 🚨 **Conflict Resolution**: Analyze both versions | Assess critical files | Test resolution | Document decisions
 **Critical Files**: CSS, main.py, configs, schemas | **Process**: `./resolve_conflicts.sh`
+>>>>>>> origin/main
 
 **Commit Format**: → `.cursor/rules/examples.md`
 

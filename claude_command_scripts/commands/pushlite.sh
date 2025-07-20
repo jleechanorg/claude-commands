@@ -206,6 +206,67 @@ if [[ $untracked_count -gt 0 ]]; then
     done
 fi
 
+# Handle modified files if present (not staged)
+if [[ $modified_count -gt 0 ]]; then
+    echo -e "\n${YELLOW}📝 Modified Files Found:${NC}"
+    echo "$modified_files" | head -20
+    if [[ $modified_count -gt 20 ]]; then
+        echo "... and $((modified_count - 20)) more files"
+    fi
+    
+    echo -e "\n${YELLOW}Options:${NC}"
+    echo "  [1] Add and commit all modified files"
+    echo "  [2] Continue without committing (push existing commits only)"
+    echo "  [3] Cancel push operation"
+    echo ""
+    
+    while true; do
+        read -p "Choose option [1-3]: " -n 1 -r choice
+        echo
+        
+        case "$choice" in
+            1)
+                echo -e "${BLUE}📝 Adding all modified files...${NC}"
+                git add .
+                
+                # Suggest commit message based on files
+                commit_msg="Update modified files"
+                if echo "$modified_files" | grep -q "\.md$"; then
+                    commit_msg="Update documentation"
+                elif echo "$modified_files" | grep -q "\.py$"; then
+                    commit_msg="Update Python implementation"
+                elif echo "$modified_files" | grep -q "\.sh$"; then
+                    commit_msg="Update scripts"
+                elif echo "$modified_files" | grep -q "copilot"; then
+                    commit_msg="Update copilot implementation"
+                fi
+                
+                echo "Suggested commit message: $commit_msg"
+                read -p "Enter commit message (or press Enter to use suggestion): " user_msg
+                if [[ -n "$user_msg" ]]; then
+                    commit_msg="$user_msg"
+                fi
+                
+                git commit -m "$commit_msg"
+                echo -e "${GREEN}✅ Modified files committed${NC}"
+                break
+                ;;
+            2)
+                echo -e "${BLUE}ℹ️ Continuing with existing commits only${NC}"
+                break
+                ;;
+            3)
+                echo -e "${RED}❌ Push cancelled${NC}"
+                exit 0
+                ;;
+            *)
+                echo "Invalid choice. Please select 1-3."
+                continue
+                ;;
+        esac
+    done
+fi
+
 # Check if there are any commits to push
 commits_ahead=$(git rev-list --count @{upstream}..HEAD 2>/dev/null || echo "unknown")
 if [[ "$commits_ahead" == "0" ]]; then

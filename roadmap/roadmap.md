@@ -257,6 +257,16 @@
 ### Research & Future Items
 - **TASK-158** 🟡 MCP Instruction Compliance Tracking (3-4 hrs) - Fork Invariant MCP-scan for automatic CLAUDE.md rule enforcement and failure rate measurement
 - **HANDOFF-LEARN-MEMORY** 🟡 Integrate Memory MCP with /learn command (4 hrs) - PR #633 HANDOFF READY
+- **HANDOFF-REVIEWSUPER** 🟡 Implement /reviewsuper command for critical PR reviews (2-3 hrs) - PR #718 HANDOFF READY
+  - **Branch**: handoff-reviewsuper-command
+  - **Goal**: Replace positive PR reviews with critical architectural analysis
+  - **Files**: `roadmap/scratchpad_handoff_reviewsuper_command.md`, `.claude/commands/reviewsuper.md`
+  - **Focus**: Architecture flaws, security gaps, technical debt detection
+- **HANDOFF-COPILOT-CONSOLIDATION** 🟡 Consolidate copilot.sh and copilot.py (2-3 hrs) - PR #722 HANDOFF READY
+  - **Branch**: handoff-copilot-consolidation
+  - **Goal**: Unified entry point with shell orchestrating Python analysis
+  - **Files**: `roadmap/scratchpad_handoff_copilot_consolidation.md`, `copilot.sh`, `copilot.py`
+  - **Focus**: Shell operations + Python analysis with unified output
 - **MCP Integration**: Context7 and Sequential Thinking setup for Claude Code CLI
 - **Optimization Tools**: Traycer evaluation, Claude best practices research
 - **Advanced Features**: Demo site branch, advanced state exploration

@@ -501,7 +501,7 @@ check_pr_bot_comments() {
     
     if [[ $total_bot_comments -gt 0 ]]; then
         echo -e "${YELLOW}⚠️  $total_bot_comments bot comment(s) found${NC}"
-        echo "Consider running: ./claude_command_scripts/commands/copilot.sh $pr_number"
+        echo "Consider running: /copilot (or python3 .claude/commands/copilot.py $pr_number)"
         return 4  # Bot comments found
     else
         echo "✅ No pending bot comments"

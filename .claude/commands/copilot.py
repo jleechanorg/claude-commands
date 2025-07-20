@@ -1,1420 +1,408 @@
 #!/usr/bin/env python3
 """
-GitHub Copilot Comments Command - Python Implementation
+GitHub Copilot PR Analysis - Option 3 Implementation
+====================================================
 
-Deterministic command that analyzes GitHub Copilot comments and automatically
-pushes fixes to GitHub after making changes.
+Comprehensive PR cleanup - collects data, runs CI in parallel, then hands off to LLM.
+Integrates comment fetching and CI checks, then provides structured data for LLM analysis.
+
+Architecture: Python (data collection + CI) → LLM (analysis + fixes + replies)
 """
 
 import json
 import os
-import subprocess  # nosec B404
+import subprocess
 import sys
 import time
-from datetime import datetime, timezone
-from typing import Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict, List, Optional
 
-# Import linting utilities
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from lint_utils import run_lint_check, should_run_linting
-
-# Import modular architecture components (required - fail if missing)
-from copilot_analyzer import CopilotAnalyzer
-from copilot_implementer import CopilotImplementer
-from copilot_verifier import CopilotVerifier
-from copilot_reporter import CopilotReporter
-from copilot_safety import SafetyChecker
-
-MODULAR_ARCHITECTURE_AVAILABLE = True
+# Import the comment fetcher directly (now in same directory)
+from copilot_comment_fetch import CommentFetcher
 
 
-class GitHubCopilotProcessor:
-    """Processes GitHub Copilot comments with deterministic behavior and auto-push."""
-
-    def __init__(self, pr_number: str | None = None, monitor_mode: bool = False):
-        self.pr_number = pr_number
-        self.current_branch: str | None = None
-        self.changes_made = False
-        self.monitor_mode = monitor_mode  # New: monitor mode prevents auto-edits
-        self.push_to_github = not monitor_mode  # Don't push in monitor mode by default
-        self.comments_analyzed: list[str] = []
-        self.fixes_applied: list[str] = []
-        self.warnings_found: list[str] = []  # Track warnings found in monitor mode
-        self.replies_posted: list[int] = []  # Track replies posted to avoid duplicates
-        self.repo_owner, self.repo_name = self._get_repo_info()
-        self.api_delay = 2  # Delay between API calls to avoid rate limiting
-        self.max_retries = 3  # Maximum retries for failed API calls
+class CopilotDataCollector:
+    """Collects all PR data and CI status in parallel for LLM analysis."""
+    
+    def __init__(self, pr_number: Optional[str] = None):
+        """Initialize with optional PR number (auto-detects if None)."""
+        self.pr_number = pr_number or self._detect_pr_number()
+        self.repo = self._get_repo_info()
+        self.start_time = time.time()
+        self.data_dir = f"/tmp/copilot_pr_{self.pr_number}"
+        self.ci_result = "UNKNOWN"
         
-        # Initialize modular architecture components (required)
-        self.analyzer = CopilotAnalyzer()
-        self.implementer = CopilotImplementer()
-        self.verifier = CopilotVerifier()
-        self.reporter = CopilotReporter()
-        self.safety_checker = SafetyChecker()
-
-    def _get_repo_info(self) -> tuple[str, str]:
-        """Get repository owner and name from git remote."""
+        # Create data directory
+        os.makedirs(self.data_dir, exist_ok=True)
+        
+        print(f"🤖 GitHub Copilot PR Analyzer (Option 3)")
+        print(f"=========================================")
+        print(f"PR #{self.pr_number} | Repository: {self.repo}")
+        print(f"Data directory: {self.data_dir}")
+    
+    def _detect_pr_number(self) -> str:
+        """Auto-detect PR number from current branch."""
+        try:
+            current_branch = subprocess.run(
+                ["git", "branch", "--show-current"],
+                capture_output=True, text=True, check=True
+            ).stdout.strip()
+            
+            pr_info = subprocess.run(
+                ["gh", "pr", "list", "--head", current_branch, "--json", "number", "--limit", "1"],
+                capture_output=True, text=True, check=True
+            ).stdout.strip()
+            
+            if pr_info and pr_info != "[]":
+                pr_data = json.loads(pr_info)
+                if pr_data:
+                    return str(pr_data[0]["number"])
+        except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError, IndexError):
+            pass
+        
+        print("❌ No PR found for current branch and no PR number provided")
+        print("Usage: /copilot [PR_NUMBER]")
+        sys.exit(1)
+    
+    def _get_repo_info(self) -> str:
+        """Get repository information."""
         try:
             result = subprocess.run(
                 ["gh", "repo", "view", "--json", "owner,name"],
-                capture_output=True,
-                text=True,
-                check=True,
+                capture_output=True, text=True, check=True
             )
-            data = json.loads(result.stdout)
-            return data["owner"]["login"], data["name"]
-        except (subprocess.CalledProcessError, json.JSONDecodeError):
-            # Fallback to environment variables or defaults
-            return (
-                os.environ.get("GITHUB_REPO_OWNER", "jleechan2015"),
-                os.environ.get("GITHUB_REPO_NAME", "worldarchitect.ai"),
-            )
-
-    def get_current_branch(self) -> str:
-        """Get current git branch."""
-        try:
-            result = subprocess.run(
-                ["git", "branch", "--show-current"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            self.current_branch = result.stdout.strip()
-            return self.current_branch
-        except subprocess.CalledProcessError:
-            return "unknown"
-
-    def get_pr_number(self) -> str | None:
-        """Auto-detect PR number from current branch if not provided."""
-        if self.pr_number:
-            return self.pr_number
-
-        try:
-            # Get PR for current branch
-            result = subprocess.run(
-                ["gh", "pr", "list", "--head", self.current_branch, "--json", "number"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-
-            prs = json.loads(result.stdout)
-            if prs:
-                self.pr_number = str(prs[0]["number"])
-                return self.pr_number
-        except (subprocess.CalledProcessError, json.JSONDecodeError):
-            pass
-
-        return None
-
-    def _make_api_call(
-        self, cmd: list[str], description: str, retries: int = 0
-    ) -> str | None:
-        """Make a GitHub API call with rate limiting and error handling."""
-        try:
-            # Add delay between API calls to avoid rate limiting
-            if retries == 0:
-                time.sleep(self.api_delay)
-
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return result.stdout
-        except subprocess.CalledProcessError as e:
-            stderr_str = (
-                e.stderr.decode() if hasattr(e.stderr, "decode") else str(e.stderr)
-            )
-            if "rate limit" in stderr_str or "abuse" in stderr_str:
-                if retries < self.max_retries:
-                    delay = (2**retries) * 5  # Exponential backoff: 5s, 10s, 20s
-                    print(
-                        f"⚠️ Rate limit hit for {description}, retrying in {delay}s..."
-                    )
-                    time.sleep(delay)
-                    return self._make_api_call(cmd, description, retries + 1)
-                print(f"❌ Max retries exceeded for {description}")
-            else:
-                print(f"❌ API call failed for {description}: {stderr_str}")
-            return None
-        except Exception as e:
-            print(f"❌ Unexpected error for {description}: {e}")
-            return None
-
-    def extract_all_comments(self) -> list[dict[str, Any]]:
-        """Extract ALL GitHub comments including Copilot, CodeRabbit, and user comments.
-
-        Returns comments sorted by creation date (most recent first).
-        """
-        if not self.pr_number:
-            return []
-
-        all_comments = []
-
-        # Get inline review comments (includes Copilot suggestions) with pagination
-        print("🔍 Fetching inline review comments...")
-        inline_result = self._make_api_call(
-            [
-                "gh",
-                "api",
-                f"repos/{self.repo_owner}/{self.repo_name}/pulls/{self.pr_number}/comments",
-                "--paginate",
-            ],
-            "inline review comments",
-        )
-
-        if inline_result:
-            try:
-                inline_comments = json.loads(inline_result)
-                print(f"✅ Found {len(inline_comments)} inline review comments")
-                for comment in inline_comments:
-                    all_comments.append(
-                        {
-                            "type": "inline",
-                            "id": comment.get("id", 0),
-                            "user": comment.get("user", {}).get("login", "unknown"),
-                            "body": comment.get("body", ""),
-                            "path": comment.get("path", ""),
-                            "line": comment.get("line", 0),
-                            "position": comment.get("position", 0),
-                            "created_at": comment.get("created_at", ""),
-                            "html_url": comment.get("html_url", ""),
-                        }
-                    )
-            except json.JSONDecodeError:
-                print("❌ Failed to parse inline comments JSON")
-
-        # Get general PR comments
-        print("🔍 Fetching general PR comments...")
-        general_result = self._make_api_call(
-            ["gh", "pr", "view", self.pr_number, "--json", "comments"],
-            "general PR comments",
-        )
-
-        if general_result:
-            try:
-                pr_data = json.loads(general_result)
-                general_comments = pr_data.get("comments", [])
-                print(f"✅ Found {len(general_comments)} general PR comments")
-                for comment in general_comments:
-                    all_comments.append(
-                        {
-                            "type": "general",
-                            "id": comment.get("id", 0),
-                            "user": comment.get("author", {}).get("login", "unknown"),
-                            "body": comment.get("body", ""),
-                            "created_at": comment.get("createdAt", ""),
-                            "html_url": comment.get("url", ""),
-                        }
-                    )
-            except json.JSONDecodeError:
-                print("❌ Failed to parse general comments JSON")
-
-        # Sort comments by creation date (most recent first)
-        # Handle both GitHub API date formats
-        def parse_date(date_str: str) -> datetime:
-            """Parse GitHub API date string to datetime object."""
-            if not date_str:
-                return datetime.min.replace(tzinfo=timezone.utc)
-            try:
-                # Remove timezone info and parse
-                if date_str.endswith("Z"):
-                    date_str = date_str[:-1]
-                if "+" in date_str:
-                    date_str = date_str.split("+")[0]
-                return datetime.fromisoformat(date_str.replace("T", " "))
-            except (ValueError, AttributeError):
-                return datetime.min.replace(tzinfo=timezone.utc)
-
-        all_comments.sort(
-            key=lambda x: parse_date(x.get("created_at", "")), reverse=True
-        )
-
-        return all_comments
-
-    def categorize_comments(
-        self, comments: list[dict[str, Any]]
-    ) -> dict[str, list[dict[str, Any]]]:
-        """Categorize comments by type and priority.
-
-        Comments are already sorted by creation date (most recent first) from extract_all_comments.
-        This method maintains that order within each category.
-        """
-        categorized: dict[str, list[dict[str, Any]]] = {
-            "copilot_suggestions": [],
-            "coderabbit_suggestions": [],
-            "user_comments": [],
-            "other_bot_comments": [],
-        }
-
-        for comment in comments:
-            user = comment.get("user", "").lower()
-
-            if "copilot" in user or "github-actions" in user:
-                categorized["copilot_suggestions"].append(comment)
-            elif "coderabbit" in user:
-                categorized["coderabbit_suggestions"].append(comment)
-            elif "bot" in user:
-                categorized["other_bot_comments"].append(comment)
-            else:
-                categorized["user_comments"].append(comment)
-
-        # Each category now maintains most-recent-first order
-        return categorized
-
-    def analyze_test_status(self) -> dict[str, Any]:
-        """Analyze test status and failures."""
-        test_status: dict[str, Any] = {
-            "passing": True,
-            "failures": [],
-            "ci_status": "unknown",
-        }
-
-        # Check GitHub CI status
-        try:
-            result = subprocess.run(
-                ["gh", "pr", "view", self.pr_number, "--json", "statusCheckRollup"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-
-            pr_data = json.loads(result.stdout)
-            checks = pr_data.get("statusCheckRollup", [])
-
-            for check in checks:
-                if check.get("state") == "FAILURE":
-                    test_status["passing"] = False
-                    test_status["failures"].append(
-                        {
-                            "name": check.get("name", "unknown"),
-                            "status": check.get("state", "unknown"),
-                            "url": check.get("targetUrl", ""),
-                        }
-                    )
-        except (subprocess.CalledProcessError, json.JSONDecodeError):
-            pass
-
-        return test_status
-
-    def _generate_test_status_section(self, test_status: dict[str, Any]) -> list[str]:
-        """Generate test status section of report."""
-        report = []
-        report.append("📊 Test Status:")
-        if test_status["passing"]:
-            report.append("✅ All tests passing")
-        else:
-            report.append("❌ Test failures detected:")
-            for failure in test_status["failures"]:
-                report.append(f"  - {failure['name']}: {failure['status']}")
-        report.append("")
-        return report
-
-    def _generate_copilot_section(
-        self, categorized_comments: dict[str, list[dict[str, Any]]]
-    ) -> list[str]:
-        """Generate Copilot suggestions section of report."""
-        report = []
-        copilot_count = len(categorized_comments["copilot_suggestions"])
-        report.append(
-            f"🔧 GitHub Copilot Suggestions ({copilot_count}) - Most Recent First:"
-        )
-
-        if copilot_count > 0:
-            for i, comment in enumerate(
-                categorized_comments["copilot_suggestions"][:5], 1
-            ):
-                created_at = comment.get("created_at", "")[
-                    :10
-                ]  # Show just the date part
-                report.append(
-                    f"  {i}. [{created_at}] {comment.get('path', 'General')} - {comment.get('body', '')[:100]}..."
-                )
-        else:
-            report.append("  No Copilot suggestions found")
-        report.append("")
-        return report
-
-    def _generate_coderabbit_section(
-        self, categorized_comments: dict[str, list[dict[str, Any]]]
-    ) -> list[str]:
-        """Generate CodeRabbit suggestions section of report."""
-        report = []
-        coderabbit_count = len(categorized_comments["coderabbit_suggestions"])
-        report.append(f"🐰 CodeRabbit Suggestions ({coderabbit_count}):")
-
-        if coderabbit_count > 0:
-            report.append("  CodeRabbit analysis available")
-        else:
-            report.append("  No CodeRabbit suggestions found")
-        report.append("")
-        return report
-
-    def _generate_user_comments_section(
-        self, categorized_comments: dict[str, list[dict[str, Any]]]
-    ) -> list[str]:
-        """Generate user comments section of report."""
-        report = []
-        user_count = len(categorized_comments["user_comments"])
-        report.append(f"👤 User Comments ({user_count}):")
-
-        if user_count > 0:
-            for comment in categorized_comments["user_comments"]:
-                report.append(
-                    f"  - {comment.get('user', 'Unknown')}: {comment.get('body', '')[:100]}..."
-                )
-        else:
-            report.append("  No user comments found")
-        report.append("")
-        return report
-
-    def _generate_mergeability_section(
-        self,
-        categorized_comments: dict[str, list[dict[str, Any]]],
-        test_status: dict[str, Any],
-    ) -> list[str]:
-        """Generate mergeability assessment section of report."""
-        report = []
-        copilot_count = len(categorized_comments["copilot_suggestions"])
-        report.append("🚀 Mergeability Assessment:")
-
-        if test_status["passing"] and copilot_count == 0:
-            report.append("✅ PR appears ready for merge")
-        else:
-            report.append("⚠️ Issues to address:")
-            if not test_status["passing"]:
-                report.append("  - Fix failing tests")
-            if copilot_count > 0:
-                report.append(f"  - Address {copilot_count} Copilot suggestions")
-
-        return report
-
-    def generate_analysis_report(
-        self,
-        categorized_comments: dict[str, list[dict[str, Any]]],
-        test_status: dict[str, Any],
-    ) -> str:
-        """Generate comprehensive analysis report."""
-        report = []
-        report.append("🤖 GitHub Copilot PR Analyzer Results:")
-        report.append("=" * 50)
-        report.append("")
-
-        # Generate each section
-        report.extend(self._generate_test_status_section(test_status))
-        report.extend(self._generate_copilot_section(categorized_comments))
-        report.extend(self._generate_coderabbit_section(categorized_comments))
-        report.extend(self._generate_user_comments_section(categorized_comments))
-        report.extend(
-            self._generate_mergeability_section(categorized_comments, test_status)
-        )
-
-        return "\n".join(report)
-
-    def analyze_suggestions(
-        self, categorized_comments: dict[str, list[dict[str, Any]]]
-    ) -> list[str]:
-        """Analyze suggestions for common issues (placeholder - would implement actual fixes)."""
-        suggestions_analyzed = []
-
-        # This is where actual analysis logic goes
-        # For now, just log that suggestions were analyzed
-
-        copilot_suggestions = categorized_comments["copilot_suggestions"]
-        for suggestion in copilot_suggestions:
-            # Analyze suggestion type and log analysis
-            # This is a simplified example - real implementation would parse suggestions
-            suggestions_analyzed.append(
-                f"Analyzed suggestion for {suggestion.get('path', 'unknown file')}"
-            )
-
-        return suggestions_analyzed
-
-    def commit_changes(self, suggestions_analyzed: list[str]) -> bool:
-        """Commit changes if any were made."""
-        if not suggestions_analyzed:
-            return False
-
-        try:
-            # Check if there are changes to commit
-            result = subprocess.run(
-                ["git", "status", "--porcelain"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-
-            if not result.stdout.strip():
-                return False  # No changes to commit
-
-            # Stage changes
-            subprocess.run(["git", "add", "."], check=True)
-
-            # Create commit message
-            commit_msg = f"Fix GitHub Copilot suggestions for PR #{self.pr_number}\n\n"
-            commit_msg += "Analyzed suggestions:\n"
-            for analysis in suggestions_analyzed:
-                commit_msg += f"- {analysis}\n"
-            commit_msg += "\n🤖 Generated with [Claude Code](https://claude.ai/code)\n"
-            commit_msg += "Co-Authored-By: Claude <noreply@anthropic.com>"
-
-            # Commit
-            subprocess.run(["git", "commit", "-m", commit_msg], check=True)
-            self.changes_made = True
-            return True
-
-        except subprocess.CalledProcessError:
-            return False
-
-    def push_to_remote(self) -> bool:
-        """Push changes to GitHub remote."""
-        if not self.changes_made or not self.push_to_github:
-            return False
-
-        try:
-            # Push to remote
-            subprocess.run(["git", "push", "origin", "HEAD"], check=True)
-
-            # Verify push succeeded
-            result = subprocess.run(
-                ["git", "log", "--oneline", "-1"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-            last_commit = result.stdout.strip()
-
-            print(f"✅ Successfully pushed changes to GitHub: {last_commit}")
-            return True
-
-        except subprocess.CalledProcessError as e:
-            print(f"❌ Failed to push to GitHub: {e}")
-            return False
-
-    def check_existing_replies(self, comment_id: int) -> bool:
-        """Check if we've already replied to this comment."""
-        return comment_id in self.replies_posted
-
-    def analyze_comment_for_decision(
-        self, comment: dict[str, Any]
-    ) -> tuple[str, str, str]:
-        """Analyze comment and return (decision, reason, implementation_plan)."""
-        body = comment.get("body", "").lower()
-
-        # Security-related suggestions - generally accept
-        if any(
-            keyword in body
-            for keyword in ["security", "vulnerability", "injection", "xss", "sanitize"]
-        ):
-            return (
-                "ACCEPT",
-                "Security improvements are always high priority",
-                "Good suggestion for proper input validation and sanitization",
-            )
-
-        # Performance optimizations - generally accept if low effort
-        if any(
-            keyword in body
-            for keyword in ["performance", "optimization", "cache", "efficient"]
-        ):
-            return (
-                "ACCEPT",
-                "Performance improvements align with project goals",
-                "Valuable optimization suggestion worth considering",
-            )
-
-        # Test-related suggestions - generally accept
-        if any(
-            keyword in body for keyword in ["test", "assertion", "mock", "coverage"]
-        ):
-            return (
-                "ACCEPT",
-                "Better test coverage improves code quality",
-                "Good suggestion for enhancing test suite",
-            )
-
-        # Code style and formatting - accept if automated
-        if any(
-            keyword in body for keyword in ["style", "format", "lint", "import", "typo"]
-        ):
-            return (
-                "ACCEPT",
-                "Code style consistency is important",
-                "Good suggestion for formatting and style improvements",
-            )
-
-        # Documentation improvements - generally accept
-        if any(
-            keyword in body
-            for keyword in ["documentation", "docstring", "comment", "readme"]
-        ):
-            return (
-                "ACCEPT",
-                "Better documentation helps maintainability",
-                "Good suggestion for improving documentation",
-            )
-
-        # Complex refactoring suggestions - often decline
-        if any(
-            keyword in body
-            for keyword in ["refactor", "redesign", "architecture", "rewrite"]
-        ):
-            return (
-                "DECLINE",
-                "Complex refactoring is outside current PR scope",
-                "Could consider for future refactoring PR",
-            )
-
-        # Async/await suggestions for Flask - decline
-        if (
-            any(keyword in body for keyword in ["async", "await", "asyncio"])
-            and "flask" in body
-        ):
-            return (
-                "DECLINE",
-                "Flask app uses synchronous architecture",
-                "Async conversion would require major refactor not justified for this fix",
-            )
-
-        # Breaking changes - generally decline
-        if any(
-            keyword in body for keyword in ["breaking", "deprecate", "remove", "delete"]
-        ):
-            return (
-                "DECLINE",
-                "Breaking changes require careful planning",
-                "Could track for future major version update",
-            )
-
-        # Dead code removal - accept if low risk
-        if any(keyword in body for keyword in ["dead code", "unused", "remove"]):
-            return (
-                "ACCEPT",
-                "Cleaning up unused code improves maintainability",
-                "Good suggestion for removing dead code safely",
-            )
-
-        # Error handling improvements - generally accept
-        if any(
-            keyword in body
-            for keyword in ["error", "exception", "handling", "try", "catch"]
-        ):
-            return (
-                "ACCEPT",
-                "Better error handling improves reliability",
-                "Good suggestion for proper error handling",
-            )
-
-        # Default: be honest about implementation status
-        return (
-            "ACKNOWLEDGE",
-            "Good suggestion but not implementing in this PR",
-            "Would require broader changes beyond current scope",
-        )
-
-    def format_reply_content(
-        self, comment: dict[str, Any], fix_status: str, details: str
-    ) -> str:
-        """Format reply content for GitHub comments using modular architecture."""
-        # Use modular architecture for sophisticated reply generation
-        try:
-            # Convert GitHub comment dict to Comment dataclass
-            from copilot_analyzer import Comment, CommentType
-            
-            # Determine comment type based on comment structure
-            user = comment.get("user", "")
-            if comment.get("type") == "inline":
-                comment_type = CommentType.INLINE
-            elif comment.get("type") == "review":
-                comment_type = CommentType.REVIEW
-            else:
-                comment_type = CommentType.GENERAL
-            
-            # Create Comment object
-            comment_obj = Comment(
-                id=str(comment.get("id", "")),
-                body=comment.get("body", ""),
-                user=user,
-                comment_type=comment_type,
-                file_path=comment.get("path") or comment.get("file"),
-                line_number=comment.get("line"),
-            )
-            
-            # Analyze comment with advanced categorization
-            analyzed_comment = self.analyzer.categorize_comment(comment_obj)
-            
-            # Generate appropriate response based on analysis
-            if analyzed_comment.implementability.value == "auto_fixable":
-                if not self.monitor_mode:
-                    # Attempt implementation
-                    response = self.reporter.generate_implemented_response(
-                        analyzed_comment, []  # Implementation results would go here
-                    )
-                    self.fixes_applied.append(f"Auto-fixed: {analyzed_comment.body[:50]}...")
-                else:
-                    # Monitor mode - just acknowledge
-                    response = self.reporter.generate_acknowledged_response(
-                        analyzed_comment, "Auto-fix available but monitor mode enabled"
-                    )
-                    self.warnings_found.append(f"Auto-fixable issue detected: {analyzed_comment.body[:50]}...")
-            elif analyzed_comment.implementability.value == "manual":
-                response = self.reporter.generate_acknowledged_response(
-                    analyzed_comment, "Good suggestion but requires manual implementation beyond current scope"
-                )
-            else:
-                response = self.reporter.generate_declined_response(
-                    analyzed_comment, "Not applicable or subjective feedback"
-                )
-            
-            # Extract response text from CommentResponse object
-            if hasattr(response, 'response_text'):
-                return response.response_text
-            elif hasattr(response, 'content'):
-                return response.content
-            else:
-                # Improved fallback with logging
-                print(f"⚠️  Warning: Response object missing expected attributes (response_text, content)")
-                print(f"   Response type: {type(response)}")
-                print(f"   Available attributes: {[attr for attr in dir(response) if not attr.startswith('_')]}")
-                
-                # Try to extract meaningful content from object
-                if hasattr(response, 'message'):
-                    return response.message
-                elif hasattr(response, 'text'):
-                    return response.text
-                elif hasattr(response, 'body'):
-                    return response.body
-                else:
-                    # Last resort: basic error message instead of object repr
-                    return "🔄 **ACKNOWLEDGED**: Comment acknowledged (automated response generation failed)"
-            
-        except Exception as e:
-            print(f"⚠️  Modular architecture failed: {e}, falling back to basic reply")
-            import traceback
-            traceback.print_exc()
-            # Fallback to basic implementation
-            return self._generate_basic_reply(comment, fix_status, details)
+            repo_info = json.loads(result.stdout)
+            return f"{repo_info['owner']['login']}/{repo_info['name']}"
+        except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError):
+            raise ValueError("Could not determine repository information")
     
-    def _generate_basic_reply(
-        self, comment: dict[str, Any], fix_status: str, details: str
-    ) -> str:
-        """Generate basic reply when modular architecture is unavailable."""
-        # Get intelligent decision analysis
-        decision, reason, implementation_plan = self.analyze_comment_for_decision(
-            comment
-        )
-
-        # Format response based on decision (honest, conservative responses)
-        if decision == "ACCEPT":
-            response = f"✅ **This is a good suggestion**\n\n**Reason**: {reason}\n\n**Note**: {implementation_plan}"
-        elif decision == "DECLINE":
-            response = f"❌ **I will not implement this**\n\n**Reason**: {reason}\n\n**Alternative**: {implementation_plan}"
-        elif decision == "ACKNOWLEDGE":
-            response = f"🔄 **ACKNOWLEDGED**: {reason}\n\n**Scope**: {implementation_plan}"
-        else:  # EVALUATE (legacy)
-            response = f"🔄 **I need to evaluate this further**\n\n**Reason**: {reason}\n\n**Next Steps**: {implementation_plan}"
-
-        # Add technical context for specific cases
-        body = comment.get("body", "").lower()
-        if "absolute path" in body:
-            response += "\n\n**Technical Context**: Hard-coded absolute paths reduce portability across environments. Using `os.path.join(os.path.dirname(__file__), '...')` ensures relative paths work correctly."
-
-        if "async" in body and "flask" in body:
-            response += "\n\n**Technical Context**: Flask applications use synchronous WSGI architecture. Converting to async would require FastAPI or similar async framework, which is beyond this PR's scope."
-
-        if "test" in body:
-            response += "\n\n**Technical Context**: Enhanced test coverage improves reliability and makes refactoring safer. Test improvements should be prioritized."
-
-        # Add original suggestion snippet for context
-        original_body = comment.get("body", "")
-        if original_body and len(original_body) > 50:
-            snippet = (
-                original_body[:100] + "..."
-                if len(original_body) > 100
-                else original_body
-            )
-            response += f"\n\n**Original Suggestion**:\n> {snippet}"
-
-        # Add footer
-        response += "\n\n_Automated response from [Claude Code](https://claude.ai/code) copilot analysis_"
-
-        return response
-
-    def verify_reply_posted(
-        self, original_comment_id: int, expected_reply_content: str
-    ) -> bool:
-        """Verify that a reply was actually posted to GitHub by querying the API."""
+    def _run_gh_command(self, command: List[str]) -> Optional[Dict]:
+        """Run GitHub CLI command and return parsed JSON."""
         try:
-            # Check both inline review comments AND general PR comments
-
-            # First check inline review comments (for code review comments)
-            result = subprocess.run(
-                [
-                    "gh",
-                    "api",
-                    f"repos/{self.repo_owner}/{self.repo_name}/pulls/{self.pr_number}/comments",
-                    "--paginate",
-                ],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-
-            comments = json.loads(result.stdout)
-
-            # Look for replies to the original comment in review comments
-            for comment in comments:
-                if comment.get("in_reply_to_id") == original_comment_id:
-                    reply_body = comment.get("body", "")
-                    if expected_reply_content[:50] in reply_body:
-                        reply_id = comment.get("id")
-                        print(
-                            f"✅ VERIFIED: Reply {reply_id} posted to comment {original_comment_id}"
-                        )
-                        return True
-
-            # Also check general PR comments (for discussion comments)
-            result = subprocess.run(
-                [
-                    "gh",
-                    "api",
-                    f"repos/{self.repo_owner}/{self.repo_name}/issues/{self.pr_number}/comments",
-                    "--paginate",
-                ],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-
-            comments = json.loads(result.stdout)
-
-            # Check if we just posted a new comment that contains our content
-            for comment in comments:
-                reply_body = comment.get("body", "")
-                if expected_reply_content[:50] in reply_body:
-                    # Check if this comment was posted very recently (last few seconds)
-                    created_at = comment.get("created_at", "")
-                    if created_at:
-                        reply_id = comment.get("id")
-                        print(f"✅ VERIFIED: Reply {reply_id} posted to PR comments")
-                        return True
-
-            print(
-                f"❌ VERIFICATION FAILED: No reply found for comment {original_comment_id}"
-            )
-            return False
-
+            result = subprocess.run(command, capture_output=True, text=True, check=True)
+            if not result.stdout.strip():
+                return None
+            return json.loads(result.stdout)
         except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
-            print(
-                f"❌ VERIFICATION ERROR: Could not verify reply for comment {original_comment_id}: {e}"
-            )
-            return False
-
-    def post_inline_comment_reply(
-        self, comment: dict[str, Any], reply_content: str, force_reply: bool = False
-    ) -> bool:
-        """Post an inline reply to a specific GitHub comment with verification.
-
-        Args:
-            comment: The comment to reply to
-            reply_content: The reply content
-            force_reply: If True, attempt to reply even if we think there's already a reply
-        """
-        comment_id = comment.get("id", 0)
-
-        # Check for existing replies unless force_reply is True
-        if not force_reply and self.check_existing_replies(comment_id):
-            print(f"⏭️ Comment {comment_id} may already have a reply. Checking...")
-
-            # Verify if reply actually exists
-            if self.verify_reply_posted(comment_id, reply_content):
-                print(f"✅ CONFIRMED: Comment {comment_id} already has a valid reply")
-                return True
-            print(
-                f"⚠️ FORCING REPLY: Comment {comment_id} needs a reply despite tracking"
-            )
-            force_reply = True
-
-        print(f"📝 Attempting to post reply to comment {comment_id}...")
-
-        # For inline comments, reply directly to the existing comment
-        if comment.get("type") == "inline" and comment.get("id"):
-            cmd = [
-                "gh",
-                "api",
-                f"repos/{self.repo_owner}/{self.repo_name}/pulls/{self.pr_number}/comments",
-                "--method",
-                "POST",
-                "--field",
-                f"body={reply_content}",
-                "--field",
-                f"in_reply_to={comment_id}",
-            ]
-            result = self._make_api_call(cmd, f"reply to inline comment {comment_id}")
-        else:
-            # Fall back to general PR comment
-            cmd = [
-                "gh",
-                "api",
-                f"repos/{self.repo_owner}/{self.repo_name}/issues/{self.pr_number}/comments",
-                "--method",
-                "POST",
-                "--field",
-                f"body={reply_content}",
-            ]
-            result = self._make_api_call(cmd, f"reply to general comment {comment_id}")
-
-        if result:
-            print(f"📤 API call successful for comment {comment_id}. Verifying...")
-
-            # Wait a moment for GitHub to process
-            time.sleep(1)
-
-            # Verify the reply was actually posted
-            if self.verify_reply_posted(comment_id, reply_content):
-                print(f"✅ SUCCESS: Reply verified for comment {comment_id}")
-                self.replies_posted.append(comment_id)
-                return True
-            print(f"❌ FAILURE: Reply not found after posting to comment {comment_id}")
-            print(
-                f"   Original comment: {comment.get('user', 'unknown')} - {comment.get('body', '')[:50]}..."
-            )
-            return False
-        print(f"❌ API FAILURE: Could not post reply to comment {comment_id}")
-        print(
-            f"   Original comment: {comment.get('user', 'unknown')} - {comment.get('body', '')[:50]}..."
-        )
-        return False
-
-    def update_pr_description(self, summary: str) -> bool:
-        """Update PR description with analysis summary."""
+            print(f"  ⚠️ GitHub CLI error: {e}", file=sys.stderr)
+            return None
+    
+    def fetch_all_comments(self) -> List[Dict]:
+        """Fetch all PR comments using direct CommentFetcher integration."""
+        print("📝 Fetching all PR comments...")
+        
         try:
-            # Get current PR description
-            result = subprocess.run(
-                ["gh", "pr", "view", self.pr_number, "--json", "body,title"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-
-            pr_data = json.loads(result.stdout)
-            current_body = pr_data.get("body", "")
-
-            # Remove existing automated section if present
-            if "## 🤖 Automated Comment Analysis" in current_body:
-                current_body = current_body.split("## 🤖 Automated Comment Analysis")[
-                    0
-                ].strip()
-
-            # Add new automated section
-            timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-            new_section = "\n\n## 🤖 Automated Comment Analysis\n\n"
-            new_section += f"**Last Updated**: {timestamp}\n\n"
-            new_section += summary
-            new_section += "\n\n_Analysis generated by [Claude Code](https://claude.ai/code) copilot command_"
-
-            updated_body = current_body + new_section
-
-            # Update PR description
-            subprocess.run(
-                [
-                    "gh",
-                    "api",
-                    f"repos/{self.repo_owner}/{self.repo_name}/pulls/{self.pr_number}",
-                    "--method",
-                    "PATCH",
-                    "--field",
-                    f"body={updated_body}",
-                ],
-                check=True,
-            )
-
-            print(f"✅ Updated PR #{self.pr_number} description")
-            return True
-
-        except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
-            print(f"❌ Failed to update PR description: {e}")
-            return False
-
-    def get_latest_commit_sha(self) -> str:
-        """Get the latest commit SHA for the PR."""
+            # Use CommentFetcher class directly
+            fetcher = CommentFetcher(self.pr_number, self.repo)
+            comments = fetcher.fetch_all_comments()
+            
+            # Convert Comment objects to dictionaries
+            comment_dicts = []
+            for comment in comments:
+                comment_dict = {
+                    'id': comment.id,
+                    'body': comment.body,
+                    'user': comment.user,
+                    'type': comment.comment_type,
+                    'created_at': comment.created_at,
+                    '_type': comment.comment_type  # For compatibility
+                }
+                
+                # Add optional fields if present
+                if comment.file:
+                    comment_dict['file'] = comment.file
+                if comment.line:
+                    comment_dict['line'] = str(comment.line)
+                if comment.position:
+                    comment_dict['position'] = str(comment.position)
+                if comment.state:
+                    comment_dict['state'] = comment.state
+                
+                comment_dicts.append(comment_dict)
+            
+            print(f"  ✅ Fetched {len(comment_dicts)} comments")
+            
+            # Categorize comments
+            inline_count = len([c for c in comment_dicts if c.get('type') == 'inline'])
+            review_count = len([c for c in comment_dicts if c.get('type') == 'review'])
+            general_count = len([c for c in comment_dicts if c.get('type') == 'general'])
+            
+            print(f"     📊 Breakdown: {inline_count} inline + {review_count} reviews + {general_count} general")
+            return comment_dicts
+            
+        except Exception as e:
+            print(f"  ❌ Comment fetching failed: {e}")
+            return []
+    
+    def check_ci_status(self) -> Dict:
+        """Check CI status and get failure details."""
+        print("🔍 Checking CI status...")
+        
         try:
-            result = subprocess.run(
-                ["gh", "pr", "view", self.pr_number, "--json", "headRefOid"],
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-
-            pr_data = json.loads(result.stdout)
-            return str(pr_data.get("headRefOid", ""))
-        except (subprocess.CalledProcessError, json.JSONDecodeError):
-            # Fallback to local git
-            try:
-                result = subprocess.run(
-                    ["git", "rev-parse", "HEAD"],
-                    capture_output=True,
-                    text=True,
-                    check=True,
-                )
-                return result.stdout.strip()
-            except subprocess.CalledProcessError:
-                return ""
-
-    def post_bulk_review_comments(self, comments: list[dict[str, Any]]) -> int:
-        """Post multiple comments in a single review for better performance."""
-        if not comments:
-            return 0
-
-        # Get latest commit SHA
-        commit_sha = self.get_latest_commit_sha()
-        if not commit_sha:
-            print("⚠️ Could not get commit SHA, falling back to individual replies")
-            return self.post_individual_replies(comments)
-
-        # Prepare review comments for bulk posting
-        review_comments = []
-        for comment in comments:
-            # Only include inline comments that have file and position info
-            if (
-                comment.get("type") == "inline"
-                and comment.get("path")
-                and comment.get("position")
-            ):
-                reply_content = self.format_reply_content(comment, "", "")
-                review_comments.append(
-                    {
-                        "path": comment.get("path"),
-                        "position": comment.get("position"),
-                        "body": reply_content,
-                    }
-                )
-
-        if not review_comments:
-            print(
-                "⚠️ No inline comments suitable for bulk review, using individual replies"
-            )
-            return self.post_individual_replies(comments)
-
-        # Create bulk review
-        review_body = (
-            f"🤖 Automated responses to {len(review_comments)} comments\n\n"
-            + "Generated by [Claude Code](https://claude.ai/code) copilot analysis"
-        )
-
-        # Prepare review payload
-        review_data = {
-            "commit_id": commit_sha,
-            "body": review_body,
-            "event": "COMMENT",
-            "comments": review_comments,
-        }
-
-        # Convert to JSON for gh api
-        review_json: str = json.dumps(review_data)
-
-        # Post bulk review
-        cmd = [
-            "gh",
-            "api",
-            f"repos/{self.repo_owner}/{self.repo_name}/pulls/{self.pr_number}/reviews",
-            "--method",
-            "POST",
-            "--input",
-            "-",
+            # Get CI status from PR
+            result = self._run_gh_command([
+                "gh", "pr", "view", self.pr_number, "--json", "statusCheckRollup"
+            ])
+            
+            if not result:
+                return {"failed_checks": [], "total_checks": 0}
+            
+            checks = result.get("statusCheckRollup", [])
+            failed_checks = [
+                check for check in checks 
+                if check.get("conclusion") in ["FAILURE", "CANCELLED"]
+            ]
+            
+            print(f"  ✅ Found {len(checks)} total checks, {len(failed_checks)} failed")
+            return {
+                "failed_checks": failed_checks,
+                "total_checks": len(checks),
+                "all_checks": checks
+            }
+            
+        except Exception as e:
+            print(f"  ❌ CI status check failed: {e}")
+            return {"failed_checks": [], "total_checks": 0, "error": str(e)}
+    
+    def run_ci_replica(self) -> str:
+        """Run CI replica in background and return result."""
+        print("🚀 Running CI replica...")
+        
+        # Find CI replica script
+        possible_scripts = [
+            "./run_ci_replica.sh",
+            "../run_ci_replica.sh",
+            os.path.join(os.getcwd(), "run_ci_replica.sh")
         ]
-
+        
+        ci_script = None
+        for script in possible_scripts:
+            if os.path.exists(script) and os.access(script, os.X_OK):
+                ci_script = script
+                break
+        
+        if not ci_script:
+            print("  ⚠️ CI replica script not found")
+            return "CI_UNAVAILABLE"
+        
         try:
-            subprocess.run(
-                cmd, input=review_json, capture_output=True, text=True, check=True
+            # Run CI replica with timeout
+            result = subprocess.run(
+                [ci_script],
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minute timeout
             )
-            print(f"✅ Posted bulk review with {len(review_comments)} comments")
-
-            # Mark all comments as replied
-            for comment in comments:
-                if comment.get("type") == "inline":
-                    self.replies_posted.append(comment.get("id", 0))
-
-            return len(review_comments)
-
-        except subprocess.CalledProcessError as e:
-            error_msg = (
-                e.stderr.decode() if hasattr(e.stderr, "decode") else str(e.stderr)
-            )
-            print(f"❌ Bulk review failed: {error_msg}")
-            print("⚠️ Falling back to individual replies")
-            return self.post_individual_replies(comments)
-
-    def post_individual_replies(self, comments: list[dict[str, Any]]) -> int:
-        """Fallback method for individual comment replies."""
-        replies_posted = 0
-
+            
+            if result.returncode == 0:
+                print("  ✅ CI replica passed")
+                return "CI_PASSED"
+            else:
+                print("  ❌ CI replica failed")
+                return "CI_FAILED"
+                
+        except subprocess.TimeoutExpired:
+            print("  ⏰ CI replica timed out")
+            return "CI_TIMEOUT"
+        except Exception as e:
+            print(f"  ❌ CI replica error: {e}")
+            return "CI_ERROR"
+    
+    def collect_all_data(self) -> Dict:
+        """Collect all data in parallel: comments + CI status + CI replica."""
+        print("\n🔄 Starting parallel data collection...")
+        
+        # Results storage
+        results = {}
+        
+        def collect_comments():
+            results['comments'] = self.fetch_all_comments()
+        
+        def collect_ci_status():
+            results['ci_status'] = self.check_ci_status()
+        
+        def collect_ci_replica():
+            results['ci_replica'] = self.run_ci_replica()
+        
+        # Run all collections in parallel
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [
+                executor.submit(collect_comments),
+                executor.submit(collect_ci_status),
+                executor.submit(collect_ci_replica)
+            ]
+            
+            # Wait for all to complete
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"❌ Data collection error: {e}")
+        
+        print("✅ Parallel data collection completed!")
+        return results
+    
+    def save_collected_data(self, data: Dict) -> None:
+        """Save all collected data to files for LLM analysis."""
+        print("💾 Saving collected data...")
+        
+        # Save comments
+        comments_file = f"{self.data_dir}/comments.json"
+        with open(comments_file, 'w') as f:
+            json.dump(data.get('comments', []), f, indent=2)
+        
+        # Save CI status
+        ci_file = f"{self.data_dir}/ci_status.json"
+        with open(ci_file, 'w') as f:
+            json.dump(data.get('ci_status', {}), f, indent=2)
+        
+        # Save CI replica result
+        replica_file = f"{self.data_dir}/ci_replica.txt"
+        with open(replica_file, 'w') as f:
+            f.write(data.get('ci_replica', 'UNKNOWN'))
+        
+        # Create comment ID mapping for GitHub MCP replies
+        comments = data.get('comments', [])
+        id_map_file = f"{self.data_dir}/comment_id_map.json"
+        id_mapping = {}
         for comment in comments:
-            comment_id = comment.get("id", 0)
-            if comment_id == 0:
-                continue
-
-            reply_content = self.format_reply_content(comment, "", "")
-
-            if self.post_inline_comment_reply(comment, reply_content):
-                replies_posted += 1
-
-        return replies_posted
-
-    def _collect_comments_to_process(
-        self, categorized_comments: dict[str, list[dict[str, Any]]]
-    ) -> list[dict[str, Any]]:
-        """Collect and filter comments to process."""
-        all_comments = []
-
-        # Add Copilot suggestions
-        copilot_comments = categorized_comments["copilot_suggestions"]
-        if copilot_comments:
-            print(f"🔧 Processing {len(copilot_comments)} Copilot suggestions...")
-            all_comments.extend(copilot_comments)
-
-        # Add filtered CodeRabbit suggestions
-        all_comments.extend(self._filter_coderabbit_comments(categorized_comments))
-
-        # Add filtered user comments
-        all_comments.extend(self._filter_user_comments(categorized_comments))
-
-        return all_comments
-
-    def _filter_coderabbit_comments(
-        self, categorized_comments: dict[str, list[dict[str, Any]]]
-    ) -> list[dict[str, Any]]:
-        """Filter CodeRabbit comments to exclude thank you messages."""
-        coderabbit_comments = categorized_comments["coderabbit_suggestions"]
-        if not coderabbit_comments:
-            return []
-
-        filtered_comments = []
-        for comment in coderabbit_comments:
-            body = comment.get("body", "")
-            # Skip CodeRabbit thank you messages
-            if (
-                "thank you" in body.lower()
-                or "thank you for" in body.lower()
-                or "@jleechan2015" in body
-            ):
-                continue
-            filtered_comments.append(comment)
-
-        print(
-            f"🐰 Processing {len(filtered_comments)} CodeRabbit suggestions (excluding thank you messages)..."
-        )
-        return filtered_comments
-
-    def _filter_user_comments(
-        self, categorized_comments: dict[str, list[dict[str, Any]]]
-    ) -> list[dict[str, Any]]:
-        """Filter user comments and prioritize jleechan2015 comments."""
-        user_comments = categorized_comments["user_comments"]
-        if not user_comments:
-            return []
-
-        jleechan_comments = []
-        other_user_comments = []
-
-        for comment in user_comments:
-            user = comment.get("user", "")
-            body = comment.get("body", "")
-
-            # Skip automated replies (both old and new formats)
-            if user == "jleechan2015" and (
-                "**Yes, I will implement this**" in body
-                or "**No, I will not implement this**" in body
-                or "**I need to evaluate this further**" in body
-                or "✅ **This is a good suggestion**" in body
-                or "🔄 **ACKNOWLEDGED**:" in body
-                or "✅ **IMPLEMENTED**:" in body  
-                or "❌ **DECLINED**:" in body
-                or "CommentResponse(" in body
-                or "ResponseType." in body
-                or body.startswith("✅ **FIXED**:")
-                or body.startswith("🔄 **MODIFIED**:")
-                or body.startswith("❌ **BLOCKED**:")
-            ):
-                continue
-
-            # Separate jleechan2015 comments for priority handling
-            if user == "jleechan2015":
-                jleechan_comments.append(comment)
-            else:
-                other_user_comments.append(comment)
-
-        # Combine with priority order
-        all_user_comments = []
-        if jleechan_comments:
-            print(
-                f"⭐ Processing {len(jleechan_comments)} HIGH PRIORITY jleechan2015 comments FIRST..."
-            )
-            all_user_comments.extend(jleechan_comments)
-
-        if other_user_comments:
-            print(f"👤 Processing {len(other_user_comments)} other user comments...")
-            all_user_comments.extend(other_user_comments)
-
-        return all_user_comments
-
-    def _process_comment_replies(
-        self, all_comments: list[dict[str, Any]]
-    ) -> tuple[int, list[dict[str, Any]]]:
-        """Process individual comment replies and return results."""
-        replies_posted = 0
-        failed_replies = []
-
-        for i, comment in enumerate(all_comments, 1):
-            comment_id = comment.get("id", 0)
-            if comment_id == 0:
-                print(f"⚠️ [{i}/{len(all_comments)}] Skipping comment with no ID")
-                continue
-
-            print(
-                f"\n📝 [{i}/{len(all_comments)}] Processing comment {comment_id} from {comment.get('user', 'unknown')}"
-            )
-
-            # Generate reply content
-            reply_content = self.format_reply_content(comment, "", "")
-
-            # Attempt to post reply with verification
-            if self.post_inline_comment_reply(
-                comment, reply_content, force_reply=False
-            ):
-                replies_posted += 1
-                print(
-                    f"✅ [{i}/{len(all_comments)}] SUCCESS: Reply posted and verified"
-                )
-            else:
-                failed_replies.append(
-                    {
-                        "id": comment_id,
-                        "user": comment.get("user", "unknown"),
-                        "body": comment.get("body", "")[:50] + "...",
-                        "type": comment.get("type", "unknown"),
-                    }
-                )
-                print(
-                    f"❌ [{i}/{len(all_comments)}] FAILED: Could not post/verify reply"
-                )
-
-        return replies_posted, failed_replies
-
-    def _report_results(
-        self,
-        replies_posted: int,
-        failed_replies: list[dict[str, Any]],
-        total_comments: int,
-    ) -> None:
-        """Report final results and failures."""
-        print("\n📊 FINAL RESULTS:")
-        print(f"✅ Successful replies: {replies_posted}")
-        print(f"❌ Failed replies: {len(failed_replies)}")
-
-        if total_comments:
-            print(
-                f"📈 Success rate: {replies_posted}/{total_comments} ({replies_posted / total_comments * 100:.1f}%)"
-            )
-        else:
-            print("📈 Success rate: No comments to process")
-
-        # Report failures explicitly
-        if failed_replies:
-            print("\n❌ EXPLICIT FAILURE REPORT:")
-            for i, failure in enumerate(failed_replies, 1):
-                print(
-                    f"   {i}. Comment {failure['id']} ({failure['type']}) from {failure['user']}"
-                )
-                print(f"      Content: {failure['body']}")
-
-            print(
-                f"\n🚨 USER ALERT: {len(failed_replies)} comments did not get replies!"
-            )
-            print("   Please check the failures above and retry if needed.")
-        else:
-            print("\n🎉 ALL COMMENTS SUCCESSFULLY REPLIED TO!")
-
-    def post_replies_to_comments(
-        self,
-        categorized_comments: dict[str, list[dict[str, Any]]],
-    ) -> int:
-        """Post replies to ALL comments with individual verification.
-
-        This ensures every comment gets an inline reply and verifies they were posted.
-        """
-        print("📋 Processing ALL comments individually for guaranteed replies...")
-
-        # Collect all comments for processing
-        all_comments = self._collect_comments_to_process(categorized_comments)
-        print(f"📊 TOTAL COMMENTS TO PROCESS: {len(all_comments)}")
-
-        if not all_comments:
-            print("📈 Success rate: No comments to process")
-            return 0
-
-        print(f"✅ Processing all {len(all_comments)} comments (most recent first)")
-
-        # Process comments and get results
-        replies_posted, failed_replies = self._process_comment_replies(all_comments)
-
-        # Report results
-        self._report_results(replies_posted, failed_replies, len(all_comments))
-
-        return replies_posted
-
-    def generate_pr_summary(
-        self,
-        categorized_comments: dict[str, list[dict[str, Any]]],
-        test_status: dict[str, Any],
-        replies_posted: int,
-    ) -> str:
-        """Generate summary for PR description update."""
-        summary = []
-
-        # Comment analysis summary
-        copilot_count = len(categorized_comments["copilot_suggestions"])
-        coderabbit_count = len(categorized_comments["coderabbit_suggestions"])
-        user_count = len(categorized_comments["user_comments"])
-
-        summary.append("**📊 Analysis Summary**:")
-        summary.append(f"- 🔧 GitHub Copilot Suggestions: {copilot_count}")
-        summary.append(f"- 🐰 CodeRabbit Suggestions: {coderabbit_count}")
-        summary.append(f"- 👤 User Comments: {user_count}")
-        summary.append(f"- 💬 Replies Posted: {replies_posted}")
-        summary.append("")
-
-        # Test status
-        summary.append("**🧪 Test Status**:")
-        if test_status["passing"]:
-            summary.append("- ✅ All tests passing")
-        else:
-            summary.append("- ❌ Test failures detected:")
-            for failure in test_status["failures"]:
-                summary.append(f"  - {failure['name']}: {failure['status']}")
-        summary.append("")
-
-        # Key actions taken
-        summary.append("**🔧 Key Actions Taken**:")
-        summary.append(
-            "- ✅ Replaced hard-coded absolute paths with relative paths (commit d745f2e5)"
-        )
-        summary.append("- ✅ Improved test portability across environments")
-        summary.append(
-            "- ✅ Added deterministic Python implementation for /copilot command"
-        )
-        summary.append("- ✅ Automated comment reply system implemented")
-        summary.append("")
-
-        # Mergeability assessment
-        summary.append("**🚀 Mergeability Assessment**:")
-        if test_status["passing"] and copilot_count <= replies_posted:
-            summary.append(
-                "- ✅ **Ready for merge** - All tests passing, suggestions addressed"
-            )
-        else:
-            summary.append("- ⚠️ **Needs attention** - Review remaining suggestions")
-
-        return "\n".join(summary)
-
-    def run(self) -> str:
-        """Main execution function with deterministic behavior."""
-        print("🚀 GitHub Copilot PR Analyzer (Python Implementation)")
-        print("=" * 60)
-
-        # Step 1: Get current branch and PR info
-        branch = self.get_current_branch()
-        pr_number = self.get_pr_number()
-
-        if not pr_number:
-            return "❌ No PR found for current branch. Please provide PR number or create a PR."
-
-        print(f"📋 Analyzing PR #{pr_number} on branch '{branch}'")
-
-        # Step 2: Extract all comments
-        print("🔍 Extracting comments from GitHub...")
-        comments = self.extract_all_comments()
-
-        # Step 3: Categorize comments
-        print("📊 Categorizing comments...")
-        categorized_comments = self.categorize_comments(comments)
-
-        # Step 4: Analyze test status
-        print("🧪 Analyzing test status...")
-        test_status = self.analyze_test_status()
-
-        # Step 5: Generate report
-        print("📄 Generating analysis report...")
-        report = self.generate_analysis_report(categorized_comments, test_status)
-
-        # Step 6: Analyze suggestions (if any)
-        print("🔧 Analyzing suggestions...")
-        suggestions_analyzed = self.analyze_suggestions(categorized_comments)
-
-        # Step 7: Commit changes
-        if suggestions_analyzed:
-            print("💾 Committing changes...")
-            self.commit_changes(suggestions_analyzed)
-
-        # Step 8: Post replies to comments
-        print("💬 Posting replies to comments...")
-        replies_posted = self.post_replies_to_comments(categorized_comments)
-
-        # Step 9: Update PR description
-        print("📝 Updating PR description...")
-        summary = self.generate_pr_summary(
-            categorized_comments, test_status, replies_posted
-        )
-        self.update_pr_description(summary)
-
-        # Step 10: Run linting before push (if changes made)
-        if self.changes_made and should_run_linting():
-            print("🔍 Running linting checks before push...")
-            lint_success, lint_message = run_lint_check("mvp_site", auto_fix=True)
-            print(f"📋 {lint_message}")
-
-            if not lint_success:
-                print("⚠️  Some linting issues remain after auto-fix")
-
-        # Step 11: Push to GitHub (deterministic behavior)
-        if self.changes_made:
-            print("🚀 Pushing to GitHub...")
-            self.push_to_remote()
-
-        return report
+            comment_id = comment.get('id', '')
+            if comment_id:
+                id_mapping[comment_id] = {
+                    'user': comment.get('user', ''),
+                    'type': comment.get('type', ''),
+                    'file': comment.get('file', ''),
+                    'line': comment.get('line', ''),
+                    'preview': comment.get('body', '')[:100] + '...' if len(comment.get('body', '')) > 100 else comment.get('body', '')
+                }
+        
+        with open(id_map_file, 'w') as f:
+            json.dump(id_mapping, f, indent=2)
+        
+        # Create summary
+        self._create_summary(data)
+        
+        print(f"  ✅ Data saved to: {self.data_dir}/")
+    
+    def _create_summary(self, data: Dict) -> None:
+        """Create human-readable summary."""
+        comments = data.get('comments', [])
+        ci_status = data.get('ci_status', {})
+        ci_replica = data.get('ci_replica', 'UNKNOWN')
+        
+        summary_file = f"{self.data_dir}/summary.md"
+        with open(summary_file, 'w') as f:
+            f.write(f"# PR #{self.pr_number} Analysis Summary\n\n")
+            f.write(f"**Repository**: {self.repo}  \n")
+            f.write(f"**Generated**: {time.strftime('%Y-%m-%d %H:%M:%S')}  \n")
+            f.write(f"**Data Directory**: {self.data_dir}/  \n\n")
+            
+            f.write(f"## Comments Analysis\n")
+            f.write(f"- **Total Comments**: {len(comments)}\n")
+            f.write(f"- **Data File**: comments.json\n\n")
+            
+            # Comment breakdown
+            comment_types = {}
+            comment_users = {}
+            for comment in comments:
+                c_type = comment.get('type', 'unknown')
+                c_user = comment.get('user', 'unknown')
+                comment_types[c_type] = comment_types.get(c_type, 0) + 1
+                comment_users[c_user] = comment_users.get(c_user, 0) + 1
+            
+            f.write("### Comment Types\n")
+            for c_type, count in sorted(comment_types.items()):
+                f.write(f"- **{c_type}**: {count}\n")
+            
+            f.write("\n### Comment Authors\n")
+            for user, count in sorted(comment_users.items(), key=lambda x: x[1], reverse=True):
+                f.write(f"- **{user}**: {count}\n")
+            
+            f.write(f"\n## CI Status\n")
+            failed_checks = ci_status.get('failed_checks', [])
+            total_checks = ci_status.get('total_checks', 0)
+            f.write(f"- **Total Checks**: {total_checks}\n")
+            f.write(f"- **Failed Checks**: {len(failed_checks)}\n")
+            f.write(f"- **CI Replica Result**: {ci_replica}\n")
+            f.write(f"- **Data File**: ci_status.json\n\n")
+            
+            if failed_checks:
+                f.write("### Failed Checks\n")
+                for check in failed_checks:
+                    name = check.get('name') or check.get('checkName', 'Unknown')
+                    conclusion = check.get('conclusion', 'Unknown')
+                    f.write(f"- **{name}**: {conclusion}\n")
+            
+            f.write(f"\n## Ready for LLM Analysis\n")
+            f.write(f"All data has been collected and is ready for intelligent analysis.\n")
+            f.write(f"The LLM should now:\n")
+            f.write(f"1. Read comments.json and categorize issues by priority\n")
+            f.write(f"2. Address failing tests and CI issues\n")
+            f.write(f"3. Apply automatic fixes where appropriate\n")
+            f.write(f"4. Reply to comments using GitHub MCP\n")
+            f.write(f"5. Generate final mergeability report\n")
+    
+    def run(self) -> None:
+        """Main execution method - collect data then hand off to LLM."""
+        try:
+            # Collect all data in parallel
+            data = self.collect_all_data()
+            
+            # Save data for LLM analysis
+            self.save_collected_data(data)
+            
+            # Performance metrics
+            duration = time.time() - self.start_time
+            comment_count = len(data.get('comments', []))
+            failed_count = len(data.get('ci_status', {}).get('failed_checks', []))
+            
+            print(f"\n🎯 Data Collection Complete!")
+            print(f"=====================================")
+            print(f"⏱️  Collection time: {duration:.2f}s")
+            print(f"📝 Comments collected: {comment_count}")
+            print(f"❌ Failed CI checks: {failed_count}")
+            print(f"🤖 CI replica result: {data.get('ci_replica', 'UNKNOWN')}")
+            print(f"📁 Data location: {self.data_dir}/")
+            print(f"\n💭 Ready for LLM analysis and action!")
+            
+            # Signal successful completion
+            print(f"\n✅ Data collection phase complete. LLM analysis can now begin.")
+            
+        except Exception as e:
+            print(f"❌ Error during data collection: {e}")
+            sys.exit(1)
 
 
-def main() -> None:
-    """Main function for command execution."""
-    args = sys.argv[1:] if len(sys.argv) > 1 else []
-    pr_number = None
-    monitor_mode = False
+def main():
+    """Main entry point for /copilot command."""
     
     # Parse arguments
-    for arg in args:
-        if arg == "--monitor":
-            monitor_mode = True
-        elif arg.isdigit():
-            pr_number = arg
-
-    processor = GitHubCopilotProcessor(pr_number, monitor_mode=monitor_mode)
-    report = processor.run()
-
-    print("\n" + report)
-
-    # Display summary
-    print("\n🎯 Command Summary:")
-    print(f"✅ Analysis completed for PR #{processor.pr_number}")
-    if processor.monitor_mode:
-        print(f"⚠️  Monitor mode: {'Yes' if processor.monitor_mode else 'No'}")
-        print(f"⚠️  Warnings found: {len(processor.warnings_found)}")
-        if processor.warnings_found:
-            print("   Warning details:")
-            for warning in processor.warnings_found:
-                print(f"     - {warning}")
-    else:
-        print(f"✅ Changes made: {'Yes' if processor.changes_made else 'No'}")
-        print(f"✅ Replies posted: {len(processor.replies_posted)}")
-        print(
-            f"✅ Pushed to GitHub: {'Yes' if processor.changes_made and processor.push_to_github else 'No'}"
-        )
+    pr_number = None
+    if len(sys.argv) > 1:
+        pr_number = sys.argv[1]
+    
+    # Show help if requested
+    if pr_number in ['-h', '--help']:
+        print("GitHub Copilot PR Analysis (Option 3)")
+        print("=====================================")
+        print()
+        print("Usage: /copilot [PR_NUMBER]")
+        print()
+        print("This command collects PR data (comments, CI status) in parallel,")
+        print("then provides structured data for LLM analysis and action.")
+        print()
+        print("Architecture: Python (data) → LLM (analysis + fixes + replies)")
+        print()
+        print("Examples:")
+        print("  /copilot         # Auto-detect PR from current branch")
+        print("  /copilot 123     # Analyze specific PR number")
+        print()
+        print("Data is saved to /tmp/copilot_pr_[NUMBER]/ for LLM analysis.")
+        return
+    
+    # Run data collection
+    collector = CopilotDataCollector(pr_number)
+    collector.run()
 
 
 if __name__ == "__main__":

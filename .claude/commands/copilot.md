@@ -1,158 +1,166 @@
-# GitHub Copilot Comments Command
+# GitHub Copilot PR Analysis - Repeatable LLM Workflow
 
-**Purpose**: Make PR mergeable by resolving ALL GitHub comments and fixing ALL failing tests
+**First, run data collection. Then analyze and take action.**
 
-**Usage**: `/copilot [PR#]`
+## Phase 1: Data Collection (RUN NOW)
 
-**Action**: Comprehensive PR cleanup - address ALL automated suggestions, bot comments, and test failures
+Execute the Python data collector to gather all PR information:
 
-**🚀 Python Implementation**: Now includes deterministic `copilot.py` that automatically pushes to GitHub
-**Enhanced Shell Script**: Also includes `claude_command_scripts/commands/copilot.sh` for automated analysis and fixing
-
-**🐍 Python Implementation Features**:
-- **Deterministic Behavior**: Always pushes changes to GitHub after analysis
-- **Auto-PR Detection**: Automatically detects PR number from current branch
-- **Multi-Source Analysis**: Extracts Copilot, CodeRabbit, and user comments
-- **Test Status Checking**: Analyzes CI/CD status for merge readiness
-- **Auto-Commit**: Commits fixes with descriptive messages
-- **GitHub Integration**: Pushes changes immediately after fixes
-- **Dynamic Repository Detection**: Automatically detects repository owner/name from environment
-- **Pagination Support**: Handles large numbers of comments across multiple pages
-- **Intelligent Comment Replies**: Provides specific "Yes/No" responses with detailed reasoning
-- **⭐ NEWEST FIRST PRIORITIZATION**: Comments processed in chronological order (most recent first)
-
-**Python Usage**:
 ```bash
-# Auto-detect PR from current branch and push changes
-python3 .claude/commands/copilot.py
-
-# Analyze specific PR and push changes
-python3 .claude/commands/copilot.py 123
+python3 .claude/commands/copilot.py $ARGUMENTS
 ```
 
-**🆕 Recent Improvements (July 2025)**:
-- **Fixed Shell Script Syntax Error**: Completed function logic, added missing temp file write, removed stray `fi`
-- **Dynamic Repository Detection**: Replaced hardcoded repository values with `_get_repo_info()` method
-- **Improved Portability**: Added fallback to environment variables for different environments  
-- **Enhanced Comment Processing**: Fixed pagination issues to ensure all comments are captured
-- **Better Error Handling**: Added comprehensive error handling for API calls and JSON parsing
-- **⭐ NEWEST FIRST PRIORITIZATION**: Comments now processed in chronological order (most recent first)
-  - Sorts all comments by creation date before processing
-  - Ensures latest feedback gets immediate attention
-  - Better user experience for time-sensitive suggestions
-  - Detailed logging shows processing order with timestamps
+**Note**: Replace `$ARGUMENTS` with the actual PR number when executing (e.g., `722` for PR #722).
 
-**Implementation** (Automated via Shell Script):
-1. **Extract ALL Comments**:
-   - Filter for comments from `github-actions[bot]`, `copilot[bot]`, `coderabbit[bot]`, and other bots
-   - Include CodeRabbit AI code review suggestions and analysis
-   - Include user comments and feedback (jleechan2015)
-   - Include both high and low confidence suggestions
-   - Include "suppressed" suggestions that are normally hidden
-   - Extract inline code review comments AND general PR comments
-   - **CRITICAL**: Use `gh api repos/owner/repo/pulls/PR#/comments` for inline review comments
-   - **Note**: `gh pr view --json comments` misses Copilot's inline suggestions
-   
-2. **Check Test Status** (Enhanced):
-   - Use `gh pr view --json statusCheckRollup` for reliable CI status
-   - Run local tests to identify root causes
-   - Identify specific test failures from CI/CD output
-   - Track both unit test and integration test failures
-   - Note any linting or type checking errors
+Wait for completion, then proceed to Phase 2.
 
-3. **Categorize ALL Issues**:
-   - **Test Failures**: Unit tests, integration tests, UI tests
-   - **Build Errors**: Compilation, linting, type checking
-   - **Security**: Potential security vulnerabilities
-   - **Performance**: Code optimization suggestions
-   - **Style**: Code formatting and consistency
-   - **Logic**: Potential bugs or logic errors
-   - **Best Practices**: Language-specific improvements
+**Data Location**: `/tmp/copilot_pr_[PR_NUMBER]/` (e.g., `/tmp/copilot_pr_722/`)
 
-4. **Display Format**:
-   ```
-   TEST FAILURE #1
-   Test: test_game_state.py::test_invalid_hp
-   Error: AssertionError: Expected exception not raised
-   Status: ❌ Not fixed
-   
-   COPILOT SUGGESTION #2 (High Confidence)
-   File: main.py:655
-   Type: Logic Error
-   Suggestion: Consider simplifying the guard by treating all non-positive hp_max values
-   Status: ❌ Not addressed
-   ```
+## Phase 2: LLM Analysis and Action (YOUR TASK)
 
-5. **Fix Priority Order**:
-   1. **Failing Tests** - MUST fix ALL to make PR mergeable
-   2. **Build/Lint Errors** - Required for CI to pass
-   3. **Security Issues** - Critical vulnerabilities
-   4. **Logic Errors** - Bugs that affect functionality
-   5. **Performance** - Optimization opportunities
-   6. **Style/Best Practices** - Nice to have but not blocking
+You are now in the analysis phase. Follow this systematic workflow:
 
-6. **Response Format**:
-   - ✅ **FIXED**: Test now passes / Issue resolved
-   - 🔄 **MODIFIED**: Implemented with adjustments
-   - ❌ **BLOCKED**: Cannot fix due to external dependency
-   - 🤔 **NEEDS DISCUSSION**: Requires design decision
+### Step 1: Read Collected Data
 
-**🚨 GOAL: Make PR Mergeable**:
-- ALL tests must pass (100% success rate)
-- ALL CI/CD checks must be green
-- ALL critical bot suggestions addressed
-- NO blocking issues remaining
+First, examine what data was collected:
 
-**Key Differences from /review**:
-- Focused on making PR mergeable, not comprehensive review
-- Prioritizes test failures and CI/CD blockers
-- Addresses ALL automated feedback (not just Copilot)
-- Faster turnaround for getting PR ready to merge
-- No manual review comments unless blocking merge
-
-**Example Output**:
-```
-PR #523 Mergeability Report:
-
-❌ FAILING TESTS (3):
-1. test_game_state.py::test_invalid_hp - AssertionError
-   → ✅ FIXED: Added validation for negative HP values
-2. test_integration.py::test_api_auth - 401 Unauthorized
-   → ✅ FIXED: Updated test headers with proper auth tokens
-3. test_ui_login.py::test_signin_flow - Timeout
-   → ✅ FIXED: Increased wait time for page load
-
-⚠️ GITHUB BOT SUGGESTIONS (5):
-1. [SECURITY] auth.py:45 - "Potential SQL injection"
-   → ✅ FIXED: Switched to parameterized queries
-2. [LOGIC] game_state.py:255 - "Division by zero possible"
-   → ✅ FIXED: Added guard clause for hp_max > 0
-3. [STYLE] utils.js:120 - "Use const instead of let"
-   → ❌ SKIPPED: Non-blocking style issue
-4. [DUPLICATION] execute.md:82 - "Redundant checkpoint info"
-   → ✅ FIXED: Consolidated duplicate sections
-5. [PERFORMANCE] main.py:340 - "Inefficient loop"
-   → 🔄 MODIFIED: Optimized with list comprehension
-
-✅ PR STATUS: All blockers resolved - ready to merge!
-```
-
-**Shell Script Usage**:
 ```bash
-# Auto-detect PR from current branch
-./claude_command_scripts/commands/copilot.sh
+# Read the data summary (replace [PR_NUMBER] with actual PR number)
+Read /tmp/copilot_pr_[PR_NUMBER]/summary.md
 
-# Analyze specific PR
-./claude_command_scripts/commands/copilot.sh 123
+# Read all comments for analysis  
+Read /tmp/copilot_pr_[PR_NUMBER]/comments.json
 
-# Get help
-./claude_command_scripts/commands/copilot.sh --help
+# Check CI status
+Read /tmp/copilot_pr_[PR_NUMBER]/ci_status.json
+
+# Check local CI result
+Read /tmp/copilot_pr_[PR_NUMBER]/ci_replica.txt
+
+# Get comment ID mapping for replies
+Read /tmp/copilot_pr_[PR_NUMBER]/comment_id_map.json
 ```
 
-**Automatic Fixes Included**:
-- Merge conflict resolution via `git merge origin/main`
-- Import error fixes via `pip install -r requirements.txt`
-- Code formatting via `black` and `isort` (if available)
-- Security pattern detection and basic remediation
+### Step 2: Categorize Issues by Priority
 
-**For Comprehensive Code Review**: Use `/review [PR#]` for detailed analysis beyond merge requirements.
+Analyze all comments and CI failures, categorizing by:
+
+- 🚨 **CRITICAL**: Test failures, build errors, security vulnerabilities, logic errors
+- ⚠️ **HIGH**: Performance issues, potential bugs, merge conflicts
+- 💡 **MEDIUM**: Code quality improvements, best practices
+- 🎨 **LOW**: Style, formatting, documentation
+
+### Step 3: Apply Automatic Fixes
+
+For issues you can confidently fix automatically:
+
+1. **Test Failures**: Fix failing tests, update assertions, resolve import errors
+2. **Build Errors**: Fix compilation issues, resolve dependencies
+3. **Security Issues**: Apply security best practices, fix vulnerabilities
+4. **Style Issues**: Apply formatting, fix linting errors
+5. **Logic Errors**: Fix obvious bugs when the solution is clear
+
+Use Edit/MultiEdit tools to apply fixes directly to files.
+
+### Step 4: Reply to Comments Using GitHub MCP
+
+For each comment that requires a response, use GitHub MCP with CLI fallback:
+
+**Primary Method - GitHub MCP (try first):**
+```
+mcp__github-server__create_pull_request_review(
+  owner="jleechanorg",
+  repo="worldarchitect.ai", 
+  pull_number=[PR_NUMBER],  # Replace with actual PR number
+  body="Response to all comments",
+  event="COMMENT",
+  comments=[
+    {
+      "path": "file.py",
+      "line": 123,
+      "body": "✅ FIXED: Applied your suggestion and updated the logic."
+    }
+  ]
+)
+```
+
+**Fallback Method - GitHub CLI:**
+```bash
+# For inline comments (if MCP fails) - replace [PR_NUMBER] with actual number
+gh api repos/jleechanorg/worldarchitect.ai/pulls/[PR_NUMBER]/comments \
+  -f body="✅ FIXED: Applied your suggestion" \
+  -F in_reply_to="COMMENT_ID"
+
+# For general PR comments
+gh pr comment [PR_NUMBER] --body "✅ ADDRESSED: All issues resolved"
+```
+
+**Comment ID Reference**: Use `/tmp/copilot_pr_[PR_NUMBER]/comment_id_map.json` to find comment IDs
+
+### Step 5: Generate Final Report
+
+Create a comprehensive report showing:
+
+```
+# PR #[PR_NUMBER] Mergeability Report
+
+## 🚨 CRITICAL Issues (X total)
+1. [FILE:LINE] Issue description → ✅ FIXED: Explanation + commit hash
+2. [FILE:LINE] Issue description → 📋 NEEDS REVIEW: Why manual review needed
+
+## ⚠️ HIGH Priority (X total)  
+1. [FILE:LINE] Issue description → ✅ FIXED: Applied optimization
+2. [FILE:LINE] Issue description → 🔄 MODIFIED: Made adjustment with reasoning
+
+## 💡 MEDIUM Priority (X total)
+1. [FILE:LINE] Issue description → ✅ APPLIED: Improved code quality  
+2. [FILE:LINE] Issue description → ❌ DECLINED: Reasoning for declining
+
+## 🎨 LOW Priority (X total)
+1. [FILE:LINE] Issue description → ✅ FIXED: Applied formatting
+2. [FILE:LINE] Issue description → ❌ SKIPPED: Non-blocking cosmetic issue
+
+## 📊 Summary
+- **Total Issues**: X analyzed
+- **Automatically Fixed**: X issues resolved
+- **Comments Replied**: X responses posted  
+- **Tests Status**: ✅ ALL PASSING / ❌ X STILL FAILING
+- **CI Status**: ✅ ALL CHECKS PASS / ❌ X CHECKS FAILING
+
+## 🎯 PR Status: [READY TO MERGE / NEEDS MANUAL REVIEW / BLOCKED]
+
+**Reasoning**: [Explanation of final status]
+```
+
+## Success Criteria
+
+The PR is ready to merge when:
+- ✅ All critical issues are fixed
+- ✅ All tests pass (run tests to verify)
+- ✅ All CI checks pass
+- ✅ All actionable comments have been addressed
+- ✅ All bot suggestions have been replied to
+
+## Workflow Summary
+
+This is a **repeatable process**:
+
+1. **Data Collection** (Python script) → 
+2. **LLM Analysis** (you analyze comments.json) → 
+3. **Apply Fixes** (you use Edit tools) → 
+4. **Reply to Comments** (you use GitHub MCP/CLI) → 
+5. **Generate Report** (you create mergeability report)
+
+**Key Files:**
+- `comments.json` - All PR comments to analyze
+- `ci_status.json` - CI check status  
+- `comment_id_map.json` - For replying to specific comments
+- `summary.md` - Human-readable overview
+
+**Tools Available:**
+- GitHub MCP for comment replies and PR operations
+- Edit/MultiEdit for code fixes
+- Bash for running tests and verification
+- Read for examining files and data
+
+The data collection phase is complete. **Begin your analysis now.**
