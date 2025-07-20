@@ -173,7 +173,7 @@
    - ✅ **Pattern**: Try MCP first → Fall back to `gh` CLI → Slash commands are bonus, not dependency
    - Benefits: Immediate results, reliable API access, no command completion uncertainty
 16. 🚨 **MEMORY ENHANCEMENT PROTOCOL**: ⚠️ MANDATORY for specific commands
-- **Enhanced Commands**: `/think`, `/learn`, `/debug`, `/analyze`, `/fix`
+- **Enhanced Commands**: `/think`, `/learn`, `/debug`, `/analyze`, `/fix`, `/plan`, `/execute`, `/arch`, `/test`, `/pr`, `/perp`, `/research`
 - **Execution Steps**:
   1. ✅ **Extract key terms** from command arguments (entities, technical terms, PR references)
   2. ✅ **Search Memory MCP**: Call `mcp__memory-server__search_nodes(query)` with extracted terms (MCP functions use double underscores as namespace separators)

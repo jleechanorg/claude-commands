@@ -123,3 +123,5 @@ This command combines three powerful search capabilities:
 - Unified synthesis section at the end
 - Source links for further reading
 - Time-stamped results when available
+
+**Memory Enhancement**: This command automatically searches memory context using Memory MCP for relevant past search patterns, research methodologies, and information sources to enhance search strategy and result quality. See CLAUDE.md Memory Enhancement Protocol for details.

@@ -81,3 +81,5 @@ Assistant: [Executes same protocol as /execute command]
 - ✅ **Plan presentation** with realistic assessment
 - ✅ **Same execution protocol** as `/execute` after approval
 - ✅ **Honest subagent evaluation** - only when beneficial
+
+**Memory Enhancement**: This command automatically searches memory context using Memory MCP for relevant past planning approaches, execution patterns, and lessons learned to enhance plan quality and accuracy. See CLAUDE.md Memory Enhancement Protocol for details.
