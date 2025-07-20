@@ -95,9 +95,9 @@ start_orchestration_background() {
 
 # Function to check and start orchestration for non-worker modes
 check_orchestration() {
-    echo -e "${BLUE}🔧 Checking orchestration system...${NC}"
+    echo -e "${BLUE}🔍 Verifying orchestration system status...${NC}"
     if is_orchestration_running; then
-        echo -e "${GREEN}✅ Orchestration system already running${NC}"
+        echo -e "${GREEN}✅ Orchestration system already running (no restart needed)${NC}"
     else
         if start_orchestration_background; then
             if is_orchestration_running; then
@@ -156,7 +156,7 @@ fi
 echo ""
 
 # Memory backup system checks
-echo -e "${BLUE}🧠 Checking Memory MCP backup system...${NC}"
+echo -e "${BLUE}🧠 Verifying Memory MCP backup system status...${NC}"
 
 # Check if memory backup script exists (dedicated repository format)
 MEMORY_BACKUP_SCRIPT="$HOME/projects/worldarchitect-memory-backups/scripts/daily_backup.sh"
