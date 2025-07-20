@@ -62,30 +62,61 @@ For issues you can confidently fix automatically:
 
 Use Edit/MultiEdit tools to apply fixes directly to files.
 
-### Step 4: Reply to Comments Using GitHub MCP
+### Step 4: Reply to Comments Using Threaded Replies
 
-For each comment that requires a response, use GitHub MCP with CLI fallback:
+For each comment that requires a response, use threaded replies for proper conversation flow:
 
-**Primary Method - GitHub MCP (try first):**
+**Primary Method - GitHub CLI Threaded Replies:**
+```bash
+# WORKING: Direct threaded replies to individual inline comments
+# CRITICAL: Use -F flag for comment ID (number) and -f flag for text (string)
+
+# For each comment ID from comment_id_map.json:
+gh api repos/jleechanorg/worldarchitect.ai/pulls/[PR_NUMBER]/comments \
+  -f body="✅ FIXED: [Specific response to this comment]" \
+  -F in_reply_to=COMMENT_ID
+
+# Example with actual IDs:
+# Reply to Copilot suggestion on line 278:
+gh api repos/jleechanorg/worldarchitect.ai/pulls/775/comments \
+  -f body="✅ FIXED: Applied your suggestion and updated the placeholder." \
+  -F in_reply_to=2217902292
+
+# Reply to Copilot suggestion on line 279:  
+gh api repos/jleechanorg/worldarchitect.ai/pulls/775/comments \
+  -f body="✅ FIXED: Updated find command as recommended." \
+  -F in_reply_to=2217902296
+```
+
+**Alternative Method - GitHub MCP Review (for multiple related comments):**
 ```
 mcp__github-server__create_pull_request_review(
   owner="jleechanorg",
   repo="worldarchitect.ai", 
-  pull_number=[PR_NUMBER],  # Replace with actual PR number
-  body="Response to all comments",
+  pull_number=[PR_NUMBER],
+  body="✅ ADDRESSED: Applied all automated suggestions",
   event="COMMENT",
   comments=[
     {
       "path": "file.py",
       "line": 123,
-      "body": "✅ FIXED: Applied your suggestion and updated the logic."
+      "body": "✅ FIXED: [Specific fix description]"
     }
   ]
 )
 ```
 
-**Fallback Method - GitHub CLI:**
-```bash
+**Backup Method - General PR Comment (if threading fails):**
+# If neither threaded replies nor MCP reviews work, use general PR comment:
+gh pr comment [PR_NUMBER] --body "✅ ADDRESSED ALL: [Summary of all fixes applied]"
+
+# KEY INSIGHTS FOR THREADED REPLIES:
+# - Endpoint: /repos/{owner}/{repo}/pulls/{pr}/comments  
+# - Parameter: in_reply_to=[COMMENT_ID]
+# - Use -F flag for in_reply_to (treats as number)
+# - Use -f flag for body text (treats as string)  
+# - Creates proper threaded conversations like web interface
+=======
 # CORRECT: Create review with line-specific comments (if MCP fails)
 # 1. Create JSON file with review data
 cat > /tmp/review_response.json << 'EOF'
@@ -108,9 +139,10 @@ gh api repos/jleechanorg/worldarchitect.ai/pulls/[PR_NUMBER]/reviews --input /tm
 # WRONG: Don't use these (they create general comments, not line-specific):
 # gh pr comment [PR_NUMBER] --body "general response"
 # gh api .../pulls/[PR_NUMBER]/comments -f body="..." -F in_reply_to="ID"
-```
 
 **Comment ID Reference**: Use `/tmp/copilot_pr_[PR_NUMBER]/comment_id_map.json` to find comment IDs
+
+**📚 Complete Guide**: See `docs/github-threaded-replies-guide.md` for comprehensive documentation on GitHub threaded replies
 
 ### Step 5: Generate Final Report
 
