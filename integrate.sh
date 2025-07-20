@@ -3,31 +3,50 @@
 # integrate.sh - Updates from main and creates fresh dev branch
 # This script implements the standard integration pattern for the project
 # 
-# Usage: ./integrate.sh [branch-name] [--force]
+# Usage: ./integrate.sh [branch-name] [--force] [--new-branch]
 #   branch-name: Optional custom branch name (default: dev{timestamp})
 #   --force: Override hard stops for uncommitted/unpushed changes
+#   --new-branch: Skip deleting the current branch (just create new branch)
 #
 # Examples:
 #   ./integrate.sh              # Creates dev{timestamp} branch
 #   ./integrate.sh feature/foo  # Creates feature/foo branch
 #   ./integrate.sh --force      # Force mode with dev{timestamp}
 #   ./integrate.sh newb --force # Creates newb branch in force mode
+#   ./integrate.sh --new-branch # Creates new dev{timestamp} without deleting current
+#   ./integrate.sh --new-branch feature/bar # Creates feature/bar without deleting current
 
 set -e  # Exit on any error
 
 # Parse arguments
 FORCE_MODE=false
+NEW_BRANCH_MODE=false
 CUSTOM_BRANCH_NAME=""
 
+# First pass: look for --new-branch and get its optional value
+for i in "${!@}"; do
+    if [[ "${!i}" == "--new-branch" ]]; then
+        NEW_BRANCH_MODE=true
+        echo "🌿 NEW BRANCH MODE: Will not delete current branch"
+        # Check if next argument exists and is not a flag
+        next_idx=$((i + 1))
+        if [ $next_idx -le $# ] && [[ "${!next_idx}" != --* ]]; then
+            CUSTOM_BRANCH_NAME="${!next_idx}"
+        fi
+    fi
+done
+
+# Second pass: handle other arguments
 for arg in "$@"; do
     if [[ "$arg" == "--force" ]]; then
         FORCE_MODE=true
         echo "🚨 FORCE MODE: Overriding safety checks"
-    else
-        # First non-force argument is the branch name
-        if [ -z "$CUSTOM_BRANCH_NAME" ]; then
-            CUSTOM_BRANCH_NAME="$arg"
-        fi
+    elif [[ "$arg" == "--new-branch" ]]; then
+        # Already handled in first pass
+        continue
+    elif [ -z "$CUSTOM_BRANCH_NAME" ] && [[ "$arg" != --* ]]; then
+        # Only set branch name if not already set by --new-branch
+        CUSTOM_BRANCH_NAME="$arg"
     fi
 done
 
@@ -42,7 +61,7 @@ fi
 
 # Check for unmerged changes on current branch
 should_delete_branch=false
-if [ "$current_branch" != "main" ]; then
+if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
     echo "⚠️  WARNING: You are on branch '$current_branch'"
     
     # Check if current branch has uncommitted changes - HARD STOP
@@ -120,8 +139,8 @@ fi
 echo "5. Creating fresh branch from main..."
 git checkout -b "$branch_name"
 
-# Delete the old branch if it was clean
-if [ "$should_delete_branch" = true ] && [ "$current_branch" != "main" ]; then
+# Delete the old branch if it was clean (and not in --new-branch mode)
+if [ "$should_delete_branch" = true ] && [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
     echo "6. Checking if branch '$current_branch' can be safely deleted..."
     
     # Check multiple conditions to determine if branch is safe to delete

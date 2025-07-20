@@ -265,6 +265,13 @@ if [ -f "$TOKEN_HELPER" ]; then
     # Load tokens
     if load_tokens; then
         log_with_timestamp "Tokens loaded successfully via centralized helper"
+        
+        # Ensure tokens are properly exported for use in this script
+        # The load_tokens function may not export variables to parent shell properly
+        if [ -f "$HOME/.token" ]; then
+            source "$HOME/.token" 2>/dev/null || true
+            export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
+        fi
     else
         echo -e "${RED}❌ Failed to load tokens via centralized helper${NC}"
         echo -e "${YELLOW}💡 Run '$TOKEN_HELPER create' to create template token file${NC}"
@@ -366,25 +373,13 @@ else
     # Remove any old deprecated GitHub server first
     claude mcp remove "github-server" >/dev/null 2>&1 || true
     
-    # Add the new official GitHub HTTP MCP server using environment variable approach
-    # This prevents token exposure in process listings
-    export GITHUB_MCP_CONFIG='{"type": "http", "url": "https://api.githubcopilot.com/mcp/", "authorization_token": "Bearer '"$GITHUB_PERSONAL_ACCESS_TOKEN"'"}'
-    
-    add_output=$(claude mcp add-json --scope user "github-server" "$GITHUB_MCP_CONFIG" 2>&1)
+    # Add the new official GitHub HTTP MCP server
+    add_output=$(claude mcp add-json --scope user "github-server" '{"type": "http", "url": "https://api.githubcopilot.com/mcp/", "authorization_token": "Bearer '"$GITHUB_PERSONAL_ACCESS_TOKEN"'"}' 2>&1)
     add_exit_code=$?
     
-    # Clean up environment variable
-    unset GITHUB_MCP_CONFIG
-    
-    # Check if the server was actually added (success messages can sometimes have exit code 0)
-    if [ $add_exit_code -eq 0 ] && echo "$add_output" | grep -q "Added.*github-server"; then
+    if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully added GitHub remote MCP server${NC}"
         log_with_timestamp "Successfully added GitHub remote MCP server"
-        INSTALL_RESULTS["github-server"]="SUCCESS"
-        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-    elif [ $add_exit_code -eq 0 ]; then
-        echo -e "${GREEN}  ✅ GitHub server configuration completed${NC}"
-        log_with_timestamp "GitHub server configuration completed: $add_output"
         INSTALL_RESULTS["github-server"]="SUCCESS"
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
     else
