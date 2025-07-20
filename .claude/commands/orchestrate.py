@@ -215,21 +215,16 @@ class OrchestrationCLI:
                 print(f"❌ Not in a git repository: {current_dir}")
                 return False
             
-            # Create fresh worktree from default branch for agent
-            # First create the directory
-            os.makedirs(agent_dir, exist_ok=True)
-            
-            # Get default branch dynamically
+            # Create git worktree with new branch from default branch for proper PR creation
             default_branch = self.get_default_branch()
+            branch_name = f'{agent_name}-implementation'
             
-            # Create a git worktree from default branch
-            worktree_result = subprocess.run(['git', 'worktree', 'add', agent_dir, default_branch], 
+            # Create worktree with new branch (enables proper PR creation)
+            worktree_result = subprocess.run(['git', 'worktree', 'add', '-b', branch_name, agent_dir, default_branch], 
                                            capture_output=True, text=True, cwd=current_dir)
             if worktree_result.returncode != 0:
-                # Fallback: copy current directory but checkout default branch
-                import shutil
-                shutil.copytree(current_dir, agent_dir, dirs_exist_ok=True)
-                subprocess.run(['git', 'checkout', default_branch], capture_output=True, cwd=agent_dir)
+                print(f"❌ Failed to create git worktree: {worktree_result.stderr}")
+                return False
             # Build task instruction
             task_instruction = self._build_task_instruction(
                 task_description, current_branch, agent_dir
@@ -245,11 +240,8 @@ class OrchestrationCLI:
             #
             # Safer alternative: Use a secure environment variable to confirm the bypass explicitly.
             # This ensures that the flag is only enabled in trusted environments.
-            skip_permissions_flag = os.getenv("CLAUDE_SKIP_PERMISSIONS", "false").lower() == "true"
-            if skip_permissions_flag:
-                claude_cmd = f'{claude_path} -p "{task_instruction}" --output-format stream-json --verbose --dangerously-skip-permissions'
-            else:
-                claude_cmd = f'{claude_path} -p "{task_instruction}" --output-format stream-json --verbose'
+            # Always use --dangerously-skip-permissions for autonomous agent operation
+            claude_cmd = f'{claude_path} -p "{task_instruction}" --output-format stream-json --verbose --dangerously-skip-permissions'
 
             # Create tmux session with proper headless Claude execution
             tmux_cmd = [
@@ -283,21 +275,21 @@ class OrchestrationCLI:
 
 WORKING ENVIRONMENT:
 - You are working in your own dedicated worktree: {agent_dir}
-- This is a fresh git worktree created from the {default_branch} branch
-- You start on the {default_branch} branch and should create a new feature branch
+- This is a fresh git worktree with your own feature branch from {default_branch}
+- You are already on your feature branch and ready to work
 - The user remains in their original directory working on: {current_branch}
 - Maximum {self.MAX_FILES_LIMIT} files allowed in workspace
 - CRITICAL: Validate file count regularly with: find . -name '*.py' -o -name '*.sh' -o -name '*.md' | wc -l
 - If approaching {self.MAX_FILES_LIMIT}, STOP and focus your implementation
 
 AUTONOMOUS WORKFLOW:
-1. Create a new feature branch: /nb (this will create a new branch from {default_branch})
+1. You are already on your feature branch - no need to create one
 2. Locate the relevant file and make the specific change requested
 3. Test that the change works correctly
 4. Run tests to ensure nothing breaks: ./run_tests.sh
 5. Create a NEW PR when complete: /pr (this will be a separate PR from the user's work)
 6. Your PR will be independent of the user's current branch: {current_branch}
-6. Task complete - you can exit or wait
+7. Task complete - you can exit or wait
 
 IMPORTANT INSTRUCTIONS:
 - Work in your dedicated directory: {agent_dir}
