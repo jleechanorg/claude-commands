@@ -1,10 +1,10 @@
 # GitHub Copilot PR Analysis - Repeatable LLM Workflow
 
-**First, run parallel data collection. Then analyze and take action.**
+**First, run data collection. Then analyze and take action.**
 
-## Phase 1: Parallel Data Collection (RUN NOW)
+## Phase 1: Data Collection (RUN NOW)
 
-Execute the Python data collector to gather all PR information in parallel:
+Execute the Python data collector to gather all PR information:
 
 ```bash
 python3 .claude/commands/copilot.py $ARGUMENTS
@@ -12,12 +12,7 @@ python3 .claude/commands/copilot.py $ARGUMENTS
 
 **Note**: Replace `$ARGUMENTS` with the actual PR number when executing (e.g., `722` for PR #722).
 
-The collector runs **parallel data fetching** using ThreadPoolExecutor:
-- Comments fetching (GitHub API)
-- CI status checking (GraphQL)  
-- Local CI replica execution
-
-Wait for parallel collection to complete, then proceed to Phase 2.
+Wait for completion, then proceed to Phase 2.
 
 **Data Location**: `/tmp/copilot_pr_[PR_NUMBER]/` (e.g., `/tmp/copilot_pr_722/`)
 
@@ -197,7 +192,7 @@ The PR is ready to merge when:
 
 This is a **repeatable process**:
 
-1. **Parallel Data Collection** (Python script with ThreadPoolExecutor) → 
+1. **Data Collection** (Python script) → 
 2. **LLM Analysis** (you analyze comments.json) → 
 3. **Apply Fixes** (you use Edit tools) → 
 4. **Reply to Comments** (you use GitHub MCP/CLI) → 
@@ -215,4 +210,4 @@ This is a **repeatable process**:
 - Bash for running tests and verification
 - Read for examining files and data
 
-The parallel data collection phase is complete. **Begin your analysis now.**
+The data collection phase is complete. **Begin your analysis now.**
