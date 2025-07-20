@@ -3,6 +3,9 @@
 
 set -e
 
+# Capture original working directory before changing to script directory
+ORIGINAL_PWD="$(pwd)"
+readonly ORIGINAL_PWD
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
@@ -76,19 +79,24 @@ check_dependencies() {
 
 # Create task directories
 setup_directories() {
-    mkdir -p tasks/{pending,active,completed}
-    mkdir -p logs
+    # Use TASK_DIR if set (from start_claude_agents), otherwise fallback to relative path for compatibility
+    local task_base="${TASK_DIR:-tasks}"
+    local log_base="${TASK_DIR:+${TASK_DIR%/tasks}/logs}"
+    log_base="${log_base:-logs}"
+    
+    mkdir -p "${task_base}"/{pending,active,completed}
+    mkdir -p "${log_base}"
     
     # Create task assignment files for real Claude agents
-    touch tasks/frontend_tasks.txt
-    touch tasks/backend_tasks.txt
-    touch tasks/testing_tasks.txt
-    touch tasks/shared_status.txt
+    touch "${task_base}/frontend_tasks.txt"
+    touch "${task_base}/backend_tasks.txt"
+    touch "${task_base}/testing_tasks.txt"
+    touch "${task_base}/shared_status.txt"
     
     # Initialize status file
-    echo "=== Agent Status Dashboard ===" > tasks/shared_status.txt
-    echo "Updated: $(date)" >> tasks/shared_status.txt
-    echo "" >> tasks/shared_status.txt
+    echo "=== Agent Status Dashboard ===" > "${task_base}/shared_status.txt"
+    echo "Updated: $(date)" >> "${task_base}/shared_status.txt"
+    echo "" >> "${task_base}/shared_status.txt"
     
     log_info "Directories and task files created"
 }
@@ -115,15 +123,29 @@ start_opus() {
 start_claude_agents() {
     log_info "Starting specialized Claude Code CLI agents..."
     
-    # Use current working directory as project root (respects worktrees)
-    PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+    # Use original working directory as project root (respects worktrees)
+    PROJECT_ROOT="$ORIGINAL_PWD"
     
-    # If we're in a worktree, use it; otherwise offer to create one
+    # Ensure all task/log paths are resolved inside the project root the user invoked from
+    export TASK_DIR="$PROJECT_ROOT/tasks"
+    
+    # Create directories explicitly in the project root
+    mkdir -p "$TASK_DIR" "$PROJECT_ROOT/logs"
+
+    # Validate we're working in the correct directory
     if [[ "$PROJECT_ROOT" == *"worktree"* ]]; then
         log_info "Using worktree: $PROJECT_ROOT"
     else
         log_warn "Not in a worktree. Agents will work in: $PROJECT_ROOT"
         log_info "Consider running from a worktree for isolated development"
+    fi
+    
+    # Verify orchestration is running from project directory, not system hooks
+    if [[ "$(basename "$PROJECT_ROOT")" == "worktree_hooks" ]]; then
+        log_error "ERROR: Running from system hooks directory. Please run from a valid worktree:"
+        log_error "  Use 'git worktree list' to find available worktrees, then navigate to one and run:"
+        log_error "  cd <path-to-worktree> && ./orchestration/start_system.sh"
+        exit 1
     fi
     
     # Check if we have the agent startup script
@@ -138,12 +160,12 @@ start_claude_agents() {
         log_info "Starting Dead Code Cleanup Agent in headless mode..."
         SESSION_NAME=$("$SCRIPT_DIR/start_claude_agent.sh" dead-code "" "$PROJECT_ROOT")
         log_info "Dead Code Agent started in session: $SESSION_NAME"
-        echo "dead-code:$SESSION_NAME" >> tasks/agent_sessions.txt
+        echo "dead-code:$SESSION_NAME" >> "${TASK_DIR:-tasks}/agent_sessions.txt"
     elif [ "$1" == "testing" ]; then
         log_info "Starting Testing Agent in headless mode..."
         SESSION_NAME=$("$SCRIPT_DIR/start_claude_agent.sh" testing "" "$PROJECT_ROOT")
         log_info "Testing Agent started in session: $SESSION_NAME"
-        echo "testing:$SESSION_NAME" >> tasks/agent_sessions.txt
+        echo "testing:$SESSION_NAME" >> "${TASK_DIR:-tasks}/agent_sessions.txt"
     else
         # Start interactive agents for general orchestration
         start_claude_agents_manual
@@ -153,7 +175,7 @@ start_claude_agents() {
 # Manual agent startup (interactive mode)
 start_claude_agents_manual() {
     log_info "Starting interactive Claude agents..."
-    PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+    # PROJECT_ROOT already set above - no need to reassign
     
     # Start Frontend Agent
     log_info "Starting Frontend Agent (UI/React specialist)..."
@@ -170,7 +192,7 @@ start_claude_agents_manual() {
     tmux send-keys -t frontend-agent "- User experience and interface optimization" Enter
     tmux send-keys -t frontend-agent "- Frontend testing and validation" Enter
     tmux send-keys -t frontend-agent "" Enter
-    tmux send-keys -t frontend-agent "I monitor tasks/frontend_tasks.txt for assignments." Enter
+    tmux send-keys -t frontend-agent "I monitor ${TASK_DIR:-tasks}/frontend_tasks.txt for assignments." Enter
     tmux send-keys -t frontend-agent "Ready for frontend development tasks!" Enter
     
     # Start Backend Agent  
@@ -188,7 +210,7 @@ start_claude_agents_manual() {
     tmux send-keys -t backend-agent "- Server logic and authentication systems" Enter
     tmux send-keys -t backend-agent "- Performance optimization and caching" Enter
     tmux send-keys -t backend-agent "" Enter
-    tmux send-keys -t backend-agent "I monitor tasks/backend_tasks.txt for assignments." Enter
+    tmux send-keys -t backend-agent "I monitor ${TASK_DIR:-tasks}/backend_tasks.txt for assignments." Enter
     tmux send-keys -t backend-agent "Ready for backend development tasks!" Enter
     
     # Start Testing Agent
@@ -206,7 +228,7 @@ start_claude_agents_manual() {
     tmux send-keys -t testing-agent "- API testing and integration testing" Enter
     tmux send-keys -t testing-agent "- Code quality and security analysis" Enter
     tmux send-keys -t testing-agent "" Enter
-    tmux send-keys -t testing-agent "I monitor tasks/testing_tasks.txt for assignments." Enter
+    tmux send-keys -t testing-agent "I monitor ${TASK_DIR:-tasks}/testing_tasks.txt for assignments." Enter
     tmux send-keys -t testing-agent "Ready for testing and quality assurance tasks!" Enter
     
     # Update shared status
@@ -224,7 +246,7 @@ start_claude_agents_manual() {
         echo "  tmux attach -t backend-agent"
         echo "  tmux attach -t testing-agent" 
         echo "  tmux attach -t opus-master"
-    } > tasks/shared_status.txt
+    } > "${TASK_DIR:-tasks}/shared_status.txt"
     
     log_info "✅ All Claude agents started successfully!"
     log_info "🔗 Connect to agents:"
@@ -253,16 +275,16 @@ show_status() {
     done
     
     echo "├── Task Files:"
-    if [ -f "tasks/frontend_tasks.txt" ]; then
-        frontend_count=$(wc -l < tasks/frontend_tasks.txt 2>/dev/null || echo "0")
+    if [ -f "${TASK_DIR:-tasks}/frontend_tasks.txt" ]; then
+        frontend_count=$(wc -l < "${TASK_DIR:-tasks}/frontend_tasks.txt" 2>/dev/null || echo "0")
         echo "│   Frontend tasks: $frontend_count pending"
     fi
-    if [ -f "tasks/backend_tasks.txt" ]; then
-        backend_count=$(wc -l < tasks/backend_tasks.txt 2>/dev/null || echo "0")
+    if [ -f "${TASK_DIR:-tasks}/backend_tasks.txt" ]; then
+        backend_count=$(wc -l < "${TASK_DIR:-tasks}/backend_tasks.txt" 2>/dev/null || echo "0")
         echo "│   Backend tasks: $backend_count pending"
     fi
-    if [ -f "tasks/testing_tasks.txt" ]; then
-        testing_count=$(wc -l < tasks/testing_tasks.txt 2>/dev/null || echo "0")
+    if [ -f "${TASK_DIR:-tasks}/testing_tasks.txt" ]; then
+        testing_count=$(wc -l < "${TASK_DIR:-tasks}/testing_tasks.txt" 2>/dev/null || echo "0")
         echo "│   Testing tasks: $testing_count pending"
     fi
     
@@ -270,13 +292,13 @@ show_status() {
     echo "    tmux attach -t frontend-agent  # Connect to Frontend Agent"
     echo "    tmux attach -t backend-agent   # Connect to Backend Agent"
     echo "    tmux attach -t testing-agent   # Connect to Testing Agent"
-    echo "    cat tasks/shared_status.txt    # View detailed status"
+    echo "    cat ${TASK_DIR:-tasks}/shared_status.txt    # View detailed status"
     echo
     
     # Show shared status if available
-    if [ -f "tasks/shared_status.txt" ]; then
+    if [ -f "${TASK_DIR:-tasks}/shared_status.txt" ]; then
         echo "📊 Agent Status Dashboard:"
-        cat tasks/shared_status.txt | sed 's/^/   /'
+        cat "${TASK_DIR:-tasks}/shared_status.txt" | sed 's/^/   /'
         echo
     fi
 }
@@ -320,10 +342,10 @@ stop_system() {
     log_info "Cleared Redis data"
     
     # Update status file
-    echo "=== Agent Status Dashboard ===" > tasks/shared_status.txt
-    echo "Updated: $(date)" >> tasks/shared_status.txt
-    echo "" >> tasks/shared_status.txt
-    echo "All agents stopped." >> tasks/shared_status.txt
+    echo "=== Agent Status Dashboard ===" > "${TASK_DIR:-tasks}/shared_status.txt"
+    echo "Updated: $(date)" >> "${TASK_DIR:-tasks}/shared_status.txt"
+    echo "" >> "${TASK_DIR:-tasks}/shared_status.txt"
+    echo "All agents stopped." >> "${TASK_DIR:-tasks}/shared_status.txt"
     
     log_info "System stopped"
 }
@@ -390,7 +412,7 @@ case "${1:-start}" in
         if [ "$QUIET_MODE" = false ]; then
             echo
             log_info "🎉 Real Claude Agent System started successfully!"
-            echo "📊 Status dashboard: cat tasks/shared_status.txt"
+            echo "📊 Status dashboard: cat ${TASK_DIR:-tasks}/shared_status.txt"
             echo "🔗 Connect to agents:"
             echo "   Frontend: tmux attach -t frontend-agent" 
             echo "   Backend:  tmux attach -t backend-agent"
@@ -399,9 +421,9 @@ case "${1:-start}" in
         echo "   Opus:     tmux attach -t opus-master"
         echo ""
         echo "📝 Task assignment:"
-        echo "   echo 'Build login form' >> tasks/frontend_tasks.txt"
-        echo "   echo 'Create auth API' >> tasks/backend_tasks.txt"
-        echo "   echo 'Test auth flow' >> tasks/testing_tasks.txt"
+        echo "   echo 'Build login form' >> ${TASK_DIR:-tasks}/frontend_tasks.txt"
+        echo "   echo 'Create auth API' >> ${TASK_DIR:-tasks}/backend_tasks.txt"
+        echo "   echo 'Test auth flow' >> ${TASK_DIR:-tasks}/testing_tasks.txt"
         echo ""
         echo "View status: $0 status"
         echo "Stop system: $0 stop"
