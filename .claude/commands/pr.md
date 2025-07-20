@@ -6,7 +6,7 @@
 
 ## 🚨 COMPLETE PR WORKFLOW
 
-This command conceptually combines the functionality of: `/think /execute /push /review /copilot`
+This command conceptually combines the functionality of: `/think /execute /push /copilot /review`
 
 ### Phase 1: Think (/think)
 
@@ -31,22 +31,24 @@ This command conceptually combines the functionality of: `/think /execute /push 
 - Push to remote branch
 - Create detailed PR description
 - Include test results and screenshots
+- **Auto-run /copilot** - Immediately analyze and fix any issues
 
-### Phase 4: Review (/review)
+### Phase 4: Copilot (/copilot) - AUTO-EXECUTED
+
+**Address automated feedback** (runs automatically after push):
+- Handle GitHub bot comments
+- Fix failing tests
+- Address security/performance suggestions
+- Make PR mergeable
+- Post replies to all review comments
+
+### Phase 5: Review (/review)
 
 **Comprehensive code review**:
 - Analyze code quality
 - Check for potential issues
 - Verify test coverage
 - Document any concerns
-
-### Phase 5: Copilot (/copilot)
-
-**Address automated feedback**:
-- Handle GitHub bot comments
-- Fix failing tests
-- Address security/performance suggestions
-- Make PR mergeable
 
 ## Command Combination
 
@@ -61,7 +63,7 @@ This command conceptually combines the functionality of: `/think /execute /push 
 **`/pr` Flow**:
 ```
 User: /pr implement user login validation
-Assistant: I detected these commands: /think /execute /push /review /copilot and will combine them intelligently.
+Assistant: I detected these commands: /think /execute /push /copilot /review and will combine them intelligently.
 
 Phase 1 - Think:
 [Deep analysis of login validation requirements]
@@ -72,20 +74,21 @@ Phase 2 - Execute:
 Phase 3 - Push:
 [Create PR with comprehensive description]
 
-Phase 4 - Review:
-[Comprehensive code review]
-
-Phase 5 - Copilot:
+Phase 4 - Copilot (Auto):
 [Address automated feedback and make PR mergeable]
+
+Phase 5 - Review:
+[Comprehensive code review]
 ```
 
 ## Key Benefits
 
 - ✅ **Complete lifecycle** - from concept to mergeable PR
 - ✅ **Integrated workflow** - all phases work together
+- ✅ **Auto-fix issues** - /copilot runs automatically after push
 - ✅ **Combo command support** - uses universal composition system
 - ✅ **Realistic execution** - based on actual capabilities
-- ✅ **Comprehensive coverage** - thinking, implementation, review, feedback
+- ✅ **Comprehensive coverage** - thinking, implementation, auto-fix, review
 
 ## When to Use
 
