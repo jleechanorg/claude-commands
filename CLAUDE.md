@@ -52,6 +52,15 @@
    1. "Does this violate any rules in CLAUDE.md?"
    2. "Should I check my constraints first?"
 
+🚨 **DUAL COMPOSITION ARCHITECTURE**: Command processing uses two different mechanisms
+   - **Cognitive Commands** (/think, /arch, /debug): Use Universal Composition (natural semantic understanding)
+   - **Operational Commands** (/headless, /handoff, /orchestrate): Use Protocol Enforcement (mandatory workflow execution)
+   - ✅ **Command Recognition**: Scan for "/" prefixes and classify command type BEFORE processing
+   - ✅ **Protocol Enforcement**: Operational commands trigger required workflows automatically
+   - ✅ **Composition Integration**: Both systems work together (/think /headless = thinking + headless environment)
+   - ❌ NEVER process operational commands as regular tasks without workflow setup
+   - **Pattern**: Cognitive = semantic composition, Operational = protocol enforcement
+
 🚨 **NO FALSE ✅**: Only use ✅ for 100% complete/working. Use ❌ ⚠️ 🔄 or text for partial.
 
 🚨 **NO POSITIVITY**: Be extremely self-critical. No celebration unless 100% working.
@@ -481,13 +490,32 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 **Full Documentation**: → `.claude/commands/` | Use `/list` for available commands
 
+### Command Classification (Dual Architecture)
+
+**🧠 Cognitive Commands** (Semantic Composition):
+- `/think`, `/arch`, `/debug` - Modify thinking approach, compose naturally
+- **Behavior**: Automatic semantic understanding and tool integration
+
+**⚙️ Operational Commands** (Protocol Enforcement):  
+- `/headless`, `/handoff`, `/orchestrate` - Modify execution environment
+- **Behavior**: Mandatory workflow execution before task processing
+
+**🔧 Tool Commands** (Direct Execution):
+- `/execute`, `/test`, `/pr` - Direct task execution
+- **Behavior**: Immediate execution with optional parameters
+
 ### Critical Enforcement
 🚨 **EXECUTE CIRCUIT BREAKER**: `/e` or `/execute` → TodoWrite checklist MANDATORY
 - Context % | Complexity | Subagents? | Plan presented | Approval received
 - ❌ NEVER start work without approval | TodoWrite = safety protocol
 
+🚨 **OPERATIONAL COMMAND ENFORCEMENT**: `/headless`, `/handoff`, `/orchestrate`
+- ✅ ALWAYS trigger protocol workflow before task execution
+- ✅ Create isolated environments as specified in command documentation  
+- ❌ NEVER process as regular tasks without environment setup
+
 **Key Commands**: `/execute` (no approval) | `/plan` (requires approval) | `/replicate` (PR analysis)
-**Universal Composition**: ANY combination works via Claude's NLP
+**Dual Composition**: Cognitive (semantic) + Operational (protocol) + Tool (direct)
 **Unified Learning**: ONE `/learn` command with Memory MCP integration
 
 ## Special Protocols
