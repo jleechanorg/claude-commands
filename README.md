@@ -1,5 +1,7 @@
 # WorldArchitect.AI - AI-Powered Tabletop RPG Platform
 
+> **🏆 Innovation Highlights**: See our [Innovation Summary](README_SUMMARY.md) showcasing breakthrough advances in AI-first development, including industry-first universal command composition and autonomous multi-agent orchestration.
+
 ## 🎲 Overview
 
 WorldArchitect.AI is a revolutionary AI-powered platform that serves as your digital Game Master for Dungeons & Dragons 5th Edition experiences. Using advanced language models and sophisticated state management, it delivers dynamic, interactive storytelling that adapts to your choices in real-time - no human DM required.
