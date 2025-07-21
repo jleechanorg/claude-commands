@@ -20,6 +20,7 @@ select = [
     "RET",  # flake8-return
     "SIM",  # flake8-simplify
     "TID",  # flake8-tidy-imports
+    "ICN",  # flake8-import-conventions
     "ARG",  # flake8-unused-arguments
     "DTZ",  # flake8-datetimez
     "ERA",  # eradicate (commented-out code)
@@ -39,6 +40,14 @@ ignore = [
     "PLR2004", # Magic value used in comparison
     "T201",   # Print found (allowed for debug/logging)
 ]
+
+# Custom rules for import enforcement
+[tool.ruff.lint.flake8-tidy-imports]
+# Ban try/except around imports
+ban-relative-imports = "parents"  # Only allow relative imports within same package
+
+[tool.ruff.lint.flake8-import-conventions]
+# Enforce import conventions
 
 # Allow fix for all enabled rules
 fixable = ["ALL"]

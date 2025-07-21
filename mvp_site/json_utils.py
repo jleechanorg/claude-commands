@@ -3,7 +3,7 @@ Shared JSON parsing utilities for handling incomplete or malformed JSON response
 """
 import json
 import re
-from typing import Tuple, Optional, Dict, Any, Union
+from typing import Tuple, Optional, Dict, Any, Union, List
 
 
 def count_unmatched_quotes(text: str) -> int:

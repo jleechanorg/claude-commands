@@ -39,8 +39,10 @@ import sys
 import traceback
 import uuid
 from functools import wraps
+from typing import Dict, List, Optional, Any, Union, Tuple, Callable
 
 import constants
+from custom_types import ApiResponse, CampaignData, UserId, CampaignId
 
 # Local service imports
 import document_generator
@@ -52,7 +54,7 @@ from debug_mode_parser import DebugModeParser
 from firebase_admin import auth
 
 # Flask and web imports
-from flask import Flask, jsonify, request, send_file, send_from_directory
+from flask import Flask, jsonify, request, send_file, send_from_directory, Response, Request
 from flask_cors import CORS
 from token_utils import log_with_tokens
 
@@ -154,7 +156,7 @@ RANDOM_SETTINGS = [
 # --- END CONSTANTS ---
 
 
-def _prepare_game_state(user_id, campaign_id):
+def _prepare_game_state(user_id: UserId, campaign_id: CampaignId) -> Tuple[GameState, bool, int]:
     """
     Load and prepare game state, including legacy cleanup.
 
@@ -169,8 +171,8 @@ def _prepare_game_state(user_id, campaign_id):
     - Logs cleanup operations for debugging
 
     Args:
-        user_id (str): Firebase user ID
-        campaign_id (str): Campaign identifier from Firestore
+        user_id: Firebase user ID
+        campaign_id: Campaign identifier from Firestore
 
     Returns:
         tuple: (current_game_state, was_cleaned, num_cleaned)
@@ -205,7 +207,7 @@ def _prepare_game_state(user_id, campaign_id):
     return current_game_state, was_cleaned, num_cleaned
 
 
-def _handle_set_command(user_input, current_game_state, user_id, campaign_id):
+def _handle_set_command(user_input: str, current_game_state: GameState, user_id: UserId, campaign_id: CampaignId) -> Optional[Response]:
     """
     Handle GOD_MODE_SET command.
 
@@ -272,7 +274,7 @@ def _handle_set_command(user_input, current_game_state, user_id, campaign_id):
     )
 
 
-def _handle_ask_state_command(user_input, current_game_state, user_id, campaign_id):
+def _handle_ask_state_command(user_input: str, current_game_state: GameState, user_id: UserId, campaign_id: CampaignId) -> Optional[Response]:
     """
     Handle GOD_ASK_STATE command.
 
@@ -297,7 +299,7 @@ def _handle_ask_state_command(user_input, current_game_state, user_id, campaign_
     return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: response_text})
 
 
-def _handle_update_state_command(user_input, user_id, campaign_id):
+def _handle_update_state_command(user_input: str, user_id: UserId, campaign_id: CampaignId) -> Optional[Response]:
     """
     Handle GOD_MODE_UPDATE_STATE command.
 
@@ -364,22 +366,22 @@ def _handle_update_state_command(user_input, user_id, campaign_id):
 
 
 def _apply_state_changes_and_respond(
-    proposed_changes,
-    current_game_state,
-    gemini_response_obj,
-    structured_response,
-    mode,
-    story_context,
-    campaign_id,
-    user_id,
-):
+    proposed_changes: Optional[Dict[str, Any]],
+    current_game_state: GameState,
+    gemini_response_obj: Any,  # GeminiResponse type from gemini_service
+    structured_response: Optional[Any],  # NarrativeResponse type from gemini_service
+    mode: str,
+    story_context: List[Dict[str, Any]],
+    campaign_id: CampaignId,
+    user_id: UserId,
+) -> Response:
     """
     Apply state changes from AI response and prepare final response.
 
     Args:
         proposed_changes: Proposed state changes dict
         current_game_state: Current GameState object
-        gemini_response: Processed narrative text
+        gemini_response_obj: Processed narrative text object
         structured_response: Parsed NarrativeResponse object or None
         mode: Game mode
         story_context: Story context list
@@ -508,8 +510,8 @@ def _apply_state_changes_and_respond(
 
 
 def _handle_debug_mode_command(
-    user_input, mode, current_game_state, user_id, campaign_id
-):
+    user_input: str, mode: str, current_game_state: GameState, user_id: UserId, campaign_id: CampaignId
+) -> Optional[Response]:
     """
     Handle debug mode command parsing and state updates.
 
@@ -558,7 +560,7 @@ def _handle_debug_mode_command(
     )
 
 
-def truncate_game_state_for_logging(game_state_dict, max_lines=20):
+def truncate_game_state_for_logging(game_state_dict: Dict[str, Any], max_lines: int = 20) -> str:
     """
     Truncates a game state dictionary for logging to improve readability.
     Only shows the first max_lines lines of the JSON representation.
@@ -575,8 +577,8 @@ def truncate_game_state_for_logging(game_state_dict, max_lines=20):
 
 
 def apply_automatic_combat_cleanup(
-    updated_state_dict: dict, proposed_changes: dict
-) -> dict:
+    updated_state_dict: Dict[str, Any], proposed_changes: Dict[str, Any]
+) -> Dict[str, Any]:
     """
     Automatically cleans up defeated enemies from combat state when combat updates are applied.
 
@@ -627,7 +629,7 @@ def apply_automatic_combat_cleanup(
     return updated_state_dict
 
 
-def _cleanup_legacy_state(state_dict: dict) -> tuple[dict, bool, int]:
+def _cleanup_legacy_state(state_dict: Dict[str, Any]) -> Tuple[Dict[str, Any], bool, int]:
     """
     Removes legacy data structures from a game state dictionary.
     Specifically, it removes top-level keys with '.' in them and the old 'world_time' key.
@@ -653,14 +655,14 @@ def _cleanup_legacy_state(state_dict: dict) -> tuple[dict, bool, int]:
     return cleaned_state, True, num_deleted
 
 
-def format_state_changes(changes: dict, for_html: bool = False) -> str:
+def format_state_changes(changes: Dict[str, Any], for_html: bool = False) -> str:
     """Formats a dictionary of state changes into a readable string, counting the number of leaf-node changes."""
     if not changes:
         return "No state changes."
 
-    log_lines = []
+    log_lines: List[str] = []
 
-    def recurse_items(d, prefix=""):
+    def recurse_items(d: Dict[str, Any], prefix: str = "") -> None:
         for key, value in d.items():
             path = f"{prefix}.{key}" if prefix else key
             if isinstance(value, dict):
@@ -685,13 +687,13 @@ def format_state_changes(changes: dict, for_html: bool = False) -> str:
     return f"{header}\\n{items_text}"
 
 
-def parse_set_command(payload_str: str) -> dict:
+def parse_set_command(payload_str: str) -> Dict[str, Any]:
     """
     Parses a multi-line string of `key.path = value` into a nested
     dictionary of proposed changes. Handles multiple .append operations correctly.
     """
-    proposed_changes = {}
-    append_ops = collections.defaultdict(list)
+    proposed_changes: Dict[str, Any] = {}
+    append_ops: Dict[str, List[Any]] = collections.defaultdict(list)
 
     for line in payload_str.strip().splitlines():
         line = line.strip()
@@ -731,7 +733,7 @@ def parse_set_command(payload_str: str) -> dict:
     return proposed_changes
 
 
-def _build_campaign_prompt(character, setting, description, old_prompt):
+def _build_campaign_prompt(character: Optional[str], setting: Optional[str], description: Optional[str], old_prompt: Optional[str]) -> str:
     """
     Build campaign prompt from character, setting, and description parameters.
 
@@ -741,13 +743,13 @@ def _build_campaign_prompt(character, setting, description, old_prompt):
     - Backward compatibility with old_prompt format is maintained
 
     Args:
-        character (str): Character description or None/empty
-        setting (str): Setting description or None/empty
-        description (str): Campaign description or None/empty
-        old_prompt (str): Legacy prompt format for backward compatibility
+        character: Character description or None/empty
+        setting: Setting description or None/empty
+        description: Campaign description or None/empty
+        old_prompt: Legacy prompt format for backward compatibility
 
     Returns:
-        str: Constructed campaign prompt with proper character/setting/description format
+        Constructed campaign prompt with proper character/setting/description format
     """
     import random
 
@@ -783,7 +785,7 @@ def _build_campaign_prompt(character, setting, description, old_prompt):
     return "\n".join(prompt_parts)
 
 
-def setup_file_logging():
+def setup_file_logging() -> None:
     """
     Configure file logging for current git branch.
 
@@ -834,7 +836,7 @@ def setup_file_logging():
     logging_util.info(f"File logging configured: {log_file}")
 
 
-def create_app():
+def create_app() -> Flask:
     """
     Create and configure the Flask application.
 
@@ -860,7 +862,7 @@ def create_app():
     - /* - Frontend SPA fallback
 
     Returns:
-        Flask: Configured Flask application instance
+        Configured Flask application instance
     """
     # Set up file logging before creating app
     setup_file_logging()
@@ -895,9 +897,9 @@ def create_app():
         if not firebase_admin._apps:
             firebase_admin.initialize_app()
 
-    def check_token(f):
+    def check_token(f: Callable[..., Response]) -> Callable[..., Response]:
         @wraps(f)
-        def wrap(*args, **kwargs):
+        def wrap(*args: Any, **kwargs: Any) -> Response:
             # Check for auth skip mode (for testing with real services)
             auth_skip_enabled = (
                 app.config.get("TESTING") or os.getenv("AUTH_SKIP_MODE") == "true"
@@ -931,7 +933,7 @@ def create_app():
     # --- API Routes ---
     @app.route("/api/campaigns", methods=["GET"])
     @check_token
-    def get_campaigns(user_id):
+    def get_campaigns(user_id: UserId) -> Union[Response, Tuple[Response, int]]:
         # --- RESTORED TRY-EXCEPT BLOCK ---
         try:
             return jsonify(firestore_service.get_campaigns_for_user(user_id))
@@ -947,7 +949,7 @@ def create_app():
 
     @app.route("/api/campaigns/<campaign_id>", methods=["GET"])
     @check_token
-    def get_campaign(user_id, campaign_id):
+    def get_campaign(user_id: UserId, campaign_id: CampaignId) -> Union[Response, Tuple[Response, int]]:
         # --- RESTORED TRY-EXCEPT BLOCK ---
         try:
             logging_util.info(
@@ -1007,7 +1009,7 @@ def create_app():
 
     @app.route("/api/campaigns", methods=["POST"])
     @check_token
-    def create_campaign_route(user_id):
+    def create_campaign_route(user_id: UserId) -> Union[Response, Tuple[Response, int]]:
         data = request.get_json()
 
         # Handle both new (character/setting/description) and old (prompt) formats
@@ -1083,7 +1085,7 @@ def create_app():
 
     @app.route("/api/campaigns/<campaign_id>", methods=["PATCH"])
     @check_token
-    def update_campaign(user_id, campaign_id):
+    def update_campaign(user_id: UserId, campaign_id: CampaignId) -> Union[Response, Tuple[Response, int]]:
         data = request.get_json()
         new_title = data.get(constants.KEY_TITLE)
         if not new_title:
@@ -1102,7 +1104,7 @@ def create_app():
 
     @app.route("/api/campaigns/<campaign_id>/interaction", methods=["POST"])
     @check_token
-    def handle_interaction(user_id, campaign_id):
+    def handle_interaction(user_id: UserId, campaign_id: CampaignId) -> Union[Response, Tuple[Response, int]]:
         try:
             data = request.get_json()
             user_input, mode = (
@@ -1307,7 +1309,7 @@ def create_app():
 
     @app.route("/api/campaigns/<campaign_id>/export", methods=["GET"])
     @check_token
-    def export_campaign(user_id, campaign_id):
+    def export_campaign(user_id: UserId, campaign_id: CampaignId) -> Union[Response, Tuple[Response, int]]:
         try:
             export_format = request.args.get("format", "txt").lower()
 
@@ -1369,7 +1371,7 @@ def create_app():
                 )
 
                 @response.call_on_close
-                def cleanup():
+                def cleanup() -> None:
                     try:
                         os.remove(safe_file_path)
                         logging_util.info(
@@ -1396,7 +1398,7 @@ def create_app():
     # --- Frontend Serving ---
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
-    def serve_frontend(path):
+    def serve_frontend(path: str) -> Response:
         """Serve the frontend files. This is the fallback for any non-API routes."""
         if path and os.path.exists(os.path.join(app.static_folder, path)):
             return send_from_directory(app.static_folder, path)
@@ -1405,7 +1407,7 @@ def create_app():
     return app
 
 
-def run_god_command(campaign_id, user_id, action, command_string=None):
+def run_god_command(campaign_id: CampaignId, user_id: UserId, action: str, command_string: Optional[str] = None) -> None:
     """Runs a GOD_MODE command directly against Firestore."""
     # We need to initialize the app to get the context for Firestore
     if not firebase_admin._apps:
@@ -1469,12 +1471,12 @@ def run_god_command(campaign_id, user_id, action, command_string=None):
         )
 
 
-def run_test_command(command):
+def run_test_command(command: str) -> None:
     """
     Run a test command.
 
     Args:
-        command (str): The test command to run ('testui', 'testuif', 'testhttp', 'testhttpf')
+        command: The test command to run ('testui', 'testuif', 'testhttp', 'testhttpf')
     """
     if command == "testui":
         # Run browser tests with mock APIs

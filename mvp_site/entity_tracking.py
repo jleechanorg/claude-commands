@@ -32,7 +32,7 @@ Note: This module acts as a bridge between the core application and the Pydantic
 entity schemas, providing a stable API while delegating validation to the schemas module.
 """
 
-from typing import Any
+from typing import Any, Dict
 
 # Import from Pydantic schemas (entities_simple.py was removed)
 from schemas.entities_pydantic import (
@@ -55,7 +55,7 @@ __all__ = [
 
 
 def create_from_game_state(
-    game_state: dict[str, Any], session_number: int, turn_number: int
+    game_state: Dict[str, Any], session_number: int, turn_number: int
 ) -> SceneManifest:
     """
     Create a SceneManifest from game state using Pydantic validation.
@@ -63,6 +63,6 @@ def create_from_game_state(
     return schemas_create_from_game_state(game_state, session_number, turn_number)
 
 
-def get_validation_info() -> dict[str, str]:
+def get_validation_info() -> Dict[str, str]:
     """Get information about the current validation approach"""
     return {"validation_type": VALIDATION_TYPE, "pydantic_available": "true"}

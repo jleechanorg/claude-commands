@@ -3,6 +3,7 @@ Defines the GameState class, which represents the complete state of a campaign.
 """
 
 import datetime
+from typing import Any, Dict, List, Optional, Union
 
 import constants
 import logging_util
@@ -13,7 +14,7 @@ class GameState:
     A class to hold and manage game state data, behaving like a flexible dictionary.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs: Any) -> None:
         """Initializes the GameState object with arbitrary data."""
         # Set default values for core attributes if they are not provided
         self.game_state_version = kwargs.get("game_state_version", 1)
@@ -68,7 +69,7 @@ class GameState:
         return data
 
     @classmethod
-    def from_dict(cls, source: dict):
+    def from_dict(cls, source: Optional[Dict[str, Any]]) -> Optional['GameState']:
         """Creates a GameState object from a dictionary (e.g., from Firestore)."""
         if not source:
             return None
@@ -76,7 +77,7 @@ class GameState:
         # The constructor now directly accepts the dictionary.
         return cls(**source)
 
-    def validate_checkpoint_consistency(self, narrative_text: str) -> list:
+    def validate_checkpoint_consistency(self, narrative_text: str) -> List[str]:
         """
         Validates that critical checkpoint data in the state matches references in the narrative.
         Returns a list of discrepancies found.
@@ -249,7 +250,7 @@ class GameState:
 
     # Combat Management Methods
 
-    def start_combat(self, combatants_data: list[dict]) -> None:
+    def start_combat(self, combatants_data: List[Dict[str, Any]]) -> None:
         """
         Initialize combat state with given combatants.
 
@@ -318,7 +319,7 @@ class GameState:
             "combat_log": [],
         }
 
-    def cleanup_defeated_enemies(self) -> list[str]:
+    def cleanup_defeated_enemies(self) -> List[str]:
         """
         Identifies and removes defeated enemies from both combat_state and npc_data.
         Returns a list of defeated enemy names for logging.
@@ -385,7 +386,7 @@ class GameState:
 
         return defeated_enemies
 
-    def _consolidate_time_tracking(self):
+    def _consolidate_time_tracking(self) -> None:
         """
         Consolidate time tracking from separate fields into a single object.
         Migrates old time_of_day field into world_time object if needed.
@@ -435,7 +436,7 @@ class GameState:
                     f"Calculated time_of_day as '{world_data['world_time']['time_of_day']}' from hour {hour}"
                 )
 
-    def _calculate_time_of_day(self, hour):
+    def _calculate_time_of_day(self, hour: int) -> str:
         """
         Calculate descriptive time of day from hour value.
 
@@ -461,7 +462,7 @@ class GameState:
             return "Night"
         return "Unknown"
 
-    def _estimate_hour_from_time_of_day(self, time_of_day):
+    def _estimate_hour_from_time_of_day(self, time_of_day: str) -> int:
         """
         Estimate a reasonable hour value from a time of day description.
         Used for migration when we have time_of_day but no hour.
