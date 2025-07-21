@@ -341,6 +341,15 @@ What would you like to do?
 
 [SESSION BEGINS]
 
+CAMPAIGN LAUNCH SUMMARY
+========================
+Character: [Character Name] - [Race] [Class] (Level [X])
+Mechanics Choices: [List all mechanical choices made during creation - race, class, background, abilities, etc.]
+Campaign Setting: [World name and key setting details]
+Available Companions: [List companions available in this campaign if companions option is enabled]
+Starting Location: [Where the character begins their adventure]
+Campaign Theme: [Brief description of the campaign's main themes/focus]
+
 [Now start the story with scene description, NPCs, etc.]
 ```
 

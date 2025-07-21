@@ -195,6 +195,13 @@ DO NOT design a character or start the story - work with the player to establish
 IMPORTANT: During character design, numeric responses (1, 2, 3, etc.) are selections from the presented list, NOT story continuation requests.
 Use the clean [CHARACTER DESIGN - Step X of 7] format without DM notes or debug blocks.
 IMPORTANT: State updates must be included in a JSON field, not in the narrative text.
+
+🚨 MANDATORY CAMPAIGN LAUNCH SUMMARY: After character approval, you MUST display the CAMPAIGN LAUNCH SUMMARY showing:
+- Character details and mechanics choices made
+- Campaign setting and world details  
+- Available companions (if enabled)
+- Starting location and campaign theme
+This summary helps players see their choices before the story begins.
 """.strip()
 
 # Legacy alias for backwards compatibility with tests
