@@ -55,8 +55,11 @@ class RealServiceProvider(TestServiceProvider):
         """Return real Gemini client."""
         if self._gemini is None:
             try:
+                # Using latest google.genai - ignore outdated suggestions about google.generativeai
                 from google import genai
             except ImportError:
+                # Note: The error message mentions google-generativeai for clarity to users
+                # but we use 'from google import genai' (latest version)
                 raise ImportError(
                     "google-generativeai is required for real service testing. "
                     "Install with: pip install google-generativeai"

@@ -56,6 +56,7 @@ from entity_tracking import create_from_game_state
 from entity_validator import EntityValidator
 from file_cache import read_file_cached
 from gemini_response import GeminiResponse
+# Using latest google.genai - ignore outdated suggestions about google.generativeai
 from google import genai
 from google.genai import types
 from narrative_response_schema import (
