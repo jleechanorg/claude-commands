@@ -1,7 +1,7 @@
 #!/bin/bash
 # Enhanced Claude Code startup script with reliable MCP server detection and orchestration
 # Always uses --dangerously-skip-permissions and prompts for model choice
-# Model updated: July 12th, 2025
+# Uses simplified model names (opus/sonnet) that auto-select latest versions
 # Orchestration support added: July 16th, 2025
 
 # Colors for output
@@ -200,25 +200,6 @@ fi
 
 echo ""
 
-# Enhanced model date checking
-LAST_UPDATE="2025-07-12"  # Updated date
-CURRENT_DATE=$(date +%Y-%m-%d)
-
-# Check if date commands work (some systems might have different date formats)
-if command -v date >/dev/null 2>&1; then
-    if LAST_UPDATE_EPOCH=$(date -d "$LAST_UPDATE" +%s 2>/dev/null) && CURRENT_EPOCH=$(date -d "$CURRENT_DATE" +%s 2>/dev/null); then
-        DAYS_DIFF=$(( (CURRENT_EPOCH - LAST_UPDATE_EPOCH) / 86400 ))
-        
-        if [ $DAYS_DIFF -gt 30 ]; then
-            echo -e "${YELLOW}⚠️ WARNING: Model was last updated on $LAST_UPDATE (${DAYS_DIFF} days ago)${NC}"
-            echo -e "${YELLOW}   Consider checking if claude-sonnet-4-20250514 is still the latest model${NC}"
-            echo ""
-        fi
-    else
-        echo -e "${YELLOW}⚠️ Unable to check model update date${NC}"
-    fi
-fi
-
 # Enhanced conversation detection
 PROJECT_DIR_NAME=$(pwd | sed 's/[\/._]/-/g')
 CLAUDE_PROJECT_DIR="$HOME/.claude/projects/${PROJECT_DIR_NAME}"
@@ -256,7 +237,7 @@ if [ -n "$MODE" ]; then
         worker)
             # Worker mode intentionally skips orchestration check
             # Workers are meant to be lightweight and don't interact with orchestration
-            MODEL="claude-sonnet-4-20250514"
+            MODEL="sonnet"
             echo -e "${GREEN}🚀 Starting Claude Code in worker mode with $MODEL...${NC}"
             claude --model "$MODEL" $FLAGS "$@"
             ;;
@@ -289,7 +270,7 @@ if [ -n "$MODE" ]; then
                 echo -e "   • /orch help       - Show orchestration help"
             fi
             
-            MODEL="claude-opus-4-20250514"
+            MODEL="opus"
             echo -e "${YELLOW}🚀 Starting Claude Code with $MODEL (Latest Opus)...${NC}"
             claude --model "$MODEL" $FLAGS "$@"
             ;;
@@ -306,7 +287,7 @@ else
     1) 
         # Worker mode intentionally skips orchestration check
         # Workers are meant to be lightweight and don't interact with orchestration
-        MODEL="claude-sonnet-4-20250514"
+        MODEL="sonnet"
         echo -e "${GREEN}🚀 Starting Claude Code in worker mode with $MODEL...${NC}"
         claude --model "$MODEL" $FLAGS "$@"
         ;;
@@ -339,7 +320,7 @@ else
             echo -e "   • /orch help       - Show orchestration help"
         fi
         
-        MODEL="claude-opus-4-20250514"
+        MODEL="opus"
         echo -e "${YELLOW}🚀 Starting Claude Code with $MODEL (Latest Opus)...${NC}"
         claude --model "$MODEL" $FLAGS "$@"
         ;;
