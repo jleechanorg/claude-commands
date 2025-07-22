@@ -96,6 +96,17 @@
    - ❌ Avoid generic advice about "command overload" or "cognitive load"
    - ❌ Avoid patronizing about user interface complexity or learning curves
 
+🚨 **NO FAKE IMPLEMENTATIONS**: ⚠️ MANDATORY
+
+- ❌ NEVER create files with "# Note: In the real implementation" comments
+- ❌ NEVER write placeholder code that doesn't actually work  
+- ❌ NEVER create demonstration files instead of working implementations
+- ✅ ALWAYS build real, functional code that works immediately
+- ✅ ALWAYS enhance existing systems rather than creating fake parallel ones
+- **Pattern**: Real implementation > No implementation > Fake implementation
+- **Evidence**: orchestrate_enhanced.py with placeholder comments frustrated user
+- **Rule**: If you can't implement it properly, don't create the file at all
+
 🚨 **NO OVER-ENGINEERING**: Prevent building parallel inferior systems vs enhancing existing ones
    - ✅ ALWAYS ask "Can the LLM handle this naturally?" before building parsers/analytics systems
    - ✅ ALWAYS try enhancing existing systems before building parallel new ones  
@@ -105,7 +116,8 @@
    - ❌ NEVER add analytics/tracking beyond core functionality needs
    - **Pattern**: Trust LLM capabilities, enhance existing systems, prioritize immediate user value
    - **Evidence**: Command composition over-engineering (PR #737) - a parallel command execution system was built instead of enhancing the existing Claude Code CLI. This led to unnecessary complexity, duplication of functionality, and reduced maintainability.
-   - **Root Causes**: LLM capability underestimation, perfectionist engineering, integration avoidance, demo-driven development
+   - **Evidence**: Orchestration parallel development (PR #790) - created .claude/commands/orchestrate.py instead of enhancing existing orchestration/ directory with Redis infrastructure. Fixed by migrating LLM features TO the mature system and deleting parallel implementation.
+   - **Root Causes**: LLM capability underestimation, perfectionist engineering, integration avoidance, demo-driven development, insufficient analysis of existing infrastructure
 
 🚨 **NO FALSE PROMISES**: Be honest about capabilities | Conservative language | Deliver or don't promise
 
@@ -210,11 +222,17 @@
 
 ## Orchestration System
 
+**Full Documentation**: → `.claude/commands/orchestrate.md` for complete system details
+
 ### 🚨 Agent Operation
-**Headless**: `claude -p "[task]" --output-format stream-json --verbose --dangerously-skip-permissions`
-**Worktree**: `git worktree add -b <branch> agent_workspace_<name> main` (isolated branches)
-**Monitoring**: Stream JSON for visibility ($0.003-$0.050/task) | Ignore "Context low" warnings
-**Paths**: Use relative paths, not `/tmp/` for agent compatibility
+**System**: Uses tmux sessions with specialized agents (frontend, backend, testing, opus-master)
+**Startup**: `./claude_start.sh` auto-starts orchestration | Manual: `./orchestration/start_system.sh start`
+**Monitoring**: `/orch What's the status?` or `/orch monitor agents` | Direct tmux: `tmux attach -t [agent-name]`
+**Cost**: $0.003-$0.050/task | Redis required for coordination
+**Working Directory**: ❌ NEVER cd into agent workspaces | ✅ Provide cd command for user to copy if needed
+**CRITICAL**: ❌ NEVER execute orchestration tasks yourself | ✅ ALWAYS delegate to agents when /orch or /orchestrate is used
+**ENFORCEMENT**: When user runs /orch, you MUST ONLY monitor agents - NO direct execution allowed! The entire point of /orch is agent delegation!
+**NO HARDCODING**: ❌ NEVER hardcode task patterns - agents execute EXACT tasks requested | ✅ General task agents, not pattern-matched types
 
 ## Project Overview
 
@@ -524,6 +542,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 ### 🚨 Anti-Patterns
 **Silent Breaking Changes**: Update all str() usage when changing objects | Test backward compatibility
 **Branch Confusion**: Verify context before changes | Check PR destination | Evidence: PR #627/628
+**Orchestration Hardcoding**: ❌ NEVER pattern-match tasks to agent types | ✅ Execute exact requested tasks | Evidence: task_dispatcher.py created test agents for all tasks
 
 ### Debugging Protocol (🚨 MANDATORY)
 **Process**: Extract evidence → Analyze → Verify → Fix | Trace: Backend → API → Frontend
@@ -558,10 +577,12 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - Context % | Complexity | Subagents? | Plan presented | Approval received
 - ❌ NEVER start work without approval | TodoWrite = safety protocol
 
-🚨 **OPERATIONAL COMMAND ENFORCEMENT**: `/headless`, `/handoff`, `/orchestrate`
+🚨 **OPERATIONAL COMMAND ENFORCEMENT**: `/headless`, `/handoff`, `/orchestrate`, `/orch`
 - ✅ ALWAYS trigger protocol workflow before task execution
 - ✅ Create isolated environments as specified in command documentation  
 - ❌ NEVER process as regular tasks without environment setup
+- ❌ NEVER execute /orch or /orchestrate tasks yourself - ONLY monitor agents
+- ✅ For /orch: Create agents → Monitor progress → Report results ONLY
 
 **Key Commands**: `/execute` (no approval) | `/plan` (requires approval) | `/replicate` (PR analysis)
 **Dual Composition**: Cognitive (semantic) + Operational (protocol) + Tool (direct)

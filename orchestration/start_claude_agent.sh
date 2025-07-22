@@ -101,10 +101,14 @@ if [ "${CLAUDE_SKIP_PERMISSIONS:-false}" = "true" ]; then
     log_info "⚠️  Security warning: Running with --dangerously-skip-permissions"
 fi
 
+# Default to sonnet for cost efficiency (can override with CLAUDE_AGENT_MODEL env var)
+AGENT_MODEL="${CLAUDE_AGENT_MODEL:-claude-sonnet-4-20250514}"
+
 tmux new-session -d -s "$SESSION_NAME" -c "$PROJECT_ROOT" \
-    "$CLAUDE_PATH -p '$TASK_PROMPT' --output-format stream-json --verbose $SKIP_PERMISSIONS_FLAG; echo 'Agent completed. Press Enter to exit...'; read"
+    "$CLAUDE_PATH -p '$TASK_PROMPT' --output-format stream-json --verbose --model $AGENT_MODEL $SKIP_PERMISSIONS_FLAG; echo 'Agent completed. Press Enter to exit...'; read"
 
 log_info "$AGENT_NAME started in session: $SESSION_NAME"
+log_info "Model: $AGENT_MODEL"
 log_info "Monitor with: tmux attach -t $SESSION_NAME"
 
 # Return session name for tracking

@@ -36,5 +36,5 @@ else
     fi
 fi
 
-# Execute the Python orchestration script
+# Execute the unified orchestration script
 python3 "$commands_dir/orchestrate.py" "$@"

@@ -6,10 +6,13 @@
 
 **Usage**: `/orchestrate [task_description]`
 
+**CRITICAL RULE**: When `/orchestrate` is used, NEVER execute the task yourself. ALWAYS delegate to the orchestration agents. The orchestration system will handle all task execution through specialized agents.
+
 **Implementation**: 
 - **Python Script**: `python3 .claude/commands/orchestrate.py [task_description]`
 - **Shell Wrapper**: `./claude_command_scripts/orchestrate.sh` (if available)
 - **Direct Execution**: Uses real Claude Code CLI agents in separate tmux sessions
+- **System Check**: ALWAYS checks system status first before executing tasks
 
 **Features**:
 - **Real tmux sessions**: Creates separate terminal sessions for each agent
@@ -23,7 +26,18 @@
 **System Requirements**:
 - Redis server running (for coordination)
 - Orchestration system started: `./orchestration/start_system.sh start`
-- Or started via: `./claude_start.sh`
+- Or started via: `./claude_start.sh` (auto-starts orchestration when not running git hooks)
+
+**Automatic Behavior**:
+- `/orch` commands automatically check if the orchestration system is running
+- If not running, attempts to start it before executing the task
+- Shows clear status messages about system state
+- **Memory Integration**: Automatically queries Memory MCP for:
+  - Past mistakes and learnings related to the task
+  - Previous similar orchestration patterns
+  - Known issues and their solutions
+  - This helps agents avoid repeating past errors
+  - **Note**: If Memory MCP is unavailable, tasks proceed without memory context (non-blocking)
 
 **Agent Types**:
 - **Frontend Agent**: UI, React components, styling (`frontend-agent`)
@@ -54,3 +68,11 @@
 - **Connect to backend**: `tmux attach -t backend-agent`
 - **Connect to testing**: `tmux attach -t testing-agent`
 - **Monitor all**: `tmux list-sessions | grep -E '(frontend|backend|testing|opus)'`
+
+## Important Notes
+
+- **Working Directory**: The orchestration system creates agent workspaces as subdirectories. Always ensure you're in the main project directory when running orchestration commands, not inside an agent workspace
+- **Monitoring**: Use `tmux attach -t [agent-name]` to watch agent progress
+- **Results**: Check `/tmp/orchestration_results/` for agent completion status
+- **Cleanup**: Run `orchestration/cleanup_agents.sh` to remove completed agent worktrees
+- **Branch Context**: Agents inherit from your current branch, so their changes build on your work

@@ -6,6 +6,8 @@
 
 **Usage**: `/orch [task_description]` (alias for `/orchestrate`)
 
+**CRITICAL RULE**: When `/orch` is used, NEVER execute the task yourself. ALWAYS delegate to the orchestration agents. The orchestration system will handle all task execution through specialized agents.
+
 **Implementation**: 
 - **Python Script**: `python3 .claude/commands/orchestrate.py [task_description]`
 - **Shell Wrapper**: `./claude_command_scripts/orch.sh` (if available)

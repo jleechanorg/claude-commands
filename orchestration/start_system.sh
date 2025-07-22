@@ -167,24 +167,29 @@ start_claude_agents() {
         log_info "Testing Agent started in session: $SESSION_NAME"
         echo "testing:$SESSION_NAME" >> "${TASK_DIR:-tasks}/agent_sessions.txt"
     else
-        # Start interactive agents for general orchestration
-        start_claude_agents_manual
+        # Dynamic agents only - no predefined agents
+        log_info "Dynamic agent system ready. Use orchestrate_unified.py to create task-specific agents."
     fi
 }
 
-# Manual agent startup (interactive mode)
+# Manual agent startup (DEPRECATED - kept for compatibility)
 start_claude_agents_manual() {
-    log_info "Starting interactive Claude agents..."
-    # PROJECT_ROOT already set above - no need to reassign
+    log_warn "Generic agents are deprecated. Use dynamic agents via orchestrate_unified.py instead."
+    log_info "To create agents, run: python3 orchestration/orchestrate_unified.py 'your task description'"
+    return 0
     
-    # Start Frontend Agent
-    log_info "Starting Frontend Agent (UI/React specialist)..."
-    CLAUDE_PATH="${CLAUDE_PATH:-/home/jleechan/.claude/local/claude}"
-    if [ ! -f "$CLAUDE_PATH" ]; then
-        log_error "Claude executable not found at $CLAUDE_PATH. Please set CLAUDE_PATH environment variable."
-        exit 1
-    fi
-    tmux new-session -d -s frontend-agent -c "$PROJECT_ROOT" "$CLAUDE_PATH"
+    # DEPRECATED CODE BELOW - DO NOT USE
+    # log_info "Starting interactive Claude agents..."
+    # # PROJECT_ROOT already set above - no need to reassign
+    # 
+    # # Start Frontend Agent
+    # log_info "Starting Frontend Agent (UI/React specialist)..."
+    # CLAUDE_PATH="${CLAUDE_PATH:-/home/jleechan/.claude/local/claude}"
+    # if [ ! -f "$CLAUDE_PATH" ]; then
+    #     log_error "Claude executable not found at $CLAUDE_PATH. Please set CLAUDE_PATH environment variable."
+    #     exit 1
+    # fi
+    # tmux new-session -d -s frontend-agent -c "$PROJECT_ROOT" "$CLAUDE_PATH"
     sleep 2
     tmux send-keys -t frontend-agent "I am the Frontend Agent. I specialize in:" Enter
     tmux send-keys -t frontend-agent "- React components and UI development" Enter  
@@ -262,17 +267,24 @@ show_status() {
     echo "├── Redis: $(redis-cli ping 2>/dev/null || echo 'Not running')"
     echo "├── Claude Agents:"
     
-    # Check each agent session
-    for agent in "frontend-agent:🎨 Frontend" "backend-agent:⚙️  Backend" "testing-agent:🧪 Testing" "opus-master:🎯 Opus"; do
-        session_name=$(echo "$agent" | cut -d: -f1)
-        display_name=$(echo "$agent" | cut -d: -f2)
-        
-        if tmux has-session -t "$session_name" 2>/dev/null; then
-            echo "│   $display_name Agent: ✅ ACTIVE"
-        else
-            echo "│   $display_name Agent: ❌ STOPPED"
-        fi
-    done
+    # Check for dynamic agents
+    dynamic_agents=$(tmux list-sessions 2>/dev/null | grep -E "(task-|dev-|script-|security-|test-)" | wc -l || echo "0")
+    if [ "$dynamic_agents" -gt 0 ]; then
+        echo "│   Dynamic Agents: $dynamic_agents active"
+        tmux list-sessions 2>/dev/null | grep -E "(task-|dev-|script-|security-|test-)" | while read session; do
+            session_name=$(echo "$session" | cut -d: -f1)
+            echo "│     - $session_name"
+        done
+    else
+        echo "│   Dynamic Agents: None active"
+    fi
+    
+    # Check Opus master
+    if tmux has-session -t "opus-master" 2>/dev/null; then
+        echo "│   🎯 Opus Master: ✅ ACTIVE"
+    else
+        echo "│   🎯 Opus Master: ❌ STOPPED"
+    fi
     
     echo "├── Task Files:"
     if [ -f "${TASK_DIR:-tasks}/frontend_tasks.txt" ]; then
@@ -289,10 +301,10 @@ show_status() {
     fi
     
     echo "└── Quick Commands:"
-    echo "    tmux attach -t frontend-agent  # Connect to Frontend Agent"
-    echo "    tmux attach -t backend-agent   # Connect to Backend Agent"
-    echo "    tmux attach -t testing-agent   # Connect to Testing Agent"
-    echo "    cat ${TASK_DIR:-tasks}/shared_status.txt    # View detailed status"
+    echo "    python3 orchestration/orchestrate_unified.py 'task'  # Create dynamic agents"
+    echo "    tmux list-sessions                                   # List all agents"
+    echo "    tmux attach -t [agent-name]                          # Connect to agent"
+    echo "    ls orchestration/results/                            # View agent results"
     echo
     
     # Show shared status if available
@@ -411,19 +423,17 @@ case "${1:-start}" in
         
         if [ "$QUIET_MODE" = false ]; then
             echo
-            log_info "🎉 Real Claude Agent System started successfully!"
-            echo "📊 Status dashboard: cat ${TASK_DIR:-tasks}/shared_status.txt"
-            echo "🔗 Connect to agents:"
-            echo "   Frontend: tmux attach -t frontend-agent" 
-            echo "   Backend:  tmux attach -t backend-agent"
+            log_info "🎉 Dynamic Agent Orchestration System started successfully!"
+            echo "🤖 Create agents with: python3 orchestration/orchestrate_unified.py 'your task'"
+            echo "🔍 Monitor agents:    tmux list-sessions | grep -E '(task-|dev-|script-)'"
+            echo "📁 View results:      ls orchestration/results/"
         fi
-        echo "   Testing:  tmux attach -t testing-agent"
         echo "   Opus:     tmux attach -t opus-master"
         echo ""
-        echo "📝 Task assignment:"
-        echo "   echo 'Build login form' >> ${TASK_DIR:-tasks}/frontend_tasks.txt"
-        echo "   echo 'Create auth API' >> ${TASK_DIR:-tasks}/backend_tasks.txt"
-        echo "   echo 'Test auth flow' >> ${TASK_DIR:-tasks}/testing_tasks.txt"
+        echo "📝 Examples:"
+        echo "   python3 orchestration/orchestrate_unified.py 'Fix all failing tests'"
+        echo "   python3 orchestration/orchestrate_unified.py 'Add user authentication'"
+        echo "   python3 orchestration/orchestrate_unified.py 'Update documentation'"
         echo ""
         echo "View status: $0 status"
         echo "Stop system: $0 stop"
