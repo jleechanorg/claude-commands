@@ -1,6 +1,5 @@
 #!/bin/bash
-
-# integrate.sh - Updates from main and creates fresh dev branch
+# integrate.sh - This script helps developers integrate the latest changes from main and start fresh on a new branch.
 # This script implements the standard integration pattern for the project
 # 
 # Usage: ./integrate.sh [branch-name] [--force] [--new-branch]
