@@ -12,6 +12,11 @@ ACTOR_GEMINI = "gemini"
 ACTOR_UNKNOWN = "NO_ACTOR"  # Default when actor is missing from data
 
 
+# --- SETTINGS ---
+# Allowed Gemini model selections for user preferences
+ALLOWED_GEMINI_MODELS = ["pro-2.5", "flash-2.5"]
+
+
 # --- INTERACTION MODES ---
 # Used to determine the style of user input and AI response
 MODE_CHARACTER = "character"

@@ -54,7 +54,7 @@ from debug_mode_parser import DebugModeParser
 from firebase_admin import auth
 
 # Flask and web imports
-from flask import Flask, jsonify, request, send_file, send_from_directory, Response, Request
+from flask import Flask, jsonify, request, send_file, send_from_directory, Response, Request, render_template
 from flask_cors import CORS
 from token_utils import log_with_tokens
 
@@ -62,6 +62,8 @@ from firestore_service import (
     _truncate_log_json,
     json_default_serializer,
     update_state_with_changes,
+    get_user_settings,
+    update_user_settings,
 )
 from game_state import GameState
 
@@ -1409,6 +1411,48 @@ def create_app() -> Flask:
                     KEY_DETAILS: str(e),
                 }
             ), 500
+
+    # --- Settings Routes ---
+    @app.route("/settings")
+    @check_token
+    def settings_page(user_id: UserId) -> Response:
+        """Settings page for authenticated users."""
+        logging_util.info(f"User {user_id} visited settings page")
+        return render_template('settings.html')
+
+    @app.route("/api/settings", methods=["GET", "POST"])
+    @check_token  
+    def api_settings(user_id: UserId) -> Union[Response, Tuple[Response, int]]:
+        """Get or update user settings."""
+        try:
+            if request.method == "GET":
+                settings = get_user_settings(user_id)
+                return jsonify(settings)
+            
+            elif request.method == "POST":
+                # Validate model selection
+                data = request.get_json()
+                if not data or 'gemini_model' not in data:
+                    return jsonify({'error': 'Missing gemini_model parameter'}), 400
+                
+                model = data['gemini_model'] 
+                if model not in constants.ALLOWED_GEMINI_MODELS:
+                    return jsonify({'error': 'Invalid model selection'}), 400
+                
+                # Update settings
+                success = update_user_settings(user_id, {'gemini_model': model})
+                
+                # Log the change
+                logging_util.info(f"User {user_id} changed Gemini model to {model}")
+                
+                if success:
+                    return jsonify({'success': True, 'message': 'Settings saved'})
+                else:
+                    return jsonify({'error': 'Failed to save settings'}), 500
+                    
+        except Exception as e:
+            logging_util.error(f"Settings API error: {str(e)}")
+            return jsonify({'error': 'Internal server error'}), 500
 
     # --- Frontend Serving ---
     @app.route("/", defaults={"path": ""})
