@@ -22,7 +22,7 @@ def test_structured_display():
 
         try:
             # Navigate with test mode
-            test_url = "http://localhost:6006?test_mode=true&test_user_id=ui-test-123"
+            test_url = "http://localhost:8081?test_mode=true&test_user_id=ui-test-123"
             page.goto(test_url)
             print(f"✓ Navigated to: {test_url}")
 

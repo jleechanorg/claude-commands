@@ -5,7 +5,7 @@ import json
 
 import requests
 
-BASE_URL = "http://localhost:6006"
+BASE_URL = "http://localhost:8081"
 headers = {
     "X-Test-Mode": "true",
     "X-Test-User-ID": "debug-test-user",

@@ -15,7 +15,7 @@ from playwright.sync_api import expect, sync_playwright
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Test configuration
-BASE_URL = "http://localhost:6006"
+BASE_URL = "http://localhost:8081"
 TEST_USER_ID = "test-wizard-fixes-" + str(int(time.time()))
 
 

@@ -52,7 +52,7 @@ class StructuredFieldsTest {
         </body>
         </html>
       `, {
-        url: 'http://localhost:6006',
+        url: 'http://localhost:8081',
         runScripts: 'dangerously',
         resources: 'usable'
       });

@@ -38,7 +38,7 @@ show_help() {
     echo ""
     echo "Notes:"
     echo "  - ⚠️  COSTS MONEY - Each test makes real Gemini API calls"
-    echo "  - Test server runs on port 6006 WITHOUT TESTING=true"
+    echo "  - Test server runs on port 8081 WITHOUT TESTING=true"
     echo "  - Screenshots saved to testing_ui/screenshots/"
     echo "  - Use /testui (mock) for development testing"
     exit 0
@@ -135,12 +135,12 @@ else
     sleep 3
     
     # Verify server
-    if ! curl -s http://localhost:6006 > /dev/null; then
+    if ! curl -s http://localhost:8081 > /dev/null; then
         echo -e "${RED}❌ Server failed to start!${NC}"
         kill $SERVER_PID 2>/dev/null || true
         exit 1
     fi
-    echo "✓ Server running on http://localhost:6006 (REAL MODE)"
+    echo "✓ Server running on http://localhost:8081 (REAL MODE)"
     
     # Run tests
     echo -e "\n${GREEN}🧪 Running browser tests with REAL APIs...${NC}"

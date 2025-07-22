@@ -16,7 +16,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Configuration
-BASE_URL = "http://localhost:6006"
+BASE_URL = "http://localhost:8081"
 SCREENSHOT_DIR = "/tmp/worldarchitectai/browser/structured_fields"
 TEST_USER_ID = "test-user-123"
 # Use an existing campaign ID from our tests

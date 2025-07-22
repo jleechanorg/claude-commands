@@ -41,7 +41,7 @@ readonly MAX_FILE_PATH_LENGTH=500
 # =============================================================================
 
 # Test server settings
-readonly BASE_PORT=6006
+readonly BASE_PORT=8081
 readonly TEST_MODE_URL="http://localhost:PORT?test_mode=true&test_user_id=test-user-123"
 
 # Test types

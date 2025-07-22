@@ -165,7 +165,7 @@ async def test_campaign_browser_real():
     
     try:
         # Navigate with test mode
-        await page.goto('http://localhost:6006?test_mode=true&test_user_id=test-user')
+        await page.goto('http://localhost:8081?test_mode=true&test_user_id=test-user')
         
         # Real browser interactions
         await page.fill('#campaign-title', 'Real Test Campaign')

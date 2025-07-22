@@ -26,7 +26,7 @@ show_help() {
     echo "  This script runs browser automation tests using Playwright with mock APIs:"
     echo "  - Activates virtual environment"
     echo "  - Verifies Playwright installation"
-    echo "  - Starts test server on port 6006"
+    echo "  - Starts test server on port 8081"
     echo "  - Runs all browser tests with mock responses"
     echo "  - Captures screenshots for failures"
     echo "  - Provides clear test results"
@@ -38,7 +38,7 @@ show_help() {
     echo ""
     echo "Notes:"
     echo "  - Uses mock APIs to avoid costs"
-    echo "  - Test server runs on port 6006 with TESTING=true"
+    echo "  - Test server runs on port 8081 with TESTING=true"
     echo "  - Screenshots saved to testing_ui/screenshots/"
     echo "  - Requires Playwright installed in venv"
     exit 0
@@ -152,12 +152,12 @@ else
     sleep 3
     
     # Verify server is running
-    if ! curl -s http://localhost:6006 > /dev/null; then
+    if ! curl -s http://localhost:8081 > /dev/null; then
         echo -e "${RED}❌ Test server failed to start!${NC}"
         kill $SERVER_PID 2>/dev/null || true
         exit 1
     fi
-    echo "✓ Test server running on http://localhost:6006"
+    echo "✓ Test server running on http://localhost:8081"
     
     # 5. Run tests
     echo -e "\n${GREEN}🧪 Running browser tests...${NC}"
