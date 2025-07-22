@@ -53,19 +53,16 @@ class TestPydanticEntityIntegration(unittest.TestCase):
             )
             self.assertEqual(npc.gender, gender.lower())
 
-    def test_npc_gender_validation_invalid(self):
-        """Test invalid gender values for NPCs"""
-        with self.assertRaises(ValueError) as context:
-            NPC(
-                entity_id="npc_test_001",
-                display_name="Test NPC",
-                health=self.health,
-                current_location="loc_test_001",
-                gender="invalid_gender",
-            )
-
-        self.assertIn("Invalid gender", str(context.exception))
-        self.assertIn("Valid options", str(context.exception))
+    def test_npc_creative_gender_accepted(self):
+        """Test that creative gender values are accepted (updated for permissive validation)"""
+        npc = NPC(
+            entity_id="npc_test_001",
+            display_name="Test NPC",
+            health=self.health,
+            current_location="loc_test_001",
+            gender="creative_gender",  # Now accepted
+        )
+        self.assertEqual(npc.gender, "creative_gender")
 
     def test_pc_gender_optional(self):
         """Test that gender is optional for PCs"""
@@ -152,19 +149,18 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 gender="male",
                 mbti=mbti.lower(),  # Test case insensitivity
             )
-            self.assertEqual(npc.mbti, mbti.upper())
+            self.assertEqual(npc.mbti, mbti.lower().strip())  # We passed mbti.lower(), validation strips whitespace
 
-        # Test invalid MBTI
-        with self.assertRaises(ValueError) as context:
-            NPC(
-                entity_id="npc_invalid_mbti_001",
-                display_name="Invalid MBTI NPC",
-                health=self.health,
-                current_location="loc_test_001",
-                gender="female",
-                mbti="XXXX",
-            )
-        self.assertIn("Invalid MBTI type", str(context.exception))
+        # Test creative personality description (now accepted)
+        npc2 = NPC(
+            entity_id="npc_invalid_mbti_001",
+            display_name="Creative Personality NPC",
+            health=self.health,
+            current_location="loc_test_001",
+            gender="female",
+            mbti="analytical and methodical thinker",  # Now accepted
+        )
+        self.assertEqual(npc2.mbti, "analytical and methodical thinker")
 
     def test_alignment_validation(self):
         """Test D&D alignment validation"""
@@ -192,17 +188,16 @@ class TestPydanticEntityIntegration(unittest.TestCase):
             )
             self.assertEqual(npc.alignment, alignment)
 
-        # Test invalid alignment
-        with self.assertRaises(ValueError) as context:
-            NPC(
-                entity_id="npc_invalid_alignment_001",
-                display_name="Invalid Alignment NPC",
-                health=self.health,
-                current_location="loc_test_001",
-                gender="female",
-                alignment="Chaotic Awesome",  # Not a valid D&D alignment
-            )
-        self.assertIn("Invalid alignment", str(context.exception))
+        # Test creative alignment (now accepted)
+        npc2 = NPC(
+            entity_id="npc_creative_alignment_001",
+            display_name="Creative Alignment NPC",
+            health=self.health,
+            current_location="loc_test_001",
+            gender="female",
+            alignment="Chaotic Awesome",  # Now accepted
+        )
+        self.assertEqual(npc2.alignment, "Chaotic Awesome")
 
     def test_dnd_fundamentals_integration(self):
         """Test D&D fundamental fields integration"""
@@ -246,6 +241,63 @@ class TestPydanticEntityIntegration(unittest.TestCase):
         self.assertEqual(health.hp, 25)
         self.assertEqual(health.hp_max, 30)
         self.assertEqual(health.temp_hp, 5)
+
+    def test_npc_creative_gender_values(self):
+        """Test that creative gender values are now accepted"""
+        test_genders = ["mixed", "fluid", "shapeshifter", "androgynous", "non-conforming"]
+        
+        for i, gender in enumerate(test_genders):
+            npc = NPC(
+                entity_id=f"npc_creative_test_{i:03d}",
+                display_name=f"Creative Gender Test NPC {i}",
+                health=self.health,
+                current_location="loc_test_001",
+                gender=gender,
+            )
+            self.assertEqual(npc.gender, gender)
+
+    def test_npc_invalid_gender_types_still_fail(self):
+        """Test that non-string gender values still fail validation"""
+        with self.assertRaises(ValueError) as context:
+            npc = NPC(
+                entity_id="npc_invalid_test_001",
+                display_name="Invalid Gender Type Test NPC",
+                health=self.health,
+                current_location="loc_test_001",
+                gender=123,  # Wrong type - should fail
+            )
+        # Check that the error message indicates type validation failure
+        self.assertIn("string_type", str(context.exception))
+
+    def test_creative_alignment_values(self):
+        """Test that creative alignment values are accepted"""
+        creative_alignments = ["Chaotic Awesome", "Lawful Annoying", "Neutral Mischievous", "True Lazy"]
+        
+        for i, alignment in enumerate(creative_alignments):
+            npc = NPC(
+                entity_id=f"npc_alignment_test_{i:03d}",
+                display_name=f"Creative Alignment Test NPC {i}",
+                health=self.health,
+                current_location="loc_test_001",
+                gender="test",
+                alignment=alignment,
+            )
+            self.assertEqual(npc.alignment, alignment)
+
+    def test_creative_mbti_values(self):
+        """Test that creative personality descriptions are accepted"""
+        creative_personalities = ["mysterious and brooding", "cheerful optimist", "ENFP", "analytical thinker"]
+        
+        for i, mbti in enumerate(creative_personalities):
+            npc = NPC(
+                entity_id=f"npc_mbti_test_{i:03d}",
+                display_name=f"Creative MBTI Test NPC {i}",
+                health=self.health,
+                current_location="loc_test_001",
+                gender="test",
+                mbti=mbti,
+            )
+            self.assertEqual(npc.mbti, mbti)
 
     def test_comprehensive_npc_creation(self):
         """Test creating a comprehensive NPC with all enhanced fields"""

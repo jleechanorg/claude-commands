@@ -211,9 +211,7 @@ class Character(BaseModel):
     
     @validator('gender')
     def validate_gender(cls, v, values):
-        """Validate gender field for narrative consistency (critical for NPCs)"""
-        valid_genders = ["male", "female", "non-binary", "other"]
-        
+        """Validate gender field for narrative consistency (permissive for LLM creativity)"""
         # Check if this is an NPC
         entity_type = values.get('entity_type')
         entity_id = values.get('entity_id', '')
@@ -228,19 +226,20 @@ class Character(BaseModel):
         # For NPCs, gender is mandatory to prevent narrative inconsistency
         if entity_type == EntityType.NPC:
             if v is None or v == "":
-                raise ValueError(f"Gender is required for NPCs to ensure narrative consistency. "
-                               f"Valid options: {valid_genders}")
+                raise ValueError("Gender is required for NPCs to ensure narrative consistency. "
+                               "Can be any descriptive value (e.g., 'male', 'female', 'fluid', 'mixed', etc.)")
             
-            if v.lower() not in valid_genders:
-                raise ValueError(f"Invalid gender '{v}' for NPC. Valid options: {valid_genders}")
+            # Accept any non-empty string for creative flexibility
+            if not isinstance(v, str):
+                raise ValueError(f"Gender must be a string_type, got: {type(v)}")
             
-            return v.lower()
+            return v.lower().strip()
         
-        # For PCs, gender is optional but validated if provided
+        # For PCs, gender is optional but must be a string if provided
         elif v is not None and v != "":
-            if v.lower() not in valid_genders:
-                raise ValueError(f"Invalid gender '{v}'. Valid options: {valid_genders}")
-            return v.lower()
+            if not isinstance(v, str):
+                raise ValueError(f"Gender must be a string_type, got: {type(v)}")
+            return v.lower().strip()
         
         return v
     
@@ -256,34 +255,26 @@ class Character(BaseModel):
     
     @validator('mbti')
     def validate_mbti(cls, v):
-        """Validate MBTI personality type"""
+        """Validate personality field (accepts MBTI or creative descriptions)"""
         if v is not None:
-            if not isinstance(v, str) or len(v) != 4:
-                raise ValueError(f"MBTI must be a 4-character string (e.g., 'INFJ'), got: {v}")
+            if not isinstance(v, str):
+                raise ValueError(f"Personality/MBTI must be a string, got: {type(v)}")
             
-            mbti_upper = v.upper()
-            valid_types = [
-                'INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
-                'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'
-            ]
-            
-            if mbti_upper not in valid_types:
-                raise ValueError(f"Invalid MBTI type '{v}'. Must be valid 4-letter type (e.g., INFJ, ENTP)")
-            
-            return mbti_upper
+            # Accept any personality description for creative flexibility
+            # Could be traditional MBTI (INFJ) or creative ("mysterious and brooding")
+            return v.strip()
         return v
     
     @validator('alignment')
     def validate_alignment(cls, v):
-        """Validate D&D alignment"""
+        """Validate alignment field (accepts D&D or creative alignments)"""
         if v is not None:
-            valid_alignments = [
-                "Lawful Good", "Neutral Good", "Chaotic Good",
-                "Lawful Neutral", "True Neutral", "Chaotic Neutral", 
-                "Lawful Evil", "Neutral Evil", "Chaotic Evil"
-            ]
-            if v not in valid_alignments:
-                raise ValueError(f"Invalid alignment '{v}'. Valid options: {valid_alignments}")
+            if not isinstance(v, str):
+                raise ValueError(f"Alignment must be a string, got: {type(v)}")
+            
+            # Accept any alignment description for creative flexibility
+            # Could be traditional D&D ("Lawful Good") or creative ("Chaotic Awesome")
+            return v.strip()
         return v
     
     @validator('entity_type')

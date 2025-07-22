@@ -867,8 +867,23 @@ def create_app() -> Flask:
     # Set up file logging before creating app
     setup_file_logging()
 
-    app = Flask(__name__, static_folder="static")
+    app = Flask(__name__, static_folder=None)  # Disable default static serving
     CORS(app, resources=CORS_RESOURCES)
+    
+    # Cache busting route for testing - only activates with special header
+    @app.route('/static/<path:filename>')
+    def static_files_with_cache_busting(filename):
+        """Serve static files with optional cache-busting for testing"""
+        static_folder = os.path.join(os.path.dirname(__file__), 'static')
+        response = send_from_directory(static_folder, filename)
+        
+        # Only disable cache if X-No-Cache header is present (for testing)
+        if request.headers.get('X-No-Cache') and filename.endswith(('.js', '.css')):
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        
+        return response
 
     # Set TESTING config from environment
     if os.environ.get("TESTING", "").lower() in ["true", "1", "yes"]:
@@ -1400,9 +1415,20 @@ def create_app() -> Flask:
     @app.route("/<path:path>")
     def serve_frontend(path: str) -> Response:
         """Serve the frontend files. This is the fallback for any non-API routes."""
-        if path and os.path.exists(os.path.join(app.static_folder, path)):
-            return send_from_directory(app.static_folder, path)
-        return send_from_directory(app.static_folder, "index.html")
+        static_folder = os.path.join(os.path.dirname(__file__), 'static')
+        if path and os.path.exists(os.path.join(static_folder, path)):
+            return send_from_directory(static_folder, path)
+        return send_from_directory(static_folder, "index.html")
+
+    # Fallback route for old cached frontend code calling /handle_interaction
+    @app.route("/handle_interaction", methods=["POST"])
+    def handle_interaction_fallback():
+        """Fallback for cached frontend code calling old endpoint"""
+        return jsonify({
+            "error": "This endpoint has been moved. Please refresh your browser (Ctrl+Shift+R) to get the latest version.",
+            "redirect_message": "Hard refresh required to clear browser cache",
+            "status": "cache_issue"
+        }), 410  # 410 Gone - indicates this endpoint no longer exists
 
     return app
 
@@ -1616,7 +1642,7 @@ if __name__ == "__main__":
         args = parser.parse_args()
         if args.command == "serve":
             app = create_app()
-            port = int(os.environ.get("PORT", 8080))
+            port = int(os.environ.get("PORT", 8081))
             logging_util.info(f"Development server running: http://localhost:{port}")
             app.run(host="0.0.0.0", port=port, debug=True)
         elif args.command == "testui":
