@@ -5,6 +5,18 @@
 
 set -euo pipefail
 
+# Ensure we're running from project root
+if [[ ! -f "CLAUDE.md" ]]; then
+    # Try to find project root by looking for CLAUDE.md
+    PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || true)
+    if [[ -n "$PROJECT_ROOT" && -f "$PROJECT_ROOT/CLAUDE.md" ]]; then
+        cd "$PROJECT_ROOT"
+    else
+        echo -e "\033[0;31m❌ Must run from project root (directory containing CLAUDE.md)\033[0m"
+        exit 1
+    fi
+fi
+
 # Configuration defaults
 DEFAULT_CONFIG='{"checks":{"merge_conflicts":true,"ci_status":true,"bot_comments":true},"auto_fix":{"merge_conflicts":true,"run_local_tests":true},"github":{"api_timeout":30,"retry_attempts":3}}'
 CONFIG_FILE="$HOME/.push-config.json"
@@ -309,6 +321,19 @@ fi
 echo -e "${GREEN}✅ All tests passed!${NC}"
 
 # CI replica already run at the beginning, skip duplicate run
+
+# Run code authenticity check
+echo -e "\n${BLUE}🔍 Checking code authenticity...${NC}"
+if [ -f "./claude_command_scripts/commands/analyze_code_authenticity.sh" ]; then
+    if ./claude_command_scripts/commands/analyze_code_authenticity.sh; then
+        echo -e "${GREEN}✅ Code authenticity check passed${NC}"
+    else
+        echo -e "${YELLOW}⚠️ Code authenticity concerns detected - review suggested before pushing${NC}"
+        # This is a warning, not a failure - let the user decide
+    fi
+else
+    echo -e "${YELLOW}⚠️ Code authenticity script not found - skipping check${NC}"
+fi
 
 # Exit if test-only mode
 if [[ "$TEST_ONLY" == "true" ]]; then
