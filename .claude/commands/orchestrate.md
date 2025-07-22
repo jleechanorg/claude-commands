@@ -76,3 +76,15 @@
 - **Results**: Check `/tmp/orchestration_results/` for agent completion status
 - **Cleanup**: Run `orchestration/cleanup_agents.sh` to remove completed agent worktrees
 - **Branch Context**: Agents inherit from your current branch, so their changes build on your work
+
+## 🚨 AGENT TASK PATIENCE
+
+Agent tasks require TIME - wait for completion before ANY declaration:
+- ⚠️ Orchestrate agents work autonomously and may take 5-10+ minutes
+- ❌ NEVER declare success OR failure without checking completion status
+- ❌ NEVER make declarations based on quick checks (10s, 30s, 60s too soon)
+- ✅ ALWAYS check tmux output for "Task completed" message
+- ✅ ALWAYS verify PR creation in agent output before declaring results
+- 🔍 Evidence: Agent task-agent-5819 succeeded with PR #851 after 270 seconds
+- 📋 Proper verification: tmux output → "Task completed" → PR URL → verify PR exists
+- ⚠️ Status warnings like "agent may still be working" mean WAIT, don't declare

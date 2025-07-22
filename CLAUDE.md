@@ -75,13 +75,13 @@
 🚨 **NO POSITIVITY**: Be extremely self-critical. No celebration unless 100% working.
 
 🚨 **NO PREMATURE VICTORY DECLARATION**: Task completion requires FULL verification
-   - ❌ NEVER declare success based on intermediate steps (file edits, partial work)
-   - ❌ NEVER say "successfully completed" without verifiable evidence
-   - ✅ ONLY declare success when ALL steps verified complete
-   - ✅ For agent tasks: Requires PR created + pushed + link verified
-   - ✅ For direct tasks: Requires changes committed + pushed + tested
-   - 🔍 Evidence: Agent modified a critical workflow script but no PR = TASK FAILED
-   - ⚠️ File changes in isolated workspaces are NOT task completion
+- ❌ NEVER declare success based on intermediate steps (file edits, partial work)
+- ❌ NEVER say "successfully completed" without verifiable evidence
+- ✅ ONLY declare success when ALL steps verified complete
+- ✅ For agent tasks: Requires PR created + pushed + link verified
+- ✅ For direct tasks: Requires changes committed + pushed + tested
+- 🔍 Evidence: Agent modified schedule_branch_work.sh but no PR = TASK INCOMPLETE
+- ⚠️ File changes in isolated workspaces are NOT task completion
 
 🚨 **NO EXCUSES FOR TEST FAILURES**: When asked to fix tests, FIX THEM ALL
    - ❌ NEVER say "pre-existing issues" or "unrelated to our changes"
