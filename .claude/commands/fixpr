@@ -1,0 +1,3 @@
+#!/bin/bash
+# /fixpr command - executes through fixpr.md
+echo "[/fixpr] This command works through fixpr.md - Claude will analyze CI/conflicts intelligently"

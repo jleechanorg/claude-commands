@@ -101,13 +101,71 @@ This was tried and **failed** because it:
 ### **NEVER Recreate Hook Files**
 ❌ **DO NOT** create `copilot_pre_hook.py` or `copilot_post_hook.py`
 ❌ **DO NOT** add copilot hook configuration to `.claude/settings.toml`
-❌ **DO NOT** create shell script wrappers for copilot commands
+## Modular Copilot Commands
 
-**Why**: These violate the "explicit > implicit" philosophy and create broken dependencies.
+The copilot system follows a **clean architecture** where only /commentfetch uses Python for data collection, and all other commands work directly through .md files:
 
-**Evidence**: Hook files had invalid `tool_name` matchers and didn't work with slash commands.
+### Clean Architecture Commands
 
-**Correct**: Use direct Python execution with documentation-driven workflows in `copilot.md`.
+#### The 4 Modular Commands (Each Stands Alone):
+
+1. **`/commentfetch`** - Fetch all PR comments ✅
+   - Pure Python: Collects comments from all sources
+   - Output: `/tmp/copilot/comments.json`
+   - The ONLY command that needs Python (pure data collection)
+
+2. **`/fixpr`** - Analyze CI failures and conflicts ✅
+   - Pure Markdown: fixpr.md provides all functionality
+   - Claude reads fixpr.md and executes analysis directly
+   - Runs CI checks, analyzes failures, suggests fixes
+   - NO Python file needed
+
+3. **`/commentreply`** - Post comment responses ✅
+   - Pure Markdown: commentreply.md guides Claude
+   - Claude generates and posts replies directly via `gh api`
+   - NO Python middleman, NO intermediate files
+   - Direct execution with full transparency
+
+4. **`/pushl`** - Push changes to remote ✅
+   - Existing command for git operations
+   - Handles add, commit, push workflow
+
+#### Orchestration:
+- **`/copilot`** - Intelligent orchestrator that chains the above commands
+- Adapts workflow based on PR needs
+- Ensures 100% comment coverage with DONE/NOT DONE
+
+### Clean Architecture Principles
+
+**Minimal Python, Maximum Claude Intelligence**
+
+The clean approach:
+- **Python**: ONLY for /commentfetch data collection
+- **.md files**: Complete command implementations for /fixpr and /commentreply
+- **Claude**: Executes .md instructions directly, no Python middleman
+- **Transparency**: All actions shown before execution
+- **Modularity**: Each command stands alone and can be chained
+
+Clean data flow:
+```
+PHASE 1: DATA COLLECTION (Only /commentfetch uses Python)
+commentfetch.py → comments.json
+fixpr.py → fixes.json, comparison.json, conflicts.json
+        ↓
+PHASE 2: INTELLIGENT ANALYSIS (Claude + .md)
+Claude reads data + applies .md intelligence
+        ↓
+PHASE 3: EXECUTION
+Claude executes fixes directly
+commentreply.py posts pre-generated replies
+pushl handles git operations
+```
+
+### Why Hybrid?
+- **Modularity**: Each command can stand alone
+- **Composability**: Commands chain together naturally
+- **Transparency**: Clear separation of data vs intelligence
+- **Maintainability**: Python for stable plumbing, .md for evolving intelligence
 
 ---
 

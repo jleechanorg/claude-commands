@@ -130,6 +130,24 @@
 
 🚨 **NO FALSE PROMISES**: Be honest about capabilities | Conservative language | Deliver or don't promise
 
+🚨 **NO UNNECESSARY EXTERNAL APIS**: Before adding ANY external API integration:
+   - ✅ FIRST ask "Can Claude solve this directly without external APIs?"
+   - ✅ ALWAYS try direct implementation before adding dependencies
+   - ✅ TEST the direct solution - if it works, STOP there
+   - ❌ NEVER default to Gemini API just because it exists in codebase
+   - ❌ NEVER add external LLM calls when Claude can generate responses directly
+   - **Pattern**: Direct solution → Justify external need → Only then integrate
+   - **Anti-pattern**: See AI task → Immediately reach for Gemini API
+   - **Evidence**: GitHub comment fiasco (PR #796) - built Gemini integration that degraded to useless generic templates when Claude could have generated responses directly
+
+🚨 **GEMINI API JUSTIFICATION REQUIRED**: Gemini should ONLY be used when:
+   - ✅ The task requires capabilities Claude doesn't have (e.g., image generation)
+   - ✅ The system needs to work autonomously without Claude present
+   - ✅ Specific model features are required (e.g., specific Gemini models)
+   - ✅ User explicitly requests Gemini integration
+   - ❌ NEVER use Gemini just for text generation that Claude can do
+   - ❌ NEVER add complexity without clear unique value
+   - **Question to ask**: "What can Gemini do here that Claude cannot?"
 🚨 **USE LLM CAPABILITIES**: When designing command systems or natural language features:
    - ❌ NEVER suggest keyword matching, regex patterns, or rule-based parsing
    - ❌ NEVER propose "if word in text" simplistic approaches
@@ -137,6 +155,18 @@
    - ✅ ALWAYS trust the LLM to understand context, nuance, and intent
    - **Pattern**: User intent → LLM understanding → Natural response
    - **Anti-pattern**: Keywords → Rules → Rigid behavior
+
+🚨 **NEVER SIMULATE INTELLIGENCE**: When building response generation systems:
+   - ❌ NEVER create Python functions that simulate Claude's responses with templates
+   - ❌ NEVER use pattern matching to generate "intelligent" responses  
+   - ❌ NEVER build `_create_contextual_response()` methods that fake understanding
+   - ❌ NEVER generate generic replies like "I'll fix the issue" or "Thanks for the suggestion"
+   - ✅ ALWAYS invoke actual Claude for genuine response generation
+   - ✅ ALWAYS pass full comment context to Claude for analysis
+   - ✅ ALWAYS ensure responses address specific technical points, not patterns
+   - **Pattern**: Collect data → Claude analyzes → Claude responds
+   - **Anti-pattern**: Collect data → Python templates → Fake responses
+   - **Violation Count**: Repeatedly - STOP THIS PATTERN IMMEDIATELY
 
 🚨 **EVIDENCE-BASED APPROACH**: Core principles for all analysis
    - ✅ Extract exact error messages/code snippets before analyzing
@@ -300,6 +330,7 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 ### Gemini SDK
 ✅ `from google import genai` | ✅ `client = genai.Client(api_key=api_key)`
 Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
+🚨 **WARNING**: See "NO UNNECESSARY EXTERNAL APIS" rule before using Gemini
 
 ### Development Practices
 `tempfile.mkdtemp()` for test files | Verify before assuming | ❌ unsolicited refactoring |
