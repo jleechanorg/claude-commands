@@ -175,8 +175,27 @@
     resize: vertical;
 }
 
-#shareStoryBtn {
-    max-width: 300px;
+/* Icon button styling */
+#shareStoryBtn,
+#downloadStoryBtn {
+    padding: 0.375rem 0.75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+#shareStoryBtn i,
+#downloadStoryBtn i {
+    font-size: 1.1rem;
+}
+
+#downloadStoryBtn {
+    background-color: #98FBCB !important;
+    color: #222 !important; /* dark text for contrast */
+    border: none;
+}
+#downloadStoryBtn:hover, #downloadStoryBtn:focus {
+    background-color: #7edbb2 !important; /* slightly darker mint for hover */
+    color: #111 !important;
 }
 
 /* Theme-specific active menu item styling */

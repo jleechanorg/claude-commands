@@ -20,7 +20,7 @@
 - `/testserver cleanup` - Stop all servers
 
 **Features**:
-- Automatic port allocation (6006, 6007, 6008, etc.)
+- Automatic port allocation (8081, 8082, 8083, etc.)
 - Branch-specific logging
 - Process management with PID tracking
 - Conflict detection and resolution

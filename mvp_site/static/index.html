@@ -191,8 +191,12 @@
             
             <!-- Download/Share Buttons - Moved to top per TASK-137 -->
             <div class="d-flex justify-content-end mb-3 gap-2">
-                <button id="downloadStoryBtn" class="btn btn-secondary">Download Story</button>
-                <button id="shareStoryBtn" class="btn btn-info">Share Story</button>
+                <button id="downloadStoryBtn" class="btn btn-sm btn-secondary" title="Download Story">
+                    <i class="bi bi-download"></i>
+                </button>
+                <button id="shareStoryBtn" class="btn btn-sm btn-info" title="Share Story">
+                    <i class="bi bi-share"></i>
+                </button>
             </div>
             <div id="story-content" class="p-3 border rounded bg-light"></div>
             <div id="timer-info" class="mt-2 text-muted text-center small"></div>
@@ -229,9 +233,15 @@
                 <div class="modal-body">
                     <p>Choose a format to download your campaign story.</p>
                     <div class="d-grid gap-2">
-                        <button class="btn btn-primary" id="download-txt-btn">Download as .txt</button>
-                        <button class="btn btn-danger" id="download-pdf-btn">Download as .pdf (takes long)</button>
-                        <button class="btn btn-success" id="download-docx-btn">Download as .docx</button>
+                        <button class="btn btn-primary" id="download-txt-btn">
+                            <i class="bi bi-file-text"></i> Download as .txt
+                        </button>
+                        <button class="btn btn-danger" id="download-pdf-btn">
+                            <i class="bi bi-file-pdf"></i> Download as .pdf (takes long)
+                        </button>
+                        <button class="btn btn-success" id="download-docx-btn">
+                            <i class="bi bi-file-word"></i> Download as .docx
+                        </button>
                     </div>
                 </div>
                 <div class="modal-footer">
