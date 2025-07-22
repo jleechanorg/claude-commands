@@ -23,6 +23,7 @@ fi
 # If branch is provided as second argument, use it; otherwise use current branch
 if [ "$#" -eq 2 ]; then
   REMOTE_BRANCH="$2"
+  BRANCH_MESSAGE="Continue work on the remote branch $REMOTE_BRANCH. If you see conversation history that aligns with the current branch work, please review and consider that context to guide your continuation approach."
 else
   # Resolve current branch; fall back for detached-HEAD
   REMOTE_BRANCH=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || git branch --show-current)
@@ -30,10 +31,11 @@ else
     echo "Error: Could not determine current branch (detached HEAD?). Please specify a branch name or ensure you are in a valid Git repository."
     exit 1
   fi
+  BRANCH_MESSAGE="Figure out the current branch ($REMOTE_BRANCH), use conversation context, and resume work."
 fi
 
 if ! command -v ccschedule >/dev/null 2>&1; then
   echo "Error: 'ccschedule' command not found in PATH"
   exit 1
 fi
-ccschedule --time "$SCHEDULE_TIME" --message "Continue work on the remote branch $REMOTE_BRANCH"
+ccschedule --time "$SCHEDULE_TIME" --message "$BRANCH_MESSAGE"
