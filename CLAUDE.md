@@ -261,6 +261,8 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 ### Code Standards
 **Principles**: SOLID, DRY | **Templates**: Use existing code patterns | **Validation**: `isinstance()` checks
 **Constants**: Module-level (>1x) or constants.py (cross-file) | **Imports**: Module-level only, NO inline/try-except
+**Path Computation**: ✅ Use `os.path.dirname()` to retrieve the parent directory of a file path | ✅ Use `os.path.join()` for constructing paths | ✅ Use `pathlib.Path` for modern path operations | ❌ NEVER use `string.replace()` for paths
+- 🔍 Evidence: PR #818 - Replaced fragile `.replace('/tests', '')` with proper directory navigation
 
 ### Feature Compatibility
 **Critical**: Audit integration points | Update filters for new formats | Test object/string conversion
@@ -276,6 +278,12 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 `tempfile.mkdtemp()` for test files | Verify before assuming | ❌ unsolicited refactoring |
 **Logging**: ✅ `import logging_util` | ❌ `import logging` | Use project's unified logging
 Use docstrings, proper JS loading
+
+🚨 **PR Review Verification**: Always verify current state before applying review suggestions
+- ✅ Check if suggested fix already exists in code
+- ✅ Read the actual file content before making changes
+- ❌ NEVER blindly apply review comments without verification
+- 🔍 Evidence: PR #818 - Copilot suggested fixing 'string_type' that was already correct
 
 ### Website Testing & Deployment Expectations (🚨 CRITICAL)
 🚨 **BRANCH ≠ WEBSITE**: ❌ NEVER assume branch changes are visible on websites without deployment
@@ -303,6 +311,11 @@ Use docstrings, proper JS loading
 - 🔍 Evidence: PR #780 with real conflicts revealed false negative bug that clean PRs missed
 - **Why Critical**: Clean PRs won't expose detection failures - need real conflicts to validate
 **Validation**: Verify PASS/FAIL detection | Output must match summary | Parse output, don't trust exit codes
+**Test Assertions**: ⚠️ MANDATORY - Must match actual validation behavior exactly
+- 🔍 Evidence: PR #818 - MBTI test checked .lower() but validation only does .strip()
+- ✅ Always verify what transformations validation actually performs
+**Exception Specificity**: ✅ Use specific exception types in tests (ValidationError, not Exception)
+- 🔍 Evidence: PR #818 - Improved test precision with Pydantic's ValidationError
 **Methodology**: Fix one issue at a time | Run after each fix | Prefer test fixes over core logic
 **Rules**: ✅ Run before task completion | ❌ NEVER skip without permission | ✅ Only use ✅ after real results
 
@@ -333,6 +346,10 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - **Exception**: Only when user explicitly requests file creation in mvp_site/
 
 🚨 **Test File Policy**: Add to existing files, NEVER create new test files
+- ⚠️ MANDATORY: Always add tests to existing test files that match the functionality
+- ❌ NEVER create `test_new_feature.py` - add to `test_existing_module.py` instead
+- 🔍 Evidence: PR #818 - CodeRabbit caught test_cache_busting_red_green.py violation
+- ✅ Moved cache busting tests to test_main_routes.py to comply with policy
 🚨 **Code Review**: Check README.md and CODE_REVIEW_SUMMARY.md before mvp_site/ changes
 
 ### Repository Separation
