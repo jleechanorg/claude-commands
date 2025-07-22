@@ -9,8 +9,9 @@
 # Project-specific settings
 readonly PROJECT_NAME="worldarchitect.ai"
 readonly DEFAULT_BRANCH="main"
-readonly TEST_SCRIPT="./run_tests.sh"
-readonly UI_TEST_SCRIPT="./run_ui_tests.sh"
+# Test scripts will be resolved relative to project root
+readonly TEST_SCRIPT="run_tests.sh"
+readonly UI_TEST_SCRIPT="run_ui_tests.sh"
 
 # Repository settings
 readonly REPO_OWNER="jleechan2015"
@@ -32,10 +33,7 @@ readonly SECURE_TMP_DIR="/tmp/worldarchitectai_secure"
 readonly LOG_DIR="$SECURE_TMP_DIR/logs"
 readonly PID_DIR="$SECURE_TMP_DIR/pids"
 
-# Input validation limits
-readonly MAX_BRANCH_NAME_LENGTH=50
-readonly MAX_PR_TITLE_LENGTH=100
-readonly MAX_PR_DESCRIPTION_LENGTH=2000
+# Input validation limits (MAX_*_LENGTH variables defined in security_utils.sh)
 readonly MAX_FILE_PATH_LENGTH=500
 
 # =============================================================================
@@ -244,9 +242,10 @@ validate_config() {
         errors+=("Project root directory not found")
     fi
     
-    # Check test scripts exist
-    if [ ! -f "$TEST_SCRIPT" ]; then
-        errors+=("Test script not found: $TEST_SCRIPT")
+    # Check test scripts exist (relative to project root)
+    local project_root="$(get_project_root)"
+    if [ ! -f "$project_root/$TEST_SCRIPT" ]; then
+        errors+=("Test script not found: $project_root/$TEST_SCRIPT")
     fi
     
     # Check if we're in a git repository

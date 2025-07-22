@@ -11,7 +11,7 @@
 ```
 
 **Header Generation Methods:**
-- **PREFERRED:** Use `/header` command (single command: `./claude_command_scripts/git-header.sh`)
+- **PREFERRED:** Use `/header` command (finds project root automatically by looking for CLAUDE.md)
 - **Manual:** Run individual commands:
   - `git branch --show-current` - Get local branch
   - `git rev-parse --abbrev-ref @{upstream} 2>/dev/null || echo "no upstream"` - Get remote

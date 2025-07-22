@@ -1,20 +1,45 @@
 #!/bin/bash
-# Global git header command wrapper
-# Works from any directory within a git repository
+# Universal git header command wrapper
+# Finds project root by looking for CLAUDE.md marker file
 
-# Find git root
-git_root=$(git rev-parse --show-toplevel 2>/dev/null)
-if [ $? -ne 0 ]; then
-    echo "[Not in a git repository]"
+# Function to find project root by searching for CLAUDE.md
+find_project_root() {
+    # Start from the directory containing this script
+    local current_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local max_depth=20  # Prevent infinite loops
+    local depth=0
+    
+    while [ "$depth" -lt "$max_depth" ]; do
+        # Check if CLAUDE.md exists in current directory
+        if [ -f "$current_dir/CLAUDE.md" ]; then
+            echo "$current_dir"
+            return 0
+        fi
+        
+        # Check if we've reached the filesystem root
+        if [ "$current_dir" = "/" ] || [ "$current_dir" = "" ]; then
+            return 1
+        fi
+        
+        # Move up one directory
+        current_dir=$(dirname "$current_dir")
+        ((depth++))
+    done
+    
+    return 1
+}
+
+# Find the project root
+if ! project_root=$(find_project_root); then
+    echo "[ERROR] Could not find project root (no CLAUDE.md found)"
     exit 1
 fi
 
-# Find and execute the git-header.sh script
-if [ -f "$git_root/claude_command_scripts/git-header.sh" ]; then
-    exec "$git_root/claude_command_scripts/git-header.sh" "$@"
-elif [ -f "$git_root/worktree_roadmap/claude_command_scripts/git-header.sh" ]; then
-    exec "$git_root/worktree_roadmap/claude_command_scripts/git-header.sh" "$@"
+# Find and execute the git-header.sh script relative to project root
+header_script="$project_root/claude_command_scripts/git-header.sh"
+if [ -f "$header_script" ]; then
+    exec "$header_script" "$@"
 else
-    echo "[git-header.sh not found in repository]"
+    echo "[ERROR] git-header.sh not found at: $header_script"
     exit 1
 fi
