@@ -1,37 +1,11 @@
 #!/bin/bash
 # Universal git header command wrapper
-# Finds project root by looking for CLAUDE.md marker file
+# Uses hardcoded project root for reliability
 
-# Function to find project root by searching for CLAUDE.md
-find_project_root() {
-    # Start from the directory containing this script
-    local current_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    local max_depth=20  # Prevent infinite loops
-    local depth=0
-    
-    while [ "$depth" -lt "$max_depth" ]; do
-        # Check if CLAUDE.md exists in current directory
-        if [ -f "$current_dir/CLAUDE.md" ]; then
-            echo "$current_dir"
-            return 0
-        fi
-        
-        # Check if we've reached the filesystem root
-        if [ "$current_dir" = "/" ] || [ "$current_dir" = "" ]; then
-            return 1
-        fi
-        
-        # Move up one directory
-        current_dir=$(dirname "$current_dir")
-        ((depth++))
-    done
-    
-    return 1
-}
-
-# Find the project root
-if ! project_root=$(find_project_root); then
-    echo "[ERROR] Could not find project root (no CLAUDE.md found)"
+# Use hardcoded project root for reliability
+project_root="$HOME/projects/worldarchitect.ai"
+if [ ! -d "$project_root" ]; then
+    echo "[ERROR] Project root directory not found: $project_root"
     exit 1
 fi
 

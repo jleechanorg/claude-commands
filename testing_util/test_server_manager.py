@@ -187,13 +187,11 @@ class TestServerManager:
         ]
     
     def _get_project_root(self) -> str:
-        """Get project root directory"""
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        # Look for CLAUDE.md as project root marker
-        while current_dir != '/':
-            if os.path.exists(os.path.join(current_dir, 'CLAUDE.md')):
-                return current_dir
-            current_dir = os.path.dirname(current_dir)
+        """Get project root directory using hardcoded path for reliability"""
+        project_root = os.path.expanduser("~/projects/worldarchitect.ai")
+        if os.path.exists(project_root):
+            return project_root
+        # Fallback to current working directory if hardcoded path doesn't exist
         return os.getcwd()
     
     def _wait_for_server_health(self, base_url: str, timeout: int) -> bool:

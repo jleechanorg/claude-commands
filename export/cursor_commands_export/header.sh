@@ -34,9 +34,10 @@ find_project_root() {
     return 1
 }
 
-# Try to find and use the git-header script
-if project_root=$(find_project_root) && [ -f "$project_root/claude_command_scripts/git-header.sh" ]; then
-    log_message "INFO" "Using git-header.sh from project root"
+# Use hardcoded project root for reliability
+project_root="$HOME/projects/worldarchitect.ai"
+if [ -f "$project_root/claude_command_scripts/git-header.sh" ]; then
+    log_message "INFO" "Using git-header.sh from hardcoded project root: $project_root"
     "$project_root/claude_command_scripts/git-header.sh"
 else
     # Fallback implementation using secure functions
