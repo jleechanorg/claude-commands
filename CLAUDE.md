@@ -642,9 +642,18 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - ❌ NEVER execute /orch or /orchestrate tasks yourself - ONLY monitor agents
 - ✅ For /orch: Create agents → Monitor progress → Report results ONLY
 
-**Key Commands**: `/execute` (no approval) | `/plan` (requires approval) | `/replicate` (PR analysis)
+**Key Commands**: `/execute` (no approval) | `/plan` (requires approval) | `/replicate` (PR analysis) | `/fake` (code quality audit)
 **Dual Composition**: Cognitive (semantic) + Operational (protocol) + Tool (direct)
 **Unified Learning**: ONE `/learn` command with Memory MCP integration
+
+### Quality Assurance Commands
+
+#### `/fake`
+**Purpose**: Comprehensive fake code detection using command composition
+**Composition**: `/arch /thinku /devilsadvocate /diligent`
+**Usage**: `/fake`
+**Detection**: Identifies fake implementations, demo code, placeholder comments, duplicate protocols
+**Output**: Structured audit report with actionable remediation guidance
 
 ## Special Protocols
 
