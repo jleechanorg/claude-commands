@@ -1,8 +1,8 @@
 # Fake Code Detection Command - /fake
 
-**Purpose**: Detect fake, demo, or simulated code that isn't truly working
+**Purpose**: Detect fake, demo, or simulated code that isn't truly working using Memory MCP-enhanced pattern recognition
 
-**Usage**: `/fake` - Comprehensive audit for non-functional code patterns
+**Usage**: `/fake` - Memory-enhanced comprehensive audit for non-functional code patterns
 
 ## 🚨 COMMAND COMPOSITION
 
@@ -48,6 +48,21 @@ This command combines: `/arch /thinku /devilsadvocate /diligent`
 
 ## 🚨 EXECUTION PROTOCOL
 
+### Phase 0: Memory Enhancement (Memory MCP Integration)
+**Historical Pattern Learning**:
+- Search Memory MCP for previously detected fake patterns: `mcp__memory-server__search_nodes("fake_patterns OR placeholder_code OR demo_files")`
+- Query for codebase-specific fake pattern knowledge: `mcp__memory-server__search_nodes("fake code patterns [current_branch] [file_type]")`
+  - **[current_branch]**: Replace with the name of the branch you are currently working on (e.g., `feature/new-feature` or `bugfix/issue-123`).
+  - **[file_type]**: Replace with the type of file being analyzed (e.g., `python`, `config`, `script`, `test`, or `documentation`).
+  - **Example**: `mcp__memory-server__search_nodes("fake code patterns feature/new-feature python")`
+  - **[current_branch]**: Replace with the name of the branch you are currently working on (e.g., `feature/new-feature` or `bugfix/issue-123`)
+  - **[file_type]**: Replace with the type of file being analyzed (e.g., `python`, `config`, `script`, `test`, or `documentation`)
+  - **Example**: `mcp__memory-server__search_nodes("fake code patterns feature/new-feature python")`
+- Retrieve context on areas prone to fake implementations
+- Load learned detection strategies and their effectiveness
+- **Log**: "🔍 Memory searched: X relevant fake patterns found"
+- **Integration**: Use memory context to inform all subsequent analysis phases
+
 ### Phase 1: Architecture Analysis (/arch)
 **System Understanding**:
 - Map current system architecture
@@ -76,6 +91,15 @@ This command combines: `/arch /thinku /devilsadvocate /diligent`
 - Check configuration values point to real resources
 - Validate test assertions match actual behavior
 
+### Phase 5: Memory Persistence (Store Learnings)
+**Knowledge Capture for Future Detection**:
+- Create entities for new fake patterns discovered: `mcp__memory-server__create_entities([{name: "hardcoded_demo_data", entityType: "fake_code_pattern", observations: ["Hardcoded values found in demo.py", "demo.py, test_demo.py", "Identified by static analysis of hardcoded strings"]}])`
+- Store relationships between fake patterns and file types/areas
+- Record detection strategy effectiveness and user feedback
+- Add observations to existing fake pattern entities if updating knowledge
+- **Log**: "📚 Stored X new fake patterns in memory for future detection"
+- **Benefits**: Builds persistent knowledge base for improved future detection
+
 ## 📋 DETECTION CHECKLIST
 
 ### Code Functionality
@@ -103,11 +127,18 @@ This command combines: `/arch /thinku /devilsadvocate /diligent`
 
 ### Summary Report
 ```text
-🚨 FAKE CODE AUDIT RESULTS
+🚨 FAKE CODE AUDIT RESULTS (Memory-Enhanced)
 
 📊 Files Analyzed: X
-⚠️  Fake Patterns Found: Y
+⚠️  Fake Patterns Found: Y  
 ✅ Verified Working Code: Z
+🧠 Memory Patterns Used: A
+📚 New Patterns Learned: B
+
+🔍 MEMORY-ENHANCED DETECTION:
+- [Patterns detected using historical knowledge]
+- [Areas flagged based on past fake implementations]
+- [Detection strategies informed by memory context]
 
 🔴 CRITICAL ISSUES:
 - [List fake implementations requiring immediate attention]
@@ -117,6 +148,10 @@ This command combines: `/arch /thinku /devilsadvocate /diligent`
 
 ✅ VERIFIED FUNCTIONAL:
 - [List code confirmed to work correctly]
+
+🧠 KNOWLEDGE CAPTURED:
+- [New fake patterns stored for future detection]
+- [Updated pattern entities with additional observations]
 ```
 
 ### Detailed Findings
@@ -126,6 +161,28 @@ For each fake pattern found:
 - **Evidence**: Code snippet showing the issue
 - **Impact**: How this affects system functionality  
 - **Recommendation**: Specific action to resolve the issue
+
+## 🧠 MEMORY-ENHANCED DETECTION BENEFITS
+
+### Learning from History
+**Pattern Recognition**: Memory MCP stores examples of fake patterns found in this codebase, enabling faster recognition of similar issues.
+
+**Context Awareness**: The system learns which files, directories, or code areas tend to contain fake implementations.
+
+**Strategy Evolution**: Detection approaches are refined based on what works well for this specific project.
+
+### Continuous Improvement
+**False Positive Reduction**: Memory helps distinguish between legitimate code and fake patterns by learning from corrections.
+
+**Codebase-Specific Intelligence**: Understanding of project conventions helps identify what constitutes "fake" vs acceptable code.
+
+**Cross-Session Knowledge**: Insights persist across different analysis sessions, building comprehensive detection capabilities.
+
+### Memory Integration Flow
+1. **Search**: Query memory for relevant fake patterns before analysis
+2. **Analyze**: Use memory context to enhance detection accuracy  
+3. **Learn**: Store new findings and update existing knowledge
+4. **Evolve**: Each run improves future detection capabilities
 
 ## 🛠️ REMEDIATION GUIDANCE
 
@@ -149,6 +206,9 @@ For each fake pattern found:
 - Recommendations are actionable and specific
 - Both local branch and PR context are analyzed
 - Integration points are verified for real functionality
+- **Memory MCP successfully queried** for historical fake patterns
+- **New learnings stored** in Memory MCP for future detection improvement
+- **Memory context integrated** naturally into analysis phases
 
 **Red Flags Requiring Attention**:
 - Files with placeholder comments in production areas
