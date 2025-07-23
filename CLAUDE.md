@@ -107,14 +107,32 @@
 
 🚨 **NO FAKE IMPLEMENTATIONS**: ⚠️ MANDATORY
 
+**CRITICAL ANTI-PATTERN**: Always audit existing functionality before implementing new code
+
 - ❌ NEVER create files with "# Note: In the real implementation" comments
 - ❌ NEVER write placeholder code that doesn't actually work  
 - ❌ NEVER create demonstration files instead of working implementations
+- ❌ NEVER create Python intelligence files when .md files handle the logic
+- ❌ NEVER duplicate systematic protocols that already exist in other .md files
+- ❌ NEVER reimplement existing command functionality (use orchestration instead)
+- ✅ ALWAYS audit existing commands and .md files before writing new implementations
 - ✅ ALWAYS build real, functional code that works immediately
 - ✅ ALWAYS enhance existing systems rather than creating fake parallel ones
+- ✅ ALWAYS check if functionality exists: Read existing commands, Grep for patterns
 - **Pattern**: Real implementation > No implementation > Fake implementation
+- **Evidence**: PR #820 - 563+ lines of fake code removed (fixpr.py, commentreply.py, copilot.md duplication)
 - **Evidence**: orchestrate_enhanced.py with placeholder comments frustrated user
 - **Rule**: If you can't implement it properly, don't create the file at all
+
+🚨 **ORCHESTRATION OVER DUPLICATION**: ⚠️ MANDATORY  
+- **Principle**: Orchestrators delegate to existing commands, never reimplement their functionality
+- ✅ Pattern: New commands should be orchestrators, not implementers
+- ✅ Use existing /commentreply, /pushl, /fixpr rather than duplicating their logic
+- ✅ Add command summary at top of orchestrator .md files to prevent confusion
+- ❌ NEVER copy systematic protocols from other .md files into new commands
+- ❌ NEVER duplicate GitHub API commands that already exist in other commands
+- **Evidence**: PR #812 (https://github.com/WorldArchitectAI/repo/pull/812) - 120 lines of duplicate systematic protocol removed from copilot.md
+- **Architecture**: copilot = orchestrator, not implementer
 
 🚨 **NO OVER-ENGINEERING**: Prevent building parallel inferior systems vs enhancing existing ones
    - ✅ ALWAYS ask "Can the LLM handle this naturally?" before building parsers/analytics systems
@@ -166,7 +184,7 @@
    - ✅ ALWAYS ensure responses address specific technical points, not patterns
    - **Pattern**: Collect data → Claude analyzes → Claude responds
    - **Anti-pattern**: Collect data → Python templates → Fake responses
-   - **Violation Count**: Repeatedly - STOP THIS PATTERN IMMEDIATELY
+   - **Violation Count**: 100+ times - STOP THIS PATTERN IMMEDIATELY
 
 🚨 **EVIDENCE-BASED APPROACH**: Core principles for all analysis
    - ✅ Extract exact error messages/code snippets before analyzing
