@@ -1,8 +1,12 @@
-# Fake Code Detection Command - /fake
+# Fake Code Detection Command
 
 **Purpose**: Detect fake, demo, or simulated code that isn't truly working using Memory MCP-enhanced pattern recognition
 
 **Usage**: `/fake` - Memory-enhanced comprehensive audit for non-functional code patterns
+
+## 🔄 RELATED COMMANDS
+
+**Light Alternative**: For quick screening, use `/fakel` command which provides the same detection patterns with faster analysis (4 thoughts vs 10+ thoughts).
 
 ## 🚨 COMMAND COMPOSITION
 
@@ -10,7 +14,7 @@ This command combines: `/arch /thinku /devilsadvocate /diligent`
 
 **Composition Logic**:
 - **Architecture Analysis** (/arch): Understand system design and integration points
-- **Deep Thinking** (/thinku): Thorough analysis of code functionality
+- **Deep Thinking** (/thinku): Thorough analysis of code functionality (10+ thoughts)
 - **Devil's Advocate** (/devilsadvocate): Challenge assumptions about what works
 - **Diligent Review** (/diligent): Methodical examination of implementation details
 
@@ -71,7 +75,7 @@ This command combines: `/arch /thinku /devilsadvocate /diligent`
 - Analyze how changes fit into existing system
 
 ### Phase 2: Deep Thinking (/thinku)
-**Thorough Code Analysis**:
+**Thorough Code Analysis** (10+ thoughts):
 - Trace execution paths through new code
 - Verify each function actually performs its stated purpose
 - Check error handling and edge cases
@@ -127,7 +131,7 @@ This command combines: `/arch /thinku /devilsadvocate /diligent`
 
 ### Summary Report
 ```text
-🚨 FAKE CODE AUDIT RESULTS (Memory-Enhanced)
+🚨 FAKE CODE AUDIT RESULTS (/fake - Deep Analysis)
 
 📊 Files Analyzed: X
 ⚠️  Fake Patterns Found: Y  
