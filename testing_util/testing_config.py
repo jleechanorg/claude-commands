@@ -7,6 +7,7 @@ Replaces scattered configuration across multiple test files.
 """
 
 import os
+import time
 from enum import Enum
 from dataclasses import dataclass
 from typing import Dict, Any, Optional
@@ -144,7 +145,6 @@ class TestConfig:
     @classmethod
     def generate_test_user_id(cls, prefix: str = "test") -> str:
         """Generate unique test user ID"""
-        import time
         timestamp = int(time.time())
         return f"{prefix}-user-{timestamp}"
 
