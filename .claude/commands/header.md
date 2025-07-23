@@ -8,7 +8,7 @@
 
 ## Implementation
 
-**Single Command**: `./claude_command_scripts/git-header.sh --with-api`
+**Single Command**: `~/projects/worldarchitect.ai/claude_command_scripts/git-header.sh --with-api`
 
 This script automatically:
 1. Gets local branch name
@@ -47,7 +47,7 @@ Examples:
 - Remove all friction in compliance
 
 **Automated Memory Aid**:
-- The single command `./claude_command_scripts/git-header.sh` makes header generation effortless
+- The single command `~/projects/worldarchitect.ai/claude_command_scripts/git-header.sh` makes header generation effortless
 - No need to remember 3 separate commands
 - Consistent, reliable output every time
 - Perfect for developing muscle memory

@@ -2,6 +2,8 @@
 
 A working implementation of hierarchical AI agent orchestration using tmux terminals and Redis messaging.
 
+> **📚 A2A Integration Documentation**: For comprehensive documentation on the Agent-to-Agent (A2A) SDK integration, real implementation details, and usage examples, see [README_A2A_INTEGRATION.md](./README_A2A_INTEGRATION.md)
+
 ## ✅ What Actually Works
 
 Unlike the previous vaporware implementation, this system provides:

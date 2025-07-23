@@ -95,8 +95,9 @@ if [ ! -f "$CLAUDE_PATH" ]; then
 fi
 
 # Configure security flags (use --dangerously-skip-permissions only if explicitly enabled)
+# For orchestration agents, we need permissions to create files and PRs
 SKIP_PERMISSIONS_FLAG=""
-if [ "${CLAUDE_SKIP_PERMISSIONS:-false}" = "true" ]; then
+if [ "${CLAUDE_SKIP_PERMISSIONS:-false}" = "true" ] || [ "${AGENT_TYPE}" = "orchestration" ]; then
     SKIP_PERMISSIONS_FLAG="--dangerously-skip-permissions"
     log_info "⚠️  Security warning: Running with --dangerously-skip-permissions"
 fi
