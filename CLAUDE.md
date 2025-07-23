@@ -291,6 +291,12 @@
 **ENFORCEMENT**: When user runs /orch, you MUST ONLY monitor agents - NO direct execution allowed! The entire point of /orch is agent delegation!
 **NO HARDCODING**: ❌ NEVER hardcode task patterns - agents execute EXACT tasks requested | ✅ General task agents, not pattern-matched types
 
+🚨 **ORCHESTRATION TASK COMPLETION**: When using /orch, task completion requires FULL end-to-end verification
+- ✅ Agent must complete entire workflow (find issue → fix → commit → push → create PR)
+- ✅ Verify PR creation with link before declaring success
+- ❌ NEVER declare success based on agent creation alone
+- 🔍 Evidence: task-agent-3570 completed full workflow creating PR #887
+
 ## Project Overview
 
 WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
@@ -339,6 +345,12 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 **Path Computation**: ✅ Use `os.path.dirname()` to retrieve the parent directory of a file path | ✅ Use `os.path.join()` for constructing paths | ✅ Use `pathlib.Path` for modern path operations | ❌ NEVER use `string.replace()` for paths
 - 🔍 Evidence: PR #818 - Replaced fragile `.replace('/tests', '')` with proper directory navigation
 
+🚨 **DYNAMIC AGENT ASSIGNMENT**: Replace ALL hardcoded agent mappings with capability-based selection
+- ❌ NEVER use patterns like `if "test" in task: return "testing-agent"`
+- ✅ ALWAYS use capability scoring with load balancing
+- ✅ Consider: agent capabilities, current workload, task requirements
+- 🔍 Evidence: PR #873 removed 150+ lines of hardcoded mappings
+
 ### Feature Compatibility
 **Critical**: Audit integration points | Update filters for new formats | Test object/string conversion
 **Always Reuse**: Check existing code | Extract patterns to utilities | No duplication
@@ -360,6 +372,13 @@ Use docstrings, proper JS loading
 - ✅ Read the actual file content before making changes
 - ❌ NEVER blindly apply review comments without verification
 - 🔍 Evidence: PR #818 - Copilot suggested fixing 'string_type' that was already correct
+
+⚠️ **PR COMMENT PRIORITY**: Address review comments in strict priority order
+1. **CRITICAL**: Undefined variables, inline imports, runtime errors
+2. **HIGH**: Bare except clauses, security issues
+3. **MEDIUM**: Logging violations, format issues
+4. **LOW**: Style preferences, optimizations
+- 🔍 Evidence: PR #873 review - fixed critical inline imports first
 
 ### Website Testing & Deployment Expectations (🚨 CRITICAL)
 🚨 **BRANCH ≠ WEBSITE**: ❌ NEVER assume branch changes are visible on websites without deployment
