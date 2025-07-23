@@ -113,8 +113,47 @@ fi
 echo "1. Switching to main branch..."
 git checkout main
 
-echo "2. Pulling latest changes from origin..."
-git pull
+echo "2. Smart sync with origin/main..."
+if ! git fetch origin main; then
+    echo "❌ Error: Failed to fetch updates from origin/main."
+    echo "   Possible causes: network issues, authentication problems, or repository unavailability."
+    echo "   Please check your connection and credentials, and try again."
+    exit 1
+fi
+
+# Detect relationship between local main and origin/main
+if git merge-base --is-ancestor HEAD origin/main; then
+    # Local main is behind origin/main → safe fast-forward
+    echo "✅ Fast-forwarding to latest origin/main"
+    if ! git merge --ff-only origin/main; then
+        echo "❌ Error: Fast-forward merge with origin/main failed. Please resolve manually." >&2
+        exit 1
+    fi
+    
+elif git merge-base --is-ancestor origin/main HEAD; then
+    # Local main is ahead of origin/main → push local commits
+    echo "✅ Local main ahead, pushing to origin"
+    if ! git push origin main; then
+        echo "❌ Error: Push to origin/main failed. Please check your network connection or resolve conflicts manually." >&2
+        exit 1
+    fi
+    
+else
+    # Branches have diverged → auto-merge (like manual git merge --no-ff)
+    echo "⚠️  Local main and origin/main have diverged"
+    echo "🔄 Auto-merging to sync histories (prevents integration failure)..."
+    if ! git merge --no-ff origin/main -m "integrate.sh: Auto-merge divergent main histories
+
+This merge resolves the divergence between local main (with unpushed commits)
+and origin/main (with merged PR changes). This prevents the integration script
+from failing and requiring manual intervention.
+
+Equivalent to: git merge --no-ff origin/main"; then
+        echo "❌ Error: Auto-merge of divergent main histories failed. Please resolve conflicts manually." >&2
+        exit 1
+    fi
+    echo "✅ Successfully merged divergent histories"
+fi
 
 # Check if there are any local branches that haven't been pushed
 echo "3. Checking for unmerged local branches..."
