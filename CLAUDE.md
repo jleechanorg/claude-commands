@@ -252,25 +252,47 @@
    - Benefits: Immediate results, reliable API access, no command completion uncertainty
 16. 🚨 **MEMORY ENHANCEMENT PROTOCOL**: ⚠️ MANDATORY for specific commands
 - **Enhanced Commands**: `/think`, `/learn`, `/debug`, `/analyze`, `/fix`, `/plan`, `/execute`, `/arch`, `/test`, `/pr`, `/perp`, `/research`
+- **High-Quality Memory Standards**: ⚠️ MANDATORY - Based on Memory MCP best practices research (via Perplexity API research)
+  - ✅ **Specific Technical Details**: Include exact error messages, file paths with line numbers (file:line), code snippets
+  - ✅ **Actionable Information**: Provide reproduction steps, implementation details, verification methods
+  - ✅ **External References**: Link to PRs, commits, files, documentation URLs for verification
+  - ✅ **Canonical Naming**: Use `{system}_{issue_type}_{timestamp}` format for disambiguation
+  - ✅ **Measurable Outcomes**: Include test results, performance metrics, quantified improvements
+  - ✅ **Contextual Details**: Timestamp, circumstances, specific situations that triggered learning
+  - ❌ **Avoid Low-Quality**: Generic statements, missing context, vague observations without actionable detail
+- **Enhanced Entity Types**: Use specific, technical entity types
+  - `technical_learning` - Specific solutions with code/errors/fixes
+  - `implementation_pattern` - Successful code patterns with reusable details
+  - `debug_session` - Complete debugging journeys with root causes
+  - `workflow_insight` - Process improvements with measurable outcomes
+  - `architecture_decision` - Design choices with rationale and trade-offs
 - **Execution Steps**:
-  1. ✅ **Extract key terms** from command arguments (entities, technical terms, PR references)
-  2. ✅ **Search Memory MCP**: Call `mcp__memory-server__search_nodes(query)` with extracted terms (MCP functions use double underscores as namespace separators)
-  3. ✅ **Log results**: Always show "🔍 Memory searched: X relevant memories found"
+  1. ✅ **Extract specific technical terms** from command arguments (file names, error messages, PR numbers, technologies)
+  2. ✅ **Search Memory MCP**: Call `mcp__memory-server__search_nodes(query)` with extracted technical terms
+  3. ✅ **Log results transparently**: Always show "📚 Found X relevant memories"
   4. ✅ **Natural integration**: If memories found, incorporate context naturally into response
-  5. ❌ **Memory search is mandatory** for listed commands unless performance/availability exceptions apply (see constraints below)
+  5. ✅ **Capture high-quality learnings**: Use structured patterns with technical details, references, and actionable information
+  6. ❌ **Memory search is mandatory** for listed commands unless performance/availability exceptions apply
+- **Quality Validation Before Storage**:
+  - Contains specific technical details (error messages, file paths, code snippets)
+  - Includes actionable information (how to reproduce, fix, or implement)
+  - References external artifacts (PRs, commits, files, documentation)
+  - Uses canonical entity names for disambiguation
+  - Provides measurable outcomes (test counts, performance metrics)
+  - Links to related memories explicitly through relations
 - **Transparency Requirements**:
   - Show "🔍 Searching memory..." when search begins
   - Report "📚 Found X relevant memories" or "💭 No relevant memories found"
   - Indicate when response is enhanced: "📚 Enhanced with memory context"
 - **Performance Constraints**:
   - Batch all terms into single search (not multiple calls)
-  - Skip if search would take >100ms with notice to user (100ms chosen as UX threshold for perceived instant response)
+  - Skip if search would take >100ms with notice to user
   - Continue without enhancement if MCP unavailable (with notice)
 - **Integration Approach**:
   - Use natural language understanding to weave context seamlessly
   - Don't mechanically inject memory blocks
   - Judge relevance using semantic understanding, not keyword matching
-  - Prioritize recent and relevant memories
+  - Prioritize recent and relevant memories with actionable technical detail
 
 ### 🔧 GitHub MCP Setup
 **Token**: Set in `claude_mcp.sh` line ~247 via `export GITHUB_TOKEN="your_token_here"`
@@ -639,6 +661,11 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 **🧠 Cognitive Commands** (Semantic Composition):
 - `/think`, `/arch`, `/debug` - Modify thinking approach, compose naturally
+- `/learn` - Capture structured technical learnings with Memory MCP integration
+- `/analyze` - Deep analysis with memory context enhancement
+- `/fix` - Problem resolution with memory-guided solutions
+- `/perp` - Research validation using Perplexity API
+- `/research` - Knowledge gathering with memory pattern recognition
 - **Behavior**: Automatic semantic understanding and tool integration
 
 **⚙️ Operational Commands** (Protocol Enforcement):  
