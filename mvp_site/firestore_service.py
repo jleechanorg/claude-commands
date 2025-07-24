@@ -43,13 +43,7 @@ from custom_types import (
     CampaignData, StateUpdate, EntityData, MissionData,
     UserId, CampaignId, JsonDict, JsonValue, Timestamp
 )
-
-# Import numeric field converter
-# This handles both package imports (relative) and direct script execution
-try:
-    from .numeric_field_converter import NumericFieldConverter
-except ImportError:
-    from numeric_field_converter import NumericFieldConverter
+from numeric_field_converter import NumericFieldConverter
 
 MAX_TEXT_BYTES: int = 1000000
 MAX_LOG_LINES: int = 20

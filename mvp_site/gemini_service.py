@@ -40,6 +40,7 @@ import json
 import os
 import re
 import sys
+import traceback
 from typing import (
     Dict, List, Optional, Any, Union, Tuple, Callable, cast, TypedDict
 )
@@ -68,6 +69,7 @@ from narrative_response_schema import (
 from narrative_sync_validator import NarrativeSyncValidator
 from schemas.entities_pydantic import sanitize_entity_name_for_id
 from token_utils import estimate_tokens, log_with_tokens
+from world_loader import load_world_content_for_system_instruction
 
 from game_state import GameState
 from custom_types import GeminiRequest, GeminiResponse as GeminiResponseType, JsonDict
@@ -237,7 +239,6 @@ def _add_world_instructions_to_system(system_instruction_parts: List[str]) -> No
     Add world content instructions to system instruction parts if world is enabled.
     Avoids code duplication between get_initial_story and continue_story.
     """
-    from world_loader import load_world_content_for_system_instruction
 
     world_instruction = (
         "\n**CRITICAL INSTRUCTION: USE ESTABLISHED WORLD LORE**\n"
@@ -1541,8 +1542,6 @@ Full narrative context:
         logging_util.error(f"🔍 PLANNING_BLOCK_EXCEPTION: Exception details: {repr(e)}")
 
         # Log traceback for debugging
-        import traceback
-
         logging_util.error(
             f"🔍 PLANNING_BLOCK_EXCEPTION: Traceback: {traceback.format_exc()}"
         )
