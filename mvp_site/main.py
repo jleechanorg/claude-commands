@@ -1072,6 +1072,7 @@ def create_app() -> Flask:
         try:
             opening_story_response = gemini_service.get_initial_story(
                 prompt,
+                user_id=user_id,
                 selected_prompts=selected_prompts,
                 generate_companions=generate_companions,
                 use_default_world=use_default_world,
