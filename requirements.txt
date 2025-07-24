@@ -1,0 +1,41 @@
+# Core Dependencies
+redis==5.0.1
+python-dotenv==1.0.0
+pydantic==2.5.3
+aiohttp==3.9.1
+asyncio-mqtt==0.16.1
+
+# Task Processing
+celery==5.3.4
+kombu==5.3.4
+
+# Google SDKs (when available)
+# google-genai>=0.1.0
+# google-generativeai>=0.3.2
+
+# Async Support
+asyncio==3.4.3
+aiofiles==23.2.1
+
+# CLI and Display
+click==8.1.7
+rich==13.7.0
+tabulate==0.9.0
+colorama==0.4.6
+
+# Development Tools
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-timeout==2.2.0
+black==23.12.1
+flake8==6.1.0
+mypy==1.7.1
+
+# Monitoring
+psutil==5.9.6
+watchdog==3.0.0
+
+# Utilities
+pyyaml==6.0.1
+toml==0.10.2
+humanize==4.9.0

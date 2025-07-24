@@ -1,0 +1,64 @@
+#!/bin/bash
+# Simple pushl command - placeholder for existing implementation
+# As noted in plan: "leave /pushl alone for now, it already exists"
+# This is a minimal implementation for testing
+
+set -e
+
+# Default values
+MESSAGE=""
+FORCE=false
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --message|-m)
+            MESSAGE="$2"
+            shift 2
+            ;;
+        --force|-f)
+            FORCE=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+# Check for changes
+if [[ -z $(git status --porcelain) ]]; then
+    echo "No changes to push"
+    exit 0
+fi
+
+# Stage all changes
+git add -A
+
+# Commit with message
+if [[ -z "$MESSAGE" ]]; then
+    MESSAGE="chore: Automated commit from copilot"
+fi
+git commit -m "$MESSAGE"
+
+# Push to remote
+if [[ "$FORCE" == "true" ]]; then
+    git push --force-with-lease
+else
+    git push
+fi
+
+# Create result JSON
+cat > /tmp/copilot/push.json << EOF
+{
+  "pushed_at": "$(date -Iseconds)",
+  "branch": "$(git branch --show-current)",
+  "remote": "origin",
+  "commit_sha": "$(git rev-parse HEAD)",
+  "message": "$MESSAGE",
+  "success": true
+}
+EOF
+
+echo "✅ Changes pushed successfully"
