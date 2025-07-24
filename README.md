@@ -2,53 +2,103 @@
 
 Command composition system for Claude AI using natural language processing to combine slash commands.
 
-## Command Composition
+## Problem Statement
 
-The system parses arbitrary command combinations and generates meta-prompts for Claude interpretation:
+Claude AI lacks native command composition. Users cannot combine multiple slash commands like `/think /debug /optimize` in a single invocation. Each command must be executed individually, losing context and requiring manual coordination between different analytical approaches.
+
+## Solution: Command Composition
+
+This system enables arbitrary command combination through meta-prompt generation. Instead of modifying Claude's underlying architecture, it preprocesses combined commands into natural language instructions that Claude can interpret natively.
+
+### Technical Approach
+
+**Command Parsing**: Regular expressions extract slash commands from user input
+**Behavior Mapping**: Known commands map to documented behaviors, unknown commands default to "approach" patterns
+**Meta-Prompt Generation**: System constructs natural language instructions combining all specified behaviors
+**Context Preservation**: Original task context flows through to the combined execution
+
+### Value Proposition
+
+1. **Cognitive Multiplication**: Combine different thinking approaches (analytical + creative + systematic)
+2. **Workflow Integration**: Chain related operations without losing context between steps  
+3. **Emergent Behaviors**: Command combinations produce capabilities not available individually
+4. **Extensibility**: New combinations work without hardcoded definitions
+
+### Example Transformations
 
 ```bash
-/think /debug /optimize     # Sequential thinking + debugging + optimization
-/arch /security /deploy     # Architecture analysis + security + deployment  
-/custom /nonexistent /test  # Handles undefined commands via approach patterns
+# Single command limitation
+/think analyze performance → Sequential thinking only
+/debug analyze performance → Debugging methodology only
+
+# Composition capability  
+/think /debug analyze performance → Sequential thinking + systematic debugging + analysis
 ```
 
-Implementation uses simple string parsing and prompt templating rather than hardcoded command mappings.
+**Generated Meta-Prompt**:
+```
+Use sequential thinking methodology for systematic debugging approach: analyze performance
+```
+
+Claude processes this as natural language instructions, accessing both thinking patterns simultaneously.
 
 ## Core Commands
 
 ### Cognitive
 - **`/think [level]`** - Sequential thinking (light/medium/deep/ultra depth levels)
-- **`/arch`** - Architecture analysis
-- **`/debug`** - Systematic debugging methodology
+- **`/arch`** - Architecture analysis and design patterns
+- **`/debug`** - Systematic debugging methodology with evidence collection
 
 ### Operational
 - **`/orchestrate`** - Multi-agent task delegation *(WIP - requires Redis/tmux)*
-- **`/execute`** - Task execution with approval gates
-- **`/plan`** - Planning workflows
+- **`/execute`** - Task execution with safety checks and approval gates
+- **`/plan`** - Strategic planning with structured decomposition
 
 ### Analysis
-- **`/fake`** - Placeholder/demo code detection
-- **`/learn`** - Learning capture with Memory MCP
-- **`/test`** - Testing automation (UI/HTTP/integration)
+- **`/fake`** - Placeholder/demo code detection across codebases
+- **`/learn`** - Learning capture with Memory MCP integration
+- **`/test`** - Testing automation (UI/HTTP/integration workflows)
+
+### Communication
+- **`/commentreply`** - Intelligent GitHub PR comment generation
+- **`/copilot`** - Automated PR analysis and issue resolution
 
 ### Meta
-- **`/combinations`** - Command composition engine documentation
+- **`/combinations`** - Command composition engine documentation and examples
 
-## Implementation
+## Composition Examples
 
-**Command Processing**: Markdown files contain command specifications. Hook scripts parse combinations and generate natural language instructions.
+### Analytical Depth
+```bash
+/think deep /arch /security → Deep architectural thinking with security analysis
+```
+Produces comprehensive security-focused architectural analysis using extended thinking methodology.
+
+### Problem Solving
+```bash
+/debug /test /learn → Systematic debugging + testing validation + learning capture
+```
+Combines debugging methodology with test-driven validation and automatic learning documentation.
+
+### Creative Technical
+```bash
+/arch /optimize /unconventional → Architecture analysis + optimization + creative approaches
+```
+Standard architectural analysis enhanced with optimization focus and non-conventional thinking patterns.
+
+## Implementation Details
+
+**Command Processing**: Markdown files contain command specifications with behavior descriptions. Hook scripts parse input and generate meta-prompts.
 
 **Composition Algorithm**:
-1. Parse slash commands from input
-2. Map known commands to behaviors, unknown to "approach" patterns  
-3. Generate meta-prompt combining all behaviors
-4. Execute via existing command infrastructure
+1. Parse slash commands using regex: `/(\w+)/g`
+2. Map known commands to behavior descriptions from markdown files
+3. Handle unknown commands with generic "approach" pattern
+4. Concatenate behaviors with natural language connectors
+5. Append original task context
+6. Execute through existing command infrastructure
 
-**Example Transformation**:
-```
-Input:  /think /debug analyze memory leak
-Output: Use sequential thinking for systematic debugging: analyze memory leak
-```
+**Extensibility**: New commands work immediately through pattern matching. No system updates required for novel combinations.
 
 ## Architecture
 
@@ -56,53 +106,54 @@ Output: Use sequential thinking for systematic debugging: analyze memory leak
 claude/commands/           # Command specifications (markdown)
 ├── cognitive/            # Analysis and thinking commands
 ├── operational/          # Task execution commands  
-├── quality/             # Code analysis commands
+├── quality/             # Code analysis and validation
+├── communication/       # PR and comment management
 └── meta/                # System and composition commands
 
+.claude/hooks/            # Preprocessing hooks
+├── compose-commands.sh   # Main composition engine
+└── command-parser.py     # Command extraction logic
+
 orchestration/           # Multi-agent system (WIP)
-├── task_dispatcher.py  # Agent routing
-├── message_broker.py   # Redis coordination
+├── task_dispatcher.py  # Agent routing and load balancing
+├── message_broker.py   # Redis-based coordination
 └── agent_system.py     # tmux session management
 ```
 
 ## Dependencies
 
-**Core System**: None (pure prompt engineering)
-**Orchestration**: Redis, tmux, Python 3.8+
-**Integrations**: Memory MCP, GitHub API (optional)
+**Core System**: None (pure prompt engineering approach)
+**Orchestration**: Redis 6.0+, tmux, Python 3.8+
+**Optional Integrations**: Memory MCP, GitHub API, various testing frameworks
 
 ## Usage
 
-1. Clone repository
-2. Reference command files in `claude/commands/*.md`  
-3. Use combinations in Claude interface:
+1. Clone repository and reference command specifications
+2. Configure hooks in Claude environment  
+3. Use arbitrary command combinations:
    ```
-   /think deep /arch What's the optimal database design?
-   /debug /test /learn Why are integration tests failing?
+   /think ultra /arch /security Analyze microservices for vulnerabilities
+   /debug /test /optimize Find and fix performance bottlenecks
+   /plan /execute /learn Implement feature with learning capture
    ```
 
 **Orchestration Setup** *(WIP)*:
 ```bash
-# Start Redis
-redis-server
-
-# Initialize orchestration
-./orchestration/start_system.sh start
-
-# Use orchestration
-/orchestrate implement user authentication
+redis-server                              # Start coordination backend
+./orchestration/start_system.sh start    # Initialize agent system
+/orchestrate implement authentication     # Delegate to specialized agents
 ```
 
-## Technical Notes
+## Technical Limitations
 
-- Commands are markdown specifications, not executable code
-- Composition works through prompt engineering, not program logic
-- Unknown commands default to generic "approach" interpretation
-- System designed for Claude AI but adaptable to other LLMs
-- Orchestration requires external infrastructure (Redis, tmux)
+- Requires preprocessing integration with Claude interface
+- Meta-prompt quality depends on command specification completeness
+- No runtime validation of command compatibility
+- Orchestration system requires external infrastructure
+- Performance scales with number of combined commands
 
 ## Status
 
-- **Command System**: Production ready
-- **Composition Engine**: Stable  
-- **Orchestration**: Work in progress, experimental
+- **Command System**: Production ready, 50+ commands available
+- **Composition Engine**: Stable, handles arbitrary combinations
+- **Orchestration**: Experimental, requires Redis/tmux infrastructure
