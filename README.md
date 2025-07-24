@@ -1,243 +1,174 @@
-# Claude Orchestrator - AI Command System & Task Orchestration
+# Claude Commands - Universal AI Command Composition System
 
-A powerful system combining Claude AI commands with an advanced multi-agent task orchestration framework.
+🚀 **Revolutionary command composition system for Claude AI** - Turn any combination of slash commands into powerful workflows through natural language understanding.
 
-## 🚀 Overview
+## ✨ What Makes This Special
 
-This repository contains two integrated systems:
+**True Universal Composition**: Unlike traditional command systems with hardcoded combinations, this leverages Claude's natural language processing to understand ANY command combination - even completely made-up ones!
 
-1. **Claude Commands** - A comprehensive collection of AI-powered commands for development workflows
-2. **Orchestration System** - Multi-agent task execution framework with Redis coordination and A2A SDK integration
-
-## 📋 Features
-
-### Claude Commands (/claude/commands/)
-- **`/think`** - Deep sequential thinking for complex problem-solving
-- **`/fake`** - Detect and audit fake/placeholder code
-- **`/test`** - Automated testing workflows (UI, HTTP, integration)
-- **`/copilot`** - GitHub PR analysis and automated fixes
-- **`/orchestrate`** (`/orch`)- Delegate tasks to specialized agents
-- **`/learn`** - Capture and persist learnings with Memory MCP
-- **`/execute`** (`/e`) - Execute tasks with safety checks
-- **`/plan`** - Strategic planning with approval workflow
-- **`/debug`** - Systematic debugging approach
-- **`/arch`** - Architecture and design analysis
-- And 50+ more specialized commands...
-
-### Orchestration System (/orchestration/)
-- **Multi-Agent Architecture**: Specialized agents (frontend, backend, testing, opus-master)
-- **Redis-Based Coordination**: Reliable task queuing and state management
-- **A2A SDK Integration**: Google's Agent-to-Agent communication framework
-- **Dynamic Task Assignment**: Intelligent load balancing across agents
-- **Real-Time Monitoring**: Live agent status via tmux sessions
-- **Automatic Agent Spawning**: Create task-specific agents on demand
-
-## 🛠️ Installation
-
-### Prerequisites
-- Python 3.11+
-- Redis server (6.0+)
-- tmux (for agent monitoring)
-- Git
-
-### Quick Setup
-
-1. **Clone the repository:**
 ```bash
-git clone https://github.com/jleechan2015/claude-orchestrator.git
-cd claude-orchestrator
+/think /debug /optimize     # → Deep thinking + systematic debugging + optimization
+/security /stealth /deploy  # → Security-focused stealthy deployment  
+/quantum /cosmic /analyze   # → Creative cosmic-level analysis (yes, really!)
 ```
 
-2. **Create virtual environment:**
+## 🎯 Most Interesting Commands
+
+### 🧠 **Cognitive Commands**
+- **`/think [level]`** - Sequential thinking with adjustable depth (light/medium/deep/ultra)
+- **`/arch`** - Architecture analysis and design thinking
+- **`/debug`** - Systematic debugging methodology
+- **`/combinations`** - Universal command composition engine
+
+### 🤖 **Orchestration Commands** ⚠️ **(WIP)**
+- **`/orchestrate`** (`/orch`) - Multi-agent task delegation with Redis coordination
+- **`/execute`** - Task execution with safety checks and approval workflows
+- **`/plan`** - Strategic planning with structured approaches
+
+### 🔍 **Analysis Commands**
+- **`/fake`** - Detect placeholder/demo code across codebases
+- **`/learn`** - Capture insights with Memory MCP integration
+- **`/test`** - Automated testing workflows (UI/HTTP/integration)
+
+### 💬 **Communication Commands**  
+- **`/commentreply`** - Intelligent GitHub PR comment responses
+- **`/copilot`** - Automated PR analysis and fixes
+- **`/context`** - Smart context management for conversations
+
+## 🌟 Universal Command Composition
+
+The breakthrough feature: **ANY combination works**!
+
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Real commands
+/think /plan /arch → Strategic architectural planning with deep thinking
+/debug /test /optimize → Systematic debugging with testing and optimization
+
+# Creative commands  
+/ninja /stealth /implement → Subtle, efficient implementation
+/dragon /mythical /optimize → Powerful creative optimization
+
+# Made-up commands
+/fluffy /rainbow /debug → Claude finds meaningful interpretation
+/quantum /cosmic /secure → Creative high-level security analysis
 ```
 
-3. **Install dependencies:**
+**How it works**: Creates natural language meta-prompts that Claude interprets through its reasoning capabilities. No hardcoded combinations needed!
+
+## 🚀 Quick Start
+
+1. **Clone the repository**:
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/jleechanorg/claude-commands.git
+cd claude-commands
 ```
 
-4. **Start Redis:**
+2. **Browse commands**:
 ```bash
-# Install Redis if needed
-sudo apt-get install redis-server  # Ubuntu/Debian
-brew install redis                  # macOS
-
-# Start Redis
-redis-server
-```
-
-5. **Initialize the orchestration system:**
-```bash
-./orchestration/start_system.sh start
-```
-
-## 📖 Usage
-
-### Using Claude Commands
-
-Claude commands are markdown files that define AI-powered workflows. They're designed to be used within Claude AI interfaces but can be adapted for other LLMs.
-
-```bash
-# List all available commands
 ls claude/commands/*.md
-
-# View command documentation
-cat claude/commands/think.md
-
-# Example: View the orchestrate command
-cat claude/commands/orchestrate.md
+cat claude/commands/think.md     # Deep thinking system
+cat claude/commands/combinations.md  # Universal composition
 ```
 
-### Using the Orchestrator Programmatically
-
-```python
-from orchestration.task_dispatcher import TaskDispatcher
-
-# Create dispatcher
-dispatcher = TaskDispatcher()
-
-# Submit a task
-task_id = dispatcher.create_task(
-    description="Build a REST API with authentication",
-    priority="high"
-)
-
-# Monitor progress
-status = dispatcher.get_task_status(task_id)
-print(f"Task {task_id}: {status}")
+3. **Use in Claude AI**:
+```
+/think deep What's causing this performance issue?
+/arch /security /optimize Design a scalable API gateway
+/debug /test /learn Analyze failing integration tests
 ```
 
-### Command Line Usage
+## 📋 Command Categories
 
-```bash
-# Create a new task
-python orchestration/task_dispatcher.py create "Implement user authentication"
+### Cognitive (Thinking & Analysis)
+- `think.md` - Sequential thinking with adjustable computation
+- `arch.md` - Architecture analysis and design  
+- `debug.md` - Systematic debugging workflows
+- `learn.md` - Learning capture with memory integration
 
-# List all tasks
-python orchestration/task_dispatcher.py list
+### Operational (Task Execution)
+- `orchestrate.md` - Multi-agent orchestration *(WIP)*
+- `execute.md` - Safe task execution with approvals
+- `plan.md` - Strategic planning workflows
+- `test.md` - Comprehensive testing automation
 
-# Monitor agents
-./orchestration/monitor_agents.sh
-```
+### Quality Assurance
+- `fake.md` - Fake/placeholder code detection
+- `commentreply.md` - Intelligent PR responses
+- `copilot.md` - Automated PR analysis
+- `context.md` - Smart context management
 
-### Monitoring Agents
-
-```bash
-# View all running agents
-tmux ls | grep agent
-
-# Attach to a specific agent
-tmux attach -t frontend-agent
-
-# View agent logs
-tail -f orchestration/logs/agent-*.log
-```
+### Meta-System
+- `combinations.md` - Universal command composition
+- `combo-help.md` - Composition examples and patterns
 
 ## 🏗️ Architecture
 
-### Command System Structure
 ```
 claude/commands/
-├── cognitive/          # Thinking and analysis commands
-│   ├── think.md       # Sequential thinking
-│   ├── arch.md        # Architecture analysis
-│   └── debug.md       # Debugging workflows
-├── operational/       # Task execution commands
-│   ├── orchestrate.md # Multi-agent orchestration
-│   ├── execute.md     # Direct execution
-│   └── plan.md        # Planning workflows
-└── quality/          # Code quality commands
-    ├── fake.md        # Fake code detection
-    ├── test.md        # Testing workflows
-    └── review.md      # Code review automation
+├── cognitive/          # Thinking and analysis
+├── operational/        # Task execution  
+├── quality/           # Code quality assurance
+├── communication/     # PR and comment management
+└── meta/             # System commands and composition
 ```
 
-### Orchestration Components
-
-1. **Task Dispatcher** (`task_dispatcher.py`)
-   - Routes tasks to appropriate agents
-   - Manages task lifecycle and priorities
-   - Implements dynamic agent selection
-
-2. **Message Broker** (`message_broker.py`)
-   - Redis pub/sub for agent communication
-   - Task queue management
-   - State synchronization
-
-3. **Agent System** (`agent_system.py`)
-   - Agent lifecycle management
-   - tmux session orchestration
-   - Health monitoring
-
-4. **A2A Integration** (`a2a_integration.py`)
-   - Google A2A SDK bridge
-   - Advanced workflow capabilities
-   - Cross-agent coordination
-
-## 🔧 Configuration
-
-### Redis Configuration
-```bash
-# Default Redis connection
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_DB=0
+**Orchestration System** *(Work In Progress)*:
+```
+orchestration/
+├── task_dispatcher.py    # Multi-agent task routing
+├── message_broker.py     # Redis-based coordination  
+├── agent_system.py       # tmux agent management
+└── a2a_integration.py    # Google A2A SDK bridge
 ```
 
-### Agent Configuration
-```python
-# orchestration/config.py
-AGENT_TYPES = {
-    "frontend": {"capabilities": ["ui", "react", "vue"]},
-    "backend": {"capabilities": ["api", "database", "auth"]},
-    "testing": {"capabilities": ["unit", "integration", "e2e"]},
-    "opus-master": {"capabilities": ["coordination", "planning"]}
-}
+## 🔧 Integration
+
+**Claude Code CLI**: Drop-in compatibility with Claude's command system
+**Memory MCP**: Automatic context enhancement from past learnings
+**GitHub Integration**: Direct PR analysis and comment generation
+**Redis Orchestration**: Multi-agent coordination *(WIP)*
+
+## 🎨 Examples
+
+**Complex Analysis**:
+```
+/think ultra /arch /security Analyze this microservices architecture for security vulnerabilities
+```
+
+**Creative Problem Solving**:
+```  
+/mythical /dragon /debug /optimize Find the most elusive performance bottleneck
+```
+
+**Systematic Development**:
+```
+/plan /test /execute /learn Build user authentication with comprehensive testing
+```
+
+**AI-to-AI Orchestration** *(WIP)*:
+```
+/orchestrate implement real-time chat with WebSocket support and Redis persistence
 ```
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+This is an active research project! Contributions welcome:
 
-### Adding New Commands
-1. Create a new `.md` file in `claude/commands/`
-2. Follow the existing command format
-3. Test with Claude AI interface
-4. Submit PR with examples
-
-### Improving Orchestration
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Submit PR with description
+1. **New Commands**: Add `.md` files following existing patterns
+2. **Composition Patterns**: Enhance the universal composition system  
+3. **Orchestration**: Help develop the multi-agent system *(WIP)*
+4. **Integration**: Expand MCP and external system support
 
 ## 📝 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+MIT License - Use freely for AI workflow automation!
 
-## 🔗 Resources
+## 🔗 Learn More
 
-- [Claude AI Documentation](https://claude.ai/docs)
-- [Redis Documentation](https://redis.io/docs)
-- [tmux Cheat Sheet](https://tmuxcheatsheet.com)
-- [Google A2A SDK](https://github.com/google/genai) (when available)
-
-## 🚨 Security
-
-- Never commit API keys or secrets
-- Use environment variables for configuration
-- Run Redis with authentication in production
-- Limit agent permissions appropriately
-
-## 📊 Status
-
-- **Claude Commands**: 50+ commands, actively maintained
-- **Orchestration**: Production-ready with Redis backend
-- **A2A Integration**: Experimental, pending SDK availability
+- **Command Reference**: Browse `claude/commands/*.md` for detailed documentation
+- **Composition Guide**: See `combinations.md` for universal composition patterns
+- **Orchestration**: Check `orchestrate.md` for multi-agent workflows *(WIP)*
 
 ---
 
-Created with ❤️ by the WorldArchitect.AI team
+*Built for the future of AI-human collaboration* 🤖✨
