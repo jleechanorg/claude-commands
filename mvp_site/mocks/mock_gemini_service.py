@@ -7,8 +7,11 @@ import json
 from datetime import datetime
 from typing import Dict, Any, List
 from .data_fixtures import SAMPLE_AI_RESPONSES, SAMPLE_STATE_UPDATES
+
+from .structured_fields_fixtures import FULL_STRUCTURED_RESPONSE, GOD_MODE_RESPONSE
+
 try:
-    from .structured_fields_fixtures import FULL_STRUCTURED_RESPONSE, GOD_MODE_RESPONSE
+
 except ImportError:
     # Fallback if fixtures not available
     FULL_STRUCTURED_RESPONSE = None

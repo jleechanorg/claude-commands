@@ -11,6 +11,8 @@ from datetime import datetime
 # Import defensive numeric field converter for robust data handling
 from .defensive_numeric_converter import DefensiveNumericConverter
 
+import re
+
 
 def sanitize_entity_name_for_id(name: str) -> str:
     """Sanitize a name to create a valid entity ID component.
@@ -27,7 +29,7 @@ def sanitize_entity_name_for_id(name: str) -> str:
     if not name:
         return name
         
-    import re
+
     
     # Convert to lowercase
     name = name.lower()

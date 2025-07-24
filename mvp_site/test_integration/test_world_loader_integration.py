@@ -10,6 +10,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import importlib
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -70,7 +72,7 @@ class TestWorldLoaderIntegration(unittest.TestCase):
         mock_exists.side_effect = exists_side_effect
 
         # Reload the module to trigger path detection with mock
-        import importlib
+
 
         importlib.reload(world_loader)
 

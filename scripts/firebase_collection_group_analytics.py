@@ -14,6 +14,9 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
 
+import csv
+import traceback
+
 
 def initialize_firebase():
     """Initialize Firebase connection using the same pattern as live tests."""
@@ -248,7 +251,7 @@ def export_to_csv(
     user_analytics, filename="analysis/firebase_collection_group_analytics.csv"
 ):
     """Export analytics data to CSV file."""
-    import csv
+
 
     # Sort by total activity
     sorted_users = sorted(
@@ -314,7 +317,7 @@ def main():
 
     except Exception as e:
         print(f"\n❌ Error: {e}")
-        import traceback
+
 
         traceback.print_exc()
         sys.exit(1)

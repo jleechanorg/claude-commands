@@ -11,6 +11,8 @@ import logging
 from fastapi import FastAPI
 import uvicorn
 
+import httpx
+
 
 class MinimalA2AAgent:
     """Minimal working A2A agent with real protocol compliance"""
@@ -79,7 +81,7 @@ async def validate_a2a_agent():
     """Validate that our A2A agent is working correctly"""
     print("🧪 Validating Real A2A Agent...")
     
-    import httpx
+
     base_url = "http://localhost:8000"
     
     async with httpx.AsyncClient() as client:

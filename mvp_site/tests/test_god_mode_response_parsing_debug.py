@@ -4,6 +4,9 @@ import os
 import sys
 import unittest
 
+from narrative_response_schema import _combine_god_mode_and_narrative
+import json
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import json
@@ -113,7 +116,7 @@ class TestGodModeResponseParsingDebug(unittest.TestCase):
 }"""
 
         # Step 1: Parse JSON
-        import json
+
 
         parsed_data = json.loads(test_response)
 
@@ -128,7 +131,7 @@ class TestGodModeResponseParsingDebug(unittest.TestCase):
                 and validated_response.god_mode_response
             ):
                 print("MAIN PATH: god_mode_response detected")
-                from narrative_response_schema import _combine_god_mode_and_narrative
+
 
                 combined_response = _combine_god_mode_and_narrative(
                     validated_response.god_mode_response, validated_response.narrative
@@ -148,7 +151,7 @@ class TestGodModeResponseParsingDebug(unittest.TestCase):
                 narrative = parsed_data.get("narrative")
                 if narrative is None:
                     narrative = ""
-                from narrative_response_schema import _combine_god_mode_and_narrative
+
 
                 combined_response = _combine_god_mode_and_narrative(
                     god_mode_response, narrative

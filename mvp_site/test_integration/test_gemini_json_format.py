@@ -7,6 +7,11 @@ import os
 import sys
 import unittest
 
+from game_state import GameState
+from main import create_app
+import firestore_service
+import gemini_service
+
 # Add the project root to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
@@ -18,11 +23,11 @@ from integration_test_lib import (
 
 # Handle missing dependencies gracefully
 try:
-    from main import create_app
 
-    import firestore_service
-    import gemini_service
-    from game_state import GameState
+
+
+
+
 
     DEPS_AVAILABLE = True
 except ImportError as e:

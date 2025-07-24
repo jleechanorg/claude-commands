@@ -7,6 +7,8 @@ Can be run directly without pytest
 import os
 import sys
 
+from the history books."
+
 # Add prototype to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -52,7 +54,7 @@ def test_sariel_ambiguous_presence():
     narrative = """
     Cassian's voice was tight and strained. "Uncle Titus is leading a 
     punitive campaign against Mordan's entire clan. We will burn them 
-    from the history books."
+
     """
 
     expected_entities = ["Cassian", "Titus"]

@@ -11,6 +11,8 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
+from tests.fake_firestore import FakeFirestoreClient
+
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -65,7 +67,7 @@ class TestAuthMockSeparation(unittest.TestCase):
 
         with patch("firestore_service.get_db") as mock_db:
             # Use FakeFirestoreClient for realistic behavior
-            from tests.fake_firestore import FakeFirestoreClient
+
 
             fake_db = FakeFirestoreClient()
             mock_db.return_value = fake_db

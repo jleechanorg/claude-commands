@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+from gemini_service import GeminiService
+
 """
 Unit tests for Think Block State Management Protocol
 
@@ -25,7 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import gemini_service which handles prompt processing
 try:
-    from gemini_service import GeminiService
+
 except ImportError:
     # If import fails, create a mock for testing
     class GeminiService:

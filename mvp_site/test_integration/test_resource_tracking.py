@@ -6,6 +6,10 @@ Test resource tracking in debug output for PR changes
 import os
 import sys
 
+from game_state import GameState
+import gemini_service
+import traceback
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -64,8 +68,8 @@ os.environ["GEMINI_API_KEY"] = "dummy_key"
 
 try:
     # Now we can import gemini_service
-    import gemini_service
-    from game_state import GameState
+
+
 
     # Clear cache
     gemini_service._loaded_instructions_cache.clear()
@@ -144,7 +148,7 @@ try:
 
 except Exception as e:
     print(f"✗ Resource tracking test failed: {e}")
-    import traceback
+
 
     traceback.print_exc()
     sys.exit(1)

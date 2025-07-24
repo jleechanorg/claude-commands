@@ -11,6 +11,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import world_loader
+
 
 class TestDeploymentBuild(unittest.TestCase):
     """Test deployment build context and file accessibility."""
@@ -82,7 +84,7 @@ def load_world_content_for_system_instruction():
         # Import should work
         sys.path.insert(0, self.mvp_site_dir)
         try:
-            import world_loader
+
 
             # But loading should fail
             with self.assertRaises(FileNotFoundError) as context:
@@ -115,7 +117,7 @@ def load_world_content_for_system_instruction():
         # Import and test
         sys.path.insert(0, self.mvp_site_dir)
         try:
-            import world_loader
+
 
             # Loading should now work
             result = world_loader.load_world_content_for_system_instruction()

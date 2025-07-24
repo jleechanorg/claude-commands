@@ -13,6 +13,13 @@ import sys
 import tempfile
 import unittest
 
+from schemas import entities_pydantic
+from schemas.defensive_numeric_converter import DefensiveNumericConverter
+from schemas.entities_pydantic import NPC, HealthStatus
+import arch
+import entity_tracking
+import os
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -31,7 +38,7 @@ class TestArchitecturalDecisions(unittest.TestCase):
     def test_adt_001_pydantic_validation_is_used(self):
         """ADT-001: Entity validation uses Pydantic implementation for robust data validation"""
         # Import and verify we're using the pydantic module
-        from schemas import entities_pydantic
+
 
         # Verify we're using Pydantic
         self.assertIn(
@@ -69,7 +76,7 @@ class TestArchitecturalDecisions(unittest.TestCase):
 
     def test_adt_003_entity_tracking_imports_pydantic_module(self):
         """ADT-003: entity_tracking.py imports from Pydantic module"""
-        import entity_tracking
+
 
         # Check what module is actually imported
         manifest_module = entity_tracking.SceneManifest.__module__
@@ -84,7 +91,7 @@ class TestArchitecturalDecisions(unittest.TestCase):
 
     def test_adt_004_pydantic_validation_actually_rejects_bad_data(self):
         """ADT-004: Pydantic validation actually rejects invalid data"""
-        from schemas.entities_pydantic import NPC, HealthStatus
+
 
         # Test that gender validation works for NPCs (Luke campaign fix)
         with self.assertRaises(Exception) as context:
@@ -101,7 +108,7 @@ class TestArchitecturalDecisions(unittest.TestCase):
 
     def test_adt_005_defensive_numeric_conversion_works(self):
         """ADT-005: DefensiveNumericConverter handles 'unknown' values gracefully"""
-        from schemas.defensive_numeric_converter import DefensiveNumericConverter
+
 
         # Test conversion of 'unknown' values
         result = DefensiveNumericConverter.convert_value("hp", "unknown")
@@ -117,7 +124,7 @@ class TestArchitecturalDecisions(unittest.TestCase):
 
     def test_adt_006_no_environment_variable_switching(self):
         """ADT-006: No environment variable switching - Pydantic is always used"""
-        import entity_tracking
+
 
         # Verify that validation type is always Pydantic regardless of environment
         info = entity_tracking.get_validation_info()
@@ -125,7 +132,7 @@ class TestArchitecturalDecisions(unittest.TestCase):
         self.assertEqual(info["pydantic_available"], "true")
 
         # Verify no environment variable dependency
-        import os
+
 
         old_env = os.environ.get("USE_PYDANTIC")
         try:
@@ -136,7 +143,7 @@ class TestArchitecturalDecisions(unittest.TestCase):
             if "entity_tracking" in sys.modules:
                 del sys.modules["entity_tracking"]
 
-            import entity_tracking
+
 
             # Should still be Pydantic
             self.assertEqual(entity_tracking.VALIDATION_TYPE, "Pydantic")
@@ -154,7 +161,7 @@ class TestASTAnalysisEngine(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures with temporary directory and test files"""
         # Import arch module for testing
-        import arch
+
 
         self.arch = arch
 

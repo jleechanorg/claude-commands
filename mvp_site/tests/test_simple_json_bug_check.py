@@ -4,6 +4,8 @@ import os
 import sys
 import unittest
 
+import traceback
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Ensure testing environment
@@ -78,7 +80,7 @@ class TestSimpleJsonBugCheck(unittest.TestCase):
         except Exception as e:
             print(f"❌ Parsing failed with exception: {e}")
             print(f"Exception type: {type(e)}")
-            import traceback
+
 
             traceback.print_exc()
 

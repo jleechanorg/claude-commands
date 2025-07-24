@@ -5,6 +5,9 @@ Test suite for advanced authentication functionality in main.py
 import os
 import sys
 
+from main import app
+import jwt
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["TESTING"] = "true"
 
@@ -13,7 +16,7 @@ from unittest.mock import Mock, patch
 
 # Handle missing dependencies gracefully
 try:
-    import jwt
+
 
     JWT_AVAILABLE = True
 except ImportError:
@@ -21,7 +24,7 @@ except ImportError:
     jwt = None
 
 try:
-    from main import app
+
 
     FLASK_AVAILABLE = True
 except ImportError:

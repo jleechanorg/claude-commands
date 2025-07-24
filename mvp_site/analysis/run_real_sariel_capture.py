@@ -10,6 +10,9 @@ import os
 import sys
 from datetime import datetime
 
+import gemini_service
+import traceback
+
 def run_sariel_capture_in_main_project():
     """Run the Sariel capture in the main project where dependencies exist"""
     
@@ -47,7 +50,7 @@ def capture_responses():
     original_cwd = os.getcwd()
     os.chdir(temp_prompts_dir)
     
-    import gemini_service
+
     
     try:
         # Create Flask app
@@ -248,6 +251,6 @@ if __name__ == "__main__":
             sys.exit(1)
     except Exception as e:
         print(f"\\n💥 Unexpected error: {e}")
-        import traceback
+
         traceback.print_exc()
         sys.exit(1)

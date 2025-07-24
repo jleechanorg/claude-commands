@@ -8,6 +8,9 @@ import json
 import logging_util
 import re
 from robust_json_parser import parse_llm_json_response
+
+import re
+
 # Planning block extraction from narrative is deprecated - blocks should only come from JSON
 
 # Precompiled regex patterns for better performance
@@ -230,7 +233,7 @@ class NarrativeResponse:
                 r'on\w+\s*=.*?[\s>]',  # event handlers like onclick= onerror=
             ]
             
-            import re
+
             cleaned = value
             for pattern in dangerous_patterns:
                 cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE | re.DOTALL)

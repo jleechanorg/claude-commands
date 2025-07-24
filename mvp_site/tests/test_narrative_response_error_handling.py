@@ -6,6 +6,8 @@ import sys
 import unittest
 from unittest.mock import Mock, patch
 
+import logging_util
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from narrative_response_schema import (
@@ -30,7 +32,7 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
                 return str(value)
             except Exception as e:
                 # Import at runtime to match the actual implementation
-                import logging_util
+
 
                 logging_util.error(f"Failed to convert {field_name} to string: {e}")
                 return ""

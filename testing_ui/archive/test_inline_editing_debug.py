@@ -10,6 +10,8 @@ import time
 
 from playwright.sync_api import sync_playwright
 
+import traceback
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -241,7 +243,7 @@ def test_inline_editing_features():
 
         except Exception as e:
             print(f"\n[ERROR] Test failed: {e}")
-            import traceback
+
 
             traceback.print_exc()
 

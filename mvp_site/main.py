@@ -1,3 +1,10 @@
+from debug_hybrid_system import process_story_for_display
+from mocks import mock_firestore_service_wrapper as firestore_service
+from mocks import mock_gemini_service_wrapper as gemini_service
+import firestore_service
+import gemini_service
+import random
+
 """
 WorldArchitect.AI - Main Flask Application
 
@@ -84,15 +91,15 @@ if os.environ.get("USE_MOCKS", "").lower() in ["true", "1", "yes"]:
 
 # Import Gemini service based on flag
 if use_mock_gemini:
-    from mocks import mock_gemini_service_wrapper as gemini_service
+
 else:
-    import gemini_service
+
 
 # Import Firestore service based on flag
 if use_mock_firebase:
-    from mocks import mock_firestore_service_wrapper as firestore_service
+
 else:
-    import firestore_service
+
 
 import structured_fields_utils
 
@@ -751,7 +758,7 @@ def _build_campaign_prompt(character: Optional[str], setting: Optional[str], des
     Returns:
         Constructed campaign prompt with proper character/setting/description format
     """
-    import random
+
 
     # Normalize inputs: convert None to empty string and strip whitespace
     character = (character or "").strip()
@@ -980,7 +987,7 @@ def create_app() -> Flask:
 
             # Apply hybrid debug processing to story entries for backward compatibility
             debug_mode = game_state_dict.get("debug_mode", False)
-            from debug_hybrid_system import process_story_for_display
+
 
             processed_story = process_story_for_display(story, debug_mode)
 

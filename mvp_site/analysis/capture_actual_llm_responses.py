@@ -13,16 +13,23 @@ import logging
 from datetime import datetime
 from typing import List, Dict, Any
 
+from game_state import GameState
+from integration_test_lib import IntegrationTestSetup, setup_integration_test_environment
+from main import create_app
+import firestore_service
+import gemini_service
+import traceback
+
 # Add the project root to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), 'mvp_site'))
 sys.path.insert(0, project_root)
 
 # Handle missing dependencies gracefully
 try:
-    from main import create_app
-    import firestore_service
-    from game_state import GameState
-    from integration_test_lib import IntegrationTestSetup, setup_integration_test_environment
+
+
+
+
     
     # Set up the integration test environment
     test_setup = setup_integration_test_environment(project_root)
@@ -44,7 +51,7 @@ def capture_sariel_llm_responses():
     original_cwd = os.getcwd()
     os.chdir(temp_prompts_dir)
     
-    import gemini_service
+
     
     # Get test configuration
     TEST_MODEL_OVERRIDE = IntegrationTestSetup.TEST_MODEL_OVERRIDE
@@ -211,7 +218,7 @@ def capture_sariel_llm_responses():
         
     except Exception as e:
         print(f"💥 Error during capture: {e}")
-        import traceback
+
         traceback.print_exc()
         return None
     
@@ -232,6 +239,6 @@ if __name__ == "__main__":
             sys.exit(1)
     except Exception as e:
         print(f"\n💥 Unexpected error: {e}")
-        import traceback
+
         traceback.print_exc()
         sys.exit(1)

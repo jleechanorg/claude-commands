@@ -4,6 +4,8 @@ import os
 import sys
 import unittest
 
+from pydantic import ValidationError
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from schemas.entities_pydantic import NPC, HealthStatus
@@ -92,7 +94,7 @@ class TestLukeCampaignJediMasterGenderFix(unittest.TestCase):
         self.assertEqual(creative_npc.gender, "shapeshifter")
         
         # Test that type validation still works
-        from pydantic import ValidationError
+
         with self.assertRaises(ValidationError):  # More specific exception type
             NPC(
                 entity_id="npc_invalid_type_001",

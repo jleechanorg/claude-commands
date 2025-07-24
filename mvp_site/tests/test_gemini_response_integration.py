@@ -1,3 +1,6 @@
+from narrative_response_schema import NarrativeResponse
+import json
+
 """
 Red/Green Test for GeminiResponse Integration Bug Fix
 
@@ -83,9 +86,9 @@ class TestGeminiResponseIntegration(unittest.TestCase):
         raw_json_response = '{"narrative": "Your adventure begins in a bustling tavern...", "entities_mentioned": [], "location_confirmed": "Tavern", "state_updates": {}, "debug_info": {}}'
 
         # Parse JSON and create GeminiResponse object
-        import json
 
-        from narrative_response_schema import NarrativeResponse
+
+
 
         parsed_json = json.loads(raw_json_response)
         structured_response = NarrativeResponse(**parsed_json)
@@ -154,9 +157,9 @@ class TestGeminiResponseIntegration(unittest.TestCase):
         # Act: Create GeminiResponse
         raw_json_response = '{"narrative": "Test narrative", "entities_mentioned": [], "location_confirmed": "Unknown", "state_updates": {}, "debug_info": {}}'
         # Parse JSON and create GeminiResponse object
-        import json
 
-        from narrative_response_schema import NarrativeResponse
+
+
 
         parsed_json = json.loads(raw_json_response)
         structured_response = NarrativeResponse(**parsed_json)

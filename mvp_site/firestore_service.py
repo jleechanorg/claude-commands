@@ -1,3 +1,6 @@
+from .numeric_field_converter import NumericFieldConverter
+from numeric_field_converter import NumericFieldConverter
+
 """
 Firestore Service - Database Operations and Game State Management
 
@@ -47,9 +50,9 @@ from custom_types import (
 # Import numeric field converter
 # This handles both package imports (relative) and direct script execution
 try:
-    from .numeric_field_converter import NumericFieldConverter
+
 except ImportError:
-    from numeric_field_converter import NumericFieldConverter
+
 
 MAX_TEXT_BYTES: int = 1000000
 MAX_LOG_LINES: int = 20

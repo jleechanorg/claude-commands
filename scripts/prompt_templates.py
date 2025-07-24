@@ -7,6 +7,9 @@ from typing import Any
 
 from schemas.entities_simple import SceneManifest
 
+from schemas.entities_simple import create_from_game_state
+from scripts.test_scenarios import get_scenario
+
 
 class PromptTemplates:
     """Collection of prompt templates for different approaches"""
@@ -149,9 +152,9 @@ def get_prompt_for_approach(
 
 def test_prompts():
     """Test prompt generation"""
-    from schemas.entities_simple import create_from_game_state
 
-    from scripts.test_scenarios import get_scenario
+
+
 
     # Get a test scenario
     scenario = get_scenario("multi_character")

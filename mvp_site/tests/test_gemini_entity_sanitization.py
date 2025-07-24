@@ -7,6 +7,8 @@ import os
 import sys
 import unittest
 
+from schemas.entities_pydantic import NPC, HealthStatus
+
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -159,7 +161,7 @@ class TestGeminiEntitySanitization(unittest.TestCase):
 
     def test_integration_with_entity_id_format(self):
         """Test that sanitized names work with the entity ID format"""
-        from schemas.entities_pydantic import NPC, HealthStatus
+
 
         # These should all create valid entity IDs
         test_names = [

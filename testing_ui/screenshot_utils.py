@@ -6,6 +6,8 @@ Ensures all screenshots are saved to the standard location.
 
 import os
 
+import time
+
 # Standard screenshot directory as per project conventions
 SCREENSHOT_BASE_DIR = "/tmp/worldarchitectai/browser"
 
@@ -91,7 +93,7 @@ def cleanup_old_screenshots(test_name=None, keep_latest=10, days_old=None):
         keep_latest: Number of latest screenshots to keep per test (default: 10)
         days_old: Remove screenshots older than this many days (if specified)
     """
-    import time
+
 
     if test_name:
         # Clean specific test directory

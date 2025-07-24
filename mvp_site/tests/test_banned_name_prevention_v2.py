@@ -8,6 +8,8 @@ import os
 import sys
 import unittest
 
+import re
+
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -94,7 +96,7 @@ class TestBannedNamePreventionBehavior(unittest.TestCase):
             content = f.read()
 
         # Check that version is at least 1.5 (when banned name prevention was added)
-        import re
+
 
         version_match = re.search(r"Version:\s*(\d+)\.(\d+)", content)
         self.assertIsNotNone(version_match, "Should have version number")

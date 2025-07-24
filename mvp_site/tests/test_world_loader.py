@@ -11,6 +11,8 @@ import tempfile
 import time
 import unittest
 
+import world_loader
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import file_cache
@@ -179,7 +181,7 @@ def load_world_content_for_system_instruction():
 
         # Import and test
         sys.path.insert(0, self.app_dir)
-        import world_loader
+
 
         # Should raise FileNotFoundError
         with self.assertRaises(FileNotFoundError) as context:

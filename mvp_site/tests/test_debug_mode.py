@@ -9,6 +9,9 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
+from narrative_response_schema import NarrativeResponse
+import re
+
 # Mock firebase_admin before importing main - following working test pattern
 mock_firebase_admin = MagicMock()
 mock_firestore = MagicMock()
@@ -53,7 +56,7 @@ def create_mock_gemini_response(
         if debug_mode:
             return narrative_text
         # Strip debug content when debug_mode=False
-        import re
+
 
         text = narrative_text
         text = re.sub(r"\[DEBUG_START\].*?\[DEBUG_END\]", "", text, flags=re.DOTALL)
@@ -172,7 +175,7 @@ class TestDebugMode(unittest.TestCase):
         mock_response = "You enter the dark cave. You notice a glimmer in the darkness."
 
         # Create mock structured response with debug_info
-        from narrative_response_schema import NarrativeResponse
+
 
         mock_structured_response = NarrativeResponse(
             narrative=mock_response,
@@ -254,7 +257,7 @@ class TestDebugMode(unittest.TestCase):
         )
 
         # Create mock structured response with enhanced dice roll debug_info
-        from narrative_response_schema import NarrativeResponse
+
 
         mock_structured_response = NarrativeResponse(
             narrative=mock_response,
@@ -332,7 +335,7 @@ class TestDebugMode(unittest.TestCase):
         mock_response = "You enter the dark cave. You notice a glimmer in the darkness."
 
         # Create mock structured response with debug_info
-        from narrative_response_schema import NarrativeResponse
+
 
         mock_structured_response = NarrativeResponse(
             narrative=mock_response,

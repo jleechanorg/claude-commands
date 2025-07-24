@@ -6,6 +6,9 @@ Test if state updates cause the JSON bug
 import os
 import sys
 
+from narrative_response_schema import parse_structured_response
+import json
+
 mvp_site_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, mvp_site_path)
 
@@ -28,7 +31,7 @@ def test_state_updates_scenario():
         "player_character_data": {"name": "Ser Alderon Vance", "hp_max": 10}
     }
 
-    import json
+
 
     state_updates_text = f"\n\n[STATE_UPDATES_PROPOSED]\n{json.dumps(state_updates, indent=2)}\n[END_STATE_UPDATES_PROPOSED]"
     response_text = response_text + state_updates_text
@@ -52,7 +55,7 @@ def test_different_parse_result():
     print("\n" + "=" * 60)
     print("Testing edge cases where parse_structured_response might return JSON")
 
-    from narrative_response_schema import parse_structured_response
+
 
     # Test case 1: Malformed JSON
     test_cases = [

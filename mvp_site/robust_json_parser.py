@@ -6,6 +6,9 @@ import re
 import logging_util
 from typing import Tuple, Dict, Any, Optional
 from json_utils import (
+
+import json
+
     try_parse_json,
     complete_truncated_json,
     extract_json_boundaries,
@@ -165,7 +168,7 @@ class RobustJSONParser:
         state_updates_match = STATE_UPDATES_PATTERN.search(text)
         if state_updates_match:
             try:
-                import json
+
                 state_updates_str = state_updates_match.group(1)
                 state_updates = json.loads(state_updates_str)
                 result['state_updates'] = state_updates
@@ -177,7 +180,7 @@ class RobustJSONParser:
         debug_info_match = DEBUG_INFO_PATTERN.search(text)
         if debug_info_match:
             try:
-                import json
+
                 debug_info_str = debug_info_match.group(1)
                 debug_info = json.loads(debug_info_str)
                 result['debug_info'] = debug_info

@@ -11,6 +11,9 @@ from unittest.mock import MagicMock
 
 # Import capture modules
 from mvp_site.testing_framework.capture import (
+
+import shutil
+
     CaptureFirestoreClient,
     CaptureGeminiClient,
     CaptureManager,
@@ -32,7 +35,7 @@ class TestCaptureManager(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test environment."""
-        import shutil
+
 
         shutil.rmtree(self.temp_dir)
 
@@ -172,7 +175,7 @@ class TestCaptureFirestoreClient(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test environment."""
-        import shutil
+
 
         shutil.rmtree(self.temp_dir)
 
@@ -235,7 +238,7 @@ class TestCaptureGeminiClient(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test environment."""
-        import shutil
+
 
         shutil.rmtree(self.temp_dir)
 
@@ -312,7 +315,7 @@ class TestCaptureAnalyzer(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test environment."""
-        import shutil
+
 
         shutil.rmtree(self.temp_dir)
 
@@ -368,7 +371,7 @@ class TestUtilityFunctions(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test environment."""
-        import shutil
+
 
         shutil.rmtree(self.temp_dir)
 

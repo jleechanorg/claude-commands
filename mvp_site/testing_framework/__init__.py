@@ -5,6 +5,10 @@ Enables seamless switching between mock and real services for testing.
 
 from .config import TestConfig
 from .factory import (
+
+from .mock_provider import MockServiceProvider
+from .simple_mock_provider import SimpleMockServiceProvider as MockServiceProvider
+
     get_current_provider,
     get_service_provider,
     reset_global_provider,
@@ -15,9 +19,9 @@ from .service_provider import TestServiceProvider
 
 # Try to import the full mock provider, fall back to simple one
 try:
-    from .mock_provider import MockServiceProvider
+
 except ImportError:
-    from .simple_mock_provider import SimpleMockServiceProvider as MockServiceProvider
+
 
 __all__ = [
     "TestServiceProvider",

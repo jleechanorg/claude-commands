@@ -7,6 +7,10 @@ import os
 import sys
 import unittest
 
+from main import create_app
+from testing_framework.integration_utils import get_test_mode_info
+import time
+
 # Add the project root to the path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -44,7 +48,7 @@ class TestFrameworkIntegration(BaseTestCase):
         collection_name = "test_integration_validation"
         if self.is_real:
             # Use unique collection name in real mode
-            import time
+
 
             collection_name = f"{collection_name}_{int(time.time())}"
 
@@ -108,7 +112,7 @@ class TestBackwardsCompatibility(DualModeTestMixin, unittest.TestCase):
 
         # Simulate existing test setup
         try:
-            from main import create_app
+
 
             self.app = create_app()
             self.app.config["TESTING"] = True
@@ -257,7 +261,7 @@ class TestFrameworkValidation(unittest.TestCase):
 
     def test_mode_detection(self):
         """Test that test mode is detected correctly."""
-        from testing_framework.integration_utils import get_test_mode_info
+
 
         info = get_test_mode_info()
         assert "mode" in info

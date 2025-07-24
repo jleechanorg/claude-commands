@@ -2,6 +2,8 @@ import os
 import sys
 import unittest
 
+import shutil
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -59,7 +61,7 @@ class TestExportEndpoint(unittest.TestCase):
             # Mock generate_pdf to actually create the file at the expected path
             def mock_pdf_generator(story_text, output_path, campaign_title=""):
                 # Just copy our dummy file to the expected location
-                import shutil
+
 
                 shutil.copy2(dummy_pdf_path, output_path)
                 # Use the parameters to avoid unused variable warnings

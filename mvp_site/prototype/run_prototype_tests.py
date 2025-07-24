@@ -8,6 +8,13 @@ import sys
 import os
 import time
 
+from prototype.game_state_integration import MockGameState
+from prototype.validators.fuzzy_token_validator import FuzzyTokenValidator
+from prototype.validators.hybrid_validator import HybridValidator
+from prototype.validators.llm_validator import LLMValidator
+from prototype.validators.token_validator import SimpleTokenValidator, TokenValidator
+import traceback
+
 # Add prototype to path so imports work correctly
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'prototype'))
 
@@ -16,8 +23,8 @@ def test_validators():
     print("\n1. Testing Basic Validators")
     
     # Import validators
-    from prototype.validators.token_validator import SimpleTokenValidator, TokenValidator
-    from prototype.validators.fuzzy_token_validator import FuzzyTokenValidator
+
+
     
     narrative = "Gideon raised his sword while Rowan prepared her spells."
     expected = ["Gideon", "Rowan"]
@@ -57,7 +64,7 @@ def test_game_state():
     """Test game state integration."""
     print("\n2. Testing Game State Integration")
     
-    from prototype.game_state_integration import MockGameState
+
     
     game_state = MockGameState()
     
@@ -86,7 +93,7 @@ def test_performance():
     """Test performance requirements."""
     print("\n3. Testing Performance")
     
-    from prototype.validators.fuzzy_token_validator import FuzzyTokenValidator
+
     
     fuzzy = FuzzyTokenValidator()
     narrative = "Gideon and Rowan battled the dragon."
@@ -118,7 +125,7 @@ def test_hybrid():
     print("\n4. Testing Hybrid Validator")
     
     try:
-        from prototype.validators.hybrid_validator import HybridValidator
+
         
         hybrid = HybridValidator()
         
@@ -151,7 +158,7 @@ def test_llm_validator():
     """Test LLM validator mock."""
     print("\n5. Testing LLM Validator Mock")
     
-    from prototype.validators.llm_validator import LLMValidator
+
     
     llm = LLMValidator()
     
@@ -202,6 +209,6 @@ if __name__ == "__main__":
         
     except Exception as e:
         print(f"\n❌ Test failed with error: {e}")
-        import traceback
+
         traceback.print_exc()
         sys.exit(1)

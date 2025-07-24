@@ -10,6 +10,8 @@ import os
 import json
 from unittest.mock import Mock, patch, MagicMock
 
+import time
+
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -245,7 +247,7 @@ class TestEndToEndFlow(unittest.TestCase):
         
     def test_performance_requirements(self):
         """Test that validation meets performance requirements."""
-        import time
+
         
         game_state = MockGameState()
         narrative = "Gideon and Rowan explored the dungeon."

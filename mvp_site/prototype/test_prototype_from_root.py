@@ -11,6 +11,14 @@ import os
 import time
 import logging
 
+from game_state_integration import MockGameState
+from validator import ValidationResult
+from validators.fuzzy_token_validator import FuzzyTokenValidator
+from validators.hybrid_validator import HybridValidator
+from validators.llm_validator import LLMValidator
+from validators.token_validator import SimpleTokenValidator, TokenValidator
+import traceback
+
 # Suppress logging noise
 logging.getLogger().setLevel(logging.ERROR)
 
@@ -26,12 +34,12 @@ def test_imports():
     """Test that all imports work correctly."""
     print("\n1. Testing imports...")
     try:
-        from validators.token_validator import SimpleTokenValidator, TokenValidator
-        from validators.fuzzy_token_validator import FuzzyTokenValidator
-        from validators.llm_validator import LLMValidator
-        from validators.hybrid_validator import HybridValidator
-        from game_state_integration import MockGameState
-        from validator import ValidationResult
+
+
+
+
+
+
         print("   ✅ All imports successful")
         return True
     except ImportError as e:
@@ -42,8 +50,8 @@ def test_validators():
     """Test each validator implementation."""
     print("\n2. Testing validators...")
     
-    from validators.token_validator import SimpleTokenValidator, TokenValidator
-    from validators.fuzzy_token_validator import FuzzyTokenValidator
+
+
     
     narrative = "Gideon raised his sword while Rowan prepared her spells."
     entities = ["Gideon", "Rowan"]
@@ -83,7 +91,7 @@ def test_game_state():
     """Test game state integration."""
     print("\n3. Testing game state integration...")
     
-    from game_state_integration import MockGameState
+
     
     try:
         game_state = MockGameState()
@@ -112,7 +120,7 @@ def test_game_state():
         
     except Exception as e:
         print(f"   ❌ Game state error: {e}")
-        import traceback
+
         traceback.print_exc()
         return False
 
@@ -120,7 +128,7 @@ def test_performance():
     """Test performance requirements."""
     print("\n4. Testing performance...")
     
-    from validators.fuzzy_token_validator import FuzzyTokenValidator
+
     
     try:
         fuzzy = FuzzyTokenValidator()
@@ -151,7 +159,7 @@ def test_edge_cases():
     """Test edge cases and special scenarios."""
     print("\n5. Testing edge cases...")
     
-    from validators.fuzzy_token_validator import FuzzyTokenValidator
+
     
     fuzzy = FuzzyTokenValidator()
     

@@ -8,6 +8,8 @@ import sys
 
 import requests
 
+import concurrent.futures
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from test_config import BASE_URL, get_test_session
@@ -102,7 +104,7 @@ def test_error_cases():
 
     # Test 6: Concurrent requests
     print("\n6️⃣ Testing concurrent requests...")
-    import concurrent.futures
+
 
     def make_request():
         return SESSION.get(BASE_URL)

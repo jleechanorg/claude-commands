@@ -10,6 +10,10 @@ import time
 from datetime import datetime
 from typing import Any
 
+from google import genai
+from google.genai import types
+import re
+
 # Set up API key BEFORE importing SDK (following test_integration.py pattern)
 if not os.environ.get("GEMINI_API_KEY"):
     # Check home directory first
@@ -27,8 +31,8 @@ if not os.environ.get("GEMINI_API_KEY"):
                 os.environ["GEMINI_API_KEY"] = key_file.read().strip()
 
 try:
-    from google import genai
-    from google.genai import types
+
+
 except ImportError:
     # Fallback for environments without the package
     genai = None
@@ -245,7 +249,7 @@ class GeminiClient:
                 entity_block = response_text[start:end]
 
                 # Extract entity tags
-                import re
+
 
                 pattern = r"<entity[^>]*>([^<]+)</entity>"
                 matches = re.findall(pattern, entity_block)

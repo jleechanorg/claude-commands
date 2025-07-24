@@ -14,6 +14,8 @@ from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
 from testing_ui.config import BASE_URL, SCREENSHOT_DIR
 
+import requests
+
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -88,7 +90,7 @@ class FlaskServerManager:
 
         # Verify server is running
         try:
-            import requests
+
 
             response = requests.get(BASE_URL, timeout=5)
             if response.status_code == 200:

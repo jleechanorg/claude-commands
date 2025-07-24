@@ -14,6 +14,8 @@ from typing import Any
 
 import redis
 
+import shutil
+
 
 @dataclass
 class AgentStatus:
@@ -253,7 +255,7 @@ class AgentHealthMonitor:
                 if 'CLAUDE_PATH' in os.environ and os.path.exists(os.environ['CLAUDE_PATH']):
                     claude_path = os.environ['CLAUDE_PATH']
                 else:
-                    import shutil
+
                     claude_path = shutil.which('claude')
                     if not claude_path:
                         claude_path = os.path.expanduser('~/.claude/local/claude')

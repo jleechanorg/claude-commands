@@ -8,6 +8,9 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
+from firestore_service import (
+from gemini_response import GeminiResponse
+
 # Mock firebase_admin before imports
 mock_firebase_admin = MagicMock()
 mock_firestore = MagicMock()
@@ -216,7 +219,7 @@ class TestStateHelperFunctions(unittest.TestCase):
     def test_strip_state_updates_only_with_updates(self):
         """Test strip_state_updates_only with state updates present."""
         # Note: This function may not actually strip STATE_UPDATES based on test results
-        from gemini_response import GeminiResponse
+
 
         strip_state_updates_only = GeminiResponse._strip_state_updates_only
 
@@ -239,7 +242,7 @@ class TestStateHelperFunctions(unittest.TestCase):
 
     def test_strip_state_updates_only_without_updates(self):
         """Test strip_state_updates_only with no state updates."""
-        from gemini_response import GeminiResponse
+
 
         strip_state_updates_only = GeminiResponse._strip_state_updates_only
 
@@ -251,7 +254,7 @@ class TestStateHelperFunctions(unittest.TestCase):
 
     def test_truncate_game_state_for_logging(self):
         """Test game state truncation for logging."""
-        from firestore_service import (
+
             _truncate_log_json as truncate_game_state_for_logging,
         )
 
@@ -269,7 +272,7 @@ class TestStateHelperFunctions(unittest.TestCase):
 
     def test_truncate_game_state_for_logging_small_state(self):
         """Test game state truncation with small state."""
-        from firestore_service import (
+
             _truncate_log_json as truncate_game_state_for_logging,
         )
 

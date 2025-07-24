@@ -13,6 +13,9 @@ from typing import Optional, Dict, Any
 
 import uvicorn
 from a2a.types import (
+
+import sys
+
     AgentCard, AgentSkill, AgentCapabilities, Task, Message, 
     TaskState, TaskStatus, TextPart, Role
 )
@@ -384,7 +387,7 @@ async def test_real_a2a_integration():
 
 
 if __name__ == "__main__":
-    import sys
+
     
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         # Run integration test

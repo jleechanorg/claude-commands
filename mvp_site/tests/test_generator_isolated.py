@@ -2,6 +2,8 @@ import os
 import sys
 import unittest
 
+import tempfile
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -29,7 +31,7 @@ def test_export():
     try:
         if file_format == "pdf":
             # This is the line we are truly testing
-            import tempfile
+
 
             file_path = tempfile.mktemp(suffix=".pdf")
             document_generator.generate_pdf(story_text, file_path, campaign_title)

@@ -22,6 +22,8 @@ import psutil
 
 from .testing_config import TestConfig, TestType, TestMode
 
+import atexit
+
 
 @dataclass
 class ServerInstance:
@@ -225,7 +227,7 @@ class TestServerManager:
         if self.cleanup_registered:
             return
         
-        import atexit
+
         atexit.register(self.stop_all_servers)
         
         def signal_handler(signum, frame):

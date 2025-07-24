@@ -7,6 +7,8 @@ import os
 import sys
 import unittest
 
+import main
+
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -64,7 +66,7 @@ class TestGranularMockControl(unittest.TestCase):
                 os.environ[key] = value
 
         # Import main to trigger conditional imports
-        import main
+
 
         return main
 

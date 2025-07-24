@@ -1,3 +1,6 @@
+from world_loader import load_world_content_for_system_instruction
+import traceback
+
 """
 Gemini Service - AI Integration and Response Processing
 
@@ -237,7 +240,7 @@ def _add_world_instructions_to_system(system_instruction_parts: List[str]) -> No
     Add world content instructions to system instruction parts if world is enabled.
     Avoids code duplication between get_initial_story and continue_story.
     """
-    from world_loader import load_world_content_for_system_instruction
+
 
     world_instruction = (
         "\n**CRITICAL INSTRUCTION: USE ESTABLISHED WORLD LORE**\n"
@@ -1541,7 +1544,7 @@ Full narrative context:
         logging_util.error(f"🔍 PLANNING_BLOCK_EXCEPTION: Exception details: {repr(e)}")
 
         # Log traceback for debugging
-        import traceback
+
 
         logging_util.error(
             f"🔍 PLANNING_BLOCK_EXCEPTION: Traceback: {traceback.format_exc()}"

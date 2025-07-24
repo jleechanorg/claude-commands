@@ -7,6 +7,8 @@ import os
 import sys
 import unittest
 
+import main
+
 # Set USE_MOCKS before importing anything
 os.environ["USE_MOCKS"] = "true"
 os.environ["TESTING"] = "true"
@@ -34,7 +36,7 @@ class TestMockServices(unittest.TestCase):
     def test_services_are_mocked(self):
         """Test that services are using mock implementations."""
         # Import the services that main.py uses
-        import main
+
 
         # Check that gemini_service is the mock version
         self.assertEqual(

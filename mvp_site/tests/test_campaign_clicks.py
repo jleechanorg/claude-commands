@@ -2,6 +2,8 @@
 
 import unittest
 
+import os
+
 
 class TestCampaignClicks(unittest.TestCase):
     """Test campaign list click registration and navigation"""
@@ -23,7 +25,7 @@ class TestCampaignClicks(unittest.TestCase):
     def test_css_classes_present(self):
         """Test that required CSS classes are defined"""
         # This test verifies the CSS file exists and can be loaded
-        import os
+
 
         css_path = os.path.join(
             os.path.dirname(__file__), "..", "static", "campaign-click-fix.css"
@@ -43,7 +45,7 @@ class TestCampaignClicks(unittest.TestCase):
 
     def test_javascript_click_handler_structure(self):
         """Test that JavaScript has proper click handler structure"""
-        import os
+
 
         js_path = os.path.join(os.path.dirname(__file__), "..", "static", "app.js")
 
@@ -58,7 +60,7 @@ class TestCampaignClicks(unittest.TestCase):
 
     def test_index_html_includes_css(self):
         """Test that index.html includes the campaign click fix CSS"""
-        import os
+
 
         html_path = os.path.join(
             os.path.dirname(__file__), "..", "static", "index.html"

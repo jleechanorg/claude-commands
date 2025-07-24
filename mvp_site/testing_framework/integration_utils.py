@@ -8,6 +8,9 @@ import sys
 from typing import Any
 from unittest.mock import patch
 
+from testing_framework.integration_utils import update_test_imports
+import time
+
 # Add the project root to the path for imports
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
@@ -241,7 +244,7 @@ def update_test_imports(test_module):
     """Update test module to import testing framework.
 
     Call this at the top of existing test files:
-        from testing_framework.integration_utils import update_test_imports
+
         update_test_imports(__name__)
 
     Args:
@@ -266,7 +269,7 @@ class TestResourceManager:
         """Create a test-specific collection name."""
         if self.provider.is_real_service:
             # Real mode - use unique names
-            import time
+
 
             collection_name = f"test_{base_name}_{int(time.time())}"
         else:

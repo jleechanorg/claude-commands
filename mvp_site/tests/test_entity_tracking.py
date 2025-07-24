@@ -7,6 +7,8 @@ import os
 import sys
 import unittest
 
+from dual_pass_generator import DualPassGenerator
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -402,7 +404,7 @@ class TestEntityTracking(unittest.TestCase):
 
     def test_dual_pass_generator_integration(self):
         """Test DualPassGenerator uses EntityValidator properly"""
-        from dual_pass_generator import DualPassGenerator
+
 
         dual_pass = DualPassGenerator()
 

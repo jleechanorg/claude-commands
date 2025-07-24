@@ -10,6 +10,8 @@ import asyncio
 import time
 import logging_util
 
+import memory_mcp_real
+
 logger = logging_util.getLogger(__name__)
 
 # Common English stop words to exclude from search terms
@@ -110,7 +112,7 @@ class MemoryIntegration:
         """Wrapper for Memory MCP search calls - REAL implementation"""
         try:
             # Import the real Memory MCP module
-            import memory_mcp_real
+
             
             # Call the real MCP search function
             results = memory_mcp_real.search_nodes(query)

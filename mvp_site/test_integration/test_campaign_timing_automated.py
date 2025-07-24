@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+
+from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
 """
 Automated Campaign Wizard Timing Tests
 
@@ -25,12 +34,12 @@ sys.path.insert(0, project_root)
 
 # Try to import Selenium - skip tests if not available
 try:
-    from selenium import webdriver
-    from selenium.common.exceptions import TimeoutException
-    from selenium.webdriver.chrome.options import Options
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support import expected_conditions as EC
-    from selenium.webdriver.support.ui import WebDriverWait
+
+
+
+
+
+
 
     SELENIUM_AVAILABLE = True
 except ImportError:
@@ -120,7 +129,7 @@ class CampaignTimingAutomatedTests(unittest.TestCase):
                 os.path.dirname(__file__), "../../bin/chromedriver"
             )
             if os.path.exists(local_chromedriver):
-                from selenium.webdriver.chrome.service import Service
+
 
                 service = Service(executable_path=local_chromedriver)
                 cls.driver = webdriver.Chrome(service=service, options=chrome_options)

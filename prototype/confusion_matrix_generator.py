@@ -7,6 +7,9 @@ Creates detailed error analysis for each validator.
 import json
 from datetime import datetime
 
+from tests.ground_truth import ground_truth_labels
+import os
+
 
 def generate_confusion_matrix(
     validator_name: str, predictions: dict, ground_truth: dict
@@ -167,7 +170,7 @@ def generate_all_confusion_matrices():
     """Generate confusion matrices for all validators."""
 
     # Sample data - would normally come from actual test runs
-    from tests.ground_truth import ground_truth_labels
+
 
     # Sample predictions for different validators
     validator_predictions = {
@@ -261,7 +264,7 @@ if __name__ == "__main__":
     report = generate_all_confusion_matrices()
 
     # Save report
-    import os
+
 
     os.makedirs("benchmarks", exist_ok=True)
 

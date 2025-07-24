@@ -7,6 +7,9 @@ import sys
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
+from narrative_response_schema import NarrativeResponse
+import re
+
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -205,7 +208,7 @@ class TestHelperFunctions(unittest.TestCase):
     def test_process_structured_response(self, mock_logging, mock_validate, mock_parse):
         """Test _process_structured_response function."""
         # Mock the parse function to return extracted narrative
-        from narrative_response_schema import NarrativeResponse
+
 
         mock_response = Mock(spec=NarrativeResponse)
         mock_parse.return_value = ("story text", mock_response)
@@ -269,7 +272,7 @@ class TestMainHelpers(unittest.TestCase):
     def test_strip_other_debug_content(self):
         """Test StateHelper.strip_other_debug_content."""
         # Test the underlying function directly to avoid Flask dependencies
-        import re
+
 
         def strip_other_debug_content(text):
             if not text:
@@ -308,7 +311,7 @@ class TestMainHelpers(unittest.TestCase):
     def test_strip_state_updates_only(self):
         """Test StateHelper.strip_state_updates_only."""
         # Test the underlying function directly to avoid Flask dependencies
-        import re
+
 
         def strip_state_updates_only(text):
             if not text:

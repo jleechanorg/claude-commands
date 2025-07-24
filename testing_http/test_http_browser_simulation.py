@@ -12,6 +12,8 @@ from datetime import datetime
 
 import requests
 
+from bs4 import BeautifulSoup
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -38,7 +40,7 @@ def capture_response_as_image(response, filename):
 
         if "text/html" in response.headers.get("Content-Type", ""):
             # Extract visible text from HTML
-            from bs4 import BeautifulSoup
+
 
             soup = BeautifulSoup(response.text, "html.parser")
 
@@ -237,7 +239,7 @@ def main():
 
     # Install BeautifulSoup if needed
     try:
-        from bs4 import BeautifulSoup
+
     except ImportError:
         print("📦 Installing BeautifulSoup4 for HTML parsing...")
         os.system("pip install beautifulsoup4")
