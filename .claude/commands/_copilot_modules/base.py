@@ -35,6 +35,7 @@ class CopilotCommandBase(ABC):
         self.pr_number = pr_number
         self.start_time = datetime.now()
         self.repo = self._get_repo_info()
+        self.current_branch = self._get_current_branch()
         
         # Ensure I/O directory exists
         self.IO_DIR.mkdir(exist_ok=True)
@@ -66,6 +67,17 @@ class CopilotCommandBase(ABC):
             except subprocess.CalledProcessError:
                 pass
             return os.environ.get("DEFAULT_REPO", "jleechanorg/worldarchitect.ai")  # Default fallback
+    
+    def _get_current_branch(self) -> str:
+        """Get current git branch for branch-specific file naming."""
+        try:
+            result = subprocess.run(
+                ['git', 'branch', '--show-current'],
+                capture_output=True, text=True, check=True, cwd=os.getcwd()
+            )
+            return result.stdout.strip()
+        except Exception:
+            return "unknown-branch"
     
     def run_gh_command(self, command: List[str]) -> Dict[str, Any]:
         """Run GitHub CLI command and return parsed JSON.

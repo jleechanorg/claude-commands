@@ -24,15 +24,19 @@ from base import CopilotCommandBase
 class CommentFetch(CopilotCommandBase):
     """Fetch all comments from a GitHub PR."""
     
-    def __init__(self, pr_number: str, output_file: str = "comments.json"):
+    def __init__(self, pr_number: str, output_file: str = None):
         """Initialize comment fetcher.
         
         Args:
             pr_number: GitHub PR number
-            output_file: Output filename (default: comments.json)
+            output_file: Output filename (default: branch-specific comments.json)
         """
         super().__init__(pr_number)
-        self.output_file = output_file
+        # Use branch-specific filename if not specified
+        if output_file is None:
+            self.output_file = f"comments_{self.current_branch}.json"
+        else:
+            self.output_file = output_file
         self.comments = []
     
     def _get_inline_comments(self) -> List[Dict[str, Any]]:
@@ -254,8 +258,8 @@ def main():
     parser.add_argument('pr_number', help='PR number to fetch comments from')
     parser.add_argument(
         '--output', '-o',
-        default='comments.json',
-        help='Output filename (default: comments.json)'
+        default=None,
+        help='Output filename (default: branch-specific comments_{branch}.json)'
     )
     
     args = parser.parse_args()

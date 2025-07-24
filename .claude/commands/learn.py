@@ -112,9 +112,9 @@ def create_learning_pr(branch_name, learning_content):
 
 
 def analyze_recent_conversation():
-    """Analyze recent conversation for learnings"""
-    # In real implementation, this would analyze chat history
-    # For now, return placeholder
+    """Analyze recent conversation for learnings - Manual input required"""
+    print("⚠️  Conversation analysis requires manual input.")
+    print("Use: /learn 'specific learning content' to document insights")
     return {"corrections": [], "self_corrections": [], "patterns": []}
 
 
