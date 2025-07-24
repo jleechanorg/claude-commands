@@ -6,6 +6,7 @@ Manages Flask test server lifecycle across different test types.
 Provides unified server startup, health checks, and cleanup.
 """
 
+import atexit
 import os
 import socket
 import subprocess
@@ -225,7 +226,6 @@ class TestServerManager:
         if self.cleanup_registered:
             return
         
-        import atexit
         atexit.register(self.stop_all_servers)
         
         def signal_handler(signum, frame):
