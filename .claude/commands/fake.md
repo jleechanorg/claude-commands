@@ -12,6 +12,8 @@
 
 This command combines: `/arch /thinku /devilsadvocate /diligent`
 
+**⚠️ CRITICAL**: This composition MUST be executed with Memory MCP integration as described in the Execution Protocol below. The Memory MCP operations are MANDATORY, not optional.
+
 **Composition Logic**:
 - **Architecture Analysis** (/arch): Understand system design and integration points
 - **Deep Thinking** (/thinku): Thorough analysis of code functionality (10+ thoughts)
@@ -52,57 +54,102 @@ This command combines: `/arch /thinku /devilsadvocate /diligent`
 
 ## 🚨 EXECUTION PROTOCOL
 
+**⚠️ MANDATORY**: When executing /fake, you MUST perform the Memory MCP operations described below. These are NOT optional documentation - they are required execution steps.
+
 ### Phase 0: Memory Enhancement (Memory MCP Integration)
-**Historical Pattern Learning**:
-- Search Memory MCP for previously detected fake patterns: `mcp__memory-server__search_nodes("fake_patterns OR placeholder_code OR demo_files")`
-- Query for codebase-specific fake pattern knowledge: `mcp__memory-server__search_nodes("fake code patterns [current_branch] [file_type]")`
-  - **[current_branch]**: Replace with the name of the branch you are currently working on (e.g., `feature/new-feature` or `bugfix/issue-123`).
-  - **[file_type]**: Replace with the type of file being analyzed (e.g., `python`, `config`, `script`, `test`, or `documentation`).
-  - **Example**: `mcp__memory-server__search_nodes("fake code patterns feature/new-feature python")`
-  - **[current_branch]**: Replace with the name of the branch you are currently working on (e.g., `feature/new-feature` or `bugfix/issue-123`)
-  - **[file_type]**: Replace with the type of file being analyzed (e.g., `python`, `config`, `script`, `test`, or `documentation`)
-  - **Example**: `mcp__memory-server__search_nodes("fake code patterns feature/new-feature python")`
-- Retrieve context on areas prone to fake implementations
-- Load learned detection strategies and their effectiveness
-- **Log**: "🔍 Memory searched: X relevant fake patterns found"
-- **Integration**: Use memory context to inform all subsequent analysis phases
+**ACTUAL IMPLEMENTATION STEPS**:
+
+1. **Search for existing fake patterns**:
+   ```python
+   🔍 Searching memory for fake patterns...
+   result1 = mcp__memory-server__search_nodes("fake_patterns OR placeholder_code OR demo_files OR fake_implementation")
+   ```
+
+2. **Get branch-specific patterns**:
+   ```python
+   import subprocess
+   current_branch = subprocess.check_output(["git", "branch", "--show-current"], text=True).strip()
+   result2 = mcp__memory-server__search_nodes(f"fake patterns {current_branch}")
+   ```
+
+3. **Log results**:
+   - Show: "🔍 Memory searched: {len(result1.entities + result2.entities)} relevant fake patterns found"
+   - If patterns found, list them briefly
+   - Use these patterns to inform subsequent analysis
+
+**Integration**: The memory context MUST inform all subsequent analysis phases
+
+### Enhanced Composition Execution
+
+Execute the composed commands WITH memory context awareness:
 
 ### Phase 1: Architecture Analysis (/arch)
-**System Understanding**:
+**System Understanding** (enhanced with memory):
 - Map current system architecture
+- Pay special attention to areas where fake patterns were previously found
 - Identify integration boundaries
 - Understand data flow and dependencies
 - Analyze how changes fit into existing system
 
 ### Phase 2: Deep Thinking (/thinku)
-**Thorough Code Analysis** (10+ thoughts):
+**Thorough Code Analysis** (10+ thoughts, informed by memory):
 - Trace execution paths through new code
 - Verify each function actually performs its stated purpose
+- Check for patterns similar to remembered fake implementations
 - Check error handling and edge cases
 - Analyze resource usage and performance implications
 
 ### Phase 3: Devil's Advocate (/devilsadvocate)
-**Challenge Assumptions**:
+**Challenge Assumptions** (using historical knowledge):
 - Question whether code actually works as claimed
 - Look for scenarios where code would fail
+- Use past fake patterns to challenge current implementations
 - Challenge integration assumptions
 - Verify all dependencies are available and functional
 
 ### Phase 4: Diligent Review (/diligent)
-**Methodical Examination**:
+**Methodical Examination** (with specific attention to problem areas):
 - Line-by-line code review for fake patterns
+- Focus on file types/areas that historically had fake implementations
 - Verify all imports resolve to real modules
 - Check configuration values point to real resources
 - Validate test assertions match actual behavior
 
 ### Phase 5: Memory Persistence (Store Learnings)
-**Knowledge Capture for Future Detection**:
-- Create entities for new fake patterns discovered: `mcp__memory-server__create_entities([{name: "hardcoded_demo_data", entityType: "fake_code_pattern", observations: ["Hardcoded values found in demo.py", "demo.py, test_demo.py", "Identified by static analysis of hardcoded strings"]}])`
-- Store relationships between fake patterns and file types/areas
-- Record detection strategy effectiveness and user feedback
-- Add observations to existing fake pattern entities if updating knowledge
-- **Log**: "📚 Stored X new fake patterns in memory for future detection"
-- **Benefits**: Builds persistent knowledge base for improved future detection
+**ACTUAL IMPLEMENTATION STEPS**:
+
+After analysis completes, store new findings:
+
+1. **For each fake pattern found**:
+   ```python
+   pattern_name = f"{pattern_type}_{timestamp}"
+   mcp__memory-server__create_entities([{
+     "name": pattern_name,
+     "entityType": "fake_code_pattern", 
+     "observations": [
+       "Description of pattern",
+       f"Location: {file}:{line}", 
+       f"Detection method: {method}",
+       f"Found on branch: {current_branch}",
+       f"Detected by: /fake command"
+     ]
+   }])
+   ```
+
+2. **Create relationships** (if applicable):
+   ```python
+   mcp__memory-server__create_relations([{
+     "from": pattern_name,
+     "to": component_name,
+     "relationType": "found_in"
+   }])
+   ```
+
+3. **Log storage**:
+   - Show: "📚 Stored {count} new fake patterns in memory for future detection"
+   - List what was stored for transparency
+
+**Benefits**: Builds persistent knowledge base for improved future detection
 
 ## 📋 DETECTION CHECKLIST
 
@@ -131,7 +178,7 @@ This command combines: `/arch /thinku /devilsadvocate /diligent`
 
 ### Summary Report
 ```text
-🚨 FAKE CODE AUDIT RESULTS (/fake - Deep Analysis)
+🚨 FAKE CODE AUDIT RESULTS (Memory-Enhanced)
 
 📊 Files Analyzed: X
 ⚠️  Fake Patterns Found: Y  
