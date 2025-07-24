@@ -1,174 +1,108 @@
-# Claude Commands - Universal AI Command Composition System
+# Claude Commands
 
-🚀 **Revolutionary command composition system for Claude AI** - Turn any combination of slash commands into powerful workflows through natural language understanding.
+Command composition system for Claude AI using natural language processing to combine slash commands.
 
-## ✨ What Makes This Special
+## Command Composition
 
-**True Universal Composition**: Unlike traditional command systems with hardcoded combinations, this leverages Claude's natural language processing to understand ANY command combination - even completely made-up ones!
+The system parses arbitrary command combinations and generates meta-prompts for Claude interpretation:
 
 ```bash
-/think /debug /optimize     # → Deep thinking + systematic debugging + optimization
-/security /stealth /deploy  # → Security-focused stealthy deployment  
-/quantum /cosmic /analyze   # → Creative cosmic-level analysis (yes, really!)
+/think /debug /optimize     # Sequential thinking + debugging + optimization
+/arch /security /deploy     # Architecture analysis + security + deployment  
+/custom /nonexistent /test  # Handles undefined commands via approach patterns
 ```
 
-## 🎯 Most Interesting Commands
+Implementation uses simple string parsing and prompt templating rather than hardcoded command mappings.
 
-### 🧠 **Cognitive Commands**
-- **`/think [level]`** - Sequential thinking with adjustable depth (light/medium/deep/ultra)
-- **`/arch`** - Architecture analysis and design thinking
+## Core Commands
+
+### Cognitive
+- **`/think [level]`** - Sequential thinking (light/medium/deep/ultra depth levels)
+- **`/arch`** - Architecture analysis
 - **`/debug`** - Systematic debugging methodology
-- **`/combinations`** - Universal command composition engine
 
-### 🤖 **Orchestration Commands** ⚠️ **(WIP)**
-- **`/orchestrate`** (`/orch`) - Multi-agent task delegation with Redis coordination
-- **`/execute`** - Task execution with safety checks and approval workflows
-- **`/plan`** - Strategic planning with structured approaches
+### Operational
+- **`/orchestrate`** - Multi-agent task delegation *(WIP - requires Redis/tmux)*
+- **`/execute`** - Task execution with approval gates
+- **`/plan`** - Planning workflows
 
-### 🔍 **Analysis Commands**
-- **`/fake`** - Detect placeholder/demo code across codebases
-- **`/learn`** - Capture insights with Memory MCP integration
-- **`/test`** - Automated testing workflows (UI/HTTP/integration)
+### Analysis
+- **`/fake`** - Placeholder/demo code detection
+- **`/learn`** - Learning capture with Memory MCP
+- **`/test`** - Testing automation (UI/HTTP/integration)
 
-### 💬 **Communication Commands**  
-- **`/commentreply`** - Intelligent GitHub PR comment responses
-- **`/copilot`** - Automated PR analysis and fixes
-- **`/context`** - Smart context management for conversations
+### Meta
+- **`/combinations`** - Command composition engine documentation
 
-## 🌟 Universal Command Composition
+## Implementation
 
-The breakthrough feature: **ANY combination works**!
+**Command Processing**: Markdown files contain command specifications. Hook scripts parse combinations and generate natural language instructions.
 
+**Composition Algorithm**:
+1. Parse slash commands from input
+2. Map known commands to behaviors, unknown to "approach" patterns  
+3. Generate meta-prompt combining all behaviors
+4. Execute via existing command infrastructure
+
+**Example Transformation**:
+```
+Input:  /think /debug analyze memory leak
+Output: Use sequential thinking for systematic debugging: analyze memory leak
+```
+
+## Architecture
+
+```
+claude/commands/           # Command specifications (markdown)
+├── cognitive/            # Analysis and thinking commands
+├── operational/          # Task execution commands  
+├── quality/             # Code analysis commands
+└── meta/                # System and composition commands
+
+orchestration/           # Multi-agent system (WIP)
+├── task_dispatcher.py  # Agent routing
+├── message_broker.py   # Redis coordination
+└── agent_system.py     # tmux session management
+```
+
+## Dependencies
+
+**Core System**: None (pure prompt engineering)
+**Orchestration**: Redis, tmux, Python 3.8+
+**Integrations**: Memory MCP, GitHub API (optional)
+
+## Usage
+
+1. Clone repository
+2. Reference command files in `claude/commands/*.md`  
+3. Use combinations in Claude interface:
+   ```
+   /think deep /arch What's the optimal database design?
+   /debug /test /learn Why are integration tests failing?
+   ```
+
+**Orchestration Setup** *(WIP)*:
 ```bash
-# Real commands
-/think /plan /arch → Strategic architectural planning with deep thinking
-/debug /test /optimize → Systematic debugging with testing and optimization
+# Start Redis
+redis-server
 
-# Creative commands  
-/ninja /stealth /implement → Subtle, efficient implementation
-/dragon /mythical /optimize → Powerful creative optimization
+# Initialize orchestration
+./orchestration/start_system.sh start
 
-# Made-up commands
-/fluffy /rainbow /debug → Claude finds meaningful interpretation
-/quantum /cosmic /secure → Creative high-level security analysis
+# Use orchestration
+/orchestrate implement user authentication
 ```
 
-**How it works**: Creates natural language meta-prompts that Claude interprets through its reasoning capabilities. No hardcoded combinations needed!
+## Technical Notes
 
-## 🚀 Quick Start
+- Commands are markdown specifications, not executable code
+- Composition works through prompt engineering, not program logic
+- Unknown commands default to generic "approach" interpretation
+- System designed for Claude AI but adaptable to other LLMs
+- Orchestration requires external infrastructure (Redis, tmux)
 
-1. **Clone the repository**:
-```bash
-git clone https://github.com/jleechanorg/claude-commands.git
-cd claude-commands
-```
+## Status
 
-2. **Browse commands**:
-```bash
-ls claude/commands/*.md
-cat claude/commands/think.md     # Deep thinking system
-cat claude/commands/combinations.md  # Universal composition
-```
-
-3. **Use in Claude AI**:
-```
-/think deep What's causing this performance issue?
-/arch /security /optimize Design a scalable API gateway
-/debug /test /learn Analyze failing integration tests
-```
-
-## 📋 Command Categories
-
-### Cognitive (Thinking & Analysis)
-- `think.md` - Sequential thinking with adjustable computation
-- `arch.md` - Architecture analysis and design  
-- `debug.md` - Systematic debugging workflows
-- `learn.md` - Learning capture with memory integration
-
-### Operational (Task Execution)
-- `orchestrate.md` - Multi-agent orchestration *(WIP)*
-- `execute.md` - Safe task execution with approvals
-- `plan.md` - Strategic planning workflows
-- `test.md` - Comprehensive testing automation
-
-### Quality Assurance
-- `fake.md` - Fake/placeholder code detection
-- `commentreply.md` - Intelligent PR responses
-- `copilot.md` - Automated PR analysis
-- `context.md` - Smart context management
-
-### Meta-System
-- `combinations.md` - Universal command composition
-- `combo-help.md` - Composition examples and patterns
-
-## 🏗️ Architecture
-
-```
-claude/commands/
-├── cognitive/          # Thinking and analysis
-├── operational/        # Task execution  
-├── quality/           # Code quality assurance
-├── communication/     # PR and comment management
-└── meta/             # System commands and composition
-```
-
-**Orchestration System** *(Work In Progress)*:
-```
-orchestration/
-├── task_dispatcher.py    # Multi-agent task routing
-├── message_broker.py     # Redis-based coordination  
-├── agent_system.py       # tmux agent management
-└── a2a_integration.py    # Google A2A SDK bridge
-```
-
-## 🔧 Integration
-
-**Claude Code CLI**: Drop-in compatibility with Claude's command system
-**Memory MCP**: Automatic context enhancement from past learnings
-**GitHub Integration**: Direct PR analysis and comment generation
-**Redis Orchestration**: Multi-agent coordination *(WIP)*
-
-## 🎨 Examples
-
-**Complex Analysis**:
-```
-/think ultra /arch /security Analyze this microservices architecture for security vulnerabilities
-```
-
-**Creative Problem Solving**:
-```  
-/mythical /dragon /debug /optimize Find the most elusive performance bottleneck
-```
-
-**Systematic Development**:
-```
-/plan /test /execute /learn Build user authentication with comprehensive testing
-```
-
-**AI-to-AI Orchestration** *(WIP)*:
-```
-/orchestrate implement real-time chat with WebSocket support and Redis persistence
-```
-
-## 🤝 Contributing
-
-This is an active research project! Contributions welcome:
-
-1. **New Commands**: Add `.md` files following existing patterns
-2. **Composition Patterns**: Enhance the universal composition system  
-3. **Orchestration**: Help develop the multi-agent system *(WIP)*
-4. **Integration**: Expand MCP and external system support
-
-## 📝 License
-
-MIT License - Use freely for AI workflow automation!
-
-## 🔗 Learn More
-
-- **Command Reference**: Browse `claude/commands/*.md` for detailed documentation
-- **Composition Guide**: See `combinations.md` for universal composition patterns
-- **Orchestration**: Check `orchestrate.md` for multi-agent workflows *(WIP)*
-
----
-
-*Built for the future of AI-human collaboration* 🤖✨
+- **Command System**: Production ready
+- **Composition Engine**: Stable  
+- **Orchestration**: Work in progress, experimental
