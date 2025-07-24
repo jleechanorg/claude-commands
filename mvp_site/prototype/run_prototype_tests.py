@@ -11,13 +11,16 @@ import time
 # Add prototype to path so imports work correctly
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'prototype'))
 
+# Import validators
+from prototype.validators.token_validator import SimpleTokenValidator, TokenValidator
+from prototype.validators.fuzzy_token_validator import FuzzyTokenValidator
+from prototype.game_state_integration import MockGameState
+from prototype.validators.hybrid_validator import HybridValidator
+from prototype.validators.llm_validator import LLMValidator
+
 def test_validators():
     """Test the validators work."""
     print("\n1. Testing Basic Validators")
-    
-    # Import validators
-    from prototype.validators.token_validator import SimpleTokenValidator, TokenValidator
-    from prototype.validators.fuzzy_token_validator import FuzzyTokenValidator
     
     narrative = "Gideon raised his sword while Rowan prepared her spells."
     expected = ["Gideon", "Rowan"]
@@ -57,8 +60,6 @@ def test_game_state():
     """Test game state integration."""
     print("\n2. Testing Game State Integration")
     
-    from prototype.game_state_integration import MockGameState
-    
     game_state = MockGameState()
     
     # Test manifest
@@ -85,8 +86,6 @@ def test_game_state():
 def test_performance():
     """Test performance requirements."""
     print("\n3. Testing Performance")
-    
-    from prototype.validators.fuzzy_token_validator import FuzzyTokenValidator
     
     fuzzy = FuzzyTokenValidator()
     narrative = "Gideon and Rowan battled the dragon."
@@ -118,8 +117,6 @@ def test_hybrid():
     print("\n4. Testing Hybrid Validator")
     
     try:
-        from prototype.validators.hybrid_validator import HybridValidator
-        
         hybrid = HybridValidator()
         
         # Test simple case
@@ -150,8 +147,6 @@ def test_hybrid():
 def test_llm_validator():
     """Test LLM validator mock."""
     print("\n5. Testing LLM Validator Mock")
-    
-    from prototype.validators.llm_validator import LLMValidator
     
     llm = LLMValidator()
     

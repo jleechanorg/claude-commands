@@ -6,10 +6,16 @@ Run from project root with: cd mvp_site && TESTING=true python3 test_prototype_s
 
 import sys
 import os
+import time
 
 # Add prototype directory to path
 prototype_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'prototype')
 sys.path.insert(0, prototype_path)
+
+# Import validators directly
+from validators.token_validator import SimpleTokenValidator, TokenValidator
+from validators.fuzzy_token_validator import FuzzyTokenValidator
+from game_state_integration import MockGameState
 
 print(f"Testing prototype validation from: {prototype_path}")
 print("=" * 60)
@@ -17,10 +23,6 @@ print("=" * 60)
 def test_validators():
     """Test the validators work."""
     print("\n1. Testing Basic Validators")
-    
-    # Import validators directly
-    from validators.token_validator import SimpleTokenValidator, TokenValidator
-    from validators.fuzzy_token_validator import FuzzyTokenValidator
     
     narrative = "Gideon raised his sword while Rowan prepared her spells."
     expected = ["Gideon", "Rowan"]
@@ -58,8 +60,6 @@ def test_game_state():
     """Test game state integration."""
     print("\n2. Testing Game State Integration")
     
-    from game_state_integration import MockGameState
-    
     game_state = MockGameState()
     
     # Test manifest
@@ -86,9 +86,6 @@ def test_game_state():
 def test_performance():
     """Test performance requirements."""
     print("\n3. Testing Performance")
-    
-    import time
-    from validators.fuzzy_token_validator import FuzzyTokenValidator
     
     fuzzy = FuzzyTokenValidator()
     narrative = "Gideon and Rowan battled the dragon."
