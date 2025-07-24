@@ -43,7 +43,7 @@ def generate_content(prompt_parts, temperature=None, max_output_tokens=None,
     
     return response
 
-def get_initial_story(prompt, selected_prompts=None, generate_companions=False, use_default_world=False):
+def get_initial_story(prompt, user_id=None, selected_prompts=None, generate_companions=False, use_default_world=False):
     """
     Mock get_initial_story function that returns predefined content.
     """

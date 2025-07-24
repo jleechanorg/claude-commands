@@ -367,6 +367,7 @@ class TestCreateCampaignRoute(unittest.TestCase):
         # Verify service calls
         mock_gemini_service.get_initial_story.assert_called_once_with(
             "Create a fantasy adventure",
+            user_id="test-user",
             selected_prompts=["narrative", "mechanics"],
             generate_companions=False,
             use_default_world=False,

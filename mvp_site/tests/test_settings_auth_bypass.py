@@ -41,36 +41,35 @@ class TestSettingsAuthBypass(unittest.TestCase):
             time.sleep(1)
         raise Exception("Test server not available")
     
-    def test_settings_page_auth_bypass_fails(self):
-        """🔴 RED: Settings page should allow auth bypass but currently fails"""
-        # This test should FAIL initially, showing the problem
+    def test_settings_page_auth_bypass_works(self):
+        """✅ GREEN: Settings page should allow auth bypass"""
         response = requests.get(
             f"{self.base_url}/settings", 
             headers=self.bypass_headers
         )
         
-        # What we EXPECT (but will fail initially)
+        # Auth bypass should work
         self.assertEqual(response.status_code, 200, 
                         f"Settings page should allow auth bypass, got {response.status_code}: {response.text}")
         self.assertIn("Settings", response.text, 
                      "Settings page should contain 'Settings' text")
     
-    def test_settings_api_get_auth_bypass_fails(self):
-        """🔴 RED: Settings API GET should allow auth bypass but currently fails"""
+    def test_settings_api_get_auth_bypass_works(self):
+        """✅ GREEN: Settings API GET should allow auth bypass"""
         response = requests.get(
             f"{self.base_url}/api/settings",
             headers=self.bypass_headers
         )
         
-        # What we EXPECT (but will fail initially)  
+        # Auth bypass should work 
         self.assertEqual(response.status_code, 200,
                         f"Settings API GET should allow auth bypass, got {response.status_code}: {response.text}")
         
         data = response.json()
         self.assertIsInstance(data, dict, "Should return dict of settings")
     
-    def test_settings_api_post_auth_bypass_fails(self):
-        """🔴 RED: Settings API POST should allow auth bypass but currently fails"""
+    def test_settings_api_post_auth_bypass_works(self):
+        """✅ GREEN: Settings API POST should allow auth bypass"""
         payload = {"gemini_model": "flash-2.5"}
         
         response = requests.post(
@@ -79,30 +78,21 @@ class TestSettingsAuthBypass(unittest.TestCase):
             json=payload
         )
         
-        # What we EXPECT (but will fail initially)
+        # Auth bypass should work
         self.assertEqual(response.status_code, 200,
                         f"Settings API POST should allow auth bypass, got {response.status_code}: {response.text}")
         
         data = response.json()
         self.assertTrue(data.get('success'), "Should return success=True")
     
-    def test_current_auth_bypass_behavior(self):
-        """🔴 RED: Document current failing behavior"""
-        # Test what actually happens now (should be 401)
-        response = requests.get(
-            f"{self.base_url}/settings",
-            headers=self.bypass_headers
-        )
+    def test_settings_without_auth_bypass_fails(self):
+        """✅ GREEN: Settings without auth bypass should fail with 401"""
+        # Test without auth bypass headers
+        response = requests.get(f"{self.base_url}/settings")
         
-        # Document the current failing state
-        print(f"\n🔴 CURRENT FAILING STATE:")
-        print(f"Status Code: {response.status_code}")
-        print(f"Response: {response.text}")
-        print(f"Headers sent: {self.bypass_headers}")
-        
-        # This will pass initially (documenting the broken state)
+        # Should fail without auth bypass
         self.assertEqual(response.status_code, 401, 
-                        "Currently failing with 401 - this documents the problem")
+                        "Settings without auth bypass should return 401")
 
 
 if __name__ == "__main__":

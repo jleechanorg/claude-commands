@@ -73,7 +73,7 @@ class TestSettingsAPI(unittest.TestCase):
     def test_get_user_settings_empty_default(self):
         """🔴 RED: GET /api/settings should return empty dict for new user."""
         # Mock firestore to return no settings
-        with patch('firestore_service.get_user_settings') as mock_get:
+        with patch('main.get_user_settings') as mock_get:
             mock_get.return_value = {}
             
             response = self.client.get('/api/settings', headers=self.headers)
@@ -84,7 +84,7 @@ class TestSettingsAPI(unittest.TestCase):
     def test_get_user_settings_with_model_preference(self):
         """🔴 RED: GET /api/settings should return saved model preference."""
         # Mock firestore to return saved settings
-        with patch('firestore_service.get_user_settings') as mock_get:
+        with patch('main.get_user_settings') as mock_get:
             mock_get.return_value = {'gemini_model': 'flash-2.5'}
             
             response = self.client.get('/api/settings', headers=self.headers)
@@ -111,7 +111,7 @@ class TestSettingsAPI(unittest.TestCase):
     
     def test_post_user_settings_valid_model(self):
         """🔴 RED: POST /api/settings should accept valid model."""
-        with patch('firestore_service.update_user_settings') as mock_update:
+        with patch('main.update_user_settings') as mock_update:
             mock_update.return_value = True
             
             response = self.client.post('/api/settings',
@@ -127,7 +127,7 @@ class TestSettingsAPI(unittest.TestCase):
     
     def test_post_user_settings_handles_firestore_failure(self):
         """🔴 RED: POST /api/settings should handle Firestore failures."""
-        with patch('firestore_service.update_user_settings') as mock_update:
+        with patch('main.update_user_settings') as mock_update:
             mock_update.return_value = False
             
             response = self.client.post('/api/settings',
