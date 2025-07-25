@@ -10,7 +10,7 @@ import json
 # Add orchestration directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from task_dispatcher import TaskDispatcher, TaskType, TaskPriority
+from task_dispatcher import TaskDispatcher
 from fixtures import mock_tmux_fixture, mock_claude_fixture
 
 
@@ -271,6 +271,79 @@ class TestTaskDispatcher(unittest.TestCase):
                 worktree_call = worktree_calls[0]
                 self.assertIn('main', worktree_call, 
                             "Worktree should be created from main branch")
+
+    def test_pr_detection_patterns(self):
+        """Test various PR detection patterns."""
+        dispatcher = TaskDispatcher(self.orchestration_dir)
+        
+        # Test cases: (task_description, expected_mode, description)
+        test_cases = [
+            # UPDATE mode patterns - explicit PR number
+            ("fix PR #123", "update", "Explicit PR number with fix"),
+            ("adjust pull request #456", "update", "Explicit PR with adjust"),
+            ("update PR #789", "update", "Explicit PR with update"),
+            ("PR #100 needs better error handling", "update", "PR number at start"),
+            ("add logging to PR #200", "update", "Add something to PR"),
+            
+            # UPDATE mode patterns - contextual references
+            ("adjust the PR", "update", "Contextual PR with adjust"),
+            ("fix that pull request", "update", "Contextual PR with fix"),
+            ("the PR needs more tests", "update", "The PR needs pattern"),
+            ("continue with the PR", "update", "Continue with PR"),
+            ("update the existing PR", "update", "Existing PR reference"),
+            
+            # CREATE mode patterns - no PR mentioned
+            ("implement user authentication", "create", "Feature without PR"),
+            ("fix the login bug", "create", "Bug fix without PR"),
+            ("create new feature for exports", "create", "New feature task"),
+            ("add dark mode support", "create", "Enhancement without PR"),
+            
+            # CREATE mode patterns - explicit new PR
+            ("create new PR for refactoring", "create", "Explicit new PR"),
+            ("start fresh pull request for API", "create", "Fresh PR request"),
+        ]
+        
+        for task, expected_mode, description in test_cases:
+            with self.subTest(description=description):
+                pr_number, detected_mode = dispatcher._detect_pr_context(task)
+                self.assertEqual(detected_mode, expected_mode, 
+                               f"{description}: Expected {expected_mode}, got {detected_mode}")
+
+    def test_agent_prompt_generation_for_pr_modes(self):
+        """Test that agent prompts are correctly generated for each PR mode."""
+        dispatcher = TaskDispatcher(self.orchestration_dir)
+        
+        # Test UPDATE mode with PR number
+        agents = dispatcher.analyze_task_and_create_agents("fix the typo in PR #950")
+        agent = agents[0]
+        pr_context = agent.get('pr_context', None)
+        
+        self.assertIsNotNone(pr_context, "PR context should be set for UPDATE mode")
+        self.assertEqual(pr_context.get('mode'), 'update')
+        self.assertEqual(pr_context.get('pr_number'), '950')
+        self.assertIn('UPDATE MODE', agent['prompt'])
+        self.assertIn('gh pr checkout', agent['prompt'])
+        
+        # Test CREATE mode
+        agents = dispatcher.analyze_task_and_create_agents("implement new caching system")
+        agent = agents[0]
+        pr_context = agent.get('pr_context', None)
+        
+        self.assertIsNone(pr_context, "PR context should be None for CREATE mode")
+        self.assertIn('NEW PR MODE', agent['prompt'])
+        self.assertIn('new branch from main', agent['prompt'])
+        
+        # Test UPDATE mode without PR number (ambiguous)
+        # Mock _find_recent_pr to return None for this test
+        with patch.object(dispatcher, '_find_recent_pr', return_value=None):
+            agents = dispatcher.analyze_task_and_create_agents("fix the issues in the PR")
+            agent = agents[0]
+            pr_context = agent.get('pr_context', None)
+            
+            self.assertIsNotNone(pr_context, "PR context should be set for ambiguous UPDATE")
+            self.assertEqual(pr_context.get('mode'), 'update')
+            self.assertIsNone(pr_context.get('pr_number'))
+            self.assertIn('Which PR should I update?', agent['prompt'])
 
 
 if __name__ == '__main__':

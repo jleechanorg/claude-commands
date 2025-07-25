@@ -220,11 +220,26 @@
 **ENFORCEMENT**: When user runs /orch, you MUST ONLY monitor agents - NO direct execution allowed! The entire point of /orch is agent delegation!
 **NO HARDCODING**: ❌ NEVER hardcode task patterns - agents execute EXACT tasks requested | ✅ General task agents, not pattern-matched types
 
+🚨 **BRANCH PROTECTION DURING ORCHESTRATION**: ⚠️ MANDATORY - Preserve user's working context
+- ❌ **NEVER switch branches** when monitoring orchestration agents
+- ❌ **NEVER use** `git checkout` to investigate agent workspaces 
+- ✅ **ALWAYS remain** on the user's current branch while agents work
+- ✅ **REQUEST APPROVAL** before any branch switch: "May I switch to [branch]? Please type 'approve [4-digit-code]' to confirm"
+- 🔍 **Evidence**: Unauthorized branch switches disrupt user workflow and can lose uncommitted changes
+- 🔒 **Remember**: User branch = sacred workspace. Agent branches = isolated sandboxes. Never cross the streams!
+
 🚨 **ORCHESTRATION TASK COMPLETION**: When using /orch, task completion requires FULL end-to-end verification
 - ✅ Agent must complete entire workflow (find issue → fix → commit → push → create PR)
 - ✅ Verify PR creation with link before declaring success
 - ❌ NEVER declare success based on agent creation alone
 - 🔍 Evidence: task-agent-3570 completed full workflow creating PR #887
+
+🔄 **PR UPDATE MODE DETECTION**: Orchestration agents MUST detect when to UPDATE vs CREATE PRs
+- ✅ **UPDATE existing PR** when: "fix PR #123", "adjust the PR", "update pull request", "PR needs X"
+- ✅ **CREATE new PR** when: No PR mentioned, explicit "new PR", independent feature work
+- 🔍 **Detection shown**: System displays "🔍 Detected PR context: #950 - UPDATE mode" or "🆕 No PR context - CREATE mode"
+- ⚠️ **Ambiguous references**: "the PR" without context triggers search for recent PRs
+- 🔒 **Agent behavior**: UPDATE mode = checkout PR branch, make changes, push. CREATE mode = new branch from main
 
 ## Project Overview
 
