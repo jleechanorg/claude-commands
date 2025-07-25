@@ -19,6 +19,10 @@ from message_broker import MessageBroker
 class UnifiedOrchestration:
     """Unified orchestration combining Redis coordination with LLM-driven intelligence."""
     
+    # Configuration constants
+    INITIAL_DELAY = 5  # Initial delay before checking for PRs
+    POLLING_INTERVAL = 2  # Interval between PR checks
+    
     def __init__(self):
         self.task_dispatcher = TaskDispatcher()
         self.message_broker = None
@@ -127,7 +131,7 @@ class UnifiedOrchestration:
         start_time = time.time()
         
         # Give agents some time to create PRs
-        time.sleep(5)
+        time.sleep(self.INITIAL_DELAY)
         
         while time.time() - start_time < max_wait and len(prs_found) < len(agents):
             for agent in agents:
@@ -137,32 +141,45 @@ class UnifiedOrchestration:
                 # Check agent workspace for PR
                 workspace_path = f"agent_workspace_{agent['name']}"
                 if os.path.exists(workspace_path):
-                    try:
-                        # Try to get PR info from the agent's branch
-                        result = subprocess.run(
-                            ['gh', 'pr', 'list', '--head', f"{agent['name']}-work", '--json', 'number,url,title,state'],
-                            cwd=workspace_path,
-                            capture_output=True,
-                            text=True
-                        )
-                        
-                        if result.returncode == 0 and result.stdout.strip():
-                            pr_data = json.loads(result.stdout)
-                            if pr_data:
-                                pr_info = pr_data[0]
-                                prs_found.append({
-                                    'agent': agent['name'],
-                                    'number': pr_info['number'],
-                                    'url': pr_info['url'],
-                                    'title': pr_info['title'],
-                                    'state': pr_info['state']
-                                })
-                    except Exception as e:
-                        # Silently continue if PR check fails
-                        pass
+                    # Try multiple possible branch patterns
+                    branch_patterns = [
+                        f"{agent['name']}-work",
+                        agent['name'],
+                        f"task-{agent['name']}",
+                        f"agent-{agent['name']}"
+                    ]
+                    
+                    for branch_pattern in branch_patterns:
+                        try:
+                            # Try to get PR info from the agent's branch
+                            result = subprocess.run(
+                                ['gh', 'pr', 'list', '--head', branch_pattern, '--json', 'number,url,title,state'],
+                                cwd=workspace_path,
+                                capture_output=True,
+                                text=True
+                            )
+                            
+                            if result.returncode == 0 and result.stdout.strip():
+                                pr_data = json.loads(result.stdout)
+                                if pr_data:
+                                    pr_info = pr_data[0]
+                                    prs_found.append({
+                                        'agent': agent['name'],
+                                        'number': pr_info['number'],
+                                        'url': pr_info['url'],
+                                        'title': pr_info['title'],
+                                        'state': pr_info['state']
+                                    })
+                                    break  # Found PR with this pattern, stop trying others
+                        except subprocess.CalledProcessError as e:
+                            print(f"⚠️ Subprocess error while checking PRs for agent '{agent['name']}' with branch '{branch_pattern}': {e}")
+                        except json.JSONDecodeError as e:
+                            print(f"⚠️ JSON decode error while parsing PR data for agent '{agent['name']}' with branch '{branch_pattern}': {e}")
+                        except Exception as e:
+                            print(f"⚠️ Unexpected error while checking PRs for agent '{agent['name']}' with branch '{branch_pattern}': {e}")
             
             if len(prs_found) < len(agents):
-                time.sleep(2)  # Wait before checking again
+                time.sleep(self.POLLING_INTERVAL)  # Wait before checking again
         
         # Display results
         if prs_found:
