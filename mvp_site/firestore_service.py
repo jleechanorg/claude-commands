@@ -1025,25 +1025,33 @@ def update_user_settings(user_id: UserId, settings: Dict[str, Any]) -> bool:
         # Check if user document exists first
         user_doc = user_ref.get()
         
+        # Get timestamp - use datetime for CI compatibility
+        try:
+            timestamp = firestore.SERVER_TIMESTAMP
+        except Exception:
+            # Fallback for CI environments where SERVER_TIMESTAMP might fail
+            import datetime
+            timestamp = datetime.datetime.utcnow()
+            
         if user_doc.exists:
             # Use nested field update to avoid clobbering sibling settings
             update_data = {}
             for key, value in settings.items():
                 update_data[f'settings.{key}'] = value
-            update_data['lastUpdated'] = firestore.SERVER_TIMESTAMP
+            update_data['lastUpdated'] = timestamp
             
             user_ref.update(update_data)
         else:
             # Create new document with settings
             user_data = {
                 'settings': settings,
-                'lastUpdated': firestore.SERVER_TIMESTAMP,
-                'createdAt': firestore.SERVER_TIMESTAMP
+                'lastUpdated': timestamp,
+                'createdAt': timestamp
             }
             user_ref.set(user_data)
         
         logging_util.info(f"Updated settings for user {user_id}: {settings}")
         return True
     except Exception as e:
-        logging_util.error(f"Failed to update user settings for {user_id}: {str(e)}")
+        logging_util.error(f"Failed to update user settings for {user_id}: {str(e)}", exc_info=True)
         return False

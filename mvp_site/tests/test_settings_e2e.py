@@ -25,6 +25,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from main import create_app
 import constants
+from fake_firestore import FakeFirestoreClient
 
 
 class TestSettingsE2E(unittest.TestCase):
@@ -38,6 +39,12 @@ class TestSettingsE2E(unittest.TestCase):
         os.environ['TESTING'] = 'true'
         self.client = self.app.test_client()
         
+        # Add Firestore mocking for CI compatibility
+        self.firestore_patcher = patch('firestore_service.get_db')
+        self.mock_get_db = self.firestore_patcher.start()
+        self.fake_db = FakeFirestoreClient()
+        self.mock_get_db.return_value = self.fake_db
+        
         # Test data
         self.test_user_id = "e2e-test-user"
         self.auth_headers = {
@@ -48,6 +55,8 @@ class TestSettingsE2E(unittest.TestCase):
     
     def tearDown(self):
         """Clean up after each test for CI isolation"""
+        # Stop Firestore mocking
+        self.firestore_patcher.stop()
         # Ensure clean state for CI environment
         if 'TESTING' in os.environ:
             pass  # Keep TESTING env var for other tests
