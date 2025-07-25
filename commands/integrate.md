@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Integration Command
 
 **Purpose**: Create fresh branch from main and cleanup test servers

@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Coverage Command
 
 **Purpose**: Run Python test coverage analysis and identify coverage gaps

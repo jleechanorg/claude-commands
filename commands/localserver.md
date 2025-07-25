@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /localserver
 
 Starts the local development server for testing.

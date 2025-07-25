@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Push Lite Command
 
 **Purpose**: Simple push to GitHub without test server or additional automation

@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Perp Command - Comprehensive Multi-Search
 
 **Purpose**: Combine multiple search engines for comprehensive results

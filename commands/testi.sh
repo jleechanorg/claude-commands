@@ -47,7 +47,7 @@ show_help() {
     echo ""
     echo "Notes:"
     echo "  - Default: Uses mock APIs (TESTING=true)"
-    echo "  - Integration tests are in $PROJECT_ROOT/test_integration/"
+    echo "  - Integration tests are in mvp_site/test_integration/"
     echo "  - Tests full workflows like campaign creation → game play"
     echo "  - May be slower than unit tests"
     exit 0
@@ -87,7 +87,7 @@ echo -e "${BLUE}🔗 Integration Test Runner${NC}"
 echo "========================="
 
 # Check project root
-if [[ ! -f "$PROJECT_ROOT/main.py" ]]; then
+if [[ ! -f "mvp_site/main.py" ]]; then
     echo -e "${RED}❌ Error: Not in project root directory${NC}"
     echo "Please run from the WorldArchitect.AI project root"
     exit 1
@@ -101,7 +101,7 @@ if [[ "$USE_REAL_APIS" == "true" ]]; then
 fi
 
 # Check for existing integration test
-if [[ -f "$PROJECT_ROOT/test_integration/test_integration.py" ]] && [[ -z "$SPECIFIC_TEST" ]]; then
+if [[ -f "mvp_site/test_integration/test_integration.py" ]] && [[ -z "$SPECIFIC_TEST" ]]; then
     echo -e "${GREEN}✓ Found test_integration.py${NC}"
     
     # Run the main integration test
@@ -109,10 +109,10 @@ if [[ -f "$PROJECT_ROOT/test_integration/test_integration.py" ]] && [[ -z "$SPEC
     
     if [[ "$USE_REAL_APIS" == "true" ]]; then
         echo "Mode: REAL APIs"
-        cmd="python $PROJECT_ROOT/test_integration/test_integration.py"
+        cmd="python mvp_site/test_integration/test_integration.py"
     else
         echo "Mode: Mock APIs"
-        cmd="env TESTING=true python $PROJECT_ROOT/test_integration/test_integration.py"
+        cmd="env TESTING=true python mvp_site/test_integration/test_integration.py"
     fi
     
     if [[ "$VERBOSE" == "true" ]]; then
@@ -137,22 +137,22 @@ else
     
     # Determine which tests to run
     if [[ -n "$SPECIFIC_TEST" ]]; then
-        if [[ -f "$PROJECT_ROOT/test_integration/$SPECIFIC_TEST" ]]; then
-            test_files="$PROJECT_ROOT/test_integration/$SPECIFIC_TEST"
+        if [[ -f "mvp_site/test_integration/$SPECIFIC_TEST" ]]; then
+            test_files="mvp_site/test_integration/$SPECIFIC_TEST"
         else
             echo -e "${RED}❌ Test file not found: $SPECIFIC_TEST${NC}"
             exit 1
         fi
     else
         # Find all integration test files
-        test_files=$(find $PROJECT_ROOT/test_integration -name "test_*.py" -type f 2>/dev/null | sort)
+        test_files=$(find mvp_site/test_integration -name "test_*.py" -type f 2>/dev/null | sort)
     fi
     
     if [[ -z "$test_files" ]]; then
         echo -e "${YELLOW}⚠️  No integration test files found${NC}"
         echo ""
-        echo "Integration tests should be in $PROJECT_ROOT/test_integration/"
-        echo "Example: $PROJECT_ROOT/test_integration/test_game_workflow.py"
+        echo "Integration tests should be in mvp_site/test_integration/"
+        echo "Example: mvp_site/test_integration/test_game_workflow.py"
         exit 0
     fi
     
@@ -169,7 +169,7 @@ else
         if [[ "$USE_REAL_APIS" == "true" ]]; then
             cmd="vpython $test_file"
         else
-            cmd="env python $test_file"
+            cmd="env TESTING=true vpython $test_file"
         fi
         
         if [[ "$VERBOSE" == "true" ]]; then

@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Combo Help Command
 
 **Usage**: `/combo-help [commands]`

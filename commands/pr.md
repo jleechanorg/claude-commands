@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # PR Command - Complete Development Lifecycle
 
 **Purpose**: Complete development lifecycle from thinking through to PR review

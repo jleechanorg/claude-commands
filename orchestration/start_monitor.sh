@@ -31,7 +31,15 @@ fi
 # Start monitor in background
 echo -e "${GREEN}🚀 Starting monitor...${NC}"
 cd "$SCRIPT_DIR"
-python3 agent_monitor.py &
+
+# Check if agent_monitor.py exists
+if [ ! -f "agent_monitor.py" ]; then
+    echo -e "${RED}❌ Error: agent_monitor.py not found in $SCRIPT_DIR${NC}"
+    exit 1
+fi
+
+# Start monitor in background and redirect output to log file
+python3 agent_monitor.py > "$LOG_DIR/agent_monitor.log" 2>&1 &
 MONITOR_PID=$!
 
 # Wait a moment and check if it started successfully

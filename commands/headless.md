@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /headless - Enhanced Planning + Headless Development
 
 **Purpose**: Combine `/handoff` planning with `/headless` automation - creates detailed analysis then generates copy-paste command for headless execution

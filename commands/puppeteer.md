@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /puppeteer Command
 
 **Purpose**: Set Puppeteer MCP as the preferred browser automation tool for Claude Code CLI sessions

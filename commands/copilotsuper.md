@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # GitHub Copilot Super Command
 
 **Purpose**: Run comprehensive Copilot analysis on multiple PRs in isolated environments

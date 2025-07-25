@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /commentreply Command
 
 🚨 **CRITICAL**: Systematically addresses **ALL** GitHub PR comments, especially **INDIVIDUAL COMMENTS**, with inline replies and status tracking.

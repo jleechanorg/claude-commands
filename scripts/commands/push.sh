@@ -734,7 +734,7 @@ else
 fi
 
 # 7. Smart test server management for web projects
-if [[ -f "$PROJECT_ROOT/main.py" ]]; then
+if [[ -f "mvp_site/main.py" ]]; then
     echo -e "\n${GREEN}🖥️  Test Server Management${NC}"
     echo "==============================="
     
@@ -759,7 +759,7 @@ if [[ -f "$PROJECT_ROOT/main.py" ]]; then
         echo -e "${GREEN}✅ Available port found: $available_port${NC}"
         echo ""
         echo -e "${YELLOW}🚀 Start test server with:${NC}"
-        echo "  TESTING=true PORT=$available_port python $PROJECT_ROOT/main.py serve"
+        echo "  TESTING=true PORT=$available_port python mvp_site/main.py serve"
         echo ""
         echo -e "${YELLOW}🌐 Then access at:${NC}"
         echo "  http://localhost:$available_port?test_mode=true&test_user_id=test-user-123"

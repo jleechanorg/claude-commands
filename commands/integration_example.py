@@ -113,7 +113,7 @@ def test_integration():
         "/test src/",                           # Basic test
         "/debug /test src/",                    # Debug test  
         "/paranoid /test integration/",         # Paranoid test
-        "/debug /paranoid /test mvp_site/",     # Combined modes
+        "/debug /paranoid /test $PROJECT_ROOT/",     # Combined modes
         "/minimal /test unit/"                  # Minimal test
     ]
     

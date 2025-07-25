@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Milestones Command
 
 **Purpose**: Break tasks into N phases or suggest optimal milestone count

@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Integration Test Command
 
 **Purpose**: Run integration tests

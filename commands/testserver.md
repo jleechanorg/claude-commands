@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Test Server Command
 
 **Purpose**: Manage test servers for branches

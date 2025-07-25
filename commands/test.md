@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Test Command
 
 **Purpose**: Run full test suite and check GitHub CI status

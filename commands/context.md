@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Context Estimation Command
 
 **Purpose**: Show context usage percentage, breakdown, and recommendations

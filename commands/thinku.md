@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Think Ultra Command (Alias)
 
 **Alias for**: `/think ultra`

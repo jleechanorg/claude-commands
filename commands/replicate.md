@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /replicate
 
 Analyze a GitHub PR and intelligently apply its missing functionality to the current branch.

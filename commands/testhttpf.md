@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # HTTP Tests (FULL) Command
 
 **Purpose**: Run HTTP request tests with REAL APIs (costs money!)

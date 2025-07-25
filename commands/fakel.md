@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Fake Code Detection Command - /fakel (Light)
 
 **Purpose**: Quick fake code detection - exactly the same as `/fake` but with faster analysis

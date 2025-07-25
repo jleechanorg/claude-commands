@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Enhanced Command Aliases
 
 Quick reference for enhanced command aliases with memory integration.

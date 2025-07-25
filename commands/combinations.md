@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Combinations Command
 
 **Usage**: `/combinations` or `/combos`

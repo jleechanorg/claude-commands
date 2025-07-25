@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # List Commands Command
 
 **Purpose**: Display all available slash commands with descriptions

@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Scratchpad Command
 
 **Purpose**: Update planning documentation

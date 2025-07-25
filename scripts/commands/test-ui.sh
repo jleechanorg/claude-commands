@@ -73,7 +73,7 @@ echo -e "${BLUE}🌐 Browser Test Runner (Mock APIs)${NC}"
 echo "=================================="
 
 # 1. Check if we're in project root
-if [[ ! -f "$PROJECT_ROOT/main.py" ]]; then
+if [[ ! -f "mvp_site/main.py" ]]; then
     echo -e "${RED}❌ Error: Not in project root directory${NC}"
     echo "Please run from the WorldArchitect.AI project root"
     exit 1
@@ -101,13 +101,13 @@ if [[ -f "./run_ui_tests.sh" ]]; then
         
         # Start test server
         echo -e "\n${GREEN}🚀 Starting test server on port $TEST_PORT...${NC}"
-        TESTING=true PORT=$TEST_PORT vpython $PROJECT_ROOT/main.py serve &
+        TESTING=true PORT=$TEST_PORT vpython mvp_site/main.py serve &
         SERVER_PID=$!
         sleep 3
         
         # Run specific test
         echo -e "\n${GREEN}🧪 Running test: $SPECIFIC_TEST${NC}"
-        if python "testing_ui/$SPECIFIC_TEST"; then
+        if TESTING=true vpython "testing_ui/$SPECIFIC_TEST"; then
             echo -e "${GREEN}✅ Test passed!${NC}"
             EXIT_CODE=0
         else
@@ -145,7 +145,7 @@ else
     fi
     
     echo -e "\n${GREEN}🚀 Starting test server on port $TEST_PORT...${NC}"
-    TESTING=true PORT=$TEST_PORT vpython $PROJECT_ROOT/main.py serve &
+    TESTING=true PORT=$TEST_PORT vpython mvp_site/main.py serve &
     SERVER_PID=$!
     
     # Wait for server to start
@@ -186,7 +186,7 @@ else
         TOTAL_TESTS=$((TOTAL_TESTS + 1))
         
         if [[ "$VERBOSE" == "true" ]]; then
-            if python "$test_file"; then
+            if TESTING=true vpython "$test_file"; then
                 PASSED_TESTS=$((PASSED_TESTS + 1))
                 echo -e "${GREEN}✅ PASSED${NC}"
             else
@@ -194,7 +194,7 @@ else
                 echo -e "${RED}❌ FAILED${NC}"
             fi
         else
-            if python "$test_file" > /tmp/test_output.log 2>&1; then
+            if TESTING=true vpython "$test_file" > /tmp/test_output.log 2>&1; then
                 PASSED_TESTS=$((PASSED_TESTS + 1))
                 echo -e "${GREEN}✅ PASSED${NC}"
             else

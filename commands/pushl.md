@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /pushl Command
 
 **Usage**: `/pushl [--message MESSAGE] [--force]`

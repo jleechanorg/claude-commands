@@ -104,7 +104,7 @@ def analyze_pr_changes(pr_data: Dict[str, Any], focus_dirs: Optional[List[str]] 
     
     # Default focus directories if not specified
     if not focus_dirs:
-        focus_dirs = ['.claude/commands/', 'mvp_site/', 'roadmap/']
+        focus_dirs = ['.claude/commands/', '$PROJECT_ROOT/', 'roadmap/']
     
     for file_info in pr_data.get('files', []):
         path = file_info['path']

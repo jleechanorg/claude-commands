@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /tester - End2End Tests (Real Mode)
 
 **Purpose**: Run end-to-end tests using actual services (Firestore + Gemini)

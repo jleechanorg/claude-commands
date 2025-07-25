@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /newbranch or /nb - Create new branch from latest main
 
 Creates a fresh branch from the latest main branch code. Aborts if there are uncommitted changes.

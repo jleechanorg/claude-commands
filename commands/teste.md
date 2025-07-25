@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /teste - End2End Tests (Mock Mode)
 
 **Purpose**: Run end-to-end tests using mocked services (current behavior)
