@@ -104,15 +104,15 @@ class TestSettingsE2E(unittest.TestCase):
             mock_api_call.return_value = MagicMock()
             mock_get_text.return_value = '{"narrative": "E2E Pro Story!", "state_changes": {}, "player_character_data": {"name": "E2E Pro Hero"}}'
             
-            # Act 1: User saves pro-2.5 preference
+            # Act 1: User saves gemini-2.5-pro preference
             settings_response = self.client.post('/api/settings',
                                                headers=self.auth_headers,
-                                               data=json.dumps({"gemini_model": "pro-2.5"}))
+                                               data=json.dumps({"gemini_model": "gemini-2.5-pro"}))
             
             # Verify settings were saved
             self.assertEqual(settings_response.status_code, 200)
             
-            # Act 2: User creates campaign (should use pro-2.5)
+            # Act 2: User creates campaign (should use gemini-2.5-pro)
             campaign_data = {
                 "title": "E2E Pro Campaign",
                 "character": "E2E Pro Hero",
@@ -154,14 +154,14 @@ class TestSettingsE2E(unittest.TestCase):
         # Session 3: User changes to pro model
         session3_response = self.client.post('/api/settings',
                                            headers=self.auth_headers,
-                                           data=json.dumps({"gemini_model": "pro-2.5"}))
+                                           data=json.dumps({"gemini_model": "gemini-2.5-pro"}))
         self.assertEqual(session3_response.status_code, 200)
         
         # Session 4: User retrieves updated settings
         session4_response = self.client.get('/api/settings', headers=self.auth_headers)
         self.assertEqual(session4_response.status_code, 200)
         updated_settings = json.loads(session4_response.data)
-        self.assertEqual(updated_settings.get('gemini_model'), 'pro-2.5')
+        self.assertEqual(updated_settings.get('gemini_model'), 'gemini-2.5-pro')
         
     def test_multiple_users_independent_settings(self):
         """🟢 E2E: Different users maintain independent settings"""
@@ -177,7 +177,7 @@ class TestSettingsE2E(unittest.TestCase):
         user2_headers = {**self.auth_headers, 'X-Test-User-ID': 'e2e-user-2'}
         user2_response = self.client.post('/api/settings',
                                         headers=user2_headers,
-                                        data=json.dumps({"gemini_model": "pro-2.5"}))
+                                        data=json.dumps({"gemini_model": "gemini-2.5-pro"}))
         self.assertEqual(user2_response.status_code, 200)
         
         # Verify User 1 still has flash
@@ -188,7 +188,7 @@ class TestSettingsE2E(unittest.TestCase):
         # Verify User 2 still has pro
         user2_get = self.client.get('/api/settings', headers=user2_headers)
         user2_settings = json.loads(user2_get.data)
-        self.assertEqual(user2_settings.get('gemini_model'), 'pro-2.5')
+        self.assertEqual(user2_settings.get('gemini_model'), 'gemini-2.5-pro')
         
     @patch('gemini_service._call_gemini_api')
     @patch('gemini_service._get_text_from_response')
@@ -229,7 +229,7 @@ class TestSettingsE2E(unittest.TestCase):
         # Act 2: Set pro model and create another campaign
         self.client.post('/api/settings',
                         headers=self.auth_headers,
-                        data=json.dumps({"gemini_model": "pro-2.5"}))
+                        data=json.dumps({"gemini_model": "gemini-2.5-pro"}))
         
         response2 = self.client.post('/api/campaigns',
                                    headers=self.auth_headers,
