@@ -324,18 +324,16 @@ document.addEventListener('DOMContentLoaded', () => {
             html += '</div>';
         }
 
-        // 9. State updates (visible in debug mode or when significant)
+        // 9. State updates (backend now handles debug mode filtering)
         if (fullData.state_updates && Object.keys(fullData.state_updates).length > 0) {
-            if (debugMode || (fullData.state_updates.npc_data && Object.keys(fullData.state_updates.npc_data).length > 0)) {
-                html += '<div class="state-updates">';
-                html += '<strong>🔧 State Updates:</strong>';
-                html += '<pre>' + sanitizeHtml(JSON.stringify(fullData.state_updates, null, 2)) + '</pre>';
-                html += '</div>';
-            }
+            html += '<div class="state-updates">';
+            html += '<strong>🔧 State Updates:</strong>';
+            html += '<pre>' + sanitizeHtml(JSON.stringify(fullData.state_updates, null, 2)) + '</pre>';
+            html += '</div>';
         }
 
-        // 10. Debug info (only in debug mode)
-        if (debugMode && fullData.debug_info && Object.keys(fullData.debug_info).length > 0) {
+        // 10. Debug info (backend now handles debug mode filtering)
+        if (fullData.debug_info && Object.keys(fullData.debug_info).length > 0) {
             html += '<div class="debug-info">';
             html += '<strong>🔍 Debug Info:</strong>';
 
@@ -787,14 +785,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Render story with debug mode awareness and structured fields
             console.log(`Loading campaign ${campaignId} - Story entries: ${data.story.length}, Debug mode: ${debugMode}`);
             
-            // Filter out god-mode entries (internal prompts) from display
+            // Display all story entries
             let visibleEntries = 0;
             data.story.forEach(entry => {
-                // Skip god-mode entries unless we're in debug mode
-                if (entry.mode === 'god' && !debugMode) {
-                    console.log('Skipping god mode entry:', entry.text.substring(0, 50) + '...');
-                    return;
-                }
+                // All entries should be visible (god mode is a gameplay feature, not debug)
                 visibleEntries++;
                 appendToStory(entry.actor, entry.text, entry.mode, debugMode, entry.user_scene_number, entry);
             });

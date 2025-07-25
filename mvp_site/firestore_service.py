@@ -525,7 +525,10 @@ def get_campaign_by_id(user_id: UserId, campaign_id: CampaignId) -> Tuple[Option
         else:
             entry["user_scene_number"] = None
 
-        entry["timestamp"] = entry["timestamp"].isoformat()
+        # Convert timestamp to ISO format if it's not already a string
+        if hasattr(entry["timestamp"], 'isoformat'):
+            entry["timestamp"] = entry["timestamp"].isoformat()
+        # If it's already a string, leave it as is
 
     return campaign_doc.to_dict(), all_story_entries
 

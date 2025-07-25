@@ -844,6 +844,45 @@ def setup_file_logging() -> None:
     logging_util.info(f"File logging configured: {log_file}")
 
 
+def strip_game_state_fields(story_entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Strip game state information from story entries when debug mode is OFF.
+    
+    Removes fields that should only be visible in debug mode:
+    - entities_mentioned
+    - entities
+    - state_updates
+    - debug_info
+    
+    Args:
+        story_entries: List of story entry dictionaries
+        
+    Returns:
+        List of story entries with game state fields removed
+    """
+    if not story_entries:
+        return story_entries
+        
+    # Fields to strip when debug mode is OFF
+    game_state_fields = {
+        'entities_mentioned',
+        'entities',
+        'state_updates',
+        'debug_info'
+    }
+    
+    stripped_story = []
+    for entry in story_entries:
+        # Create a copy without the game state fields
+        stripped_entry = {
+            key: value for key, value in entry.items() 
+            if key not in game_state_fields
+        }
+        stripped_story.append(stripped_entry)
+    
+    return stripped_story
+
+
 def create_app() -> Flask:
     """
     Create and configure the Flask application.
@@ -995,6 +1034,10 @@ def create_app() -> Flask:
             
             # Apply hybrid debug processing to story entries for backward compatibility
             processed_story = process_story_for_display(story, debug_mode)
+            
+            # Strip game state fields when debug mode is OFF
+            if not debug_mode:
+                processed_story = strip_game_state_fields(processed_story)
 
             # Debug logging for structured fields
             logging_util.info(
