@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
         auth: document.getElementById('auth-view'), 
         dashboard: document.getElementById('dashboard-view'), 
         newCampaign: document.getElementById('new-campaign-view'), 
-        game: document.getElementById('game-view') 
+        game: document.getElementById('game-view'),
+        settings: document.getElementById('settings-view')
     };
     const loadingOverlay = document.getElementById('loading-overlay');
     let currentCampaignId = null;
@@ -151,12 +152,60 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             showView('newCampaign');
         } else if (path === '/settings') {
-            // Navigate to settings page
-            window.location.href = '/settings';
+            // Load settings within the SPA
+            loadSettingsPage();
         } else {
             currentCampaignId = null;
             renderCampaignList();
             showView('dashboard');
+        }
+    };
+    
+    // Load settings page dynamically
+    const loadSettingsPage = async () => {
+        try {
+            showSpinner('Loading settings...');
+            
+            // Fetch settings content from server
+            const response = await fetch('/settings', {
+                headers: {
+                    'Authorization': `Bearer ${await firebase.auth().currentUser.getIdToken()}`
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to load settings: ${response.status}`);
+            }
+            
+            const settingsHtml = await response.text();
+            
+            // Create settings view if it doesn't exist
+            let settingsView = document.getElementById('settings-view');
+            if (!settingsView) {
+                settingsView = document.createElement('div');
+                settingsView.id = 'settings-view';
+                settingsView.className = 'content-view';
+                document.body.appendChild(settingsView);
+                
+                // Update views object
+                views.settings = settingsView;
+            }
+            
+            // Load settings content
+            settingsView.innerHTML = settingsHtml;
+            
+            // Show settings view
+            showView('settings');
+            
+        } catch (error) {
+            console.error('Failed to load settings:', error);
+            alert('Failed to load settings page. Please try again.');
+            
+            // Fall back to dashboard
+            history.pushState({}, '', '/');
+            handleRouteChange();
+        } finally {
+            hideSpinner();
         }
     };
     
