@@ -17,6 +17,11 @@
 
 set -e  # Exit on any error
 
+# Source ~/.bashrc to ensure environment is properly set up
+if [ -f ~/.bashrc ]; then
+    source ~/.bashrc
+fi
+
 # Parse arguments
 FORCE_MODE=false
 NEW_BRANCH_MODE=false

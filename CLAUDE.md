@@ -220,6 +220,14 @@
 **ENFORCEMENT**: When user runs /orch, you MUST ONLY monitor agents - NO direct execution allowed! The entire point of /orch is agent delegation!
 **NO HARDCODING**: ❌ NEVER hardcode task patterns - agents execute EXACT tasks requested | ✅ General task agents, not pattern-matched types
 
+🚨 **BRANCH PROTECTION DURING ORCHESTRATION**: ⚠️ MANDATORY - Preserve user's working context
+- ❌ **NEVER switch branches** when monitoring orchestration agents
+- ❌ **NEVER use** `git checkout` to investigate agent workspaces 
+- ✅ **ALWAYS remain** on the user's current branch while agents work
+- ✅ **REQUEST APPROVAL** before any branch switch: "May I switch to [branch]? Please type 'approve [4-digit-code]' to confirm"
+- 🔍 **Evidence**: Unauthorized branch switches disrupt user workflow and can lose uncommitted changes
+- 🔒 **Remember**: User branch = sacred workspace. Agent branches = isolated sandboxes. Never cross the streams!
+
 🚨 **ORCHESTRATION TASK COMPLETION**: When using /orch, task completion requires FULL end-to-end verification
 - ✅ Agent must complete entire workflow (find issue → fix → commit → push → create PR)
 - ✅ Verify PR creation with link before declaring success
