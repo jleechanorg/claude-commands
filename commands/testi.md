@@ -1,0 +1,17 @@
+# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
+
+# Integration Test Command
+
+**Purpose**: Run integration tests
+
+**Action**: Execute integration test suite
+
+**Usage**: `/testi`
+
+**Implementation**: 
+- Run: `source venv/bin/activate && TESTING=true python3 $PROJECT_ROOT/test_integration/test_integration.py`
+- Execute from project root
+- Ensure virtual environment is activated
+- Use TESTING=true environment variable
+- Analyze integration test results
+- Fix any integration failures

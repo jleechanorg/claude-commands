@@ -14,6 +14,12 @@ from a2a.client.client import A2AClient
 from a2a.types import Message, TextPart, Role
 import httpx
 
+from a2a.client.client import A2AClient
+from a2a.server.apps.jsonrpc.fastapi_app import A2AFastAPIApplication
+from a2a.types import AgentCard, Task, Message, TaskState, TaskStatus
+from a2a_integration import create_real_agent_card, WorldArchitectA2AAgent
+import httpx
+
 
 class RealA2AClientTester:
     """Test real A2A integration using authentic SDK client"""
@@ -24,7 +30,7 @@ class RealA2AClientTester:
         self.agent_card_url = f"{server_url}/.well-known/agent.json"
         
         # Create real A2A client from SDK
-        import httpx
+
         self.httpx_client = httpx.AsyncClient()
         self.a2a_client = A2AClient(httpx_client=self.httpx_client, url=server_url)
         
@@ -145,12 +151,12 @@ class RealA2AClientTester:
         
         try:
             # Verify we can import and use real A2A SDK classes
-            from a2a.types import AgentCard, Task, Message, TaskState, TaskStatus
-            from a2a.server.apps.jsonrpc.fastapi_app import A2AFastAPIApplication
-            from a2a.client.client import A2AClient
+
+
+
             
             # Test that we can create real SDK objects
-            import httpx
+
             client = A2AClient(httpx_client=httpx.AsyncClient(), url="http://localhost:8000")
             assert hasattr(client, '_httpx_client'), "Not real A2AClient - missing httpx client"
             
@@ -159,7 +165,7 @@ class RealA2AClientTester:
             print("✅ Real SDK components available")
             
             # Verify we're not using fake implementations
-            from a2a_integration import create_real_agent_card, WorldArchitectA2AAgent
+
             
             agent_card = create_real_agent_card()
             agent_executor = WorldArchitectA2AAgent()

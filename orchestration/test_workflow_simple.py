@@ -7,6 +7,8 @@ import time
 import sys
 import os
 
+import traceback
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from redis_a2a_bridge import RedisA2ABridge
@@ -56,7 +58,7 @@ async def test_simple_workflow():
         
     except Exception as e:
         print(f"\n❌ Error: {e}")
-        import traceback
+
         traceback.print_exc()
         
         # Show worker output
