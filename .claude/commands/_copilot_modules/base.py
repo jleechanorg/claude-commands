@@ -85,7 +85,7 @@ class CopilotCommandBase(ABC):
         import re
         # Remove path traversal patterns and unsafe characters
         sanitized = re.sub(r'\.\./', '', branch_name)  # Remove ../ patterns
-        sanitized = re.sub(r'[^\\w\\-_.]', '_', sanitized)  # Allow only safe chars
+        sanitized = re.sub(r'[^\w\-_.]', '_', sanitized)  # Allow only safe chars
         sanitized = re.sub(r'^[.-]+', '', sanitized)  # Remove leading dots/dashes
         return sanitized or 'unknown-branch'
     
