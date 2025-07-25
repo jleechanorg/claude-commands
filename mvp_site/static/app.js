@@ -196,6 +196,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Load settings content
             settingsView.innerHTML = settingsHtml;
             
+            // Initialize settings functionality manually
+            initializeSettings();
+            
             // Show settings view
             settingsView.classList.add('active-view');
             
@@ -209,6 +212,45 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             hideSpinner();
         }
+    };
+    
+    // Initialize settings functionality when dynamically loaded
+    const initializeSettings = async () => {
+        console.log('Initializing settings functionality...');
+        
+        // Load settings.js if not already loaded
+        if (typeof loadSettings === 'undefined') {
+            const script = document.createElement('script');
+            script.src = '/static/js/settings.js';
+            script.onload = () => {
+                console.log('Settings JavaScript loaded');
+                setupSettingsEventListeners();
+            };
+            document.head.appendChild(script);
+        } else {
+            setupSettingsEventListeners();
+        }
+    };
+    
+    const setupSettingsEventListeners = () => {
+        // Load current settings
+        if (typeof loadSettings === 'function') {
+            loadSettings();
+        }
+        
+        // Add change listeners to radio buttons
+        const radioButtons = document.querySelectorAll('input[name="geminiModel"]');
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', saveSettings);
+        });
+        
+        // Add change listener to debug mode switch
+        const debugSwitch = document.getElementById('debugModeSwitch');
+        if (debugSwitch) {
+            debugSwitch.addEventListener('change', saveSettings);
+        }
+        
+        console.log('Settings event listeners attached');
     };
     
     // Helper function for elements 2-4: location, resources, dice rolls
