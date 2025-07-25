@@ -96,3 +96,39 @@ Agent tasks require TIME - wait for completion before ANY declaration:
 - 🔍 Evidence: Agent task-agent-5819 succeeded with PR #851 after 270 seconds
 - 📋 Proper verification: tmux output → "Task completed" → PR URL → verify PR exists
 - ⚠️ Status warnings like "agent may still be working" mean WAIT, don't declare
+
+## 🔄 PR UPDATE MODE vs CREATE MODE
+
+**CRITICAL**: Agents must detect whether to UPDATE existing PRs or CREATE new ones:
+
+### 🔍 PR Update Pattern Detection
+The orchestration system recognizes these patterns as PR UPDATE requests:
+- **Explicit PR references**: "fix PR #123", "update pull request #456", "adjust PR #789"
+- **Contextual PR references**: "adjust the PR", "fix the pull request", "update that PR"
+- **Action words with PR**: "modify", "fix", "adjust", "update", "enhance", "improve" + "PR/pull request"
+- **Continuation phrases**: "continue with PR", "add to the PR", "the PR needs", "PR should also"
+
+### 🆕 PR Create Patterns (Default)
+These patterns trigger NEW PR creation:
+- **No PR mentioned**: "implement feature X", "fix bug Y", "create Z"
+- **Explicit new work**: "create new PR for", "start fresh PR", "new pull request"
+- **Independent tasks**: Tasks that don't reference existing work
+
+### 📢 User Feedback
+Orchestration will clearly indicate the detected mode:
+```
+🔍 Detected PR context: #950 - Agent will UPDATE existing PR
+   Branch: feature-xyz
+   Status: OPEN
+```
+OR
+```
+🆕 No PR context detected - Agent will create NEW PR
+   New branch will be created from main
+```
+
+### ⚠️ Edge Cases
+- **Merged/Closed PRs**: Agent will warn and ask for confirmation
+- **Multiple PR mentions**: Agent will ask which PR to update
+- **Ambiguous "the PR"**: System will show recent PRs and ask for selection
+- **Branch conflicts**: Agent will attempt rebase/merge with clear messaging
