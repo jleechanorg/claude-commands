@@ -73,8 +73,14 @@ class TimeoutOptimizer:
             with open(self.config_file, 'w') as f:
                 json.dump({'mode': mode}, f)
             self.current_mode = mode
+        except PermissionError:
+            print("Error: Insufficient permissions to save the timeout configuration file.")
+        except FileNotFoundError:
+            print("Error: The specified path for the timeout configuration file is invalid.")
+        except OSError as e:
+            print(f"Error: An OS-related error occurred while saving the timeout configuration: {e}")
         except Exception as e:
-            print(f"Warning: Could not save timeout config: {e}")
+            print(f"Warning: An unexpected error occurred while saving the timeout configuration: {type(e).__name__}: {e}")
     
     def set_mode(self, mode: str) -> str:
         """Set timeout optimization mode"""
