@@ -128,7 +128,7 @@ class TaskDispatcher:
         for pattern in pr_update_patterns:
             match = re.search(pattern, task_description, re.IGNORECASE)
             if match:
-                pr_number = match.group(1) if match.lastindex else None
+                pr_number = match.group(1)
                 return pr_number, 'update'
         
         # Check for contextual PR reference without number
@@ -155,11 +155,16 @@ class TaskDispatcher:
         """Try to find a recent PR from current branch or user."""
         try:
             # Try to get PR from current branch
-            result = subprocess.run(
-                ['gh', 'pr', 'list', '--head', subprocess.run(
-                    ['git', 'branch', '--show-current'],
-                    capture_output=True, text=True
-                ).stdout.strip(), '--json', 'number', '--limit', '1'],
+            # Get current branch name first for better readability
+            branch_result = subprocess.run(
+                ['git', 'branch', '--show-current'],
+                capture_output=True, text=True
+            )
+            current_branch = branch_result.stdout.strip() if branch_result.returncode == 0 else None
+            
+            if current_branch:
+                result = subprocess.run(
+                    ['gh', 'pr', 'list', '--head', current_branch, '--json', 'number', '--limit', '1'],
                 capture_output=True, text=True
             )
             if result.returncode == 0 and result.stdout.strip():
@@ -176,7 +181,8 @@ class TaskDispatcher:
                 data = json.loads(result.stdout)
                 if data:
                     return str(data[0]['number'])
-        except Exception:
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
+            # Silently handle errors as this is a fallback mechanism
             pass
         
         return None
