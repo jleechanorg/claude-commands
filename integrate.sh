@@ -184,43 +184,51 @@ get_github_repo_url() {
 # Helper function to check if we need to wait for existing integration-related PRs
 check_existing_sync_pr() {
     if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
-        # Check for sync PRs created by this script (exact title match)
-        existing_sync_pr=$(gh pr list --author "@me" --state open --json number,url,title --jq '.[] | select(.title == "Sync main branch commits (integrate.sh)")' 2>/dev/null || true)
-        if [ -n "$existing_sync_pr" ]; then
-            pr_number=$(echo "$existing_sync_pr" | jq -r '.number')
-            pr_url=$(echo "$existing_sync_pr" | jq -r '.url')
-            echo "⚠️  Found existing sync PR #$pr_number: $pr_url"
-            echo "   This PR was created by integrate.sh to sync main branch"
+        # Check for sync PRs created by this script (exact title match) - collect into proper JSON array
+        existing_sync_prs=$(gh pr list --author "@me" --state open --json number,url,title 2>/dev/null | jq -c '[ .[] | select(.title == "Sync main branch commits (integrate.sh)") ]' || echo '[]')
+        sync_count=$(echo "$existing_sync_prs" | jq 'length')
+        
+        if [ "$sync_count" -gt 0 ]; then
+            if [ "$sync_count" -eq 1 ]; then
+                # Single sync PR - extract details
+                pr_number=$(echo "$existing_sync_prs" | jq -r '.[0].number')
+                pr_url=$(echo "$existing_sync_prs" | jq -r '.[0].url')
+                echo "⚠️  Found existing sync PR #$pr_number: $pr_url"
+                echo "   This PR was created by integrate.sh to sync main branch"
+            else
+                # Multiple sync PRs - list them all
+                echo "⚠️  Found $sync_count existing sync PRs created by integrate.sh:"
+                echo "$existing_sync_prs" | jq -r '.[] | "   PR #\(.number): \(.url)"'
+                echo "   Please merge these PRs first, then re-run integrate.sh"
+            fi
             
             if [ "$FORCE_MODE" = true ]; then
-                echo "🚨 FORCE MODE: Proceeding with integration despite sync PR"
+                echo "🚨 FORCE MODE: Proceeding with integration despite sync PR(s)"
                 return 0
             else
-                echo "   Please merge this PR first, then re-run integrate.sh"
-                echo "   Or run: gh pr merge $pr_number --merge"
+                if [ "$sync_count" -eq 1 ]; then
+                    pr_number=$(echo "$existing_sync_prs" | jq -r '.[0].number')
+                    echo "   Please merge this PR first, then re-run integrate.sh"
+                    echo "   Or run: gh pr merge $pr_number --merge"
+                else
+                    echo "   Please merge these PRs first, then re-run integrate.sh"
+                fi
                 echo "   Or use: ./integrate.sh --force (to proceed anyway)"
                 exit 1
             fi
         fi
         
         # Check for any open PRs that modify integrate.sh or integration workflows (informational only)
-        integration_prs=$(gh pr list --state open --limit 50 --json number,url,title,files --jq '.[] | select(.files[]?.filename | test("integrate\\.sh|integration"))' 2>/dev/null || true)
-        if [ -n "$integration_prs" ]; then
-            # Count the PRs by converting to array and getting length
-            pr_count=$(echo "$integration_prs" | jq -s '. | length')
-            if [ "$pr_count" -gt 0 ]; then
-                echo "ℹ️  Found $pr_count open PR(s) modifying integration workflows:"
-                # Process each PR object separately since they're newline-separated
-                echo "$integration_prs" | while IFS= read -r pr_json; do
-                    if [ -n "$pr_json" ]; then
-                        echo "$pr_json" | jq -r '"   PR #\(.number): \(.title) - \(.url)"'
-                    fi
-                done
-                echo ""
-                echo "   These PRs modify integration infrastructure but don't block your current branch."
-                echo "   Integration will proceed normally."
-                echo ""
-            fi
+        integration_prs=$(gh pr list --state open --limit 50 --json number,url,title,files 2>/dev/null | jq -c '[ .[] | select(.files[]?.filename | test("integrate\\.sh|integration")) ]' || echo '[]')
+        pr_count=$(echo "$integration_prs" | jq 'length')
+        
+        if [ "$pr_count" -gt 0 ]; then
+            echo "ℹ️  Found $pr_count open PR(s) modifying integration workflows:"
+            echo "$integration_prs" | jq -r '.[] | "   PR #\(.number): \(.title) - \(.url)"'
+            echo ""
+            echo "   These PRs modify integration infrastructure but don't block your current branch."
+            echo "   Integration will proceed normally."
+            echo ""
         fi
     elif command -v gh >/dev/null 2>&1; then
         # Fallback when jq is not available - only check for exact sync PRs
