@@ -1,10 +1,3 @@
-from debug_hybrid_system import process_story_for_display
-from mocks import mock_firestore_service_wrapper as firestore_service
-from mocks import mock_gemini_service_wrapper as gemini_service
-import firestore_service
-import gemini_service
-import random
-
 """
 WorldArchitect.AI - Main Flask Application
 
@@ -104,7 +97,7 @@ if use_mock_gemini:
 else:
     gemini_service = real_gemini_service
 
-# Choose which firestore service to use based on flags
+# Choose which firestore service to use based on flags  
 if use_mock_firebase:
     firestore_service = mock_firestore_service_wrapper
 else:

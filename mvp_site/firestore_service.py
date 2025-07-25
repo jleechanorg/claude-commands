@@ -1,6 +1,3 @@
-from .numeric_field_converter import NumericFieldConverter
-from numeric_field_converter import NumericFieldConverter
-
 """
 Firestore Service - Database Operations and Game State Management
 
@@ -46,7 +43,6 @@ from custom_types import (
     CampaignData, StateUpdate, EntityData, MissionData,
     UserId, CampaignId, JsonDict, JsonValue, Timestamp
 )
-
 from numeric_field_converter import NumericFieldConverter
 
 MAX_TEXT_BYTES: int = 1000000

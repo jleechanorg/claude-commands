@@ -6,9 +6,6 @@ import re
 import logging_util
 from typing import Tuple, Dict, Any, Optional
 from json_utils import (
-
-import json
-
     try_parse_json,
     complete_truncated_json,
     extract_json_boundaries,
