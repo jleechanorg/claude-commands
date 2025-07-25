@@ -26,7 +26,7 @@
 
 1. **`/commentfetch [PR]`** - Data collection
    - Python: `.claude/commands/_copilot_modules/commentfetch.py`
-   - Output: `/tmp/copilot/comments.json`
+   - Output: Branch-specific directory `/tmp/copilot_{branch}/comments_{branch}.json`
 
 2. **`/fixpr [PR]`** - Fix CI failures and conflicts FIRST
    - Markdown: `.claude/commands/fixpr.md` (Claude executes)
@@ -137,7 +137,7 @@ if 'copilot' in author.lower():
 
 ### Data Collection → Use `/commentfetch`
 - **Why**: `.claude/commands/_copilot_modules/commentfetch.py` already fetches all comment types
-- **What it handles**: Inline, general, review, Copilot comments → comments.json  
+- **What it handles**: Inline, general, review, Copilot comments → branch-specific comments file  
 - **Result**: Complete comment data for processing
 
 ## How It Works
@@ -159,10 +159,10 @@ if 'copilot' in author.lower():
 ### PHASE 1: Data Collection (MANDATORY)
 **🔧 PHASE 1: DATA COLLECTION - Starting...**
 
-1. **MUST RUN** `/commentfetch [PR]` to gather ALL comments → `/tmp/copilot/comments.json`
+1. **MUST RUN** `/commentfetch [PR]` to gather ALL comments → branch-specific directory
    - Show: "Running `/commentfetch [PR]`..."
    - Show: Command output and comment count found
-   - Show: "Comments saved to /tmp/copilot/comments.json"
+   - Show: "Comments saved to /tmp/copilot_{branch}/comments_{branch}.json"
 
 2. **MUST VERIFY** data collection completed successfully
    - Show: "Verifying comment data collection..."
@@ -223,11 +223,11 @@ if 'copilot' in author.lower():
 
 **MUST RUN** `/commentreply` (AFTER fixes are live):
 - Show: "Running `/commentreply` for [X] comments..."
-- Show: "Loading comment data from /tmp/copilot/comments.json..."
+- Show: "Loading comment data from branch-specific directory..."
 - Show: "Comment breakdown: [X] inline, [X] general, [X] review, [X] bot comments"
 
 🚨 **MANDATORY GENUINE ANALYSIS WORKFLOW** - For EACH comment individually:
-1. ✅ **Read Actual Content**: Load comment.body from comments.json (never skip reading)
+1. ✅ **Read Actual Content**: Load comment.body from branch-specific comments file (never skip reading)
    - Show: "Processing comment #[ID] from [author]: [first 50 chars]..."
 2. ✅ **Genuine Analysis**: Analyze specific technical content (no pattern matching allowed)
    - Show: "Analyzing technical content: [key points identified]"
@@ -328,12 +328,12 @@ if 'copilot' in author.lower():
 ### Command Composition Integration:
 
 #### Primary Command: `/commentfetch [PR]`
-- **Data Collection**: Gathers ALL 108 comments from PR #820
-- **Output**: `/tmp/copilot/comments.json` with complete comment data
+- **Data Collection**: Gathers ALL comments from PR
+- **Output**: Branch-specific directory with complete comment data
 - **Role**: The foundation - provides data for systematic processing
 
 #### Integrated Processing (via copilot.md protocol):
-- **Comment Analysis**: Claude reads comments.json directly
+- **Comment Analysis**: Claude reads branch-specific comments file directly
 - **Response Generation**: Claude creates responses using the systematic protocol
 - **GitHub API Execution**: Claude posts responses with proper threading
 - **Verification**: Claude confirms 100% coverage achieved
@@ -379,7 +379,7 @@ Full orchestration combining all capabilities with complete transparency at each
 
 ```
 PHASE 1: DATA COLLECTION
-/commentfetch → comments.json (ONLY Python usage)
+/commentfetch → branch-specific comments file (ONLY Python usage)
      ↓
 PHASE 2: INTELLIGENT ORCHESTRATION
 /copilot reads all .md files and data
@@ -405,7 +405,7 @@ PHASE 4: DIRECT EXECUTION
 > ## 🔧 Composing Commands:
 > 
 > 1. Running /commentfetch 123...
->    ✅ Found 5 comments → /tmp/copilot/comments.json
+>    ✅ Found 5 comments → branch-specific directory
 > 
 > 2. Running /fixpr 123...
 >    ✅ Claude reads fixpr.md and checks CI status
@@ -435,7 +435,7 @@ PHASE 4: DIRECT EXECUTION
 > ## 🔧 Composing Commands:
 > 
 > 1. Running /commentfetch 456...
->    ✅ Found 3 comments → /tmp/copilot/comments.json
+>    ✅ Found 3 comments → branch-specific directory
 >
 > 2. Running /fixpr 456...
 >    ✅ Claude reads fixpr.md and analyzes CI
@@ -465,11 +465,11 @@ PHASE 4: DIRECT EXECUTION
 > ## 🔧 Full Orchestration:
 > 
 > 1. Running /commentfetch 789...
->    ✅ Found 12 comments → /tmp/copilot/comments.json
+>    ✅ Found 12 comments → branch-specific directory
 >    - 8 need responses (NOT DONE)
 >    - 4 informational (DONE)
 > 
-> 2. Running /fixpr 789 --comments /tmp/copilot/comments.json...
+> 2. Running /fixpr 789...
 >    ✅ Collected comprehensive data:
 >    - GitHub CI: 3 failures, 1 timeout
 >    - Local CI: 2 failures reproduced
