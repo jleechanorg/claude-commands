@@ -1433,28 +1433,31 @@ def create_app() -> Flask:
             elif request.method == "POST":
                 # Validate settings data
                 data = request.get_json()
+                # Enhanced validation
+                if not isinstance(data, dict):
+                    return jsonify({'error': 'Invalid request format', 'success': False}), 400
                 if not data:
-                    return jsonify({'error': 'No data provided'}), 400
+                    return jsonify({'error': 'No data provided', 'success': False}), 400
                 
                 settings_to_update = {}
                 
                 # Validate gemini_model if provided
                 if 'gemini_model' in data:
                     model = data['gemini_model']
-                    if model not in constants.ALLOWED_GEMINI_MODELS:
-                        return jsonify({'error': 'Invalid model selection'}), 400
+                    if not isinstance(model, str) or model not in constants.ALLOWED_GEMINI_MODELS:
+                        return jsonify({'error': 'Invalid model selection', 'success': False}), 400
                     settings_to_update['gemini_model'] = model
                 
                 # Validate debug_mode if provided
                 if 'debug_mode' in data:
                     debug_mode = data['debug_mode']
-                    if debug_mode not in constants.ALLOWED_DEBUG_MODE_VALUES:
-                        return jsonify({'error': 'Invalid debug mode value. Must be true or false.'}), 400
+                    if not isinstance(debug_mode, bool) or debug_mode not in constants.ALLOWED_DEBUG_MODE_VALUES:
+                        return jsonify({'error': 'Invalid debug mode value. Must be true or false.', 'success': False}), 400
                     settings_to_update['debug_mode'] = debug_mode
                 
                 # Ensure at least one setting is being updated
                 if not settings_to_update:
-                    return jsonify({'error': 'No valid settings provided'}), 400
+                    return jsonify({'error': 'No valid settings provided', 'success': False}), 400
                 
                 # Update settings
                 success = update_user_settings(user_id, settings_to_update)
@@ -1468,11 +1471,11 @@ def create_app() -> Flask:
                 if success:
                     return jsonify({'success': True, 'message': 'Settings saved'})
                 else:
-                    return jsonify({'error': 'Failed to save settings'}), 500
+                    return jsonify({'error': 'Failed to save settings', 'success': False}), 500
                     
         except Exception as e:
             logging_util.error(f"Settings API error: {str(e)}")
-            return jsonify({'error': 'Internal server error'}), 500
+            return jsonify({'error': 'Internal server error', 'success': False}), 500
 
     # --- Frontend Serving ---
     @app.route("/", defaults={"path": ""})

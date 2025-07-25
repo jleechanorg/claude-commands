@@ -997,10 +997,14 @@ def get_user_settings(user_id: UserId) -> Dict[str, Any]:
         if user_doc.exists:
             data = user_doc.to_dict()
             return data.get('settings', {})
+        # Return empty dict for new users (no settings yet)
         return {}
     except Exception as e:
-        logging_util.error(f"Failed to get user settings for {user_id}: {str(e)}")
-        return {}
+        # Hash user_id for security in logs
+        user_hash = str(hash(user_id))[-6:] if user_id else 'unknown'
+        logging_util.error(f"Failed to get user settings for user_{user_hash}: {str(e)}")
+        # Return None to distinguish database errors from no settings
+        return None
 
 
 @log_exceptions

@@ -76,7 +76,12 @@ async function saveSettings() {
     }
     
     saveTimeout = setTimeout(async () => {
-        const selectedModel = document.querySelector('input[name="geminiModel"]:checked').value;
+        const checkedRadio = document.querySelector('input[name="geminiModel"]:checked');
+        if (!checkedRadio) {
+            console.warn('No radio button is selected. Aborting save operation.');
+            return;
+        }
+        const selectedModel = checkedRadio.value;
         const debugSwitch = document.getElementById('debugModeSwitch');
         const radioButtons = document.querySelectorAll('input[name="geminiModel"]');
         

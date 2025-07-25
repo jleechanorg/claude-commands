@@ -1132,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Main navigation listeners (these must remain at the end of DOMContentLoaded)
-    document.getElementById('go-to-new-campaign').onclick = () => {
+    document.getElementById('go-to-new-campaign').addEventListener('click', () => {
         isNavigatingToNewCampaignDirectly = true;
         history.pushState({}, '', '/new-campaign'); 
         handleRouteChange(); 
@@ -1141,7 +1141,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.campaignWizard) {
             window.campaignWizard.enable();
         }
-    };
-    document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };
+    });
+    
+    document.getElementById('back-to-dashboard').addEventListener('click', () => { 
+        history.pushState({}, '', '/'); 
+        handleRouteChange(); 
+    });
+    
+    // Settings button navigation
+    document.getElementById('settings-btn').addEventListener('click', () => {
+        window.location.href = '/settings';
+    });
     window.addEventListener('popstate', handleRouteChange);
 });
