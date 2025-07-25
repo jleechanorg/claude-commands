@@ -1,6 +1,51 @@
 # GitHub Development Statistics Analysis
 
-## Actual Development Statistics (June 15 - July 14, 2025)
+## Latest Development Statistics (June 25 - July 25, 2025)
+
+### Real Code Changes (Excluding Vendor/Generated Files)
+- **Total Commits**: 914 over 31 days
+- **Merged PRs**: 485 
+- **Lines Changed**: 734,835 (519,787 added + 215,048 deleted)
+- **Files Modified**: 5,413
+
+### Daily Averages (Current Period)
+- **Commits per day**: 29.5
+- **PRs merged per day**: 15.6
+- **Lines changed per day**: 23,704 (real code)
+
+### Commit Type Breakdown
+- **Fix commits**: 73 (8.0%)
+- **Feature commits**: 311 (34.0%)
+- **Other commits**: 530 (58.0%)
+
+### Pull Request Type Breakdown
+- **Features**: 160 (33.0%)
+- **Other**: 152 (31.3%)
+- **Fixes**: 122 (25.2%)
+- **Tests**: 36 (7.4%)
+- **Refactoring**: 9 (1.9%)
+- **Documentation**: 6 (1.2%)
+
+### Code Change Ratio Analysis
+- **Current codebase size**: 372,964 lines (core code)
+- **Change ratio**: 1.97:1 vs codebase size
+- **Changed**: 197.0% of the codebase (indicating high iteration and development)
+
+### Current Codebase Metrics (mvp_site)
+- **Total Lines**: 89,902 lines
+  - Python: 79,238 lines (82% tests, 18% non-test)
+  - JavaScript: 9,060 lines (40% tests, 60% non-test)
+  - HTML: 1,604 lines (81% tests, 19% non-test)
+- **Overall Test Coverage**: 78% of codebase is test code
+
+### Data Quality
+- **Noise ratio**: 6.4% of changes were vendor/generated files
+- **Excluded changes**: 50,100 lines (vendor files, package-lock.json, etc.)
+- **Clean metrics**: Focus on real development activity
+
+---
+
+## Previous Period Analysis (June 15 - July 14, 2025)
 
 ### Real Code Changes (Excluding Vendor/Generated Files)
 - **Total Commits**: 1,244 over 29 days
