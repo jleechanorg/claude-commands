@@ -521,7 +521,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 | Rule | Description | Commands/Actions |
 |------|-------------|------------------|
-| **Main = Truth** | Use `git show main:<file>` for originals | ❌ push to main (except roadmap/sprint files) |
+| **Main = Truth** | Use `git show main:<file>` for originals | ❌ push to main (no exceptions) |
 | **PR Workflow** | All changes via PRs | `gh pr create` + test results in description |
 | **Branch Safety** | Verify before push | `git push origin HEAD:branch-name` |
 | **🚨 Upstream Tracking** | Set tracking to avoid "no upstream" in headers | `git push -u origin branch-name` OR `git branch --set-upstream-to=origin/branch-name` |
@@ -530,7 +530,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 | **Post-Merge** | Check unpushed files | `git status` → follow-up PR if needed |
 | **Progress Track** | Scratchpad + JSON | `roadmap/scratchpad_[branch].md` + `tmp/milestone_*.json` |
 | **PR Testing** | Apply PRs locally | `gh pr checkout <PR#>` |
-| **Roadmap Updates** | Always create PR | All files require PR workflow |
+| **Roadmap Updates** | Always create PR | All files require PR workflow - including roadmap files |
 
 🚨 **No Main Push**: ✅ `git push origin HEAD:feature` | ❌ `git push origin main`
    - **ALL changes require PR**: Including roadmap files, documentation, everything
@@ -677,6 +677,15 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - **Behavior**: Immediate execution with optional parameters
 
 ### Critical Enforcement
+🚨 **SLASH COMMAND PROTOCOL RECOGNITION**: ⚠️ MANDATORY - Before processing ANY slash command:
+- ✅ **Recognition Phase**: Scan input for "/" → Identify command type → Look up required workflow in `.claude/commands/[command].md`
+- ✅ **Execution Phase**: Follow COMPLETE documented workflow → No partial execution allowed
+- ✅ **Verification Phase**: Confirm all protocol steps completed before declaring task done
+- ❌ NEVER treat slash commands as content suggestions - they are execution mandates
+- ❌ NEVER stop midway through documented workflows (e.g., stopping after Execute phase of `/pr`)
+- **Evidence**: PR #938 - Failed `/pr` protocol by stopping after Execute instead of continuing to Push→Copilot→Review
+- **Pattern**: Protocol execution deficit causes user frustration and incomplete deliverables
+
 🚨 **EXECUTE CIRCUIT BREAKER**: `/e` or `/execute` → TodoWrite checklist MANDATORY
 - Context % | Complexity | Subagents? | Plan presented | Approval received
 - ❌ NEVER start work without approval | TodoWrite = safety protocol

@@ -4,9 +4,13 @@
 
 **Usage**: `/pr` - Think, execute, push, review, and handle feedback
 
-## 🚨 COMPLETE PR WORKFLOW
+## 🚨 MANDATORY COMPLETE PR WORKFLOW
 
-This command conceptually combines the functionality of: `/think /execute /push /copilot /review`
+**⚠️ CRITICAL**: This command MUST execute ALL 5 phases in sequence. No partial execution allowed.
+
+This command **MANDATORILY** combines the functionality of: `/think /execute /push /copilot /review`
+
+**❌ NEVER STOP MIDWAY** - Each phase must complete before task is considered done.
 
 ### Phase 1: Think (/think)
 
@@ -52,11 +56,11 @@ This command conceptually combines the functionality of: `/think /execute /push 
 
 ## Command Combination
 
-**The `/pr` command works with the universal command composition system**:
-- Uses meta-prompt approach to combine all five commands
-- Leverages Claude's natural language processing
-- Maintains context across all phases
-- Provides comprehensive development experience
+**The `/pr` command is a MANDATORY PROTOCOL**:
+- **MUST** execute all 5 phases: Think→Execute→Push→Copilot→Review
+- **CANNOT** be treated as content suggestion - it's an execution mandate
+- **REQUIRES** complete workflow before declaring task complete
+- **ENFORCES** comprehensive development experience through protocol
 
 ## Example Flow
 
