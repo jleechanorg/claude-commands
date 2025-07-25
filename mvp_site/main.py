@@ -986,8 +986,14 @@ def create_app() -> Flask:
             game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
             game_state_dict = game_state.to_dict() if game_state else {}
 
+            # Get debug mode from user settings, not game state
+            user_settings = get_user_settings(user_id)
+            debug_mode = user_settings.get('debug_mode', False) if user_settings else False
+            
+            # Apply debug mode from user settings to game state dict for UI consistency
+            game_state_dict['debug_mode'] = debug_mode
+            
             # Apply hybrid debug processing to story entries for backward compatibility
-            debug_mode = game_state_dict.get("debug_mode", False)
             processed_story = process_story_for_display(story, debug_mode)
 
             # Debug logging for structured fields
