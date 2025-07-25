@@ -1,17 +1,18 @@
 import os
 import sys
 
+os.environ["TESTING"] = "true"
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from firebase_admin import auth
 import document_generator
 import firebase_admin
-
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
-from main import app, create_app
+from main import create_app
+app = create_app()
 from game_state import GameState
 import firestore_service
 import gemini_service
-os.environ["TESTING"] = "true"
 
 import json
 import threading
