@@ -5,12 +5,7 @@ Previously, spawning an agent took 5+ minutes of manual steps. Now it takes <30 
 
 ## Quick Usage
 
-### Method 1: Direct Orchestration (Recommended)
-```bash
-./scripts/orchestration/orch_direct.sh "Your task description here"
-```
-
-### Method 2: Quick Agent Spawner
+### Quick Agent Spawner
 ```bash
 ./scripts/orchestration/quick_agent.sh "Your task description here"
 ```
@@ -19,7 +14,7 @@ Previously, spawning an agent took 5+ minutes of manual steps. Now it takes <30 
 
 ```bash
 # Fix code issues
-./scripts/orchestration/orch_direct.sh "Find and fix inline imports"
+./scripts/orchestration/quick_agent.sh "Find and fix inline imports"
 
 # Run tests
 ./scripts/orchestration/quick_agent.sh "Run all tests and fix failures"
@@ -51,16 +46,15 @@ tmux capture-pane -t task-direct-5756 -p | tail -50
 
 ## Technical Details
 
-- `scripts/orchestration/orch_direct.sh`: Bypasses start_claude_agent.sh, calls claude directly
 - `scripts/orchestration/quick_agent.sh`: Quick agent spawner with standard instructions
-- Both create tmux sessions for easy monitoring
+- Creates tmux sessions for easy monitoring
 - Agents run with correct token limits from ~/.bashrc
 
 ## Troubleshooting
 
 If agent fails with token error:
 - Check ~/.bashrc has: `export CLAUDE_CODE_MAX_OUTPUT_TOKENS=8192`
-- Use scripts/orchestration/orch_direct.sh which explicitly sets the correct value
+- The quick_agent.sh script explicitly sets the correct value
 
 Agent not starting:
 - Check tmux is installed: `which tmux`

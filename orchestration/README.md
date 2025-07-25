@@ -79,9 +79,8 @@ sudo apt-get install tmux
 # Create agents for specific tasks
 python3 orchestration/orchestrate_unified.py "Find and fix all inline imports"
 
-# Or use the convenience scripts
-../scripts/orchestration/orch_direct.sh "Update the UI styling"
-../scripts/orchestration/quick_agent.sh "Run all tests and fix failures"
+# Or use the convenience script
+../scripts/orchestration/quick_agent.sh "Update the UI styling"
 ```
 
 ## 📁 Key Components

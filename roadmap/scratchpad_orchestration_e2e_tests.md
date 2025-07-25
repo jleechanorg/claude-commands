@@ -105,7 +105,7 @@ def test_agent_restart():
 ### Direct Python Alternative
 ```bash
 # Instead of:
-./scripts/orchestration/orch_direct.sh "Fix tests"
+./scripts/orchestration/quick_agent.sh "Fix tests"
 
 # Could be:
 python3 orchestration/orchestrate_unified.py "Fix tests"
