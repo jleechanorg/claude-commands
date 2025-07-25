@@ -459,6 +459,7 @@ Complete the task, then commit and create a PR."""
                 ["which", "claude"], capture_output=True, text=True
             ).stdout.strip()
             if not claude_path:
+                print("⚠️ Error: Claude CLI not found in PATH. Please ensure Claude is installed and accessible.")
                 return False
             
             # Create worktree for agent (inherit from current branch)
@@ -466,11 +467,21 @@ Complete the task, then commit and create a PR."""
             agent_dir = os.path.join(current_dir, f"agent_workspace_{agent_name}")
             branch_name = f'{agent_name}-work'
             
-            # Always create fresh branch from main (equivalent to /nb)
+            # Dynamically detect the default branch
+            result = subprocess.run(
+                ['git', 'symbolic-ref', 'refs/remotes/origin/HEAD'],
+                capture_output=True, text=True
+            )
+            if result.returncode != 0:
+                print("⚠️ Failed to detect default branch. Ensure the repository is properly configured.")
+                return False
+            default_branch = result.stdout.strip().split('/')[-1]
+            
+            # Always create fresh branch from the default branch
             # This prevents inheriting unrelated changes from current branch
             subprocess.run([
                 'git', 'worktree', 'add', '-b', branch_name,
-                agent_dir, 'main'
+                agent_dir, default_branch
             ], capture_output=True)
             
             # Create result collection file

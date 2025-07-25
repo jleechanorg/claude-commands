@@ -178,7 +178,9 @@ class TestTaskDispatcher(unittest.TestCase):
                                f"All agent names should be unique: {created_names}")
 
     # Removed task type and priority inference tests - these features were over-engineered
-    # The system should just create general task agents, not categorize tasks
+    # and added unnecessary complexity. The current approach simplifies task handling by
+    # creating general task agents without categorizing tasks by type or priority. This
+    # ensures a more flexible and streamlined system.
 
     def test_agent_limit_enforcement(self):
         """Test: System respects maximum concurrent agent limit"""

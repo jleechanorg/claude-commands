@@ -1,5 +1,4 @@
 #!/bin/bash
-# Direct orchestration - bypasses start_claude_agent.sh issues
 # Usage: ./orch_direct.sh "task description"
 
 set -e
@@ -18,7 +17,7 @@ fi
 
 TASK="$1"
 SESSION_NAME="task-direct-$(date +%s | tail -c 5)"
-WORK_DIR="/home/jleechan/projects/worldarchitect.ai"
+WORK_DIR="${WORK_DIR:-$(pwd)}"
 
 echo -e "${GREEN}🚀 Starting direct agent for task${NC}"
 echo -e "${YELLOW}Task: $TASK${NC}"

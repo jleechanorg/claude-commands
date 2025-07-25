@@ -1,6 +1,5 @@
 #!/bin/bash
 # Quick agent spawner that bypasses orchestration complexity
-# Usage: ./quick_agent.sh "task description"
 
 set -e
 
@@ -19,7 +18,7 @@ fi
 
 TASK="$1"
 SESSION_NAME="agent-$(date +%s | tail -c 5)"
-CLAUDE_PATH="/home/jleechan/.claude/local/claude"
+CLAUDE_PATH="${CLAUDE_PATH:-$(which claude 2>/dev/null || echo "/home/jleechan/.claude/local/claude")}"
 
 # Create agent prompt with standard instructions
 AGENT_PROMPT="$TASK
@@ -38,8 +37,8 @@ echo
 
 # Create the agent session with correct token limit
 tmux new-session -d -s "$SESSION_NAME" \
-    -c "/home/jleechan/projects/worldarchitect.ai" \
-    "cd /home/jleechan/projects/worldarchitect.ai && \
+    -c "${WORKING_DIR:-$(pwd)}" \
+    "cd ${WORKING_DIR:-$(pwd)} && \
      export CLAUDE_CODE_MAX_OUTPUT_TOKENS=8192 && \
      echo 'Starting Claude with token limit: 8192' && \
      $CLAUDE_PATH -p '$AGENT_PROMPT' \
