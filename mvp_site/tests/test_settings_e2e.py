@@ -55,10 +55,10 @@ class TestSettingsE2E(unittest.TestCase):
             mock_api_call.return_value = MagicMock()
             mock_get_text.return_value = '{"narrative": "E2E Flash Story!", "state_changes": {}, "player_character_data": {"name": "E2E Hero"}}'
             
-            # Act 1: User saves flash-2.5 preference
+            # Act 1: User saves gemini-2.5-flash preference
             settings_response = self.client.post('/api/settings',
                                                headers=self.auth_headers,
-                                               data=json.dumps({"gemini_model": "flash-2.5"}))
+                                               data=json.dumps({"gemini_model": "gemini-2.5-flash"}))
             
             # Verify settings were saved
             self.assertEqual(settings_response.status_code, 200)
@@ -67,9 +67,9 @@ class TestSettingsE2E(unittest.TestCase):
             get_response = self.client.get('/api/settings', headers=self.auth_headers)
             self.assertEqual(get_response.status_code, 200)
             saved_settings = json.loads(get_response.data)
-            self.assertEqual(saved_settings.get('gemini_model'), 'flash-2.5')
+            self.assertEqual(saved_settings.get('gemini_model'), 'gemini-2.5-flash')
             
-            # Act 3: User creates campaign (should use flash-2.5)
+            # Act 3: User creates campaign (should use gemini-2.5-flash)
             campaign_data = {
                 "title": "E2E Flash Campaign",
                 "character": "E2E Hero",
@@ -142,14 +142,14 @@ class TestSettingsE2E(unittest.TestCase):
         # Session 1: User sets flash model
         session1_response = self.client.post('/api/settings',
                                            headers=self.auth_headers,
-                                           data=json.dumps({"gemini_model": "flash-2.5"}))
+                                           data=json.dumps({"gemini_model": "gemini-2.5-flash"}))
         self.assertEqual(session1_response.status_code, 200)
         
         # Session 2: User retrieves settings
         session2_response = self.client.get('/api/settings', headers=self.auth_headers)
         self.assertEqual(session2_response.status_code, 200)
         settings = json.loads(session2_response.data)
-        self.assertEqual(settings.get('gemini_model'), 'flash-2.5')
+        self.assertEqual(settings.get('gemini_model'), 'gemini-2.5-flash')
         
         # Session 3: User changes to pro model
         session3_response = self.client.post('/api/settings',
@@ -170,7 +170,7 @@ class TestSettingsE2E(unittest.TestCase):
         user1_headers = {**self.auth_headers, 'X-Test-User-ID': 'e2e-user-1'}
         user1_response = self.client.post('/api/settings',
                                         headers=user1_headers,
-                                        data=json.dumps({"gemini_model": "flash-2.5"}))
+                                        data=json.dumps({"gemini_model": "gemini-2.5-flash"}))
         self.assertEqual(user1_response.status_code, 200)
         
         # User 2 settings  
@@ -183,7 +183,7 @@ class TestSettingsE2E(unittest.TestCase):
         # Verify User 1 still has flash
         user1_get = self.client.get('/api/settings', headers=user1_headers)
         user1_settings = json.loads(user1_get.data)
-        self.assertEqual(user1_settings.get('gemini_model'), 'flash-2.5')
+        self.assertEqual(user1_settings.get('gemini_model'), 'gemini-2.5-flash')
         
         # Verify User 2 still has pro
         user2_get = self.client.get('/api/settings', headers=user2_headers)
@@ -212,7 +212,7 @@ class TestSettingsE2E(unittest.TestCase):
         # Act 1: Set flash model and create campaign
         self.client.post('/api/settings',
                         headers=self.auth_headers,
-                        data=json.dumps({"gemini_model": "flash-2.5"}))
+                        data=json.dumps({"gemini_model": "gemini-2.5-flash"}))
         
         response1 = self.client.post('/api/campaigns',
                                    headers=self.auth_headers,

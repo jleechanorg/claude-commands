@@ -40,7 +40,7 @@ class TestUserModelSelection(unittest.TestCase):
     def test_uses_user_preferred_model_flash(self, mock_get_text, mock_api_call, mock_get_settings):
         """🟢 GREEN: Should use flash-2.5 when user prefers it"""
         # Arrange
-        mock_get_settings.return_value = {'gemini_model': 'flash-2.5'}
+        mock_get_settings.return_value = {'gemini_model': 'gemini-2.5-flash'}
         mock_api_call.return_value = MagicMock()
         mock_get_text.return_value = '{"narrative": "Test story", "state_changes": {}}'
         
@@ -53,7 +53,7 @@ class TestUserModelSelection(unittest.TestCase):
         # Assert
         mock_get_settings.assert_called_once_with(self.test_user_id)
         mock_api_call.assert_called_once()
-        # Verify the model used was flash-2.5
+        # Verify the model used was gemini-2.5-flash
         call_args = mock_api_call.call_args
         model_used = call_args[0][1]  # Second positional argument is model
         self.assertEqual(model_used, "gemini-2.5-flash")

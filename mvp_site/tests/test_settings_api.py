@@ -90,12 +90,12 @@ class TestSettingsAPI(unittest.TestCase):
             response = self.client.get('/api/settings', headers=self.headers)
             self.assertEqual(response.status_code, 200)
             data = response.get_json()
-            self.assertEqual(data['gemini_model'], 'flash-2.5')
+            self.assertEqual(data['gemini_model'], 'gemini-2.5-flash')
     
     def test_post_user_settings_requires_auth(self):
         """🔴 RED: POST /api/settings should require authentication."""
         response = self.client.post('/api/settings', 
-                                  json={'gemini_model': 'pro-2.5'})
+                                  json={'gemini_model': 'gemini-2.5-pro'})
         self.assertEqual(response.status_code, 401)
     
     def test_post_user_settings_validates_model(self):
@@ -116,14 +116,14 @@ class TestSettingsAPI(unittest.TestCase):
             
             response = self.client.post('/api/settings',
                                       headers=self.headers,
-                                      json={'gemini_model': 'pro-2.5'})
+                                      json={'gemini_model': 'gemini-2.5-pro'})
             self.assertEqual(response.status_code, 200)
             data = response.get_json()
             self.assertTrue(data['success'])
             self.assertEqual(data['message'], 'Settings saved')
             
             # Verify firestore was called correctly
-            mock_update.assert_called_once_with(self.test_user_id, {'gemini_model': 'pro-2.5'})
+            mock_update.assert_called_once_with(self.test_user_id, {'gemini_model': 'gemini-2.5-pro'})
     
     def test_post_user_settings_handles_firestore_failure(self):
         """🔴 RED: POST /api/settings should handle Firestore failures."""
@@ -177,8 +177,8 @@ class TestSettingsConstants(unittest.TestCase):
         # Should be defined in constants.py or main.py
         self.assertTrue(hasattr(constants, 'ALLOWED_GEMINI_MODELS'))
         models = getattr(constants, 'ALLOWED_GEMINI_MODELS')
-        self.assertIn('pro-2.5', models)
-        self.assertIn('flash-2.5', models)
+        self.assertIn('gemini-2.5-pro', models)
+        self.assertIn('gemini-2.5-flash', models)
 
 
 if __name__ == "__main__":

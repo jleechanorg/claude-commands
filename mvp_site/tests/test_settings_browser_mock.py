@@ -53,7 +53,7 @@ class TestSettingsHttpMock(unittest.TestCase):
         mock_update_settings.return_value = True
         
         # Act - Simulate browser form POST to settings endpoint
-        settings_data = {"gemini_model": "flash-2.5"}
+        settings_data = {"gemini_model": "gemini-2.5-flash"}
         response = self.client.post('/api/settings',
                                   headers=self.auth_headers,
                                   data=json.dumps(settings_data))
@@ -71,7 +71,7 @@ class TestSettingsHttpMock(unittest.TestCase):
     def test_settings_retrieval_simulates_browser_page_load(self, mock_get_settings):
         """🟢 Layer 3: Settings retrieval simulates browser page load"""
         # Arrange
-        expected_settings = {"gemini_model": "pro-2.5"}
+        expected_settings = {"gemini_model": "gemini-2.5-pro"}
         mock_get_settings.return_value = expected_settings
         
         # Act - Simulate browser GET request for settings page data
@@ -93,8 +93,8 @@ class TestSettingsHttpMock(unittest.TestCase):
     def test_campaign_flow_simulates_browser_sequence(self, mock_add_story, mock_create_campaign,
                                                      mock_get_text, mock_api_call, mock_get_settings):
         """🟢 Layer 3: Campaign creation simulates browser user flow sequence"""
-        # Arrange - User previously selected pro-2.5 in browser settings
-        mock_get_settings.return_value = {'gemini_model': 'pro-2.5'}
+        # Arrange - User previously selected gemini-2.5-pro in browser settings
+        mock_get_settings.return_value = {'gemini_model': 'gemini-2.5-pro'}
         mock_api_call.return_value = MagicMock()
         mock_get_text.return_value = '{"narrative": "Epic browser story!", "state_changes": {}, "player_character_data": {"name": "Browser Hero"}}'
         mock_create_campaign.return_value = 'browser-campaign-id'
@@ -136,7 +136,7 @@ class TestSettingsHttpMock(unittest.TestCase):
         mock_update_settings.side_effect = Exception("Firestore connection error")
         
         # Act - Simulate browser form submission that triggers error
-        settings_data = {"gemini_model": "flash-2.5"}
+        settings_data = {"gemini_model": "gemini-2.5-flash"}
         response = self.client.post('/api/settings',
                                   headers=self.auth_headers,
                                   data=json.dumps(settings_data))
@@ -158,20 +158,20 @@ class TestSettingsHttpMock(unittest.TestCase):
             mock_update_settings.return_value = True
             
             # Act - Simulate user changing settings multiple times
-            # First change: flash-2.5
+            # First change: gemini-2.5-flash
             response1 = self.client.post('/api/settings',
                                        headers=self.auth_headers,
-                                       data=json.dumps({"gemini_model": "flash-2.5"}))
+                                       data=json.dumps({"gemini_model": "gemini-2.5-flash"}))
             
-            # Second change: pro-2.5
+            # Second change: gemini-2.5-pro
             response2 = self.client.post('/api/settings',
                                        headers=self.auth_headers,
-                                       data=json.dumps({"gemini_model": "pro-2.5"}))
+                                       data=json.dumps({"gemini_model": "gemini-2.5-pro"}))
             
-            # Third change: back to flash-2.5
+            # Third change: back to gemini-2.5-flash
             response3 = self.client.post('/api/settings',
                                        headers=self.auth_headers,
-                                       data=json.dumps({"gemini_model": "flash-2.5"}))
+                                       data=json.dumps({"gemini_model": "gemini-2.5-flash"}))
             
             # Assert - All requests succeeded
             self.assertEqual(response1.status_code, 200)
@@ -181,9 +181,9 @@ class TestSettingsHttpMock(unittest.TestCase):
             # Verify all calls were made
             self.assertEqual(mock_update_settings.call_count, 3)
             
-            # Verify final call was flash-2.5
+            # Verify final call was gemini-2.5-flash
             final_call = mock_update_settings.call_args_list[-1]
-            self.assertEqual(final_call[0][1]['gemini_model'], 'flash-2.5')
+            self.assertEqual(final_call[0][1]['gemini_model'], 'gemini-2.5-flash')
 
 
 if __name__ == '__main__':

@@ -59,9 +59,9 @@ class TestSettingsIntegration(unittest.TestCase):
     @patch('firestore_service.add_story_entry')
     def test_campaign_creation_uses_flash_model(self, mock_add_story, mock_create_campaign, 
                                                mock_get_text, mock_api_call, mock_get_settings):
-        """🟢 Integration: Campaign creation uses user's flash-2.5 preference"""
+        """🟢 Integration: Campaign creation uses user's gemini-2.5-flash preference"""
         # Arrange
-        mock_get_settings.return_value = {'gemini_model': 'flash-2.5'}
+        mock_get_settings.return_value = {'gemini_model': 'gemini-2.5-flash'}
         mock_api_call.return_value = MagicMock()
         mock_get_text.return_value = '{"narrative": "Test story", "state_changes": {}, "player_character_data": {"name": "Test Hero"}}'
         mock_create_campaign.return_value = 'test-campaign-id'
@@ -204,7 +204,7 @@ class TestSettingsIntegration(unittest.TestCase):
     def test_settings_api_retrieves_preferences(self, mock_get_settings):
         """🟢 Integration: Settings API correctly retrieves user preferences"""
         # Arrange
-        expected_settings = {"gemini_model": "flash-2.5"}
+        expected_settings = {"gemini_model": "gemini-2.5-flash"}
         mock_get_settings.return_value = expected_settings
         
         # Act
