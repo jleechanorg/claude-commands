@@ -17,7 +17,9 @@ TEMP_BRANCH_PREFIX="dev_copilotsuper"
 TIMESTAMP=$(date +%s)
 TEMP_BRANCH="${TEMP_BRANCH_PREFIX}_${TIMESTAMP}"
 ORIGINAL_BRANCH=""
-BRANCH_NAME=$(git branch --show-current)
+# Resolve branch; fall back for detached-HEAD; make it filename-safe
+RAW_BRANCH_NAME=$(git branch --show-current 2>/dev/null || echo "detached")
+BRANCH_NAME=${RAW_BRANCH_NAME//\//_}
 RESULTS_FILE="/tmp/copilotsuper_results_${BRANCH_NAME}_${TIMESTAMP}.txt"
 
 # Functions

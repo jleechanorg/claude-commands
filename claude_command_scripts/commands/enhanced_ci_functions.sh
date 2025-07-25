@@ -64,9 +64,10 @@ present_enhanced_ci_data() {
     local has_detailed
     has_detailed=$(echo "$enhanced_ci_data" | jq -r '.summary.has_detailed_analysis // false')
     
-    # Get branch name once for performance (addressing Copilot feedback)
+    # Get branch name once for performance (addressing Copilot feedback) with sanitization
     local branch_name
-    branch_name=$(git branch --show-current)
+    branch_name=$(git branch --show-current 2>/dev/null || echo "detached")
+    branch_name=${branch_name//\//_}
     local data_dir="/tmp/copilot_pr_${branch_name}_${pr_number}"
     mkdir -p "$data_dir"
     
@@ -250,7 +251,8 @@ integrate_enhanced_ci_analysis() {
         
         # Save actionable analysis (branch name logic duplicated from present_enhanced_ci_data for function independence)
         local branch_name
-        branch_name=$(git branch --show-current)
+        branch_name=$(git branch --show-current 2>/dev/null || echo "detached")
+        branch_name=${branch_name//\//_}
         local data_dir="/tmp/copilot_pr_${branch_name}_${pr_number}"
         echo "$actionable_errors" > "$data_dir/actionable_errors.json"
         echo "$priorities" > "$data_dir/error_priorities.json"
