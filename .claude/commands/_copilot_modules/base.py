@@ -75,9 +75,19 @@ class CopilotCommandBase(ABC):
                 ['git', 'branch', '--show-current'],
                 capture_output=True, text=True, check=True, cwd=os.getcwd()
             )
-            return result.stdout.strip()
+            branch_name = result.stdout.strip()
+            return self._sanitize_branch_name(branch_name)
         except Exception:
             return "unknown-branch"
+    
+    def _sanitize_branch_name(self, branch_name: str) -> str:
+        """Sanitize branch name to prevent path traversal attacks and ensure filesystem safety."""
+        import re
+        # Remove path traversal patterns and unsafe characters
+        sanitized = re.sub(r'\.\./', '', branch_name)  # Remove ../ patterns
+        sanitized = re.sub(r'[^\\w\\-_.]', '_', sanitized)  # Allow only safe chars
+        sanitized = re.sub(r'^[.-]+', '', sanitized)  # Remove leading dots/dashes
+        return sanitized or 'unknown-branch'
     
     def run_gh_command(self, command: List[str]) -> Dict[str, Any]:
         """Run GitHub CLI command and return parsed JSON.
