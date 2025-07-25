@@ -8,6 +8,14 @@
 
 **CRITICAL RULE**: When `/orchestrate` is used, NEVER execute the task yourself. ALWAYS delegate to the orchestration agents. The orchestration system will handle all task execution through specialized agents.
 
+**🚨 CRITICAL BRANCH PROTECTION RULE**: When monitoring orchestration agents:
+- ❌ **NEVER switch branches** without explicit user permission
+- ❌ **NEVER leave the current branch** to investigate agent work
+- ✅ **ALWAYS stay on your current branch** while agents work in their isolated workspaces
+- ✅ **Request explicit approval** before any branch switch: "May I switch to branch X? Please approve with 'approve [number]'"
+- 🔒 **Branch Context**: Your branch = your workspace. Agent branches = their workspaces. Never mix them!
+- ⚠️ **Violation Impact**: Switching branches disrupts user's work context and can cause lost changes
+
 **Implementation**: 
 - **Python Script**: `python3 .claude/commands/orchestrate.py [task_description]`
 - **Shell Wrapper**: `./claude_command_scripts/orchestrate.sh` (if available)
