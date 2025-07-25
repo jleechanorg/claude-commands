@@ -173,7 +173,7 @@ The world responds to your actions, and new possibilities unfold before you."""
     
     # Import structured fields if available
     try:
-
+        from .structured_fields_fixtures import FULL_STRUCTURED_RESPONSE
     except ImportError:
         FULL_STRUCTURED_RESPONSE = None
     
