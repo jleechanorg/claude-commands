@@ -553,7 +553,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
   - **Feature branches** → Compare to `origin/branch-name` or upstream
   - **main branch** → Compare to `origin/main`
 - ✅ **Step 4**: Execute comparison commands with correct remote
-- ❌ NEVER run git comparisons without context verification
+- ❌ NEVER run git comparisons without context verification (i.e., identifying the current branch, determining the branch type, and selecting the appropriate remote comparison as outlined in Steps 1–3 above)
 - **Evidence**: Prevents autopilot execution errors that waste user time
 
 🚨 **COMMAND FAILURE TRANSPARENCY** (⚠️ MANDATORY): When user commands fail unexpectedly:
