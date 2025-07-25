@@ -20,6 +20,7 @@ set -euo pipefail  # Exit on any error with stricter error handling
 
 # Colors for output
 GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
@@ -428,7 +429,7 @@ fi
 
 # Check if there are any local branches that haven't been pushed
 echo -e "\n${GREEN}3. Checking for unmerged local branches...${NC}"
-unpushed_branches=$(git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads | grep -vE '^main$' | grep '\[ahead' || true)
+unpushed_branches=$(git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads | grep -vE '^main$' | grep '\\[ahead' || true)
 if [ -n "$unpushed_branches" ]; then
     echo "⚠️  WARNING: Found branches with unpushed commits:"
     echo "$unpushed_branches"
