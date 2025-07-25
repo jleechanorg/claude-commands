@@ -204,13 +204,18 @@ check_existing_sync_pr() {
         fi
         
         # Check for any open PRs that modify integrate.sh or integration workflows (informational only)
-        integration_prs=$(gh pr list --state open --json number,url,title,files --jq '.[] | select(.files[]?.filename | test("integrate\\.sh|integration"))' 2>/dev/null || true)
+        integration_prs=$(gh pr list --state open --limit 50 --json number,url,title,files --jq '.[] | select(.files[]?.filename | test("integrate\\.sh|integration"))' 2>/dev/null || true)
         if [ -n "$integration_prs" ]; then
-            # Count the PRs
-            pr_count=$(echo "$integration_prs" | jq -s 'length')
+            # Count the PRs by converting to array and getting length
+            pr_count=$(echo "$integration_prs" | jq -s '. | length')
             if [ "$pr_count" -gt 0 ]; then
                 echo "ℹ️  Found $pr_count open PR(s) modifying integration workflows:"
-                echo "$integration_prs" | jq -r '"   PR #\(.number): \(.title) - \(.url)"'
+                # Process each PR object separately since they're newline-separated
+                echo "$integration_prs" | while IFS= read -r pr_json; do
+                    if [ -n "$pr_json" ]; then
+                        echo "$pr_json" | jq -r '"   PR #\(.number): \(.title) - \(.url)"'
+                    fi
+                done
                 echo ""
                 echo "   These PRs modify integration infrastructure but don't block your current branch."
                 echo "   Integration will proceed normally."
