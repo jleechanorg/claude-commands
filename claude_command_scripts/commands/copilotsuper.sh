@@ -17,7 +17,8 @@ TEMP_BRANCH_PREFIX="dev_copilotsuper"
 TIMESTAMP=$(date +%s)
 TEMP_BRANCH="${TEMP_BRANCH_PREFIX}_${TIMESTAMP}"
 ORIGINAL_BRANCH=""
-RESULTS_FILE="/tmp/copilotsuper_results_${TIMESTAMP}.txt"
+BRANCH_NAME=$(git branch --show-current)
+RESULTS_FILE="/tmp/copilotsuper_results_${BRANCH_NAME}_${TIMESTAMP}.txt"
 
 # Functions
 log_info() {
@@ -135,7 +136,7 @@ process_pr() {
     local fixes_count=0
     local tests_fixed=0
     local commits_made=0
-    local json_summary="/tmp/copilot_pr_${pr_num}_summary.json"
+    local json_summary="/tmp/copilot_pr_${BRANCH_NAME}_${pr_num}_summary.json"
     
     # Try JSON parsing first (reliable), fallback to grep parsing
     if [[ -f "$json_summary" ]]; then

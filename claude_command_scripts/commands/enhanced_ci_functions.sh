@@ -64,7 +64,8 @@ present_enhanced_ci_data() {
     local has_detailed
     has_detailed=$(echo "$enhanced_ci_data" | jq -r '.summary.has_detailed_analysis // false')
     
-    local data_dir="/tmp/copilot_pr_${pr_number}"
+    local branch_name=$(git branch --show-current)
+    local data_dir="/tmp/copilot_pr_${branch_name}_${pr_number}"
     mkdir -p "$data_dir"
     
     if [[ "$has_detailed" == "true" ]]; then
@@ -246,7 +247,8 @@ integrate_enhanced_ci_analysis() {
         priorities=$(generate_error_priorities "$actionable_errors")
         
         # Save actionable analysis
-        local data_dir="/tmp/copilot_pr_${pr_number}"
+        local branch_name=$(git branch --show-current)
+        local data_dir="/tmp/copilot_pr_${branch_name}_${pr_number}"
         echo "$actionable_errors" > "$data_dir/actionable_errors.json"
         echo "$priorities" > "$data_dir/error_priorities.json"
         
