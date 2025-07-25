@@ -8,6 +8,7 @@ import sys
 import os
 import time
 import subprocess
+import json
 
 # Add orchestration directory to path
 sys.path.insert(0, os.path.dirname(__file__))
@@ -112,15 +113,80 @@ class UnifiedOrchestration:
                 print(f"\n🔄 Redis coordination active - agents can communicate")
             else:
                 print(f"\n📁 File-based coordination - check orchestration/results/")
+            
+            # Wait briefly and check for PR creation
+            self._check_and_display_prs(created_agents)
         else:
             print("❌ No agents were created successfully")
+    
+    def _check_and_display_prs(self, agents, max_wait=30):
+        """Check for PRs created by agents and display them."""
+        print(f"\n🔍 Checking for PR creation (waiting up to {max_wait}s)...")
+        
+        prs_found = []
+        start_time = time.time()
+        
+        # Give agents some time to create PRs
+        time.sleep(5)
+        
+        while time.time() - start_time < max_wait and len(prs_found) < len(agents):
+            for agent in agents:
+                if agent['name'] in [pr['agent'] for pr in prs_found]:
+                    continue  # Already found PR for this agent
+                
+                # Check agent workspace for PR
+                workspace_path = f"agent_workspace_{agent['name']}"
+                if os.path.exists(workspace_path):
+                    try:
+                        # Try to get PR info from the agent's branch
+                        result = subprocess.run(
+                            ['gh', 'pr', 'list', '--head', f"{agent['name']}-work", '--json', 'number,url,title,state'],
+                            cwd=workspace_path,
+                            capture_output=True,
+                            text=True
+                        )
+                        
+                        if result.returncode == 0 and result.stdout.strip():
+                            pr_data = json.loads(result.stdout)
+                            if pr_data:
+                                pr_info = pr_data[0]
+                                prs_found.append({
+                                    'agent': agent['name'],
+                                    'number': pr_info['number'],
+                                    'url': pr_info['url'],
+                                    'title': pr_info['title'],
+                                    'state': pr_info['state']
+                                })
+                    except Exception as e:
+                        # Silently continue if PR check fails
+                        pass
+            
+            if len(prs_found) < len(agents):
+                time.sleep(2)  # Wait before checking again
+        
+        # Display results
+        if prs_found:
+            print(f"\n✅ **PR(s) Created:**")
+            for pr in prs_found:
+                print(f"\n🔗 **Agent**: {pr['agent']}")
+                print(f"   **PR #{pr['number']}**: {pr['title']}")
+                print(f"   **URL**: {pr['url']}")
+                print(f"   **Status**: {pr['state']}")
+        else:
+            print(f"\n⏳ No PRs detected yet. Agents may still be working.")
+            print(f"   Check agent progress with: tmux attach -t [agent-name]")
+            print(f"   Or wait and check manually: gh pr list --author @me")
 
 def main():
     """Main entry point for unified orchestration."""
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 2 or sys.argv[1] in ['--help', '-h', 'help']:
         print("Usage: python3 orchestrate_unified.py [task description]")
         print("Example: python3 orchestrate_unified.py 'Find security vulnerabilities and create coverage report'")
-        return 1
+        print("\nThe orchestration system will:")
+        print("1. Create specialized agents for your task")
+        print("2. Monitor their progress")
+        print("3. Display any PRs created at the end")
+        return 1 if len(sys.argv) < 2 else 0
     
     task = " ".join(sys.argv[1:])
     orchestration = UnifiedOrchestration()
