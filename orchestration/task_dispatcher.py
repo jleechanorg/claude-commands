@@ -165,12 +165,12 @@ class TaskDispatcher:
             if current_branch:
                 result = subprocess.run(
                     ['gh', 'pr', 'list', '--head', current_branch, '--json', 'number', '--limit', '1'],
-                capture_output=True, text=True
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                data = json.loads(result.stdout)
-                if data:
-                    return str(data[0]['number'])
+                    capture_output=True, text=True
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    data = json.loads(result.stdout)
+                    if data:
+                        return str(data[0]['number'])
             
             # Fallback: get most recent PR by current user
             result = subprocess.run(
