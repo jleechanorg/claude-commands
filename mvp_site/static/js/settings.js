@@ -31,7 +31,7 @@ async function loadSettings() {
     try {
         console.log('Loading user settings...');
         const response = await fetch('/api/settings', {
-            headers: getAuthHeaders()
+            headers: await getAuthHeaders()
         });
         
         if (!response.ok) {
@@ -104,7 +104,7 @@ async function saveSettings() {
             const response = await fetch('/api/settings', {
                 method: 'POST',
                 headers: {
-                    ...getAuthHeaders(),
+                    ...(await getAuthHeaders()),
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(settingsToSave)
@@ -135,7 +135,7 @@ async function saveSettings() {
 /**
  * Get authentication headers for API requests
  */
-function getAuthHeaders() {
+async function getAuthHeaders() {
     const headers = {};
     
     // Check for test mode parameters in URL
@@ -143,6 +143,17 @@ function getAuthHeaders() {
     if (urlParams.get('test_mode') === 'true') {
         headers['X-Test-Bypass-Auth'] = 'true';
         headers['X-Test-User-ID'] = urlParams.get('test_user_id') || 'test-user-123';
+    } else {
+        // Production mode - include Firebase auth token
+        try {
+            const user = firebase.auth().currentUser;
+            if (user) {
+                const token = await user.getIdToken();
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+        } catch (error) {
+            console.error('Failed to get auth token:', error);
+        }
     }
     
     return headers;
