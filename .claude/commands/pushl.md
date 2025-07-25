@@ -23,7 +23,7 @@ Pure Python implementation that handles git operations for pushing changes. This
 
 ## Output
 
-Creates `/tmp/copilot/push.json` with:
+Creates `/tmp/copilot_{branch}/push.json` with:
 
 ```json
 {
