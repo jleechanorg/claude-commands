@@ -1431,20 +1431,39 @@ def create_app() -> Flask:
                 return jsonify(settings)
             
             elif request.method == "POST":
-                # Validate model selection
+                # Validate settings data
                 data = request.get_json()
-                if not data or 'gemini_model' not in data:
-                    return jsonify({'error': 'Missing gemini_model parameter'}), 400
+                if not data:
+                    return jsonify({'error': 'No data provided'}), 400
                 
-                model = data['gemini_model'] 
-                if model not in constants.ALLOWED_GEMINI_MODELS:
-                    return jsonify({'error': 'Invalid model selection'}), 400
+                settings_to_update = {}
+                
+                # Validate gemini_model if provided
+                if 'gemini_model' in data:
+                    model = data['gemini_model']
+                    if model not in constants.ALLOWED_GEMINI_MODELS:
+                        return jsonify({'error': 'Invalid model selection'}), 400
+                    settings_to_update['gemini_model'] = model
+                
+                # Validate debug_mode if provided
+                if 'debug_mode' in data:
+                    debug_mode = data['debug_mode']
+                    if debug_mode not in constants.ALLOWED_DEBUG_MODE_VALUES:
+                        return jsonify({'error': 'Invalid debug mode value. Must be true or false.'}), 400
+                    settings_to_update['debug_mode'] = debug_mode
+                
+                # Ensure at least one setting is being updated
+                if not settings_to_update:
+                    return jsonify({'error': 'No valid settings provided'}), 400
                 
                 # Update settings
-                success = update_user_settings(user_id, {'gemini_model': model})
+                success = update_user_settings(user_id, settings_to_update)
                 
-                # Log the change
-                logging_util.info(f"User {user_id} changed Gemini model to {model}")
+                # Log the changes
+                if 'gemini_model' in settings_to_update:
+                    logging_util.info(f"User {user_id} changed Gemini model to {settings_to_update['gemini_model']}")
+                if 'debug_mode' in settings_to_update:
+                    logging_util.info(f"User {user_id} changed debug mode to {settings_to_update['debug_mode']}")
                 
                 if success:
                     return jsonify({'success': True, 'message': 'Settings saved'})

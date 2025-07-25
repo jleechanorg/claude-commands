@@ -22,6 +22,10 @@ GEMINI_MODEL_MAPPING = {
     'pro-2.5': 'gemini-2.5-pro'
 }
 
+# Debug mode settings
+DEFAULT_DEBUG_MODE = False
+ALLOWED_DEBUG_MODE_VALUES = [True, False]
+
 
 # --- INTERACTION MODES ---
 # Used to determine the style of user input and AI response

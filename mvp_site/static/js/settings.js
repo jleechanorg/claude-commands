@@ -14,6 +14,12 @@ document.addEventListener('DOMContentLoaded', function() {
     radioButtons.forEach(radio => {
         radio.addEventListener('change', saveSettings);
     });
+    
+    // Add change listener to debug mode switch
+    const debugSwitch = document.getElementById('debugModeSwitch');
+    if (debugSwitch) {
+        debugSwitch.addEventListener('change', saveSettings);
+    }
 });
 
 let saveTimeout = null;
@@ -47,6 +53,13 @@ async function loadSettings() {
             console.log('No saved model preference or invalid value, using default (pro-2.5)');
         }
         
+        // Set debug mode switch
+        const debugSwitch = document.getElementById('debugModeSwitch');
+        if (debugSwitch) {
+            debugSwitch.checked = settings.debug_mode === true;
+            console.log(`Set debug mode to: ${settings.debug_mode}`);
+        }
+        
     } catch (error) {
         console.error('Failed to load settings:', error);
         showErrorMessage('Failed to load settings. Please refresh the page.');
@@ -64,15 +77,23 @@ async function saveSettings() {
     
     saveTimeout = setTimeout(async () => {
         const selectedModel = document.querySelector('input[name="geminiModel"]:checked').value;
+        const debugSwitch = document.getElementById('debugModeSwitch');
         const radioButtons = document.querySelectorAll('input[name="geminiModel"]');
         
-        console.log(`Saving model selection: ${selectedModel}`);
+        // Collect all settings to save
+        const settingsToSave = {
+            gemini_model: selectedModel,
+            debug_mode: debugSwitch ? debugSwitch.checked : false
+        };
+        
+        console.log('Saving settings:', settingsToSave);
         
         // Show loading indicator
         showLoadingIndicator(true);
         
         // Disable inputs during save
         radioButtons.forEach(radio => radio.disabled = true);
+        if (debugSwitch) debugSwitch.disabled = true;
         
         try {
             const response = await fetch('/api/settings', {
@@ -81,7 +102,7 @@ async function saveSettings() {
                     ...getAuthHeaders(),
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ gemini_model: selectedModel })
+                body: JSON.stringify(settingsToSave)
             });
             
             const result = await response.json();
@@ -100,6 +121,7 @@ async function saveSettings() {
         } finally {
             // Re-enable inputs and hide loading
             radioButtons.forEach(radio => radio.disabled = false);
+            if (debugSwitch) debugSwitch.disabled = false;
             showLoadingIndicator(false);
         }
     }, 300); // 300ms debounce
