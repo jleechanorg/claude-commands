@@ -58,8 +58,8 @@ def test_structured_fields_creation_with_shared_utilities():
     print(f"   Expected: {expected_character}")
 
     # Setup and start server using shared utilities
-    setup_test_environment(use_real_api=False, port="6006")
-    server_process = start_test_server("6006")
+    setup_test_environment(use_real_api=False, port="8081")
+    server_process = start_test_server("8081")
 
     # Generate test user ID and URLs using shared utilities
     test_user_id = generate_test_user_id("structured-fields-browser")

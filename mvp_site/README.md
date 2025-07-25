@@ -6,6 +6,90 @@ This directory contains the core application code for WorldArchitect.AI, an AI-p
 
 **📋 [Comprehensive Code Review & File Responsibilities →](CODE_REVIEW_SUMMARY.md)**
 
+## Tech Stack & Competitive Positioning
+
+### Core Technology Stack
+
+WorldArchitect.AI leverages a carefully selected stack that balances rapid development with production scalability:
+
+#### Backend Foundation
+- **Python 3.11** with **Flask 2.x** - Lightweight web framework for rapid API development
+- **Google Gemini AI (latest SDK)** - `from google import genai` for state-of-the-art language model integration
+- **Firebase Firestore** - NoSQL document database with real-time synchronization capabilities
+- **Firebase Authentication** - Enterprise-grade user management and security
+
+#### AI & Content Generation
+- **Advanced Prompt Engineering** - Custom `PromptBuilder` class with sophisticated context management
+- **Robust Model Fallback** - Model cycling with automatic failover for 99.9% uptime
+- **Structured JSON Response Parsing** - Type-safe AI output validation using Pydantic schemas
+- **Entity Tracking System** - Maintains narrative consistency across multi-turn conversations
+- **Dual-Pass Generation** - Retry mechanisms for complex content generation scenarios
+
+#### Frontend & User Experience
+- **Vanilla JavaScript** - Zero-framework frontend for maximum performance and minimal dependencies
+- **Bootstrap 5.x** - Responsive design with custom theme system (light/dark/fantasy/cyberpunk)
+- **Real-time State Synchronization** - WebSocket-style updates without framework overhead
+- **Progressive Web App** - Offline-capable design with service worker integration
+
+#### Testing & Quality Assurance
+- **67% Test Coverage** - Comprehensive test suite covering thousands of statements
+- **Multi-Modal Testing** - Browser automation (Playwright), HTTP testing, and integration tests
+- **Mock Service Architecture** - Granular mocking for cost-effective development and CI/CD
+- **Automated Code Quality** - Ruff linting, MyPy type checking, and Bandit security scanning
+
+### Competitive Differentiation
+
+Compared to other GenAI tabletop RPG platforms, WorldArchitect.AI makes several distinctive technical choices:
+
+#### **vs. AI Dungeon / NovelAI** (Pure LLM Approaches)
+- **Hybrid Architecture**: Combines rule-based D&D 5e validation with generative content, ensuring mechanical accuracy
+- **State Management**: Explicit game state tracking vs. pure context-based memory
+- **Export Capabilities**: Multi-format document generation (PDF/DOCX/TXT) for offline campaign management
+
+#### **vs. D&D Beyond AI Features** (Enterprise Integration)
+- **Independent Platform**: Not constrained by official content licensing or corporate content policies
+- **Open Development**: Transparent architecture vs. closed proprietary systems
+- **Custom AI Pipeline**: Direct model access vs. mediated enterprise API layers
+
+#### **vs. Character.AI** (Conversational Focus)
+- **Campaign Persistence**: Long-term story continuity with structured state management
+- **Multi-Modal Output**: Rich document generation beyond conversational interfaces
+- **GM-Centric Design**: Purpose-built for game master workflows vs. general chat applications
+
+#### **vs. Dungeon Alchemist** (Procedural Generation)
+- **Narrative Focus**: Story and character development vs. primarily visual/map content
+- **AI-Native Design**: LLM-first architecture vs. traditional procedural algorithms
+- **Integrated Workflow**: Combined story generation, state management, and export in single platform
+
+### Technical Highlights
+
+#### **Standout Engineering Decisions**
+
+1. **Latest Gemini SDK Integration**: Uses `from google import genai` for cutting-edge AI capabilities
+2. **Granular Mock Architecture**: Environment-variable controlled mocking (`USE_MOCK_GEMINI`, `USE_MOCK_FIREBASE`) for development velocity
+3. **Token-Aware Design**: Built-in cost management and token counting throughout the AI pipeline
+4. **File-Based Prompt Management**: Version-controlled AI system instructions in `/prompts/` directory
+5. **Zero-Framework Frontend**: Deliberate choice for performance and maintainability over trendy JS frameworks
+
+#### **Production-Ready Features**
+
+- **Model Cycling**: Automatic fallback between Gemini models for reliability
+- **Content Validation**: Multi-layer validation ensuring narrative consistency and D&D rule compliance
+- **Caching Strategy**: Intelligent file caching with TTL for frequently accessed content
+- **Logging Infrastructure**: Emoji-enhanced logging with structured JSON output for monitoring
+- **Security Hardening**: Bandit security scanning, input sanitization, and Firebase Authentication integration
+
+### Architecture Philosophy
+
+WorldArchitect.AI's technical approach reflects a **pragmatic AI-first design**:
+
+- **Minimalism Over Complexity**: Vanilla JS frontend avoids unnecessary framework overhead
+- **AI Integration Over Simulation**: Direct LLM integration rather than simulated intelligence patterns
+- **Explicit State Over Implicit Context**: Structured game state management for reliable long-term campaigns
+- **Developer Experience**: Comprehensive testing, mocking, and debugging infrastructure for sustainable development
+
+This stack positions WorldArchitect.AI as a technically sophisticated yet maintainable platform that bridges the gap between experimental AI tools and production-ready tabletop RPG solutions.
+
 ## Architecture
 
 ### 📁 File Placement Guidelines

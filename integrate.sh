@@ -113,8 +113,172 @@ fi
 echo "1. Switching to main branch..."
 git checkout main
 
-echo "2. Pulling latest changes from origin..."
-git pull
+echo "2. Smart sync with origin/main..."
+if ! git fetch origin main; then
+    echo "❌ Error: Failed to fetch updates from origin/main."
+    echo "   Possible causes: network issues, authentication problems, or repository unavailability."
+    echo "   Please check your connection and credentials, and try again."
+    exit 1
+fi
+
+# Helper function to extract GitHub repository URL from git remote
+get_github_repo_url() {
+    git config --get remote.origin.url | sed 's/.*github.com[:/]\([^/]*\/[^/]*\).*/\1/' | sed 's/.git$//'
+}
+
+# Helper function to check if we need to wait for existing sync PR
+check_existing_sync_pr() {
+    if command -v gh >/dev/null 2>&1; then
+        # Check for existing sync PRs that might be pending
+        existing_pr=$(gh pr list --author "@me" --state open --search "Sync main branch commits (integrate.sh)" --json number,url --jq '.[0] | select(.number != null)' 2>/dev/null || true)
+        if [ -n "$existing_pr" ]; then
+            pr_number=$(echo "$existing_pr" | jq -r '.number')
+            pr_url=$(echo "$existing_pr" | jq -r '.url')
+            echo "⚠️  Found existing sync PR #$pr_number: $pr_url"
+            echo "   Please merge this PR first, then re-run integrate.sh"
+            echo "   Or run: gh pr merge $pr_number --merge"
+            exit 1
+        fi
+    fi
+}
+
+# Check for existing sync PRs before proceeding
+check_existing_sync_pr
+
+# Detect relationship between local main and origin/main
+if git merge-base --is-ancestor HEAD origin/main; then
+    # Local main is behind origin/main → safe fast-forward
+    echo "✅ Fast-forwarding to latest origin/main"
+    if ! git merge --ff-only origin/main; then
+        echo "❌ Error: Fast-forward merge with origin/main failed. Please resolve manually." >&2
+        exit 1
+    fi
+    
+elif git merge-base --is-ancestor origin/main HEAD; then
+    # Local main is ahead of origin/main → create PR for commits
+    echo "✅ Local main ahead, creating PR to sync"
+    commit_count=$(git rev-list --count origin/main..HEAD)
+    echo "   Found $commit_count commits ahead of origin/main"
+    
+    # Generate timestamp for branch naming
+    timestamp=$(date +%Y%m%d-%H%M%S)
+    
+    # Create temporary branch for PR
+    sync_branch="sync-main-$timestamp"
+    echo "   Creating sync branch: $sync_branch"
+    
+    if ! git checkout -b "$sync_branch"; then
+        echo "❌ Error: Failed to create sync branch" >&2
+        exit 1
+    fi
+    
+    if ! git push -u origin HEAD; then
+        echo "❌ Error: Failed to push sync branch" >&2
+        exit 1
+    fi
+    
+    # Create PR if gh is available
+    if command -v gh >/dev/null 2>&1; then
+        pr_title="Sync main branch commits (integrate.sh)"
+        # Dynamic commit listing based on count
+        commit_limit=${PR_COMMIT_LIMIT:-10}
+        if [ "$commit_count" -le "$commit_limit" ]; then
+            commit_list=$(git log --oneline origin/main..HEAD)
+        else
+            commit_list=$(git log --oneline origin/main..HEAD | head -"$commit_limit")
+            commit_list="$commit_list
+   ...and $((commit_count - commit_limit)) more commits not shown"
+        fi
+        
+        pr_body="Auto-generated PR to sync $commit_count commits that were ahead on local main.
+
+This PR was created by integrate.sh to handle repository branch protection rules.
+
+Commits included:
+$commit_list
+
+Please review and merge to complete the integration process."
+        
+        if pr_url=$(gh pr create --title "$pr_title" --body "$pr_body" 2>/dev/null); then
+            echo "✅ Created PR: $pr_url"
+            echo "   Please review and merge the PR, then re-run integrate.sh"
+            exit 0
+        else
+            echo "⚠️  Could not create PR automatically. Please create one manually:"
+            echo "   Branch: $sync_branch"
+            echo "   URL: https://github.com/$(get_github_repo_url)/compare/$sync_branch"
+            exit 1
+        fi
+    else
+        echo "⚠️  gh CLI not available. Please create PR manually:"
+        echo "   Branch: $sync_branch"
+        echo "   URL: https://github.com/$(get_github_repo_url)/compare/$sync_branch"
+        exit 1
+    fi
+    
+else
+    # Branches have diverged → create PR with merged changes
+    echo "⚠️  Local main and origin/main have diverged"
+    echo "🔄 Creating merge branch to sync histories..."
+    
+    # Generate timestamp for branch naming  
+    timestamp=$(date +%Y%m%d-%H%M%S)
+    
+    # Create temporary branch for merge PR
+    merge_branch="merge-main-$timestamp"
+    echo "   Creating merge branch: $merge_branch"
+    
+    if ! git checkout -b "$merge_branch"; then
+        echo "❌ Error: Failed to create merge branch" >&2
+        exit 1
+    fi
+    
+    # Perform the merge on the temporary branch
+    if ! git merge --no-ff origin/main -m "integrate.sh: Auto-merge divergent main histories
+
+This merge resolves the divergence between local main (with unpushed commits)
+and origin/main (with merged PR changes). This prevents the integration script
+from failing and requiring manual intervention.
+
+Equivalent to: git merge --no-ff origin/main"; then
+        echo "❌ Error: Auto-merge of divergent main histories failed. Please resolve conflicts manually." >&2
+        exit 1
+    fi
+    
+    if ! git push -u origin HEAD; then
+        echo "❌ Error: Failed to push merge branch" >&2
+        exit 1
+    fi
+    
+    # Create PR if gh is available
+    if command -v gh >/dev/null 2>&1; then
+        pr_title="Merge divergent main histories (integrate.sh)"
+        pr_body="Auto-generated PR to merge divergent main histories.
+
+This PR was created by integrate.sh to handle repository branch protection rules
+when local main and origin/main have diverged.
+
+This merge resolves the divergence and allows integration to proceed normally.
+
+Please review and merge to complete the integration process."
+        
+        if pr_url=$(gh pr create --title "$pr_title" --body "$pr_body" 2>/dev/null); then
+            echo "✅ Created merge PR: $pr_url"
+            echo "   Please review and merge the PR, then re-run integrate.sh"
+            exit 0
+        else
+            echo "⚠️  Could not create PR automatically. Please create one manually:"
+            echo "   Branch: $merge_branch"
+            echo "   URL: https://github.com/$(get_github_repo_url)/compare/$merge_branch"
+            exit 1
+        fi
+    else
+        echo "⚠️  gh CLI not available. Please create PR manually:"
+        echo "   Branch: $merge_branch"
+        echo "   URL: https://github.com/$(get_github_repo_url)/compare/$merge_branch"
+        exit 1
+    fi
+fi
 
 # Check if there are any local branches that haven't been pushed
 echo "3. Checking for unmerged local branches..."

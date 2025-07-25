@@ -109,8 +109,7 @@ def main():
     """Main entry point for header checking"""
     checker = HeaderComplianceChecker()
 
-    # In a real implementation, we would get the previous response
-    # from the conversation context. For now, we'll simulate:
+    # Get response text from command line argument for validation
 
     # Check if we have a test response passed as argument
     if len(sys.argv) > 1:

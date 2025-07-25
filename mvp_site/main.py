@@ -34,6 +34,7 @@ import collections
 import json
 import logging
 import os
+import random
 import subprocess
 import sys
 import traceback
@@ -66,8 +67,16 @@ from firestore_service import (
     update_user_settings,
 )
 from game_state import GameState
+from debug_hybrid_system import process_story_for_display
 
-# --- Service Imports ---
+# Service imports that may be conditionally used
+import gemini_service as real_gemini_service
+import firestore_service as real_firestore_service
+from mocks import mock_gemini_service_wrapper
+from mocks import mock_firestore_service_wrapper
+import structured_fields_utils
+
+# --- Service Selection Logic ---
 # Granular mock control - check individual service mock flags
 use_mock_gemini = os.environ.get("USE_MOCK_GEMINI", "").lower() in ["true", "1", "yes"]
 use_mock_firebase = os.environ.get("USE_MOCK_FIREBASE", "").lower() in [
@@ -84,19 +93,17 @@ if os.environ.get("USE_MOCKS", "").lower() in ["true", "1", "yes"]:
     if "USE_MOCK_FIREBASE" not in os.environ:
         use_mock_firebase = True
 
-# Import Gemini service based on flag
+# Choose which service to use based on flags
 if use_mock_gemini:
-    from mocks import mock_gemini_service_wrapper as gemini_service
+    gemini_service = mock_gemini_service_wrapper
 else:
-    import gemini_service
+    gemini_service = real_gemini_service
 
-# Import Firestore service based on flag
+# Choose which firestore service to use based on flags  
 if use_mock_firebase:
-    from mocks import mock_firestore_service_wrapper as firestore_service
+    firestore_service = mock_firestore_service_wrapper
 else:
-    import firestore_service
-
-import structured_fields_utils
+    firestore_service = real_firestore_service
 
 # --- CONSTANTS ---
 # API Configuration
@@ -753,7 +760,6 @@ def _build_campaign_prompt(character: Optional[str], setting: Optional[str], des
     Returns:
         Constructed campaign prompt with proper character/setting/description format
     """
-    import random
 
     # Normalize inputs: convert None to empty string and strip whitespace
     character = (character or "").strip()
@@ -982,8 +988,6 @@ def create_app() -> Flask:
 
             # Apply hybrid debug processing to story entries for backward compatibility
             debug_mode = game_state_dict.get("debug_mode", False)
-            from debug_hybrid_system import process_story_for_display
-
             processed_story = process_story_for_display(story, debug_mode)
 
             # Debug logging for structured fields

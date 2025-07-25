@@ -23,6 +23,7 @@
 - **HANDOFF-SELF-CRITICAL** 🟢 Self-critical Claude Code CLI - PR #747 READY FOR HANDOFF
 - **HANDOFF-SLASH-COMMANDS** 🟢 Enhance /handoff + create /commentreply - PR #755 READY FOR HANDOFF
 - **HANDOFF-COPILOT-ENHANCEMENTS** 🟢 Advanced copilot command features - PR #780 READY FOR HANDOFF
+- **HANDOFF-SETTINGS-PAGE** 🟢 Settings page with Gemini model selection - PR #870 READY FOR HANDOFF
 - **TASK-006b** 🟡 Background story pause button - PR #323 OPEN
 - **TASK-140** 🔴 Hard stop for integrity failures - PR #336 OPEN
 - **TASK-142** 🔴 Fix send button unclickable - PR #338 OPEN

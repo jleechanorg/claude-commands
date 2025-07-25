@@ -15,11 +15,17 @@ from playwright.sync_api import Browser, Page, sync_playwright
 sys.path.append(os.path.dirname(__file__))
 from screenshot_utils import take_screenshot
 
-# Default test configuration
-DEFAULT_TEST_USER = "test-user-123"
-DEFAULT_PORT = 6006
+# Import centralized configuration  
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from testing_util import TestConfig, TestType
+
+# Default test configuration (now using centralized config)
+DEFAULT_TEST_USER = TestConfig.DEFAULT_TEST_USER_ID
+DEFAULT_PORT = TestConfig.get_server_config(TestType.BROWSER).base_port
 DEFAULT_HEADLESS = False
-DEFAULT_TIMEOUT = 30000  # 30 seconds
+DEFAULT_TIMEOUT = TestConfig.LONG_TIMEOUT_MS  # 30 seconds
 
 
 def setup_browser(

@@ -31,7 +31,55 @@ else
     echo "Error: Could not determine current branch (detached HEAD?). Please specify a branch name or ensure you are in a valid Git repository."
     exit 1
   fi
-  BRANCH_MESSAGE="Figure out the current branch ($REMOTE_BRANCH), use conversation context, and resume work."
+  
+  # Gather context about current work
+  echo "Gathering context for branch: $REMOTE_BRANCH"
+  
+  # Check for open PR on this branch
+  PR_INFO=""
+  if command -v gh >/dev/null 2>&1; then
+    PR_INFO=$(gh pr list --head "$REMOTE_BRANCH" --state open --json number,title,url 2>/dev/null | jq -r '.[] | "PR #\(.number): \(.title)"' 2>/dev/null || echo "")
+  fi
+  
+  # Check for scratchpad file
+  SCRATCHPAD_INFO=""
+  SCRATCHPAD_FILE="roadmap/scratchpad_${REMOTE_BRANCH}.md"
+  if [ -f "$SCRATCHPAD_FILE" ]; then
+    # Get first few lines of scratchpad for context
+    SCRATCHPAD_INFO=$(head -n 10 "$SCRATCHPAD_FILE" 2>/dev/null | grep -E "(Goal:|Task:|Current:|Status:)" | head -n 3 | tr '\n' ' ' || echo "")
+  fi
+  
+  # Get recent commit messages (only from current branch, not from main)
+  RECENT_COMMITS=$(git log --oneline -3 --first-parent 2>/dev/null | sed 's/^/  /' || echo "")
+  
+  # Check for TODO or task files that might provide context
+  TODO_INFO=""
+  TODO_FILE="TODO_${REMOTE_BRANCH}.md"
+  if [ -f "$TODO_FILE" ]; then
+    TODO_INFO=$(head -n 5 "$TODO_FILE" 2>/dev/null | tr '\n' ' ' || echo "")
+  fi
+  
+  # Build comprehensive context message
+  BRANCH_MESSAGE="Resume work on branch: $REMOTE_BRANCH"
+  
+  if [ -n "$PR_INFO" ]; then
+    BRANCH_MESSAGE="$BRANCH_MESSAGE. Active $PR_INFO"
+  fi
+  
+  if [ -n "$SCRATCHPAD_INFO" ]; then
+    BRANCH_MESSAGE="$BRANCH_MESSAGE. Context: $SCRATCHPAD_INFO"
+  fi
+  
+  if [ -n "$TODO_INFO" ]; then
+    BRANCH_MESSAGE="$BRANCH_MESSAGE. TODO: $TODO_INFO"
+  fi
+  
+  if [ -n "$RECENT_COMMITS" ]; then
+    BRANCH_MESSAGE="$BRANCH_MESSAGE. Recent commits:$'\n'$RECENT_COMMITS"
+  fi
+  
+  # Add instruction to check conversation history
+  BRANCH_MESSAGE="$BRANCH_MESSAGE$'\n\n'Please review conversation history and any existing context to continue the work appropriately."
 fi
 
 if ! command -v ccschedule >/dev/null 2>&1; then

@@ -22,7 +22,7 @@ def test_structured_fields_display():
 
         try:
             # Navigate with test mode enabled
-            test_url = "http://localhost:6006?test_mode=true&test_user_id=ui-test-user"
+            test_url = "http://localhost:8081?test_mode=true&test_user_id=ui-test-user"
             page.goto(test_url)
             print(f"✓ Navigated to app with test mode: {test_url}")
 

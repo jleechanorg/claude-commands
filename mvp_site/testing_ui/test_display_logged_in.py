@@ -23,7 +23,7 @@ def test_display_fields():
 
         try:
             # Navigate to the app
-            page.goto("http://localhost:6006")
+            page.goto("http://localhost:8081")
             print("✓ Navigated to app")
 
             # Wait a moment

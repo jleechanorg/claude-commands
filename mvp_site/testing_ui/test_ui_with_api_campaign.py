@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def create_campaign_via_api():
     """Create a campaign using the API with test headers."""
-    url = "http://localhost:6006/api/campaigns"
+    url = "http://localhost:8081/api/campaigns"
     headers = {
         "Content-Type": "application/json",
         "X-Test-Bypass-Auth": "true",
@@ -84,7 +84,7 @@ def test_ui_elements_with_api_campaign():
             print("=" * 60)
 
             # Navigate to dashboard first with test mode
-            base_url = "http://localhost:6006?test_mode=true&test_user_id=ui-debug-test"
+            base_url = "http://localhost:8081?test_mode=true&test_user_id=ui-debug-test"
             page.goto(base_url)
             print(f"✓ Navigated to: {base_url}")
 
@@ -316,7 +316,7 @@ def test_ui_elements_with_api_campaign():
 if __name__ == "__main__":
     print("UI Elements Verification Test - Using API to create campaign")
     print(
-        "Make sure server is running with: TESTING=true PORT=6006 python main.py serve"
+        "Make sure server is running with: TESTING=true PORT=8081 python main.py serve"
     )
     print("-" * 60)
     test_ui_elements_with_api_campaign()

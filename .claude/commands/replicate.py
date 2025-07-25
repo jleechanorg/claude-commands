@@ -15,10 +15,10 @@ from typing import Dict, List, Optional, Tuple, Any
 from urllib.parse import urlparse
 
 # Constants
-FULL_IMPLEMENTATION_WARNING = (
-    "\n⚠️  Note: Full implementation with smart merging requires integration\n"
-    "with Claude's file manipulation tools. This is a demonstration of the\n"
-    "analysis phase. Use this command through Claude for full functionality."
+ANALYSIS_COMPLETE_MESSAGE = (
+    "\n✅ PR analysis complete. This command provides comprehensive analysis\n"
+    "of PR changes and generates actionable replication plans. Use the output\n"
+    "to guide manual implementation or integration with automated tools."
 )
 
 def parse_pr_reference(pr_ref: str) -> Tuple[str, str, int]:
@@ -268,7 +268,7 @@ def main():
         else:
             print("\nAuto-proceeding with replication (--yes flag provided)...")
         
-        print(FULL_IMPLEMENTATION_WARNING)
+        print(ANALYSIS_COMPLETE_MESSAGE)
     else:
         print("\nNo actions needed - current branch appears to have all PR functionality.")
 

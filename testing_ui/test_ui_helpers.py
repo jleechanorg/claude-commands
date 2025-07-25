@@ -276,7 +276,7 @@ def get_all_text_content(page: Page, selector: str) -> list[str]:
 def navigate_to_test_game(
     page: Page,
     campaign_name: str = "All Fields Test Campaign",
-    port: int = 6006,
+    port: int = 8081,
     test_user_id: str = "test-user-123",
 ) -> bool:
     """

@@ -22,7 +22,7 @@ def test_choice_id_mobile_responsive():
 
         try:
             # Navigate to test page with planning blocks
-            page.goto("http://localhost:6006?test_mode=true&test_user_id=test-user-123")
+            page.goto("http://localhost:8081?test_mode=true&test_user_id=test-user-123")
             page.wait_for_load_state("networkidle")
 
             # Inject test CSS to ensure we have .choice-id elements
@@ -155,7 +155,7 @@ def test_choice_button_mobile_layout():
         page = browser.new_page()
 
         try:
-            page.goto("http://localhost:6006?test_mode=true&test_user_id=test-user-123")
+            page.goto("http://localhost:8081?test_mode=true&test_user_id=test-user-123")
             page.wait_for_load_state("networkidle")
 
             # Load planning-blocks.css

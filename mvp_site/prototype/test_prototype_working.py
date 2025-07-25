@@ -8,6 +8,7 @@ Run from project root: python3 test_prototype_working.py
 
 import sys
 import os
+import time
 
 # CRITICAL: Add parent directory to handle relative imports
 project_root = os.path.dirname(os.path.abspath(__file__))
@@ -88,7 +89,6 @@ def run_tests():
     
     print("\n3. Testing performance...")
     
-    import time
     start = time.time()
     for _ in range(100):
         fuzzy.validate(narrative, entities)

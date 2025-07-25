@@ -1,0 +1,379 @@
+#!/usr/bin/env python3
+"""
+base.py - Base class for modular copilot commands
+
+Provides:
+- Strong I/O contracts with JSON schemas
+- Standardized error handling
+- Common utilities for all commands
+- Verification patterns from PR #796
+"""
+
+import json
+import os
+import subprocess
+import sys
+from abc import ABC, abstractmethod
+import time
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+
+class CopilotCommandBase(ABC):
+    """Base class for all modular copilot commands."""
+    
+    # Standard directory for I/O files
+    IO_DIR = Path("/tmp/copilot")
+    
+    def __init__(self, pr_number: Optional[str] = None):
+        """Initialize base command.
+        
+        Args:
+            pr_number: GitHub PR number (optional for some commands)
+        """
+        self.pr_number = pr_number
+        self.start_time = datetime.now()
+        self.repo = self._get_repo_info()
+        self.current_branch = self._get_current_branch()
+        
+        # Ensure I/O directory exists
+        self.IO_DIR.mkdir(exist_ok=True)
+    
+    def _get_repo_info(self) -> str:
+        """Get repository info from GitHub CLI or git remote."""
+        try:
+            result = subprocess.run(
+                ['gh', 'repo', 'view', '--json', 'nameWithOwner'],
+                capture_output=True, text=True, check=True
+            )
+            data = json.loads(result.stdout)
+            return data['nameWithOwner']
+        except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError):
+            # Fallback to git remote parsing
+            try:
+                result = subprocess.run(
+                    ['git', 'remote', 'get-url', 'origin'],
+                    capture_output=True, text=True, check=True
+                )
+                url = result.stdout.strip()
+                if 'github.com' in url:
+                    if url.endswith('.git'):
+                        url = url[:-4]
+                    if ':' in url:
+                        return url.split(':')[-1]
+                    else:
+                        return '/'.join(url.split('/')[-2:])
+            except subprocess.CalledProcessError:
+                pass
+            return os.environ.get("DEFAULT_REPO", "jleechanorg/worldarchitect.ai")  # Default fallback
+    
+    def _get_current_branch(self) -> str:
+        """Get current git branch for branch-specific file naming."""
+        try:
+            result = subprocess.run(
+                ['git', 'branch', '--show-current'],
+                capture_output=True, text=True, check=True, cwd=os.getcwd()
+            )
+            return result.stdout.strip()
+        except Exception:
+            return "unknown-branch"
+    
+    def run_gh_command(self, command: List[str]) -> Dict[str, Any]:
+        """Run GitHub CLI command and return parsed JSON.
+        
+        Args:
+            command: Command list for subprocess
+            
+        Returns:
+            Parsed JSON response or empty dict on error
+        """
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, check=True)
+            if not result.stdout.strip():
+                return {}
+            return json.loads(result.stdout)
+        except subprocess.CalledProcessError as e:
+            self.log_error(f"GitHub CLI error: {e.stderr}")
+            return {}
+        except json.JSONDecodeError as e:
+            self.log_error(f"JSON parsing error: {e}")
+            return {}
+    
+    def load_json_file(self, filename: str) -> Dict[str, Any]:
+        """Load JSON from standard I/O directory.
+        
+        Args:
+            filename: Name of file to load
+            
+        Returns:
+            Parsed JSON data or empty dict if not found
+        """
+        filepath = self.IO_DIR / filename
+        if not filepath.exists():
+            self.log_error(f"File not found: {filepath}")
+            return {}
+        
+        try:
+            with open(filepath, 'r') as f:
+                return json.load(f)
+        except json.JSONDecodeError as e:
+            self.log_error(f"JSON decode error in {filename}: {e}")
+            return {}
+    
+    def save_json_file(self, filename: str, data: Dict[str, Any]) -> bool:
+        """Save JSON to standard I/O directory.
+        
+        Args:
+            filename: Name of file to save
+            data: Data to save as JSON
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        filepath = self.IO_DIR / filename
+        try:
+            with open(filepath, 'w') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            return True
+        except Exception as e:
+            self.log_error(f"Failed to save {filename}: {e}")
+            return False
+    
+    def log(self, message: str):
+        """Log informational message with timestamp in CI environments."""
+        if os.environ.get('CI') or os.environ.get('GITHUB_ACTIONS'):
+            timestamp = datetime.now().strftime('%H:%M:%S')
+            print(f"[{timestamp}] [{self.__class__.__name__}] {message}")
+        else:
+            print(f"[{self.__class__.__name__}] {message}")
+    
+    def log_error(self, message: str):
+        """Log error message to stderr with timestamp in CI environments."""
+        if os.environ.get('CI') or os.environ.get('GITHUB_ACTIONS'):
+            timestamp = datetime.now().strftime('%H:%M:%S')
+            print(f"[{timestamp}] [{self.__class__.__name__}] ERROR: {message}", file=sys.stderr)
+        else:
+            print(f"[{self.__class__.__name__}] ERROR: {message}", file=sys.stderr)
+    
+    def get_execution_time(self) -> float:
+        """Get execution time in seconds."""
+        return (datetime.now() - self.start_time).total_seconds()
+    
+    @abstractmethod
+    def execute(self) -> Dict[str, Any]:
+        """Execute the command logic.
+        
+        Returns:
+            Result dictionary with standard fields:
+            - success: bool
+            - message: str
+            - data: dict (command-specific)
+            - execution_time: float
+        """
+        pass
+    
+    def run(self) -> int:
+        """Run the command and handle errors.
+        
+        Returns:
+            Exit code (0 for success, 1 for failure)
+        """
+        try:
+            result = self.execute()
+            result['execution_time'] = self.get_execution_time()
+            
+            # Save result to standard output file
+            output_file = f"{self.__class__.__name__.lower()}_result.json"
+            self.save_json_file(output_file, result)
+            
+            # Print summary
+            if result.get('success'):
+                self.log(f"✅ Success: {result.get('message', 'Command completed')}")
+            else:
+                self.log_error(f"❌ Failed: {result.get('message', 'Command failed')}")
+            
+            return 0 if result.get('success') else 1
+            
+        except Exception as e:
+            self.log_error(f"Unexpected error: {e}")
+            error_result = {
+                'success': False,
+                'message': str(e),
+                'execution_time': self.get_execution_time()
+            }
+            self.save_json_file(f"{self.__class__.__name__.lower()}_error.json", error_result)
+            return 1
+    
+    def run_ci_replica(self, script_path: str = "run_ci_replica.sh") -> Dict[str, Any]:
+        """Run local CI replica and capture results.
+        
+        Args:
+            script_path: Path to CI replica script
+            
+        Returns:
+            Dict with CI results and any errors
+        """
+        self.log(f"Running local CI replica: {script_path}")
+        
+        try:
+            # Try different locations for the script
+            script_locations = [
+                script_path,
+                f"./{script_path}",
+                f"../../{script_path}",
+                f"../../../{script_path}",
+                f"/home/jleechan/projects/worldarchitect.ai/worktree_human2/{script_path}"
+            ]
+            
+            result = None
+            for location in script_locations:
+                if os.path.exists(location):
+                    result = subprocess.run(
+                        [location],
+                        capture_output=True,
+                        text=True,
+                        timeout=300  # 5 minute timeout
+                    )
+                    break
+            
+            if result is None:
+                raise FileNotFoundError(f"CI replica script not found in any location: {script_path}")
+            
+            return {
+                'success': result.returncode == 0,
+                'stdout': result.stdout,
+                'stderr': result.stderr,
+                'returncode': result.returncode,
+                'executed_at': datetime.now().isoformat()
+            }
+        except subprocess.TimeoutExpired:
+            self.log_error("CI replica timed out after 5 minutes")
+            return {
+                'success': False,
+                'error': 'Timeout after 5 minutes',
+                'executed_at': datetime.now().isoformat()
+            }
+        except FileNotFoundError:
+            self.log_error(f"CI replica script not found: {script_path}")
+            return {
+                'success': False,
+                'error': f'Script not found: {script_path}',
+                'executed_at': datetime.now().isoformat()
+            }
+        except Exception as e:
+            self.log_error(f"CI replica failed: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'executed_at': datetime.now().isoformat()
+            }
+    
+    def compare_ci_results(self, github_ci: Dict[str, Any], local_ci: Dict[str, Any]) -> Dict[str, Any]:
+        """Compare GitHub CI results with local CI replica results.
+        
+        Args:
+            github_ci: Results from GitHub CI checks
+            local_ci: Results from local CI replica
+            
+        Returns:
+            Comparison dict with discrepancies highlighted
+        """
+        comparison = {
+            'timestamp': datetime.now().isoformat(),
+            'match': github_ci.get('success') == local_ci.get('success'),
+            'github_ci': github_ci,
+            'local_ci': local_ci,
+            'discrepancies': []
+        }
+        
+        # Check basic success/failure match
+        if github_ci.get('success') != local_ci.get('success'):
+            comparison['discrepancies'].append({
+                'type': 'status_mismatch',
+                'github': 'passing' if github_ci.get('success') else 'failing',
+                'local': 'passing' if local_ci.get('success') else 'failing'
+            })
+        
+        # Extract test results if available
+        github_tests = self._extract_test_results(github_ci.get('stdout', ''))
+        local_tests = self._extract_test_results(local_ci.get('stdout', ''))
+        
+        if github_tests != local_tests:
+            comparison['discrepancies'].append({
+                'type': 'test_count_mismatch',
+                'github_tests': github_tests,
+                'local_tests': local_tests
+            })
+        
+        return comparison
+    
+    def _extract_test_results(self, output: str) -> Dict[str, int]:
+        """Extract test counts from CI output.
+        
+        Args:
+            output: CI output text
+            
+        Returns:
+            Dict with test counts
+        """
+        import re
+        
+        # Common test result patterns
+        patterns = {
+            'passed': r'(\d+) passed',
+            'failed': r'(\d+) failed',
+            'skipped': r'(\d+) skipped',
+            'errors': r'(\d+) error'
+        }
+        
+        results = {}
+        for key, pattern in patterns.items():
+            match = re.search(pattern, output, re.IGNORECASE)
+            if match:
+                results[key] = int(match.group(1))
+            else:
+                results[key] = 0
+        
+        return results
+
+
+class VerificationMixin:
+    """Mixin providing verification patterns from PR #796."""
+    
+    def log(self, message: str):
+        """Log method for mixin - should be provided by base class."""
+        print(f"[Verification] {message}")
+    
+    def log_error(self, message: str):
+        """Log error for mixin - should be provided by base class."""
+        print(f"[Verification] ERROR: {message}", file=sys.stderr)
+    
+    def verify_with_retry(self, 
+                         verify_func, 
+                         expected_result,
+                         max_attempts: int = 3,
+                         backoff_base: int = 5) -> bool:
+        """Verify with exponential backoff retry.
+        
+        Args:
+            verify_func: Function that returns current state
+            expected_result: Expected result to compare against
+            max_attempts: Maximum retry attempts
+            backoff_base: Base seconds for exponential backoff
+            
+        Returns:
+            True if verification succeeds, False otherwise
+        """
+        for attempt in range(1, max_attempts + 1):
+            current = verify_func()
+            if current == expected_result:
+                self.log(f"✅ Verification passed (attempt {attempt})")
+                return True
+            
+            if attempt < max_attempts:
+                wait_time = backoff_base * attempt
+                time.sleep(wait_time)
+        
+        self.log_error(f"❌ Verification failed after {max_attempts} attempts")
+        return False

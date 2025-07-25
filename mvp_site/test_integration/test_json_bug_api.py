@@ -9,7 +9,7 @@ import sys
 import requests
 
 # Test configuration
-BASE_URL = "http://localhost:6006"
+BASE_URL = "http://localhost:8081"
 TEST_USER_ID = "json-bug-api-test"
 
 
@@ -95,7 +95,7 @@ if __name__ == "__main__":
         print("✅ Server is running\n")
     except:
         print("❌ Server not running!")
-        print("   Start with: TESTING=true PORT=6006 python mvp_site/main.py serve")
+        print("   Start with: TESTING=true PORT=8081 python mvp_site/main.py serve")
         sys.exit(1)
 
     bug_found = test_api_json_bug()

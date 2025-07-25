@@ -107,14 +107,32 @@
 
 🚨 **NO FAKE IMPLEMENTATIONS**: ⚠️ MANDATORY
 
+**CRITICAL ANTI-PATTERN**: Always audit existing functionality before implementing new code
+
 - ❌ NEVER create files with "# Note: In the real implementation" comments
 - ❌ NEVER write placeholder code that doesn't actually work  
 - ❌ NEVER create demonstration files instead of working implementations
+- ❌ NEVER create Python intelligence files when .md files handle the logic
+- ❌ NEVER duplicate systematic protocols that already exist in other .md files
+- ❌ NEVER reimplement existing command functionality (use orchestration instead)
+- ✅ ALWAYS audit existing commands and .md files before writing new implementations
 - ✅ ALWAYS build real, functional code that works immediately
 - ✅ ALWAYS enhance existing systems rather than creating fake parallel ones
+- ✅ ALWAYS check if functionality exists: Read existing commands, Grep for patterns
 - **Pattern**: Real implementation > No implementation > Fake implementation
+- **Evidence**: PR #820 - 563+ lines of fake code removed (fixpr.py, commentreply.py, copilot.md duplication)
 - **Evidence**: orchestrate_enhanced.py with placeholder comments frustrated user
 - **Rule**: If you can't implement it properly, don't create the file at all
+
+🚨 **ORCHESTRATION OVER DUPLICATION**: ⚠️ MANDATORY  
+- **Principle**: Orchestrators delegate to existing commands, never reimplement their functionality
+- ✅ Pattern: New commands should be orchestrators, not implementers
+- ✅ Use existing /commentreply, /pushl, /fixpr rather than duplicating their logic
+- ✅ Add command summary at top of orchestrator .md files to prevent confusion
+- ❌ NEVER copy systematic protocols from other .md files into new commands
+- ❌ NEVER duplicate GitHub API commands that already exist in other commands
+- **Evidence**: PR #812 (https://github.com/WorldArchitectAI/repo/pull/812) - 120 lines of duplicate systematic protocol removed from copilot.md
+- **Architecture**: copilot = orchestrator, not implementer
 
 🚨 **NO OVER-ENGINEERING**: Prevent building parallel inferior systems vs enhancing existing ones
    - ✅ ALWAYS ask "Can the LLM handle this naturally?" before building parsers/analytics systems
@@ -130,6 +148,24 @@
 
 🚨 **NO FALSE PROMISES**: Be honest about capabilities | Conservative language | Deliver or don't promise
 
+🚨 **NO UNNECESSARY EXTERNAL APIS**: Before adding ANY external API integration:
+   - ✅ FIRST ask "Can Claude solve this directly without external APIs?"
+   - ✅ ALWAYS try direct implementation before adding dependencies
+   - ✅ TEST the direct solution - if it works, STOP there
+   - ❌ NEVER default to Gemini API just because it exists in codebase
+   - ❌ NEVER add external LLM calls when Claude can generate responses directly
+   - **Pattern**: Direct solution → Justify external need → Only then integrate
+   - **Anti-pattern**: See AI task → Immediately reach for Gemini API
+   - **Evidence**: GitHub comment fiasco (PR #796) - built Gemini integration that degraded to useless generic templates when Claude could have generated responses directly
+
+🚨 **GEMINI API JUSTIFICATION REQUIRED**: Gemini should ONLY be used when:
+   - ✅ The task requires capabilities Claude doesn't have (e.g., image generation)
+   - ✅ The system needs to work autonomously without Claude present
+   - ✅ Specific model features are required (e.g., specific Gemini models)
+   - ✅ User explicitly requests Gemini integration
+   - ❌ NEVER use Gemini just for text generation that Claude can do
+   - ❌ NEVER add complexity without clear unique value
+   - **Question to ask**: "What can Gemini do here that Claude cannot?"
 🚨 **USE LLM CAPABILITIES**: When designing command systems or natural language features:
    - ❌ NEVER suggest keyword matching, regex patterns, or rule-based parsing
    - ❌ NEVER propose "if word in text" simplistic approaches
@@ -137,6 +173,18 @@
    - ✅ ALWAYS trust the LLM to understand context, nuance, and intent
    - **Pattern**: User intent → LLM understanding → Natural response
    - **Anti-pattern**: Keywords → Rules → Rigid behavior
+
+🚨 **NEVER SIMULATE INTELLIGENCE**: When building response generation systems:
+   - ❌ NEVER create Python functions that simulate Claude's responses with templates
+   - ❌ NEVER use pattern matching to generate "intelligent" responses  
+   - ❌ NEVER build `_create_contextual_response()` methods that fake understanding
+   - ❌ NEVER generate generic replies like "I'll fix the issue" or "Thanks for the suggestion"
+   - ✅ ALWAYS invoke actual Claude for genuine response generation
+   - ✅ ALWAYS pass full comment context to Claude for analysis
+   - ✅ ALWAYS ensure responses address specific technical points, not patterns
+   - **Pattern**: Collect data → Claude analyzes → Claude responds
+   - **Anti-pattern**: Collect data → Python templates → Fake responses
+   - **Violation Count**: 100+ times - STOP THIS PATTERN IMMEDIATELY
 
 🚨 **EVIDENCE-BASED APPROACH**: Core principles for all analysis
    - ✅ Extract exact error messages/code snippets before analyzing
@@ -204,25 +252,47 @@
    - Benefits: Immediate results, reliable API access, no command completion uncertainty
 16. 🚨 **MEMORY ENHANCEMENT PROTOCOL**: ⚠️ MANDATORY for specific commands
 - **Enhanced Commands**: `/think`, `/learn`, `/debug`, `/analyze`, `/fix`, `/plan`, `/execute`, `/arch`, `/test`, `/pr`, `/perp`, `/research`
+- **High-Quality Memory Standards**: ⚠️ MANDATORY - Based on Memory MCP best practices research (via Perplexity API research)
+  - ✅ **Specific Technical Details**: Include exact error messages, file paths with line numbers (file:line), code snippets
+  - ✅ **Actionable Information**: Provide reproduction steps, implementation details, verification methods
+  - ✅ **External References**: Link to PRs, commits, files, documentation URLs for verification
+  - ✅ **Canonical Naming**: Use `{system}_{issue_type}_{timestamp}` format for disambiguation
+  - ✅ **Measurable Outcomes**: Include test results, performance metrics, quantified improvements
+  - ✅ **Contextual Details**: Timestamp, circumstances, specific situations that triggered learning
+  - ❌ **Avoid Low-Quality**: Generic statements, missing context, vague observations without actionable detail
+- **Enhanced Entity Types**: Use specific, technical entity types
+  - `technical_learning` - Specific solutions with code/errors/fixes
+  - `implementation_pattern` - Successful code patterns with reusable details
+  - `debug_session` - Complete debugging journeys with root causes
+  - `workflow_insight` - Process improvements with measurable outcomes
+  - `architecture_decision` - Design choices with rationale and trade-offs
 - **Execution Steps**:
-  1. ✅ **Extract key terms** from command arguments (entities, technical terms, PR references)
-  2. ✅ **Search Memory MCP**: Call `mcp__memory-server__search_nodes(query)` with extracted terms (MCP functions use double underscores as namespace separators)
-  3. ✅ **Log results**: Always show "🔍 Memory searched: X relevant memories found"
+  1. ✅ **Extract specific technical terms** from command arguments (file names, error messages, PR numbers, technologies)
+  2. ✅ **Search Memory MCP**: Call `mcp__memory-server__search_nodes(query)` with extracted technical terms
+  3. ✅ **Log results transparently**: Always show "📚 Found X relevant memories"
   4. ✅ **Natural integration**: If memories found, incorporate context naturally into response
-  5. ❌ **Memory search is mandatory** for listed commands unless performance/availability exceptions apply (see constraints below)
+  5. ✅ **Capture high-quality learnings**: Use structured patterns with technical details, references, and actionable information
+  6. ❌ **Memory search is mandatory** for listed commands unless performance/availability exceptions apply
+- **Quality Validation Before Storage**:
+  - Contains specific technical details (error messages, file paths, code snippets)
+  - Includes actionable information (how to reproduce, fix, or implement)
+  - References external artifacts (PRs, commits, files, documentation)
+  - Uses canonical entity names for disambiguation
+  - Provides measurable outcomes (test counts, performance metrics)
+  - Links to related memories explicitly through relations
 - **Transparency Requirements**:
   - Show "🔍 Searching memory..." when search begins
   - Report "📚 Found X relevant memories" or "💭 No relevant memories found"
   - Indicate when response is enhanced: "📚 Enhanced with memory context"
 - **Performance Constraints**:
   - Batch all terms into single search (not multiple calls)
-  - Skip if search would take >100ms with notice to user (100ms chosen as UX threshold for perceived instant response)
+  - Skip if search would take >100ms with notice to user
   - Continue without enhancement if MCP unavailable (with notice)
 - **Integration Approach**:
   - Use natural language understanding to weave context seamlessly
   - Don't mechanically inject memory blocks
   - Judge relevance using semantic understanding, not keyword matching
-  - Prioritize recent and relevant memories
+  - Prioritize recent and relevant memories with actionable technical detail
 
 ### 🔧 GitHub MCP Setup
 **Token**: Set in `claude_mcp.sh` line ~247 via `export GITHUB_TOKEN="your_token_here"`
@@ -242,6 +312,12 @@
 **CRITICAL**: ❌ NEVER execute orchestration tasks yourself | ✅ ALWAYS delegate to agents when /orch or /orchestrate is used
 **ENFORCEMENT**: When user runs /orch, you MUST ONLY monitor agents - NO direct execution allowed! The entire point of /orch is agent delegation!
 **NO HARDCODING**: ❌ NEVER hardcode task patterns - agents execute EXACT tasks requested | ✅ General task agents, not pattern-matched types
+
+🚨 **ORCHESTRATION TASK COMPLETION**: When using /orch, task completion requires FULL end-to-end verification
+- ✅ Agent must complete entire workflow (find issue → fix → commit → push → create PR)
+- ✅ Verify PR creation with link before declaring success
+- ❌ NEVER declare success based on agent creation alone
+- 🔍 Evidence: task-agent-3570 completed full workflow creating PR #887
 
 ## Project Overview
 
@@ -291,6 +367,12 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 **Path Computation**: ✅ Use `os.path.dirname()` to retrieve the parent directory of a file path | ✅ Use `os.path.join()` for constructing paths | ✅ Use `pathlib.Path` for modern path operations | ❌ NEVER use `string.replace()` for paths
 - 🔍 Evidence: PR #818 - Replaced fragile `.replace('/tests', '')` with proper directory navigation
 
+🚨 **DYNAMIC AGENT ASSIGNMENT**: Replace ALL hardcoded agent mappings with capability-based selection
+- ❌ NEVER use patterns like `if "test" in task: return "testing-agent"`
+- ✅ ALWAYS use capability scoring with load balancing
+- ✅ Consider: agent capabilities, current workload, task requirements
+- 🔍 Evidence: PR #873 removed 150+ lines of hardcoded mappings
+
 ### Feature Compatibility
 **Critical**: Audit integration points | Update filters for new formats | Test object/string conversion
 **Always Reuse**: Check existing code | Extract patterns to utilities | No duplication
@@ -300,6 +382,7 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 ### Gemini SDK
 ✅ `from google import genai` | ✅ `client = genai.Client(api_key=api_key)`
 Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
+🚨 **WARNING**: See "NO UNNECESSARY EXTERNAL APIS" rule before using Gemini
 
 ### Development Practices
 `tempfile.mkdtemp()` for test files | Verify before assuming | ❌ unsolicited refactoring |
@@ -311,6 +394,13 @@ Use docstrings, proper JS loading
 - ✅ Read the actual file content before making changes
 - ❌ NEVER blindly apply review comments without verification
 - 🔍 Evidence: PR #818 - Copilot suggested fixing 'string_type' that was already correct
+
+⚠️ **PR COMMENT PRIORITY**: Address review comments in strict priority order
+1. **CRITICAL**: Undefined variables, inline imports, runtime errors
+2. **HIGH**: Bare except clauses, security issues
+3. **MEDIUM**: Logging violations, format issues
+4. **LOW**: Style preferences, optimizations
+- 🔍 Evidence: PR #873 review - fixed critical inline imports first
 
 ### Website Testing & Deployment Expectations (🚨 CRITICAL)
 🚨 **BRANCH ≠ WEBSITE**: ❌ NEVER assume branch changes are visible on websites without deployment
@@ -415,7 +505,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 **Commands**: `./run_ui_tests.sh mock --playwright` (default) | `./run_ui_tests.sh mock --puppeteer` (secondary) | `./run_ui_tests.sh mock` (Playwright fallback)
 
-**Test Mode URL**: `http://localhost:6006?test_mode=true&test_user_id=test-user-123` - Required for auth bypass!
+**Test Mode URL**: `http://localhost:8081?test_mode=true&test_user_id=test-user-123` - Required for auth bypass!
 
 **Details**: → `.cursor/rules/test_protocols.md`
 
@@ -571,6 +661,11 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 **🧠 Cognitive Commands** (Semantic Composition):
 - `/think`, `/arch`, `/debug` - Modify thinking approach, compose naturally
+- `/learn` - Capture structured technical learnings with Memory MCP integration
+- `/analyze` - Deep analysis with memory context enhancement
+- `/fix` - Problem resolution with memory-guided solutions
+- `/perp` - Research validation using Perplexity API
+- `/research` - Knowledge gathering with memory pattern recognition
 - **Behavior**: Automatic semantic understanding and tool integration
 
 **⚙️ Operational Commands** (Protocol Enforcement):  
@@ -593,9 +688,18 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - ❌ NEVER execute /orch or /orchestrate tasks yourself - ONLY monitor agents
 - ✅ For /orch: Create agents → Monitor progress → Report results ONLY
 
-**Key Commands**: `/execute` (no approval) | `/plan` (requires approval) | `/replicate` (PR analysis)
+**Key Commands**: `/execute` (no approval) | `/plan` (requires approval) | `/replicate` (PR analysis) | `/fake` (code quality audit)
 **Dual Composition**: Cognitive (semantic) + Operational (protocol) + Tool (direct)
 **Unified Learning**: ONE `/learn` command with Memory MCP integration
+
+### Quality Assurance Commands
+
+#### `/fake`
+**Purpose**: Comprehensive fake code detection using command composition
+**Composition**: `/arch /thinku /devilsadvocate /diligent`
+**Usage**: `/fake`
+**Detection**: Identifies fake implementations, demo code, placeholder comments, duplicate protocols
+**Output**: Structured audit report with actionable remediation guidance
 
 ## Special Protocols
 
