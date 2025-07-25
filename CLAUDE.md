@@ -110,6 +110,9 @@
 - **Example**: 
   - ❌ Fake: `function fetchData() { return "TODO: Implement API call"; }` (placeholder with no real functionality)
   - ✅ Real: `function fetchData() { return fetch('/api/data').then(response => response.json()); }` (fully functional implementation)
+- **Example**: 
+  - ❌ Fake: `function fetchData() { return "TODO: Implement API call"; }` (placeholder with no real functionality)
+  - ✅ Real: `function fetchData() { return fetch('/api/data').then(response => response.json()); }` (fully functional implementation)
 - **Details**: → `.cursor/rules/meta_rules_detailed.md`
 
 🚨 **ORCHESTRATION OVER DUPLICATION**: ⚠️ MANDATORY - Orchestrators delegate, never reimplement
