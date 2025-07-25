@@ -27,7 +27,6 @@ class TestPydanticValidation(unittest.TestCase):
     def test_entity_id_validation(self):
         """Test entity ID validation in Pydantic models"""
 
-
         # Valid entity IDs should work
         location = Location(entity_id="loc_tavern_001", display_name="The Tavern")
         self.assertEqual(location.entity_id, "loc_tavern_001")
@@ -124,7 +123,6 @@ class TestHealthStatus(unittest.TestCase):
 
     def test_health_status_hp_validation(self):
         """Test HP validation - should reject hp > hp_max"""
-
 
         # Pydantic should reject hp > hp_max rather than clamping
         with self.assertRaises(ValidationError) as context:

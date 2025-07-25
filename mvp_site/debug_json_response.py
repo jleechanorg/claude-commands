@@ -1,7 +1,7 @@
 """
 Debug utilities for handling incomplete JSON responses from Gemini API
 """
-import json
+
 import re
 
 import logging_util
@@ -37,7 +37,7 @@ def fix_incomplete_json(response_text):
         return result, True
 
     # As a last resort, try to extract just the narrative field
-    logging_util.error(f"Failed to fix incomplete JSON")
+    logging_util.error("Failed to fix incomplete JSON")
     narrative = extract_field_value(response_text, "narrative")
     if narrative:
         return {"narrative": narrative, "_incomplete": True}, True
@@ -69,10 +69,10 @@ def validate_json_response(response_dict):
             # Check if the field appears truncated
             value = response_dict[field]
             # Common signs of truncation
-            if value and not value.rstrip().endswith(('.', '!', '?', '"', '---')):
+            if value and not value.rstrip().endswith((".", "!", "?", '"', "---")):
                 # Check if it ends mid-sentence
-                last_line = value.split('\n')[-1]
-                if last_line and not re.match(r'^(---|\d+\.|\*)', last_line):
+                last_line = value.split("\n")[-1]
+                if last_line and not re.match(r"^(---|\d+\.|\*)", last_line):
                     truncated_fields.append(field)
 
     is_valid = len(missing_fields) == 0
@@ -91,9 +91,7 @@ def extract_planning_block(narrative_text):
     """
     # Look for the planning block pattern
     planning_match = re.search(
-        r'--- PLANNING BLOCK ---\s*(.*?)$',
-        narrative_text,
-        re.DOTALL | re.IGNORECASE
+        r"--- PLANNING BLOCK ---\s*(.*?)$", narrative_text, re.DOTALL | re.IGNORECASE
     )
 
     if planning_match:
@@ -105,11 +103,15 @@ def extract_planning_block(narrative_text):
 # Example usage:
 if __name__ == "__main__":
     # Test with your incomplete JSON
-    incomplete_json = '''{"narrative": "[SESSION_HEADER]\\nTimestamp: Year 1620, Kythorn, Day 10, 02:05 PM\\nLocation: The Eastern March, on the road to the Dragon's Tooth mountains.\\nStatus: Lvl 1 Fighter/Paladin | HP: 12/12 | Gold: 25gp\\nResources:\\n- Hero Points: 1/1\\n\\nSir Andrew ignored Gareth's probing question, his focus narrowing back to the mission. He folded the map with crisp, efficient movements and tucked it away. His duty was clear; the feelings of his companions were secondary variables. He turned to the other two members of his small company, his expression a mask of command.\\n\\n\\"Report,\\" he said, his voice flat and devoid of warmth. He looked first to Kiera Varrus, the scout, whose cynical eyes were already scanning the treacherous path ahead.\\n\\nKiera spat on the ground, pulling her leather hood tighter against the wind. \\"It's a goat track at best, Sir Knight. Not a proper road. The ground is loose shale, easy to turn an ankle or alert anything hiding in the rocks.\\" She squinted at the mountains.'''
+    incomplete_json = """{"narrative": "[SESSION_HEADER]\\nTimestamp: Year 1620, Kythorn, Day 10, 02:05 PM\\nLocation: The Eastern March, on the road to the Dragon's Tooth mountains.\\nStatus: Lvl 1 Fighter/Paladin | HP: 12/12 | Gold: 25gp\\nResources:\\n- Hero Points: 1/1\\n\\nSir Andrew ignored Gareth's probing question, his focus narrowing back to the mission. He folded the map with crisp, efficient movements and tucked it away. His duty was clear; the feelings of his companions were secondary variables. He turned to the other two members of his small company, his expression a mask of command.\\n\\n\\"Report,\\" he said, his voice flat and devoid of warmth. He looked first to Kiera Varrus, the scout, whose cynical eyes were already scanning the treacherous path ahead.\\n\\nKiera spat on the ground, pulling her leather hood tighter against the wind. \\"It's a goat track at best, Sir Knight. Not a proper road. The ground is loose shale, easy to turn an ankle or alert anything hiding in the rocks.\\" She squinted at the mountains."""
 
     fixed_json, was_incomplete = fix_incomplete_json(incomplete_json)
-    logging_util.info(f"JSON fix result - incomplete: {was_incomplete}, success: {fixed_json is not None}")
+    logging_util.info(
+        f"JSON fix result - incomplete: {was_incomplete}, success: {fixed_json is not None}"
+    )
 
     if fixed_json:
         is_valid, missing, truncated = validate_json_response(fixed_json)
-        logging_util.info(f"JSON validation - valid: {is_valid}, missing fields: {len(missing)}, truncated: {truncated}")
+        logging_util.info(
+            f"JSON validation - valid: {is_valid}, missing fields: {len(missing)}, truncated: {truncated}"
+        )

@@ -9,7 +9,9 @@ import sys
 import time
 
 # Add prototype to path so imports work correctly
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'prototype'))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "prototype")
+)
 
 from prototype.game_state_integration import MockGameState
 from prototype.validators.fuzzy_token_validator import FuzzyTokenValidator
@@ -70,7 +72,7 @@ def test_game_state():
     print(f"   - Location: {manifest['location']}")
     print(f"   - Entity count: {manifest['entity_count']}")
     print(f"   - Entities: {[e['name'] for e in manifest['entities']]}")
-    assert manifest['entity_count'] == 2, "Wrong entity count"
+    assert manifest["entity_count"] == 2, "Wrong entity count"
 
     # Test validation
     print("\n   Testing narrative validation:")
@@ -80,7 +82,7 @@ def test_game_state():
     print(f"   - Valid: {result['is_valid']}")
     print(f"   - Missing: {result['missing_entities']}")
     print(f"   - Confidence: {result['confidence']:.2f}")
-    assert result['is_valid'], "Validation failed"
+    assert result["is_valid"], "Validation failed"
 
     print("\n✅ Game state tests passed!")
 
@@ -104,7 +106,7 @@ def test_performance():
     avg_time = duration / 10
 
     print(f"\n   Average validation time: {avg_time*1000:.2f}ms")
-    print(f"   Target: <50ms")
+    print("   Target: <50ms")
 
     if avg_time < 0.05:
         print("\n✅ Performance test passed!")
@@ -123,20 +125,14 @@ def test_hybrid():
 
         # Test simple case
         print("\n   Testing simple case:")
-        result = hybrid.validate(
-            "Gideon and Rowan stood ready.",
-            ["Gideon", "Rowan"]
-        )
+        result = hybrid.validate("Gideon and Rowan stood ready.", ["Gideon", "Rowan"])
         print(f"   - All present: {result.all_entities_present}")
         print(f"   - Confidence: {result.confidence:.2f}")
         assert result.all_entities_present, "Hybrid validator failed"
 
         # Test ambiguous case
         print("\n   Testing ambiguous case:")
-        result = hybrid.validate(
-            "Someone moved in the shadows.",
-            ["Gideon", "Rowan"]
-        )
+        result = hybrid.validate("Someone moved in the shadows.", ["Gideon", "Rowan"])
         print(f"   - All present: {result.all_entities_present}")
         print(f"   - Confidence: {result.confidence:.2f}")
 
@@ -155,7 +151,7 @@ def test_llm_validator():
     # Test with descriptors that the mock handles
     result = llm.validate(
         "The knight raised his sword while the healer prepared her spells.",
-        ["Gideon", "Rowan"]
+        ["Gideon", "Rowan"],
     )
     print(f"   - All present: {result.all_entities_present}")
     print(f"   - Confidence: {result.confidence:.2f}")
@@ -163,10 +159,9 @@ def test_llm_validator():
 
     # Test alone case
     result2 = llm.validate(
-        "The knight stood alone in the chamber.",
-        ["Gideon", "Rowan"]
+        "The knight stood alone in the chamber.", ["Gideon", "Rowan"]
     )
-    print(f"\n   Testing 'alone' case:")
+    print("\n   Testing 'alone' case:")
     print(f"   - Found: {result2.entities_found}")
     print(f"   - Missing: {result2.entities_missing}")
     assert "Gideon" in result2.entities_found, "Should find Gideon"
@@ -200,5 +195,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n❌ Test failed with error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

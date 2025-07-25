@@ -8,7 +8,6 @@ import os
 import shutil
 import sys
 import tempfile
-import time
 import unittest
 
 # Add parent directory to path for imports
@@ -387,7 +386,7 @@ Long ago, the Great War shaped this world..."""
         self.assertGreater(
             after_first_stats["cache_misses"],
             initial_stats["cache_misses"],
-            "Expected cache miss on first load"
+            "Expected cache miss on first load",
         )
 
         # Second load should result in cache hit
@@ -401,7 +400,7 @@ Long ago, the Great War shaped this world..."""
         self.assertGreater(
             after_second_stats["cache_hits"],
             after_first_stats["cache_hits"],
-            "Expected cache hit on second load"
+            "Expected cache hit on second load",
         )
 
         # Cache should have logged the improvement

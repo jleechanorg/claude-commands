@@ -5,8 +5,7 @@ Gemini Response objects for clean architecture between AI service and main appli
 import json
 import logging
 import re
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from narrative_response_schema import NarrativeResponse, parse_structured_response
 
@@ -18,12 +17,15 @@ class GeminiResponse:
     Provides structured response handling with backward compatibility.
     """
 
-    def __init__(self, narrative_text: str,
-                 structured_response: Optional[NarrativeResponse] = None,
-                 debug_tags_present: Optional[Dict[str, bool]] = None,
-                 processing_metadata: Optional[Dict[str, Any]] = None,
-                 provider: str = "gemini",
-                 model: str = "gemini-2.5-flash"):
+    def __init__(
+        self,
+        narrative_text: str,
+        structured_response: NarrativeResponse | None = None,
+        debug_tags_present: dict[str, bool] | None = None,
+        processing_metadata: dict[str, Any] | None = None,
+        provider: str = "gemini",
+        model: str = "gemini-2.5-flash",
+    ):
         """
         Initialize GeminiResponse.
 
@@ -49,12 +51,12 @@ class GeminiResponse:
 
     # Maintain backwards compatibility for property access
     @property
-    def state_updates(self) -> Dict[str, Any]:
+    def state_updates(self) -> dict[str, Any]:
         """Backwards compatibility property for state_updates."""
         return self.get_state_updates()
 
     @property
-    def entities_mentioned(self) -> List[str]:
+    def entities_mentioned(self) -> list[str]:
         """Backwards compatibility property for entities_mentioned."""
         return self.get_entities_mentioned()
 
@@ -64,39 +66,43 @@ class GeminiResponse:
         return self.get_location_confirmed()
 
     @property
-    def debug_info(self) -> Dict[str, Any]:
+    def debug_info(self) -> dict[str, Any]:
         """Backwards compatibility property for debug_info."""
         return self.get_debug_info()
 
     @property
     def session_header(self) -> str:
         """Get session header from structured response."""
-        if self.structured_response and hasattr(self.structured_response, 'session_header'):
+        if self.structured_response and hasattr(
+            self.structured_response, "session_header"
+        ):
             return self.structured_response.session_header or ""
         return ""
 
     @property
     def planning_block(self) -> str:
         """Get planning block from structured response."""
-        if self.structured_response and hasattr(self.structured_response, 'planning_block'):
+        if self.structured_response and hasattr(
+            self.structured_response, "planning_block"
+        ):
             return self.structured_response.planning_block or ""
         return ""
 
     @property
-    def dice_rolls(self) -> List[str]:
+    def dice_rolls(self) -> list[str]:
         """Get dice rolls from structured response."""
-        if self.structured_response and hasattr(self.structured_response, 'dice_rolls'):
+        if self.structured_response and hasattr(self.structured_response, "dice_rolls"):
             return self.structured_response.dice_rolls or []
         return []
 
     @property
     def resources(self) -> str:
         """Get resources from structured response."""
-        if self.structured_response and hasattr(self.structured_response, 'resources'):
+        if self.structured_response and hasattr(self.structured_response, "resources"):
             return self.structured_response.resources or ""
         return ""
 
-    def _detect_old_tags(self) -> Dict[str, List[str]]:
+    def _detect_old_tags(self) -> dict[str, list[str]]:
         """
         Detect deprecated tag patterns in the response and log warnings.
 
@@ -107,29 +113,26 @@ class GeminiResponse:
             Dictionary mapping tag types to lists of found instances
         """
         old_tags_found = {
-            'state_updates_proposed': [],
-            'debug_blocks': [],
-            'other_deprecated': []
+            "state_updates_proposed": [],
+            "debug_blocks": [],
+            "other_deprecated": [],
         }
 
         patterns = {
-            'state_updates_proposed': [
-                r'\[STATE_UPDATES_PROPOSED\]',
-                r'\[END_STATE_UPDATES_PROPOSED\]',
-                r'S?TATE_UPDATES_PROPOSED\]'  # Malformed variants
+            "state_updates_proposed": [
+                r"\[STATE_UPDATES_PROPOSED\]",
+                r"\[END_STATE_UPDATES_PROPOSED\]",
+                r"S?TATE_UPDATES_PROPOSED\]",  # Malformed variants
             ],
-            'debug_blocks': [
-                r'\[DEBUG_START\]',
-                r'\[DEBUG_END\]',
-                r'\[DEBUG_STATE_START\]',
-                r'\[DEBUG_STATE_END\]',
-                r'\[DEBUG_ROLL_START\]',
-                r'\[DEBUG_ROLL_END\]'
+            "debug_blocks": [
+                r"\[DEBUG_START\]",
+                r"\[DEBUG_END\]",
+                r"\[DEBUG_STATE_START\]",
+                r"\[DEBUG_STATE_END\]",
+                r"\[DEBUG_ROLL_START\]",
+                r"\[DEBUG_ROLL_END\]",
             ],
-            'other_deprecated': [
-                r'\[ENTITY_TRACKING_ENABLED\]',
-                r'\[PRE_JSON_MODE\]'
-            ]
+            "other_deprecated": [r"\[ENTITY_TRACKING_ENABLED\]", r"\[PRE_JSON_MODE\]"],
         }
 
         # Check narrative text
@@ -149,9 +152,9 @@ class GeminiResponse:
             # Convert to string to search (this is a bit hacky but effective)
             try:
                 # Handle different response types
-                if hasattr(self.structured_response, 'dict'):
+                if hasattr(self.structured_response, "dict"):
                     response_dict = self.structured_response.dict()
-                elif hasattr(self.structured_response, '__dict__'):
+                elif hasattr(self.structured_response, "__dict__"):
                     response_dict = self.structured_response.__dict__
                 else:
                     response_dict = str(self.structured_response)
@@ -181,7 +184,7 @@ class GeminiResponse:
             # Store in processing metadata for tracking
             if self.processing_metadata is None:
                 self.processing_metadata = {}
-            self.processing_metadata['deprecated_tags_found'] = old_tags_found
+            self.processing_metadata["deprecated_tags_found"] = old_tags_found
 
         return old_tags_found
 
@@ -211,31 +214,39 @@ class GeminiResponse:
 
         return False
 
-    def get_state_updates(self) -> Dict[str, Any]:
+    def get_state_updates(self) -> dict[str, Any]:
         """Get state updates from structured response."""
-        if self.structured_response and hasattr(self.structured_response, 'state_updates'):
+        if self.structured_response and hasattr(
+            self.structured_response, "state_updates"
+        ):
             return self.structured_response.state_updates or {}
 
         # JSON mode is required - log error if no structured response
         if not self.structured_response:
-            logging.error("ERROR: No structured response available for state updates. JSON mode is required.")
+            logging.error(
+                "ERROR: No structured response available for state updates. JSON mode is required."
+            )
         return {}
 
-    def get_entities_mentioned(self) -> List[str]:
+    def get_entities_mentioned(self) -> list[str]:
         """Get entities mentioned from structured response."""
-        if self.structured_response and hasattr(self.structured_response, 'entities_mentioned'):
+        if self.structured_response and hasattr(
+            self.structured_response, "entities_mentioned"
+        ):
             return self.structured_response.entities_mentioned or []
         return []
 
     def get_location_confirmed(self) -> str:
         """Get confirmed location from structured response."""
-        if self.structured_response and hasattr(self.structured_response, 'location_confirmed'):
-            return self.structured_response.location_confirmed or 'Unknown'
-        return 'Unknown'
+        if self.structured_response and hasattr(
+            self.structured_response, "location_confirmed"
+        ):
+            return self.structured_response.location_confirmed or "Unknown"
+        return "Unknown"
 
-    def get_debug_info(self) -> Dict[str, Any]:
+    def get_debug_info(self) -> dict[str, Any]:
         """Get debug info from structured response."""
-        if self.structured_response and hasattr(self.structured_response, 'debug_info'):
+        if self.structured_response and hasattr(self.structured_response, "debug_info"):
             return self.structured_response.debug_info or {}
         return {}
 
@@ -256,13 +267,25 @@ class GeminiResponse:
             return text
 
         # Use regex for proper pattern matching - same patterns as frontend
-        processed_text = re.sub(r'\[DEBUG_START\][\s\S]*?\[DEBUG_END\]', '', text)
-        processed_text = re.sub(r'\[DEBUG_STATE_START\][\s\S]*?\[DEBUG_STATE_END\]', '', processed_text)
-        processed_text = re.sub(r'\[DEBUG_ROLL_START\][\s\S]*?\[DEBUG_ROLL_END\]', '', processed_text)
+        processed_text = re.sub(r"\[DEBUG_START\][\s\S]*?\[DEBUG_END\]", "", text)
+        processed_text = re.sub(
+            r"\[DEBUG_STATE_START\][\s\S]*?\[DEBUG_STATE_END\]", "", processed_text
+        )
+        processed_text = re.sub(
+            r"\[DEBUG_ROLL_START\][\s\S]*?\[DEBUG_ROLL_END\]", "", processed_text
+        )
         # Also strip STATE_UPDATES_PROPOSED blocks which are internal state management
-        processed_text = re.sub(r'\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
+        processed_text = re.sub(
+            r"\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]",
+            "",
+            processed_text,
+        )
         # Handle malformed STATE_UPDATES_PROPOSED blocks (missing opening characters)
-        processed_text = re.sub(r'S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
+        processed_text = re.sub(
+            r"S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]",
+            "",
+            processed_text,
+        )
 
         return processed_text
 
@@ -282,9 +305,17 @@ class GeminiResponse:
             return text
 
         # Remove only STATE_UPDATES_PROPOSED blocks - these should never be shown to users
-        processed_text = re.sub(r'\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', text)
+        processed_text = re.sub(
+            r"\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]",
+            "",
+            text,
+        )
         # Also handle malformed blocks where the opening characters might be missing
-        processed_text = re.sub(r'S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]', '', processed_text)
+        processed_text = re.sub(
+            r"S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]",
+            "",
+            processed_text,
+        )
         return processed_text
 
     @staticmethod
@@ -294,45 +325,60 @@ class GeminiResponse:
             return text
 
         # Remove [Mode: STORY MODE] prefix
-        text = re.sub(r'^\[Mode:\s*[A-Z\s]+\]\s*\n*', '', text)
+        text = re.sub(r"^\[Mode:\s*[A-Z\s]+\]\s*\n*", "", text)
 
         # Remove embedded JSON objects (malformed responses)
-        text = re.sub(r'\{[^}]*"session_header"[^}]*\}[^"]*"[^"]*"', '', text, flags=re.DOTALL)
+        text = re.sub(
+            r'\{[^}]*"session_header"[^}]*\}[^"]*"[^"]*"', "", text, flags=re.DOTALL
+        )
 
         # Remove [DEBUG_START]...[DEBUG_END] blocks
-        text = re.sub(r'\[DEBUG_START\].*?\[DEBUG_END\]', '', text, flags=re.DOTALL)
+        text = re.sub(r"\[DEBUG_START\].*?\[DEBUG_END\]", "", text, flags=re.DOTALL)
 
         # Remove [SESSION_HEADER] blocks (if they exist in narrative)
-        text = re.sub(r'\[SESSION_HEADER\].*?(?=\n\n[A-Z]|\n\n[A-S]|\n\nT|\n\nU|\n\nV|\n\nW|\n\nX|\n\nY|\n\nZ|\n[A-Z][a-z])', '', text, flags=re.DOTALL)
-
+        text = re.sub(
+            r"\[SESSION_HEADER\].*?(?=\n\n[A-Z]|\n\n[A-S]|\n\nT|\n\nU|\n\nV|\n\nW|\n\nX|\n\nY|\n\nZ|\n[A-Z][a-z])",
+            "",
+            text,
+            flags=re.DOTALL,
+        )
 
         # Remove [STATE_UPDATES_PROPOSED] blocks
-        text = re.sub(r'\[STATE_UPDATES_PROPOSED\].*?\[END_STATE_UPDATES_PROPOSED\]', '', text, flags=re.DOTALL)
+        text = re.sub(
+            r"\[STATE_UPDATES_PROPOSED\].*?\[END_STATE_UPDATES_PROPOSED\]",
+            "",
+            text,
+            flags=re.DOTALL,
+        )
 
         # Remove other debug markers
-        text = re.sub(r'\[DEBUG_[A-Z_]+\].*?\[DEBUG_[A-Z_]+\]', '', text, flags=re.DOTALL)
+        text = re.sub(
+            r"\[DEBUG_[A-Z_]+\].*?\[DEBUG_[A-Z_]+\]", "", text, flags=re.DOTALL
+        )
 
         # Clean up extra whitespace
-        text = re.sub(r'\n\s*\n\s*\n', '\n\n', text)
+        text = re.sub(r"\n\s*\n\s*\n", "\n\n", text)
         text = text.strip()
 
         return text
 
     @staticmethod
-    def _detect_debug_tags_static(text: str) -> Dict[str, bool]:
+    def _detect_debug_tags_static(text: str) -> dict[str, bool]:
         """Detect which debug tags are present in text."""
         if not text:
             return {}
 
         return {
-            'debug_start_end': '[DEBUG_START]' in text and '[DEBUG_END]' in text,
-            'session_header': '[SESSION_HEADER]' in text,
-            'state_updates': '[STATE_UPDATES_PROPOSED]' in text,
-            'debug_rolls': '[DEBUG_ROLL_START]' in text,
+            "debug_start_end": "[DEBUG_START]" in text and "[DEBUG_END]" in text,
+            "session_header": "[SESSION_HEADER]" in text,
+            "state_updates": "[STATE_UPDATES_PROPOSED]" in text,
+            "debug_rolls": "[DEBUG_ROLL_START]" in text,
         }
 
     @classmethod
-    def create(cls, raw_response_text: str, model: str = "gemini-2.5-flash") -> 'GeminiResponse':
+    def create(
+        cls, raw_response_text: str, model: str = "gemini-2.5-flash"
+    ) -> "GeminiResponse":
         """
         Create a GeminiResponse from raw Gemini API response.
 
@@ -346,19 +392,26 @@ class GeminiResponse:
             GeminiResponse with parsed narrative and structured data
         """
         # Parse the raw response to extract narrative and structured data
-        narrative_text, structured_response = parse_structured_response(raw_response_text)
+        narrative_text, structured_response = parse_structured_response(
+            raw_response_text
+        )
 
         # If we have a structured response, use the new method
         if structured_response:
-            return cls.create_from_structured_response(structured_response, model, narrative_text)
+            return cls.create_from_structured_response(
+                structured_response, model, narrative_text
+            )
 
         # Otherwise fall back to legacy mode
         return cls.create_legacy(narrative_text, model)
 
     @classmethod
-    def create_from_structured_response(cls, structured_response: NarrativeResponse,
-                                      model: str = "gemini-2.5-flash",
-                                      combined_narrative_text: str = None) -> 'GeminiResponse':
+    def create_from_structured_response(
+        cls,
+        structured_response: NarrativeResponse,
+        model: str = "gemini-2.5-flash",
+        combined_narrative_text: str = None,
+    ) -> "GeminiResponse":
         """
         Create GeminiResponse from structured JSON response.
 
@@ -375,25 +428,25 @@ class GeminiResponse:
         """
         # Use the combined narrative text if provided (includes god_mode_response)
         # Otherwise extract clean narrative from structured response
-        clean_narrative = combined_narrative_text if combined_narrative_text is not None else structured_response.narrative
+        clean_narrative = (
+            combined_narrative_text
+            if combined_narrative_text is not None
+            else structured_response.narrative
+        )
 
         # Remove any remaining debug tags from narrative using static method
         clean_narrative = cls._strip_all_debug_tags(clean_narrative)
 
         # Detect debug tags from structured response content
-        debug_tags = {
-            'dm_notes': False,
-            'dice_rolls': False,
-            'state_changes': False
-        }
+        debug_tags = {"dm_notes": False, "dice_rolls": False, "state_changes": False}
 
         if structured_response:
             debug_info = structured_response.debug_info or {}
             # Check for non-empty debug content
-            debug_tags['dm_notes'] = bool(debug_info.get('dm_notes'))
-            debug_tags['dice_rolls'] = bool(debug_info.get('dice_rolls'))
+            debug_tags["dm_notes"] = bool(debug_info.get("dm_notes"))
+            debug_tags["dice_rolls"] = bool(debug_info.get("dice_rolls"))
             # Check for state changes
-            debug_tags['state_changes'] = bool(structured_response.state_updates)
+            debug_tags["state_changes"] = bool(structured_response.state_updates)
 
         return cls(
             narrative_text=clean_narrative,
@@ -404,8 +457,12 @@ class GeminiResponse:
         )
 
     @classmethod
-    def create_legacy(cls, narrative_text: str, model: str = "gemini-2.5-flash",
-                     structured_response: Optional[NarrativeResponse] = None) -> 'GeminiResponse':
+    def create_legacy(
+        cls,
+        narrative_text: str,
+        model: str = "gemini-2.5-flash",
+        structured_response: NarrativeResponse | None = None,
+    ) -> "GeminiResponse":
         """
         Create GeminiResponse from plain text (legacy support).
 

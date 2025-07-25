@@ -6,18 +6,20 @@ import sys
 # Look for Google API key in home directory first, then project root
 try:
     home_key_path = os.path.expanduser("~/.gemini_api_key.txt")
-    project_key_path = 'gemini_api_key.txt'
+    project_key_path = "gemini_api_key.txt"
 
     if os.path.exists(home_key_path):
-        with open(home_key_path, 'r') as f:
+        with open(home_key_path) as f:
             api_key = f.read().strip()
         logging.info(f"Loaded API key from {home_key_path}")
     elif os.path.exists(project_key_path):
-        with open(project_key_path, 'r') as f:
+        with open(project_key_path) as f:
             api_key = f.read().strip()
         logging.info(f"Loaded API key from {project_key_path}")
     else:
-        logging.error("API key not found in ~/.gemini_api_key.txt or gemini_api_key.txt")
+        logging.error(
+            "API key not found in ~/.gemini_api_key.txt or gemini_api_key.txt"
+        )
         sys.exit(1)
 
     os.environ["GEMINI_API_KEY"] = api_key

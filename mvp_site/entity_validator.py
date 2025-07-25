@@ -4,9 +4,10 @@ Validates AI output for missing entities and implements retry logic.
 """
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import logging_util
 from entity_utils import filter_unknown_entities
@@ -16,6 +17,7 @@ logger = logging_util.getLogger(__name__)
 
 class EntityPresenceType(Enum):
     """Types of entity presence in narrative"""
+
     PHYSICALLY_PRESENT = "physically_present"
     MENTIONED_ABSENT = "mentioned_absent"  # Talked about but not there
     IMPLIED_PRESENT = "implied_present"  # Should be there based on context
@@ -25,20 +27,21 @@ class EntityPresenceType(Enum):
 @dataclass
 class ValidationResult:
     """Result of entity validation - unified format for all validators"""
+
     passed: bool
-    missing_entities: List[str]
-    found_entities: List[str]
+    missing_entities: list[str]
+    found_entities: list[str]
     confidence_score: float
     retry_needed: bool
-    retry_suggestions: List[str]
+    retry_suggestions: list[str]
     # Extended fields for narrative sync compatibility
-    entities_found: List[str] = None
-    entities_missing: List[str] = None
+    entities_found: list[str] = None
+    entities_missing: list[str] = None
     all_entities_present: bool = False
     confidence: float = 0.0
-    warnings: List[str] = None
-    metadata: Dict[str, Any] = None
-    validation_details: Dict[str, Any] = None
+    warnings: list[str] = None
+    metadata: dict[str, Any] = None
+    validation_details: dict[str, Any] = None
 
     def __post_init__(self):
         # Maintain backward compatibility by syncing fields
@@ -74,14 +77,14 @@ class EntityValidator:
                 r"the absent (\w+)",
                 r"(\w+) remained at",
                 r"(\w+) was still in",
-                r"thinking of (\w+)"
+                r"thinking of (\w+)",
             ],
             "location_transition": [
                 r"moved to (.+)",
                 r"arrived at (.+)",
                 r"found (?:yourself|themselves) in (.+)",
-                r"now in (.+)"
-            ]
+                r"now in (.+)",
+            ],
         }
 
         # Physical state patterns
@@ -91,53 +94,58 @@ class EntityValidator:
             r"tear[- ]?stained",
             r"wounded (\w+)",
             r"bloodied (\w+)",
-            r"exhausted"
+            r"exhausted",
         ]
 
         # Pre-compile regex patterns for better performance
         self._compiled_patterns = {}
         self._compile_patterns()
 
-    def _build_entity_patterns(self) -> Dict[str, List[str]]:
+    def _build_entity_patterns(self) -> dict[str, list[str]]:
         """Build regex patterns for entity detection"""
         return {
-            'direct_mention': [
-                r'\b{entity}\b',  # Direct name mention
-                r'\b{entity}(?:\'s|\s+says|\s+does|\s+is|\s+was)',  # Possessive or action
+            "direct_mention": [
+                r"\b{entity}\b",  # Direct name mention
+                r"\b{entity}(?:\'s|\s+says|\s+does|\s+is|\s+was)",  # Possessive or action
             ],
-            'pronoun_reference': [
-                r'(?:he|she|they|him|her|them)\b',  # Pronoun references
+            "pronoun_reference": [
+                r"(?:he|she|they|him|her|them)\b",  # Pronoun references
             ],
-            'role_reference': [
-                r'\b(?:the\s+)?(?:guard|captain|magister|lady|lord|advisor|scholar)\b',
+            "role_reference": [
+                r"\b(?:the\s+)?(?:guard|captain|magister|lady|lord|advisor|scholar)\b",
             ],
-            'action_attribution': [
-                r'(?:says|speaks|responds|nods|smiles|frowns|looks|turns)',
-            ]
+            "action_attribution": [
+                r"(?:says|speaks|responds|nods|smiles|frowns|looks|turns)",
+            ],
         }
 
     def _compile_patterns(self):
         """Pre-compile regex patterns for better performance"""
         # Compile physical state patterns
-        self._compiled_patterns['physical_states'] = [
-            re.compile(pattern, re.IGNORECASE) for pattern in self.physical_state_patterns
+        self._compiled_patterns["physical_states"] = [
+            re.compile(pattern, re.IGNORECASE)
+            for pattern in self.physical_state_patterns
         ]
 
         # Compile presence patterns for better performance
-        self._compiled_patterns['absent_reference'] = [
-            re.compile(pattern, re.IGNORECASE) for pattern in self.presence_patterns["absent_reference"]
+        self._compiled_patterns["absent_reference"] = [
+            re.compile(pattern, re.IGNORECASE)
+            for pattern in self.presence_patterns["absent_reference"]
         ]
-        self._compiled_patterns['location_transition'] = [
-            re.compile(pattern, re.IGNORECASE) for pattern in self.presence_patterns["location_transition"]
+        self._compiled_patterns["location_transition"] = [
+            re.compile(pattern, re.IGNORECASE)
+            for pattern in self.presence_patterns["location_transition"]
         ]
 
-    def analyze_entity_presence(self, narrative: str, entity: str) -> EntityPresenceType:
+    def analyze_entity_presence(
+        self, narrative: str, entity: str
+    ) -> EntityPresenceType:
         """Determine if an entity is physically present or just mentioned (consolidated from NarrativeSyncValidator)"""
         narrative_lower = narrative.lower()
         entity_lower = entity.lower()
 
         # Check for explicit absence indicators first (using compiled patterns)
-        compiled_absent_patterns = self._compiled_patterns.get('absent_reference', [])
+        compiled_absent_patterns = self._compiled_patterns.get("absent_reference", [])
         for pattern in compiled_absent_patterns:
             pattern_str = pattern.pattern.replace(r"(\w+)", entity_lower)
             if re.search(pattern_str, narrative_lower, re.IGNORECASE):
@@ -148,7 +156,7 @@ class EntityValidator:
             f"thought of {entity_lower}",
             f"remembered {entity_lower}",
             f"thinking of {entity_lower}",
-            f"spoke of {entity_lower}"
+            f"spoke of {entity_lower}",
         ]
 
         for pattern in thought_patterns:
@@ -162,21 +170,23 @@ class EntityValidator:
         # Not found at all
         return None
 
-    def extract_physical_states(self, narrative: str) -> Dict[str, List[str]]:
+    def extract_physical_states(self, narrative: str) -> dict[str, list[str]]:
         """Extract physical state descriptions from narrative (consolidated from NarrativeSyncValidator)"""
         states = {}
 
         # Use pre-compiled patterns for better performance
-        compiled_patterns = self._compiled_patterns.get('physical_states', [])
+        compiled_patterns = self._compiled_patterns.get("physical_states", [])
         for pattern in compiled_patterns:
             matches = pattern.finditer(narrative)
             for match in matches:
                 state = match.group(0)
                 # Try to associate with nearby entity names
-                context = narrative[max(0, match.start()-50):min(len(narrative), match.end()+50)]
+                context = narrative[
+                    max(0, match.start() - 50) : min(len(narrative), match.end() + 50)
+                ]
 
                 # Simple heuristic: look for capitalized words nearby
-                entities = re.findall(r'\b[A-Z][a-z]+\b', context)
+                entities = re.findall(r"\b[A-Z][a-z]+\b", context)
                 for entity in entities:
                     if entity not in states:
                         states[entity] = []
@@ -184,12 +194,14 @@ class EntityValidator:
 
         return states
 
-    def detect_scene_transitions(self, narrative: str) -> List[str]:
+    def detect_scene_transitions(self, narrative: str) -> list[str]:
         """Detect location transitions in the narrative (consolidated from NarrativeSyncValidator)"""
         transitions = []
 
         # Use compiled patterns for better performance
-        compiled_transition_patterns = self._compiled_patterns.get('location_transition', [])
+        compiled_transition_patterns = self._compiled_patterns.get(
+            "location_transition", []
+        )
         for pattern in compiled_transition_patterns:
             matches = pattern.finditer(narrative)
             for match in matches:
@@ -197,7 +209,9 @@ class EntityValidator:
 
         return transitions
 
-    def create_injection_templates(self, missing_entities: List[str], context: Dict[str, Any] = None) -> Dict[str, str]:
+    def create_injection_templates(
+        self, missing_entities: list[str], context: dict[str, Any] = None
+    ) -> dict[str, str]:
         """Create entity injection templates (consolidated from DualPassGenerator)"""
         templates = {}
 
@@ -208,7 +222,7 @@ class EntityValidator:
             "{entity} steps forward and {action}.",
             "{entity}'s voice cuts through: '{dialogue}'",
             "From across the room, {entity} {action}.",
-            "{entity} looks up from their position and {action}."
+            "{entity} looks up from their position and {action}.",
         ]
 
         for entity in missing_entities:
@@ -216,9 +230,12 @@ class EntityValidator:
 
         return templates
 
-    def validate_entity_presence(self, narrative_text: str,
-                                expected_entities: List[str],
-                                location: Optional[str] = None) -> ValidationResult:
+    def validate_entity_presence(
+        self,
+        narrative_text: str,
+        expected_entities: list[str],
+        location: str | None = None,
+    ) -> ValidationResult:
         """
         Validate that expected entities are present in the narrative.
         Returns detailed validation result with retry suggestions.
@@ -242,12 +259,17 @@ class EntityValidator:
 
         # Calculate overall confidence
         if expected_entities:
-            overall_confidence = sum(confidence_scores.values()) / len(expected_entities)
+            overall_confidence = sum(confidence_scores.values()) / len(
+                expected_entities
+            )
         else:
             overall_confidence = 1.0
 
         # Determine if retry is needed
-        retry_needed = len(missing_entities) > 0 or overall_confidence < self.min_confidence_threshold
+        retry_needed = (
+            len(missing_entities) > 0
+            or overall_confidence < self.min_confidence_threshold
+        )
 
         # Generate retry suggestions
         retry_suggestions = self._generate_retry_suggestions(
@@ -260,15 +282,19 @@ class EntityValidator:
             found_entities=found_entities,
             confidence_score=overall_confidence,
             retry_needed=retry_needed,
-            retry_suggestions=retry_suggestions
+            retry_suggestions=retry_suggestions,
         )
 
-        logger.info(f"Entity validation: {len(found_entities)}/{len(expected_entities)} found, "
-                   f"confidence: {overall_confidence:.2f}")
+        logger.info(
+            f"Entity validation: {len(found_entities)}/{len(expected_entities)} found, "
+            f"confidence: {overall_confidence:.2f}"
+        )
 
         return result
 
-    def _calculate_entity_presence_score(self, narrative_text: str, entity: str) -> float:
+    def _calculate_entity_presence_score(
+        self, narrative_text: str, entity: str
+    ) -> float:
         """Calculate confidence score for entity presence in narrative"""
         narrative_lower = narrative_text.lower()
         entity_lower = entity.lower()
@@ -291,9 +317,9 @@ class EntityValidator:
 
         # Action attribution patterns
         action_patterns = [
-            rf'{re.escape(entity_lower)}\s+(?:says|speaks|responds|does|is|was)',
-            rf'(?:says|speaks|responds)\s+{re.escape(entity_lower)}',
-            rf'{re.escape(entity_lower)}\'s\s+(?:voice|words|response)'
+            rf"{re.escape(entity_lower)}\s+(?:says|speaks|responds|does|is|was)",
+            rf"(?:says|speaks|responds)\s+{re.escape(entity_lower)}",
+            rf"{re.escape(entity_lower)}\'s\s+(?:voice|words|response)",
         ]
 
         for pattern in action_patterns:
@@ -303,17 +329,20 @@ class EntityValidator:
 
         # Pronoun references (lower confidence, need context)
         if entity_lower in narrative_lower:
-            pronouns = ['he', 'she', 'they', 'him', 'her', 'them']
+            pronouns = ["he", "she", "they", "him", "her", "them"]
             pronoun_count = sum(narrative_lower.count(pronoun) for pronoun in pronouns)
             if pronoun_count > 0:
                 score += min(pronoun_count * 0.05, 0.15)
 
         return min(score, 1.0)
 
-    def _generate_retry_suggestions(self, missing_entities: List[str],
-                                  found_entities: List[str],
-                                  narrative_text: str,
-                                  location: Optional[str] = None) -> List[str]:
+    def _generate_retry_suggestions(
+        self,
+        missing_entities: list[str],
+        found_entities: list[str],
+        narrative_text: str,
+        location: str | None = None,
+    ) -> list[str]:
         """Generate specific suggestions for retry prompts"""
         suggestions = []
 
@@ -322,23 +351,35 @@ class EntityValidator:
 
         # Generic suggestions for missing entities
         for entity in missing_entities:
-            suggestions.append(f"Include {entity} in the scene with dialogue, actions, or reactions")
+            suggestions.append(
+                f"Include {entity} in the scene with dialogue, actions, or reactions"
+            )
 
         # Generic location-based suggestions
         if location and missing_entities:
-            suggestions.append(f"Ensure the missing characters fit naturally in {location}")
+            suggestions.append(
+                f"Ensure the missing characters fit naturally in {location}"
+            )
 
         # General narrative suggestions
         if len(missing_entities) > len(found_entities):
-            suggestions.append("Ensure all characters present in the scene have some role or mention")
+            suggestions.append(
+                "Ensure all characters present in the scene have some role or mention"
+            )
 
         if len(missing_entities) >= 2:
-            suggestions.append("Consider adding dialogue between the missing characters")
+            suggestions.append(
+                "Consider adding dialogue between the missing characters"
+            )
 
         return suggestions
 
-    def create_retry_prompt(self, original_prompt: str, validation_result: ValidationResult,
-                           location: Optional[str] = None) -> str:
+    def create_retry_prompt(
+        self,
+        original_prompt: str,
+        validation_result: ValidationResult,
+        location: str | None = None,
+    ) -> str:
         """Create an enhanced prompt for retry when entities are missing"""
         if not validation_result.retry_needed:
             return original_prompt
@@ -360,7 +401,9 @@ class EntityValidator:
 
         # Location context
         if location:
-            retry_instructions.append(f"Setting: {location} - ensure all characters appropriate to this location are present")
+            retry_instructions.append(
+                f"Setting: {location} - ensure all characters appropriate to this location are present"
+            )
 
         # Combine instructions
         retry_text = "\n".join(retry_instructions)
@@ -368,9 +411,14 @@ class EntityValidator:
 
         return enhanced_prompt
 
-    def validate(self, narrative_text: str, expected_entities: List[str],
-                 location: str = None, previous_states: Dict[str, Any] = None,
-                 **kwargs) -> ValidationResult:
+    def validate(
+        self,
+        narrative_text: str,
+        expected_entities: list[str],
+        location: str = None,
+        previous_states: dict[str, Any] = None,
+        **kwargs,
+    ) -> ValidationResult:
         """
         Comprehensive validation method that supports both EntityValidator and NarrativeSyncValidator interfaces.
         This method consolidates all validation logic in one place.
@@ -413,7 +461,7 @@ class EntityValidator:
 
             # Reduce confidence for ambiguous entities
             if ambiguous:
-                confidence *= (1 - 0.1 * len(ambiguous))
+                confidence *= 1 - 0.1 * len(ambiguous)
         else:
             confidence = 1.0
 
@@ -426,16 +474,23 @@ class EntityValidator:
         warnings = []
         if ambiguous:
             for entity in ambiguous:
-                warnings.append(f"⚠️ {entity}'s presence is ambiguous - unclear if physically present")
+                warnings.append(
+                    f"⚠️ {entity}'s presence is ambiguous - unclear if physically present"
+                )
 
         if len(transitions) > 0 and not any(
-            trans for trans in transitions
+            trans
+            for trans in transitions
             if any(ent.lower() in trans.lower() for ent in expected_entities)
         ):
-            warnings.append("⚠️ Scene transition detected but no character movement described")
+            warnings.append(
+                "⚠️ Scene transition detected but no character movement described"
+            )
 
         if len(mentioned_absent) > len(physically_present):
-            warnings.append("⚠️ More entities mentioned as absent than physically present - possible scene confusion")
+            warnings.append(
+                "⚠️ More entities mentioned as absent than physically present - possible scene confusion"
+            )
 
         # Build comprehensive result
         result = ValidationResult(
@@ -465,19 +520,21 @@ class EntityValidator:
                     {
                         "entity": entity,
                         "presence_type": entity_analysis.get(entity, "not_found"),
-                        "physical_states": physical_states.get(entity, [])
+                        "physical_states": physical_states.get(entity, []),
                     }
                     for entity in expected_entities
                 ],
                 "narrative_features": {
                     "has_transitions": len(transitions) > 0,
-                    "clear_presence_indicators": len(ambiguous) == 0
-                }
-            }
+                    "clear_presence_indicators": len(ambiguous) == 0,
+                },
+            },
         )
 
-        logger.info(f"Comprehensive validation: {len(result.found_entities)}/{len(expected_entities)} found, "
-                   f"confidence: {confidence:.2f}, warnings: {len(warnings)}")
+        logger.info(
+            f"Comprehensive validation: {len(result.found_entities)}/{len(expected_entities)} found, "
+            f"confidence: {confidence:.2f}, warnings: {len(warnings)}"
+        )
 
         return result
 
@@ -493,9 +550,13 @@ class EntityRetryManager:
         self.validator = EntityValidator()
         self.retry_history = {}
 
-    def validate_with_retry(self, narrative_text: str, expected_entities: List[str],
-                           location: Optional[str] = None,
-                           retry_callback: Optional[callable] = None) -> Tuple[ValidationResult, int]:
+    def validate_with_retry(
+        self,
+        narrative_text: str,
+        expected_entities: list[str],
+        location: Optional[str] = None,
+        retry_callback: Optional[Callable] = None,
+    ) -> tuple[ValidationResult, int]:
         """
         Validate entity presence with automatic retry logic.
 
@@ -516,30 +577,37 @@ class EntityRetryManager:
         current_narrative = narrative_text
 
         # Retry loop
-        while (validation_result.retry_needed and
-               retry_attempts < self.max_retries and
-               retry_callback is not None):
-
+        while (
+            validation_result.retry_needed
+            and retry_attempts < self.max_retries
+            and retry_callback is not None
+        ):
             retry_attempts += 1
-            logger.info(f"Entity validation failed, attempting retry {retry_attempts}/{self.max_retries}")
+            logger.info(
+                f"Entity validation failed, attempting retry {retry_attempts}/{self.max_retries}"
+            )
 
             # Create retry prompt
             retry_prompt = self.validator.create_retry_prompt(
                 "Please revise the narrative to include all required characters",
                 validation_result,
-                location
+                location,
             )
 
             # Call retry callback to regenerate narrative
             try:
-                current_narrative = retry_callback(retry_prompt, missing_entities=validation_result.missing_entities)
+                current_narrative = retry_callback(
+                    retry_prompt, missing_entities=validation_result.missing_entities
+                )
 
                 # Validate the new narrative
                 validation_result = self.validator.validate_entity_presence(
                     current_narrative, expected_entities, location
                 )
 
-                logger.info(f"Retry {retry_attempts} result: {len(validation_result.found_entities)}/{len(expected_entities)} entities found")
+                logger.info(
+                    f"Retry {retry_attempts} result: {len(validation_result.found_entities)}/{len(expected_entities)} entities found"
+                )
 
             except Exception as e:
                 logger.error(f"Retry {retry_attempts} failed with error: {e}")
@@ -549,16 +617,18 @@ class EntityRetryManager:
         if validation_result.passed:
             logger.info(f"Entity validation passed after {retry_attempts} retries")
         else:
-            logger.warning(f"Entity validation failed after {retry_attempts} retries. Missing: {validation_result.missing_entities}")
+            logger.warning(
+                f"Entity validation failed after {retry_attempts} retries. Missing: {validation_result.missing_entities}"
+            )
 
         return validation_result, retry_attempts
 
-    def get_retry_statistics(self) -> Dict[str, Any]:
+    def get_retry_statistics(self) -> dict[str, Any]:
         """Get statistics about retry performance"""
         # This could be expanded to track retry success rates over time
         return {
             "max_retries_configured": self.max_retries,
-            "validator_threshold": self.validator.min_confidence_threshold
+            "validator_threshold": self.validator.min_confidence_threshold,
         }
 
 

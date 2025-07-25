@@ -305,7 +305,6 @@ def example_test_functions():
         if is_real:
             # Use unique collection name in real mode
 
-
             collection_name = f"test_{int(time.time())}"
         else:
             # Use simple name in mock mode

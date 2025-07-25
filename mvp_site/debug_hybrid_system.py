@@ -6,15 +6,19 @@ and new campaigns with structured debug_info fields.
 """
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # Debug tag patterns - same as in gemini_response.py
-DEBUG_START_PATTERN = re.compile(r'\[DEBUG_START\][\s\S]*?\[DEBUG_END\]')
-DEBUG_STATE_PATTERN = re.compile(r'\[DEBUG_STATE_START\][\s\S]*?\[DEBUG_STATE_END\]')
-DEBUG_ROLL_PATTERN = re.compile(r'\[DEBUG_ROLL_START\][\s\S]*?\[DEBUG_ROLL_END\]')
-STATE_UPDATES_PATTERN = re.compile(r'\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]')
+DEBUG_START_PATTERN = re.compile(r"\[DEBUG_START\][\s\S]*?\[DEBUG_END\]")
+DEBUG_STATE_PATTERN = re.compile(r"\[DEBUG_STATE_START\][\s\S]*?\[DEBUG_STATE_END\]")
+DEBUG_ROLL_PATTERN = re.compile(r"\[DEBUG_ROLL_START\][\s\S]*?\[DEBUG_ROLL_END\]")
+STATE_UPDATES_PATTERN = re.compile(
+    r"\[STATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]"
+)
 # Handle malformed STATE_UPDATES blocks
-STATE_UPDATES_MALFORMED_PATTERN = re.compile(r'S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]')
+STATE_UPDATES_MALFORMED_PATTERN = re.compile(
+    r"S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]"
+)
 
 
 def contains_debug_tags(text: str) -> bool:
@@ -35,7 +39,7 @@ def contains_debug_tags(text: str) -> bool:
         DEBUG_START_PATTERN,
         DEBUG_STATE_PATTERN,
         DEBUG_ROLL_PATTERN,
-        STATE_UPDATES_PATTERN
+        STATE_UPDATES_PATTERN,
     ]
 
     for pattern in patterns:
@@ -59,11 +63,11 @@ def strip_debug_content(text: str) -> str:
         return text
 
     # Apply all debug stripping patterns
-    processed = DEBUG_START_PATTERN.sub('', text)
-    processed = DEBUG_STATE_PATTERN.sub('', processed)
-    processed = DEBUG_ROLL_PATTERN.sub('', processed)
-    processed = STATE_UPDATES_PATTERN.sub('', processed)
-    processed = STATE_UPDATES_MALFORMED_PATTERN.sub('', processed)
+    processed = DEBUG_START_PATTERN.sub("", text)
+    processed = DEBUG_STATE_PATTERN.sub("", processed)
+    processed = DEBUG_ROLL_PATTERN.sub("", processed)
+    processed = STATE_UPDATES_PATTERN.sub("", processed)
+    processed = STATE_UPDATES_MALFORMED_PATTERN.sub("", processed)
 
     return processed
 
@@ -82,13 +86,15 @@ def strip_state_updates_only(text: str) -> str:
         return text
 
     # Remove only STATE_UPDATES_PROPOSED blocks
-    processed = STATE_UPDATES_PATTERN.sub('', text)
-    processed = STATE_UPDATES_MALFORMED_PATTERN.sub('', processed)
+    processed = STATE_UPDATES_PATTERN.sub("", text)
+    processed = STATE_UPDATES_MALFORMED_PATTERN.sub("", processed)
 
     return processed
 
 
-def process_story_entry_for_display(entry: Dict[str, Any], debug_mode: bool) -> Dict[str, Any]:
+def process_story_entry_for_display(
+    entry: dict[str, Any], debug_mode: bool
+) -> dict[str, Any]:
     """
     Process a single story entry for display, handling debug content appropriately.
 
@@ -100,11 +106,11 @@ def process_story_entry_for_display(entry: Dict[str, Any], debug_mode: bool) -> 
         Processed story entry safe for display
     """
     # Only process AI responses
-    if entry.get('actor') != 'gemini':
+    if entry.get("actor") != "gemini":
         return entry
 
     # Get the text content
-    text = entry.get('text', '')
+    text = entry.get("text", "")
 
     # Check if this is an old campaign with embedded debug tags
     if contains_debug_tags(text):
@@ -118,7 +124,7 @@ def process_story_entry_for_display(entry: Dict[str, Any], debug_mode: bool) -> 
 
         # Create a new entry dict to avoid modifying the original
         processed_entry = entry.copy()
-        processed_entry['text'] = processed_text
+        processed_entry["text"] = processed_text
         return processed_entry
 
     # For new campaigns, text should already be clean
@@ -126,7 +132,9 @@ def process_story_entry_for_display(entry: Dict[str, Any], debug_mode: bool) -> 
     return entry
 
 
-def process_story_for_display(story_entries: List[Dict[str, Any]], debug_mode: bool) -> List[Dict[str, Any]]:
+def process_story_for_display(
+    story_entries: list[dict[str, Any]], debug_mode: bool
+) -> list[dict[str, Any]]:
     """
     Process a full story (list of entries) for display.
 
@@ -137,7 +145,9 @@ def process_story_for_display(story_entries: List[Dict[str, Any]], debug_mode: b
     Returns:
         Processed story entries safe for display
     """
-    return [process_story_entry_for_display(entry, debug_mode) for entry in story_entries]
+    return [
+        process_story_entry_for_display(entry, debug_mode) for entry in story_entries
+    ]
 
 
 def get_narrative_for_display(story_text: str, debug_mode: bool) -> str:

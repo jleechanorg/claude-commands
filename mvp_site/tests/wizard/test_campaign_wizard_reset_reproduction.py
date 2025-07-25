@@ -18,7 +18,7 @@ import unittest
 from pathlib import Path
 
 from selenium import webdriver
-from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -26,13 +26,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 # Try to import Selenium - skip tests if not available
 try:
-
-
-
-
-
-
-
     SELENIUM_AVAILABLE = True
 except ImportError:
     SELENIUM_AVAILABLE = False
@@ -49,7 +42,6 @@ class CampaignWizardResetReproductionTest(unittest.TestCase):
             return
 
         # Set up test server - use dynamic port to avoid conflicts
-
 
         sock = socket.socket()
         sock.bind(("", 0))

@@ -3,7 +3,6 @@ import os
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
-
 # Mock firebase_admin before it's used in main
 mock_firebase_admin = MagicMock()
 mock_firestore = MagicMock()
@@ -15,11 +14,14 @@ mock_firebase_admin.auth = mock_auth
 import sys
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from game_state import GameState
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+import constants
 from gemini_response import GeminiResponse
 from narrative_response_schema import NarrativeResponse
-import constants
+
+from game_state import GameState
 
 sys.modules["firebase_admin"] = mock_firebase_admin
 sys.modules["firebase_admin.firestore"] = mock_firestore
@@ -100,7 +102,6 @@ class TestAPIRoutes(unittest.TestCase):
             "player": {"name": "Hero", "level": 5},
         }
         # Mock game state
-
 
         mock_game_state = GameState()  # Will default to debug_mode=True
 
@@ -579,7 +580,6 @@ class TestCreateCampaignRoute(unittest.TestCase):
         """Test campaign creation with Destiny system checkbox checked (default)."""
         # Import constants for comparison
 
-
         # Mock constants
         mock_constants.KEY_TITLE = "title"
         mock_constants.ATTRIBUTE_SYSTEM_DND = constants.ATTRIBUTE_SYSTEM_DND
@@ -636,7 +636,6 @@ class TestCreateCampaignRoute(unittest.TestCase):
         """Test campaign creation with Destiny system checkbox unchecked (uses D&D)."""
         # Import constants for comparison
 
-
         # Mock constants
         mock_constants.KEY_TITLE = "title"
         mock_constants.ATTRIBUTE_SYSTEM_DND = constants.ATTRIBUTE_SYSTEM_DND
@@ -692,7 +691,6 @@ class TestCreateCampaignRoute(unittest.TestCase):
     ):
         """Test campaign creation with multiple custom options including destinySystem."""
         # Import constants for comparison
-
 
         # Mock constants
         mock_constants.KEY_TITLE = "title"
@@ -769,8 +767,6 @@ class TestCreateCampaignRoute(unittest.TestCase):
         )
 
         # Create a mock GeminiResponse with god_mode_response
-
-
 
         mock_gemini_response = Mock(spec=GeminiResponse)
         mock_gemini_response.get_narrative_text.return_value = "The battle continues!"

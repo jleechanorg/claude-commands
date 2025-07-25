@@ -2,12 +2,12 @@
 Mock Gemini API service for function testing.
 Provides realistic AI responses without making actual API calls.
 """
+
 import json
 import re
-from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
-from .data_fixtures import SAMPLE_AI_RESPONSES, SAMPLE_STATE_UPDATES
+from .data_fixtures import SAMPLE_AI_RESPONSES
 from .structured_fields_fixtures import FULL_STRUCTURED_RESPONSE, GOD_MODE_RESPONSE
 
 try:
@@ -46,7 +46,7 @@ class MockGeminiClient:
             "hp_discrepancy": self._generate_hp_discrepancy,
             "location_mismatch": self._generate_location_mismatch,
             "mission_completion": self._generate_mission_completion,
-            "validation_prompt": self._generate_validation_response
+            "validation_prompt": self._generate_validation_response,
         }
 
     def generate_content(self, prompt_parts, model: str = None) -> MockGeminiResponse:
@@ -133,45 +133,47 @@ Which option would you prefer? (1, 2, or 3)""",
                     "ai_generated": {
                         "text": "AI Generated Character",
                         "description": "Let the AI create a complete D&D 5e character sheet for Ser Arion.",
-                        "risk_level": "safe"
+                        "risk_level": "safe",
                     },
                     "custom_class": {
                         "text": "Custom Class Creation",
                         "description": "Work with the AI to design unique custom mechanics for Ser Arion's knightly abilities.",
-                        "risk_level": "safe"
+                        "risk_level": "safe",
                     },
                     "standard_dnd": {
                         "text": "Standard D&D Creation",
                         "description": "Choose Ser Arion's race (Human) and class from standard D&D 5e options.",
-                        "risk_level": "safe"
-                    }
-                }
+                        "risk_level": "safe",
+                    },
+                },
             },
             "dice_rolls": [],
             "god_mode_response": "",
             "entities_mentioned": [],
             "location_confirmed": "Character Creation",
             "state_updates": {
-                "world_data": {
-                    "current_location_name": "Character Creation"
-                },
+                "world_data": {"current_location_name": "Character Creation"},
                 "custom_campaign_state": {
                     "campaign_title": "Celestial Imperium: Order Under Tyranny",
                     "character_name": "Ser Arion",
-                    "setting": "Assiah"
-                }
+                    "setting": "Assiah",
+                },
             },
             "debug_info": {
-                "dm_notes": ["Initial state creation, setting character creation in progress and recording campaign summary and initial state."],
-                "state_rationale": "Initial state creation, setting character creation in progress and recording campaign summary and initial state."
-            }
+                "dm_notes": [
+                    "Initial state creation, setting character creation in progress and recording campaign summary and initial state."
+                ],
+                "state_rationale": "Initial state creation, setting character creation in progress and recording campaign summary and initial state.",
+            },
         }
         return json.dumps(initial_response, indent=2)
 
     def _generate_continue_story(self, prompt: str) -> str:
         """Generate a normal story continuation."""
         # Check if we need to return structured JSON response
-        if FULL_STRUCTURED_RESPONSE and ("json" in prompt.lower() or "structured" in prompt.lower()):
+        if FULL_STRUCTURED_RESPONSE and (
+            "json" in prompt.lower() or "structured" in prompt.lower()
+        ):
             # Check for god mode
             if "god mode:" in prompt.lower() or "god:" in prompt.lower():
                 return json.dumps(GOD_MODE_RESPONSE, indent=2)
@@ -226,13 +228,16 @@ def get_mock_client():
     return mock_gemini_client
 
 
-def parse_state_updates_from_response(response_text: str) -> Dict[str, Any]:
+def parse_state_updates_from_response(response_text: str) -> dict[str, Any]:
     """
     Parse state updates from a mock AI response.
     Mimics the real gemini_service.parse_llm_response_for_state_changes function.
     """
-    matches = re.findall(r'\[STATE_UPDATES_PROPOSED\](.*?)\[END_STATE_UPDATES_PROPOSED\]',
-                        response_text, re.DOTALL)
+    matches = re.findall(
+        r"\[STATE_UPDATES_PROPOSED\](.*?)\[END_STATE_UPDATES_PROPOSED\]",
+        response_text,
+        re.DOTALL,
+    )
 
     if not matches:
         return {}

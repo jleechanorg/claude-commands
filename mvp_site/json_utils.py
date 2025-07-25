@@ -1,9 +1,10 @@
 """
 Shared JSON parsing utilities for handling incomplete or malformed JSON responses
 """
+
 import json
 import re
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 
 def count_unmatched_quotes(text: str) -> int:
@@ -20,7 +21,7 @@ def count_unmatched_quotes(text: str) -> int:
         if escape_next:
             escape_next = False
             continue
-        if char == '\\':
+        if char == "\\":
             escape_next = True
             continue
         if char == '"' and not escape_next:
@@ -29,7 +30,7 @@ def count_unmatched_quotes(text: str) -> int:
     return quote_count
 
 
-def count_unmatched_braces(text: str) -> Tuple[int, int]:
+def count_unmatched_braces(text: str) -> tuple[int, int]:
     """
     Count unmatched braces and brackets, accounting for strings.
 
@@ -46,7 +47,7 @@ def count_unmatched_braces(text: str) -> Tuple[int, int]:
             escape_next = False
             continue
 
-        if char == '\\':
+        if char == "\\":
             escape_next = True
             continue
 
@@ -55,13 +56,13 @@ def count_unmatched_braces(text: str) -> Tuple[int, int]:
             continue
 
         if not in_string:
-            if char == '{':
+            if char == "{":
                 brace_count += 1
-            elif char == '}':
+            elif char == "}":
                 brace_count -= 1
-            elif char == '[':
+            elif char == "[":
                 bracket_count += 1
-            elif char == ']':
+            elif char == "]":
                 bracket_count -= 1
 
     return (brace_count, bracket_count)
@@ -75,31 +76,31 @@ def unescape_json_string(text: str) -> str:
     result = []
     i = 0
     while i < len(text):
-        if text[i] == '\\' and i + 1 < len(text):
+        if text[i] == "\\" and i + 1 < len(text):
             next_char = text[i + 1]
-            if next_char == 'n':
-                result.append('\n')
+            if next_char == "n":
+                result.append("\n")
                 i += 2
-            elif next_char == 't':
-                result.append('\t')
+            elif next_char == "t":
+                result.append("\t")
                 i += 2
-            elif next_char == 'r':
-                result.append('\r')
+            elif next_char == "r":
+                result.append("\r")
                 i += 2
-            elif next_char == 'b':
-                result.append('\b')
+            elif next_char == "b":
+                result.append("\b")
                 i += 2
-            elif next_char == 'f':
-                result.append('\f')
+            elif next_char == "f":
+                result.append("\f")
                 i += 2
             elif next_char == '"':
                 result.append('"')
                 i += 2
-            elif next_char == '/':
-                result.append('/')
+            elif next_char == "/":
+                result.append("/")
                 i += 2
-            elif next_char == '\\':
-                result.append('\\')
+            elif next_char == "\\":
+                result.append("\\")
                 i += 2
             else:
                 # Unknown escape sequence, keep as is
@@ -109,10 +110,10 @@ def unescape_json_string(text: str) -> str:
             result.append(text[i])
             i += 1
 
-    return ''.join(result)
+    return "".join(result)
 
 
-def try_parse_json(text: str) -> Tuple[Optional[Dict[str, Any]], bool]:
+def try_parse_json(text: str) -> tuple[dict[str, Any] | None, bool]:
     """
     Try to parse JSON text, returning (result, success).
     """
@@ -122,7 +123,7 @@ def try_parse_json(text: str) -> Tuple[Optional[Dict[str, Any]], bool]:
         return None, False
 
 
-def extract_json_boundaries(text: str) -> Optional[str]:
+def extract_json_boundaries(text: str) -> str | None:
     """
     Extract JSON content between first { and its matching } or [ and its matching ].
 
@@ -130,19 +131,19 @@ def extract_json_boundaries(text: str) -> Optional[str]:
         Extracted JSON string if valid boundaries found, original text if incomplete,
         or None if no JSON start marker ({ or [) is found
     """
-    start_match = re.search(r'[{\[]', text)
+    start_match = re.search(r"[{\[]", text)
     if not start_match:
         return None
 
-    text = text[start_match.start():]
+    text = text[start_match.start() :]
 
-    if text.startswith('{'):
+    if text.startswith("{"):
         brace_count = 0
         in_string = False
         i = 0
 
         while i < len(text):
-            if in_string and text[i] == '\\' and i + 1 < len(text):
+            if in_string and text[i] == "\\" and i + 1 < len(text):
                 # Skip escaped character in string
                 i += 2
                 continue
@@ -150,21 +151,21 @@ def extract_json_boundaries(text: str) -> Optional[str]:
             if text[i] == '"':
                 in_string = not in_string
             elif not in_string:
-                if text[i] == '{':
+                if text[i] == "{":
                     brace_count += 1
-                elif text[i] == '}':
+                elif text[i] == "}":
                     brace_count -= 1
                     if brace_count == 0:
-                        return text[:i + 1]
+                        return text[: i + 1]
 
             i += 1
-    elif text.startswith('['):
+    elif text.startswith("["):
         bracket_count = 0
         in_string = False
         i = 0
 
         while i < len(text):
-            if in_string and text[i] == '\\' and i + 1 < len(text):
+            if in_string and text[i] == "\\" and i + 1 < len(text):
                 # Skip escaped character in string
                 i += 2
                 continue
@@ -172,12 +173,12 @@ def extract_json_boundaries(text: str) -> Optional[str]:
             if text[i] == '"':
                 in_string = not in_string
             elif not in_string:
-                if text[i] == '[':
+                if text[i] == "[":
                     bracket_count += 1
-                elif text[i] == ']':
+                elif text[i] == "]":
                     bracket_count -= 1
                     if bracket_count == 0:
-                        return text[:i + 1]
+                        return text[: i + 1]
 
             i += 1
 
@@ -192,7 +193,7 @@ def complete_truncated_json(text: str) -> str:
         return "{}"
 
     # Ensure it starts with { or [
-    if not text.strip().startswith(('{', '[')):
+    if not text.strip().startswith(("{", "[")):
         return text
 
     completed = text
@@ -201,7 +202,7 @@ def complete_truncated_json(text: str) -> str:
     quote_count = count_unmatched_quotes(text)
     if quote_count % 2 == 1:
         # Odd number of quotes means we're in a string
-        if completed.rstrip().endswith('}'):
+        if completed.rstrip().endswith("}"):
             # Insert quote before the closing brace
             completed = completed[:-1] + '"}'
         else:
@@ -215,11 +216,11 @@ def complete_truncated_json(text: str) -> str:
     while i < len(completed):
         if completed[i] == '"':
             # Check if this quote is escaped
-            if i > 0 and completed[i-1] == '\\':
+            if i > 0 and completed[i - 1] == "\\":
                 # Count preceding backslashes
                 num_backslashes = 0
                 j = i - 1
-                while j >= 0 and completed[j] == '\\':
+                while j >= 0 and completed[j] == "\\":
                     num_backslashes += 1
                     j -= 1
 
@@ -229,11 +230,11 @@ def complete_truncated_json(text: str) -> str:
             else:
                 in_string = not in_string
         elif not in_string:
-            if completed[i] == '{':
-                nesting_stack.append('}')
-            elif completed[i] == '[':
-                nesting_stack.append(']')
-            elif completed[i] in '}]' and nesting_stack:
+            if completed[i] == "{":
+                nesting_stack.append("}")
+            elif completed[i] == "[":
+                nesting_stack.append("]")
+            elif completed[i] in "}]" and nesting_stack:
                 if nesting_stack[-1] == completed[i]:
                     nesting_stack.pop()
 
@@ -246,7 +247,7 @@ def complete_truncated_json(text: str) -> str:
     return completed
 
 
-def extract_field_value(text: str, field_name: str) -> Optional[str]:
+def extract_field_value(text: str, field_name: str) -> str | None:
     """
     Extract a specific field value from potentially malformed JSON.
 
@@ -258,7 +259,7 @@ def extract_field_value(text: str, field_name: str) -> Optional[str]:
         The extracted value or None
     """
     # Special handling for narrative field - it often contains quotes and can be very long
-    if field_name == 'narrative':
+    if field_name == "narrative":
         # For narrative, we need to handle incomplete JSON where the string might be cut off
         # First try: Look for narrative field and find its proper end
         narrative_start = re.search(rf'"{field_name}"\s*:\s*"', text, re.DOTALL)
@@ -273,7 +274,7 @@ def extract_field_value(text: str, field_name: str) -> Optional[str]:
 
                 if escaped:
                     escaped = False
-                elif char == '\\':
+                elif char == "\\":
                     escaped = True
                 elif char == '"':
                     # Found the closing quote
@@ -288,7 +289,7 @@ def extract_field_value(text: str, field_name: str) -> Optional[str]:
             # For incomplete JSON (no closing quote found), we generally don't unescape
             # because we can't be sure the escape sequences are complete
             # However, if there are no trailing backslashes, it's safe to unescape
-            has_trailing_backslash = value and value[-1] == '\\'
+            has_trailing_backslash = value and value[-1] == "\\"
 
             if has_trailing_backslash:
                 # Don't unescape - preserve raw content for incomplete JSON
@@ -306,7 +307,7 @@ def extract_field_value(text: str, field_name: str) -> Optional[str]:
     if matches:
         value = matches[-1].group(1)
         # Handle trailing backslash in incomplete strings
-        if value.endswith('\\') and len(value) % 2 == 1:
+        if value.endswith("\\") and len(value) % 2 == 1:
             value = value[:-1]
         return unescape_json_string(value)
 
@@ -316,8 +317,8 @@ def extract_field_value(text: str, field_name: str) -> Optional[str]:
     if match:
         value = match.group(1)
         # Remove trailing backslash if it's incomplete
-        if value.endswith('\\'):
-            value = value.rstrip('\\')
+        if value.endswith("\\"):
+            value = value.rstrip("\\")
         return unescape_json_string(value)
 
     return None

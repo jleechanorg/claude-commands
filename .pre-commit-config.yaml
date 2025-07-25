@@ -6,8 +6,8 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-      # Temporarily disabled due to invalid test result JSON files
-      # - id: check-json
+      - id: check-json
+        exclude: ^analysis/test_results/.*\.json$
       - id: check-merge-conflict
       - id: check-added-large-files
         args: ['--maxkb=500']

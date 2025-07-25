@@ -9,7 +9,9 @@ import unittest
 from unittest.mock import call, patch
 
 # Add the parent directory to the path to import modules
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from robust_json_parser import RobustJSONParser
 

@@ -3,11 +3,9 @@
 Automatically enhances LLM responses with relevant memory context.
 """
 
-import asyncio
 import re
 import time
-from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import logging_util
 import memory_mcp_real
@@ -15,7 +13,23 @@ import memory_mcp_real
 logger = logging_util.getLogger(__name__)
 
 # Common English stop words to exclude from search terms
-STOP_WORDS = {'the', 'is', 'at', 'which', 'on', 'and', 'a', 'an', 'as', 'are', 'was', 'were', 'been', 'be'}
+STOP_WORDS = {
+    "the",
+    "is",
+    "at",
+    "which",
+    "on",
+    "and",
+    "a",
+    "an",
+    "as",
+    "are",
+    "was",
+    "were",
+    "been",
+    "be",
+}
+
 
 class MemoryIntegration:
     """Core memory integration for automatic context enhancement"""
@@ -27,7 +41,7 @@ class MemoryIntegration:
         self.cache_timestamps = {}
         self.metrics = MemoryMetrics()
 
-    def extract_query_terms(self, user_input: str) -> List[str]:
+    def extract_query_terms(self, user_input: str) -> list[str]:
         """
         Extracts key terms from the user input for use in memory searches.
 
@@ -47,7 +61,7 @@ class MemoryIntegration:
         stop_words = STOP_WORDS
 
         # Extract potential entity names (capitalized words)
-        entity_pattern = r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b'
+        entity_pattern = r"\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b"
         entities = re.findall(entity_pattern, user_input)
 
         # Extract technical terms
@@ -55,14 +69,16 @@ class MemoryIntegration:
         technical_terms = [w for w in words if w not in stop_words and len(w) > 2]
 
         # Extract PR numbers
-        pr_pattern = r'PR\s*#?\d+'
+        pr_pattern = r"PR\s*#?\d+"
         pr_refs = re.findall(pr_pattern, user_input, re.IGNORECASE)
 
         # Combine and deduplicate
         all_terms = list(set(entities + technical_terms + pr_refs))
         return all_terms[:5]  # Limit to top 5 terms
 
-    def calculate_relevance_score(self, entity: Dict[str, Any], query_context: str) -> float:
+    def calculate_relevance_score(
+        self, entity: dict[str, Any], query_context: str
+    ) -> float:
         """
         Calculate the relevance score of an entity to a given query context.
 
@@ -88,18 +104,20 @@ class MemoryIntegration:
         query_lower = query_context.lower()
 
         # Name match (highest weight)
-        entity_name = entity.get('name', '').lower().replace('_', ' ')
-        if entity_name in query_lower or any(term in entity_name for term in query_lower.split()):
+        entity_name = entity.get("name", "").lower().replace("_", " ")
+        if entity_name in query_lower or any(
+            term in entity_name for term in query_lower.split()
+        ):
             score += 0.4
 
         # Type match
-        entity_type = entity.get('entityType', '')
-        if any(term in entity_type for term in ['pattern', 'learning', 'issue']):
+        entity_type = entity.get("entityType", "")
+        if any(term in entity_type for term in ["pattern", "learning", "issue"]):
             score += 0.2
 
         # Observation relevance
-        observations = entity.get('observations', [])
-        obs_text = ' '.join(observations).lower()
+        observations = entity.get("observations", [])
+        obs_text = " ".join(observations).lower()
         matches = sum(1 for term in query_lower.split() if term in obs_text)
         score += min(0.3, matches * 0.05)
 
@@ -108,15 +126,16 @@ class MemoryIntegration:
 
         return min(1.0, score)
 
-    def _call_memory_mcp_search(self, query: str) -> List[Dict[str, Any]]:
+    def _call_memory_mcp_search(self, query: str) -> list[dict[str, Any]]:
         """Wrapper for Memory MCP search calls - REAL implementation"""
         try:
             # Import the real Memory MCP module
 
-
             # Call the real MCP search function
             results = memory_mcp_real.search_nodes(query)
-            logger.debug(f"Memory MCP search for '{query}' returned {len(results)} results")
+            logger.debug(
+                f"Memory MCP search for '{query}' returned {len(results)} results"
+            )
             return results
 
         except ImportError:
@@ -127,7 +146,7 @@ class MemoryIntegration:
             logger.error(f"Memory MCP search error: {e}")
             return []
 
-    def search_relevant_memory(self, terms: List[str]) -> List[Dict[str, Any]]:
+    def search_relevant_memory(self, terms: list[str]) -> list[dict[str, Any]]:
         """
         Search and retrieve relevant memories.
 
@@ -178,20 +197,22 @@ class MemoryIntegration:
             # Deduplicate by entity name
             unique_entities = {}
             for entity in all_results:
-                name = entity.get('name', '')
+                name = entity.get("name", "")
                 if name and name not in unique_entities:
                     unique_entities[name] = entity
 
             # Score and filter
             scored = []
-            query_text = ' '.join(terms)
+            query_text = " ".join(terms)
             for entity in unique_entities.values():
                 score = self.calculate_relevance_score(entity, query_text)
                 if score >= 0.4:
                     scored.append((score, entity))
 
             # Sort by score and take top 5
-            relevant = [e for _, e in sorted(scored, key=lambda x: x[0], reverse=True)][:5]
+            relevant = [e for _, e in sorted(scored, key=lambda x: x[0], reverse=True)][
+                :5
+            ]
 
             # Cache result
             self.hot_cache[cache_key] = relevant
@@ -205,16 +226,18 @@ class MemoryIntegration:
             self.metrics.record_query(False, time.time() - start_time)
             return []
 
-    def enhance_context(self, original_context: str, memories: List[Dict[str, Any]]) -> str:
+    def enhance_context(
+        self, original_context: str, memories: list[dict[str, Any]]
+    ) -> str:
         """Inject memory context into prompt"""
         if not memories:
             return original_context
 
         memory_section = "\n## Relevant Memory Context\n"
         for memory in memories:
-            name = memory.get('name', 'Unknown')
-            entity_type = memory.get('entityType', 'unknown')
-            observations = memory.get('observations', [])
+            name = memory.get("name", "Unknown")
+            entity_type = memory.get("entityType", "unknown")
+            observations = memory.get("observations", [])
 
             memory_section += f"\n### {name} ({entity_type})\n"
             for obs in observations[:3]:  # Limit observations
@@ -272,7 +295,7 @@ memory_integration = MemoryIntegration()
 def enhance_slash_command(command: str, args: str) -> str:
     """Enhance slash command with memory context"""
     # Commands that benefit from memory
-    memory_commands = {'/learn', '/debug', '/think', '/analyze', '/fix'}
+    memory_commands = {"/learn", "/debug", "/think", "/analyze", "/fix"}
 
     if command not in memory_commands:
         return ""

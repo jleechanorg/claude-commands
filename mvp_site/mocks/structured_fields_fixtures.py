@@ -33,38 +33,38 @@ Which option would you prefer? (1, 2, or 3)""",
             "ai_generated": {
                 "text": "AI Generated Character",
                 "description": "Let the AI create a complete D&D 5e character sheet for Ser Arion.",
-                "risk_level": "safe"
+                "risk_level": "safe",
             },
             "custom_class": {
                 "text": "Custom Class Creation",
                 "description": "Work with the AI to design unique custom mechanics for Ser Arion's knightly abilities.",
-                "risk_level": "safe"
+                "risk_level": "safe",
             },
             "standard_dnd": {
                 "text": "Standard D&D Creation",
                 "description": "Choose Ser Arion's race (Human) and class from standard D&D 5e options.",
-                "risk_level": "safe"
-            }
-        }
+                "risk_level": "safe",
+            },
+        },
     },
     "dice_rolls": [],
     "god_mode_response": "",
     "entities_mentioned": [],
     "location_confirmed": "Character Creation",
     "state_updates": {
-        "world_data": {
-            "current_location_name": "Character Creation"
-        },
+        "world_data": {"current_location_name": "Character Creation"},
         "custom_campaign_state": {
             "campaign_title": "Celestial Imperium: Order Under Tyranny",
             "character_name": "Ser Arion",
-            "setting": "Assiah"
-        }
+            "setting": "Assiah",
+        },
     },
     "debug_info": {
-        "dm_notes": ["Initial state creation, setting character creation in progress and recording campaign summary and initial state."],
-        "state_rationale": "Initial state creation, setting character creation in progress and recording campaign summary and initial state."
-    }
+        "dm_notes": [
+            "Initial state creation, setting character creation in progress and recording campaign summary and initial state."
+        ],
+        "state_rationale": "Initial state creation, setting character creation in progress and recording campaign summary and initial state.",
+    },
 }
 
 # Complete structured response with all 10 required fields
@@ -79,29 +79,29 @@ FULL_STRUCTURED_RESPONSE = {
             "press_attack": {
                 "text": "Press the Attack",
                 "description": "Continue attacking the wounded goblin to finish it off before it can recover",
-                "risk_level": "medium"
+                "risk_level": "medium",
             },
             "defensive_stance": {
                 "text": "Take Defensive Stance",
                 "description": "Fall back to a defensive position and prepare to counter their attacks",
-                "risk_level": "low"
+                "risk_level": "low",
             },
             "action_surge": {
                 "text": "Use Action Surge",
                 "description": "Unleash a flurry of attacks using your fighter's Action Surge ability",
-                "risk_level": "high"
+                "risk_level": "high",
             },
             "intimidate": {
                 "text": "Intimidate Enemies",
                 "description": "Try to intimidate the goblins with a fierce battle cry and aggressive posture",
-                "risk_level": "medium"
-            }
-        }
+                "risk_level": "medium",
+            },
+        },
     },
     "dice_rolls": [
         "Attack Roll: 1d20+7 = 15+7 = 22 (Hit!)",
         "Damage Roll: 1d8+4 = 6+4 = 10 slashing damage",
-        "Goblin Constitution Save: 1d20+1 = 8+1 = 9 (Failed - remains conscious but badly wounded)"
+        "Goblin Constitution Save: 1d20+1 = 8+1 = 9 (Failed - remains conscious but badly wounded)",
     ],
     "god_mode_response": "",
     "entities_mentioned": ["goblin", "goblin chieftain", "wounded goblin"],
@@ -112,39 +112,37 @@ FULL_STRUCTURED_RESPONSE = {
                 "hp": 2,
                 "max_hp": 12,
                 "status": "badly_wounded",
-                "position": "retreating"
+                "position": "retreating",
             },
             "goblin_chieftain": {
                 "hp": 28,
                 "max_hp": 28,
                 "status": "angry",
-                "position": "throne"
+                "position": "throne",
             },
-            "goblin_warrior_2": {
-                "hp": 12,
-                "max_hp": 12,
-                "status": "advancing"
-            },
-            "goblin_warrior_3": {
-                "hp": 12,
-                "max_hp": 12,
-                "status": "advancing"
-            }
+            "goblin_warrior_2": {"hp": 12, "max_hp": 12, "status": "advancing"},
+            "goblin_warrior_3": {"hp": 12, "max_hp": 12, "status": "advancing"},
         },
         "combat": {
             "in_combat": True,
             "round": 2,
-            "turn_order": ["player", "goblin_chieftain", "goblin_warrior_2", "goblin_warrior_3", "goblin_warrior_1"]
-        }
+            "turn_order": [
+                "player",
+                "goblin_chieftain",
+                "goblin_warrior_2",
+                "goblin_warrior_3",
+                "goblin_warrior_1",
+            ],
+        },
     },
     "debug_info": {
         "dm_notes": [
             "Player made a successful attack against goblin_warrior_1",
             "Introducing reinforcements to increase challenge",
-            "Chieftain will likely cast a spell next round if not engaged"
+            "Chieftain will likely cast a spell next round if not engaged",
         ],
-        "state_rationale": "Updated NPC HP values and positions based on combat results. Added new combatants to the encounter."
-    }
+        "state_rationale": "Updated NPC HP values and positions based on combat results. Added new combatants to the encounter.",
+    },
 }
 
 # God mode specific response
@@ -160,8 +158,8 @@ GOD_MODE_RESPONSE = {
     "state_updates": {},
     "debug_info": {
         "dm_notes": ["God mode query - provided scene overview and suggestions"],
-        "state_rationale": "No state changes in god mode response"
-    }
+        "state_rationale": "No state changes in god mode response",
+    },
 }
 
 # Response with all fields but some empty (minimal response)
@@ -175,14 +173,14 @@ MINIMAL_STRUCTURED_RESPONSE = {
             "visit_merchant": {
                 "text": "Visit the Merchants",
                 "description": "Browse the wares at the market stalls",
-                "risk_level": "safe"
+                "risk_level": "safe",
             },
             "explore_village": {
                 "text": "Explore the Village",
                 "description": "Walk around and get familiar with the village layout",
-                "risk_level": "safe"
-            }
-        }
+                "risk_level": "safe",
+            },
+        },
     },
     "dice_rolls": [],
     "god_mode_response": "",
@@ -191,6 +189,6 @@ MINIMAL_STRUCTURED_RESPONSE = {
     "state_updates": {},
     "debug_info": {
         "dm_notes": ["Starting a new day in the village"],
-        "state_rationale": "No combat or state changes in this peaceful scene"
-    }
+        "state_rationale": "No combat or state changes in this peaceful scene",
+    },
 }

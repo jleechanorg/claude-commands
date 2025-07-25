@@ -1,18 +1,20 @@
 """Debug test to identify exactly where god mode response parsing fails."""
 
+import json
 import os
 import sys
 import unittest
 
-import json
-
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from narrative_response_schema import _combine_god_mode_and_narrative
-
-import json
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 import logging
 
-from narrative_response_schema import NarrativeResponse, parse_structured_response
+from narrative_response_schema import (
+    NarrativeResponse,
+    _combine_god_mode_and_narrative,
+    parse_structured_response,
+)
 
 
 class TestGodModeResponseParsingDebug(unittest.TestCase):
@@ -117,7 +119,6 @@ class TestGodModeResponseParsingDebug(unittest.TestCase):
 
         # Step 1: Parse JSON
 
-
         parsed_data = json.loads(test_response)
 
         # Step 2: Try to create NarrativeResponse
@@ -131,7 +132,6 @@ class TestGodModeResponseParsingDebug(unittest.TestCase):
                 and validated_response.god_mode_response
             ):
                 print("MAIN PATH: god_mode_response detected")
-
 
                 combined_response = _combine_god_mode_and_narrative(
                     validated_response.god_mode_response, validated_response.narrative
@@ -151,7 +151,6 @@ class TestGodModeResponseParsingDebug(unittest.TestCase):
                 narrative = parsed_data.get("narrative")
                 if narrative is None:
                     narrative = ""
-
 
                 combined_response = _combine_god_mode_and_narrative(
                     god_mode_response, narrative

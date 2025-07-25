@@ -39,8 +39,9 @@ import subprocess
 import sys
 import traceback
 import uuid
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 import constants
 
@@ -51,21 +52,13 @@ import document_generator
 import firebase_admin
 import logging_util
 import structured_fields_utils
-from custom_types import ApiResponse, CampaignData, CampaignId, UserId
+from custom_types import CampaignId, UserId
 from debug_hybrid_system import process_story_for_display
 from debug_mode_parser import DebugModeParser
 from firebase_admin import auth
 
 # Flask and web imports
-from flask import (
-    Flask,
-    Request,
-    Response,
-    jsonify,
-    request,
-    send_file,
-    send_from_directory,
-)
+from flask import Flask, Response, jsonify, request, send_file, send_from_directory
 from flask_cors import CORS
 from mocks import mock_firestore_service_wrapper, mock_gemini_service_wrapper
 from token_utils import log_with_tokens
@@ -170,7 +163,9 @@ RANDOM_SETTINGS = [
 # --- END CONSTANTS ---
 
 
-def _prepare_game_state(user_id: UserId, campaign_id: CampaignId) -> Tuple[GameState, bool, int]:
+def _prepare_game_state(
+    user_id: UserId, campaign_id: CampaignId
+) -> tuple[GameState, bool, int]:
     """
     Load and prepare game state, including legacy cleanup.
 
@@ -221,7 +216,12 @@ def _prepare_game_state(user_id: UserId, campaign_id: CampaignId) -> Tuple[GameS
     return current_game_state, was_cleaned, num_cleaned
 
 
-def _handle_set_command(user_input: str, current_game_state: GameState, user_id: UserId, campaign_id: CampaignId) -> Optional[Response]:
+def _handle_set_command(
+    user_input: str,
+    current_game_state: GameState,
+    user_id: UserId,
+    campaign_id: CampaignId,
+) -> Response | None:
     """
     Handle GOD_MODE_SET command.
 
@@ -288,7 +288,12 @@ def _handle_set_command(user_input: str, current_game_state: GameState, user_id:
     )
 
 
-def _handle_ask_state_command(user_input: str, current_game_state: GameState, user_id: UserId, campaign_id: CampaignId) -> Optional[Response]:
+def _handle_ask_state_command(
+    user_input: str,
+    current_game_state: GameState,
+    user_id: UserId,
+    campaign_id: CampaignId,
+) -> Response | None:
     """
     Handle GOD_ASK_STATE command.
 
@@ -313,7 +318,9 @@ def _handle_ask_state_command(user_input: str, current_game_state: GameState, us
     return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: response_text})
 
 
-def _handle_update_state_command(user_input: str, user_id: UserId, campaign_id: CampaignId) -> Optional[Response]:
+def _handle_update_state_command(
+    user_input: str, user_id: UserId, campaign_id: CampaignId
+) -> Response | None:
     """
     Handle GOD_MODE_UPDATE_STATE command.
 
@@ -380,12 +387,12 @@ def _handle_update_state_command(user_input: str, user_id: UserId, campaign_id: 
 
 
 def _apply_state_changes_and_respond(
-    proposed_changes: Optional[Dict[str, Any]],
+    proposed_changes: dict[str, Any] | None,
     current_game_state: GameState,
     gemini_response_obj: Any,  # GeminiResponse type from gemini_service
-    structured_response: Optional[Any],  # NarrativeResponse type from gemini_service
+    structured_response: Any | None,  # NarrativeResponse type from gemini_service
     mode: str,
-    story_context: List[Dict[str, Any]],
+    story_context: list[dict[str, Any]],
     campaign_id: CampaignId,
     user_id: UserId,
 ) -> Response:
@@ -524,8 +531,12 @@ def _apply_state_changes_and_respond(
 
 
 def _handle_debug_mode_command(
-    user_input: str, mode: str, current_game_state: GameState, user_id: UserId, campaign_id: CampaignId
-) -> Optional[Response]:
+    user_input: str,
+    mode: str,
+    current_game_state: GameState,
+    user_id: UserId,
+    campaign_id: CampaignId,
+) -> Response | None:
     """
     Handle debug mode command parsing and state updates.
 
@@ -574,7 +585,9 @@ def _handle_debug_mode_command(
     )
 
 
-def truncate_game_state_for_logging(game_state_dict: Dict[str, Any], max_lines: int = 20) -> str:
+def truncate_game_state_for_logging(
+    game_state_dict: dict[str, Any], max_lines: int = 20
+) -> str:
     """
     Truncates a game state dictionary for logging to improve readability.
     Only shows the first max_lines lines of the JSON representation.
@@ -591,8 +604,8 @@ def truncate_game_state_for_logging(game_state_dict: Dict[str, Any], max_lines: 
 
 
 def apply_automatic_combat_cleanup(
-    updated_state_dict: Dict[str, Any], proposed_changes: Dict[str, Any]
-) -> Dict[str, Any]:
+    updated_state_dict: dict[str, Any], proposed_changes: dict[str, Any]
+) -> dict[str, Any]:
     """
     Automatically cleans up defeated enemies from combat state when combat updates are applied.
 
@@ -643,7 +656,9 @@ def apply_automatic_combat_cleanup(
     return updated_state_dict
 
 
-def _cleanup_legacy_state(state_dict: Dict[str, Any]) -> Tuple[Dict[str, Any], bool, int]:
+def _cleanup_legacy_state(
+    state_dict: dict[str, Any],
+) -> tuple[dict[str, Any], bool, int]:
     """
     Removes legacy data structures from a game state dictionary.
     Specifically, it removes top-level keys with '.' in them and the old 'world_time' key.
@@ -669,14 +684,14 @@ def _cleanup_legacy_state(state_dict: Dict[str, Any]) -> Tuple[Dict[str, Any], b
     return cleaned_state, True, num_deleted
 
 
-def format_state_changes(changes: Dict[str, Any], for_html: bool = False) -> str:
+def format_state_changes(changes: dict[str, Any], for_html: bool = False) -> str:
     """Formats a dictionary of state changes into a readable string, counting the number of leaf-node changes."""
     if not changes:
         return "No state changes."
 
-    log_lines: List[str] = []
+    log_lines: list[str] = []
 
-    def recurse_items(d: Dict[str, Any], prefix: str = "") -> None:
+    def recurse_items(d: dict[str, Any], prefix: str = "") -> None:
         for key, value in d.items():
             path = f"{prefix}.{key}" if prefix else key
             if isinstance(value, dict):
@@ -701,13 +716,13 @@ def format_state_changes(changes: Dict[str, Any], for_html: bool = False) -> str
     return f"{header}\\n{items_text}"
 
 
-def parse_set_command(payload_str: str) -> Dict[str, Any]:
+def parse_set_command(payload_str: str) -> dict[str, Any]:
     """
     Parses a multi-line string of `key.path = value` into a nested
     dictionary of proposed changes. Handles multiple .append operations correctly.
     """
-    proposed_changes: Dict[str, Any] = {}
-    append_ops: Dict[str, List[Any]] = collections.defaultdict(list)
+    proposed_changes: dict[str, Any] = {}
+    append_ops: dict[str, list[Any]] = collections.defaultdict(list)
 
     for line in payload_str.strip().splitlines():
         line = line.strip()
@@ -747,7 +762,12 @@ def parse_set_command(payload_str: str) -> Dict[str, Any]:
     return proposed_changes
 
 
-def _build_campaign_prompt(character: Optional[str], setting: Optional[str], description: Optional[str], old_prompt: Optional[str]) -> str:
+def _build_campaign_prompt(
+    character: str | None,
+    setting: str | None,
+    description: str | None,
+    old_prompt: str | None,
+) -> str:
     """
     Build campaign prompt from character, setting, and description parameters.
 
@@ -884,17 +904,17 @@ def create_app() -> Flask:
     CORS(app, resources=CORS_RESOURCES)
 
     # Cache busting route for testing - only activates with special header
-    @app.route('/static/<path:filename>')
+    @app.route("/static/<path:filename>")
     def static_files_with_cache_busting(filename):
         """Serve static files with optional cache-busting for testing"""
-        static_folder = os.path.join(os.path.dirname(__file__), 'static')
+        static_folder = os.path.join(os.path.dirname(__file__), "static")
         response = send_from_directory(static_folder, filename)
 
         # Only disable cache if X-No-Cache header is present (for testing)
-        if request.headers.get('X-No-Cache') and filename.endswith(('.js', '.css')):
-            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
-            response.headers['Pragma'] = 'no-cache'
-            response.headers['Expires'] = '0'
+        if request.headers.get("X-No-Cache") and filename.endswith((".js", ".css")):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
 
         return response
 
@@ -961,7 +981,7 @@ def create_app() -> Flask:
     # --- API Routes ---
     @app.route("/api/campaigns", methods=["GET"])
     @check_token
-    def get_campaigns(user_id: UserId) -> Union[Response, Tuple[Response, int]]:
+    def get_campaigns(user_id: UserId) -> Response | tuple[Response, int]:
         # --- RESTORED TRY-EXCEPT BLOCK ---
         try:
             return jsonify(firestore_service.get_campaigns_for_user(user_id))
@@ -977,7 +997,9 @@ def create_app() -> Flask:
 
     @app.route("/api/campaigns/<campaign_id>", methods=["GET"])
     @check_token
-    def get_campaign(user_id: UserId, campaign_id: CampaignId) -> Union[Response, Tuple[Response, int]]:
+    def get_campaign(
+        user_id: UserId, campaign_id: CampaignId
+    ) -> Response | tuple[Response, int]:
         # --- RESTORED TRY-EXCEPT BLOCK ---
         try:
             logging_util.info(
@@ -1035,7 +1057,7 @@ def create_app() -> Flask:
 
     @app.route("/api/campaigns", methods=["POST"])
     @check_token
-    def create_campaign_route(user_id: UserId) -> Union[Response, Tuple[Response, int]]:
+    def create_campaign_route(user_id: UserId) -> Response | tuple[Response, int]:
         data = request.get_json()
 
         # Handle both new (character/setting/description) and old (prompt) formats
@@ -1111,7 +1133,9 @@ def create_app() -> Flask:
 
     @app.route("/api/campaigns/<campaign_id>", methods=["PATCH"])
     @check_token
-    def update_campaign(user_id: UserId, campaign_id: CampaignId) -> Union[Response, Tuple[Response, int]]:
+    def update_campaign(
+        user_id: UserId, campaign_id: CampaignId
+    ) -> Response | tuple[Response, int]:
         data = request.get_json()
         new_title = data.get(constants.KEY_TITLE)
         if not new_title:
@@ -1130,7 +1154,9 @@ def create_app() -> Flask:
 
     @app.route("/api/campaigns/<campaign_id>/interaction", methods=["POST"])
     @check_token
-    def handle_interaction(user_id: UserId, campaign_id: CampaignId) -> Union[Response, Tuple[Response, int]]:
+    def handle_interaction(
+        user_id: UserId, campaign_id: CampaignId
+    ) -> Response | tuple[Response, int]:
         try:
             data = request.get_json()
             user_input, mode = (
@@ -1335,7 +1361,9 @@ def create_app() -> Flask:
 
     @app.route("/api/campaigns/<campaign_id>/export", methods=["GET"])
     @check_token
-    def export_campaign(user_id: UserId, campaign_id: CampaignId) -> Union[Response, Tuple[Response, int]]:
+    def export_campaign(
+        user_id: UserId, campaign_id: CampaignId
+    ) -> Response | tuple[Response, int]:
         try:
             export_format = request.args.get("format", "txt").lower()
 
@@ -1426,7 +1454,7 @@ def create_app() -> Flask:
     @app.route("/<path:path>")
     def serve_frontend(path: str) -> Response:
         """Serve the frontend files. This is the fallback for any non-API routes."""
-        static_folder = os.path.join(os.path.dirname(__file__), 'static')
+        static_folder = os.path.join(os.path.dirname(__file__), "static")
         if path and os.path.exists(os.path.join(static_folder, path)):
             return send_from_directory(static_folder, path)
         return send_from_directory(static_folder, "index.html")
@@ -1435,16 +1463,23 @@ def create_app() -> Flask:
     @app.route("/handle_interaction", methods=["POST"])
     def handle_interaction_fallback():
         """Fallback for cached frontend code calling old endpoint"""
-        return jsonify({
-            "error": "This endpoint has been moved. Please refresh your browser (Ctrl+Shift+R) to get the latest version.",
-            "redirect_message": "Hard refresh required to clear browser cache",
-            "status": "cache_issue"
-        }), 410  # 410 Gone - indicates this endpoint no longer exists
+        return jsonify(
+            {
+                "error": "This endpoint has been moved. Please refresh your browser (Ctrl+Shift+R) to get the latest version.",
+                "redirect_message": "Hard refresh required to clear browser cache",
+                "status": "cache_issue",
+            }
+        ), 410  # 410 Gone - indicates this endpoint no longer exists
 
     return app
 
 
-def run_god_command(campaign_id: CampaignId, user_id: UserId, action: str, command_string: Optional[str] = None) -> None:
+def run_god_command(
+    campaign_id: CampaignId,
+    user_id: UserId,
+    action: str,
+    command_string: str | None = None,
+) -> None:
     """Runs a GOD_MODE command directly against Firestore."""
     # We need to initialize the app to get the context for Firestore
     if not firebase_admin._apps:

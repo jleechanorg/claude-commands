@@ -178,7 +178,6 @@ else:
         """Save results to file"""
         # Use temporary directory for test outputs
 
-
         temp_dir = tempfile.mkdtemp(prefix="validation_results_")
 
         filepath = os.path.join(

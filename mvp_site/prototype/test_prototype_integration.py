@@ -4,12 +4,11 @@ Integration tests for validation system.
 Tests the complete flow from game state through validation to results.
 """
 
-import json
 import os
 import sys
 import time
 import unittest
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -110,8 +109,7 @@ class TestNarrativeServiceIntegration(unittest.TestCase):
     def test_generate_narrative_with_validation(self):
         """Test complete narrative generation flow."""
         result = self.service.generate_narrative_with_validation(
-            self.game_state,
-            "Describe the party preparing for battle"
+            self.game_state, "Describe the party preparing for battle"
         )
 
         self.assertIn("narrative", result)
@@ -138,8 +136,7 @@ class TestNarrativeServiceIntegration(unittest.TestCase):
         self.service._mock_generate_narrative = mock_fail_then_succeed
 
         result = self.service.generate_narrative_with_validation(
-            self.game_state,
-            "Describe the scene"
+            self.game_state, "Describe the scene"
         )
 
         # Should have retried and succeeded
@@ -155,8 +152,7 @@ class TestNarrativeServiceIntegration(unittest.TestCase):
         self.game_state.party_members.append("Evil'; DROP TABLE--")
 
         result = self.service.generate_narrative_with_validation(
-            self.game_state,
-            "Test prompt"
+            self.game_state, "Test prompt"
         )
 
         # Should not have SQL injection in narrative
@@ -184,12 +180,10 @@ class TestValidatorIntegration(unittest.TestCase):
             ("token", self.token_validator),
             ("fuzzy", self.fuzzy_validator),
             ("llm", self.llm_validator),
-            ("hybrid", self.hybrid_validator)
+            ("hybrid", self.hybrid_validator),
         ]:
             result = validator.validate(
-                self.test_narrative,
-                self.expected_entities,
-                "Combat Arena"
+                self.test_narrative, self.expected_entities, "Combat Arena"
             )
             results[name] = result
 
@@ -198,7 +192,7 @@ class TestValidatorIntegration(unittest.TestCase):
             self.assertEqual(
                 set(result.entities_found),
                 set(self.expected_entities),
-                f"{name} validator failed to find all entities"
+                f"{name} validator failed to find all entities",
             )
 
     def test_hybrid_combination_strategies(self):
@@ -207,16 +201,10 @@ class TestValidatorIntegration(unittest.TestCase):
 
         for strategy in strategies:
             hybrid = HybridValidator(combination_strategy=strategy)
-            result = hybrid.validate(
-                self.test_narrative,
-                self.expected_entities
-            )
+            result = hybrid.validate(self.test_narrative, self.expected_entities)
 
             # All strategies should work for clear case
-            self.assertTrue(
-                result.all_entities_present,
-                f"{strategy} strategy failed"
-            )
+            self.assertTrue(result.all_entities_present, f"{strategy} strategy failed")
 
 
 class TestEndToEndFlow(unittest.TestCase):
@@ -247,7 +235,6 @@ class TestEndToEndFlow(unittest.TestCase):
     def test_performance_requirements(self):
         """Test that validation meets performance requirements."""
 
-
         game_state = MockGameState()
         narrative = "Gideon and Rowan explored the dungeon."
 
@@ -261,11 +248,7 @@ class TestEndToEndFlow(unittest.TestCase):
         duration = (time.time() - start) / 10
 
         # Should be under 50ms (0.05s)
-        self.assertLess(
-            duration,
-            0.05,
-            f"Validation too slow: {duration*1000:.1f}ms"
-        )
+        self.assertLess(duration, 0.05, f"Validation too slow: {duration*1000:.1f}ms")
 
 
 class TestErrorHandling(unittest.TestCase):
@@ -276,12 +259,12 @@ class TestErrorHandling(unittest.TestCase):
         game_state = MockGameState()
 
         # Mock validator to raise exception
-        with patch('validators.fuzzy_token_validator.FuzzyTokenValidator.validate') as mock_validate:
+        with patch(
+            "validators.fuzzy_token_validator.FuzzyTokenValidator.validate"
+        ) as mock_validate:
             mock_validate.side_effect = Exception("Validator error")
 
-            result = game_state.validate_narrative_consistency(
-                "Test narrative"
-            )
+            result = game_state.validate_narrative_consistency("Test narrative")
 
             # Should handle gracefully
             self.assertFalse(result["is_valid"])
@@ -302,9 +285,7 @@ class TestErrorHandling(unittest.TestCase):
         game_state = MockGameState()
         game_state.party_members = []
 
-        result = game_state.validate_narrative_consistency(
-            "The chamber was silent."
-        )
+        result = game_state.validate_narrative_consistency("The chamber was silent.")
 
         # Should be valid (no entities expected)
         self.assertTrue(result["is_valid"])

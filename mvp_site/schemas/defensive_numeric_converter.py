@@ -1,7 +1,8 @@
 """
 Defensive numeric field converter that handles 'unknown' and invalid values
 """
-from typing import Any, Dict, Set
+
+from typing import Any
 
 import logging_util
 
@@ -13,51 +14,63 @@ class DefensiveNumericConverter:
     """
 
     # Field categories for validation rules
-    HP_FIELDS = {'hp', 'hp_current', 'hp_max', 'level'}
-    NON_NEGATIVE_FIELDS = {'temp_hp', 'xp', 'xp_current', 'gold', 'successes', 'failures', 'damage', 'healing', 'initiative'}
-    ABILITY_SCORE_FIELDS = {'strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'}
+    HP_FIELDS = {"hp", "hp_current", "hp_max", "level"}
+    NON_NEGATIVE_FIELDS = {
+        "temp_hp",
+        "xp",
+        "xp_current",
+        "gold",
+        "successes",
+        "failures",
+        "damage",
+        "healing",
+        "initiative",
+    }
+    ABILITY_SCORE_FIELDS = {
+        "strength",
+        "dexterity",
+        "constitution",
+        "intelligence",
+        "wisdom",
+        "charisma",
+    }
 
     # Define default values for different types of numeric fields
-    FIELD_DEFAULTS: Dict[str, int] = {
+    FIELD_DEFAULTS: dict[str, int] = {
         # HP-related fields (minimum 1 for living entities)
-        'hp': 1,
-        'hp_current': 1,
-        'hp_max': 1,
-        'temp_hp': 0,
-
+        "hp": 1,
+        "hp_current": 1,
+        "hp_max": 1,
+        "temp_hp": 0,
         # Character stats (D&D standard average)
-        'level': 1,
-        'xp': 0,
-        'xp_current': 0,
-        'xp_to_next_level': 300,
-        'ac': 10,
-        'armor_class': 10,
-        'initiative': 0,
-
+        "level": 1,
+        "xp": 0,
+        "xp_current": 0,
+        "xp_to_next_level": 300,
+        "ac": 10,
+        "armor_class": 10,
+        "initiative": 0,
         # Ability scores (D&D standard average)
-        'strength': 10,
-        'dexterity': 10,
-        'constitution': 10,
-        'intelligence': 10,
-        'wisdom': 10,
-        'charisma': 10,
-
+        "strength": 10,
+        "dexterity": 10,
+        "constitution": 10,
+        "intelligence": 10,
+        "wisdom": 10,
+        "charisma": 10,
         # Combat-related
-        'damage': 0,
-        'healing': 0,
-        'attack_bonus': 0,
-
+        "damage": 0,
+        "healing": 0,
+        "attack_bonus": 0,
         # Resources
-        'gold': 0,
-        'hero_points': 0,
-        'inspiration_points': 0,
-
+        "gold": 0,
+        "hero_points": 0,
+        "inspiration_points": 0,
         # Other numeric fields
-        'round_number': 1,
-        'turn_number': 1,
-        'session_number': 1,
-        'successes': 0,
-        'failures': 0,
+        "round_number": 1,
+        "turn_number": 1,
+        "session_number": 1,
+        "successes": 0,
+        "failures": 0,
     }
 
     @classmethod
@@ -76,8 +89,10 @@ class DefensiveNumericConverter:
             return value
 
         # Handle explicit 'unknown' values (case-insensitive)
-        if (isinstance(value, str) and value.lower() == 'unknown') or value is None:
-            logging_util.warning(f"Invalid value '{value}' for field '{key}'. Using default: {cls.FIELD_DEFAULTS[key]}")
+        if (isinstance(value, str) and value.lower() == "unknown") or value is None:
+            logging_util.warning(
+                f"Invalid value '{value}' for field '{key}'. Using default: {cls.FIELD_DEFAULTS[key]}"
+            )
             return cls.FIELD_DEFAULTS[key]
 
         # Try to convert to integer
@@ -99,11 +114,13 @@ class DefensiveNumericConverter:
 
         except (ValueError, TypeError):
             # If conversion fails, return the default
-            logging_util.warning(f"Failed to convert '{value}' to int for field '{key}'. Using default: {cls.FIELD_DEFAULTS[key]}")
+            logging_util.warning(
+                f"Failed to convert '{value}' to int for field '{key}'. Using default: {cls.FIELD_DEFAULTS[key]}"
+            )
             return cls.FIELD_DEFAULTS[key]
 
     @classmethod
-    def convert_dict(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+    def convert_dict(cls, data: dict[str, Any]) -> dict[str, Any]:
         """
         Recursively convert all numeric fields in a dictionary with defensive handling.
 
@@ -124,14 +141,14 @@ class DefensiveNumericConverter:
             elif isinstance(value, list):
                 # Process lists (in case they contain dicts or numeric values)
                 result[key] = [
-                    cls.convert_dict(item) if isinstance(item, dict) else cls.convert_value(key, item)
+                    cls.convert_dict(item)
+                    if isinstance(item, dict)
+                    else cls.convert_value(key, item)
                     for item in value
                 ]
+            elif key in cls.FIELD_DEFAULTS:
+                result[key] = cls.convert_value(key, value)
             else:
-                # Convert the value if it's a numeric field
-                if key in cls.FIELD_DEFAULTS:
-                    result[key] = cls.convert_value(key, value)
-                else:
-                    result[key] = value
+                result[key] = value
 
         return result

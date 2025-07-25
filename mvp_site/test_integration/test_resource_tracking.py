@@ -5,10 +5,10 @@ Test resource tracking in debug output for PR changes
 
 import os
 import sys
-
-from game_state import GameState
-import gemini_service
 import traceback
+
+import gemini_service
+from game_state import GameState
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -69,8 +69,6 @@ os.environ["GEMINI_API_KEY"] = "dummy_key"
 try:
     # Now we can import gemini_service
 
-
-
     # Clear cache
     gemini_service._loaded_instructions_cache.clear()
 
@@ -110,12 +108,12 @@ try:
     # Check for resource tracking in captured instruction
     captured_instruction = capture_box["instruction"]
     assert captured_instruction is not None, "System instruction not captured"
-    assert "[DEBUG_RESOURCES_START]" in captured_instruction, (
-        "Missing DEBUG_RESOURCES_START tag"
-    )
-    assert "[DEBUG_RESOURCES_END]" in captured_instruction, (
-        "Missing DEBUG_RESOURCES_END tag"
-    )
+    assert (
+        "[DEBUG_RESOURCES_START]" in captured_instruction
+    ), "Missing DEBUG_RESOURCES_START tag"
+    assert (
+        "[DEBUG_RESOURCES_END]" in captured_instruction
+    ), "Missing DEBUG_RESOURCES_END tag"
     assert "EP used" in captured_instruction, "Missing EP resource tracking"
     assert "spell slot" in captured_instruction, "Missing spell slot tracking"
     assert "short rest" in captured_instruction, "Missing short rest tracking"
@@ -132,12 +130,12 @@ try:
     captured_instruction = capture_box["instruction"]
     assert captured_instruction is not None, "System instruction not captured"
     # AI always gets debug instructions - backend strips them for user display
-    assert "[DEBUG_RESOURCES_START]" in captured_instruction, (
-        "DEBUG_RESOURCES_START should be in instructions for AI"
-    )
-    assert "[DEBUG_RESOURCES_END]" in captured_instruction, (
-        "DEBUG_RESOURCES_END should be in instructions for AI"
-    )
+    assert (
+        "[DEBUG_RESOURCES_START]" in captured_instruction
+    ), "DEBUG_RESOURCES_START should be in instructions for AI"
+    assert (
+        "[DEBUG_RESOURCES_END]" in captured_instruction
+    ), "DEBUG_RESOURCES_END should be in instructions for AI"
     print("✓ AI always receives debug instructions (backend handles display filtering)")
 
     # Restore original functions
@@ -148,7 +146,6 @@ try:
 
 except Exception as e:
     print(f"✗ Resource tracking test failed: {e}")
-
 
     traceback.print_exc()
     sys.exit(1)

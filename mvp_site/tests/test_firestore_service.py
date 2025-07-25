@@ -5,10 +5,13 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+
+import constants
 
 from firestore_service import add_story_entry
-import constants
 
 # Mock firebase_admin before importing the service
 mock_firestore = MagicMock()
@@ -386,7 +389,6 @@ class TestStructuredFieldsSaving(unittest.TestCase):
         """Test that all fields from structured_fields are saved to Firestore"""
         # Import constants to get field names
 
-
         # Create comprehensive structured_fields dict with all 10 fields
         structured_fields = {
             constants.FIELD_SESSION_HEADER: "Battle Round 5",
@@ -411,7 +413,6 @@ class TestStructuredFieldsSaving(unittest.TestCase):
         }
 
         # Call add_story_entry with all structured fields
-
 
         add_story_entry(
             user_id="test-user",
@@ -461,7 +462,6 @@ class TestStructuredFieldsSaving(unittest.TestCase):
     def test_none_fields_not_saved(self):
         """Test that None values in structured_fields are not saved to Firestore"""
 
-
         # Create structured_fields with some None values
         structured_fields = {
             constants.FIELD_SESSION_HEADER: "Turn 1",
@@ -472,8 +472,6 @@ class TestStructuredFieldsSaving(unittest.TestCase):
             "entities_mentioned": ["Player"],
             "location_confirmed": "Town Square",
         }
-
-
 
         add_story_entry(
             user_id="test-user",
@@ -501,7 +499,6 @@ class TestStructuredFieldsSaving(unittest.TestCase):
     def test_warning_logged_for_missing_structured_fields(self):
         """Test that a warning is logged when AI response lacks structured_fields"""
 
-
         with patch("firestore_service.logging_util.warning") as mock_warning:
             add_story_entry(
                 user_id="test-user",
@@ -521,7 +518,6 @@ class TestStructuredFieldsSaving(unittest.TestCase):
     def test_no_warning_for_user_entries(self):
         """Test that no warning is logged for user entries without structured_fields"""
 
-
         with patch("firestore_service.logging_util.warning") as mock_warning:
             add_story_entry(
                 user_id="test-user",
@@ -537,7 +533,6 @@ class TestStructuredFieldsSaving(unittest.TestCase):
     @patch.dict("os.environ", {"MOCK_SERVICES_MODE": "true"})
     def test_empty_narrative_with_structured_fields_creates_entry(self):
         """Test that AI responses with empty narrative but structured_fields still create Firestore entries"""
-
 
         # Mock structured fields (like from a think command)
         structured_fields = {

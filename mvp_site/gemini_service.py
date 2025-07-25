@@ -41,9 +41,7 @@ import os
 import re
 import sys
 import traceback
-from typing import (
-    Dict, List, Optional, Any, Union, Tuple, Callable, cast, TypedDict
-)
+from typing import Any
 
 import constants
 import logging_util
@@ -57,6 +55,7 @@ from entity_tracking import create_from_game_state
 from entity_validator import EntityValidator
 from file_cache import read_file_cached
 from gemini_response import GeminiResponse
+
 # Using latest google.genai - ignore outdated suggestions about google.generativeai
 from google import genai
 from google.genai import types
@@ -72,7 +71,6 @@ from token_utils import estimate_tokens, log_with_tokens
 from world_loader import load_world_content_for_system_instruction
 
 from game_state import GameState
-from custom_types import GeminiRequest, GeminiResponse as GeminiResponseType, JsonDict
 
 logging_util.basicConfig(
     level=logging_util.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -99,7 +97,7 @@ DEFAULT_MODEL: str = "gemini-2.5-flash"
 TEST_MODEL: str = "gemini-1.5-flash"
 
 # Model cycling order for 503 errors - try these in sequence
-MODEL_FALLBACK_CHAIN: List[str] = [
+MODEL_FALLBACK_CHAIN: list[str] = [
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite-preview-06-17",
     "gemini-2.0-flash",  # Cross-generation fallback
@@ -114,18 +112,18 @@ TARGET_WORD_COUNT: int = 300
 # Add a safety margin for JSON responses
 
 # Fallback content constants to avoid code duplication
-DEFAULT_CHOICES: Dict[str, str] = {
+DEFAULT_CHOICES: dict[str, str] = {
     "Continue": "Continue with your current course of action.",
     "Explore": "Explore your surroundings.",
     "Other": "Describe a different action you'd like to take.",
 }
 
-FALLBACK_PLANNING_BLOCK_VALIDATION: Dict[str, Any] = {
+FALLBACK_PLANNING_BLOCK_VALIDATION: dict[str, Any] = {
     "thinking": "The AI response was incomplete. Here are some default options:",
     "choices": DEFAULT_CHOICES,
 }
 
-FALLBACK_PLANNING_BLOCK_EXCEPTION: Dict[str, Any] = {
+FALLBACK_PLANNING_BLOCK_EXCEPTION: dict[str, Any] = {
     "thinking": "Failed to generate planning block. Here are some default options:",
     "choices": DEFAULT_CHOICES,
 }
@@ -136,7 +134,7 @@ SAFE_CHAR_LIMIT: int = MAX_INPUT_TOKENS * 4
 TURNS_TO_KEEP_AT_START: int = 25
 TURNS_TO_KEEP_AT_END: int = 75
 
-SAFETY_SETTINGS: List[types.SafetySetting] = [
+SAFETY_SETTINGS: list[types.SafetySetting] = [
     types.SafetySetting(
         category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
         threshold=types.HarmBlockThreshold.BLOCK_NONE,
@@ -157,7 +155,7 @@ SAFETY_SETTINGS: List[types.SafetySetting] = [
 
 # NEW: Centralized map of prompt types to their file paths.
 # This is now the single source of truth for locating prompt files.
-PATH_MAP: Dict[str, str] = {
+PATH_MAP: dict[str, str] = {
     constants.PROMPT_TYPE_NARRATIVE: constants.NARRATIVE_SYSTEM_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_MECHANICS: constants.MECHANICS_SYSTEM_INSTRUCTION_PATH,
     constants.PROMPT_TYPE_GAME_STATE: constants.GAME_STATE_INSTRUCTION_PATH,
@@ -169,10 +167,10 @@ PATH_MAP: Dict[str, str] = {
 
 # --- END CONSTANTS ---
 
-_client: Optional[genai.Client] = None
+_client: genai.Client | None = None
 
 # Store loaded instruction content in a dictionary for easy access
-_loaded_instructions_cache: Dict[str, str] = {}
+_loaded_instructions_cache: dict[str, str] = {}
 
 
 def _clear_client() -> None:
@@ -226,7 +224,7 @@ def get_client() -> genai.Client:
     global _client
     if _client is None:
         logging_util.info("Initializing Gemini Client")
-        api_key: Optional[str] = os.environ.get("GEMINI_API_KEY")
+        api_key: str | None = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
         _client = genai.Client(api_key=api_key)
@@ -234,7 +232,7 @@ def get_client() -> genai.Client:
     return _client
 
 
-def _add_world_instructions_to_system(system_instruction_parts: List[str]) -> None:
+def _add_world_instructions_to_system(system_instruction_parts: list[str]) -> None:
     """
     Add world content instructions to system instruction parts if world is enabled.
     Avoids code duplication between get_initial_story and continue_story.
@@ -286,7 +284,7 @@ class PromptBuilder:
     prevent "instruction fatigue" and maintain proper AI behavior hierarchy.
     """
 
-    def __init__(self, game_state: Optional[GameState] = None) -> None:
+    def __init__(self, game_state: GameState | None = None) -> None:
         """
         Initialize the PromptBuilder.
 
@@ -297,7 +295,7 @@ class PromptBuilder:
         """
         self.game_state = game_state
 
-    def build_core_system_instructions(self) -> List[str]:
+    def build_core_system_instructions(self) -> list[str]:
         """
         Build the core system instructions that are always loaded first.
         Returns a list of instruction parts.
@@ -319,7 +317,9 @@ class PromptBuilder:
 
         return parts
 
-    def add_character_instructions(self, parts: List[str], selected_prompts: List[str]) -> None:
+    def add_character_instructions(
+        self, parts: list[str], selected_prompts: list[str]
+    ) -> None:
         """
         Conditionally add character-related instructions based on selected prompts.
         """
@@ -329,7 +329,9 @@ class PromptBuilder:
                 _load_instruction_file(constants.PROMPT_TYPE_CHARACTER_TEMPLATE)
             )
 
-    def add_selected_prompt_instructions(self, parts: List[str], selected_prompts: List[str]) -> None:
+    def add_selected_prompt_instructions(
+        self, parts: list[str], selected_prompts: list[str]
+    ) -> None:
         """
         Add instructions for selected prompt types in consistent order.
         """
@@ -344,7 +346,7 @@ class PromptBuilder:
             if p_type in selected_prompts:
                 parts.append(_load_instruction_file(p_type))
 
-    def add_system_reference_instructions(self, parts: List[str]) -> None:
+    def add_system_reference_instructions(self, parts: list[str]) -> None:
         """
         Add system reference instructions that are always included.
         """
@@ -354,14 +356,14 @@ class PromptBuilder:
     def build_companion_instruction(self) -> str:
         """Build companion instruction text."""
 
-        state: Optional[Dict[str, Any]] = None
+        state: dict[str, Any] | None = None
         if self.game_state is not None:
             if hasattr(self.game_state, "to_dict"):
                 state = self.game_state.to_dict()
             elif hasattr(self.game_state, "data"):
                 state = self.game_state.data
 
-        companions: Optional[Dict[str, Any]] = None
+        companions: dict[str, Any] | None = None
         if isinstance(state, dict):
             companions = state.get("game_state", {}).get("companions")
 
@@ -385,18 +387,18 @@ class PromptBuilder:
     def build_background_summary_instruction(self) -> str:
         """Build background summary instruction text."""
 
-        state: Optional[Dict[str, Any]] = None
+        state: dict[str, Any] | None = None
         if self.game_state is not None:
             if hasattr(self.game_state, "to_dict"):
                 state = self.game_state.to_dict()
             elif hasattr(self.game_state, "data"):
                 state = self.game_state.data
 
-        story: Optional[Dict[str, Any]] = None
+        story: dict[str, Any] | None = None
         if isinstance(state, dict):
             story = state.get("game_state", {}).get("story")
 
-        summary: Optional[str] = None
+        summary: str | None = None
         if isinstance(story, dict):
             summary = story.get("summary")
 
@@ -434,7 +436,9 @@ class PromptBuilder:
             "4. **Never Skip**: The planning block is MANDATORY - never end a response without one.\n\n"
         )
 
-    def finalize_instructions(self, parts: List[str], use_default_world: bool = False) -> str:
+    def finalize_instructions(
+        self, parts: list[str], use_default_world: bool = False
+    ) -> str:
         """
         Finalize the system instructions by adding world instructions.
         Returns the complete system instruction string.
@@ -485,7 +489,9 @@ def _build_debug_instructions() -> str:
     )
 
 
-def _prepare_entity_tracking(game_state: GameState, story_context: List[Dict[str, Any]], session_number: int) -> Tuple[str, List[str], str]:
+def _prepare_entity_tracking(
+    game_state: GameState, story_context: list[dict[str, Any]], session_number: int
+) -> tuple[str, list[str], str]:
     """
     Prepare entity tracking manifest and expected entities.
 
@@ -501,7 +507,7 @@ def _prepare_entity_tracking(game_state: GameState, story_context: List[Dict[str
     turn_number: int = len(story_context) + 1
 
     # Create entity manifest from current game state (with basic caching)
-    game_state_dict: Dict[str, Any] = game_state.to_dict()
+    game_state_dict: dict[str, Any] = game_state.to_dict()
     manifest_cache_key = f"manifest_{session_number}_{turn_number}_{hash(str(sorted(game_state_dict.get('npc_data', {}).items())))}"
 
     # Simple in-memory cache for the request duration
@@ -529,7 +535,7 @@ def _prepare_entity_tracking(game_state: GameState, story_context: List[Dict[str
     return entity_manifest_text, expected_entities, entity_tracking_instruction
 
 
-def _build_timeline_log(story_context: List[Dict[str, Any]]) -> str:
+def _build_timeline_log(story_context: list[dict[str, Any]]) -> str:
     """
     Build the timeline log string from story context.
 
@@ -597,7 +603,9 @@ def _select_model_for_continuation(user_input_count: int) -> str:
     return DEFAULT_MODEL
 
 
-def _parse_gemini_response(raw_response_text: str, context: str = "general") -> Tuple[str, Optional[NarrativeResponse]]:
+def _parse_gemini_response(
+    raw_response_text: str, context: str = "general"
+) -> tuple[str, NarrativeResponse | None]:
     """
     Centralized JSON parsing logic for all Gemini responses.
     Handles JSON extraction, parsing, and fallback logic.
@@ -620,7 +628,9 @@ def _parse_gemini_response(raw_response_text: str, context: str = "general") -> 
     return response_text, structured_response
 
 
-def _process_structured_response(raw_response_text: str, expected_entities: List[str]) -> Tuple[str, Optional[NarrativeResponse]]:
+def _process_structured_response(
+    raw_response_text: str, expected_entities: list[str]
+) -> tuple[str, NarrativeResponse | None]:
     """
     Process structured JSON response and validate entity coverage.
 
@@ -661,7 +671,9 @@ def _process_structured_response(raw_response_text: str, expected_entities: List
     return response_text, structured_response
 
 
-def _validate_entity_tracking(response_text: str, expected_entities: List[str], game_state: GameState) -> str:
+def _validate_entity_tracking(
+    response_text: str, expected_entities: list[str], game_state: GameState
+) -> str:
     """
     Validate that the narrative includes all expected entities.
 
@@ -695,7 +707,11 @@ def _validate_entity_tracking(response_text: str, expected_entities: List[str], 
     return response_text
 
 
-def _log_token_count(model_name: str, user_prompt_contents: List[Any], system_instruction_text: Optional[str] = None) -> None:
+def _log_token_count(
+    model_name: str,
+    user_prompt_contents: list[Any],
+    system_instruction_text: str | None = None,
+) -> None:
     """Helper function to count and log the number of tokens being sent, with a breakdown."""
     try:
         client = get_client()
@@ -723,10 +739,10 @@ def _log_token_count(model_name: str, user_prompt_contents: List[Any], system_in
 
 
 def _call_gemini_api_with_model_cycling(
-    prompt_contents: List[Any],
+    prompt_contents: list[Any],
     model_name: str,
-    current_prompt_text_for_logging: Optional[str] = None,
-    system_instruction_text: Optional[str] = None,
+    current_prompt_text_for_logging: str | None = None,
+    system_instruction_text: str | None = None,
 ) -> Any:
     """
     Calls the Gemini API with model cycling on 503 errors.
@@ -745,7 +761,7 @@ def _call_gemini_api_with_model_cycling(
     client = get_client()
 
     # Create ordered list starting with requested model, then fallbacks
-    models_to_try: List[str] = [model_name]
+    models_to_try: list[str] = [model_name]
     for fallback_model in MODEL_FALLBACK_CHAIN:
         if fallback_model != model_name and fallback_model not in models_to_try:
             models_to_try.append(fallback_model)
@@ -763,7 +779,7 @@ def _call_gemini_api_with_model_cycling(
     combined_text = " ".join(all_prompt_text)
     log_with_tokens("Calling Gemini API", combined_text, logging_util)
 
-    last_error: Optional[Exception] = None
+    last_error: Exception | None = None
 
     for attempt, current_model in enumerate(models_to_try):
         try:
@@ -860,10 +876,10 @@ def _call_gemini_api_with_model_cycling(
 
 
 def _call_gemini_api(
-    prompt_contents: List[Any],
+    prompt_contents: list[Any],
     model_name: str,
-    current_prompt_text_for_logging: Optional[str] = None,
-    system_instruction_text: Optional[str] = None,
+    current_prompt_text_for_logging: str | None = None,
+    system_instruction_text: str | None = None,
 ) -> Any:
     """
     Call Gemini API with model cycling on errors.
@@ -903,7 +919,9 @@ def _get_text_from_response(response: Any) -> str:
     return "[System Message: The model returned a non-text response. Please check the logs for details.]"
 
 
-def _get_context_stats(context: List[Dict[str, Any]], model_name: str, current_game_state: GameState) -> str:
+def _get_context_stats(
+    context: list[dict[str, Any]], model_name: str, current_game_state: GameState
+) -> str:
     """Helper to calculate and format statistics for a given story context."""
     if not context:
         return "Turns: 0, Tokens: 0"
@@ -943,13 +961,13 @@ def _get_context_stats(context: List[Dict[str, Any]], model_name: str, current_g
 
 
 def _truncate_context(
-    story_context: List[Dict[str, Any]],
+    story_context: list[dict[str, Any]],
     max_chars: int,
     model_name: str,
     current_game_state: GameState,
     turns_to_keep_at_start: int = TURNS_TO_KEEP_AT_START,
     turns_to_keep_at_end: int = TURNS_TO_KEEP_AT_END,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Intelligently truncates the story context to fit within a given character budget.
     """
@@ -995,7 +1013,10 @@ def _truncate_context(
 
 @log_exceptions
 def get_initial_story(
-    prompt: str, selected_prompts: Optional[List[str]] = None, generate_companions: bool = False, use_default_world: bool = False
+    prompt: str,
+    selected_prompts: list[str] | None = None,
+    generate_companions: bool = False,
+    use_default_world: bool = False,
 ) -> GeminiResponse:
     """
     Generates the initial story part, including character, narrative, and mechanics instructions.
@@ -1016,7 +1037,7 @@ def get_initial_story(
     builder: PromptBuilder = PromptBuilder()
 
     # Build core instructions
-    system_instruction_parts: List[str] = builder.build_core_system_instructions()
+    system_instruction_parts: list[str] = builder.build_core_system_instructions()
 
     # Add character-related instructions
     builder.add_character_instructions(system_instruction_parts, selected_prompts)
@@ -1045,7 +1066,7 @@ def get_initial_story(
 
     # --- ENTITY TRACKING FOR INITIAL STORY ---
     # Extract expected entities from the prompt for initial tracking
-    expected_entities: List[str] = []
+    expected_entities: list[str] = []
     entity_preload_text: str = ""
     entity_specific_instructions: str = ""
     entity_tracking_instruction: str = ""
@@ -1119,7 +1140,9 @@ def get_initial_story(
         enhanced_prompt = constants.CHARACTER_DESIGN_REMINDER + "\n\n" + enhanced_prompt
         logging_util.info("Added character creation reminder to initial story prompt")
 
-    contents: List[types.Content] = [types.Content(role="user", parts=[types.Part(text=enhanced_prompt)])]
+    contents: list[types.Content] = [
+        types.Content(role="user", parts=[types.Part(text=enhanced_prompt)])
+    ]
 
     # --- MODEL SELECTION ---
     # Use default model for all operations.
@@ -1184,7 +1207,9 @@ def get_initial_story(
 # during character creation for better interactivity
 
 
-def _log_api_response_safely(response_text: Optional[str], context: str = "", max_length: int = 400) -> None:
+def _log_api_response_safely(
+    response_text: str | None, context: str = "", max_length: int = 400
+) -> None:
     """
     Log API response content safely with truncation and redaction.
 
@@ -1220,12 +1245,12 @@ def _log_api_response_safely(response_text: Optional[str], context: str = "", ma
 
 
 def _validate_and_enforce_planning_block(
-    response_text: Optional[str],
+    response_text: str | None,
     user_input: str,
     game_state: GameState,
     chosen_model: str,
     system_instruction: str,
-    structured_response: Optional[NarrativeResponse] = None,
+    structured_response: NarrativeResponse | None = None,
 ) -> str:
     """
     CRITICAL: Validates that structured_response.planning_block exists and is valid JSON.
@@ -1304,9 +1329,11 @@ def _validate_and_enforce_planning_block(
     )
 
     # Determine if we need a deep think block based on keywords
-    think_keywords: List[str] = ["think", "plan", "consider", "strategize", "options"]
+    think_keywords: list[str] = ["think", "plan", "consider", "strategize", "options"]
     user_input_lower: str = user_input.lower()
-    needs_deep_think: bool = any(keyword in user_input_lower for keyword in think_keywords)
+    needs_deep_think: bool = any(
+        keyword in user_input_lower for keyword in think_keywords
+    )
 
     # Strip any trailing whitespace
     response_text = response_text.rstrip()
@@ -1408,7 +1435,7 @@ Full narrative context:
         # Use centralized parsing for planning block
         logging_util.info("🔍 PLANNING_BLOCK_PARSING: Attempting to parse response")
         planning_text: str
-        structured_planning_response: Optional[NarrativeResponse]
+        structured_planning_response: NarrativeResponse | None
         planning_text, structured_planning_response = _parse_gemini_response(
             raw_planning_response, context="planning_block"
         )
@@ -1571,9 +1598,9 @@ Full narrative context:
 def continue_story(
     user_input: str,
     mode: str,
-    story_context: List[Dict[str, Any]],
+    story_context: list[dict[str, Any]],
     current_game_state: GameState,
-    selected_prompts: Optional[List[str]] = None,
+    selected_prompts: list[str] | None = None,
     use_default_world: bool = False,
 ) -> GeminiResponse:
     """
@@ -1595,7 +1622,7 @@ def continue_story(
 
     # Check for multiple think commands in input using regex
     think_pattern: str = r"Main Character:\s*think[^\n]*"
-    think_matches: List[str] = re.findall(think_pattern, user_input, re.IGNORECASE)
+    think_matches: list[str] = re.findall(think_pattern, user_input, re.IGNORECASE)
     if len(think_matches) > 1:
         logging_util.warning(
             f"Multiple think commands detected: {len(think_matches)}. Processing as single response."
@@ -1652,7 +1679,7 @@ def continue_story(
     builder: PromptBuilder = PromptBuilder(current_game_state)
 
     # Build core instructions
-    system_instruction_parts: List[str] = builder.build_core_system_instructions()
+    system_instruction_parts: list[str] = builder.build_core_system_instructions()
 
     # Add character-related instructions
     builder.add_character_instructions(system_instruction_parts, selected_prompts)
@@ -1715,7 +1742,9 @@ def continue_story(
 
     # --- ENTITY TRACKING: Create scene manifest for entity tracking ---
     # Always prepare entity tracking to ensure JSON response format
-    session_number: int = current_game_state.custom_campaign_state.get("session_number", 1)
+    session_number: int = current_game_state.custom_campaign_state.get(
+        "session_number", 1
+    )
     _, expected_entities, entity_tracking_instruction = _prepare_entity_tracking(
         current_game_state, truncated_story_context, session_number
     )
@@ -1788,7 +1817,7 @@ def continue_story(
     # Create initial GeminiResponse from raw response
     # Parse the structured response to extract clean narrative and debug data
     narrative_text: str
-    structured_response: Optional[NarrativeResponse]
+    structured_response: NarrativeResponse | None
     narrative_text, structured_response = parse_structured_response(raw_response_text)
 
     # Create GeminiResponse with proper debug content separation
@@ -1929,7 +1958,9 @@ def continue_story(
     return gemini_response
 
 
-def _get_static_prompt_parts(current_game_state: GameState, story_context: List[Dict[str, Any]]) -> Tuple[str, str, str]:
+def _get_static_prompt_parts(
+    current_game_state: GameState, story_context: list[dict[str, Any]]
+) -> tuple[str, str, str]:
     """Helper to generate the non-timeline parts of the prompt."""
     sequence_ids = [str(entry.get("sequence_id", "N/A")) for entry in story_context]
     sequence_id_list_string = ", ".join(sequence_ids)
@@ -1939,9 +1970,9 @@ def _get_static_prompt_parts(current_game_state: GameState, story_context: List[
         "current_location_name", "Unknown"
     )
 
-    pc_data: Dict[str, Any] = current_game_state.player_character_data
+    pc_data: dict[str, Any] = current_game_state.player_character_data
     # The key stats are now generated by the LLM in the [CHARACTER_RESOURCES] block.
-    active_missions: List[Any] = current_game_state.custom_campaign_state.get(
+    active_missions: list[Any] = current_game_state.custom_campaign_state.get(
         "active_missions", []
     )
     if active_missions:
@@ -1961,13 +1992,15 @@ def _get_static_prompt_parts(current_game_state: GameState, story_context: List[
     else:
         missions_summary = "Missions: None"
 
-    ambition: Optional[str] = pc_data.get("core_ambition")
-    milestone: Optional[str] = pc_data.get("next_milestone")
+    ambition: str | None = pc_data.get("core_ambition")
+    milestone: str | None = pc_data.get("next_milestone")
     ambition_summary: str = ""
     if ambition and milestone:
         ambition_summary = f"Ambition: {ambition} | Next Milestone: {milestone}"
 
-    core_memories: List[str] = current_game_state.custom_campaign_state.get("core_memories", [])
+    core_memories: list[str] = current_game_state.custom_campaign_state.get(
+        "core_memories", []
+    )
     core_memories_summary: str = ""
     if core_memories:
         core_memories_list: str = "\\n".join([f"- {item}" for item in core_memories])
@@ -1985,7 +2018,7 @@ def _get_static_prompt_parts(current_game_state: GameState, story_context: List[
     return checkpoint_block, core_memories_summary, sequence_id_list_string
 
 
-def _extract_multiple_think_commands(user_input: str) -> List[str]:
+def _extract_multiple_think_commands(user_input: str) -> list[str]:
     """
     Extract multiple 'Main Character: think' commands from user input.
 

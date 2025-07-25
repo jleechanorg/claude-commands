@@ -36,7 +36,6 @@ class TestMockServices(unittest.TestCase):
         """Test that services are using mock implementations."""
         # Import the services that main.py uses
 
-
         # Check that gemini_service is the mock version
         self.assertEqual(
             main.gemini_service.__name__,

@@ -13,7 +13,7 @@ project_root = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, project_root)
 
 # Import the validator directly to avoid relative import issues
-import prototype.validators.token_validator as token_validator
+from prototype.validators import token_validator
 
 
 # Define test class here to avoid import issues
@@ -27,7 +27,9 @@ class TestWordBoundaryBug(unittest.TestCase):
     def test_partial_word_false_positive(self):
         """Test that partial word matches cause false positives (BUG)."""
         # This test should FAIL with current implementation
-        narrative = "The party arrived at Gideonville, a town named after an ancient hero."
+        narrative = (
+            "The party arrived at Gideonville, a town named after an ancient hero."
+        )
         expected_entities = ["Gideon"]  # We're looking for the character Gideon
 
         result = self.validator.validate(narrative, expected_entities)
@@ -86,6 +88,7 @@ class TestWordBoundaryBug(unittest.TestCase):
 
         self.assertEqual(result.entities_found, ["Gideon"])
         self.assertTrue(result.all_entities_present)
+
 
 if __name__ == "__main__":
     print("Running Word Boundary Bug Tests (Red Phase - Expecting Failures)")

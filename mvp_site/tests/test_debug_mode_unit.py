@@ -9,7 +9,9 @@ import sys
 import unittest
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from game_state import GameState
 
@@ -17,7 +19,6 @@ from game_state import GameState
 # Import the strip_debug_content function directly to avoid Flask dependency
 def strip_debug_content(text):
     """Strip debug content from AI response text."""
-
 
     if not text:
         return text

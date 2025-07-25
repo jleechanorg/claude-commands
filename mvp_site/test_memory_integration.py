@@ -1,13 +1,12 @@
 """Test suite for memory integration"""
 
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from memory_integration import MemoryIntegration, enhance_slash_command
 
 
 class TestMemoryIntegration(unittest.TestCase):
-
     def setUp(self):
         self.memory = MemoryIntegration()
 
@@ -31,7 +30,7 @@ class TestMemoryIntegration(unittest.TestCase):
         entity = {
             "name": "git_workflow",
             "entityType": "pattern",
-            "observations": ["All changes through PRs", "Never push to main"]
+            "observations": ["All changes through PRs", "Never push to main"],
         }
 
         # High relevance - name match
@@ -48,7 +47,7 @@ class TestMemoryIntegration(unittest.TestCase):
 
     def test_search_with_caching(self):
         """Test search with cache behavior"""
-        with patch('memory_mcp_real.search_nodes') as mock_search:
+        with patch("memory_mcp_real.search_nodes") as mock_search:
             mock_search.return_value = [{"name": "test_entity", "entityType": "test"}]
 
             # First search - cache miss
@@ -62,11 +61,13 @@ class TestMemoryIntegration(unittest.TestCase):
 
     def test_context_enhancement(self):
         """Test context enhancement with memories"""
-        memories = [{
-            "name": "urgent_pattern",
-            "entityType": "pattern",
-            "observations": ["Use minimal changes", "Skip refactoring"]
-        }]
+        memories = [
+            {
+                "name": "urgent_pattern",
+                "entityType": "pattern",
+                "observations": ["Use minimal changes", "Skip refactoring"],
+            }
+        ]
 
         enhanced = self.memory.enhance_context("Original context", memories)
         self.assertIn("Relevant Memory Context", enhanced)
@@ -85,7 +86,7 @@ class TestMemoryIntegration(unittest.TestCase):
 
     def test_error_handling(self):
         """Test graceful error handling"""
-        with patch('memory_mcp_real.search_nodes') as mock_search:
+        with patch("memory_mcp_real.search_nodes") as mock_search:
             mock_search.side_effect = Exception("MCP unavailable")
 
             # Should return empty list on error
@@ -106,5 +107,5 @@ class TestMemoryIntegration(unittest.TestCase):
         self.assertAlmostEqual(metrics.avg_latency, 0.0267, places=3)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

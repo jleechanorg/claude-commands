@@ -15,7 +15,7 @@ import time
 logging.getLogger().setLevel(logging.ERROR)
 
 # Add prototype to Python path FIRST
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'prototype'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "prototype"))
 
 from game_state_integration import MockGameState
 from validator import ValidationResult
@@ -30,6 +30,7 @@ print("=" * 60)
 print("PROTOTYPE VALIDATION TESTS (from project root)")
 print("=" * 60)
 print(f"\nPython path: {sys.path[0]}")
+
 
 def test_imports():
     """Test that all imports work correctly."""
@@ -49,6 +50,7 @@ def test_imports():
         print(f"   ❌ Import failed: {e}")
         return False
 
+
 def test_validators():
     """Test each validator implementation."""
     print("\n2. Testing validators...")
@@ -59,7 +61,7 @@ def test_validators():
     validators = {
         "SimpleTokenValidator": SimpleTokenValidator(),
         "TokenValidator": TokenValidator(),
-        "FuzzyTokenValidator": FuzzyTokenValidator()
+        "FuzzyTokenValidator": FuzzyTokenValidator(),
     }
 
     all_passed = True
@@ -67,7 +69,9 @@ def test_validators():
         try:
             result = validator.validate(narrative, entities)
             if result.all_entities_present:
-                print(f"   ✅ {name}: Found all entities (confidence: {result.confidence:.2f})")
+                print(
+                    f"   ✅ {name}: Found all entities (confidence: {result.confidence:.2f})"
+                )
             else:
                 print(f"   ❌ {name}: Missing entities: {result.entities_missing}")
                 all_passed = False
@@ -82,10 +86,11 @@ def test_validators():
     if result.all_entities_present:
         print(f"   ✅ Descriptor matching works: {result.entities_found}")
     else:
-        print(f"   ❌ Descriptor matching failed")
+        print("   ❌ Descriptor matching failed")
         all_passed = False
 
     return all_passed
+
 
 def test_game_state():
     """Test game state integration."""
@@ -96,20 +101,24 @@ def test_game_state():
 
         # Test manifest
         manifest = game_state.get_active_entity_manifest()
-        print(f"   ✅ Entity manifest: {manifest['entity_count']} entities at '{manifest['location']}'")
+        print(
+            f"   ✅ Entity manifest: {manifest['entity_count']} entities at '{manifest['location']}'"
+        )
 
         # Test validation
         test_cases = [
             ("Both present", "Gideon and Rowan entered the chamber.", True),
             ("Descriptors", "The knight and healer prepared for battle.", True),
-            ("One missing", "The knight stood alone.", False)
+            ("One missing", "The knight stood alone.", False),
         ]
 
         all_passed = True
         for desc, narrative, should_be_valid in test_cases:
             result = game_state.validate_narrative_consistency(narrative)
-            if result['is_valid'] == should_be_valid:
-                print(f"   ✅ {desc}: Correctly validated (confidence: {result['confidence']:.2f})")
+            if result["is_valid"] == should_be_valid:
+                print(
+                    f"   ✅ {desc}: Correctly validated (confidence: {result['confidence']:.2f})"
+                )
             else:
                 print(f"   ❌ {desc}: Incorrect validation")
                 all_passed = False
@@ -119,8 +128,10 @@ def test_game_state():
     except Exception as e:
         print(f"   ❌ Game state error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 def test_performance():
     """Test performance requirements."""
@@ -153,6 +164,7 @@ def test_performance():
         print(f"   ❌ Performance test error: {e}")
         return False
 
+
 def test_edge_cases():
     """Test edge cases and special scenarios."""
     print("\n5. Testing edge cases...")
@@ -162,18 +174,32 @@ def test_edge_cases():
     fuzzy = FuzzyTokenValidator()
 
     test_cases = [
-        ("Partial names", "Gid-- was interrupted while Row cast a spell", ["Gideon", "Rowan"], True),
+        (
+            "Partial names",
+            "Gid-- was interrupted while Row cast a spell",
+            ["Gideon", "Rowan"],
+            True,
+        ),
         ("Pronouns", "He swung while she healed", ["Gideon", "Rowan"], True),
         ("Empty narrative", "", ["Gideon", "Rowan"], False),
         ("No entities", "The chamber was empty", [], True),
-        ("Special characters", "Gideon's sword and Rowan's staff", ["Gideon", "Rowan"], True)
+        (
+            "Special characters",
+            "Gideon's sword and Rowan's staff",
+            ["Gideon", "Rowan"],
+            True,
+        ),
     ]
 
     all_passed = True
     for desc, narrative, entities, should_find_all in test_cases:
         try:
             result = fuzzy.validate(narrative, entities)
-            success = result.all_entities_present if should_find_all else not result.all_entities_present
+            success = (
+                result.all_entities_present
+                if should_find_all
+                else not result.all_entities_present
+            )
             if success:
                 print(f"   ✅ {desc}: Handled correctly")
             else:
@@ -185,6 +211,7 @@ def test_edge_cases():
 
     return all_passed
 
+
 def main():
     """Run all tests and report results."""
     results = {
@@ -192,7 +219,7 @@ def main():
         "Validators": test_validators(),
         "Game State": test_game_state(),
         "Performance": test_performance(),
-        "Edge Cases": test_edge_cases()
+        "Edge Cases": test_edge_cases(),
     }
 
     print("\n" + "=" * 60)
@@ -219,6 +246,7 @@ def main():
         print("\nNote: Import issues may be due to running from wrong directory.")
         print("Always run from project root: python3 test_prototype_from_root.py")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

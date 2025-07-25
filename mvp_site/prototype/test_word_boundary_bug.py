@@ -25,7 +25,9 @@ class TestWordBoundaryBug(unittest.TestCase):
     def test_partial_word_false_positive(self):
         """Test that partial word matches cause false positives (BUG)."""
         # This test should FAIL with current implementation
-        narrative = "The party arrived at Gideonville, a town named after an ancient hero."
+        narrative = (
+            "The party arrived at Gideonville, a town named after an ancient hero."
+        )
         expected_entities = ["Gideon"]  # We're looking for the character Gideon
 
         result = self.validator.validate(narrative, expected_entities)

@@ -11,8 +11,6 @@ import sys
 import traceback
 from datetime import datetime
 
-import gemini_service
-
 
 def run_sariel_capture_in_main_project():
     """Run the Sariel capture in the main project where dependencies exist"""
@@ -28,7 +26,7 @@ def run_sariel_capture_in_main_project():
         return None
 
     # Create a script in the main project to run our capture
-    capture_script = '''
+    capture_script = """
 import unittest
 import os
 import json
@@ -155,11 +153,11 @@ if __name__ == "__main__":
         print("SUCCESS: Captured real LLM responses")
     else:
         print("FAILED: Could not capture responses")
-'''
+"""
 
     # Write the script to main project
     script_path = os.path.join(main_project_path, "temp_capture_script.py")
-    with open(script_path, 'w') as f:
+    with open(script_path, "w") as f:
         f.write(capture_script)
 
     try:
@@ -172,7 +170,8 @@ if __name__ == "__main__":
             cwd=main_project_path,
             capture_output=True,
             text=True,
-            env={**os.environ, "TESTING": "true"}
+            env={**os.environ, "TESTING": "true"},
+            check=False,
         )
 
         print("📊 Capture script output:")
@@ -186,11 +185,11 @@ if __name__ == "__main__":
         results_path = os.path.join(main_project_path, "sariel_real_responses.json")
         if os.path.exists(results_path):
             # Copy results to our working directory
-            with open(results_path, 'r') as f:
+            with open(results_path) as f:
                 data = json.load(f)
 
             local_path = "sariel_real_responses_captured.json"
-            with open(local_path, 'w') as f:
+            with open(local_path, "w") as f:
                 json.dump(data, f, indent=2)
 
             print(f"✅ Copied results to {local_path}")
@@ -206,7 +205,7 @@ if __name__ == "__main__":
 
 """
 
-            for response in data['responses']:
+            for response in data["responses"]:
                 summary += f"""### Interaction {response['interaction']}
 **Player Input**: {response['input']}
 **Location**: {response['location']}
@@ -219,11 +218,11 @@ if __name__ == "__main__":
 ```
 
 """
-                if response['is_cassian_problem']:
-                    cassian_found = 'cassian' in response['narrative'].lower()
+                if response["is_cassian_problem"]:
+                    cassian_found = "cassian" in response["narrative"].lower()
                     summary += f"🚨 **THE CASSIAN PROBLEM**: {'RESOLVED' if cassian_found else 'STILL FAILING'}\\n\\n"
 
-            with open("sariel_real_responses_summary.md", 'w') as f:
+            with open("sariel_real_responses_summary.md", "w") as f:
                 f.write(summary)
 
             print("📄 Created detailed summary")
@@ -240,6 +239,7 @@ if __name__ == "__main__":
         # Clean up script
         if os.path.exists(script_path):
             os.remove(script_path)
+
 
 if __name__ == "__main__":
     try:

@@ -2,10 +2,8 @@
 Utility functions for entity handling and validation.
 """
 
-from typing import List
 
-
-def filter_unknown_entities(entities: List[str]) -> List[str]:
+def filter_unknown_entities(entities: list[str]) -> list[str]:
     """
     Filter out 'Unknown' entities from a list.
 
@@ -18,7 +16,7 @@ def filter_unknown_entities(entities: List[str]) -> List[str]:
     Returns:
         List of entities with 'Unknown' entries removed
     """
-    return [e for e in entities if e.lower() != 'unknown']
+    return [e for e in entities if e.lower() != "unknown"]
 
 
 def is_unknown_entity(entity: str) -> bool:
@@ -31,4 +29,4 @@ def is_unknown_entity(entity: str) -> bool:
     Returns:
         True if entity is 'Unknown' (case-insensitive), False otherwise
     """
-    return entity.lower() == 'unknown'
+    return entity.lower() == "unknown"

@@ -15,6 +15,7 @@ WORLD_DIR = os.path.join(os.path.dirname(__file__), "world")
 WORLD_ASSIAH_PATH = os.path.join(WORLD_DIR, "world_assiah_compressed.md")
 BANNED_NAMES_PATH = os.path.join(WORLD_DIR, "banned_names.md")
 
+
 def load_banned_names():
     """
     Load the banned names from the dedicated banned_names.md file
@@ -58,47 +59,55 @@ def load_world_content_for_system_instruction():
             "",
             world_content,
             "",
-            "---"
+            "---",
         ]
 
         # Only add banned names section if content was loaded
         if banned_names_content:
-            combined_parts.extend([
-                "",
-                "## CRITICAL NAMING RESTRICTIONS (from banned_names.md)",
-                "**IMPORTANT**: The following content is from banned_names.md. These names are BANNED and must NEVER be used for any character, location, or entity:",
-                "",
-                banned_names_content,
-                "",
-                "**Enforcement**: If you are about to use any name from the CRITICAL NAMING RESTRICTIONS, you MUST choose a different name. This applies to:",
-                "- New NPCs being introduced",
-                "- Player character suggestions",
-                "- Location names",
-                "- Organization names",
-                "- Any other named entity",
-                "",
-                "---"
-            ])
+            combined_parts.extend(
+                [
+                    "",
+                    "## CRITICAL NAMING RESTRICTIONS (from banned_names.md)",
+                    "**IMPORTANT**: The following content is from banned_names.md. These names are BANNED and must NEVER be used for any character, location, or entity:",
+                    "",
+                    banned_names_content,
+                    "",
+                    "**Enforcement**: If you are about to use any name from the CRITICAL NAMING RESTRICTIONS, you MUST choose a different name. This applies to:",
+                    "- New NPCs being introduced",
+                    "- Player character suggestions",
+                    "- Location names",
+                    "- Organization names",
+                    "- Any other named entity",
+                    "",
+                    "---",
+                ]
+            )
 
         # Add world consistency rules
-        combined_parts.extend([
-            "",
-            "## WORLD CONSISTENCY RULES",
-            "1. **Character Consistency**: Maintain established character personalities and relationships",
-            "2. **Timeline Integrity**: Respect established historical events and chronology",
-            "3. **Power Scaling**: Follow established power hierarchies and combat abilities",
-            "4. **Cultural Accuracy**: Maintain consistency in world cultures and societies",
-            "5. **Geographic Consistency**: Respect established locations and their descriptions"
-        ])
+        combined_parts.extend(
+            [
+                "",
+                "## WORLD CONSISTENCY RULES",
+                "1. **Character Consistency**: Maintain established character personalities and relationships",
+                "2. **Timeline Integrity**: Respect established historical events and chronology",
+                "3. **Power Scaling**: Follow established power hierarchies and combat abilities",
+                "4. **Cultural Accuracy**: Maintain consistency in world cultures and societies",
+                "5. **Geographic Consistency**: Respect established locations and their descriptions",
+            ]
+        )
 
         # Only add rule 6 if banned names were loaded
         if banned_names_content:
-            combined_parts.append("6. **Name Restrictions**: NEVER use any name from the CRITICAL NAMING RESTRICTIONS section")
+            combined_parts.append(
+                "6. **Name Restrictions**: NEVER use any name from the CRITICAL NAMING RESTRICTIONS section"
+            )
 
-        combined_parts.extend([
-            "",
-            "Use this world content to enhance campaign narratives while maintaining consistency with established lore."
-        ])
+        combined_parts.extend(
+            [
+                "",
+                "Use this world content to enhance campaign narratives while maintaining consistency with established lore.",
+            ]
+        )
 
         combined_content = "\n".join(combined_parts)
 

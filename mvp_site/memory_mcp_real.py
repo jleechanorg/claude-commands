@@ -10,11 +10,12 @@ The fundamental issue:
 This module serves as documentation of this architectural limitation.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 import logging_util
 
 logger = logging_util.getLogger(__name__)
+
 
 class MemoryMCPInterface:
     """
@@ -26,9 +27,11 @@ class MemoryMCPInterface:
     """
 
     def __init__(self):
-        logger.info("Memory MCP Interface initialized - see module docstring for limitations")
+        logger.info(
+            "Memory MCP Interface initialized - see module docstring for limitations"
+        )
 
-    def search_nodes(self, query: str) -> List[Dict[str, Any]]:
+    def search_nodes(self, query: str) -> list[dict[str, Any]]:
         """
         This method cannot actually call MCP tools from Python.
 
@@ -47,7 +50,7 @@ class MemoryMCPInterface:
         )
         return []
 
-    def create_entities(self, entities: List[Dict[str, Any]]) -> bool:
+    def create_entities(self, entities: list[dict[str, Any]]) -> bool:
         """
         This method cannot actually call MCP tools from Python.
 
@@ -62,14 +65,17 @@ class MemoryMCPInterface:
         )
         return False
 
+
 # Global instance for compatibility
 memory_mcp = MemoryMCPInterface()
 
+
 # Compatibility functions
-def search_nodes(query: str) -> List[Dict[str, Any]]:
+def search_nodes(query: str) -> list[dict[str, Any]]:
     """See MemoryMCPInterface.search_nodes - returns empty list"""
     return memory_mcp.search_nodes(query)
 
-def create_entities(entities: List[Dict[str, Any]]) -> bool:
+
+def create_entities(entities: list[dict[str, Any]]) -> bool:
     """See MemoryMCPInterface.create_entities - returns False"""
     return memory_mcp.create_entities(entities)
