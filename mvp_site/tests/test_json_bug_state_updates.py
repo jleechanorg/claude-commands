@@ -6,11 +6,11 @@ Test if state updates cause the JSON bug
 import os
 import sys
 
-from narrative_response_schema import parse_structured_response
 import json
 
 mvp_site_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, mvp_site_path)
+from narrative_response_schema import parse_structured_response
 
 
 def test_state_updates_scenario():

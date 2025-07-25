@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 
 import logging_util
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
 
 from narrative_response_schema import (
     _combine_god_mode_and_narrative,

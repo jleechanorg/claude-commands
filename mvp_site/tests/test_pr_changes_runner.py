@@ -6,12 +6,12 @@ Simple test runner for PR changes that avoids import issues
 import os
 import sys
 
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
 from entity_tracking import create_from_game_state
 from game_state import GameState
 import constants
-
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def run_pr_change_tests():

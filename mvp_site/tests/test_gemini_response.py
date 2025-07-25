@@ -13,14 +13,13 @@ import sys
 import unittest
 from unittest.mock import Mock, patch
 
+# Add the parent directory to the Python path so we can import modules
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+
 from game_state import GameState
 from gemini_response import GeminiResponse
 from gemini_service import continue_story
 from gemini_service import get_initial_story
-
-# Add the parent directory to the Python path so we can import modules
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from narrative_response_schema import NarrativeResponse
 
 

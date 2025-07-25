@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from gemini_service import GeminiService
 
 """
 Unit tests for Think Block State Management Protocol
@@ -24,7 +23,8 @@ import unittest
 from unittest.mock import MagicMock
 
 # Add parent directory to Python path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+from gemini_service import GeminiService
 
 # Import gemini_service which handles prompt processing
 try:

@@ -7,11 +7,11 @@ import sys
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
-from narrative_response_schema import NarrativeResponse
 import re
 
 # Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+from narrative_response_schema import NarrativeResponse
 
 # Mock dependencies
 sys.modules["firebase_admin"] = MagicMock()

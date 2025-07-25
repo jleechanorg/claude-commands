@@ -8,17 +8,17 @@ import os
 import sys
 import unittest
 
+import main
+import structured_fields_utils
+
+# Add the parent directory to the Python path
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
 import constants
 import firestore_service
 import game_state
 import gemini_response
 import gemini_service
-import main
 import narrative_response_schema
-import structured_fields_utils
-
-# Add the parent directory to the Python path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 class TestImports(unittest.TestCase):

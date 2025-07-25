@@ -13,15 +13,14 @@ import sys
 import tempfile
 import unittest
 
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+
 from schemas import entities_pydantic
 from schemas.defensive_numeric_converter import DefensiveNumericConverter
 from schemas.entities_pydantic import NPC, HealthStatus
 import arch
 import entity_tracking
-import os
-
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Add .claude/commands to path for arch module import
 claude_commands_path = os.path.join(

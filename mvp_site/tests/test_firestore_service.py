@@ -4,12 +4,10 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
-from firestore_service import add_story_entry
-import constants
-
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
 
+from firestore_service import add_story_entry
 import constants
 
 # Mock firebase_admin before importing the service

@@ -14,7 +14,7 @@ os.environ["USE_MOCKS"] = "true"
 os.environ["TESTING"] = "true"
 
 # Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
 
 from main import create_app
 

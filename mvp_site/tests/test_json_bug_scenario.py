@@ -6,10 +6,10 @@ Test the exact scenario that causes the JSON bug
 import os
 import sys
 
-from gemini_service import _process_structured_response
 
 mvp_site_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, mvp_site_path)
+from gemini_service import _process_structured_response
 
 
 def test_exact_bug_scenario():

@@ -11,7 +11,7 @@ import os
 import sys
 import unittest
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
 
 # Import the original version for red testing simulation
 from narrative_response_schema import NarrativeResponse, parse_structured_response

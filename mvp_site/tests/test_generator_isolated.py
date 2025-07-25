@@ -5,7 +5,7 @@ import unittest
 import tempfile
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
 
 # We ONLY import the document_generator, which has no cloud dependencies.
 import document_generator

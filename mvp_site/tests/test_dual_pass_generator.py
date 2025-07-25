@@ -8,10 +8,10 @@ import sys
 import unittest
 from unittest.mock import Mock, patch
 
-from entity_validator import entity_validator
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+from entity_validator import entity_validator
 
 from dual_pass_generator import (
     AdaptiveEntityInjector,

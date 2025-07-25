@@ -3,10 +3,10 @@ import sys
 import unittest
 from unittest.mock import Mock, patch
 
-from gemini_response import GeminiResponse
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+from gemini_response import GeminiResponse
 
 from gemini_response import GeminiResponse
 from narrative_response_schema import NarrativeResponse

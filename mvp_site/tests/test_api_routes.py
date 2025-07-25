@@ -3,10 +3,6 @@ import os
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
-from game_state import GameState
-from gemini_response import GeminiResponse
-from narrative_response_schema import NarrativeResponse
-import constants
 
 # Mock firebase_admin before it's used in main
 mock_firebase_admin = MagicMock()
@@ -19,7 +15,11 @@ mock_firebase_admin.auth = mock_auth
 import sys
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+from game_state import GameState
+from gemini_response import GeminiResponse
+from narrative_response_schema import NarrativeResponse
+import constants
 
 sys.modules["firebase_admin"] = mock_firebase_admin
 sys.modules["firebase_admin.firestore"] = mock_firestore

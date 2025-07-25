@@ -2,14 +2,14 @@ import os
 import sys
 
 from firebase_admin import auth
-from game_state import GameState
 from main import app, create_app
 import document_generator
 import firebase_admin
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+from game_state import GameState
 import firestore_service
 import gemini_service
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["TESTING"] = "true"
 
 import json

@@ -3,13 +3,12 @@
 import os
 import sys
 import unittest
-
-from firestore_service import add_story_entry
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from unittest.mock import MagicMock, patch
 
+# Add mvp_site directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+
+from firestore_service import add_story_entry
 import constants
 from narrative_response_schema import parse_structured_response
 

@@ -8,7 +8,7 @@ import os
 import sys
 
 # Add paths for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fake_services import FakeServiceManager

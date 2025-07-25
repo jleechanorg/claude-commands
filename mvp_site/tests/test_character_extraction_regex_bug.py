@@ -9,12 +9,12 @@ to ensure the import re statement exists and works properly.
 import os
 import sys
 import unittest
-
-import gemini_service
 import re
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+
+import gemini_service
 
 # Set dummy API key before importing gemini_service
 os.environ["GEMINI_API_KEY"] = "DUMMY_KEY_FOR_TESTING"
