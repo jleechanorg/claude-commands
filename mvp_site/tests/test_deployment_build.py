@@ -21,8 +21,6 @@ else:
     # Running from project root
     sys.path.insert(0, os.path.join(current_dir, 'mvp_site'))
 
-import world_loader
-
 
 class TestDeploymentBuild(unittest.TestCase):
     """Test deployment build context and file accessibility."""
@@ -94,7 +92,7 @@ def load_world_content_for_system_instruction():
         # Import should work
         sys.path.insert(0, self.mvp_site_dir)
         try:
-
+            import world_loader
 
             # But loading should fail
             with self.assertRaises(FileNotFoundError) as context:
@@ -127,12 +125,12 @@ def load_world_content_for_system_instruction():
         # Import and test
         sys.path.insert(0, self.mvp_site_dir)
         try:
-
+            import world_loader
 
             # Loading should now work
             result = world_loader.load_world_content_for_system_instruction()
 
-            # Verify content was loaded
+            # Verify content was loaded (mock returns char counts)
             self.assertIn("Book:", result)
             self.assertIn("World:", result)
             self.assertIn("chars", result)
