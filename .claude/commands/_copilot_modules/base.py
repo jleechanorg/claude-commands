@@ -85,7 +85,7 @@ class CopilotCommandBase(ABC):
         import re
         # Remove path traversal patterns and unsafe characters
         sanitized = re.sub(r'\.\./', '', branch_name)  # Remove ../ patterns
-        sanitized = re.sub(r'[^\\w\\-_.]', '_', sanitized)  # Allow only safe chars
+        sanitized = re.sub(r'[^\w\-_.]', '_', sanitized)  # Allow only safe chars
         sanitized = re.sub(r'^[.-]+', '', sanitized)  # Remove leading dots/dashes
         return sanitized or 'unknown-branch'
     
@@ -193,8 +193,8 @@ class CopilotCommandBase(ABC):
             result = self.execute()
             result['execution_time'] = self.get_execution_time()
             
-            # Save result to standard output file
-            output_file = f"{self.__class__.__name__.lower()}_result.json"
+            # Save result to branch-specific output file
+            output_file = f"{self.__class__.__name__.lower()}_result_{self.current_branch}.json"
             self.save_json_file(output_file, result)
             
             # Print summary
@@ -212,7 +212,7 @@ class CopilotCommandBase(ABC):
                 'message': str(e),
                 'execution_time': self.get_execution_time()
             }
-            self.save_json_file(f"{self.__class__.__name__.lower()}_error.json", error_result)
+            self.save_json_file(f"{self.__class__.__name__.lower()}_error_{self.current_branch}.json", error_result)
             return 1
     
     def run_ci_replica(self, script_path: str = "run_ci_replica.sh") -> Dict[str, Any]:

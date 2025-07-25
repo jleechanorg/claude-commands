@@ -49,8 +49,12 @@ else
     git push
 fi
 
-# Create result JSON
-cat > /tmp/copilot/push.json << EOF
+# Create result JSON with branch-specific path
+BRANCH=$(git branch --show-current)
+SANITIZED_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/_/g' | sed 's/^[.-]*//g')
+OUTPUT_DIR="/tmp/copilot_${SANITIZED_BRANCH}"
+mkdir -p "$OUTPUT_DIR"
+cat > "$OUTPUT_DIR/push.json" << EOF
 {
   "pushed_at": "$(date -Iseconds)",
   "branch": "$(git branch --show-current)",
