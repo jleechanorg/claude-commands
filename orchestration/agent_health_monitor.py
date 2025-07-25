@@ -46,23 +46,8 @@ class AgentHealthMonitor:
         # Initialize Redis connection
         self._init_redis()
 
-        # Define expected agents
+        # Define expected agents - only opus-master for dynamic system
         self.expected_agents = {
-            "frontend-agent": {
-                "type": "frontend",
-                "specialization": "UI/React development",
-                "task_file": "frontend_tasks.txt",
-            },
-            "backend-agent": {
-                "type": "backend",
-                "specialization": "API/Database development",
-                "task_file": "backend_tasks.txt",
-            },
-            "testing-agent": {
-                "type": "testing",
-                "specialization": "Quality assurance",
-                "task_file": "testing_tasks.txt",
-            },
             "opus-master": {
                 "type": "orchestrator",
                 "specialization": "Task coordination",

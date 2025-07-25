@@ -101,7 +101,8 @@ class OrchestrationDashboard:
         return {"total_tasks": 0, "agent_workload": {}}\n    
     def get_task_files_status(self) -> Dict[str, int]:
         """Get status of task files"""
-        task_files = ["frontend_tasks.txt", "backend_tasks.txt", "testing_tasks.txt"]
+        # No static task files - check orchestration/results/ for completed tasks
+        task_files = []
         status = {}
         
         for filename in task_files:
@@ -183,10 +184,8 @@ class OrchestrationDashboard:
         print(f"\n🤖 AGENT STATUS:")
         sessions = self.get_tmux_session_info()
         
+        # Only opus-master is predefined - all others are dynamic
         expected_agents = [
-            ("frontend-agent", "🎨 Frontend", "UI/React development"),
-            ("backend-agent", "⚙️  Backend", "API/Database development"),
-            ("testing-agent", "🧪 Testing", "Quality assurance"),
             ("opus-master", "🎯 Opus", "Task coordination")
         ]
         
