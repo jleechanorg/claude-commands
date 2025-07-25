@@ -8,11 +8,7 @@ from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 import logging
 import re
-from narrative_response_schema import NarrativeResponse
-
-from narrative_response_schema import parse_structured_response
-import json
-import re
+from narrative_response_schema import NarrativeResponse, parse_structured_response
 
 class GeminiResponse:
     """
@@ -139,7 +135,6 @@ class GeminiResponse:
         if self.narrative_text:
             for tag_type, pattern_list in patterns.items():
                 for pattern in pattern_list:
-
                     matches = re.findall(pattern, self.narrative_text)
                     if matches:
                         old_tags_found[tag_type].extend(matches)
@@ -152,7 +147,6 @@ class GeminiResponse:
         if self.structured_response:
             # Convert to string to search (this is a bit hacky but effective)
             try:
-
                 # Handle different response types
                 if hasattr(self.structured_response, 'dict'):
                     response_dict = self.structured_response.dict()
@@ -164,7 +158,6 @@ class GeminiResponse:
                 response_str = json.dumps(response_dict)
                 for tag_type, pattern_list in patterns.items():
                     for pattern in pattern_list:
-
                         matches = re.findall(pattern, response_str)
                         if matches:
                             old_tags_found[tag_type].extend(matches)
@@ -351,9 +344,6 @@ class GeminiResponse:
         Returns:
             GeminiResponse with parsed narrative and structured data
         """
-        # Import here to avoid circular dependency
-
-        
         # Parse the raw response to extract narrative and structured data
         narrative_text, structured_response = parse_structured_response(raw_response_text)
         

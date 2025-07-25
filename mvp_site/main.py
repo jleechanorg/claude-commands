@@ -41,6 +41,7 @@ import collections
 import json
 import logging
 import os
+import random
 import subprocess
 import sys
 import traceback
@@ -71,8 +72,16 @@ from firestore_service import (
     update_state_with_changes,
 )
 from game_state import GameState
+from debug_hybrid_system import process_story_for_display
 
-# --- Service Imports ---
+# Service imports that may be conditionally used
+import gemini_service as real_gemini_service
+import firestore_service as real_firestore_service
+from mocks import mock_gemini_service_wrapper
+from mocks import mock_firestore_service_wrapper
+import structured_fields_utils
+
+# --- Service Selection Logic ---
 # Granular mock control - check individual service mock flags
 use_mock_gemini = os.environ.get("USE_MOCK_GEMINI", "").lower() in ["true", "1", "yes"]
 use_mock_firebase = os.environ.get("USE_MOCK_FIREBASE", "").lower() in [
@@ -100,9 +109,6 @@ if use_mock_firebase:
     firestore_service = mock_firestore_service_wrapper
 else:
     firestore_service = real_firestore_service
-
-
-import structured_fields_utils
 
 # --- CONSTANTS ---
 # API Configuration
@@ -760,7 +766,6 @@ def _build_campaign_prompt(character: Optional[str], setting: Optional[str], des
         Constructed campaign prompt with proper character/setting/description format
     """
 
-
     # Normalize inputs: convert None to empty string and strip whitespace
     character = (character or "").strip()
     setting = (setting or "").strip()
@@ -988,8 +993,6 @@ def create_app() -> Flask:
 
             # Apply hybrid debug processing to story entries for backward compatibility
             debug_mode = game_state_dict.get("debug_mode", False)
-
-
             processed_story = process_story_for_display(story, debug_mode)
 
             # Debug logging for structured fields

@@ -49,7 +49,6 @@ from custom_types import (
 
 from numeric_field_converter import NumericFieldConverter
 
-
 MAX_TEXT_BYTES: int = 1000000
 MAX_LOG_LINES: int = 20
 DELETE_TOKEN: str = "__DELETE__"  # Token used to mark fields for deletion in state updates

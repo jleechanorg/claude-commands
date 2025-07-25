@@ -7,11 +7,10 @@ from typing import List, Dict, Optional, Any, Union
 from pydantic import BaseModel, Field, validator, model_validator
 from enum import Enum
 from datetime import datetime
+import re
 
 # Import defensive numeric field converter for robust data handling
 from .defensive_numeric_converter import DefensiveNumericConverter
-
-import re
 
 
 def sanitize_entity_name_for_id(name: str) -> str:
@@ -28,8 +27,6 @@ def sanitize_entity_name_for_id(name: str) -> str:
     """
     if not name:
         return name
-        
-
     
     # Convert to lowercase
     name = name.lower()

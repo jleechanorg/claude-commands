@@ -8,9 +8,7 @@ Run from project root: python3 test_prototype_working.py
 
 import sys
 import os
-
 import time
-import traceback
 
 # CRITICAL: Add parent directory to handle relative imports
 project_root = os.path.dirname(os.path.abspath(__file__))
@@ -91,7 +89,6 @@ def run_tests():
     
     print("\n3. Testing performance...")
     
-
     start = time.time()
     for _ in range(100):
         fuzzy.validate(narrative, entities)
@@ -116,5 +113,5 @@ if __name__ == "__main__":
         run_tests()
     except Exception as e:
         print(f"\n❌ Test failed: {e}")
-
+        import traceback
         traceback.print_exc()

@@ -5,10 +5,9 @@ Creates detailed error analysis for each validator.
 """
 
 import json
-from datetime import datetime
-
-from tests.ground_truth import ground_truth_labels
 import os
+from datetime import datetime
+from tests.ground_truth import ground_truth_labels
 
 
 def generate_confusion_matrix(
@@ -171,7 +170,6 @@ def generate_all_confusion_matrices():
 
     # Sample data - would normally come from actual test runs
 
-
     # Sample predictions for different validators
     validator_predictions = {
         "SimpleTokenValidator": {
@@ -264,8 +262,6 @@ if __name__ == "__main__":
     report = generate_all_confusion_matrices()
 
     # Save report
-
-
     os.makedirs("benchmarks", exist_ok=True)
 
     with open("benchmarks/confusion_matrix_report.json", "w") as f:

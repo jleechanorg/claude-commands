@@ -3,11 +3,10 @@ Enhanced Explicit Entity Instructions (Option 5 Enhanced)
 Generates specific AI instructions requiring entity mentions and presence.
 """
 
+import re
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 import logging_util
-
-import re
 
 logger = logging_util.getLogger(__name__)
 
@@ -341,7 +340,6 @@ class EntityEnforcementChecker:
         ]
         
         for pattern in dialogue_patterns:
-
             if re.search(pattern, narrative_lower):
                 compliance['has_dialogue'] = True
                 break
@@ -353,7 +351,6 @@ class EntityEnforcementChecker:
         ]
         
         for pattern in action_patterns:
-
             if re.search(pattern, narrative_lower):
                 compliance['has_action'] = True
                 break

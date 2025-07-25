@@ -11,19 +11,19 @@ import os
 import time
 import logging
 
-from game_state_integration import MockGameState
-from validator import ValidationResult
-from validators.fuzzy_token_validator import FuzzyTokenValidator
-from validators.hybrid_validator import HybridValidator
-from validators.llm_validator import LLMValidator
-from validators.token_validator import SimpleTokenValidator, TokenValidator
-import traceback
-
 # Suppress logging noise
 logging.getLogger().setLevel(logging.ERROR)
 
 # Add prototype to Python path FIRST
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'prototype'))
+
+# Import all validators and modules
+from validators.token_validator import SimpleTokenValidator, TokenValidator
+from validators.fuzzy_token_validator import FuzzyTokenValidator
+from validators.llm_validator import LLMValidator
+from validators.hybrid_validator import HybridValidator
+from game_state_integration import MockGameState
+from validator import ValidationResult
 
 print("=" * 60)
 print("PROTOTYPE VALIDATION TESTS (from project root)")
@@ -34,24 +34,23 @@ def test_imports():
     """Test that all imports work correctly."""
     print("\n1. Testing imports...")
     try:
-
-
-
-
-
-
+        # Just verify the imports worked by checking if classes exist
+        assert SimpleTokenValidator is not None
+        assert TokenValidator is not None
+        assert FuzzyTokenValidator is not None
+        assert LLMValidator is not None
+        assert HybridValidator is not None
+        assert MockGameState is not None
+        assert ValidationResult is not None
         print("   ✅ All imports successful")
         return True
-    except ImportError as e:
+    except (ImportError, AssertionError) as e:
         print(f"   ❌ Import failed: {e}")
         return False
 
 def test_validators():
     """Test each validator implementation."""
     print("\n2. Testing validators...")
-    
-
-
     
     narrative = "Gideon raised his sword while Rowan prepared her spells."
     entities = ["Gideon", "Rowan"]
@@ -91,8 +90,6 @@ def test_game_state():
     """Test game state integration."""
     print("\n3. Testing game state integration...")
     
-
-    
     try:
         game_state = MockGameState()
         
@@ -120,7 +117,7 @@ def test_game_state():
         
     except Exception as e:
         print(f"   ❌ Game state error: {e}")
-
+        import traceback
         traceback.print_exc()
         return False
 
@@ -128,7 +125,7 @@ def test_performance():
     """Test performance requirements."""
     print("\n4. Testing performance...")
     
-
+    from validators.fuzzy_token_validator import FuzzyTokenValidator
     
     try:
         fuzzy = FuzzyTokenValidator()
@@ -159,7 +156,7 @@ def test_edge_cases():
     """Test edge cases and special scenarios."""
     print("\n5. Testing edge cases...")
     
-
+    from validators.fuzzy_token_validator import FuzzyTokenValidator
     
     fuzzy = FuzzyTokenValidator()
     
