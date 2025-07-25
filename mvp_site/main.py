@@ -1510,7 +1510,13 @@ def create_app() -> Flask:
                 # Validate gemini_model if provided
                 if 'gemini_model' in data:
                     model = data['gemini_model']
-                    if not isinstance(model, str) or model not in constants.ALLOWED_GEMINI_MODELS:
+                    if not isinstance(model, str):
+                        return jsonify({'error': 'Invalid model selection', 'success': False}), 400
+                    
+                    # Case-insensitive validation to prevent case manipulation attacks
+                    model_lower = model.lower()
+                    allowed_models = {m.lower() for m in constants.ALLOWED_GEMINI_MODELS}
+                    if model_lower not in allowed_models:
                         return jsonify({'error': 'Invalid model selection', 'success': False}), 400
                     settings_to_update['gemini_model'] = model
                 
