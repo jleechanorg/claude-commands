@@ -1,17 +1,20 @@
 """Tests for A2A protocol integration in the orchestration system."""
 
+import json
 import os
+import shutil
+import sys
 import tempfile
 import unittest
+from datetime import datetime
 from unittest.mock import Mock, patch
-import sys
-import json
 
 # Add orchestration directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+import logging_util
 from orchestrate_unified import UnifiedOrchestration
-from message_broker import MessageBroker, MessageType
+from message_broker import MessageBroker, MessageType, TaskMessage
 from fixtures import mock_tmux_fixture, mock_claude_fixture, mock_message_broker_fixture
 
 
@@ -31,7 +34,6 @@ class TestA2AIntegration(unittest.TestCase):
     def tearDown(self):
         """Clean up test environment."""
         os.chdir(self.old_cwd)
-        import shutil
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def test_agent_registration_with_a2a(self):
@@ -196,9 +198,6 @@ class TestA2AIntegration(unittest.TestCase):
             agent_id = "heartbeat-agent"
             
             # When: Agent sends heartbeat
-            from message_broker import TaskMessage, MessageType
-            from datetime import datetime
-            
             heartbeat_message = TaskMessage(
                 id="heartbeat-1",
                 type=MessageType.AGENT_HEARTBEAT,

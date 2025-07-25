@@ -1,7 +1,23 @@
 # Orchestration System End-to-End Test Planning
 
-## Goal
+## Project Goal
 Create comprehensive end-to-end tests that verify the orchestration system's correct code flow: request → A2A → tmux agent creation. Mock external dependencies but NOT internal Python method calls.
+
+## Implementation Plan
+Develop a test suite that validates the orchestration workflow by mocking external dependencies (tmux, git, Claude CLI, Redis) while preserving internal Python method calls for authentic code flow verification.
+
+## Current State
+Basic test infrastructure exists but needs comprehensive coverage of the orchestration workflow including A2A integration, agent creation, and error handling scenarios.
+
+## Next Steps
+1. Create test directory structure
+2. Implement mock fixtures for external dependencies
+3. Write basic flow tests first
+4. Add A2A integration tests
+5. Add error handling tests
+6. Add performance/load tests
+
+## Key Context
 
 ## Key Testing Requirements
 
@@ -257,3 +273,6 @@ with self.assertLogs('orchestration', level='INFO') as cm:
 - [ ] Tests run quickly (<5 seconds total)
 - [ ] Clear failure messages when flow breaks
 - [ ] Easy to add new test scenarios
+
+## Branch Info
+Working on orchestration-clean-from-main branch for PR #944. This test planning supports the clean orchestration system implementation with dynamic agent creation and monitoring capabilities.

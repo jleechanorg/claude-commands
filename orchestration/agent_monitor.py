@@ -6,7 +6,6 @@ Pings agents every 2 minutes and logs status to a central log file
 """
 
 import json
-import logging
 import os
 import subprocess
 import sys
@@ -17,10 +16,8 @@ from typing import Dict, List, Set
 # Add orchestration directory to path
 sys.path.insert(0, os.path.dirname(__file__))
 
-try:
-    from message_broker import MessageBroker
-except ImportError:
-    MessageBroker = None
+import logging_util
+from message_broker import MessageBroker
 
 
 class AgentMonitor:
@@ -43,28 +40,13 @@ class AgentMonitor:
     
     def setup_logging(self):
         """Setup centralized logging for agent monitoring"""
+        self.logger = logging_util.get_logger(__name__)
+        # Ensure log directory exists
         log_dir = "/tmp/orchestration_logs"
         os.makedirs(log_dir, exist_ok=True)
-        
-        log_file = os.path.join(log_dir, "agent_monitor.log")
-        
-        # Configure logging
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s | %(levelname)s | %(message)s',
-            handlers=[
-                logging.FileHandler(log_file),
-                logging.StreamHandler(sys.stdout)
-            ]
-        )
-        self.logger = logging.getLogger(__name__)
     
     def init_message_broker(self):
         """Initialize Redis message broker if available"""
-        if MessageBroker is None:
-            self.logger.warning("MessageBroker not available - monitoring without Redis")
-            return
-            
         try:
             self.message_broker = MessageBroker()
             self.logger.info("✅ Connected to Redis message broker")
@@ -108,8 +90,8 @@ class AgentMonitor:
             try:
                 stat = os.stat(workspace_path)
                 workspace_info["last_modified"] = datetime.fromtimestamp(stat.st_mtime)
-            except:
-                pass
+            except (OSError, IOError) as e:
+                self.logger.debug(f"Failed to stat workspace {workspace_path}: {e}")
         
         return workspace_info
     
@@ -172,8 +154,8 @@ class AgentMonitor:
                 capture_output=True
             )
             agent_status["tmux_active"] = result.returncode == 0
-        except:
-            pass
+        except (subprocess.SubprocessError, OSError) as e:
+            self.logger.debug(f"Failed to check tmux session {agent_name}: {e}")
         
         # Get recent output if tmux is active
         if agent_status["tmux_active"]:
@@ -300,11 +282,8 @@ class AgentMonitor:
         self.running = False
         
         if self.message_broker:
-            try:
-                # Could send shutdown message via A2A
-                pass
-            except:
-                pass
+            # Could send shutdown message via A2A if needed
+            pass
 
 
 def main():

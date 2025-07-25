@@ -1,16 +1,18 @@
 """End-to-end integration tests for the orchestration system."""
 
+import json
 import os
+import shutil
+import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import Mock, patch
-import sys
-import json
-import time
 
 # Add orchestration directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+import logging_util
 from orchestrate_unified import UnifiedOrchestration
 from fixtures import mock_tmux_fixture, mock_claude_fixture, mock_redis_fixture
 
@@ -31,7 +33,6 @@ class TestOrchestrationEndToEnd(unittest.TestCase):
     def tearDown(self):
         """Clean up test environment."""
         os.chdir(self.old_cwd)
-        import shutil
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def test_complete_task_workflow_with_redis(self):
