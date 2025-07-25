@@ -91,9 +91,9 @@ class TestSettingsIntegration(unittest.TestCase):
     @patch('firestore_service.add_story_entry')
     def test_campaign_creation_uses_pro_model(self, mock_add_story, mock_create_campaign,
                                              mock_get_text, mock_api_call, mock_get_settings):
-        """🟢 Integration: Campaign creation uses user's pro-2.5 preference"""
+        """🟢 Integration: Campaign creation uses user's gemini-2.5-pro preference"""
         # Arrange
-        mock_get_settings.return_value = {'gemini_model': 'pro-2.5'}
+        mock_get_settings.return_value = {'gemini_model': 'gemini-2.5-pro'}
         mock_api_call.return_value = MagicMock()
         mock_get_text.return_value = '{"narrative": "Test story", "state_changes": {}, "player_character_data": {"name": "Test Hero"}}'
         mock_create_campaign.return_value = 'test-campaign-id'
@@ -157,7 +157,7 @@ class TestSettingsIntegration(unittest.TestCase):
                                     mock_get_text, mock_api_call, mock_get_settings):
         """🟢 Integration: Campaign creation handles settings retrieval errors gracefully"""
         # Arrange
-        mock_get_settings.side_effect = Exception("Firestore error")
+        mock_get_settings.side_effect = ValueError("Firestore error")
         mock_api_call.return_value = MagicMock()
         mock_get_text.return_value = '{"narrative": "Test story", "state_changes": {}, "player_character_data": {"name": "Test Hero"}}'
         mock_create_campaign.return_value = 'test-campaign-id'
@@ -184,7 +184,7 @@ class TestSettingsIntegration(unittest.TestCase):
     def test_settings_api_saves_preferences(self, mock_update_settings):
         """🟢 Integration: Settings API correctly saves user preferences"""
         # Arrange
-        settings_data = {"gemini_model": "pro-2.5"}
+        settings_data = {"gemini_model": "gemini-2.5-pro"}
         
         # Act
         response = self.client.post('/api/settings',

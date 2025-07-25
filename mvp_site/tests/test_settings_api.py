@@ -85,7 +85,7 @@ class TestSettingsAPI(unittest.TestCase):
         """🔴 RED: GET /api/settings should return saved model preference."""
         # Mock firestore to return saved settings
         with patch('main.get_user_settings') as mock_get:
-            mock_get.return_value = {'gemini_model': 'flash-2.5'}
+            mock_get.return_value = {'gemini_model': 'gemini-2.5-flash'}
             
             response = self.client.get('/api/settings', headers=self.headers)
             self.assertEqual(response.status_code, 200)
@@ -132,7 +132,7 @@ class TestSettingsAPI(unittest.TestCase):
             
             response = self.client.post('/api/settings',
                                       headers=self.headers,
-                                      json={'gemini_model': 'flash-2.5'})
+                                      json={'gemini_model': 'gemini-2.5-flash'})
             self.assertEqual(response.status_code, 500)
             data = response.get_json()
             self.assertIn('error', data)
