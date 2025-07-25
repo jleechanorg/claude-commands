@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /experiment - Triple-Blind AI Testing Protocol
 
 Run scientifically rigorous experiments to test AI behavior changes with bias elimination.

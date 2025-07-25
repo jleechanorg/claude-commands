@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Comment Reply Command (Alias)
 
 **Alias for**: `/commentreply`

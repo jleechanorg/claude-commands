@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Fake Code Detection Command
 
 **Purpose**: Detect fake, demo, or simulated code that isn't truly working using Memory MCP-enhanced pattern recognition

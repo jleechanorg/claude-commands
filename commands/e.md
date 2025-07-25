@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Execute Command (Alias)
 
 **Alias for**: `/execute`

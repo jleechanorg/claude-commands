@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Roadmap Command
 
 **Purpose**: Update roadmap files with enhanced multi-task parallel processing and integrated agent workflow

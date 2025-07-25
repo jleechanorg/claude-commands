@@ -81,12 +81,12 @@ class CopilotCommandBase(ABC):
             return "unknown-branch"
     
     def _sanitize_branch_name(self, branch_name: str) -> str:
-        """Sanitize branch name to prevent path traversal attacks and ensure filesystem safety."""
+        """Sanitize branch name using PR #941 standard pattern for consistency."""
         import re
-        # Remove path traversal patterns and unsafe characters
-        sanitized = re.sub(r'\.\./', '', branch_name)  # Remove ../ patterns
-        sanitized = re.sub(r'[^\w\-_.]', '_', sanitized)  # Allow only safe chars
-        sanitized = re.sub(r'^[.-]+', '', sanitized)  # Remove leading dots/dashes
+        # PR #941 standard: Replace any non-alphanumeric, non-dot, non-underscore, non-dash with underscore
+        sanitized = re.sub(r'[^a-zA-Z0-9._-]', '_', branch_name)
+        # Remove leading dots/dashes for filesystem safety  
+        sanitized = re.sub(r'^[.-]+', '', sanitized)
         return sanitized or 'unknown-branch'
     
     def run_gh_command(self, command: List[str]) -> Dict[str, Any]:

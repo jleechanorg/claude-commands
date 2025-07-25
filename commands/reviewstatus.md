@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Review Status Command - Check PR CI and Review Comments
 
 **Purpose**: Check outstanding PRs for CI issues and important review comments

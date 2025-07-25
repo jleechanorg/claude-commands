@@ -83,7 +83,7 @@ echo -e "${BLUE}🔌 HTTP Test Runner (Mock APIs)${NC}"
 echo "==============================="
 
 # Check project root
-if [[ ! -f "$PROJECT_ROOT/main.py" ]]; then
+if [[ ! -f "mvp_site/main.py" ]]; then
     echo -e "${RED}❌ Error: Not in project root directory${NC}"
     echo "Please run from the WorldArchitect.AI project root"
     exit 1
@@ -98,7 +98,7 @@ fi
 
 # Start test server
 echo -e "\n${GREEN}🚀 Starting test server on port $PORT...${NC}"
-source venv/bin/activate && TESTING=true PORT=$PORT python $PROJECT_ROOT/main.py serve &
+source venv/bin/activate && TESTING=true PORT=$PORT python mvp_site/main.py serve &
 SERVER_PID=$!
 
 # Wait for server

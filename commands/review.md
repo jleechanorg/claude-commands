@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Code Review Command
 
 **Purpose**: Process ALL PR comments systematically with proper tracking and replies using enhanced analysis

@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /ghfixtests
 
 Find recent PRs with failing tests and offer to fix them via Claude Code Action comments.

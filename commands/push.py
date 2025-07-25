@@ -141,7 +141,7 @@ def start_test_server(branch):
     try:
         with open(log_file, "w") as log:
             subprocess.Popen(
-                ["python", "mvp_site/main.py"],
+                ["python", "$PROJECT_ROOT/main.py"],
                 env={**os.environ, "PORT": str(port)},
                 stdout=log,
                 stderr=subprocess.STDOUT,

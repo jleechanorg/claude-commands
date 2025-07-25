@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Architecture Review Command
 
 **Usage**: `/archreview [scope]` or `/arch [scope]`

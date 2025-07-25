@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Think Command
 
 **Usage**: `/think [level] [problem/question]` or `/think [problem/question]`

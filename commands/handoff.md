@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /handoff Command
 
 Creates a structured handoff for another worker with PR, scratchpad, and worker prompt.

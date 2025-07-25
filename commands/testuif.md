@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Browser Tests (FULL) Command
 
 **Purpose**: Run REAL browser tests with REAL APIs using Playwright MCP by default (costs money!)

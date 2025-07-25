@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Branch Cleanup Command
 
 **Purpose**: Delete local branches without open GitHub PRs

@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /orch - Alias for /orchestrate
 
 **This is an alias**: See `/orchestrate` for full documentation.

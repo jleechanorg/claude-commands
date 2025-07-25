@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /reviewsuper Command - Critical Architecture Reviewer
 
 Performs critical architectural reviews of recent PRs with focus on problems, flaws, and technical debt.

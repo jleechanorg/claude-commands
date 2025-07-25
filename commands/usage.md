@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /usage Command
 
 Check Claude API usage and rate limits along with git status.

@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /arch Command (Alias)
 
 **Alias for**: `/archreview`

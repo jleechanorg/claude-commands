@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /copilot Command - Intelligent PR Analysis with Universal Composition
 
 **Usage**: `/copilot <PR_NUMBER>`
@@ -553,7 +551,7 @@ gh pr review {pr} --comment --body "Some observations..."
 - **Prioritize by urgency**: Security issues first, style issues last  
 - **Context awareness**: First-time contributors get more detailed help
 - **Error recovery**: Continue with remaining tasks if one fails
-- **State management**: All data in `/tmp/copilot/` for debugging
+- **State management**: All data in `/tmp/copilot_${SANITIZED_BRANCH}/` for debugging
 
 ## Key Principles
 

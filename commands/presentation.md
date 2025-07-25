@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /presentation
 
 **Purpose**: Create professional presentations compatible with Google Slides through an interactive outline development process with multi-phase quality assurance.

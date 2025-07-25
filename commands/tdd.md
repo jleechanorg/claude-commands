@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Test-Driven Development Command
 
 **Purpose**: Test-driven development workflow

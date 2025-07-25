@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Push Command
 
 **Purpose**: Pre-push review, validation, PR update, and test server startup

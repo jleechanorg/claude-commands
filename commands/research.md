@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Research Command - Academic and Technical Research
 
 **Purpose**: Systematic research using multiple information sources with academic rigor

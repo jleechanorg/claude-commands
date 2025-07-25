@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /commentfetch Command
 
 **Usage**: `/commentfetch <PR_NUMBER> [--output FILE]`
@@ -12,7 +10,7 @@ Pure Python implementation that collects comments from all GitHub PR sources. Th
 
 ## Output Format
 
-Creates a JSON file at `/tmp/copilot/comments.json` (or specified output) with:
+Creates a JSON file at `/tmp/copilot_${SANITIZED_BRANCH}/comments_${SANITIZED_BRANCH}.json` (or specified output) with:
 
 ```json
 {
@@ -68,8 +66,10 @@ The command automatically determines if comments need responses based on:
 # Fetch with custom output file
 /commentfetch 820 --output pr820_comments.json
 
-# Check results
-cat /tmp/copilot/comments.json | jq '.metadata'
+# Check results (using PR #941 standard)
+BRANCH=$(git branch --show-current)
+SANITIZED_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/_/g' | sed 's/^[.-]*//g')
+cat /tmp/copilot_${SANITIZED_BRANCH}/comments_${SANITIZED_BRANCH}.json | jq '.metadata'
 ```
 
 ## Integration

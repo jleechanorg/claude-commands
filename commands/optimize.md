@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Optimize Command
 
 **Purpose**: Improve code/files by removing duplicates and improving efficiency

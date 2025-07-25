@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Header Command
 
 **Purpose**: Generate and display the mandatory branch header for CLAUDE.md compliance with session usage info

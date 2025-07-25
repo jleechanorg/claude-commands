@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Plan Command - Execute with Approval
 
 **Purpose**: Same as `/execute` but requires user approval before implementation

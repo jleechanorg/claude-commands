@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /4layer - Four-Layer TDD Testing Protocol
 
 ## Purpose

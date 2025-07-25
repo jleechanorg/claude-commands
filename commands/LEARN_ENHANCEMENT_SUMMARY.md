@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Enhanced /learn Command - Implementation Summary
 
 ## Overview

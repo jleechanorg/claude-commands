@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /learn Command
 
 **Purpose**: The unified learning command that captures and documents learnings with Memory MCP integration for persistent knowledge storage

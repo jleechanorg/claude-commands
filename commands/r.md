@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Roadmap Command (Alias)
 
 **Alias for**: `/roadmap`

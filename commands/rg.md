@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # Red-Green Refactor Command (Alias)
 
 **Alias for**: `/tdd`

@@ -7,10 +7,14 @@ Handles dynamic agent creation without complex task categorization
 import glob
 import json
 import os
+import re
 import subprocess
 import time
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
+
+# Constants
+TIMESTAMP_MODULO = 100000000  # 8 digits from microseconds for unique name generation
 
 
 # Production safety limits
@@ -78,14 +82,14 @@ class TaskDispatcher:
                 existing.add(agent_name)
         except Exception as e:
             # Log specific error for debugging
-            print(f"Warning: Failed to check existing workspaces: {e}")
+            print(f"Warning: Failed to check existing workspaces due to error: {e}")
             
         return existing
 
     def _generate_unique_name(self, base_name: str, role_suffix: str = "") -> str:
         """Generate unique agent name with collision detection."""
         # Use microsecond precision for better uniqueness
-        timestamp = int(time.time() * 1000000) % 100000000  # 8 digits from microseconds
+        timestamp = int(time.time() * 1000000) % TIMESTAMP_MODULO  # 8 digits from microseconds
         
         # Get existing agents
         existing = self._check_existing_agents()
@@ -107,9 +111,114 @@ class TaskDispatcher:
         self.active_agents.add(candidate)
         return candidate
 
+    def _detect_pr_context(self, task_description: str) -> Tuple[Optional[str], str]:
+        """Detect if task is about updating an existing PR.
+        Returns: (pr_number, mode) where mode is 'update' or 'create'
+        """
+        # Patterns that indicate PR update mode
+        pr_update_patterns = [
+            # Action + anything + PR number
+            r'(?:fix|adjust|update|modify|enhance|improve)\s+.*?(?:PR|pull request)\s*#?(\d+)',
+            # PR number + needs/should/must
+            r'PR\s*#?(\d+)\s+(?:needs|should|must)',
+            # Add/apply to PR number
+            r'(?:add|apply)\s+.*?to\s+(?:PR|pull request)\s*#?(\d+)',
+            # Direct PR number reference
+            r'(?:PR|pull request)\s*#(\d+)',
+        ]
+        
+        # Check for explicit PR number
+        for pattern in pr_update_patterns:
+            match = re.search(pattern, task_description, re.IGNORECASE)
+            if match:
+                pr_number = match.group(1)
+                return pr_number, 'update'
+        
+        # Check for contextual PR reference without number
+        contextual_patterns = [
+            r'(?:the|that|this)\s+PR',
+            r'(?:the|that)\s+pull\s+request',
+            r'existing\s+PR',
+            r'current\s+(?:PR|pull request)'
+        ]
+        
+        for pattern in contextual_patterns:
+            if re.search(pattern, task_description, re.IGNORECASE):
+                # Try to find recent PR from current branch or user
+                recent_pr = self._find_recent_pr()
+                if recent_pr:
+                    return recent_pr, 'update'
+                else:
+                    print("🤔 Ambiguous PR reference detected. Agent will ask for clarification.")
+                    return None, 'update'  # Signal update mode but need clarification
+        
+        return None, 'create'
+    
+    def _find_recent_pr(self) -> Optional[str]:
+        """Try to find a recent PR from current branch or user."""
+        try:
+            # Try to get PR from current branch
+            # Get current branch name first for better readability
+            branch_result = subprocess.run(
+                ['git', 'branch', '--show-current'],
+                capture_output=True, text=True
+            )
+            current_branch = branch_result.stdout.strip() if branch_result.returncode == 0 else None
+            
+            if current_branch:
+                result = subprocess.run(
+                    ['gh', 'pr', 'list', '--head', current_branch, '--json', 'number', '--limit', '1'],
+                    capture_output=True, text=True
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    data = json.loads(result.stdout)
+                    if data:
+                        return str(data[0]['number'])
+            
+            # Fallback: get most recent PR by current user
+            result = subprocess.run(
+                ['gh', 'pr', 'list', '--author', '@me', '--json', 'number', '--limit', '1'],
+                capture_output=True, text=True
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                data = json.loads(result.stdout)
+                if data:
+                    return str(data[0]['number'])
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
+            # Silently handle errors as this is a fallback mechanism
+            pass
+        
+        return None
+
     def analyze_task_and_create_agents(self, task_description: str) -> List[Dict]:
-        """Create appropriate agent for the given task."""
+        """Create appropriate agent for the given task with PR context awareness."""
         print("\n🧠 Processing task request...")
+        
+        # Detect PR context
+        pr_number, mode = self._detect_pr_context(task_description)
+        
+        # Show user what was detected
+        if mode == 'update':
+            if pr_number:
+                print(f"\n🔍 Detected PR context: #{pr_number} - Agent will UPDATE existing PR")
+                # Get PR details for better context
+                try:
+                    result = subprocess.run(
+                        ['gh', 'pr', 'view', pr_number, '--json', 'title,state,headRefName'],
+                        capture_output=True, text=True
+                    )
+                    if result.returncode == 0:
+                        pr_data = json.loads(result.stdout)
+                        print(f"   Branch: {pr_data['headRefName']}")
+                        print(f"   Status: {pr_data['state']}")
+                except Exception:
+                    pass
+            else:
+                print("\n🔍 Detected PR update request but no specific PR number")
+                print("   Agent will check for recent PRs and ask for clarification if needed")
+        else:
+            print("\n🆕 No PR context detected - Agent will create NEW PR")
+            print("   New branch will be created from main")
         
         # Use the same unique name generation as other methods
         agent_name = self._generate_unique_name("task-agent")
@@ -117,23 +226,57 @@ class TaskDispatcher:
         # Get default capabilities from discovery method
         capabilities = list(self.agent_capabilities.keys())
         
-        # Always create a general development agent that can handle any task
-        # The agent itself will understand what to do based on the task description
-        return [{
-            "name": agent_name,
-            "type": "development",
-            "focus": task_description,
-            "capabilities": capabilities,
-            "prompt": f"""Task: {task_description}
+        # Build appropriate prompt based on mode
+        if mode == 'update':
+            if pr_number:
+                prompt = f"""Task: {task_description}
+
+🔄 PR UPDATE MODE - You must UPDATE existing PR #{pr_number}
+
+IMPORTANT INSTRUCTIONS:
+1. First, checkout the PR branch: gh pr checkout {pr_number}
+2. Make the requested changes on that branch
+3. Commit and push to update the existing PR
+4. DO NOT create a new branch or new PR
+5. Use 'git push' (not 'git push -u origin new-branch')
+
+Key points:
+- This is about UPDATING an existing PR, not creating a new one
+- Stay on the PR's branch throughout your work
+- Your commits will automatically update the PR"""
+            else:
+                prompt = f"""Task: {task_description}
+
+🔄 PR UPDATE MODE - You need to update an existing PR
+
+The user referenced "the PR" but didn't specify which one. You must:
+1. List recent PRs: gh pr list --author @me --limit 5
+2. Identify which PR the user meant based on the task context
+3. If unclear, show the PRs and ask: "Which PR should I update? Please specify the PR number."
+4. Once identified, checkout that PR's branch and make the requested changes
+5. DO NOT create a new PR"""
+        else:
+            prompt = f"""Task: {task_description}
+
+🆕 NEW PR MODE - Create a fresh pull request
 
 Execute the task exactly as requested. Key points:
+- Create a new branch from main for your work
 - If asked to start a server, start it on the specified port
 - If asked to modify files, make those exact modifications
 - If asked to run commands, execute them
 - If asked to test, run the appropriate tests
 - Always follow the specific instructions given
 
-Complete the task, then use /pr to create a pull request."""
+Complete the task, then use /pr to create a new pull request."""
+        
+        return [{
+            "name": agent_name,
+            "type": "development",
+            "focus": task_description,
+            "capabilities": capabilities,
+            "pr_context": {"mode": mode, "pr_number": pr_number} if mode == 'update' else None,
+            "prompt": prompt
         }]
 
     def create_dynamic_agent(self, agent_spec: Dict) -> bool:

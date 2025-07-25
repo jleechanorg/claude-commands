@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /timeout Command - Performance Optimizer
 
 Automatically applies timeout mitigation strategies to prevent Claude Code CLI timeouts.

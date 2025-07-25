@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /commentcheck Command
 
 **Usage**: `/commentcheck [PR_NUMBER]`

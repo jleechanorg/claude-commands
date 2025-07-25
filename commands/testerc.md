@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /testerc - End2End Tests (Real Mode + Capture)
 
 **Purpose**: Run end-to-end tests using real services AND capture data for mock generation

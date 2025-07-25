@@ -95,7 +95,7 @@ if [[ "$CONFIRMED" != "true" ]]; then
 fi
 
 # Check project root
-if [[ ! -f "$PROJECT_ROOT/main.py" ]]; then
+if [[ ! -f "mvp_site/main.py" ]]; then
     echo -e "${RED}❌ Error: Not in project root directory${NC}"
     echo "Please run from the WorldArchitect.AI project root"
     exit 1
@@ -128,7 +128,7 @@ else
     # Start REAL server (no TESTING=true)
     echo -e "\n${GREEN}🚀 Starting REAL server on port $REAL_PORT...${NC}"
     echo -e "${YELLOW}⚠️  Server running with REAL APIs${NC}"
-    PORT=$REAL_PORT vpython $PROJECT_ROOT/main.py serve &
+    PORT=$REAL_PORT vpython mvp_site/main.py serve &
     SERVER_PID=$!
     
     # Wait for server

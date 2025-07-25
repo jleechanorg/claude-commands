@@ -1,5 +1,3 @@
-# ⚠️ REFERENCE ONLY - Requires adaptation for your project setup
-
 # /reviewdeep Command
 
 Deep architecture and implementation review using ultra thinking mode, /arch review, and Gemini MCP with role switching.
