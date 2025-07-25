@@ -6,8 +6,8 @@ including TypedDicts for Firebase data structures, type aliases, and
 protocol definitions for better type safety.
 """
 
-from typing import TypedDict, Dict, Any, List, Optional, Union, Protocol, Literal
 from datetime import datetime
+from typing import Any, Dict, List, Literal, Optional, Protocol, TypedDict, Union
 
 
 # Firebase/Firestore data structures
@@ -99,15 +99,15 @@ JsonDict = Dict[str, JsonValue]
 # Protocol definitions for better interface contracts
 class DatabaseService(Protocol):
     """Protocol for database service implementations."""
-    
+
     def get_campaign(self, user_id: UserId, campaign_id: CampaignId) -> Optional[CampaignData]:
         """Retrieve a campaign by ID."""
         ...
-    
+
     def update_campaign(self, user_id: UserId, campaign_id: CampaignId, data: CampaignData) -> bool:
         """Update a campaign."""
         ...
-    
+
     def delete_campaign(self, user_id: UserId, campaign_id: CampaignId) -> bool:
         """Delete a campaign."""
         ...
@@ -115,11 +115,11 @@ class DatabaseService(Protocol):
 
 class AIService(Protocol):
     """Protocol for AI service implementations."""
-    
+
     def generate_response(self, request: GeminiRequest) -> GeminiResponse:
         """Generate an AI response."""
         ...
-    
+
     def validate_response(self, response: str) -> bool:
         """Validate an AI response."""
         ...

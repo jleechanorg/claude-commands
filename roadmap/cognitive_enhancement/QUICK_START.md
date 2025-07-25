@@ -21,7 +21,7 @@ Replace standard commands with enhanced versions:
 # Instead of: /execute implement user auth
 /ee implement user auth
 
-# Instead of: /plan build dashboard  
+# Instead of: /plan build dashboard
 /plan+ build dashboard
 
 # Instead of: /testui test login form
@@ -61,7 +61,7 @@ Found 3 relevant patterns
 🚨 CRITICAL CORRECTIONS (1):
   ⚠️ Always use --puppeteer flag for browser tests
 
-🎯 USER PREFERENCES (1):  
+🎯 USER PREFERENCES (1):
   • Prefer subagent coordination for complex tasks
 
 💡 RECOMMENDATIONS (1):
@@ -77,7 +77,7 @@ Found 3 relevant patterns
 
 # Response includes:
 # - Pattern consultation results
-# - Memory-informed complexity assessment  
+# - Memory-informed complexity assessment
 # - Pattern-guided execution approach
 # - Enhanced TodoWrite checklist
 # - Critical corrections applied automatically

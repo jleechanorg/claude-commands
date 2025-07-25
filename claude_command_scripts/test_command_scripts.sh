@@ -24,10 +24,10 @@ SCRIPT_DIR="$(dirname "$0")/commands"
 test_script() {
     local script="$1"
     local script_name=$(basename "$script")
-    
+
     echo -e "\n${BLUE}Testing: $script_name${NC}"
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
-    
+
     # Test 1: Check if executable
     if [[ ! -x "$script" ]]; then
         echo -e "  ${RED}❌ Not executable${NC}"
@@ -35,7 +35,7 @@ test_script() {
         return 1
     fi
     echo -e "  ${GREEN}✓ Executable${NC}"
-    
+
     # Test 2: Syntax check
     if ! bash -n "$script" 2>/dev/null; then
         echo -e "  ${RED}❌ Syntax error${NC}"
@@ -43,7 +43,7 @@ test_script() {
         return 1
     fi
     echo -e "  ${GREEN}✓ Valid syntax${NC}"
-    
+
     # Test 3: Check for help flag
     if ! grep -q -- '--help' "$script"; then
         echo -e "  ${YELLOW}⚠️  No --help flag found${NC}"
@@ -57,21 +57,21 @@ test_script() {
             return 1
         fi
     fi
-    
+
     # Test 4: Check for set flags
     if ! grep -q 'set -euo pipefail' "$script"; then
         echo -e "  ${YELLOW}⚠️  Missing 'set -euo pipefail'${NC}"
     else
         echo -e "  ${GREEN}✓ Error handling enabled${NC}"
     fi
-    
+
     # Test 5: Check for color definitions
     if grep -q 'GREEN=' "$script" && grep -q 'NC=' "$script"; then
         echo -e "  ${GREEN}✓ Color output supported${NC}"
     else
         echo -e "  ${YELLOW}⚠️  No color definitions${NC}"
     fi
-    
+
     PASSED_TESTS=$((PASSED_TESTS + 1))
     echo -e "  ${GREEN}✅ Script validation passed${NC}"
     return 0

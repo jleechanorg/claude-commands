@@ -1,7 +1,7 @@
 # Scratchpad for feature/planningb-doublecheck
 
 ## Branch Info
-- **Branch**: feature/planningb-doublecheck  
+- **Branch**: feature/planningb-doublecheck
 - **PR**: #524 https://github.com/jleechan2015/worldarchitect.ai/pull/524
 - **Status**: Ready for review, minor test issues being debugged
 
@@ -60,7 +60,7 @@ GitHub CI: All checks passing ✅
 - Will affect all campaigns after merge
 
 ### Files Modified
-- **Backend**: 
+- **Backend**:
   - narrative_response_schema.py (JSON validation)
   - prompts/game_state_instruction.md (LLM instructions)
 - **Frontend**:

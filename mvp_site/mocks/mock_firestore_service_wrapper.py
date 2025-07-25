@@ -2,13 +2,15 @@
 Mock Firestore Service wrapper that provides the same interface as the real firestore_service module.
 """
 
-from .mock_firestore_service import MockFirestoreClient, MockFirestoreDocument
-from .data_fixtures import SAMPLE_CAMPAIGN, SAMPLE_GAME_STATE
-import logging_util
-import json
 import copy
+import json
 from datetime import datetime
+
+import logging_util
 from firebase_admin import firestore
+
+from .data_fixtures import SAMPLE_CAMPAIGN, SAMPLE_GAME_STATE
+from .mock_firestore_service import MockFirestoreClient, MockFirestoreDocument
 
 # Module constants from the real service
 DELETE_FIELD = object()  # Simple sentinel for mock
@@ -143,7 +145,7 @@ def _truncate_log_json(state_dict, max_length=1000):
 __all__ = [
     'get_client',
     'get_campaigns_for_user',
-    'get_campaign_by_id', 
+    'get_campaign_by_id',
     'create_campaign',
     'update_campaign',
     'delete_campaign',

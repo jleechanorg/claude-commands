@@ -20,7 +20,7 @@ TOKEN_FILE_EXISTS=false
 log_token_event() {
     local message="$1"
     local level="$2"  # INFO, WARN, ERROR
-    
+
     case "$level" in
         "ERROR")
             echo -e "${RED}❌ $message${NC}" >&2
@@ -56,9 +56,9 @@ validate_perplexity_token() {
 # Function to load tokens from ~/.token file
 load_tokens() {
     local quiet_mode="$1"  # Set to "quiet" to suppress output
-    
+
     local HOME_TOKEN_FILE="$HOME/.token"
-    
+
     if [ ! -f "$HOME_TOKEN_FILE" ]; then
         TOKEN_FILE_EXISTS=false
         if [ "$quiet_mode" != "quiet" ]; then
@@ -73,13 +73,13 @@ load_tokens() {
         fi
         return 1
     fi
-    
+
     TOKEN_FILE_EXISTS=true
-    
+
     if [ "$quiet_mode" != "quiet" ]; then
         log_token_event "Loading tokens from $HOME_TOKEN_FILE" "INFO"
     fi
-    
+
     # Source the token file to load environment variables
     if source "$HOME_TOKEN_FILE" 2>/dev/null; then
         # Verify and export GitHub token
@@ -101,7 +101,7 @@ load_tokens() {
                 log_token_event "GITHUB_TOKEN not found in token file" "WARN"
             fi
         fi
-        
+
         # Verify and export Perplexity token
         if [ -n "$PERPLEXITY_API_KEY" ]; then
             if validate_perplexity_token "$PERPLEXITY_API_KEY"; then
@@ -120,7 +120,7 @@ load_tokens() {
                 log_token_event "PERPLEXITY_API_KEY not found in token file" "WARN"
             fi
         fi
-        
+
         return 0
     else
         if [ "$quiet_mode" != "quiet" ]; then
@@ -134,19 +134,19 @@ load_tokens() {
 check_token_status() {
     echo -e "${BLUE}🔍 Token Configuration Status${NC}"
     echo "=========================="
-    
+
     if [ "$TOKEN_FILE_EXISTS" = true ]; then
         echo -e "${GREEN}✅ Token file exists: $HOME/.token${NC}"
     else
         echo -e "${RED}❌ Token file missing: $HOME/.token${NC}"
     fi
-    
+
     if [ "$GITHUB_TOKEN_LOADED" = true ]; then
         echo -e "${GREEN}✅ GitHub token: Loaded and valid${NC}"
     else
         echo -e "${RED}❌ GitHub token: Not loaded or invalid${NC}"
     fi
-    
+
     if [ "$PERPLEXITY_TOKEN_LOADED" = true ]; then
         echo -e "${GREEN}✅ Perplexity token: Loaded and valid${NC}"
     else
@@ -160,13 +160,13 @@ test_github_token() {
         log_token_event "GitHub token not loaded - cannot test" "ERROR"
         return 1
     fi
-    
+
     log_token_event "Testing GitHub token validity..." "INFO"
-    
+
     # Create temporary curl config to hide token from process listings
     local curl_config=$(mktemp)
     printf 'header = "Authorization: Bearer %s"\n' "$GITHUB_TOKEN" > "$curl_config"
-    
+
     # Test token with secure curl configuration
     if curl --silent --fail --config "$curl_config" --url https://api.github.com/user >/dev/null 2>&1; then
         log_token_event "GitHub token is valid and working" "INFO"
@@ -184,16 +184,16 @@ test_github_token() {
 # Function to create template token file
 create_token_template() {
     local token_file="$HOME/.token"
-    
+
     if [ -f "$token_file" ]; then
         log_token_event "Token file already exists at $token_file" "WARN"
         return 1
     fi
-    
+
     cat > "$token_file" << 'EOF'
 # Token Configuration File
 # This file should be kept secure with chmod 600 permissions
-# 
+#
 # GitHub Personal Access Token
 # Generate at: https://github.com/settings/tokens
 # Required scopes: repo, read:org, read:user
@@ -203,9 +203,9 @@ export GITHUB_TOKEN="ghp_your_github_token_here"
 # Generate at: https://www.perplexity.ai/settings/api
 export PERPLEXITY_API_KEY="pplx_your_perplexity_token_here"
 EOF
-    
+
     chmod 600 "$token_file"
-    
+
     log_token_event "Created token template at $token_file" "INFO"
     echo -e "${YELLOW}📝 Please edit $token_file and add your actual tokens${NC}"
     return 0

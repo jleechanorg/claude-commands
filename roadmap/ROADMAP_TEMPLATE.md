@@ -1,6 +1,6 @@
 # WorldArchitect.AI Development Roadmap
 
-<!-- 
+<!--
 This is the master roadmap file. All tasks are tracked here.
 - sprint_current.md is generated from the "Current Sprint" section
 - completed_log.md archives finished tasks

@@ -51,7 +51,7 @@ Character's internal thoughts about: {user_input}
 After considering the situation, I see several options:
 
 1. Option 1: Do X
-2. Option 2: Do Y  
+2. Option 2: Do Y
 3. Option 3: Do Z
 
 **--- PLANNING BLOCK ---**

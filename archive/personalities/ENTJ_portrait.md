@@ -18,8 +18,8 @@ see mistakes repeated, and have no patience with inefficiency.  They may
 become quite harsh when their patience is tried in these respects, because
 they are not naturally tuned in to people's feelings, and more than likely
 don't believe that they should tailor their judgments in consideration
-for people's feelings.  ENTJs, like many types,  have difficulty seeing 
-things from outside their own perspective.  
+for people's feelings.  ENTJs, like many types,  have difficulty seeing
+things from outside their own perspective.
 Unlike other types, ENTJs naturally have little patience with people who do not
 see things the same way as the ENTJ.
 The ENTJ needs to consciously work on recognizing the value of other
@@ -31,18 +31,18 @@ and collaboration from others.  In their personal world, it can make
 some ENTJs overbearing as spouses or parents.\nThe ENTJ has a tremendous amount of personal power and presence that
 will work for them as a force towards achieving their goals.  However,
 this personal power is also an agent of alienation and self-aggrandizement,
-that the ENTJ would do well to avoid.\nENTJs are very forceful, decisive individuals.  
+that the ENTJ would do well to avoid.\nENTJs are very forceful, decisive individuals.
 They make decisions quickly, and are
 quick to verbalize their opinions and decisions to the rest of the world.
-The ENTJ who has not developed their Intuition will make decisions too hastily, 
+The ENTJ who has not developed their Intuition will make decisions too hastily,
 without understanding all of the issues and possible solutions.  On the other hand,
 an ENTJ who has not developed their Thinking side will have difficulty
 applying logic to their insights, and will often make poor decisions.
 In that case, they may have brilliant ideas and insight into situations,
-but they may have little skill at determining how to act upon their 
+but they may have little skill at determining how to act upon their
 understanding, or their actions may be inconsistent.
 An ENTJ who has developed in a generally
-less than ideal way may become dictatorial and abrasive - intrusively 
+less than ideal way may become dictatorial and abrasive - intrusively
 giving orders and direction without a sound reason for doing so, and
 without consideration for the people involved.\nAlthough ENTJs are not naturally tuned into other people's feelings,
 these individuals frequently have very strong sentimental streaks.
@@ -51,7 +51,7 @@ likely hide it from general knowledge, believing the feelings to be
 a weakness.  Because the world of feelings and values is not where the
 ENTJ naturally functions, they may sometimes make value judgments and
 hold onto submerged emotions that are ill-founded and inappropriate, and
-will cause them problems - sometimes rather serious problems.\nENTJs love to interact with people.  
+will cause them problems - sometimes rather serious problems.\nENTJs love to interact with people.
 As Extroverts, they're energized and stimulated primarily externally.
 There's nothing more enjoyable and satisfying to the ENTJ than having
 a lively, challenging conversation.  They especially respect people
@@ -60,7 +60,7 @@ of view.  There aren't too many people who will do so, however, because the
 ENTJ is a very forceful and dynamic presence who has a tremendous amount
 of self-confidence and excellent verbal communication skills.
 Even the most confident individuals may experience moments of self-doubt
-when debating a point with an ENTJ.\nENTJs want their home to be beautiful, well-furnished, and efficiently run. 
+when debating a point with an ENTJ.\nENTJs want their home to be beautiful, well-furnished, and efficiently run.
 They're likely to place much emphasis on their children being well-educated
 and structured, to desire a congenial and devoted relationship with their
 spouse.  At home, the ENTJ needs to be in charge as much as they do at
@@ -69,7 +69,7 @@ self-image, who is also a Thinking type.  Because the ENTJ is primarily
 focused on their careers, some ENTJs have a problem with
 being constantly absent from home, physically or mentally.\nThe ENTJ has many gifts that make it possible for them to have a great deal
 of personal power, if they don't forget to remain balanced in their lives.
-They are assertive, innovative, long-range thinkers with an excellent ability 
+They are assertive, innovative, long-range thinkers with an excellent ability
 to translate theories and possibilities into solid plans of action.  They
 are usually tremendously forceful personalities, and have the tools to
 accomplish whatever goals they set out for.

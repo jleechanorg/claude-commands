@@ -410,7 +410,7 @@ class TestFrontendRoutes(unittest.TestCase):
     def test_static_js_file_normal_caching_green(self):
         """GREEN: Test that JS files have normal caching without special header."""
         response = self.client.get('/static/app.js')
-        
+
         # Should have normal caching (not full no-cache)
         cache_control = response.headers.get('Cache-Control', '')
         self.assertNotEqual(cache_control, 'no-cache, no-store, must-revalidate')
@@ -420,7 +420,7 @@ class TestFrontendRoutes(unittest.TestCase):
     def test_static_js_file_cache_busting_green(self):
         """GREEN: Test that JS files disable caching with X-No-Cache header."""
         response = self.client.get('/static/app.js', headers={'X-No-Cache': 'true'})
-        
+
         # Should have full cache busting
         self.assertEqual(response.headers.get('Cache-Control'), 'no-cache, no-store, must-revalidate')
         self.assertEqual(response.headers.get('Pragma'), 'no-cache')
@@ -429,7 +429,7 @@ class TestFrontendRoutes(unittest.TestCase):
     def test_static_css_file_cache_busting_green(self):
         """GREEN: Test that CSS files also support cache busting."""
         response = self.client.get('/static/style.css', headers={'X-No-Cache': 'true'})
-        
+
         # Should have full cache busting for CSS too
         self.assertEqual(response.headers.get('Cache-Control'), 'no-cache, no-store, must-revalidate')
         self.assertEqual(response.headers.get('Pragma'), 'no-cache')
@@ -442,9 +442,9 @@ class TestFrontendRoutes(unittest.TestCase):
             mock_response = MagicMock()
             mock_response.headers = {}
             mock_send.return_value = mock_response
-            
+
             response = self.client.get('/static/image.png', headers={'X-No-Cache': 'true'})
-            
+
             # Should not have cache busting headers for non-JS/CSS files
             self.assertNotIn('Cache-Control', mock_response.headers)
             self.assertNotIn('Pragma', mock_response.headers)
@@ -452,10 +452,10 @@ class TestFrontendRoutes(unittest.TestCase):
 
     def test_handle_interaction_fallback_green(self):
         """GREEN: Test that /handle_interaction returns helpful fallback message."""
-        response = self.client.post('/handle_interaction', 
+        response = self.client.post('/handle_interaction',
                                    json={'input': 'test'},
                                    headers={'Content-Type': 'application/json'})
-        
+
         # Should return 410 Gone with helpful message
         self.assertEqual(response.status_code, 410)
         data = response.get_json()

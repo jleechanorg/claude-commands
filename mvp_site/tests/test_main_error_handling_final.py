@@ -48,7 +48,7 @@ valid_array=[1, 2, 3]"""
         """Test handling of empty values and whitespace"""
         command = """
         hp=50
-        
+
         name="Hero"
         """
 

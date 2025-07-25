@@ -14,7 +14,7 @@ MAX_AGE_HOURS=24
 is_worktree_safe_to_remove() {
     local worktree_path="$1"
     local branch_name=$(git -C "$worktree_path" branch --show-current 2>/dev/null || echo "")
-    
+
     # Check if PR exists and is merged
     if [ -n "$branch_name" ]; then
         pr_state=$(gh pr view "$branch_name" --json state -q .state 2>/dev/null || echo "")
@@ -22,12 +22,12 @@ is_worktree_safe_to_remove() {
             return 0  # Safe to remove
         fi
     fi
-    
+
     # Check if .done file exists (agent completed)
     if [ -f "$RESULT_DIR/${worktree_path##*/}_results.json.done" ]; then
         return 0  # Safe to remove
     fi
-    
+
     return 1  # Not safe
 }
 

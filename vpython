@@ -25,4 +25,4 @@ fi
 
 # Run python with all provided arguments
 echo "Running python $*"
-exec python "$@" 
+exec python "$@"

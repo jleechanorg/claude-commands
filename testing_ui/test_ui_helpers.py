@@ -239,7 +239,7 @@ def is_element_in_viewport(page: Page, selector: str) -> bool:
         (() => {{
             const element = document.querySelector('{selector}');
             if (!element) return false;
-            
+
             const rect = element.getBoundingClientRect();
             return (
                 rect.top >= 0 &&

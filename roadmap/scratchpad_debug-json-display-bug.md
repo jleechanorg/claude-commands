@@ -57,7 +57,7 @@ Raw JSON is being displayed to the user in the game interface. Based on the file
 ### Root Cause Identified
 The issue is in the entity tracking feature when JSON mode is enabled. When entity tracking is active:
 
-1. `gemini_service.py` line 1117: Sets `use_json_mode=True` 
+1. `gemini_service.py` line 1117: Sets `use_json_mode=True`
 2. Line 1118: `raw_response_text = _get_text_from_response(response)` gets the raw JSON
 3. Line 1121: `response_text = _process_structured_response(raw_response_text, expected_entities)` should extract the narrative
 4. However, the log shows "Coverage rate 0.00" which suggests the JSON parsing might be failing
@@ -169,7 +169,7 @@ All required PR quality improvements have been successfully implemented:
 
 #### ✅ Priority 3 Verification (COMPLETED)
 - **JSON Display Bug Tests**: 18/18 passing ✅
-- **Narrative Cutoff Bug Tests**: 6/6 passing ✅  
+- **Narrative Cutoff Bug Tests**: 6/6 passing ✅
 - **Simple Verification Tests**: 3/3 passing ✅
 - **Main Integration Test**: Still working correctly ✅
 - **State Validation**: Working with appropriate warning logs ✅
@@ -194,7 +194,7 @@ All required PR quality improvements have been successfully implemented:
 
 ### 🎯 **MISSION ACCOMPLISHED**
 - ✅ **Core JSON Display Bugs**: Both bugs FIXED and verified working
-- ✅ **Code Quality**: All reviewer feedback addressed and implemented  
+- ✅ **Code Quality**: All reviewer feedback addressed and implemented
 - ✅ **Test Coverage**: Comprehensive test suite (47 total tests) all passing
 - ✅ **Integration Verified**: Main integration test confirms no regressions
 - ✅ **Documentation**: Complete PR documentation and analysis provided
@@ -202,7 +202,7 @@ All required PR quality improvements have been successfully implemented:
 ### 📊 **Final Test Results**
 ```bash
 ✅ Simple Verification: 3/3 tests passing
-✅ Narrative Cutoff Fix: 6/6 tests passing  
+✅ Narrative Cutoff Fix: 6/6 tests passing
 ✅ JSON Display Bugs: 18/18 tests passing
 ✅ Integration Tests: 11/11 properly skipped with explanations
 ✅ Main Integration: Working correctly - no regressions
@@ -218,7 +218,7 @@ All required PR quality improvements have been successfully implemented:
 ### 🚀 **Ready for Production**
 The JSON display bug fixes are production-ready with:
 - Backward compatibility maintained
-- No breaking changes to existing functionality  
+- No breaking changes to existing functionality
 - Comprehensive error handling for edge cases
 - Full test coverage preventing regressions
 

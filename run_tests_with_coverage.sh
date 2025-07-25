@@ -5,7 +5,7 @@
 #
 # Usage:
 #   ./run_tests_with_coverage.sh                   # Unit tests only with coverage (HTML report included by default)
-#   ./run_tests_with_coverage.sh --integration     # Unit tests AND integration tests with coverage  
+#   ./run_tests_with_coverage.sh --integration     # Unit tests AND integration tests with coverage
 #   ./run_tests_with_coverage.sh --no-html         # Generate text report only (skip HTML)
 #   ./run_tests_with_coverage.sh --integration --no-html  # Integration tests with text report only
 #
@@ -126,7 +126,7 @@ if [ "$include_integration" = true ]; then
             test_files+=("$file")
         done < <(find ./test_integration -name "test_*.py" -type f -print0)
     fi
-    
+
     if [ -d "./tests/test_integration" ]; then
         print_status "Including integration tests from tests/test_integration/"
         while IFS= read -r -d '' file; do
@@ -167,7 +167,7 @@ for test_file in "${test_files[@]}"; do
     if [ -f "$test_file" ]; then
         total_tests=$((total_tests + 1))
         echo -n "[$total_tests/${#test_files[@]}] Running: $test_file ... "
-        
+
         if TESTING=true source ../venv/bin/activate && coverage run --append --source=. "$VPYTHON" "$test_file" >/dev/null 2>&1; then
             passed_tests=$((passed_tests + 1))
             print_success "✓"
@@ -197,28 +197,28 @@ coverage_report_exit_code=$?
 # Display key coverage metrics
 if [ $coverage_report_exit_code -eq 0 ]; then
     print_success "Coverage report generated successfully"
-    
+
     # Extract and display key metrics
     echo
     print_status "📈 Coverage Summary:"
     echo "----------------------------------------"
-    
+
     # Show overall coverage
     overall_coverage=$(tail -1 coverage_report.txt | awk '{print $4}')
     echo "Overall Coverage: $overall_coverage"
-    
+
     # Show key file coverage
     echo
     echo "Key Files Coverage:"
     grep -E "(main\.py|gemini_service\.py|game_state\.py|firestore_service\.py)" coverage_report.txt | head -10
-    
+
     echo "----------------------------------------"
-    
+
     # Display full report
     echo
     print_status "📋 Full Coverage Report:"
     cat coverage_report.txt
-    
+
 else
     print_error "Failed to generate coverage report"
 fi

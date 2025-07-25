@@ -6,7 +6,7 @@ This protocol defines the standardized entity structure for all characters, NPCs
 
 ### Character Attributes (The Big Six)
 - **STR** (Strength) - Physical power, melee attacks, carrying capacity
-- **DEX** (Dexterity) - Agility, ranged attacks, AC, initiative 
+- **DEX** (Dexterity) - Agility, ranged attacks, AC, initiative
 - **CON** (Constitution) - Health, hit points, concentration
 - **INT** (Intelligence) - Reasoning, investigation, knowledge
 - **WIS** (Wisdom) - Perception, insight, awareness
@@ -34,7 +34,7 @@ This protocol defines the standardized entity structure for all characters, NPCs
 
 ### Social Interaction Rules
 - **Persuasion**: CHA + proficiency (if proficient)
-- **Deception**: CHA + proficiency (if proficient)  
+- **Deception**: CHA + proficiency (if proficient)
 - **Intimidation**: CHA + proficiency (if proficient)
 - **Insight**: WIS + proficiency (if proficient)
 
@@ -64,25 +64,25 @@ Every player character MUST include these fields in `player_character_data`:
   "background": "Soldier",
   "alignment": "Lawful Good",
   "mbti": "INFJ",
-  
+
   "hp_current": 28,
   "hp_max": 28,
   "temp_hp": 0,
   "armor_class": 16,
-  
+
   "attributes": {
     "strength": 16,
-    "dexterity": 14, 
+    "dexterity": 14,
     "constitution": 15,
     "intelligence": 12,
     "wisdom": 13,
     "charisma": 10
   },
-  
+
   "proficiency_bonus": 2,
   "skills": ["Athletics", "Perception", "Insight"],
   "saving_throw_proficiencies": ["Strength", "Constitution"],
-  
+
   "resources": {
     "gold": 150,
     "inspiration": false,
@@ -92,23 +92,23 @@ Every player character MUST include these fields in `player_character_data`:
       "level_2": {"used": 1, "total": 1}
     }
   },
-  
+
   "equipment": {
     "weapons": ["Longsword", "Shield"],
     "armor": "Chain Mail",
     "backpack": ["Rope (50 feet)", "Rations (5 days)"],
     "money": "150 gp"
   },
-  
+
   "combat_stats": {
     "initiative": 2,
     "speed": 30,
     "passive_perception": 13
   },
-  
+
   "status_conditions": [],
   "death_saves": { "successes": 0, "failures": 0 },
-  
+
   "features": ["Fighting Style: Defense", "Second Wind", "Action Surge"],
   "spells_known": []
 }
@@ -126,13 +126,13 @@ NPCs in `npc_data` should be stored by their display name as the key, with this 
     "faction": "faction_royalty_001",
     "mbti": "ISFP",
     "attitude_to_party": "neutral",
-    
+
     "level": 10,
     "class": "Noble",
     "hp_current": 65,
     "hp_max": 65,
     "armor_class": 15,
-    
+
     "attributes": {
       "strength": 13,
       "dexterity": 12,
@@ -141,22 +141,22 @@ NPCs in `npc_data` should be stored by their display name as the key, with this 
       "wisdom": 15,
       "charisma": 18
     },
-    
+
     "combat_stats": {
       "initiative": 1,
       "speed": 30,
       "passive_perception": 15
     },
-    
+
     "present": true,
     "conscious": true,
     "hidden": false,
     "status": "Concerned about kingdom",
-    
+
     "relationships": {
       "pc_kaelan_001": "cautious respect"
     },
-    
+
     "knowledge": ["kingdom politics", "dragon threat"],
     "recent_actions": ["summoned heroes", "offered quest"]
   }
@@ -312,7 +312,7 @@ The `custom_campaign_state` object tracks narrative progress and campaign config
 
 ### Mission Object Schema
 - **`mission_id`**: Unique string identifier
-- **`title`**: Human-readable mission title  
+- **`title`**: Human-readable mission title
 - **`status`**: "accepted", "in_progress", "completed", "failed"
 - **`objective`**: Current next step description
 - **`description`**: Detailed mission background (optional)

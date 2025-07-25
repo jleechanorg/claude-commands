@@ -35,7 +35,7 @@ Create an engaging, accessible web game that allows players to embody different 
 - **Environmental Interaction**: Animals react to terrain, obstacles, and other elements
 
 ### 3.3 Environment System
-- **Multiple Habitats**: 
+- **Multiple Habitats**:
   - Forest (trees, undergrowth, streams)
   - Savanna (grasslands, rocks, watering holes)
   - Ocean (coral reefs, kelp forests, depths)
@@ -52,7 +52,7 @@ Create an engaging, accessible web game that allows players to embody different 
 ## 4. User Experience Design
 
 ### 4.1 User Interface
-- **Minimalist HUD**: 
+- **Minimalist HUD**:
   - Animal health/energy bar
   - Mini-map for navigation
   - Action prompts for interactions

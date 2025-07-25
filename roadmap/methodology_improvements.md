@@ -4,7 +4,7 @@
 
 ### Original Testing Limitations
 1. **Sample Size**: N=1 tests provide anecdotal evidence, not statistical validation
-2. **Confounded Variables**: Different task complexity between original and enhanced tests  
+2. **Confounded Variables**: Different task complexity between original and enhanced tests
 3. **Observer Bias**: Interpreter knew which condition was "enhanced"
 4. **Cherry-Picked Metrics**: Selected measurements that favor command composition
 5. **No Controls**: Missing placebo controls, baseline variance measurement

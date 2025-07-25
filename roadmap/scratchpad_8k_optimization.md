@@ -3,7 +3,7 @@
 ## Current Status
 - **Current Total**: 16,040 words (base prompts)
 - **Effective Story Mode Total**: 17,009 words (includes character_template.md: 969 words)
-- **Target**: 8,000 words  
+- **Target**: 8,000 words
 - **Reduction Needed**: 9,009 words (53% reduction)
 - **Previous Achievement**: 35% reduction in Phase 1
 
@@ -49,7 +49,7 @@ Update `gemini_service.py` to load prompts based on current context:
 def build_context_aware_instructions(self, context):
     # Always load core (3.5K words)
     core_instructions = self.build_core_instructions()
-    
+
     if context.is_combat:
         # Combat-focused subset (1.5K words)
         return core_instructions + self.build_combat_essentials()
@@ -178,7 +178,7 @@ Modify `PromptBuilder` class:
 
 ### Phase 2B: Content Extraction (Week 2-3)
 - [ ] Extract examples from game_state_instruction.md
-- [ ] Extract examples from mechanics_system_instruction.md  
+- [ ] Extract examples from mechanics_system_instruction.md
 - [ ] Further condense narrative_system_instruction.md
 - [ ] Reduce master_directive.md to essentials
 - [ ] Create examples/ directory structure
@@ -205,7 +205,7 @@ Modify `PromptBuilder` class:
 
 **Context-Specific Targets:**
 - Story Mode: ≤ 8,000 words (core + story essentials)
-- Combat Mode: ≤ 5,000 words (core + combat essentials)  
+- Combat Mode: ≤ 5,000 words (core + combat essentials)
 - Creation Mode: ≤ 5,500 words (core + creation essentials)
 
 ## Risk Mitigation

@@ -30,7 +30,7 @@
 ```
 🧪 Validating Real A2A Agent...
 ✅ Agent card discovered: orchestrator-minimal-poc
-✅ Agent card has all required A2A fields  
+✅ Agent card has all required A2A fields
 ✅ Health check passed: healthy
 ✅ Root endpoint working: Real A2A Agent POC
 ```
@@ -39,7 +39,7 @@
 ```json
 {
   "name": "orchestrator-minimal-poc",
-  "description": "Minimal POC for real A2A integration with orchestrator framework", 
+  "description": "Minimal POC for real A2A integration with orchestrator framework",
   "version": "1.0.0",
   "url": "http://localhost:8000",
   "capabilities": ["orchestration", "task_execution"],
@@ -89,7 +89,7 @@ from a2a.server.apps.jsonrpc.fastapi_app import A2AFastAPIApplication
 External A2A Agents
         ↕ (A2A Protocol)
 Orchestrator A2A Server (FastAPI)
-        ↕ (Message Bridge)  
+        ↕ (Message Bridge)
 Redis-based Agent System
         ↕ (Internal Communication)
 Opus/Sonnet/SubAgents

@@ -12,14 +12,14 @@ Use entities.py (Pydantic) as the foundation and integrate critical features fro
 
 ### Phase 2: Core Features Integration ✅
 **From entities_simple.py (CRITICAL):**
-- [x] **Gender validation** - Mandatory for NPCs, prevents narrative inconsistency 
+- [x] **Gender validation** - Mandatory for NPCs, prevents narrative inconsistency
 - [x] **Age validation** - Fantasy-appropriate ranges (0-50,000 years)
 - [x] **Defensive numeric conversion** - Handles "unknown" values gracefully
 - [x] **Enhanced validation logic** - More robust error handling
 
 **From game_state_instruction.md (HIGH PRIORITY):**
 - [x] **MBTI field** - Personality type for consistent roleplay
-- [x] **Alignment field** - D&D moral/ethical alignment  
+- [x] **Alignment field** - D&D moral/ethical alignment
 - [x] **Class name field** - Character class (Fighter, Wizard, etc.)
 - [x] **Background field** - Character background (Soldier, Noble, etc.)
 - [ ] **Armor Class field** - Essential combat statistic
@@ -53,7 +53,7 @@ Use entities.py (Pydantic) as the foundation and integrate critical features fro
 
 **✅ CRITICAL Narrative Consistency Fields:**
 - `gender` field with mandatory validation for NPCs
-- `age` field with fantasy-appropriate range validation (0-50,000 years) 
+- `age` field with fantasy-appropriate range validation (0-50,000 years)
 - Comprehensive gender validation preventing Luke campaign bugs
 
 **✅ D&D Fundamentals:**
@@ -85,7 +85,7 @@ Use entities.py (Pydantic) as the foundation and integrate critical features fro
 1. **`mbti: str`** - Personality consistency (INFJ, ENTP, etc.)
 2. **`alignment: str`** - D&D fundamental (Lawful Good, etc.)
 3. **`class_name: str`** - Character class
-4. **`background: str`** - Character background  
+4. **`background: str`** - Character background
 5. **`armor_class: int`** - AC for combat
 6. **`proficiency_bonus: int`** - Core D&D progression
 7. **`combat_stats: CombatStats`** - Initiative, speed, passive perception
@@ -112,7 +112,7 @@ def validate_gender(cls, v, values):
             raise ValueError(f"Gender required for NPCs. Valid: {valid_genders}")
     return v
 
-@validator('age')  
+@validator('age')
 def validate_age(cls, v):
     if v is not None:
         if not isinstance(v, int) or v < 0 or v > 50000:
@@ -129,7 +129,7 @@ def validate_age(cls, v):
 ```python
 @validator('mbti')
 def validate_mbti(cls, v):
-    valid_types = ["INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP", 
+    valid_types = ["INTJ", "INTP", "ENTJ", "ENTP", "INFJ", "INFP",
                    "ENFJ", "ENFP", "ISTJ", "ISFJ", "ESTJ", "ESFJ",
                    "ISTP", "ISFP", "ESTP", "ESFP"]
     if v and v not in valid_types:
@@ -139,7 +139,7 @@ def validate_mbti(cls, v):
 @validator('alignment')
 def validate_alignment(cls, v):
     valid_alignments = ["Lawful Good", "Neutral Good", "Chaotic Good",
-                       "Lawful Neutral", "True Neutral", "Chaotic Neutral", 
+                       "Lawful Neutral", "True Neutral", "Chaotic Neutral",
                        "Lawful Evil", "Neutral Evil", "Chaotic Evil"]
     if v and v not in valid_alignments:
         raise ValueError(f"Invalid D&D alignment: {v}")
@@ -163,7 +163,7 @@ def validate_alignment(cls, v):
 - **Goal**: Single comprehensive entity schema supporting both narrative consistency and D&D mechanics
 
 ## Branch Info
-- Branch: luke_campaign_fixes  
+- Branch: luke_campaign_fixes
 - Goal: Migrate to comprehensive Pydantic entity schema
 - Target: Replace entities_simple.py with enhanced entities_pydantic.py
 

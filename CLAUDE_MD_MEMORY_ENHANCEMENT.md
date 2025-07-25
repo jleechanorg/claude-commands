@@ -20,7 +20,7 @@ Add the following protocol to CLAUDE.md:
 
 ### Execution Steps:
 1. ✅ **Extract key terms** from user input (entities, technical terms, PR references)
-2. ✅ **Call MCP**: `results = mcp__memory-server__search_nodes(terms)`  
+2. ✅ **Call MCP**: `results = mcp__memory-server__search_nodes(terms)`
 3. ✅ **Log search**: "🔍 Memory MCP searched: {len(results)} relevant memories found"
 4. ✅ **If results found**: Naturally incorporate relevant context into response
 5. ✅ **If no results**: Continue without enhancement

@@ -174,7 +174,7 @@ else
     PYTHON_VERSION=$($PYTHON_CMD --version)
     print_warning "Python 3.11 not found, using $PYTHON_VERSION"
     print_warning "CI uses Python 3.11, results may differ significantly"
-    
+
     # Check Python version compatibility
     if $PYTHON_CMD -c "import sys; exit(0 if sys.version_info >= (3, 8) else 1)"; then
         print_info "Python version is compatible (3.8+)"
@@ -217,7 +217,7 @@ else
         print_info "Removing existing virtual environment..."
         rm -rf "$PROJECT_ROOT/venv"
     fi
-    
+
     # Create fresh virtual environment (exactly like CI)
     print_info "Creating fresh virtual environment with $PYTHON_CMD..."
     $PYTHON_CMD -m venv venv
@@ -313,7 +313,7 @@ import pkg_resources
 
 # Key packages to check
 packages = [
-    'flask', 'gunicorn', 'firebase-admin', 'google-cloud-firestore', 
+    'flask', 'gunicorn', 'firebase-admin', 'google-cloud-firestore',
     'protobuf', 'google-genai', 'flask-cors', 'selenium', 'requests'
 ]
 
@@ -412,7 +412,7 @@ if [ "$DEBUG_MODE" = true ]; then
     print_debug "Saving final environment state..."
     env | sort > /tmp/ci_replica_final_env.txt
     print_debug "Final environment saved to /tmp/ci_replica_final_env.txt"
-    
+
     if [ -f /tmp/ci_replica_original_env.txt ]; then
         print_debug "Environment changes:"
         diff /tmp/ci_replica_original_env.txt /tmp/ci_replica_final_env.txt || true

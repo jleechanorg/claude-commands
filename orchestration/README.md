@@ -85,7 +85,7 @@ tmux list-sessions
 3. **Start Talking Naturally** (in Opus terminal):
    ```
    🎯 Opus > Build a user authentication system
-   🎯 Opus > Create a REST API urgently  
+   🎯 Opus > Create a REST API urgently
    🎯 Opus > What's the status?
    🎯 Opus > Help me with commands
    ```
@@ -209,7 +209,7 @@ Opus: Analyzes → Spawns Sonnet-Backend
 Sonnet-Backend: Breaks down → Spawns DB-Agent, API-Agent, Auth-Agent
   ↓
 DB-Agent: Designs database schema
-API-Agent: Implements REST endpoints  
+API-Agent: Implements REST endpoints
 Auth-Agent: Handles user authentication
   ↓
 Results bubble back up through hierarchy
@@ -218,7 +218,7 @@ Results bubble back up through hierarchy
 🎯 Opus > What's the status?
 🔄 Redis: ✅ Connected
 🎯 Opus agents: 1
-🤖 Sonnet agents: 3  
+🤖 Sonnet agents: 3
 🔧 Sub-agents: 3
 📊 Total active agents: 7
 ```
@@ -319,7 +319,7 @@ redis-cli flushdb
    # Connect to individual agents
    tmux attach -t sonnet-1
    tmux attach -t sonnet-2
-   
+
    # Multi-pane monitoring setup
    tmux new-session -d -s monitor
    tmux split-window -h -t monitor
@@ -375,7 +375,7 @@ redis-cli flushdb
 2. **Direct Opus Terminal:**
    ```bash
    tmux attach -t opus-master
-   
+
    # Then ask naturally:
    🎯 Opus > How do I connect to Sonnet agents?
    🎯 Opus > Can I use Claude Code CLI with agents?
@@ -453,13 +453,13 @@ redis-cli flushdb
    # Automated collaborative setup
    tmux new-session -d -s collaborate-sonnet-1
    tmux split-window -h -t collaborate-sonnet-1
-   
+
    # Your Claude Code CLI pane
    tmux send-keys -t collaborate-sonnet-1:0.0 'cd $(pwd) && claude' Enter
-   
-   # Agent session pane  
+
+   # Agent session pane
    tmux send-keys -t collaborate-sonnet-1:0.1 'tmux attach -t sonnet-1' Enter
-   
+
    # Connect to collaborative session
    tmux attach -t collaborate-sonnet-1
    ```
@@ -477,7 +477,7 @@ redis-cli flushdb
 # Review agent's work
 /e Read the file they just modified
 
-# Add to their implementation  
+# Add to their implementation
 /e Add error handling to the function
 
 # Test their changes
@@ -503,7 +503,7 @@ tmux split-window -v -t agent-monitor:0.1
 # Pane 0: Sonnet-1 activity
 tmux send-keys -t agent-monitor:0.0 'tmux attach -t sonnet-1' Enter
 
-# Pane 1: Sonnet-2 activity  
+# Pane 1: Sonnet-2 activity
 tmux send-keys -t agent-monitor:0.1 'tmux attach -t sonnet-2' Enter
 
 # Pane 2: System monitoring
@@ -558,7 +558,7 @@ tmux list-sessions | grep sonnet
 ./start_system.sh spawn sonnet
 ```
 
-**Problem: tmux session not found**  
+**Problem: tmux session not found**
 ```bash
 # List all sessions
 tmux list-sessions
@@ -577,7 +577,7 @@ tmux list-sessions
 # Check Redis status
 redis-cli ping                         # Should return PONG
 
-# Start Redis if needed  
+# Start Redis if needed
 redis-server --daemonize yes
 
 # Clear Redis data if corrupted
@@ -607,7 +607,7 @@ tmux kill-session -t sonnet-1
 # 2. Delegate high-level task
 /orch Build a REST API for user management urgently
 
-# 3. Monitor progress  
+# 3. Monitor progress
 /orch What's the status?
 tmux attach -t sonnet-1                # Watch agent work
 
@@ -627,7 +627,7 @@ git add . && git commit -m "Add user management API"
 ```bash
 # 1. Delegate to multiple agents
 /orch Build the frontend urgently
-/orch Build the backend when possible  
+/orch Build the backend when possible
 /orch Create the database schema
 
 # 2. Monitor multiple agents
@@ -638,7 +638,7 @@ tmux send-keys -t multi-monitor:0.1 'tmux attach -t sonnet-2' Enter
 tmux attach -t multi-monitor
 
 # 3. Coordinate between agents via Claude Code CLI
-# In sonnet-1 (frontend): 
+# In sonnet-1 (frontend):
 /e Review the API schema from backend team
 
 # In sonnet-2 (backend):
@@ -653,7 +653,7 @@ tmux attach -t multi-monitor
   "id": "msg_abc123",
   "type": "task_assignment",
   "from_agent": "opus-master",
-  "to_agent": "sonnet-1", 
+  "to_agent": "sonnet-1",
   "timestamp": "2025-01-16T10:30:00Z",
   "payload": {
     "description": "Implement user authentication",

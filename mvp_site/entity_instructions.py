@@ -4,8 +4,9 @@ Generates specific AI instructions requiring entity mentions and presence.
 """
 
 import re
-from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
 import logging_util
 
 logger = logging_util.getLogger(__name__)
@@ -25,11 +26,11 @@ class EntityInstructionGenerator:
     Generates explicit instructions for AI to ensure entity presence.
     Creates targeted instructions based on entity types and context.
     """
-    
+
     def __init__(self):
         self.instruction_templates = self._build_instruction_templates()
         self.entity_priorities = self._build_entity_priorities()
-    
+
     def _build_instruction_templates(self) -> Dict[str, Dict[str, str]]:
         """Build instruction templates for different entity types and situations"""
         return {
@@ -59,7 +60,7 @@ class EntityInstructionGenerator:
                 'reactive': "{entity} may react to events but doesn't need to drive the action."
             }
         }
-    
+
     def _build_entity_priorities(self) -> Dict[str, int]:
         """Define priority levels for different entity types"""
         return {
@@ -70,14 +71,14 @@ class EntityInstructionGenerator:
             'location_associated': 2,
             'background': 3
         }
-    
-    def generate_entity_instructions(self, entities: List[str], 
+
+    def generate_entity_instructions(self, entities: List[str],
                                    player_references: List[str],
                                    location: Optional[str] = None,
                                    story_context: Optional[str] = None) -> str:
         """
         Generate comprehensive entity instructions for AI prompts.
-        
+
         Args:
             entities: List of all entities that should be present
             player_references: Entities specifically referenced by player input
@@ -86,59 +87,59 @@ class EntityInstructionGenerator:
         """
         if not entities:
             return ""
-        
+
         instructions = []
         entity_instructions = []
-        
+
         # Process each entity
         for entity in entities:
             entity_instruction = self._create_entity_instruction(
                 entity, player_references, location, story_context
             )
             entity_instructions.append(entity_instruction)
-        
+
         # Sort by priority
         entity_instructions.sort(key=lambda x: x.priority)
-        
+
         # Build instruction sections
         instructions.append("=== MANDATORY ENTITY REQUIREMENTS ===")
-        
+
         mandatory_instructions = [ei for ei in entity_instructions if ei.instruction_type == 'mandatory']
         if mandatory_instructions:
             instructions.append("The following entities are REQUIRED and MUST appear in your response:")
             for ei in mandatory_instructions:
                 instructions.append(f"• {ei.entity_name}: {ei.specific_instruction}")
-        
+
         conditional_instructions = [ei for ei in entity_instructions if ei.instruction_type == 'conditional']
         if conditional_instructions:
             instructions.append("\nCONDITIONAL REQUIREMENTS:")
             for ei in conditional_instructions:
                 instructions.append(f"• {ei.entity_name}: {ei.specific_instruction}")
-        
+
         background_instructions = [ei for ei in entity_instructions if ei.instruction_type == 'background']
         if background_instructions:
             instructions.append("\nBACKGROUND PRESENCE:")
             for ei in background_instructions:
                 instructions.append(f"• {ei.entity_name}: {ei.specific_instruction}")
-        
+
         # Add enforcement clause
         instructions.append("\n=== ENFORCEMENT ===")
         instructions.append(f"DO NOT complete your response without including ALL {len(mandatory_instructions)} mandatory entities listed above.")
         instructions.append("Each mandatory entity must have at least one line of dialogue, action, or clear presence indication.")
-        
+
         if player_references:
             instructions.append(f"\nSPECIAL ATTENTION: The player specifically mentioned {', '.join(player_references)}. "
                              f"These entities MUST respond or appear, as ignoring player references breaks immersion.")
-        
+
         instructions.append("=== END ENTITY REQUIREMENTS ===\n")
-        
+
         return "\n".join(instructions)
-    
+
     def _create_entity_instruction(self, entity: str, player_references: List[str],
                                  location: Optional[str], story_context: Optional[str]) -> EntityInstruction:
         """Create specific instruction for an individual entity"""
         entity_lower = entity.lower()
-        
+
         # Determine entity category and priority
         if entity in player_references:
             category = 'npc_referenced'
@@ -165,7 +166,7 @@ class EntityInstructionGenerator:
             instruction_type = 'background'
             priority = 3
             template_key = 'presence'
-        
+
         # Get template and create instruction
         templates = self.instruction_templates.get(category, self.instruction_templates['background'])
         if template_key in templates:
@@ -173,65 +174,65 @@ class EntityInstructionGenerator:
         else:
             # Fallback to first available template in category
             template = list(templates.values())[0]
-        
+
         specific_instruction = template.format(
             entity=entity,
             location=location or "this location"
         )
-        
+
         # Add context-specific enhancements
         if entity in player_references:
             specific_instruction += " The player directly referenced this character, so ignoring them would break narrative continuity."
-        
+
         # Check for emotional context for any entity
         if entity in player_references and any(keyword in str(player_references).lower() for keyword in ['scared', 'helpless', 'help']):
             specific_instruction += f" This is an emotional moment requiring {entity}'s response to the player's vulnerability."
-        
+
         return EntityInstruction(
             entity_name=entity,
             instruction_type=instruction_type,
             specific_instruction=specific_instruction,
             priority=priority
         )
-    
+
     def _is_player_character(self, entity: str) -> bool:
         """Determine if entity is a player character"""
         # This should be determined by game state, not hardcoded
         # For now, return False to avoid false positives
         return False
-    
+
     def _is_location_owner(self, entity: str, location: Optional[str]) -> bool:
         """Determine if entity owns/belongs to the current location"""
         if not location:
             return False
-        
+
         location_lower = location.lower()
         entity_lower = entity.lower()
-        
+
         # Location mappings should come from game state, not hardcoded
         # For now, return False to avoid false positives
         return False
-    
+
     def _is_story_critical(self, entity: str, story_context: Optional[str]) -> bool:
         """Determine if entity is critical to current story development"""
         if not story_context:
             return False
-        
+
         # Simple keyword matching - could be enhanced
         story_lower = story_context.lower()
         entity_lower = entity.lower()
-        
+
         critical_indicators = ['important', 'key', 'crucial', 'main']
         return any(indicator in story_lower for indicator in critical_indicators)
-    
+
     def create_entity_specific_instruction(self, entity_name: str, player_input: str) -> str:
         """Create specific instruction for handling entity references"""
         if entity_name.lower() not in player_input.lower():
             return ""
-        
+
         emotional_keywords = ['scared', 'helpless', 'forgiveness', 'sorry', 'help', 'please']
         is_emotional = any(keyword in player_input.lower() for keyword in emotional_keywords)
-        
+
         if is_emotional:
             return (
                 f"CRITICAL: The player is making an emotional appeal to {entity_name}. "
@@ -243,7 +244,7 @@ class EntityInstructionGenerator:
                 f"IMPORTANT: {entity_name} has been directly mentioned and must be present "
                 "or respond in some way to acknowledge the reference."
             )
-    
+
     def create_location_specific_instructions(self, location: str, expected_entities: List[str]) -> str:
         """Create location-specific entity instructions"""
         # Generic location-based instructions
@@ -256,12 +257,12 @@ class EntityInstructionGenerator:
             'market': "Bustling commercial area with merchants and customers.",
             'tavern': "Social gathering place with patrons and staff."
         }
-        
+
         location_lower = location.lower()
         for loc_type, instruction in location_types.items():
             if loc_type in location_lower:
                 return f"LOCATION REQUIREMENT for {location}: {instruction}"
-        
+
         return f"LOCATION: {location} - Ensure entities appropriate to this setting are present."
 
 
@@ -269,10 +270,10 @@ class EntityEnforcementChecker:
     """
     Validates that entity instructions are being followed in AI responses.
     """
-    
+
     def __init__(self):
         self.instruction_compliance_patterns = self._build_compliance_patterns()
-    
+
     def _build_compliance_patterns(self) -> Dict[str, List[str]]:
         """Build patterns to check instruction compliance"""
         return {
@@ -291,8 +292,8 @@ class EntityEnforcementChecker:
                 r'{entity}.*(?:says|speaks|responds)',
             ]
         }
-    
-    def check_instruction_compliance(self, narrative: str, 
+
+    def check_instruction_compliance(self, narrative: str,
                                    mandatory_entities: List[str]) -> Dict[str, Any]:
         """Check if narrative complies with entity instructions"""
         compliance_report = {
@@ -301,60 +302,60 @@ class EntityEnforcementChecker:
             'non_compliant_entities': [],
             'compliance_details': {}
         }
-        
+
         narrative_lower = narrative.lower()
-        
+
         for entity in mandatory_entities:
             entity_compliance = self._check_entity_compliance(narrative_lower, entity)
             compliance_report['compliance_details'][entity] = entity_compliance
-            
+
             if entity_compliance['present']:
                 compliance_report['compliant_entities'].append(entity)
             else:
                 compliance_report['non_compliant_entities'].append(entity)
                 compliance_report['overall_compliance'] = False
-        
+
         return compliance_report
-    
+
     def _check_entity_compliance(self, narrative_lower: str, entity: str) -> Dict[str, Any]:
         """Check compliance for a specific entity"""
         entity_lower = entity.lower()
-        
+
         compliance = {
             'present': False,
             'has_dialogue': False,
             'has_action': False,
             'mention_count': 0
         }
-        
+
         # Check basic presence
         if entity_lower in narrative_lower:
             compliance['present'] = True
             compliance['mention_count'] = narrative_lower.count(entity_lower)
-        
+
         # Check for dialogue
         dialogue_patterns = [
             f'{entity_lower}.*["\']',
             f'["\'].*{entity_lower}',
             f'{entity_lower}.*(?:says|speaks|responds)'
         ]
-        
+
         for pattern in dialogue_patterns:
             if re.search(pattern, narrative_lower):
                 compliance['has_dialogue'] = True
                 break
-        
+
         # Check for action
         action_patterns = [
             f'{entity_lower}.*(?:moves|walks|turns|looks|nods|speaks)',
             f'(?:moves|walks|turns|looks|nods|speaks).*{entity_lower}'
         ]
-        
+
         for pattern in action_patterns:
             if re.search(pattern, narrative_lower):
                 compliance['has_action'] = True
                 break
-        
+
         return compliance
 
 

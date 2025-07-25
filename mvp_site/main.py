@@ -40,10 +40,9 @@ import sys
 import traceback
 import uuid
 from functools import wraps
-from typing import Dict, List, Optional, Any, Union, Tuple, Callable
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import constants
-from custom_types import ApiResponse, CampaignData, UserId, CampaignId
 
 # Local service imports
 import document_generator
@@ -51,28 +50,36 @@ import document_generator
 # Firebase imports
 import firebase_admin
 import logging_util
+import structured_fields_utils
+from custom_types import ApiResponse, CampaignData, CampaignId, UserId
+from debug_hybrid_system import process_story_for_display
 from debug_mode_parser import DebugModeParser
 from firebase_admin import auth
 
 # Flask and web imports
-from flask import Flask, jsonify, request, send_file, send_from_directory, Response, Request
+from flask import (
+    Flask,
+    Request,
+    Response,
+    jsonify,
+    request,
+    send_file,
+    send_from_directory,
+)
 from flask_cors import CORS
+from mocks import mock_firestore_service_wrapper, mock_gemini_service_wrapper
 from token_utils import log_with_tokens
 
+import firestore_service as real_firestore_service
+
+# Service imports that may be conditionally used
+import gemini_service as real_gemini_service
 from firestore_service import (
     _truncate_log_json,
     json_default_serializer,
     update_state_with_changes,
 )
 from game_state import GameState
-from debug_hybrid_system import process_story_for_display
-
-# Service imports that may be conditionally used
-import gemini_service as real_gemini_service
-import firestore_service as real_firestore_service
-from mocks import mock_gemini_service_wrapper
-from mocks import mock_firestore_service_wrapper
-import structured_fields_utils
 
 # --- Service Selection Logic ---
 # Granular mock control - check individual service mock flags
@@ -97,7 +104,7 @@ if use_mock_gemini:
 else:
     gemini_service = real_gemini_service
 
-# Choose which firestore service to use based on flags  
+# Choose which firestore service to use based on flags
 if use_mock_firebase:
     firestore_service = mock_firestore_service_wrapper
 else:
@@ -875,20 +882,20 @@ def create_app() -> Flask:
 
     app = Flask(__name__, static_folder=None)  # Disable default static serving
     CORS(app, resources=CORS_RESOURCES)
-    
+
     # Cache busting route for testing - only activates with special header
     @app.route('/static/<path:filename>')
     def static_files_with_cache_busting(filename):
         """Serve static files with optional cache-busting for testing"""
         static_folder = os.path.join(os.path.dirname(__file__), 'static')
         response = send_from_directory(static_folder, filename)
-        
+
         # Only disable cache if X-No-Cache header is present (for testing)
         if request.headers.get('X-No-Cache') and filename.endswith(('.js', '.css')):
             response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
             response.headers['Pragma'] = 'no-cache'
             response.headers['Expires'] = '0'
-        
+
         return response
 
     # Set TESTING config from environment

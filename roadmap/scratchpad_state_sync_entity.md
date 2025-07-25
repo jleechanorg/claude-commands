@@ -40,28 +40,28 @@ Implement comprehensive entity tracking and state synchronization improvements f
      - Generates comprehensive entity manifests for AI prompts
      - Includes location-specific entity enforcement
      - Implements caching for performance optimization
-   
+
    - ✅ **Option 2 Enhanced: Post-Generation Validation with Retry** (`entity_validator.py`)
      - Confidence-scored entity presence detection
      - Intelligent retry suggestion generation
      - Automatic retry management with configurable limits
-   
+
    - ✅ **Option 7: Dual-Pass Generation** (`dual_pass_generator.py`)
      - Two-phase narrative generation with entity verification
      - Adaptive entity injection based on narrative context
      - Intelligent narrative combination algorithms
-   
+
    - ✅ **Option 5 Enhanced: Explicit Entity Instructions** (`entity_instructions.py`)
      - Dynamic instruction generation based on entity priority
      - Special handling for The Cassian Problem
      - Location-aware entity requirements
 
-6. **Comprehensive Unit Testing** 
+6. **Comprehensive Unit Testing**
    - ✅ **88 Unit Tests Passing** across all mitigation strategies
    - ✅ **13 tests** for Entity Pre-Loading system
    - ✅ **17 tests** for Enhanced Validation with Retry
    - ✅ **21 tests** for Dual-Pass Generation
-   - ✅ **28 tests** for Explicit Entity Instructions  
+   - ✅ **28 tests** for Explicit Entity Instructions
    - ✅ **9 integration tests** for cross-strategy functionality
    - ✅ All tests optimized for small data sets to avoid API timeouts
 
@@ -130,7 +130,7 @@ From campaign snapshot analysis (`campaign_snapshot_sariel_v2.json`):
 - ✅ **56/59 tests PASSED** - Flask dependencies and environment ARE working
 - ❌ **test_integration.py FAILED** - Gemini API 503 error (model overloaded)
 - ❌ **test_sariel_campaign_integration.py FAILED** - Same Gemini API 503 error
-- ✅ **Validation comparison test SUCCESS**: 
+- ✅ **Validation comparison test SUCCESS**:
   - Simple: 69,122 ops/sec
   - Pydantic: 48,799 ops/sec (1.4x slower)
   - Both produce identical results (1 PC, 2 NPCs)
@@ -143,7 +143,7 @@ From campaign snapshot analysis (`campaign_snapshot_sariel_v2.json`):
   - ✅ Primary model (gemini-2.5-flash) working, no fallback needed
 - **ITERATION 2**: ✅ **Real LLM responses captured**
   - ✅ Model cycling eliminated 503 errors completely
-  - ✅ Captured 3 real AI narrative responses 
+  - ✅ Captured 3 real AI narrative responses
   - **Success rate: 66.7% (2/3 tests passed)**
   - **The Cassian Problem reproduced**: AI says "I'm right here" but doesn't use "Cassian" name
   - **Key finding**: AI acknowledges entity exists but fails to name them consistently
@@ -231,7 +231,7 @@ From campaign snapshot analysis (`campaign_snapshot_sariel_v2.json`):
 - **Test Coverage**: 28 unit tests covering instruction templates, priority logic, compliance validation
 
 ## Branch Info
-- Remote Branch: jleechan/statesync7 
+- Remote Branch: jleechan/statesync7
 - PR Number: #194 (merged - architectural decision), #TBD (mitigation strategies)
 - Merge Target: main
 - GitHub URL: https://github.com/jleechan2015/worldarchitect.ai/tree/jleechan/statesync7
@@ -418,7 +418,7 @@ The mitigation strategies are fully implemented and tested. **Ready for producti
 
 ### What's NOT Integrated:
 - ❌ `entity_preloader.py` - Not imported or used
-- ❌ `entity_instructions.py` - Not imported or used  
+- ❌ `entity_instructions.py` - Not imported or used
 - ❌ `dual_pass_generator.py` - Not connected to main flow
 - ❌ Automatic retry on validation failure
 - ❌ Entity injection on missing entities
@@ -568,7 +568,7 @@ cd /home/jleechan/projects/worldarchitect.ai/mvp_site && TESTING=true /home/jlee
 - All major issues resolved and fixes tested
 
 ### Completed Tasks (2025-07-02)
-1. ✅ Root cause identified: Entity tracking not integrated in get_initial_story 
+1. ✅ Root cause identified: Entity tracking not integrated in get_initial_story
 2. ✅ **CRITICAL FIX APPLIED**: Added entity tracking to get_initial_story function
 3. ✅ Fixed entity_preloader to use correct attribute names
 4. ✅ Verified entity tracking works in initial story (9 Sariel mentions)
@@ -656,7 +656,7 @@ cd /home/jleechan/projects/worldarchitect.ai/mvp_site && TESTING=true /home/jlee
 5. **Fixed timeline_log_string UnboundLocalError**: Variable now defined before use
 6. **Created comprehensive test suite**:
    - test_sariel_with_prompts.py - Logs LLM prompts
-   - test_sariel_single_campaign_full.py - Full validation 
+   - test_sariel_single_campaign_full.py - Full validation
    - test_sariel_field_validation.py - Field-level counts
    - test_initial_entity_tracking.py - Verifies initial story fix
    - test_sariel_production_validation.py - Detailed field tracking
@@ -747,21 +747,21 @@ Create a fresh Sariel campaign using the actual website to capture real prompts 
 1. **test_entity_tracking_generic.py::test_location_enforcer_not_hardcoded**
    - LocationEntityEnforcer still has hardcoded Sariel-specific location rules
    - Should be made generic to work with any campaign
-   
+
 2. **test_mitigation_integration.py** (3 tests)
    - TypeError issues with mock objects and missing method arguments
    - Integration problems between components
-   
+
 3. **test_preloader_with_instruction_generator**
    - TypeError with Mock objects not being handled properly as strings
 
 #### Test Infrastructure Issues (3 failures - SETUP NEEDED)
 1. **test_campaign_timing_automated.py**
    - ChromeDriver not installed/configured for Selenium tests
-   
+
 2. **test_entity_retry_integration.py**
    - Likely test setup issues
-   
+
 3. **test_pr_changes_runner.py**
    - Test runner configuration problems
 
@@ -789,10 +789,10 @@ All Sariel-related tests and integration tests failing with 503 UNAVAILABLE erro
 
 ### Real Bug Fixes Applied
 1. **entity_preloader.py**: Removed hardcoded location rules for "valerius's study" and "lady cressida's chambers"
-2. **test_mitigation_integration.py**: 
+2. **test_mitigation_integration.py**:
    - Fixed `create_entity_specific_instruction()` call to include both entity_name and player_input arguments
    - Added `display_name` attribute to all Mock objects to match entity_preloader expectations
-   
+
 ### Current Status
 - **3/3 real bugs fixed** ✅
 - **3 test infrastructure issues** remain (ChromeDriver, test runner config)
@@ -809,10 +809,10 @@ All Sariel-related tests and integration tests failing with 503 UNAVAILABLE erro
      ```bash
      # Quick test (3 interactions, 1 campaign)
      cd mvp_site && TESTING=true vpython -m unittest tests.test_sariel_consolidated -v
-     
+
      # FULL TEST (10 interactions with debug output)
      cd mvp_site && SARIEL_FULL_TEST=true SARIEL_DEBUG_PROMPTS=true TESTING=true vpython -m unittest tests.test_sariel_consolidated -v
-     
+
      # Multiple campaign replays (e.g., 5 campaigns)
      cd mvp_site && SARIEL_REPLAYS=5 TESTING=true vpython -m unittest tests.test_sariel_consolidated -v
      ```
@@ -900,7 +900,7 @@ All Sariel-related tests and integration tests failing with 503 UNAVAILABLE erro
   - `test_sariel_consolidated.py` - Configurable depth (3-10 API calls)
   - `test_sariel_production_methods.py` - Direct method testing (2-3 API calls)
   - `test_sariel_entity_debug.py` - Debug tool (2 API calls)
-- **Removed 4 redundant tests**: 
+- **Removed 4 redundant tests**:
   - test_sariel_single_campaign_full.py
   - test_sariel_with_prompts.py
   - test_sariel_production_validation.py
@@ -985,7 +985,7 @@ All Sariel-related tests and integration tests failing with 503 UNAVAILABLE erro
   - test_sariel_production_methods.py (2-3 calls)
   - test_sariel_entity_debug.py (2 calls)
   - test_integration.py (variable)
-  
+
 - **Manual Tests** (in tests/manual_tests/):
   - test_sariel_full_validation.py (110 calls)
   - test_sariel_exact_production.py (~20 calls)
@@ -995,7 +995,7 @@ All Sariel-related tests and integration tests failing with 503 UNAVAILABLE erro
 # Basic test (3 interactions)
 TESTING=true vpython tests/test_sariel_consolidated.py
 
-# Full test (10 interactions)  
+# Full test (10 interactions)
 SARIEL_FULL_TEST=true TESTING=true vpython tests/test_sariel_consolidated.py
 
 # Debug with prompts

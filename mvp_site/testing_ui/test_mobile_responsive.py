@@ -167,16 +167,16 @@ def test_choice_button_mobile_layout():
                         margin-right: 0.25rem;
                         margin-bottom: 0.15rem;
                     }
-                    
+
                     .choice-id {
                         font-size: 0.7rem;
                     }
-                    
+
                     .planning-block-choices {
                         padding: 0.15rem;
                     }
                 }
-                
+
                 .choice-button {
                     display: block;
                     width: 100%;
@@ -188,7 +188,7 @@ def test_choice_button_mobile_layout():
                     border-radius: 3px;
                     cursor: pointer;
                 }
-                
+
                 .choice-id {
                     font-weight: bold;
                     color: #0d6efd;

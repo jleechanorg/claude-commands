@@ -8,7 +8,6 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
-
 # Mock firebase_admin before imports
 mock_firebase_admin = MagicMock()
 mock_firestore = MagicMock()
@@ -224,11 +223,11 @@ class TestStateHelperFunctions(unittest.TestCase):
 
         text_with_updates = """
         Here is some story text.
-        
+
         STATE_UPDATES:
         - health: 90
         - location: forest
-        
+
         More story content.
         """
 

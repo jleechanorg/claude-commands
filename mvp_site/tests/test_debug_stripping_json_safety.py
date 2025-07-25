@@ -79,7 +79,7 @@ class TestDebugStrippingJSONSafety(unittest.TestCase):
     def test_strip_state_updates_only_affects_markdown_blocks(self):
         """Test that strip_state_updates_only only removes markdown blocks"""
         text_with_block = """Story begins here.
-        
+
 [STATE_UPDATES_PROPOSED]
 {
     "pc_data": {"gold": 50}

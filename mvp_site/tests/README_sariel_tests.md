@@ -6,7 +6,7 @@ The Sariel test suite was consolidated from 7 redundant test files into 3 focuse
 ## Consolidated Tests
 
 ### 1. `test_sariel_consolidated.py` (Main Test)
-**Replaces**: 
+**Replaces**:
 - `test_sariel_single_campaign_full.py`
 - `test_sariel_with_prompts.py`
 - `test_sariel_production_validation.py`

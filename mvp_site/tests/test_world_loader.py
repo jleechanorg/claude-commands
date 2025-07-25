@@ -142,7 +142,7 @@ if os.path.exists(os.path.join(os.path.dirname(__file__), "world")):
     WORLD_DIR = "world"
 else:
     WORLD_DIR = "../world"
-    
+
 CELESTIAL_WARS_BOOK_PATH = os.path.join(WORLD_DIR, "celestial_wars_alexiel_book.md")
 WORLD_ASSIAH_PATH = os.path.join(WORLD_DIR, "world_assiah.md")
 
@@ -157,15 +157,15 @@ def load_world_content_for_system_instruction():
             # WORLD_DIR is "world" - files are in same directory
             book_path = CELESTIAL_WARS_BOOK_PATH
             world_path = WORLD_ASSIAH_PATH
-            
+
         # Load book content
         with open(book_path, 'r', encoding='utf-8') as f:
             book_content = f.read().strip()
-        
+
         # Load world content
         with open(world_path, 'r', encoding='utf-8') as f:
             world_content = f.read().strip()
-        
+
         return {"book": book_content, "world": world_content}
     except FileNotFoundError as e:
         raise FileNotFoundError(f"World file not found: {e}")
@@ -221,7 +221,7 @@ Long ago, the Great War shaped this world..."""
         # Create test banned names file
         self.banned_content = """# Banned Names List
 - Voldemort
-- Sauron  
+- Sauron
 - Darth Vader
 - Emperor Palpatine
 - Thanos"""

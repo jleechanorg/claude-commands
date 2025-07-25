@@ -4,10 +4,9 @@ Tests the core debug mode logic in isolation.
 """
 
 import os
+import re
 import sys
 import unittest
-
-import re
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -85,27 +84,27 @@ class TestDebugModeUnit(unittest.TestCase):
         # Sample AI response with debug content
         self.ai_response_with_debug = """
         You enter the tavern and see a hooded figure in the corner.
-        
+
         [DEBUG_START]
         The player is entering a social encounter. I'll roll for the NPC's initial disposition.
         [DEBUG_END]
-        
+
         The figure looks up as you approach.
-        
+
         [DEBUG_ROLL_START]
         NPC Disposition: 1d20 = 12 (Neutral)
         [DEBUG_ROLL_END]
-        
+
         "What brings you here, stranger?" the figure asks.
-        
+
         [DEBUG_RESOURCES_START]
         Resources: 0 EP used (8/8 remaining), no spell slots used
         [DEBUG_RESOURCES_END]
-        
+
         [DEBUG_STATE_START]
         Adding NPC "Hooded Figure" to the scene with neutral disposition.
         [DEBUG_STATE_END]
-        
+
         [STATE_UPDATES_PROPOSED]
         {
             "npc_data": {
@@ -176,15 +175,15 @@ class TestDebugModeUnit(unittest.TestCase):
         expected_instructions = """
 DEBUG MODE - ALWAYS GENERATE the following sections in EVERY response:
 
-1. DM COMMENTARY - Your internal reasoning about the situation. 
+1. DM COMMENTARY - Your internal reasoning about the situation.
    Format: Wrap in [DEBUG_START] and [DEBUG_END] tags.
-   
+
 2. DICE ROLLS - All dice rolls made during the response.
    Format: Wrap in [DEBUG_ROLL_START] and [DEBUG_ROLL_END] tags.
-   
+
 3. RESOURCES USED - Track the resources consumed.
    Format: Wrap in [DEBUG_RESOURCES_START] and [DEBUG_RESOURCES_END] tags.
-   
+
 4. STATE CHANGES - Explain what state changes you're making.
    Format: Wrap in [DEBUG_STATE_START] and [DEBUG_STATE_END] tags.
 """

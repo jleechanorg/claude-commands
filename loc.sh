@@ -73,11 +73,11 @@ count_test_vs_nontest() {
     local ext="$1"
     local test_lines=$(find "$TARGET_DIR" -type f -name "*.$ext" ! -path "*/__pycache__/*" ! -path "*/.pytest_cache/*" ! -path "*/node_modules/*" 2>/dev/null | grep -i test | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
     local nontest_lines=$(find "$TARGET_DIR" -type f -name "*.$ext" ! -path "*/__pycache__/*" ! -path "*/.pytest_cache/*" ! -path "*/node_modules/*" 2>/dev/null | grep -v -i test | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
-    
+
     # Handle empty results
     test_lines=${test_lines:-0}
     nontest_lines=${nontest_lines:-0}
-    
+
     echo "$test_lines $nontest_lines"
 }
 
@@ -103,7 +103,7 @@ for ext in "${FILE_TYPES[@]}"; do
     test_lines_by_type[$ext]=$test_count
     nontest_lines_by_type[$ext]=$nontest_count
     total_lines_by_type[$ext]=$((test_count + nontest_count))
-    
+
     total_test_lines=$((total_test_lines + test_count))
     total_nontest_lines=$((total_nontest_lines + nontest_count))
     total_all_lines=$((total_all_lines + test_count + nontest_count))
@@ -119,20 +119,20 @@ for ext in "${FILE_TYPES[@]}"; do
     test_count=${test_lines_by_type[$ext]}
     nontest_count=${nontest_lines_by_type[$ext]}
     total_count=${total_lines_by_type[$ext]}
-    
+
     if [ $total_count -gt 0 ]; then
         test_percentage=$(( (test_count * 100) / total_count ))
     else
         test_percentage=0
     fi
-    
+
     case $ext in
         py) type_name="Python" ;;
         js) type_name="JavaScript" ;;
         html) type_name="HTML" ;;
         *) type_name="$ext" ;;
     esac
-    
+
     printf "%-12s %10d %10d %10d %7d%%\n" "$type_name" "$test_count" "$nontest_count" "$total_count" "$test_percentage"
 done
 
@@ -146,33 +146,33 @@ if [ "$SHOW_GIT_STATS" = true ]; then
     echo ""
     echo "📊 Git Contribution Analysis"
     echo "========================================================================"
-    
+
     # Determine author email
     if [ -z "$AUTHOR_EMAIL" ]; then
         AUTHOR_EMAIL=$(git config user.email)
     fi
-    
+
     if [ -z "$AUTHOR_EMAIL" ]; then
         echo "Error: Could not determine Git author email."
         echo "Please specify with: ./loc.sh --git <email>"
         exit 1
     fi
-    
+
     echo "Author: $AUTHOR_EMAIL"
     echo "Since: $TIME_FRAME"
     echo "-----------------------------------"
-    
+
     # Initialize git stats
     git_total=0
     declare -A git_lines_by_type
-    
+
     # Calculate git contributions
     for ext in "${FILE_TYPES[@]}"; do
         lines_added=$(git log --author="$AUTHOR_EMAIL" --since="$TIME_FRAME" --pretty=tformat: --numstat -- "*.$ext" | awk '{s+=$1} END {print s+0}')
         git_lines_by_type[$ext]=$lines_added
         git_total=$((git_total + lines_added))
     done
-    
+
     # Display git results
     printf "%-15s: %d lines\n" "Python (.py)" "${git_lines_by_type[py]}"
     printf "%-15s: %d lines\n" "JavaScript (.js)" "${git_lines_by_type[js]}"

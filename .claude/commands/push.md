@@ -6,7 +6,7 @@
 
 **Usage**: `/push`
 
-**Implementation**: 
+**Implementation**:
 - Check for untracked files
 - If untracked files exist, offer to include them:
   - Analyze if they're related to current PR work

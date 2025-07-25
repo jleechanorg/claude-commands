@@ -319,7 +319,7 @@ def main():
 
     # Example interaction
     interaction = """
-    No, actually please change 'usr' to 'user'. I prefer descriptive 
+    No, actually please change 'usr' to 'user'. I prefer descriptive
     variable names over abbreviations. Also, this needs to ship today
     so just make it work for now.
     """

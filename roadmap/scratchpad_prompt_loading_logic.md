@@ -19,7 +19,7 @@ Need to test which prompt files are loaded based on user checkbox selections dur
 #### When Narrative Selected
 - `narrative_system_instruction.md` - Storytelling protocol
 
-#### When Mechanics Selected  
+#### When Mechanics Selected
 - `mechanics_system_instruction.md` - Dice, combat, **character creation**
 - Character creation triggers at campaign start
 

@@ -6,15 +6,16 @@ Note: This is a data fixtures file, not a test file.
 It provides sample data for other tests to use.
 """
 import datetime
-import sys
 import os
+import sys
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import constants
 
 # Sample campaign data
 SAMPLE_CAMPAIGN = {
     "id": "test_campaign_123",
-    "title": "The Lost Crown Adventure", 
+    "title": "The Lost Crown Adventure",
     "user_id": "test_user_456",
     "prompt": "Start an adventure in a medieval fantasy world",
     "selected_prompts": [constants.PROMPT_TYPE_NARRATIVE, constants.PROMPT_TYPE_MECHANICS],
@@ -57,7 +58,7 @@ SAMPLE_GAME_STATE = {
         },
         "mysterious_stranger": {
             "name": "Shadowcloak",
-            "relationship": "Unknown", 
+            "relationship": "Unknown",
             constants.KEY_MBTI: "INTJ",
             "last_interaction": "Warned about dangers ahead"
         }
@@ -110,13 +111,13 @@ SAMPLE_STORY_CONTEXT = [
 # Sample AI responses for different scenarios
 SAMPLE_AI_RESPONSES = {
     "normal_response": "Sir Kaelan nods thoughtfully as he processes the innkeeper's words. The flickering candlelight dances across his determined features.",
-    
+
     "hp_discrepancy_response": "Sir Kaelan lies unconscious on the tavern floor, completely drained of life force after the mysterious encounter.",
-    
+
     "location_mismatch_response": "Standing in the middle of the dark forest, Sir Kaelan hears the ancient trees whispering secrets of the lost crown.",
-    
+
     "mission_completion_response": "With the dragon finally defeated and the treasure secured, Sir Kaelan's quest was complete. The Lost Crown gleamed in his hands.",
-    
+
     "state_update_response": """Sir Kaelan carefully examines the crown fragment, feeling its ancient power.
 
 [STATE_UPDATES_PROPOSED]
@@ -142,14 +143,14 @@ SAMPLE_STATE_UPDATES = {
             "hp_max": 100
         }
     },
-    
+
     "location_update": {
         "world_data": {
             "current_location_name": "Dark Forest",
             "weather": "Foggy"
         }
     },
-    
+
     "mission_completion": {
         "custom_campaign_state": {
             "completed_missions": {
@@ -158,7 +159,7 @@ SAMPLE_STATE_UPDATES = {
             "active_missions": []
         }
     },
-    
+
     "complex_update": {
         "player_character_data": {
             "hp_current": 95,
@@ -191,7 +192,7 @@ DISCREPANCY_SCENARIOS = {
         "narrative": "The hero lies unconscious on the ground, completely drained of life force.",
         "expected_discrepancies": 1
     },
-    
+
     "location_conflict": {
         "game_state": {
             "world_data": {"current_location_name": "Tavern"}
@@ -199,7 +200,7 @@ DISCREPANCY_SCENARIOS = {
         "narrative": "Standing in the middle of the dark forest, surrounded by ancient trees.",
         "expected_discrepancies": 1
     },
-    
+
     "mission_completed": {
         "game_state": {
             "custom_campaign_state": {

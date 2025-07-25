@@ -14,41 +14,41 @@ on:
 jobs:
   test-deployment-build:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         if [ -f mvp_site/requirements.txt ]; then
           pip install -r mvp_site/requirements.txt
         fi
-    
+
     - name: Run deployment build test
       run: |
         cd mvp_site
         TESTING=true python tests/test_deployment_build.py -v
-    
+
     - name: Test deploy.sh world copy logic
       run: |
         # Create test world files
         mkdir -p world
         echo "Test content" > world/celestial_wars_alexiel_book.md
         echo "Test content" > world/world_assiah.md
-        
+
         # Simulate the deploy.sh copy
         TARGET_DIR="mvp_site"
         if [ "$TARGET_DIR" = "mvp_site" ] && [ -d "world" ]; then
             echo "Copying world directory into mvp_site..."
             cp -r world "$TARGET_DIR/"
         fi
-        
+
         # Verify files exist
         if [ -f "mvp_site/world/celestial_wars_alexiel_book.md" ] && [ -f "mvp_site/world/world_assiah.md" ]; then
             echo "✅ World files successfully copied"

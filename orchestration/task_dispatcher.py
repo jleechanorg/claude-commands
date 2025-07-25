@@ -68,7 +68,7 @@ class TaskDispatcher:
         # Dynamic agent capabilities - agents register their own capabilities
         # This allows agents to determine what they can handle based on task content
         self.agent_capabilities = self._discover_agent_capabilities()
-        
+
         # LLM-driven enhancements
         self.active_agents = set()  # Track active agent names for collision detection
         self.result_dir = "/tmp/orchestration_results"
@@ -76,7 +76,7 @@ class TaskDispatcher:
 
         # Load existing tasks
         self._load_tasks()
-    
+
     def _discover_agent_capabilities(self) -> dict:
         """Discover agent capabilities dynamically from registered agents"""
         # Default capabilities for any discovered agents
@@ -101,7 +101,7 @@ class TaskDispatcher:
                 "current_load": 0,
             },
         }
-        
+
         # In production, this would query Redis for registered agents
         # and their self-reported capabilities
         return default_capabilities
@@ -253,7 +253,7 @@ class TaskDispatcher:
 
             # No keyword matching - agents understand task content naturally
             # Instead, use load balancing as primary factor
-            
+
             # Check agent availability (load)
             if capabilities["current_load"] < capabilities["max_concurrent"]:
                 score += 50 - (capabilities["current_load"] * 10)
@@ -412,23 +412,23 @@ class TaskDispatcher:
         )
 
     # =================== LLM-DRIVEN ENHANCEMENTS ===================
-    
+
     def _check_existing_agents(self) -> set:
         """Check for existing tmux sessions and worktrees to avoid collisions."""
         existing = set()
-        
+
         # Check tmux sessions
         try:
             result = subprocess.run(
-                ["tmux", "list-sessions", "-F", "#{session_name}"], 
+                ["tmux", "list-sessions", "-F", "#{session_name}"],
                 capture_output=True, text=True
             )
             if result.returncode == 0:
                 existing.update(result.stdout.strip().split('\n'))
         except:
             pass
-            
-        # Check worktrees  
+
+        # Check worktrees
         try:
 
             workspaces = glob.glob("agent_workspace_*")
@@ -437,40 +437,40 @@ class TaskDispatcher:
                 existing.add(agent_name)
         except:
             pass
-            
+
         return existing
 
     def _generate_unique_name(self, base_name: str, role_suffix: str = "") -> str:
         """Generate unique agent name with collision detection."""
         timestamp = int(time.time()) % 10000
-        
+
         # Get existing agents
         existing = self._check_existing_agents()
         existing.update(self.active_agents)
-        
+
         # Try base name with timestamp
         if role_suffix:
             candidate = f"{base_name}-{role_suffix}-{timestamp}"
         else:
             candidate = f"{base_name}-{timestamp}"
-            
+
         # If collision, increment until unique
         counter = 1
         original_candidate = candidate
         while candidate in existing:
             candidate = f"{original_candidate}-{counter}"
             counter += 1
-            
+
         self.active_agents.add(candidate)
         return candidate
 
     def analyze_task_and_create_agents(self, task_description: str) -> List[Dict]:
         """Create appropriate agent for the given task."""
         print("\n🧠 Processing task request...")
-        
+
         # Generate unique timestamp for agent names
         timestamp = int(time.time()) % 10000
-        
+
         # Always create a general development agent that can handle any task
         # The agent itself will understand what to do based on the task description
         return [{
@@ -489,11 +489,11 @@ Execute the task exactly as requested. Key points:
 
 Complete the task, then commit and create a PR."""
         }]
-    
+
     def _extract_ui_focus(self, task_description: str) -> str:
         """Extract specific UI component or area from task description."""
         task_lower = task_description.lower()
-        
+
         # Common UI components to look for
         ui_components = {
             'button': 'UI buttons and click handlers',
@@ -511,15 +511,15 @@ Complete the task, then commit and create a PR."""
             'footer': 'footer components',
             'sidebar': 'sidebar navigation'
         }
-        
+
         # Check for specific components mentioned
         for component, description in ui_components.items():
             if component in task_lower:
                 return description
-                
+
         # Default to general UI
         return "UI and frontend JavaScript/CSS"
-    
+
 
     def create_dynamic_agent(self, agent_spec: Dict) -> bool:
         """Create agent with enhanced Redis coordination and worktree management."""
@@ -528,12 +528,12 @@ Complete the task, then commit and create a PR."""
         agent_prompt = agent_spec.get("prompt", "Complete the assigned task")
         agent_type = agent_spec.get("type", "general")
         capabilities = agent_spec.get("capabilities", [])
-        
+
         # Check concurrent agent limit
         if len(self.active_agents) >= MAX_CONCURRENT_AGENTS:
             print(f"⚠️ Agent limit reached ({MAX_CONCURRENT_AGENTS} max). Cannot create {agent_name}")
             return False
-        
+
         try:
             # Find Claude
             claude_path = subprocess.run(
@@ -541,22 +541,22 @@ Complete the task, then commit and create a PR."""
             ).stdout.strip()
             if not claude_path:
                 return False
-            
+
             # Create worktree for agent (inherit from current branch)
             current_dir = os.getcwd()
             agent_dir = os.path.join(current_dir, f"agent_workspace_{agent_name}")
             branch_name = f'{agent_name}-work'
-            
+
             # Always create fresh branch from main (equivalent to /nb)
             # This prevents inheriting unrelated changes from current branch
             subprocess.run([
                 'git', 'worktree', 'add', '-b', branch_name,
                 agent_dir, 'main'
             ], capture_output=True)
-            
+
             # Create result collection file
             result_file = os.path.join(self.result_dir, f"{agent_name}_results.json")
-            
+
             # Enhanced prompt with completion enforcement
             full_prompt = f"""{agent_prompt}
 
@@ -577,41 +577,41 @@ Agent Configuration:
 
 1. Complete the assigned task
 2. When done, run these commands IN ORDER:
-   
+
    # Stage and commit all changes
    git add -A
    git commit -m "Complete {agent_focus}
-   
+
    Agent: {agent_name}
    Task: {agent_focus}
-   
+
    🤖 Generated with [Claude Code](https://claude.ai/code)
-   
+
    Co-Authored-By: Claude <noreply@anthropic.com>"
-   
+
    # Push the branch
    git push -u origin {branch_name}
-   
+
    # Create the PR (REQUIRED - DO NOT SKIP)
    gh pr create --title "Agent {agent_name}: {agent_focus}" \
      --body "## Summary
    Agent {agent_name} completed task: {agent_focus}
-   
+
    ## Changes
    [List changes made]
-   
+
    ## Test Plan
    [Describe testing if applicable]
-   
+
    Auto-generated by orchestration system
-   
+
    🤖 Generated with [Claude Code](https://claude.ai/code)
-   
+
    Co-Authored-By: Claude <noreply@anthropic.com>"
-   
+
    # Verify PR was created
    gh pr view --json number,url || echo "ERROR: PR creation failed!"
-   
+
    # Create completion report
    echo '{{"agent": "{agent_name}", "status": "completed", "branch": "{branch_name}"}}' > {result_file}
 
@@ -624,22 +624,22 @@ Agent Configuration:
 
 ❌ FAILURE TO CREATE PR = INCOMPLETE TASK
 """
-            
+
             # Write prompt to file to avoid shell quoting issues
             prompt_file = os.path.join("/tmp", f"agent_prompt_{agent_name}.txt")
             with open(prompt_file, "w") as f:
                 f.write(full_prompt)
-            
+
             # Create log directory
             log_dir = "/tmp/orchestration_logs"
             os.makedirs(log_dir, exist_ok=True)
             log_file = os.path.join(log_dir, f"{agent_name}.log")
-            
+
             # Create tmux session with enhanced monitoring and error handling
             # Use @filename syntax to read prompt from file
             # Add --dangerously-skip-permissions for orchestration agents to create files/PRs
             claude_cmd = f'{claude_path} -p @{prompt_file} --output-format stream-json --verbose --dangerously-skip-permissions'
-            
+
             # Enhanced bash command with error handling and logging
             bash_cmd = f'''
 # Signal handler to log interruptions
@@ -670,20 +670,20 @@ echo "[$(date)] Session ending. Check log at: {log_file}"
 echo "Session will close in 5 seconds (stdin redirected, no keyboard input)..."
 sleep 5
 '''
-            
+
             tmux_cmd = [
                 "tmux", "new-session", "-d", "-s", agent_name,
                 "-c", agent_dir, "bash", "-c", bash_cmd
             ]
-            
+
             result = subprocess.run(tmux_cmd, capture_output=True, text=True)
             if result.returncode != 0:
                 print(f"⚠️ Error creating tmux session: {result.stderr}")
                 return False
-            
+
             print(f"✅ Created {agent_name} - Focus: {agent_focus}")
             return True
-            
+
         except Exception as e:
             print(f"❌ Failed to create {agent_name}: {e}")
             return False

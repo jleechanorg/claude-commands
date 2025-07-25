@@ -9,13 +9,13 @@ import datetime
 def monitor_redis():
     """Monitor Redis for real-time activity"""
     r = redis.Redis(decode_responses=True)
-    
+
     print("=== Redis Live Monitor ===")
     print("Monitoring for messages...\n")
-    
+
     # Track what we've seen
     seen_messages = set()
-    
+
     while True:
         try:
             # Check all queues
@@ -35,7 +35,7 @@ def monitor_redis():
                                 print(f"  Task ID: {data['payload']['task_id']}")
                         except json.JSONDecodeError:
                             print(f"  Raw: {msg[:100]}...")
-            
+
             # Also check for agent heartbeats
             for key in r.scan_iter("agent:*"):
                 agent_info = r.hgetall(key)
@@ -44,9 +44,9 @@ def monitor_redis():
                     hb_time = datetime.datetime.fromisoformat(agent_info['last_heartbeat'])
                     if (datetime.datetime.now() - hb_time).seconds < 2:
                         print(f"[{time.strftime('%H:%M:%S')}] Heartbeat from {key}")
-            
+
             time.sleep(0.5)
-            
+
         except KeyboardInterrupt:
             print("\nMonitoring stopped.")
             break

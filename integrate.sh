@@ -1,7 +1,7 @@
 #!/bin/bash
 # integrate.sh - This script helps developers integrate the latest changes from main and start fresh on a new branch.
 # This script implements the standard integration pattern for the project
-# 
+#
 # Usage: ./integrate.sh [branch-name] [--force] [--new-branch]
 #   branch-name: Optional custom branch name (default: dev{timestamp})
 #   --force: Override hard stops for uncommitted/unpushed changes
@@ -62,7 +62,7 @@ fi
 should_delete_branch=false
 if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
     echo "⚠️  WARNING: You are on branch '$current_branch'"
-    
+
     # Check if current branch has uncommitted changes - HARD STOP
     if ! git diff --quiet || ! git diff --cached --quiet; then
         echo "❌ HARD STOP: You have uncommitted changes on '$current_branch'"
@@ -81,7 +81,7 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
             exit 1
         fi
     fi
-    
+
     # Check if current branch has unpushed commits - HARD STOP
     if git status --porcelain=v1 -b | grep -q "ahead"; then
         # Extract commit count from git status output
@@ -153,30 +153,30 @@ if git merge-base --is-ancestor HEAD origin/main; then
         echo "❌ Error: Fast-forward merge with origin/main failed. Please resolve manually." >&2
         exit 1
     fi
-    
+
 elif git merge-base --is-ancestor origin/main HEAD; then
     # Local main is ahead of origin/main → create PR for commits
     echo "✅ Local main ahead, creating PR to sync"
     commit_count=$(git rev-list --count origin/main..HEAD)
     echo "   Found $commit_count commits ahead of origin/main"
-    
+
     # Generate timestamp for branch naming
     timestamp=$(date +%Y%m%d-%H%M%S)
-    
+
     # Create temporary branch for PR
     sync_branch="sync-main-$timestamp"
     echo "   Creating sync branch: $sync_branch"
-    
+
     if ! git checkout -b "$sync_branch"; then
         echo "❌ Error: Failed to create sync branch" >&2
         exit 1
     fi
-    
+
     if ! git push -u origin HEAD; then
         echo "❌ Error: Failed to push sync branch" >&2
         exit 1
     fi
-    
+
     # Create PR if gh is available
     if command -v gh >/dev/null 2>&1; then
         pr_title="Sync main branch commits (integrate.sh)"
@@ -189,7 +189,7 @@ elif git merge-base --is-ancestor origin/main HEAD; then
             commit_list="$commit_list
    ...and $((commit_count - commit_limit)) more commits not shown"
         fi
-        
+
         pr_body="Auto-generated PR to sync $commit_count commits that were ahead on local main.
 
 This PR was created by integrate.sh to handle repository branch protection rules.
@@ -198,7 +198,7 @@ Commits included:
 $commit_list
 
 Please review and merge to complete the integration process."
-        
+
         if pr_url=$(gh pr create --title "$pr_title" --body "$pr_body" 2>/dev/null); then
             echo "✅ Created PR: $pr_url"
             echo "   Please review and merge the PR, then re-run integrate.sh"
@@ -215,24 +215,24 @@ Please review and merge to complete the integration process."
         echo "   URL: https://github.com/$(get_github_repo_url)/compare/$sync_branch"
         exit 1
     fi
-    
+
 else
     # Branches have diverged → create PR with merged changes
     echo "⚠️  Local main and origin/main have diverged"
     echo "🔄 Creating merge branch to sync histories..."
-    
-    # Generate timestamp for branch naming  
+
+    # Generate timestamp for branch naming
     timestamp=$(date +%Y%m%d-%H%M%S)
-    
+
     # Create temporary branch for merge PR
     merge_branch="merge-main-$timestamp"
     echo "   Creating merge branch: $merge_branch"
-    
+
     if ! git checkout -b "$merge_branch"; then
         echo "❌ Error: Failed to create merge branch" >&2
         exit 1
     fi
-    
+
     # Perform the merge on the temporary branch
     if ! git merge --no-ff origin/main -m "integrate.sh: Auto-merge divergent main histories
 
@@ -244,12 +244,12 @@ Equivalent to: git merge --no-ff origin/main"; then
         echo "❌ Error: Auto-merge of divergent main histories failed. Please resolve conflicts manually." >&2
         exit 1
     fi
-    
+
     if ! git push -u origin HEAD; then
         echo "❌ Error: Failed to push merge branch" >&2
         exit 1
     fi
-    
+
     # Create PR if gh is available
     if command -v gh >/dev/null 2>&1; then
         pr_title="Merge divergent main histories (integrate.sh)"
@@ -261,7 +261,7 @@ when local main and origin/main have diverged.
 This merge resolves the divergence and allows integration to proceed normally.
 
 Please review and merge to complete the integration process."
-        
+
         if pr_url=$(gh pr create --title "$pr_title" --body "$pr_body" 2>/dev/null); then
             echo "✅ Created merge PR: $pr_url"
             echo "   Please review and merge the PR, then re-run integrate.sh"
@@ -305,11 +305,11 @@ git checkout -b "$branch_name"
 # Delete the old branch if it was clean (and not in --new-branch mode)
 if [ "$should_delete_branch" = true ] && [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
     echo "6. Checking if branch '$current_branch' can be safely deleted..."
-    
+
     # Check multiple conditions to determine if branch is safe to delete
     branch_can_be_deleted=false
     deletion_reason=""
-    
+
     # Check 1: Is it merged into local main?
     if git branch --merged main | grep -q "^[[:space:]]*$current_branch$"; then
         branch_can_be_deleted=true
@@ -325,7 +325,7 @@ if [ "$should_delete_branch" = true ] && [ "$current_branch" != "main" ] && [ "$
         branch_can_be_deleted=true
         deletion_reason="has merged PR"
     fi
-    
+
     if [ "$branch_can_be_deleted" = true ]; then
         echo "   ✓ Branch is safe to delete ($deletion_reason)"
         echo "   Deleting branch '$current_branch'..."
@@ -339,4 +339,4 @@ if [ "$should_delete_branch" = true ] && [ "$current_branch" != "main" ] && [ "$
 fi
 
 echo "✅ Integration complete! You are now on a fresh '$branch_name' branch with latest main changes."
-echo "📍 Current branch: $(git branch --show-current)" 
+echo "📍 Current branch: $(git branch --show-current)"

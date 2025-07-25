@@ -8,7 +8,7 @@
 
 **CRITICAL RULE**: When `/orchestrate` is used, NEVER execute the task yourself. ALWAYS delegate to the orchestration agents. The orchestration system will handle all task execution through specialized agents.
 
-**Implementation**: 
+**Implementation**:
 - **Python Script**: `python3 .claude/commands/orchestrate.py [task_description]`
 - **Shell Wrapper**: `./claude_command_scripts/orchestrate.sh` (if available)
 - **Direct Execution**: Uses real Claude Code CLI agents in separate tmux sessions
@@ -41,7 +41,7 @@
 
 **Agent Types**:
 - **Frontend Agent**: UI, React components, styling (`frontend-agent`)
-- **Backend Agent**: APIs, database, server logic (`backend-agent`) 
+- **Backend Agent**: APIs, database, server logic (`backend-agent`)
 - **Testing Agent**: Tests, QA, validation (`testing-agent`)
 - **Opus Master**: Coordination and oversight (`opus-master`)
 

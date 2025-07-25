@@ -21,20 +21,20 @@ Architecture:
 Usage:
     # Parse debug command
     command_type, should_update = DebugModeParser.parse_debug_command(user_input, mode)
-    
+
     # Quick check if input is debug command
     is_debug = DebugModeParser.is_debug_toggle_command(user_input, mode)
-    
+
     # Get appropriate system message
     message = DebugModeParser.get_state_update_message(command_type, new_state)
 """
 import re
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
 
 class DebugModeParser:
     """Parser for debug mode commands in god mode."""
-    
+
     # Comprehensive patterns for enabling debug mode
     ENABLE_PATTERNS = [
         # Direct commands
@@ -47,19 +47,19 @@ class DebugModeParser:
         r'^debug\s+mode\s+enable$',
         r'^set\s+debug\s+mode\s+on$',
         r'^start\s+debug\s+mode$',
-        
+
         # With punctuation
         r'^enable\s+debug\s+mode[.!]?$',
         r'^debug\s+mode:\s*on$',
         r'^debug:\s*enable$',
-        
+
         # Common variations
         r'^debugmode\s+on$',
         r'^debug-mode\s+on$',
         r'^enable\s+debugging$',
         r'^enable\s+debug$',  # Allow "enable debug" without "mode"
         r'^debugging\s+on$',
-        
+
         # Conversational
         r'^i\s+want\s+to\s+enable\s+debug\s+mode$',
         r'^please\s+enable\s+debug\s+mode$',
@@ -67,11 +67,11 @@ class DebugModeParser:
         r'^let\'?s\s+turn\s+on\s+debug\s+mode$',
         r'^show\s+me\s+debug\s+mode$',
         r'^show\s+debug\s+info$',
-        
+
         # Flexible variations
         r'^enable\s+debug\s+mode\s+please$',  # Allow "please" at end
     ]
-    
+
     # Comprehensive patterns for disabling debug mode
     DISABLE_PATTERNS = [
         # Direct commands
@@ -86,19 +86,19 @@ class DebugModeParser:
         r'^stop\s+debug\s+mode$',
         r'^exit\s+debug\s+mode$',
         r'^quit\s+debug\s+mode$',
-        
+
         # With punctuation
         r'^disable\s+debug\s+mode[.!]?$',
         r'^debug\s+mode:\s*off$',
         r'^debug:\s*disable$',
-        
+
         # Common variations
         r'^debugmode\s+off$',
         r'^debug-mode\s+off$',
         r'^disable\s+debugging$',
         r'^disable\s+debug$',
         r'^debugging\s+off$',
-        
+
         # Conversational
         r'^i\s+want\s+to\s+disable\s+debug\s+mode$',
         r'^please\s+disable\s+debug\s+mode$',
@@ -108,7 +108,7 @@ class DebugModeParser:
         r'^hide\s+debug\s+info$',
         r'^no\s+more\s+debug\s+mode$',
     ]
-    
+
     # Patterns that might be confused but should NOT trigger debug mode
     NEGATIVE_PATTERNS = [
         r'debug\s+the\s+',  # "debug the issue"
@@ -118,16 +118,16 @@ class DebugModeParser:
         r'debug\s+.*\s+problem',  # "debug this problem"
         r'debug\s+.*\s+error',  # "debug the error"
     ]
-    
+
     @classmethod
     def parse_debug_command(cls, user_input: str, current_mode: str) -> Tuple[Optional[str], bool]:
         """
         Parse user input for debug mode commands.
-        
+
         Args:
             user_input: Raw user input string
             current_mode: Current interaction mode ('god' or 'character')
-            
+
         Returns:
             Tuple of (command_type, should_update_state)
             - command_type: 'enable', 'disable', or None
@@ -136,54 +136,54 @@ class DebugModeParser:
         # Only process in god mode
         if current_mode != 'god':
             return None, False
-            
+
         # Normalize input
         normalized = user_input.strip().lower()
-        
+
         # Remove extra whitespace
         normalized = ' '.join(normalized.split())
-        
+
         # Check negative patterns first
         for pattern in cls.NEGATIVE_PATTERNS:
             if re.search(pattern, normalized):
                 return None, False
-        
+
         # Check enable patterns
         for pattern in cls.ENABLE_PATTERNS:
             if re.match(pattern, normalized):
                 return 'enable', True
-                
+
         # Check disable patterns
         for pattern in cls.DISABLE_PATTERNS:
             if re.match(pattern, normalized):
                 return 'disable', True
-                
+
         return None, False
-    
+
     @classmethod
     def is_debug_toggle_command(cls, user_input: str, current_mode: str) -> bool:
         """
         Quick check if input is likely a debug toggle command.
-        
+
         Args:
             user_input: Raw user input string
             current_mode: Current interaction mode
-            
+
         Returns:
             True if this appears to be a debug toggle command
         """
         command_type, _ = cls.parse_debug_command(user_input, current_mode)
         return command_type is not None
-    
+
     @classmethod
     def get_state_update_message(cls, command_type: str, new_state: bool) -> str:
         """
         Get appropriate system message for debug mode state change.
-        
+
         Args:
             command_type: 'enable' or 'disable'
             new_state: New debug mode state
-            
+
         Returns:
             System message to display to user
         """

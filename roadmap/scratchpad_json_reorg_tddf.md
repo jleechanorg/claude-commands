@@ -1,6 +1,6 @@
 # Scratchpad: JSON Response Format Reorganization using /tddf
 
-**Branch**: update/json-response-reorganization  
+**Branch**: update/json-response-reorganization
 **Goal**: Update all code layers to match the new JSON response format with reordered fields and restructured debug_info
 
 ## Understanding the Changes
@@ -16,7 +16,7 @@
     "location_confirmed": "Current location name or 'Unknown' or 'Character Creation'",
     "dice_rolls": ["Perception check: 1d20+3 = 15+3 = 18 (Success)", "Attack roll: 1d20+5 = 12+5 = 17 (Hit)"],
     "narrative": "Your complete narrative response containing ONLY the story text and dialogue that players see",
-    "planning_block": "The --- PLANNING BLOCK --- with character options - ALWAYS VISIBLE TO PLAYERS", 
+    "planning_block": "The --- PLANNING BLOCK --- with character options - ALWAYS VISIBLE TO PLAYERS",
     "god_mode_response": "ONLY for GOD MODE commands - put your response here instead of narrative",
     "debug_info": {
         "dm_notes": ["DM thoughts about the scene", "Rule considerations"],
@@ -51,7 +51,7 @@
 
 Based on your instructions:
 
-1. **Resources in Header**: 
+1. **Resources in Header**:
    - ✅ REMOVE resource tracking from [SESSION_HEADER] text
    - Resources are now a separate field and should not appear in header
 
@@ -87,7 +87,7 @@ Based on your instructions:
 - [ ] `test_narrative_response_extraction.py` - Fix field access
 - [ ] `test_gemini_response.py` - Update response creation
 
-#### 1.3 LLM Response Tests  
+#### 1.3 LLM Response Tests
 - [ ] `test_llm_response.py` - Update getters for moved fields
 - [ ] Add getter methods for backward compatibility?
 - [ ] Test debug_info stripping logic
@@ -149,7 +149,7 @@ Based on your instructions:
 1. Update narrative_response_schema.py for new structure
 2. Add CamelCase section IDs to game_state_instruction.md:
    - ## JsonResponseFormat
-   - ## CharacterEntitySchema  
+   - ## CharacterEntitySchema
    - ## StateUpdateFormat
    - ## WorldTimeSchema
    - ## CombatStateSchema
@@ -187,7 +187,7 @@ Based on your instructions:
 
 ### Mitigation Strategies
 1. Add compatibility getters in transition period
-2. Search/replace comprehensively 
+2. Search/replace comprehensively
 3. Run full test suite after each phase
 4. Keep detailed migration notes
 

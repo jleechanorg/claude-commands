@@ -4,17 +4,20 @@ Capture actual LLM responses from Sariel campaign replay for documentation.
 This runs a single test and saves the complete narrative responses.
 """
 
-import subprocess
 import json
 import os
+import subprocess
 import sys
 import time
+import traceback
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from main import create_app
-from test_integration.integration_test_lib import IntegrationTestSetup, setup_integration_test_environment
-import traceback
+from test_integration.integration_test_lib import (
+    IntegrationTestSetup,
+    setup_integration_test_environment,
+)
 
 # Ensure we're in the project root
 project_root = os.path.abspath(os.path.dirname(__file__))
@@ -26,31 +29,31 @@ sys.path.insert(0, os.path.join(project_root, 'mvp_site'))
 def capture_sariel_responses():
     """Run Sariel campaign and capture actual LLM responses"""
     print("🎯 Starting Sariel campaign replay with response capture...")
-    
+
     # Import test modules
 
 
-    
+
     # Set up environment
     test_setup = setup_integration_test_environment(project_root)
-    
+
     # Create Flask app
     app = create_app()
     app.config['TESTING'] = True
     client = app.test_client()
     user_id = 'test-llm-capture-user'
-    
+
     # Load Sariel campaign prompts
     prompts_path = os.path.join('mvp_site', 'tests', 'data', 'sariel_campaign_prompts.json')
     with open(prompts_path, 'r') as f:
         sariel_data = json.load(f)
-    
+
     prompts = sariel_data['prompts']
     initial_prompt = prompts[0]
     interaction_prompts = prompts[1:6]  # First 5 interactions to start
-    
+
     print(f"🔍 Will replay {len(interaction_prompts)} interactions")
-    
+
     # Step 1: Create campaign
     print("📝 Creating campaign...")
     campaign_data = {
@@ -58,35 +61,35 @@ def capture_sariel_responses():
         'title': 'Sariel LLM Response Capture',
         'selected_prompts': ['narrative', 'mechanics']
     }
-    
+
     create_response = client.post(
         '/api/campaigns',
         headers=IntegrationTestSetup.create_test_headers(user_id),
         data=json.dumps(campaign_data)
     )
-    
+
     if create_response.status_code != 201:
         print(f"❌ Failed to create campaign: {create_response.status_code}")
         print(f"Response: {create_response.get_data()}")
         return None
-    
+
     campaign_info = create_response.get_json()
     campaign_id = campaign_info['campaign_id']
     print(f"✅ Created campaign: {campaign_id}")
-    
+
     # Step 2: Capture responses for each interaction
     captured_responses = []
-    
+
     for i, prompt_data in enumerate(interaction_prompts):
         interaction_num = i + 1
         print(f"\n--- Interaction {interaction_num}: {prompt_data['input'][:50]}... ---")
-        
+
         # Send interaction
         interaction_data = {
             'input': prompt_data['input'],
             'mode': 'character'
         }
-        
+
         start_time = time.time()
         interaction_response = client.post(
             f'/api/campaigns/{campaign_id}/interaction',
@@ -97,21 +100,21 @@ def capture_sariel_responses():
             },
             data=json.dumps(interaction_data)
         )
-        
+
         duration = time.time() - start_time
-        
+
         if interaction_response.status_code != 200:
             print(f"❌ Interaction {interaction_num} failed: {interaction_response.status_code}")
             response_data = interaction_response.get_json()
             print(f"Error: {response_data}")
             break
-        
+
         response_data = interaction_response.get_json()
         narrative = response_data.get('response', '')
-        
+
         print(f"✅ Received response ({len(narrative)} chars) in {duration:.1f}s")
         print(f"📄 Preview: {narrative[:100]}...")
-        
+
         # Capture complete response data
         captured_response = {
             'interaction': interaction_num,
@@ -133,12 +136,12 @@ def capture_sariel_responses():
                 'campaign_id': campaign_id
             }
         }
-        
+
         captured_responses.append(captured_response)
-        
+
         # Brief pause between interactions
         time.sleep(1)
-    
+
     # Step 3: Save captured responses
     output_data = {
         'capture_date': datetime.now().isoformat(),
@@ -147,14 +150,14 @@ def capture_sariel_responses():
         'purpose': 'Document actual LLM responses for GitHub plan update',
         'responses': captured_responses
     }
-    
+
     output_path = os.path.join('mvp_site', 'tests', 'data', 'sariel_llm_responses_captured.json')
     with open(output_path, 'w') as f:
         json.dump(output_data, f, indent=2)
-    
+
     print(f"\n✅ Captured {len(captured_responses)} LLM responses")
     print(f"📁 Saved to: {output_path}")
-    
+
     # Step 4: Create summary for GitHub
     summary_lines = [
         f"# Sariel Campaign LLM Responses - {datetime.now().strftime('%Y-%m-%d')}",
@@ -166,7 +169,7 @@ def capture_sariel_responses():
         "## Interaction Summary",
         ""
     ]
-    
+
     for response in captured_responses:
         summary_lines.extend([
             f"### Interaction {response['interaction']}",
@@ -182,17 +185,17 @@ def capture_sariel_responses():
             "```",
             ""
         ])
-        
+
         if response['metadata']['is_cassian_problem']:
             summary_lines.insert(-2, "🚨 **THE CASSIAN PROBLEM** - Player references Cassian directly")
             summary_lines.insert(-2, "")
-    
+
     summary_path = os.path.join('mvp_site', 'tests', 'data', 'sariel_llm_responses_summary.md')
     with open(summary_path, 'w') as f:
         f.write('\n'.join(summary_lines))
-    
+
     print(f"📄 Summary saved to: {summary_path}")
-    
+
     return output_data
 
 if __name__ == "__main__":

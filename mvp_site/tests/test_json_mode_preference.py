@@ -2,14 +2,10 @@ import os
 import sys
 import unittest
 
-
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from gemini_response import GeminiResponse
-from narrative_response_schema import parse_structured_response
-
-from gemini_response import GeminiResponse
-from narrative_response_schema import NarrativeResponse
+from narrative_response_schema import NarrativeResponse, parse_structured_response
 
 import gemini_service
 
@@ -107,7 +103,7 @@ class TestJSONModePreference(unittest.TestCase):
 
         # Text with debug content
         text_with_debug = """Story text here.
-        
+
 [DEBUG_START]
 Debug info
 [DEBUG_END]

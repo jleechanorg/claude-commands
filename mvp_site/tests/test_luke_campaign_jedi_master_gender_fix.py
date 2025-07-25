@@ -89,10 +89,10 @@ class TestLukeCampaignJediMasterGenderFix(unittest.TestCase):
             current_location="loc_test_001",
             gender="shapeshifter",  # Creative values now accepted
         )
-        
+
         # Verify creative gender is stored
         self.assertEqual(creative_npc.gender, "shapeshifter")
-        
+
         # Test that type validation still works
 
         with self.assertRaises(ValidationError):  # More specific exception type

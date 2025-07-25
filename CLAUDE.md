@@ -38,7 +38,7 @@
 
 🚨 **COPILOT COMMAND AUTONOMOUS OPERATION**: ⚠️ MANDATORY
 - ✅ `/copilot` commands operate autonomously without user approval prompts
-- ✅ ALWAYS proceed with full analysis regardless of conflicts/issues detected  
+- ✅ ALWAYS proceed with full analysis regardless of conflicts/issues detected
 - ✅ Claude should automatically apply fixes and resolve issues without asking
 - ✅ Continue workflow through conflicts, CI failures, or other blockers
 - ❌ NEVER stop workflow for user confirmation during `/copilot` execution
@@ -90,9 +90,9 @@
    - ✅ ALWAYS fix ALL failing tests to 100% pass rate
    - ✅ ALWAYS take ownership of test failures, especially in new code
 
-🚨 **NO ASSUMPTIONS ABOUT RUNNING COMMANDS**: 
+🚨 **NO ASSUMPTIONS ABOUT RUNNING COMMANDS**:
    - ❌ NEVER explain what a command "will do" when it's already running
-   - ❌ NEVER make assumptions about command execution or results  
+   - ❌ NEVER make assumptions about command execution or results
    - ✅ ALWAYS wait for actual command output and results
    - ✅ ALWAYS trust command execution and observe real behavior
    - **Pattern**: User says "X is running..." → Wait for actual results, don't speculate
@@ -110,7 +110,7 @@
 **CRITICAL ANTI-PATTERN**: Always audit existing functionality before implementing new code
 
 - ❌ NEVER create files with "# Note: In the real implementation" comments
-- ❌ NEVER write placeholder code that doesn't actually work  
+- ❌ NEVER write placeholder code that doesn't actually work
 - ❌ NEVER create demonstration files instead of working implementations
 - ❌ NEVER create Python intelligence files when .md files handle the logic
 - ❌ NEVER duplicate systematic protocols that already exist in other .md files
@@ -124,7 +124,7 @@
 - **Evidence**: orchestrate_enhanced.py with placeholder comments frustrated user
 - **Rule**: If you can't implement it properly, don't create the file at all
 
-🚨 **ORCHESTRATION OVER DUPLICATION**: ⚠️ MANDATORY  
+🚨 **ORCHESTRATION OVER DUPLICATION**: ⚠️ MANDATORY
 - **Principle**: Orchestrators delegate to existing commands, never reimplement their functionality
 - ✅ Pattern: New commands should be orchestrators, not implementers
 - ✅ Use existing /commentreply, /pushl, /fixpr rather than duplicating their logic
@@ -136,7 +136,7 @@
 
 🚨 **NO OVER-ENGINEERING**: Prevent building parallel inferior systems vs enhancing existing ones
    - ✅ ALWAYS ask "Can the LLM handle this naturally?" before building parsers/analytics systems
-   - ✅ ALWAYS try enhancing existing systems before building parallel new ones  
+   - ✅ ALWAYS try enhancing existing systems before building parallel new ones
    - ✅ ALWAYS prioritize user workflow integration over technical sophistication
    - ❌ NEVER build parallel command execution systems - enhance Claude Code CLI instead
    - ❌ NEVER build complex parsing when LLM can understand intent naturally
@@ -176,7 +176,7 @@
 
 🚨 **NEVER SIMULATE INTELLIGENCE**: When building response generation systems:
    - ❌ NEVER create Python functions that simulate Claude's responses with templates
-   - ❌ NEVER use pattern matching to generate "intelligent" responses  
+   - ❌ NEVER use pattern matching to generate "intelligent" responses
    - ❌ NEVER build `_create_contextual_response()` methods that fake understanding
    - ❌ NEVER generate generic replies like "I'll fix the issue" or "Thanks for the suggestion"
    - ✅ ALWAYS invoke actual Claude for genuine response generation
@@ -226,7 +226,7 @@
 11. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
 12. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
    - **OPEN** = Work In Progress (WIP) - NOT completed
-   - **MERGED** = Completed and integrated into main branch  
+   - **MERGED** = Completed and integrated into main branch
    - **CLOSED** = Abandoned or rejected - NOT completed
    - ❌ NEVER mark tasks as completed just because PR exists
    - ✅ ONLY mark completed when PR state = "MERGED"
@@ -448,7 +448,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - **Budget 2-3x normal effort** for large file deletions due to cleanup cascade
 - **Evidence**: PR #722 required 36-file cleanup after deleting copilot.sh (695 lines)
 
-### Scope Management Protocol (⚠️ MANDATORY)  
+### Scope Management Protocol (⚠️ MANDATORY)
 **Distinguish rewrite vs consolidation** to set proper effort expectations
 - **Consolidation**: Reorganizing existing functionality (preserve files, move/rename)
 - **Rewrite**: Replacing with new implementation (delete old, extensive cleanup needed)
@@ -484,7 +484,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - **Command Structure** (Claude Code CLI defaults to Playwright MCP):
   - `/testui` = Browser (Playwright MCP) + Mock APIs
   - `/testuif` = Browser (Playwright MCP) + REAL APIs (costs $)
-  - `/testhttp` = HTTP + Mock APIs  
+  - `/testhttp` = HTTP + Mock APIs
   - `/testhttpf` = HTTP + REAL APIs (costs $)
   - `/tester` = End-to-end tests with REAL APIs (user decides cost)
 
@@ -558,7 +558,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 🚨 **COMMAND FAILURE TRANSPARENCY** (⚠️ MANDATORY): When user commands fail unexpectedly:
    - ✅ Immediately explain what failed and why
-   - ✅ Show system messages/errors received  
+   - ✅ Show system messages/errors received
    - ✅ Explain resolution approach being taken
    - ✅ Ask preference for alternatives (merge vs rebase, etc.)
    - ❌ NEVER silently fix without explanation
@@ -577,7 +577,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
    - 🔍 **Evidence**: setup_automation.sh successfully deployed complete cron job + monitoring system
    - **Application**: Cron jobs, service configuration, system initialization, deployment automation
 4. **Python Execution**: ✅ Run from project root | ❌ cd into subdirs
-5. **vpython Tests**: 
+5. **vpython Tests**:
    - ⚠️ "run all tests" → `./run_tests.sh`
    - ⚠️ Test fails → fix immediately or ask user
    - ✅ `TESTING=true vpython mvp_site/test_file.py` (from root)
@@ -679,7 +679,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - `/research` - Knowledge gathering with memory pattern recognition
 - **Behavior**: Automatic semantic understanding and tool integration
 
-**⚙️ Operational Commands** (Protocol Enforcement):  
+**⚙️ Operational Commands** (Protocol Enforcement):
 - `/headless`, `/handoff`, `/orchestrate` - Modify execution environment
 - **Behavior**: Mandatory workflow execution before task processing
 
@@ -703,7 +703,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 🚨 **OPERATIONAL COMMAND ENFORCEMENT**: `/headless`, `/handoff`, `/orchestrate`, `/orch`
 - ✅ ALWAYS trigger protocol workflow before task execution
-- ✅ Create isolated environments as specified in command documentation  
+- ✅ Create isolated environments as specified in command documentation
 - ❌ NEVER process as regular tasks without environment setup
 - ❌ NEVER execute /orch or /orchestrate tasks yourself - ONLY monitor agents
 - ✅ For /orch: Create agents → Monitor progress → Report results ONLY

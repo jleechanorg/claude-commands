@@ -37,7 +37,7 @@ class StructuredFieldsTest {
   // Setup browser environment with app.js loaded
   async setupBrowserEnvironment() {
     this.log('🌐 Setting up browser environment with jsdom');
-    
+
     try {
       // Create JSDOM instance
       this.dom = new JSDOM(`
@@ -63,7 +63,7 @@ class StructuredFieldsTest {
       // Mock window functions that app.js might need
       this.window.alert = (msg) => this.log(`Alert: ${msg}`, 'info');
       this.window.confirm = () => true;
-      
+
       // Mock fetch API
       this.window.fetch = this.createMockFetch();
 
@@ -83,7 +83,7 @@ class StructuredFieldsTest {
     // Simplified version of generateStructuredFieldsHTML
     this.window.generateStructuredFieldsHTML = (fullData, debugMode) => {
       let html = '';
-      
+
       // Add dice rolls if present
       if (fullData.dice_rolls && fullData.dice_rolls.length > 0) {
         html += '<div class="dice-rolls">';
@@ -93,17 +93,17 @@ class StructuredFieldsTest {
         });
         html += '</ul></div>';
       }
-      
+
       // Add resources if present
       if (fullData.resources) {
         html += `<div class="resources"><strong>📊 Resources:</strong> ${fullData.resources}</div>`;
       }
-      
+
       // Add planning block if present (always at the bottom)
       if (fullData.planning_block) {
         html += `<div class="planning-block">${fullData.planning_block}</div>`;
       }
-      
+
       // Add debug info if in debug mode
       if (debugMode && fullData.debug_info && Object.keys(fullData.debug_info).length > 0) {
         html += '<div class="debug-info">';
@@ -111,7 +111,7 @@ class StructuredFieldsTest {
         html += '<pre>' + JSON.stringify(fullData.debug_info, null, 2) + '</pre>';
         html += '</div>';
       }
-      
+
       return html;
     };
   }
@@ -120,7 +120,7 @@ class StructuredFieldsTest {
   createMockFetch() {
     return async (url, options) => {
       this.log(`Mock fetch called: ${url}`, 'info');
-      
+
       // Mock response with structured fields
       const mockResponse = {
         success: true,
@@ -146,7 +146,7 @@ class StructuredFieldsTest {
   // Test 1: Basic HTML generation for all fields
   async testGenerateStructuredFieldsHTML() {
     this.log('📝 Testing generateStructuredFieldsHTML function');
-    
+
     const testData = {
       dice_rolls: ["Attack: 1d20+5 = 18", "Damage: 2d6+3 = 11"],
       resources: "HP: 45/50 | Gold: 120",
@@ -155,7 +155,7 @@ class StructuredFieldsTest {
     };
 
     const html = this.window.generateStructuredFieldsHTML(testData, true);
-    
+
     // Check that all fields are present
     this.assert(html.includes('🎲 Dice Rolls:'), 'Dice rolls header present');
     this.assert(html.includes('Attack: 1d20+5 = 18'), 'First dice roll present');
@@ -164,7 +164,7 @@ class StructuredFieldsTest {
     this.assert(html.includes('HP: 45/50'), 'Resources content present');
     this.assert(html.includes('**Next Steps:**'), 'Planning block present');
     this.assert(html.includes('🔍 Debug Info:'), 'Debug info header present (debug mode on)');
-    
+
     // Test without debug mode
     const htmlNoDebug = this.window.generateStructuredFieldsHTML(testData, false);
     this.assert(!htmlNoDebug.includes('🔍 Debug Info:'), 'Debug info hidden when debug mode off');
@@ -173,7 +173,7 @@ class StructuredFieldsTest {
   // Test 2: Empty fields handling
   async testEmptyFieldsHandling() {
     this.log('📝 Testing empty fields handling');
-    
+
     const emptyData = {
       dice_rolls: [],
       resources: "",
@@ -182,7 +182,7 @@ class StructuredFieldsTest {
     };
 
     const html = this.window.generateStructuredFieldsHTML(emptyData, true);
-    
+
     // Check that empty fields are not rendered
     this.assert(!html.includes('🎲 Dice Rolls:'), 'Empty dice rolls not rendered');
     this.assert(!html.includes('📊 Resources:'), 'Empty resources not rendered');
@@ -194,7 +194,7 @@ class StructuredFieldsTest {
   // Test 3: Missing fields handling
   async testMissingFieldsHandling() {
     this.log('📝 Testing missing fields handling');
-    
+
     const partialData = {
       dice_rolls: ["Critical Hit: 20"],
       // resources missing
@@ -203,11 +203,11 @@ class StructuredFieldsTest {
     };
 
     const html = this.window.generateStructuredFieldsHTML(partialData, true);
-    
+
     // Check that present fields are rendered
     this.assert(html.includes('Critical Hit: 20'), 'Present dice roll rendered');
     this.assert(html.includes('Continue forward'), 'Present planning block rendered');
-    
+
     // Check that missing fields are not causing errors
     this.assert(!html.includes('📊 Resources:'), 'Missing resources field handled gracefully');
     this.assert(!html.includes('🔍 Debug Info:'), 'Missing debug info field handled gracefully');
@@ -225,12 +225,12 @@ class StructuredFieldsTest {
     };
 
     const html = this.window.generateStructuredFieldsHTML(dataWithGodMode, true);
-    
+
     // 🔴 These should FAIL - god mode response should be rendered
     this.assert(html.includes('🔮 God Mode Response:'), 'God mode response header displayed');
     this.assert(html.includes('📝 DM Notes: User requested plot arcs'), 'God mode content displayed');
     this.assert(html.includes('god-mode-response'), 'God mode CSS class applied');
-    
+
     // Regular narrative should still be present
     this.assert(html.includes('Regular narrative text'), 'Regular narrative still displayed');
   }
@@ -238,7 +238,7 @@ class StructuredFieldsTest {
   // Run all tests
   async runTests() {
     this.log('🚀 Starting Structured Fields Frontend Tests', 'info');
-    
+
     // Setup environment
     const setupSuccess = await this.setupBrowserEnvironment();
     if (!setupSuccess) {
@@ -262,7 +262,7 @@ class StructuredFieldsTest {
 
     this.log('=' * 50, 'info');
     this.log(`Test Summary: ${passed}/${total} passed`, 'info');
-    
+
     if (failed > 0) {
       this.log(`❌ ${failed} tests failed`, 'fail');
       process.exit(1);

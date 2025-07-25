@@ -1,8 +1,8 @@
 # Handoff: Real AST-based /arch Implementation
 
-**Task**: `arch_impl`  
-**Branch**: `handoff-arch_impl`  
-**Parent PR**: #596 https://github.com/jleechan2015/worldarchitect.ai/pull/596  
+**Task**: `arch_impl`
+**Branch**: `handoff-arch_impl`
+**Parent PR**: #596 https://github.com/jleechan2015/worldarchitect.ai/pull/596
 **Created**: 2025-07-15
 
 ## 🎯 **Mission**
@@ -18,7 +18,7 @@ Implement real AST-based technical analysis for `/arch` command to enhance exist
 - BUT lacks technical depth: no AST parsing, complexity metrics, or quantified evidence
 
 **Target State**:
-- Preserve existing contextual analysis capabilities  
+- Preserve existing contextual analysis capabilities
 - Add technical analysis layer with AST parsing
 - Generate evidence-based findings with file:line references
 - Ensure variance validation (different files = different analysis)
@@ -51,7 +51,7 @@ def analyze_file_structure(filepath: str) -> Dict[str, Any]:
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
         tree = ast.parse(content)
-    
+
     return {
         'file': filepath,
         'metrics': calculate_file_metrics(tree, content),
@@ -89,7 +89,7 @@ def calculate_cyclomatic_complexity(tree: ast.AST) -> int:
 def generate_evidence_based_insights(analysis_results: List[Dict]) -> List[Dict]:
     """Convert technical analysis to actionable insights"""
     insights = []
-    
+
     # High complexity detection
     high_complexity = [r for r in analysis_results if r['metrics']['complexity'] > 10]
     if high_complexity:
@@ -97,13 +97,13 @@ def generate_evidence_based_insights(analysis_results: List[Dict]) -> List[Dict]
             'category': 'complexity',
             'severity': 'high',
             'finding': f"High complexity detected in {len(high_complexity)} files",
-            'evidence': [f"{r['file']} (complexity: {r['metrics']['complexity']})" 
+            'evidence': [f"{r['file']} (complexity: {r['metrics']['complexity']})"
                         for r in high_complexity],
             'recommendation': "Consider refactoring using Extract Method pattern",
-            'specific_actions': [f"Review {r['file']} line-by-line for extraction opportunities" 
+            'specific_actions': [f"Review {r['file']} line-by-line for extraction opportunities"
                                for r in high_complexity]
         })
-    
+
     return insights
 ```
 
@@ -113,7 +113,7 @@ def generate_evidence_based_insights(analysis_results: List[Dict]) -> List[Dict]
 ```bash
 # Must produce different analysis for different file types
 python3 .claude/commands/arch.py mvp_site/main.py     # Flask patterns
-python3 .claude/commands/arch.py tests/test_main.py   # Test patterns  
+python3 .claude/commands/arch.py tests/test_main.py   # Test patterns
 python3 .claude/commands/arch.py .claude/commands/    # Command patterns
 ```
 
@@ -131,7 +131,7 @@ python3 .claude/commands/arch.py .claude/commands/    # Command patterns
    - Evidence generation
    - Integration with existing command system
 
-### **Modified Files**  
+### **Modified Files**
 2. **`roadmap/scratchpad_real-arch-implementation.md`** - Progress updates
 3. **PR #596 description** - Implementation status updates
 
@@ -142,7 +142,7 @@ python3 .claude/commands/arch.py .claude/commands/    # Command patterns
 
 ### **Functional Testing**
 - [ ] AST parsing works for valid Python files
-- [ ] Graceful handling of syntax errors  
+- [ ] Graceful handling of syntax errors
 - [ ] Timeout protection for large files
 - [ ] Correct complexity calculation
 
@@ -158,14 +158,14 @@ python3 .claude/commands/arch.py .claude/commands/    # Command patterns
 
 ### **Edge Case Testing**
 - [ ] Empty files handled gracefully
-- [ ] Binary files skipped appropriately  
+- [ ] Binary files skipped appropriately
 - [ ] Large files respect timeout limits
 
 ## 🎯 **Success Criteria**
 
 ### **Primary Goals**
 1. **Evidence-Based Analysis**: Every finding includes file:line references
-2. **Variance Validation**: Different files produce different analysis  
+2. **Variance Validation**: Different files produce different analysis
 3. **Performance**: Analysis completes in reasonable time
 4. **Integration**: Works seamlessly with existing `/arch` command
 
@@ -273,7 +273,7 @@ python3 .claude/commands/arch.py .claude/commands/    # Command patterns
    # Standalone analysis
    python3 .claude/commands/arch.py mvp_site/main.py
    python3 .claude/commands/arch.py mvp_site/
-   
+
    # Integration with /arch command
    python3 .claude/commands/arch.py --arch-integration
    ```
@@ -283,7 +283,7 @@ python3 .claude/commands/arch.py .claude/commands/    # Command patterns
    ```markdown
    ## 📊 Technical Analysis (AST-based)
    **Files Analyzed**: 2 | **Lines**: 1,971 | **Functions**: 53
-   
+
    ### 🔍 Key Findings
    🚨 **High file complexity detected in 2 files**
    - *Evidence*: `mvp_site/main.py (complexity: 166)`

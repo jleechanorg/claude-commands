@@ -58,9 +58,9 @@ def create_scratchpad(task_name, description, analysis_content=""):
 
     content = f"""# Scratchpad: {task_name.replace("_", " ").title()}
 
-**Branch**: {current_branch}  
-**Goal**: {description}  
-**Status**: Analysis complete, ready for implementation handoff  
+**Branch**: {current_branch}
+**Goal**: {description}
+**Status**: Analysis complete, ready for implementation handoff
 **Created**: {timestamp}
 
 ## Problem Statement
@@ -77,13 +77,13 @@ def create_scratchpad(task_name, description, analysis_content=""):
 - [ ] Specific action item
 - [ ] Another action item
 
-### Step 2: [Second Implementation Step]  
+### Step 2: [Second Implementation Step]
 - [ ] Specific action item
 - [ ] Another action item
 
 ### Step 3: [Testing & Validation]
 - [ ] Unit tests
-- [ ] Integration tests  
+- [ ] Integration tests
 - [ ] Manual verification
 
 ## Files to Modify
@@ -247,7 +247,7 @@ def generate_worker_prompt(task_name, description, pr_url, scratchpad_file):
 
 ### Quick Summary
 - Analysis phase complete
-- Implementation approach defined  
+- Implementation approach defined
 - Files to modify identified
 - Testing strategy documented
 

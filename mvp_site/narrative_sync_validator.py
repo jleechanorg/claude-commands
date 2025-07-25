@@ -6,10 +6,11 @@ REFACTORED: Now delegates to EntityValidator for all entity presence logic.
 """
 
 import re
-import logging_util
-from typing import List, Dict, Any, Tuple, Optional
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple
+
+import logging_util
 from entity_validator import EntityValidator
 
 
@@ -30,7 +31,7 @@ class EntityContext:
     last_action: Optional[str] = None
     emotional_state: Optional[str] = None
     physical_markers: List[str] = None  # e.g., "bandaged ear", "trembling"
-    
+
     def __post_init__(self):
         if self.physical_markers is None:
             self.physical_markers = []
@@ -46,7 +47,7 @@ class ValidationResult:
     warnings: List[str] = None
     metadata: Dict[str, Any] = None
     validation_details: Dict[str, Any] = None
-    
+
     def __post_init__(self):
         if self.entities_found is None:
             self.entities_found = []
@@ -65,14 +66,14 @@ class NarrativeSyncValidator:
     Advanced validator specifically designed for preventing narrative desynchronization.
     Delegates entity presence logic to EntityValidator while adding narrative-specific features.
     """
-    
+
     def __init__(self):
         self.name = "NarrativeSyncValidator"
         self.logger = logging_util.getLogger(self.name)
-        
+
         # Delegate all entity validation logic to EntityValidator
         self.entity_validator = EntityValidator()
-        
+
         # Emotional state patterns (kept here as they're narrative-specific)
         self.emotional_patterns = {
             "grief": ["mourning", "grieving", "sorrowful", "bereaved"],
@@ -80,24 +81,24 @@ class NarrativeSyncValidator:
             "fear": ["terrified", "afraid", "fearful", "frightened"],
             "guilt": ["guilty", "ashamed", "remorseful"]
         }
-    
+
     def _compile_patterns(self):
         """Pre-compile regex patterns for better performance"""
         # Compile physical state patterns
         self._compiled_patterns['physical_states'] = [
             re.compile(pattern, re.IGNORECASE) for pattern in self.physical_state_patterns
         ]
-    
+
     def _analyze_entity_presence(self, narrative: str, entity: str) -> EntityPresenceType:
         """Determine if an entity is physically present or just mentioned"""
         narrative_lower = narrative.lower()
         entity_lower = entity.lower()
-        
+
         # Check for explicit absence indicators first
         for pattern in self.presence_patterns["absent_reference"]:
             if re.search(pattern.replace(r"(\w+)", entity_lower), narrative_lower):
                 return EntityPresenceType.MENTIONED_ABSENT
-        
+
         # Check if only mentioned in dialogue or thoughts
         thought_patterns = [
             f"thought of {entity_lower}",
@@ -105,23 +106,23 @@ class NarrativeSyncValidator:
             f"thinking of {entity_lower}",
             f"spoke of {entity_lower}"
         ]
-        
+
         for pattern in thought_patterns:
             if pattern in narrative_lower:
                 return EntityPresenceType.MENTIONED_ABSENT
-        
+
         # If entity is mentioned in narrative, assume physically present unless proven otherwise
         # This is more appropriate for our use case where entities should be mentioned if present
         if entity_lower in narrative_lower:
             return EntityPresenceType.PHYSICALLY_PRESENT
-        
+
         # Not found at all
         return None
-    
+
     def _extract_physical_states(self, narrative: str) -> Dict[str, List[str]]:
         """Extract physical state descriptions from narrative"""
         states = {}
-        
+
         # Use pre-compiled patterns for better performance
         compiled_patterns = self._compiled_patterns.get('physical_states', [])
         for pattern in compiled_patterns:
@@ -130,36 +131,36 @@ class NarrativeSyncValidator:
                 state = match.group(0)
                 # Try to associate with nearby entity names
                 context = narrative[max(0, match.start()-50):min(len(narrative), match.end()+50)]
-                
+
                 # Simple heuristic: look for capitalized words nearby
                 entities = re.findall(r'\b[A-Z][a-z]+\b', context)
                 for entity in entities:
                     if entity not in states:
                         states[entity] = []
                     states[entity].append(state)
-        
+
         return states
-    
+
     def _detect_scene_transitions(self, narrative: str) -> List[str]:
         """Detect location transitions in the narrative"""
         transitions = []
-        
+
         for pattern_list in self.presence_patterns["location_transition"]:
             matches = re.finditer(pattern_list, narrative, re.IGNORECASE)
             for match in matches:
                 transitions.append(match.group(0))
-        
+
         return transitions
-    
-    def _check_continuity(self, 
+
+    def _check_continuity(self,
                          narrative: str,
                          previous_states: Dict[str, EntityContext]) -> List[str]:
         """Check for continuity issues with previous states"""
         issues = []
-        
+
         # Extract current physical states
         current_physical = self._extract_physical_states(narrative)
-        
+
         # Check if previously noted physical states are maintained
         for entity, context in previous_states.items():
             if context.physical_markers:
@@ -171,11 +172,11 @@ class NarrativeSyncValidator:
                             issues.append(
                                 f"{entity}'s '{marker}' not maintained in narrative"
                             )
-        
+
         return issues
-    
-    def validate(self, 
-                 narrative_text: str, 
+
+    def validate(self,
+                 narrative_text: str,
                  expected_entities: List[str],
                  location: str = None,
                  previous_states: Dict[str, EntityContext] = None,
@@ -183,7 +184,7 @@ class NarrativeSyncValidator:
         """
         Validate narrative synchronization with advanced presence detection.
         REFACTORED: Now delegates all entity logic to EntityValidator.
-        
+
         Args:
             narrative_text: The generated narrative
             expected_entities: List of entities that should appear
@@ -192,19 +193,19 @@ class NarrativeSyncValidator:
         """
         # Delegate all entity validation to EntityValidator
         result = self.entity_validator.validate(narrative_text, expected_entities, location, previous_states, **kwargs)
-        
+
         # Add continuity checking (narrative-specific logic)
         if previous_states:
             continuity_issues = self._check_continuity(narrative_text, previous_states)
             result.warnings.extend(continuity_issues)
-            
+
             # Update metadata
             if result.metadata:
                 result.metadata["continuity_issues"] = continuity_issues
                 result.metadata["validator_name"] = self.name  # Override to show delegation
                 result.metadata["method"] = "narrative_sync_delegation"
-        
+
         self.logger.info(f"NarrativeSyncValidator delegated to EntityValidator: "
                         f"{len(result.found_entities)}/{len(expected_entities)} found")
-        
+
         return result

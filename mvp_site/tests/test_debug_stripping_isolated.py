@@ -65,31 +65,31 @@ class TestDebugStrippingIsolated(unittest.TestCase):
         """Set up test data."""
         self.sample_response = """
         You enter the ancient library. Dust motes dance in the filtered sunlight.
-        
+
         [DEBUG_START]
-        The player is entering a key story location. I should describe the atmosphere 
+        The player is entering a key story location. I should describe the atmosphere
         and hint at the knowledge contained here.
         [DEBUG_END]
-        
+
         The librarian, an elderly elf, looks up from her tome.
-        
+
         [DEBUG_ROLL_START]
         Rolling for librarian's initial reaction: 1d20+2 = 15+2 = 17 (Friendly)
         [DEBUG_ROLL_END]
-        
+
         "Welcome, traveler. It's been some time since we've had visitors."
-        
+
         [DEBUG_RESOURCES_START]
         Resources: 0 EP used (8/8 remaining), no spell slots used, short rests: 2/2
         [DEBUG_RESOURCES_END]
-        
+
         [DEBUG_STATE_START]
         Adding NPC "Elderly Librarian" to the scene with friendly disposition.
         Location updated to "Ancient Library".
         [DEBUG_STATE_END]
-        
+
         She gestures to the vast collection of books surrounding you.
-        
+
         [STATE_UPDATES_PROPOSED]
         {
             "world_data": {
@@ -217,15 +217,15 @@ class TestDebugStrippingIsolated(unittest.TestCase):
         extra_newlines = """
         Start
         [DEBUG_START]
-        
-        
+
+
         Debug content
-        
-        
+
+
         [DEBUG_END]
-        
-        
-        
+
+
+
         End
         """
 
@@ -260,24 +260,24 @@ class TestDebugStrippingIsolated(unittest.TestCase):
         """Test with a realistic AI response."""
         real_response = """
         The morning sun breaks through the tavern windows as you finish your breakfast.
-        
+
         [DEBUG_START]
         Time to introduce the quest hook. The player has rested and should be ready for adventure.
         [DEBUG_END]
-        
+
         A cloaked figure bursts through the door, breathing heavily.
-        
+
         [DEBUG_ROLL_START]
         Rolling Perception check to notice details: 1d20+3 = 14+3 = 17 (Success)
         [DEBUG_ROLL_END]
-        
-        You notice blood on their cloak and fear in their eyes. "Please, you must help me!" 
+
+        You notice blood on their cloak and fear in their eyes. "Please, you must help me!"
         they gasp. "The goblins... they've taken my daughter!"
-        
+
         [DEBUG_RESOURCES_START]
         Resources: 0 EP used (8/8 remaining), full HP (25/25), spell slots: 3/3 (level 1)
         [DEBUG_RESOURCES_END]
-        
+
         [STATE_UPDATES_PROPOSED]
         {
             "custom_campaign_state": {

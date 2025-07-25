@@ -21,13 +21,13 @@ Architecture:
 Usage:
     # Generate PDF document
     generate_pdf(story_text, output_path, campaign_title)
-    
+
     # Generate DOCX document
     generate_docx(story_text, output_path, campaign_title)
-    
+
     # Generate TXT document
     generate_txt(story_text, output_path, campaign_title)
-    
+
     # Process story log for export
     story_text = get_story_text_from_context(story_log)
 
@@ -37,11 +37,13 @@ Dependencies:
 - DejaVu Sans font: Custom font for better Unicode support
 """
 
-import os
 import logging
-from fpdf import FPDF, XPos, YPos
-from docx import Document
+import os
+
 import constants
+from docx import Document
+from fpdf import FPDF, XPos, YPos
+
 
 def get_story_text_from_context(story_log):
     """
@@ -103,13 +105,13 @@ def generate_pdf(story_text, output_filepath, campaign_title=""):
             os.path.join(ASSETS_DIR, FONT_FILENAME),  # Current working directory
             os.path.join(os.path.dirname(__file__), ASSETS_DIR, FONT_FILENAME),  # Relative to this file
         ]
-        
+
         font_path = None
         for path in possible_paths:
             if os.path.exists(path):
                 font_path = path
                 break
-        
+
         if font_path:
             # The 'uni=True' parameter is crucial for UTF-8 support with FPDF.
             pdf.add_font(CUSTOM_FONT_NAME, '', font_path)
@@ -123,7 +125,7 @@ def generate_pdf(story_text, output_filepath, campaign_title=""):
         pass
 
     pdf.set_font(font_family, style='', size=BODY_FONT_SIZE)
-    
+
     # Split the text into paragraphs and write them to the PDF.
     # The \\n is now a literal backslash followed by 'n', so we split on that.
     for paragraph in story_text.split('\\n\\n'):

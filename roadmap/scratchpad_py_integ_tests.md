@@ -13,7 +13,7 @@
 
 ### What NOT to Mock (MUST GO THROUGH REAL CODE):
 - ❌ DO NOT mock `main.py` functions
-- ❌ DO NOT mock `firestore_service.py` functions  
+- ❌ DO NOT mock `firestore_service.py` functions
 - ❌ DO NOT mock `gemini_service.py` functions
 - ❌ DO NOT mock `game_state.py` functions
 - ❌ DO NOT mock any internal application logic
@@ -35,7 +35,7 @@ The tests are failing because:
 - Make `client.models.count_tokens()` return a proper object with `total_tokens` as an integer
 - Example: `MockTokenCount(total_tokens=1000)`
 
-#### Step 3: Fix Gemini Response Mock  
+#### Step 3: Fix Gemini Response Mock
 - Make `client.models.generate_content()` return a proper response object
 - The response must have a `.text` attribute containing the JSON response string
 - Example: `MockResponse(text='{"narrative": "...", ...}')`

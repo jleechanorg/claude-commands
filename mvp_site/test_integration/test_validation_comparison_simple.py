@@ -8,12 +8,11 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from datetime import datetime
 
 import logging_util
-
-import tempfile
 
 # Add the project root to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -120,17 +119,17 @@ response = client.post(
 
 if response.status_code == 201:
     campaign_id = response.get_json()['campaign_id']
-    
+
     # Run Cassian interaction
     cassian_prompt = sariel_data['prompts'][2]  # The Cassian problem prompt
     interaction_data = {'input': cassian_prompt['input']}
-    
+
     response = client.post(
         f'/api/campaigns/{campaign_id}/interaction',
         headers=IntegrationTestSetup.create_test_headers(user_id),
         data=json.dumps(interaction_data)
     )
-    
+
     if response.status_code == 200:
         result = response.get_json()
         narrative = result.get('narrative', '')

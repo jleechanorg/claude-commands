@@ -94,7 +94,7 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
             "narrative": "The mortal realm trembles.",
             "god_mode_response": "Lightning strikes!",
             "entities_mentioned": [],
-            "location_confirmed": "Unknown", 
+            "location_confirmed": "Unknown",
             "state_updates": {},
             "debug_info": {}
         }"""

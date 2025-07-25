@@ -82,7 +82,7 @@ FULL_STRUCTURED_RESPONSE = {
                 "risk_level": "medium"
             },
             "defensive_stance": {
-                "text": "Take Defensive Stance", 
+                "text": "Take Defensive Stance",
                 "description": "Fall back to a defensive position and prepare to counter their attacks",
                 "risk_level": "low"
             },

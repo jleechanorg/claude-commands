@@ -5,17 +5,17 @@ This module adds the new endpoints needed for parallel dual-pass processing.
 To be integrated into main.py
 """
 
-from flask import jsonify, request
-from entity_validator import entity_validator
-from dual_pass_generator import dual_pass_generator
 import logging_util
+from dual_pass_generator import EntityInjector, dual_pass_generator
+from entity_validator import entity_validator
+from flask import jsonify, request
 
-from dual_pass_generator import EntityInjector
 from gemini_service import generate_content
+
 
 def add_parallel_dual_pass_routes(app, get_campaign_info):
     """Add routes for parallel dual-pass optimization"""
-    
+
     @app.route('/api/campaigns/<campaign_id>/enhance-entities', methods=['POST'])
     def enhance_entities(campaign_id):
         """Background endpoint for entity enhancement (Pass 2)"""
@@ -24,35 +24,35 @@ def add_parallel_dual_pass_routes(app, get_campaign_info):
             user_id = request.cookies.get('user_id')
             if not user_id:
                 return jsonify({'error': 'Unauthorized'}), 401
-            
+
             # Get request data
             data = request.get_json()
             original_response = data.get('original_response', '')
             missing_entities = data.get('missing_entities', [])
             sequence_id = data.get('sequence_id')
-            
+
             # Get campaign info
             campaign_info = get_campaign_info(user_id, campaign_id)
             if not campaign_info:
                 return jsonify({'error': 'Campaign not found'}), 404
-            
+
             current_game_state = campaign_info['game_state']
             location = current_game_state.world_data.get('current_location_name', 'Unknown')
-            
+
             # Run Pass 2 - Entity injection using the internal method
             logging_util.info(f"PARALLEL_DUAL_PASS: Starting background entity enhancement for {len(missing_entities)} entities")
-            
+
             # Create injection prompt
             injection_prompt = dual_pass_generator._create_injection_prompt(
                 original_narrative=original_response,
                 missing_entities=missing_entities,
                 location=location
             )
-            
+
             # Generate enhanced narrative
 
             enhanced_narrative = generate_content(injection_prompt)
-            
+
             # Use the injector to refine if needed
 
             entity_injector = EntityInjector()
@@ -61,7 +61,7 @@ def add_parallel_dual_pass_routes(app, get_campaign_info):
                 missing_entities=missing_entities,
                 location=location
             )
-            
+
             if final_narrative:
                 logging_util.info(f"PARALLEL_DUAL_PASS: Successfully enhanced narrative with {len(missing_entities)} entities")
                 return jsonify({
@@ -76,11 +76,11 @@ def add_parallel_dual_pass_routes(app, get_campaign_info):
                     'success': False,
                     'error': 'Enhancement failed'
                 })
-                
+
         except Exception as e:
             logging_util.error(f"PARALLEL_DUAL_PASS: Error in enhance_entities: {str(e)}")
             return jsonify({'error': str(e)}), 500
-    
+
     @app.route('/api/campaigns/<campaign_id>/check-enhancement', methods=['GET'])
     def check_enhancement_status(campaign_id):
         """Check if a response needs entity enhancement"""
@@ -88,7 +88,7 @@ def add_parallel_dual_pass_routes(app, get_campaign_info):
             # This endpoint can be used to check if enhancement is complete
             # For now, just return success
             return jsonify({'status': 'ready'})
-            
+
         except Exception as e:
             logging_util.error(f"PARALLEL_DUAL_PASS: Error checking status: {str(e)}")
             return jsonify({'error': str(e)}), 500

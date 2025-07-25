@@ -36,25 +36,25 @@ class HeaderComplianceEngine:
     def __init__(self):
         self.memory_mcp = MemoryMCPClient()
         self.git_header_script = "./claude_command_scripts/git-header.sh"
-    
+
     def process_response(self, response_text, context):
         # 1. Check compliance
         violations = self.check_header_compliance(response_text)
-        
+
         # 2. Auto-correct if needed
         if violations:
             corrected = self.auto_correct_header(response_text)
             self.log_violation_to_memory(violations, context)
             return corrected
-        
+
         return response_text
-    
+
     def check_header_compliance(self, text):
         header_pattern = r'^\[Local:.*\|.*Remote:.*\|.*PR:.*\]'
         if not re.match(header_pattern, text.strip()):
             return ['missing_header']
         return []
-    
+
     def auto_correct_header(self, text):
         header = subprocess.check_output(self.git_header_script, shell=True)
         return f"{header.strip()}\n\n{text}"
@@ -135,7 +135,7 @@ Once header compliance achieves 90% success:
 - Pattern: "tests complete" without actual test results
 - Auto-correct: Require test output before completion claims
 
-### Phase 3: Evidence-Based Debugging  
+### Phase 3: Evidence-Based Debugging
 - Check: Do I show actual errors before proposing fixes?
 - Pattern: Suggesting fixes without showing specific error messages
 - Auto-correct: Prompt for error evidence before solution proposals
@@ -153,7 +153,7 @@ Once header compliance achieves 90% success:
 ## Expected ROI
 
 **Development Investment**: 2-3 weeks
-**User Value**: 
+**User Value**:
 - Eliminate daily frustration point (header commands)
 - Proof that behavioral automation works
 - Foundation for complete rule automation

@@ -22,7 +22,7 @@ Commands that need timeout mitigation applied:
 - `execute.py` (if exists) - Task execution commands
 
 **Medium Priority:**
-- All `.py` files in `.claude/commands/` 
+- All `.py` files in `.claude/commands/`
 - Any command that reads files, makes API calls, or runs subprocess operations
 - Commands that use MultiEdit or other tool calls
 
@@ -54,7 +54,7 @@ from request_optimizer import optimize_file_read, check_request_size, handle_tim
 
 # Replace ALL file reads
 # OLD: with open(filepath, 'r') as f: content = f.read()
-# NEW: 
+# NEW:
 read_params = optimize_file_read(filepath)
 with open(filepath, 'r') as f:
     if 'limit' in read_params:
@@ -103,7 +103,7 @@ optimizer.record_success(operation_type, int(duration * 1000), context_size)
 - Potential large context when analyzing changes
 - **Risk**: High - Core workflow command
 
-**`push.py`**: 
+**`push.py`**:
 - Git push operations can timeout
 - File status checking operations
 - **Risk**: High - Critical deployment command
@@ -144,10 +144,10 @@ from typing import Any, Dict, List, Optional
 # UNIVERSAL TIMEOUT PROTECTION - Add to ALL commands
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'lib'))
 from request_optimizer import (
-    optimize_file_read, 
+    optimize_file_read,
     optimize_multiedit,
-    check_request_size, 
-    handle_timeout, 
+    check_request_size,
+    handle_timeout,
     optimizer
 )
 
@@ -171,7 +171,7 @@ def protected_subprocess(cmd: List[str], operation_name: str, timeout: int = 60)
     """Run subprocess with timeout protection"""
     attempt = 1
     max_attempts = 3
-    
+
     while attempt <= max_attempts:
         try:
             return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=True)
@@ -189,13 +189,13 @@ def protected_subprocess(cmd: List[str], operation_name: str, timeout: int = 60)
 
 def main():
     start_time = time.time()
-    
+
     # Command logic here with protected operations
-    
+
     # Performance monitoring
     duration = time.time() - start_time
     print(f"\n⏱️ Command completed in {duration:.1f}s")
-    
+
     # Show optimization report if issues occurred
     opt_report = optimizer.get_optimization_report()
     if "No timeouts recorded" not in opt_report:
@@ -223,7 +223,7 @@ if __name__ == "__main__":
 
 **Week 1**: Audit all commands, categorize by risk level
 **Week 2**: Implement protection for high-risk commands (pr.py, push.py, etc.)
-**Week 3**: Apply template to medium-risk commands  
+**Week 3**: Apply template to medium-risk commands
 **Week 4**: Testing, refinement, and performance validation
 
 ## 📝 **Notes**

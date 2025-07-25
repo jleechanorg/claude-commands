@@ -1,6 +1,6 @@
 # Anti-Demo Hook System Design
-**Branch**: dev1752951728  
-**Date**: 2025-07-19  
+**Branch**: dev1752951728
+**Date**: 2025-07-19
 **Purpose**: Design a two-phase hook system to prevent generation of demo/simulated/fake code
 
 ## Problem Statement
@@ -22,13 +22,13 @@ The LLM sometimes generates placeholder, demo, or simulated code instead of real
 ## Proposed Solution: Two-Phase Validation System
 
 ### Phase 1: Keyword Detection Hook
-**Mechanism**: Shell-based hook on tool usage  
-**Trigger**: Write/Edit/MultiEdit tool calls  
+**Mechanism**: Shell-based hook on tool usage
+**Trigger**: Write/Edit/MultiEdit tool calls
 **Action**: Pattern matching with context awareness
 
 ### Phase 2: Self-Analysis Protocol
-**Mechanism**: Embedded verification prompts  
-**Trigger**: After code generation  
+**Mechanism**: Embedded verification prompts
+**Trigger**: After code generation
 **Action**: LLM evaluates its own output for completeness
 
 ## Phase 1 Implementation Design
@@ -85,13 +85,13 @@ for pattern in "${PATTERNS[@]}"; do
     if is_test_file "$FILE_PATH" || is_mock_file "$FILE_PATH"; then
       continue
     fi
-    
+
     # Alert and optionally block
     echo "⚠️  WARNING: Potential demo/placeholder code detected!"
     echo "   Pattern: $pattern"
     echo "   File: $FILE_PATH"
     echo "   Consider implementing real functionality"
-    
+
     # Optionally block the operation
     # exit 1  # Uncomment to block
   fi

@@ -4,26 +4,28 @@ Loads world files and creates combined instruction content for AI system.
 """
 
 import os
+
 import logging_util
 from file_cache import read_file_cached
+
 # World file paths - only used in this module
 # The world directory is now permanently located within mvp_site/world/
 WORLD_DIR = os.path.join(os.path.dirname(__file__), "world")
-    
+
 WORLD_ASSIAH_PATH = os.path.join(WORLD_DIR, "world_assiah_compressed.md")
 BANNED_NAMES_PATH = os.path.join(WORLD_DIR, "banned_names.md")
 
 def load_banned_names():
     """
     Load the banned names from the dedicated banned_names.md file
-    
+
     Returns:
         str: Banned names content or empty string if not found.
     """
     try:
         banned_content = read_file_cached(BANNED_NAMES_PATH).strip()
         return banned_content
-            
+
     except FileNotFoundError:
         logging_util.warning(f"Banned names file not found at {BANNED_NAMES_PATH}")
         return ""
@@ -35,7 +37,7 @@ def load_banned_names():
 def load_world_content_for_system_instruction():
     """
     Load world file and create system instruction.
-    
+
     Returns:
         str: Combined world content formatted for system instruction
     """
@@ -43,10 +45,10 @@ def load_world_content_for_system_instruction():
         # Load world content using cached file reader
         logging_util.info(f"Looking for world content at: {WORLD_ASSIAH_PATH}")
         world_content = read_file_cached(WORLD_ASSIAH_PATH).strip()
-        
+
         # Load banned names list
         banned_names_content = load_banned_names()
-        
+
         # Build the base content
         combined_parts = [
             "# WORLD CONTENT FOR CAMPAIGN CONSISTENCY",
@@ -58,7 +60,7 @@ def load_world_content_for_system_instruction():
             "",
             "---"
         ]
-        
+
         # Only add banned names section if content was loaded
         if banned_names_content:
             combined_parts.extend([
@@ -77,7 +79,7 @@ def load_world_content_for_system_instruction():
                 "",
                 "---"
             ])
-        
+
         # Add world consistency rules
         combined_parts.extend([
             "",
@@ -88,20 +90,20 @@ def load_world_content_for_system_instruction():
             "4. **Cultural Accuracy**: Maintain consistency in world cultures and societies",
             "5. **Geographic Consistency**: Respect established locations and their descriptions"
         ])
-        
+
         # Only add rule 6 if banned names were loaded
         if banned_names_content:
             combined_parts.append("6. **Name Restrictions**: NEVER use any name from the CRITICAL NAMING RESTRICTIONS section")
-        
+
         combined_parts.extend([
             "",
             "Use this world content to enhance campaign narratives while maintaining consistency with established lore."
         ])
-        
+
         combined_content = "\n".join(combined_parts)
-        
+
         return combined_content
-        
+
     except FileNotFoundError as e:
         logging_util.error(f"CRITICAL: World file not found: {e}")
         raise

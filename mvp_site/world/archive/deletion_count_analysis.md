@@ -22,7 +22,7 @@
 
 ### 3. Content Enhanced/Replaced (Not deleted)
 - Brief descriptions replaced with detailed versions
-- "Valerius" corrected to "Darius" 
+- "Valerius" corrected to "Darius"
 - Simple location descriptions expanded
 - Seven Apostates list expanded with details
 **Count: ~30 lines**

@@ -65,12 +65,12 @@ def load_world_content_for_system_instruction():
         book_path = os.path.join(os.path.dirname(__file__), CELESTIAL_WARS_BOOK_PATH)
         with open(book_path, 'r', encoding='utf-8') as f:
             book_content = f.read().strip()
-        
+
         # Load world content
         world_path = os.path.join(os.path.dirname(__file__), WORLD_ASSIAH_PATH)
         with open(world_path, 'r', encoding='utf-8') as f:
             world_content = f.read().strip()
-        
+
         return f"Book: {len(book_content)} chars, World: {len(world_content)} chars"
     except FileNotFoundError as e:
         raise FileNotFoundError(f"World file not found: {e}")

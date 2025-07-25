@@ -42,7 +42,7 @@ Already configured to use the `~/.token` file for testing token availability.
    ```bash
    # Create the token file
    ./scripts/load_tokens.sh create
-   
+
    # Edit with your actual tokens
    nano ~/.token
    ```
@@ -51,12 +51,12 @@ Already configured to use the `~/.token` file for testing token availability.
    ```bash
    # Token Configuration File
    # This file should be kept secure with chmod 600 permissions
-   
+
    # GitHub Personal Access Token
    # Generate at: https://github.com/settings/tokens
    # Required scopes: repo, read:org, read:user
    export GITHUB_TOKEN="ghp_your_github_token_here"
-   
+
    # Perplexity API Key (optional)
    # Generate at: https://www.perplexity.ai/settings/api
    export PERPLEXITY_API_KEY="pplx_your_perplexity_token_here"
@@ -205,7 +205,7 @@ If you have an existing `.token` file in the project root:
    ```bash
    # Old format (single token)
    ghp_your_token_here
-   
+
    # New format (environment variables)
    export GITHUB_TOKEN="ghp_your_token_here"
    export PERPLEXITY_API_KEY="pplx_your_token_here"

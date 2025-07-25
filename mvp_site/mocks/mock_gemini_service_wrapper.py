@@ -5,16 +5,19 @@ Mock Gemini Service wrapper that provides the same interface as the real gemini_
 import os
 import sys
 
-from .structured_fields_fixtures import FULL_STRUCTURED_RESPONSE
-from .structured_fields_fixtures import INITIAL_CAMPAIGN_RESPONSE
+from .structured_fields_fixtures import (
+    FULL_STRUCTURED_RESPONSE,
+    INITIAL_CAMPAIGN_RESPONSE,
+)
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from .mock_gemini_service import MockGeminiClient
 import logging_util
 from gemini_response import GeminiResponse
 from narrative_response_schema import NarrativeResponse
+
+from .mock_gemini_service import MockGeminiClient
 
 # Module-level client instance (like the real service)
 _client = None
@@ -27,23 +30,23 @@ def get_client():
         _client = MockGeminiClient()
     return _client
 
-def generate_content(prompt_parts, temperature=None, max_output_tokens=None, 
+def generate_content(prompt_parts, temperature=None, max_output_tokens=None,
                     top_p=None, top_k=None, response_mime_type=None,
                     response_schema=None, model_name=None):
     """
     Mock generate_content function that mimics the real service interface.
-    
+
     Note: Parameters temperature, max_output_tokens, top_p, top_k, response_mime_type,
     and response_schema are accepted for API compatibility but not used in mock.
     """
     client = get_client()
-    
+
     # Log the call
     logging_util.debug(f"Mock Gemini Service: generate_content called with model={model_name}")
-    
+
     # The mock doesn't use these parameters but accepts them for compatibility
     response = client.generate_content(prompt_parts, model=model_name)
-    
+
     return response
 
 def get_initial_story(prompt, selected_prompts=None, generate_companions=False, use_default_world=False):
@@ -52,7 +55,7 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
     """
     client = get_client()
     logging_util.info("Mock Gemini Service: get_initial_story called")
-    
+
     # Import structured response fixture for initial story
     try:
 
@@ -66,7 +69,7 @@ def get_initial_story(prompt, selected_prompts=None, generate_companions=False, 
 Gareth leans in closer, his voice dropping to a whisper. "There's an old map in my possession. Shows the way to the Whispering Woods where the crown was last seen. But I'll need something in return..."
 
 What do you do?"""
-    
+
     # Create NarrativeResponse object with proper parameters
     # Use structured fields from fixture if available
     if 'INITIAL_CAMPAIGN_RESPONSE' in locals():
@@ -95,11 +98,11 @@ What do you do?"""
                 "setting": "Assiah"
             }
         }
-        
+
         narrative_response = NarrativeResponse(
             narrative=narrative_text,
             entities_mentioned=[],
-            location_confirmed="Character Creation", 
+            location_confirmed="Character Creation",
             turn_summary="Campaign creation started.",
             state_updates=state_updates,
             session_header="[SESSION_HEADER]\nTimestamp: Unknown\nLocation: Character Creation\nStatus: Creating Character",
@@ -126,13 +129,13 @@ What do you do?"""
             dice_rolls=[],
             resources="None"
         )
-    
+
     # Create GeminiResponse object
     response = GeminiResponse(
         narrative_text=narrative_text,
         structured_response=narrative_response
     )
-    
+
     return response
 
 def continue_story(user_input, mode, story_context, current_game_state, selected_prompts=None, use_default_world=False):
@@ -141,13 +144,13 @@ def continue_story(user_input, mode, story_context, current_game_state, selected
     """
     client = get_client()
     logging_util.info(f"Mock Gemini Service: continue_story called with mode={mode}")
-    
+
     # Use the imported classes
-    
+
     # Generate a response based on the user input
     if "attack" in user_input.lower():
         narrative_text = """You draw your sword and charge at your opponent! The clash of steel rings through the air as you engage in fierce combat.
-        
+
 Your strike lands true, dealing damage to your enemy."""
         state_updates = {
             "combat_active": True,
@@ -155,7 +158,7 @@ Your strike lands true, dealing damage to your enemy."""
         }
     elif "talk" in user_input.lower() or "speak" in user_input.lower():
         narrative_text = """You approach cautiously and attempt to engage in conversation. The figure turns to face you, revealing weathered features and wise eyes.
-        
+
 "Greetings, traveler," they say. "I've been expecting you."""
         state_updates = {
             "npcs": [
@@ -167,16 +170,16 @@ Your strike lands true, dealing damage to your enemy."""
         }
     else:
         narrative_text = f"""You {user_input}.
-        
+
 The world responds to your actions, and new possibilities unfold before you."""
         state_updates = {}
-    
+
     # Import structured fields if available
     try:
         from .structured_fields_fixtures import FULL_STRUCTURED_RESPONSE
     except ImportError:
         FULL_STRUCTURED_RESPONSE = None
-    
+
     # Add structured fields to the response
     if FULL_STRUCTURED_RESPONSE:
         # Use full structured fields from fixtures
@@ -206,13 +209,13 @@ The world responds to your actions, and new possibilities unfold before you."""
             turn_summary="Action taken.",
             state_updates=state_updates
         )
-    
+
     response = GeminiResponse(
         narrative_text=narrative_text,
         structured_response=narrative_response
     )
-    
+
     return response
 
-# Export the same functions as the real service  
+# Export the same functions as the real service
 __all__ = ['get_client', 'generate_content', 'get_initial_story', 'continue_story']

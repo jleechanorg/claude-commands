@@ -10,6 +10,7 @@ This test reproduces the exact user workflow that leads to the persistent spinne
 """
 
 import http.server
+import socket
 import socketserver
 import threading
 import time
@@ -22,7 +23,6 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-import socket
 
 # Try to import Selenium - skip tests if not available
 try:
@@ -145,7 +145,7 @@ class CampaignWizardResetReproductionTest(unittest.TestCase):
                     <h2>Campaign Dashboard</h2>
                     <button id="start-campaign-btn" class="btn btn-primary">Start Campaign</button>
                 </div>
-                
+
                 <div id="campaign-creation-section" style="display: block;">
                     <form id="new-campaign-form">
                         <input id="campaign-title" value="Test Campaign" />
@@ -153,35 +153,35 @@ class CampaignWizardResetReproductionTest(unittest.TestCase):
                         <button type="button" id="begin-adventure-btn" onclick="beginAdventure()">Begin Adventure!</button>
                     </form>
                 </div>
-                
+
                 <div id="campaign-wizard"></div>
             `;
-            
+
             // Mock the campaign wizard object
             window.campaignWizard = {
                 isEnabled: false,
-                
+
                 enable() {
                     console.log('🔧 Campaign wizard enabled');
                     this.isEnabled = true;
                     this.forceCleanRecreation();
                 },
-                
+
                 forceCleanRecreation() {
                     console.log('🧹 Force clean recreation called');
                     const existingWizard = document.getElementById('campaign-wizard');
                     const existingSpinner = document.getElementById('campaign-creation-spinner');
-                    
+
                     if (existingWizard) {
                         existingWizard.innerHTML = ''; // Clear any existing content
                     }
                     if (existingSpinner) {
                         existingSpinner.remove();
                     }
-                    
+
                     this.replaceOriginalForm();
                 },
-                
+
                 replaceOriginalForm() {
                     console.log('🔄 Replace original form called');
                     const wizardContainer = document.getElementById('campaign-wizard');
@@ -194,11 +194,11 @@ class CampaignWizardResetReproductionTest(unittest.TestCase):
                         `;
                     }
                 },
-                
+
                 showDetailedSpinner() {
                     console.log('⏳ Show detailed spinner called');
                     const container = document.getElementById('campaign-wizard');
-                    
+
                     // This is the PROBLEMATIC code that destroys wizard structure
                     const spinnerHTML = `
                         <div id="campaign-creation-spinner" class="text-center py-5">
@@ -211,13 +211,13 @@ class CampaignWizardResetReproductionTest(unittest.TestCase):
                             </div>
                         </div>
                     `;
-                    
+
                     if (container) {
                         // REPRODUCE THE BUG: This destroys the wizard content
                         container.innerHTML = spinnerHTML;
                     }
                 },
-                
+
                 completeProgress() {
                     console.log('✅ Complete progress called');
                     // Simulate campaign creation completion
@@ -225,7 +225,7 @@ class CampaignWizardResetReproductionTest(unittest.TestCase):
                         this.navigateToDashboard();
                     }, 1000);
                 },
-                
+
                 navigateToDashboard() {
                     console.log('📊 Navigating to dashboard');
                     document.getElementById('campaign-creation-section').style.display = 'none';
@@ -233,18 +233,18 @@ class CampaignWizardResetReproductionTest(unittest.TestCase):
                     this.isEnabled = false;
                 }
             };
-            
+
             // Mock the beginAdventure function
             window.beginAdventure = function() {
                 console.log('🚀 Begin Adventure clicked');
                 window.campaignWizard.showDetailedSpinner();
-                
+
                 // Simulate backend processing time
                 setTimeout(() => {
                     window.campaignWizard.completeProgress();
                 }, 2000);
             };
-            
+
             // Mock the start campaign function
             window.startCampaign = function() {
                 console.log('🎯 Start Campaign clicked');
@@ -252,7 +252,7 @@ class CampaignWizardResetReproductionTest(unittest.TestCase):
                 document.getElementById('campaign-creation-section').style.display = 'block';
                 window.campaignWizard.enable();
             };
-            
+
             // Add event listener for start campaign button
             document.getElementById('start-campaign-btn').addEventListener('click', startCampaign);
         """)
