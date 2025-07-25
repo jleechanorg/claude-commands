@@ -6,13 +6,10 @@ Tests against real desync scenarios from mock and Sariel campaigns
 import unittest
 
 from ..validators.narrative_sync_validator import (
-    NarrativeSyncValidator,
-    ValidationResult
-)
-
     EntityContext,
     EntityPresenceType,
     NarrativeSyncValidator,
+    ValidationResult
 )
 
 
