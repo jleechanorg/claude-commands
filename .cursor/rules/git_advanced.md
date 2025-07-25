@@ -24,7 +24,8 @@ Detailed git workflows and conflict resolution procedures referenced in CLAUDE.m
 - ✅ **Step 2**: Determine branch type (sync-main-*, feature branch, main)
 - ✅ **Step 3**: Select appropriate remote comparison:
   - **sync-main-*** branches → Compare to `origin/main`
-  - **Feature branches** → Compare to `origin/branch-name` if the branch is tracked locally and changes need to be compared to the remote branch on the same repository. Use `upstream` if the branch is forked from another repository and changes need to be compared to the original repository.
+  - **Feature branches – same repo** → compare to `origin/<branch>`
+  - **Feature branches – fork** → compare to `upstream/<branch>`
   - **main branch** → Compare to `origin/main`
 - ✅ **Step 4**: Execute comparison commands with correct remote
 - ❌ NEVER run git comparisons without context verification (i.e., identifying the current branch, determining the branch type, and selecting the appropriate remote comparison as outlined in Steps 1–3 above)

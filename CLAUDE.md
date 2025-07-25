@@ -107,6 +107,9 @@
 
 🚨 **NO FAKE IMPLEMENTATIONS**: ⚠️ MANDATORY - Always audit existing functionality before implementing new code
 - ❌ NEVER create placeholder/demo code | ✅ ALWAYS build real, functional implementations
+- **Example**: 
+  - ❌ Fake: `function fetchData() { return "TODO: Implement API call"; }` (placeholder with no real functionality)
+  - ✅ Real: `function fetchData() { return fetch('/api/data').then(response => response.json()); }` (fully functional implementation)
 - **Details**: → `.cursor/rules/meta_rules_detailed.md`
 
 🚨 **ORCHESTRATION OVER DUPLICATION**: ⚠️ MANDATORY - Orchestrators delegate, never reimplement
@@ -120,6 +123,11 @@
 🚨 **NO FALSE PROMISES**: Be honest about capabilities | Conservative language | Deliver or don't promise
 
 🚨 **NO UNNECESSARY EXTERNAL APIS**: Try direct Claude solution first before adding dependencies
+- **Decision Framework**:
+  1. **Ask**: Can Claude solve this directly using its built-in capabilities?
+  2. **Test**: Attempt a direct Claude solution and evaluate its effectiveness.
+  3. **Integrate**: Only add external APIs if the direct solution is insufficient or infeasible.
+- **Key Question**: "What can Gemini do here that Claude cannot?"
 - **Details**: → `.cursor/rules/meta_rules_detailed.md`
 
 🚨 **USE LLM CAPABILITIES**: Leverage natural language understanding, avoid regex/keyword matching
