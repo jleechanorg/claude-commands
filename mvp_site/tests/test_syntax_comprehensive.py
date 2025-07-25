@@ -1,11 +1,13 @@
 import ast
 import importlib.util
 import os
+import sys
 import unittest
 
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from game_state import GameState
-import os
-import sys
 
 
 class TestComprehensiveSyntax(unittest.TestCase):

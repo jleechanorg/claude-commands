@@ -11,11 +11,10 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
-from tests.fake_firestore import FakeFirestoreClient
-
 # Add parent directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from tests.fake_firestore import FakeFirestoreClient
 import firestore_service
 
 
