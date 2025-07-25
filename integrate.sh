@@ -20,13 +20,13 @@ set -euo pipefail  # Exit on any error with stricter error handling
 
 # Colors for output
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 # Help function
 show_help() {
-    echo "integrate.sh - Integration workflow for WorldArchitect.AI development"
+    repo_name=$(basename -s .git "$(git config --get remote.origin.url)" 2>/dev/null || echo "current project")
+    echo "integrate.sh - Integration workflow for $repo_name development"
     echo ""
     echo "Usage: $0 [branch-name] [--force] [--new-branch] [--help]"
     echo ""
@@ -67,33 +67,38 @@ FORCE_MODE=false
 NEW_BRANCH_MODE=false
 CUSTOM_BRANCH_NAME=""
 
-# First pass: look for --new-branch and get its optional value
-for ((i=1; i<=$#; i++)); do
-    if [[ "${!i}" == "--new-branch" ]]; then
-        NEW_BRANCH_MODE=true
-        echo "🌿 NEW BRANCH MODE: Will not delete current branch"
-        # Check if next argument exists and is not a flag
-        next_idx=$((i + 1))
-        if [ $next_idx -le $# ] && [[ "${!next_idx}" != --* ]]; then
-            CUSTOM_BRANCH_NAME="${!next_idx}"
-        fi
-    fi
-done
-
-# Second pass: handle other arguments
-for arg in "$@"; do
-    if [[ "$arg" == "--force" ]]; then
-        FORCE_MODE=true
-        echo -e "${RED}🚨 FORCE MODE: Overriding safety checks${NC}"
-    elif [[ "$arg" == "--new-branch" ]]; then
-        # Already handled in first pass
-        continue
-    elif [[ "$arg" == "--help" ]] || [[ "$arg" == "-h" ]]; then
-        show_help
-    elif [ -z "$CUSTOM_BRANCH_NAME" ] && [[ "$arg" != --* ]]; then
-        # Only set branch name if not already set by --new-branch
-        CUSTOM_BRANCH_NAME="$arg"
-    fi
+# Single-pass argument parsing
+while (( $# )); do
+    case "$1" in
+        --new-branch)
+            NEW_BRANCH_MODE=true
+            echo "🌿 NEW BRANCH MODE: Will not delete current branch"
+            # Check if next argument exists and is not a flag
+            if [[ $# -gt 1 && "$2" != --* ]]; then
+                CUSTOM_BRANCH_NAME="$2"
+                shift  # consume the branch name
+            fi
+            ;;
+        --force)
+            FORCE_MODE=true
+            echo -e "${RED}🚨 FORCE MODE: Overriding safety checks${NC}"
+            ;;
+        -h|--help)
+            show_help
+            ;;
+        --*)
+            echo "Unknown flag: $1" >&2
+            exit 1
+            ;;
+        *)
+            if [[ -z "$CUSTOM_BRANCH_NAME" ]]; then
+                CUSTOM_BRANCH_NAME="$1"
+            else
+                echo "Multiple branch names provided. Using: $CUSTOM_BRANCH_NAME" >&2
+            fi
+            ;;
+    esac
+    shift
 done
 
 echo -e "${GREEN}🔄 Starting integration process...${NC}"
@@ -130,25 +135,27 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
     fi
     
     # Check if current branch has unpushed commits - HARD STOP
-    if git status --porcelain=v1 -b | grep -q "ahead"; then
-        # Extract commit count from git status output
-        commit_count=$(git status --porcelain=v1 -b | grep "ahead" | sed 's/.*ahead \([0-9]*\).*/\1/')
-        echo -e "${RED}❌ HARD STOP: Branch '$current_branch' has $commit_count unpushed commit(s):${NC}"
-        echo ""
-        echo "   📋 COMMIT SUMMARY:"
-        git log --oneline -n "$commit_count" | head -10 | sed 's/^/     /'
-        echo ""
-        echo "   📊 FILES CHANGED:"
-        git diff --name-only HEAD~"$commit_count" | head -10 | sed 's/^/     /'
-        echo ""
-        if [ "$FORCE_MODE" = true ]; then
-            echo -e "${RED}🚨 FORCE MODE: Proceeding anyway (unpushed commits will be abandoned)${NC}"
-        else
-            echo "   Please push these changes or create a PR before integrating."
-            echo "   Use: git push origin HEAD:$current_branch"
-            echo "   Or:  gh pr create"
-            echo "   Or:  ./integrate.sh --force (to abandon commits)"
-            exit 1
+    ahead_ref="$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || true)"
+    if [[ -n "$ahead_ref" ]]; then
+        commit_count=$(git rev-list --count "${ahead_ref}..HEAD")
+        if [[ $commit_count -gt 0 ]]; then
+            echo -e "${RED}❌ HARD STOP: Branch '$current_branch' has $commit_count unpushed commit(s):${NC}"
+            echo ""
+            echo "   📋 COMMIT SUMMARY:"
+            git log --oneline -n "$commit_count" | head -10 | sed 's/^/     /'
+            echo ""
+            echo "   📊 FILES CHANGED:"
+            git diff --name-only HEAD~"$commit_count" | head -10 | sed 's/^/     /'
+            echo ""
+            if [ "$FORCE_MODE" = true ]; then
+                echo -e "${RED}🚨 FORCE MODE: Proceeding anyway (unpushed commits will be abandoned)${NC}"
+            else
+                echo "   Please push these changes or create a PR before integrating."
+                echo "   Use: git push origin HEAD:$current_branch"
+                echo "   Or:  gh pr create"
+                echo "   Or:  ./integrate.sh --force (to abandon commits)"
+                exit 1
+            fi
         fi
     else
         # Branch is clean (no uncommitted changes, no unpushed commits)
@@ -329,7 +336,7 @@ fi
 
 # Check if there are any local branches that haven't been pushed
 echo -e "\n${GREEN}3. Checking for unmerged local branches...${NC}"
-unpushed_branches=$(git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads | grep -v "main" | grep "\[ahead" || true)
+unpushed_branches=$(git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads | grep -vE '^main$' | grep '\[ahead' || true)
 if [ -n "$unpushed_branches" ]; then
     echo "⚠️  WARNING: Found branches with unpushed commits:"
     echo "$unpushed_branches"
