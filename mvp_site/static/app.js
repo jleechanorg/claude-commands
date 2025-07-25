@@ -150,6 +150,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 isNavigatingToNewCampaignDirectly = false; // Reset the flag after use
             }
             showView('newCampaign');
+        } else if (path === '/settings') {
+            // Navigate to settings page
+            window.location.href = '/settings';
         } else {
             currentCampaignId = null;
             renderCampaignList();
@@ -1150,7 +1153,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Settings button navigation
     document.getElementById('settings-btn').addEventListener('click', () => {
-        window.location.href = '/settings';
+        history.pushState({}, '', '/settings');
+        handleRouteChange();
     });
     window.addEventListener('popstate', handleRouteChange);
 });
