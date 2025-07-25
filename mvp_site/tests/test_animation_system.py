@@ -148,8 +148,8 @@ class TestAnimationSystem(unittest.TestCase):
 
         # Theme-specific features
         theme_features = [
-            '[data-theme="fantasy"]',
-            '[data-theme="cyberpunk"]',
+            "[data-theme='fantasy']",
+            "[data-theme='cyberpunk']",
             "@keyframes sparkle",
             "box-shadow:",
         ]
