@@ -16,7 +16,7 @@ The Python component automatically:
 1. Runs three-layer CI verification (local, GitHub, merge-tree)
 2. Detects merge conflicts
 3. Compares CI results to find discrepancies
-4. Outputs comparison data to `/tmp/copilot/`
+4. Outputs comparison data to `/tmp/copilot_${SANITIZED_BRANCH}/`
 5. **NEW**: With `--auto-apply`, extracts and applies fixes from bot comments
 6. **NEW**: Re-runs CI after applying fixes to verify success
 
@@ -24,12 +24,14 @@ The Python component automatically:
 
 Read the collected data:
 ```bash
-# Check what fixpr.py collected
-cat /tmp/copilot/fixes.json
-cat /tmp/copilot/comparison.json
-cat /tmp/copilot/conflicts.json
+# Check what fixpr.py collected (using PR #941 standard)
+BRANCH=$(git branch --show-current)
+SANITIZED_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/_/g' | sed 's/^[.-]*//g')
+cat /tmp/copilot_${SANITIZED_BRANCH}/fixes.json
+cat /tmp/copilot_${SANITIZED_BRANCH}/comparison.json
+cat /tmp/copilot_${SANITIZED_BRANCH}/conflicts.json
 # NEW: Check applied fixes if --auto-apply was used
-cat /tmp/copilot/applied_fixes.json
+cat /tmp/copilot_${SANITIZED_BRANCH}/applied_fixes.json
 ```
 
 **Auto-Fix Mode**: When `--auto-apply` is enabled:

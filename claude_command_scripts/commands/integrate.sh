@@ -52,6 +52,11 @@ fi
 
 echo -e "${GREEN}🔄 Starting integration workflow...${NC}"
 
+# Source ~/.bashrc to ensure environment is properly set up
+if [ -f ~/.bashrc ]; then
+    source ~/.bashrc
+fi
+
 # 1. Check for uncommitted changes
 if ! git diff --quiet || ! git diff --cached --quiet; then
     echo -e "${YELLOW}📦 Stashing uncommitted changes...${NC}"

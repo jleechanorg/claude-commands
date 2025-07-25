@@ -105,86 +105,33 @@
    - ❌ Avoid generic advice about "command overload" or "cognitive load"
    - ❌ Avoid patronizing about user interface complexity or learning curves
 
-🚨 **NO FAKE IMPLEMENTATIONS**: ⚠️ MANDATORY
+🚨 **NO FAKE IMPLEMENTATIONS**: ⚠️ MANDATORY - Always audit existing functionality before implementing new code
+- ❌ NEVER create placeholder/demo code | ✅ ALWAYS build real, functional implementations
+- **Example**: 
+  - ❌ Fake: `function fetchData() { return "TODO: Implement API call"; }` (placeholder with no real functionality)
+  - ✅ Real: `function fetchData() { return fetch('/api/data').then(response => response.json()); }` (fully functional implementation)
+- **Details**: → `.cursor/rules/meta_rules_detailed.md`
 
-**CRITICAL ANTI-PATTERN**: Always audit existing functionality before implementing new code
+🚨 **ORCHESTRATION OVER DUPLICATION**: ⚠️ MANDATORY - Orchestrators delegate, never reimplement
+- ✅ Use existing commands | ❌ NEVER duplicate protocols
+- **Details**: → `.cursor/rules/meta_rules_detailed.md`
 
-- ❌ NEVER create files with "# Note: In the real implementation" comments
-- ❌ NEVER write placeholder code that doesn't actually work  
-- ❌ NEVER create demonstration files instead of working implementations
-- ❌ NEVER create Python intelligence files when .md files handle the logic
-- ❌ NEVER duplicate systematic protocols that already exist in other .md files
-- ❌ NEVER reimplement existing command functionality (use orchestration instead)
-- ✅ ALWAYS audit existing commands and .md files before writing new implementations
-- ✅ ALWAYS build real, functional code that works immediately
-- ✅ ALWAYS enhance existing systems rather than creating fake parallel ones
-- ✅ ALWAYS check if functionality exists: Read existing commands, Grep for patterns
-- **Pattern**: Real implementation > No implementation > Fake implementation
-- **Evidence**: PR #820 - 563+ lines of fake code removed (fixpr.py, commentreply.py, copilot.md duplication)
-- **Evidence**: orchestrate_enhanced.py with placeholder comments frustrated user
-- **Rule**: If you can't implement it properly, don't create the file at all
-
-🚨 **ORCHESTRATION OVER DUPLICATION**: ⚠️ MANDATORY  
-- **Principle**: Orchestrators delegate to existing commands, never reimplement their functionality
-- ✅ Pattern: New commands should be orchestrators, not implementers
-- ✅ Use existing /commentreply, /pushl, /fixpr rather than duplicating their logic
-- ✅ Add command summary at top of orchestrator .md files to prevent confusion
-- ❌ NEVER copy systematic protocols from other .md files into new commands
-- ❌ NEVER duplicate GitHub API commands that already exist in other commands
-- **Evidence**: PR #812 (https://github.com/WorldArchitectAI/repo/pull/812) - 120 lines of duplicate systematic protocol removed from copilot.md
-- **Architecture**: copilot = orchestrator, not implementer
-
-🚨 **NO OVER-ENGINEERING**: Prevent building parallel inferior systems vs enhancing existing ones
-   - ✅ ALWAYS ask "Can the LLM handle this naturally?" before building parsers/analytics systems
-   - ✅ ALWAYS try enhancing existing systems before building parallel new ones  
-   - ✅ ALWAYS prioritize user workflow integration over technical sophistication
-   - ❌ NEVER build parallel command execution systems - enhance Claude Code CLI instead
-   - ❌ NEVER build complex parsing when LLM can understand intent naturally
-   - ❌ NEVER add analytics/tracking beyond core functionality needs
-   - **Pattern**: Trust LLM capabilities, enhance existing systems, prioritize immediate user value
-   - **Evidence**: Command composition over-engineering (PR #737) - a parallel command execution system was built instead of enhancing the existing Claude Code CLI. This led to unnecessary complexity, duplication of functionality, and reduced maintainability.
-   - **Evidence**: Orchestration parallel development (PR #790) - created .claude/commands/orchestrate.py instead of enhancing existing orchestration/ directory with Redis infrastructure. Fixed by migrating LLM features TO the mature system and deleting parallel implementation.
-   - **Root Causes**: LLM capability underestimation, perfectionist engineering, integration avoidance, demo-driven development, insufficient analysis of existing infrastructure
+🚨 **NO OVER-ENGINEERING**: Enhance existing systems before building parallel ones
+- ✅ Ask "Can LLM handle this naturally?" | ✅ Prioritize user workflow integration
+- **Details**: → `.cursor/rules/meta_rules_detailed.md`
 
 🚨 **NO FALSE PROMISES**: Be honest about capabilities | Conservative language | Deliver or don't promise
 
-🚨 **NO UNNECESSARY EXTERNAL APIS**: Before adding ANY external API integration:
-   - ✅ FIRST ask "Can Claude solve this directly without external APIs?"
-   - ✅ ALWAYS try direct implementation before adding dependencies
-   - ✅ TEST the direct solution - if it works, STOP there
-   - ❌ NEVER default to Gemini API just because it exists in codebase
-   - ❌ NEVER add external LLM calls when Claude can generate responses directly
-   - **Pattern**: Direct solution → Justify external need → Only then integrate
-   - **Anti-pattern**: See AI task → Immediately reach for Gemini API
-   - **Evidence**: GitHub comment fiasco (PR #796) - built Gemini integration that degraded to useless generic templates when Claude could have generated responses directly
+🚨 **NO UNNECESSARY EXTERNAL APIS**: Try direct Claude solution first before adding dependencies
+- **Decision Framework**:
+  1. **Ask**: Can Claude solve this directly using its built-in capabilities?
+  2. **Test**: Attempt a direct Claude solution and evaluate its effectiveness.
+  3. **Integrate**: Only add external APIs if the direct solution is insufficient or infeasible.
+- **Key Question**: "What can Gemini do here that Claude cannot?"
+- **Details**: → `.cursor/rules/meta_rules_detailed.md`
 
-🚨 **GEMINI API JUSTIFICATION REQUIRED**: Gemini should ONLY be used when:
-   - ✅ The task requires capabilities Claude doesn't have (e.g., image generation)
-   - ✅ The system needs to work autonomously without Claude present
-   - ✅ Specific model features are required (e.g., specific Gemini models)
-   - ✅ User explicitly requests Gemini integration
-   - ❌ NEVER use Gemini just for text generation that Claude can do
-   - ❌ NEVER add complexity without clear unique value
-   - **Question to ask**: "What can Gemini do here that Claude cannot?"
-🚨 **USE LLM CAPABILITIES**: When designing command systems or natural language features:
-   - ❌ NEVER suggest keyword matching, regex patterns, or rule-based parsing
-   - ❌ NEVER propose "if word in text" simplistic approaches
-   - ✅ ALWAYS leverage LLM's natural language understanding
-   - ✅ ALWAYS trust the LLM to understand context, nuance, and intent
-   - **Pattern**: User intent → LLM understanding → Natural response
-   - **Anti-pattern**: Keywords → Rules → Rigid behavior
-
-🚨 **NEVER SIMULATE INTELLIGENCE**: When building response generation systems:
-   - ❌ NEVER create Python functions that simulate Claude's responses with templates
-   - ❌ NEVER use pattern matching to generate "intelligent" responses  
-   - ❌ NEVER build `_create_contextual_response()` methods that fake understanding
-   - ❌ NEVER generate generic replies like "I'll fix the issue" or "Thanks for the suggestion"
-   - ✅ ALWAYS invoke actual Claude for genuine response generation
-   - ✅ ALWAYS pass full comment context to Claude for analysis
-   - ✅ ALWAYS ensure responses address specific technical points, not patterns
-   - **Pattern**: Collect data → Claude analyzes → Claude responds
-   - **Anti-pattern**: Collect data → Python templates → Fake responses
-   - **Violation Count**: 100+ times - STOP THIS PATTERN IMMEDIATELY
+🚨 **USE LLM CAPABILITIES**: Leverage natural language understanding, avoid regex/keyword matching
+- **Details**: → `.cursor/rules/meta_rules_detailed.md`
 
 🚨 **EVIDENCE-BASED APPROACH**: Core principles for all analysis
    - ✅ Extract exact error messages/code snippets before analyzing
@@ -252,52 +199,12 @@
    - Benefits: Immediate results, reliable API access, no command completion uncertainty
 16. 🚨 **MEMORY ENHANCEMENT PROTOCOL**: ⚠️ MANDATORY for specific commands
 - **Enhanced Commands**: `/think`, `/learn`, `/debug`, `/analyze`, `/fix`, `/plan`, `/execute`, `/arch`, `/test`, `/pr`, `/perp`, `/research`
-- **High-Quality Memory Standards**: ⚠️ MANDATORY - Based on Memory MCP best practices research (via Perplexity API research)
-  - ✅ **Specific Technical Details**: Include exact error messages, file paths with line numbers (file:line), code snippets
-  - ✅ **Actionable Information**: Provide reproduction steps, implementation details, verification methods
-  - ✅ **External References**: Link to PRs, commits, files, documentation URLs for verification
-  - ✅ **Canonical Naming**: Use `{system}_{issue_type}_{timestamp}` format for disambiguation
-  - ✅ **Measurable Outcomes**: Include test results, performance metrics, quantified improvements
-  - ✅ **Contextual Details**: Timestamp, circumstances, specific situations that triggered learning
-  - ❌ **Avoid Low-Quality**: Generic statements, missing context, vague observations without actionable detail
-- **Enhanced Entity Types**: Use specific, technical entity types
-  - `technical_learning` - Specific solutions with code/errors/fixes
-  - `implementation_pattern` - Successful code patterns with reusable details
-  - `debug_session` - Complete debugging journeys with root causes
-  - `workflow_insight` - Process improvements with measurable outcomes
-  - `architecture_decision` - Design choices with rationale and trade-offs
-- **Execution Steps**:
-  1. ✅ **Extract specific technical terms** from command arguments (file names, error messages, PR numbers, technologies)
-  2. ✅ **Search Memory MCP**: Call `mcp__memory-server__search_nodes(query)` with extracted technical terms
-  3. ✅ **Log results transparently**: Always show "📚 Found X relevant memories"
-  4. ✅ **Natural integration**: If memories found, incorporate context naturally into response
-  5. ✅ **Capture high-quality learnings**: Use structured patterns with technical details, references, and actionable information
-  6. ❌ **Memory search is mandatory** for listed commands unless performance/availability exceptions apply
-- **Quality Validation Before Storage**:
-  - Contains specific technical details (error messages, file paths, code snippets)
-  - Includes actionable information (how to reproduce, fix, or implement)
-  - References external artifacts (PRs, commits, files, documentation)
-  - Uses canonical entity names for disambiguation
-  - Provides measurable outcomes (test counts, performance metrics)
-  - Links to related memories explicitly through relations
-- **Transparency Requirements**:
-  - Show "🔍 Searching memory..." when search begins
-  - Report "📚 Found X relevant memories" or "💭 No relevant memories found"
-  - Indicate when response is enhanced: "📚 Enhanced with memory context"
-- **Performance Constraints**:
-  - Batch all terms into single search (not multiple calls)
-  - Skip if search would take >100ms with notice to user
-  - Continue without enhancement if MCP unavailable (with notice)
-- **Integration Approach**:
-  - Use natural language understanding to weave context seamlessly
-  - Don't mechanically inject memory blocks
-  - Judge relevance using semantic understanding, not keyword matching
-  - Prioritize recent and relevant memories with actionable technical detail
+- **Process**: Search Memory MCP → Integrate context → Capture learnings with technical details
+- **Details**: → `.cursor/rules/claude_behavior_detailed.md`
 
-### 🔧 GitHub MCP Setup
-**Token**: Set in `claude_mcp.sh` line ~247 via `export GITHUB_TOKEN="your_token_here"`
-**Private Repos**: Use direct functions only (no search) | `mcp__github-server__get_pull_request()`
-**Restart After Token Change**: Remove & re-add github-server MCP
+### 🔧 MCP Configuration
+**GitHub Token**: Set in `claude_mcp.sh` | **Tool Priorities**: GitHub MCP → gh CLI → slash commands
+**Details**: → `.cursor/rules/claude_behavior_detailed.md`
 
 ## Orchestration System
 
@@ -313,11 +220,26 @@
 **ENFORCEMENT**: When user runs /orch, you MUST ONLY monitor agents - NO direct execution allowed! The entire point of /orch is agent delegation!
 **NO HARDCODING**: ❌ NEVER hardcode task patterns - agents execute EXACT tasks requested | ✅ General task agents, not pattern-matched types
 
+🚨 **BRANCH PROTECTION DURING ORCHESTRATION**: ⚠️ MANDATORY - Preserve user's working context
+- ❌ **NEVER switch branches** when monitoring orchestration agents
+- ❌ **NEVER use** `git checkout` to investigate agent workspaces 
+- ✅ **ALWAYS remain** on the user's current branch while agents work
+- ✅ **REQUEST APPROVAL** before any branch switch: "May I switch to [branch]? Please type 'approve [4-digit-code]' to confirm"
+- 🔍 **Evidence**: Unauthorized branch switches disrupt user workflow and can lose uncommitted changes
+- 🔒 **Remember**: User branch = sacred workspace. Agent branches = isolated sandboxes. Never cross the streams!
+
 🚨 **ORCHESTRATION TASK COMPLETION**: When using /orch, task completion requires FULL end-to-end verification
 - ✅ Agent must complete entire workflow (find issue → fix → commit → push → create PR)
 - ✅ Verify PR creation with link before declaring success
 - ❌ NEVER declare success based on agent creation alone
 - 🔍 Evidence: task-agent-3570 completed full workflow creating PR #887
+
+🔄 **PR UPDATE MODE DETECTION**: Orchestration agents MUST detect when to UPDATE vs CREATE PRs
+- ✅ **UPDATE existing PR** when: "fix PR #123", "adjust the PR", "update pull request", "PR needs X"
+- ✅ **CREATE new PR** when: No PR mentioned, explicit "new PR", independent feature work
+- 🔍 **Detection shown**: System displays "🔍 Detected PR context: #950 - UPDATE mode" or "🆕 No PR context - CREATE mode"
+- ⚠️ **Ambiguous references**: "the PR" without context triggers search for recent PRs
+- 🔒 **Agent behavior**: UPDATE mode = checkout PR branch, make changes, push. CREATE mode = new branch from main
 
 ## Project Overview
 
@@ -420,21 +342,7 @@ Use docstrings, proper JS loading
 **Zero Tolerance**: Run ALL tests before completion | Fix ALL failures | No "pre-existing issues" excuse
 **Commands**: `./run_tests.sh` | `./run_ui_tests.sh mock` | `gh pr view`
 **Protocol**: STOP → FIX → VERIFY → EVIDENCE → Complete
-
-🚨 **TEST WITH REAL CONFLICTS**: ⚠️ MANDATORY
-- ✅ ALWAYS test merge conflict detection with PRs that actually have conflicts
-- ✅ Use `gh pr view [PR] --json mergeable` to verify real conflict state before testing
-- ❌ NEVER assume conflict detection works based on testing with clean PRs only
-- 🔍 Evidence: PR #780 with real conflicts revealed false negative bug that clean PRs missed
-- **Why Critical**: Clean PRs won't expose detection failures - need real conflicts to validate
-**Validation**: Verify PASS/FAIL detection | Output must match summary | Parse output, don't trust exit codes
-**Test Assertions**: ⚠️ MANDATORY - Must match actual validation behavior exactly
-- 🔍 Evidence: PR #818 - MBTI test checked .lower() but validation only does .strip()
-- ✅ Always verify what transformations validation actually performs
-**Exception Specificity**: ✅ Use specific exception types in tests (ValidationError, not Exception)
-- 🔍 Evidence: PR #818 - Improved test precision with Pydantic's ValidationError
-**Methodology**: Fix one issue at a time | Run after each fix | Prefer test fixes over core logic
-**Rules**: ✅ Run before task completion | ❌ NEVER skip without permission | ✅ Only use ✅ after real results
+**Details**: → `.cursor/rules/development_protocols.md`
 
 ### Safety & Security
 ❌ Global `document.addEventListener('click')` without approval | Test workflows after modifications |
@@ -457,114 +365,38 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 ### File Placement Rules (🚨 HARD RULE)
 🚨 **NEVER add new files directly to mvp_site/** without explicit user permission
-- ❌ NEVER create test files, documentation, or scripts directly in mvp_site/
-- ✅ If unsure, add content to roadmap/scratchpad_[branch].md instead
-- ✅ Ask user where to place new files before creating them
-- **Exception**: Only when user explicitly requests file creation in mvp_site/
-
 🚨 **Test File Policy**: Add to existing files, NEVER create new test files
-- ⚠️ MANDATORY: Always add tests to existing test files that match the functionality
-- ❌ NEVER create `test_new_feature.py` - add to `test_existing_module.py` instead
-- 🔍 Evidence: PR #818 - CodeRabbit caught test_cache_busting_red_green.py violation
-- ✅ Moved cache busting tests to test_main_routes.py to comply with policy
-🚨 **Code Review**: Check README.md and CODE_REVIEW_SUMMARY.md before mvp_site/ changes
+**Details**: → `.cursor/rules/development_protocols.md`
 
 ### Repository Separation
 **Pattern**: Specialized systems → Dedicated repos | **Benefits**: Cleaner automation, focused workflows
 
 ### Browser vs HTTP Testing (🚨 HARD RULE)
 **CRITICAL DISTINCTION**: Never confuse browser automation with HTTP simulation
-- 🚨 **testing_ui/**: ONLY real browser automation using **Playwright MCP** (default) or Puppeteer MCP | ❌ NEVER use `requests` library here
-- 🚨 **testing_http/**: ONLY HTTP requests using `requests` library | ❌ NEVER use browser automation here
-- ⚠️ **/testui and /testuif**: MUST use real browser automation (Playwright MCP preferred) | NO HTTP simulation
-- ⚠️ **/testhttp and /testhttpf**: MUST use HTTP requests | NO browser automation
-- ✅ **/testi**: HTTP requests are acceptable (integration testing)
+- 🚨 **testing_ui/**: ONLY real browser automation (Playwright MCP default)
+- 🚨 **testing_http/**: ONLY HTTP requests using `requests` library
 - **Red Flag**: If writing "browser tests" with `requests.get()`, STOP immediately
-
-- **Command Structure** (Claude Code CLI defaults to Playwright MCP):
-  - `/testui` = Browser (Playwright MCP) + Mock APIs
-  - `/testuif` = Browser (Playwright MCP) + REAL APIs (costs $)
-  - `/testhttp` = HTTP + Mock APIs  
-  - `/testhttpf` = HTTP + REAL APIs (costs $)
-  - `/tester` = End-to-end tests with REAL APIs (user decides cost)
-
-### Real API Testing Protocol (🚨 MANDATORY)
-**NEVER push back or suggest alternatives when user requests real API testing**:
-- ✅ User decides if real API costs are acceptable - respect their choice
-- ✅ `/tester`, `/testuif`, `/testhttpf` commands are valid user requests
-- ✅ Real API testing provides valuable validation that mocks cannot
-- ❌ NEVER suggest mock alternatives unless specifically asked
-- ❌ NEVER warn about costs unless the command requires confirmation prompts
-- **User autonomy**: User controls their API usage and testing approach
-
-### Browser Test Execution Protocol (🚨 MANDATORY)
-
-🚨 **PREFERRED**: Playwright MCP in Claude Code CLI - Accessibility-tree based, AI-optimized, cross-browser
-🚨 **SECONDARY**: Puppeteer MCP for Chrome-specific or stealth testing scenarios
-🚨 **FALLBACK**: Playwright IS installed in venv! Use headless=True | ❌ NEVER say "not installed"
-
-**Commands**: `./run_ui_tests.sh mock --playwright` (default) | `./run_ui_tests.sh mock --puppeteer` (secondary) | `./run_ui_tests.sh mock` (Playwright fallback)
-
-**Test Mode URL**: `http://localhost:8081?test_mode=true&test_user_id=test-user-123` - Required for auth bypass!
-
-**Details**: → `.cursor/rules/test_protocols.md`
-
-### Coverage Analysis Protocol (⚠️)
-**MANDATORY**: When analyzing test coverage:
-1. **ALWAYS use**: `./run_tests.sh --coverage` or `./coverage.sh` (HTML default)
-2. **NEVER use**: Manual `coverage run` commands on individual test files
-3. **Verify full test suite**: Ensure all 94+ test files are included in coverage analysis
-4. **Report source**: Always mention "Coverage from full test suite via run_tests.sh"
-5. **HTML location**: `/tmp/worldarchitectai/coverage/index.html`
+**Details**: → `.cursor/rules/development_protocols.md`
 
 ## Git Workflow
 
-| Rule | Description | Commands/Actions |
-|------|-------------|------------------|
-| **Main = Truth** | Use `git show main:<file>` for originals | ❌ push to main (no exceptions) |
-| **PR Workflow** | All changes via PRs | `gh pr create` + test results in description |
-| **Branch Safety** | Verify before push | `git push origin HEAD:branch-name` |
-| **🚨 Upstream Tracking** | Set tracking to avoid "no upstream" in headers | `git push -u origin branch-name` OR `git branch --set-upstream-to=origin/branch-name` |
-| **Integration** | Fresh branch after merge | `./integrate.sh` |
-| **Pre-PR Check** | Verify commits/files | → `.cursor/rules/validation_commands.md` |
-| **Post-Merge** | Check unpushed files | `git status` → follow-up PR if needed |
-| **Progress Track** | Scratchpad + JSON | `roadmap/scratchpad_[branch].md` + `tmp/milestone_*.json` |
-| **PR Testing** | Apply PRs locally | `gh pr checkout <PR#>` |
-| **Roadmap Updates** | Always create PR | All files require PR workflow - including roadmap files |
-
+### Core Rules
 🚨 **No Main Push**: ✅ `git push origin HEAD:feature` | ❌ `git push origin main`
-   - **ALL changes require PR**: Including roadmap files, documentation, everything
-   - **Fresh branches from main**: Always create new branch from latest main for new work
-   - **Pattern**: `git checkout main && git pull && git checkout -b descriptive-name`
+- **ALL changes require PR**: Including roadmap files, documentation, everything
+- **Fresh branches from main**: Always create new branch from latest main for new work
 
-🚨 **PR Context Management**: Verify before creating PRs - Check git status | Ask which PR if ambiguous | Use existing branches
+🚨 **Branch Protection**: ❌ NEVER switch without explicit request | ✅ Create descriptive branches
 
-🚨 **Branch Protection**: ❌ NEVER switch without explicit request | ❌ NEVER use dev[timestamp] for development
-✅ Create descriptive branches | Verify context before changes | Ask if ambiguous
+🚨 **PR Workflow**: All changes via PRs | `gh pr create` + test results in description
 
-🚨 **Conflict Resolution**: Analyze both versions | Assess critical files | Test resolution | Document decisions
-**Critical Files**: CSS, main.py, configs, schemas | **Process**: `./resolve_conflicts.sh`
+🚨 **Upstream Tracking**: Set tracking to avoid "no upstream" in headers
+- `git push -u origin branch-name` OR `git branch --set-upstream-to=origin/branch-name`
 
+### Context Verification
 🚨 **GIT ANALYSIS CONTEXT CHECKPOINT**: ⚠️ MANDATORY protocol before any git comparison
-- ✅ **Step 1**: Identify current branch (`git branch --show-current`)
-- ✅ **Step 2**: Determine branch type (sync-main-*, feature branch, main)
-- ✅ **Step 3**: Select appropriate remote comparison:
-  - **sync-main-*** branches → Compare to `origin/main`
-  - **Feature branches** → Compare to `origin/branch-name` if the branch is tracked locally and changes need to be compared to the remote branch on the same repository. Use `upstream` if the branch is forked from another repository and changes need to be compared to the original repository.
-  - **main branch** → Compare to `origin/main`
-- ✅ **Step 4**: Execute comparison commands with correct remote
-- ❌ NEVER run git comparisons without context verification (i.e., identifying the current branch, determining the branch type, and selecting the appropriate remote comparison as outlined in Steps 1–3 above)
-- **Evidence**: Prevents autopilot execution errors that waste user time
+- Identify current branch → Determine branch type → Select correct remote → Execute
 
-🚨 **COMMAND FAILURE TRANSPARENCY** (⚠️ MANDATORY): When user commands fail unexpectedly:
-   - ✅ Immediately explain what failed and why
-   - ✅ Show system messages/errors received  
-   - ✅ Explain resolution approach being taken
-   - ✅ Ask preference for alternatives (merge vs rebase, etc.)
-   - ❌ NEVER silently fix without explanation
-   - **Pattern**: Command fails > Explain > Show options > Get preference > Execute
-   - **Evidence**: Silent git merge resolution leads to "ignored comment" perception
-
+**Detailed Workflows**: → `.cursor/rules/git_advanced.md`
 **Commit Format**: → `.cursor/rules/examples.md`
 
 ## Environment, Tooling & Scripts
