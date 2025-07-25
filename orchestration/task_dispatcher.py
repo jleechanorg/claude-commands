@@ -13,6 +13,9 @@ import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
+# Constants
+TIMESTAMP_MODULO = 100000000  # 8 digits from microseconds for unique name generation
+
 
 # Production safety limits
 MAX_CONCURRENT_AGENTS = 5
@@ -79,14 +82,14 @@ class TaskDispatcher:
                 existing.add(agent_name)
         except Exception as e:
             # Log specific error for debugging
-            print(f"Warning: Failed to check existing workspaces: {e}")
+            print(f"Warning: Failed to check existing workspaces due to error: {e}")
             
         return existing
 
     def _generate_unique_name(self, base_name: str, role_suffix: str = "") -> str:
         """Generate unique agent name with collision detection."""
         # Use microsecond precision for better uniqueness
-        timestamp = int(time.time() * 1000000) % 100000000  # 8 digits from microseconds
+        timestamp = int(time.time() * 1000000) % TIMESTAMP_MODULO  # 8 digits from microseconds
         
         # Get existing agents
         existing = self._check_existing_agents()
