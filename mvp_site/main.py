@@ -1151,6 +1151,13 @@ def create_app() -> Flask:
             )
             game_state_dict = current_game_state.to_dict()
 
+            # --- Apply User Settings to Game State ---
+            # Override game state with current user settings (e.g., debug_mode)
+            user_settings = get_user_settings(user_id)
+            if user_settings and 'debug_mode' in user_settings:
+                current_game_state.debug_mode = user_settings['debug_mode']
+                logging_util.info(f"Applied user debug mode setting: {user_settings['debug_mode']}")
+
             # --- Debug Mode Command Parsing (BEFORE other commands) ---
             debug_response = _handle_debug_mode_command(
                 user_input, mode, current_game_state, user_id, campaign_id
