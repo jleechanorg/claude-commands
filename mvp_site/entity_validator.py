@@ -98,7 +98,7 @@ class EntityValidator:
         ]
 
         # Pre-compile regex patterns for better performance
-        self._compiled_patterns = {}
+        self._compiled_patterns: dict[str, list[re.Pattern[str]]] = {}
         self._compile_patterns()
 
     def _build_entity_patterns(self) -> dict[str, list[str]]:
@@ -145,7 +145,7 @@ class EntityValidator:
         entity_lower = entity.lower()
 
         # Check for explicit absence indicators first (using compiled patterns)
-        compiled_absent_patterns = self._compiled_patterns.get("absent_reference", [])
+        compiled_absent_patterns: list[re.Pattern[str]] = self._compiled_patterns.get("absent_reference", [])
         for pattern in compiled_absent_patterns:
             pattern_str = pattern.pattern.replace(r"(\w+)", entity_lower)
             if re.search(pattern_str, narrative_lower, re.IGNORECASE):
@@ -172,10 +172,10 @@ class EntityValidator:
 
     def extract_physical_states(self, narrative: str) -> dict[str, list[str]]:
         """Extract physical state descriptions from narrative (consolidated from NarrativeSyncValidator)"""
-        states = {}
+        states: dict[str, list[str]] = {}
 
         # Use pre-compiled patterns for better performance
-        compiled_patterns = self._compiled_patterns.get("physical_states", [])
+        compiled_patterns: list[re.Pattern[str]] = self._compiled_patterns.get("physical_states", [])
         for pattern in compiled_patterns:
             matches = pattern.finditer(narrative)
             for match in matches:
@@ -199,7 +199,7 @@ class EntityValidator:
         transitions = []
 
         # Use compiled patterns for better performance
-        compiled_transition_patterns = self._compiled_patterns.get(
+        compiled_transition_patterns: list[re.Pattern[str]] = self._compiled_patterns.get(
             "location_transition", []
         )
         for pattern in compiled_transition_patterns:
@@ -211,7 +211,7 @@ class EntityValidator:
 
     def create_injection_templates(
         self, missing_entities: list[str], context: dict[str, Any] = None
-    ) -> dict[str, str]:
+    ) -> dict[str, list[str]]:
         """Create entity injection templates (consolidated from DualPassGenerator)"""
         templates = {}
 
@@ -243,7 +243,6 @@ class EntityValidator:
         # Filter out 'Unknown' from expected entities - it's not a real entity
         expected_entities = filter_unknown_entities(expected_entities)
 
-        narrative_lower = narrative_text.lower()
         found_entities = []
         missing_entities = []
         confidence_scores = {}
@@ -344,7 +343,7 @@ class EntityValidator:
         location: str | None = None,
     ) -> list[str]:
         """Generate specific suggestions for retry prompts"""
-        suggestions = []
+        suggestions: list[str] = []
 
         if not missing_entities:
             return suggestions
@@ -548,14 +547,14 @@ class EntityRetryManager:
     def __init__(self, max_retries: int = 2):
         self.max_retries = max_retries
         self.validator = EntityValidator()
-        self.retry_history = {}
+        self.retry_history: dict[str, int] = {}
 
     def validate_with_retry(
         self,
         narrative_text: str,
         expected_entities: list[str],
-        location: Optional[str] = None,
-        retry_callback: Optional[Callable] = None,
+        location: str | None = None,
+        retry_callback: Callable | None = None,
     ) -> tuple[ValidationResult, int]:
         """
         Validate entity presence with automatic retry logic.
