@@ -8,8 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
         auth: document.getElementById('auth-view'), 
         dashboard: document.getElementById('dashboard-view'), 
         newCampaign: document.getElementById('new-campaign-view'), 
-        game: document.getElementById('game-view'),
-        settings: document.getElementById('settings-view')
+        game: document.getElementById('game-view')
     };
     const loadingOverlay = document.getElementById('loading-overlay');
     let currentCampaignId = null;
@@ -37,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const showView = (viewName) => {
-        Object.values(views).forEach(v => v.classList.remove('active-view'));
+        Object.values(views).forEach(v => v && v.classList.remove('active-view'));
         if(views[viewName]) {
             views[viewName].classList.add('active-view');
             
@@ -191,11 +190,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 views.settings = settingsView;
             }
             
+            // Hide all other views
+            Object.values(views).forEach(v => v && v.classList.remove('active-view'));
+            
             // Load settings content
             settingsView.innerHTML = settingsHtml;
             
             // Show settings view
-            showView('settings');
+            settingsView.classList.add('active-view');
             
         } catch (error) {
             console.error('Failed to load settings:', error);
