@@ -4,7 +4,7 @@
 # 
 # Usage: ./integrate.sh [branch-name] [--force] [--new-branch]
 #   branch-name: Optional custom branch name (default: dev{timestamp})
-#   --force: Override hard stops for uncommitted/unpushed changes
+#   --force: Override hard stops for uncommitted/unpushed changes and integration PR warnings
 #   --new-branch: Skip deleting the current branch (just create new branch)
 #
 # Examples:
@@ -22,10 +22,60 @@ if [ -f ~/.bashrc ]; then
     source ~/.bashrc
 fi
 
+# Show help if requested
+show_help() {
+    cat << 'EOF'
+integrate.sh - Integration workflow for fresh branch creation
+
+USAGE:
+    ./integrate.sh [branch-name] [--force] [--new-branch] [--help]
+
+ARGUMENTS:
+    branch-name     Optional custom branch name (default: dev{timestamp})
+
+OPTIONS:
+    --force         Override hard stops for uncommitted/unpushed changes and integration PR warnings
+    --new-branch    Skip deleting the current branch (just create new branch)
+    --help          Show this help message
+
+EXAMPLES:
+    ./integrate.sh                    # Creates dev{timestamp} branch
+    ./integrate.sh feature/foo        # Creates feature/foo branch  
+    ./integrate.sh --force            # Force mode with dev{timestamp}
+    ./integrate.sh newb --force       # Creates newb branch in force mode
+    ./integrate.sh --new-branch       # Creates new dev{timestamp} without deleting current
+    ./integrate.sh --new-branch bar   # Creates bar branch without deleting current
+
+SAFETY FEATURES:
+    • Hard stops for uncommitted changes (override with --force)
+    • Hard stops for unpushed commits (override with --force)
+    • Warnings for integration PR conflicts (override with --force)
+    • Smart branch deletion only when safe (merged/clean branches)
+    • Automatic PR creation for divergent main histories
+
+WORKFLOW:
+    1. Check current branch safety (uncommitted/unpushed changes)
+    2. Switch to main branch
+    3. Smart sync with origin/main (handles divergence)
+    4. Check for problematic integration PRs
+    5. Create fresh branch from updated main
+    6. Optionally delete old branch if safe
+
+EOF
+}
+
 # Parse arguments
 FORCE_MODE=false
 NEW_BRANCH_MODE=false
 CUSTOM_BRANCH_NAME=""
+
+# Check for help first
+for arg in "$@"; do
+    if [[ "$arg" == "--help" || "$arg" == "-h" ]]; then
+        show_help
+        exit 0
+    fi
+done
 
 # First pass: look for --new-branch and get its optional value
 for ((i=1; i<=$#; i++)); do
@@ -131,18 +181,49 @@ get_github_repo_url() {
     git config --get remote.origin.url | sed 's/.*github.com[:/]\([^/]*\/[^/]*\).*/\1/' | sed 's/.git$//'
 }
 
-# Helper function to check if we need to wait for existing sync PR
+# Helper function to check if we need to wait for existing integration-related PRs
 check_existing_sync_pr() {
-    if command -v gh >/dev/null 2>&1; then
-        # Check for existing sync PRs that might be pending
-        existing_pr=$(gh pr list --author "@me" --state open --search "Sync main branch commits (integrate.sh)" --json number,url --jq '.[0] | select(.number != null)' 2>/dev/null || true)
-        if [ -n "$existing_pr" ]; then
-            pr_number=$(echo "$existing_pr" | jq -r '.number')
-            pr_url=$(echo "$existing_pr" | jq -r '.url')
+    if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+        # Check for sync PRs created by this script (exact title match)
+        existing_sync_pr=$(gh pr list --author "@me" --state open --json number,url,title --jq '.[] | select(.title == "Sync main branch commits (integrate.sh)")' 2>/dev/null || true)
+        if [ -n "$existing_sync_pr" ]; then
+            pr_number=$(echo "$existing_sync_pr" | jq -r '.number')
+            pr_url=$(echo "$existing_sync_pr" | jq -r '.url')
             echo "⚠️  Found existing sync PR #$pr_number: $pr_url"
-            echo "   Please merge this PR first, then re-run integrate.sh"
-            echo "   Or run: gh pr merge $pr_number --merge"
-            exit 1
+            echo "   This PR was created by integrate.sh to sync main branch"
+            
+            if [ "$FORCE_MODE" = true ]; then
+                echo "🚨 FORCE MODE: Proceeding with integration despite sync PR"
+                return 0
+            else
+                echo "   Please merge this PR first, then re-run integrate.sh"
+                echo "   Or run: gh pr merge $pr_number --merge"
+                echo "   Or use: ./integrate.sh --force (to proceed anyway)"
+                exit 1
+            fi
+        fi
+        
+        # Check for any open PRs that modify integrate.sh or integration workflows (informational only)
+        integration_prs=$(gh pr list --state open --json number,url,title,files --jq '.[] | select(.files[]?.filename | test("integrate\\.sh|integration"))' 2>/dev/null || true)
+        if [ -n "$integration_prs" ]; then
+            # Count the PRs
+            pr_count=$(echo "$integration_prs" | jq -s 'length')
+            if [ "$pr_count" -gt 0 ]; then
+                echo "ℹ️  Found $pr_count open PR(s) modifying integration workflows:"
+                echo "$integration_prs" | jq -r '"   PR #\(.number): \(.title) - \(.url)"'
+                echo ""
+                echo "   These PRs modify integration infrastructure but don't block your current branch."
+                echo "   Integration will proceed normally."
+                echo ""
+            fi
+        fi
+    elif command -v gh >/dev/null 2>&1; then
+        # Fallback when jq is not available - only check for exact sync PRs
+        echo "ℹ️  Checking for integration conflicts (jq not available, using basic check)..."
+        sync_prs=$(gh pr list --author "@me" --state open --search "Sync main branch commits" 2>/dev/null || true)
+        if [ -n "$sync_prs" ]; then
+            echo "⚠️  Found potential sync PR(s). If integration fails, try:"
+            echo "   ./integrate.sh --force"
         fi
     fi
 }
