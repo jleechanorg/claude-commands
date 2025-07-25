@@ -8,7 +8,6 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
-from firestore_service import (
 from gemini_response import GeminiResponse
 
 # Mock firebase_admin before imports
@@ -254,7 +253,7 @@ class TestStateHelperFunctions(unittest.TestCase):
 
     def test_truncate_game_state_for_logging(self):
         """Test game state truncation for logging."""
-
+        from firestore_service import (
             _truncate_log_json as truncate_game_state_for_logging,
         )
 
@@ -272,7 +271,7 @@ class TestStateHelperFunctions(unittest.TestCase):
 
     def test_truncate_game_state_for_logging_small_state(self):
         """Test game state truncation with small state."""
-
+        from firestore_service import (
             _truncate_log_json as truncate_game_state_for_logging,
         )
 

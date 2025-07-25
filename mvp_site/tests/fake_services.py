@@ -12,14 +12,11 @@ from fake_auth import FakeFirebaseAuth, FakeUserRecord
 
 # Import our fake implementations
 from fake_firestore import (
-
+    FakeFirestoreClient,
+)
 from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID
 from main import create_app
 from unittest.mock import MagicMock
-import sys
-
-    FakeFirestoreClient,
-)
 from fake_gemini import create_fake_gemini_client
 
 

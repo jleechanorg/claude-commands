@@ -89,16 +89,17 @@ if os.environ.get("USE_MOCKS", "").lower() in ["true", "1", "yes"]:
     if "USE_MOCK_FIREBASE" not in os.environ:
         use_mock_firebase = True
 
-# Import Gemini service based on flag
+# Choose which service to use based on flags
 if use_mock_gemini:
-
+    gemini_service = mock_gemini_service_wrapper
 else:
+    gemini_service = real_gemini_service
 
-
-# Import Firestore service based on flag
+# Choose which firestore service to use based on flags
 if use_mock_firebase:
-
+    firestore_service = mock_firestore_service_wrapper
 else:
+    firestore_service = real_firestore_service
 
 
 import structured_fields_utils

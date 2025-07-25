@@ -47,11 +47,7 @@ from custom_types import (
     UserId, CampaignId, JsonDict, JsonValue, Timestamp
 )
 
-# Import numeric field converter
-# This handles both package imports (relative) and direct script execution
-try:
-
-except ImportError:
+from numeric_field_converter import NumericFieldConverter
 
 
 MAX_TEXT_BYTES: int = 1000000
