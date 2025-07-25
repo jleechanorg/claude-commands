@@ -7,15 +7,14 @@ import os
 import sys
 import unittest
 
-import main
-
 # Set USE_MOCKS before importing anything
 os.environ["USE_MOCKS"] = "true"
 os.environ["TESTING"] = "true"
 
 # Add parent directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import main
 from main import create_app
 
 

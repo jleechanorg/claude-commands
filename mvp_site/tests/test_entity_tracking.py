@@ -10,7 +10,7 @@ import unittest
 from dual_pass_generator import DualPassGenerator
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from entity_tracking import create_from_game_state, get_validation_info
 from entity_validator import EntityValidator

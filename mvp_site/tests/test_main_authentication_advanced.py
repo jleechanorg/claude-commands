@@ -4,15 +4,16 @@ Test suite for advanced authentication functionality in main.py
 
 import os
 import sys
-
-from main import app
-import jwt
-
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
-os.environ["TESTING"] = "true"
-
 import unittest
 from unittest.mock import Mock, patch
+
+# Add mvp_site directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+os.environ["TESTING"] = "true"
+
+from main import create_app
+app = create_app()
+import jwt
 
 # Handle missing dependencies gracefully
 try:

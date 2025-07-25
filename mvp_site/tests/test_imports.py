@@ -8,11 +8,12 @@ import os
 import sys
 import unittest
 
-import main
+# Add the parent directory to the Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import structured_fields_utils
 
-# Add the parent directory to the Python path
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+import main
 import constants
 import firestore_service
 import game_state

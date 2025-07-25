@@ -19,7 +19,7 @@ if os.path.basename(current_dir) == 'mvp_site':
     sys.path.insert(0, current_dir)
 else:
     # Running from project root
-    sys.path.insert(0, os.path.join(current_dir, 'mvp_site'))
+    sys.path.insert(0, os.path.join(current_dir))
 
 
 class TestDeploymentBuild(unittest.TestCase):

@@ -14,7 +14,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 # Add the parent directory to the Python path so we can import modules
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from game_state import GameState
 from gemini_response import GeminiResponse

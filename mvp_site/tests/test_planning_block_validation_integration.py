@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 # Add the parent directory to the path to import modules
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from game_state import GameState
 from gemini_service import NarrativeResponse, _validate_and_enforce_planning_block

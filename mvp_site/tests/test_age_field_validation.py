@@ -6,7 +6,7 @@ import unittest
 
 from pydantic import ValidationError
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from schemas.entities_pydantic import NPC, HealthStatus, PlayerCharacter
 

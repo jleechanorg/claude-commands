@@ -6,7 +6,7 @@ import unittest
 
 import traceback
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # Ensure testing environment
 os.environ["TESTING"] = "true"

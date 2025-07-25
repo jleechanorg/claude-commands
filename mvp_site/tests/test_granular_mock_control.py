@@ -7,10 +7,10 @@ import os
 import sys
 import unittest
 
-import main
 
 # Add parent directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+import main
 
 
 class TestGranularMockControl(unittest.TestCase):

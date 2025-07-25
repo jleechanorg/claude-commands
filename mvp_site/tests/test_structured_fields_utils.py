@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import Mock
 
 # Add the parent directory to the path so we can import from the mvp_site package
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import constants
 import structured_fields_utils

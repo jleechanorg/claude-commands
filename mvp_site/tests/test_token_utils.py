@@ -18,7 +18,7 @@ from unittest.mock import mock_open
 import shutil
 
 # Add the parent directory to sys.path so we can import from mvp_site
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import file_cache
 from token_utils import estimate_tokens, format_token_count, log_with_tokens

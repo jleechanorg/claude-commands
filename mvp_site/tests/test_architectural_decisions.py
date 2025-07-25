@@ -14,7 +14,7 @@ import tempfile
 import unittest
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from schemas import entities_pydantic
 from schemas.defensive_numeric_converter import DefensiveNumericConverter

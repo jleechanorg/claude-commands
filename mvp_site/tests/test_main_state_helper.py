@@ -8,10 +8,6 @@ import re
 import unittest
 from unittest.mock import MagicMock
 
-from main import CORS_RESOURCES
-from main import DEFAULT_TEST_USER
-from main import HEADER_AUTH, HEADER_TEST_BYPASS, HEADER_TEST_USER_ID
-from main import KEY_CAMPAIGN_ID, KEY_ERROR, KEY_MESSAGE, KEY_SUCCESS
 
 # Mock firebase_admin before imports
 mock_firebase_admin = MagicMock()
@@ -27,7 +23,12 @@ mock_firestore.DELETE_FIELD = DELETE_FIELD
 # Setup module mocks
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from main import CORS_RESOURCES
+from main import DEFAULT_TEST_USER
+from main import HEADER_AUTH, HEADER_TEST_BYPASS, HEADER_TEST_USER_ID
+from main import KEY_CAMPAIGN_ID, KEY_ERROR, KEY_MESSAGE, KEY_SUCCESS
 sys.modules["firebase_admin"] = mock_firebase_admin
 sys.modules["firebase_admin.firestore"] = mock_firestore
 sys.modules["firebase_admin.auth"] = mock_auth

@@ -23,7 +23,7 @@ import unittest
 from unittest.mock import MagicMock
 
 # Add parent directory to Python path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from gemini_service import GeminiService
 
 # Import gemini_service which handles prompt processing

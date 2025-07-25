@@ -17,7 +17,7 @@ mock_firebase_admin.firestore = mock_firestore
 mock_firebase_admin.auth = mock_auth
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from gemini_response import GeminiResponse
 
 sys.modules["firebase_admin"] = mock_firebase_admin

@@ -7,10 +7,10 @@ import os
 import sys
 import unittest
 
-from schemas.entities_pydantic import NPC, HealthStatus
 
 # Add parent directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from schemas.entities_pydantic import NPC, HealthStatus
 
 from gemini_service import sanitize_entity_name_for_id
 
