@@ -8,7 +8,7 @@ import sys
 import unittest
 
 # Add parent directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
 
 from pydantic import ValidationError
 from schemas.entities_pydantic import (

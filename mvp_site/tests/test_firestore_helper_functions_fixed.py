@@ -12,7 +12,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
 
 from firestore_service import _perform_append, _truncate_log_json
 

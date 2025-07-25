@@ -11,6 +11,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
+# Add mvp_site directory to path for imports
+# Handle both running from project root and from mvp_site directory
+current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if os.path.basename(current_dir) == 'mvp_site':
+    # Already in mvp_site directory
+    sys.path.insert(0, current_dir)
+else:
+    # Running from project root
+    sys.path.insert(0, os.path.join(current_dir, 'mvp_site'))
+
 import world_loader
 
 

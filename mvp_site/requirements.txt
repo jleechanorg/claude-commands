@@ -21,3 +21,4 @@ mypy>=1.8.0
 bandit>=1.7.0
 types-flask>=1.1.6
 types-requests>=2.31.0
+cachetools>=5.3.0
