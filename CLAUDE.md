@@ -545,6 +545,17 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 🚨 **Conflict Resolution**: Analyze both versions | Assess critical files | Test resolution | Document decisions
 **Critical Files**: CSS, main.py, configs, schemas | **Process**: `./resolve_conflicts.sh`
 
+🚨 **GIT ANALYSIS CONTEXT CHECKPOINT**: ⚠️ MANDATORY protocol before any git comparison
+- ✅ **Step 1**: Identify current branch (`git branch --show-current`)
+- ✅ **Step 2**: Determine branch type (sync-main-*, feature branch, main)
+- ✅ **Step 3**: Select appropriate remote comparison:
+  - **sync-main-*** branches → Compare to `origin/main`
+  - **Feature branches** → Compare to `origin/branch-name` if the branch is tracked locally and changes need to be compared to the remote branch on the same repository. Use `upstream` if the branch is forked from another repository and changes need to be compared to the original repository.
+  - **main branch** → Compare to `origin/main`
+- ✅ **Step 4**: Execute comparison commands with correct remote
+- ❌ NEVER run git comparisons without context verification (i.e., identifying the current branch, determining the branch type, and selecting the appropriate remote comparison as outlined in Steps 1–3 above)
+- **Evidence**: Prevents autopilot execution errors that waste user time
+
 🚨 **COMMAND FAILURE TRANSPARENCY** (⚠️ MANDATORY): When user commands fail unexpectedly:
    - ✅ Immediately explain what failed and why
    - ✅ Show system messages/errors received  
