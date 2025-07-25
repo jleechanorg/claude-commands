@@ -23,9 +23,6 @@ from typing import Any, Dict, List, Optional
 class CopilotCommandBase(ABC):
     """Base class for all modular copilot commands."""
     
-    # Standard directory for I/O files
-    IO_DIR = Path("/tmp/copilot")
-    
     def __init__(self, pr_number: Optional[str] = None):
         """Initialize base command.
         
@@ -36,6 +33,9 @@ class CopilotCommandBase(ABC):
         self.start_time = datetime.now()
         self.repo = self._get_repo_info()
         self.current_branch = self._get_current_branch()
+        
+        # Branch-specific directory for I/O files to prevent conflicts between branches
+        self.IO_DIR = Path(f"/tmp/copilot_{self.current_branch}")
         
         # Ensure I/O directory exists
         self.IO_DIR.mkdir(exist_ok=True)

@@ -18,7 +18,7 @@ Successfully implemented a modular copilot architecture that splits the monolith
 1. **`/commentfetch`** (Pure Python)
    - Fetches comments from all GitHub sources
    - Standardizes format with response detection
-   - Output: `/tmp/copilot/comments.json`
+   - Output: Branch-specific directory `/tmp/copilot_{branch}/comments_{branch}.json`
 
 2. **`/fixpr`** (Hybrid)
    - `fixpr.py`: Three-layer CI verification, conflict detection
@@ -28,7 +28,7 @@ Successfully implemented a modular copilot architecture that splits the monolith
 3. **`/pushl`** (Pure Python)
    - Simple git wrapper with verification
    - Placeholder implementation (to be enhanced if needed)
-   - Output: `/tmp/copilot/push.json`
+   - Output: Branch-specific directory `/tmp/copilot_{branch}/push.json`
 
 4. **`/commentreply`** (Hybrid)
    - Posts replies with verification logic
