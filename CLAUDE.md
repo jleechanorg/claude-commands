@@ -226,6 +226,13 @@
 - ❌ NEVER declare success based on agent creation alone
 - 🔍 Evidence: task-agent-3570 completed full workflow creating PR #887
 
+🔄 **PR UPDATE MODE DETECTION**: Orchestration agents MUST detect when to UPDATE vs CREATE PRs
+- ✅ **UPDATE existing PR** when: "fix PR #123", "adjust the PR", "update pull request", "PR needs X"
+- ✅ **CREATE new PR** when: No PR mentioned, explicit "new PR", independent feature work
+- 🔍 **Detection shown**: System displays "🔍 Detected PR context: #950 - UPDATE mode" or "🆕 No PR context - CREATE mode"
+- ⚠️ **Ambiguous references**: "the PR" without context triggers search for recent PRs
+- 🔒 **Agent behavior**: UPDATE mode = checkout PR branch, make changes, push. CREATE mode = new branch from main
+
 ## Project Overview
 
 WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
