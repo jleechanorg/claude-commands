@@ -49,8 +49,10 @@ class RealBrowserSettingsGameTest:
                 ["git", "branch", "--show-current"], 
                 capture_output=True, text=True, check=True
             )
-            return result.stdout.strip()
-        except:
+            branch = result.stdout.strip()
+            # Sanitize branch name for safe file path usage
+            return branch.replace('/', '_').replace('\\', '_').replace('..', '_')
+        except subprocess.SubprocessError:
             return "unknown-branch"
     
     def wait_for_server(self, max_retries=5):
@@ -62,7 +64,7 @@ class RealBrowserSettingsGameTest:
                 if response.status_code == 200:
                     print("✅ Server is ready")
                     return True
-            except:
+            except requests.RequestException:
                 print(f"   Attempt {i+1}/{max_retries}: Server not ready, waiting...")
                 time.sleep(2)
         
@@ -78,7 +80,7 @@ class RealBrowserSettingsGameTest:
             if response.status_code == 200:
                 current_settings = response.json()
                 print(f"   Current settings: {current_settings}")
-        except:
+        except requests.RequestException:
             print("   No existing settings found (or API issue)")
         
         print("✅ Ready for clean settings test")

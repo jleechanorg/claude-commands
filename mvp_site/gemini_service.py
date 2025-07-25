@@ -1134,17 +1134,16 @@ def get_initial_story(
             user_preferred_model = user_settings.get('gemini_model')
             
             # Validate user preference against allowed models
-            if user_preferred_model in constants.ALLOWED_GEMINI_MODELS:
-                # Convert user preference to full model name
-                if user_preferred_model == 'flash-2.5':
-                    model_to_use = "gemini-2.5-flash"
-                elif user_preferred_model == 'pro-2.5':
-                    model_to_use = "gemini-2.5-pro"
-                else:
-                    model_to_use = DEFAULT_MODEL
+            if user_preferred_model and user_preferred_model in constants.ALLOWED_GEMINI_MODELS:
+                # Use centralized model mapping from constants
+                model_to_use = constants.GEMINI_MODEL_MAPPING.get(user_preferred_model, DEFAULT_MODEL)
+                if model_to_use == DEFAULT_MODEL and user_preferred_model in constants.ALLOWED_GEMINI_MODELS:
+                    logging_util.warning(f"No mapping found for allowed model: {user_preferred_model}")
             else:
+                if user_preferred_model:
+                    logging_util.warning(f"Invalid user model preference: {user_preferred_model}")
                 model_to_use = DEFAULT_MODEL
-        except Exception as e:
+        except (KeyError, AttributeError, ValueError) as e:
             logging_util.warning(f"Failed to get user settings for {user_id}: {e}")
             model_to_use = DEFAULT_MODEL
     else:

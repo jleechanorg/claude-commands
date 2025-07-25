@@ -13,6 +13,7 @@ This follows TDD methodology: Write failing tests → Fix code → Tests pass
 import unittest
 import requests
 import os
+import time
 
 
 class TestSettingsRoutingFix(unittest.TestCase):
@@ -39,8 +40,9 @@ class TestSettingsRoutingFix(unittest.TestCase):
                 response = requests.get(f"{self.base_url}/", timeout=2)
                 if response.status_code == 200:
                     return
-            except:
-                pass
+            except requests.RequestException:
+                if i < max_retries - 1:
+                    time.sleep(1)
         raise Exception("Server not available for TDD testing")
     
     def test_settings_route_serves_correct_template(self):

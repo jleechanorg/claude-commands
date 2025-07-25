@@ -36,7 +36,7 @@ class TestSettingsAuthBypass(unittest.TestCase):
                 response = requests.get(f"{self.base_url}/", timeout=2)
                 if response.status_code == 200:
                     return
-            except:
+            except requests.RequestException:
                 pass
             time.sleep(1)
         raise Exception("Test server not available")

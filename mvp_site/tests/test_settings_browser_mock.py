@@ -1,28 +1,23 @@
 """
-Layer 3: Browser tests for user settings with mocked services
+Layer 2: HTTP tests for user settings with mocked services
 
-Tests the complete browser flow from UI interaction to backend processing.
-Uses real browser automation but mocks external services (Firestore, Gemini API).
+Tests HTTP endpoints simulating browser requests with mocked services.
+Uses Flask test client to simulate browser form submissions.
 
 Coverage:  
-- Settings page form submission and validation
-- Model preference selection in browser UI
-- Campaign creation using browser-selected model preferences
-- Error handling in browser for invalid settings
-- Visual feedback and UI state management
+- Settings API form submission and validation
+- Model preference selection via HTTP requests
+- Campaign creation using selected model preferences  
+- Error handling for invalid settings
 
-NOTE: This test assumes a Flask server is running on localhost:6006
-Run: python3 mvp_site/run_server.py 
+NOTE: Uses Flask test client, no external server required
 """
 
 import os
 import sys
 import unittest
 from unittest.mock import patch, MagicMock
-import time
 import json
-import subprocess
-import requests
 
 # Add the parent directory to the path to import the modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -32,8 +27,8 @@ from main import create_app
 import constants
 
 
-class TestSettingsBrowserMock(unittest.TestCase):
-    """Layer 3: HTTP-based tests simulating browser flow with mocked external services"""
+class TestSettingsHttpMock(unittest.TestCase):
+    """Layer 2: HTTP-based tests simulating browser requests with mocked external services"""
 
     def setUp(self):
         """Set up test fixtures"""
