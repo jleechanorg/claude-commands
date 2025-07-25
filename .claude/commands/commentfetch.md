@@ -10,7 +10,7 @@ Pure Python implementation that collects comments from all GitHub PR sources. Th
 
 ## Output Format
 
-Creates a JSON file at `/tmp/copilot-$(git branch --show-current)/comments.json` (or specified output) with:
+Creates a JSON file at `/tmp/copilot-$(git rev-parse --abbrev-ref HEAD | tr '/\\' '_')/comments.json` (or specified output) with:
 
 ```json
 {
@@ -66,8 +66,8 @@ The command automatically determines if comments need responses based on:
 # Fetch with custom output file
 /commentfetch 820 --output pr820_comments.json
 
-# Check results
-cat /tmp/copilot-$(git branch --show-current)/comments.json | jq '.metadata'
+# Check results  
+cat /tmp/copilot-$(git rev-parse --abbrev-ref HEAD | tr '/\\' '_')/comments.json | jq '.metadata'
 ```
 
 ## Integration
