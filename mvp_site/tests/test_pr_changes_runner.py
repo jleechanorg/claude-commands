@@ -6,8 +6,12 @@ Simple test runner for PR changes that avoids import issues
 import os
 import sys
 
+
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from entity_tracking import create_from_game_state
+from game_state import GameState
+import constants
 
 
 def run_pr_change_tests():
@@ -16,7 +20,7 @@ def run_pr_change_tests():
     # Test debug mode default change
     print("\n=== Testing Debug Mode Default Change ===")
     try:
-        from game_state import GameState
+
 
         # Test 1: Default to True
         gs = GameState()
@@ -51,7 +55,7 @@ def run_pr_change_tests():
     # Test entity schema constant
     print("\n=== Testing Entity Schema Constant ===")
     try:
-        import constants
+
 
         # PROMPT_TYPE_ENTITY_SCHEMA was integrated into game_state_instruction.md
         # So we check that it's no longer a separate constant
@@ -77,7 +81,7 @@ def run_pr_change_tests():
     # Test manifest cache exclusion
     print("\n=== Testing Manifest Cache Exclusion ===")
     try:
-        from game_state import GameState
+
 
         gs = GameState()
         gs.player_character_data = {"name": "TestHero"}
@@ -103,7 +107,7 @@ def run_pr_change_tests():
     # Test entity ID format
     print("\n=== Testing Entity ID Format ===")
     try:
-        from entity_tracking import create_from_game_state
+
 
         game_state = {
             "player_character_data": {"name": "Test Hero", "hp": 100, "hp_max": 100},

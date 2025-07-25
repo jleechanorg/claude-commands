@@ -4,6 +4,8 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
+from game_state import GameState
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -532,7 +534,7 @@ class TestResourceTrackingInDebugOutput(unittest.TestCase):
         mock_truncate.return_value = []
         mock_get_static.return_value = ("checkpoint", "memories", "seq_ids")
 
-        from game_state import GameState
+
 
         test_game_state = GameState(debug_mode=True)  # Ensure debug mode is on
 
@@ -576,7 +578,7 @@ class TestResourceTrackingInDebugOutput(unittest.TestCase):
         mock_truncate.return_value = []
         mock_get_static.return_value = ("checkpoint", "memories", "seq_ids")
 
-        from game_state import GameState
+
 
         test_game_state = GameState(debug_mode=False)  # Debug mode off
 
@@ -610,7 +612,7 @@ class TestResourceTrackingInDebugOutput(unittest.TestCase):
         mock_truncate.return_value = []
         mock_get_static.return_value = ("checkpoint", "memories", "seq_ids")
 
-        from game_state import GameState
+
 
         test_game_state = GameState(debug_mode=True)
 
@@ -664,7 +666,7 @@ class TestUserInputCountAndModelSelection(unittest.TestCase):
         mock_truncate.return_value = []  # Return empty truncated context
         mock_get_static.return_value = ("checkpoint", "memories", "seq_ids")
 
-        from game_state import GameState
+
 
         test_game_state = GameState(
             player_character_data={},
@@ -747,7 +749,7 @@ class TestUserInputCountAndModelSelection(unittest.TestCase):
         mock_truncate.return_value = []
         mock_get_static.return_value = ("checkpoint", "memories", "seq_ids")
 
-        from game_state import GameState
+
 
         test_game_state = GameState(
             player_character_data={},
@@ -785,7 +787,7 @@ class TestUserInputCountAndModelSelection(unittest.TestCase):
         mock_truncate.return_value = []
         mock_get_static.return_value = ("checkpoint", "memories", "seq_ids")
 
-        from game_state import GameState
+
 
         test_game_state = GameState(
             player_character_data={},
@@ -842,7 +844,7 @@ class TestUserInputCountAndModelSelection(unittest.TestCase):
         mock_truncate.return_value = []
         mock_get_static.return_value = ("checkpoint", "memories", "seq_ids")
 
-        from game_state import GameState
+
 
         test_game_state = GameState(
             player_character_data={},

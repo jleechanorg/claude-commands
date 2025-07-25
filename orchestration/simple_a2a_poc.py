@@ -15,6 +15,8 @@ from a2a.types import AgentCard
 import uvicorn
 from fastapi import FastAPI
 
+import httpx
+
 
 class SimpleA2AAgent:
     """Simple real A2A agent using official SDK"""
@@ -97,7 +99,7 @@ class A2ATestClient:
             self.logger.info(f"Discovering A2A agent at {agent_url}")
             
             # Real A2A agent card discovery
-            import httpx
+
             async with httpx.AsyncClient() as http_client:
                 response = await http_client.get(f"{agent_url}/.well-known/agent.json")
                 
@@ -116,7 +118,7 @@ class A2ATestClient:
     async def test_health_check(self, agent_url: str):
         """Test agent health check"""
         try:
-            import httpx
+
             async with httpx.AsyncClient() as http_client:
                 response = await http_client.get(f"{agent_url}/health")
                 

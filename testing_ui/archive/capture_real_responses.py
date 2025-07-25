@@ -11,6 +11,8 @@ from datetime import datetime
 
 import requests
 
+import subprocess
+
 # Add project root to path
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -145,7 +147,7 @@ def main():
     time.sleep(2)
 
     # Start server in background with real APIs
-    import subprocess
+
 
     env = os.environ.copy()
     env["TESTING"] = "true"

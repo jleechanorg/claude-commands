@@ -10,6 +10,8 @@ import time
 
 from playwright.sync_api import sync_playwright
 
+import traceback
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -219,7 +221,7 @@ def test_features():
 
         except Exception as e:
             print(f"\n❌ Test failed with error: {e}")
-            import traceback
+
 
             traceback.print_exc()
 

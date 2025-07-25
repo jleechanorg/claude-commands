@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from entity_validator import (
     EntityRetryManager,

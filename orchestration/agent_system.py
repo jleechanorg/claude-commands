@@ -11,6 +11,8 @@ from typing import Any
 from message_broker import MessageBroker, MessageType, TaskMessage
 from a2a_adapter import A2AAdapter, A2AMessage, A2AMessageBroker
 
+import sys
+
 
 class AgentBase:
     """Base class for all agents with A2A support."""
@@ -411,7 +413,7 @@ def list_tmux_sessions():
 
 
 if __name__ == "__main__":
-    import sys
+
 
     if len(sys.argv) > 1:
         agent_type = sys.argv[1]

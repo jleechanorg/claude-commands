@@ -6,6 +6,9 @@ Tests cross-module interactions with mocked external dependencies.
 import os
 import sys
 
+import copy
+import time
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -269,7 +272,7 @@ class TestFunctionValidationFlow(unittest.TestCase):
         initial_state = GameState(**fresh_state_data)
 
         # Test state changes with unique memory to avoid duplicates
-        import time
+
 
         unique_memory = f"Test memory added at {time.time()}"
         changes = {
@@ -278,7 +281,7 @@ class TestFunctionValidationFlow(unittest.TestCase):
         }
 
         # Apply changes using firestore_service function (use a copy to avoid mutation)
-        import copy
+
 
         initial_state_copy = copy.deepcopy(initial_state.to_dict())
         updated_state_dict = firestore_service.update_state_with_changes(

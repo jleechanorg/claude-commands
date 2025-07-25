@@ -8,6 +8,7 @@ import re
 import unittest
 from unittest.mock import MagicMock
 
+
 # Mock firebase_admin before imports
 mock_firebase_admin = MagicMock()
 mock_firestore = MagicMock()
@@ -22,7 +23,12 @@ mock_firestore.DELETE_FIELD = DELETE_FIELD
 # Setup module mocks
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from main import CORS_RESOURCES
+from main import DEFAULT_TEST_USER
+from main import HEADER_AUTH, HEADER_TEST_BYPASS, HEADER_TEST_USER_ID
+from main import KEY_CAMPAIGN_ID, KEY_ERROR, KEY_MESSAGE, KEY_SUCCESS
 sys.modules["firebase_admin"] = mock_firebase_admin
 sys.modules["firebase_admin.firestore"] = mock_firestore
 sys.modules["firebase_admin.auth"] = mock_auth
@@ -233,7 +239,7 @@ class TestConstants(unittest.TestCase):
 
     def test_header_constants(self):
         """Test that header constants are properly defined."""
-        from main import HEADER_AUTH, HEADER_TEST_BYPASS, HEADER_TEST_USER_ID
+
 
         self.assertEqual(HEADER_AUTH, "Authorization")
         self.assertEqual(HEADER_TEST_BYPASS, "X-Test-Bypass-Auth")
@@ -241,7 +247,7 @@ class TestConstants(unittest.TestCase):
 
     def test_key_constants(self):
         """Test that response key constants are properly defined."""
-        from main import KEY_CAMPAIGN_ID, KEY_ERROR, KEY_MESSAGE, KEY_SUCCESS
+
 
         self.assertEqual(KEY_SUCCESS, "success")
         self.assertEqual(KEY_ERROR, "error")
@@ -250,13 +256,13 @@ class TestConstants(unittest.TestCase):
 
     def test_default_test_user(self):
         """Test default test user constant."""
-        from main import DEFAULT_TEST_USER
+
 
         self.assertEqual(DEFAULT_TEST_USER, "test-user")
 
     def test_cors_resources_configuration(self):
         """Test CORS resources configuration."""
-        from main import CORS_RESOURCES
+
 
         self.assertIn(r"/api/*", CORS_RESOURCES)
         self.assertEqual(CORS_RESOURCES[r"/api/*"]["origins"], "*")

@@ -8,6 +8,9 @@ import json
 import os
 import sys
 
+from capture import cleanup_old_captures
+from datetime import datetime
+
 # Add current directory to path for imports
 current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
@@ -92,7 +95,7 @@ def cleanup_command(args):
         print(f"Error: Capture directory not found: {args.capture_dir}")
         return
 
-    from capture import cleanup_old_captures
+
 
     print(f"Cleaning up captures older than {args.days} days...")
     cleanup_old_captures(args.capture_dir, args.days)
@@ -125,7 +128,7 @@ def list_command(args):
     print("-" * 70)
 
     for filename, size, mtime in capture_files:
-        from datetime import datetime
+
 
         mod_time = datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M")
         print(f"{filename:<40} {size:<10.1f} {mod_time}")

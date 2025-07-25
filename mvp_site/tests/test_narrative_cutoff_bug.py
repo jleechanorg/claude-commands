@@ -1,3 +1,5 @@
+import re
+
 """
 Red/Green test for narrative cutoff bug fix.
 
@@ -79,7 +81,7 @@ Options:
         at an embedded quote within the content.
         """
         # Simulate the old buggy regex that would fail
-        import re
+
 
         # This pattern is too simple and doesn't handle escaped quotes properly
         buggy_pattern = r'"narrative"\s*:\s*"([^"]*)"'

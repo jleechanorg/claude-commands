@@ -9,8 +9,11 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
+import inspect
+import re
+
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 # Mock firebase_admin before importing main
 mock_firebase_admin = MagicMock()
@@ -56,7 +59,7 @@ class TestDebugModeE2E(unittest.TestCase):
         """Test that AI is instructed to always generate debug content."""
         # This test verifies the implementation by checking that the gemini_service
         # has the debug instructions that tell AI to always generate debug content
-        import inspect
+
 
         # Check that _build_debug_instructions exists and contains the right content
         build_debug_source = inspect.getsource(gemini_service._build_debug_instructions)
@@ -139,7 +142,7 @@ class TestDebugModeE2E(unittest.TestCase):
             if debug_mode:
                 return ai_response_with_debug
             # Strip debug content
-            import re
+
 
             text = ai_response_with_debug
             text = re.sub(r"\[DEBUG_START\].*?\[DEBUG_END\]", "", text, flags=re.DOTALL)
@@ -213,7 +216,7 @@ class TestDebugModeE2E(unittest.TestCase):
             if debug_mode:
                 return ai_response_with_debug
             # Strip debug content
-            import re
+
 
             text = ai_response_with_debug
             text = re.sub(r"\[DEBUG_START\].*?\[DEBUG_END\]", "", text, flags=re.DOTALL)

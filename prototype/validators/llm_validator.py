@@ -10,6 +10,9 @@ from typing import Any
 from ..logging_config import setup_logging, with_metrics
 from ..validator import BaseValidator, ValidationResult
 
+import concurrent.futures
+import google.generativeai as genai
+
 # Prompt templates for LLM validation
 VALIDATION_PROMPT_TEMPLATE = """You are a narrative analyzer for a role-playing game. Your task is to identify which characters are present or mentioned in a given narrative text.
 
@@ -91,7 +94,7 @@ class LLMValidator(BaseValidator):
         """Initialize Gemini service from API key file."""
         try:
             # Import here to avoid dependency if not using real API
-            import google.generativeai as genai
+
 
             # Read API key
             with open(api_key_path) as f:
@@ -318,7 +321,7 @@ class LLMValidator(BaseValidator):
             try:
                 if self.gemini_service:
                     # Real API call with timeout
-                    import concurrent.futures
+
 
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(

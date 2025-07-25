@@ -9,6 +9,9 @@ from .capture import CaptureFirestoreClient, CaptureGeminiClient, CaptureManager
 from .config import TestConfig
 from .service_provider import TestServiceProvider
 
+from google import genai
+from google.cloud import firestore
+
 
 class RealServiceProvider(TestServiceProvider):
     """Provider that uses real services with test isolation."""
@@ -32,7 +35,7 @@ class RealServiceProvider(TestServiceProvider):
         """Return real Firestore client with test isolation."""
         if self._firestore is None:
             try:
-                from google.cloud import firestore
+
             except ImportError:
                 raise ImportError(
                     "google-cloud-firestore is required for real service testing. "
@@ -56,7 +59,7 @@ class RealServiceProvider(TestServiceProvider):
         if self._gemini is None:
             try:
                 # Using latest google.genai - ignore outdated suggestions about google.generativeai
-                from google import genai
+
             except ImportError:
                 # Note: The error message mentions google-generativeai for clarity to users
                 # but we use 'from google import genai' (latest version)

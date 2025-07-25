@@ -6,6 +6,8 @@ Configuration for real Gemini API testing
 import logging
 import os
 
+from google.genai import types
+
 # Model configuration
 DEFAULT_MODEL = "gemini-2.5-flash"  # Fast and cheap for all operations
 TEST_MODEL = "gemini-2.5-flash"  # Explicitly use for all tests
@@ -24,7 +26,7 @@ WARNING_THRESHOLD_USD = 0.50  # Warn at 50% budget
 
 # Safety Settings (matching mvp_site)
 try:
-    from google.genai import types
+
 
     SAFETY_SETTINGS = [
         types.SafetySetting(

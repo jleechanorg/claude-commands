@@ -9,9 +9,12 @@ to ensure the import re statement exists and works properly.
 import os
 import sys
 import unittest
+import re
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+import gemini_service
 
 # Set dummy API key before importing gemini_service
 os.environ["GEMINI_API_KEY"] = "DUMMY_KEY_FOR_TESTING"
@@ -24,7 +27,7 @@ class TestCharacterExtractionRegex(unittest.TestCase):
         """RED: Test that re module is properly imported"""
         # This should fail initially if import re is missing
         try:
-            import gemini_service
+
 
             # Access the re module within gemini_service scope
             self.assertTrue(hasattr(gemini_service, "re"))
@@ -51,7 +54,7 @@ class TestCharacterExtractionRegex(unittest.TestCase):
 
         # This should work if re is properly imported
         try:
-            import re
+
 
             expected_entities = []
 
@@ -85,7 +88,7 @@ class TestCharacterExtractionRegex(unittest.TestCase):
 
         # We can't easily test the full get_initial_story without mocking
         # but we can test the import and basic functionality
-        import gemini_service
+
 
         # Just verify the module loads and re is available
         self.assertTrue(hasattr(gemini_service, "re"))
@@ -100,7 +103,7 @@ class TestCharacterExtractionRegex(unittest.TestCase):
         ]
 
         # This should not raise NameError if re is properly imported
-        import re
+
 
         for pattern in npc_patterns:
             matches = re.findall(pattern, test_prompt)
@@ -110,7 +113,7 @@ class TestCharacterExtractionRegex(unittest.TestCase):
 
     def test_planning_block_character_creation_check(self):
         """GREEN: Test the actual re.search usage in planning block logic"""
-        import re
+
 
         # Test the actual line that uses re.search in the current code
         test_text = "[CHARACTER CREATION] Please create your character stats"
@@ -126,7 +129,7 @@ class TestCharacterExtractionRegex(unittest.TestCase):
 
     def test_all_re_usage_in_gemini_service(self):
         """GREEN: Comprehensive test of all regex usage in gemini_service"""
-        import re
+
 
         # Test 1: NPC pattern extraction (lines 913-914)
         test_prompt = """

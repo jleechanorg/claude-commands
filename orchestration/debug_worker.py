@@ -7,8 +7,11 @@ import sys
 from datetime import datetime
 from dataclasses import asdict
 
+from message_broker import MessageBroker, MessageType, TaskMessage
+import traceback
+
 try:
-    from message_broker import MessageBroker, MessageType, TaskMessage
+
     print("✅ Imports successful")
 except Exception as e:
     print(f"❌ Import failed: {e}")
@@ -84,7 +87,7 @@ def main():
                     
                 except Exception as e:
                     print(f"❌ Error processing message: {e}")
-                    import traceback
+
                     traceback.print_exc()
             
             # Heartbeat
@@ -95,7 +98,7 @@ def main():
         print("\n\n👋 Worker shutting down...")
     except Exception as e:
         print(f"\n❌ Fatal error: {e}")
-        import traceback
+
         traceback.print_exc()
 
 if __name__ == "__main__":

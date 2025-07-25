@@ -4,6 +4,12 @@ import subprocess
 import sys
 import unittest
 
+from game_state import GameState
+from integration_test_lib import (
+from main import create_app
+import atexit
+import firestore_service
+
 # Add the project root to the Python path to allow for imports
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
@@ -11,14 +17,14 @@ sys.path.insert(0, project_root)
 
 # Handle missing dependencies gracefully
 try:
-    from integration_test_lib import (
+
         IntegrationTestSetup,
         setup_integration_test_environment,
     )
-    from main import create_app
 
-    import firestore_service
-    from game_state import GameState
+
+
+
 
     # Set up the integration test environment
     test_setup = setup_integration_test_environment(project_root)
@@ -48,7 +54,7 @@ if DEPS_AVAILABLE:
     MOCK_INTEGRATION_CALIBRATION = mock_instructions["calibration"]
 
     # Register cleanup on exit
-    import atexit
+
 
     atexit.register(lambda: test_setup.cleanup())
 

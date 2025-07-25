@@ -11,6 +11,11 @@ import unittest
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
+import io
+import os
+import unicodedata
+import zipfile
+
 # Mock firebase modules before imports
 mock_firebase_admin = MagicMock()
 mock_firestore = MagicMock()
@@ -24,7 +29,7 @@ DELETE_FIELD = object()
 mock_firestore.DELETE_FIELD = DELETE_FIELD
 
 # Setup module mocks
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.modules["firebase_admin"] = mock_firebase_admin
 sys.modules["firebase_admin.firestore"] = mock_firestore
 sys.modules["firebase_admin.auth"] = mock_auth
@@ -470,7 +475,7 @@ class TestInputSanitization(unittest.TestCase):
 
     def test_unicode_normalization(self):
         """Test Unicode normalization to prevent homograph attacks."""
-        import unicodedata
+
 
         # Test various Unicode variations that normalize differently
         unicode_tests = [
@@ -672,7 +677,7 @@ class TestPathTraversalAndPayloadAttacks(unittest.TestCase):
 
     def test_path_traversal_prevention(self):
         """Test prevention of path traversal attacks."""
-        import os
+
 
         # Base directory for safe file operations
         safe_base = "/tmp/worldarchitect/safe"
@@ -750,8 +755,8 @@ class TestPathTraversalAndPayloadAttacks(unittest.TestCase):
 
     def test_zip_bomb_prevention(self):
         """Test prevention of zip bomb attacks."""
-        import io
-        import zipfile
+
+
 
         # Create a simulated zip file
         zip_buffer = io.BytesIO()

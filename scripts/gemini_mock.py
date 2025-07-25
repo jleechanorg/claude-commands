@@ -10,6 +10,8 @@ import random
 from dataclasses import dataclass
 from typing import Any
 
+import re
+
 
 @dataclass
 class GeminiResponse:
@@ -139,7 +141,7 @@ Narrative: {included[0]} surveyed the scene{f" while {included[1]} stood nearby"
             entities = [e.strip() for e in line.split(",")]
         elif "<entity>" in prompt:
             # XML style
-            import re
+
 
             entities = re.findall(r"<entity>(.*?)</entity>", prompt)
         elif '"entities_mentioned"' in prompt:
@@ -148,7 +150,7 @@ Narrative: {included[0]} surveyed the scene{f" while {included[1]} stood nearby"
                 entities = ["Lyra", "Theron", "Marcus", "Elara"]
         else:
             # Try to find character names (capitalized words)
-            import re
+
 
             words = re.findall(r"\b[A-Z][a-z]+\b", prompt)
             # Filter common words

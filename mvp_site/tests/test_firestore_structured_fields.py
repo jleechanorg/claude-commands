@@ -10,7 +10,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 # Add the parent directory to the Python path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import constants
 

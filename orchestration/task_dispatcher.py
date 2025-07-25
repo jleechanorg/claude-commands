@@ -13,6 +13,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List
 
+import glob
+
 
 class TaskPriority(Enum):
     LOW = 1
@@ -428,7 +430,7 @@ class TaskDispatcher:
             
         # Check worktrees  
         try:
-            import glob
+
             workspaces = glob.glob("agent_workspace_*")
             for ws in workspaces:
                 agent_name = ws.replace("agent_workspace_", "")

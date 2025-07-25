@@ -8,8 +8,10 @@ import sys
 import unittest
 from unittest.mock import Mock, patch
 
+
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from entity_validator import entity_validator
 
 from dual_pass_generator import (
     AdaptiveEntityInjector,
@@ -29,7 +31,7 @@ class TestDualPassGenerator(unittest.TestCase):
     def test_build_injection_templates(self):
         """Test that injection templates are properly built via EntityValidator"""
         # This functionality now lives in EntityValidator
-        from entity_validator import entity_validator
+
 
         missing_entities = ["Gideon", "Sariel"]
         templates = entity_validator.create_injection_templates(missing_entities)

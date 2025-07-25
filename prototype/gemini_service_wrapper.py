@@ -7,9 +7,11 @@ import os
 import time
 from typing import Any
 
+import google.generativeai as genai
+
 # Try to import Gemini
 try:
-    import google.generativeai as genai
+
 
     GEMINI_AVAILABLE = True
 except ImportError:

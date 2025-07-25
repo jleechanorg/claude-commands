@@ -9,6 +9,7 @@ from ..validators.narrative_sync_validator import (
     EntityContext,
     EntityPresenceType,
     NarrativeSyncValidator,
+    ValidationResult
 )
 
 
@@ -44,7 +45,7 @@ class TestNarrativeSyncValidator(unittest.TestCase):
         narrative = """
         Cassian's voice was tight and strained. "Uncle Titus is leading a 
         punitive campaign against Mordan's entire clan. We will burn them 
-        from the history books."
+
         """
 
         expected_entities = ["Cassian", "Titus"]

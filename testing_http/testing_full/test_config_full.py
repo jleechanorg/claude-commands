@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+
 """
 Configuration for FULL API browser tests using real Firebase and Gemini.
 
@@ -21,7 +23,7 @@ import requests
 # Try to load from .env file if it exists
 env_path = Path(__file__).parent / ".env"
 if env_path.exists():
-    from dotenv import load_dotenv
+
 
     load_dotenv(env_path)
 

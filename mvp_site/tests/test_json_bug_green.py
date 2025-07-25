@@ -7,6 +7,8 @@ It verifies that narrative_text no longer contains raw JSON.
 import os
 import sys
 
+import traceback
+
 mvp_site_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, mvp_site_path)
 
@@ -123,7 +125,7 @@ if __name__ == "__main__":
 
     except Exception as e:
         print(f"\n❌ Test error: {e}")
-        import traceback
+
 
         traceback.print_exc()
         sys.exit(1)

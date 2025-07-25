@@ -6,6 +6,9 @@ Manages global provider state for tests.
 import os
 import sys
 
+from .mock_provider import MockServiceProvider
+from .simple_mock_provider import SimpleMockServiceProvider as MockServiceProvider
+
 # Ensure the project root is in Python path for imports
 project_root = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -18,11 +21,11 @@ from .service_provider import TestServiceProvider
 
 # Try to import the full mock provider, fall back to simple one
 try:
-    from .mock_provider import MockServiceProvider
+
 
     _use_full_mocks = True
 except ImportError:
-    from .simple_mock_provider import SimpleMockServiceProvider as MockServiceProvider
+
 
     _use_full_mocks = False
 

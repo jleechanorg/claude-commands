@@ -8,6 +8,8 @@ Uses the shared browser_test_helpers library for standardized screenshot managem
 import os
 import sys
 
+import traceback
+
 # Add project root to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -67,7 +69,7 @@ def test_all_structured_fields(page, test_name):
 
     except Exception as e:
         print(f"❌ Test failed: {e}")
-        import traceback
+
 
         traceback.print_exc()
         return False

@@ -12,6 +12,8 @@ import pytest
 from .factory import get_service_provider, reset_global_provider
 from .service_provider import TestServiceProvider
 
+import time
+
 # ============================================================================
 # PYTEST FIXTURES
 # ============================================================================
@@ -303,7 +305,7 @@ def example_test_functions():
 
         if is_real:
             # Use unique collection name in real mode
-            import time
+
 
             collection_name = f"test_{int(time.time())}"
         else:

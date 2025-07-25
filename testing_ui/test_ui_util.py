@@ -11,6 +11,8 @@ from typing import Any
 
 from playwright.sync_api import Browser, Page, sync_playwright
 
+import json
+
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(__file__))
 from screenshot_utils import take_screenshot
@@ -161,7 +163,7 @@ def capture_api_request(
     def handle_request(request):
         if url_pattern in request.url and request.method == method:
             try:
-                import json
+
 
                 data = json.loads(request.post_data) if request.post_data else {}
                 captured_data["request"] = {

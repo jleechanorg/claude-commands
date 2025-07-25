@@ -9,6 +9,9 @@ import time
 
 from playwright.sync_api import sync_playwright
 
+import subprocess
+import traceback
+
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -29,7 +32,7 @@ def take_screenshots():
         try:
             # Start test server
             print("🚀 Starting test server...")
-            import subprocess
+
 
             server = subprocess.Popen(
                 [sys.executable, "mvp_site/main.py", "serve"],
@@ -122,7 +125,7 @@ def take_screenshots():
 
         except Exception as e:
             print(f"❌ Error: {e}")
-            import traceback
+
 
             traceback.print_exc()
 

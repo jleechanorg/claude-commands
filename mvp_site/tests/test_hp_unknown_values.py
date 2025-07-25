@@ -5,6 +5,8 @@ import os
 import sys
 import unittest
 
+from pydantic import ValidationError
+
 # Add the mvp_site directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -85,7 +87,7 @@ class TestHPUnknownValues(unittest.TestCase):
 
     def test_hp_exceeds_max_after_conversion(self):
         """Test validation still works after conversion"""
-        from pydantic import ValidationError
+
 
         # HP=5 exceeds converted hp_max=1, should raise ValidationError
         with self.assertRaises(ValidationError) as context:

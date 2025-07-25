@@ -8,6 +8,9 @@ import sys
 import unittest
 from unittest.mock import patch
 
+from main import _cleanup_legacy_state
+from main import apply_automatic_combat_cleanup
+
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -33,14 +36,14 @@ class StateHelper:
     @staticmethod
     def apply_automatic_combat_cleanup(state_dict, changes_dict):
         """Delegate to main.apply_automatic_combat_cleanup."""
-        from main import apply_automatic_combat_cleanup
+
 
         return apply_automatic_combat_cleanup(state_dict, changes_dict)
 
     @staticmethod
     def cleanup_legacy_state(state_dict):
         """Delegate to main._cleanup_legacy_state."""
-        from main import _cleanup_legacy_state
+
 
         return _cleanup_legacy_state(state_dict)
 

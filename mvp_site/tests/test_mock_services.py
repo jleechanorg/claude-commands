@@ -14,6 +14,7 @@ os.environ["TESTING"] = "true"
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import main
 from main import create_app
 
 
@@ -34,7 +35,7 @@ class TestMockServices(unittest.TestCase):
     def test_services_are_mocked(self):
         """Test that services are using mock implementations."""
         # Import the services that main.py uses
-        import main
+
 
         # Check that gemini_service is the mock version
         self.assertEqual(

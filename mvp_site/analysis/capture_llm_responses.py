@@ -12,6 +12,10 @@ import time
 from datetime import datetime
 from typing import List, Dict, Any
 
+from main import create_app
+from test_integration.integration_test_lib import IntegrationTestSetup, setup_integration_test_environment
+import traceback
+
 # Ensure we're in the project root
 project_root = os.path.abspath(os.path.dirname(__file__))
 os.chdir(project_root)
@@ -24,8 +28,8 @@ def capture_sariel_responses():
     print("🎯 Starting Sariel campaign replay with response capture...")
     
     # Import test modules
-    from main import create_app
-    from test_integration.integration_test_lib import IntegrationTestSetup, setup_integration_test_environment
+
+
     
     # Set up environment
     test_setup = setup_integration_test_environment(project_root)
@@ -201,6 +205,6 @@ if __name__ == "__main__":
             sys.exit(1)
     except Exception as e:
         print(f"\n💥 Error during capture: {e}")
-        import traceback
+
         traceback.print_exc()
         sys.exit(1)

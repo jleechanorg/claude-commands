@@ -7,6 +7,8 @@ Tests validators with challenging scenarios like hidden/unconscious characters.
 import json
 from datetime import datetime
 
+import os
+
 
 def test_edge_cases():
     """Test validators with edge cases."""
@@ -241,7 +243,7 @@ if __name__ == "__main__":
     report = test_edge_cases()
 
     # Save report
-    import os
+
 
     os.makedirs("benchmarks", exist_ok=True)
 

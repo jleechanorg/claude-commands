@@ -7,9 +7,11 @@ import json
 import os
 from typing import Any
 
+import jsonschema
+
 # Try to import jsonschema if available
 try:
-    import jsonschema
+
 
     JSONSCHEMA_AVAILABLE = True
 except ImportError:

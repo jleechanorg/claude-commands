@@ -8,6 +8,7 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
+
 # Mock firebase_admin before imports
 mock_firebase_admin = MagicMock()
 mock_firestore = MagicMock()
@@ -16,7 +17,8 @@ mock_firebase_admin.firestore = mock_firestore
 mock_firebase_admin.auth = mock_auth
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from gemini_response import GeminiResponse
 
 sys.modules["firebase_admin"] = mock_firebase_admin
 sys.modules["firebase_admin.firestore"] = mock_firestore
@@ -216,7 +218,7 @@ class TestStateHelperFunctions(unittest.TestCase):
     def test_strip_state_updates_only_with_updates(self):
         """Test strip_state_updates_only with state updates present."""
         # Note: This function may not actually strip STATE_UPDATES based on test results
-        from gemini_response import GeminiResponse
+
 
         strip_state_updates_only = GeminiResponse._strip_state_updates_only
 
@@ -239,7 +241,7 @@ class TestStateHelperFunctions(unittest.TestCase):
 
     def test_strip_state_updates_only_without_updates(self):
         """Test strip_state_updates_only with no state updates."""
-        from gemini_response import GeminiResponse
+
 
         strip_state_updates_only = GeminiResponse._strip_state_updates_only
 

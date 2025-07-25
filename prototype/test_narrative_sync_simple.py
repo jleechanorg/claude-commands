@@ -52,7 +52,7 @@ def test_sariel_ambiguous_presence():
     narrative = """
     Cassian's voice was tight and strained. "Uncle Titus is leading a 
     punitive campaign against Mordan's entire clan. We will burn them 
-    from the history books."
+
     """
 
     expected_entities = ["Cassian", "Titus"]
