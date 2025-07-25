@@ -10,6 +10,8 @@ from datetime import datetime
 
 import requests
 
+import traceback
+
 BASE_URL = "http://localhost:8080"
 
 # Real browser headers from Chrome
@@ -296,7 +298,7 @@ def main():
 
     except Exception as e:
         log(f"Test suite failed: {e}", "ERROR")
-        import traceback
+
 
         traceback.print_exc()
 

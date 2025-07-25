@@ -4,7 +4,9 @@ import os
 import sys
 import unittest
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from pydantic import ValidationError
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from schemas.entities_pydantic import NPC, HealthStatus, PlayerCharacter
 
@@ -74,7 +76,7 @@ class TestAgeFieldValidation(unittest.TestCase):
 
     def test_age_validation_negative(self):
         """Test that negative ages are rejected."""
-        from pydantic import ValidationError
+
 
         with self.assertRaises(ValidationError) as context:
             NPC(
@@ -90,7 +92,7 @@ class TestAgeFieldValidation(unittest.TestCase):
 
     def test_age_validation_too_high(self):
         """Test that unreasonably high ages are rejected."""
-        from pydantic import ValidationError
+
 
         with self.assertRaises(ValidationError) as context:
             NPC(
@@ -122,7 +124,7 @@ class TestAgeFieldValidation(unittest.TestCase):
 
     def test_age_type_validation(self):
         """Test that non-integer ages are rejected."""
-        from pydantic import ValidationError
+
 
         invalid_ages = [25.5, "young", [1, 2], {"age": 25}]
 

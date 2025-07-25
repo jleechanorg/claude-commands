@@ -9,6 +9,10 @@ from flask import jsonify, request
 from entity_validator import entity_validator
 from dual_pass_generator import dual_pass_generator
 import logging_util
+
+from dual_pass_generator import EntityInjector
+from gemini_service import generate_content
+
 def add_parallel_dual_pass_routes(app, get_campaign_info):
     """Add routes for parallel dual-pass optimization"""
     
@@ -46,11 +50,11 @@ def add_parallel_dual_pass_routes(app, get_campaign_info):
             )
             
             # Generate enhanced narrative
-            from gemini_service import generate_content
+
             enhanced_narrative = generate_content(injection_prompt)
             
             # Use the injector to refine if needed
-            from dual_pass_generator import EntityInjector
+
             entity_injector = EntityInjector()
             final_narrative = entity_injector.inject_entities_adaptively(
                 narrative=enhanced_narrative,

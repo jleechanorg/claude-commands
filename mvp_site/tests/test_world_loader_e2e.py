@@ -8,9 +8,14 @@ import os
 import sys
 import unittest
 
+import time
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 from file_cache import clear_file_cache, get_cache_stats
+# Add mvp_site directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
 from world_loader import load_banned_names, load_world_content_for_system_instruction
 
 
@@ -99,7 +104,7 @@ class TestWorldLoaderE2E(unittest.TestCase):
 
     def test_world_loader_performance_with_cache(self):
         """Test that repeated world loader calls show performance improvement."""
-        import time
+
 
         world_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "world")
         world_assiah_path = os.path.join(world_dir, "world_assiah_compressed.md")

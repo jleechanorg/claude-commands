@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+
+from testing_framework.fixtures import get_test_client_for_mode
+import pytest
+
 """
 Test-Driven Development for Backend Character and Setting Parameters
 Phase 2: Backend Testing
@@ -17,7 +21,7 @@ from unittest.mock import MagicMock, patch
 
 # Try to import pytest, but don't fail if not available
 try:
-    import pytest
+
 
     PYTEST_AVAILABLE = True
 except ImportError:
@@ -31,7 +35,7 @@ os.environ["TESTING"] = "true"
 
 # Import testing framework for dual-mode support
 try:
-    from testing_framework.fixtures import get_test_client_for_mode
+
 
     FRAMEWORK_AVAILABLE = True
 except ImportError:

@@ -19,7 +19,7 @@ Pure markdown command (no Python executable) that systematically verifies all PR
 
 ## What It Does
 
-1. **Loads comments data** from `/tmp/copilot/comments.json` 
+1. **Loads comments data** from `/tmp/copilot_{branch}/comments_{branch}.json` 
 2. **Fetches current PR comment responses** from GitHub API
 3. **Cross-references** original comments with posted responses
 4. **Verifies coverage** - ensures every comment has a corresponding response
@@ -33,7 +33,9 @@ Pure markdown command (no Python executable) that systematically verifies all PR
 
 ```bash
 # 1. Load original comment data from /commentfetch
-TOTAL_ORIGINAL=$(cat /tmp/copilot/comments.json | jq '.comments | length')
+BRANCH=$(git branch --show-current)
+SANITIZED_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/_/g' | sed 's/^[.-]*//g')
+TOTAL_ORIGINAL=$(cat /tmp/copilot_${SANITIZED_BRANCH}/comments_${SANITIZED_BRANCH}.json | jq '.comments | length')
 echo "Original comments found: $TOTAL_ORIGINAL"
 
 # 2. Fetch current individual pull request comments

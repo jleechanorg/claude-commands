@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+from memory_integration import memory_enhanced_response
+
 """
 Immediate Integration Demo for Cognitive Enhancement Framework
 ==============================================================
@@ -295,7 +298,7 @@ def demonstrate_direct_integration():
     print("-" * 40)
 
     # Example 1: Enhance existing function
-    from memory_integration import memory_enhanced_response
+
 
     @memory_enhanced_response()
     def my_chat_function(user_input: str) -> str:

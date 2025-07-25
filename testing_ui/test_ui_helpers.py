@@ -9,6 +9,8 @@ from typing import Any
 
 from playwright.sync_api import Page
 
+from screenshot_utils import take_screenshot
+
 
 def wait_and_click(
     page: Page, selector: str, timeout: int = 5000, force: bool = False
@@ -339,7 +341,7 @@ def capture_structured_fields_sequence(
     Returns:
         Dictionary mapping field names to screenshot paths
     """
-    from screenshot_utils import take_screenshot
+
 
     screenshots = {}
 

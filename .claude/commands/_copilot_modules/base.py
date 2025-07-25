@@ -23,9 +23,6 @@ from typing import Any, Dict, List, Optional
 class CopilotCommandBase(ABC):
     """Base class for all modular copilot commands."""
     
-    # Standard directory for I/O files
-    IO_DIR = Path("/tmp/copilot")
-    
     def __init__(self, pr_number: Optional[str] = None):
         """Initialize base command.
         
@@ -36,6 +33,9 @@ class CopilotCommandBase(ABC):
         self.start_time = datetime.now()
         self.repo = self._get_repo_info()
         self.current_branch = self._get_current_branch()
+        
+        # Branch-specific directory for I/O files to prevent conflicts between branches
+        self.IO_DIR = Path(f"/tmp/copilot_{self.current_branch}")
         
         # Ensure I/O directory exists
         self.IO_DIR.mkdir(exist_ok=True)
@@ -75,9 +75,19 @@ class CopilotCommandBase(ABC):
                 ['git', 'branch', '--show-current'],
                 capture_output=True, text=True, check=True, cwd=os.getcwd()
             )
-            return result.stdout.strip()
+            branch_name = result.stdout.strip()
+            return self._sanitize_branch_name(branch_name)
         except Exception:
             return "unknown-branch"
+    
+    def _sanitize_branch_name(self, branch_name: str) -> str:
+        """Sanitize branch name to prevent path traversal attacks and ensure filesystem safety."""
+        import re
+        # Remove path traversal patterns and unsafe characters
+        sanitized = re.sub(r'\.\./', '', branch_name)  # Remove ../ patterns
+        sanitized = re.sub(r'[^\w\-_.]', '_', sanitized)  # Allow only safe chars
+        sanitized = re.sub(r'^[.-]+', '', sanitized)  # Remove leading dots/dashes
+        return sanitized or 'unknown-branch'
     
     def run_gh_command(self, command: List[str]) -> Dict[str, Any]:
         """Run GitHub CLI command and return parsed JSON.
@@ -183,8 +193,8 @@ class CopilotCommandBase(ABC):
             result = self.execute()
             result['execution_time'] = self.get_execution_time()
             
-            # Save result to standard output file
-            output_file = f"{self.__class__.__name__.lower()}_result.json"
+            # Save result to branch-specific output file
+            output_file = f"{self.__class__.__name__.lower()}_result_{self.current_branch}.json"
             self.save_json_file(output_file, result)
             
             # Print summary
@@ -202,7 +212,7 @@ class CopilotCommandBase(ABC):
                 'message': str(e),
                 'execution_time': self.get_execution_time()
             }
-            self.save_json_file(f"{self.__class__.__name__.lower()}_error.json", error_result)
+            self.save_json_file(f"{self.__class__.__name__.lower()}_error_{self.current_branch}.json", error_result)
             return 1
     
     def run_ci_replica(self, script_path: str = "run_ci_replica.sh") -> Dict[str, Any]:

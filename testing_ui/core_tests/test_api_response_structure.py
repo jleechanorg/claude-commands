@@ -15,6 +15,8 @@ import requests
 
 from testing_ui.config import BASE_URL
 
+import traceback
+
 
 def test_api_structure():
     # Start test server
@@ -150,7 +152,7 @@ def test_api_structure():
 
     except Exception as e:
         print(f"Error: {e}")
-        import traceback
+
 
         traceback.print_exc()
     finally:

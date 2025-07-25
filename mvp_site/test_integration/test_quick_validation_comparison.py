@@ -13,6 +13,8 @@ from datetime import datetime
 
 import logging_util
 
+import tempfile
+
 # Add the project root to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
@@ -139,7 +141,7 @@ class TestQuickValidationComparison(unittest.TestCase):
     def _save_results(self, results: dict):
         """Save results to file"""
         # Use temporary directory for test outputs
-        import tempfile
+
 
         temp_dir = tempfile.mkdtemp(prefix="cassian_test_")
 

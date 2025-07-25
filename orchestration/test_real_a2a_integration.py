@@ -14,6 +14,8 @@ from typing import Dict, List, Any
 from redis_a2a_bridge import RedisA2ABridge
 from message_broker import MessageBroker
 
+import sys
+
 
 class RealA2AIntegrationTest:
     """Test suite that validates REAL A2A functionality - no simulations"""
@@ -345,6 +347,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    import sys
+
     success = asyncio.run(main())
     sys.exit(0 if success else 1)

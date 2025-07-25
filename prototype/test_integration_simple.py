@@ -4,14 +4,19 @@ Simple integration test to verify the validation system works end-to-end.
 Run from the prototype directory.
 """
 
+from game_state_integration import MockGameState
+from validators.fuzzy_token_validator import FuzzyTokenValidator
+from validators.token_validator import SimpleTokenValidator, TokenValidator
+import time
+
 
 def test_basic_integration():
     """Test basic integration of validators."""
     print("=== Basic Integration Test ===")
 
     # Import components
-    from validators.fuzzy_token_validator import FuzzyTokenValidator
-    from validators.token_validator import SimpleTokenValidator, TokenValidator
+
+
 
     # Test data
     narrative = "Gideon raised his sword while the healer prepared her spells."
@@ -62,7 +67,7 @@ def test_game_state_integration():
     """Test integration with game state."""
     print("\n=== Game State Integration Test ===")
 
-    from game_state_integration import MockGameState
+
 
     # Create game state
     game_state = MockGameState()
@@ -95,9 +100,9 @@ def test_performance():
     """Test performance meets requirements."""
     print("\n=== Performance Test ===")
 
-    import time
 
-    from validators.fuzzy_token_validator import FuzzyTokenValidator
+
+
 
     validator = FuzzyTokenValidator()
     narrative = "Gideon and Rowan battled the dragon."

@@ -5,6 +5,9 @@ Mock Gemini Service wrapper that provides the same interface as the real gemini_
 import os
 import sys
 
+from .structured_fields_fixtures import FULL_STRUCTURED_RESPONSE
+from .structured_fields_fixtures import INITIAL_CAMPAIGN_RESPONSE
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -52,7 +55,7 @@ def get_initial_story(prompt, user_id=None, selected_prompts=None, generate_comp
     
     # Import structured response fixture for initial story
     try:
-        from .structured_fields_fixtures import INITIAL_CAMPAIGN_RESPONSE
+
         # Use the narrative from the initial campaign response
         narrative_text = INITIAL_CAMPAIGN_RESPONSE.get("narrative", "Default narrative text")
     except ImportError:

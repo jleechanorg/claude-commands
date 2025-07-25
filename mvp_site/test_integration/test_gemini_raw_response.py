@@ -7,6 +7,10 @@ import os
 import sys
 import unittest
 
+from game_state import GameState
+import gemini_service
+import traceback
+
 # Add the project root to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
@@ -15,8 +19,8 @@ from integration_test_lib import setup_integration_test_environment
 
 # Handle missing dependencies gracefully
 try:
-    import gemini_service
-    from game_state import GameState
+
+
 
     DEPS_AVAILABLE = True
 except ImportError as e:
@@ -94,7 +98,7 @@ class TestGeminiRawResponse(unittest.TestCase):
 
         except Exception as e:
             print(f"\nError calling Gemini: {e}")
-            import traceback
+
 
             traceback.print_exc()
 

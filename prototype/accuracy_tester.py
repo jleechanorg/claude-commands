@@ -7,13 +7,16 @@ Calculates precision, recall, and F1 scores for each validator.
 import json
 from datetime import datetime
 
+from tests.ground_truth import ground_truth_labels
+import os
+
 
 # Simplified test runner for accuracy metrics
 def calculate_accuracy_metrics():
     """Calculate accuracy metrics for each validator type."""
 
     # Import test data
-    from tests.ground_truth import ground_truth_labels
+
 
     # Sample validator results (would normally run actual validators)
     # Format: test_id -> validator_name -> result
@@ -166,7 +169,7 @@ if __name__ == "__main__":
     report = calculate_accuracy_metrics()
 
     # Save report
-    import os
+
 
     os.makedirs("benchmarks", exist_ok=True)
 

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+import traceback
+
 """
 Manual test to reproduce the exact Sariel campaign production scenario.
 This test makes real API calls and validates entity tracking behavior.
@@ -191,7 +194,7 @@ if __name__ == "__main__":
         run_sariel_exact_production()
     except Exception as e:
         print(f"\n❌ Test failed with error: {e}")
-        import traceback
+
 
         traceback.print_exc()
         sys.exit(1)

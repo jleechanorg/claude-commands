@@ -9,6 +9,9 @@ import os
 import sys
 import tempfile
 
+import shutil
+import traceback
+
 # Add project root to path
 project_root = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -246,7 +249,7 @@ def demo_mock_capture():
         print(f"     Differences found: {len(diff['differences'])}")
 
     # Clean up
-    import shutil
+
 
     shutil.rmtree(temp_dir)
     print("\n7. Cleaned up temporary files")
@@ -323,7 +326,7 @@ def main():
 
     except Exception as e:
         print(f"\nDemo failed: {e}")
-        import traceback
+
 
         traceback.print_exc()
 

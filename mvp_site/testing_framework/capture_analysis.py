@@ -9,6 +9,8 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any
 
+import time
+
 
 class CaptureAnalyzer:
     """Analyzes captured service interactions and compares with mock data."""
@@ -38,7 +40,7 @@ class CaptureAnalyzer:
         if not os.path.exists(self.capture_dir):
             return []
 
-        import time
+
 
         cutoff_time = time.time() - (days_back * 24 * 3600)
         recent_files = []

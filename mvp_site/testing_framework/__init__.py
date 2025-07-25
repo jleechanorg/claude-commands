@@ -19,6 +19,7 @@ try:
 except ImportError:
     from .simple_mock_provider import SimpleMockServiceProvider as MockServiceProvider
 
+
 __all__ = [
     "TestServiceProvider",
     "MockServiceProvider",

@@ -9,16 +9,22 @@ import sys
 import os
 import time
 
+from game_state_integration import MockGameState
+from validators.fuzzy_token_validator import FuzzyTokenValidator
+from validators.hybrid_validator import HybridValidator
+from validators.llm_validator import LLMValidator
+from validators.token_validator import SimpleTokenValidator, TokenValidator
+
 # Add prototype directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'prototype'))
 
 # Import prototype modules
 try:
-    from validators.token_validator import SimpleTokenValidator, TokenValidator
-    from validators.fuzzy_token_validator import FuzzyTokenValidator
-    from validators.llm_validator import LLMValidator
-    from validators.hybrid_validator import HybridValidator
-    from game_state_integration import MockGameState
+
+
+
+
+
     IMPORTS_SUCCESSFUL = True
 except ImportError as e:
     print(f"Import error: {e}")

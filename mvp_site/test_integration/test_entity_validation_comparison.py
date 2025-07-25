@@ -13,6 +13,8 @@ from typing import Any
 
 import logging_util
 
+import tempfile
+
 # Add the project root to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
@@ -251,7 +253,7 @@ class TestEntityValidationComparison(unittest.TestCase):
     def _save_metrics(self, metrics: ValidationMetrics, filename: str):
         """Save metrics to file"""
         # Use temporary directory for test outputs
-        import tempfile
+
 
         temp_dir = tempfile.mkdtemp(prefix="validation_metrics_")
 

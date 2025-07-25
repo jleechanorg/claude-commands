@@ -10,6 +10,8 @@ import sys
 import time
 from datetime import datetime
 
+import requests
+
 # Test files to run
 HTTP_TESTS = [
     "test_continue_campaign.py",
@@ -73,7 +75,7 @@ def main():
     print("=" * 60)
 
     # Check if test server is running
-    import requests
+
 
     try:
         response = requests.get("http://localhost:8086", timeout=2)

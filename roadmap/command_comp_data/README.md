@@ -14,9 +14,9 @@ This directory contains concrete evidence from A/B testing the command compositi
 
 ## Files
 
-### Raw Test Outputs
-- `ab_test_group_a_command_composition.txt` - Full JSON log from Group A
-- `ab_test_group_b_natural_language.txt` - Full JSON log from Group B
+### Raw Test Outputs (Archived)
+- Raw JSON logs (~107KB) moved to backup after analysis completion
+- All key findings extracted and preserved in analysis documents below
 
 ### Analysis Documents
 - `concrete_ab_test_evidence.md` - Comprehensive comparison and analysis

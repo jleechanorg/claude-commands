@@ -11,6 +11,16 @@ import tempfile
 import unittest
 from pathlib import Path
 
+# Add mvp_site directory to path for imports
+# Handle both running from project root and from mvp_site directory
+current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if os.path.basename(current_dir) == 'mvp_site':
+    # Already in mvp_site directory
+    sys.path.insert(0, current_dir)
+else:
+    # Running from project root
+    sys.path.insert(0, os.path.join(current_dir))
+
 
 class TestDeploymentBuild(unittest.TestCase):
     """Test deployment build context and file accessibility."""
@@ -120,7 +130,7 @@ def load_world_content_for_system_instruction():
             # Loading should now work
             result = world_loader.load_world_content_for_system_instruction()
 
-            # Verify content was loaded
+            # Verify content was loaded (mock returns char counts)
             self.assertIn("Book:", result)
             self.assertIn("World:", result)
             self.assertIn("chars", result)

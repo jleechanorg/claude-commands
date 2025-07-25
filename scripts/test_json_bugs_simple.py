@@ -10,6 +10,8 @@ import json
 import os
 import sys
 
+import traceback
+
 # Add the mvp_site directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mvp_site"))
 
@@ -104,7 +106,7 @@ def main():
 
     except Exception as e:
         print(f"❌ Test failed: {e}")
-        import traceback
+
 
         traceback.print_exc()
         sys.exit(1)

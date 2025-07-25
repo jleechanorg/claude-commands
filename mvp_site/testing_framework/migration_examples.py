@@ -8,6 +8,8 @@ import os
 import sys
 from unittest.mock import MagicMock, patch
 
+from testing_framework.fixtures import get_test_client_for_mode
+
 # Add the project root to the path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -176,7 +178,7 @@ class GradualMigrationExample:
         """Existing test with minimal changes using compatibility helper."""
 
         # STEP 1: Add this single line to existing tests
-        from testing_framework.fixtures import get_test_client_for_mode
+
 
         services = get_test_client_for_mode()
 
@@ -213,7 +215,7 @@ class BackwardsCompatibleTest:
         self.client = self.app.test_client()
 
         # Add compatibility layer
-        from testing_framework.fixtures import get_test_client_for_mode
+
 
         services = get_test_client_for_mode()
 
