@@ -1,6 +1,17 @@
 # GitHub Development Statistics Analysis
 
-## Latest Statistics Update (July 25, 2025)
+## Latest Development Statistics (June 25 - July 25, 2025)
+
+### Real Code Changes (Current Period)
+- **Total Commits**: 419 over 30 days
+- **Merged PRs**: 481 (with 57 total PRs created this period)
+- **Lines Added**: 24,090 lines (Python: 20,973, JavaScript: 3,045, HTML: 72)
+- **Files Modified**: Primarily in mvp_site directory
+
+### Daily Averages (Current Period)
+- **Commits per day**: 14.0
+- **PRs merged per day**: 16.0
+- **Lines added per day**: 803
 
 ### Current Codebase Metrics (mvp_site)
 - **Total Lines**: 89,902 lines
@@ -8,13 +19,6 @@
   - JavaScript: 9,060 lines (40% tests, 60% non-test)
   - HTML: 1,604 lines (81% tests, 19% non-test)
 - **Overall Test Coverage**: 78% of codebase is test code
-
-### Last Month Activity (June 25 - July 25, 2025)
-- **Python Lines Added**: 20,973 lines
-- **JavaScript Lines Added**: 3,045 lines  
-- **HTML Lines Added**: 72 lines
-- **Total Lines Added**: 24,090 lines
-- **Daily Average**: ~775 lines/day
 
 ---
 
