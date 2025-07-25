@@ -1,18 +1,8 @@
 import os
 import sys
 
-os.environ["TESTING"] = "true"
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from firebase_admin import auth
-import document_generator
-import firebase_admin
-from main import create_app
-app = create_app()
-from game_state import GameState
-import firestore_service
-import gemini_service
+os.environ["TESTING"] = "true"
 
 import json
 import threading
@@ -23,7 +13,7 @@ from unittest.mock import Mock, patch
 
 # Handle missing dependencies gracefully
 try:
-
+    from main import app, create_app
 
     FLASK_AVAILABLE = True
 except ImportError:
@@ -32,8 +22,8 @@ except ImportError:
     create_app = None
 
 try:
-
-
+    import firebase_admin
+    from firebase_admin import auth
 
     FIREBASE_AVAILABLE = True
 except ImportError:
@@ -42,11 +32,11 @@ except ImportError:
     auth = None
 
 try:
+    import document_generator
 
-
-
-
-
+    import firestore_service
+    import gemini_service
+    from game_state import GameState
 
     SERVICES_AVAILABLE = True
 except ImportError:
