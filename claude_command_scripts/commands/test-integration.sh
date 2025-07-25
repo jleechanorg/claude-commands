@@ -76,6 +76,10 @@ done
 echo -e "${BLUE}🔗 Integration Test Runner${NC}"
 echo "========================="
 
+# Get branch for filename sanitization
+BRANCH=$(git branch --show-current)
+SANITIZED_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/_/g' | sed 's/^[.-]*//g')
+
 # Check project root
 if [[ ! -f "mvp_site/main.py" ]]; then
     echo -e "${RED}❌ Error: Not in project root directory${NC}"
@@ -108,14 +112,14 @@ if [[ -f "mvp_site/test_integration/test_integration.py" ]] && [[ -z "$SPECIFIC_
     if [[ "$VERBOSE" == "true" ]]; then
         $cmd
     else
-        if $cmd > /tmp/integration_output.log 2>&1; then
+        if $cmd > /tmp/integration_output_${SANITIZED_BRANCH}.log 2>&1; then
             echo -e "${GREEN}✅ Integration tests passed!${NC}"
             exit 0
         else
             echo -e "${RED}❌ Integration tests failed!${NC}"
             echo ""
             echo "Error output:"
-            tail -30 /tmp/integration_output.log
+            tail -30 /tmp/integration_output_${SANITIZED_BRANCH}.log
             exit 1
         fi
     fi
@@ -169,14 +173,14 @@ else
                 echo -e "${RED}❌ FAILED${NC}"
             fi
         else
-            if $cmd > /tmp/test_output.log 2>&1; then
+            if $cmd > /tmp/test_output_${SANITIZED_BRANCH}.log 2>&1; then
                 PASSED_TESTS=$((PASSED_TESTS + 1))
                 echo -e "${GREEN}✅ PASSED${NC}"
             else
                 FAILED_TESTS=$((FAILED_TESTS + 1))
                 echo -e "${RED}❌ FAILED${NC}"
                 echo "Error output:"
-                tail -20 /tmp/test_output.log
+                tail -20 /tmp/test_output_${SANITIZED_BRANCH}.log
             fi
         fi
     done

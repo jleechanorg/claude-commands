@@ -111,7 +111,7 @@ The copilot system follows a **clean architecture** where only /commentfetch use
 
 1. **`/commentfetch`** - Fetch all PR comments ✅
    - Pure Python: Collects comments from all sources
-   - Output: `/tmp/copilot/comments.json`
+   - Output: `/tmp/copilot_${SANITIZED_BRANCH}/comments_${SANITIZED_BRANCH}.json`
    - The ONLY command that needs Python (pure data collection)
 
 2. **`/fixpr`** - Analyze CI failures and conflicts ✅
