@@ -16,6 +16,8 @@ from a2a.types import AgentCard, Task, Message
 from fastapi import FastAPI
 import uvicorn
 
+from a2a import Client
+
 
 class OrchestrationA2AServer:
     """Real A2A server for orchestrator framework integration"""
@@ -207,7 +209,7 @@ class A2AClient:
     """Real A2A client for external agent communication"""
     
     def __init__(self):
-        from a2a import Client
+
         self.client = Client()
         self.logger = logging.getLogger(__name__)
     

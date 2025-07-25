@@ -9,6 +9,7 @@ using proper SDK components and patterns.
 import asyncio
 import uuid
 import logging
+import sys
 from typing import Optional, Dict, Any
 
 import uvicorn
@@ -384,8 +385,6 @@ async def test_real_a2a_integration():
 
 
 if __name__ == "__main__":
-    import sys
-    
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         # Run integration test
         success = asyncio.run(test_real_a2a_integration())

@@ -1,159 +1,331 @@
-# Claude Commands
+# Claude Commands Export Repository
 
-Command composition system for Claude AI using natural language processing to combine slash commands.
+## 🚨 WARNING AND DISCLAIMER
 
-## Problem Statement
+### **REFERENCE-ONLY REPOSITORY**
+This repository contains commands and configurations extracted from the WorldArchitect.AI project as reference material. These commands are:
 
-Claude AI lacks native command composition. Users cannot combine multiple slash commands like `/think /debug /optimize` in a single invocation. Each command must be executed individually, losing context and requiring manual coordination between different analytical approaches.
+- **⚠️ UNTESTED** in isolation outside their original environment
+- **⚠️ PROJECT-SPECIFIC** with configurations tailored to WorldArchitect.AI workflows
+- **⚠️ DEPENDENCY-HEAVY** requiring specific MCP servers, tools, and environment setup
+- **⚠️ EXPERIMENTAL** with some commands still in development/testing phases
 
-## Solution: Command Composition
+**DO NOT EXPECT PLUG-AND-PLAY FUNCTIONALITY**
 
-This system enables arbitrary command combination through meta-prompt generation. Instead of modifying Claude's underlying architecture, it preprocesses combined commands into natural language instructions that Claude can interpret natively.
+### **Use Case**
+This repository serves as:
+- ✅ **Inspiration** for building similar command systems
+- ✅ **Reference implementation** of command composition patterns
+- ✅ **Architecture examples** for Claude workflow automation
+- ✅ **Technical learning resource** for AI-powered development tools
 
-### Technical Approach
+---
 
-**Command Parsing**: Regular expressions extract slash commands from user input
-**Behavior Mapping**: Known commands map to documented behaviors, unknown commands default to "approach" patterns
-**Meta-Prompt Generation**: System constructs natural language instructions combining all specified behaviors
-**Context Preservation**: Original task context flows through to the combined execution
+## 📋 QUICK START
 
-### Value Proposition
+### Prerequisites
+- [Claude Code CLI](https://claude.ai/code) - Primary execution environment
+- Python 3.8+ with venv support
+- Git with `gh` CLI for GitHub operations
+- Redis 6.0+ (for orchestration features)
+- Required MCP servers (see [Dependencies](#dependencies))
 
-1. **Cognitive Multiplication**: Combine different thinking approaches (analytical + creative + systematic)
-2. **Workflow Integration**: Chain related operations without losing context between steps  
-3. **Emergent Behaviors**: Command combinations produce capabilities not available individually
-4. **Extensibility**: New combinations work without hardcoded definitions
-
-### Example Transformations
-
+### Installation
 ```bash
-# Single command limitation
-/think analyze performance → Sequential thinking only
-/debug analyze performance → Debugging methodology only
+git clone https://github.com/jleechanorg/claude-commands.git
+cd claude-commands
 
-# Composition capability  
-/think /debug analyze performance → Sequential thinking + systematic debugging + analysis
+# Install MCP servers
+npm install @anthropic/mcp-server-github @anthropic/mcp-server-memory @playwright/mcp
+
+# Setup environment (adapt to your needs)
+cp .env.example .env
+# Edit .env with your tokens and configuration
 ```
 
-**Generated Meta-Prompt**:
-```
-Use sequential thinking methodology for systematic debugging approach: analyze performance
-```
+⚠️ **Important**: These commands require significant adaptation for your environment. See [Configuration](#configuration) and [Troubleshooting](#troubleshooting) sections.
 
-Claude processes this as natural language instructions, accessing both thinking patterns simultaneously.
+---
 
-## Core Commands
+## 🏗️ ARCHITECTURE OVERVIEW
 
-### Cognitive
-- **`/think [level]`** - Sequential thinking (light/medium/deep/ultra depth levels)
-- **`/arch`** - Architecture analysis and design patterns
-- **`/debug`** - Systematic debugging methodology with evidence collection
+### Command Composition System
+The claude-commands system implements **Command Composition** - combining multiple slash commands to create enhanced AI behaviors.
 
-### Operational
-- **`/orchestrate`** - Multi-agent task delegation *(WIP - requires Redis/tmux)*
-- **`/execute`** - Task execution with safety checks and approval gates
-- **`/plan`** - Strategic planning with structured decomposition
-
-### Analysis
-- **`/fake`** - Placeholder/demo code detection across codebases
-- **`/learn`** - Learning capture with Memory MCP integration
-- **`/test`** - Testing automation (UI/HTTP/integration workflows)
-
-### Communication
-- **`/commentreply`** - Intelligent GitHub PR comment generation
-- **`/copilot`** - Automated PR analysis and issue resolution
-
-### Meta
-- **`/combinations`** - Command composition engine documentation and examples
-
-## Composition Examples
-
-### Analytical Depth
+**Example:**
 ```bash
-/think deep /arch /security → Deep architectural thinking with security analysis
+/think deep /arch /security → Deep architectural security analysis
+/debug /test /learn → Systematic debugging + testing + learning capture
 ```
-Produces comprehensive security-focused architectural analysis using extended thinking methodology.
 
-### Problem Solving
-```bash
-/debug /test /learn → Systematic debugging + testing validation + learning capture
+### Directory Structure
 ```
-Combines debugging methodology with test-driven validation and automatic learning documentation.
-
-### Creative Technical
-```bash
-/arch /optimize /unconventional → Architecture analysis + optimization + creative approaches
-```
-Standard architectural analysis enhanced with optimization focus and non-conventional thinking patterns.
-
-## Implementation Details
-
-**Command Processing**: Markdown files contain command specifications with behavior descriptions. Hook scripts parse input and generate meta-prompts.
-
-**Composition Algorithm**:
-1. Parse slash commands using regex: `/(\w+)/g`
-2. Map known commands to behavior descriptions from markdown files
-3. Handle unknown commands with generic "approach" pattern
-4. Concatenate behaviors with natural language connectors
-5. Append original task context
-6. Execute through existing command infrastructure
-
-**Extensibility**: New commands work immediately through pattern matching. No system updates required for novel combinations.
-
-## Architecture
-
-```
-claude/commands/           # Command specifications (markdown)
-├── cognitive/            # Analysis and thinking commands
+commands/                  # 78+ command definitions
+├── cognitive/            # Thinking and analysis commands
 ├── operational/          # Task execution commands  
 ├── quality/             # Code analysis and validation
 ├── communication/       # PR and comment management
-└── meta/                # System and composition commands
+└── meta/                # System commands
 
-.claude/hooks/            # Preprocessing hooks
-├── compose-commands.sh   # Main composition engine
-└── command-parser.py     # Command extraction logic
+orchestration/           # Multi-agent system (requires Redis/tmux)
+├── agent_system.py     # Agent management
+├── task_dispatcher.py  # Load balancing
+└── redis_a2a_bridge.py # Agent communication
 
-orchestration/           # Multi-agent system (WIP)
-├── task_dispatcher.py  # Agent routing and load balancing
-├── message_broker.py   # Redis-based coordination
-└── agent_system.py     # tmux session management
+scripts/                # Supporting scripts and utilities
 ```
 
-## Dependencies
+---
 
-**Core System**: None (pure prompt engineering approach)
-**Orchestration**: Redis 6.0+, tmux, Python 3.8+
-**Optional Integrations**: Memory MCP, GitHub API, various testing frameworks
+## 📚 COMMAND CATEGORIES
 
-## Usage
+### 🧠 Cognitive Commands
+| Command | Description | Composition Examples |
+|---------|-------------|---------------------|
+| `/think [level]` | Sequential thinking (light/medium/deep/ultra) | `/think deep /arch` |
+| `/arch` | Architecture analysis and design patterns | `/arch /security` |
+| `/debug` | Systematic debugging with evidence collection | `/debug /test` |
+| `/analyze` | Deep analysis with memory context | `/analyze /learn` |
 
-1. Clone repository and reference command specifications
-2. Configure hooks in Claude environment  
-3. Use arbitrary command combinations:
-   ```
-   /think ultra /arch /security Analyze microservices for vulnerabilities
-   /debug /test /optimize Find and fix performance bottlenecks
-   /plan /execute /learn Implement feature with learning capture
-   ```
+### ⚙️ Operational Commands  
+| Command | Description | Requirements |
+|---------|-------------|--------------|
+| `/orchestrate` | Multi-agent task delegation | Redis, tmux |
+| `/execute` | Task execution with safety checks | - |
+| `/plan` | Strategic planning with decomposition | - |
+| `/handoff` | Task handoff between contexts | - |
 
-**Orchestration Setup** *(WIP)*:
+### 🔍 Analysis Commands
+| Command | Description | Use Cases |
+|---------|-------------|-----------|
+| `/fake` | Detect placeholder/demo code | Code audits |
+| `/test` | Testing automation workflows | CI/CD |
+| `/learn` | Capture learnings to memory | Knowledge management |
+| `/research` | Knowledge gathering with patterns | Investigation |
+
+### 💬 Communication Commands
+| Command | Description | GitHub Integration |
+|---------|-------------|-------------------|
+| `/commentreply` | Intelligent PR comment generation | GitHub API |
+| `/copilot` | Automated PR analysis and fixes | GitHub MCP |
+| `/pr` | Pull request workflow automation | gh CLI |
+
+---
+
+## 🔧 DEPENDENCIES
+
+### Core Dependencies
 ```bash
-redis-server                              # Start coordination backend
-./orchestration/start_system.sh start    # Initialize agent system
-/orchestrate implement authentication     # Delegate to specialized agents
+# Essential tools
+git                     # Version control
+gh                      # GitHub CLI  
+python3                 # Python runtime
+redis-server           # Orchestration backend (optional)
+tmux                   # Multi-session management (optional)
 ```
 
-## Technical Limitations
+### MCP Server Dependencies
+```bash
+# Required
+npm install @anthropic/mcp-server-github    # GitHub operations
+npm install @anthropic/mcp-server-memory    # Learning persistence
 
-- Requires preprocessing integration with Claude interface
-- Meta-prompt quality depends on command specification completeness
-- No runtime validation of command compatibility
-- Orchestration system requires external infrastructure
-- Performance scales with number of combined commands
+# Recommended  
+npm install @playwright/mcp                 # Browser automation
+npm install @context7/mcp                   # Documentation lookup
+npm install @perplexity/mcp                 # Research capabilities
 
-## Status
+# Optional
+npm install @puppeteer/mcp                  # Alternative browser automation
+npm install @gemini/mcp                     # AI model integration
+```
 
-- **Command System**: Production ready, 50+ commands available
-- **Composition Engine**: Stable, handles arbitrary combinations
-- **Orchestration**: Experimental, requires Redis/tmux infrastructure
+### Environment Variables
+```bash
+# GitHub integration
+GITHUB_TOKEN=ghp_...           # GitHub API access
+
+# Optional integrations
+GEMINI_API_KEY=...             # Google AI API
+REDIS_URL=redis://localhost:6379/0  # Redis (for orchestration)
+```
+
+---
+
+## 💡 USAGE EXAMPLES
+
+### Basic Usage
+```bash
+# Single command execution
+/think analyze this codebase
+/debug find the authentication issue
+/test run integration tests
+```
+
+### Command Composition
+```bash
+# Analytical workflows
+/think deep /arch /security → Deep architectural security analysis
+/debug /test /learn → Systematic debugging with test validation and learning
+
+# Problem solving
+/plan /execute /test → Strategic planning + execution + validation
+/research /analyze /learn → Investigation + analysis + knowledge capture
+
+# PR management
+/copilot /commentreply → Automated PR analysis + intelligent responses
+```
+
+### Advanced Orchestration
+```bash
+# Multi-agent task delegation (requires Redis/tmux setup)
+/orchestrate implement user authentication system
+/orchestrate analyze performance bottlenecks across codebase
+```
+
+---
+
+## ⚙️ CONFIGURATION
+
+### Environment Setup
+1. **Copy environment template:**
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Configure required variables:**
+   ```bash
+   GITHUB_TOKEN=your_github_token_here
+   # Add other configuration as needed
+   ```
+
+3. **Install Python dependencies:**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt  # If available
+   ```
+
+### Claude Code CLI Integration
+Reference the commands directory in your Claude Code CLI configuration. The exact method depends on your Claude Code CLI version.
+
+---
+
+## 🔧 TROUBLESHOOTING
+
+### Common Issues
+
+**Command Not Found**
+- Verify command files are accessible to Claude Code CLI
+- Check file permissions and paths
+- Restart Claude Code CLI after configuration changes
+
+**MCP Server Issues**
+```bash
+# Check MCP server status
+npx @anthropic/mcp-server-github --version
+
+# Verify GitHub token
+gh auth status
+```
+
+**Redis Connection (for orchestration)**
+```bash
+# Start Redis server
+redis-server
+
+# Test connection
+redis-cli ping  # Should return: PONG
+```
+
+**GitHub Authentication**
+```bash
+# Check authentication
+gh auth status
+
+# Refresh if needed
+gh auth refresh
+```
+
+### Debug Mode
+```bash
+# Enable verbose logging
+export DEBUG=1
+export LOG_LEVEL=DEBUG
+```
+
+---
+
+## 🤝 ADAPTATION GUIDELINES
+
+### Recommended Approach
+1. **Start Small**: Begin with simple commands like `/think` or `/debug`
+2. **Test Thoroughly**: Validate each command in your environment
+3. **Adapt Gradually**: Modify commands for your specific needs
+4. **Focus on Value**: Prioritize commands most relevant to your workflow
+
+### High-Value Adaptations
+- **Cognitive commands** (`/think`, `/arch`, `/debug`) - Universally applicable
+- **Basic utilities** (`/list`, `/header`) - Simple and portable
+- **Learning system** (`/learn`) - Valuable with Memory MCP
+
+### High-Effort Adaptations
+- **Orchestration system** - Requires complete Redis/tmux infrastructure
+- **GitHub workflows** - Needs API reconfiguration for your repositories
+- **Testing commands** - Framework-specific modifications required
+
+### Creating Your Own Commands
+```markdown
+# Command Template Structure
+## Purpose
+Brief description of functionality
+
+## Dependencies  
+Required tools and environment
+
+## Implementation
+Detailed behavior specification
+
+## Examples
+Usage examples and expected outputs
+```
+
+---
+
+## ⚠️ TECHNICAL LIMITATIONS
+
+### Known Issues
+- **Environment Coupling**: Contains WorldArchitect.AI-specific assumptions
+- **Dependency Complexity**: Heavy reliance on specific MCP servers and tools
+- **Testing Status**: Many commands are experimental/untested in isolation
+- **Performance**: Command composition can generate very long prompts
+
+### Migration Considerations
+**High-Effort**: Orchestration system, GitHub workflows, Memory integration
+**Medium-Effort**: Testing commands, project workflows, composition patterns  
+**Low-Effort**: Basic cognitive commands, simple utilities
+
+---
+
+## 📄 LICENSE AND USAGE
+
+This repository contains reference implementations extracted from the WorldArchitect.AI project. 
+
+**Recommended Approach:**
+- Use as reference and inspiration
+- Build your own implementations based on patterns shown
+- Adapt commands to your specific environment and needs
+- Respect any applicable licenses from underlying tools
+
+---
+
+## 🔗 RESOURCES
+
+- [Claude Code CLI Documentation](https://claude.ai/code)
+- [MCP Server Documentation](https://github.com/anthropic/mcp)
+- [GitHub CLI Documentation](https://cli.github.com/)
+
+---
+
+*Repository Status: Reference/Educational Use Only*
+*Last Updated: July 25, 2025*

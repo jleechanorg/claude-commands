@@ -8,6 +8,8 @@ import time
 import json
 from message_broker import MessageBroker, MessageType
 
+import sys
+
 class TestWorkerAgent:
     """Test agent that processes tasks and returns results"""
     
@@ -82,7 +84,7 @@ class TestWorkerAgent:
         }
 
 if __name__ == "__main__":
-    import sys
+
     
     agent_id = sys.argv[1] if len(sys.argv) > 1 else "test-worker"
     agent = TestWorkerAgent(agent_id)

@@ -14,6 +14,8 @@ from typing import Dict, Any
 
 from real_a2a_poc import OrchestrationA2AServer, A2AClient
 
+import sys
+
 
 class TestRealA2AIntegration:
     """Test real A2A SDK integration"""
@@ -273,6 +275,6 @@ async def main():
 
 
 if __name__ == "__main__":
-    import sys
+
     success = asyncio.run(main())
     sys.exit(0 if success else 1)

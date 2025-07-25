@@ -10,6 +10,8 @@ import time
 import json
 from datetime import datetime
 
+import traceback
+
 # Add parent directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -93,7 +95,7 @@ async def test_real_task_execution():
         
     except Exception as e:
         print(f"\n❌ Task execution failed: {e}")
-        import traceback
+
         traceback.print_exc()
         return False
 
@@ -134,7 +136,7 @@ async def test_workflow_execution():
         
     except Exception as e:
         print(f"\n❌ Workflow execution failed: {e}")
-        import traceback
+
         traceback.print_exc()
         return False
 
