@@ -3,30 +3,23 @@ Narrative Synchronization Validator for Milestone 0.4
 Specifically designed to detect and prevent entity desynchronization in narratives.
 """
 
+import os
 import re
+import sys
 from dataclasses import dataclass
 from enum import Enum
-
-from ..logging_config import setup_logging, with_metrics
-from ..validation_utils import find_entity_mentions, normalize_text
-from ..validator import BaseValidator, ValidationResult
-from logging_config import setup_logging, with_metrics
-from validator import BaseValidator, ValidationResult
-import os
-import sys
+from typing import Dict, List, Optional, Set, Tuple
 
 try:
-
-
-
+    from ..logging_config import setup_logging, with_metrics
+    from ..validation_utils import find_entity_mentions, normalize_text
+    from ..validator import BaseValidator, ValidationResult
 except ImportError:
     # Handle both relative and absolute imports
-
-
-
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-
+    from logging_config import setup_logging, with_metrics
+    from validation_utils import find_entity_mentions, normalize_text
+    from validator import BaseValidator, ValidationResult
 
 
 class EntityPresenceType(Enum):
