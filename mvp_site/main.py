@@ -1488,6 +1488,12 @@ def create_app() -> Flask:
         try:
             if request.method == "GET":
                 settings = get_user_settings(user_id)
+                # Return default settings for new users or database errors
+                if settings is None:
+                    settings = {
+                        'debug_mode': constants.DEFAULT_DEBUG_MODE,
+                        'gemini_model': 'gemini-2.5-flash'  # Default model
+                    }
                 return jsonify(settings)
             
             elif request.method == "POST":

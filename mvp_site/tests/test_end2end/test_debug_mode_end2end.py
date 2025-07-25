@@ -171,7 +171,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
         user_data = {
             "settings": {
                 "debug_mode": False,  # Default user setting
-                "gemini_model": "flash-2.5"
+                "gemini_model": "gemini-2.5-flash"
             },
             "lastUpdated": "2025-01-01T00:00:00Z"
         }

@@ -43,7 +43,7 @@ async function loadSettings() {
         
         // Validate the model value before using it
         if (settings.gemini_model && 
-            ['pro-2.5', 'flash-2.5'].includes(settings.gemini_model)) {
+            ['gemini-2.5-pro', 'gemini-2.5-flash'].includes(settings.gemini_model)) {
             const radio = document.querySelector(`input[value="${settings.gemini_model}"]`);
             if (radio) {
                 radio.checked = true;

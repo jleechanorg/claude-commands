@@ -977,14 +977,15 @@ def update_campaign_title(user_id: UserId, campaign_id: CampaignId, new_title: s
 
 # --- USER SETTINGS FUNCTIONS ---
 @log_exceptions
-def get_user_settings(user_id: UserId) -> Dict[str, Any]:
+def get_user_settings(user_id: UserId) -> Optional[Dict[str, Any]]:
     """Get user settings from Firestore.
     
     Args:
         user_id: User ID to get settings for
         
     Returns:
-        Dict containing user settings or empty dict if none exist
+        Dict containing user settings, empty dict if user exists but no settings, 
+        or None if user doesn't exist or database error
     """
     try:
         db = get_db()
@@ -993,9 +994,9 @@ def get_user_settings(user_id: UserId) -> Dict[str, Any]:
         
         if user_doc.exists:
             data = user_doc.to_dict()
-            return data.get('settings', {})
-        # Return empty dict for new users (no settings yet)
-        return {}
+            return data.get('settings', {})  # Empty dict for user with no settings
+        # Return None for users that don't exist yet
+        return None
     except Exception as e:
         # Hash user_id for security in logs
         user_hash = str(hash(user_id))[-6:] if user_id else 'unknown'
