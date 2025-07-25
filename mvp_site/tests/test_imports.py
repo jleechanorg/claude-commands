@@ -2,6 +2,11 @@
 """
 Import tests to catch missing import statements.
 These tests simply import modules to ensure all dependencies are available.
+
+NOTE: This file is intentionally exempt from the inline import rule.
+It may contain imports within test methods to test specific import scenarios
+and verify that modules can be imported correctly under various conditions.
+This is the ONLY file in the codebase allowed to have inline imports.
 """
 
 import os
