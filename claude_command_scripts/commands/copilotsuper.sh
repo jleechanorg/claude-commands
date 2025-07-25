@@ -17,10 +17,12 @@ TEMP_BRANCH_PREFIX="dev_copilotsuper"
 TIMESTAMP=$(date +%s)
 TEMP_BRANCH="${TEMP_BRANCH_PREFIX}_${TIMESTAMP}"
 ORIGINAL_BRANCH=""
-# Resolve branch; fall back for detached-HEAD; make it filename-safe
+# Resolve branch; fall back for detached-HEAD; make it filename-safe (PR #941 standard)
 RAW_BRANCH_NAME=$(git branch --show-current 2>/dev/null || echo "detached")
-BRANCH_NAME=${RAW_BRANCH_NAME//\//_}
-RESULTS_FILE="/tmp/copilotsuper_results_${BRANCH_NAME}_${TIMESTAMP}.txt"
+SANITIZED_BRANCH=$(echo "$RAW_BRANCH_NAME" | sed 's/[^a-zA-Z0-9._-]/_/g' | sed 's/^[.-]*//g')
+OUTPUT_DIR="/tmp/copilot_${SANITIZED_BRANCH}"
+mkdir -p "$OUTPUT_DIR"
+RESULTS_FILE="$OUTPUT_DIR/copilotsuper_results_${TIMESTAMP}.txt"
 
 # Functions
 log_info() {
@@ -138,7 +140,7 @@ process_pr() {
     local fixes_count=0
     local tests_fixed=0
     local commits_made=0
-    local json_summary="/tmp/copilot_pr_${BRANCH_NAME}_${pr_num}_summary.json"
+    local json_summary="$OUTPUT_DIR/pr_${pr_num}_summary.json"
     
     # Try JSON parsing first (reliable), fallback to grep parsing
     if [[ -f "$json_summary" ]]; then
