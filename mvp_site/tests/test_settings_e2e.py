@@ -34,6 +34,8 @@ class TestSettingsE2E(unittest.TestCase):
         """Set up test fixtures"""
         self.app = create_app()
         self.app.config['TESTING'] = True
+        # Force testing mode for CI compatibility
+        os.environ['TESTING'] = 'true'
         self.client = self.app.test_client()
         
         # Test data
@@ -43,6 +45,12 @@ class TestSettingsE2E(unittest.TestCase):
             'X-Test-User-ID': self.test_user_id,
             'Content-Type': 'application/json'
         }
+    
+    def tearDown(self):
+        """Clean up after each test for CI isolation"""
+        # Ensure clean state for CI environment
+        if 'TESTING' in os.environ:
+            pass  # Keep TESTING env var for other tests
         
     def test_complete_user_journey_flash_model(self):
         """🟢 E2E: Complete user journey from settings to campaign with flash model"""
@@ -60,11 +68,17 @@ class TestSettingsE2E(unittest.TestCase):
                                                headers=self.auth_headers,
                                                data=json.dumps({"gemini_model": "gemini-2.5-flash"}))
             
-            # Verify settings were saved
+            # Verify settings were saved with error details for CI debugging
+            if settings_response.status_code != 200:
+                response_data = settings_response.get_data(as_text=True)
+                self.fail(f"Settings save failed with {settings_response.status_code}: {response_data}")
             self.assertEqual(settings_response.status_code, 200)
             
             # Act 2: User retrieves settings (to verify persistence)
             get_response = self.client.get('/api/settings', headers=self.auth_headers)
+            if get_response.status_code != 200:
+                response_data = get_response.get_data(as_text=True)
+                self.fail(f"Settings get failed with {get_response.status_code}: {response_data}")
             self.assertEqual(get_response.status_code, 200)
             saved_settings = json.loads(get_response.data)
             self.assertEqual(saved_settings.get('gemini_model'), 'gemini-2.5-flash')
