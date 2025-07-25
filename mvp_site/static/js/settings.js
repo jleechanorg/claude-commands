@@ -50,7 +50,7 @@ async function loadSettings() {
                 console.log(`Set model to: ${settings.gemini_model}`);
             }
         } else {
-            console.log('No saved model preference or invalid value, using default (pro-2.5)');
+            console.log('No saved model preference or invalid value, using default (gemini-2.5-pro)');
         }
         
         // Set debug mode switch
