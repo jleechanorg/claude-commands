@@ -5,22 +5,22 @@ Previously, spawning an agent took 5+ minutes of manual steps. Now it takes <30 
 
 ## Quick Usage
 
-### Quick Agent Spawner
+### Python Orchestration
 ```bash
-./scripts/orchestration/quick_agent.sh "Your task description here"
+python3 orchestration/orchestrate_unified.py "Your task description here"
 ```
 
 ## Examples
 
 ```bash
 # Fix code issues
-./scripts/orchestration/quick_agent.sh "Find and fix inline imports"
+python3 orchestration/orchestrate_unified.py "Find and fix inline imports"
 
 # Run tests
-./scripts/orchestration/quick_agent.sh "Run all tests and fix failures"
+python3 orchestration/orchestrate_unified.py "Run all tests and fix failures"
 
 # Frontend tasks
-./scripts/orchestration/quick_agent.sh "Update CSS for dark mode"
+python3 orchestration/orchestrate_unified.py "Update CSS for dark mode"
 ```
 
 ## Monitoring Agents
@@ -46,7 +46,7 @@ tmux capture-pane -t task-direct-5756 -p | tail -50
 
 ## Technical Details
 
-- `scripts/orchestration/quick_agent.sh`: Quick agent spawner with standard instructions
+- `orchestration/orchestrate_unified.py`: Python orchestration system with agent creation
 - Creates tmux sessions for easy monitoring
 - Agents run with correct token limits from ~/.bashrc
 
@@ -54,7 +54,7 @@ tmux capture-pane -t task-direct-5756 -p | tail -50
 
 If agent fails with token error:
 - Check ~/.bashrc has: `export CLAUDE_CODE_MAX_OUTPUT_TOKENS=8192`
-- The quick_agent.sh script explicitly sets the correct value
+- The orchestration system sets the correct value
 
 Agent not starting:
 - Check tmux is installed: `which tmux`

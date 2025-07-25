@@ -102,18 +102,16 @@ def test_agent_restart():
 - Harder to test
 - Shell script maintenance
 
-### Direct Python Alternative
+### Direct Python Usage
 ```bash
-# Instead of:
-./scripts/orchestration/quick_agent.sh "Fix tests"
-
-# Could be:
+# Standard orchestration command:
 python3 orchestration/orchestrate_unified.py "Fix tests"
 ```
 
-**Recommendation**: Keep shell scripts for user convenience but ensure Python entry points work directly. The scripts add value by:
-1. Setting up environment variables
-2. Finding project root automatically
+**Recommendation**: Use direct Python entry points for orchestration. Benefits:
+1. Simpler maintenance
+2. Direct integration with Python ecosystem
+3. No shell script dependency layer
 3. Providing shorter commands
 4. Handling common error cases
 
