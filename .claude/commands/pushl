@@ -30,6 +30,25 @@ done
 # Check for changes
 if [[ -z $(git status --porcelain) ]]; then
     echo "No changes to push"
+
+    # Create result JSON even when no changes
+    BRANCH=$(git branch --show-current)
+    SANITIZED_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/_/g' | sed 's/^[.-]*//g')
+    OUTPUT_DIR="/tmp/copilot_${SANITIZED_BRANCH}"
+    mkdir -p "$OUTPUT_DIR"
+    cat > "$OUTPUT_DIR/push.json" << EOF
+{
+  "pushed_at": "$(date -Iseconds)",
+  "branch": "$(git branch --show-current)",
+  "remote": "origin",
+  "commit_sha": "$(git rev-parse HEAD)",
+  "message": "No changes to push",
+  "success": true,
+  "status": "up_to_date"
+}
+EOF
+
+    echo "✅ Status: up to date"
     exit 0
 fi
 
