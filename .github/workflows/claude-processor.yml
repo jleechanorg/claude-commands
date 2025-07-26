@@ -10,8 +10,11 @@ jobs:
       - name: Extract
         id: x
         run: |
-          P=$(jq -r '.slash_command.args.all' "$GITHUB_EVENT_PATH")
-          CID=$(jq -r '.github.payload.comment.id' "$GITHUB_EVENT_PATH")
+          echo "Debug: GitHub event file content:"
+          cat "$GITHUB_EVENT_PATH"
+          echo ""
+          P=$(jq -r '.client_payload.slash_command.args.all // empty' "$GITHUB_EVENT_PATH")
+          CID=$(jq -r '.client_payload.github.payload.comment.id // empty' "$GITHUB_EVENT_PATH")
           echo "Debug: Extracted prompt='$P'"
           echo "Debug: Comment ID='$CID'"
           echo "prompt=$P"  >> $GITHUB_OUTPUT
