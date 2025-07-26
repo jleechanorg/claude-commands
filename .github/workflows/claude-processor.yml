@@ -10,15 +10,22 @@ jobs:
       - name: Extract
         id: x
         run: |
-          P=$(jq -r '.slash_command.args.all' "$GITHUB_EVENT_PATH")
-          CID=$(jq -r '.github.payload.comment.id' "$GITHUB_EVENT_PATH")
+          echo "Debug: GitHub event file content:"
+          cat "$GITHUB_EVENT_PATH"
+          echo ""
+          P=$(jq -r '.client_payload.slash_command.args.all // empty' "$GITHUB_EVENT_PATH")
+          CID=$(jq -r '.client_payload.github.payload.comment.id // empty' "$GITHUB_EVENT_PATH")
+          echo "Debug: Extracted prompt='$P'"
+          echo "Debug: Comment ID='$CID'"
           echo "prompt=$P"  >> $GITHUB_OUTPUT
           echo "cid=$CID"  >> $GITHUB_OUTPUT
 
       - name: Call Claude
         id: y
         run: |
-          A=$(curl -s --data-urlencode "prompt=${{ steps.x.outputs.prompt }}" ${{ secrets.CLAUDE_ENDPOINT }})
+          echo "Debug: Calling Claude with prompt='${{ steps.x.outputs.prompt }}'"
+          A=$(curl -s --data-urlencode "prompt=${{ steps.x.outputs.prompt }}" "${{ secrets.CLAUDE_ENDPOINT }}")
+          echo "Debug: Claude response='$A'"
           echo "answer<<EOF" >> $GITHUB_OUTPUT
           echo "$A" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
@@ -28,7 +35,7 @@ jobs:
         with:
           comment-id: ${{ steps.x.outputs.cid }}
           body: |
-            **🤖 Claude Bot Reply**  
+            **🤖 Claude Bot Reply**
             ```
             ${{ steps.y.outputs.answer }}
             ```
