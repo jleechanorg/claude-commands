@@ -9,7 +9,7 @@ This directory contains concrete evidence from A/B testing the command compositi
 **Task**: Debug a function with division by zero bug
 
 **Groups**:
-- **Group A**: Command composition (`/think /debug /analyze`)  
+- **Group A**: Command composition (`/think /debug /analyze`)
 - **Group B**: Natural language equivalent ("analyze systematically and thoroughly...")
 
 ## Files
@@ -20,7 +20,7 @@ This directory contains concrete evidence from A/B testing the command compositi
 
 ### Analysis Documents
 - `concrete_ab_test_evidence.md` - Comprehensive comparison and analysis
-- `headless_ab_comparison.md` - Extracted behavioral differences 
+- `headless_ab_comparison.md` - Extracted behavioral differences
 
 ### Test Materials
 - `test_case_debugging_task.py` - Original buggy code used for testing
@@ -38,7 +38,7 @@ This directory contains concrete evidence from A/B testing the command compositi
 | **Problem-Solving** | Deliberative, multiple options | Practical, immediate |
 
 ### Tools Used
-- **Group A**: `mcp__sequential-thinking__sequentialthinking` 
+- **Group A**: `mcp__sequential-thinking__sequentialthinking`
 - **Group B**: Direct analysis with markdown formatting
 
 ### Solutions Produced

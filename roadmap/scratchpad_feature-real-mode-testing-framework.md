@@ -11,20 +11,20 @@ Build a comprehensive testing framework that can run end-to-end tests against re
 
 ### Three Testing Modes
 1. **`/teste`** - Mock mode (current behavior) - Fast, no cost, isolated
-2. **`/tester`** - Real mode - Uses actual services, costs money, validates real behavior  
+2. **`/tester`** - Real mode - Uses actual services, costs money, validates real behavior
 3. **`/testerc`** - Real + Capture mode - Real services + data capture for analysis
 
 ### Core Abstraction: TestServiceProvider
 ```python
 class TestServiceProvider:
     def get_firestore(self) -> Any
-    def get_gemini(self) -> Any  
+    def get_gemini(self) -> Any
     def get_auth(self) -> Any
 
 class MockServiceProvider(TestServiceProvider):
     # Current mock implementations
-    
-class RealServiceProvider(TestServiceProvider):  
+
+class RealServiceProvider(TestServiceProvider):
     # Real service connections with test isolation
 ```
 
@@ -50,11 +50,11 @@ class RealServiceProvider(TestServiceProvider):
 
 #### Phase 2: Command Agent ⚡
 **Responsibility**: Implement slash commands and bash scripts
-**Duration**: ~4 hours  
+**Duration**: ~4 hours
 **Dependencies**: Foundation Agent complete
 **Deliverables**:
 - `/teste` command - sets `TEST_MODE=mock`
-- `/tester` command - sets `TEST_MODE=real`  
+- `/tester` command - sets `TEST_MODE=real`
 - `/testerc` command - sets `TEST_MODE=capture`
 - Corresponding bash scripts for each mode
 - Environment variable configuration and validation
@@ -122,7 +122,7 @@ class RealServiceProvider(TestServiceProvider):
 ### Environment Variable Control
 ```bash
 TEST_MODE=mock    # Use MockServiceProvider
-TEST_MODE=real    # Use RealServiceProvider  
+TEST_MODE=real    # Use RealServiceProvider
 TEST_MODE=capture # Use RealServiceProvider + data capture
 ```
 
@@ -184,7 +184,7 @@ def get_service_provider() -> TestServiceProvider:
 - **API Costs**: Mitigated by resource limits and approval gates
 - **Test Data Pollution**: Mitigated by isolated test collections/projects
 
-### Low Risks  
+### Low Risks
 - **Service Authentication**: Mitigated by separate test credentials and documentation
 
 ## Next Steps

@@ -18,7 +18,7 @@ def add_story_entry_and_read(user_id, campaign_id, text, **kwargs):
     """Add story entry and return the persisted data to guarantee persistence"""
     # Write to Firestore using existing function
     doc_refs = add_story_entry(user_id, campaign_id, text, **kwargs)
-    
+
     # Read back persisted data to verify save
     persisted_entries = []
     for doc_ref in doc_refs:
@@ -27,7 +27,7 @@ def add_story_entry_and_read(user_id, campaign_id, text, **kwargs):
             persisted_entries.append(doc.to_dict())
         else:
             raise Exception(f"Failed to persist story entry: {doc_ref.id}")
-    
+
     return persisted_entries
 ```
 
@@ -41,7 +41,7 @@ ENABLE_WRITE_THEN_READ = os.getenv('ENABLE_WRITE_THEN_READ', 'false') == 'true'
 
 #### 3. Update Main API Endpoints
 **Endpoints to modify**:
-- `/api/campaigns/<campaign_id>/interaction` 
+- `/api/campaigns/<campaign_id>/interaction`
 - `/api/campaigns/<campaign_id>/story`
 
 **Changes**:
@@ -56,7 +56,7 @@ ENABLE_WRITE_THEN_READ = os.getenv('ENABLE_WRITE_THEN_READ', 'false') == 'true'
 - Log detailed error information
 - Provide clear user error messages
 
-#### 2. Read Failure Handling  
+#### 2. Read Failure Handling
 - Implement retry logic (1-2 attempts)
 - Fall back to write confirmation if read fails
 - Log warnings for monitoring
@@ -65,13 +65,13 @@ ENABLE_WRITE_THEN_READ = os.getenv('ENABLE_WRITE_THEN_READ', 'false') == 'true'
 
 #### 1. Unit Tests
 - Test write-then-read flow success path
-- Test write failure scenarios  
+- Test write failure scenarios
 - Test read failure scenarios
 - Verify data consistency
 
 #### 2. Integration Tests
 - End-to-end persistence verification
-- Test with real Firestore 
+- Test with real Firestore
 - Performance benchmarks
 
 ## 🔄 **Migration Strategy**
@@ -95,7 +95,7 @@ ENABLE_WRITE_THEN_READ = os.getenv('ENABLE_WRITE_THEN_READ', 'false') == 'true'
 ## 🎯 **Success Criteria**
 
 - ✅ All story entries guaranteed persisted before display
-- ✅ No increase in user-facing errors  
+- ✅ No increase in user-facing errors
 - ✅ <10ms additional latency (P99)
 - ✅ All existing tests pass
 - ✅ Feature flag controls behavior
@@ -106,7 +106,7 @@ ENABLE_WRITE_THEN_READ = os.getenv('ENABLE_WRITE_THEN_READ', 'false') == 'true'
 - ✅ Added `add_story_entry_and_read()` function to firestore_service.py
 - ✅ Updated API endpoints in main.py to use write-then-read pattern:
   - `/api/campaigns/<id>/interaction` (user input and AI responses)
-  - Debug mode state commands  
+  - Debug mode state commands
   - GOD mode state commands
 - ✅ Added feature flag support (`ENABLE_WRITE_THEN_READ=true` by default)
 
@@ -142,7 +142,7 @@ ENABLE_WRITE_THEN_READ = os.getenv('ENABLE_WRITE_THEN_READ', 'false') == 'true'
 ## 🔗 **References**
 
 - **Original Plan**: PR #572 - roadmap/scratchpad_firestore_write_then_read.md
-- **Bug Context**: PR #551 - Think command persistence issues  
+- **Bug Context**: PR #551 - Think command persistence issues
 - **Testing Framework**: PR #569 - Real-mode testing support
 
 ## 🎉 **IMPLEMENTATION COMPLETE**

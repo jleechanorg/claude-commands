@@ -33,7 +33,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-[data-theme="dark"] .card.glass {
+[data-theme='dark'] .card.glass {
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -167,7 +167,7 @@ body {
   box-shadow: 0 0 0 3px rgba(3, 2, 19, 0.1);
 }
 
-[data-theme="dark"] .form-control:focus {
+[data-theme='dark'] .form-control:focus {
   box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
 }
 
@@ -264,7 +264,7 @@ body {
   backdrop-filter: var(--backdrop-blur) var(--backdrop-saturate);
 }
 
-[data-theme="dark"] .navbar.glass {
+[data-theme='dark'] .navbar.glass {
   background-color: rgba(0, 0, 0, 0.8) !important;
 }
 
@@ -385,37 +385,59 @@ body {
 }
 
 /* Utility: Text Colors */
-.text-primary { color: var(--primary) !important; }
-.text-secondary { color: var(--secondary-foreground) !important; }
-.text-muted { color: var(--muted-foreground) !important; }
-.text-success { color: var(--success) !important; }
-.text-danger { color: var(--destructive) !important; }
+.text-primary {
+  color: var(--primary) !important;
+}
+.text-secondary {
+  color: var(--secondary-foreground) !important;
+}
+.text-muted {
+  color: var(--muted-foreground) !important;
+}
+.text-success {
+  color: var(--success) !important;
+}
+.text-danger {
+  color: var(--destructive) !important;
+}
 
 /* Utility: Background Colors */
-.bg-primary { background-color: var(--primary) !important; }
-.bg-secondary { background-color: var(--secondary) !important; }
-.bg-light { background-color: var(--card) !important; }
-.bg-dark { background-color: var(--popover) !important; }
+.bg-primary {
+  background-color: var(--primary) !important;
+}
+.bg-secondary {
+  background-color: var(--secondary) !important;
+}
+.bg-light {
+  background-color: var(--card) !important;
+}
+.bg-dark {
+  background-color: var(--popover) !important;
+}
 
 /* Special Effects for Cyberpunk Theme */
-[data-theme="cyberpunk"] .btn-primary {
+[data-theme='cyberpunk'] .btn-primary {
   box-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
 }
 
-[data-theme="cyberpunk"] .btn-primary:hover {
+[data-theme='cyberpunk'] .btn-primary:hover {
   box-shadow: 0 0 30px rgba(0, 217, 255, 0.7);
 }
 
-[data-theme="cyberpunk"] .card {
+[data-theme='cyberpunk'] .card {
   border: 1px solid var(--primary);
   box-shadow: 0 0 20px rgba(0, 217, 255, 0.2);
 }
 
 /* Special Effects for Fantasy Theme */
-[data-theme="fantasy"] .card {
-  background: linear-gradient(135deg, var(--card) 0%, rgba(237, 224, 212, 0.3) 100%);
+[data-theme='fantasy'] .card {
+  background: linear-gradient(
+    135deg,
+    var(--card) 0%,
+    rgba(237, 224, 212, 0.3) 100%
+  );
 }
 
-[data-theme="fantasy"] .btn-primary {
+[data-theme='fantasy'] .btn-primary {
   background: linear-gradient(135deg, var(--primary) 0%, #6d4c41 100%);
-} 
+}

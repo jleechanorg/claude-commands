@@ -20,7 +20,9 @@ os.environ["TESTING"] = "true"
 os.environ["GEMINI_API_KEY"] = "test-api-key"
 
 # Add the parent directory to the path
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 import constants
 

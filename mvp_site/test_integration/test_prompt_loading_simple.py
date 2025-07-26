@@ -95,7 +95,6 @@ class TestPromptLoadingLogic(unittest.TestCase):
         """Test the exact loading order in get_initial_story."""
         # Import here after mocks are set up
 
-
         mock_load.return_value = "content"
 
         # Simulate the loading sequence from get_initial_story
@@ -164,7 +163,6 @@ class TestPromptLoadingLogic(unittest.TestCase):
     def test_prompt_loading_order_continue_story(self, mock_load):
         """Test the exact loading order in continue_story."""
         # Import here after mocks are set up
-
 
         mock_load.return_value = "content"
 

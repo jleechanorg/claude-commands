@@ -93,7 +93,7 @@ cat /tmp/copilot_pr_[PR_NUMBER]/comment_id_map.json
 ```
 
 ### Method 3: From GitHub Web Interface
-- Right-click on comment → "Copy link" 
+- Right-click on comment → "Copy link"
 - Extract ID from URL: `#discussion_r2217902292` → ID is `2217902292`
 
 ## 📋 Complete Workflow

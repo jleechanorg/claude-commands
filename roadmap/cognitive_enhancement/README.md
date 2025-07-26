@@ -180,11 +180,11 @@ enhanced = memory_response.generate_memory_enhanced_response(
 class MyAssistant:
     def __init__(self):
         self.memory_manager = ConversationMemoryManager()
-    
+
     def respond(self, message: str) -> str:
         def base_response(msg):
             return f"Standard response to: {msg}"
-        
+
         return self.memory_manager.process_turn(message, base_response)
 ```
 
@@ -195,20 +195,20 @@ class TechnicalAssistant:
     def __init__(self):
         self.learner = EnhancedLearner()
         self.query_engine = PatternQueryEngine(self.learner)
-        
+
         # Pre-populate with domain knowledge
         self._load_technical_patterns()
-    
+
     def handle_technical_query(self, query: str) -> str:
         # Query domain-specific patterns
         result = self.query_engine.query_patterns(query)
-        
+
         # Generate response with technical context
         base_response = self._generate_technical_response(query)
-        
+
         if result.matches:
             return self._enhance_with_patterns(base_response, result)
-        
+
         return base_response
 ```
 
@@ -219,16 +219,16 @@ class DebuggingAssistant:
     def __init__(self):
         self.memory_manager = ConversationMemoryManager()
         self.session_state = {}
-    
+
     def start_debugging(self, error_description: str) -> str:
         # Check for similar past debugging sessions
         similar_patterns = self.memory_manager.learner.query_relevant_patterns(
             f"debugging {error_description}"
         )
-        
+
         # Apply past experience to current session
         return self.memory_manager.process_turn(
-            error_description, 
+            error_description,
             lambda x: self._generate_debugging_response(x, similar_patterns)
         )
 ```
@@ -372,7 +372,7 @@ def initialize_coding_patterns(learner):
             tags=["security", "validation"]
         )
     ]
-    
+
     for pattern in patterns:
         learner.add_pattern(pattern)
 ```
@@ -407,7 +407,7 @@ def handle_feedback(self, feedback: str, context: str):
         examples=[feedback],
         tags=["user_input", "feedback"]
     )
-    
+
     self.learner.add_pattern(pattern)
 ```
 
@@ -419,13 +419,13 @@ Periodically review and clean the knowledge base:
 def maintain_knowledge_base(learner):
     # Remove low-confidence old patterns
     cutoff_date = datetime.now() - timedelta(days=90)
-    
+
     patterns_to_keep = []
     for pattern in learner.patterns:
         pattern_date = datetime.fromisoformat(pattern.timestamp)
         if pattern.confidence >= 0.7 or pattern_date > cutoff_date:
             patterns_to_keep.append(pattern)
-    
+
     learner.patterns = patterns_to_keep
     learner.save_knowledge_base()
 ```
@@ -474,7 +474,7 @@ Examine the knowledge base directly:
 # Load and inspect patterns
 with open('knowledge_base.json', 'r') as f:
     data = json.load(f)
-    
+
 for pattern in data['patterns']:
     print(f"Type: {pattern['pattern_type']}")
     print(f"Content: {pattern['content']}")

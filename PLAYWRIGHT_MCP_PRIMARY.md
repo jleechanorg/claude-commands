@@ -28,7 +28,7 @@ mcp__playwright-mcp__browser_click(element="Login Button", ref="selector")
 mcp__playwright-mcp__browser_take_screenshot(filename="test-state")
 ```
 
-### 2. 🥈 **SECONDARY: Puppeteer MCP** 
+### 2. 🥈 **SECONDARY: Puppeteer MCP**
 For Chrome-specific testing only:
 ```bash
 mcp__puppeteer-server__puppeteer_navigate("http://localhost:6006")

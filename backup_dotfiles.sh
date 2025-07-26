@@ -32,7 +32,7 @@ echo "Starting dotfile backup process..."
 filter_sensitive_data() {
     local input_file="$1"
     local output_file="$2"
-    
+
     # Use sed to remove lines containing sensitive patterns
     sed -E '
         # Remove lines with tokens, keys, passwords
@@ -51,7 +51,7 @@ filter_sensitive_data() {
         /github\.com.*@/d
         /gitlab\.com.*@/d
     ' "$input_file" > "$output_file"
-    
+
     echo "  → Filtered sensitive data from $(basename "$input_file")"
 }
 
@@ -62,10 +62,10 @@ for source_path in "${!DOTFILES_TO_BACKUP[@]}"; do
 
     if [ -f "$source_path" ]; then
         echo "Processing $source_path to $dest_path"
-        
+
         # Filter sensitive data instead of direct copy
         filter_sensitive_data "$source_path" "$dest_path"
-        
+
         # Verify the filtered file was created successfully
         if [ ! -f "$dest_path" ]; then
             echo "Error: Failed to create filtered backup of $source_path"
@@ -89,12 +89,12 @@ if [ -n "$(git status --porcelain "$BACKUP_DIR/")" ]; then
     echo "Dotfile changes detected in $BACKUP_DIR. Committing and pushing..."
     # The files in BACKUP_DIR are already staged due to the `git add` above.
     # We might want to add the script itself if it changed, though that's usually a manual commit.
-    
+
     git commit -m "Automated backup of dotfiles from Cloud Workstation: $(date +'%Y-%m-%d %H:%M:%S')"
-    
+
     # Specify the remote and branch if necessary, default is usually 'origin main' or 'origin master'
-    git push 
-    
+    git push
+
     if [ $? -eq 0 ]; then
         echo "Push successful."
     else

@@ -184,18 +184,18 @@ This document maps all Bootstrap classes currently used in WorldArchitect.AI to 
   --space-3: 1rem;
   --space-4: 1.5rem;
   --space-5: 3rem;
-  
+
   /* Border Radius */
   --radius-sm: 0.25rem;
   --radius: 0.375rem;
   --radius-lg: 0.5rem;
   --radius-full: 9999px;
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-  
+
   /* Breakpoints */
   --breakpoint-sm: 576px;
   --breakpoint-md: 768px;

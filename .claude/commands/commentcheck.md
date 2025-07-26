@@ -19,7 +19,7 @@ Pure markdown command (no Python executable) that systematically verifies all PR
 
 ## What It Does
 
-1. **Loads comments data** from `/tmp/copilot_{branch}/comments_{branch}.json` 
+1. **Loads comments data** from `/tmp/copilot_{branch}/comments_{branch}.json`
 2. **Fetches current PR comment responses** from GitHub API
 3. **Cross-references** original comments with posted responses
 4. **Verifies coverage** - ensures every comment has a corresponding response
@@ -42,7 +42,7 @@ echo "Original comments found: $TOTAL_ORIGINAL"
 PULL_COMMENTS=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq length)
 echo "Current pull request comments: $PULL_COMMENTS"
 
-# 3. Fetch current issue comments  
+# 3. Fetch current issue comments
 ISSUE_COMMENTS=$(gh api "repos/$OWNER/$REPO/issues/$PR_NUMBER/comments" --paginate | jq length)
 echo "Current issue comments: $ISSUE_COMMENTS"
 
@@ -128,7 +128,7 @@ echo "$COMMENTS_DATA" | \
       COMMENT_INFO=$(echo "$COMMENTS_DATA" | jq -r ".[] | select(.id == $original_id) | \"Comment #\(.id) (\(.user.login)): $REPLIES_TO_THIS threaded replies\"")
       echo "✅ REPLIED: $COMMENT_INFO"
     fi
-  done 
+  done
 ```
 
 ### Step 3: Individual Comment Coverage Analysis (ENHANCED ZERO TOLERANCE)
@@ -160,7 +160,7 @@ gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
   jq -r '.[] | select(.user.login == "jleechan2015") | .body' | \
   sort | uniq -c | sort -nr | head -10
 
-# Pattern 2: Template-based responses  
+# Pattern 2: Template-based responses
 echo "Checking for template patterns..."
 gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
   jq -r '.[] | select(.user.login == "jleechan2015") | .body' | \
@@ -183,7 +183,7 @@ COPILOT_RESPONSES=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --pagi
   jq -r '.[] | select(.user.login == "jleechan2015") | .body' | \
   grep -c "Thank you.*Copilot" || echo 0)
 
-echo "CodeRabbit-specific templates: $CODERABBIT_RESPONSES"  
+echo "CodeRabbit-specific templates: $CODERABBIT_RESPONSES"
 echo "Copilot-specific templates: $COPILOT_RESPONSES"
 
 # Flag as FAKE if template patterns detected
@@ -203,23 +203,23 @@ fi
 ### 📊 INDIVIDUAL COMMENT INVENTORY
 **Total Individual Comments**: 11
 - Copilot bot comments: 3
-- CodeRabbit bot comments: 8  
+- CodeRabbit bot comments: 8
 - Human reviewer comments: 0
 - GitHub Actions comments: 0
 
 ### ✅ Individual Comments WITH Responses (TARGET: 100%)
-1. Comment #2223812756 (Copilot): "Function parameter docs inconsistent" 
+1. Comment #2223812756 (Copilot): "Function parameter docs inconsistent"
    → Reply #XXXXX: "✅ DONE: Updated table to show all parameters consistently"
-   
+
 2. Comment #2223812765 (Copilot): "Migration status column missing"
    → Reply #XXXXX: "✅ DONE: Added Migration Status column with tracking"
-   
-3. Comment #2223812783 (Copilot): "Port inconsistency 8081 vs 6006" 
+
+3. Comment #2223812783 (Copilot): "Port inconsistency 8081 vs 6006"
    → Reply #XXXXX: "✅ DONE: Fixed all references to use port 6006"
 
 [... continues for ALL individual comments ...]
 
-### ❌ Individual Comments WITHOUT Responses (TARGET: 0)  
+### ❌ Individual Comments WITHOUT Responses (TARGET: 0)
 [THIS SECTION MUST BE EMPTY - Any entries here indicate FAILURE]
 
 ### ⚠️ Poor Quality Individual Responses (TARGET: 0)
@@ -228,20 +228,20 @@ fi
 ### 🚨 FAILURE CASE REFERENCES
 
 **PR #864**: 11 individual comments received ZERO replies
-- All 3 Copilot comments: NO RESPONSE  
+- All 3 Copilot comments: NO RESPONSE
 - All 8 CodeRabbit comments: NO RESPONSE
 - Result: Complete failure of individual comment coverage
 
 **PR #867 (Initial)**: 7 individual comments with code fixes but NO direct replies
 - All 5 Copilot comments: Code fixes implemented but NO individual replies posted
-- 1 CodeRabbit comment: NO direct reply  
+- 1 CodeRabbit comment: NO direct reply
 - 1 Copilot-PR-Reviewer: NO direct reply
 - Result: False claim of "100% coverage" when actual coverage was 0%
 - **Corrected**: Direct replies posted to achieve actual 100% coverage
 
 ### 📈 Individual Comment Coverage Statistics
 - **Individual comments found: 11**
-- **Individual comments with responses: 11 (100%)**  
+- **Individual comments with responses: 11 (100%)**
 - **Missing individual responses: 0 (0%)**
 - **Bot comment coverage: 100% (11/11)**
 - **COVERAGE SCORE: 100% ✅**
@@ -252,7 +252,7 @@ fi
 🚨 **✅ PASS REQUIREMENTS**: 100% individual comment coverage with quality responses
 - **ALL individual comments have direct replies** (no exceptions for bots)
 - **Every Copilot comment has a response** (technical feedback must be addressed)
-- **Every CodeRabbit comment has a response** (AI suggestions require acknowledgment)  
+- **Every CodeRabbit comment has a response** (AI suggestions require acknowledgment)
 - **All responses address specific technical content** (not generic acknowledgments)
 - **Appropriate ✅ DONE/❌ NOT DONE status** (clear resolution indication)
 - **Professional and substantial replies** (meaningful engagement with feedback)
@@ -277,10 +277,10 @@ fi
 - **Before** final `/pushl` in copilot workflow
 - **Verify** comment coverage is complete
 
-### Actions on Failure  
+### Actions on Failure
 If `/commentcheck` finds issues:
 1. **Report specific problems** - List missing/poor responses
-2. **Suggest fixes** - Indicate what needs improvement  
+2. **Suggest fixes** - Indicate what needs improvement
 3. **Prevent completion** - Workflow should not proceed until fixed
 4. **Re-run commentreply** - Address missing/poor responses
 
@@ -306,9 +306,9 @@ gh api "/repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
 
 # 3. Check for replies on EACH individual comment
 gh api "/repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
-  jq -r '.[] | "ID: \(.id) | Author: \(.user.login) | Replies: \(.replies_url)"' 
+  jq -r '.[] | "ID: \(.id) | Author: \(.user.login) | Replies: \(.replies_url)"'
 
-# 4. Verify bot comment coverage specifically  
+# 4. Verify bot comment coverage specifically
 echo "=== COPILOT COMMENTS ==="
 gh api "/repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
   jq -r '.[] | select(.user.login == "Copilot") | "Comment #\(.id): \(.body[0:80])..."'
@@ -331,7 +331,7 @@ done
 
 # 6. CRITICAL: Verify PR #864 failure pattern doesn't repeat
 COPILOT_COUNT=$(gh api "/repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq '[.[] | select(.user.login | test("(?i)^copilot(\\[bot\\])?$"))] | length')
-CODERABBIT_COUNT=$(gh api "/repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq '[.[] | select(.user.login == "coderabbitai[bot]")] | length') 
+CODERABBIT_COUNT=$(gh api "/repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq '[.[] | select(.user.login == "coderabbitai[bot]")] | length')
 echo "Copilot comments: $COPILOT_COUNT | CodeRabbit comments: $CODERABBIT_COUNT"
 echo "All bot comments MUST have responses or this check FAILS"
 ```
@@ -339,7 +339,7 @@ echo "All bot comments MUST have responses or this check FAILS"
 ## Error Handling
 
 - **No comments.json found**: Clear error with guidance to run `/commentfetch` first
-- **GitHub API failures**: Retry mechanism with exponential backoff  
+- **GitHub API failures**: Retry mechanism with exponential backoff
 - **Permission issues**: Clear explanation of authentication requirements
 - **Malformed data**: Skip problematic entries with warnings
 

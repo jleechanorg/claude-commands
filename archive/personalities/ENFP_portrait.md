@@ -56,11 +56,11 @@ become bored with what actually is.  Their strong sense of values will keep
 many ENFPs dedicated to their relationships. However, ENFPs like a little
 excitement in their lives, and are best matched with individuals who are
 comfortable with change and new experiences.\nHaving an ENFP parent can be a fun-filled experience, but may be stressful
-at times for children with strong Sensing or Judging tendancies.  
-Such children may see the 
+at times for children with strong Sensing or Judging tendancies.
+Such children may see the
 ENFP parent as inconsistent and difficult to understand, as the children
 are pulled along in the whirlwind life of the ENFP.  Sometimes the ENFP
-will want to be their child's best friend, and at other times they will play 
+will want to be their child's best friend, and at other times they will play
 the parental authoritarian.  But ENFPs are always
 consistent in their value systems, which they will impress on their children
 above all else, along with a basic joy of living.\nENFPs are basically happy people.  They may become unhappy when they are
@@ -68,8 +68,8 @@ confined to strict schedules or mundane tasks.  Consequently, ENFPs work
 best in situations where they have a lot of flexibility, and where they can
 work with people and ideas.  Many go into
 business for themselves.  They have the ability to be quite productive with
-little supervision, 
-as long as they are excited about what they're doing.\nBecause they are so alert and sensitive, constantly 
+little supervision,
+as long as they are excited about what they're doing.\nBecause they are so alert and sensitive, constantly
 scanning their environments, ENFPs often suffer from muscle tension.
 They have a strong need to be independent, and resist being controlled or
 labelled.  They need to maintain control over themselves, but they do not
@@ -77,5 +77,5 @@ believe in controlling others.  Their dislike of dependence and suppression
 extends to others as well as to themselves.\nENFPs are charming, ingenious, risk-taking, sensitive, people-oriented individuals with
 capabilities ranging across a broad spectrum.  They have many gifts which
 they will use to fulfill themselves and those near them, if they are able to
-remain centered and 
+remain centered and
 master the ability of following through.\nAdvertisment

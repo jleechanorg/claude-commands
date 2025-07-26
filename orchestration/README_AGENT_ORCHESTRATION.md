@@ -121,7 +121,7 @@ tmux attach -t subagent-A
 
 1. **User Request**: "Build a blog system"
 
-2. **Opus Analysis**: 
+2. **Opus Analysis**:
    ```
    [OPUS] Analyzing complex task: Build a blog system
    [OPUS] Spawning Sonnet-Backend for API development
@@ -133,7 +133,7 @@ tmux attach -t subagent-A
    [SONNET-1] Received task: Build a blog system
    [SONNET-1] Breaking into components:
    [SONNET-1] - Database design
-   [SONNET-1] - API implementation  
+   [SONNET-1] - API implementation
    [SONNET-1] - Authentication system
    [SONNET-1] Spawning specialized subagents...
    ```

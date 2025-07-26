@@ -29,10 +29,10 @@
   of their closest relationships.\nAllowing your ENFP strengths to flourish\nAs an ENFP, you have gifts that are specific to your personality type
     that aren't natural strengths for other types. By recognizing your special
     gifts and encouraging their growth and development, you will more readily see
-    your place in the world, and be more content with your role.\nNearly all ENFPs will recognize the following characteristics in themselves.  They should embrace and nourish these strengths:\nThey're exceptionally perceptive about people and situations.  
-           They're often able to quickly and accurately assess where someone is coming from.\nThey accept and value people as individuals, and are strongly egalitarian.  
-          They believe that individuals have the right to be themselves, and are very tolerant and accepting of most people.\nThey're often deep and intelligent, and may be quite brilliant in their ability to tie things together.  
-          They're wired to look for connections in the external world, and so may mentally put things together more easily than many.\nTheir interest in understanding the world usually makes them in tune with what's socially acceoptable and what isn't.  
+    your place in the world, and be more content with your role.\nNearly all ENFPs will recognize the following characteristics in themselves.  They should embrace and nourish these strengths:\nThey're exceptionally perceptive about people and situations.
+           They're often able to quickly and accurately assess where someone is coming from.\nThey accept and value people as individuals, and are strongly egalitarian.
+          They believe that individuals have the right to be themselves, and are very tolerant and accepting of most people.\nThey're often deep and intelligent, and may be quite brilliant in their ability to tie things together.
+          They're wired to look for connections in the external world, and so may mentally put things together more easily than many.\nTheir interest in understanding the world usually makes them in tune with what's socially acceoptable and what isn't.
           This may help them to be popular and likable.\nThey're highly creative.  This ability may be used in an artistic way, or may be used to generate ideas and new ways of thinking.\nENFPs who have developed their Introverted Feeling to the extent that they apply judgment to all of their perceptions will enjoy these special gifts:\nThey will have the ability to follow through on projects they've begun.\nThey will be less gullible and malleable, and generally more able to discern between "good" and "bad", rather than accepting everything without question.\nThey may be highly artistic.\nThey will have the ability to focus and concentrate deeply on tasks.  This enhanced ability to think and process information internally will make them more capable on many levels.\nThey will balance out their desire to meet new people and have new experiences with the desire to put their understanding to use in some way.\nThey will find more meaning and purpose in their lives.\nPotential problem areas\nWith any gift of strength, there is an associated weakness. Without
   "bad", there would be no "good". Without
   "difficult", there would be no "easy". We value our
@@ -54,7 +54,7 @@
   discriminate things and people in their external environment, the ENFP will
   begin to use their judging function (Introverted Feeling) as a "rubber
   stamper" to support their agenda to seek out experiences.  This is a natural
-  survivalistic technique for the ENFP personality. 
+  survivalistic technique for the ENFP personality.
   The main driver to the ENFP personality is
   Extraverted Intuition, whose purpose is to understand the world as one Big
   Picture, seeking connections and meaning in everything.

@@ -37,7 +37,7 @@
    - Handles: git add, commit, push with proper messaging
 
 4. **`/commentreply`** - Comment response processing (AFTER fixes are live)
-   - Markdown: `.claude/commands/commentreply.md` (Claude executes)  
+   - Markdown: `.claude/commands/commentreply.md` (Claude executes)
    - Handles: All comment types, DONE/NOT DONE tracking, GitHub API posting
 
 5. **`/commentcheck`** - Verify 100% comment coverage
@@ -57,7 +57,7 @@ The `/copilot` command uses **universal composition** to intelligently orchestra
 
 **Before posting ANY replies or making changes**:
 1. Generate all responses/fixes
-2. Display them in chat for visibility  
+2. Display them in chat for visibility
 3. Indicate which will be auto-posted
 4. Then execute with full transparency
 
@@ -130,14 +130,14 @@ if 'copilot' in author.lower():
 - **What it handles**: All comment types, DONE/NOT DONE tracking, GitHub API threading
 - **Result**: 100% comment coverage with proper inline responses
 
-### Git Operations → Use `/pushl`  
+### Git Operations → Use `/pushl`
 - **Why**: `.claude/commands/pushl` already handles git add/commit/push workflow
 - **What it handles**: Staging, committing, pushing, verification
 - **Result**: Clean git operations with proper messaging
 
 ### Data Collection → Use `/commentfetch`
 - **Why**: `.claude/commands/_copilot_modules/commentfetch.py` already fetches all comment types
-- **What it handles**: Inline, general, review, Copilot comments → branch-specific comments file  
+- **What it handles**: Inline, general, review, Copilot comments → branch-specific comments file
 - **Result**: Complete comment data for processing
 
 ## How It Works
@@ -185,7 +185,7 @@ if 'copilot' in author.lower():
   - Show: "CI Status: [passing/failing] - [X] checks found"
   - Show: Each CI failure with analysis and fix plan
 - **MANDATORY**: Handle merge conflicts and compatibility issues
-  - Show: "Merge Status: [mergeable/conflicts] - [X] conflicts found"  
+  - Show: "Merge Status: [mergeable/conflicts] - [X] conflicts found"
   - Show: Each conflict with resolution strategy
 - **MANDATORY**: Apply necessary fixes based on analysis
   - Show: "Applying [X] fixes: [list of changes]"
@@ -304,7 +304,7 @@ if 'copilot' in author.lower():
 
 **MANDATORY CONTINUATION RULES**:
 - ❌ **NEVER stop silently** - Always show what's happening
-- ❌ **NEVER skip phases** - Execute all 6 phases in sequence  
+- ❌ **NEVER skip phases** - Execute all 6 phases in sequence
 - ❌ **NEVER assume success** - Verify each phase completion
 - ✅ **ALWAYS show progress** - Verbose output for every action
 - ✅ **ALWAYS continue on errors** - Show error and attempt recovery
@@ -319,7 +319,7 @@ if 'copilot' in author.lower():
 
 **Key Principles:**
 - **Zero tolerance for missed comments** - every single one gets processed
-- **Complete transparency** - show everything before doing it  
+- **Complete transparency** - show everything before doing it
 - **Systematic execution** - follow the protocol exactly, no shortcuts
 - **Proper threading** - responses appear in the right place
 - **Self-improving** - commit any improvements made during execution
@@ -401,29 +401,29 @@ PHASE 4: DIRECT EXECUTION
 ```
 /copilot 123
 > Analyzing PR #123...
-> 
+>
 > ## 🔧 Composing Commands:
-> 
+>
 > 1. Running /commentfetch 123...
 >    ✅ Found 5 comments → branch-specific directory
-> 
+>
 > 2. Running /fixpr 123...
 >    ✅ Claude reads fixpr.md and checks CI status
 >    ✅ No failures or conflicts found
-> 
+>
 > 3. Analyzing comments (100% coverage):
 >    - @user "Fix pagination" - NOT DONE
 >    - @bot "CI passed" - DONE (informational)
 >    - @reviewer "LGTM" - DONE (approval)
 >    - @user "Add tests" - NOT DONE
 >    - @user "Thanks!" - DONE (acknowledgment)
-> 
+>
 > 4. Running /commentreply...
 >    ✅ Claude reads commentreply.md
 >    ✅ Posting 2 responses directly via gh api:
 >    → "Fixed pagination in commit abc123"
 >    → "Added tests in test_edge_cases.py"
-> 
+>
 > ✅ Complete! Orchestrated all 4 modular commands
 ```
 
@@ -431,9 +431,9 @@ PHASE 4: DIRECT EXECUTION
 ```
 /copilot 456
 > Analyzing PR #456...
-> 
+>
 > ## 🔧 Composing Commands:
-> 
+>
 > 1. Running /commentfetch 456...
 >    ✅ Found 3 comments → branch-specific directory
 >
@@ -441,19 +441,19 @@ PHASE 4: DIRECT EXECUTION
 >    ✅ Claude reads fixpr.md and analyzes CI
 >    - GitHub CI: 2 failures detected
 >    - Analyzing failure patterns...
->    
+>
 >    ## 🔧 Planned Fixes:
 >    1. **Test failure in test_auth.py**: Missing import statement
 >    2. **Linting error in main.py**: Unused variable
-> 
+>
 > 3. [Shows exact changes before applying]
-> 
+>
 > 4. Applying fixes directly...
 >    ✅ Fixed both issues
-> 
+>
 > 5. Running /pushl to commit and push...
 >    ✅ Pushed fixes to remote
-> 
+>
 > ✅ Complete! Used /fixpr + direct fixes + /pushl
 ```
 
@@ -461,33 +461,33 @@ PHASE 4: DIRECT EXECUTION
 ```
 /copilot 789
 > Analyzing PR #789...
-> 
+>
 > ## 🔧 Full Orchestration:
-> 
+>
 > 1. Running /commentfetch 789...
 >    ✅ Found 12 comments → branch-specific directory
 >    - 8 need responses (NOT DONE)
 >    - 4 informational (DONE)
-> 
+>
 > 2. Running /fixpr 789...
 >    ✅ Collected comprehensive data:
 >    - GitHub CI: 3 failures, 1 timeout
 >    - Local CI: 2 failures reproduced
 >    - Merge conflicts: 2 files conflicted
-> 
+>
 > 3. Intelligent Analysis Phase:
 >    [Using fixpr.md + commentreply.md intelligence]
->    
+>
 >    ## Fixes Identified:
 >    - Import error: Add missing firebase import
 >    - Test timeout: Increase async timeout to 30s
 >    - Flaky test: Add retry logic
 >    - Conflicts: Merge both feature additions
->    
+>
 >    ## Responses Generated:
 >    - Technical replies for 8 comments
 >    - Acknowledgments where appropriate
-> 
+>
 > 4. Execution Phase:
 >    a. Applying code fixes...
 >       ✅ Fixed all 3 CI issues
@@ -497,12 +497,12 @@ PHASE 4: DIRECT EXECUTION
 >       ✅ Posted 8 responses
 >    d. Running /pushl...
 >       ✅ Committed and pushed all fixes
-> 
+>
 > 5. Verification:
 >    - Re-running /fixpr 789...
 >    - ✅ All CI checks now passing
 >    - ✅ No conflicts remaining
-> 
+>
 > ✅ Complete! Full hybrid orchestration successful
 ```
 
@@ -548,7 +548,7 @@ gh pr review {pr} --comment --body "Some observations..."
 ## Adaptive Intelligence Features
 
 - **Skip unnecessary steps**: No comments? Skip comment fetching
-- **Prioritize by urgency**: Security issues first, style issues last  
+- **Prioritize by urgency**: Security issues first, style issues last
 - **Context awareness**: First-time contributors get more detailed help
 - **Error recovery**: Continue with remaining tasks if one fails
 - **State management**: All data in `/tmp/copilot_${SANITIZED_BRANCH}/` for debugging

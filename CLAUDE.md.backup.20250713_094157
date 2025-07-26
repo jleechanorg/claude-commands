@@ -124,7 +124,7 @@ When mistakes occur:
 10. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
 11. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
    - **OPEN** = Work In Progress (WIP) - NOT completed
-   - **MERGED** = Completed and integrated into main branch  
+   - **MERGED** = Completed and integrated into main branch
    - **CLOSED** = Abandoned or rejected - NOT completed
    - ❌ NEVER mark tasks as completed just because PR exists
    - ✅ ONLY mark completed when PR state = "MERGED"
@@ -158,7 +158,7 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 - 🚨 **USER EXPECTATION**: Missing header = immediate callout from user
 - ✅ This is the #1 most violated rule - extreme vigilance required
 
-**Response Modes**: 
+**Response Modes**:
 - Default: Structured analysis with <thinking>, <analysis>, <response> format for complex tasks
 - For simple queries: Direct concise answers
 - Override to concise: "be brief", "short answer", "concise mode"
@@ -195,7 +195,7 @@ When working with test runners/harnesses:
 ❌ NEVER skip or comment out tests without user's explicit agreement
 - If a test is failing, FIX it or ask user for permission to skip
 - ❌ NEVER use `@unittest.skip` or `pytest.mark.skip` without asking
-- ❌ NEVER comment out test methods or assertions without permission  
+- ❌ NEVER comment out test methods or assertions without permission
 - ❌ NEVER modify test expectations to make them pass without user approval
 - ✅ ALWAYS run ALL tests unless user explicitly says to skip specific ones
 - If tests are "not relevant to current task", still run them to ensure no regression
@@ -309,7 +309,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - **Command Structure**:
   - `/testui` = Browser + Mock APIs
   - `/testuif` = Browser + REAL APIs (costs $)
-  - `/testhttp` = HTTP + Mock APIs  
+  - `/testhttp` = HTTP + Mock APIs
   - `/testhttpf` = HTTP + REAL APIs (costs $)
 
 ### Browser Test Execution Protocol (🚨 MANDATORY STEPS)
@@ -501,14 +501,14 @@ When asked to run HTTP tests, follow these steps IN ORDER:
 1. **Python venv**: Verify activated before running Python/tests | If missing/corrupted → `VENV_SETUP.md`
 2. **Robust Scripts**: Make idempotent, work from any subdirectory
 3. **Python Execution**: ✅ Run from project root | ❌ cd into subdirs
-4. **vpython Tests**: 
+4. **vpython Tests**:
    - ⚠️ "run all tests" → `./run_tests.sh`
    - ⚠️ Test fails → fix immediately or ask user
    - ✅ `TESTING=true vpython mvp_site/test_file.py` (from root)
 5. 🚨 **NEVER DISMISS FAILING TESTS**: ❌ "minor failures" or "test expectation updates" | ✅ Fix ALL failing tests systematically | Debug root cause | Real bugs vs test issues | One failure = potential systemic issue
 6. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
 7. **Web Scraping**: Use full-content tools (curl) not search snippets
-8. **Log Files Location**: 
+8. **Log Files Location**:
    - ✅ Logs are in `/tmp/worldarchitectai_logs/[branch-name].log`
    - ✅ Branch-specific logs: e.g., `/tmp/worldarchitectai_logs/feature-enhanced-character-codesign.log`
    - ✅ Use `strings /tmp/worldarchitectai_logs/[branch].log | grep -i "pattern"` for binary log files
@@ -641,7 +641,7 @@ Use `/list` to display all available slash commands with descriptions.
 
 **Command Documentation**: → `.claude/commands/`
 
-🚨 **SLASH COMMAND ENFORCEMENT**: 
+🚨 **SLASH COMMAND ENFORCEMENT**:
 - `/e` or `/execute` MUST follow simplified protocol in `.claude/commands/execute.md`
 - NEVER treat `/e` as regular request - always use TodoWrite circuit breaker
 - MANDATORY: TodoWrite checklist → Present plan → Wait for approval → Execute

@@ -3,14 +3,15 @@ Additional tests to achieve full coverage of refactored code.
 """
 
 import os
+import re
 import sys
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
-import re
-
 # Add parent directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 from narrative_response_schema import NarrativeResponse
 
 # Mock dependencies
@@ -209,7 +210,6 @@ class TestHelperFunctions(unittest.TestCase):
         """Test _process_structured_response function."""
         # Mock the parse function to return extracted narrative
 
-
         mock_response = Mock(spec=NarrativeResponse)
         mock_parse.return_value = ("story text", mock_response)
         mock_validate.return_value = {"coverage_rate": 1.0, "schema_valid": True}
@@ -273,7 +273,6 @@ class TestMainHelpers(unittest.TestCase):
         """Test StateHelper.strip_other_debug_content."""
         # Test the underlying function directly to avoid Flask dependencies
 
-
         def strip_other_debug_content(text):
             if not text:
                 return text
@@ -311,7 +310,6 @@ class TestMainHelpers(unittest.TestCase):
     def test_strip_state_updates_only(self):
         """Test StateHelper.strip_state_updates_only."""
         # Test the underlying function directly to avoid Flask dependencies
-
 
         def strip_state_updates_only(text):
             if not text:

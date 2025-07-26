@@ -103,13 +103,13 @@ fi
 if [ "$enable_coverage" = true ]; then
     print_status "🧪 Coverage analysis enabled (--coverage flag specified)"
     print_status "HTML output will be saved to: $coverage_dir"
-    
+
     # Create coverage output directory
     mkdir -p "$coverage_dir"
-    
+
     # Check if coverage is installed
     print_status "Checking coverage installation..."
-    
+
     # Check if coverage is importable (venv already activated)
     if ! python -c "import coverage" 2>/dev/null; then
         print_warning "Coverage tool not found. Installing..."
@@ -121,10 +121,10 @@ if [ "$enable_coverage" = true ]; then
     else
         print_status "Coverage already installed"
     fi
-    
+
     # Clear any previous coverage data
     coverage erase
-    
+
     print_warning "Coverage mode: Running tests SEQUENTIALLY (not parallel) for accurate tracking"
 else
     print_status "Running tests in parallel mode (use --coverage for coverage analysis)"
@@ -156,7 +156,7 @@ if [ "$include_integration" = true ]; then
             test_files+=("$file")
         done < <(find ./test_integration -name "test_*.py" -type f -print0)
     fi
-    
+
     if [ -d "./tests/test_integration" ]; then
         print_status "Including integration tests from tests/test_integration/"
         while IFS= read -r -d '' file; do
@@ -214,15 +214,15 @@ echo
 run_test() {
     local test_file="$1"
     local temp_dir="$2"
-    
+
     if [ -f "$test_file" ]; then
         print_status "Running: $test_file"
-        
+
         # Create a safe filename for temp files by replacing slashes and dots
         local safe_filename=$(echo "$test_file" | sed 's|[./]|_|g')
         local output_file="$temp_dir/${safe_filename}.output"
         local status_file="$temp_dir/${safe_filename}.status"
-        
+
         # Choose command based on coverage mode
         if [ "$enable_coverage" = true ]; then
             # Run with coverage
@@ -244,7 +244,7 @@ run_test() {
             fi
         fi
         echo "----------------------------------------"
-        
+
         # Store output for potential display
         if [ -s "$output_file" ]; then
             echo "=== Output from $test_file ===" >> "$temp_dir/all_output.log"
@@ -264,7 +264,7 @@ if [ "$enable_coverage" = true ]; then
     # Sequential execution for coverage
     print_status "Running tests sequentially for coverage analysis..."
     start_time=$(date +%s)
-    
+
     for test_file in "${test_files[@]}"; do
         if [ -f "$test_file" ]; then
             total_tests=$((total_tests + 1))
@@ -272,14 +272,14 @@ if [ "$enable_coverage" = true ]; then
             run_test "$test_file" "$temp_dir"
         fi
     done
-    
+
     test_end_time=$(date +%s)
     test_duration=$((test_end_time - start_time))
     print_status "⏱️  Test execution completed in ${test_duration}s"
 else
     # Parallel execution for normal mode
     print_status "Running tests in parallel (one thread per file)..."
-    
+
     # Run tests in parallel using background processes
     pids=()
     for test_file in "${test_files[@]}"; do
@@ -318,30 +318,30 @@ if [ "$enable_coverage" = true ]; then
     echo
     print_status "📊 Generating coverage report..."
     coverage_start_time=$(date +%s)
-    
+
     # Generate text coverage report
     if source ../venv/bin/activate && coverage report > "$coverage_dir/coverage_report.txt"; then
         print_success "Coverage report generated successfully"
-        
+
         # Display key coverage metrics
         echo
         print_status "📈 Coverage Summary:"
         echo "----------------------------------------"
-        
+
         # Show overall coverage
         overall_coverage=$(tail -1 "$coverage_dir/coverage_report.txt" | awk '{print $4}')
         echo "Overall Coverage: $overall_coverage"
-        
+
         # Show key file coverage
         echo
         echo "Key Files Coverage:"
         grep -E "(main\\.py|gemini_service\\.py|game_state\\.py|firestore_service\\.py)" "$coverage_dir/coverage_report.txt" | head -10
-        
+
         echo "----------------------------------------"
     else
         print_error "Failed to generate coverage report"
     fi
-    
+
     # Generate HTML report
     print_status "🌐 Generating HTML coverage report..."
     if source ../venv/bin/activate && coverage html --directory="$coverage_dir"; then
@@ -350,11 +350,11 @@ if [ "$enable_coverage" = true ]; then
     else
         print_error "Failed to generate HTML coverage report"
     fi
-    
+
     # Calculate coverage generation time
     coverage_end_time=$(date +%s)
     coverage_duration=$((coverage_end_time - coverage_start_time))
-    
+
     echo
     print_status "⏱️  Coverage generation completed in ${coverage_duration}s"
     print_status "📁 Coverage files saved to: $coverage_dir"
@@ -392,7 +392,7 @@ if [ $failed_tests -eq 0 ]; then
     exit 0
 else
     print_error "$failed_tests test(s) failed"
-    
+
     # Clean summary at the end
     echo
     echo "SUMMARY: $passed_tests passed, $failed_tests failed"
@@ -406,6 +406,6 @@ else
             fi
         fi
     done
-    
+
     exit 1
-fi 
+fi

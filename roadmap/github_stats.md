@@ -4,7 +4,7 @@
 
 ### Real Code Changes (Excluding Vendor/Generated Files)
 - **Total Commits**: 914 over 31 days
-- **Merged PRs**: 485 
+- **Merged PRs**: 485
 - **Lines Changed**: 734,835 (519,787 added + 215,048 deleted)
 - **Files Modified**: 5,413
 

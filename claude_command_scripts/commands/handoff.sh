@@ -110,7 +110,7 @@ create_scratchpad() {
     local timestamp="$(date '+%Y-%m-%d %H:%M')"
     local filename="roadmap/scratchpad_handoff_${task_name}.md"
     local handoff_branch="handoff-$task_name"
-    
+
     cat > "$filename" << EOF
 # 🎯 WORKER PROMPT (Copy-paste ready)
 
@@ -136,9 +136,9 @@ create_scratchpad() {
 
 # Handoff Scratchpad: ${task_name//_/ } (Title Case)
 
-**Branch**: $current_branch  
-**Goal**: $description  
-**Status**: Analysis complete, ready for implementation handoff  
+**Branch**: $current_branch
+**Goal**: $description
+**Status**: Analysis complete, ready for implementation handoff
 **Created**: $timestamp
 
 ## Problem Statement
@@ -149,7 +149,7 @@ $description
 
 Add detailed analysis here:
 - Root cause identified
-- Current state documented  
+- Current state documented
 - Solution approach validated
 - Dependencies mapped
 
@@ -160,7 +160,7 @@ Add detailed analysis here:
 - [ ] Another action item with expected outcome
 - [ ] Validation step
 
-### Step 2: [Second Implementation Step]  
+### Step 2: [Second Implementation Step]
 - [ ] Specific action item
 - [ ] Another action item
 - [ ] Validation step
@@ -179,16 +179,16 @@ Add detailed analysis here:
 
 ## Testing Requirements
 
-1. **Unit Tests**: 
+1. **Unit Tests**:
    - Test new functionality
    - Edge case coverage
    - Error handling validation
 
-2. **Integration Tests**: 
+2. **Integration Tests**:
    - End-to-end workflow testing
    - Component interaction validation
 
-3. **Manual Verification**: 
+3. **Manual Verification**:
    - [ ] Feature works as expected
    - [ ] No regressions introduced
    - [ ] Performance acceptable
@@ -231,20 +231,20 @@ update_roadmap() {
     local task_name="$1"
     local description="$2"
     local task_id="$(generate_task_id)"
-    
+
     # Create backup
     cp roadmap/roadmap.md roadmap/roadmap.md.backup
-    
+
     # Add to roadmap after "Next Priority Tasks" line
     awk -v task_id="$task_id" -v desc="$description" '
-        /^### Next Priority Tasks \(Ready to Start\)/ { 
+        /^### Next Priority Tasks \(Ready to Start\)/ {
             print $0
             print "- **" task_id "** 🟡 " desc " - HANDOFF READY"
             next
         }
         { print }
     ' roadmap/roadmap.md.backup > roadmap/roadmap.md
-    
+
     rm roadmap/roadmap.md.backup
     echo "$task_id"
 }
@@ -254,7 +254,7 @@ create_pr() {
     local description="$2"
     local scratchpad_file="$3"
     local branch_name="$(get_current_branch)"
-    
+
     # Create PR body
     local pr_body="## Handoff Task
 
@@ -285,7 +285,7 @@ This task has been analyzed and is ready for a worker to pick up and implement.
 4. Verify all acceptance criteria met
 
 🤖 Generated with [Claude Code](https://claude.ai/code)"
-    
+
     # Commit changes
     git add "$scratchpad_file" roadmap/roadmap.md
     git commit -m "Add handoff task: $description
@@ -296,16 +296,16 @@ Ready for worker assignment
 🤖 Generated with [Claude Code](https://claude.ai/code)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
-    
+
     # Push branch
     git push origin "HEAD:$branch_name"
-    
+
     # Create PR
     local pr_url
     pr_url=$(gh pr create \
         --title "Handoff: $description" \
         --body "$pr_body" 2>&1)
-    
+
     if [[ $? -eq 0 ]]; then
         echo "$pr_url"
     else
@@ -320,7 +320,7 @@ generate_worker_prompt() {
     local description="$2"
     local pr_url="$3"
     local scratchpad_file="$4"
-    
+
     echo "## Worker Assignment
 
 **Task**: $description
@@ -333,7 +333,7 @@ generate_worker_prompt() {
 
 ### Quick Summary
 - Analysis phase complete
-- Implementation approach defined  
+- Implementation approach defined
 - Files to modify identified
 - Testing strategy documented
 
@@ -356,10 +356,10 @@ The analysis is complete - this is ready for implementation."
 main() {
     echo -e "${BLUE}🚀 Creating handoff for: ${CYAN}$DESCRIPTION${NC}"
     echo ""
-    
+
     # Remember original branch
     local original_branch="$(get_current_branch)"
-    
+
     # Check for uncommitted changes
     if [[ -n "$(check_git_status)" ]]; then
         echo -e "${YELLOW}⚠️  Warning: You have uncommitted changes${NC}"
@@ -368,52 +368,52 @@ main() {
         echo ""
         exit 1
     fi
-    
+
     # Create handoff branch
     local handoff_branch="handoff-$TASK_NAME"
     echo -e "${CYAN}📝 Creating handoff branch: $handoff_branch${NC}"
-    
+
     if git show-ref --verify --quiet "refs/heads/$handoff_branch"; then
         echo -e "${RED}❌ Branch $handoff_branch already exists${NC}"
         exit 1
     fi
-    
+
     git checkout -b "$handoff_branch"
-    
+
     # Create scratchpad
     echo -e "${CYAN}📋 Creating scratchpad...${NC}"
     local scratchpad_file
     scratchpad_file=$(create_scratchpad "$TASK_NAME" "$DESCRIPTION")
-    
+
     # Note: Roadmap update moved to after PR creation for /r command integration
-    
+
     # Create PR
     echo -e "${CYAN}🔀 Creating PR...${NC}"
     local pr_url
     pr_url=$(create_pr "$TASK_NAME" "$DESCRIPTION" "$scratchpad_file")
-    
+
     if [[ $? -ne 0 ]]; then
         echo -e "${RED}❌ Failed to create PR${NC}"
         exit 1
     fi
-    
+
     # Execute /r command to update roadmap
     echo -e "${CYAN}🗺️  Executing /r command to update roadmap...${NC}"
-    
+
     # Switch to main branch
     git checkout main
     git pull origin main
-    
+
     # Update roadmap.md with handoff entry
     local handoff_entry="- **HANDOFF-$TASK_NAME** 🔄 $DESCRIPTION - Ready for implementation (PR: $pr_url)"
-    
+
     # Add entry to roadmap.md under "Next Priority Tasks"
     if grep -q "### Next Priority Tasks" roadmap/roadmap.md; then
         sed -i "/### Next Priority Tasks/a $handoff_entry" roadmap/roadmap.md
     else
         echo "$handoff_entry" >> roadmap/roadmap.md
     fi
-    
+
     # Commit roadmap changes
     git add roadmap/roadmap.md
     git commit -m "docs(roadmap): Add handoff task - $DESCRIPTION
@@ -425,14 +425,14 @@ Scratchpad: $scratchpad_file
 🤖 Generated with [Claude Code](https://claude.ai/code)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
-    
+
     # Push to main
     git push origin main
-    
+
     # Switch back to original branch
     echo -e "${CYAN}🔄 Returning to original branch: $original_branch${NC}"
     git checkout "$original_branch"
-    
+
     # Show results
     echo ""
     echo "="*60

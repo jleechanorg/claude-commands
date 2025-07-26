@@ -20,7 +20,7 @@ fi
 find_available_port() {
     local port=$BASE_PORT
     local max_port=$((BASE_PORT + MAX_PORTS - 1))
-    
+
     while [ $port -le $max_port ]; do
         if ! lsof -i:$port > /dev/null 2>&1; then
             echo $port
@@ -28,7 +28,7 @@ find_available_port() {
         fi
         port=$((port + 1))
     done
-    
+
     echo -e "${RED}❌ No available ports in range $BASE_PORT-$max_port${NC}" >&2
     return 1
 }
@@ -40,7 +40,7 @@ is_port_in_use() {
         echo "Usage: is_port_in_use <port>" >&2
         return 1
     fi
-    
+
     lsof -i:$port > /dev/null 2>&1
     return $?
 }
@@ -48,7 +48,7 @@ is_port_in_use() {
 # Function to list running servers in our port range
 list_running_servers() {
     echo -e "${YELLOW}🖥️  Running servers in range $BASE_PORT-$((BASE_PORT + MAX_PORTS - 1)):${NC}"
-    
+
     local found_any=false
     for port in $(seq $BASE_PORT $((BASE_PORT + MAX_PORTS - 1))); do
         local pid=$(lsof -ti:$port 2>/dev/null)
@@ -58,7 +58,7 @@ list_running_servers() {
             found_any=true
         fi
     done
-    
+
     if [ "$found_any" = false ]; then
         echo "   (No servers running in port range)"
     fi

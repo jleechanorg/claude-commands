@@ -165,7 +165,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
         # Check for modern mode specific selectors
         self.assertIn(".modern-mode", content)
-        self.assertIn('body[data-interface-mode="modern"]', content)
+        self.assertIn("body[data-interface-mode='modern']", content)
         self.assertIn(".interactive-features-enabled", content)
 
         # Check for responsive design
@@ -173,9 +173,9 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         self.assertIn("max-width: 768px", content)
 
         # Check for theme-specific styles
-        self.assertIn('[data-theme="dark"]', content)
-        self.assertIn('[data-theme="fantasy"]', content)
-        self.assertIn('[data-theme="cyberpunk"]', content)
+        self.assertIn("[data-theme='dark']", content)
+        self.assertIn("[data-theme='fantasy']", content)
+        self.assertIn("[data-theme='cyberpunk']", content)
 
         print("✅ CSS has proper modern mode selectors and responsive design")
 
@@ -325,7 +325,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         required_themes = ["dark", "fantasy", "cyberpunk"]
         for theme in required_themes:
             self.assertIn(
-                f'[data-theme="{theme}"]', content, f"Should support {theme} theme"
+                f"[data-theme='{theme}']", content, f"Should support {theme} theme"
             )
 
         # Check for no conflicts with existing classes

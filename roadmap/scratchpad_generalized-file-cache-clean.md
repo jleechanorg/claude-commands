@@ -34,7 +34,7 @@ Implement generalized file caching using `cachetools` library to replace any exi
 
 ### Why This Improves Performance (Not Token Usage)
 - **File I/O elimination**: Avoids repeated disk access
-- **Memory efficiency**: Shared content vs multiple file reads  
+- **Memory efficiency**: Shared content vs multiple file reads
 - **No token reduction**: Same content still sent to Gemini (user was correct to question this)
 
 ## Technical Benefits

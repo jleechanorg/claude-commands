@@ -41,7 +41,7 @@ This document captures implicit patterns, preferences, and contextual behaviors 
 ## Pattern Confidence Levels
 
 - 🟢 **High Confidence** (90%+): Seen 5+ times, consistently applied
-- 🟡 **Medium Confidence** (70-89%): Seen 3-4 times, mostly consistent  
+- 🟡 **Medium Confidence** (70-89%): Seen 3-4 times, mostly consistent
 - 🔴 **Low Confidence** (50-69%): Seen 1-2 times, needs validation
 
 ---
@@ -93,7 +93,7 @@ This document captures implicit patterns, preferences, and contextual behaviors 
 ### Recently Added
 <!-- Last 5 patterns detected -->
 
-### Recently Updated  
+### Recently Updated
 <!-- Patterns with changed confidence -->
 
 ### Under Review

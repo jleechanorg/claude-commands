@@ -16,83 +16,83 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 def test_campaign_creation_browser():
     """Test campaign creation using browser automation with fake services."""
     print("🚀 Starting browser test with fake services...")
-    
+
     # Import fake services
     from fake_services import FakeServiceManager
-    
+
     # Set up fake services
     services = FakeServiceManager()
     services.setup_environment()
-    
+
     # Mock Firebase and Gemini at module level
     from unittest.mock import MagicMock, patch
-    
+
     # Create mock modules
     mock_firebase_admin = MagicMock()
     mock_firestore = MagicMock()
     mock_auth = MagicMock()
     mock_firebase_admin.firestore = mock_firestore
     mock_firebase_admin.auth = mock_auth
-    
+
     # Firebase DELETE_FIELD sentinel
     DELETE_FIELD = object()
     mock_firestore.DELETE_FIELD = DELETE_FIELD
-    
+
     # Setup module mocks
     sys.modules['firebase_admin'] = mock_firebase_admin
     sys.modules['firebase_admin.firestore'] = mock_firestore
     sys.modules['firebase_admin.auth'] = mock_auth
-    
+
     # Connect mocks to our fakes
     mock_firestore.client.return_value = services.firestore
     mock_auth.verify_id_token = services.auth.verify_id_token
     mock_auth.get_user = services.auth.get_user
-    
+
     # Mock Gemini
     genai_patch = patch('google.genai.Client', return_value=services.gemini_client)
     genai_patch.start()
-    
+
     try:
         # Import and create app after mocking
         from main import create_app
         app = create_app()
-        
+
         # Set up test user
         test_user_id = "browser-test-user"
         services.setup_user(test_user_id, "browser@test.com")
-        
+
         print("✅ Fake services set up successfully")
         print(f"📊 Test user created: {test_user_id}")
-        
+
         # Start Flask server in background
         import subprocess
         import threading
-        
+
         def run_server():
             # Run server with fake services
             app.run(host='localhost', port=6006, debug=False, use_reloader=False)
-        
+
         server_thread = threading.Thread(target=run_server, daemon=True)
         server_thread.start()
-        
+
         # Give server time to start
         time.sleep(2)
-        
+
         print("🌐 Test server started on http://localhost:6006")
-        
+
         # NOTE: In a real test, you would use Puppeteer MCP here
         # Since we're demonstrating the pattern, we'll simulate the browser interaction
-        
+
         # Simulate browser test steps:
         print("🤖 [SIMULATED] Browser automation with Puppeteer MCP:")
         print("   1. Navigate to http://localhost:6006?test_mode=true&test_user_id=browser-test-user")
         print("   2. Fill campaign form:")
         print("      - Title: 'Browser Test Campaign'")
-        print("      - Character: 'Test Hero'") 
+        print("      - Character: 'Test Hero'")
         print("      - Setting: 'Test Realm'")
         print("   3. Click 'Create Campaign' button")
         print("   4. Wait for campaign creation response")
-        
+
         # Simulate the API call that browser would make
         import requests
         campaign_data = {
@@ -102,33 +102,33 @@ def test_campaign_creation_browser():
             "description": "Created via browser test",
             "campaignType": "custom"
         }
-        
+
         headers = {
             'X-Test-Bypass': 'true',
             'X-Test-User-Id': test_user_id,
             'Content-Type': 'application/json'
         }
-        
+
         try:
             response = requests.post('http://localhost:6006/api/campaigns/create',
                                    json=campaign_data,
                                    headers=headers,
                                    timeout=5)
-            
+
             if response.status_code == 200:
                 data = response.json()
                 campaign_id = data.get('campaign_id')
                 print(f"✅ Campaign created successfully: {campaign_id}")
-                
+
                 # Verify data was stored in fake Firestore
                 stored_doc = services.firestore.collection("campaigns").document(campaign_id)
                 stored_data = stored_doc.get().to_dict()
-                
+
                 print(f"📁 Campaign data in fake Firestore:")
                 print(f"   Title: {stored_data.get('title')}")
                 print(f"   Character: {stored_data.get('character')}")
                 print(f"   User ID: {stored_data.get('user_id')}")
-                
+
                 # Verify AI-generated story
                 story_doc = stored_doc.collection("story").document("current")
                 if story_doc.exists():
@@ -136,14 +136,14 @@ def test_campaign_creation_browser():
                     print(f"📖 AI-generated story from fake Gemini:")
                     print(f"   Narrative: {story_data.get('narrative', '')[:100]}...")
                     print(f"   Health: {story_data.get('mechanics', {}).get('health', 'N/A')}")
-                
+
                 print("🎉 Browser test simulation completed successfully!")
                 return True
             else:
                 print(f"❌ Campaign creation failed: {response.status_code}")
                 print(f"Response: {response.text}")
                 return False
-                
+
         except requests.exceptions.ConnectionError:
             print("⚠️  Could not connect to test server (normal in test environment)")
             print("✅ Fake services are working correctly though!")
@@ -151,7 +151,7 @@ def test_campaign_creation_browser():
         except Exception as e:
             print(f"❌ Request failed: {e}")
             return False
-    
+
     finally:
         # Clean up
         genai_patch.stop()
@@ -164,42 +164,42 @@ def real_puppeteer_browser_test():
     Example of how to use real Puppeteer MCP for browser testing.
     This would be the actual implementation using Claude Code's MCP tools.
     """
-    
+
     example_code = '''
     # Real Puppeteer MCP browser test would look like this:
-    
+
     from claude_code_mcp import puppeteer
-    
+
     async def test_campaign_creation_real_browser():
         """Real browser test using Puppeteer MCP."""
-        
+
         # Set up fake services first
         services = FakeServiceManager()
         services.setup_environment()
         services.start_patches()
-        
+
         # Launch real browser
         browser = await puppeteer.launch(headless=True)
         page = await browser.new_page()
-        
+
         try:
             # Navigate with test mode parameters
             await page.goto('http://localhost:6006?test_mode=true&test_user_id=browser-test-user')
-            
+
             # Fill form with real UI interaction
             await page.fill('#campaign-title', 'Real Browser Test')
             await page.fill('#character-name', 'Real Hero')
             await page.fill('#setting', 'Real Realm')
-            
+
             # Click create button
             await page.click('#create-campaign-btn')
-            
+
             # Wait for response
             await page.wait_for_selector('.campaign-created', timeout=10000)
-            
+
             # Take screenshot for verification
             await page.screenshot(path='campaign_created.png')
-            
+
             # Verify campaign was created in fake services
             campaigns = services.firestore.collection("campaigns").stream()
             created_campaign = None
@@ -208,18 +208,18 @@ def real_puppeteer_browser_test():
                 if data.get('title') == 'Real Browser Test':
                     created_campaign = data
                     break
-            
+
             assert created_campaign is not None
             assert created_campaign['character'] == 'Real Hero'
-            
+
             print("✅ Real browser test passed!")
-            
+
         finally:
             await browser.close()
             services.stop_patches()
             services.restore_environment()
     '''
-    
+
     print("📝 Real Puppeteer MCP implementation example:")
     print(example_code)
 
@@ -227,12 +227,12 @@ def real_puppeteer_browser_test():
 if __name__ == '__main__':
     print("🧪 Testing fake services with browser automation")
     print("=" * 60)
-    
+
     # Run simulated test
     success = test_campaign_creation_browser()
-    
+
     print("\n" + "=" * 60)
-    
+
     if success:
         print("🎯 DEMONSTRATION COMPLETE!")
         print("\n✅ Fake Services Benefits Proven:")
@@ -242,7 +242,7 @@ if __name__ == '__main__':
         print("  • Behavior-based testing")
         print("  • Works with browser automation")
         print("  • Easy to debug and maintain")
-        
+
         print("\n🚀 Ready for Puppeteer MCP Integration:")
         real_puppeteer_browser_test()
     else:

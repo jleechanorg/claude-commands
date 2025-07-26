@@ -110,7 +110,7 @@ SKIP_LINT=true /pushl
 💡 Or set SKIP_LINT=true to bypass
 ```
 
-### `/pushl` Experience  
+### `/pushl` Experience
 ```
 📤 Pushing to remote...
 ✅ Push successful
@@ -178,7 +178,7 @@ SKIP_LINT=true /pushl
 
 ### Files Modified
 - `claude_command_scripts/commands/pushlite.sh`: Added post-push linting
-- `.claude/commands/push.py`: Added pre-push blocking linting  
+- `.claude/commands/push.py`: Added pre-push blocking linting
 - `.claude/commands/lint_utils.py`: Enhanced path detection
 - `LINTING_SETUP.md`: Added workflow comparison table
 - `.claude/commands/pushlite.md`: Updated feature descriptions

@@ -25,7 +25,7 @@ class FlaskServerManager:
         self.port = self._find_free_port()
         self.process = None
         self.log_file = f"/tmp/test_server_{self.port}.log"
-    
+
     def _find_free_port(self):
         import socket
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -42,13 +42,13 @@ class SafeProcessManager:
     def __init__(self):
         self.owned_processes = []
         self.port = None
-    
+
     def start_server(self):
         # Only kill processes we own
         for proc in self.owned_processes:
             if proc.is_running():
                 proc.terminate()
-        
+
         # Use subprocess.Popen with process group
         self.process = subprocess.Popen(
             [...],
@@ -82,12 +82,12 @@ class BrowserTestBase:
 class MockManager:
     def __init__(self):
         self.use_mocks = os.environ.get('USE_MOCKS', 'false').lower() == 'true'
-    
+
     def get_firestore_service(self):
         if self.use_mocks:
             return MockFirestoreService()
         return FirestoreService()
-    
+
     def get_gemini_service(self):
         if self.use_mocks:
             return MockGeminiService()
@@ -102,10 +102,10 @@ class MockManager:
 # mvp_site/main.py modifications
 def create_app(use_mocks=None):
     app = Flask(__name__)
-    
+
     if use_mocks is None:
         use_mocks = os.environ.get('USE_MOCKS', 'false').lower() == 'true'
-    
+
     if use_mocks:
         app.config['FIRESTORE_SERVICE'] = MockFirestoreService()
         app.config['GEMINI_SERVICE'] = MockGeminiService()
@@ -143,15 +143,15 @@ class TestDataManager:
         self.test_id = test_id
         self.created_campaigns = []
         self.created_files = []
-    
+
     def track_campaign(self, campaign_id: str):
         self.created_campaigns.append(campaign_id)
-    
+
     def cleanup(self):
         # Clean Firebase
         for campaign_id in self.created_campaigns:
             firestore_service.delete_campaign(campaign_id)
-        
+
         # Clean files
         for file_path in self.created_files:
             if os.path.exists(file_path):
@@ -168,12 +168,12 @@ class BrowserManager:
         self.playwright = None
         self.browser = None
         self.contexts = []
-    
+
     def __enter__(self):
         self.playwright = sync_playwright().start()
         self.browser = self.playwright.chromium.launch(headless=True)
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         for context in self.contexts:
             context.close()
@@ -198,12 +198,12 @@ class TestOrchestrator:
         self.max_concurrent = max_concurrent
         self.running_tests = {}
         self.available_ports = queue.Queue()
-        
+
     def initialize_port_pool(self):
         for _ in range(self.max_concurrent):
             port = self._find_free_port()
             self.available_ports.put(port)
-    
+
     async def run_test(self, test_class):
         port = await self.available_ports.get()
         try:
@@ -238,7 +238,7 @@ class TestExecutionContext:
         self.start_time = time.time()
         self.errors = []
         self.screenshots = []
-    
+
     def handle_error(self, error: Exception, context: str):
         self.errors.append({
             'error': str(error),
@@ -322,8 +322,8 @@ class TestMetrics:
 
 ---
 
-**OWNER**: Browser Test Framework Team  
-**PRIORITY**: CRITICAL  
-**TIMELINE**: 7-10 days  
-**DEPENDENCIES**: None (self-contained)  
+**OWNER**: Browser Test Framework Team
+**PRIORITY**: CRITICAL
+**TIMELINE**: 7-10 days
+**DEPENDENCIES**: None (self-contained)
 **RISK LEVEL**: Medium (touching critical testing infrastructure)

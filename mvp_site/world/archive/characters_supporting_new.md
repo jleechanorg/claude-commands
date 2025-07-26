@@ -57,7 +57,7 @@
 **Influence:** Controls significant resources and political connections
 
 #### Lord Vorlag
-**Faction:** Celestial Imperium  
+**Faction:** Celestial Imperium
 **Role:** House Sanguis Leader
 **Key Traits:** Arch-traditionalist, opposes Alexiel, bloodline purist
 **Background:** Leads conservative faction opposing reforms and Alexiel's influence
@@ -71,7 +71,7 @@
 **Role:** Raziel's personal retinue, supreme combat unit
 **Capabilities:** Tier 5+ warriors, perfect coordination, absolute loyalty
 
-#### Apostate Guard  
+#### Apostate Guard
 **Faction:** Unchained Host
 **Description:** Crimson-winged elite forces under Xylos command
 **Role:** Lucifer's elite shock troops

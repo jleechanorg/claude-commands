@@ -5,7 +5,7 @@
 
 /* Only apply these styles in modern mode */
 .modern-mode .interactive-features-enabled,
-body[data-interface-mode="modern"] {
+body[data-interface-mode='modern'] {
   /* Enable interactive features */
 }
 
@@ -202,7 +202,7 @@ body[data-interface-mode="modern"] {
   box-shadow: 0 4px 15px rgba(0, 123, 255, 0.2);
 }
 
-.campaign-type-card input[type="radio"] {
+.campaign-type-card input[type='radio'] {
   position: absolute;
   opacity: 0;
   pointer-events: none;
@@ -521,7 +521,7 @@ body[data-interface-mode="modern"] {
    ================================== */
 
 /* Fix checkbox alignment issues */
-input[type="checkbox"] {
+input[type='checkbox'] {
   vertical-align: middle;
   margin-right: 0.5rem;
   margin-top: -2px; /* Fine-tune vertical alignment */
@@ -547,7 +547,7 @@ input[type="checkbox"] {
 }
 
 /* Ensure checkboxes in wizard are properly aligned */
-.wizard-step input[type="checkbox"] {
+.wizard-step input[type='checkbox'] {
   width: 1.2em;
   height: 1.2em;
   vertical-align: middle;
@@ -579,40 +579,40 @@ input[type="checkbox"] {
     padding: 1rem;
     margin: 1rem;
   }
-  
+
   .step-indicators {
     flex-wrap: wrap;
     gap: 0.5rem;
   }
-  
+
   .step-indicator .step-label {
     display: none;
   }
-  
+
   .wizard-navigation {
     flex-direction: column;
     gap: 1rem;
   }
-  
+
   .filter-controls {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .filter-group {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .campaign-type-cards {
     grid-template-columns: 1fr;
   }
-  
+
   .campaign-type-label {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .campaign-type-icon {
     font-size: 2rem;
   }
@@ -622,52 +622,52 @@ input[type="checkbox"] {
    DARK MODE SUPPORT
    ================================== */
 
-[data-theme="dark"] .campaign-wizard,
-[data-theme="dark"] .search-filter-container {
+[data-theme='dark'] .campaign-wizard,
+[data-theme='dark'] .search-filter-container {
   background: rgba(52, 58, 64, 0.95);
   color: #f8f9fa;
 }
 
-[data-theme="dark"] .campaign-type-card {
+[data-theme='dark'] .campaign-type-card {
   background: rgba(73, 80, 87, 0.5);
   border-color: #495057;
   color: #f8f9fa;
 }
 
-[data-theme="dark"] .campaign-type-card:hover {
+[data-theme='dark'] .campaign-type-card:hover {
   border-color: #0d6efd;
   background: rgba(73, 80, 87, 0.7);
 }
 
-[data-theme="dark"] .campaign-type-card.selected {
+[data-theme='dark'] .campaign-type-card.selected {
   border-color: #0d6efd;
   background: rgba(13, 110, 253, 0.15);
 }
 
-[data-theme="dark"] .campaign-type-content h5 {
+[data-theme='dark'] .campaign-type-content h5 {
   color: #f8f9fa;
 }
 
-[data-theme="dark"] .step-title {
+[data-theme='dark'] .step-title {
   color: #f8f9fa;
 }
 
-[data-theme="dark"] .step-description {
+[data-theme='dark'] .step-description {
   color: #adb5bd;
 }
 
-[data-theme="dark"] .personality-card,
-[data-theme="dark"] .option-card {
+[data-theme='dark'] .personality-card,
+[data-theme='dark'] .option-card {
   background: rgba(73, 80, 87, 0.5);
   border-color: #495057;
   color: #f8f9fa;
 }
 
-[data-theme="dark"] .campaign-preview {
+[data-theme='dark'] .campaign-preview {
   background: linear-gradient(135deg, #495057, #343a40);
 }
 
-[data-theme="dark"] .modern-mode .campaign-item {
+[data-theme='dark'] .modern-mode .campaign-item {
   background: rgba(52, 58, 64, 0.8);
   border-color: #495057;
   color: #f8f9fa;
@@ -677,21 +677,29 @@ input[type="checkbox"] {
    THEME-SPECIFIC ENHANCEMENTS
    ================================== */
 
-[data-theme="fantasy"] .campaign-wizard {
-  background: linear-gradient(135deg, rgba(139, 69, 19, 0.1), rgba(160, 82, 45, 0.1));
+[data-theme='fantasy'] .campaign-wizard {
+  background: linear-gradient(
+    135deg,
+    rgba(139, 69, 19, 0.1),
+    rgba(160, 82, 45, 0.1)
+  );
   border: 2px solid rgba(139, 69, 19, 0.3);
 }
 
-[data-theme="fantasy"] .step-indicator.active .step-circle {
-  background: linear-gradient(45deg, #8B4513, #A0522D);
+[data-theme='fantasy'] .step-indicator.active .step-circle {
+  background: linear-gradient(45deg, #8b4513, #a0522d);
 }
 
-[data-theme="cyberpunk"] .campaign-wizard {
-  background: linear-gradient(135deg, rgba(0, 255, 255, 0.1), rgba(255, 0, 255, 0.1));
+[data-theme='cyberpunk'] .campaign-wizard {
+  background: linear-gradient(
+    135deg,
+    rgba(0, 255, 255, 0.1),
+    rgba(255, 0, 255, 0.1)
+  );
   border: 2px solid rgba(0, 255, 255, 0.3);
   box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
 }
 
-[data-theme="cyberpunk"] .step-indicator.active .step-circle {
+[data-theme='cyberpunk'] .step-indicator.active .step-circle {
   background: linear-gradient(45deg, #00ffff, #ff00ff);
-} 
+}

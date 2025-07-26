@@ -12,7 +12,7 @@ Convert all character count logging to token count logging throughout the codeba
 
 ### Milestone 2: Core Implementation (10 min) ✅
 - [x] Updated gemini_service.py main character log to include tokens
-- [x] Updated world_loader.py (3 locations) 
+- [x] Updated world_loader.py (3 locations)
 - [x] Updated narrative_response_schema.py
 - [x] Maintained backward compatibility with dual logging
 

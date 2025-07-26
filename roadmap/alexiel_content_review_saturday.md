@@ -47,7 +47,7 @@ However, some Alexiel content still appears to be missing or could benefit from 
 **Sections**: Overview, Factions, World Mechanics, Geography, History, Characters, Major Plotlines, Names Library
 
 **Successfully Integrated**:
-- ✅ 15+ supporting characters 
+- ✅ 15+ supporting characters
 - ✅ 6 Elite Units (Silent Guard, Apostate Guard, Third Imperial Regiment, etc.)
 - ✅ 4 Creatures (Shadow Stalkers, Chitinous Weavers, Rock Drake, Abyssal Constructs)
 - ✅ Enhanced character profiles with psychology and relationships

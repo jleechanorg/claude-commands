@@ -18,7 +18,7 @@
 
 ### 2. Data Flow
 ```
-Gemini API (returns JSON) 
+Gemini API (returns JSON)
     → gemini_service.py (parses JSON, extracts narrative)
     → main.py (receives GeminiResponse object)
     → firestore_service.py (saves narrative text)
@@ -76,7 +76,7 @@ Gemini API (returns JSON)
 **Symptom**: Users see raw JSON like `Scene #2: {"narrative": "..."}` instead of formatted text
 **NOT the cause**: Malformed JSON, parsing errors, or JSON mode being broken
 **Likely cause**: Valid JSON not being processed correctly somewhere in the pipeline
-**Investigation needed**: 
+**Investigation needed**:
 - Where exactly is the narrative extraction failing?
 - Is it in gemini_service, main.py, or somewhere else?
 - Why does parse_structured_response work in tests but not in production?

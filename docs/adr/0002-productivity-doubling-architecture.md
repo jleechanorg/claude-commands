@@ -1,13 +1,13 @@
 # ADR-0002: Architecture for Doubling Development Productivity
 
-**Status**: Proposed  
-**Date**: 2025-07-14  
+**Status**: Proposed
+**Date**: 2025-07-14
 **Participants**: Claude & Gemini (alternating roles)
 
 ## Context
 
 Analysis of GitHub statistics shows:
-- 13 PRs/day but feeling "slow" 
+- 13 PRs/day but feeling "slow"
 - 7.4:1 change ratio vs core code (high rework)
 - 20 fix commits in 2 weeks
 - Multiple refactoring cycles for same features

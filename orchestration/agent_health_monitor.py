@@ -234,7 +234,7 @@ class AgentHealthMonitor:
                 except subprocess.CalledProcessError as e:
                     print(f"⚠️ Warning: Failed to determine project root using 'git rev-parse': {e}")
                     project_root = os.path.dirname(self.orchestration_dir)
-                
+
                 # Find Claude executable portably
                 claude_path = None
                 if 'CLAUDE_PATH' in os.environ and os.path.exists(os.environ['CLAUDE_PATH']):
@@ -244,11 +244,11 @@ class AgentHealthMonitor:
                     claude_path = shutil.which('claude')
                     if not claude_path:
                         claude_path = os.path.expanduser('~/.claude/local/claude')
-                
+
                 if not claude_path or not os.path.exists(claude_path):
                     print(f"❌ Claude executable not found for agent {agent_name}")
                     return False
-                
+
                 subprocess.run([
                     'tmux', 'new-session', '-d', '-s', agent_name,
                     '-c', project_root, claude_path

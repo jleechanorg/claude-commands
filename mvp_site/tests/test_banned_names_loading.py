@@ -9,7 +9,9 @@ import sys
 import unittest
 
 # Add parent directory to path so we can import world_loader
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 import world_loader
 

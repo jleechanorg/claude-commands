@@ -5,7 +5,7 @@
 
 describe('Dragon Knight Campaign Description Length', function() {
   let campaignWizard;
-  
+
   beforeEach(function() {
     // Mock DOM elements needed for testing
     document.body.innerHTML = `
@@ -20,48 +20,48 @@ describe('Dragon Knight Campaign Description Length', function() {
         <button id="modern-mode-btn" class="btn btn-primary active">Modern</button>
       </div>
     `;
-    
+
     // Mock window.interfaceManager
     window.interfaceManager = {
       isModernMode: () => true
     };
-    
+
     // Create campaign wizard instance
     campaignWizard = new CampaignWizard();
   });
-  
+
   afterEach(function() {
     document.body.innerHTML = '';
     delete window.interfaceManager;
     delete window.campaignWizard;
   });
-  
+
   it('should handle long Dragon Knight description without errors', function() {
     const description = CampaignWizard.DEFAULT_DRAGON_KNIGHT_DESCRIPTION;
-    
+
     // Test that description is properly defined and not placeholder
     expect(description).toBeDefined();
     expect(description).not.toContain('[PLACEHOLDER');
     expect(description.length).toBeGreaterThan(1000); // Should be much longer than before
-    
+
     // Test that description contains expected Dragon Knight content
     expect(description).toContain('Ser Arion');
     expect(description).toContain('Celestial Imperium');
     expect(description).toContain('Empress Sariel');
     expect(description).toContain('Campaign summary');
   });
-  
+
   it('should properly format long descriptions in preview', function() {
     const longDescription = CampaignWizard.DEFAULT_DRAGON_KNIGHT_DESCRIPTION;
-    
+
     // Test formatting helper function
     const formatted = campaignWizard._formatDescription(longDescription, true);
-    
+
     // Should truncate long descriptions for preview
     expect(formatted.length).toBeLessThanOrEqual(53); // 50 chars + "..."
     expect(formatted).toContain('...');
   });
-  
+
   it('should handle Dragon Knight description in form data collection', function() {
     // Set up wizard with Dragon Knight selected
     document.body.innerHTML += `
@@ -77,9 +77,9 @@ describe('Dragon Knight Campaign Description Length', function() {
         <input type="checkbox" id="wizard-default-world" checked />
       </div>
     `;
-    
+
     const formData = campaignWizard.collectFormData();
-    
+
     // Should collect the long description properly
     expect(formData.description).toBe(CampaignWizard.DEFAULT_DRAGON_KNIGHT_DESCRIPTION);
     expect(formData.description.length).toBeGreaterThan(1000);
@@ -87,10 +87,10 @@ describe('Dragon Knight Campaign Description Length', function() {
     expect(formData.character).toBe('Ser Arion');
     expect(formData.setting).toBe('World of Assiah');
   });
-  
+
   it('should populate original form with long description', function() {
     const longDescription = CampaignWizard.DEFAULT_DRAGON_KNIGHT_DESCRIPTION;
-    
+
     const formData = {
       title: 'Dragon Knight Campaign',
       character: 'Ser Arion',
@@ -99,14 +99,14 @@ describe('Dragon Knight Campaign Description Length', function() {
       selectedPrompts: ['narrative', 'mechanics'],
       customOptions: ['companions', 'defaultWorld']
     };
-    
+
     campaignWizard.populateOriginalForm(formData);
-    
+
     const descriptionInput = document.getElementById('description-input');
     expect(descriptionInput.value).toBe(longDescription);
     expect(descriptionInput.value.length).toBeGreaterThan(1000);
   });
-  
+
   it('should handle campaign type change to Dragon Knight', async function() {
     // Set up wizard DOM
     document.body.innerHTML += `
@@ -123,26 +123,26 @@ describe('Dragon Knight Campaign Description Length', function() {
         <div class="campaign-type-card" data-type="custom"></div>
       </div>
     `;
-    
+
     await campaignWizard.handleCampaignTypeChange('dragon-knight');
-    
+
     const descriptionInput = document.getElementById('wizard-description-input');
     const characterInput = document.getElementById('wizard-character-input');
     const settingInput = document.getElementById('wizard-setting-input');
-    
+
     // Should pre-fill with Dragon Knight content
     expect(descriptionInput.value).toBe(CampaignWizard.DEFAULT_DRAGON_KNIGHT_DESCRIPTION);
     expect(characterInput.value).toBe('Ser Arion');
     expect(settingInput.value).toBe('World of Assiah');
   });
-  
+
   it('should validate description length limits', function() {
     const description = CampaignWizard.DEFAULT_DRAGON_KNIGHT_DESCRIPTION;
-    
+
     // Test that even very long descriptions are accepted
     expect(description.length).toBeGreaterThan(0);
     expect(description.length).toBeLessThan(100000); // Reasonable upper limit
-    
+
     // Test that it doesn't contain obvious formatting issues
     expect(description).not.toContain('undefined');
     expect(description).not.toContain('null');

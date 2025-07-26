@@ -1,7 +1,7 @@
 #!/bin/bash
 # integrate.sh - This script helps developers integrate the latest changes from main and start fresh on a new branch.
 # This script implements the standard integration pattern for the project
-# 
+#
 # Usage: ./integrate.sh [branch-name] [--force] [--new-branch] [--help]
 #   branch-name: Optional custom branch name (default: dev{timestamp})
 #   --force: Override hard stops for uncommitted/unpushed changes and integration PR warnings
@@ -23,45 +23,6 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
-
-# Help function
-show_help() {
-    repo_name=$(basename -s .git "$(git config --get remote.origin.url)" 2>/dev/null || echo "current project")
-    echo "integrate.sh - Integration workflow for $repo_name development"
-    echo ""
-    echo "Usage: $0 [branch-name] [--force] [--new-branch] [--help]"
-    echo ""
-    echo "Arguments:"
-    echo "  branch-name   Optional custom branch name (default: dev{timestamp})"
-    echo ""
-    echo "Options:"
-    echo "  --force       Override safety checks for uncommitted/unpushed changes"
-    echo "  --new-branch  Create new branch without deleting current one"
-    echo "  --help        Show this help message"
-    echo ""
-    echo "Description:"
-    echo "  This script provides a comprehensive integration workflow that:"
-    echo "  1. Handles uncommitted changes (stash or require commit)"
-    echo "  2. Manages unpushed commits (require push or force abandon)"
-    echo "  3. Syncs with origin/main (including PR creation for protected branches)"
-    echo "  4. Creates fresh development branch from latest main"
-    echo "  5. Optionally cleans up old branches"
-    echo ""
-    echo "Examples:"
-    echo "  $0                           # Standard integration with dev{timestamp}"
-    echo "  $0 feature/new-auth         # Custom branch name"
-    echo "  $0 --force                  # Force integration (abandon local changes)"
-    echo "  $0 --new-branch             # Keep current branch, create new one"
-    echo "  $0 hotfix/urgent --force    # Force with custom name"
-    echo ""
-    echo "Safety Features:"
-    echo "  - Hard stops for uncommitted changes (unless --force)"
-    echo "  - Hard stops for unpushed commits (unless --force)"
-    echo "  - Automatic PR creation for protected main branches"
-    echo "  - Smart branch cleanup based on merge status"
-    echo "  - Test server management integration"
-    exit 0
-}
 
 # Source ~/.bashrc to ensure environment is properly set up
 if [ -f ~/.bashrc ]; then
@@ -86,7 +47,7 @@ OPTIONS:
 
 EXAMPLES:
     ./integrate.sh                    # Creates dev{timestamp} branch
-    ./integrate.sh feature/foo        # Creates feature/foo branch  
+    ./integrate.sh feature/foo        # Creates feature/foo branch
     ./integrate.sh --force            # Force mode with dev{timestamp}
     ./integrate.sh newb --force       # Creates newb branch in force mode
     ./integrate.sh --new-branch       # Creates new dev{timestamp} without deleting current
@@ -163,7 +124,7 @@ fi
 should_delete_branch=false
 if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
     echo "⚠️  WARNING: You are on branch '$current_branch'"
-    
+
     # Check if current branch has uncommitted changes - HARD STOP
     if ! git diff --quiet || ! git diff --cached --quiet; then
         echo -e "${RED}❌ HARD STOP: You have uncommitted changes on '$current_branch'${NC}"
@@ -182,7 +143,7 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
             exit 1
         fi
     fi
-    
+
     # Check if current branch has unpushed commits - HARD STOP
     ahead_ref="$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || true)"
     if [[ -n "$ahead_ref" ]]; then
@@ -235,7 +196,7 @@ check_existing_sync_pr() {
         # Check for sync PRs created by this script (exact title match) - collect into proper JSON array
         existing_sync_prs=$(gh pr list --author "@me" --state open --json number,url,title 2>/dev/null | jq -c '[ .[] | select(.title == "Sync main branch commits (integrate.sh)") ]' || echo '[]')
         sync_count=$(echo "$existing_sync_prs" | jq 'length')
-        
+
         if [ "$sync_count" -gt 0 ]; then
             if [ "$sync_count" -eq 1 ]; then
                 # Single sync PR - extract details
@@ -249,7 +210,7 @@ check_existing_sync_pr() {
                 echo "$existing_sync_prs" | jq -r '.[] | "   PR #\(.number): \(.url)"'
                 echo "   Please merge these PRs first, then re-run integrate.sh"
             fi
-            
+
             if [ "$FORCE_MODE" = true ]; then
                 echo "🚨 FORCE MODE: Proceeding with integration despite sync PR(s)"
                 return 0
@@ -265,11 +226,11 @@ check_existing_sync_pr() {
                 exit 1
             fi
         fi
-        
+
         # Check for any open PRs that modify integrate.sh or integration workflows (informational only)
         integration_prs=$(gh pr list --state open --limit 50 --json number,url,title,files 2>/dev/null | jq -c '[ .[] | select(.files[]?.filename | test("integrate\\.sh|integration")) ]' || echo '[]')
         pr_count=$(echo "$integration_prs" | jq 'length')
-        
+
         if [ "$pr_count" -gt 0 ]; then
             echo "ℹ️  Found $pr_count open PR(s) modifying integration workflows:"
             echo "$integration_prs" | jq -r '.[] | "   PR #\(.number): \(.title) - \(.url)"'
@@ -300,30 +261,30 @@ if git merge-base --is-ancestor HEAD origin/main; then
         echo "❌ Error: Fast-forward merge with origin/main failed. Please resolve manually." >&2
         exit 1
     fi
-    
+
 elif git merge-base --is-ancestor origin/main HEAD; then
     # Local main is ahead of origin/main → create PR for commits
     echo -e "${GREEN}✅ Local main ahead, creating PR to sync${NC}"
     commit_count=$(git rev-list --count origin/main..HEAD)
     echo "   Found $commit_count commits ahead of origin/main"
-    
+
     # Generate timestamp for branch naming
     timestamp=$(date +%Y%m%d-%H%M%S)
-    
+
     # Create temporary branch for PR
     sync_branch="sync-main-$timestamp"
     echo "   Creating sync branch: $sync_branch"
-    
+
     if ! git checkout -b "$sync_branch"; then
         echo "❌ Error: Failed to create sync branch" >&2
         exit 1
     fi
-    
+
     if ! git push -u origin HEAD; then
         echo "❌ Error: Failed to push sync branch" >&2
         exit 1
     fi
-    
+
     # Create PR if gh is available
     if command -v gh >/dev/null 2>&1; then
         pr_title="Sync main branch commits (integrate.sh)"
@@ -336,7 +297,7 @@ elif git merge-base --is-ancestor origin/main HEAD; then
             commit_list="$commit_list
    ...and $((commit_count - commit_limit)) more commits not shown"
         fi
-        
+
         pr_body="Auto-generated PR to sync $commit_count commits that were ahead on local main.
 
 This PR was created by integrate.sh to handle repository branch protection rules.
@@ -345,7 +306,7 @@ Commits included:
 $commit_list
 
 Please review and merge to complete the integration process."
-        
+
         if pr_url=$(gh pr create --title "$pr_title" --body "$pr_body" 2>/dev/null); then
             echo -e "${GREEN}✅ Created PR: $pr_url${NC}"
             echo "   Please review and merge the PR, then re-run integrate.sh"
@@ -362,24 +323,24 @@ Please review and merge to complete the integration process."
         echo "   URL: https://github.com/$(get_github_repo_url)/compare/$sync_branch"
         exit 1
     fi
-    
+
 else
     # Branches have diverged → create PR with merged changes
     echo "⚠️  Local main and origin/main have diverged"
     echo "🔄 Creating merge branch to sync histories..."
-    
-    # Generate timestamp for branch naming  
+
+    # Generate timestamp for branch naming
     timestamp=$(date +%Y%m%d-%H%M%S)
-    
+
     # Create temporary branch for merge PR
     merge_branch="merge-main-$timestamp"
     echo "   Creating merge branch: $merge_branch"
-    
+
     if ! git checkout -b "$merge_branch"; then
         echo "❌ Error: Failed to create merge branch" >&2
         exit 1
     fi
-    
+
     # Perform the merge on the temporary branch
     if ! git merge --no-ff origin/main -m "integrate.sh: Auto-merge divergent main histories
 
@@ -391,12 +352,12 @@ Equivalent to: git merge --no-ff origin/main"; then
         echo "❌ Error: Auto-merge of divergent main histories failed. Please resolve conflicts manually." >&2
         exit 1
     fi
-    
+
     if ! git push -u origin HEAD; then
         echo "❌ Error: Failed to push merge branch" >&2
         exit 1
     fi
-    
+
     # Create PR if gh is available
     if command -v gh >/dev/null 2>&1; then
         pr_title="Merge divergent main histories (integrate.sh)"
@@ -408,7 +369,7 @@ when local main and origin/main have diverged.
 This merge resolves the divergence and allows integration to proceed normally.
 
 Please review and merge to complete the integration process."
-        
+
         if pr_url=$(gh pr create --title "$pr_title" --body "$pr_body" 2>/dev/null); then
             echo -e "${GREEN}✅ Created merge PR: $pr_url${NC}"
             echo "   Please review and merge the PR, then re-run integrate.sh"
@@ -452,11 +413,10 @@ git checkout -b "$branch_name"
 # Delete the old branch if it was clean (and not in --new-branch mode)
 if [ "$should_delete_branch" = true ] && [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
     echo -e "\n${GREEN}6. Checking if branch '$current_branch' can be safely deleted...${NC}"
-    
     # Check multiple conditions to determine if branch is safe to delete
     branch_can_be_deleted=false
     deletion_reason=""
-    
+
     # Check 1: Is it merged into local main?
     if git branch --merged main | grep -q "^[[:space:]]*$current_branch$"; then
         branch_can_be_deleted=true
@@ -472,7 +432,7 @@ if [ "$should_delete_branch" = true ] && [ "$current_branch" != "main" ] && [ "$
         branch_can_be_deleted=true
         deletion_reason="has merged PR"
     fi
-    
+
     if [ "$branch_can_be_deleted" = true ]; then
         echo "   ✓ Branch is safe to delete ($deletion_reason)"
         echo "   Deleting branch '$current_branch'..."
@@ -486,4 +446,4 @@ if [ "$should_delete_branch" = true ] && [ "$current_branch" != "main" ] && [ "$
 fi
 
 echo -e "\n${GREEN}✅ Integration complete! You are now on a fresh '$branch_name' branch with latest main changes.${NC}"
-echo -e "${GREEN}📍 Current branch: $(git branch --show-current)${NC}" 
+echo -e "${GREEN}📍 Current branch: $(git branch --show-current)${NC}"

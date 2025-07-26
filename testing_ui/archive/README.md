@@ -80,19 +80,19 @@ def test_user_can_create_character():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)  # Set True for CI
         page = browser.new_page()
-        
+
         # Navigate to the app
         page.goto("http://localhost:6006")
-        
+
         # Click real buttons
         page.click("text=Create Character")
-        
+
         # Fill real forms
         page.fill("#character-name", "Gandalf")
-        
+
         # Assert real UI state
         assert page.is_visible("text=Character Created")
-        
+
         browser.close()
 ```
 
@@ -110,11 +110,11 @@ def test_user_can_create_character():
 1. **Campaign Creation** (Full coverage)
    - Browser automation v1 ✅ (`test_campaign_creation_browser.py`)
    - Browser automation v2 ✅ (`test_campaign_creation_browser_v2.py`)
-   
+
 2. **Campaign Continuation** (Full coverage)
    - Browser automation v1 ✅ (`test_continue_campaign_browser.py`)
    - Browser automation v2 ✅ (`test_continue_campaign_browser_v2.py`)
-   
+
 3. **God Mode** (Partial coverage)
    - Browser automation ✅ (`test_god_mode_browser.py`)
    - Needs integration with v2 framework ⚠️

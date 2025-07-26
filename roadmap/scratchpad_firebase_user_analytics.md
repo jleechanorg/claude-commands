@@ -20,7 +20,7 @@ Create a Python script to analyze Firebase database and generate user engagement
 ### 2. Data Structure Analysis
 Need to understand current Firebase schema:
 - User collection structure
-- Campaign collection structure  
+- Campaign collection structure
 - Entry/interaction collection structure
 - Relationship between users, campaigns, and entries
 

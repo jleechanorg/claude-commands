@@ -5,7 +5,7 @@
     <link href="../mvp_site/static/style.css" rel="stylesheet">
     <link href="../mvp_site/static/styles/planning-blocks.css" rel="stylesheet">
     <style>
-        body { 
+        body {
             padding: 20px;
             max-width: 1200px;
             margin: 0 auto;
@@ -43,17 +43,17 @@
 </head>
 <body>
     <h1>🎮 JSON Planning Block - Live Demo</h1>
-    
+
     <div class="demo-section">
         <h2>Example Game Scenario</h2>
-        
+
         <div class="narrative-section">
             <div class="session-header">[SESSION 1: THE MYSTERIOUS TAVERN]</div>
             <p>You push open the heavy wooden door of the Rusty Goblet tavern. The warm air inside carries the scent of ale and roasted meat. Several patrons look up as you enter - a hooded figure in the corner quickly looks away, while the barkeep gives you a welcoming nod. A bard strums a lute by the fireplace, and you notice a posting board covered in various notices and wanted posters.</p>
         </div>
-        
+
         <div id="planning-block-container"></div>
-        
+
         <h3>JSON Structure Being Rendered:</h3>
         <pre class="json-display">{
   "thinking": "The player has entered the tavern. I'll give them several options to explore different aspects of the location and interact with various NPCs.",
@@ -87,7 +87,7 @@
   }
 }</pre>
     </div>
-    
+
     <div class="demo-section">
         <h2>Features Demonstrated</h2>
         <ul>
@@ -99,7 +99,7 @@
             <li>✅ <strong>Descriptive Text</strong>: Each choice has both a short label and detailed description</li>
         </ul>
     </div>
-    
+
     <div class="demo-section">
         <h2>Click Events</h2>
         <div id="click-log">
@@ -109,7 +109,7 @@
 
     <!-- Include the actual app.js to use parsePlanningBlocks -->
     <script src="../mvp_site/static/app.js"></script>
-    
+
     <script>
         // The JSON planning block data
         const planningBlockData = {
@@ -143,15 +143,15 @@
                 }
             }
         };
-        
+
         // Render the planning block
         document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('planning-block-container');
-            
+
             if (typeof parsePlanningBlocks === 'function') {
                 const html = parsePlanningBlocks(planningBlockData);
                 container.innerHTML = html;
-                
+
                 // Add click handlers to demonstrate functionality
                 container.querySelectorAll('.choice-button').forEach(button => {
                     button.addEventListener('click', function(e) {
@@ -159,7 +159,7 @@
                         const choiceId = this.getAttribute('data-choice-id');
                         const choiceText = this.getAttribute('data-choice-text');
                         const log = document.getElementById('click-log');
-                        
+
                         log.innerHTML = `
                             <h4>✅ Choice Selected!</h4>
                             <p><strong>Choice ID:</strong> <code>${choiceId}</code></p>
@@ -167,7 +167,7 @@
                             <p><strong>Timestamp:</strong> ${new Date().toLocaleTimeString()}</p>
                             <p>In the actual game, this would send: <code>I choose to ${choiceText}</code></p>
                         `;
-                        
+
                         // Highlight the clicked button
                         container.querySelectorAll('.choice-button').forEach(btn => {
                             btn.style.opacity = '0.6';

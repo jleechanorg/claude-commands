@@ -3,8 +3,8 @@
 Runner for full integration test suite.
 """
 
-import sys
 import os
+import sys
 
 # Run the integration test module
 result = os.system(f"{sys.executable} -m prototype.run_integration_tests")

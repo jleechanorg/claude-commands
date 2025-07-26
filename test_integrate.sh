@@ -21,11 +21,11 @@ echo "======================================"
 run_test() {
     local test_name="$1"
     local test_command="$2"
-    
+
     TESTS_RUN=$((TESTS_RUN + 1))
     echo -e "\n${YELLOW}Test $TESTS_RUN: $test_name${NC}"
     echo "Command: $test_command"
-    
+
     if eval "$test_command"; then
         echo -e "${GREEN}✅ PASS${NC}"
         TESTS_PASSED=$((TESTS_PASSED + 1))
@@ -63,7 +63,7 @@ run_test "Script has sync PR detection" "grep -q 'check_existing_sync_pr' ./inte
 # Test 5: Verify error handling for repository rules
 run_test "Script handles repository rule violations" "grep -q 'repository.*rule' ./integrate.sh"
 
-# Test 6: Check script validates git status properly  
+# Test 6: Check script validates git status properly
 run_test "Script checks git status" "grep -q 'git.*status' ./integrate.sh"
 
 # Test 7: Verify script creates timestamped branches
@@ -78,7 +78,7 @@ echo -e "\n${YELLOW}🔍 Analyzing integrate.sh logic...${NC}"
 # Test 9: Check main sync scenarios are handled
 run_test "Script handles main ahead scenario" "grep -A 5 'Local main ahead' ./integrate.sh | grep -q 'PR'"
 
-# Test 10: Check diverged branches scenario  
+# Test 10: Check diverged branches scenario
 run_test "Script handles diverged branches" "grep -A 5 'diverged' ./integrate.sh | grep -q 'merge'"
 
 # Test 11: Verify cleanup logic exists

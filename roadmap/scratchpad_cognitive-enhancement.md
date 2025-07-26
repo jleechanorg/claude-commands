@@ -208,7 +208,7 @@ def enhanced_response_end(user_feedback):
 
 **Pattern Recognition**:
 - "Don't do X, do Y" → code_style_preference entity
-- "I prefer..." → workflow_preference entity  
+- "I prefer..." → workflow_preference entity
 - "Actually..." → mistake_correction entity
 - "When urgent..." → context_behavior entity
 
@@ -234,18 +234,18 @@ def get_relevant_patterns(current_context):
     # Query memory for similar situations
     similar_contexts = search_nodes(current_context)
     applied_patterns = []
-    
+
     for context in similar_contexts:
         patterns = get_related_patterns(context)
         confidence_scores = calculate_confidence(patterns)
         applied_patterns.extend(high_confidence_patterns(patterns))
-    
+
     return applied_patterns
 ```
 
 **Context Detection**:
 - Urgency indicators: "quick", "urgent", "ASAP"
-- Quality indicators: "careful", "thorough", "comprehensive"  
+- Quality indicators: "careful", "thorough", "comprehensive"
 - Task type: "fix", "add", "refactor", "debug"
 
 ### Phase 4: Success Tracking (Week 4)
@@ -254,7 +254,7 @@ def get_relevant_patterns(current_context):
 ```python
 def track_pattern_success(applied_patterns, user_response):
     satisfaction = detect_satisfaction(user_response)
-    
+
     for pattern in applied_patterns:
         if satisfaction == "positive":
             increment_pattern_confidence(pattern)

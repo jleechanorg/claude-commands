@@ -111,7 +111,7 @@ LLM API → gemini_service.py → main.py → Frontend
        """Ensure only clean narrative text reaches frontend"""
        if isinstance(response_obj, Exception):
            return {"error": "An error occurred processing your request"}
-       
+
        # Extract only safe fields
        return {
            "narrative": response_obj.narrative_text,
@@ -153,7 +153,7 @@ LLM API → gemini_service.py → main.py → Frontend
        narrative: str  # Always clean text
        metadata: Dict[str, Any]  # Structured data
        debug_info: Optional[Dict[str, Any]] = None
-       
+
        def to_json(self) -> Dict[str, Any]:
            # Guaranteed safe serialization
            pass
@@ -229,7 +229,7 @@ LLM API → gemini_service.py → main.py → Frontend
 
 **🚨 CRITICAL SECURITY VULNERABILITY DISCOVERED**: The main `handle_interaction` API endpoint has **NO exception handling**, meaning any error during core processing can expose raw JSON, LLM responses, or system internals to the frontend.
 
-**Recommended action**: 
+**Recommended action**:
 1. **IMMEDIATELY** add exception handling to `handle_interaction` - this is a security risk
 2. Merge PR #398 as foundation
 3. Implement Phase 1 critical fixes to achieve true JSON bug annihilation

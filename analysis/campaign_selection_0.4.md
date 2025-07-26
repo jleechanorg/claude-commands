@@ -98,7 +98,7 @@ Generated: 2025-06-29T18:57:23.534432
 These 5 campaigns provide excellent test cases for Milestone 0.4:
 
 1. **Sariel v2** - Required campaign with combat entity tracking issues
-2. **Thornwood Conspiracy** - Split party and stealth scenarios  
+2. **Thornwood Conspiracy** - Split party and stealth scenarios
 3. **Shadows of Darkmoor** - Hidden/invisible character handling
 4. **Brass Compass Guild** - Large NPC groups and naval combat
 5. **Astral War** - Planar travel and transformation effects

@@ -70,10 +70,10 @@ Check `gameState.custom_campaign_state.attribute_system` to determine display:
 ```python
 def test_campaign_creation_with_attribute_system():
     # Test explicit destiny system
-    
+
 def test_campaign_creation_default_system():
     # Test defaults to dnd
-    
+
 def test_attribute_system_persistence():
     # Test system is saved and loaded correctly
 ```

@@ -12,10 +12,10 @@ This command combines: `/arch /think /devilsadvocate /diligent`
 
 ## 📋 COMPLETE DOCUMENTATION
 
-For full documentation on detection patterns, execution protocol, reporting format, and all other details, see the `/fake` command documentation in `fake.md`. 
+For full documentation on detection patterns, execution protocol, reporting format, and all other details, see the `/fake` command documentation in `fake.md`.
 
 The `/fakel` command uses **identical functionality** with the only difference being the thinking depth:
-- `/fake`: Deep analysis (10+ thoughts) 
+- `/fake`: Deep analysis (10+ thoughts)
 - `/fakel`: Light analysis (4 thoughts)
 
 All detection targets, Memory MCP integration, success criteria, and remediation guidance are the same.

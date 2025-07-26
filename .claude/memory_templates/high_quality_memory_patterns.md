@@ -6,7 +6,7 @@ Based on Memory MCP best practices research (via Perplexity API integration from
 
 **External Validation Sources**:
 - **BasicMachines**: Memory MCP linked knowledge graph patterns
-- **LobHub**: Atomic precision and semantic searchability standards  
+- **LobHub**: Atomic precision and semantic searchability standards
 - **Orca Security**: Context-aware memory organization principles
 - **Dynatrace**: Technical detail requirements and quality validation
 - **Research Method**: Perplexity API query for "Memory MCP best practices" (July 2025)
@@ -14,7 +14,7 @@ Based on Memory MCP best practices research (via Perplexity API integration from
 ## Core Principles
 
 1. **Actionable Technical Detail**: Include specific error messages, file paths, code snippets
-2. **Linked Knowledge Graphs**: Connect entities through explicit relations  
+2. **Linked Knowledge Graphs**: Connect entities through explicit relations
 3. **Atomic Precision**: Each observation should be specific and clear
 4. **Canonical Naming**: Use exact names for disambiguation
 5. **Contextual Grouping**: Organize by project/system for navigation
@@ -28,7 +28,7 @@ Based on Memory MCP best practices research (via Perplexity API integration from
 ```json
 {
   "name": "firebase_auth_timeout_2025_07_23",
-  "entityType": "technical_issue", 
+  "entityType": "technical_issue",
   "observations": [
     "Issue: Firebase Auth timeout in mvp_site/firebase_util.py:45",
     "Error: 'Request timed out after 30 seconds'",
@@ -98,7 +98,7 @@ Based on Memory MCP best practices research (via Perplexity API integration from
     "Repository: https://github.com/jleechanorg/worldarchitect-memory-backups",
     "Architecture: Daily automated backups with historical preservation",
     "Rationale: Persistent storage beyond local cache, version history",
-    "Implementation: Cron job + GitHub API + append-only strategy", 
+    "Implementation: Cron job + GitHub API + append-only strategy",
     "Scripts: daily_backup.sh, health_monitor.sh, setup_automation.sh",
     "Data Flow: ~/.cache/mcp-memory/memory.json → GitHub → historical/",
     "Benefits: Disaster recovery, audit trail, cross-machine access",
@@ -117,7 +117,7 @@ Based on Memory MCP best practices research (via Perplexity API integration from
   "entityType": "user_preference_pattern",
   "observations": [
     "User: jleechan2015",
-    "Preference: Direct, concise responses over lengthy analysis", 
+    "Preference: Direct, concise responses over lengthy analysis",
     "Evidence: 'skip long thinking process and get straight to the point'",
     "Context: CLAUDE.md compliance, technical problem solving",
     "Optimal Response Pattern: Bullet points, essential info only",
@@ -132,11 +132,11 @@ Based on Memory MCP best practices research (via Perplexity API integration from
 
 ### Technical Relations
 - `{entity1} caused_by {entity2}` - Error causation
-- `{entity1} fixed_by {entity2}` - Solution relationships  
+- `{entity1} fixed_by {entity2}` - Solution relationships
 - `{entity1} implemented_in {entity2}` - Code location mapping
 - `{entity1} tested_by {entity2}` - Test coverage tracking
 
-### Workflow Relations  
+### Workflow Relations
 - `{entity1} preceded_by {entity2}` - Process sequences
 - `{entity1} requires {entity2}` - Dependencies
 - `{entity1} optimizes {entity2}` - Performance improvements

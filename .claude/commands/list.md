@@ -27,7 +27,7 @@
 - `/archreview` or `/arch` - Architecture and design review with dual-perspective analysis
 - `/reviewdeep` or `/reviewd` - Deep review with ultra thinking mode (12-point analysis)
 
-**Implementation**: 
+**Implementation**:
 - Display all available slash commands
 - Include purpose and brief description for each
 - Show command aliases where applicable
@@ -35,7 +35,7 @@
 
 ## Testing Commands (Real-Mode Testing Framework)
 - `/teste` - Run end-to-end tests with mock services (fast, free)
-- `/tester` - Run end-to-end tests with real services (costs money) 
+- `/tester` - Run end-to-end tests with real services (costs money)
 - `/testerc` - Run end-to-end tests with real services + data capture
 
 ## Other Commands

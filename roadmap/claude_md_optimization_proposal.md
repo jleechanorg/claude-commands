@@ -99,7 +99,7 @@ venv/
 *.pyc
 __pycache__/
 
-# Build artifacts  
+# Build artifacts
 dist/
 build/
 *.egg-info/
@@ -120,18 +120,18 @@ build/
    - [ ] Create/update CLAUDE.md with context
    - [ ] Add tech stack and constraints
    - [ ] Import key files with `@path/to/file`
-   
+
 2. Environment:
    - [ ] Create `.claudeignore` for performance
    - [ ] Set up virtual environment
    - [ ] Configure `.claude/settings.json`
-   
+
 3. Planning:
    - [ ] Define clear project goals
    - [ ] Create roadmap/scratchpad_[branch].md
    - [ ] Break into milestones
    - [ ] Identify core workflows
-   
+
 4. Development:
    - [ ] Initialize test framework
    - [ ] Set up CI/CD hooks
@@ -155,7 +155,7 @@ build/
 ## PROPOSED DELETIONS
 
 ### 1. Duplicate Git Workflow Sections
-**Lines to remove**: 
+**Lines to remove**:
 - Second occurrence of "Pull Request Workflow for All Changes" (around line 462)
 - Second occurrence of "Detailed Progress Tracking" (around line 386)
 - Duplicate "Branch Safety and Push Verification Protocol" content
@@ -188,7 +188,7 @@ build/
 
 **Additions**: ~200 lines of new valuable content
 - Official commands documentation
-- Memory management strategies  
+- Memory management strategies
 - Workflow templates
 - Project initialization checklist
 - Cost optimization guidelines

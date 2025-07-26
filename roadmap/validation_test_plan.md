@@ -10,7 +10,7 @@ Provide rigorous statistical validation of command composition behavioral patter
 **Method**:
 - **Task**: Same debugging problem for both groups (eliminate complexity confound)
 - **Sample Size**: 20 runs per condition minimum
-- **Groups**: 
+- **Groups**:
   - A: `/think /debug /analyze` + identical task
   - B: "Analyze this systematically and thoroughly, debug the issue, and provide comprehensive analysis" + identical task
 - **Measurement**: Response length, tool usage, solution quality, approach style
@@ -28,7 +28,7 @@ Provide rigorous statistical validation of command composition behavioral patter
 **Purpose**: Understand normal Claude response variation
 **Method**:
 - 20 runs of identical natural language prompt
-- 20 runs of identical command composition prompt  
+- 20 runs of identical command composition prompt
 - Document variance in length, depth, tool usage
 - Establish expected range of normal variation
 
@@ -106,14 +106,14 @@ Provide rigorous statistical validation of command composition behavioral patter
 - Set up blind evaluation process (Test 1.2)
 - Document baseline variance (Test 1.3)
 
-### Week 2: Confound Controls  
+### Week 2: Confound Controls
 - Task complexity matrix (Test 2.1)
 - Prompt equivalence testing (Test 2.2)
 - Placebo controls (Test 2.3)
 
 ### Week 3: Mechanism Analysis
 - Component testing (Test 3.1)
-- Alternative natural language (Test 3.2)  
+- Alternative natural language (Test 3.2)
 - Tool access controls (Test 3.3)
 
 ### Week 4: Analysis & Documentation

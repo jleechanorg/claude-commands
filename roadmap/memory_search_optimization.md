@@ -29,15 +29,15 @@ This document analyzes Memory MCP search behavior and provides optimization stra
 ```python
 def get_relevant_memories(context):
     """Multi-tier search strategy based on context type"""
-    
+
     # Tier 1: Known entity lookup (fastest)
     if has_specific_entities(context):
         return open_nodes(extract_entity_names(context))
-    
+
     # Tier 2: Topic search (moderate)
     if has_topic_keywords(context):
         return search_nodes(extract_keywords(context))
-    
+
     # Tier 3: Full graph analysis (slowest, most comprehensive)
     if needs_relationship_analysis(context):
         return analyze_graph_relationships(read_graph())
@@ -70,23 +70,23 @@ def get_relevant_memories(context):
 def calculate_relevance_score(entity, query_context):
     """Score entity relevance to query context"""
     score = 0.0
-    
+
     # Name match (highest weight)
     if query_terms_in(entity.name):
         score += 0.4
-    
+
     # Type match (categorical relevance)
     if entity.entityType == context_category:
         score += 0.2
-    
+
     # Observation relevance (content match)
     observation_matches = count_matches_in_observations(entity)
     score += min(0.3, observation_matches * 0.05)
-    
+
     # Recency bonus (newer = more relevant)
     if has_recent_timestamp(entity):
         score += 0.1
-    
+
     return score
 ```
 
@@ -131,31 +131,31 @@ Based on memory analysis, cache these patterns:
 ```python
 async def get_enhanced_context(user_query):
     """Get relevant memories for user query"""
-    
+
     # Check hot cache first
     cache_key = generate_cache_key("search", user_query)
     if cached := hot_cache.get(cache_key):
         return cached
-    
+
     # Extract search terms
     terms = extract_key_terms(user_query)
-    
+
     # Parallel search for efficiency
     results = await asyncio.gather(
         search_nodes(terms[0]) if terms else None,
         open_nodes(extract_entity_names(user_query)),
         search_nodes(detect_error_pattern(user_query))
     )
-    
+
     # Merge and score results
     all_entities = merge_unique(results)
-    scored = [(calculate_relevance_score(e, user_query), e) 
+    scored = [(calculate_relevance_score(e, user_query), e)
               for e in all_entities]
-    
+
     # Return top relevant memories
-    relevant = [e for score, e in sorted(scored, reverse=True) 
+    relevant = [e for score, e in sorted(scored, reverse=True)
                 if score >= 0.4][:5]
-    
+
     # Cache result
     hot_cache[cache_key] = relevant
     return relevant
@@ -165,12 +165,12 @@ async def get_enhanced_context(user_query):
 ```python
 def prefetch_related_memories(current_context):
     """Prefetch likely next queries based on patterns"""
-    
+
     if "compliance" in current_context:
         # Prefetch related compliance patterns
         asyncio.create_task(search_nodes("pattern"))
         asyncio.create_task(search_nodes("anti-pattern"))
-    
+
     if "PR #" in current_context:
         # Prefetch GitHub-related memories
         asyncio.create_task(search_nodes("GitHub"))
@@ -181,22 +181,22 @@ def prefetch_related_memories(current_context):
 ```python
 def get_related_context(entity_name, depth=1):
     """Get related entities via relationship graph"""
-    
+
     # Get full graph (cached)
     graph = get_cached_graph()
-    
+
     # Find entity
-    entity = next(e for e in graph["entities"] 
+    entity = next(e for e in graph["entities"]
                   if e["name"] == entity_name)
-    
+
     # Get related entities
     related = set()
-    relations = [r for r in graph["relations"] 
+    relations = [r for r in graph["relations"]
                  if r["from"] == entity_name or r["to"] == entity_name]
-    
+
     for rel in relations:
         related.add(rel["to"] if rel["from"] == entity_name else rel["from"])
-    
+
     # Get entities
     return [e for e in graph["entities"] if e["name"] in related]
 ```
@@ -239,14 +239,14 @@ class MemoryMetrics:
         self.cache_misses = 0
         self.query_times = []
         self.relevance_feedback = []
-    
+
     def record_query(self, cached, latency):
         if cached:
             self.cache_hits += 1
         else:
             self.cache_misses += 1
         self.query_times.append(latency)
-    
+
     @property
     def cache_hit_rate(self):
         total = self.cache_hits + self.cache_misses

@@ -4,7 +4,7 @@
 
 Current entity tracking relies on string matching of names, which causes several issues:
 
-1. **Name Ambiguity**: 
+1. **Name Ambiguity**:
    - Multiple "Guard" NPCs
    - Common names like "Marcus" appearing in different contexts
    - Titles vs names ("The King" vs "King Aldric")
@@ -147,10 +147,10 @@ game_state = {
 ```python
 def validate_narrative_with_ids(narrative: str, game_state: dict) -> ValidationResult:
     """Enhanced validation using entity IDs"""
-    
+
     active_scene = game_state["active_scene"]
     entities = game_state["entities"]
-    
+
     # Get entities that MUST be mentioned
     required_entities = []
     for entity_id in active_scene["present_entities"]:
@@ -162,22 +162,22 @@ def validate_narrative_with_ids(narrative: str, game_state: dict) -> ValidationR
                 "name": entity["display_name"],
                 "aliases": entity.get("aliases", [])
             })
-    
+
     # Validate each entity appears in narrative
     missing = []
     for entity in required_entities:
         # Check main name and all aliases
         found = False
         search_terms = [entity["name"]] + entity.get("aliases", [])
-        
+
         for term in search_terms:
             if term.lower() in narrative.lower():
                 found = True
                 break
-        
+
         if not found:
             missing.append(entity["id"])
-    
+
     return ValidationResult(
         missing_entities=missing,
         detection_confidence=1.0  # No fuzzy matching needed!
@@ -201,7 +201,7 @@ def validate_narrative_with_ids(narrative: str, game_state: dict) -> ValidationR
 
 ### Implementation Priority
 
-1. **Start with Milestone 0.4**: 
+1. **Start with Milestone 0.4**:
    - Add entity IDs to test campaigns
    - Validate improvement in detection accuracy
 

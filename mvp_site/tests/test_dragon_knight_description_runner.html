@@ -12,7 +12,7 @@
             padding: 20px;
             background-color: #f8f9fa;
         }
-        
+
         .header {
             background: linear-gradient(135deg, #6f42c1, #e83e8c);
             color: white;
@@ -21,7 +21,7 @@
             margin-bottom: 20px;
             text-align: center;
         }
-        
+
         .test-controls {
             background: white;
             padding: 20px;
@@ -29,7 +29,7 @@
             margin-bottom: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        
+
         .run-button {
             background: #6c757d !important;
             color: white !important;
@@ -45,11 +45,11 @@
             min-width: 200px !important;
             text-align: center !important;
         }
-        
+
         .run-button:hover {
             background: #545b62 !important;
         }
-        
+
         .test-results {
             background: white;
             padding: 20px;
@@ -57,18 +57,18 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-        
+
         .result-item {
             padding: 10px;
             margin: 5px 0;
             border-radius: 5px;
             font-family: 'Courier New', monospace;
         }
-        
+
         .result-pass { background-color: #d4edda; color: #155724; }
         .result-fail { background-color: #f8d7da; color: #721c24; }
         .result-info { background-color: #d1ecf1; color: #0c5460; }
-        
+
         .summary {
             font-size: 18px;
             font-weight: bold;
@@ -76,7 +76,7 @@
             border-radius: 8px;
             margin: 10px 0;
         }
-        
+
         .summary-fail { background-color: #f8d7da; color: #721c24; }
         .summary-pass { background-color: #d4edda; color: #155724; }
     </style>
@@ -101,7 +101,7 @@
 
     <!-- Load the CampaignWizard class first -->
     <script src="../static/js/campaign-wizard.js"></script>
-    
+
     <!-- Simple test framework -->
     <script>
         class SimpleTestRunner {
@@ -111,7 +111,7 @@
                 this.failed = 0;
                 this.total = 0;
             }
-            
+
             expect(actual) {
                 return {
                     toBeDefined: () => this.assert(actual !== undefined, `Expected ${actual} to be defined`),
@@ -124,7 +124,7 @@
                     }
                 };
             }
-            
+
             assert(condition, message) {
                 this.total++;
                 if (condition) {
@@ -136,7 +136,7 @@
                 }
                 return condition;
             }
-            
+
             log(type, message) {
                 const timestamp = new Date().toLocaleTimeString();
                 this.results.push({
@@ -145,12 +145,12 @@
                     timestamp: timestamp
                 });
             }
-            
+
             describe(description, testFn) {
                 this.log('info', `🧪 ${description}`);
                 testFn();
             }
-            
+
             it(description, testFn) {
                 this.log('info', `  📋 ${description}`);
                 try {
@@ -161,7 +161,7 @@
                     this.log('fail', `❌ Error: ${error.message}`);
                 }
             }
-            
+
             getResults() {
                 return {
                     results: this.results,
@@ -170,7 +170,7 @@
                     total: this.total
                 };
             }
-            
+
             clear() {
                 this.results = [];
                 this.passed = 0;
@@ -178,13 +178,13 @@
                 this.total = 0;
             }
         }
-        
+
         let testRunner = new SimpleTestRunner();
-        
+
         function runTests() {
             clearResults();
             testRunner.clear();
-            
+
             // Mock DOM elements needed for testing
             document.body.innerHTML += `
                 <div id="test-mock-container" style="display: none;">
@@ -200,22 +200,22 @@
                     </div>
                 </div>
             `;
-            
+
             // Mock window.interfaceManager
             window.interfaceManager = {
                 isModernMode: () => true
             };
-            
+
             // Run tests
             testRunner.describe('Dragon Knight Campaign Description Length', () => {
                 let campaignWizard;
-                
+
                 // Setup
                 campaignWizard = new CampaignWizard();
-                
+
                 testRunner.it('should handle long Dragon Knight description without errors', () => {
                     const description = CampaignWizard.DEFAULT_DRAGON_KNIGHT_DESCRIPTION;
-                    
+
                     testRunner.expect(description).toBeDefined();
                     testRunner.expect(description).not.toContain('[PLACEHOLDER');
                     testRunner.expect(description.length).toBeGreaterThan(1000);
@@ -224,28 +224,28 @@
                     testRunner.expect(description).toContain('Empress Sariel');
                     testRunner.expect(description).toContain('Dragon Knights');
                 });
-                
+
                 testRunner.it('should properly format long descriptions in preview', () => {
                     const longDescription = CampaignWizard.DEFAULT_DRAGON_KNIGHT_DESCRIPTION;
                     const formatted = campaignWizard._formatDescription(longDescription, true);
-                    
+
                     testRunner.expect(formatted.length).toBeLessThanOrEqual(53);
                     testRunner.expect(formatted).toContain('...');
                 });
-                
+
                 testRunner.it('should handle description length validation', () => {
                     const description = CampaignWizard.DEFAULT_DRAGON_KNIGHT_DESCRIPTION;
-                    
+
                     testRunner.expect(description.length).toBeGreaterThan(0);
                     testRunner.expect(description).not.toContain('undefined');
                     testRunner.expect(description).not.toContain('null');
                     testRunner.expect(description).not.toContain('[object Object]');
                 });
             });
-            
+
             // Display results
             displayResults(testRunner.getResults());
-            
+
             // Cleanup
             const mockContainer = document.getElementById('test-mock-container');
             if (mockContainer) {
@@ -253,23 +253,23 @@
             }
             delete window.interfaceManager;
         }
-        
+
         function displayResults(results) {
             const summaryDiv = document.getElementById('test-summary');
             const logDiv = document.getElementById('test-log');
-            
+
             // Display summary
             let summaryClass = results.failed > 0 ? 'summary-fail' : 'summary-pass';
             let summaryIcon = results.failed > 0 ? '❌' : '✅';
             let summaryText = results.failed > 0 ? 'TESTS FAILED' : 'ALL TESTS PASSED';
-            
+
             summaryDiv.innerHTML = `
                 <div class="summary ${summaryClass}">
                     ${summaryIcon} ${summaryText}<br>
                     Total: ${results.total} | ✅ Passed: ${results.passed} | ❌ Failed: ${results.failed}
                 </div>
             `;
-            
+
             // Display detailed log
             results.results.forEach(result => {
                 const div = document.createElement('div');
@@ -278,12 +278,12 @@
                 logDiv.appendChild(div);
             });
         }
-        
+
         function clearResults() {
             document.getElementById('test-summary').innerHTML = '';
             document.getElementById('test-log').innerHTML = '';
         }
-        
+
         // Auto-load message
         window.addEventListener('load', () => {
             console.log('🐲 Dragon Knight Description Length Test Runner loaded');

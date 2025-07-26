@@ -38,18 +38,18 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
     # Step 1: Get your code
     - name: Checkout repository
       uses: actions/checkout@v4
-    
+
     # Step 2: Set up Python (same version as your project)
     - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
         python-version: '3.11'
-    
+
     # Step 3: Cache dependencies (speeds up future runs)
     - name: Cache pip dependencies
       uses: actions/cache@v3
@@ -58,20 +58,20 @@ jobs:
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
-    
+
     # Step 4: Create virtual environment (matches your local setup)
     - name: Create virtual environment
       run: |
         python -m venv venv
         echo "VIRTUAL_ENV=venv" >> $GITHUB_ENV
         echo "venv/bin" >> $GITHUB_PATH
-    
+
     # Step 5: Install your dependencies
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r mvp_site/requirements.txt
-    
+
     # Step 6: Run your tests (using your existing script)
     - name: Run test suite
       run: ./run_tests.sh
@@ -79,7 +79,7 @@ jobs:
         TESTING: true
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
-    
+
     # Step 7: Upload test results (optional)
     - name: Upload test results
       uses: actions/upload-artifact@v3
@@ -106,7 +106,7 @@ GEMINI_API_KEY
 - Name: GEMINI_API_KEY
 - Value: your_actual_gemini_api_key
 
-FIREBASE_SERVICE_ACCOUNT_KEY  
+FIREBASE_SERVICE_ACCOUNT_KEY
 - Name: FIREBASE_SERVICE_ACCOUNT_KEY
 - Value: your_firebase_service_account_json_content
 ```
@@ -130,15 +130,15 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.11']  # Can add ['3.10', '3.11'] to test multiple versions
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    
+
     - name: Cache dependencies
       uses: actions/cache@v3
       with:
@@ -146,33 +146,33 @@ jobs:
           ~/.cache/pip
           venv
         key: ${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt') }}
-    
+
     - name: Set up virtual environment
       run: |
         python -m venv venv
         source venv/bin/activate
         echo "VIRTUAL_ENV=$(pwd)/venv" >> $GITHUB_ENV
         echo "$(pwd)/venv/bin" >> $GITHUB_PATH
-    
+
     - name: Install dependencies
       run: |
         pip install --upgrade pip
         pip install -r mvp_site/requirements.txt
-    
+
     # Lint code (optional)
     - name: Lint with flake8
       run: |
         pip install flake8
         flake8 mvp_site/ --count --select=E9,F63,F7,F82 --show-source --statistics
       continue-on-error: true  # Don't fail build on linting issues
-    
+
     - name: Run tests
       run: ./run_tests.sh
       env:
         TESTING: true
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
-    
+
     # Post test results as PR comment
     - name: Comment PR with test results
       uses: actions/github-script@v6
@@ -228,7 +228,7 @@ Add a status badge to your README.md:
 ## What Happens After Setup?
 
 - **Every push** to `main` or `dev` → Tests run automatically
-- **Every PR** to `main` → Tests run automatically  
+- **Every PR** to `main` → Tests run automatically
 - **Test results** show up in the GitHub interface
 - **Failed tests** prevent merging (if you enable branch protection)
 - **Notifications** sent to you if tests fail
@@ -346,4 +346,4 @@ gh run view [run-id]
 
 # Re-run failed workflows
 gh run rerun [run-id]
-``` 
+```

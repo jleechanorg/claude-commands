@@ -8,7 +8,9 @@ import os
 import sys
 
 # Add paths for imports
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from fake_services import FakeServiceManager
@@ -152,46 +154,46 @@ def puppeteer_integration_example():
 
 async def test_campaign_browser_real():
     """Real browser test using Puppeteer MCP + fake services."""
-    
+
     # 1. Set up fake services (same as above)
     services = FakeServiceManager()
     services.start_patches()  # Patch Firebase/Gemini to use fakes
-    
+
     # 2. Start test server with fake services
     server = start_test_server_with_fakes(services)
-    
+
     # 3. Use Puppeteer MCP for real browser automation
     page = await puppeteer.new_page()
-    
+
     try:
         # Navigate with test mode
         await page.goto('http://localhost:8081?test_mode=true&test_user_id=test-user')
-        
+
         # Real browser interactions
         await page.fill('#campaign-title', 'Real Test Campaign')
         await page.fill('#character-name', 'Real Hero')
         await page.select('#setting', 'Fantasy Realm')
         await page.click('#create-campaign')
-        
+
         # Wait for AI response (fake Gemini will respond quickly)
         await page.wait_for_text('Campaign created successfully!')
-        
+
         # Take screenshot for verification
         screenshot = await page.screenshot()
-        
+
         # Verify backend data using fake services
         campaigns = services.firestore.collection("campaigns").stream()
         assert any(c.to_dict()['title'] == 'Real Test Campaign' for c in campaigns)
-        
+
         print("✅ Real browser test passed with fake services!")
-        
+
     finally:
         await page.close()
         services.stop_patches()
 
 Benefits of Fake Services + Puppeteer MCP:
 ✅ Real browser interactions with realistic backend
-✅ No complex mock configurations 
+✅ No complex mock configurations
 ✅ Fast test execution (fake services respond instantly)
 ✅ Reliable test data (no Mock serialization issues)
 ✅ Easy debugging (inspect fake service state)

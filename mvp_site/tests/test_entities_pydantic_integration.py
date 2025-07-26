@@ -4,7 +4,9 @@ import os
 import sys
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from schemas.entities_pydantic import NPC, HealthStatus, PlayerCharacter, Stats
 
@@ -149,7 +151,9 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 gender="male",
                 mbti=mbti.lower(),  # Test case insensitivity
             )
-            self.assertEqual(npc.mbti, mbti.lower().strip())  # We passed mbti.lower(), validation strips whitespace
+            self.assertEqual(
+                npc.mbti, mbti.lower().strip()
+            )  # We passed mbti.lower(), validation strips whitespace
 
         # Test creative personality description (now accepted)
         npc2 = NPC(
@@ -244,8 +248,14 @@ class TestPydanticEntityIntegration(unittest.TestCase):
 
     def test_npc_creative_gender_values(self):
         """Test that creative gender values are now accepted"""
-        test_genders = ["mixed", "fluid", "shapeshifter", "androgynous", "non-conforming"]
-        
+        test_genders = [
+            "mixed",
+            "fluid",
+            "shapeshifter",
+            "androgynous",
+            "non-conforming",
+        ]
+
         for i, gender in enumerate(test_genders):
             npc = NPC(
                 entity_id=f"npc_creative_test_{i:03d}",
@@ -271,8 +281,13 @@ class TestPydanticEntityIntegration(unittest.TestCase):
 
     def test_creative_alignment_values(self):
         """Test that creative alignment values are accepted"""
-        creative_alignments = ["Chaotic Awesome", "Lawful Annoying", "Neutral Mischievous", "True Lazy"]
-        
+        creative_alignments = [
+            "Chaotic Awesome",
+            "Lawful Annoying",
+            "Neutral Mischievous",
+            "True Lazy",
+        ]
+
         for i, alignment in enumerate(creative_alignments):
             npc = NPC(
                 entity_id=f"npc_alignment_test_{i:03d}",
@@ -286,8 +301,13 @@ class TestPydanticEntityIntegration(unittest.TestCase):
 
     def test_creative_mbti_values(self):
         """Test that creative personality descriptions are accepted"""
-        creative_personalities = ["mysterious and brooding", "cheerful optimist", "ENFP", "analytical thinker"]
-        
+        creative_personalities = [
+            "mysterious and brooding",
+            "cheerful optimist",
+            "ENFP",
+            "analytical thinker",
+        ]
+
         for i, mbti in enumerate(creative_personalities):
             npc = NPC(
                 entity_id=f"npc_mbti_test_{i:03d}",

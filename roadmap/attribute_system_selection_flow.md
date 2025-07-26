@@ -47,17 +47,17 @@ Include in your initial response:
 ```python
 def get_initial_story(prompt, ...):
     # ... existing code ...
-    
+
     response_text = _get_text_from_response(response)
-    
+
     # Extract recommended system
     import re
     system_match = re.search(r'\[RECOMMENDED_SYSTEM: (dnd|destiny)\]', response_text)
     recommended_system = system_match.group(1) if system_match else 'dnd'
-    
+
     # Clean the marker from the response
     clean_response = re.sub(r'\[RECOMMENDED_SYSTEM: (?:dnd|destiny)\]', '', response_text).strip()
-    
+
     return {
         'story': clean_response,
         'recommended_attribute_system': recommended_system
@@ -69,20 +69,20 @@ def get_initial_story(prompt, ...):
 @app.route('/api/campaigns', methods=['POST'])
 def create_campaign_route(user_id):
     # ... existing code ...
-    
+
     # Get initial story with system recommendation
     story_result = gemini_service.get_initial_story(prompt, ...)
-    
+
     # Use LLM recommendation unless explicitly overridden
     attribute_system = data.get('attribute_system') or story_result['recommended_attribute_system']
-    
+
     # Create game state with chosen system
     initial_game_state = GameState(
         custom_campaign_state={'attribute_system': attribute_system}
     ).to_dict()
-    
+
     campaign_id = firestore_service.create_campaign(
-        user_id, title, prompt, story_result['story'], 
+        user_id, title, prompt, story_result['story'],
         initial_game_state, selected_prompts, use_default_world
     )
 ```
@@ -95,22 +95,22 @@ If we don't want to modify the API, use simple rules in main.py:
 def guess_attribute_system(prompt, selected_prompts):
     """Simple heuristic to choose system based on prompt"""
     prompt_lower = prompt.lower()
-    
+
     # Check for explicit mentions
     if 'd&d' in prompt_lower or 'dungeons' in prompt_lower:
         return 'dnd'
-    
+
     # Check for genre indicators
-    destiny_keywords = ['sci-fi', 'modern', 'cyberpunk', 'space', 'future', 
+    destiny_keywords = ['sci-fi', 'modern', 'cyberpunk', 'space', 'future',
                        'psychological', 'social', 'intrigue', 'politics']
-    
+
     if any(keyword in prompt_lower for keyword in destiny_keywords):
         return 'destiny'
-    
+
     # Check selected prompts
     if 'destiny' in selected_prompts:
         return 'destiny'
-    
+
     # Default to D&D
     return 'dnd'
 ```

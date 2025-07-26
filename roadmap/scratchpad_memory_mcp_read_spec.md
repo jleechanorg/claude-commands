@@ -10,7 +10,7 @@ This specification defines how to read from Memory MCP for compliance enforcemen
 1. **Local MCP Storage**: `~/.cache/mcp-memory/memory.json`
    - Real-time updates from Memory MCP
    - Source of truth for current session
-   
+
 2. **Repository Storage**: `memory/memory.json`
    - Hourly backups (when working)
    - Cross-session persistence
@@ -42,42 +42,42 @@ mcp__memory-server__open_nodes(names)    # Get specific entities by name
 ```python
 class ComplianceMemoryReader:
     """Read past violations from Memory MCP"""
-    
+
     def get_violation_history(self, violation_type: str = None):
         """Retrieve past compliance violations"""
         # Search for entities with type "compliance_violation"
         results = mcp__memory-server__search_nodes("compliance_violation")
-        
+
         # Filter by specific violation type if provided
         if violation_type:
             results = [r for r in results if violation_type in r.observations]
-        
+
         return results
-    
+
     def get_violation_patterns(self):
         """Analyze patterns in violations"""
         # Read full graph
         graph = mcp__memory-server__read_graph()
-        
+
         # Extract violation entities
         violations = [e for e in graph.entities if e.type == "compliance_violation"]
-        
+
         # Group by type and frequency
         patterns = defaultdict(list)
         for v in violations:
             v_type = extract_violation_type(v)
             patterns[v_type].append(v)
-        
+
         return patterns
-    
+
     def should_remind_about_rule(self, rule_type: str):
         """Check if user should be reminded about a rule"""
         recent_violations = self.get_violation_history(rule_type)
-        
+
         # If >3 violations in last 7 days, return True
         threshold = 3
         recent = filter_by_date(recent_violations, days=7)
-        
+
         return len(recent) >= threshold
 ```
 
@@ -86,32 +86,32 @@ class ComplianceMemoryReader:
 ```python
 class LearningMemoryReader:
     """Read learnings from Memory MCP"""
-    
+
     def get_learnings_by_category(self, category: str):
         """Get all learnings in a category"""
         query = f"learning-{category}"
         return mcp__memory-server__search_nodes(query)
-    
+
     def get_related_learnings(self, context: str):
         """Find learnings related to current context"""
         # Search for relevant entities
         results = mcp__memory-server__search_nodes(context)
-        
+
         # Filter to learning entities
         learnings = [r for r in results if r.type == "learning"]
-        
+
         return learnings
-    
+
     def get_learning_graph(self):
         """Get full learning knowledge graph with relations"""
         graph = mcp__memory-server__read_graph()
-        
+
         # Extract learning entities and their relations
         learning_graph = {
             "entities": [e for e in graph.entities if e.type == "learning"],
             "relations": [r for r in graph.relations if involves_learning(r)]
         }
-        
+
         return learning_graph
 ```
 
@@ -120,24 +120,24 @@ class LearningMemoryReader:
 ```python
 class PreResponseChecker:
     """Check Memory MCP before responding"""
-    
+
     def __init__(self):
         self.compliance_reader = ComplianceMemoryReader()
         self.learning_reader = LearningMemoryReader()
-    
+
     def check_before_response(self, response_context: dict):
         """Run checks before generating response"""
         reminders = []
-        
+
         # Check for repeated violations
         if self.compliance_reader.should_remind_about_rule("MANDATORY_HEADER"):
             reminders.append("Remember: Include branch header at end of response")
-        
+
         # Check for relevant learnings
         learnings = self.learning_reader.get_related_learnings(response_context["topic"])
         if learnings:
             reminders.append(f"Related learnings: {summarize_learnings(learnings)}")
-        
+
         return reminders
 ```
 
@@ -148,11 +148,11 @@ class PreResponseChecker:
 def header_command():
     # Existing: Check if previous response missing header
     violation_detected = check_previous_response()
-    
+
     # NEW: Check violation history
     reader = ComplianceMemoryReader()
     history = reader.get_violation_history("MANDATORY_HEADER")
-    
+
     if len(history) > 5:
         print(f"⚠️ You've forgotten the header {len(history)} times before!")
         print("Pattern analysis: Usually happens when rushing responses")
@@ -163,11 +163,11 @@ def header_command():
 def learn_command(topic):
     # Existing: Save new learning
     save_learning(topic)
-    
+
     # NEW: Check for similar past learnings
     reader = LearningMemoryReader()
     similar = reader.get_related_learnings(topic)
-    
+
     if similar:
         print(f"📚 Found {len(similar)} related learnings:")
         for learning in similar:
@@ -180,7 +180,7 @@ def learn_command(topic):
 def before_response_hook(context):
     checker = PreResponseChecker()
     reminders = checker.check_before_response(context)
-    
+
     if reminders:
         # Inject reminders into context
         context["system_reminders"] = reminders
@@ -189,10 +189,10 @@ def before_response_hook(context):
 ## Implementation Roadmap
 
 ### Phase 1: Fix Storage Issues
-1. **Fix backup script**: 
+1. **Fix backup script**:
    - Handle uncommitted changes gracefully
    - OR run from a clean worktree
-   
+
 2. **Consolidate directories**:
    - Keep only `memory/` directory
    - Remove `memory-backup/` if redundant

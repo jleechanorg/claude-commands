@@ -16,7 +16,7 @@ Implement hard stop mechanism for unrecoverable integrity failures when LLM does
    - After every LLM call in `gemini_service.py`
    - Before processing LLM responses in game state logic
    - During JSON parsing and state updates
-   
+
 2. **Failure Detection Criteria:**
    - Missing `state_updates` field in LLM response
    - Empty or null state updates when expected
@@ -36,7 +36,7 @@ Implement hard stop mechanism for unrecoverable integrity failures when LLM does
    - Create `IntegrityFailureError` exception class
    - Catch failures at LLM response processing points
    - Halt game progression immediately on detection
-   
+
 2. **Error Context Collection:**
    - Capture full LLM request and response
    - Record game state before failure

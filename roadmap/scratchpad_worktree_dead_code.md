@@ -140,7 +140,7 @@ Remove identified dead code from the codebase to improve maintainability and red
 
 **Why we didn't use vulture this time**:
 - Used basic grep searches instead
-- This led to false positive with `json_datetime_serializer` 
+- This led to false positive with `json_datetime_serializer`
 - Vulture would have caught this as it understands callback usage
 
 **Expected Benefits**:

@@ -51,10 +51,10 @@ echo "$INTERACTION_RESPONSE" | python -c "
 import sys, json
 try:
     data = json.load(sys.stdin)
-    
+
     print('\\n1. RESPONSE STRUCTURE:')
     print(f'   Top-level keys: {sorted(data.keys())}')
-    
+
     print('\\n2. STRUCTURED FIELDS AT TOP LEVEL:')
     fields = ['dice_rolls', 'resources', 'planning_block', 'session_header']
     for field in fields:
@@ -68,12 +68,12 @@ try:
                 print(f'   ✓ {field}: {type(val).__name__}')
         else:
             print(f'   ✗ {field}: NOT FOUND')
-    
+
     print('\\n3. DEBUG_INFO STRUCTURE:')
     if 'debug_info' in data:
         debug = data['debug_info']
         print(f'   ✓ debug_info found with keys: {list(debug.keys())}')
-        
+
         # Check nested fields
         print('\\n4. NESTED FIELDS IN DEBUG_INFO:')
         for field in ['dice_rolls', 'resources', 'dm_notes', 'state_rationale']:
@@ -92,12 +92,12 @@ try:
                 print(f'   ✗ {field}: NOT FOUND in debug_info')
     else:
         print('   ✗ debug_info NOT FOUND at top level')
-    
+
     print('\\n5. SUMMARY:')
     # Check for duplication
     dice_top = 'dice_rolls' in data
     dice_debug = 'debug_info' in data and 'dice_rolls' in data.get('debug_info', {})
-    
+
     if dice_top and dice_debug:
         print('   ⚠️  ISSUE: dice_rolls appears in BOTH locations (duplication)')
     elif dice_top and not dice_debug:
@@ -106,7 +106,7 @@ try:
         print('   ✓ CORRECT: dice_rolls only in debug_info')
     else:
         print('   ✗ ERROR: dice_rolls not found anywhere')
-        
+
     # Check frontend expectation vs backend reality
     print('\\n6. FRONTEND COMPATIBILITY:')
     print('   Frontend expects at top level: dice_rolls, resources')
@@ -122,7 +122,7 @@ try:
     else:
         print(' WILL NOT', end='')
     print(' display dice_rolls correctly')
-    
+
 except Exception as e:
     print(f'Error analyzing response: {e}')
     print('Raw response:', sys.stdin.read()[:500])

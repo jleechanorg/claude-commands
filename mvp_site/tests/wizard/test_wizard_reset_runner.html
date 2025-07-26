@@ -12,7 +12,7 @@
             padding: 20px;
             background-color: #f8f9fa;
         }
-        
+
         .header {
             background: linear-gradient(135deg, #dc3545, #c82333);
             color: white;
@@ -21,7 +21,7 @@
             margin-bottom: 20px;
             text-align: center;
         }
-        
+
         .test-controls {
             background: white;
             padding: 20px;
@@ -29,7 +29,7 @@
             margin-bottom: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        
+
         .run-button {
             background: #dc3545 !important;
             color: white !important;
@@ -45,11 +45,11 @@
             min-width: 150px !important;
             text-align: center !important;
         }
-        
+
         .run-button:hover {
             background: #c82333 !important;
         }
-        
+
         .test-results {
             background: white;
             padding: 20px;
@@ -57,20 +57,20 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-        
+
         .result-item {
             padding: 10px;
             margin: 5px 0;
             border-radius: 5px;
             font-family: 'Courier New', monospace;
         }
-        
+
         .result-pass { background-color: #d4edda; color: #155724; }
         .result-fail { background-color: #f8d7da; color: #721c24; }
         .result-info { background-color: #d1ecf1; color: #0c5460; }
         .result-error { background-color: #f8d7da; color: #721c24; font-weight: bold; }
         .result-success { background-color: #d4edda; color: #155724; font-weight: bold; }
-        
+
         .summary {
             font-size: 18px;
             font-weight: bold;
@@ -78,10 +78,10 @@
             border-radius: 8px;
             margin: 10px 0;
         }
-        
+
         .summary-fail { background-color: #f8d7da; color: #721c24; }
         .summary-pass { background-color: #d4edda; color: #155724; }
-        
+
         #test-dom-area {
             border: 2px dashed #6c757d;
             padding: 20px;
@@ -129,41 +129,41 @@
 
     <script>
         let testInstance = null;
-        
+
         async function runWizardResetTest() {
             clearResults();
-            
+
             // Create test instance
             testInstance = new WizardResetTest();
-            
+
             // Initialize campaign wizard if not already done
             if (!window.campaignWizard) {
                 window.campaignWizard = new CampaignWizard();
             }
-            
+
             // Run the test
             const result = await testInstance.runTest();
-            
+
             // Display results
             displayResults(testInstance.getResults(), result);
         }
-        
+
         function displayResults(results, overallResult) {
             const summaryDiv = document.getElementById('test-summary');
             const logDiv = document.getElementById('test-log');
-            
+
             // Display summary
             const summaryClass = overallResult ? 'summary-pass' : 'summary-fail';
             const summaryIcon = overallResult ? '🟢' : '🔴';
             const summaryText = overallResult ? 'ALL TESTS PASSED' : 'TESTS FAILED (Expected for Red State)';
-            
+
             summaryDiv.innerHTML = `
                 <div class="summary ${summaryClass}">
                     ${summaryIcon} ${summaryText}<br>
                     Tests: ${results.total} | ✅ Passed: ${results.passed} | ❌ Failed: ${results.failed}
                 </div>
             `;
-            
+
             // Display detailed log
             results.results.forEach(result => {
                 const div = document.createElement('div');
@@ -172,12 +172,12 @@
                 logDiv.appendChild(div);
             });
         }
-        
+
         function clearResults() {
             document.getElementById('test-summary').innerHTML = '';
             document.getElementById('test-log').innerHTML = '';
         }
-        
+
         // Auto-run test on page load for development
         window.addEventListener('load', () => {
             console.log('🔴 Red/Green Test Runner loaded - Ready to test wizard reset');

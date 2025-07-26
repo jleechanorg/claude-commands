@@ -48,7 +48,7 @@ class TestCharacterCreation(unittest.TestCase):
     def setUp(self):
         self.app = create_app()
         self.client = self.app.test_client()
-    
+
     def test_create_character(self):
         with patch('main.gemini_service') as mock_gemini:
             mock_gemini.generate_character.return_value = {"name": "Test"}
@@ -64,7 +64,7 @@ class TestCharacterCreation(DualModeTestMixin, unittest.TestCase):
         super().setUp()  # Initializes dual-mode support
         self.app = create_app()
         self.client = self.app.test_client()
-    
+
     def test_create_character(self):
         # Automatically works with mock or real services
         with smart_patch(gemini_service=None):
@@ -105,16 +105,16 @@ class ExistingTest(unittest.TestCase):
     def setUp(self):
         self.app = create_app()
         self.client = self.app.test_client()
-        
+
         # Add dual-mode support gradually
         self.services = get_test_client_for_mode()
         self.is_real = self.services['is_real']
-    
+
     def tearDown(self):
         # Always cleanup
         if hasattr(self, 'services'):
             self.services['provider'].cleanup()
-    
+
     def test_something(self):
         if self.is_real:
             # Real mode - no mocking
@@ -142,7 +142,7 @@ result = doc_ref.get()
 ```python
 # Real Firestore (same API, actual database)
 firestore = self.test_firestore
-doc_ref = firestore.collection('test_real').document('doc1') 
+doc_ref = firestore.collection('test_real').document('doc1')
 doc_ref.set({'data': 'test'})
 result = doc_ref.get()  # Actually calls Firebase
 ```
@@ -197,7 +197,7 @@ def test_creates_data(self):
     else:
         # Uses simple names: test_data
         collection = self.test_firestore.collection('test_data')
-    
+
     # Data is cleaned up automatically after test
 ```
 
@@ -235,7 +235,7 @@ def test_mock_only_scenario(self):
 Skip tests that need real services:
 
 ```python
-@real_mode_only("Tests actual API integration") 
+@real_mode_only("Tests actual API integration")
 def test_real_integration(self):
     # This test only runs in real mode
     pass
