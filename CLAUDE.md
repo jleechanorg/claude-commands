@@ -304,7 +304,7 @@
 **Full Documentation**: → `.claude/commands/orchestrate.md` for complete system details
 
 ### 🚨 Agent Operation
-**System**: Uses tmux sessions with specialized agents (frontend, backend, testing, opus-master)
+**System**: Uses tmux sessions with dynamic task agents (task-agent-*) managed by Python monitor
 **Startup**: `./claude_start.sh` auto-starts orchestration | Manual: `./orchestration/start_system.sh start`
 **Monitoring**: `/orch What's the status?` or `/orch monitor agents` | Direct tmux: `tmux attach -t [agent-name]`
 **Cost**: $0.003-$0.050/task | Redis required for coordination

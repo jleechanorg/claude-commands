@@ -51,8 +51,13 @@ is_orchestration_running() {
         return 1
     fi
 
-    # Check if orchestration agents exist
-    if tmux has-session -t opus-master 2>/dev/null; then
+    # Check if agent monitor process is running (more reliable indicator)
+    if pgrep -f "agent_monitor.py" > /dev/null 2>&1; then
+        return 0
+    fi
+
+    # Alternative: Check for any active task agents
+    if tmux list-sessions 2>/dev/null | grep -q "task-agent-"; then
         return 0
     fi
 

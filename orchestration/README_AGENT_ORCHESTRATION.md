@@ -81,7 +81,11 @@ This will:
 ### 2. Connect to Opus Master
 
 ```bash
-tmux attach -t opus-master
+# List active agents
+tmux list-sessions | grep task-agent
+
+# Attach to a specific agent
+tmux attach -t task-agent-XXXX
 ```
 
 You'll see the Opus agent running and ready to receive commands.
@@ -238,8 +242,11 @@ python3 test_system.py
 # In another terminal, check status
 ./start_system.sh status
 
-# Connect to Opus and test delegation
-tmux attach -t opus-master
+# Create a new task agent
+python3 orchestration/orchestrate_unified.py "Your task description"
+
+# List and connect to agents
+tmux list-sessions | grep task-agent
 ```
 
 ## 🚨 Troubleshooting
@@ -335,7 +342,7 @@ redis-cli flushdb
 {
   "id": "msg_abc123",
   "type": "task_assignment",
-  "from_agent": "opus-master",
+  "from_agent": "task-agent-1234",
   "to_agent": "sonnet-1",
   "timestamp": "2025-01-16T10:30:00Z",
   "payload": {
