@@ -1,7 +1,7 @@
 # Agentic `/pr` Command Implementation Plan
 
-**Branch**: dev34534  
-**Goal**: Create an agentic coding command that asks clarifying questions then autonomously executes full PR workflow  
+**Branch**: dev34534
+**Goal**: Create an agentic coding command that asks clarifying questions then autonomously executes full PR workflow
 **Date**: 2025-01-12
 
 ## Project Overview
@@ -22,7 +22,7 @@ Transform Claude from step-by-step tool into autonomous "AI pair programmer" tha
 ```
 Task Types:
 - Feature Addition → functionality, integration, UX questions
-- Bug Fix → behavior, scope, test case questions  
+- Bug Fix → behavior, scope, test case questions
 - Refactoring → goals, performance, compatibility questions
 - UI Changes → design system, responsiveness, a11y questions
 ```
@@ -77,7 +77,7 @@ State Schema:
 - [ ] Add basic workflow orchestration (plan → execute → test → push)
 - [ ] Test with simple feature additions
 
-### Phase 2: MCP Integration (Week 2)  
+### Phase 2: MCP Integration (Week 2)
 - [ ] Integrate GitHub MCP for PR monitoring
 - [ ] Use Memory MCP for state persistence
 - [ ] Add Puppeteer MCP for screenshot generation
@@ -112,13 +112,13 @@ State Schema:
 # Basic usage
 /pr "add user authentication system"
 
-# Advanced usage  
+# Advanced usage
 /pr "fix memory leak in game state management" --priority=high
 /pr "refactor API client to use new endpoints" --scope=backend
 
 # Monitoring commands
 /pr status    # Check current PR status
-/pr monitor   # Enable background monitoring  
+/pr monitor   # Enable background monitoring
 /pr resolve   # Auto-resolve detected issues
 ```
 
@@ -127,11 +127,11 @@ State Schema:
 def generate_questions(task_description, codebase_analysis):
     task_type = classify_intent(task_description)
     existing_patterns = analyze_codebase(task_type)
-    
+
     if task_type == "authentication":
         return [
             "Authentication method: OAuth (Google/GitHub) or email/password?",
-            "User data: Firestore collection or separate auth service?", 
+            "User data: Firestore collection or separate auth service?",
             "Scope: Login/logout only or full user management?",
             "Security: Session management, rate limiting, 2FA needed?",
             "UI: New pages or integrate with existing components?"
@@ -145,18 +145,18 @@ async def monitor_pr_workflow(pr_number):
     while workflow_active:
         # Check GitHub status
         status = await github_mcp.get_pr_status(pr_number)
-        
+
         # Process failures
         if status.ci_failed:
             await auto_suggest_fixes(status.failures)
-            
+
         # Handle new comments
         new_comments = await github_mcp.get_new_comments(pr_number)
         await process_feedback(new_comments)
-        
+
         # Update persistent state
         await memory_mcp.update_workflow_state(pr_number, status)
-        
+
         await asyncio.sleep(60)
 ```
 
@@ -222,5 +222,5 @@ async def monitor_pr_workflow(pr_number):
 
 ---
 
-**Ready for approval** ✅  
+**Ready for approval** ✅
 This plan leverages existing infrastructure while adding genuine agentic capabilities that transform the development experience.

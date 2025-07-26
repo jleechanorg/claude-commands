@@ -23,8 +23,8 @@ class TestSarielProductionMethods(unittest.TestCase):
 
         # Test initial story generation
         print("\n1. Testing get_initial_story...")
-        initial_prompt = """You are Sariel, a member of House Arcanus known for magical prowess. 
-        You've been summoned to the throne room where you find your estranged brother Cassian 
+        initial_prompt = """You are Sariel, a member of House Arcanus known for magical prowess.
+        You've been summoned to the throne room where you find your estranged brother Cassian
         waiting with grave news about your family's legacy."""
 
         initial_result = get_initial_story(initial_prompt)

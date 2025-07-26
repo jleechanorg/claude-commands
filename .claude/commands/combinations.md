@@ -56,7 +56,7 @@ The **Universal Command Composition** system:
 **Input**: `/think /debug /brief /test analyze memory leaks`
 **Output**: `/execute Use sequential thinking for systematic debugging with testing methodology: analyze memory leaks [Respond concisely]`
 
-**Input**: `/arch /optimize /secure build API gateway`  
+**Input**: `/arch /optimize /secure build API gateway`
 **Output**: `/arch for architectural design to optimize and improve with security considerations: build API gateway`
 
 **Input**: `/custom /weird /nonexistent create something`

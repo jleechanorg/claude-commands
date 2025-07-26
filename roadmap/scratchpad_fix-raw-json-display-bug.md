@@ -5,7 +5,7 @@
 ## Goal
 Completely eliminate raw JSON appearing in user responses and campaign logs through comprehensive debugging and logging.
 
-## State  
+## State
 **CRITICAL DISCOVERY**: This is a **fallback logic bug** in `parse_structured_response()`.
 **STATUS**: ✅ **FIXED** - Root cause identified and resolved.
 - Primary JSON parsing fails for some God mode responses
@@ -27,7 +27,7 @@ Completely eliminate raw JSON appearing in user responses and campaign logs thro
 
 #### 1.1 Add Targeted Debug Logging
 - [ ] Add logging to `parse_structured_response()` to see exactly what's happening
-- [ ] Log when primary parsing fails and fallback logic triggers  
+- [ ] Log when primary parsing fails and fallback logic triggers
 - [ ] Track what the fallback logic returns vs what it should return
 
 #### 1.2 Fix Fallback Logic (/e)
@@ -35,7 +35,7 @@ Completely eliminate raw JSON appearing in user responses and campaign logs thro
 - [ ] Ensure fallback NEVER returns JSON structure to users
 - [ ] Make fallback return clean narrative text or meaningful error message
 
-#### 1.3 Test God Mode Scenarios (/e) 
+#### 1.3 Test God Mode Scenarios (/e)
 - [ ] Create tests that reproduce the exact God mode parsing failure
 - [ ] Verify fix works for malformed God mode responses
 - [ ] Ensure normal God mode responses still work correctly
@@ -114,8 +114,8 @@ class ResponseProcessingMonitor:
     @staticmethod
     def log_llm_response(stage, content, max_chars=200):
         logging_util.debug(f"RESPONSE_MONITOR_{stage}: {content[:max_chars]}...")
-    
-    @staticmethod  
+
+    @staticmethod
     def validate_no_json_leak(content, stage):
         if '"narrative":' in content or '"entities_mentioned":' in content:
             logging_util.error(f"JSON_LEAK_DETECTED at {stage}: {content[:100]}...")
@@ -132,7 +132,7 @@ def log_campaign_entry(scene_number, content, source_type):
 ## Execution Strategy
 
 ### Immediate Actions:
-1. **Add targeted debug logging** to `parse_structured_response()` 
+1. **Add targeted debug logging** to `parse_structured_response()`
 2. **Test with God mode input** to trigger the fallback logic
 3. **Fix the fallback cleanup** to never return JSON structure
 4. **Validate with red/green tests**
@@ -144,7 +144,7 @@ def log_campaign_entry(scene_number, content, source_type):
 
 ## Success Criteria
 - ✅ No raw JSON in user responses
-- ✅ No raw JSON in campaign logs  
+- ✅ No raw JSON in campaign logs
 - ✅ No raw JSON in Firestore
 - ✅ All existing functionality preserved
 - ✅ Comprehensive logging for future debugging
@@ -154,7 +154,7 @@ def log_campaign_entry(scene_number, content, source_type):
 
 ### Work Strategy Used
 1. **Systematic Approach**: Added debug logging → identified root cause → applied targeted fix
-2. **Test-Driven Validation**: Created failing tests → fixed issue → validated comprehensive scenarios  
+2. **Test-Driven Validation**: Created failing tests → fixed issue → validated comprehensive scenarios
 3. **Incremental Progress**: Small, safe changes with validation at each step
 4. **Comprehensive Coverage**: Enhanced parser to handle all field types, not just the immediate bug
 5. **Future-Proofing**: Added debug logging and comprehensive test coverage for future issues
@@ -170,15 +170,15 @@ def log_campaign_entry(scene_number, content, source_type):
 
 ## Next Steps (COMPLETED)
 1. ✅ **Get approval for focused plan** - Plan was approved
-2. ✅ **Add targeted debug logging** to `parse_structured_response()` 
+2. ✅ **Add targeted debug logging** to `parse_structured_response()`
 3. ✅ **Identify root cause** - Found in robust_json_parser._extract_fields()
 4. ✅ **Fix field extraction** - Added god_mode_response, state_updates, debug_info
 5. ✅ **Test with God mode inputs** - All scenarios validated
 6. ✅ **Validate with comprehensive tests** - All tests pass
 
 ## Ready for User Return
-- **Branch**: `fix-raw-json-display-bug` 
-- **Commits**: 
+- **Branch**: `fix-raw-json-display-bug`
+- **Commits**:
   - `1a95a52` - Core JSON parser fix
   - `6b1cc2e` - Documentation update
   - `29c5648` - UI validation tests
@@ -187,7 +187,7 @@ def log_campaign_entry(scene_number, content, source_type):
 
 ### UI Test Validation Results
 **PASSED** - Comprehensive browser automation testing completed:
-- ✅ 5/5 high-risk god mode scenarios tested 
+- ✅ 5/5 high-risk god mode scenarios tested
 - ✅ 0 JSON artifacts detected in UI
 - ✅ All malformed JSON properly converted to clean narrative text
 - ✅ Screenshots captured as evidence
@@ -232,7 +232,7 @@ if match:
 
 **Test Results**: ✅ All 5 unit tests pass
 - Scene prefix with valid JSON ✅
-- Scene prefix variations ✅ 
+- Scene prefix variations ✅
 - No scene prefix (backward compatibility) ✅
 - Scene prefix in markdown blocks ✅
 - Malformed JSON with scene prefix ✅
@@ -242,7 +242,7 @@ if match:
 #### ✅ Confirmed Working Components
 **All parsing functions work perfectly:**
 1. ✅ `parse_structured_response()` correctly extracts narrative from raw JSON
-2. ✅ `_process_structured_response()` correctly processes AI responses  
+2. ✅ `_process_structured_response()` correctly processes AI responses
 3. ✅ Robust JSON parser enhanced field extraction works
 4. ✅ All unit tests pass (112/112)
 5. ✅ Browser test missed the real issue (false positive)
@@ -280,7 +280,7 @@ generation_config_params["response_mime_type"] = "application/json"
 - Error handling falls back to saving raw JSON directly
 - Bypasses all parsing logic
 
-**Theory 2: Alternative Save Path**  
+**Theory 2: Alternative Save Path**
 - Multiple places call `firestore_service.add_story_entry()`
 - One path might save raw response without processing
 - Campaign creation vs interaction handling differences
@@ -305,7 +305,7 @@ generation_config_params["response_mime_type"] = "application/json"
 #### 📋 Next Investigation Steps
 1. **Trace actual user campaign creation** with logging
 2. **Check exception handling paths** for fallback logic
-3. **Verify all `add_story_entry()` call sites** 
+3. **Verify all `add_story_entry()` call sites**
 4. **Test campaign creation end-to-end** with problematic prompts
 5. **Examine frontend API response handling**
 
@@ -318,7 +318,7 @@ generation_config_params["response_mime_type"] = "application/json"
 ### Root Cause Identified
 The bug was in the **robust JSON parser** (`robust_json_parser.py`), specifically in the `_extract_fields()` method. When malformed JSON failed standard parsing, the field extraction only preserved:
 - `narrative`
-- `entities_mentioned`  
+- `entities_mentioned`
 - `location_confirmed`
 
 **Critical missing field**: `god_mode_response` was completely lost during field extraction from malformed JSON.
@@ -328,7 +328,7 @@ The bug was in the **robust JSON parser** (`robust_json_parser.py`), specificall
 
 Added extraction for missing fields:
 - ✅ `god_mode_response` - Critical for god mode commands
-- ✅ `state_updates` - Preserves game state changes  
+- ✅ `state_updates` - Preserves game state changes
 - ✅ `debug_info` - Preserves debug information
 
 ### Validation
@@ -341,7 +341,7 @@ Added extraction for missing fields:
 ### Debug Logging Added
 Added comprehensive debug logging in `narrative_response_schema.py` for future debugging:
 - Fallback entry conditions
-- JSON likelihood detection  
+- JSON likelihood detection
 - Cleanup process steps
 - Final results
 

@@ -301,7 +301,7 @@ class MobileResponsiveTest(BrowserTestBase):
 
             # Check for responsive classes
             responsive_classes = page.evaluate("""
-                Array.from(document.body.classList).filter(cls => 
+                Array.from(document.body.classList).filter(cls =>
                     cls.includes('mobile') || cls.includes('tablet') || cls.includes('responsive')
                 )
             """)

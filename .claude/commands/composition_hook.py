@@ -8,20 +8,20 @@ import os
 def is_composition_command(command_line):
     """
     Detect if command line should use natural language interpretation.
-    
+
     Args:
         command_line (str): User input like "/debug /test src/" or "/please run tests carefully"
-        
+
     Returns:
         bool: True if should use Claude interpretation (natural language default)
     """
     if not command_line.strip():
         return False
-    
+
     # Check if it starts with / (any slash command gets Claude interpretation)
     if command_line.strip().startswith('/'):
         return True
-        
+
     # For now, only handle slash-based commands
     # Future: could handle pure natural language like "run tests carefully"
     return False
@@ -30,35 +30,35 @@ def get_available_commands():
     """
     Get context about available commands for Claude interpretation.
     Based on comprehensive analysis of all user-defined commands.
-    
+
     Returns:
         dict: Command context for Claude
     """
     return {
         "protocol_commands": [
             # Core Actions (DO things)
-            "/test", "/testui", "/testuif", "/testhttp", "/testhttpf", 
+            "/test", "/testui", "/testuif", "/testhttp", "/testhttpf",
             "/testi", "/teste", "/tester", "/testerc", "/testserver",
             "/coverage", "/execute", "/e", "/plan",
-            
+
             # Analysis & Review
             "/arch", "/archreview", "/review", "/reviewdeep", "/replicate",
-            
-            # Development Workflow  
+
+            # Development Workflow
             "/pr", "/push", "/pushlite", "/integrate", "/newbranch", "/nb",
-            
+
             # Documentation & Planning
             "/learn", "/scratchpad", "/roadmap", "/r", "/milestones", "/handoff",
-            
+
             # Multi-agent & Orchestration
-            "/orchestrate", "/orch", "/copilot", 
-            
+            "/orchestrate", "/orch", "/copilot",
+
             # Search & Research
             "/perp",
-            
+
             # Comment Management
             "/commentr", "/commentreply",
-            
+
             # Utilities & Tools
             "/list", "/header", "/usage", "/context", "/con", "/bclean",
             "/localserver", "/puppeteer", "/optimize", "/experiment",
@@ -67,18 +67,18 @@ def get_available_commands():
         "natural_modifiers": [
             # Thinking & Analysis Modifiers
             "/think", "/thinku", "/debug",
-            
-            # Quality & Thoroughness Modifiers  
+
+            # Quality & Thoroughness Modifiers
             "/paranoid", "/minimal", "/complete", "/thorough", "/clean",
-            
+
             # Style & Approach Modifiers
             "/verbose", "/performance", "/combinations", "/combo-help",
-            
+
             # Action Modifiers (virtual commands that modify how things are done)
             "/deploy",
-            
+
             # Enhanced Execution Modifiers
-            "/execute-enhanced", "/ENHANCED_ALIASES", "/LEARN_ENHANCEMENT_SUMMARY", 
+            "/execute-enhanced", "/ENHANCED_ALIASES", "/LEARN_ENHANCEMENT_SUMMARY",
             "/MEMORY_INTEGRATION"
         ],
         "command_descriptions": {
@@ -106,7 +106,7 @@ def get_available_commands():
             "/commentreply": "Systematically address all GitHub PR comments with inline replies",
             "/context": "Show context usage percentage and breakdown",
             "/deploy": "Deploy to specified environment",
-            
+
             # Natural Modifiers (How to do things)
             "/debug": "Enable verbose debug output and detailed analysis",
             "/think": "Enable analytical/thinking mode with sequential reasoning",
@@ -123,10 +123,10 @@ def get_available_commands():
 def interpret_composition_with_claude(command_line):
     """
     Use Claude to interpret command composition naturally - REAL API INTEGRATION.
-    
+
     Args:
         command_line (str): Like "/debug /paranoid /test src/" or "/please run tests carefully on mvp_site"
-        
+
     Returns:
         dict: {
             'protocol_command': '/test',
@@ -138,9 +138,9 @@ def interpret_composition_with_claude(command_line):
     """
     import subprocess
     import tempfile
-    
+
     commands_context = get_available_commands()
-    
+
     # Create prompt for Claude - supports ANYTHING, not just predefined commands
     prompt = f"""Interpret this command for Claude Code CLI. Support ANY natural language, not just predefined commands:
 
@@ -151,12 +151,12 @@ Available Commands Context:
 
 Rules:
 1. ANY text starting with / can be a natural modifier, even if not in the list
-2. Support natural language like "/please run tests carefully" 
+2. Support natural language like "/please run tests carefully"
 3. If you see unknown /commands, interpret them contextually
 4. Natural language is the DEFAULT - be flexible and intelligent
 
 Please respond with a JSON object containing:
-- protocol_command: The main action command (like "/test", "/deploy")  
+- protocol_command: The main action command (like "/test", "/deploy")
 - arguments: List of non-command arguments (like ["src/", "production"])
 - context_flags: Dict of boolean flags based on modifiers (like {{"debug": true, "paranoid": true, "careful": true}})
 - execution_plan: Human-readable description of what will be executed
@@ -176,19 +176,19 @@ Respond with only the JSON object, no other text."""
         with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
             f.write(prompt)
             temp_file = f.name
-        
+
         # Call Claude CLI directly for real interpretation
         # Use a direct prompt rather than file to ensure JSON response
         result = subprocess.run([
-            'claude', '-p', prompt, 
+            'claude', '-p', prompt,
             '--output-format', 'json'
         ], capture_output=True, text=True, timeout=30)
-        
+
         if result.returncode == 0:
             try:
                 # Parse Claude's JSON response - extract the actual result
                 claude_response = json.loads(result.stdout.strip())
-                
+
                 # Check if this is the CLI metadata format
                 if 'result' in claude_response and isinstance(claude_response['result'], str):
                     # Try to extract JSON from the result field
@@ -206,7 +206,7 @@ Respond with only the JSON object, no other text."""
                 elif isinstance(claude_response, dict) and 'protocol_command' in claude_response:
                     # Direct JSON response format
                     return claude_response
-                    
+
             except json.JSONDecodeError:
                 # If Claude didn't return valid JSON, try to extract JSON from the response
                 response_text = result.stdout.strip()
@@ -217,7 +217,7 @@ Respond with only the JSON object, no other text."""
                         return json.loads(response_text[start:end])
                     except json.JSONDecodeError:
                         pass
-        
+
         # Fallback to local interpretation if Claude API fails
         print("⚠️ Claude API failed, using local interpretation")
         fallback_result = fallback_interpretation(command_line, commands_context)
@@ -225,9 +225,9 @@ Respond with only the JSON object, no other text."""
         if 'success' not in fallback_result:
             fallback_result['success'] = True
         return fallback_result
-        
+
     except Exception as e:
-        print(f"⚠️ Claude API error: {e}, using local interpretation") 
+        print(f"⚠️ Claude API error: {e}, using local interpretation")
         fallback_result = fallback_interpretation(command_line, commands_context)
         # Ensure fallback result has success key
         if 'success' not in fallback_result:
@@ -247,15 +247,15 @@ def fallback_interpretation(command_line, commands_context):
     Handles basic parsing with support for ANY natural language modifiers.
     """
     tokens = command_line.strip().split()
-    
+
     # Find protocol command
     protocol_commands = set(commands_context["protocol_commands"])
     natural_modifiers = set(commands_context["natural_modifiers"])
-    
+
     protocol_command = None
     context_flags = {}
     arguments = []
-    
+
     for token in tokens:
         if token in protocol_commands:
             protocol_command = token
@@ -284,7 +284,7 @@ def fallback_interpretation(command_line, commands_context):
                     context_flags['verbose'] = True
         else:
             arguments.append(token)
-    
+
     if not protocol_command:
         return {
             "protocol_command": None,
@@ -293,12 +293,12 @@ def fallback_interpretation(command_line, commands_context):
             "execution_plan": "No clear protocol command found",
             "success": False
         }
-    
+
     # Generate execution plan
     plan_parts = [f"Execute {protocol_command}"]
     if arguments:
         plan_parts.append(f"on {' '.join(arguments)}")
-    
+
     modifiers = []
     if context_flags.get("debug"):
         modifiers.append("debug verbose output")
@@ -308,12 +308,12 @@ def fallback_interpretation(command_line, commands_context):
         modifiers.append("minimal quick execution")
     if context_flags.get("thinking"):
         modifiers.append("analytical thinking mode")
-        
+
     if modifiers:
         plan_parts.append(f"with {' and '.join(modifiers)}")
-    
+
     execution_plan = ' '.join(plan_parts)
-    
+
     return {
         "protocol_command": protocol_command,
         "arguments": arguments,
@@ -325,19 +325,19 @@ def fallback_interpretation(command_line, commands_context):
 def handle_composition_command(command_line):
     """
     Main entry point for handling command compositions.
-    
+
     Args:
         command_line (str): User input
-        
+
     Returns:
         dict: Interpretation result or None for single commands
     """
     if not is_composition_command(command_line):
         return None  # Let normal CLI handle single commands
-    
+
     print(f"🧠 Interpreting composition: {command_line}")
     result = interpret_composition_with_claude(command_line)
-    
+
     if result['success']:
         print(f"📋 Plan: {result['execution_plan']}")
         return result
@@ -350,18 +350,18 @@ if __name__ == "__main__":
     test_cases = [
         "/test src/",                              # Single command (should return None)
         "/debug /test src/",                       # Debug test
-        "/paranoid /deploy production",            # Paranoid deploy  
+        "/paranoid /deploy production",            # Paranoid deploy
         "/debug /paranoid /minimal /test mvp_site/", # Multiple modifiers
         "/think /arch codebase",                   # Thinking architecture review
         "/complete /coverage integration/"         # Thorough coverage
     ]
-    
+
     print("=== Command Composition Hook Test ===\n")
-    
+
     for test in test_cases:
         print(f"Input: {test}")
         result = handle_composition_command(test)
-        
+
         if result is None:
             print("→ Single command, handled by normal CLI\n")
         else:

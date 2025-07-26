@@ -1,6 +1,6 @@
 # Make /arch Actually Work - Real Implementation
 
-**Branch**: `feature/real-arch-implementation`  
+**Branch**: `feature/real-arch-implementation`
 **Goal**: Transform `/arch` from contextual advice to evidence-based technical analysis
 
 **Updated Understanding**:
@@ -11,7 +11,7 @@
 
 **Context from Previous Work**:
 - Built comprehensive timeout mitigation system (works)
-- Created fake detection utilities (works) 
+- Created fake detection utilities (works)
 - Infrastructure is solid for adding technical analysis layer
 
 ## 🚨 **ENHANCEMENT NEEDED**
@@ -38,7 +38,7 @@
 **Target**: Add AST-based analysis engine to enhance existing contextual analysis
 
 **Create arch.py Implementation**:
-- Real AST parsing of Python files  
+- Real AST parsing of Python files
 - File-level metrics (lines, functions, classes, complexity)
 - Evidence-based output with file:line references
 - Variance validation (different files = different analysis)
@@ -53,17 +53,17 @@ def analyze_file_structure(filepath):
     """Real AST-based analysis of Python file"""
     with open(filepath, 'r') as f:
         tree = ast.parse(f.read())
-    
+
     # Extract actual code elements
     analysis = {
         'classes': extract_classes_with_methods(tree),
-        'functions': extract_functions_with_complexity(tree), 
+        'functions': extract_functions_with_complexity(tree),
         'imports': extract_import_dependencies(tree),
         'complexity': calculate_cyclomatic_complexity(tree),
         'patterns': detect_design_patterns(tree),
         'issues': find_code_issues(tree, filepath)
     }
-    
+
     return analysis
 
 def extract_import_dependencies(tree):
@@ -106,7 +106,7 @@ def calculate_cyclomatic_complexity(tree):
 def find_code_issues(tree, filepath):
     """Find specific architectural issues"""
     issues = []
-    
+
     # Check for functions without error handling
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
@@ -118,7 +118,7 @@ def find_code_issues(tree, filepath):
                     'function': node.name,
                     'severity': 'medium'
                 })
-    
+
     return issues
 ```
 
@@ -137,7 +137,7 @@ def analyze_project_structure(root_dir):
         'patterns': [],
         'metrics': {}
     }
-    
+
     # Scan all Python files
     for root, dirs, files in os.walk(root_dir):
         for file in files:
@@ -148,31 +148,31 @@ def analyze_project_structure(root_dir):
                     'path': filepath,
                     'analysis': file_analysis
                 })
-    
+
     # Build dependency graph
     structure['dependencies'] = build_dependency_graph(structure['modules'])  # TODO: Implement this helper
-    
+
     # Detect architectural patterns
     structure['patterns'] = detect_architectural_patterns(structure)
-    
+
     return structure
 
 def detect_architectural_patterns(structure):
     """Detect MVC, Factory, Singleton, etc. patterns"""
     patterns = []
-    
+
     # Look for MVC pattern
     has_models = any('model' in m['path'].lower() for m in structure['modules'])
-    has_views = any('view' in m['path'].lower() for m in structure['modules']) 
+    has_views = any('view' in m['path'].lower() for m in structure['modules'])
     has_controllers = any('controller' in m['path'].lower() or 'main.py' in m['path'] for m in structure['modules'])
-    
+
     if has_models and has_views and has_controllers:
         patterns.append({
             'pattern': 'MVC',
             'confidence': 'high',
             'evidence': 'Found model, view, and controller components'
         })
-    
+
     return patterns
 ```
 
@@ -184,19 +184,19 @@ def detect_architectural_patterns(structure):
 def generate_architectural_insights(analysis):
     """Convert analysis into actionable insights"""
     insights = []
-    
+
     # Complexity analysis
     high_complexity_functions = [
-        f for f in analysis['functions'] 
+        f for f in analysis['functions']
         if f.get('complexity', 0) > 10
     ]
-    
+
     if high_complexity_functions:
         insights.append({
             'category': 'complexity',
             'severity': 'high',
             'finding': f"High complexity detected in {len(high_complexity_functions)} functions",
-            'evidence': [f"{f['name']} (complexity: {f['complexity']}, {f['file']}:{f['line']})" 
+            'evidence': [f"{f['name']} (complexity: {f['complexity']}, {f['file']}:{f['line']})"
                         for f in high_complexity_functions[:3]],
             'recommendation': "Refactor complex functions using Extract Method pattern",
             'specific_actions': [
@@ -204,15 +204,15 @@ def generate_architectural_insights(analysis):
                 for f in high_complexity_functions[:2]
             ]
         })
-    
-    # Dependency analysis  
+
+    # Dependency analysis
     high_coupling_modules = find_highly_coupled_modules(analysis)
     if high_coupling_modules:
         insights.append({
             'category': 'coupling',
-            'severity': 'medium', 
+            'severity': 'medium',
             'finding': f"High coupling detected in {len(high_coupling_modules)} modules",
-            'evidence': [f"{m['name']} imported by {len(m['importers'])} modules" 
+            'evidence': [f"{m['name']} imported by {len(m['importers'])} modules"
                         for m in high_coupling_modules],
             'recommendation': "Consider introducing facade or mediator patterns",
             'specific_actions': [
@@ -220,7 +220,7 @@ def generate_architectural_insights(analysis):
                 for m in high_coupling_modules[:2]
             ]
         })
-    
+
     return insights
 ```
 
@@ -232,13 +232,13 @@ def generate_architectural_insights(analysis):
 def main():
     """Enhanced /arch with real analysis and timeout protection"""
     start_time = time.time()
-    
+
     # Use timeout mitigation from existing infrastructure
     from request_optimizer import optimize_file_read, check_request_size
-    
+
     # Determine scope
     scope = sys.argv[1] if len(sys.argv) > 1 else "current"
-    
+
     if scope == "current":
         # Analyze current branch changes
         analysis = analyze_current_branch_architecture()
@@ -249,18 +249,18 @@ def main():
     elif os.path.isdir(scope):
         # Analyze directory structure
         analysis = analyze_project_structure(scope)
-    
+
     # Generate evidence-based insights
     insights = generate_architectural_insights(analysis)
-    
+
     # Format and display results
     report = format_architecture_report(insights, analysis)
     print(report)
-    
+
     # Performance monitoring
     duration = time.time() - start_time
     print(f"\n⏱️ Analysis completed in {duration:.1f}s")
-    
+
     # Validate we're not returning fake results
     if not insights or all(i.get('evidence') == [] for i in insights):
         print("⚠️ Warning: Analysis may be incomplete or fake")
@@ -291,7 +291,7 @@ def main():
 ## 📋 **IMPLEMENTATION CHECKLIST**
 
 - [ ] **Create real AST parsing functions** (2 hours)
-- [ ] **Build dependency analysis** (1 hour)  
+- [ ] **Build dependency analysis** (1 hour)
 - [ ] **Implement evidence-based insights** (1 hour)
 - [ ] **Integrate with timeout mitigation** (30 min)
 - [ ] **Test variance with 3 different targets** (30 min)
@@ -305,7 +305,7 @@ def main():
 
 1. **Start with single file analysis** - get AST parsing working
 2. **Add evidence extraction** - specific line numbers, metrics
-3. **Build insight generation** - convert analysis to recommendations  
+3. **Build insight generation** - convert analysis to recommendations
 4. **Test variance** - verify different files give different results
 5. **Expand to directory analysis** - full project structure
 

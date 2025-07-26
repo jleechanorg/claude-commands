@@ -4,18 +4,18 @@
 
 **Action**: Stop test server → Run `./integrate.sh` script → Clean environment
 
-**Usage**: 
+**Usage**:
 - `/integrate` - Creates dev{timestamp} branch
 - `/integrate [branch-name]` - Creates branch with custom name
 - `/integrate --force` - Override safety checks
 
 **Examples**:
 - `/integrate` - Creates dev1752251680 branch
-- `/integrate newb` - Creates newb branch  
+- `/integrate newb` - Creates newb branch
 - `/integrate feature/my-feature` - Creates feature/my-feature branch
 - `/integrate fix/bug-123 --force` - Creates fix/bug-123 branch, overriding checks
 
-**Enhanced Implementation**: 
+**Enhanced Implementation**:
 - **Auto-Learning**: Automatically trigger `/learn` to capture insights from completed work
 - Stop test server for current branch (if running)
 - Execute `./integrate.sh` script with optional branch name

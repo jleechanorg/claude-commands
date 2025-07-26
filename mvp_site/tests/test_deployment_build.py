@@ -14,7 +14,7 @@ from pathlib import Path
 # Add mvp_site directory to path for imports
 # Handle both running from project root and from mvp_site directory
 current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if os.path.basename(current_dir) == 'mvp_site':
+if os.path.basename(current_dir) == "mvp_site":
     # Already in mvp_site directory
     sys.path.insert(0, current_dir)
 else:
@@ -65,12 +65,12 @@ def load_world_content_for_system_instruction():
         book_path = os.path.join(os.path.dirname(__file__), CELESTIAL_WARS_BOOK_PATH)
         with open(book_path, 'r', encoding='utf-8') as f:
             book_content = f.read().strip()
-        
+
         # Load world content
         world_path = os.path.join(os.path.dirname(__file__), WORLD_ASSIAH_PATH)
         with open(world_path, 'r', encoding='utf-8') as f:
             world_content = f.read().strip()
-        
+
         return f"Book: {len(book_content)} chars, World: {len(world_content)} chars"
     except FileNotFoundError as e:
         raise FileNotFoundError(f"World file not found: {e}")

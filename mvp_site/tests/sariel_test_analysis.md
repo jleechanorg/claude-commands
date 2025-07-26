@@ -4,7 +4,7 @@
 
 ### 1. test_sariel_single_campaign_full.py
 - **Purpose**: Run ONE Sariel campaign with first 10 interactions, validating all entities and game state
-- **API Calls**: 
+- **API Calls**:
   - 1 campaign creation (POST)
   - 10 interactions (POST)
   - 10 game state checks (GET)

@@ -6,7 +6,7 @@ A comprehensive event-tracking and state management system that prevents narrati
 ## Problem Statement
 Current issues in long campaigns:
 - NPCs "forget" past interactions
-- World doesn't reflect player actions  
+- World doesn't reflect player actions
 - Contradictions emerge ("Didn't we kill that guy?")
 - Static world feels unreactive
 
@@ -134,7 +134,7 @@ Implement a comprehensive event-tracking and state management system to prevent 
 # Day 1-2: WorldEvent
 /tdd --component "WorldEvent" --tests "creation, validation, serialization"
 
-# Day 3-4: VersionedEntity  
+# Day 3-4: VersionedEntity
 /tdd --component "VersionedEntity" --tests "versioning, history, state_retrieval"
 
 # Day 5: Core Types
@@ -244,7 +244,7 @@ import json
 import uuid
 
 class WorldEvent:
-    def __init__(self, event_type, affected_entities, changes, 
+    def __init__(self, event_type, affected_entities, changes,
                  narrative_reference=None, cascade_effects=None):
         self.event_id = str(uuid.uuid4())
         self.timestamp = datetime.now()
@@ -253,7 +253,7 @@ class WorldEvent:
         self.changes = changes
         self.narrative_reference = narrative_reference
         self.cascade_effects = cascade_effects or []
-    
+
     def to_json(self):
         return json.dumps({
             'event_id': self.event_id,
@@ -294,7 +294,7 @@ def test_retrieve_historical_version():
     entity = VersionedEntity("npc_guard_001", {"hp": 20})
     entity.update({"hp": 15}, event_id="evt_001")
     entity.update({"hp": 10}, event_id="evt_002")
-    
+
     state_v2 = entity.get_version(2)
     assert state_v2["hp"] == 15
 ```
@@ -310,7 +310,7 @@ class VersionedEntity:
         self.current_state = initial_state.copy()
         self.change_history = []
         self.last_modified = datetime.now()
-    
+
     def update(self, changes, event_id):
         change_record = StateChange(
             from_version=self.version,
@@ -336,13 +336,13 @@ def test_time_based_invalidation():
         conditions={"days_elapsed": 30},
         affected_patterns=["merchant_gratitude_*"]
     )
-    
+
     event = WorldEvent(
         event_type="merchant_saved",
         affected_entities=["npc_merchant_001"],
         changes={"gratitude": "high"}
     )
-    
+
     # 31 days later...
     assert rule.should_invalidate(event, days_elapsed=31) == True
 
@@ -353,7 +353,7 @@ def test_event_based_invalidation():
         conditions={"event_type": "attack_ally"},
         affected_patterns=["alliance_*"]
     )
-    
+
     trigger_event = WorldEvent(event_type="attack_ally", ...)
     assert rule.should_trigger(trigger_event) == True
 
@@ -361,10 +361,10 @@ def test_cascade_invalidation():
     """Test cascade effects propagate"""
     rules_engine = InvalidationEngine()
     rules_engine.add_rule(...)
-    
+
     king_death_event = WorldEvent(event_type="king_death", ...)
     cascaded_events = rules_engine.process_cascades(king_death_event)
-    
+
     assert len(cascaded_events) > 0
     assert any(e.event_type == "succession_crisis" for e in cascaded_events)
 ```
@@ -381,7 +381,7 @@ def test_reconstruct_world_state():
             "Guard": {"hp": 20, "status": "alive"}
         }
     }
-    
+
     events = [
         WorldEvent(
             event_type="combat_damage",
@@ -394,7 +394,7 @@ def test_reconstruct_world_state():
             changes={"hp": 0, "status": "dead"}
         )
     ]
-    
+
     reconstructed = reconstruct_world_state(base_state, events, target_time=events[1].timestamp)
     assert reconstructed["npc_data"]["Guard"]["status"] == "dead"
     assert reconstructed["npc_data"]["Guard"]["hp"] == 0
@@ -403,11 +403,11 @@ def test_reconstruction_performance():
     """Test performance with many events"""
     base_state = create_large_world()
     events = generate_events(count=1000)
-    
+
     start_time = time.time()
     reconstructed = reconstruct_world_state(base_state, events)
     elapsed = time.time() - start_time
-    
+
     assert elapsed < 0.1  # Must be under 100ms
 ```
 
@@ -419,16 +419,16 @@ def test_reconstruction_performance():
 def test_game_state_with_events():
     """Test that game state updates generate events"""
     game_state = GameState()
-    
+
     # Simulate state update
     update = {
         "npc_data": {
             "Guard": {"hp": 0, "status": "dead"}
         }
     }
-    
+
     game_state.apply_update(update)
-    
+
     # Check event was recorded
     events = game_state.get_events()
     assert len(events) == 1
@@ -451,7 +451,7 @@ def test_prompt_integration():
 
 ### Week 3-4: State Versioning ⬜
 - [ ] VersionedEntity wrapper
-- [ ] VersionManager service  
+- [ ] VersionManager service
 - [ ] Change history tracking
 - [ ] Historical state retrieval
 
@@ -485,7 +485,7 @@ def test_prompt_integration():
 ## Performance Targets
 
 - Event creation: <5ms
-- State reconstruction (1000 events): <100ms  
+- State reconstruction (1000 events): <100ms
 - Memory usage: <1MB per 1000 events
 - Token usage: <100 tokens per event batch
 
@@ -560,7 +560,7 @@ touch mvp_site/tests/world_state/test_base.py
 class GameStateEventAdapter:
     def convert_state_update_to_events(self, state_update):
         """Convert current state update format to events"""
-        
+
     def enhance_state_with_versions(self, game_state):
         """Add version info to existing state"""
 ```
@@ -571,7 +571,7 @@ class GameStateEventAdapter:
 class PromptEnhancer:
     def add_event_context(self, prompt, current_scene):
         """Add relevant historical events to prompt"""
-        
+
     def format_world_version(self, entities):
         """Include version numbers in entity descriptions"""
 ```
@@ -602,9 +602,9 @@ class PromptEnhancer:
 function appendToStory(content, isUser = false) {
     const storyEntry = document.createElement('div');
     storyEntry.className = 'story-entry ' + (isUser ? 'user-entry' : 'ai-entry');
-    
+
     // ... existing narrative rendering ...
-    
+
     // NEW: Add world event indicators
     if (content.world_events && content.world_events.length > 0) {
         const indicator = document.createElement('div');
@@ -616,7 +616,7 @@ function appendToStory(content, isUser = false) {
         indicator.onclick = () => showEventDetails(content.world_events);
         storyEntry.appendChild(indicator);
     }
-    
+
     document.getElementById('story-content').appendChild(storyEntry);
 }
 ```
@@ -627,7 +627,7 @@ function appendToStory(content, isUser = false) {
 @app.route('/api/campaigns/<campaign_id>/interaction', methods=['POST'])
 def handle_interaction(user_id, campaign_id):
     # ... existing code through AI response generation ...
-    
+
     # NEW: Extract world events if feature enabled
     campaign_settings = campaign_data.get('settings', {})
     if campaign_settings.get('dynamic_world_state', {}).get('enabled', False):
@@ -642,7 +642,7 @@ def handle_interaction(user_id, campaign_id):
         structured_fields['world_events'] = [e.to_dict() for e in events]
         # Store events
         event_recorder.store_events(campaign_id, events)
-    
+
     return jsonify(response_data)
 ```
 
@@ -700,13 +700,13 @@ class WorldEvent:
     cascade_effects: List[str] = None
     event_id: str = None
     timestamp: datetime = None
-    
+
     def __post_init__(self):
         if not self.event_id:
             self.event_id = str(uuid.uuid4())
         if not self.timestamp:
             self.timestamp = datetime.utcnow()
-    
+
     def to_dict(self):
         return {
             'event_id': self.event_id,
@@ -728,17 +728,17 @@ class EventRecorderService:
     def extract_events_from_interaction(self, user_input, ai_response, game_state, story_context):
         """Extract world events from gameplay interaction"""
         events = []
-        
+
         # Extract from narrative
         narrative = ai_response.get('narrative', '')
-        
+
         # Death detection
         death_patterns = [
             r'(\w+) (?:dies|is killed|perishes|falls)',
             r'You (?:kill|slay|defeat) (\w+)',
             r'(\w+) is (?:dead|deceased|no more)'
         ]
-        
+
         for pattern in death_patterns:
             matches = re.findall(pattern, narrative, re.IGNORECASE)
             for match in matches:
@@ -750,14 +750,14 @@ class EventRecorderService:
                         changes={'status': 'deceased'},
                         narrative_reference=f"scene_{len(story_context)}"
                     ))
-        
+
         # Alliance/relationship changes
         alliance_patterns = [
             r'(\w+) (?:joins your party|becomes your ally)',
             r'alliance with (\w+)',
             r'(\w+) pledges loyalty'
         ]
-        
+
         for pattern in alliance_patterns:
             matches = re.findall(pattern, narrative, re.IGNORECASE)
             for match in matches:
@@ -768,7 +768,7 @@ class EventRecorderService:
                     changes={'relationship': 'allied'},
                     narrative_reference=f"scene_{len(story_context)}"
                 ))
-        
+
         return events
 ```
 
@@ -781,20 +781,20 @@ from firestore_service import db
 class FirestoreEventRepository:
     def __init__(self):
         self.collection = 'world_events'
-    
+
     def save_events(self, campaign_id: str, events: List[WorldEvent]):
         """Save events to Firestore"""
         batch = db.batch()
-        
+
         for event in events:
             doc_ref = db.collection(self.collection).document()
             batch.set(doc_ref, {
                 'campaign_id': campaign_id,
                 **event.to_dict()
             })
-        
+
         batch.commit()
-    
+
     def get_events_for_recap(self, campaign_id: str, session_num: int):
         """Get events for session recap"""
         # Query events for this session
@@ -812,7 +812,7 @@ class WorldStateUI {
     constructor() {
         this.events = [];
     }
-    
+
     showEventDetails(events) {
         // Simple modal for phase 1
         const modal = document.createElement('div');
@@ -833,7 +833,7 @@ class WorldStateUI {
         `;
         document.body.appendChild(modal);
     }
-    
+
     getEventIcon(eventType) {
         const icons = {
             'NPC_DEATH': 'skull',
@@ -843,7 +843,7 @@ class WorldStateUI {
         };
         return icons[eventType] || 'circle';
     }
-    
+
     formatEvent(event) {
         const formatters = {
             'NPC_DEATH': e => `${e.affected_entities[0]} has died`,
@@ -867,7 +867,7 @@ window.showEventDetails = (events) => worldStateUI.showEventDetails(events);
 2. Basic event extraction
 3. Simple UI indicators
 
-#### Week 2: Storage & Retrieval  
+#### Week 2: Storage & Retrieval
 1. Firestore integration
 2. Event querying
 3. Session detection

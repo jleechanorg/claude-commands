@@ -34,7 +34,7 @@ Optimize world content sending (currently sent with every request) and verify to
    - **Session-Level Caching**: Send world content only once per campaign session
    - **Context Awareness**: Include world content only when contextually relevant
    - **Smart Inclusion**: Send world sections based on current story context
-   
+
 2. **Content Segmentation:**
    - Break world files into logical sections (geography, history, factions, etc.)
    - Send only relevant sections based on current story context
@@ -46,7 +46,7 @@ Optimize world content sending (currently sent with every request) and verify to
        def __init__(self):
            self.session_cache = {}
            self.sent_content = set()
-       
+
        def should_include_world_content(self, session_id, content_type):
            return content_type not in self.sent_content.get(session_id, set())
    ```
@@ -63,7 +63,7 @@ Optimize world content sending (currently sent with every request) and verify to
    def verify_token_measurements(prompt, estimated_tokens):
        actual_size = len(prompt.encode('utf-8'))
        api_response_tokens = response.get('usage', {}).get('prompt_tokens', 0)
-       
+
        logging.info(f"Token Verification - Estimated: {estimated_tokens}, "
                    f"Actual bytes: {actual_size}, API reported: {api_response_tokens}")
    ```
@@ -118,7 +118,7 @@ Optimize world content sending (currently sent with every request) and verify to
 class OptimizedWorldContent:
     def __init__(self):
         self.session_world_content = {}
-    
+
     def get_world_content_for_request(self, session_id, context):
         if session_id not in self.session_world_content:
             # First request - send full world content
@@ -135,14 +135,14 @@ def send_request_with_verification(prompt, estimated_tokens):
     # Log before sending
     actual_prompt_size = len(prompt.encode('utf-8'))
     log_token_comparison("pre_request", estimated_tokens, actual_prompt_size)
-    
+
     # Send to API
     response = gemini_api.call(prompt)
-    
+
     # Log actual usage
     api_reported_tokens = response.usage.prompt_tokens
     log_token_comparison("post_request", estimated_tokens, api_reported_tokens)
-    
+
     return response
 ```
 

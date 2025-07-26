@@ -4,7 +4,7 @@
 
 ### 1. Factions Restored (First Pass)
 - ✅ The Sylvan Remnant (Elves) - 3 sub-factions
-- ✅ The Glimmering Combine (Gnomes) - 3 sub-factions  
+- ✅ The Glimmering Combine (Gnomes) - 3 sub-factions
 - ✅ The Adamant Vault (Dwarves) - 3 sub-factions
 - ✅ Minor Factions (Halflings, Ogres, Shadow Syndicate)
 - ✅ 15+ faction leaders and characters

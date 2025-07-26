@@ -104,20 +104,20 @@ declare -a unmerged=()
 for branch in $branches_to_check; do
     # Skip if no branch (empty line)
     [[ -z "$branch" ]] && continue
-    
+
     echo -n "Checking $branch... "
-    
+
     # Check if branch has unpushed commits
     if git rev-parse --verify "origin/$branch" >/dev/null 2>&1; then
         unpushed=$(git rev-list "origin/$branch..$branch" --count 2>/dev/null || echo "0")
     else
         unpushed="no remote"
     fi
-    
+
     # Check for associated PR
     pr_info=$(gh pr list --head "$branch" --json number,state --limit 1 2>/dev/null || echo "[]")
     pr_exists=$(echo "$pr_info" | jq 'length > 0')
-    
+
     if [[ "$pr_exists" == "true" ]]; then
         pr_number=$(echo "$pr_info" | jq -r '.[0].number')
         pr_state=$(echo "$pr_info" | jq -r '.[0].state')
@@ -168,7 +168,7 @@ if [[ ${#safe_to_delete[@]} -gt 0 ]]; then
         echo -e "\n${YELLOW}🔍 DRY RUN: Would delete ${#safe_to_delete[@]} branches${NC}"
     else
         echo -e "\n${YELLOW}🗑️  Preparing to delete ${#safe_to_delete[@]} branches...${NC}"
-        
+
         if [[ "$FORCE" != "true" ]]; then
             echo -n "Continue? (y/N) "
             read -r response
@@ -177,7 +177,7 @@ if [[ ${#safe_to_delete[@]} -gt 0 ]]; then
                 exit 0
             fi
         fi
-        
+
         # Delete branches
         for branch in "${safe_to_delete[@]}"; do
             echo -n "Deleting $branch... "
@@ -187,7 +187,7 @@ if [[ ${#safe_to_delete[@]} -gt 0 ]]; then
                 echo -e "${RED}✗${NC}"
             fi
         done
-        
+
         echo -e "\n${GREEN}✅ Cleanup complete!${NC}"
     fi
 else

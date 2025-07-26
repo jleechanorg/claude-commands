@@ -6,7 +6,7 @@
 **Problem**: Code puts campaign_config at GameState root, but prompts document it under custom_campaign_state
 **Fix**: Update game_state_instruction.md to match code structure
 
-### 2. Missing display_mode Implementation  
+### 2. Missing display_mode Implementation
 **Problem**: character_display_adapter.js ignores display_mode setting
 **Fix**: Implement support for 'both' and 'player_choice' modes
 
@@ -41,7 +41,7 @@ formatCharacterStats(characterData, displayMode) {
         case 'player_choice':
             return this.formatWithToggle(characterData);
         default: // 'active_only'
-            return this.system === 'dnd' 
+            return this.system === 'dnd'
                 ? this.formatDnDStats(characterData)
                 : this.formatDestinyStats(characterData);
     }
@@ -54,17 +54,17 @@ Create mvp_site/test_character_conversion.py:
 class TestCharacterConversion(unittest.TestCase):
     def test_cha_to_traits_conversion(self):
         # Test CHA 3-20 conversions
-        
+
     def test_traits_to_cha_conversion(self):
         # Test personality trait averages
-        
+
     def test_round_trip_conversion(self):
         # Verify data integrity through conversion
 ```
 
 ## Priority
 1. Fix schema documentation (High - causes confusion)
-2. Add test coverage (High - prevents bugs)  
+2. Add test coverage (High - prevents bugs)
 3. Implement display modes (Medium - nice to have)
 
 ## Note

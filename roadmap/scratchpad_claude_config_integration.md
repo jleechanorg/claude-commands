@@ -14,7 +14,7 @@
   - State "I don't have enough information" when uncertain
   - Base all conclusions on extracted evidence
 
-### 2. Uncertainty Acknowledgment  
+### 2. Uncertainty Acknowledgment
 - **Status**: INTEGRATED
 - **Location**: Meta-Rules section
 - **Key additions**:

@@ -1,9 +1,9 @@
 # Debug Content Architecture Redesign
 
-**Branch**: TBD (future PR)  
-**Goal**: Replace string parsing debug system with proper structured debug_info handling  
-**Priority**: Technical debt / architectural improvement  
-**Impact**: Internal code quality, no user-facing changes  
+**Branch**: TBD (future PR)
+**Goal**: Replace string parsing debug system with proper structured debug_info handling
+**Priority**: Technical debt / architectural improvement
+**Impact**: Internal code quality, no user-facing changes
 
 ## Problem Statement
 
@@ -34,7 +34,7 @@ No string parsing needed
 
 **1. String Parsing Functions Exist**
 - `_strip_debug_content()` - removes `[DEBUG_START]` blocks
-- `_strip_state_updates_only()` - removes `[STATE_UPDATES_PROPOSED]` blocks  
+- `_strip_state_updates_only()` - removes `[STATE_UPDATES_PROPOSED]` blocks
 - `_strip_other_debug_content()` - complex regex parsing
 
 **2. Test Evidence**
@@ -88,7 +88,7 @@ def get_narrative_for_display(story_text, debug_mode):
     # New campaigns: already clean
     if not contains_debug_tags(story_text):
         return story_text
-    
+
     # Old campaigns: apply string parsing
     if debug_mode:
         return strip_state_updates_only(story_text)
@@ -157,7 +157,7 @@ The prompts are ALREADY correctly instructing the AI to use structured debug_inf
   - [x] Verify game_state_instruction.md loads FIRST (highest priority)
   - [x] Add explicit examples showing WRONG vs RIGHT debug formatting
   - [x] Add emoji warnings (🚨) for critical rules
-  
+
 #### **IMPLEMENTATION:**
 
 **1. Added TOP-LEVEL Debug Rules Section**
@@ -270,7 +270,7 @@ processed_story = process_story_for_display(story, debug_mode)
 
 ### Prompt Files
 - `mvp_site/prompts/narrative_system_instruction.md`
-- `mvp_site/prompts/game_state_instruction.md` 
+- `mvp_site/prompts/game_state_instruction.md`
 - `mvp_site/prompts/mechanics_system_instruction.md`
 
 ### Code Files to Change
@@ -283,7 +283,7 @@ processed_story = process_story_for_display(story, debug_mode)
 ```python
 # These should be deleted:
 def _strip_debug_content(text: str) -> str
-def _strip_state_updates_only(text: str) -> str  
+def _strip_state_updates_only(text: str) -> str
 def _strip_other_debug_content(text: str) -> str
 
 # Complex regex patterns for parsing
@@ -335,7 +335,7 @@ assert response.narrative_text == "Story more story"  # No parsing
 - Current string parsing works as fallback
 - Can implement incrementally
 
-### Medium Risk  
+### Medium Risk
 - Prompt engineering may need iteration
 - AI might not follow new instructions immediately
 - Test suite needs significant updates
@@ -379,7 +379,7 @@ assert response.narrative_text == "Story more story"  # No parsing
 ### **Paradigm Shift Discovery**
 Agent 1's archaeology reveals the architecture is ALREADY CORRECT in the prompts:
 - ✅ Prompts instruct AI to use `debug_info` field
-- ✅ Prompts forbid debug content in `narrative` field  
+- ✅ Prompts forbid debug content in `narrative` field
 - ✅ Proper JSON schema is defined
 - ❌ But AI still generates [DEBUG_START] tags in narrative
 
@@ -525,17 +525,17 @@ The AI is correctly following instructions #2, #3, and #4, which explicitly tell
 - **✅ resources field**: AI putting resource tracking in dedicated field
 - **✅ debug_info minimal**: Only DM notes and rationale (as intended)
 
-**Major Breakthrough**: 
+**Major Breakthrough**:
 - Created dedicated always-visible fields instead of hiding in debug_info
 - AI immediately adopted the new schema structure
 - Clean separation between narrative (story) and meta content (session/planning/dice/resources)
 - Much more intuitive architecture - players always see what they need to see
 
-**Architecture Now Correct**: 
+**Architecture Now Correct**:
 ```json
 {
   "narrative": "clean story text only",
-  "session_header": "always visible player info", 
+  "session_header": "always visible player info",
   "planning_block": "always visible action options",
   "dice_rolls": ["always visible dice results"],
   "resources": "always visible resource tracking",
@@ -546,7 +546,7 @@ The AI is correctly following instructions #2, #3, and #4, which explicitly tell
 ## Notes
 
 - This is **technical debt**, not urgent bug fix
-- Current system works, just architecturally backwards  
+- Current system works, just architecturally backwards
 - Good candidate for dedicated PR with proper testing
 - Should be done when not under delivery pressure
 - Hybrid approach ensures zero disruption to existing campaigns

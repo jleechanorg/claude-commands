@@ -13,7 +13,7 @@ Hide alignment and Myers-Briggs references from player-visible narrative while k
 ### 1. Direct Alignment Fix
 - **Problem**: AI mentions "Lawful Good", "Chaotic Neutral", etc. in narrative text shown to players
 - **Solution**: Keep alignment/Myers-Briggs in game state for AI guidance, but hide from narrative
-- **Implementation**: 
+- **Implementation**:
   - Review all narrative generation prompts
   - Add explicit instructions to NEVER mention alignment terms in player-visible narrative
   - Keep alignment data in game state JSON for AI internal use

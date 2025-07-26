@@ -15,7 +15,7 @@ Investigate and fix suspected model cycling issues causing transient errors wher
    - Search for model switching logic in codebase
    - Identify where Gemini model selection occurs
    - Find retry mechanisms and error handling
-   
+
 2. **Review error patterns:**
    - Examine logs for model-related errors
    - Identify common failure scenarios
@@ -31,12 +31,12 @@ Investigate and fix suspected model cycling issues causing transient errors wher
    - Log every model selection decision
    - Track model switch triggers and timing
    - Record error types that cause cycling
-   
+
 2. **Create model cycling tracker:**
    - Add unique request IDs for tracing
    - Log model used for each request
    - Track retry attempts and model changes
-   
+
 3. **Error classification system:**
    - Categorize errors by type (API, model, network, etc.)
    - Identify which errors should trigger model cycling
@@ -47,12 +47,12 @@ Investigate and fix suspected model cycling issues causing transient errors wher
    - Test scenarios that commonly cause failures
    - Monitor model cycling behavior during errors
    - Verify if cycling occurs when expected
-   
+
 2. **Analyze cycling logic:**
    - Test model availability detection
    - Verify fallback model selection
    - Check retry timing and limits
-   
+
 3. **Identify root causes:**
    - Determine if cycling is happening at all
    - Check if wrong models are selected
@@ -64,12 +64,12 @@ Investigate and fix suspected model cycling issues causing transient errors wher
    - Improve error detection for cycling triggers
    - Optimize model selection algorithms
    - Adjust retry timing and strategies
-   
+
 2. **Enhanced error handling:**
    - Add specific error types that should trigger cycling
    - Implement progressive fallback strategy
    - Add circuit breaker for failing models
-   
+
 3. **Validation and testing:**
    - Test cycling under various error conditions
    - Verify retry success rates improve
@@ -79,7 +79,7 @@ Investigate and fix suspected model cycling issues causing transient errors wher
 
 ### Current Model Configuration:
 - **Primary model**: `gemini-2.5-flash`
-- **Test model**: `gemini-1.5-flash`  
+- **Test model**: `gemini-1.5-flash`
 - **Configuration location**: Check gemini_service.py and related files
 - **Environment variables**: API keys and model settings
 

@@ -53,7 +53,7 @@ When errors occur, automatically search for similar past issues:
 def handle_error(error_msg):
     # Search for similar errors
     memories = memory_integration.search_relevant_memory([error_msg])
-    
+
     # Add to error context
     if memories:
         print("Similar issues found:")
@@ -68,7 +68,7 @@ Check for repeated violations:
 def check_compliance_history(rule_type):
     # Search for past violations
     violations = memory_integration.search_relevant_memory([f"violation {rule_type}"])
-    
+
     if len(violations) > 3:
         return f"⚠️ Reminder: {rule_type} violated {len(violations)} times before"
     return None
@@ -86,7 +86,7 @@ The system automatically extracts:
 ### 2. Relevance Scoring
 Memories scored by:
 - **Name match**: 40% weight
-- **Type match**: 20% weight  
+- **Type match**: 20% weight
 - **Content match**: 30% weight
 - **Recency**: 10% weight (when timestamps available)
 

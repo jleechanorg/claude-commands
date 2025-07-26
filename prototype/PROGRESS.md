@@ -87,7 +87,7 @@ prototype/
    - Case-insensitive search
    - Simple confidence scoring
 
-2. **TokenValidator** 
+2. **TokenValidator**
    - Descriptor-based matching
    - Entity state detection
    - Reference position tracking

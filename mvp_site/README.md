@@ -98,7 +98,7 @@ This stack positions WorldArchitect.AI as a technically sophisticated yet mainta
 
 #### Testing Files
 - **Browser Tests**: `/testing_ui/` (project root) - Playwright browser automation tests
-- **HTTP Tests**: `/testing_http/` (project root) - HTTP API endpoint tests  
+- **HTTP Tests**: `/testing_http/` (project root) - HTTP API endpoint tests
 - **MVP Site Browser Tests**: `mvp_site/testing_ui/` - Browser tests specific to MVP site
 - **Integration Tests**: `mvp_site/test_integration/` - Cross-component integration tests
 - **Unit Tests**: `mvp_site/tests/` - Individual component unit tests

@@ -1,8 +1,8 @@
 # Sariel Campaign LLM Responses - Entity Tracking Analysis
 
-**Date**: 2025-07-01  
-**Campaign**: sariel_v2_001  
-**Branch**: jleechan/statesync7  
+**Date**: 2025-07-01
+**Campaign**: sariel_v2_001
+**Branch**: jleechan/statesync7
 **Purpose**: Document actual LLM responses showing entity tracking failures
 
 ## Executive Summary
@@ -18,7 +18,7 @@
 
 ### Test Environment Limitations
 - **Flask dependency issues** prevented real-time LLM response capture
-- **Gemini API 503 errors** blocked additional campaign replays  
+- **Gemini API 503 errors** blocked additional campaign replays
 - **Available data**: Entity tracking patterns + limited narrative examples
 
 ## Documented LLM Response Failures
@@ -45,7 +45,7 @@ Actual: Sariel acts alone, Cassian completely absent from narrative
 
 **Context**: Interactions 6 & 7 - Lady Cressida's Chambers
 - **Player Input**: "2" (continue/interact)
-- **Location**: Lady Cressida's Chambers  
+- **Location**: Lady Cressida's Chambers
 - **Expected Entities**: Lady Cressida Valeriana, Sariel
 - **Game State**: Lady Cressida should be present in her own chambers
 
@@ -81,13 +81,13 @@ Actual: Only Sariel present, Magister Kantos missing from archives
 
 ### **Working Examples** (Entity tracking successful):
 
-**Interaction 1**: 
+**Interaction 1**:
 - **Input**: "continue"
 - **Expected**: Sariel
 - **Result**: ✅ Success - Sariel properly tracked
 
 **Interactions 4 & 5**: Valerius's Study
-- **Input**: "2" & "1" 
+- **Input**: "2" & "1"
 - **Expected**: Sariel, Valerius
 - **Result**: ✅ Success - Both entities properly tracked
 - **Pattern**: Valerius consistently appears in his own study
@@ -155,7 +155,7 @@ Based on these documented failures, the 4 implemented mitigation strategies dire
 ### **Strategy Alignment with Failures**:
 
 1. **Entity Pre-Loading** → Addresses missing location NPCs
-2. **Validation with Retry** → Catches Cassian Problem failures  
+2. **Validation with Retry** → Catches Cassian Problem failures
 3. **Dual-Pass Generation** → Injects missing NPCs after first pass
 4. **Explicit Instructions** → Forces AI to acknowledge player references
 
@@ -178,7 +178,7 @@ Based on these documented failures, the 4 implemented mitigation strategies dire
 While complete LLM response capture was blocked by technical limitations, the available data provides **critical evidence** of the entity tracking crisis:
 
 - **50% desync rate confirmed** through statistical analysis
-- **The Cassian Problem documented** with specific failure examples  
+- **The Cassian Problem documented** with specific failure examples
 - **Clear patterns identified**: Player characters reliable, NPCs disappearing
 - **Mitigation strategies validated** against documented failure modes
 

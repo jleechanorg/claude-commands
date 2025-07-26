@@ -145,7 +145,7 @@ Based on grep results, these files reference parsing planning blocks from text:
    - test_planning_block_json_corruption_fix.py
    - test_planning_block_json_first_fix.py
    - Part of test_planning_block_enforcement.py (structured response tests)
-   
+
 2. **Overlapping enforcement tests**:
    - test_planning_block_enforcement.py has 15+ test methods
    - Many test similar scenarios with slight variations
@@ -201,11 +201,11 @@ Need to examine these files for narrative parsing:
    - JSON field updates
    - Mode-specific behavior
    - API failure handling
-   
+
 2. **test_planning_block_prompts.py** (current test_planning_block_simplified.py)
    - Prompt template testing
    - Keyword detection
-   
+
 3. **test_planning_blocks_ui.py** (keep as-is)
    - UI parsing and rendering
 
@@ -227,7 +227,7 @@ Successfully added robustness improvements for planning block edge case handling
 #### 1. Backend Validation (narrative_response_schema.py)
 Added comprehensive validation methods:
 - `_validate_string_field()` - Handles null/non-string values for all string fields
-- `_validate_list_field()` - Handles null/non-list values for list fields  
+- `_validate_list_field()` - Handles null/non-list values for list fields
 - `_validate_planning_block()` - Special validation for planning blocks with:
   - JSON detection warning
   - Length validation (warns if >5000 chars)

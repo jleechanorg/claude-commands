@@ -75,7 +75,7 @@ Transform planning block architecture from:
       "risk_level": "low"
     },
     "open_directly": {
-      "text": "Open Directly", 
+      "text": "Open Directly",
       "description": "Push the door open immediately",
       "risk_level": "medium"
     },
@@ -97,13 +97,13 @@ Transform planning block architecture from:
 - **Action**: Replace planning block format specification
 - **Test**: Mock LLM responses validate against new schema
 
-#### 1.2 Backend Response Processing  
+#### 1.2 Backend Response Processing
 - **File**: `mvp_site/gemini_service.py`
 - **Action**: Update planning block parsing/validation
 - **Test**: Unit tests for JSON structure validation
 
 #### 1.3 Game State Integration
-- **File**: `mvp_site/game_state.py` 
+- **File**: `mvp_site/game_state.py`
 - **Action**: Handle new planning block structure
 - **Test**: Integration tests for game state updates
 
@@ -131,7 +131,7 @@ Transform planning block architecture from:
 - **Test**: Screenshots show proper button rendering
 
 #### 3.3 Edge Case Testing
-- **File**: `testing_ui/test_planning_block_edge_cases.py` 
+- **File**: `testing_ui/test_planning_block_edge_cases.py`
 - **Action**: Add JSON validation and error handling tests
 - **Test**: Malformed JSON handled gracefully
 
@@ -154,7 +154,7 @@ Transform planning block architecture from:
 - Individual choice parsing
 - Error handling for malformed data
 
-### Layer 2: Integration Tests  
+### Layer 2: Integration Tests
 - Backend → Frontend data flow
 - Button generation from JSON
 - Choice selection and submission
@@ -175,7 +175,7 @@ Transform planning block architecture from:
 
 ### Core Implementation
 1. `mvp_site/game_state_instruction.md` - LLM format specification
-2. `mvp_site/gemini_service.py` - Backend JSON processing  
+2. `mvp_site/gemini_service.py` - Backend JSON processing
 3. `mvp_site/static/js/game.js` - Frontend JSON consumption
 4. `mvp_site/game_state.py` - Game state integration
 
@@ -194,13 +194,13 @@ Transform planning block architecture from:
 ## ⚡ EXECUTION SEQUENCE (TDD)
 
 1. **RED**: Write failing test for new JSON format
-2. **GREEN**: Implement minimal code to pass test  
+2. **GREEN**: Implement minimal code to pass test
 3. **REFACTOR**: Clean up implementation
 4. **REPEAT**: For each component layer
 
 ### Specific Order:
 1. Backend JSON processing (tests first)
-2. Frontend JSON consumption (tests first) 
+2. Frontend JSON consumption (tests first)
 3. Integration validation (tests first)
 4. Legacy cleanup and final validation
 
@@ -222,7 +222,7 @@ Transform planning block architecture from:
 **Risk**: Breaking existing functionality during migration
 **Mitigation**: TDD approach ensures each step validated
 
-**Risk**: Complex multi-layer change introduces subtle bugs  
+**Risk**: Complex multi-layer change introduces subtle bugs
 **Mitigation**: Comprehensive test coverage at all 4 layers
 
 **Risk**: JSON parsing edge cases not handled
@@ -249,7 +249,7 @@ If issues arise:
 ---
 
 **Status**: ✅ IMPLEMENTATION COMPLETE - JSON-Only Planning Block Migration
-**Branch**: feature/planningb-doublecheck  
+**Branch**: feature/planningb-doublecheck
 **PR**: #524 (scope expanded to comprehensive JSON migration)
 
 ---
@@ -265,17 +265,17 @@ If issues arise:
 ```json
 {
   "thinking": "The player approaches a mysterious door...",
-  "context": "Optional additional context about the scenario", 
+  "context": "Optional additional context about the scenario",
   "choices": {
     "examine_door": {
       "text": "Examine Door",
-      "description": "Look carefully for traps or mechanisms", 
+      "description": "Look carefully for traps or mechanisms",
       "risk_level": "low"
     },
     "open_directly": {
       "text": "Open Directly",
       "description": "Push the door open immediately",
-      "risk_level": "medium" 
+      "risk_level": "medium"
     }
   }
 }
@@ -297,7 +297,7 @@ If issues arise:
   - **REMOVED**: Legacy string format support
   - **ADDED**: Error logging for deprecated string format attempts
 
-#### **Phase 2: Frontend Adaptation (COMPLETE)**  
+#### **Phase 2: Frontend Adaptation (COMPLETE)**
 - ✅ **JavaScript JSON Processing**: `mvp_site/static/app.js`
   - **REMOVED**: Entire `parsePlanningBlocksString()` function and all regex parsing
   - **ENFORCED**: JSON-only input with error messages for string inputs
@@ -324,7 +324,7 @@ If issues arise:
 #### **Core Implementation**
 1. `mvp_site/prompts/game_state_instruction.md` - LLM format specification ✅
 2. `mvp_site/narrative_response_schema.py` - Backend JSON validation ✅
-3. `mvp_site/static/app.js` - Frontend JSON consumption ✅  
+3. `mvp_site/static/app.js` - Frontend JSON consumption ✅
 4. `mvp_site/gemini_service.py` - Service layer validation ✅
 
 #### **Test Infrastructure**
@@ -344,7 +344,7 @@ If issues arise:
 
 ### 🎯 **SUCCESS CRITERIA MET**
 
-- ✅ **All existing tests pass** with new JSON format  
+- ✅ **All existing tests pass** with new JSON format
 - ✅ **Planning blocks render as proper HTML buttons** (no string parsing)
 - ✅ **Choice selection functionality maintained** and enhanced
 - ✅ **Edge cases handled robustly** (XSS, unicode, empty choices, malformed data)
@@ -357,7 +357,7 @@ If issues arise:
 
 #### **Developer Experience**
 - **Clear Structure**: JSON format is self-documenting and type-safe
-- **No Parsing Ambiguity**: Eliminates regex complexity and edge cases  
+- **No Parsing Ambiguity**: Eliminates regex complexity and edge cases
 - **Better Debugging**: Structured data easy to inspect and validate
 - **IDE Support**: JSON schema enables autocomplete and validation
 
@@ -367,7 +367,7 @@ If issues arise:
 - **Security**: Enhanced XSS prevention and content sanitization
 - **Performance**: Eliminated regex parsing overhead
 
-#### **Maintainability** 
+#### **Maintainability**
 - **Single Format**: No dual compatibility complexity
 - **Clear Validation**: Explicit JSON schema requirements
 - **Extensible**: Easy to add new choice metadata (risk_level, analysis, etc.)

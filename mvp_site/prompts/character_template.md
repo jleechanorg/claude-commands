@@ -29,7 +29,7 @@ This document defines the standard for the Player Character (PC) and all major N
 ## IV. Backstory
 - **Defining Moment:** (A key past event that shaped who they are today.)
 - **Relevant History:** (A brief summary of their life leading up to the present.)
-- **Secrets:** (At least one significant secret they are hiding from the player or the world.) 
+- **Secrets:** (At least one significant secret they are hiding from the player or the world.)
 
 ## V. Game Mechanics
 - **Feats:** (List of special talents or areas of expertise that provide unique advantages.)

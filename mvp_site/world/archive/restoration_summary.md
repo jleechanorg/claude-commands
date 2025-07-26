@@ -7,7 +7,7 @@ The user correctly identified that content was deleted from `world_assiah_compre
 
 ### 1. Major Factions (3 factions restored)
 - **The Sylvan Remnant (Elves)** - Complete faction with 3 sub-factions
-- **The Glimmering Combine (Gnomes)** - Complete faction with 3 sub-factions  
+- **The Glimmering Combine (Gnomes)** - Complete faction with 3 sub-factions
 - **The Adamant Vault (Dwarves)** - Complete faction with 3 sub-factions
 
 ### 2. Minor Factions (restored)

@@ -9,7 +9,7 @@ This document provides comprehensive documentation for all available slash comma
 #### `/fake`
 **Purpose**: Comprehensive fake code detection using command composition
 
-**Usage**: 
+**Usage**:
 ```
 /fake
 ```
@@ -18,14 +18,14 @@ This document provides comprehensive documentation for all available slash comma
 
 **Behavior**:
 - Combines architectural analysis, deep thinking, devil's advocate, and diligent review
-- Compares local branch vs main and remote PR context  
+- Compares local branch vs main and remote PR context
 - Detects fake implementations, demo code, placeholder comments, duplicate protocols
 - Provides structured audit report with specific remediation guidance
 
 **Detection Targets**:
 - Placeholder comments (`# Note: In the real implementation`)
 - Demo files that don't actually work
-- Python files simulating .md logic  
+- Python files simulating .md logic
 - Duplicate systematic protocols
 - Template responses without real analysis
 - Mock implementations that fake functionality
@@ -48,7 +48,7 @@ Assistant: Running comprehensive fake code audit...
 #### `/tdd` or `/rg`
 **Purpose**: Execute Test-Driven Development (red-green-refactor) workflow
 
-**Usage**: 
+**Usage**:
 ```
 /tdd
 /rg
@@ -187,7 +187,7 @@ Provides detailed breakdown including:
 ```
 Session Context Usage: ~75-85% used
 - System messages: ~10-15%
-- File operations: ~30-40%  
+- File operations: ~30-40%
 - Conversation: ~25-35%
 - Tool outputs: ~10-15%
 

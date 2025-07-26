@@ -8,4 +8,3 @@ Generated: 2025-07-04T19:33:23.375881
 - Sariel v2 found: No ❌
 
 ## Top 3 Real Campaigns with Desync Issues
-

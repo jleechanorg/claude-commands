@@ -111,7 +111,7 @@ Combined:        $0.0625 total (+150%)
 
 ### Optimization Targets
 1. **Reduce token usage** in structured prompts
-2. **Cache validation results** for repeated entities  
+2. **Cache validation results** for repeated entities
 3. **Batch API calls** for multi-turn narratives
 
 ### Monitoring Metrics

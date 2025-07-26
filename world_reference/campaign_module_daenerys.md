@@ -22,15 +22,15 @@ This campaign begins in this single, defining moment, with the eyes of the world
 
 **Your Character:**
 
-* **Name:** Daenerys Targaryen  
-* **Age:** 17  
-* **Class:** Level 1 Dragon Queen (a unique class blending Warlord and Sorcerer abilities)  
+* **Name:** Daenerys Targaryen
+* **Age:** 17
+* **Class:** Level 1 Dragon Queen (a unique class blending Warlord and Sorcerer abilities)
 * **Background:** You are caught between two warring identities. The **"Mother"**—the Breaker of Chains, the compassionate liberator who bleeds for her people. And the **"Dragon"**—the last Targaryen, a being of fire and blood whose ultimate power lies in a force of pure, untamed destruction. This moment is forcing you to choose which part of your soul will define your reign.
 
 **Gear & Assets:**
 
-* **Drogon, Rhaegal, and Viserion:** Your three dragons, now the size of small horses, are becoming wilder and more dangerous by the day.  
-* **The Unsullied:** 8,000 of the world's most disciplined soldiers, loyal only to you.  
+* **Drogon, Rhaegal, and Viserion:** Your three dragons, now the size of small horses, are becoming wilder and more dangerous by the day.
+* **The Unsullied:** 8,000 of the world's most disciplined soldiers, loyal only to you.
 * **Your Advisors:** Ser Barristan Selmy and Ser Jorah Mormont (your protectors and counselors), Missandei (your trusted handmaiden), and Daario Naharis (your charismatic mercenary champion and lover).
 
 **Starting Abilities:** You possess a powerful **Force of Personality** that can sway crowds and intimidate enemies. You have an innate, magical **Bond with your Dragons**, allowing you to communicate with them on an empathic level. You are fluent in the Common Tongue, High Valyrian, and Dothraki.
@@ -61,15 +61,15 @@ You are now caught between your past choice and your future survival. Do you con
 
 **Your Character:**
 
-* **Name:** Daenerys Targaryen  
-* **Age:** 19  
-* **Class:** Level 1 Queen / Diplomat  
+* **Name:** Daenerys Targaryen
+* **Age:** 19
+* **Class:** Level 1 Queen / Diplomat
 * **Background:** You have spent two years trying to be a just ruler, a mother to your people. You have learned the hard lessons of compromise, law, and politics. But you feel a growing frustration, a sense that your attempts at peace are being mistaken for weakness. You fear that by chaining your dragons, you have chained the very part of yourself that made you a queen in the first place.
 
 **Gear & Assets:**
 
-* **Rhaegal and Viserion:** Chained in the catacombs, they are growing larger and more resentful by the day.  
-* **The Unsullied & The Second Sons:** Your loyal army and mercenary company, though their morale has been eroded by the long, frustrating shadow war.  
+* **Rhaegal and Viserion:** Chained in the catacombs, they are growing larger and more resentful by the day.
+* **The Unsullied & The Second Sons:** Your loyal army and mercenary company, though their morale has been eroded by the long, frustrating shadow war.
 * **Your Council:** Missandei, Grey Worm, and Daario Naharis are your loyal core, but you are now surrounded by Meereenese nobles whose true loyalties are uncertain.
 
 **Starting Abilities:** Your skills in **Diplomacy, Persuasion, and Insight** are at their peak. You are a master of negotiation and political maneuvering. However, your connection to your dragons has weakened, and your own inner "fire" feels distant and suppressed.
@@ -100,16 +100,15 @@ You are now caught between the peace of your tyranny and the call of your birthr
 
 **Your Character:**
 
-* **Name:** Daenerys Targaryen  
-* **Age:** 19  
-* **Class:** Level 1 Dragon Empress / Warlord  
+* **Name:** Daenerys Targaryen
+* **Age:** 19
+* **Class:** Level 1 Dragon Empress / Warlord
 * **Background:** You have proven that "Fire and Blood" is the most effective tool of governance. You have achieved perfect order and security. But in doing so, you have sacrificed your own identity as a liberator. You are haunted by the memory of the "Mhysa" you once were, and you see the fear, not love, in the eyes of everyone around you. You are becoming your ancestors, and you do not know if that is a victory or a curse.
 
 **Gear & Assets:**
 
-* **Your Dragons:** Drogon, Rhaegal, and Viserion are now fully grown, terrifying engines of war that answer only to you.  
-* **Your Armies:** A massive, fanatically loyal, and battle-hardened force of Unsullied, Dothraki screamers, and freedmen soldiers.  
+* **Your Dragons:** Drogon, Rhaegal, and Viserion are now fully grown, terrifying engines of war that answer only to you.
+* **Your Armies:** A massive, fanatically loyal, and battle-hardened force of Unsullied, Dothraki screamers, and freedmen soldiers.
 * **Your Dominion:** You are the absolute ruler of Slaver's Bay, your treasury overflowing with the seized wealth of the former masters.
 
 **Starting Abilities:** Your abilities of **Command and Intimidation** are nearly absolute. Your **Dragon Bond** is at its peak, allowing you to direct your dragons in battle with perfect, terrifying precision. However, your connection to the "people" is gone; your skills in empathy and persuasion have atrophied, replaced by the cold calculus of a conqueror.
-

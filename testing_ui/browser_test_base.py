@@ -197,7 +197,7 @@ class BrowserTestBase:
                 enabled: true,
                 userId: '{TEST_USER_ID}'
             }};
-            
+
             // Hide auth view and show dashboard
             const authView = document.getElementById('auth-view');
             const dashboardView = document.getElementById('dashboard-view');
@@ -205,10 +205,10 @@ class BrowserTestBase:
                 authView.classList.remove('active-view');
                 dashboardView.classList.add('active-view');
             }}
-            
+
             // Fire test mode ready event
-            window.dispatchEvent(new CustomEvent('testModeReady', {{ 
-                detail: {{ userId: '{TEST_USER_ID}' }} 
+            window.dispatchEvent(new CustomEvent('testModeReady', {{
+                detail: {{ userId: '{TEST_USER_ID}' }}
             }}));
         """)
 

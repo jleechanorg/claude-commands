@@ -225,7 +225,7 @@ Existing tests work unchanged - just change the TEST_MODE:
 # Before (mock mode)
 TEST_MODE=mock python test_campaign.py
 
-# After (capture mode)  
+# After (capture mode)
 TEST_MODE=capture python test_campaign.py
 ```
 
@@ -301,11 +301,11 @@ Set up automated analysis:
   run: |
     export TEST_MODE=capture
     python -m pytest tests/integration/
-    
+
 - name: Analyze captures
   run: |
     python -m mvp_site.testing_framework.capture_cli analyze --output capture_report.md
-    
+
 - name: Cleanup old captures
   run: |
     python -m mvp_site.testing_framework.capture_cli cleanup --days 1

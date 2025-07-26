@@ -86,10 +86,10 @@ class StructuredFieldsTest(BrowserTestBase):
             """
             # Try to use existing campaign first
             print("🔍 Looking for existing test campaign...")
-            
+
             # Check for campaigns
             page.wait_for_timeout(2000)  # Wait for campaigns to load
-            
+
             # Debug: Log the campaigns list HTML
             try:
                 campaigns_list = page.locator("#campaign-list")
@@ -98,29 +98,29 @@ class StructuredFieldsTest(BrowserTestBase):
                     print(f"📋 Campaign list HTML (first 500 chars): {list_html[:500]}...")
             except:
                 print("⚠️ Could not get campaign list HTML")
-            
+
             # Look for campaign items - based on actual DOM structure
             campaign_selectors = [
                 ".list-group-item[data-campaign-id]",  # Primary selector with campaign ID
                 ".list-group-item.list-group-item-action",  # Fallback
                 "[data-campaign-id]"  # Any element with campaign ID
             ]
-            
+
             found_campaign = False
             for selector in campaign_selectors:
                 elements = page.locator(selector)
                 count = elements.count()
                 if count > 0:
                     print(f"✅ Found {count} campaigns with selector: {selector}")
-                    
+
                     # Get first campaign element
                     campaign_elem = elements.first
-                    
+
                     # Try to extract campaign ID or text
                     try:
                         campaign_text = campaign_elem.text_content()
                         print(f"   Campaign text: {campaign_text}")
-                        
+
                         # Check for data-campaign-id attribute
                         campaign_id = campaign_elem.get_attribute("data-campaign-id")
                         if campaign_id:
@@ -129,27 +129,27 @@ class StructuredFieldsTest(BrowserTestBase):
                             print("   ⚠️ No data-campaign-id attribute found")
                     except Exception as e:
                         print(f"   ⚠️ Error extracting campaign info: {e}")
-                    
+
                     # Click the campaign
                     print("🖱️ Clicking campaign...")
                     campaign_elem.click()
                     found_campaign = True
                     print("⏳ Waiting for campaign to load...")
                     page.wait_for_timeout(5000)  # Give time for the campaign to load
-                    
+
                     # Take screenshot after clicking
                     self.take_screenshot(page, "02_after_campaign_click")
-                    
+
                     # Check current URL
                     current_url = page.url
                     print(f"📍 Current URL after click: {current_url}")
                     break
-            
+
             if not found_campaign:
                 # Create new campaign only if none found
                 print("🎮 Creating new test campaign for structured fields...")
                 test_campaign_name = f"Structured Fields Test {int(time.time())}"
-                
+
                 if not self._create_test_campaign(page, test_campaign_name):
                     print("❌ Failed to create test campaign")
                     return False
@@ -158,7 +158,7 @@ class StructuredFieldsTest(BrowserTestBase):
                 if "browser_test_campaign" in str(campaign_id):
                     print("📌 Found mock campaign, creating real campaign instead...")
                     test_campaign_name = f"Structured Fields Test {int(time.time())}"
-                    
+
                     if not self._create_test_campaign(page, test_campaign_name):
                         print("❌ Failed to create test campaign")
                         return False

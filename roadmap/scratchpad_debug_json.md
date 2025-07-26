@@ -15,12 +15,12 @@ Fix incomplete JSON responses from Gemini API when using JSON response mode for 
 1. **Identified Root Cause**
    - JSON mode with high token limits (50k) leads to truncated responses
    - Gemini doesn't gracefully handle JSON completion when hitting limits
-   
+
 2. **Implemented Token Limit Reduction**
    - Added `JSON_MODE_MAX_TOKENS = 20000` for JSON mode specifically
    - Reduced from 30k to 20k for better reliability
    - Updated `_call_gemini_api_with_model_cycling` to use reduced limit in JSON mode
-   
+
 3. **Enhanced JSON Parsing with Recovery**
    - Created `RobustJSONParser` class with multi-strategy parsing
    - Handles various truncation scenarios gracefully
@@ -76,7 +76,7 @@ Fix incomplete JSON responses from Gemini API when using JSON response mode for 
 ### Final Test Results (2025-01-03)
 ✅ **All Tests Passing:**
 - `test_robust_json_parser.py`: 14/14 tests passing
-- `test_incomplete_json_recovery.py`: 10/10 tests passing  
+- `test_incomplete_json_recovery.py`: 10/10 tests passing
 - `test_json_mode_token_limits.py`: 5/5 tests passing
 - `test_gemini_service.py`: 17/17 tests passing
 - `test_api_routes.py`: 17/17 tests passing

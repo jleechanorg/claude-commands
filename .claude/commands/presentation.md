@@ -87,7 +87,7 @@ while not user_satisfied:
     present_outline(outline)
     ask_clarifying_questions()
     outline = refine_based_on_feedback(outline)
-    
+
 # Phase 3: Quality review
 /thinku analyze presentation outline for completeness and flow
 /reviewdeep evaluate presentation from multiple perspectives

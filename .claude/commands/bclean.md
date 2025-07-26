@@ -14,7 +14,7 @@
 
 3. **Cross-Reference**: Identify local branches that do NOT have corresponding open GitHub PRs
 
-4. **Safety Check**: 
+4. **Safety Check**:
    - ⚠️ **NEVER delete current branch**
    - ⚠️ **NEVER delete main/master branches**
    - ⚠️ **NEVER delete worktree branches** (check `git worktree list`)

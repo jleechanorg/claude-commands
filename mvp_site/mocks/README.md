@@ -75,7 +75,7 @@ class TestCampaignCreation(unittest.TestCase):
     def setUp(self):
         self.firestore = MockFirestoreService()
         self.gemini = MockGeminiService()
-    
+
     def test_create_campaign(self):
         # Test using mocks instead of real services
         campaign_id = self.firestore.create_campaign(
@@ -97,7 +97,7 @@ def test_campaign_workflow():
     # Use mock service with fixture data
     mock_service = MockFirestoreService()
     campaign_data = get_sample_campaign()
-    
+
     # Test full workflow with predictable data
     result = mock_service.create_campaign(**campaign_data)
     assert result is not None

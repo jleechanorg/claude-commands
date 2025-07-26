@@ -73,7 +73,7 @@ import sys, json
 try:
     data = json.load(sys.stdin)
     print('Top-level keys:', sorted(data.keys()))
-    
+
     # Check for fields at top level
     print('\\nTop-level structured fields:')
     for field in ['dice_rolls', 'resources', 'planning_block', 'session_header']:
@@ -81,13 +81,13 @@ try:
             print(f'  ✓ {field}: {type(data[field]).__name__}')
         else:
             print(f'  ✗ {field}: not found')
-    
+
     # Check debug_info
     if 'debug_info' in data:
         print('\\ndebug_info contents:')
         for field in data['debug_info']:
             print(f'  - {field}: {type(data[\"debug_info\"][field]).__name__}')
-        
+
         # Check for nested fields
         print('\\nNested structured fields in debug_info:')
         for field in ['dice_rolls', 'resources', 'dm_notes', 'state_rationale']:

@@ -25,7 +25,7 @@ get_changed_files() {
 create_analysis_file() {
     local analysis_file="$1"
     local changed_files="$2"
-    
+
     cat > "$analysis_file" <<EOF
 # Code Authenticity Analysis
 
@@ -58,7 +58,7 @@ EOF
     local changed_files_array
     if [[ -n "$changed_files" ]]; then
         mapfile -d '' -t changed_files_array < <(printf '%s' "$changed_files")
-        
+
         if ((${#changed_files_array[@]})); then
             for file in "${changed_files_array[@]}"; do
                 if [[ -n "$file" && -f "$file" ]]; then
@@ -78,7 +78,7 @@ EOF
             done
         fi
     fi
-    
+
     cat >> "$analysis_file" <<EOF
 
 ## Analysis Request
@@ -103,11 +103,11 @@ EOF
 # Use Claude to analyze the code
 analyze_with_claude() {
     local analysis_file="$1"
-    
+
     # Try to use Claude Code CLI to analyze the file
     if command -v claudepw &> /dev/null; then
         echo -e "${YELLOW}🔍 Analyzing code with Claude LLM...${NC}"
-        
+
         # Use claudepw to analyze the markdown file with permissions skipped
         claudepw --dangerously-skip-permissions --file "$analysis_file" --prompt "Analyze this code for fake/demo patterns as described in the file." 2>>"$analysis_file.error" || {
             echo -e "${YELLOW}⚠️  Claude CLI not available or encountered an error. Check $analysis_file.error for details.${NC}"
@@ -115,7 +115,7 @@ analyze_with_claude() {
         }
     elif command -v claude &> /dev/null; then
         echo -e "${YELLOW}🔍 Analyzing code with Claude LLM...${NC}"
-        
+
         # Fallback to regular claude if claudepw not available
         claude --dangerously-skip-permissions --file "$analysis_file" --prompt "Analyze this code for fake/demo patterns as described in the file." 2>>"$analysis_file.error" || {
             echo -e "${YELLOW}⚠️  Claude CLI not available or encountered an error. Check $analysis_file.error for details.${NC}"
@@ -130,30 +130,30 @@ analyze_with_claude() {
 # Main function
 main() {
     echo -e "${GREEN}🔍 Checking code authenticity with LLM analysis...${NC}"
-    
+
     # Get changed files
     changed_files=$(get_changed_files)
-    
+
     if [[ -z "$changed_files" ]]; then
         echo "✅ No code files changed"
         return 0
     fi
-    
+
     # Create temporary analysis file
     analysis_file=$(mktemp "/tmp/code_analysis_XXXXXX.md")
-    
+
     # Set up cleanup trap
     trap 'rm -f "$analysis_file" "$analysis_file.error"' EXIT
-    
+
     # Create the analysis markdown
     create_analysis_file "$analysis_file" "$changed_files"
-    
+
     echo "📝 Created analysis file: $analysis_file"
     echo "Files to analyze:"
     if [[ -n "$changed_files" ]]; then
         local changed_files_array
         mapfile -d '' -t changed_files_array < <(printf '%s' "$changed_files")
-        
+
         if ((${#changed_files_array[@]})); then
             for file in "${changed_files_array[@]}"; do
                 if [[ -n "$file" && -f "$file" ]]; then
@@ -166,20 +166,20 @@ main() {
             done
         fi
     fi
-    
+
     # Analyze with Claude
     if analysis_result=$(analyze_with_claude "$analysis_file"); then
         echo ""
         echo "Analysis Result:"
         echo "$analysis_result"
-        
+
         # Check if fake code was detected
         if echo "$analysis_result" | grep -q "🚨 FAKE CODE DETECTED"; then
             echo -e "\n${RED}🚨 Fake code patterns detected!${NC}"
-            
+
             # Call /learn to document the patterns
             echo -e "${YELLOW}📚 Calling /learn to document fake code patterns...${NC}"
-            
+
             # Try to call the learn command
             if [[ -f "./claude_command_scripts/commands/learn.sh" ]]; then
                 temp_file=$(mktemp)
@@ -191,7 +191,7 @@ main() {
             elif command -v claude &> /dev/null; then
                 claude --dangerously-skip-permissions --prompt "/learn Fake code patterns detected in push: $analysis_result"
             fi
-            
+
             echo -e "\n${YELLOW}⚠️  Consider reviewing the flagged code before pushing${NC}"
             return 1  # Warning level
         else

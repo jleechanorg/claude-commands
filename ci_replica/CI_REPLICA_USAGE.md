@@ -90,7 +90,7 @@ This directory contains three comprehensive scripts designed to replicate the Gi
 Based on `.github/workflows/test.yml`:
 - **OS**: Ubuntu Latest
 - **Python**: 3.11
-- **Environment Variables**: 
+- **Environment Variables**:
   - `CI=true`
   - `GITHUB_ACTIONS=true`
   - `TESTING=true`

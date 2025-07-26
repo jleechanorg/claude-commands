@@ -12,7 +12,7 @@ Address the low-priority Copilot comments from PR #278 to improve code quality a
 
 ### 2. Line 154: Precompile regex patterns
 **Location**: `mvp_site/narrative_response_schema.py:154`
-**Current**: 
+**Current**:
 ```python
 pattern = r'```\s*\n?(.*?)\n?```'
 match = re.search(pattern, response_text, re.DOTALL)
@@ -34,7 +34,7 @@ NARRATIVE_PATTERN = re.compile(r'"narrative"\s*:\s*"([^"]*(?:\\.[^"]*)*)"')
 ### 4. Line 226: Safer JSON cleanup approach
 **Location**: `mvp_site/narrative_response_schema.py:218-226`
 **Current**: Multiple regex substitutions to clean JSON-like text
-**Concerns**: 
+**Concerns**:
 - Could potentially corrupt valid narrative text that happens to contain JSON-like patterns
 - The cleanup is aggressive and might remove legitimate brackets/braces from narrative
 
@@ -83,7 +83,7 @@ NARRATIVE_PATTERN = re.compile(r'"narrative"\s*:\s*"([^"]*(?:\\.[^"]*)*)"')
 
 ### 2. Regex Patterns Found
 - Line 145: `r'```json\s*\n?(.*?)\n?```'` - for JSON markdown blocks
-- Line 153: `r'```\s*\n?(.*?)\n?```'` - for generic markdown blocks  
+- Line 153: `r'```\s*\n?(.*?)\n?```'` - for generic markdown blocks
 - Line 196: `r'"narrative"\s*:\s*"([^"]*(?:\\.[^"]*)*)"'` - for narrative extraction
 - Multiple patterns in lines 219-225 for JSON cleanup
 

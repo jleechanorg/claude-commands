@@ -59,8 +59,6 @@ class TestComprehensiveSyntax(unittest.TestCase):
 
         # Then test import
         try:
-
-
             # Test basic instantiation
             gs = GameState()
             self.assertIsNotNone(gs)
@@ -102,13 +100,9 @@ class TestComprehensiveSyntax(unittest.TestCase):
         try:
             # Add parent directory to path for imports
 
-
-
             sys.path.insert(
                 0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             )
-
-
 
             gs = GameState()
 

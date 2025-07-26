@@ -39,7 +39,7 @@ Both AIs iterate until reaching a consensus on:
 ## Example Dialogue Template
 
 ```
-Claude: "For feature X, I see we have similar patterns in Y and Z that evolved from strings to JSON. 
+Claude: "For feature X, I see we have similar patterns in Y and Z that evolved from strings to JSON.
         Should we start with Pydantic models?"
 
 Gemini: "Yes, use Pydantic with versioning..."

@@ -74,10 +74,10 @@ if [ -f ".claude/commands/pr.md" ] && [ -x "./claude_command_scripts/pr.sh" ]; t
     ./claude_command_scripts/pr.sh
 else
     echo "⚠️ /pr command or script not found or not executable, creating PR manually..."
-    
+
     # Push the branch
     git push -u origin "$BRANCH_NAME"
-    
+
     # Create PR using gh
     gh pr create --title "Headless: $(echo "$PROMPT" | cut -c1-50)..." --body "$(cat <<EOF
 ## Automated Headless Development
@@ -105,7 +105,7 @@ cd ..
 
 **Enhanced Features**:
 - ✅ **Detailed Planning**: Creates comprehensive implementation plan (from `/handoff`)
-- ✅ **Isolated Environment**: Separate git worktree prevents conflicts  
+- ✅ **Isolated Environment**: Separate git worktree prevents conflicts
 - ✅ **User Control**: Review generated plan before execution
 - ✅ **Rich Context**: Full prompt with specifications and requirements
 - ✅ **Copy-Paste Ready**: Generated command with all context included
@@ -120,7 +120,7 @@ cd ..
 **Example Usage**:
 ```bash
 /headless "Add user authentication system with login/logout functionality"
-/headless "Fix the responsive design issues on mobile devices"  
+/headless "Fix the responsive design issues on mobile devices"
 /headless "Implement automated testing for the payment processing module"
 ```
 

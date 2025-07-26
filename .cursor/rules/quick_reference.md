@@ -8,7 +8,7 @@
 - `/optimize` - Code/file optimization following user preferences
 - `/integrate` - Git integration workflow (fresh branch from main)
 
-### Project Management  
+### Project Management
 - `/milestones N` - Break work into N specific milestones
 - `/milestones suggest` - Analyze and suggest optimal milestone breakdown
 - `/scratchpad` - Create/update work-in-progress planning documents

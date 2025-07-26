@@ -7,7 +7,6 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from mvp_site.testing_framework.mock_provider import MockServiceProvider
 from mvp_site.testing_framework.simple_mock_provider import SimpleMockServiceProvider
 
 # Add the project root to Python path
@@ -26,6 +25,7 @@ from mvp_site.testing_framework.real_provider import RealServiceProvider
 # Get the MockServiceProvider class that the factory actually uses
 try:
     from mvp_site.testing_framework.factory import ServiceProviderFactory
+
     factory = ServiceProviderFactory()
     from mvp_site.testing_framework.mock_provider import (
         MockServiceProvider as OriginalMockServiceProvider,
@@ -37,11 +37,13 @@ try:
         from mvp_site.testing_framework.simple_mock_provider import (
             SimpleMockServiceProvider,
         )
+
         MockProviderClass = SimpleMockServiceProvider
 except ImportError:
     from mvp_site.testing_framework.simple_mock_provider import (
         SimpleMockServiceProvider,
     )
+
     MockProviderClass = SimpleMockServiceProvider
 
 

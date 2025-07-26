@@ -5,11 +5,11 @@ Provides helpers for gradual migration and backwards compatibility.
 
 import os
 import sys
+import time
 from typing import Any
 from unittest.mock import patch
 
 from testing_framework.integration_utils import update_test_imports
-import time
 
 # Add the project root to the path for imports
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -269,7 +269,6 @@ class TestResourceManager:
         """Create a test-specific collection name."""
         if self.provider.is_real_service:
             # Real mode - use unique names
-
 
             collection_name = f"test_{base_name}_{int(time.time())}"
         else:

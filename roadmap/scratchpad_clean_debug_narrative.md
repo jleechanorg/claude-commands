@@ -1,6 +1,6 @@
 # Scratchpad: Clean Debug/Narrative Separation
 
-**Branch**: update/clean-debug-narrative-separation  
+**Branch**: update/clean-debug-narrative-separation
 **Goal**: Remove outdated pre-JSON mode references and ensure debug content is never placed in narrative fields
 
 ## Problem Analysis
@@ -13,7 +13,7 @@
 
 ### Forbidden Content in Narrative Field
 - ❌ [DEBUG_START]...[DEBUG_END] blocks
-- ❌ [DEBUG_STATE_START]...[DEBUG_STATE_END] blocks  
+- ❌ [DEBUG_STATE_START]...[DEBUG_STATE_END] blocks
 - ❌ [DEBUG_ROLL_START]...[DEBUG_ROLL_END] blocks
 - ❌ [STATE_UPDATES_PROPOSED]...[END_STATE_UPDATES_PROPOSED] blocks
 - ❌ Any debug tags or markers
@@ -71,7 +71,7 @@
 1. **mechanics_system_instruction.md** (line 158):
    - Removed reference to "previously [STATE_UPDATES_PROPOSED] block"
    - Clarified that state updates go in JSON state_updates field
-   
+
 2. **game_state_instruction.md**:
    - Updated line 621 to reference state_updates field instead of block
    - Converted 5 examples from old block format to proper JSON format:
@@ -97,7 +97,7 @@ Key files to update:
 ### Phase 4: Implementation Updates
 1. **Backend Validation**
    - [ ] Add validation to ensure narrative field is clean
-   - [ ] Strip any debug tags if they slip through  
+   - [ ] Strip any debug tags if they slip through
    - [ ] Log warnings when debug content detected in narrative
 
 2. **Frontend Safety**

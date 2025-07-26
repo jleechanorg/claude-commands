@@ -3,14 +3,13 @@
 Integration tests for world_loader.py using the actual implementation.
 """
 
+import importlib
 import os
 import shutil
 import sys
 import tempfile
 import unittest
 from unittest.mock import patch
-
-import importlib
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -72,7 +71,6 @@ class TestWorldLoaderIntegration(unittest.TestCase):
         mock_exists.side_effect = exists_side_effect
 
         # Reload the module to trigger path detection with mock
-
 
         importlib.reload(world_loader)
 

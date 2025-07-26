@@ -80,7 +80,7 @@ if [ $STAGE2_SKIPPED -eq 0 ]; then
 
     NO_PR_BRANCHES_TO_DELETE=()
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-    
+
     # Exclude protected branches AND the current branch from the list to check
     LOCAL_BRANCHES_TO_CHECK=$(git branch --format='%(refname:short)' | grep -vE "$PROTECTED_BRANCHES|${CURRENT_BRANCH}")
 

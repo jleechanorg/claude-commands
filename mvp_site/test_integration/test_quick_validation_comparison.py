@@ -7,13 +7,12 @@ Runs fewer iterations for faster results.
 import json
 import os
 import sys
+import tempfile
 import time
 import unittest
 from datetime import datetime
 
 import logging_util
-
-import tempfile
 
 # Add the project root to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -141,7 +140,6 @@ class TestQuickValidationComparison(unittest.TestCase):
     def _save_results(self, results: dict):
         """Save results to file"""
         # Use temporary directory for test outputs
-
 
         temp_dir = tempfile.mkdtemp(prefix="cassian_test_")
 

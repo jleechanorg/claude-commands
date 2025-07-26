@@ -55,11 +55,11 @@ class TestTimePressure(unittest.TestCase):
         self.game_state = GameState()
         self.gemini_service = GeminiService()
         # Setup test data
-        
+
     def test_time_sensitive_events_tracked(self):
         # Should fail initially
         # Test implementation here
-        
+
     # Additional tests...
 ```
 

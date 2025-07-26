@@ -4,7 +4,7 @@
 
 **Action**: List EVERY comment individually, apply changes, commit, and post replies to show resolution
 
-**Usage**: 
+**Usage**:
 - `/review` - Automatically reviews the PR associated with current branch
 - `/review [PR#]` - Reviews specific PR number
 - (automatically enables ultrathink mode for thorough analysis)
@@ -24,7 +24,7 @@
    - If no PR found, report "No PR found for current branch [branch-name]"
    - If multiple PRs found, use the most recent (first in list)
 
-**Enhanced Implementation**: 
+**Enhanced Implementation**:
 1. **PR Content Validation** (CRITICAL FIRST STEP):
    - Use `gh api repos/owner/repo/pulls/<PR#>/files --jq '.[].filename'` to get actual PR files
    - Compare PR contents against local implementation claims
@@ -75,7 +75,7 @@
 
 **Comment Reply Protocol**:
 - ✅ **RESOLVED**: Issue completely fixed with code changes
-- 🔄 **PARTIALLY ADDRESSED**: Some progress made, more work needed  
+- 🔄 **PARTIALLY ADDRESSED**: Some progress made, more work needed
 - 📝 **ACKNOWLEDGED**: Comment noted, will address in future work
 - ❌ **DECLINED**: Intentionally not implementing with reasoning
 - 🤔 **NEEDS CLARIFICATION**: Requires more information from commenter

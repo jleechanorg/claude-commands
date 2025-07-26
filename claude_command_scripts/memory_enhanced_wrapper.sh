@@ -19,11 +19,11 @@ ARGS="$*"
 get_memory_context() {
     local cmd="$1"
     local args="$2"
-    
+
     # Use environment variables to safely pass arguments
     export MEMORY_CMD="$cmd"
     export MEMORY_ARGS="$args"
-    
+
     python3 -c "
 import sys
 import os
@@ -57,7 +57,7 @@ done
 if [[ "$should_enhance" == "true" ]]; then
     echo -e "${BLUE}🧠 Retrieving relevant memory context...${NC}"
     memory_context=$(get_memory_context "$COMMAND" "$ARGS" 2>/dev/null || echo "")
-    
+
     if [[ -n "$memory_context" ]]; then
         echo -e "${GREEN}✓ Found relevant memories${NC}"
         echo "$memory_context"

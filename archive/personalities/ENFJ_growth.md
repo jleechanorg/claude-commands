@@ -42,7 +42,7 @@ others have fulfilled their own life as well.\nAllowing your ENFJ strengths to f
     appearance of what they quickly judge as good or bad about the people and
     situations in their external environment, they will only use their introverted
     intuition to support those judgements they feel are good for them and disregard
-    not only other possibilities but their own quality of inner life as well. 
+    not only other possibilities but their own quality of inner life as well.
     The consideration of these less obvious
     possibilities and their own needs requires that the ENFJ recognize that their
     own value judgements are indeed subjective, and that it is not appropriate or

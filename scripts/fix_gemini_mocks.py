@@ -20,13 +20,13 @@ def fix_file_mocks(file_path):
     def replace_tuple_mock(match):
         ai_response_var = match.group(1)
         return f"""return_value=mock_gemini_response)
-        
+
         # Create mock GeminiResponse object before the patch
         mock_gemini_response = MagicMock()
         mock_gemini_response.narrative_text = {ai_response_var}
         mock_gemini_response.debug_tags_present = {{'dm_notes': True, 'dice_rolls': True, 'state_changes': True}}
         mock_gemini_response.state_updates = {{}}
-        
+
         with patch('gemini_service.continue_story', """
 
     # Replace the patterns

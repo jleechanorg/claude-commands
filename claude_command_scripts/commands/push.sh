@@ -69,7 +69,7 @@ call_github_api() {
     local max_attempts
     timeout=$(echo "$config" | jq -r '.github.api_timeout // 30') || timeout=30
     max_attempts=$(echo "$config" | jq -r '.github.retry_attempts // 3') || max_attempts=3
-    
+
     for ((i=1; i<=max_attempts; i++)); do
         if result=$(timeout "$timeout" gh api "$endpoint" 2>/dev/null); then
             echo "$result"
@@ -92,7 +92,7 @@ call_github_cli() {
     local max_attempts
     timeout=$(echo "$config" | jq -r '.github.api_timeout // 30') || timeout=30
     max_attempts=$(echo "$config" | jq -r '.github.retry_attempts // 3') || max_attempts=3
-    
+
     for ((i=1; i<=max_attempts; i++)); do
         if result=$(timeout "$timeout" gh $cmd 2>/dev/null); then
             echo "$result"
@@ -259,7 +259,7 @@ echo -e "\n${GREEN}🧪 Running pre-push tests...${NC}"
 if [[ "$SYNC_TESTS" == "true" ]]; then
     # Synchronous mode: run all tests sequentially
     echo "Running in synchronous mode..."
-    
+
     # Run HTTP tests first
     if [[ "$SKIP_HTTP_TESTS" != "true" ]] && [[ -f "./claude_command_scripts/commands/test-http.sh" ]]; then
         echo -e "\n${BLUE}🔌 Running core HTTP tests...${NC}"
@@ -268,7 +268,7 @@ if [[ "$SYNC_TESTS" == "true" ]]; then
             exit 1
         fi
     fi
-    
+
     # Run backend tests
     if [[ -f "./run_tests.sh" ]]; then
         echo -e "\n${BLUE}🔬 Running backend tests...${NC}"
@@ -277,10 +277,10 @@ if [[ "$SYNC_TESTS" == "true" ]]; then
             exit 1
         fi
     fi
-    
+
 else
     # Asynchronous mode (default): run HTTP tests in background, backend tests foreground
-    
+
     # Start HTTP tests in background
     if [[ "$SKIP_HTTP_TESTS" != "true" ]] && [[ -f "./claude_command_scripts/commands/test-http.sh" ]]; then
         echo -e "\n${BLUE}🔌 Starting core HTTP tests (async)...${NC}"
@@ -290,7 +290,7 @@ else
     else
         HTTP_TEST_PID=""
     fi
-    
+
     # Run backend tests in foreground
     if [[ -f "./run_tests.sh" ]]; then
         echo -e "\n${BLUE}🔬 Running backend tests...${NC}"
@@ -303,7 +303,7 @@ else
         fi
         echo "✓ Backend tests passed"
     fi
-    
+
     # Wait for and check HTTP tests
     if [[ -n "$HTTP_TEST_PID" ]]; then
         echo -e "\n${BLUE}⏳ Waiting for HTTP tests to complete...${NC}"
@@ -350,10 +350,10 @@ changed_files=$(git diff --name-only origin/main...HEAD 2>/dev/null || git diff 
 if [[ -n "$changed_files" ]]; then
     file_count=$(echo "$changed_files" | wc -l)
     echo "Files to be pushed: $file_count"
-    
+
     # Categorize files
     categories=()
-    
+
     # Check for different file categories
     if echo "$changed_files" | grep -q "\.py$"; then categories+=("Python"); fi
     if echo "$changed_files" | grep -q "\.js$"; then categories+=("JavaScript"); fi
@@ -364,9 +364,9 @@ if [[ -n "$changed_files" ]]; then
     if echo "$changed_files" | grep -q "^scripts/"; then categories+=("Scripts"); fi
     if echo "$changed_files" | grep -q "^docs/"; then categories+=("Docs"); fi
     if echo "$changed_files" | grep -q "CLAUDE\.md\|\.gitignore\|requirements\.txt"; then categories+=("Config"); fi
-    
+
     category_count=${#categories[@]}
-    
+
     # Warn if PR seems to have unrelated changes
     if [[ $category_count -gt 2 ]] || [[ $file_count -gt 10 ]]; then
         echo -e "${YELLOW}⚠️  PR contains $file_count files across $category_count categories${NC}"
@@ -401,7 +401,7 @@ echo -e "\n${GREEN}📤 Step 3: Checking if additional push is needed...${NC}"
 if git log --oneline origin/"$current_branch"..HEAD | grep -q .; then
     echo "✓ New commits detected since initial pushlite push"
     echo -e "\n${BLUE}📤 Pushing additional changes to remote...${NC}"
-    
+
     if [[ -z "$remote_branch" ]]; then
         # No upstream set, push with -u
         echo "Setting upstream and pushing..."
@@ -426,23 +426,23 @@ pr_exists=$(echo "$pr_info" | jq 'length > 0')
 check_pr_merge_status() {
     local pr_number=$1
     local config=$2
-    
+
     if [[ $(echo "$config" | jq -r '.checks.merge_conflicts') != "true" ]]; then
         log_info "Merge conflict checking disabled"
         return 0
     fi
-    
+
     log_info "Checking merge conflicts for PR #$pr_number"
-    
+
     local pr_data
     if ! pr_data=$(call_github_cli "pr view $pr_number --json mergeable" "$config"); then
         log_error "Failed to get PR merge status"
         return 1
     fi
-    
+
     local pr_mergeable
     pr_mergeable=$(echo "$pr_data" | jq -r '.mergeable') || pr_mergeable="UNKNOWN"
-    
+
     case "$pr_mergeable" in
         "CONFLICTING")
             echo -e "${RED}❌ Merge conflicts detected!${NC}"
@@ -463,27 +463,27 @@ check_pr_merge_status() {
 check_pr_ci_status() {
     local pr_number=$1
     local config=$2
-    
+
     if [[ $(echo "$config" | jq -r '.checks.ci_status') != "true" ]]; then
         log_info "CI status checking disabled"
         return 0
     fi
-    
+
     log_info "Checking CI status for PR #$pr_number"
-    
+
     local checks_data
     if ! checks_data=$(call_github_cli "pr view $pr_number --json statusCheckRollup" "$config"); then
         log_error "Failed to get CI status"
         return 1
     fi
-    
+
     local checks_status
     local failed_checks
     local success_checks
     checks_status=$(echo "$checks_data" | jq '.statusCheckRollup') || checks_status="[]"
     failed_checks=$(echo "$checks_status" | jq '[.[] | select(.conclusion == "FAILURE")] | length') || failed_checks=0
     success_checks=$(echo "$checks_status" | jq '[.[] | select(.conclusion == "SUCCESS")] | length') || success_checks=0
-    
+
     if [[ $failed_checks -gt 0 ]]; then
         echo -e "${RED}❌ $failed_checks CI check(s) failing${NC}"
         echo "Failed checks:"
@@ -502,28 +502,28 @@ check_pr_ci_status() {
 check_pr_bot_comments() {
     local pr_number=$1
     local config=$2
-    
+
     if [[ $(echo "$config" | jq -r '.checks.bot_comments') != "true" ]]; then
         log_info "Bot comment checking disabled"
         return 0
     fi
-    
+
     log_info "Checking bot comments for PR #$pr_number"
-    
+
     # Check for inline review comments from bots
     local bot_comments=0
     if bot_result=$(call_github_api "repos/{owner}/{repo}/pulls/$pr_number/comments" "$config"); then
         bot_comments=$(echo "$bot_result" | jq '[.[] | select(.user.type == "Bot" or (.user.login | test("bot|copilot"; "i")))] | length' 2>/dev/null || echo "0")
     fi
-    
+
     # Check for general PR comments from bots
     local general_bot_comments=0
     if general_result=$(call_github_cli "pr view $pr_number --json comments" "$config"); then
         general_bot_comments=$(echo "$general_result" | jq '[.comments[] | select(.author.login | test("bot|copilot|github-actions"; "i"))] | length' 2>/dev/null || echo "0")
     fi
-    
+
     local total_bot_comments=$((bot_comments + general_bot_comments))
-    
+
     if [[ $total_bot_comments -gt 0 ]]; then
         echo -e "${YELLOW}⚠️  $total_bot_comments bot comment(s) found${NC}"
         echo "Consider running: /copilot (or python3 .claude/commands/copilot.py $pr_number)"
@@ -540,13 +540,13 @@ attempt_pr_fixes() {
     local issues_found=$2
     local config=$3
     local current_branch=$4
-    
+
     log_info "Attempting to fix issues for PR #$pr_number (issues: $issues_found)"
-    
+
     # Fix merge conflicts if found and auto-fix is enabled
     if [[ $issues_found -eq 2 && $(echo "$config" | jq -r '.auto_fix.merge_conflicts') == "true" ]]; then
         echo -e "${BLUE}🔧 Attempting to resolve merge conflicts...${NC}"
-        
+
         # Phase 2: Add confirmation prompt for destructive operations
         echo -e "${YELLOW}⚠️  This will fetch and merge origin/main into your branch.${NC}"
         read -p "Continue with automatic conflict resolution? [y/N] " -n 1 -r
@@ -555,10 +555,10 @@ attempt_pr_fixes() {
             log_info "User declined automatic conflict resolution"
             return 0
         fi
-        
+
         if git fetch origin main && git merge origin/main --no-edit; then
             echo -e "${GREEN}✅ Conflicts resolved automatically${NC}"
-            
+
             # Confirm push
             echo -e "${YELLOW}⚠️  This will push the merge commit to your branch.${NC}"
             read -p "Push merge commit? [y/N] " -n 1 -r
@@ -579,7 +579,7 @@ attempt_pr_fixes() {
             return 1
         fi
     fi
-    
+
     # Run local tests if CI failures and local testing is enabled
     if [[ $issues_found -eq 3 && $(echo "$config" | jq -r '.auto_fix.run_local_tests') == "true" ]]; then
         echo -e "${BLUE}🔧 Running local tests to diagnose CI failures...${NC}"
@@ -593,7 +593,7 @@ attempt_pr_fixes() {
             log_warn "No ./run_tests.sh found for local testing"
         fi
     fi
-    
+
     return 0
 }
 
@@ -602,34 +602,34 @@ check_and_fix_pr_issues() {
     local pr_number=$1
     local config=$2
     local current_branch=$3
-    
+
     echo -e "\n${BLUE}🔍 Analyzing PR #$pr_number for issues...${NC}"
     log_info "Starting comprehensive PR health check"
-    
+
     local issues_found=0
-    
+
     # Phase 2: Parallel execution of independent checks
     {
         check_pr_merge_status "$pr_number" "$config" &
         local merge_pid=$!
-        
+
         check_pr_ci_status "$pr_number" "$config" &
         local ci_pid=$!
-        
+
         check_pr_bot_comments "$pr_number" "$config" &
         local bot_pid=$!
-        
+
         # Wait for all checks to complete
         wait $merge_pid; local merge_result=$?
         wait $ci_pid; local ci_result=$?
         wait $bot_pid; local bot_result=$?
-        
+
         # Determine which issues were found
         if [[ $merge_result -eq 2 ]]; then issues_found=2; fi
         if [[ $ci_result -eq 3 ]]; then issues_found=3; fi
         if [[ $bot_result -eq 4 ]]; then issues_found=4; fi
     }
-    
+
     # Attempt fixes if issues were found
     if [[ $issues_found -gt 0 ]]; then
         attempt_pr_fixes "$pr_number" "$issues_found" "$config" "$current_branch"
@@ -637,7 +637,7 @@ check_and_fix_pr_issues() {
         echo -e "${GREEN}✅ PR is healthy - no issues found${NC}"
         log_info "PR health check completed successfully"
     fi
-    
+
     return 0
 }
 
@@ -645,19 +645,19 @@ if [[ "$pr_exists" == "true" ]]; then
     pr_number=$(echo "$pr_info" | jq -r '.[0].number')
     pr_url=$(echo "$pr_info" | jq -r '.[0].url')
     pr_state=$(echo "$pr_info" | jq -r '.[0].state')
-    
+
     echo "✓ Found existing PR #$pr_number ($pr_state)"
     echo "  URL: $pr_url"
-    
+
     # Check and fix PR issues if it's open
     if [[ "$pr_state" == "OPEN" ]]; then
         check_and_fix_pr_issues "$pr_number" "$CONFIG" "$current_branch"
-        
+
         echo -e "\n${GREEN}📝 Updating PR description with health status...${NC}"
-        
+
         # Get recent commits since PR creation
         recent_commits=$(git log --oneline -10 --pretty=format:"- %s")
-        
+
         # Get current PR health status for the update using resilient API calls
         # Remove 'local' keyword - we're in the main script body
         if pr_data=$(call_github_cli "pr view $pr_number --json mergeable" "$CONFIG"); then
@@ -665,7 +665,7 @@ if [[ "$pr_exists" == "true" ]]; then
         else
             pr_mergeable="UNKNOWN"
         fi
-        
+
         if ci_data=$(call_github_cli "pr view $pr_number --json statusCheckRollup" "$CONFIG"); then
             checks_status=$(echo "$ci_data" | jq '.statusCheckRollup')
             failed_checks=$(echo "$checks_status" | jq '[.[] | select(.conclusion == "FAILURE")] | length')
@@ -675,7 +675,7 @@ if [[ "$pr_exists" == "true" ]]; then
             failed_checks=0
             success_checks=0
         fi
-        
+
         # Create status indicators
         merge_status="❌ Conflicts"
         if [[ "$pr_mergeable" == "MERGEABLE" ]]; then
@@ -683,14 +683,14 @@ if [[ "$pr_exists" == "true" ]]; then
         elif [[ "$pr_mergeable" == "UNKNOWN" ]]; then
             merge_status="⚠️ Status unknown"
         fi
-        
+
         ci_status_icon="⚠️ Pending"
         if [[ $success_checks -gt 0 && $failed_checks -eq 0 ]]; then
             ci_status_icon="✅ All $success_checks passing"
         elif [[ $failed_checks -gt 0 ]]; then
             ci_status_icon="❌ $failed_checks failing"
         fi
-        
+
         # Create temporary file for PR body
         pr_body_file=$(mktemp)
         cat > "$pr_body_file" <<EOF
@@ -737,10 +737,10 @@ fi
 if [[ -f "mvp_site/main.py" ]]; then
     echo -e "\n${GREEN}🖥️  Test Server Management${NC}"
     echo "==============================="
-    
+
     # Source shared port utilities
     source "$(dirname "$0")/../port-utils.sh"
-    
+
     # Function to offer server cleanup
     offer_cleanup() {
         local servers=$(ps aux | grep -E "python.*main.py.*serve" | grep -v grep || true)
@@ -752,7 +752,7 @@ if [[ -f "mvp_site/main.py" ]]; then
             echo ""
         fi
     }
-    
+
     # Check for available port
     available_port=$(find_available_port)
     if [[ $? -eq 0 ]]; then
@@ -763,7 +763,7 @@ if [[ -f "mvp_site/main.py" ]]; then
         echo ""
         echo -e "${YELLOW}🌐 Then access at:${NC}"
         echo "  http://localhost:$available_port?test_mode=true&test_user_id=test-user-123"
-        
+
         # Show any existing servers
         list_running_servers
     else

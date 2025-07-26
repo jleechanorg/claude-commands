@@ -66,7 +66,7 @@ totally swallowed up by their selfless and yet single minded attachment to
 facts, figures and a rationale they accept only from the world outside
 themselves. Because this inner information is often opposed to the\nENTJ's\nstrongly held ideas it is often rejected, or if
 accepted, turned outward to make negative judgments about external situations
-or the behavior of others, rather than seen as a corrective balance to the 
+or the behavior of others, rather than seen as a corrective balance to the
 ENTJ's own attitudes and behavior.\nSolutions\nTo grow as an individual, the
 ENTJ needs to recognize the role Intuition plays in their life, and learn to
 understand its language. In particular the ENTJ needs to realize that their

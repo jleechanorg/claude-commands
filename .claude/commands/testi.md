@@ -6,7 +6,7 @@
 
 **Usage**: `/testi`
 
-**Implementation**: 
+**Implementation**:
 - Run: `source venv/bin/activate && TESTING=true python3 mvp_site/test_integration/test_integration.py`
 - Execute from project root
 - Ensure virtual environment is activated

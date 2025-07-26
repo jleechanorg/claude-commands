@@ -72,7 +72,7 @@ create_planning_scratchpad() {
     local current_branch="$(get_current_branch)"
     local timestamp="$(date '+%Y-%m-%d %H:%M')"
     local filename="roadmap/scratchpad_${task_name}.md"
-    
+
     cat > "$filename" << EOF
 # 🎯 HEADLESS COMMAND READY (Copy-paste when ready)
 
@@ -100,9 +100,9 @@ START: Implement the detailed plan below" --output-format stream-json --verbose 
 
 # Headless Development Plan: ${task_name}
 
-**Created**: $timestamp  
-**Original Branch**: $current_branch  
-**Task**: $prompt  
+**Created**: $timestamp
+**Original Branch**: $current_branch
+**Task**: $prompt
 **Status**: Analysis complete, ready for headless execution
 
 ## Problem Statement
@@ -125,7 +125,7 @@ Add detailed analysis here:
 - [ ] Add necessary imports and dependencies
 - [ ] Validation step: Core functionality works
 
-### Step 2: Testing & Validation  
+### Step 2: Testing & Validation
 - [ ] Add unit tests for new functionality
 - [ ] Add integration tests if needed
 - [ ] Manual verification steps
@@ -140,13 +140,13 @@ Add detailed analysis here:
 ## Files to Create/Modify
 
 - \`file1.py\`: Description of specific changes needed
-- \`file2.py\`: Description of specific changes needed  
+- \`file2.py\`: Description of specific changes needed
 - \`tests/test_file.py\`: New test cases for validation
 
 ## Testing Strategy
 
 1. **Unit Tests**: Test individual components and functions
-2. **Integration Tests**: Test component interactions  
+2. **Integration Tests**: Test component interactions
 3. **Manual Verification**: Verify end-to-end functionality
 
 ## Context for Headless Execution
@@ -169,7 +169,7 @@ This task is fully planned and ready for automated implementation.
 
 ## Branch Status
 
-- **Planning**: ✅ Complete  
+- **Planning**: ✅ Complete
 - **Implementation**: ⏳ Ready for headless execution
 - **Testing**: ⏳ Pending implementation
 - **Review**: ⏳ Pending completion

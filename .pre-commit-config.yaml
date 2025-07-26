@@ -1,0 +1,70 @@
+repos:
+  # General file hygiene and safety
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+        exclude: ^analysis/test_results/.*\.json$
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Python tooling - using existing comprehensive setup from pyproject.toml
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.10
+    hooks:
+      # Ruff linting (replaces flake8, pycodestyle, etc.)
+      - id: ruff
+        args: [--fix]
+        files: ^mvp_site/.*\.py$
+      # Ruff formatting (replaces black)
+      - id: ruff-format
+        files: ^mvp_site/.*\.py$
+
+  # Import sorting using existing isort config
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        files: ^mvp_site/.*\.py$
+        # Uses configuration from pyproject.toml
+
+  # Static type checking using existing mypy config
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        files: ^mvp_site/.*\.py$
+        # Uses configuration from pyproject.toml
+        additional_dependencies: [types-requests, types-PyYAML]
+
+  # Security scanning using existing bandit config
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.8
+    hooks:
+      - id: bandit
+        args: ['-c', 'pyproject.toml']
+        files: ^mvp_site/.*\.py$
+
+  # JavaScript/CSS formatting for static files
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        files: ^mvp_site/static/.*\.(js|css|html)$
+        args: ['--tab-width=2', '--single-quote=true']
+
+  # Basic JavaScript linting for static files (simplified config)
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.44.0
+    hooks:
+      - id: eslint
+        files: ^mvp_site/static/.*\.js$
+        additional_dependencies:
+          - eslint@8.44.0
+        args: ['--fix']

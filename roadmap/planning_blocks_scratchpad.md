@@ -6,7 +6,7 @@ Looking at the campaign output, I can see that planning blocks are missing. The 
 ## Expected Behavior
 Based on the game flow, there should be planning blocks before story generation that show:
 1. Campaign initialization planning
-2. Character creation planning 
+2. Character creation planning
 3. Story beat planning
 
 ## Current Output Analysis
@@ -41,7 +41,7 @@ The issue is NOT with the code or loading - it's with AI compliance. The AI is r
 
 ## Possible Solutions
 1. Add explicit enforcement in the prompt builder ✓
-2. Move planning block instructions earlier in the prompt order 
+2. Move planning block instructions earlier in the prompt order
 3. Add a reminder at the end of each user prompt ✓
 4. Validate AI responses and re-prompt if planning blocks are missing ✓
 
@@ -90,15 +90,15 @@ The AI should:
 1. **Add explicit character creation input handling**
    - Create specific prompt reminders for processing numeric selections
    - Emphasize that numeric inputs map to the numbered options presented
-   
+
 2. **Enhance character creation state tracking**
    - Add validation to ensure selections are saved before progressing
    - Create clearer examples of how to update state with each selection
-   
+
 3. **Add character creation context to prompts**
    - Detect when in character creation mode
    - Add specific instructions for handling selections vs story commands
-   
+
 4. **Create character creation tests**
    - Test that numeric inputs update state correctly
    - Verify progression through all 7 steps
@@ -159,12 +159,12 @@ def _validate_and_enforce_planning_block(response_text, user_input, game_state, 
     if any(phrase in user_input.lower() for phrase in ['god mode', 'dm mode', 'gm mode']):
         logging.info("User switching to god/dm mode - skipping planning block")
         return response_text
-    
+
     # Check if AI response indicates mode switch
     if "[Mode: DM MODE]" in response_text or "[Mode: GOD MODE]" in response_text:
         logging.info("Response indicates mode switch - skipping planning block")
         return response_text
-    
+
     # Existing character creation check...
     # Continue with planning block enforcement...
 ```

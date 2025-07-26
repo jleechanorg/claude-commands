@@ -6,14 +6,15 @@ Tests to catch data corruption bugs like NPCs being converted to strings,
 state inconsistencies, and other data structure violations.
 """
 
+import logging
 import os
 import sys
 import unittest
 
-import logging
-
 # Add parent directory to Python path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 # Import the functions we need for testing (avoid Firebase dependencies)
 import collections.abc
@@ -511,7 +512,6 @@ class TestDataIntegrity(unittest.TestCase):
 
 if __name__ == "__main__":
     # Set up logging to see corruption detection in action
-
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 

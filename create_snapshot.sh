@@ -24,11 +24,11 @@ done
 # For each file found, run a loop.
 file_counter=0
 git ls-files | grep -v "^${OUTPUT_BASE}_part[0-9]*.txt$" | while read -r filepath; do
-    
+
     # Calculate which output file to use (cycle through 1-5)
     file_index=$((file_counter % NUM_FILES + 1))
     CURRENT_OUTPUT="${OUTPUT_BASE}_part${file_index}.txt"
-    
+
     filename=$(basename "$filepath")
 
     # Print a clear separator and the file metadata to the current output file.
@@ -36,7 +36,7 @@ git ls-files | grep -v "^${OUTPUT_BASE}_part[0-9]*.txt$" | while read -r filepat
     echo "Location: $filepath" >> "$CURRENT_OUTPUT"
     echo "Name: $filename" >> "$CURRENT_OUTPUT"
     echo "--- CONTENT ---" >> "$CURRENT_OUTPUT"
-    
+
     # Check if the file is binary using the file command
     if file "$filepath" | grep -q "text"; then
         # File is text, append the actual content
@@ -45,13 +45,13 @@ git ls-files | grep -v "^${OUTPUT_BASE}_part[0-9]*.txt$" | while read -r filepat
         # File is binary, skip content
         echo "--- CONTENT SKIPPED (Binary File) ---" >> "$CURRENT_OUTPUT"
     fi
-    
+
     # Print a separator at the end of the file content for clarity.
     # The two blank lines make the final text file easier to read.
     echo "" >> "$CURRENT_OUTPUT"
     echo "--- FILE END ---" >> "$CURRENT_OUTPUT"
     echo "" >> "$CURRENT_OUTPUT"
-    
+
     # Increment the file counter
     file_counter=$((file_counter + 1))
 done

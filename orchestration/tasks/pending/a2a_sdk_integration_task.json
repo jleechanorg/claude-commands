@@ -9,7 +9,7 @@
   "subtasks": [
     {
       "task_id": "a2a_sdk_setup",
-      "title": "A2A SDK Installation and Basic Setup", 
+      "title": "A2A SDK Installation and Basic Setup",
       "description": "Install A2A SDK, create adapter layer, configure Redis transport",
       "files_to_create": [
         "orchestration/a2a_adapter.py",
@@ -25,7 +25,7 @@
       "title": "A2A Protocols and Workflow Implementation",
       "description": "Implement A2A protocols, workflow engine, and enhanced communication patterns",
       "files_to_create": [
-        "orchestration/a2a_protocols.py", 
+        "orchestration/a2a_protocols.py",
         "orchestration/a2a_workflows.py"
       ],
       "files_to_modify": [

@@ -6,7 +6,7 @@
 ✅ Located and opened existing research document at `roadmap/claude_code_llm_hallucination_research.md`
 ✅ Added complete Section 2.1.2 "Detailed Sub-Categories (19 Types)" with all 19 hallucination types:
   - Intent Conflicting (5 subtypes)
-  - Context Inconsistency (4 subtypes)  
+  - Context Inconsistency (4 subtypes)
   - Context Repetition (3 subtypes)
   - Dead Code (3 subtypes)
   - Knowledge Conflicting (4 subtypes)

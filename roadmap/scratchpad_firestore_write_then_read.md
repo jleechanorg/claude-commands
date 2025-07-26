@@ -39,14 +39,14 @@ return saved_doc  # Only show persisted data
        """Add story entry and return the persisted data"""
        # Write to Firestore
        doc_refs = add_story_entry(user_id, campaign_id, text, **kwargs)
-       
+
        # Read back persisted data
        persisted_entries = []
        for doc_ref in doc_refs:
            doc = doc_ref.get()
            if doc.exists:
                persisted_entries.append(doc.to_dict())
-       
+
        return persisted_entries
    ```
 
@@ -99,7 +99,7 @@ return saved_doc  # Only show persisted data
 1. **Feature Flag Approach**
    ```python
    ENABLE_WRITE_THEN_READ = os.getenv('ENABLE_WRITE_THEN_READ', 'false') == 'true'
-   
+
    if ENABLE_WRITE_THEN_READ:
        return add_story_entry_and_read(...)
    else:
@@ -167,7 +167,7 @@ return saved_doc  # Only show persisted data
 ## 📅 **Estimated Timeline**
 
 - **Implementation**: 2-3 hours
-- **Testing**: 1-2 hours  
+- **Testing**: 1-2 hours
 - **Documentation**: 30 minutes
 - **Total**: ~5 hours
 

@@ -36,12 +36,12 @@ Created advanced validator with:
   - Mentioned but absent
   - Ambiguous presence
   - Missing entirely
-  
+
 - **State Continuity Tracking**:
   - Physical markers (bandaged ear, wounds)
   - Emotional states (grief, anger)
   - Scene transitions
-  
+
 - **Advanced Pattern Recognition**:
   - Entry/exit detection
   - Location transitions

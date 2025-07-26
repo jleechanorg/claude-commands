@@ -7,7 +7,7 @@ Create a comprehensive superset of entity fields by integrating the best aspects
 
 ### Phase 1: Analysis and Design ✅
 - [x] Compare field definitions across all three sources
-- [x] Identify unique fields, overlapping implementations, and missing critical fields  
+- [x] Identify unique fields, overlapping implementations, and missing critical fields
 - [x] Create comprehensive field matrix and integration recommendations
 - [x] Prioritize missing fields by importance (High/Medium/Low)
 
@@ -37,7 +37,7 @@ Create a comprehensive superset of entity fields by integrating the best aspects
 1. **gender & age** - Present in Simple, missing in Pydantic ⚠️
 2. **mbti** - Missing in both, critical for roleplay consistency
 3. **alignment** - Fundamental D&D attribute, missing in both
-4. **class_name** - Core D&D identity, missing in both  
+4. **class_name** - Core D&D identity, missing in both
 5. **armor_class** - Essential combat stat, missing in both
 6. **proficiency_bonus** - Core D&D mechanic, missing in both
 

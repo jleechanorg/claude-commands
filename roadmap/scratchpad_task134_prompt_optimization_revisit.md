@@ -90,7 +90,7 @@ Comprehensive review of all prompts for token reduction and quality improvement,
 
 ### Token Reduction Targets:
 - **System instructions**: 30% reduction
-- **Character templates**: 25% reduction  
+- **Character templates**: 25% reduction
 - **Game state prompts**: 35% reduction
 - **Narrative prompts**: 20% reduction
 
@@ -134,7 +134,7 @@ Comprehensive review of all prompts for token reduction and quality improvement,
 
 ## Estimated Time: 4 hours
 - Current audit: 45 minutes
-- Strategy development: 30 minutes  
+- Strategy development: 30 minutes
 - Systematic optimization: 2 hours
 - Testing & validation: 45 minutes
 

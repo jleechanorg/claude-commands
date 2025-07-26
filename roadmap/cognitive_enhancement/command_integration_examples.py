@@ -214,23 +214,23 @@ Using Playwright for browser automation."""
 
         demo_flow = """
 1. **Initial Command**: /execute implement user dashboard
-   
+
 2. **AI Response**: Uses direct execution approach
-   
+
 3. **User Correction**: "Actually, use subagent coordination for this"
-   
+
 4. **Learning Capture**: /learn command captures the correction
    - Pattern: "For dashboard implementation, use subagent coordination"
    - Type: "preference"
    - Context: "UI implementation projects"
-   
+
 5. **Future Commands**: /execute implement admin panel
-   
+
 6. **Enhanced Response**: Memory query finds dashboard pattern
    - Recommends subagent coordination
    - Cites previous user preference
    - Applies learned approach automatically
-   
+
 7. **Result**: Consistent with user preferences without re-correction
         """
         print(demo_flow)
@@ -306,7 +306,7 @@ Using Playwright for browser automation."""
 The enhanced command wrappers provide:
 
 ✅ **Memory Integration**: Commands automatically consult learned patterns
-✅ **Pattern-Guided Decisions**: Execution approaches informed by experience  
+✅ **Pattern-Guided Decisions**: Execution approaches informed by experience
 ✅ **Consistency**: User preferences applied across all commands
 ✅ **Learning Loop**: Continuous improvement through pattern accumulation
 ✅ **Backward Compatibility**: Works alongside existing command structure

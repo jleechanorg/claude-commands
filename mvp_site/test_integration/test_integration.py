@@ -4,27 +4,19 @@ import subprocess
 import sys
 import unittest
 
-from game_state import GameState
-from integration_test_lib import (
-from main import create_app
-import atexit
-import firestore_service
-
 # Add the project root to the Python path to allow for imports
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+project_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+
+
 sys.path.insert(0, project_root)
 
 
 # Handle missing dependencies gracefully
 try:
-
+    from testing_framework.integration_utils import (
         IntegrationTestSetup,
         setup_integration_test_environment,
     )
-
-
-
-
 
     # Set up the integration test environment
     test_setup = setup_integration_test_environment(project_root)
@@ -54,7 +46,6 @@ if DEPS_AVAILABLE:
     MOCK_INTEGRATION_CALIBRATION = mock_instructions["calibration"]
 
     # Register cleanup on exit
-
 
     atexit.register(lambda: test_setup.cleanup())
 
@@ -188,9 +179,9 @@ class BaseCampaignIntegrationTest(unittest.TestCase):
                 "campaign_title": cls.CAMPAIGN_TITLE,
             }
             print(f"CAMPAIGN CREATION FAILED: {json.dumps(error_details, indent=2)}")
-        assert create_response.status_code == 201, (
-            f"Failed to create {cls.CAMPAIGN_TITLE} - Status: {create_response.status_code}, Response: {create_response.get_data(as_text=True)}"
-        )
+        assert (
+            create_response.status_code == 201
+        ), f"Failed to create {cls.CAMPAIGN_TITLE} - Status: {create_response.status_code}, Response: {create_response.get_data(as_text=True)}"
         create_data = create_response.get_json()
         cls.campaign_id = create_data.get("campaign_id")
         assert cls.campaign_id is not None

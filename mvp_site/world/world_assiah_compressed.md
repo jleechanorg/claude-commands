@@ -1,7 +1,7 @@
 # World of Assiah - Compressed Campaign Guide
 
-**Source**: world_assiah.md (85k tokens)  
-**Target**: ~45k tokens (47% reduction)  
+**Source**: world_assiah.md (85k tokens)
+**Target**: ~45k tokens (47% reduction)
 **Purpose**: Streamlined campaign reference maintaining all essential information
 
 ---
@@ -43,7 +43,7 @@ The World of Assiah centers on the aftermath of the Celestial Wars, where Lucife
 
 ### Core Themes
 • **Divine rebellion consequences** - Cosmic warfare's lasting impact on mortal civilization
-• **Political intrigue** - Multiple fractured factions competing for power and influence  
+• **Political intrigue** - Multiple fractured factions competing for power and influence
 • **Order vs. chaos struggle** - Balance between freedom and stability in power vacuum
 • **Personal redemption/corruption** - Character choices in morally ambiguous world
 • **Failed gods legacy** - Abandoned creation forcing mortals to forge their own destiny
@@ -60,7 +60,7 @@ The World of Assiah centers on the aftermath of the Celestial Wars, where Lucife
 #### Strategic Situation
 Post-war multi-polar world emerged after Treaty of Nexus ended bipolar Imperial-Host conflict. Current tensions center on:
 • Alexiel's death removing last unifying figure
-• Succession questions for twin heirs Cassian/Darius  
+• Succession questions for twin heirs Cassian/Darius
 • Rising power of independent factions
 • Economic disruption from continued instability
 • Generational change from war veterans to young leaders
@@ -177,7 +177,7 @@ Intelligence network masquerading as library (The Athenaeum), controlling flow o
 
 ### Major Powers & Territory Control
 **Celestial Imperium**: ~25% of world, eastern regions centered on Aeterna
-**Shattered Host Remnants**: ~25% of world in scattered western territories  
+**Shattered Host Remnants**: ~25% of world in scattered western territories
 **Independent Powers**: ~50% including Tsuran Dominion, Adamant Vault, First-Spear Clans, Nexus
 
 ### Imperial Cities & Strongholds
@@ -261,7 +261,7 @@ Intelligence network masquerading as library (The Athenaeum), controlling flow o
 **Abilities:** Peerless combat skills, tactical genius, hidden magical powers functioning within her nullification field, master psychological manipulator, three-layer deception system
 
 #### Prince Artorius val Raziel
-**Faction:** Celestial Imperium  
+**Faction:** Celestial Imperium
 **Role:** Heir Apparent, High Commander
 **Archetype:** Honorable Prince
 
@@ -568,4 +568,3 @@ Key Moral Choices: Sacrifice desires for others? Accept diminished power for mor
 This compressed guide maintains complete campaign functionality while dramatically improving accessibility and reducing preparation time for World Assiah adventures.
 
 ---
-

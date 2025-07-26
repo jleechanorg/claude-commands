@@ -174,7 +174,7 @@ redis:
   host: localhost
   port: 6379
   db: 0
-  
+
 agent_registry:
   key_prefix: "a2a:agents"
   heartbeat:

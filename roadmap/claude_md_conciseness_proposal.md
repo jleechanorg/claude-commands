@@ -194,7 +194,7 @@ Has 18 numbered items with verbose explanations
 
 **Documentation**
 - Rules → CLAUDE.md
-- Lessons → .cursor/rules/lessons.mdc  
+- Lessons → .cursor/rules/lessons.mdc
 - Cursor → .cursor/rules/rules.mdc
 - Update immediately after errors/corrections
 

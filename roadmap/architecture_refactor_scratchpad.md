@@ -36,7 +36,7 @@ class GeminiConstants:
     RESPONSE_TYPE_STORY = "story"
     RESPONSE_TYPE_INITIAL = "initial"
     RESPONSE_TYPE_GOD_MODE = "god_mode"
-    
+
     # JSON field names
     FIELD_NARRATIVE = "narrative"
     FIELD_STATE_UPDATES = "state_updates"
@@ -44,11 +44,11 @@ class GeminiConstants:
     FIELD_LOCATION_CONFIRMED = "location_confirmed"
     FIELD_DEBUG_INFO = "debug_info"
     FIELD_GOD_MODE_RESPONSE = "god_mode_response"
-    
+
     # Planning block
     PLANNING_BLOCK_HEADER = "--- PLANNING BLOCK ---"
     PLANNING_BLOCK_PATTERN = r'\n\n--- PLANNING BLOCK ---\n(.*?)$'
-    
+
     # Debug tags
     DEBUG_TAG_DM_NOTES = "dm_notes"
     DEBUG_TAG_DICE_ROLLS = "dice_rolls"
@@ -58,44 +58,44 @@ class GeminiConstants:
 # response_parser.py
 class ResponseParser:
     """Handles all response parsing logic"""
-    
+
     def parse_raw_response(self, raw_text: str) -> ParsedResponse:
         """Main entry point for parsing any response"""
         # 1. Try JSON parsing first
         # 2. Fall back to text parsing
         # 3. Extract components
-        
+
     def _parse_json_response(self, text: str) -> Optional[dict]:
         """Parse JSON with all our fallback strategies"""
         # Use robust_json_parser logic here
-        
+
     def _extract_planning_block(self, text: str) -> tuple[str, Optional[str]]:
         """Extract planning block from narrative"""
         # Returns (narrative_without_block, planning_block)
-        
+
     def _detect_debug_tags(self, debug_info: dict) -> dict[str, bool]:
         """Detect which debug tags have content"""
 
 # gemini_response.py
 class GeminiResponse:
     """Public API for Gemini responses"""
-    
+
     def __init__(self):
         self._parser = ResponseParser()
         self._raw_response = None
         self._parsed_data = None
         self._response_type = None
-        
+
     @classmethod
     def create(cls, raw_response_text: str, response_type: str = None) -> 'GeminiResponse':
         """Factory method - single way to create responses"""
-        
+
     def get_narrative(self) -> str:
         """Get clean narrative text (no JSON, no planning block)"""
-        
+
     def get_planning_block(self) -> Optional[str]:
         """Get planning block if present"""
-        
+
     def get_full_narrative(self) -> str:
         """Get narrative + planning block (for story display)"""
 ```
@@ -106,13 +106,13 @@ class GeminiResponse:
 1. Update `game_state_instruction.txt`:
    ```
    IMPORTANT: For all story mode responses, you MUST end with a planning block:
-   
+
    [Your narrative response here]
-   
+
    --- PLANNING BLOCK ---
    What would you like to do?
    1. **[Action1_1]:** Description
-   2. **[Action2_2]:** Description  
+   2. **[Action2_2]:** Description
    3. **[Other_3]:** Describe a different action
    ```
 
@@ -127,7 +127,7 @@ class GeminiResponse:
    - `narrative_response_schema.parse_structured_response()`
    - `robust_json_parser.parse_llm_json_response()`
    - Planning block extraction logic
-   
+
 2. Implement specific exception handling:
    ```python
    try:
