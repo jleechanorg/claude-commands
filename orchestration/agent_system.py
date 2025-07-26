@@ -160,10 +160,10 @@ class AgentBase:
 
 
 class OpusAgent(AgentBase):
-    """Opus master coordinator agent."""
+    """Opus coordinator agent."""
 
     def __init__(self, broker: MessageBroker):
-        super().__init__("opus-master", "opus", broker)
+        super().__init__("task-coordinator", "opus", broker)
         self.capabilities = ["coordination", "task_breakdown", "management"]
         self.subordinates = []
 

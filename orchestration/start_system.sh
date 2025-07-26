@@ -218,9 +218,9 @@ run_test() {
     check_tmux
     check_dependencies
     setup_directories
-    start_opus
+    start_monitor
 
-    # Wait for agent to start
+    # Wait for system to start
     sleep 3
 
     # Test Redis connectivity

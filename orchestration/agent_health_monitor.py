@@ -46,14 +46,9 @@ class AgentHealthMonitor:
         # Initialize Redis connection
         self._init_redis()
 
-        # Define expected agents - only opus-master for dynamic system
-        self.expected_agents = {
-            "opus-master": {
-                "type": "orchestrator",
-                "specialization": "Task coordination",
-                "task_file": "shared_status.txt",
-            },
-        }
+        # Dynamic agent system - no fixed expected agents
+        # Agents are created on-demand via /orch command
+        self.expected_agents = {}
 
     def _init_redis(self):
         """Initialize Redis connection"""
@@ -221,52 +216,46 @@ class AgentHealthMonitor:
             # Wait a moment
             time.sleep(2)
 
-            # Restart based on agent type
-            if agent_name == "opus-master":
-                subprocess.run(
-                    [self.startup_script, "start"], check=False, capture_output=True
-                )
+            # Restart dynamic agents (task-agent-*)
+            # Start Claude agent with portable path discovery
+            try:
+                project_root = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
+                                            capture_output=True, text=True, check=True).stdout.strip()
+            except subprocess.CalledProcessError as e:
+                print(f"⚠️ Warning: Failed to determine project root using 'git rev-parse': {e}")
+                project_root = os.path.dirname(self.orchestration_dir)
+
+            # Find Claude executable portably
+            claude_path = None
+            if 'CLAUDE_PATH' in os.environ and os.path.exists(os.environ['CLAUDE_PATH']):
+                claude_path = os.environ['CLAUDE_PATH']
             else:
-                # Start Claude agent with portable path discovery
-                try:
-                    project_root = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
-                                                capture_output=True, text=True, check=True).stdout.strip()
-                except subprocess.CalledProcessError as e:
-                    print(f"⚠️ Warning: Failed to determine project root using 'git rev-parse': {e}")
-                    project_root = os.path.dirname(self.orchestration_dir)
+                claude_path = shutil.which('claude')
+                if not claude_path:
+                    claude_path = os.path.expanduser('~/.claude/local/claude')
 
-                # Find Claude executable portably
-                claude_path = None
-                if 'CLAUDE_PATH' in os.environ and os.path.exists(os.environ['CLAUDE_PATH']):
-                    claude_path = os.environ['CLAUDE_PATH']
-                else:
+            if not claude_path or not os.path.exists(claude_path):
+                print(f"❌ Claude executable not found for agent {agent_name}")
+                return False
 
-                    claude_path = shutil.which('claude')
-                    if not claude_path:
-                        claude_path = os.path.expanduser('~/.claude/local/claude')
-
-                if not claude_path or not os.path.exists(claude_path):
-                    print(f"❌ Claude executable not found for agent {agent_name}")
-                    return False
-
-                subprocess.run([
-                    'tmux', 'new-session', '-d', '-s', agent_name,
-                    '-c', project_root, claude_path
-                ], capture_output=True, check=False)
-                # Send initialization message
-                time.sleep(3)
-                subprocess.run(
-                    [
-                        "tmux",
-                        "send-keys",
-                        "-t",
-                        agent_name,
-                        f"I am the {config['type'].title()} Agent specialized in {config['specialization']}.",
-                        "Enter",
-                    ],
-                    check=False,
-                    capture_output=True,
-                )
+            subprocess.run([
+                'tmux', 'new-session', '-d', '-s', agent_name,
+                '-c', project_root, claude_path
+            ], capture_output=True, check=False)
+            # Send initialization message
+            time.sleep(3)
+            subprocess.run(
+                [
+                    "tmux",
+                    "send-keys",
+                    "-t",
+                    agent_name,
+                    f"I am the {config['type'].title()} Agent specialized in {config['specialization']}.",
+                    "Enter",
+                ],
+                check=False,
+                capture_output=True,
+            )
 
             # Update agent status
             if agent_name in self.agents:
