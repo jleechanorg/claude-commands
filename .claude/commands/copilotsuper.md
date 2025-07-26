@@ -2,7 +2,7 @@
 
 **Purpose**: Run comprehensive Copilot analysis on multiple PRs using orchestration agents
 
-**Usage**: `/copilotsuper PR1 [PR2 PR3...]`
+**Usage**: `/copilotsuper PR1 [PR2 PR3...]` or `/copilots PR1 [PR2 PR3...]`
 
 **Action**: Spawn orchestration agents to process multiple PRs in parallel with full Copilot analysis and fixes
 
@@ -126,8 +126,8 @@ User: /copilotsuper 718 719 720
 
 **Daily Review Cycle**:
 ```bash
-/copilotsuper $(gh pr list --json number -q '.[].number' | head -5)
-# Process 5 most recent PRs
+/copilots $(gh pr list --json number -q '.[].number' | head -5)
+# Process 5 most recent PRs using convenient alias
 ```
 
 ## ⚡ Performance Considerations
