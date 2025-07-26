@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Character Sheet Panel - WorldArchitect.AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .fantasy-bg {
+            background: linear-gradient(135deg,
+                rgba(147, 51, 234, 0.85),
+                rgba(126, 34, 206, 0.9),
+                rgba(79, 70, 229, 0.85)
+            );
+        }
+        .stat-hover:hover {
+            transform: scale(1.05);
+            transition: transform 0.2s ease;
+        }
+        .spell-slot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 1px;
+        }
+        .spell-slot.used {
+            background-color: #6b7280;
+        }
+        .spell-slot.available {
+            background-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="min-h-screen fantasy-bg text-white">
+    <!-- Header -->
+    <header class="bg-black/20 backdrop-blur-sm border-b border-purple-500/30 p-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                    <span class="text-xl">🗡️</span>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold">Kael Windhunter</h1>
+                    <p class="text-green-400 text-sm">Half-Elf Ranger • Level 5</p>
+                </div>
+            </div>
+            <button class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-sm font-medium">
+                View Full Sheet
+            </button>
+        </div>
+    </header>
+
+    <div class="flex h-[calc(100vh-80px)]">
+        <!-- Main Character Panel -->
+        <div class="flex-1 p-6 overflow-y-auto">
+            <!-- Character Stats -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold mb-4">Ability Scores</h2>
+                <div class="grid grid-cols-3 md:grid-cols-6 gap-4">
+                    <!-- Strength -->
+                    <div class="bg-black/40 backdrop-blur-sm rounded-lg p-4 text-center border border-gray-600/30 stat-hover cursor-pointer">
+                        <div class="text-xs text-gray-400 mb-1">STR</div>
+                        <div class="text-2xl font-bold">14</div>
+                        <div class="text-sm text-green-400">+2</div>
+                    </div>
+
+                    <!-- Dexterity -->
+                    <div class="bg-black/40 backdrop-blur-sm rounded-lg p-4 text-center border border-green-500/30 stat-hover cursor-pointer">
+                        <div class="text-xs text-gray-400 mb-1">DEX</div>
+                        <div class="text-2xl font-bold text-green-400">18</div>
+                        <div class="text-sm text-green-400">+4</div>
+                    </div>
+
+                    <!-- Constitution -->
+                    <div class="bg-black/40 backdrop-blur-sm rounded-lg p-4 text-center border border-gray-600/30 stat-hover cursor-pointer">
+                        <div class="text-xs text-gray-400 mb-1">CON</div>
+                        <div class="text-2xl font-bold">16</div>
+                        <div class="text-sm text-green-400">+3</div>
+                    </div>
+
+                    <!-- Intelligence -->
+                    <div class="bg-black/40 backdrop-blur-sm rounded-lg p-4 text-center border border-gray-600/30 stat-hover cursor-pointer">
+                        <div class="text-xs text-gray-400 mb-1">INT</div>
+                        <div class="text-2xl font-bold">12</div>
+                        <div class="text-sm text-green-400">+1</div>
+                    </div>
+
+                    <!-- Wisdom -->
+                    <div class="bg-black/40 backdrop-blur-sm rounded-lg p-4 text-center border border-green-500/30 stat-hover cursor-pointer">
+                        <div class="text-xs text-gray-400 mb-1">WIS</div>
+                        <div class="text-2xl font-bold text-green-400">16</div>
+                        <div class="text-sm text-green-400">+3</div>
+                    </div>
+
+                    <!-- Charisma -->
+                    <div class="bg-black/40 backdrop-blur-sm rounded-lg p-4 text-center border border-gray-600/30 stat-hover cursor-pointer">
+                        <div class="text-xs text-gray-400 mb-1">CHA</div>
+                        <div class="text-2xl font-bold">13</div>
+                        <div class="text-sm text-green-400">+1</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Health & Resources -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold mb-4">Health & Resources</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Hit Points -->
+                    <div class="bg-red-900/30 backdrop-blur-sm rounded-lg p-4 border border-red-500/30">
+                        <div class="text-sm text-red-400 mb-2">Hit Points</div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-2xl font-bold">34</span>
+                            <span class="text-gray-400">/</span>
+                            <span class="text-xl">42</span>
+                        </div>
+                        <div class="w-full bg-red-900/50 rounded-full h-2 mt-2">
+                            <div class="bg-red-500 h-2 rounded-full" style="width: 81%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Armor Class -->
+                    <div class="bg-blue-900/30 backdrop-blur-sm rounded-lg p-4 border border-blue-500/30">
+                        <div class="text-sm text-blue-400 mb-2">Armor Class</div>
+                        <div class="text-3xl font-bold">16</div>
+                        <div class="text-xs text-gray-400">Studded Leather + Dex</div>
+                    </div>
+
+                    <!-- Speed -->
+                    <div class="bg-yellow-900/30 backdrop-blur-sm rounded-lg p-4 border border-yellow-500/30">
+                        <div class="text-sm text-yellow-400 mb-2">Speed</div>
+                        <div class="text-3xl font-bold">30</div>
+                        <div class="text-xs text-gray-400">feet</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Spells -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold mb-4">Ranger Spells</h2>
+
+                <!-- Spell Slots -->
+                <div class="mb-4 bg-black/40 backdrop-blur-sm rounded-lg p-4 border border-purple-500/30">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="text-sm font-medium">Spell Slots</span>
+                        <button class="text-xs bg-purple-600 hover:bg-purple-700 px-2 py-1 rounded">Long Rest</button>
+                    </div>
+
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm">1st Level</span>
+                            <div class="flex space-x-1">
+                                <span class="spell-slot used" title="Used"></span>
+                                <span class="spell-slot available" title="Available"></span>
+                                <span class="spell-slot available" title="Available"></span>
+                                <span class="spell-slot available" title="Available"></span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm">2nd Level</span>
+                            <div class="flex space-x-1">
+                                <span class="spell-slot available" title="Available"></span>
+                                <span class="spell-slot available" title="Available"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Known Spells -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <!-- Hunter's Mark -->
+                    <div class="bg-green-900/30 backdrop-blur-sm rounded-lg p-3 border border-green-500/30 cursor-pointer hover:bg-green-900/50">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium text-green-400">Hunter's Mark</span>
+                            <span class="text-xs bg-green-700 px-2 py-1 rounded">1st</span>
+                        </div>
+                        <p class="text-xs text-gray-300">Mark a creature, deal extra damage</p>
+                        <button class="w-full mt-2 bg-green-600 hover:bg-green-700 py-1 rounded text-sm">Cast</button>
+                    </div>
+
+                    <!-- Cure Wounds -->
+                    <div class="bg-blue-900/30 backdrop-blur-sm rounded-lg p-3 border border-blue-500/30 cursor-pointer hover:bg-blue-900/50">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium text-blue-400">Cure Wounds</span>
+                            <span class="text-xs bg-blue-700 px-2 py-1 rounded">1st</span>
+                        </div>
+                        <p class="text-xs text-gray-300">Heal 1d8 + WIS modifier HP</p>
+                        <button class="w-full mt-2 bg-blue-600 hover:bg-blue-700 py-1 rounded text-sm">Cast</button>
+                    </div>
+
+                    <!-- Pass Without Trace -->
+                    <div class="bg-purple-900/30 backdrop-blur-sm rounded-lg p-3 border border-purple-500/30 cursor-pointer hover:bg-purple-900/50">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium text-purple-400">Pass Without Trace</span>
+                            <span class="text-xs bg-purple-700 px-2 py-1 rounded">2nd</span>
+                        </div>
+                        <p class="text-xs text-gray-300">+10 Stealth for party</p>
+                        <button class="w-full mt-2 bg-purple-600 hover:bg-purple-700 py-1 rounded text-sm">Cast</button>
+                    </div>
+
+                    <!-- Spike Growth -->
+                    <div class="bg-amber-900/30 backdrop-blur-sm rounded-lg p-3 border border-amber-500/30 cursor-pointer hover:bg-amber-900/50">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="font-medium text-amber-400">Spike Growth</span>
+                            <span class="text-xs bg-amber-700 px-2 py-1 rounded">2nd</span>
+                        </div>
+                        <p class="text-xs text-gray-300">Difficult terrain, 2d4 damage</p>
+                        <button class="w-full mt-2 bg-amber-600 hover:bg-amber-700 py-1 rounded text-sm">Cast</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Equipment -->
+            <div>
+                <h2 class="text-xl font-bold mb-4">Quick Equipment</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <!-- Longbow -->
+                    <div class="bg-black/40 backdrop-blur-sm rounded-lg p-3 border border-gray-600/30 cursor-pointer hover:bg-black/60">
+                        <div class="text-center">
+                            <div class="text-2xl mb-1">🏹</div>
+                            <div class="text-sm font-medium">Longbow</div>
+                            <div class="text-xs text-green-400">+7 to hit</div>
+                        </div>
+                        <button class="w-full mt-2 bg-gray-600 hover:bg-gray-700 py-1 rounded text-xs">Attack</button>
+                    </div>
+
+                    <!-- Shortsword -->
+                    <div class="bg-black/40 backdrop-blur-sm rounded-lg p-3 border border-gray-600/30 cursor-pointer hover:bg-black/60">
+                        <div class="text-center">
+                            <div class="text-2xl mb-1">⚔️</div>
+                            <div class="text-sm font-medium">Shortsword</div>
+                            <div class="text-xs text-green-400">+6 to hit</div>
+                        </div>
+                        <button class="w-full mt-2 bg-gray-600 hover:bg-gray-700 py-1 rounded text-xs">Attack</button>
+                    </div>
+
+                    <!-- Health Potion -->
+                    <div class="bg-red-900/30 backdrop-blur-sm rounded-lg p-3 border border-red-500/30 cursor-pointer hover:bg-red-900/50">
+                        <div class="text-center">
+                            <div class="text-2xl mb-1">🧪</div>
+                            <div class="text-sm font-medium">Healing Potion</div>
+                            <div class="text-xs text-red-400">x3</div>
+                        </div>
+                        <button class="w-full mt-2 bg-red-600 hover:bg-red-700 py-1 rounded text-xs">Use</button>
+                    </div>
+
+                    <!-- Thieves' Tools -->
+                    <div class="bg-yellow-900/30 backdrop-blur-sm rounded-lg p-3 border border-yellow-500/30 cursor-pointer hover:bg-yellow-900/50">
+                        <div class="text-center">
+                            <div class="text-2xl mb-1">🔧</div>
+                            <div class="text-sm font-medium">Thieves' Tools</div>
+                            <div class="text-xs text-yellow-400">Proficient</div>
+                        </div>
+                        <button class="w-full mt-2 bg-yellow-600 hover:bg-yellow-700 py-1 rounded text-xs">Use</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skills Panel -->
+        <div class="w-80 bg-black/60 backdrop-blur-sm border-l border-purple-500/30 p-4 overflow-y-auto">
+            <h3 class="text-lg font-bold mb-4">Skills & Saves</h3>
+
+            <div class="space-y-2 mb-6">
+                <h4 class="text-sm font-medium text-purple-400 mb-2">Saving Throws</h4>
+
+                <div class="flex items-center justify-between p-2 bg-black/40 rounded cursor-pointer hover:bg-black/60">
+                    <span class="text-sm">Strength</span>
+                    <span class="text-green-400">+2</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-green-900/30 border border-green-500/30 rounded cursor-pointer hover:bg-green-900/50">
+                    <span class="text-sm">Dexterity</span>
+                    <span class="text-green-400">+7</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-black/40 rounded cursor-pointer hover:bg-black/60">
+                    <span class="text-sm">Constitution</span>
+                    <span class="text-green-400">+3</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-black/40 rounded cursor-pointer hover:bg-black/60">
+                    <span class="text-sm">Intelligence</span>
+                    <span class="text-green-400">+1</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-green-900/30 border border-green-500/30 rounded cursor-pointer hover:bg-green-900/50">
+                    <span class="text-sm">Wisdom</span>
+                    <span class="text-green-400">+6</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-black/40 rounded cursor-pointer hover:bg-black/60">
+                    <span class="text-sm">Charisma</span>
+                    <span class="text-green-400">+1</span>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <h4 class="text-sm font-medium text-purple-400 mb-2">Skills</h4>
+
+                <div class="flex items-center justify-between p-2 bg-green-900/30 border border-green-500/30 rounded cursor-pointer hover:bg-green-900/50">
+                    <span class="text-sm">Animal Handling</span>
+                    <span class="text-green-400">+6</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-black/40 rounded cursor-pointer hover:bg-black/60">
+                    <span class="text-sm">Arcana</span>
+                    <span class="text-green-400">+1</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-black/40 rounded cursor-pointer hover:bg-black/60">
+                    <span class="text-sm">Athletics</span>
+                    <span class="text-green-400">+2</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-black/40 rounded cursor-pointer hover:bg-black/60">
+                    <span class="text-sm">Deception</span>
+                    <span class="text-green-400">+1</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-black/40 rounded cursor-pointer hover:bg-black/60">
+                    <span class="text-sm">History</span>
+                    <span class="text-green-400">+1</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-green-900/30 border border-green-500/30 rounded cursor-pointer hover:bg-green-900/50">
+                    <span class="text-sm">Insight</span>
+                    <span class="text-green-400">+6</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-black/40 rounded cursor-pointer hover:bg-black/60">
+                    <span class="text-sm">Intimidation</span>
+                    <span class="text-green-400">+1</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-black/40 rounded cursor-pointer hover:bg-black/60">
+                    <span class="text-sm">Investigation</span>
+                    <span class="text-green-400">+1</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-black/40 rounded cursor-pointer hover:bg-black/60">
+                    <span class="text-sm">Medicine</span>
+                    <span class="text-green-400">+3</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-green-900/30 border border-green-500/30 rounded cursor-pointer hover:bg-green-900/50">
+                    <span class="text-sm">Nature</span>
+                    <span class="text-green-400">+4</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-green-900/30 border border-green-500/30 rounded cursor-pointer hover:bg-green-900/50">
+                    <span class="text-sm">Perception</span>
+                    <span class="text-green-400">+6</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-black/40 rounded cursor-pointer hover:bg-black/60">
+                    <span class="text-sm">Performance</span>
+                    <span class="text-green-400">+1</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-black/40 rounded cursor-pointer hover:bg-black/60">
+                    <span class="text-sm">Persuasion</span>
+                    <span class="text-green-400">+1</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-black/40 rounded cursor-pointer hover:bg-black/60">
+                    <span class="text-sm">Religion</span>
+                    <span class="text-green-400">+1</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-black/40 rounded cursor-pointer hover:bg-black/60">
+                    <span class="text-sm">Sleight of Hand</span>
+                    <span class="text-green-400">+4</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-green-900/30 border border-green-500/30 rounded cursor-pointer hover:bg-green-900/50">
+                    <span class="text-sm">Stealth</span>
+                    <span class="text-green-400">+7</span>
+                </div>
+
+                <div class="flex items-center justify-between p-2 bg-green-900/30 border border-green-500/30 rounded cursor-pointer hover:bg-green-900/50">
+                    <span class="text-sm">Survival</span>
+                    <span class="text-green-400">+6</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add click handlers for ability scores and skills
+        document.querySelectorAll('.stat-hover, .cursor-pointer').forEach(element => {
+            element.addEventListener('click', function() {
+                // Simulate rolling for this stat/skill
+                console.log('Rolling for:', this.textContent.trim());
+
+                // Add visual feedback
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = 'scale(1)';
+                }, 150);
+            });
+        });
+    </script>
+</body>
+</html>

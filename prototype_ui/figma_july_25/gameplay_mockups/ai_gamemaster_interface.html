@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Game Master Interface - WorldArchitect.AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .story-content {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .action-option {
+            background-color: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 6px;
+            margin: 8px 0;
+            padding: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .action-option:hover {
+            background-color: #bbdefb;
+        }
+        .custom-action-box {
+            background-color: #f5f5f5;
+            border: 1px dashed #ccc;
+            border-radius: 6px;
+            padding: 15px;
+        }
+        .navbar-brand {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
+    <div class="container-fluid">
+        <span class="navbar-brand h1">WorldArchitect.AI</span>
+        <div class="d-flex align-items-center">
+            <span class="me-3">jleechan@gmail.com</span>
+            <span class="me-2">⭐ ⭐</span>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    Settings
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <!-- Campaign Title -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h2">Shadow heart</h1>
+                <button class="btn btn-secondary">Back to Dashboard</button>
+            </div>
+
+            <!-- Story Content -->
+            <div class="story-content p-4 mb-4">
+                <p class="mb-3">
+                    And above all, the "Manifest Shadow Servant" was a cold, precise eye. Its reconnaissance reports were chillingly accurate: a detailed map of the Bastion's internal layout, including patrol routes, key guard shifts, and the precise location of the 'Sacred Sunstone', the relic radiating the Bastion's core light. It had even identified a series of little-used maintenance tunnels beneath the structure, offering a covert entry point.
+                </p>
+
+                <p class="mb-3">
+                    Shadowheart opened her eyes, a grim satisfaction settling over her. The data was clear. The multi-pronged assault was underway, each Justiciar a specialized tool, and her Shadow Servant the perfect scout. The Bastion of Eternal Radiance, so full of its arrogant light, was already beginning to feel the insidious touch of Shar's encroaching night.
+                </p>
+
+                <div class="alert alert-info mb-3">
+                    <em>The initial intelligence and operational reports from the Justiciars and Manifest Shadow Servant are positive. The strategy is well underway, and immediate vulnerabilities have been identified. The Bastion is indeed complacent.</em>
+                    <br><br>
+                    The Bastion of Eternal Radiance is proving to be less fortified against insidious attacks than expected, its faith in Lathander blinding it to the shadows.
+                </div>
+
+                <!-- Action Options -->
+                <div class="action-option">
+                    <strong>Evaluate New Recruits:</strong> Focus on the desperate individuals Roric's overt displays have attracted, consolidating their loyalty to Shar.
+                </div>
+
+                <div class="action-option">
+                    <strong>Exploit Supply Lines:</strong> Direct Thane and Kaelen to immediately exploit the identified vulnerabilities in the Bastion's supply lines.
+                </div>
+
+                <div class="action-option">
+                    <strong>Intensify Psychological Warfare:</strong> Instruct Seraphina to escalate her efforts to sow despair and doubt within the Bastion's ranks.
+                </div>
+
+                <div class="action-option">
+                    <strong>Plan Covert Entry:</strong> Utilize the Manifest Shadow Servant's detailed intel to prepare a covert entry for a personal strike or to send a smaller, elite force.
+                </div>
+
+                <div class="custom-action-box">
+                    <strong>Other Action:</strong> You can describe a different action you'd like to take.
+                </div>
+
+                <div class="custom-action-box mt-3">
+                    <label for="customAction" class="form-label"><strong>Custom Action</strong></label>
+                    <textarea class="form-control" id="customAction" rows="3" placeholder="Describe your action..."></textarea>
+                </div>
+            </div>
+
+            <!-- Action Input -->
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" placeholder="What do you do?" id="actionInput">
+                        <button class="btn btn-primary" type="button">Send</button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="mode" id="characterMode" value="character" checked>
+                        <label class="form-check-label" for="characterMode">Character Mode</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="mode" id="godMode" value="god">
+                        <label class="form-check-label" for="godMode">God Mode</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Add click handlers for action options
+    document.querySelectorAll('.action-option').forEach(option => {
+        option.addEventListener('click', function() {
+            // Copy the action text to the input field
+            const actionText = this.textContent.trim();
+            document.getElementById('actionInput').value = actionText;
+        });
+    });
+
+    // Send button handler
+    document.querySelector('.btn-primary').addEventListener('click', function() {
+        const input = document.getElementById('actionInput');
+        if (input.value.trim()) {
+            console.log('Action sent:', input.value);
+            // Here you would send the action to the backend
+            input.value = '';
+        }
+    });
+</script>
+</body>
+</html>
