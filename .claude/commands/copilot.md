@@ -10,7 +10,7 @@
 ```
 🤖 /copilot - Starting intelligent PR analysis for PR #[NUMBER]
 🔧 Reading PR status and planning workflow...
-📊 PR Status: [OPEN/MERGED/CLOSED] | ✅ CI Status: [PASSING/FAILING] | 🔄 Mergeable: [TRUE/FALSE/CONFLICTING]
+📊 PR Status: [OPEN/MERGED/CLOSED] | ✅ CI Status: [PASSING/FAILING] | 🔄 Mergeable: [MERGEABLE/CONFLICTING/UNMERGEABLE]
 🚀 Beginning 6-phase autonomous workflow with full transparency...
 
 === COPILOT WORKFLOW INITIATED ===
@@ -186,9 +186,9 @@ if 'copilot' in author.lower():
    - Show: "CI Status: [PASSING/FAILING] - [X] checks found"
    - Show: Each CI check result with detailed status
 
-2. **🔄 NEW: GitHub Mergeable Status Check** (via `gh pr view --json mergeable`):
+2. **🔄 NEW: GitHub Mergeable Status Check** (via `gh pr view [PR] --json mergeable`):
    - Show: "🔄 Checking Mergeable Status: `gh pr view [PR] --json mergeable`..."
-   - Show: "Mergeable Status: [TRUE/FALSE/CONFLICTING]"
+   - Show: "Mergeable Status: [MERGEABLE/CONFLICTING/UNMERGEABLE]"
    - Show: Merge conflict details if any exist
 
 3. **🚨 CRITICAL: False Confidence Detection**:
@@ -222,7 +222,8 @@ if 'copilot' in author.lower():
   - Show: "  - CI Status: [detailed remaining failures]"
   - Show: "  - Mergeable Status: [CONFLICTING/FALSE with conflict details]"
   - Show: "📋 CONFLICT RESOLUTION GUIDANCE:"
-  - Show: "  1. Pull latest changes: `git pull origin main`"
+  - Show: "  1. Pull latest changes: `git pull origin [default-branch]`"
+  - Show: "     (Note: Replace `[default-branch]` with your repository's default branch name, e.g., `main` or `master`)"
   - Show: "  2. Resolve conflicts in: [list of conflicted files]"
   - Show: "  3. Use conflict resolution tools or manual editing"
   - Show: "  4. Test locally: `./run_tests.sh`"
@@ -443,7 +444,7 @@ PHASE 4: DIRECT EXECUTION
 >
 > 2. Running comprehensive merge readiness check...
 >    ✅ CI Status: PASSING - 3 checks passed
->    🔄 Mergeable Status: TRUE - No conflicts detected
+>    🔄 Mergeable Status: MERGEABLE - No conflicts detected
 >    🔍 Cross-check: ✅ CI and mergeable both green - ready to proceed
 >
 > 3. Analyzing comments (100% coverage):
@@ -474,7 +475,7 @@ PHASE 4: DIRECT EXECUTION
 >
 > 2. Running comprehensive merge readiness check...
 >    ✅ CI Status: FAILING - 2 failures detected
->    🔄 Mergeable Status: TRUE - No conflicts detected
+>    🔄 Mergeable Status: MERGEABLE - No conflicts detected
 >    🔍 Cross-check: ⚠️ CI failing but mergeable - need to fix CI issues
 >
 >    ## 🔧 Planned Fixes:
@@ -508,7 +509,8 @@ PHASE 4: DIRECT EXECUTION
 >    🚨 FALSE CONFIDENCE DETECTED: CI passes but PR cannot merge due to conflicts!
 >
 >    📋 CONFLICT RESOLUTION GUIDANCE:
->    1. Pull latest changes: `git pull origin main`
+>    1. Pull latest changes: `git pull origin [default-branch]`
+>       (Note: Replace `[default-branch]` with your repository's default branch name, e.g., `main` or `master`)
 >    2. Resolve conflicts in: .claude/commands/copilot.md, main.py
 >    3. Use conflict resolution tools or manual editing
 >    4. Test locally: `./run_tests.sh`
