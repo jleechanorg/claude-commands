@@ -232,7 +232,7 @@ if [[ -n "$WORKTREES" ]]; then
         fi
         
         # Get the branch for this worktree
-        WT_BRANCH=$(git --git-dir="$wt/.git" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+        WT_BRANCH=$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
         if [[ -z "$WT_BRANCH" ]]; then
             echo -e "${RED}no branch${NC}"
             worktrees_to_delete+=("$wt - no branch")
@@ -240,16 +240,23 @@ if [[ -n "$WORKTREES" ]]; then
         fi
         
         # Check for uncommitted changes
-        if [[ -n $(git --git-dir="$wt/.git" --work-tree="$wt" status --porcelain 2>/dev/null) ]]; then
+        if [[ -n $(git -C "$wt" status --porcelain 2>/dev/null) ]]; then
             echo -e "${YELLOW}uncommitted changes${NC}"
             worktrees_kept+=("$wt ($WT_BRANCH) - uncommitted changes")
             continue
         fi
         
         # Check branch's last commit date
-        COMMIT_DATE=$(git --git-dir="$wt/.git" log -1 --format="%cI" 2>/dev/null || echo "")
+        COMMIT_DATE=$(git -C "$wt" log -1 --format="%cI" 2>/dev/null || echo "")
         if [[ -n "$COMMIT_DATE" ]]; then
-            COMMIT_AGE_DAYS=$(( ($(date +%s) - $(date -d "$COMMIT_DATE" +%s)) / 86400 ))
+            # Handle both GNU date (Linux) and BSD date (macOS)
+            if date -d "2021-01-01" +%s >/dev/null 2>&1; then
+                # GNU date
+                COMMIT_AGE_DAYS=$(( ($(date +%s) - $(date -d "$COMMIT_DATE" +%s)) / 86400 ))
+            else
+                # BSD date (macOS)
+                COMMIT_AGE_DAYS=$(( ($(date +%s) - $(date -j -f "%Y-%m-%dT%H:%M:%S%z" "$COMMIT_DATE" +%s)) / 86400 ))
+            fi
             if [[ $COMMIT_AGE_DAYS -gt $WORKTREE_DAYS ]]; then
                 echo -e "${GREEN}stale ($COMMIT_AGE_DAYS days old)${NC}"
                 worktrees_to_delete+=("$wt ($WT_BRANCH) - $COMMIT_AGE_DAYS days old")
