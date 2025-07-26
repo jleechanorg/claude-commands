@@ -58,23 +58,23 @@ Meanwhile, from the black salt flats of the south, the monstrous black dragon Um
 
 ### Campaign Start: The Knight of Two Suns
 
-**Setting the Scene:**  
+**Setting the Scene:**
 The wind is a blade of ice in the northern province of Winter-Mourn, but the road beneath your company’s horses is a perfect, white ribbon of Imperial stone, cleared of snow by engineering guilds paid on time. For decades, the Silent Peace of Empress Sariel has held. Bandits are a myth, trade flows uninterrupted, and for the first time in generations, the common folk do not fear the changing of the seasons. This is the peace you swore an oath to protect. You are Ser Arion val Valerion, and at sixteen, your new knighthood feels less like a title and more like a sacred duty to the Empress who forged this stable, prosperous world from the ashes of a cataclysmic war.
 
 This is your first major deployment as a newly-sworn knight in the “Argent Eaglets,” a junior company tasked with enforcing Imperial law in these remote territories. Your mission, delivered by your commanding officer, the stern and ruthlessly pragmatic Prefect Gratian, is a test of your resolve. The March Lord of this province, Lady Annalise Ashwood, has been declared a traitor. Her crime: violating the Provincial Stability Mandate by offering sanctuary to a growing population of refugees, creating an unregistered settlement that attracts predations from the Shattered Host and drains regional resources. The orders are to "pacify" her keep and "disperse" the refugees—a cold euphemism for their slaughter, a necessary evil to prevent a single crack from forming in the Imperium's perfect, unyielding wall. Your father’s words echo in your mind: “Loyalty to the Crown is loyalty to civilization itself.”
 
 **Your Character:**
 
-- **Name:** Ser Arion val Valerion  
-- **Age:** 16  
-- **Class:** Level 1 Paladin (Oath of the Crown, sworn to Empress Sariel and the Laws of the Imperium)  
-- **Background:** Noble Knight of House Valerion. You are a young prodigy of the blade who has only ever known the benefits of the Empress’s rule. Your loyalty to her is intertwined with your loyalty to the peace and order she has created. This mission is the first time you have been forced to see the brutal machinery required to maintain that peace, and your disillusionment is a fresh, painful wound.  
+- **Name:** Ser Arion val Valerion
+- **Age:** 16
+- **Class:** Level 1 Paladin (Oath of the Crown, sworn to Empress Sariel and the Laws of the Imperium)
+- **Background:** Noble Knight of House Valerion. You are a young prodigy of the blade who has only ever known the benefits of the Empress’s rule. Your loyalty to her is intertwined with your loyalty to the peace and order she has created. This mission is the first time you have been forced to see the brutal machinery required to maintain that peace, and your disillusionment is a fresh, painful wound.
 
 **Gear:**
 
-- **Valerion Plate:** A suit of fine, heavy plate armor, emblazoned with your house's sigil of a steel gauntlet. It is perfectly crafted but not yet enchanted.  
-- **"Duty's Edge":** A heavy, perfectly balanced longsword, an heirloom of your house, carried by every firstborn on their first campaign.  
-- **The Gryphon Helm:** Your iconic helmet, marking you as a knight of your order.  
+- **Valerion Plate:** A suit of fine, heavy plate armor, emblazoned with your house's sigil of a steel gauntlet. It is perfectly crafted but not yet enchanted.
+- **"Duty's Edge":** A heavy, perfectly balanced longsword, an heirloom of your house, carried by every firstborn on their first campaign.
+- **The Gryphon Helm:** Your iconic helmet, marking you as a knight of your order.
 
-**Starting Abilities:**  
+**Starting Abilities:**
 You begin with Level 1 Paladin abilities: Divine Sense and Lay on Hands. Your oath to Empress Sariel grants you a deep connection to the laws of the Imperium, which is the source of your nascent holy power.

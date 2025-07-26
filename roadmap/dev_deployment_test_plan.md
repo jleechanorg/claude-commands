@@ -12,14 +12,14 @@ URL: https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app
 4. Enter prompt: "A cyberpunk heist in Neo-Tokyo"
 5. Submit
 
-**Expected**: 
+**Expected**:
 - Game state should have `custom_campaign_state.attribute_system = "destiny"`
 - Character generation should use 5 aptitudes
 - Social interactions use personality traits
 
 ### 2. Create Campaign with D&D System
 1. Create another campaign
-2. **CHECK** "Use D&D 6-Attribute System" 
+2. **CHECK** "Use D&D 6-Attribute System"
 3. Enter prompt: "Classic D&D dungeon crawl"
 4. Submit
 
@@ -36,7 +36,7 @@ URL: https://mvp-site-app-dev-i6xf2p72ka-uc.a.run.app
 ### 4. Check AI Behavior
 1. In Destiny campaign: Ask AI to show character stats
    - Should show: Physique, Coordination, Health, Intelligence, Wisdom
-2. In D&D campaign: Ask AI to show character stats  
+2. In D&D campaign: Ask AI to show character stats
    - Should show: STR, DEX, CON, INT, WIS, CHA
 
 ## Debugging

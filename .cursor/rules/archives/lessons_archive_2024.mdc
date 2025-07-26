@@ -38,7 +38,7 @@ This file contains historical lessons and incidents that have been resolved or s
 - **Root Cause:** Code assumed data structures from external sources (Firestore, AI responses) would always be consistent types, but missions could be stored as either strings or dictionaries, and NPC data could be malformed.
 - **Solution:** Always validate data types before operations. Pattern: `if isinstance(item, dict):` before calling dictionary methods like `.get()`. For collections that might contain mixed types, iterate and handle each type appropriately.
 
-### Theme System Architectural Failure (December 2024) 
+### Theme System Architectural Failure (December 2024)
 
 **Lesson: Global Event Delegation Can Break Core Functionality**
 - **Incident:** Theme system implementation completely broke campaign creation. Clicking "Begin Adventure!" button stopped working and only triggered theme changes instead of form submission.

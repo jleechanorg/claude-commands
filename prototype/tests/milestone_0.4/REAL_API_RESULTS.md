@@ -8,7 +8,7 @@
 Tested three entity tracking approaches with REAL Gemini API calls (not mock mode):
 
 1. **Validation-only**: Post-generation validation
-2. **Pydantic-only**: Structured generation with schema  
+2. **Pydantic-only**: Structured generation with schema
 3. **Combined**: Structured generation + validation
 
 ### Results
@@ -46,7 +46,7 @@ Tested three entity tracking approaches with REAL Gemini API calls (not mock mod
 - Pydantic: ✅ Found all 4
 - Combined: ✅ Found all 4
 
-#### Scenario 2: multi_character  
+#### Scenario 2: multi_character
 - Expected: Lyra, Theron, Marcus, Elara
 - Validation: ❌ Only found Lyra
 - Pydantic: ✅ Found all 4

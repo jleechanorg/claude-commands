@@ -3,7 +3,7 @@ Defines the GameState class, which represents the complete state of a campaign.
 """
 
 import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional
 
 import constants
 import logging_util
@@ -69,7 +69,7 @@ class GameState:
         return data
 
     @classmethod
-    def from_dict(cls, source: Optional[Dict[str, Any]]) -> Optional['GameState']:
+    def from_dict(cls, source: dict[str, Any] | None) -> Optional["GameState"]:
         """Creates a GameState object from a dictionary (e.g., from Firestore)."""
         if not source:
             return None
@@ -77,7 +77,7 @@ class GameState:
         # The constructor now directly accepts the dictionary.
         return cls(**source)
 
-    def validate_checkpoint_consistency(self, narrative_text: str) -> List[str]:
+    def validate_checkpoint_consistency(self, narrative_text: str) -> list[str]:
         """
         Validates that critical checkpoint data in the state matches references in the narrative.
         Returns a list of discrepancies found.
@@ -250,7 +250,7 @@ class GameState:
 
     # Combat Management Methods
 
-    def start_combat(self, combatants_data: List[Dict[str, Any]]) -> None:
+    def start_combat(self, combatants_data: list[dict[str, Any]]) -> None:
         """
         Initialize combat state with given combatants.
 
@@ -319,7 +319,7 @@ class GameState:
             "combat_log": [],
         }
 
-    def cleanup_defeated_enemies(self) -> List[str]:
+    def cleanup_defeated_enemies(self) -> list[str]:
         """
         Identifies and removes defeated enemies from both combat_state and npc_data.
         Returns a list of defeated enemy names for logging.

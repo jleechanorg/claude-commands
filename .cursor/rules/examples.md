@@ -47,7 +47,7 @@ def process_data():
 class MyClass:
     def method(self):
         from utils import helper  # ❌ NEVER import inside methods
-        
+
 if condition:
     import special_module  # ❌ NEVER conditional imports
 ```
@@ -81,7 +81,7 @@ User says "run tests" → Check if feature is integrated → If not, say "The fe
 ```
 Session Context Usage: ~75-85% used
 - System messages: ~10-15%
-- File operations: ~30-40%  
+- File operations: ~30-40%
 - Conversation: ~25-35%
 - Tool outputs: ~10-15%
 

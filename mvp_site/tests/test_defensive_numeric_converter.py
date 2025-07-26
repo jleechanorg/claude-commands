@@ -171,7 +171,6 @@ class TestEntitiesWithDefensiveConverter(unittest.TestCase):
     def test_hp_validation_after_conversion(self):
         """Test that HP validation works after defensive conversion"""
 
-
         # HP=10, HP_MAX=unknown (converts to 1) -> Should fail validation (hp > hp_max)
         with self.assertRaises(ValidationError):
             HealthStatus(hp=10, hp_max="unknown")  # hp=10 > hp_max=1 after conversion

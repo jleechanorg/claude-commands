@@ -5,11 +5,10 @@ Compares captured real service interactions with mock responses.
 
 import json
 import os
+import time
 from collections import defaultdict
 from datetime import datetime
 from typing import Any
-
-import time
 
 
 class CaptureAnalyzer:
@@ -39,8 +38,6 @@ class CaptureAnalyzer:
         """Get capture files from the last N days."""
         if not os.path.exists(self.capture_dir):
             return []
-
-
 
         cutoff_time = time.time() - (days_back * 24 * 3600)
         recent_files = []

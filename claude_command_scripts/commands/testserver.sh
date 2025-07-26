@@ -23,7 +23,7 @@ Usage: /testserver [action] [branch]
 
 Actions:
   start [branch]  - Start test server for branch (defaults to current branch)
-  stop [branch]   - Stop test server for branch (defaults to current branch)  
+  stop [branch]   - Stop test server for branch (defaults to current branch)
   list           - List all running test servers
   cleanup        - Stop all test servers
   status         - Show status of current branch server
@@ -68,7 +68,7 @@ case "$ACTION" in
         current_branch=$(git branch --show-current)
         echo -e "${BLUE}📊 Test Server Status for '$current_branch'${NC}"
         echo "=========================="
-        
+
         if [ -f "$PROJECT_ROOT/test_server_manager.sh" ]; then
             # Check if server is running
             "$PROJECT_ROOT/test_server_manager.sh" list | grep -A 4 "^✅ $current_branch" || {

@@ -372,21 +372,21 @@ body {
         gap: 1rem;
         align-items: stretch;
     }
-    
+
     .track-label {
         position: static;
         text-align: left;
         margin-bottom: 0.5rem;
     }
-    
+
     .events-line {
         margin-left: 0;
     }
-    
+
     .dashboard-title {
         font-size: 1.5rem;
     }
-    
+
     .campaign-name {
         display: block;
         font-size: 1rem;

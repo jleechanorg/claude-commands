@@ -17,7 +17,7 @@
 **Default Thinking Mode**: Architecture reviews use sequential thinking (4-6 thoughts) by default.
 **Ultra-Think Upgrade**: When combined with `/thinku`, automatically upgrades to deep analysis (12+ thoughts).
 
-**Dual-Perspective Analysis**: 
+**Dual-Perspective Analysis**:
 1. **Claude Perspective**: System architecture, design patterns, maintainability, technical debt
 2. **Gemini Perspective**: Performance optimization, scalability concerns, alternative approaches, industry best practices
 
@@ -87,7 +87,7 @@ Both perspectives focus on MVP shipping priorities:
 **Phase 4: Equal Partnership (Shipping Focus)**
 - **Both evaluate**: MVP shipping readiness
 - **Joint focus**: Speed, simplicity, user value
-- **Key questions**: 
+- **Key questions**:
   - "Can one person build and maintain this?"
   - "Does this help users or just satisfy engineering perfectionism?"
   - "Can we ship without this refinement?"
@@ -103,7 +103,7 @@ Both perspectives focus on MVP shipping priorities:
 
 **Ultra Mode** (when combined with `/thinku`):
 - **Initial Analysis**: 4-6 thoughts for context gathering
-- **Deep Review**: 8-12 thoughts for architectural analysis  
+- **Deep Review**: 8-12 thoughts for architectural analysis
 - **Synthesis**: 4-6 thoughts for final recommendations
 - **Total Budget**: 16-24 thoughts for comprehensive review
 
@@ -125,7 +125,7 @@ Both perspectives focus on MVP shipping priorities:
 ### Consultant Insights (Gemini)
 [Performance red flags, simpler alternatives]
 
-## Phase 3: Gemini-Led Analysis (Reality Check)  
+## Phase 3: Gemini-Led Analysis (Reality Check)
 ### Primary Analysis (Gemini)
 [Optimization opportunities, cleaner patterns]
 ### Consultant Reality Check (Claude)
@@ -141,7 +141,7 @@ Both perspectives focus on MVP shipping priorities:
 
 ## Action Items
 - [ ] Ship Blockers: [Must fix before users see this]
-- [ ] Quick Wins: [Easy improvements while building]  
+- [ ] Quick Wins: [Easy improvements while building]
 - [ ] Post-MVP: [Save for after initial user feedback]
 ```
 

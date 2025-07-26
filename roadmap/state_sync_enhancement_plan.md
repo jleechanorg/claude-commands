@@ -87,7 +87,7 @@ Additionally, the system lacks:
 
 4. **Enhance token validator with fuzzy matching** ✅ COMPLETED
    - ✅ Add regex patterns for name variations and titles
-   - ✅ Implement descriptor matching (e.g., "knight" → "Gideon") 
+   - ✅ Implement descriptor matching (e.g., "knight" → "Gideon")
    - ✅ Handle pronouns and contextual references
    - ✅ Support partial name matches with confidence scores
 
@@ -153,7 +153,7 @@ Additionally, the system lacks:
   - Updated recommendation based on real LLM behavior ✅
   - Production integration guide ✅
 
-**Results:** 
+**Results:**
 - Validation-only: 0% success on test scenarios, 70% on real campaign
 - Pydantic-only: 100% success on all tests
 - Combined: 100% success on all tests
@@ -258,7 +258,7 @@ Additionally, the system lacks:
     - Include implementation guide for chosen approach
 
 **Progress Summary:**
-- Steps 1-12: ✅ COMPLETED (72/72 sub-bullets) 
+- Steps 1-12: ✅ COMPLETED (72/72 sub-bullets)
 - **Overall: 100% complete! 🎉**
 
 ### Phase 1: AI Token Audit and Validation Infrastructure (Weeks 3-4)
@@ -319,7 +319,7 @@ Additionally, the system lacks:
      - Cache lifecycle limited to single API request duration
      - No external dependencies (Redis, etc.) required
      - Cache invalidated when `last_state_update_timestamp` changes
-*   **Performance Targets:** 
+*   **Performance Targets:**
      - Manifest generation: < 50ms for scenes with < 20 entities
      - Validation check: < 10ms per narrative generation
 *   **Rationale:** This approach prevents redundant manifest generation within the same request while maintaining simplicity in our stateless Cloud Run environment.
@@ -333,14 +333,14 @@ Additionally, the system lacks:
      - Optimized approach:
        ```python
        # Build index once
-       entity_index = {descriptor.lower(): entity_id 
-                       for entity in manifest["entities"] 
+       entity_index = {descriptor.lower(): entity_id
+                       for entity in manifest["entities"]
                        for descriptor in entity["descriptors"]}
-       
+
        # Fast lookup during validation
        narrative_tokens = set(narrative_text.lower().split())
-       matched_entities = {entity_index[token] 
-                          for token in narrative_tokens 
+       matched_entities = {entity_index[token]
+                          for token in narrative_tokens
                           if token in entity_index}
        ```
      - Configurable strictness levels (strict/normal/lenient)
@@ -373,7 +373,7 @@ Additionally, the system lacks:
 *   **Primary Integration:** Modifications to `gemini_service.py` to enforce state synchronization
 *   **Integration Sequence:**
      1. **Before AI Call:** After loading GameState, call `game_state.get_active_entity_manifest()`
-     2. **Prompt Injection with Security:** 
+     2. **Prompt Injection with Security:**
         - **CRITICAL SECURITY**: Sanitize all entity names/descriptions before injection
         - Use structured prompt with placeholders instead of string concatenation
         - Example secure format:
@@ -410,8 +410,8 @@ class GameState:
             }
         """
         pass
-    
-    def validate_narrative_consistency(self, narrative_text: str, 
+
+    def validate_narrative_consistency(self, narrative_text: str,
                                      strictness: str = "normal") -> Dict[str, Any]:
         """
         Validate narrative against current entity manifest.
@@ -444,7 +444,7 @@ class GameState:
         {
             "id": "rowan_001",
             "name": "Rowan",
-            "type": "player_character", 
+            "type": "player_character",
             "status": ["conscious", "healing"],
             "descriptors": ["rowan", "healer", "cleric"]
         }
@@ -467,7 +467,7 @@ class GameState:
 
 ### 5.1. Performance Risks
 *   **Risk:** Scene Manifest generation could degrade performance for large entity counts
-*   **Mitigation:** 
+*   **Mitigation:**
      - Implement lazy loading for entity details
      - Add circuit breaker for scenes > 50 entities
      - Profile and optimize hot paths
@@ -680,7 +680,7 @@ class GameState:
 - **Milestone 0.3**: Validation Prototype ✅ (100% complete)
   - Built multiple validator types with benchmarking
   - Proven hybrid approach achieves best accuracy/performance balance
-  
+
 - **Milestone 0.4**: Alternative Approach Evaluation ✅ (100% complete)
   - Test framework comparing 3 approaches
   - Mock testing shows combined approach achieves 100% entity mention rate
@@ -705,4 +705,4 @@ class GameState:
 2. Skip original Phase 1 (AI Token Audit) - Not needed given structured approach success
 3. The new Milestone 1 incorporates the best parts of original Phase 2
 
-All phases (0, 1, and 2) remain in active development. This document serves as the authoritative implementation guide for the enhanced state synchronization system. 
+All phases (0, 1, and 2) remain in active development. This document serves as the authoritative implementation guide for the enhanced state synchronization system.

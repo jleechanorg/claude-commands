@@ -27,7 +27,7 @@ if [ $NUM_COMMITS -eq 0 ]; then
   echo "No new commits found in PR #$PR_NUM to cherry-pick."
 else
   echo "Found $NUM_COMMITS commit(s) to cherry-pick from PR #$PR_NUM."
-  
+
   # Loop through and cherry-pick each commit individually
   for COMMIT in "${COMMITS[@]}"; do
     echo "Cherry-picking commit: ${COMMIT:0:12}..."

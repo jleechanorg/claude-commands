@@ -36,7 +36,7 @@ This directory contains several utility modules to reduce code duplication and s
 - `extract_structured_fields()` - Extract common response fields
 - `wait_for_text_to_appear()` - Wait for specific text
 
-### 5. `browser_test_base.py` 
+### 5. `browser_test_base.py`
 **Purpose**: Base class for browser tests (for tests that extend BrowserTestBase)
 - `BrowserTestBase` - Base class with setup/teardown
 - `FlaskServerManager` - Manages test server lifecycle
@@ -59,14 +59,14 @@ from screenshot_utils import take_screenshot
 def my_test(page, test_name):
     # Navigate with test mode
     navigate_to_page(page, "new-campaign", port=6008)
-    
+
     # Take screenshot
     take_screenshot(page, test_name, "initial_state")
-    
+
     # Fill wizard
-    fill_wizard_step1(page, "Test Campaign", "custom", 
+    fill_wizard_step1(page, "Test Campaign", "custom",
                      "Test Character", "Test Setting")
-    
+
     # ... rest of test
 
 # Run the test
@@ -80,10 +80,10 @@ from test_data_utils import MockAPIServer, generate_test_campaign
 with MockAPIServer(port=8086) as server:
     # Set custom response
     server.set_response("/api/custom", {"result": "success"})
-    
+
     # Run test against mock server
     # ...
-    
+
     # Check what requests were made
     print(f"Requests made: {server.requests}")
 ```
@@ -95,7 +95,7 @@ from browser_test_base import BrowserTestBase
 class MyTest(BrowserTestBase):
     def __init__(self):
         super().__init__("My Test Name")
-    
+
     def run_test(self, page):
         # Your test logic here
         self.take_screenshot(page, "test_screenshot")

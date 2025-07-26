@@ -63,7 +63,7 @@ def test_response_includes_structured_fields():
     # Mock all dependencies
     # Test specific function behavior
 
-# Layer 2: test_structured_fields_integration.py  
+# Layer 2: test_structured_fields_integration.py
 def test_structured_fields_flow():
     """Integration: Full backend flow with mocked APIs"""
     # Mock only Firestore and Gemini

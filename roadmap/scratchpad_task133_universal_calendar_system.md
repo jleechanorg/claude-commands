@@ -5,7 +5,7 @@ Create a simple universal calendar system that uses consistent backend numbers b
 
 ## Current Implementation Analysis
 - **Primary calendar logic:** `mvp_site/prompts/game_state_instruction.md` (lines 622, 792, 803, 814-843, 1019)
-- **World-specific dates:** `mvp_site/world/world_assiah_compressed.md` (lines 12, 21-22) 
+- **World-specific dates:** `mvp_site/world/world_assiah_compressed.md` (lines 12, 21-22)
 - **Time calculations:** `mvp_site/game_state.py` (lines 282-374)
 - **System:** Uses Forgotten Realms Calendar of Harptos with fantasy month names like "Ches", "Mirtul", "Kythorn"
 
@@ -17,7 +17,7 @@ Create a simple universal calendar system that uses consistent backend numbers b
   {
     "world_time": {
       "year": 1492,
-      "month": "Ches", 
+      "month": "Ches",
       "day": 20,
       "hour": 9,
       "minute": 51,
@@ -75,7 +75,7 @@ Create a simple universal calendar system that uses consistent backend numbers b
    - Add universe template definitions
    - Add calendar conversion instructions for LLM
    - Add examples for each universe type
-   
+
 2. **Add universe field validation:**
    - Ensure `calendar_universe` is included in campaign data schema
    - Add default fallback to "fantasy"
@@ -84,7 +84,7 @@ Create a simple universal calendar system that uses consistent backend numbers b
 1. **Update campaign creation:**
    - Add universe selection dropdown/option
    - Include in campaign data structure
-   
+
 2. **Add DM inference logic:**
    - Prompt instructions for LLM to detect universe from setting
    - Fallback to asking user if unclear
@@ -129,7 +129,7 @@ Create a simple universal calendar system that uses consistent backend numbers b
 - Firestore campaign data structure
 
 ## Estimated Time: 2 hours
-- Prompt updates: 45 minutes  
+- Prompt updates: 45 minutes
 - Campaign integration: 30 minutes
 - Migration logic: 30 minutes
 - Testing: 15 minutes

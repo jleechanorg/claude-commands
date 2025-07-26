@@ -7,10 +7,9 @@ by testing the complete flow from AI response to state application.
 
 import json
 import os
+import shutil
 import sys
 import unittest
-
-import shutil
 
 # Add the parent directory to path to enable imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -65,7 +64,6 @@ class TestStateUpdateIntegration(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test fixtures"""
-
 
         if os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)

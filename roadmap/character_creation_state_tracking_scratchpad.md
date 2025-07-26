@@ -10,7 +10,7 @@ During character creation, when a user selects a numbered option (e.g., "1" for 
 Instead, it repeats the same prompt without processing the input.
 
 ## Example from User Report
-- User was at Step 6 (Background Selection) 
+- User was at Step 6 (Background Selection)
 - Options presented: 1. Knight of the Imperium, 2. Wilds Warden, 3. Disgraced Noble
 - User input: "1"
 - Expected: AI acknowledges "You have chosen Knight of the Imperium..." and moves to Step 7
@@ -91,7 +91,7 @@ if current_game_state.custom_campaign_state.get('character_creation', {}).get('i
 ### Solution 2: Clearer AI Instructions
 Add more explicit instructions in the character creation prompt:
 ```
-CRITICAL: During character creation, when the user provides a single number (1, 2, 3, etc.), 
+CRITICAL: During character creation, when the user provides a single number (1, 2, 3, etc.),
 this is ALWAYS a selection from the numbered options you just presented. You MUST:
 1. Map the number to the corresponding option
 2. Update the state with this selection

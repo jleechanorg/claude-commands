@@ -88,7 +88,6 @@ class TestHPUnknownValues(unittest.TestCase):
     def test_hp_exceeds_max_after_conversion(self):
         """Test validation still works after conversion"""
 
-
         # HP=5 exceeds converted hp_max=1, should raise ValidationError
         with self.assertRaises(ValidationError) as context:
             HealthStatus(hp=5, hp_max="unknown")

@@ -74,7 +74,7 @@ Achieve 80%+ test coverage across core modules while maintaining pragmatic testi
 - [ ] Test CORS handling
 
 ### 4.2 Helper Function Tests
-- [ ] Test `_handle_ask_state_command()` 
+- [ ] Test `_handle_ask_state_command()`
 - [ ] Test `_handle_update_state_command()`
 - [ ] Test `_handle_legacy_migration()`
 - [ ] Test `_apply_state_changes_and_respond()`

@@ -81,12 +81,12 @@ def _run_validation_only_real(self, campaign_id, scenario):
     # Use baseline prompt
     # Call real Gemini API
     # Validate with NarrativeSyncValidator
-    
+
 def _run_pydantic_only_real(self, campaign_id, scenario):
     # Use structured prompt with manifest
     # Call real Gemini API
     # Parse structured response
-    
+
 def _run_combined_real(self, campaign_id, scenario):
     # Use structured prompt + validation hints
     # Call real Gemini API

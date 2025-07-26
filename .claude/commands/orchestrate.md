@@ -16,7 +16,7 @@
 - 🔒 **Branch Context**: Your branch = your workspace. Agent branches = their workspaces. Never mix them!
 - ⚠️ **Violation Impact**: Switching branches disrupts user's work context and can cause lost changes
 
-**Implementation**: 
+**Implementation**:
 - **Python Script**: `python3 .claude/commands/orchestrate.py [task_description]`
 - **Shell Wrapper**: `./claude_command_scripts/orchestrate.sh` (if available)
 - **Direct Execution**: Uses real Claude Code CLI agents in separate tmux sessions
@@ -49,7 +49,7 @@
 
 **Agent Types**:
 - **Frontend Agent**: UI, React components, styling (`frontend-agent`)
-- **Backend Agent**: APIs, database, server logic (`backend-agent`) 
+- **Backend Agent**: APIs, database, server logic (`backend-agent`)
 - **Testing Agent**: Tests, QA, validation (`testing-agent`)
 - **Opus Master**: Coordination and oversight (`opus-master`)
 

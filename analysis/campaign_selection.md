@@ -15,7 +15,7 @@ Generated: 2025-06-29
 - **Players**: 4
 - **Sessions**: 12
 - **Desync Rate**: 15% (estimated 18 incidents)
-- **Common Issues**: 
+- **Common Issues**:
   - Presence ambiguity (mentioned vs physically present)
   - State discontinuity (physical/emotional states)
   - Combat entity tracking
@@ -28,7 +28,7 @@ Generated: 2025-06-29
 - **Players**: 3
 - **Sessions**: 8
 - **Desync Rate**: 22% (estimated 14 incidents)
-- **Common Issues**: 
+- **Common Issues**:
   - Split party scenarios
   - Location confusion
   - Stealth character tracking
@@ -40,7 +40,7 @@ Generated: 2025-06-29
 - **Players**: 5
 - **Sessions**: 6
 - **Desync Rate**: 18% (estimated 9 incidents)
-- **Common Issues**: 
+- **Common Issues**:
   - Hidden/invisible characters
   - Status effects (paralyzed, unconscious)
   - Darkness/vision limitations
@@ -52,7 +52,7 @@ Generated: 2025-06-29
 - **Players**: 3
 - **Sessions**: 15
 - **Desync Rate**: 12% (estimated 11 incidents)
-- **Common Issues**: 
+- **Common Issues**:
   - Ship combat with many NPCs
   - Crew management (10+ entities)
   - Environmental hazards
@@ -64,7 +64,7 @@ Generated: 2025-06-29
 - **Players**: 4
 - **Sessions**: 7
 - **Desync Rate**: 25% (estimated 10 incidents)
-- **Common Issues**: 
+- **Common Issues**:
   - Mass combat confusion
   - Allied NPC tracking
   - Battlefield positioning
@@ -85,7 +85,7 @@ Pattern: Subtle omission in emotional scenes
 ### Thornwood - Split Party Desync
 ```
 Session 5, Turn 22:
-Game State: 
+Game State:
   - Rogue in sewers (stealth mission)
   - Rest of party in tavern (planning)
 Generated: "The party discussed their plans together..."

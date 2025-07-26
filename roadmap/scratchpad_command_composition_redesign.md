@@ -19,7 +19,7 @@ Commands with specific implementations that MUST be preserved:
 - `/deploy` - Deployment procedures
 - `/learn` - Memory MCP integration
 
-### Natural Commands  
+### Natural Commands
 Commands that modify approach/style through natural language:
 - `/think` - Thinking approach
 - `/debug` - Debugging mindset
@@ -88,7 +88,7 @@ Test validates 100% registration coverage.
 {
   "protocol_commands": [
     "/arch",
-    "/execute", 
+    "/execute",
     "/test",
     "/testui",
     "/testhttp",
@@ -105,7 +105,7 @@ Test validates 100% registration coverage.
   "natural_commands": [
     // Current commands
     "/think",
-    "/thinku", 
+    "/thinku",
     "/debug",
     "/brief",
     "/verbose",
@@ -116,7 +116,7 @@ Test validates 100% registration coverage.
     "/review",
     "/analyze",
     "/fix",
-    
+
     // Quality & Style
     "/clean",        // Prioritize clean code principles
     "/readable",     // Optimize for human readability
@@ -126,21 +126,21 @@ Test validates 100% registration coverage.
     "/functional",   // Prefer functional programming
     "/oop",          // Object-oriented approach
     "/declarative",  // Declarative over imperative
-    
-    // Safety & Validation  
+
+    // Safety & Validation
     "/paranoid",     // Extra validation everywhere
     "/defensive",    // Defensive programming
     "/failsafe",     // Graceful degradation
     "/idempotent",   // Ensure idempotency
     "/atomic",       // Atomic operations
-    
+
     // Performance & Resource
     "/performance",  // Optimize for speed
     "/memory",       // Optimize memory usage
     "/scalable",     // Design for scale
     "/efficient",    // General efficiency
     "/stream",       // Streaming approaches
-    
+
     // Scope & Depth
     "/minimal",      // Bare minimum implementation
     "/complete",     // Fully featured
@@ -148,7 +148,7 @@ Test validates 100% registration coverage.
     "/production",   // Production-ready code
     "/prototype",    // Quick prototype
     "/polish",       // Refined implementation
-    
+
     // Learning & Interaction
     "/explore",      // Try multiple approaches
     "/research",     // Deep dive into options
@@ -157,21 +157,21 @@ Test validates 100% registration coverage.
     "/teach",        // Tutorial-style
     "/beginner",     // Assume less knowledge
     "/expert",       // Assume deep knowledge
-    
+
     // Collaboration Style
     "/pair",         // Pair programming style
     "/mentor",       // Mentoring approach
     "/suggest",      // Suggestive not prescriptive
     "/critique",     // Critical analysis
     "/refactor",     // Focus on refactoring
-    
+
     // Context & Domain
     "/web",          // Web development focus
     "/mobile",       // Mobile constraints
     "/enterprise",   // Enterprise patterns
     "/startup",      // Move fast approach
     "/legacy",       // Work with legacy code
-    
+
     // Meta & Behavior
     "/confident",    // Be decisive
     "/cautious",     // Highlight uncertainties
@@ -188,44 +188,44 @@ def execute_commands(commands, task):
     # Separate protocol and natural commands
     protocol_cmds = [c for c in commands if c in registry['protocol_commands']]
     natural_cmds = [c for c in commands if c in registry['natural_commands']]
-    
+
     # Natural commands modify the execution context
     context = build_context(natural_cmds)
-    
+
     # LLM decides execution plan for protocol commands
     execution_plan = llm_analyze_dependencies(protocol_cmds, task)
-    
+
     # Present plan to user
     if not user_approves(execution_plan):
         return
-    
+
     # Execute according to LLM's plan (may include parallel phases)
     execute_plan(execution_plan, context)
 
 def build_context(natural_cmds):
     """Natural commands set context that modifies protocol execution"""
     context = {}
-    
+
     # Thinking mode selection with explicit precedence
     # When multiple thinking commands present, use the most powerful
     if '/thinku' in natural_cmds:
         context['thinking_mode'] = 'ultra'  # 12+ thoughts (takes precedence)
     elif '/think' in natural_cmds:
         context['thinking_mode'] = 'regular'  # 4-6 thoughts
-    
+
     # Output modifiers
     if '/brief' in natural_cmds:
         context['output'] = 'brief'
     elif '/verbose' in natural_cmds:
         context['output'] = 'verbose'
-        
+
     # Debug mode
     if '/debug' in natural_cmds:
         context['debug'] = True
         context['logging'] = 'verbose'
         context['error_handling'] = 'detailed'
         context['validation'] = 'strict'
-        
+
     # Other natural modifiers...
     return context
 ```
@@ -241,14 +241,14 @@ Example LLM analysis:
 Input: /test /arch /deploy /copilot "review and deploy feature"
 
 LLM Decision:
-Phase 1 (Parallel): /test, /copilot 
+Phase 1 (Parallel): /test, /copilot
   - Both can run independently
   - Gather test results and code suggestions simultaneously
-  
+
 Phase 2: /arch
   - Needs test results and copilot suggestions as input
   - Comprehensive review with all data
-  
+
 Phase 3: /deploy
   - Only if tests pass and architecture approved
   - Sequential dependency on previous phases
@@ -293,7 +293,7 @@ Execution Plan:
 Note: Order doesn't matter - natural commands modify context
 ```
 
-#### `/think /arch /execute` 
+#### `/think /arch /execute`
 ```
 Natural Context: Thinking approach (redundant for arch, useful for execute)
 Execution Plan:
@@ -361,7 +361,7 @@ Execution Plan:
 
 #### `/minimal /fast /prototype "proof of concept"`
 ```
-Natural Context: 
+Natural Context:
 - Minimal scope (bare essentials only)
 - Fast execution (skip non-critical paths)
 - Prototype quality (not production-ready)
@@ -435,11 +435,11 @@ def suggest_commands(task_description, current_commands):
     prompt = f"""
     Task: {task_description}
     Current commands: {current_commands}
-    
+
     Analyze the task and suggest 1-3 natural commands that would help.
     Consider: debugging needs, performance concerns, safety requirements,
     scope decisions, and user experience goals.
-    
+
     For each suggestion explain WHY it helps this specific task.
     """
     return llm_analyze(prompt)
@@ -486,7 +486,7 @@ This is an interactive CLI tool, not production automation. Users can clarify am
 ⚠️ Potential conflict detected:
    /minimal - Bare minimum implementation
    /paranoid - Extensive validation
-   
+
 Proceed with both? The result may be contradictory.
 [Yes/No/Modify]
 ```
@@ -509,7 +509,7 @@ Track which combinations succeed/fail to improve suggestions over time.
 
 ### Expected User Behavior
 - **New Users**: Use 2-3 basic commands with LLM suggestions
-- **Regular Users**: Develop favorite 3-5 command patterns  
+- **Regular Users**: Develop favorite 3-5 command patterns
 - **Power Users**: Discover creative combinations
 - **Edge Cases**: Rare nonsensical combinations handled gracefully
 
@@ -631,13 +631,13 @@ SharedContext {
 ### Example Flow
 ```
 Input: /think /arch /execute /brief
-Output: 
+Output:
   ⚠️ Execution Plan:
   Phase 1: /think (sequential thinking analysis)
   Phase 2: /arch (architecture review - uses think output)
   Phase 3: /execute (implementation - uses arch findings)
   Modifier: /brief (applied to all output)
-  
+
   Proceed? [Y/n]
 ```
 
@@ -697,7 +697,7 @@ Detected conflicts:
 
 How to resolve?
 1) Use /brief and /fast
-2) Use /verbose and /careful  
+2) Use /verbose and /careful
 3) Cancel operation
 Choice:
 ```
@@ -761,7 +761,7 @@ def detect_conflicts(commands):
     for cmd1, cmd2 in combinations(commands, 2):
         if conflicts_with(cmd1, cmd2):
             conflicts.append((cmd1, cmd2))
-    
+
     if conflicts:
         return ask_user_resolution(conflicts)
     return commands
@@ -783,17 +783,17 @@ def try_combine(commands):
 ```python
 def create_execution_plan(commands):
     plan = ExecutionPlan()
-    
+
     # Group by parallelizability
     parallel_groups = group_parallel_safe(commands)
-    
+
     # Build phases
     for group in parallel_groups:
         if len(group) > 1:
             plan.add_parallel_phase(group)
         else:
             plan.add_sequential_phase(group[0])
-    
+
     # Present to user
     return plan.present_for_approval()
 ```
@@ -806,7 +806,7 @@ Input: /think /debug /fix "memory leak issue"
 
 ✅ Commands can be integrated:
 - Sequential thinking to analyze the issue
-- Debug mode for systematic investigation  
+- Debug mode for systematic investigation
 - Generate and apply fixes
 
 Proceed with integrated execution? [Y/n]
@@ -837,13 +837,13 @@ Proceed? [Y/n]
 Input: /think /copilot /gemini /arch /execute
 
 📋 Execution Plan:
-Phase 1 (Sequential): 
+Phase 1 (Sequential):
   → /think (initial analysis)
-  
+
 Phase 2 (Parallel):
   → /copilot (code suggestions)
   → /gemini (alternative perspective)
-  
+
 Phase 3 (Sequential):
   → /arch (architecture review incorporating all inputs)
   → /execute (implementation)
@@ -856,7 +856,7 @@ Proceed? [Y/n]
 
 1. **High Priority**: Conflict detection and resolution
 2. **High Priority**: Execution plan presentation
-3. **Medium Priority**: Protocol preservation for known commands  
+3. **Medium Priority**: Protocol preservation for known commands
 4. **Medium Priority**: Parallel execution support
 5. **Low Priority**: Unknown command handling
 6. **Low Priority**: Advanced integration patterns

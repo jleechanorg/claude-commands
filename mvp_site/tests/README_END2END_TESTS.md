@@ -40,7 +40,7 @@ fake_doc.set({"name": "test"})
    - `FakeGeminiResponse` - Simple response with text attribute
 
 2. **test_create_campaign_end2end_fixed.py** - Campaign creation tests
-3. **test_continue_story_end2end_fixed.py** - Story continuation tests  
+3. **test_continue_story_end2end_fixed.py** - Story continuation tests
 4. **test_visit_campaign_end2end_fixed.py** - Campaign retrieval tests
 5. **test_create_campaign_end2end_v2.py** - Alternative implementation example
 

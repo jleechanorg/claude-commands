@@ -35,7 +35,7 @@ While I did perform web searches, I may have:
 ### 3. **Logical Reasoning Override**
 The specification-based approach *seemed* so logically sound:
 - ✅ More structure usually improves consistency
-- ✅ Explicit requirements reduce ambiguity  
+- ✅ Explicit requirements reduce ambiguity
 - ✅ Templates provide clear expectations
 - ✅ This follows software engineering best practices
 
@@ -50,7 +50,7 @@ But logical reasoning can be wrong when it doesn't account for:
 ### 1. **Context Specificity Problem**
 Real research findings are often:
 - Limited to specific domains or task types
-- Dependent on particular experimental conditions  
+- Dependent on particular experimental conditions
 - Not generalizable across different complexity levels
 - Sensitive to how key concepts are defined
 
@@ -76,7 +76,7 @@ Real research findings are often:
 
 **What actually happens**:
 - Cognitive overload → Reduced performance
-- Rigid constraints → Loss of adaptability  
+- Rigid constraints → Loss of adaptability
 - Process focus → Reduced task attention
 
 ### 2. **LLM Cognition ≠ Human Software Development**

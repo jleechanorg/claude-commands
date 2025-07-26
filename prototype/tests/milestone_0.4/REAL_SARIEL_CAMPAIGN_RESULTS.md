@@ -39,7 +39,7 @@ Tested entity tracking on the **real Sariel v2 campaign** by replaying the first
 
 **Test results**: ALL three approaches successfully tracked Cassian!
 - Validation-only: ✓ Tracked
-- Pydantic-only: ✓ Tracked  
+- Pydantic-only: ✓ Tracked
 - Combined: ✓ Tracked
 
 This proves the structured generation approach fixes the entity tracking issue.

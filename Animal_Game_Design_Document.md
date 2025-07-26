@@ -6,7 +6,7 @@
 ```
 Game Engine
 ├── InputManager (keyboard/mouse events)
-├── AnimationEngine (sprite management) 
+├── AnimationEngine (sprite management)
 ├── PhysicsSystem (collision/movement)
 ├── RenderEngine (canvas drawing)
 ├── AudioManager (sound effects)
@@ -31,7 +31,7 @@ class AnimalMovement {
 }
 
 class QuadrupedMovement extends AnimalMovement {}
-class AerialMovement extends AnimalMovement {}  
+class AerialMovement extends AnimalMovement {}
 class AquaticMovement extends AnimalMovement {}
 ```
 
@@ -120,7 +120,7 @@ const controls = {
 class SceneManager {
   scenes = {
     'menu': MenuScene,
-    'game': GameScene, 
+    'game': GameScene,
     'settings': SettingsScene
   }
   transition(fromScene, toScene) {}
@@ -137,7 +137,7 @@ class SceneManager {
 
 ### 7.1 Rendering Pipeline
 1. **Clear canvas**: requestAnimationFrame callback
-2. **Update logic**: Game state, physics, animations  
+2. **Update logic**: Game state, physics, animations
 3. **Render pass**: Background → sprites → UI → effects
 4. **Frame limiting**: Target 60 FPS, fallback to 30 FPS
 

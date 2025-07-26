@@ -150,7 +150,7 @@ What next?"""
     print("""
     # Old code (line 874 in main.py):
     proposed_changes = gemini_service.parse_llm_response_for_state_changes(gemini_response_obj.narrative_text)
-    
+
     # Fixed code:
     if gemini_response_obj.structured_response:
         proposed_changes = gemini_response_obj.state_updates

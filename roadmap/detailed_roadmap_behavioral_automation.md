@@ -33,17 +33,17 @@ class TestComplianceEngine:
             r'all\s+tests\s+pass',
             r'✅.*test'
         ]
-        
+
         # Check for actual evidence
         evidence_patterns = [
             r'\d+/\d+\s+pass',
             r'test.*output',
             r'PASSED.*FAILED'
         ]
-        
+
         has_claim = any(re.search(p, text, re.I) for p in test_claim_patterns)
         has_evidence = any(re.search(p, text, re.I) for p in evidence_patterns)
-        
+
         if has_claim and not has_evidence:
             return ['test_claim_without_evidence']
         return []
@@ -77,17 +77,17 @@ class DebuggingComplianceEngine:
             r'you\s+should\s+',
             r'the\s+issue\s+is\s+likely'
         ]
-        
+
         # Check for error evidence
         error_patterns = [
             r'error\s+shows?:',
             r'the\s+output\s+is',
             r'`[^`]*error[^`]*`'
         ]
-        
+
         has_solution = any(re.search(p, text, re.I) for p in solution_patterns)
         has_error = any(re.search(p, text, re.I) for p in error_patterns)
-        
+
         if has_solution and not has_error:
             return ['solution_without_evidence']
         return []
@@ -123,28 +123,28 @@ class VerbosityComplianceEngine:
             r'^how\s+do\s+i\s+\w+\?$',
             r'^\w+\s*\?$'
         ]
-        
+
         urgency_patterns = [
             r'urgent',
             r'quickly',
             r'asap'
         ]
-        
+
         if any(re.search(p, user_input, re.I) for p in simple_patterns):
             return 'simple'
         elif any(re.search(p, user_input, re.I) for p in urgency_patterns):
             return 'urgent'
         else:
             return 'complex'
-    
+
     def check_response_length(self, response, query_complexity):
         word_count = len(response.split())
-        
+
         if query_complexity == 'simple' and word_count > 50:
             return ['excessive_verbosity_simple']
         elif query_complexity == 'urgent' and word_count > 100:
             return ['excessive_verbosity_urgent']
-        
+
         return []
 ```
 
@@ -214,26 +214,26 @@ class BehavioralComplianceSystem:
     def __init__(self):
         self.engines = [
             HeaderComplianceEngine(),
-            TestComplianceEngine(), 
+            TestComplianceEngine(),
             DebuggingComplianceEngine(),
             VerbosityComplianceEngine()
         ]
         self.memory_mcp = MemoryMCPClient()
         self.learning_engine = AdaptiveLearner()
         self.context_engine = ContextEngine()
-    
+
     def process_interaction(self, user_input, ai_response):
         context = self.context_engine.classify(user_input)
         violations = []
-        
+
         for engine in self.engines:
             violations.extend(engine.check_compliance(ai_response, context))
-        
+
         if violations:
             corrected = self.auto_correct(ai_response, violations)
             self.learn_from_violations(violations, context)
             return corrected
-        
+
         return ai_response
 ```
 
@@ -243,7 +243,7 @@ class BehavioralComplianceSystem:
 
 ### Quantitative Metrics
 - **Header Compliance**: 95% → User `/header` commands <1/day
-- **Test Claims**: 100% accuracy → No false test completion claims  
+- **Test Claims**: 100% accuracy → No false test completion claims
 - **Debugging**: 90% evidence-first → Show errors before solutions
 - **Response Length**: 95% appropriate → Match verbosity to complexity
 - **Overall User Friction**: 80% reduction in compliance reminders

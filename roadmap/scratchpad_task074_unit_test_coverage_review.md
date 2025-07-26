@@ -15,7 +15,7 @@ Review current unit test coverage state, assess progress toward 85% coverage goa
 Based on comprehensive test suite analysis:
 
 - **main.py**: **33%** coverage (599 statements, 404 missing)
-- **gemini_service.py**: **65%** coverage (632 statements, 221 missing) 
+- **gemini_service.py**: **65%** coverage (632 statements, 221 missing)
 - **game_state.py**: **91%** coverage (182 statements, 17 missing)
 - **firestore_service.py**: **61%** coverage (254 statements, 100 missing)
 - **Overall Coverage**: **59%** (16,023 statements, 6,542 missing)
@@ -32,14 +32,14 @@ Based on comprehensive test suite analysis:
 **Gap Analysis**: 404 missing statements out of 599 total
 **Critical Areas**:
 - Route handlers: `/api/campaigns/*` endpoints
-- Authentication middleware  
+- Authentication middleware
 - State update processing
 - Error handling utilities
 - God mode command parsing
 
 **Impact**: Core application functionality - affects all user interactions
 
-### MEDIUM PRIORITY: firestore_service.py (61% coverage)  
+### MEDIUM PRIORITY: firestore_service.py (61% coverage)
 **Gap Analysis**: 100 missing statements out of 254 total
 **Critical Areas**:
 - Complex merge scenarios
@@ -50,7 +50,7 @@ Based on comprehensive test suite analysis:
 **Impact**: Data integrity and persistence
 
 ### LOWER PRIORITY: gemini_service.py (65% coverage)
-**Gap Analysis**: 221 missing statements out of 632 total  
+**Gap Analysis**: 221 missing statements out of 632 total
 **Status**: Much better than initially thought
 **Critical Areas**:
 - Model cycling logic
@@ -71,7 +71,7 @@ Based on comprehensive test suite analysis:
 **Focus Areas**:
 1. **Route Handler Tests** (Priority 1)
    - `/api/campaigns/create` endpoint testing
-   - `/api/campaigns/update` endpoint testing  
+   - `/api/campaigns/update` endpoint testing
    - `/api/campaigns/delete` endpoint testing
    - Authentication middleware testing
 
@@ -136,7 +136,7 @@ Based on comprehensive test suite analysis:
 
 2. **Create main.py Test Suite**
    - `test_main_routes.py` - Route handler testing
-   - `test_main_auth.py` - Authentication testing  
+   - `test_main_auth.py` - Authentication testing
    - `test_main_state.py` - State management testing
    - `test_main_errors.py` - Error handling testing
 
@@ -144,7 +144,7 @@ Based on comprehensive test suite analysis:
 
 ### Week 2-4: Service Layer Enhancement
 1. **Firestore service coverage** to 80%
-2. **Gemini service coverage** to 75%  
+2. **Gemini service coverage** to 75%
 3. **Game state completion** to 95%
 
 ## Success Metrics
@@ -168,7 +168,7 @@ Based on comprehensive test suite analysis:
 ```bash
 # Use new infrastructure for accurate coverage
 ./coverage.sh                    # Unit tests with HTML report
-./coverage.sh --integration      # Include integration tests  
+./coverage.sh --integration      # Include integration tests
 ./run_tests.sh --coverage        # Use existing runner
 
 # Reports available at:
@@ -181,7 +181,7 @@ Based on comprehensive test suite analysis:
 ./run_tests.sh                   # All unit tests (parallel)
 TESTING=true vpython mvp_site/tests/test_main.py
 
-# Test individual modules  
+# Test individual modules
 cd mvp_site && source ../venv/bin/activate
 TESTING=true python tests/test_main_routes.py
 ```
@@ -190,11 +190,11 @@ TESTING=true python tests/test_main_routes.py
 
 ### Technical Risks
 1. **Test Execution Issues**: Coverage infrastructure validated and working
-2. **Mock Complexity**: Centralized fixtures reduce complexity  
+2. **Mock Complexity**: Centralized fixtures reduce complexity
 3. **Integration Conflicts**: Focus on unit tests only
 4. **Performance Impact**: Coverage mode runs sequentially (~10s total)
 
-### Scope Risks  
+### Scope Risks
 1. **Time Overrun**: Prioritize main.py first (highest impact)
 2. **Coverage Gaming**: Focus on meaningful business logic tests
 3. **Maintenance Burden**: Use existing test patterns and fixtures
@@ -249,12 +249,12 @@ TESTING=true python tests/test_main_routes.py
   - Authentication bypass and Firebase token validation
   - Export functionality error handling
   - Malformed request handling
-  
+
 - **test_main_god_mode.py**: God mode command testing (partial - needs refinement)
   - GOD_MODE_SET, GOD_ASK_STATE, GOD_MODE_UPDATE_STATE commands
   - JSON validation and error handling
   - Helper function validation
-  
+
 - **test_main_state_helper.py**: 20 tests for StateHelper and utility functions
   - Debug content stripping functionality
   - State formatting functions
@@ -265,10 +265,10 @@ TESTING=true python tests/test_main_routes.py
 
 ---
 
-**Created**: 2025-01-07  
-**Task ID**: TASK-074  
-**Status**: Phase 2 Complete - Continuing Implementation  
-**Next Action**: Begin Phase 3 (main.py error handling testing)  
+**Created**: 2025-01-07
+**Task ID**: TASK-074
+**Status**: Phase 2 Complete - Continuing Implementation
+**Next Action**: Begin Phase 3 (main.py error handling testing)
 **Coverage Tool**: `./coverage.sh` (verified working)
 
 ### IMPLEMENTATION PROGRESS (Updated)
@@ -276,7 +276,7 @@ TESTING=true python tests/test_main_routes.py
 #### Phase 2 Completion (Current Session)
 - ✅ **Phase 2**: main.py Auth & State Management Tests - PR #401 (17 passing tests)
   - Complete authentication decorator testing (check_token)
-  - Firebase token validation and error handling  
+  - Firebase token validation and error handling
   - Authentication bypass mechanisms for testing
   - Game state preparation functions
   - State command handlers (SET, ASK_STATE commands)
@@ -290,7 +290,7 @@ TESTING=true python tests/test_main_routes.py
 
 #### Next Steps
 - **Phase 3**: main.py Error Handling Tests (55% → 65% coverage)
-- **Phase 4**: firestore_service.py MissionHandler Tests (61% → 70% coverage) 
+- **Phase 4**: firestore_service.py MissionHandler Tests (61% → 70% coverage)
 - **Phase 5**: firestore_service.py State Helpers Tests (70% → 80% coverage)
 
 ---
@@ -494,7 +494,7 @@ TESTING=true python tests/test_main_routes.py
 - `create_campaign()` workflow
 - Campaign creation error handling
 
-**Mock Requirements**: 
+**Mock Requirements**:
 - Mock firestore.client()
 - Mock document operations
 - Mock collection operations
@@ -514,7 +514,7 @@ TESTING=true python tests/test_main_routes.py
 - `update_campaign_title()` success/failure
 - State persistence edge cases
 
-**Mock Requirements**: 
+**Mock Requirements**:
 - Mock GameState.from_dict()
 - Mock document update operations
 - Mock error conditions
@@ -534,7 +534,7 @@ TESTING=true python tests/test_main_routes.py
 - Error handling for story operations
 - Complex story data scenarios
 
-**Mock Requirements**: 
+**Mock Requirements**:
 - Mock large text processing
 - Mock chunking operations
 - Mock firestore batch operations
@@ -557,7 +557,7 @@ TESTING=true python tests/test_main_routes.py
 
 ### Total Implementation Scope
 - **main.py**: 12 submilestones (404 missing statements) - **TOP PRIORITY**
-- **firestore_service.py**: 12 submilestones (100 missing statements) - **MEDIUM PRIORITY**  
+- **firestore_service.py**: 12 submilestones (100 missing statements) - **MEDIUM PRIORITY**
 - **game_state.py**: 12 submilestones (17 missing statements) - **MINIMAL WORK**
 
 ### Total: 36 Detailed Submilestones

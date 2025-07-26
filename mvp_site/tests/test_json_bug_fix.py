@@ -3,10 +3,9 @@
 Test the JSON bug fix by calling parse_structured_response directly
 """
 
+import json
 import os
 import sys
-
-import json
 
 mvp_site_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, mvp_site_path)
@@ -45,7 +44,6 @@ def test_parse_structured_response_fix():
         print("   This is the root cause of the JSON display bug")
 
         # What it should return
-
 
         expected = json.loads(raw_json)["narrative"]
         print(f"\n   Expected: {expected[:100]}...")

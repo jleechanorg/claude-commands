@@ -69,7 +69,7 @@
 
 **High-Quality Entity Types**:
 - `technical_learning` - Specific technical solutions with code/errors
-- `implementation_pattern` - Successful code patterns with reusable details  
+- `implementation_pattern` - Successful code patterns with reusable details
 - `debug_session` - Complete debugging journeys with root causes
 - `fix_implementation` - Documented fixes with validation steps
 - `workflow_insight` - Process improvements with measurable outcomes

@@ -62,7 +62,7 @@ Transform the MVP site to match the sophisticated Figma design aesthetics while 
   background: oklch(var(--wizard-bg) / 0.85);
   backdrop-filter: blur(20px) saturate(1.5);
   border: 1px solid oklch(var(--wizard-border) / 0.2);
-  box-shadow: 
+  box-shadow:
     0 20px 40px oklch(var(--shadow) / 0.15),
     0 0 80px oklch(var(--glow) / 0.1);
 }
@@ -90,4 +90,4 @@ Transform the MVP site to match the sophisticated Figma design aesthetics while 
 - Verify all wizard functionality remains intact
 - Test theme switching updates wizard colors
 - Ensure smooth animations on all transitions
-- Validate form functionality unchanged 
+- Validate form functionality unchanged

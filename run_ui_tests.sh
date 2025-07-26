@@ -7,10 +7,10 @@
 #     mock        - Use mock implementations for BOTH Firebase and Gemini
 #     mock-gemini - Use mock Gemini but REAL Firebase (default for cost savings)
 #     real        - Use REAL implementations for both services (costs money!)
-#   
+#
 #   --playwright  - Use Playwright MCP (default, AI-optimized)
 #   --puppeteer   - Use Puppeteer MCP for Chrome-specific testing (requires Claude Code CLI)
-#   
+#
 # Default (no argument): mock-gemini mode
 
 set -e  # Exit on any error
@@ -48,7 +48,7 @@ MODE="${MODE:-mock-gemini}"
 case "$MODE" in
     "mock")
         echo "🚀 WorldArchitect.AI UI Test Runner (FULL MOCK MODE)"
-        echo "==============================================" 
+        echo "=============================================="
         echo "📌 Both Firebase and Gemini will be mocked - no API costs!"
         export USE_MOCK_FIREBASE=true
         export USE_MOCK_GEMINI=true
@@ -56,7 +56,7 @@ case "$MODE" in
         ;;
     "mock-gemini")
         echo "🚀 WorldArchitect.AI UI Test Runner (MOCK GEMINI + REAL FIREBASE)"
-        echo "==============================================" 
+        echo "=============================================="
         echo "📌 Gemini will be mocked (no AI costs)"
         echo "🔥 Firebase will be REAL (database operations will persist)"
         export USE_MOCK_FIREBASE=false
@@ -65,7 +65,7 @@ case "$MODE" in
         ;;
     "real")
         echo "🚀 WorldArchitect.AI UI Test Runner (REAL APIs)"
-        echo "==============================================" 
+        echo "=============================================="
         echo "⚠️  WARNING: Real APIs will be used - this costs money!"
         echo "🔥 Firebase: REAL"
         echo "🤖 Gemini: REAL (costs per API call)"
@@ -201,14 +201,14 @@ if [[ "$USE_PUPPETEER" == "true" ]]; then
     echo "   3. Capture screenshots for validation"
     echo ""
     echo "⏳ Server will remain running... Press Ctrl+C to stop"
-    
+
     # Keep server running for manual testing
     wait $SERVER_PID
     exit 0
 else
     echo "🧪 Running Playwright browser tests in parallel..."
     echo "=================================================="
-    
+
     # Automatically discover all test files in testing_ui/ directory
     BROWSER_TESTS=()
     if [ -d "testing_ui/core_tests/" ]; then
@@ -254,9 +254,9 @@ for i in "${!BROWSER_TESTS[@]}"; do
     if [ -f "$test_file" ]; then
         # Wait for a slot to become available
         wait_for_slot
-        
+
         echo "   📋 Starting: $test_file (${#PIDS[@]}/$MAX_PARALLEL active)"
-        
+
         # Run test in background, capture output to temp file
         temp_file="/tmp/test_result_$i.log"
         (
@@ -270,7 +270,7 @@ for i in "${!BROWSER_TESTS[@]}"; do
                 echo "FAILED" > "/tmp/test_status_$i"
             fi
         ) &
-        
+
         PIDS+=($!)
         TEST_RESULTS+=("$temp_file")
     else
@@ -285,10 +285,10 @@ echo "⏳ Waiting for ${#PIDS[@]} parallel tests to complete..."
 for i in "${!PIDS[@]}"; do
     pid="${PIDS[$i]}"
     test_file="${BROWSER_TESTS[$i]}"
-    
+
     echo "   ⏳ Waiting for: $test_file (PID: $pid)"
     wait $pid
-    
+
     # Check result
     if [ -f "/tmp/test_status_$i" ]; then
         status=$(cat "/tmp/test_status_$i")

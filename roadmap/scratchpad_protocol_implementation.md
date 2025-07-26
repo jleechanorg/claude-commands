@@ -35,7 +35,7 @@
 # CLAUDE_CORE.md - The Essential 10
 
 1. 🚨 **VERIFY BEFORE ACTING**: Read current state before any edit
-2. 🚨 **NEVER SIMULATE**: Admit limitations rather than fake results  
+2. 🚨 **NEVER SIMULATE**: Admit limitations rather than fake results
 3. 🚨 **EVIDENCE FIRST**: Extract actual errors/code before analyzing
 4. 🚨 **TEST = TRUTH**: Fix ALL failures, no excuses
 5. 🚨 **BRANCH DISCIPLINE**: Never switch branches without permission
@@ -55,7 +55,7 @@ TRIGGERS → PROTOCOL CHECKS
 - When user asks for something → Verify current state before assuming it needs change
 ```
 
-### 2. Ultra-Simple Checkpoint  
+### 2. Ultra-Simple Checkpoint
 ```markdown
 🚨 BEFORE ANY ACTION, ASK:
 1. What is the current state?
@@ -68,7 +68,7 @@ TRIGGERS → PROTOCOL CHECKS
 #### PR Creation Checklist
 ```markdown
 - [ ] `git status` - verify clean state
-- [ ] `git branch` - confirm correct branch  
+- [ ] `git branch` - confirm correct branch
 - [ ] `./run_tests.sh` - all tests pass
 - [ ] `./coverage.sh` - check coverage
 - [ ] Review changes with `git diff`
@@ -145,7 +145,7 @@ Show only relevant rules based on current task:
 Level 1: CLAUDE_CORE.md (10 rules - always visible)
    ↓
 Level 2: Task-specific rules (5-10 rules - shown when relevant)
-   ↓  
+   ↓
 Level 3: Full CLAUDE.md (2000+ lines - reference only)
 ```
 
@@ -182,7 +182,7 @@ Test failing?
 - **Push requires Tests**: GitHooks can enforce test passage
 - **PR requires Description**: GitHub templates enforce completeness
 
-#### Workflow-Level Forcing  
+#### Workflow-Level Forcing
 - **Bug Fix**: Must reproduce → extract evidence → trace flow → fix → verify
 - **Feature**: Must read existing → write tests → implement → integrate
 - **Review**: Must extract ALL comments → categorize → address → verify
@@ -266,7 +266,7 @@ Good: *uses Playwright to click buttons and fill forms*
 - [ ] Document compliance/non-compliance
 - [ ] Adjust protocols based on what actually works
 
-### Phase 3: Reinforcement  
+### Phase 3: Reinforcement
 - [ ] Regular review of protocol compliance
 - [ ] Feedback loop for improvement
 - [ ] Integration with existing tools

@@ -6,13 +6,13 @@
 class InterfaceManager {
   constructor() {
     this.modes = {
-      modern: { 
-        name: 'Modern Interface', 
-        icon: '✨', 
-        description: 'Enhanced with animations and modern UX' 
-      }
+      modern: {
+        name: 'Modern Interface',
+        icon: '✨',
+        description: 'Enhanced with animations and modern UX',
+      },
     };
-    
+
     // Always use modern mode
     this.currentMode = 'modern';
     localStorage.setItem('interface_mode', 'modern');
@@ -34,15 +34,17 @@ class InterfaceManager {
 
     this.currentMode = modeName;
     localStorage.setItem('interface_mode', modeName);
-    
+
     console.log(`🔄 Switching to ${modeName} mode...`);
     this.applyMode(modeName);
     this.updateModeIndicator();
-    
+
     // Dispatch event for other components
-    window.dispatchEvent(new CustomEvent('interfaceModeChanged', { 
-      detail: { mode: modeName } 
-    }));
+    window.dispatchEvent(
+      new CustomEvent('interfaceModeChanged', {
+        detail: { mode: modeName },
+      }),
+    );
   }
 
   applyMode(mode) {
@@ -56,9 +58,9 @@ class InterfaceManager {
     this.enableEnhancedComponents();
     this.enableModernThemes();
     this.enableInteractiveFeatures();
-    
+
     document.body.classList.add('modern-mode');
-    
+
     console.log('✨ Modern interface activated - enhanced features enabled');
   }
 
@@ -68,7 +70,7 @@ class InterfaceManager {
     if (animationCSS) {
       animationCSS.disabled = true;
     }
-    
+
     if (window.animationHelpers) {
       window.animationHelpers.disable?.();
     }
@@ -79,7 +81,7 @@ class InterfaceManager {
     if (animationCSS) {
       animationCSS.disabled = false;
     }
-    
+
     if (window.animationHelpers) {
       window.animationHelpers.enable?.();
     }
@@ -88,7 +90,7 @@ class InterfaceManager {
   // Enhanced Components Control
   disableEnhancedComponents() {
     localStorage.setItem('feature_enhanced_components', 'false');
-    
+
     if (window.componentEnhancer) {
       window.componentEnhancer.disable();
     }
@@ -96,7 +98,7 @@ class InterfaceManager {
 
   enableEnhancedComponents() {
     localStorage.setItem('feature_enhanced_components', 'true');
-    
+
     if (window.componentEnhancer) {
       window.componentEnhancer.enable();
     }
@@ -105,7 +107,7 @@ class InterfaceManager {
   // Modern Theme System Control
   disableModernThemes() {
     localStorage.setItem('feature_new_themes', 'false');
-    
+
     if (window.themeManager) {
       window.themeManager.modernThemesEnabled = false;
     }
@@ -113,7 +115,7 @@ class InterfaceManager {
 
   enableModernThemes() {
     localStorage.setItem('feature_new_themes', 'true');
-    
+
     if (window.themeManager) {
       window.themeManager.modernThemesEnabled = true;
     }
@@ -150,11 +152,13 @@ class InterfaceManager {
     }
 
     // Update active menu item
-    document.querySelectorAll('[data-interface-mode-item]').forEach(item => {
+    document.querySelectorAll('[data-interface-mode-item]').forEach((item) => {
       item.classList.remove('active');
     });
-    
-    const currentItem = document.querySelector(`[data-interface-mode-item][data-interface-mode="${this.currentMode}"]`);
+
+    const currentItem = document.querySelector(
+      `[data-interface-mode-item][data-interface-mode="${this.currentMode}"]`,
+    );
     if (currentItem) {
       currentItem.classList.add('active');
     }
@@ -192,11 +196,11 @@ class InterfaceManager {
   trackModeUsage() {
     const usage = JSON.parse(localStorage.getItem('mode_usage') || '{}');
     const today = new Date().toDateString();
-    
+
     if (!usage[today]) {
       usage[today] = { modern: 0 };
     }
-    
+
     usage[today]['modern']++;
     localStorage.setItem('mode_usage', JSON.stringify(usage));
   }
@@ -205,7 +209,7 @@ class InterfaceManager {
 // Initialize interface manager when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   window.interfaceManager = new InterfaceManager();
-  
+
   // Track session for analytics
   const sessions = parseInt(localStorage.getItem('user_sessions') || '0') + 1;
   localStorage.setItem('user_sessions', sessions.toString());
@@ -214,4 +218,4 @@ document.addEventListener('DOMContentLoaded', () => {
 // Export for potential module usage
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = InterfaceManager;
-} 
+}

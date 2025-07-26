@@ -58,7 +58,7 @@
 - Git workflow lessons (already in rules)
 - Debug session logs (too detailed)
 
-### Medium Reduction Potential  
+### Medium Reduction Potential
 - Integration test lessons
 - Combat system debugging
 - State management patterns
@@ -106,7 +106,7 @@
 
 ### Milestone 2: Archive Pre-November 2024 Content (Lines: 1,829 → 1,749) ✅ COMPLETED
 - [x] Identify all lessons before November 2024
-- [x] Move to `lessons_archive_2024.mdc` 
+- [x] Move to `lessons_archive_2024.mdc`
 - [x] Add archive reference header
 - [x] Verify no critical recent lessons affected
 

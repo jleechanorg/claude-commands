@@ -9,7 +9,6 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import logging_util
-
 from narrative_response_schema import (
     _combine_god_mode_and_narrative,
     parse_structured_response,
@@ -32,7 +31,6 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
                 return str(value)
             except Exception as e:
                 # Import at runtime to match the actual implementation
-
 
                 logging_util.error(f"Failed to convert {field_name} to string: {e}")
                 return ""

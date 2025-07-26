@@ -13,11 +13,11 @@ the ENTP at a distinct advantage in their lives.  They generally
 understand things quickly and with great depth.  Accordingly, they
 are quite flexible and adapt well to a wide range of tasks.
 They are good at most anything that interests them.  As they grow
-and further develop their intuitive abilities and insights, they 
+and further develop their intuitive abilities and insights, they
 become very aware that exciting possibilities exist all around them.\nENTPs are idea people.  Their perceptive abilities cause them to
 see possibilities everywhere.  They get excited and enthusiastic
-about their ideas, and are able to spread their enthusiasm to 
-others.  In this way, they get the support that they need to 
+about their ideas, and are able to spread their enthusiasm to
+others.  In this way, they get the support that they need to
 fulfill their visions.\nENTPs are less interested in developing plans of actions or making
 decisions than they are in generating possibilities and ideas.
 Following through on the implementation of an idea is usually a chore
@@ -37,9 +37,9 @@ truth in the world around them.\nENTPs are fluent conversationalists, mentally q
 with others.  They love to debate issues, and may even switch sides sometimes
 just for the love of the debate.  When they express their underlying principles,
 however, they may feel awkward and speak abruptly and intensely.\nThe ENTP personality type is sometimes referred to the "lawyer type,"
-that quickly and accurately understands a situation, and 
+that quickly and accurately understands a situation, and
 objectively and logically acts upon it using their auxilliary Introverted Thinking
-function.  
+function.
 If an ENTP lawyer is tasked with  defending someone who
 committed a crime, they might take advantage of quirks in
 the law to get their client off the hook.  If they were to
@@ -64,5 +64,5 @@ They live in the world of possibilities,
 and become excited about concepts, challenges and difficulties.  When
 presented with a problem, they're good at improvising and quickly come
 up with a creative solution.  Creative, clever, fun,
-curious, and theoretical, ENTPs have a broad range of possibilities in 
+curious, and theoretical, ENTPs have a broad range of possibilities in
 their lives.

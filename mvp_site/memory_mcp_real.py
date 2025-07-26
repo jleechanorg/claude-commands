@@ -10,32 +10,36 @@ The fundamental issue:
 This module serves as documentation of this architectural limitation.
 """
 
+from typing import Any
+
 import logging_util
-from typing import List, Dict, Any
 
 logger = logging_util.getLogger(__name__)
+
 
 class MemoryMCPInterface:
     """
     Interface demonstrating the architectural limitation of MCP integration.
-    
+
     MCP tools are not accessible from Python runtime. The correct approach is to
     implement memory enhancement as a behavioral protocol in CLAUDE.md, allowing
     the LLM to handle memory searches directly.
     """
-    
+
     def __init__(self):
-        logger.info("Memory MCP Interface initialized - see module docstring for limitations")
-    
-    def search_nodes(self, query: str) -> List[Dict[str, Any]]:
+        logger.info(
+            "Memory MCP Interface initialized - see module docstring for limitations"
+        )
+
+    def search_nodes(self, query: str) -> list[dict[str, Any]]:
         """
         This method cannot actually call MCP tools from Python.
-        
+
         The architectural limitation:
         - mcp__memory-server__search_nodes exists in Claude's environment
         - It is NOT a Python function that can be imported or called
         - Only the Claude AI can access these tools directly
-        
+
         Returns:
             Empty list - Python cannot access MCP tools
         """
@@ -45,13 +49,13 @@ class MemoryMCPInterface:
             "See CLAUDE_MD_MEMORY_ENHANCEMENT.md for the correct approach."
         )
         return []
-    
-    def create_entities(self, entities: List[Dict[str, Any]]) -> bool:
+
+    def create_entities(self, entities: list[dict[str, Any]]) -> bool:
         """
         This method cannot actually call MCP tools from Python.
-        
+
         See search_nodes docstring for architectural limitations.
-        
+
         Returns:
             False - Python cannot access MCP tools
         """
@@ -61,14 +65,17 @@ class MemoryMCPInterface:
         )
         return False
 
+
 # Global instance for compatibility
 memory_mcp = MemoryMCPInterface()
 
+
 # Compatibility functions
-def search_nodes(query: str) -> List[Dict[str, Any]]:
+def search_nodes(query: str) -> list[dict[str, Any]]:
     """See MemoryMCPInterface.search_nodes - returns empty list"""
     return memory_mcp.search_nodes(query)
 
-def create_entities(entities: List[Dict[str, Any]]) -> bool:
+
+def create_entities(entities: list[dict[str, Any]]) -> bool:
     """See MemoryMCPInterface.create_entities - returns False"""
     return memory_mcp.create_entities(entities)

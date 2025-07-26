@@ -10,16 +10,16 @@
   --input-bg: var(--input);
   --hover-bg: var(--secondary);
   --overlay-bg: rgba(0, 0, 0, 0.8);
-  
+
   --text-primary: var(--foreground);
   --text-secondary: var(--muted-foreground);
   --text-on-accent: var(--accent-foreground);
-  
+
   --accent-color: var(--primary);
   --accent-color-alpha: rgba(3, 2, 19, 0.25);
-  
+
   --border-color: var(--border);
-  
+
   --btn-primary-bg: var(--primary);
   --btn-secondary-bg: var(--secondary);
   --btn-success-bg: var(--success);
@@ -27,19 +27,19 @@
 }
 
 /* Dark theme overrides */
-[data-theme="dark"] {
+[data-theme='dark'] {
   --overlay-bg: rgba(0, 0, 0, 0.8);
   --accent-color-alpha: rgba(250, 250, 250, 0.25);
 }
 
 /* Fantasy theme adjustments */
-[data-theme="fantasy"] {
+[data-theme='fantasy'] {
   --story-bg: #ffffff;
   --accent-color: var(--accent);
 }
 
 /* Cyberpunk theme adjustments */
-[data-theme="cyberpunk"] {
+[data-theme='cyberpunk'] {
   --accent-color: var(--accent);
   --accent-color-alpha: rgba(0, 217, 255, 0.25);
-} 
+}

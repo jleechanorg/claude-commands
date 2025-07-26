@@ -4,7 +4,7 @@
 - **Status**: not_started
 - **Priority**: high
 - **Estimated Hours**: 4-6
-- **Dependencies**: 
+- **Dependencies**:
   - PR: Implement JSON output format for narrative and planning systems (must be merged first)
   - Current narrative system implementation
   - Current planning system implementation

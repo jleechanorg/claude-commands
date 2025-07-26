@@ -30,7 +30,7 @@ Total User Wait: 2-5 seconds (50% improvement)
 1. **Split dual-pass into separate endpoints**
    - `/api/campaigns/{id}/interaction` - Returns Pass 1 immediately
    - `/api/campaigns/{id}/enhance-entities` - Background Pass 2 enhancement
-   
+
 2. **Add entity validation response**
    - Include `entities_missing` flag in Pass 1 response
    - Return `enhancement_needed: true/false`
@@ -69,13 +69,13 @@ Total User Wait: 2-5 seconds (50% improvement)
 @app.route('/api/campaigns/<campaign_id>/interaction', methods=['POST'])
 def handle_interaction(user_id, campaign_id):
     # ... existing logic ...
-    
+
     # Pass 1: Generate initial response
     gemini_response = gemini_service.continue_story(...)
-    
+
     # Validate entities immediately
     validation_result = entity_validator.validate(gemini_response, expected_entities)
-    
+
     return jsonify({
         'response': gemini_response,
         'sequence_id': ai_sequence_id,
@@ -98,13 +98,13 @@ def enhance_entities(user_id, campaign_id):
 async function handleInteraction(userInput, mode) {
     // Show Pass 1 immediately
     const { data } = await fetchApi(`/api/campaigns/${currentCampaignId}/interaction`, {
-        method: 'POST', 
+        method: 'POST',
         body: JSON.stringify({ input: userInput, mode })
     });
-    
+
     // Display initial response right away
     appendToStory('gemini', data.response, null, data.debug_mode, data.sequence_id);
-    
+
     // Start background enhancement if needed
     if (data.enhancement_needed) {
         enhanceStoryInBackground(data.response, data.missing_entities, data.sequence_id);
@@ -115,16 +115,16 @@ async function enhanceStoryInBackground(originalResponse, missingEntities, seque
     try {
         const { data } = await fetchApi(`/api/campaigns/${currentCampaignId}/enhance-entities`, {
             method: 'POST',
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 original_response: originalResponse,
-                missing_entities: missingEntities 
+                missing_entities: missingEntities
             })
         });
-        
+
         // Replace original response with enhanced version
         replaceStoryEntry(sequenceId, data.enhanced_response);
         showEnhancementNotification();
-        
+
     } catch (error) {
         console.warn('Background enhancement failed:', error);
         // Silently fail - user keeps original response
@@ -186,11 +186,11 @@ async function enhanceStoryInBackground(originalResponse, missingEntities, seque
 1. **Analyze current dual-pass usage patterns**
    - Measure how often Pass 2 is triggered
    - Identify most common missing entity scenarios
-   
+
 2. **Prototype background processing**
    - Build minimal parallel endpoint
    - Test response timing and caching
-   
+
 3. **Design smooth UX transitions**
    - Plan story replacement animations
    - Design enhancement notifications
@@ -212,7 +212,7 @@ async function enhanceStoryInBackground(originalResponse, missingEntities, seque
 
 ✅ **Primary Goal**: Users receive story responses 50% faster while maintaining entity tracking quality
 
-✅ **Secondary Goals**: 
+✅ **Secondary Goals**:
 - Seamless background enhancement experience
 - No degradation in story quality or system stability
 - Improved user engagement and satisfaction

@@ -32,7 +32,7 @@ TESTING=true vpython tests/manual_tests/test_sariel_exact_production.py
 - **When to run**: Before major releases or when validating entity tracking improvements
 - **Command**: `cd mvp_site && TESTING=true vpython tests/manual_tests/test_sariel_full_validation.py`
 
-### test_sariel_exact_production.py  
+### test_sariel_exact_production.py
 - **API Calls**: ~15-20
 - **Purpose**: Tests exact production flow with auto-selection of choices
 - **When to run**: When debugging specific production scenarios

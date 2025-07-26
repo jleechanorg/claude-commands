@@ -321,8 +321,8 @@ if __name__ == "__main__":
 
     # Example narrative with potential desync
     test_narrative = """
-    Cressida's chambers offered a small respite from the cold judgment of the Spire. 
-    Your friend looked up from her desk, immediately softening with concern as she 
+    Cressida's chambers offered a small respite from the cold judgment of the Spire.
+    Your friend looked up from her desk, immediately softening with concern as she
     saw your tear-stained face. Without a word, she rose and embraced you, offering
     the comfort you desperately needed.
     """

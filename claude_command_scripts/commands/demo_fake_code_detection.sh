@@ -21,7 +21,7 @@ cat << 'EOF'
 def handle_user_input(input_text):
     """AI-powered response generator"""
     input_lower = input_text.lower()
-    
+
     if 'error' in input_lower:
         return "Thank you for reporting this error!"
     elif 'help' in input_lower:
@@ -44,22 +44,22 @@ def validate_user_input(input_text):
     """Validate and sanitize user input"""
     if not input_text:
         raise ValueError("Input cannot be empty")
-    
+
     # Remove leading/trailing whitespace
     cleaned = input_text.strip()
-    
+
     # Check length constraints
     if len(cleaned) < 3:
         raise ValueError("Input too short (min 3 chars)")
     if len(cleaned) > 500:
         raise ValueError("Input too long (max 500 chars)")
-    
+
     # Check for SQL injection patterns
     dangerous_patterns = ['DROP TABLE', 'DELETE FROM', '; --']
     for pattern in dangerous_patterns:
         if pattern in cleaned.upper():
             raise SecurityError(f"Dangerous pattern detected: {pattern}")
-    
+
     return cleaned
 EOF
 

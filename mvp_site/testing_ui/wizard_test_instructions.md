@@ -1,6 +1,6 @@
 # Campaign Wizard Browser Testing Instructions
 
-**Created**: 2025-07-15  
+**Created**: 2025-07-15
 **Purpose**: Manual testing guide for campaign wizard functionality using Puppeteer MCP
 
 ## Prerequisites
@@ -63,7 +63,7 @@
 3. Verify advancement to Step 2
 4. Test AI personality checkboxes:
    - Narrative (default: checked)
-   - Mechanics (default: checked) 
+   - Mechanics (default: checked)
    - Companions (default: checked)
 5. Continue to Step 3 and Step 4
 6. Verify preview updates correctly
@@ -81,7 +81,7 @@
 1. Navigate to Step 4 (Launch)
 2. Check preview elements:
    - `#preview-title`
-   - `#preview-character` 
+   - `#preview-character`
    - `#preview-description`
    - `#preview-personalities`
    - `#preview-options`

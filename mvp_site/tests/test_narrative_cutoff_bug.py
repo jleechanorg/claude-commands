@@ -82,7 +82,6 @@ Options:
         """
         # Simulate the old buggy regex that would fail
 
-
         # This pattern is too simple and doesn't handle escaped quotes properly
         buggy_pattern = r'"narrative"\s*:\s*"([^"]*)"'
 

@@ -8,7 +8,7 @@ The 500 errors were caused by field name mismatches between the browser tests an
 - **Problem**: Tests were sending `"text"` field but API expects `"input"` field (defined by `KEY_USER_INPUT = 'input'` in main.py:36)
 - **Fix**: Updated all test files to use `"input"` instead of `"text"` in story interaction payloads
 
-### 2. API Endpoint Issues  
+### 2. API Endpoint Issues
 - **Problem**: Tests were using incorrect endpoints like `/campaigns` and `/story`
 - **Fix**: Updated to correct endpoints:
   - `/api/campaigns` for campaign creation
@@ -32,7 +32,7 @@ The 500 errors were caused by field name mismatches between the browser tests an
 ## Files Modified
 
 1. `test_continue_campaign.py` - Fixed field names and endpoints
-2. `test_god_mode.py` - Fixed field names and endpoints  
+2. `test_god_mode.py` - Fixed field names and endpoints
 3. `test_multiple_turns.py` - Fixed field names and endpoints
 4. `test_character_creation.py` - Fixed field names and added auth
 5. `test_export_download.py` - Fixed field names and added auth

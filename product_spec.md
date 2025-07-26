@@ -508,7 +508,7 @@ class AppState {
         this.gameState = null;
         this.theme = 'light';
     }
-    
+
     update(changes) {
         Object.assign(this, changes);
         this.persist();
@@ -929,7 +929,7 @@ interface GameState {
   turn_number: number;
   timestamp: string;
   version: string;
-  
+
   // Scene Information
   current_scene: {
     description: string;
@@ -938,7 +938,7 @@ interface GameState {
     weather: string;
     lighting: string;
   };
-  
+
   // Player State
   player: {
     name: string;
@@ -955,12 +955,12 @@ interface GameState {
     spell_slots: SpellSlots;
     abilities: Ability[];
   };
-  
+
   // NPCs and Enemies
   npcs: {
     [id: string]: NPC;
   };
-  
+
   // World State
   world: {
     discovered_locations: Location[];
@@ -971,7 +971,7 @@ interface GameState {
     world_events: Event[];
     factions: Faction[];
   };
-  
+
   // Combat State
   combat: {
     active: boolean;
@@ -979,7 +979,7 @@ interface GameState {
     turn_order: CombatantOrder[];
     battlefield: BattlefieldState;
   };
-  
+
   // Session State
   session: {
     notes: string[];
@@ -1000,7 +1000,7 @@ class GameStateValidator(BaseModel):
     npcs: Dict[str, NPCState]
     world: WorldState
     combat: CombatState
-    
+
     @validator('player')
     def validate_player_hp(cls, v):
         if v.hp.current > v.hp.max + v.hp.temp:
@@ -1014,7 +1014,7 @@ class GameStateValidator(BaseModel):
 def validate_entities(narrative: str, state: GameState):
     mentioned = extract_entities(narrative)
     existing = get_state_entities(state)
-    
+
     for entity in mentioned:
         if entity not in existing and entity not in newly_created:
             raise EntityMismatchError(f"{entity} not found")
@@ -1035,7 +1035,7 @@ def validate_entities(narrative: str, state: GameState):
 ```python
 def deep_merge(base: dict, updates: dict) -> dict:
     result = base.copy()
-    
+
     for key, value in updates.items():
         if key in result and isinstance(result[key], dict):
             result[key] = deep_merge(result[key], value)
@@ -1043,7 +1043,7 @@ def deep_merge(base: dict, updates: dict) -> dict:
             result[key] = merge_lists(result[key], value)
         else:
             result[key] = value
-    
+
     return result
 ```
 
@@ -1359,7 +1359,7 @@ jobs:
         run: |
           pip install -r requirements.txt
           pytest --cov=.
-      
+
   build:
     needs: test
     steps:
@@ -1367,7 +1367,7 @@ jobs:
         run: |
           docker build -t gcr.io/$PROJECT/worldarchitect:$SHA .
           docker push gcr.io/$PROJECT/worldarchitect:$SHA
-      
+
   deploy:
     needs: build
     steps:
@@ -1677,25 +1677,25 @@ OUTPUT FORMAT:
 
 **Jeff's Narrative Flair**
 ```
-You paint vivid scenes with rich sensory details. Every NPC has a voice, 
-every location has atmosphere. You prioritize emotional engagement and 
-character development, creating memorable moments that players will 
+You paint vivid scenes with rich sensory details. Every NPC has a voice,
+every location has atmosphere. You prioritize emotional engagement and
+character development, creating memorable moments that players will
 discuss long after the session ends.
 ```
 
 **Jeff's Mechanical Precision**
 ```
-You are a rules lawyer in the best sense - fair, consistent, and 
-educational. You explain mechanics clearly, ensure balanced encounters, 
-and help players understand the tactical depth of D&D. Every roll matters, 
+You are a rules lawyer in the best sense - fair, consistent, and
+educational. You explain mechanics clearly, ensure balanced encounters,
+and help players understand the tactical depth of D&D. Every roll matters,
 every rule is applied correctly.
 ```
 
 **Jeff's Calibration Rigor**
 ```
-You are a master of game balance, ensuring perfect difficulty curves and 
-reward pacing. You analyze player performance to tune encounters, 
-distribute loot optimally, and create satisfying progression arcs. 
+You are a master of game balance, ensuring perfect difficulty curves and
+reward pacing. You analyze player performance to tune encounters,
+distribute loot optimally, and create satisfying progression arcs.
 Data-driven but never robotic.
 ```
 
@@ -1739,17 +1739,17 @@ class EntityTracker:
             'locations': {},
             'quests': {}
         }
-    
+
     def extract_entities(self, narrative):
         # NLP-based entity extraction
         entities = nlp_extract(narrative)
-        
+
         # Validation against game state
         validated = validate_against_state(entities)
-        
+
         # Update tracking
         self.update_manifest(validated)
-        
+
         return self.entities
 ```
 
@@ -1768,13 +1768,13 @@ class EntityTracker:
 def process_input(user_input, mode):
     # Clean and validate input
     cleaned = sanitize_input(user_input)
-    
+
     # Determine action type
     action_type = classify_action(cleaned)
-    
+
     # Extract intent
     intent = extract_intent(cleaned, mode)
-    
+
     return {
         'raw': user_input,
         'cleaned': cleaned,
@@ -1790,7 +1790,7 @@ def assemble_context(campaign_id, processed_input):
     game_state = get_current_state(campaign_id)
     recent_stories = get_recent_stories(campaign_id, limit=10)
     entities = get_active_entities(campaign_id)
-    
+
     # Build prompt
     prompt = build_prompt(
         processed_input,
@@ -1798,7 +1798,7 @@ def assemble_context(campaign_id, processed_input):
         recent_stories,
         entities
     )
-    
+
     return prompt
 ```
 
@@ -1812,14 +1812,14 @@ async def generate_response(prompt, model='gemini-2.0-flash'):
         'max_tokens': 2000,
         'stop_sequences': ['[END]']
     }
-    
+
     # Generate with retry logic
     response = await gemini_client.generate(
         prompt,
         config,
         retry_count=3
     )
-    
+
     return response
 ```
 
@@ -1830,13 +1830,13 @@ def parse_response(ai_response):
     narrative = extract_narrative(ai_response)
     state_update = extract_state_update(ai_response)
     entities = extract_entities(ai_response)
-    
+
     # Validate state update
     validated_state = validate_state_update(state_update)
-    
+
     # Check narrative consistency
     consistency_check(narrative, validated_state, entities)
-    
+
     return {
         'narrative': narrative,
         'state_update': validated_state,
@@ -1968,13 +1968,13 @@ def roll_initiative(combatants):
 def make_attack(attacker, target, weapon):
     # Roll to hit
     attack_roll = roll_d20() + attacker.attack_bonus(weapon)
-    
+
     # Check critical hit/miss
     if attack_roll_base == 20:
         return critical_hit(attacker, weapon)
     elif attack_roll_base == 1:
         return critical_miss()
-    
+
     # Compare to AC
     if attack_roll >= target.ac:
         damage = roll_damage(weapon) + attacker.damage_bonus(weapon)
@@ -2058,7 +2058,7 @@ Alternative to D&D attributes for different game feel:
 ```python
 DESTINY_ATTRIBUTES = {
     'vigor': 'Physical prowess and endurance',
-    'finesse': 'Agility and precision', 
+    'finesse': 'Agility and precision',
     'intellect': 'Knowledge and reasoning',
     'resolve': 'Willpower and determination',
     'intuition': 'Awareness and instinct',
@@ -2173,20 +2173,20 @@ class PlayerState:
     class_name: str
     background: str
     alignment: str
-    
+
     # Attributes
     level: int
     experience: int
     hp: HealthPoints
     attributes: Dict[str, int]
     skills: Dict[str, SkillProficiency]
-    
+
     # Resources
     spell_slots: Dict[int, SpellSlotInfo]
     abilities: List[Ability]
     inventory: List[Item]
     currency: Currency
-    
+
     # Status
     conditions: List[Condition]
     inspiration: bool
@@ -2202,17 +2202,17 @@ class NPCState:
     name: str
     race: str
     role: str  # 'ally', 'enemy', 'neutral'
-    
+
     # Stats
     hp: HealthPoints
     ac: int
     attributes: Dict[str, int]
-    
+
     # Behavior
     attitude: str  # 'hostile', 'friendly', 'neutral'
     goals: List[str]
     knowledge: List[str]
-    
+
     # Status
     location: str
     conditions: List[Condition]
@@ -2225,18 +2225,18 @@ class NPCState:
 ```python
 def parse_state_update(ai_response: str) -> StateUpdate:
     # Extract state block
-    state_match = re.search(r'\[STATE_UPDATE\](.*?)\[/STATE_UPDATE\]', 
+    state_match = re.search(r'\[STATE_UPDATE\](.*?)\[/STATE_UPDATE\]',
                            ai_response, re.DOTALL)
-    
+
     if not state_match:
         return StateUpdate()
-    
+
     # Parse JSON
     try:
         update_data = json.loads(state_match.group(1))
     except JSONDecodeError:
         return handle_malformed_update(state_match.group(1))
-    
+
     # Validate against schema
     return validate_state_update(update_data)
 ```
@@ -2246,19 +2246,19 @@ def parse_state_update(ai_response: str) -> StateUpdate:
 class StateValidator:
     def validate(self, update: StateUpdate, current: GameState) -> ValidationResult:
         errors = []
-        
+
         # Type validation
         errors.extend(self.validate_types(update))
-        
+
         # Range validation
         errors.extend(self.validate_ranges(update))
-        
+
         # Logic validation
         errors.extend(self.validate_game_logic(update, current))
-        
+
         # Consistency validation
         errors.extend(self.validate_consistency(update, current))
-        
+
         return ValidationResult(
             valid=len(errors) == 0,
             errors=errors,
@@ -2274,7 +2274,7 @@ def deep_merge_state(current: Dict, update: Dict) -> Dict:
     Handles nested dictionaries and special cases.
     """
     merged = current.copy()
-    
+
     for key, value in update.items():
         if key not in merged:
             merged[key] = value
@@ -2290,7 +2290,7 @@ def deep_merge_state(current: Dict, update: Dict) -> Dict:
         else:
             # Direct replacement for primitives
             merged[key] = value
-    
+
     return merged
 ```
 
@@ -2304,24 +2304,24 @@ def cleanup_combat_state(state: GameState) -> GameState:
     """
     if not state.combat.active:
         return state
-    
+
     # Check for living enemies
     living_enemies = [
         npc for npc in state.npcs.values()
         if npc.role == 'enemy' and npc.hp.current > 0
     ]
-    
+
     if not living_enemies:
         # End combat
         state.combat.active = False
         state.combat.turn_order = []
         state.combat.current_turn = 0
-        
+
         # Clean up defeated NPCs
         for npc_id, npc in list(state.npcs.items()):
             if npc.role == 'enemy' and npc.hp.current <= 0:
                 del state.npcs[npc_id]
-    
+
     return state
 ```
 
@@ -2334,14 +2334,14 @@ class CombatManager:
             combatant for combatant in state.combat.turn_order
             if self.is_active_combatant(combatant, state)
         ]
-        
+
         # Advance turn
         if state.combat.turn_order:
             state.combat.current_turn = (
-                (state.combat.current_turn + 1) % 
+                (state.combat.current_turn + 1) %
                 len(state.combat.turn_order)
             )
-        
+
         return state
 ```
 
@@ -2352,21 +2352,21 @@ class CombatManager:
 @dataclass
 class EntityManifest:
     """Tracks all entities mentioned in the narrative"""
-    
+
     characters: Dict[str, CharacterEntity]
     items: Dict[str, ItemEntity]
     locations: Dict[str, LocationEntity]
-    
+
     def update_from_narrative(self, narrative: str, state: GameState):
         # Extract entities using NLP
         extracted = self.extract_entities(narrative)
-        
+
         # Validate against state
         validated = self.validate_entities(extracted, state)
-        
+
         # Update manifest
         self.merge_entities(validated)
-        
+
         # Mark inactive entities
         self.update_activity_status(narrative)
 ```
@@ -2375,7 +2375,7 @@ class EntityManifest:
 ```python
 class EntityLifecycle:
     STATES = ['introduced', 'active', 'mentioned', 'inactive', 'departed']
-    
+
     def transition(self, entity: Entity, event: str) -> Entity:
         transitions = {
             ('introduced', 'appears'): 'active',
@@ -2384,12 +2384,12 @@ class EntityLifecycle:
             ('mentioned', 'not_mentioned'): 'inactive',
             ('inactive', 'appears'): 'active'
         }
-        
+
         new_state = transitions.get((entity.state, event))
         if new_state:
             entity.state = new_state
             entity.last_updated = datetime.now()
-        
+
         return entity
 ```
 
@@ -2399,10 +2399,10 @@ class EntityLifecycle:
 ```python
 class StateMigrationManager:
     CURRENT_VERSION = "2.3.0"
-    
+
     def migrate(self, state: Dict, version: str) -> Dict:
         """Migrate state from old version to current"""
-        
+
         migrations = [
             ("1.0.0", "1.1.0", self.migrate_1_0_to_1_1),
             ("1.1.0", "1.2.0", self.migrate_1_1_to_1_2),
@@ -2411,13 +2411,13 @@ class StateMigrationManager:
             ("2.1.0", "2.2.0", self.migrate_2_1_to_2_2),
             ("2.2.0", "2.3.0", self.migrate_2_2_to_2_3),
         ]
-        
+
         current_version = version
         for old_ver, new_ver, migration_func in migrations:
             if current_version == old_ver:
                 state = migration_func(state)
                 current_version = new_ver
-        
+
         state['version'] = self.CURRENT_VERSION
         return state
 ```
@@ -2426,14 +2426,14 @@ class StateMigrationManager:
 ```python
 def migrate_2_2_to_2_3(self, state: Dict) -> Dict:
     """Add entity tracking to existing states"""
-    
+
     if 'entities' not in state:
         state['entities'] = {
             'characters': {},
             'items': {},
             'locations': {}
         }
-    
+
     # Extract entities from existing NPCs
     for npc_id, npc in state.get('npcs', {}).items():
         state['entities']['characters'][npc_id] = {
@@ -2442,7 +2442,7 @@ def migrate_2_2_to_2_3(self, state: Dict) -> Dict:
             'state': 'active' if npc.get('hp', {}).get('current', 0) > 0 else 'inactive',
             'last_seen': state.get('turn_number', 0)
         }
-    
+
     return state
 ```
 
@@ -2455,11 +2455,11 @@ class FirestoreStateManager:
         try:
             # Serialize state
             serialized = self.serialize_state(state)
-            
+
             # Compress large states
             if len(json.dumps(serialized)) > 100000:
                 serialized = self.compress_state(serialized)
-            
+
             # Save to Firestore
             doc_ref = self.db.collection('campaigns').document(campaign_id)
             doc_ref.update({
@@ -2467,12 +2467,12 @@ class FirestoreStateManager:
                 'last_updated': firestore.SERVER_TIMESTAMP,
                 'state_version': STATE_VERSION
             })
-            
+
             # Archive previous state
             self.archive_state(campaign_id, state)
-            
+
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to save state: {e}")
             return False
@@ -2482,9 +2482,9 @@ class FirestoreStateManager:
 ```python
 def compress_state(self, state: Dict) -> Dict:
     """Compress state for storage efficiency"""
-    
+
     compressed = state.copy()
-    
+
     # Remove redundant data
     if 'npcs' in compressed:
         for npc in compressed['npcs'].values():
@@ -2493,13 +2493,13 @@ def compress_state(self, state: Dict) -> Dict:
                 del npc['conditions']
             if npc.get('exhaustion') == 0:
                 del npc['exhaustion']
-    
+
     # Compress inventory
     if 'player' in compressed and 'inventory' in compressed['player']:
         compressed['player']['inventory'] = self.compress_inventory(
             compressed['player']['inventory']
         )
-    
+
     return compressed
 ```
 
@@ -2511,13 +2511,13 @@ class StateCache:
     def __init__(self, ttl_seconds=300):
         self.cache = TTLCache(maxsize=100, ttl=ttl_seconds)
         self.locks = defaultdict(threading.Lock)
-    
+
     def get_state(self, campaign_id: str) -> Optional[GameState]:
         with self.locks[campaign_id]:
             if campaign_id in self.cache:
                 return deepcopy(self.cache[campaign_id])
             return None
-    
+
     def set_state(self, campaign_id: str, state: GameState):
         with self.locks[campaign_id]:
             self.cache[campaign_id] = deepcopy(state)
@@ -2527,10 +2527,10 @@ class StateCache:
 ```python
 def batch_update_states(self, updates: List[StateUpdate]) -> BatchResult:
     """Process multiple state updates efficiently"""
-    
+
     results = []
     batch = self.db.batch()
-    
+
     for update in updates:
         try:
             # Validate update
@@ -2538,15 +2538,15 @@ def batch_update_states(self, updates: List[StateUpdate]) -> BatchResult:
             if not validation.valid:
                 results.append(BatchError(update.id, validation.errors))
                 continue
-            
+
             # Add to batch
             doc_ref = self.db.collection('campaigns').document(update.campaign_id)
             batch.update(doc_ref, update.changes)
             results.append(BatchSuccess(update.id))
-            
+
         except Exception as e:
             results.append(BatchError(update.id, str(e)))
-    
+
     # Commit batch
     batch.commit()
     return BatchResult(results)
@@ -2644,22 +2644,22 @@ WorldArchitect.AI's interface follows principles of simplicity, immersion, and a
     <nav class="app-header">
         <!-- Logo, user menu, theme switcher -->
     </nav>
-    
+
     <main class="app-content">
         <aside class="sidebar" data-state="collapsed">
             <!-- Campaign list, character sheet -->
         </aside>
-        
+
         <section class="game-area">
             <div class="narrative-panel">
                 <!-- Story display -->
             </div>
-            
+
             <div class="input-area">
                 <!-- Action input, mode toggle -->
             </div>
         </section>
-        
+
         <aside class="info-panel">
             <!-- Game state, inventory -->
         </aside>
@@ -2698,10 +2698,10 @@ class Button {
         this.icon = config.icon;
         this.loading = false;
     }
-    
+
     render() {
         return `
-            <button class="btn btn-${this.type} btn-${this.size}" 
+            <button class="btn btn-${this.type} btn-${this.size}"
                     ${this.loading ? 'disabled' : ''}>
                 ${this.icon ? `<i class="bi bi-${this.icon}"></i>` : ''}
                 ${this.loading ? '<span class="spinner"></span>' : ''}
@@ -2767,9 +2767,9 @@ class Card {
 
 .loading-skeleton {
     animation: pulse 1.5s ease-in-out infinite;
-    background: linear-gradient(90deg, 
-        var(--skeleton-base) 25%, 
-        var(--skeleton-highlight) 50%, 
+    background: linear-gradient(90deg,
+        var(--skeleton-base) 25%,
+        var(--skeleton-highlight) 50%,
         var(--skeleton-base) 75%);
     background-size: 200% 100%;
 }
@@ -2797,19 +2797,19 @@ class DiceRoller {
         this.animate(sides, result);
         return result;
     }
-    
+
     animate(sides, result) {
         const dice = document.createElement('div');
         dice.className = `dice d${sides} rolling`;
         dice.innerHTML = `
             <div class="dice-face">${result}</div>
         `;
-        
+
         document.body.appendChild(dice);
-        
+
         // 3D rotation animation
         dice.style.animation = 'roll3d 1s ease-out';
-        
+
         setTimeout(() => {
             dice.classList.remove('rolling');
             dice.classList.add('settled');
@@ -2827,18 +2827,18 @@ class Tooltip {
             element.addEventListener('mouseleave', this.hide);
         });
     }
-    
+
     static show(event) {
         const text = event.target.dataset.tooltip;
         const tooltip = document.createElement('div');
         tooltip.className = 'tooltip';
         tooltip.textContent = text;
-        
+
         // Position calculation
         const rect = event.target.getBoundingClientRect();
         tooltip.style.top = `${rect.top - 40}px`;
         tooltip.style.left = `${rect.left + rect.width / 2}px`;
-        
+
         document.body.appendChild(tooltip);
     }
 }
@@ -2854,7 +2854,7 @@ class Tooltip {
 </div>
 
 <!-- Interactive elements -->
-<button 
+<button
     class="btn-action"
     aria-label="Attack with longsword"
     aria-describedby="weapon-desc">
@@ -2867,7 +2867,7 @@ class Tooltip {
     <label for="character-action" class="form-label">
         What do you do?
     </label>
-    <textarea 
+    <textarea
         id="character-action"
         class="form-control"
         aria-describedby="action-help"
@@ -2894,7 +2894,7 @@ class KeyboardNav {
             'i': this.toggleInventory
         };
     }
-    
+
     init() {
         document.addEventListener('keydown', (e) => {
             const combo = this.getKeyCombo(e);
@@ -2916,22 +2916,22 @@ class TouchHandler {
         this.swipeThreshold = 50;
         this.touchStart = null;
     }
-    
+
     init() {
         const gameArea = document.querySelector('.game-area');
-        
+
         gameArea.addEventListener('touchstart', (e) => {
             this.touchStart = {
                 x: e.touches[0].clientX,
                 y: e.touches[0].clientY
             };
         });
-        
+
         gameArea.addEventListener('touchend', (e) => {
             if (!this.touchStart) return;
-            
+
             const deltaX = e.changedTouches[0].clientX - this.touchStart.x;
-            
+
             if (Math.abs(deltaX) > this.swipeThreshold) {
                 if (deltaX > 0) {
                     this.showSidebar();
@@ -2954,20 +2954,20 @@ class TouchHandler {
         margin: 0;
         max-height: 100vh;
     }
-    
+
     /* Larger touch targets */
     .btn {
         min-height: 44px;
         min-width: 44px;
     }
-    
+
     /* Simplified layout */
     .sidebar {
         position: fixed;
         transform: translateX(-100%);
         transition: transform 0.3s ease;
     }
-    
+
     .sidebar.active {
         transform: translateX(0);
     }
@@ -2985,11 +2985,11 @@ class LazyLoader {
             { rootMargin: '50px' }
         );
     }
-    
+
     observe(elements) {
         elements.forEach(el => this.observer.observe(el));
     }
-    
+
     onIntersection(entries) {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
@@ -3010,16 +3010,16 @@ class VirtualScroller {
         this.itemHeight = itemHeight;
         this.visibleRange = { start: 0, end: 0 };
     }
-    
+
     render() {
         const scrollTop = this.container.scrollTop;
         const containerHeight = this.container.clientHeight;
-        
+
         this.visibleRange = {
             start: Math.floor(scrollTop / this.itemHeight),
             end: Math.ceil((scrollTop + containerHeight) / this.itemHeight)
         };
-        
+
         this.renderVisibleItems();
     }
 }
@@ -3044,21 +3044,21 @@ class AuthenticationService:
             'github': GitHubOAuthProvider(),  # Future
             'discord': DiscordOAuthProvider()  # Future
         }
-    
+
     async def authenticate(self, provider, credentials):
         # Validate provider
         if provider not in self.oauth_providers:
             raise InvalidProviderError()
-        
+
         # Verify OAuth token
         user_info = await self.oauth_providers[provider].verify(credentials)
-        
+
         # Create or update user
         user = await self.create_or_update_user(user_info)
-        
+
         # Generate session
         session = self.create_session(user)
-        
+
         return session
 ```
 
@@ -3067,7 +3067,7 @@ class AuthenticationService:
 class SessionManager:
     SESSION_DURATION = 86400  # 24 hours
     REFRESH_THRESHOLD = 3600  # 1 hour
-    
+
     def create_session(self, user):
         session_id = secrets.token_urlsafe(32)
         session_data = {
@@ -3077,14 +3077,14 @@ class SessionManager:
             'ip_address': request.remote_addr,
             'user_agent': request.headers.get('User-Agent')
         }
-        
+
         # Store in secure cache
         self.cache.set(
             f"session:{session_id}",
             session_data,
             ttl=self.SESSION_DURATION
         )
-        
+
         return session_id
 ```
 
@@ -3099,14 +3099,14 @@ class RBAC:
         'admin': ['read_all', 'write_all', 'delete_all'],
         'moderator': ['read_all', 'flag_content']
     }
-    
+
     def check_permission(self, user, resource, action):
         user_permissions = self.get_user_permissions(user)
         required_permission = f"{action}_{resource.scope}"
-        
+
         if required_permission not in user_permissions:
             raise PermissionDeniedError()
-        
+
         # Additional resource-level checks
         if resource.scope == 'own' and resource.owner_id != user.id:
             raise PermissionDeniedError()
@@ -3118,10 +3118,10 @@ class APIKeyManager:
     def generate_api_key(self, user_id, scopes):
         # Generate secure key
         key = f"wai_{secrets.token_urlsafe(32)}"
-        
+
         # Hash for storage
         key_hash = hashlib.sha256(key.encode()).hexdigest()
-        
+
         # Store with metadata
         self.db.api_keys.insert({
             'key_hash': key_hash,
@@ -3131,7 +3131,7 @@ class APIKeyManager:
             'last_used': None,
             'usage_count': 0
         })
-        
+
         return key  # Return only once
 ```
 
@@ -3143,15 +3143,15 @@ class DataEncryption:
     def __init__(self):
         self.kms_client = google.cloud.kms.KeyManagementServiceClient()
         self.key_name = self.get_encryption_key()
-    
+
     def encrypt_sensitive_data(self, data):
         # Generate data encryption key (DEK)
         dek = Fernet.generate_key()
-        
+
         # Encrypt data with DEK
         f = Fernet(dek)
         encrypted_data = f.encrypt(data.encode())
-        
+
         # Encrypt DEK with KMS
         encrypted_dek = self.kms_client.encrypt(
             request={
@@ -3159,7 +3159,7 @@ class DataEncryption:
                 'plaintext': dek
             }
         ).ciphertext
-        
+
         return {
             'data': encrypted_data,
             'encrypted_key': encrypted_dek
@@ -3183,22 +3183,22 @@ class RequestValidator:
             validated = schema.load(data)
         except ValidationError as e:
             raise InvalidInputError(e.messages)
-        
+
         # Additional security checks
         self.check_sql_injection(validated)
         self.check_xss(validated)
         self.check_command_injection(validated)
-        
+
         return validated
-    
+
     def sanitize_output(self, content):
         # HTML escaping
         content = html.escape(content)
-        
+
         # Markdown sanitization
         allowed_tags = ['p', 'br', 'strong', 'em', 'code', 'pre']
         content = bleach.clean(content, tags=allowed_tags)
-        
+
         return content
 ```
 
@@ -3207,21 +3207,21 @@ class RequestValidator:
 class FileUploadHandler:
     ALLOWED_TYPES = ['image/png', 'image/jpeg', 'text/plain']
     MAX_SIZE = 10 * 1024 * 1024  # 10MB
-    
+
     def validate_upload(self, file):
         # Check file size
         if file.size > self.MAX_SIZE:
             raise FileTooLargeError()
-        
+
         # Verify MIME type
         mime = magic.from_buffer(file.read(1024), mime=True)
         if mime not in self.ALLOWED_TYPES:
             raise InvalidFileTypeError()
-        
+
         # Scan for malware
         if self.virus_scanner.scan(file):
             raise MalwareDetectedError()
-        
+
         # Generate safe filename
         filename = secure_filename(file.filename)
         return filename
@@ -3240,9 +3240,9 @@ class PrivacyManager:
             'session_hash': self.hash_session_id(event.session_id),
             # No PII collected
         }
-        
+
         return anonymized_event
-    
+
     def anonymize_user_data(self, user_data):
         # Remove or hash PII
         return {
@@ -3263,9 +3263,9 @@ class GDPRCompliance:
             'campaigns': self.get_user_campaigns(user_id),
             'activity': self.get_user_activity(user_id)
         }
-        
+
         return json.dumps(data, indent=2)
-    
+
     def delete_user_data(self, user_id):
         """Right to erasure"""
         # Soft delete with retention period
@@ -3278,7 +3278,7 @@ class GDPRCompliance:
                 }
             }
         )
-        
+
         # Schedule hard delete
         self.scheduler.schedule_deletion(user_id, days=30)
 ```
@@ -3293,7 +3293,7 @@ class SecurityMonitor:
         if self.is_rate_limited(request.ip):
             self.block_ip(request.ip)
             return False
-        
+
         # Suspicious pattern detection
         patterns = [
             r'<script',  # XSS attempts
@@ -3301,12 +3301,12 @@ class SecurityMonitor:
             r'\.\./',  # Path traversal
             r'eval\(',  # Code injection
         ]
-        
+
         for pattern in patterns:
             if re.search(pattern, str(request.data), re.I):
                 self.log_security_event(request, pattern)
                 return False
-        
+
         return True
 ```
 
@@ -3323,10 +3323,10 @@ class AuditLogger:
             'details': details,
             'request_id': request.id
         }
-        
+
         # Write to secure audit log
         self.audit_db.insert(audit_entry)
-        
+
         # Alert on critical events
         if event_type in self.CRITICAL_EVENTS:
             self.alert_security_team(audit_entry)
@@ -3342,14 +3342,14 @@ class RateLimiter:
         'auth_attempt': (5, 300),  # 5 attempts per 5 minutes
         'export': (10, 3600),  # 10 exports per hour
     }
-    
+
     def check_limit(self, key, action):
         limit, window = self.LIMITS[action]
         current = self.redis.incr(f"{action}:{key}")
-        
+
         if current == 1:
             self.redis.expire(f"{action}:{key}", window)
-        
+
         if current > limit:
             raise RateLimitExceededError()
 ```
@@ -3413,24 +3413,24 @@ class ResponseOptimizer:
     def __init__(self):
         self.cache = ResponseCache()
         self.predictor = ResponsePredictor()
-    
+
     async def optimize_response(self, request):
         # Check cache first
         cached = self.cache.get(request.hash())
         if cached and cached.age < 300:  # 5 minute cache
             return cached.response
-        
+
         # Predictive pre-generation
         if self.predictor.should_pregenerate(request):
             asyncio.create_task(self.pregenerate_likely_responses(request))
-        
+
         # Parallel processing
         tasks = [
             self.generate_narrative(request),
             self.calculate_state_changes(request),
             self.validate_entities(request)
         ]
-        
+
         results = await asyncio.gather(*tasks)
         return self.combine_results(results)
 ```
@@ -3448,20 +3448,20 @@ class LoadBalancer:
     def __init__(self):
         self.servers = self.discover_servers()
         self.health_checker = HealthChecker()
-    
+
     def route_request(self, request):
         # Check server health
         healthy_servers = [
-            s for s in self.servers 
+            s for s in self.servers
             if self.health_checker.is_healthy(s)
         ]
-        
+
         # Route based on load
         if request.is_ai_heavy:
             server = self.get_least_loaded_ai_server(healthy_servers)
         else:
             server = self.get_nearest_server(request.location)
-        
+
         return server
 ```
 
@@ -3476,7 +3476,7 @@ class QueryOptimizer:
             'user_id': user_id,
             'deleted': {'$ne': True}
         }).hint('user_id_1_updated_at_-1').limit(50)
-    
+
     def optimize_story_query(self, campaign_id, limit=10):
         # Projection to reduce data transfer
         return self.db.stories.find(
@@ -3522,26 +3522,26 @@ class CacheSystem:
         self.l1_cache = InMemoryCache(max_size=1000)  # Hot data
         self.l2_cache = RedisCache()  # Distributed cache
         self.l3_cache = CDNCache()  # Static assets
-    
+
     async def get(self, key):
         # Check L1
         value = self.l1_cache.get(key)
         if value:
             return value
-        
+
         # Check L2
         value = await self.l2_cache.get(key)
         if value:
             self.l1_cache.set(key, value)
             return value
-        
+
         # Check L3
         value = await self.l3_cache.get(key)
         if value:
             await self.l2_cache.set(key, value)
             self.l1_cache.set(key, value)
             return value
-        
+
         return None
 ```
 
@@ -3554,10 +3554,10 @@ class CacheInvalidator:
             f"stories:{campaign_id}:*",
             f"state:{campaign_id}:*"
         ]
-        
+
         for pattern in patterns:
             self.redis.delete_pattern(pattern)
-        
+
         # Publish invalidation event
         self.pubsub.publish('cache_invalidation', {
             'type': 'campaign',
@@ -3572,19 +3572,19 @@ class CacheInvalidator:
 class MemoryManager:
     MAX_CONTEXT_SIZE = 100000  # tokens
     MAX_STATE_SIZE = 1048576  # 1MB
-    
+
     def optimize_context(self, stories):
         total_size = sum(len(s.narrative) for s in stories)
-        
+
         if total_size > self.MAX_CONTEXT_SIZE:
             # Summarize older stories
             cutoff = len(stories) // 3
             summarized = self.summarize_stories(stories[:cutoff])
             recent = stories[cutoff:]
             return summarized + recent
-        
+
         return stories
-    
+
     def compress_state(self, state):
         if sys.getsizeof(state) > self.MAX_STATE_SIZE:
             # Remove transient data
@@ -3592,7 +3592,7 @@ class MemoryManager:
             # Archive old quest data
             compressed = self.archive_completed_quests(compressed)
             return compressed
-        
+
         return state
 ```
 
@@ -3605,17 +3605,17 @@ class ConnectionPool:
             'redis': RedisPool(min_size=5, max_size=50),
             'gemini': GeminiPool(min_size=20, max_size=200)
         }
-    
+
     async def get_connection(self, service):
         pool = self.pools[service]
-        
+
         # Try to get existing connection
         conn = await pool.acquire(timeout=1.0)
-        
+
         # Create new if needed and under limit
         if not conn and pool.size < pool.max_size:
             conn = await pool.create_connection()
-        
+
         return conn
 ```
 
@@ -3665,7 +3665,7 @@ class ComponentLoader {
         );
         return module.default;
     }
-    
+
     async loadCampaignManager() {
         const module = await import(
             /* webpackChunkName: "campaigns" */
@@ -3689,23 +3689,23 @@ class RequestTracker:
         self.request_id = request_id
         self.start_time = time.time()
         self.checkpoints = []
-    
+
     def checkpoint(self, name):
         self.checkpoints.append({
             'name': name,
             'time': time.time() - self.start_time
         })
-    
+
     def complete(self):
         total_time = time.time() - self.start_time
-        
+
         # Log to monitoring service
         metrics.record({
             'request_id': self.request_id,
             'total_time': total_time,
             'checkpoints': self.checkpoints
         })
-        
+
         # Alert if slow
         if total_time > 5.0:
             alerts.trigger('slow_request', self.request_id)
@@ -3748,14 +3748,14 @@ class LoadTestScenarios:
         self.wait(think_time=5)
         self.continue_story()
         self.view_state()
-    
+
     @scenario(users=5000, duration='5m')
     def campaign_creation_spike(self):
         # Simulate marketing campaign
         self.register()
         self.create_campaign()
         self.play_tutorial()
-    
+
     @scenario(users=100, duration='1h')
     def extended_session(self):
         # Long gameplay session
@@ -3790,25 +3790,25 @@ class TestGeminiService(unittest.TestCase):
         self.service = GeminiService()
         self.mock_client = Mock()
         self.service.client = self.mock_client
-    
+
     def test_continue_story_success(self):
         # Arrange
         mock_response = Mock()
         mock_response.text = "[NARRATIVE]\nYou enter the tavern...\n[STATE_UPDATE]\n{}"
         self.mock_client.generate_content.return_value = mock_response
-        
+
         # Act
         result = self.service.continue_story("I enter the tavern", {}, [])
-        
+
         # Assert
         self.assertIn("You enter the tavern", result['narrative'])
         self.assertEqual(result['state_update'], {})
-    
+
     def test_entity_extraction(self):
         # Test entity tracking
         narrative = "The bartender John greets you warmly."
         entities = self.service.extract_entities(narrative)
-        
+
         self.assertEqual(entities['npcs']['john']['name'], 'John')
         self.assertEqual(entities['npcs']['john']['role'], 'bartender')
 ```
@@ -3817,26 +3817,26 @@ class TestGeminiService(unittest.TestCase):
 ```javascript
 describe('StateManager', () => {
     let stateManager;
-    
+
     beforeEach(() => {
         stateManager = new StateManager();
     });
-    
+
     test('should merge state updates correctly', () => {
         const initial = {
             player: { hp: { current: 20, max: 20 } }
         };
-        
+
         const update = {
             player: { hp: { current: 15 } }
         };
-        
+
         const result = stateManager.mergeState(initial, update);
-        
+
         expect(result.player.hp.current).toBe(15);
         expect(result.player.hp.max).toBe(20);
     });
-    
+
     test('should handle combat cleanup', () => {
         const state = {
             combat: { active: true },
@@ -3844,9 +3844,9 @@ describe('StateManager', () => {
                 'goblin1': { hp: { current: 0 }, role: 'enemy' }
             }
         };
-        
+
         const cleaned = stateManager.cleanupCombat(state);
-        
+
         expect(cleaned.combat.active).toBe(false);
         expect(cleaned.npcs).toEqual({});
     });
@@ -3861,10 +3861,10 @@ class TestCampaignAPI(TestCase):
     def setUp(self):
         self.client = TestClient(app)
         self.auth_token = self.get_test_auth_token()
-    
+
     def test_create_campaign_flow(self):
         # Create campaign
-        response = self.client.post('/api/campaigns', 
+        response = self.client.post('/api/campaigns',
             headers={'Authorization': f'Bearer {self.auth_token}'},
             json={
                 'title': 'Test Campaign',
@@ -3872,16 +3872,16 @@ class TestCampaignAPI(TestCase):
                 'aiPersona': 'narrative_flair'
             }
         )
-        
+
         self.assertEqual(response.status_code, 201)
         campaign_id = response.json()['campaignId']
-        
+
         # Continue story
         response = self.client.post(f'/api/campaigns/{campaign_id}/continue',
             headers={'Authorization': f'Bearer {self.auth_token}'},
             json={'action': 'Look around the tavern'}
         )
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertIn('narrative', response.json())
 ```
@@ -3895,11 +3895,11 @@ class TestServiceIntegration(TestCase):
         # Setup mocks
         mock_gemini.generate_content.return_value.text = self.get_mock_ai_response()
         mock_firestore.collection.return_value.document.return_value.get.return_value.exists = True
-        
+
         # Execute flow
         campaign_service = CampaignService()
         result = campaign_service.continue_story('campaign123', 'user123', 'Test action')
-        
+
         # Verify interactions
         mock_firestore.collection.assert_called_with('campaigns')
         mock_gemini.generate_content.assert_called_once()
@@ -3914,18 +3914,18 @@ describe('New User Journey', () => {
     beforeEach(async () => {
         await page.goto('https://localhost:3000');
     });
-    
+
     test('should complete onboarding flow', async () => {
         // Login
         await page.click('[data-test="login-button"]');
         await page.waitForNavigation();
-        
+
         // Create first campaign
         await page.click('[data-test="create-campaign"]');
         await page.type('[data-test="campaign-title"]', 'My First Adventure');
         await page.type('[data-test="campaign-prompt"]', 'I am a wizard');
         await page.click('[data-test="start-campaign"]');
-        
+
         // Verify game started
         await page.waitForSelector('[data-test="narrative-text"]');
         const narrative = await page.$eval('[data-test="narrative-text"]', el => el.textContent);
@@ -3939,20 +3939,20 @@ describe('New User Journey', () => {
 describe('Accessibility', () => {
     test('should be navigable by keyboard', async () => {
         await page.goto('https://localhost:3000/game');
-        
+
         // Tab through interface
         await page.keyboard.press('Tab');
         const focusedElement = await page.evaluate(() => document.activeElement.dataset.test);
         expect(focusedElement).toBe('action-input');
-        
+
         // Submit with Enter
         await page.type('[data-test="action-input"]', 'Test action');
         await page.keyboard.press('Enter');
-        
+
         // Verify submission
         await page.waitForSelector('[data-test="loading-indicator"]');
     });
-    
+
     test('should meet WCAG standards', async () => {
         const results = await axe(page);
         expect(results.violations).toHaveLength(0);
@@ -3969,11 +3969,11 @@ class TestNarrativeConsistency(TestCase):
         # Introduce NPC
         response1 = self.ai_service.generate("I talk to the shopkeeper")
         self.assertIn("shopkeeper", response1['entities']['npcs'])
-        
+
         # Reference NPC later
         response2 = self.ai_service.generate("What did the shopkeeper say?")
         self.assertIn("shopkeeper", response2['narrative'])
-        
+
         # Verify consistency
         self.assertEqual(
             response1['entities']['npcs']['shopkeeper']['name'],
@@ -3991,13 +3991,13 @@ class TestGameMechanics(TestCase):
                 'goblin': {'hp': {'current': 7}, 'ac': 13}
             }
         }
-        
+
         # Test attack resolution
         response = self.ai_service.generate("I attack the goblin", state)
-        
+
         # Verify dice rolls occurred
         self.assertRegex(response['narrative'], r'rolls? \d+')
-        
+
         # Verify HP changes are valid
         if 'goblin' in response['state_update'].get('npcs', {}):
             new_hp = response['state_update']['npcs']['goblin']['hp']['current']
@@ -4013,7 +4013,7 @@ from locust import HttpUser, task, between
 
 class GameplayUser(HttpUser):
     wait_time = between(5, 15)
-    
+
     def on_start(self):
         # Login
         response = self.client.post("/api/auth/login", json={
@@ -4021,11 +4021,11 @@ class GameplayUser(HttpUser):
         })
         self.token = response.json()['token']
         self.headers = {'Authorization': f'Bearer {self.token}'}
-        
+
         # Get campaigns
         response = self.client.get("/api/campaigns", headers=self.headers)
         self.campaigns = response.json()['campaigns']
-    
+
     @task(3)
     def continue_story(self):
         if self.campaigns:
@@ -4035,7 +4035,7 @@ class GameplayUser(HttpUser):
                 headers=self.headers,
                 json={"action": self.generate_random_action()}
             )
-    
+
     @task(1)
     def view_state(self):
         if self.campaigns:
@@ -4052,7 +4052,7 @@ class StressTests(TestCase):
     def test_concurrent_state_updates(self):
         # Simulate race conditions
         campaign_id = self.create_test_campaign()
-        
+
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = []
             for i in range(10):
@@ -4062,9 +4062,9 @@ class StressTests(TestCase):
                     f"Action {i}"
                 )
                 futures.append(future)
-            
+
             results = [f.result() for f in futures]
-        
+
         # Verify no conflicts
         final_state = self.get_campaign_state(campaign_id)
         self.assertEqual(final_state['turn_number'], 10)
@@ -4084,7 +4084,7 @@ class TestDataFactory:
             'created_at': datetime.utcnow()
         }
         return {**defaults, **kwargs}
-    
+
     @staticmethod
     def create_game_state(**kwargs):
         defaults = {
@@ -4110,32 +4110,32 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v2
-    
+
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: 3.11
-    
+
     - name: Install dependencies
       run: |
         pip install -r requirements.txt
         pip install -r requirements-test.txt
-    
+
     - name: Run unit tests
       run: pytest tests/unit --cov=. --cov-report=xml
-    
+
     - name: Run integration tests
       run: pytest tests/integration
-    
+
     - name: Upload coverage
       uses: codecov/codecov-action@v1
-      
+
   e2e:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Run E2E tests
       run: npm run test:e2e
@@ -4147,7 +4147,7 @@ jobs:
 ```python
 # pytest.ini
 [tool:pytest]
-addopts = 
+addopts =
     --cov=mvp_site
     --cov-report=html
     --cov-report=term-missing
@@ -4188,13 +4188,13 @@ regions:
       - cloud-run
       - firestore
       - secret-manager
-  
+
   secondary:
     location: europe-west1
     services:
       - cloud-run
       - cdn-edge
-  
+
   disaster-recovery:
     location: asia-northeast1
     services:
@@ -4271,21 +4271,21 @@ class BlueGreenDeployer:
     def deploy(self, new_version):
         # Deploy to green environment
         green_url = self.deploy_to_green(new_version)
-        
+
         # Run health checks
         if not self.health_check(green_url):
             self.rollback()
             raise DeploymentError("Health check failed")
-        
+
         # Gradual traffic shift
         for percentage in [10, 25, 50, 75, 100]:
             self.shift_traffic(percentage)
             time.sleep(300)  # 5 minutes
-            
+
             if self.error_rate() > 0.01:  # 1% error threshold
                 self.rollback()
                 raise DeploymentError("Error rate exceeded threshold")
-        
+
         # Update blue to match green
         self.sync_blue_to_green()
 ```
@@ -4305,7 +4305,7 @@ class Environment(Enum):
 
 class Config:
     ENV = Environment(os.getenv('ENVIRONMENT', 'development'))
-    
+
     # Service URLs
     if ENV == Environment.PRODUCTION:
         API_URL = "https://api.worldarchitect.ai"
@@ -4316,7 +4316,7 @@ class Config:
     else:
         API_URL = "http://localhost:8080"
         APP_URL = "http://localhost:3000"
-    
+
     # Feature flags
     FEATURES = {
         'multiplayer': ENV == Environment.PRODUCTION,
@@ -4332,10 +4332,10 @@ class SecretManager:
     def __init__(self):
         self.client = secretmanager.SecretManagerServiceClient()
         self.project_id = os.getenv('GOOGLE_CLOUD_PROJECT')
-    
+
     def get_secret(self, secret_id, version="latest"):
         name = f"projects/{self.project_id}/secrets/{secret_id}/versions/{version}"
-        
+
         try:
             response = self.client.access_secret_version(request={"name": name})
             return response.payload.data.decode("UTF-8")
@@ -4361,15 +4361,15 @@ class MetricsCollector:
     def __init__(self):
         self.client = monitoring_v3.MetricServiceClient()
         self.project_name = f"projects/{os.getenv('GOOGLE_CLOUD_PROJECT')}"
-    
+
     def record_metric(self, metric_type, value, labels=None):
         series = monitoring_v3.TimeSeries()
         series.metric.type = f"custom.googleapis.com/{metric_type}"
-        
+
         if labels:
             for key, val in labels.items():
                 series.metric.labels[key] = val
-        
+
         now = time.time()
         interval = monitoring_v3.TimeInterval({"end_time": {"seconds": int(now)}})
         point = monitoring_v3.Point({
@@ -4377,7 +4377,7 @@ class MetricsCollector:
             "value": {"double_value": value}
         })
         series.points = [point]
-        
+
         self.client.create_time_series(
             name=self.project_name,
             time_series=[series]
@@ -4430,23 +4430,23 @@ class BackupManager:
         self.firestore = firestore.Client()
         self.storage = storage.Client()
         self.backup_bucket = "worldarchitect-backups"
-    
+
     def backup_campaigns(self):
         """Daily backup of all campaigns"""
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        
+
         # Export Firestore
         operation = self.firestore.export_documents(
             output_uri_prefix=f"gs://{self.backup_bucket}/firestore/{timestamp}",
             collection_ids=['campaigns', 'users']
         )
-        
+
         # Wait for completion
         operation.result()
-        
+
         # Verify backup
         self.verify_backup(timestamp)
-        
+
         # Clean old backups (keep 30 days)
         self.cleanup_old_backups(days=30)
 ```
@@ -4457,25 +4457,25 @@ class DisasterRecovery:
     def __init__(self):
         self.regions = ['us-central1', 'europe-west1', 'asia-northeast1']
         self.health_checker = HealthChecker()
-    
+
     def failover(self, failed_region):
         """Automatic failover to healthy region"""
-        
+
         # Find healthy region
         for region in self.regions:
             if region != failed_region and self.health_checker.is_healthy(region):
-                
+
                 # Update DNS
                 self.update_dns(region)
-                
+
                 # Restore from latest backup
                 self.restore_from_backup(region)
-                
+
                 # Notify team
                 self.send_notification(f"Failover completed to {region}")
-                
+
                 return region
-        
+
         raise CriticalError("No healthy regions available")
 ```
 
@@ -4554,19 +4554,19 @@ class IncidentManager:
         'P2': {'response_time': '2h', 'escalation': '4h'},
         'P3': {'response_time': '24h', 'escalation': '48h'}
     }
-    
+
     def handle_incident(self, alert):
         severity = self.determine_severity(alert)
-        
+
         # Create incident
         incident = self.create_incident(alert, severity)
-        
+
         # Notify responders
         self.notify_oncall(incident)
-        
+
         # Start tracking
         self.start_incident_timeline(incident)
-        
+
         # Auto-remediation attempts
         if self.can_auto_remediate(alert.type):
             self.attempt_auto_remediation(alert)

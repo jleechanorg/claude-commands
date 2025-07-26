@@ -5,7 +5,7 @@
 This directory contains Claude Code slash commands that follow the **explicit execution principle**:
 
 - ✅ **Documentation-driven workflows** where every command is visible
-- ✅ **Python-based tools** for maintainability and cross-platform support  
+- ✅ **Python-based tools** for maintainability and cross-platform support
 - ✅ **No hidden wrapper scripts** - users see exactly what runs
 - ❌ **Shell scripts are NOT preferred** for command implementations
 
@@ -20,7 +20,7 @@ Example workflow in `copilot.md`:
 ```bash
 # Explicit execution - user sees every command
 python3 .claude/commands/copilot.py 780
-./run_ci_replica.sh  
+./run_ci_replica.sh
 gh pr view 780 --json statusCheckRollup
 python3 .claude/commands/copilot_resolver.py [files]
 ```
@@ -33,7 +33,7 @@ python3 .claude/commands/copilot_resolver.py [files]
 ### 🚨 **NEVER Create copilot.sh Again**
 This was tried and **failed** because it:
 - Hid commands behind a wrapper interface
-- Contradicted the explicit execution philosophy  
+- Contradicted the explicit execution philosophy
 - Added unnecessary complexity vs. documentation-driven approach
 - Made the workflow less transparent and harder to customize
 
@@ -44,7 +44,7 @@ This was tried and **failed** because it:
 - **Output**: Structured data files in `/tmp/` for LLM analysis
 - **Integration**: Via explicit calls in documentation
 
-### **Analysis Commands**  
+### **Analysis Commands**
 - **Pattern**: Standalone Python scripts that process collected data
 - **Focus**: Single responsibility (conflict resolution, formatting, etc.)
 - **Usage**: Direct execution with clear input/output contracts
@@ -77,7 +77,7 @@ This was tried and **failed** because it:
 
 ### **Modifying Existing Commands**
 1. **Maintain explicit interfaces** - no hidden behavior changes
-2. **Update documentation** to reflect new capabilities  
+2. **Update documentation** to reflect new capabilities
 3. **Test both automated and manual execution paths**
 4. **Preserve backward compatibility** where possible
 

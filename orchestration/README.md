@@ -22,7 +22,7 @@ This system implements the **core design philosophy**: **one general agent per t
 
 # System does this:
 ✅ Creates task-agent-1234 in tmux session
-✅ Creates fresh git worktree from main branch  
+✅ Creates fresh git worktree from main branch
 ✅ Agent completes task in isolated workspace
 ✅ Agent commits, pushes, and creates PR
 ✅ Monitor tracks progress every 2 minutes
@@ -153,7 +153,7 @@ def analyze_task_and_create_agents(self, task_description):
 def create_dynamic_agent(self, agent_spec):
     # Create git worktree from main branch
     subprocess.run(['git', 'worktree', 'add', '-b', branch_name, agent_dir, 'main'])
-    
+
     # Generate comprehensive prompt with MANDATORY completion steps
     # Create tmux session with Claude
     tmux_cmd = [
@@ -269,11 +269,11 @@ ls -la /tmp/orchestration_results/
    ```bash
    # Check specific agent
    tmux capture-pane -t task-agent-1234 -p | tail -50
-   
+
    # View agent result files
    ls -la /tmp/orchestration_results/
    cat /tmp/orchestration_results/task-agent-1234_results.json
-   
+
    # Check agent logs
    tail -f /tmp/orchestration_logs/task-agent-1234.log
    ```

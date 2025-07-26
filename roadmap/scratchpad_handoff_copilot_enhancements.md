@@ -55,9 +55,9 @@ The `/copilot` command was enhanced with merge conflict detection but needs foll
    event = "PreToolUse"
    filter = "copilot"
    command = "python3 .claude/commands/copilot_pre_hook.py"
-   
+
    [[hooks]]
-   event = "PostToolUse" 
+   event = "PostToolUse"
    filter = "Edit"
    command = "python3 .claude/commands/copilot_post_hook.py"
    ```
@@ -205,7 +205,7 @@ The `/copilot` command was enhanced with merge conflict detection but needs foll
 ## Timeline Estimate
 
 - **Phase 1**: 2-3 hours (Testing & Validation)
-- **Phase 2**: 3-4 hours (Hooks Integration)  
+- **Phase 2**: 3-4 hours (Hooks Integration)
 - **Phase 3**: 2-3 hours (Advanced Arguments)
 - **Phase 4**: 4-5 hours (Workflow Automation)
 

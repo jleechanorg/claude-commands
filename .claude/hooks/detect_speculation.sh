@@ -46,10 +46,10 @@ for pattern in "${!SPECULATION_PATTERNS[@]}"; do
     if echo "$RESPONSE_TEXT" | grep -i -E "$pattern" > /dev/null 2>&1; then
         FOUND_SPECULATION=true
         ((SPECULATION_COUNT++))
-        
+
         description="${SPECULATION_PATTERNS[$pattern]}"
         matching_text=$(echo "$RESPONSE_TEXT" | grep -i -E "$pattern" | head -1)
-        
+
         echo -e "${YELLOW}⚠️  SPECULATION DETECTED${NC}: $description"
         echo -e "   ${RED}Pattern${NC}: $pattern"
         echo -e "   ${RED}Match${NC}: $matching_text"
@@ -64,10 +64,10 @@ if [ "$FOUND_SPECULATION" = true ]; then
     echo "   2. Look for error messages or completion status"
     echo "   3. Proceed based on observable facts"
     echo "   4. Never assume execution state"
-    
+
     # Log speculation incidents
     echo "$(date '+%Y-%m-%d %H:%M:%S') - Speculation detected: $SPECULATION_COUNT patterns" >> "$LOG_FILE"
-    
+
     exit 1  # Block response to force correction
 else
     exit 0  # Allow response

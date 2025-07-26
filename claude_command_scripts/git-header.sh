@@ -43,7 +43,7 @@ if [ "$remote" != "no upstream" ]; then
     # Count commits ahead and behind
     ahead_count=$(git rev-list --count "$remote"..HEAD 2>/dev/null || echo "0")
     behind_count=$(git rev-list --count HEAD.."$remote" 2>/dev/null || echo "0")
-    
+
     if [ "$ahead_count" -eq 0 ] && [ "$behind_count" -eq 0 ]; then
         local_status=" (synced)"
     elif [ "$ahead_count" -gt 0 ] && [ "$behind_count" -eq 0 ]; then
@@ -110,7 +110,7 @@ show_popup() {
 check_bashrc_alias() {
     local git_root=$(git rev-parse --show-toplevel 2>/dev/null)
     local script_path="$git_root/claude_command_scripts/git-header.sh"
-    
+
     # Check if alias exists in bashrc
     if ! grep -q "alias.*git-header" ~/.bashrc 2>/dev/null; then
         echo "⚠️  WARNING: git-header alias not found in ~/.bashrc"
@@ -132,7 +132,7 @@ if [ "$1" = "--with-api" ] || [ "$1" = "--monitor" ]; then
         echo "[API: Error - CLAUDE_API_KEY environment variable not set]"
         exit 0
     fi
-    
+
     response=$(curl -s -D /tmp/claude_headers.tmp https://api.anthropic.com/v1/messages \
       --header "x-api-key: $CLAUDE_API_KEY" \
       --header "anthropic-version: 2023-06-01" \
@@ -142,7 +142,7 @@ if [ "$1" = "--with-api" ] || [ "$1" = "--monitor" ]; then
         "max_tokens": 10,
         "messages": [{"role": "user", "content": "test"}]
       }' 2>/dev/null)
-    
+
     # Check for authentication errors
     if echo "$response" | grep -q "authentication_error"; then
         echo "[Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]"
@@ -150,18 +150,18 @@ if [ "$1" = "--with-api" ] || [ "$1" = "--monitor" ]; then
         rm -f /tmp/claude_headers.tmp
         exit 0
     fi
-    
+
     if [ -f /tmp/claude_headers.tmp ]; then
         requests_reset=$(grep -i 'anthropic-ratelimit-requests-reset:' /tmp/claude_headers.tmp | cut -d' ' -f2- | tr -d '\r')
         requests_remaining=$(grep -i 'anthropic-ratelimit-requests-remaining:' /tmp/claude_headers.tmp | cut -d' ' -f2- | tr -d '\r')
         requests_limit=$(grep -i 'anthropic-ratelimit-requests-limit:' /tmp/claude_headers.tmp | cut -d' ' -f2- | tr -d '\r')
-        
+
         # Calculate usage percentage
         if [ -n "$requests_remaining" ] && [ -n "$requests_limit" ]; then
             requests_used=$((requests_limit - requests_remaining))
             usage_percent=$((requests_used * 100 / requests_limit))
             remaining_percent=$((requests_remaining * 100 / requests_limit))
-            
+
             # Show alerts based on remaining percentage
             if [ "$1" = "--monitor" ] && [ "$remaining_percent" -le 25 ]; then
                 show_popup "CRITICAL: Only $remaining_percent% API quota remaining ($requests_remaining/$requests_limit requests)"
@@ -171,10 +171,10 @@ if [ "$1" = "--with-api" ] || [ "$1" = "--monitor" ]; then
                 show_balloon "Claude API Notice" "Info: $remaining_percent% quota remaining ($requests_remaining/$requests_limit)"
             fi
         fi
-        
+
         echo "[Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]"
         echo "[API: ${requests_remaining:-?}/${requests_limit:-50} requests (${remaining_percent:-?}% remaining) | Reset: $(format_time "$requests_reset")]"
-        
+
         rm -f /tmp/claude_headers.tmp
     else
         echo "[Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]"

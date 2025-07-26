@@ -7,13 +7,13 @@ The current git-header.sh script shows API request rate limits (1000 requests) b
 
 ### Claude Pro Session Limits (from web search)
 - **Claude Pro ($20/month)**: ~45 messages every 5 hours
-- **Claude Max ($200/month)**: ~900 messages every 5 hours  
+- **Claude Max ($200/month)**: ~900 messages every 5 hours
 - **Max Plan Specific**: "50 sessions per month" guideline (flexible benchmark)
 - **Session Definition**: 5-hour segments starting from first message
 
 ### API Headers Available
 - `anthropic-ratelimit-requests-*` - Request-based rate limits
-- `anthropic-ratelimit-tokens-*` - Token-based rate limits  
+- `anthropic-ratelimit-tokens-*` - Token-based rate limits
 - `anthropic-ratelimit-sessions` - Session tracking (mentioned but details unclear)
 - `retry-after` - For 429 errors
 - `anthropic-organization-id` - Organization ID
@@ -110,7 +110,7 @@ echo "[Reset: Requests $(format_time "$requests_reset") | Sessions $(format_time
 - [ ] Monthly reset timing is accurate
 - [ ] Graceful fallback when session headers unavailable
 
-### Secondary Goals  
+### Secondary Goals
 - [ ] Maintain existing request limit display
 - [ ] Add session usage alerts/warnings
 - [ ] Improve header caching efficiency
@@ -118,7 +118,7 @@ echo "[Reset: Requests $(format_time "$requests_reset") | Sessions $(format_time
 
 ## Timeline Estimate
 - **Research & Testing**: 2-3 hours
-- **Implementation**: 2-4 hours  
+- **Implementation**: 2-4 hours
 - **Testing & Validation**: 1-2 hours
 - **Documentation**: 1 hour
 - **Total**: 6-10 hours

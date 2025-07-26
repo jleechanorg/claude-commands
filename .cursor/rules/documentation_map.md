@@ -32,7 +32,7 @@
                                   References:
                                   • virtual_agents.md
                                   • milestone_planning_structure.md
-        
+
 ┌──────────────────┐              ┌──────────────────┐
 │   lessons.mdc    │              │    CLAUDE.md     │
 │                  │              │                  │

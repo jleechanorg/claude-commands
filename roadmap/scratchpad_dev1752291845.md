@@ -73,7 +73,7 @@ Remove classic interface feature and all related code to simplify the codebase.
 
 ## Branch Info
 - **Local**: dev1752291845
-- **Remote**: fix/remove-classic-interface 
+- **Remote**: fix/remove-classic-interface
 - **PR**: #520 https://github.com/jleechan2015/worldarchitect.ai/pull/520
 - **Status**: **READY FOR MERGE** ✅
 

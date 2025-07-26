@@ -34,7 +34,7 @@ git worktree add ../worktree_docs documentation
 
 # Run Claude in each worktree for parallel development
 cd ../worktree_feature1 && claude  # Context: New feature
-cd ../worktree_bugfix && claude    # Context: Bug fixes  
+cd ../worktree_bugfix && claude    # Context: Bug fixes
 cd ../worktree_docs && claude      # Context: Documentation
 ```
 
@@ -44,7 +44,7 @@ cd ../worktree_docs && claude      # Context: Documentation
 claude --session-name "dev-primary"
 
 # Process 2: Research/Analysis (Secondary)
-claude --session-name "research" 
+claude --session-name "research"
 
 # Process 3: Testing/Automation (Headless)
 claude -p "Run tests and analyze results" --output-format stream-json
@@ -57,7 +57,7 @@ claude --session-name "docs"
 ```bash
 # Stagger sessions to avoid quota conflicts
 # Session 1: 9:00 AM - 2:00 PM (5 hours)
-# Session 2: 11:00 AM - 4:00 PM (5 hours) 
+# Session 2: 11:00 AM - 4:00 PM (5 hours)
 # Session 3: 1:00 PM - 6:00 PM (5 hours)
 # Session 4: 3:00 PM - 8:00 PM (5 hours)
 ```
@@ -70,7 +70,7 @@ claude --session-name "docs"
 export CLAUDE_PRIORITY=1  # Get 50% of quota allocation
 claude --max-requests-per-hour 20
 
-# Medium Priority (Research/Analysis)  
+# Medium Priority (Research/Analysis)
 export CLAUDE_PRIORITY=2  # Get 30% of quota allocation
 claude --max-requests-per-hour 12
 

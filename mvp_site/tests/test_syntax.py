@@ -1,8 +1,7 @@
 import ast
 import os
-import unittest
-
 import sys
+import unittest
 
 
 class TestModuleSyntax(unittest.TestCase):
@@ -39,7 +38,6 @@ class TestModuleSyntax(unittest.TestCase):
 
         try:
             # Add parent directory to path for imports
-
 
             sys.path.insert(
                 0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

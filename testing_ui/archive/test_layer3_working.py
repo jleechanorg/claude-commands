@@ -35,90 +35,90 @@ def test_layer3_working():
             <head>
                 <title>Layer 3 Working Test</title>
                 <style>
-                    .session-header { 
-                        background-color: #f0f0f0; 
-                        padding: 10px; 
-                        margin-bottom: 10px; 
-                        font-family: monospace; 
-                        white-space: pre-wrap; 
-                        border-radius: 5px; 
+                    .session-header {
+                        background-color: #f0f0f0;
+                        padding: 10px;
+                        margin-bottom: 10px;
+                        font-family: monospace;
+                        white-space: pre-wrap;
+                        border-radius: 5px;
                     }
-                    .god-mode-response { 
-                        border: 2px solid #9b59b6; 
-                        background-color: rgba(155, 89, 182, 0.05); 
-                        padding: 15px; 
-                        margin: 10px 0; 
-                        border-radius: 8px; 
+                    .god-mode-response {
+                        border: 2px solid #9b59b6;
+                        background-color: rgba(155, 89, 182, 0.05);
+                        padding: 15px;
+                        margin: 10px 0;
+                        border-radius: 8px;
                     }
-                    .entities-mentioned { 
-                        background-color: #e7f3ff; 
-                        padding: 10px; 
-                        margin: 10px 0; 
-                        border-radius: 5px; 
-                        border-left: 4px solid #2196F3; 
+                    .entities-mentioned {
+                        background-color: #e7f3ff;
+                        padding: 10px;
+                        margin: 10px 0;
+                        border-radius: 5px;
+                        border-left: 4px solid #2196F3;
                     }
-                    .location-confirmed { 
-                        background-color: #f0f8ff; 
-                        padding: 10px; 
-                        margin: 10px 0; 
-                        border-radius: 5px; 
-                        border-left: 4px solid #4169e1; 
+                    .location-confirmed {
+                        background-color: #f0f8ff;
+                        padding: 10px;
+                        margin: 10px 0;
+                        border-radius: 5px;
+                        border-left: 4px solid #4169e1;
                     }
-                    .dice-rolls { 
-                        background-color: #e8f4e8; 
-                        padding: 10px; 
-                        margin: 10px 0; 
-                        border-radius: 5px; 
-                        border-left: 4px solid #4caf50; 
+                    .dice-rolls {
+                        background-color: #e8f4e8;
+                        padding: 10px;
+                        margin: 10px 0;
+                        border-radius: 5px;
+                        border-left: 4px solid #4caf50;
                     }
-                    .resources { 
-                        background-color: #fff3cd; 
-                        padding: 10px; 
-                        margin: 10px 0; 
-                        border-radius: 5px; 
-                        border-left: 4px solid #ffc107; 
+                    .resources {
+                        background-color: #fff3cd;
+                        padding: 10px;
+                        margin: 10px 0;
+                        border-radius: 5px;
+                        border-left: 4px solid #ffc107;
                     }
-                    .state-updates { 
-                        background-color: #f5f5f5; 
-                        padding: 10px; 
-                        margin: 10px 0; 
-                        border-radius: 5px; 
-                        border-left: 4px solid #9e9e9e; 
+                    .state-updates {
+                        background-color: #f5f5f5;
+                        padding: 10px;
+                        margin: 10px 0;
+                        border-radius: 5px;
+                        border-left: 4px solid #9e9e9e;
                     }
-                    .planning-block { 
-                        background-color: #e3f2fd; 
-                        padding: 15px; 
-                        margin: 15px 0; 
-                        border-radius: 5px; 
-                        border-left: 4px solid #2196f3; 
-                        white-space: pre-wrap; 
+                    .planning-block {
+                        background-color: #e3f2fd;
+                        padding: 15px;
+                        margin: 15px 0;
+                        border-radius: 5px;
+                        border-left: 4px solid #2196f3;
+                        white-space: pre-wrap;
                     }
-                    .debug-info { 
-                        background-color: #f8f9fa; 
-                        padding: 15px; 
-                        margin: 10px 0; 
-                        border-radius: 5px; 
-                        border: 1px solid #dee2e6; 
+                    .debug-info {
+                        background-color: #f8f9fa;
+                        padding: 15px;
+                        margin: 10px 0;
+                        border-radius: 5px;
+                        border: 1px solid #dee2e6;
                     }
-                    .dm-notes { 
-                        background-color: #f8f4ff; 
-                        padding: 10px; 
-                        margin: 10px 0; 
-                        border-radius: 5px; 
-                        border-left: 4px solid #9c27b0; 
+                    .dm-notes {
+                        background-color: #f8f4ff;
+                        padding: 10px;
+                        margin: 10px 0;
+                        border-radius: 5px;
+                        border-left: 4px solid #9c27b0;
                     }
-                    .state-rationale { 
-                        background-color: #fff8e7; 
-                        padding: 10px; 
-                        margin: 10px 0; 
-                        border-radius: 5px; 
-                        border-left: 4px solid #ff9800; 
+                    .state-rationale {
+                        background-color: #fff8e7;
+                        padding: 10px;
+                        margin: 10px 0;
+                        border-radius: 5px;
+                        border-left: 4px solid #ff9800;
                     }
                 </style>
             </head>
             <body>
                 <h1>Layer 3 Working Test - All 10 Structured Fields</h1>
-                
+
                 <div class="session-header">
 [SESSION_HEADER]
 Timestamp: 1492 DR, Ches 20, 10:00
@@ -127,7 +127,7 @@ Status: Lvl 5 Paladin | HP: 10/10 (Temp: 0) | XP: 0/2700 | Gold: 0gp
 Resources: HD: 3/3 | Lay on Hands: 20/20 | Divine Sense: 4/4 | Spells: L1 2/2, L2 1/1 | Channel Divinity: 1/1
 Conditions: None | Exhaustion: 0 | Inspiration: No | Potions: 1
                 </div>
-                
+
                 <div class="god-mode-response">
                     <strong>🔮 God Mode Response:</strong>
                     <pre>Current game state:
@@ -137,7 +137,7 @@ Conditions: None | Exhaustion: 0 | Inspiration: No | Potions: 1
 - Hidden: Treasure chest behind waterfall
 - NPCs: 2 goblins sleeping in side chamber</pre>
                 </div>
-                
+
                 <div class="entities-mentioned">
                     <strong>👥 Entities:</strong>
                     <ul>
@@ -146,11 +146,11 @@ Conditions: None | Exhaustion: 0 | Inspiration: No | Potions: 1
                         <li>merchant</li>
                     </ul>
                 </div>
-                
+
                 <div class="location-confirmed">
                     <strong>📍 Location:</strong> Dragon's Lair
                 </div>
-                
+
                 <div class="dice-rolls">
                     <strong>🎲 Dice Rolls:</strong>
                     <ul>
@@ -158,11 +158,11 @@ Conditions: None | Exhaustion: 0 | Inspiration: No | Potions: 1
                         <li>Damage Roll: 1d8 + 5 = 6 + 5 = 11 Slashing damage</li>
                     </ul>
                 </div>
-                
+
                 <div class="resources">
                     <strong>📊 Resources:</strong> HD: 3/3 | Lay on Hands: 5/5 | Spells: L1 4/4, L2 3/3 | Divine Sense: 4/4 | Channel Divinity: 1/1 | Potions: 1
                 </div>
-                
+
                 <div class="state-updates">
                     <strong>🔧 State Updates:</strong>
                     <pre>{
@@ -172,14 +172,14 @@ Conditions: None | Exhaustion: 0 | Inspiration: No | Potions: 1
   "location": "goblin_cave_main_chamber"
 }</pre>
                 </div>
-                
+
                 <div class="planning-block">--- PLANNING BLOCK ---
 What would you like to do next?
 1. **Proceed cautiously:** Slowly enter the cave, searching for traps and enemies.
 2. **Shout a challenge:** Announce your presence to any goblins inside.
 3. **Cast Divine Sense:** Check for any evil presences nearby.
 4. **Other:** Describe a different action you'd like to take.</div>
-                
+
                 <div class="debug-info">
                     <strong>🔍 Debug Info:</strong>
                     <div class="dm-notes">

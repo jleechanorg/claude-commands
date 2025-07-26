@@ -42,7 +42,7 @@ jobs:
   claude-code:
     runs-on: ubuntu-latest
     name: Claude Code Action
-    
+
     steps:
       # NO CHECKOUT STEP - Claude handles this internally
       - name: Claude Code Action

@@ -13,7 +13,7 @@ Merge the compressed Alexiel book content into World Assiah to create a single u
 
 ### Milestone 1: Foundation Integration (Low-Medium complexity)
 - [ ] Extract Power Tier System from Alexiel book
-- [ ] Extract Nullification mechanics from Alexiel book  
+- [ ] Extract Nullification mechanics from Alexiel book
 - [ ] Extract Wing Manifestation rules from Alexiel book
 - [ ] Add these to World Mechanics section in World Assiah
 - [ ] Extract unique locations from Alexiel book
