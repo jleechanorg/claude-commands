@@ -1,37 +1,40 @@
 # Branch Cleanup Command
 
-**Purpose**: Delete local branches without open GitHub PRs
+**Purpose**: Safe cleanup of Git branches and worktrees with comprehensive safety features
 
-**Action**: Delete local branches without open GitHub PRs
+**Action**: Execute the enhanced branch-cleanup.sh script with worktree cleanup functionality
 
-**Usage**: `/bclean`
+**Usage**: `/bclean [options]`
 
-**MANDATORY**: When using `/bclean` command, follow this exact sequence:
+## Available Options
+- `--dry-run` - Preview what would be cleaned without making changes
+- `--force` - Skip confirmation prompts (use with caution)
+- `--days N` - Age threshold for worktree cleanup (default: 2 days)
+- `--help` - Show detailed help and examples
 
-1. **GitHub PR Check**: Use `gh pr list --state open --json headRefName` to get all open PR branch names
+## Enhanced Features
+✅ **Branch Cleanup**: Safely removes local branches without open PRs
+✅ **Worktree Cleanup**: Removes stale worktrees based on commit age
+✅ **PR-Aware**: Preserves branches with active GitHub PRs
+✅ **Safety First**: Never deletes uncommitted work or current branch
+✅ **Configurable**: Adjustable age thresholds for worktree cleanup
 
-2. **Local Branch List**: Use `git branch` to get all local branches (exclude main/master)
+## Implementation
+When `/bclean` is used, Claude should execute the enhanced branch-cleanup.sh script:
 
-3. **Cross-Reference**: Identify local branches that do NOT have corresponding open GitHub PRs
+**Action**: Execute `./claude_command_scripts/commands/branch-cleanup.sh` with any provided arguments
 
-4. **Safety Check**: 
-   - ⚠️ **NEVER delete current branch**
-   - ⚠️ **NEVER delete main/master branches**
-   - ⚠️ **NEVER delete worktree branches** (check `git worktree list`)
+This provides:
+- **Comprehensive Git workspace cleanup** (branches + worktrees)  
+- **Battle-tested safety features** with PR checking
+- **Interactive confirmations** and dry-run preview
+- **Clear status reporting** with color-coded output
+- **Flexible configuration** with command-line options
 
-5. **User Confirmation**: Present list of branches to delete and request explicit approval
+## Examples
+- `/bclean --dry-run` - Preview cleanup without changes
+- `/bclean` - Interactive cleanup with confirmations  
+- `/bclean --days 7` - Clean worktrees older than 7 days
+- `/bclean --help` - Show detailed usage information
 
-6. **Branch Deletion**: Only delete branches after user confirms with:
-   - `git branch -d <branch>` (safe delete - only if merged)
-   - `git branch -D <branch>` (force delete - only if user explicitly requests)
-
-7. **Result Reporting**: Summarize branches deleted, any that couldn't be deleted, and reasons
-
-**Safety Rules**:
-- ✅ **Only delete branches without open PRs**
-- ✅ **Always check for unpushed commits** before deletion
-- ✅ **Warn about unpushed work** and offer to create PRs first
-- ❌ **NEVER delete without user confirmation**
-- ❌ **NEVER delete branches with uncommitted changes**
-
-**Command Purpose**: Clean up stale local branches that don't have active GitHub PRs, preventing branch pollution while preserving active work.
+**Command executes the enhanced script with all provided arguments for full functionality.**
