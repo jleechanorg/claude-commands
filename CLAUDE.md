@@ -36,14 +36,24 @@
 - 🔍 Evidence: Recurring pattern of "PR: none" when user expects PR context to be tracked
 - ⚠️ This is a critical attention to detail compliance issue
 
-🚨 **COPILOT COMMAND AUTONOMOUS OPERATION**: ⚠️ MANDATORY
-- ✅ `/copilot` commands operate autonomously without user approval prompts
+🚨 **ZERO TOLERANCE PR MERGE APPROVAL PROTOCOL**: ⚠️ MANDATORY
+- ❌ **NEVER MERGE PRS WITHOUT EXPLICIT USER APPROVAL - ZERO EXCEPTIONS**
+- 🚨 **CRITICAL RULE**: "dont merge without my approval EVER" - User statement with zero tolerance
+- ✅ **ALWAYS require explicit approval** before any action that could trigger PR merge
+- ✅ **CHECK PR state** before any push/update that could auto-merge
+- ✅ **MANDATORY approval phrase**: User must type "MERGE APPROVED" for merge-triggering actions
+- ❌ **NO assumptions**: Even PR updates require merge approval verification
+- 🔍 **Evidence**: PR #967 auto-merged violation - this must NEVER happen again
+- **Scope**: Applies to ALL operations - manual, /copilot, orchestration, agents
+
+🚨 **COPILOT COMMAND AUTONOMOUS OPERATION**: ⚠️ MANDATORY (FOR ANALYSIS ONLY)
+- ✅ `/copilot` commands operate autonomously without user approval prompts FOR ANALYSIS ONLY
+- ❌ **EXCEPTION**: MERGE operations ALWAYS require explicit user approval regardless of command
 - ✅ ALWAYS proceed with full analysis regardless of conflicts/issues detected
 - ✅ Claude should automatically apply fixes and resolve issues without asking
 - ✅ Continue workflow through conflicts, CI failures, or other blockers
-- ❌ NEVER stop workflow for user confirmation during `/copilot` execution
-- ❌ No "proceed anyway?" or "continue with analysis?" prompts
-- **Purpose**: `/copilot` is designed for autonomous PR analysis and fixing
+- 🔒 **CRITICAL**: Must implement merge approval protocol before any merge-triggering push
+- **Purpose**: `/copilot` is designed for autonomous PR analysis and fixing, NOT merging
 
 ## Legend
 🚨 = CRITICAL | ⚠️ = MANDATORY | ✅ = Always/Do | ❌ = Never/Don't | → = See reference | PR = Pull Request
@@ -401,6 +411,14 @@ Use docstrings, proper JS loading
 3. **MEDIUM**: Logging violations, format issues
 4. **LOW**: Style preferences, optimizations
 - 🔍 Evidence: PR #873 review - fixed critical inline imports first
+
+🚨 **BOT COMMENT FILTERING**: ⚠️ MANDATORY - Ignore specific bot comment patterns when explicitly overridden
+- ❌ **IGNORE**: Bot comments about `--dangerously-skip-permissions` flag when user has explicitly chosen to keep it
+- ✅ **ACKNOWLEDGE**: Still respond to bot comments but indicate user decision to retain flag
+- ✅ **AUDIT TRAIL**: Label ignored comment and link to user request for compliance
+- ✅ **CONTEXT**: "Thanks for the security suggestion. For this specific use case, we're keeping the flag as requested per user direction. Audit: [Link to user decision]"
+- **Scope**: Apply only when user has explicitly stated intention to keep controversial patterns
+- **Evidence**: Memory automation testing requires bypass permissions for development/testing scenarios
 
 ### Website Testing & Deployment Expectations (🚨 CRITICAL)
 🚨 **BRANCH ≠ WEBSITE**: ❌ NEVER assume branch changes are visible on websites without deployment

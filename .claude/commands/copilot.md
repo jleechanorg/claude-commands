@@ -335,6 +335,27 @@ if 'copilot' in author.lower():
 
 🚨 **ENFORCEMENT**: Each phase MUST complete successfully before proceeding to next phase. NO skipping steps.
 
+## 🚨 CRITICAL: ZERO TOLERANCE MERGE APPROVAL PROTOCOL
+
+→ See **CLAUDE.md §ZERO-TOLERANCE MERGE APPROVAL** for complete protocol
+
+### ✅ **Non-Interactive Implementation:**
+```bash
+# MANDATORY: Check before any push operation
+pr_json=$(gh pr view "${PR_NUMBER:-}" --json state,mergeable 2>/dev/null)
+PR_STATE=$(jq -r '.state' <<<"$pr_json")
+PR_MERGEABLE=$(jq -r '.mergeable' <<<"$pr_json")
+
+if [[ "$PR_STATE" == "OPEN" && "$PR_MERGEABLE" == "MERGEABLE" ]]; then
+    if [[ "${MERGE_APPROVAL:-}" != "MERGE APPROVED" ]]; then
+        echo "❌ Operation cancelled – export MERGE_APPROVAL='MERGE APPROVED' to proceed"
+        exit 1
+    fi
+fi
+```
+
+**This protocol applies to ALL PR operations: manual, /copilot, orchestration agents, and any automated workflow.**
+
 ## 🚨 CRITICAL: NO SILENT FAILURES
 
 **MANDATORY CONTINUATION RULES**:
