@@ -184,9 +184,9 @@ class OrchestrationDashboard:
         print(f"\n🤖 AGENT STATUS:")
         sessions = self.get_tmux_session_info()
 
-        # Only opus-master is predefined - all others are dynamic
+        # Only task-coordinator is predefined - all others are dynamic
         expected_agents = [
-            ("opus-master", "🎯 Opus", "Task coordination")
+            ("task-coordinator", "🎯 Task Coordinator", "Task coordination")
         ]
 
         for agent_name, display_name, description in expected_agents:

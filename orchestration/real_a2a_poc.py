@@ -138,7 +138,7 @@ class OrchestrationA2AServer:
 
         return [
             {
-                "agent_id": "opus-master",
+                "agent_id": "task-coordinator",
                 "agent_type": "coordinator",
                 "capabilities": ["coordination", "task_breakdown", "management"],
                 "status": "active",
