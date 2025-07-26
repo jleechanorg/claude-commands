@@ -160,6 +160,71 @@ fi
 
 echo ""
 
+# Claude Bot Server auto-start
+echo -e "${BLUE}🤖 Checking Claude Bot Server status...${NC}"
+
+# Function to check if Claude bot server is running
+is_claude_bot_running() {
+    if curl -s http://127.0.0.1:5001/health &> /dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Function to start Claude bot server in background
+start_claude_bot_background() {
+    local SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+    # Check if start script exists
+    if [ -f "$SCRIPT_DIR/start-claude-bot.sh" ]; then
+        echo -e "${BLUE}🚀 Starting Claude bot server in background...${NC}"
+
+        # Start the server in background, redirecting output to log file
+        nohup "$SCRIPT_DIR/start-claude-bot.sh" > "$HOME/.claude-bot-server.log" 2>&1 &
+
+        # Store the PID
+        echo $! > "$HOME/.claude-bot-server.pid"
+
+        # Wait a moment for startup
+        sleep 3
+
+        return 0
+    else
+        echo -e "${YELLOW}⚠️  start-claude-bot.sh not found${NC}"
+        return 1
+    fi
+}
+
+# Check and start Claude bot server
+if is_claude_bot_running; then
+    echo -e "${GREEN}✅ Claude bot server already running on port 5001${NC}"
+else
+    echo -e "${YELLOW}⚠️  Claude bot server not running${NC}"
+
+    if start_claude_bot_background; then
+        # Give it a moment to start up
+        sleep 2
+
+        if is_claude_bot_running; then
+            echo -e "${GREEN}✅ Claude bot server started successfully${NC}"
+            echo -e "${BLUE}📋 Server info:${NC}"
+            echo -e "   • Health check: http://127.0.0.1:5001/health"
+            echo -e "   • Bot endpoint: http://127.0.0.1:5001/claude"
+            echo -e "   • Log file: $HOME/.claude-bot-server.log"
+            echo -e "   • PID file: $HOME/.claude-bot-server.pid"
+        else
+            echo -e "${RED}❌ Failed to start Claude bot server${NC}"
+            echo -e "${BLUE}💡 Check log: tail -f $HOME/.claude-bot-server.log${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Could not start Claude bot server automatically${NC}"
+        echo -e "${BLUE}💡 To start manually: ./start-claude-bot.sh${NC}"
+    fi
+fi
+
+echo ""
+
 # Memory backup system checks
 echo -e "${BLUE}🧠 Verifying Memory MCP backup system status...${NC}"
 
@@ -347,3 +412,55 @@ else
         ;;
     esac
 fi
+
+# Add helper functions for Claude bot server management
+# (These functions are available after claude_start.sh runs)
+
+# Function to stop Claude bot server
+stop_claude_bot() {
+    if [ -f "$HOME/.claude-bot-server.pid" ]; then
+        local PID=$(cat "$HOME/.claude-bot-server.pid")
+        if kill -0 "$PID" 2>/dev/null; then
+            echo -e "${BLUE}🛑 Stopping Claude bot server (PID: $PID)...${NC}"
+            kill "$PID"
+            rm -f "$HOME/.claude-bot-server.pid"
+            echo -e "${GREEN}✅ Claude bot server stopped${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Process not running, cleaning up PID file${NC}"
+            rm -f "$HOME/.claude-bot-server.pid"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  No PID file found${NC}"
+    fi
+}
+
+# Function to restart Claude bot server
+restart_claude_bot() {
+    echo -e "${BLUE}🔄 Restarting Claude bot server...${NC}"
+    stop_claude_bot
+    sleep 2
+    start_claude_bot_background
+    sleep 3
+    if is_claude_bot_running; then
+        echo -e "${GREEN}✅ Claude bot server restarted successfully${NC}"
+    else
+        echo -e "${RED}❌ Failed to restart Claude bot server${NC}"
+    fi
+}
+
+# Function to show Claude bot server status
+claude_bot_status() {
+    if is_claude_bot_running; then
+        echo -e "${GREEN}✅ Claude bot server is running on port 5001${NC}"
+        if [ -f "$HOME/.claude-bot-server.pid" ]; then
+            local PID=$(cat "$HOME/.claude-bot-server.pid")
+            echo -e "${BLUE}📋 PID: $PID${NC}"
+        fi
+        echo -e "${BLUE}📋 Health check: curl http://127.0.0.1:5001/health${NC}"
+    else
+        echo -e "${RED}❌ Claude bot server is not running${NC}"
+    fi
+}
+
+# Export functions so they're available in the shell
+export -f stop_claude_bot restart_claude_bot claude_bot_status is_claude_bot_running start_claude_bot_background

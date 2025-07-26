@@ -1,0 +1,35 @@
+name: Claude Bot Processor
+on:
+  repository_dispatch:
+    types: [claude-command]
+
+jobs:
+  claude:
+    runs-on: [self-hosted, claude]
+    steps:
+      - name: Extract
+        id: x
+        run: |
+          P=$(jq -r '.slash_command.args.all' "$GITHUB_EVENT_PATH")
+          CID=$(jq -r '.github.payload.comment.id' "$GITHUB_EVENT_PATH")
+          echo "prompt=$P"  >> $GITHUB_OUTPUT
+          echo "cid=$CID"  >> $GITHUB_OUTPUT
+
+      - name: Call Claude
+        id: y
+        run: |
+          A=$(curl -s --data-urlencode "prompt=${{ steps.x.outputs.prompt }}" ${{ secrets.CLAUDE_ENDPOINT }})
+          echo "answer<<EOF" >> $GITHUB_OUTPUT
+          echo "$A" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Comment back
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.x.outputs.cid }}
+          body: |
+            **🤖 Claude Bot Reply**  
+            ```
+            ${{ steps.y.outputs.answer }}
+            ```
+          token: ${{ secrets.REPO_ACCESS_TOKEN }}
