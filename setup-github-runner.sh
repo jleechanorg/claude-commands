@@ -24,7 +24,7 @@ fi
 
 # Configuration
 RUNNER_DIR="$HOME/actions-runner"
-REPO_URL="https://github.com/jleechan2015/worldarchitect.ai"
+REPO_URL="https://github.com/jleechanorg/worldarchitect.ai"
 RUNNER_VERSION="2.311.0"
 LABELS="self-hosted,claude"
 
