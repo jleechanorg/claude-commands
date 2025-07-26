@@ -19,24 +19,24 @@ on:
 jobs:
   check-doc-sizes:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-    
+
     - name: Run documentation size check
       run: |
         python3 mvp_site/test_documentation_performance.py
-        
+
     - name: Quick size monitor
       run: |
         chmod +x mvp_site/monitor_doc_sizes.sh
         ./mvp_site/monitor_doc_sizes.sh
-        
+
     - name: Comment PR if files too large
       if: failure() && github.event_name == 'pull_request'
       uses: actions/github-script@v7

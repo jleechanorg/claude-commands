@@ -48,7 +48,7 @@ Fix failing tests in the mvp_site/tests directory by updating them to reflect th
 
 ## Completed Tasks
 1. ✅ Updated test_constants.py to only test active constants
-2. ✅ Updated entity-related tests to check game_state integration instead of separate constants  
+2. ✅ Updated entity-related tests to check game_state integration instead of separate constants
 3. ✅ Removed tests for archived prompt types
 4. ✅ Verified fixes work (tests that don't require google module pass)
 5. ⏳ Push to GitHub PR on test-organization-improvements branch
@@ -72,7 +72,7 @@ Fix failing tests in the mvp_site/tests directory by updating them to reflect th
 
 ### Missing Dependencies (3 files):
 - test_pr_state_sync_entity.py - needs `google-genai` module
-- test_function_validation_flow.py - needs `google-genai` module  
+- test_function_validation_flow.py - needs `google-genai` module
 - test_refactoring_helpers.py - needs `google-genai` module
 
 ### Test Logic Issues (3 files):
@@ -86,7 +86,7 @@ Fix failing tests in the mvp_site/tests directory by updating them to reflect th
 
 ### Broken Tests (need updates):
 - test_entity_tracking.py - expects removed PROMPT_TYPE_ENTITY_SCHEMA
-- test_prompts.py - expects removed PROMPT_TYPE_CALIBRATION  
+- test_prompts.py - expects removed PROMPT_TYPE_CALIBRATION
 - test_pr_state_sync_entity.py - expects removed PROMPT_TYPE_ENTITY_SCHEMA
 - test_constants.py - expects many archived constants
 

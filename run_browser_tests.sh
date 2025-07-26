@@ -46,7 +46,7 @@ echo ""
 for test in "${tests[@]}"; do
     test_name=$(basename "$test" .py)
     echo "🧪 Running $test_name..."
-    
+
     if python "$test"; then
         echo "✅ $test_name PASSED"
         ((passed_tests++))
@@ -55,7 +55,7 @@ for test in "${tests[@]}"; do
         ((failed_tests++))
         failed_test_names+=("$test_name")
     fi
-    
+
     echo "---"
 done
 

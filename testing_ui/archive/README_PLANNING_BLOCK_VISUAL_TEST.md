@@ -7,7 +7,7 @@ The `test_planning_block_visual.py` test is designed to visually verify that pla
 ## What It Tests
 
 1. **Normal Planning Blocks**: Verifies that planning blocks with choices render as proper HTML with clickable buttons
-2. **Empty Planning Blocks**: Tests rendering when there are no choices available  
+2. **Empty Planning Blocks**: Tests rendering when there are no choices available
 3. **Special Characters**: Ensures proper HTML escaping for characters like `<>`, `&`, quotes, etc.
 4. **Multiple Planning Blocks**: Verifies multiple planning blocks can be displayed on screen simultaneously
 5. **Button Hover States**: Captures visual feedback when hovering over choice buttons

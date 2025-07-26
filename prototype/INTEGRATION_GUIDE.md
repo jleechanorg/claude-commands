@@ -25,7 +25,7 @@ This guide documents how to integrate the validation prototype into the WorldArc
 ```python
 class GameState:
     # Add these methods to the existing GameState class
-    
+
     def get_active_entity_manifest(self) -> Dict[str, Any]:
         """
         Generate manifest of all active entities in current scene.
@@ -36,7 +36,7 @@ class GameState:
             "timestamp": datetime.now().isoformat(),
             "entity_count": 0
         }
-        
+
         # Populate from party_members and other relevant state
         for member in self.party_members:
             entity = {
@@ -47,11 +47,11 @@ class GameState:
                 "descriptors": self._get_entity_descriptors(member)
             }
             manifest["entities"].append(entity)
-            
+
         manifest["entity_count"] = len(manifest["entities"])
         return manifest
-    
-    def validate_narrative_consistency(self, narrative_text: str, 
+
+    def validate_narrative_consistency(self, narrative_text: str,
                                      strictness: str = "normal") -> Dict[str, Any]:
         """
         Validate narrative against current entity manifest.
@@ -70,32 +70,32 @@ class GameState:
 def generate_narrative(self, game_state, prompt, **kwargs):
     # Step 1: Get entity manifest
     manifest = game_state.get_active_entity_manifest()
-    
+
     # Step 2: Enhance prompt with manifest (SANITIZED)
     enhanced_prompt = self._inject_manifest(prompt, manifest)
-    
+
     # Step 3: Generate narrative
     narrative = self._call_gemini_api(enhanced_prompt)
-    
+
     # Step 4: Validate result
     validation = game_state.validate_narrative_consistency(narrative)
-    
+
     # Step 5: Handle validation failure
     if not validation["is_valid"]:
         narrative = self._handle_validation_failure(
             narrative, validation, game_state
         )
-    
+
     return narrative
 
 def _inject_manifest(self, prompt: str, manifest: Dict) -> str:
     """Safely inject entity manifest into prompt."""
     # Sanitize entity names to prevent injection
     safe_entities = [
-        self._sanitize_for_prompt(e["name"]) 
+        self._sanitize_for_prompt(e["name"])
         for e in manifest["entities"]
     ]
-    
+
     manifest_prompt = f"""
 [SYSTEM: Current Scene State]
 Location: {self._sanitize_for_prompt(manifest["location"])}
@@ -105,7 +105,7 @@ IMPORTANT: All characters listed above MUST be acknowledged in the narrative.
 """
     return manifest_prompt + prompt
 
-def _handle_validation_failure(self, narrative: str, validation: Dict, 
+def _handle_validation_failure(self, narrative: str, validation: Dict,
                               game_state: GameState) -> str:
     """Handle validation failures with retry logic."""
     if validation["confidence"] < 0.5:
@@ -161,14 +161,14 @@ VALIDATION_METRICS = {
 def log_validation_event(result: Dict, duration: float):
     """Log validation metrics."""
     VALIDATION_METRICS["validation_attempts"].inc()
-    
+
     if result["is_valid"]:
         VALIDATION_METRICS["validation_successes"].inc()
     else:
         VALIDATION_METRICS["validation_failures"].inc()
         if result["confidence"] > 0.7:
             VALIDATION_METRICS["desync_prevented"].inc()
-    
+
     VALIDATION_METRICS["validation_duration"].observe(duration)
 ```
 
@@ -242,9 +242,9 @@ def test_manifest_generation():
     """Test entity manifest is correctly generated."""
     game_state = GameState()
     game_state.party_members = ["Gideon", "Rowan"]
-    
+
     manifest = game_state.get_active_entity_manifest()
-    
+
     assert manifest["entity_count"] == 2
     assert any(e["name"] == "Gideon" for e in manifest["entities"])
 
@@ -252,7 +252,7 @@ def test_validation_accuracy():
     """Test validation catches missing entities."""
     narrative = "The knight stood alone."
     result = validate_narrative(narrative, ["Gideon", "Rowan"])
-    
+
     assert not result["is_valid"]
     assert "Rowan" in result["missing_entities"]
 ```
@@ -278,7 +278,7 @@ def _sanitize_for_prompt(text: str) -> str:
     # Remove quotes, backslashes, newlines
     sanitized = text.replace('"', '').replace("'", '')
     sanitized = sanitized.replace('\\', '').replace('\n', ' ')
-    
+
     # Limit length
     return sanitized[:50]
 ```

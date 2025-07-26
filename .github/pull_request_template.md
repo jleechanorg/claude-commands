@@ -3,14 +3,14 @@
 
 ## Changes
 <!-- Detailed list of what was changed -->
-- 
-- 
-- 
+-
+-
+-
 
 ## Benefits
 <!-- Why these changes improve the project -->
-- 
-- 
+-
+-
 
 ## Testing
 <!-- How changes were tested -->

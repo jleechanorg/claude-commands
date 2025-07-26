@@ -2,57 +2,63 @@
 
 /* Enhanced loading overlay with messages */
 #loading-overlay {
-    background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(0, 0, 0, 0.8);
 }
 
 .loading-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
 }
 
 .loading-message {
-    color: white;
-    font-size: 1.1rem;
-    text-align: center;
-    min-height: 2rem;
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
-    max-width: 400px;
-    padding: 0 1rem;
+  color: white;
+  font-size: 1.1rem;
+  text-align: center;
+  min-height: 2rem;
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+  max-width: 400px;
+  padding: 0 1rem;
 }
 
 .loading-message.active {
-    opacity: 1;
+  opacity: 1;
 }
 
 /* Contextual loading for interactions */
 #loading-spinner {
-    position: relative;
+  position: relative;
 }
 
 #loading-spinner .loading-message {
-    color: var(--bs-body-color);
-    margin-top: 0.5rem;
-    font-size: 0.9rem;
+  color: var(--bs-body-color);
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
 }
 
 /* Dark theme support */
-[data-bs-theme="dark"] #loading-overlay {
-    background-color: rgba(0, 0, 0, 0.9);
+[data-bs-theme='dark'] #loading-overlay {
+  background-color: rgba(0, 0, 0, 0.9);
 }
 
 /* Animation for message rotation */
 @keyframes fadeInOut {
-    0%, 100% { opacity: 0; }
-    20%, 80% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0;
+  }
+  20%,
+  80% {
+    opacity: 1;
+  }
 }
 
 /* Responsive adjustments */
 @media (max-width: 576px) {
-    .loading-message {
-        font-size: 1rem;
-        max-width: 300px;
-    }
+  .loading-message {
+    font-size: 1rem;
+    max-width: 300px;
+  }
 }

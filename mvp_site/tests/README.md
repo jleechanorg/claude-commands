@@ -6,7 +6,7 @@ This directory contains comprehensive test files for debugging, validation, and 
 
 **Current Coverage (January 2025)**: 67% overall (21,031 statements, 6,975 missing)
 - **main.py**: 74% (550 statements, 144 missing)
-- **firestore_service.py**: 64% (254 statements, 91 missing) 
+- **firestore_service.py**: 64% (254 statements, 91 missing)
 - **gemini_service.py**: 70% (594 statements, 178 missing)
 - **game_state.py**: 90% (169 statements, 17 missing) - Excellent!
 
@@ -26,7 +26,7 @@ This directory contains comprehensive test files for debugging, validation, and 
 - **`test_main_security_validation.py`** - Security validation and edge cases
 - **`auth/test_auth_resilience.py`** - Authentication error handling and recovery
 
-#### JSON & Data Processing  
+#### JSON & Data Processing
 - **`test_json_*.py`** - JSON parsing, validation, and bug fixes (15 files)
 - **`test_robust_json_parser.py`** - Robust JSON parsing edge cases
 - **`test_numeric_field_converter.py`** - Numeric field validation and conversion
@@ -53,7 +53,7 @@ This directory contains comprehensive test files for debugging, validation, and 
 - `test_wizard_reset_*` - Additional wizard reset testing infrastructure (3 files)
 - `test_campaign_wizard_*` - Comprehensive wizard behavior tests (2 files)
 
-#### `/timing/` - Performance & Timing Tests  
+#### `/timing/` - Performance & Timing Tests
 - **`test_campaign_timing_automated.py`** - Automated backend timing validation
 - **`test_timing_runner.html`** - Browser-based timing test runner
 - `test_runner.html` - General test execution interface
@@ -71,11 +71,11 @@ This directory contains comprehensive test files for debugging, validation, and 
 
 ### Essential Debug Tools
 1. **Root Cause Validation**: `wizard/test_root_cause_red_green.js`
-   - Reproduces the exact wizard reset issue 
+   - Reproduces the exact wizard reset issue
    - Validates that navigation handler calls wizard.enable()
    - Red/green methodology for regression testing
 
-2. **Performance Monitoring**: `timing/test_campaign_timing_automated.py` 
+2. **Performance Monitoring**: `timing/test_campaign_timing_automated.py`
    - Monitors campaign creation performance
    - Validates timing across AI generation and database operations
 

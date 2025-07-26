@@ -103,7 +103,7 @@ def analyze_with_gemini_mcp(target: str, target_type: str, role: str) -> Dict[st
     # Format prompt based on role
     if role == "developer":
         prompt = f"""As a senior developer, review this {target_type}: {target}
-        
+
 Focus on:
 - Code quality and maintainability
 - Implementation correctness
@@ -116,7 +116,7 @@ Provide specific, actionable feedback."""
 
     elif role == "architect":
         prompt = f"""As a system architect, review this {target_type}: {target}
-        
+
 Focus on:
 - System design and patterns
 - Scalability considerations
@@ -129,7 +129,7 @@ Identify architectural strengths and weaknesses."""
 
     else:  # business analyst
         prompt = f"""As a business analyst, review this {target_type}: {target}
-        
+
 Focus on:
 - Business value delivered
 - User experience impact

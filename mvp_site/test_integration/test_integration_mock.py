@@ -5,33 +5,26 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 from firebase_admin import firestore
-from test_integration.integration_test_lib import (
-from unittest.mock import MagicMock
-import atexit
-import firebase_admin
-import firestore_service
-import google.auth
-import google.cloud.firestore
 
 # CRITICAL: Disable all Google Cloud authentication in CI/test environments
 # Remove any existing credentials environment variables to force mocking
+# Force CI mode to disable real services
 if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
     del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
-
-os.environ["TESTING"] = "true"
+os.environ["CI"] = "true"
 os.environ["TEST_MODE"] = "mock"
-os.environ["CI"] = "true"  # Force CI mode to disable real services
+os.environ["TESTING"] = "true"
 
 # Add the project root to the Python path to allow for imports
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+project_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+
 sys.path.insert(0, project_root)
 
 # Handle missing dependencies gracefully with comprehensive mocking
 try:
     # Pre-import patching to prevent any real Firebase/Google Cloud initialization
-
-
-
+    import google.auth
+    import google.cloud.firestore
 
     # Mock Firebase Admin and Google Cloud at module level
     firebase_admin.initialize_app = MagicMock()
@@ -39,7 +32,7 @@ try:
     google.cloud.firestore.Client = MagicMock()
     google.auth.default = MagicMock(return_value=(MagicMock(), "mock-project-id"))
 
-
+    from testing_framework.integration_utils import (
         IntegrationTestSetup,
         setup_integration_test_environment,
     )
@@ -72,7 +65,6 @@ if DEPS_AVAILABLE:
     MOCK_INTEGRATION_CALIBRATION = mock_instructions["calibration"]
 
     # Register cleanup on exit
-
 
     atexit.register(lambda: test_setup.cleanup())
 
@@ -112,7 +104,6 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
         cls.get_db_patcher = patch("firestore_service.get_db")
         cls.mock_get_db = cls.get_db_patcher.start()
         # Return a mock Firestore client that doesn't require authentication
-
 
         mock_db = MagicMock()
         cls.mock_get_db.return_value = mock_db
@@ -176,7 +167,6 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
         cls.mock_get_game_state = cls.get_game_state_patcher.start()
 
         # Create a mock object that behaves like a Firestore document
-
 
         mock_doc = MagicMock()
         mock_doc.to_dict.return_value = {
@@ -498,24 +488,20 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
 
         # 1. Verify that get_db is properly mocked
 
-
         db = firestore_service.get_db()
         self.assertIsNotNone(db)
 
         # 2. Verify that firebase_admin.initialize_app is mocked
-
 
         result = firebase_admin.initialize_app()
         self.assertIsNone(result)  # Our mock returns None
 
         # 3. Verify that direct firestore.client() calls are mocked
 
-
         client = firestore.client()
         self.assertIsNotNone(client)
 
         # 4. Verify that google.auth.default is mocked (prevents CI credential errors)
-
 
         credentials, project = google.auth.default()
         self.assertIsNotNone(credentials)
@@ -568,8 +554,6 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
             "get_campaign_game_state",
             "update_campaign_game_state",
         ]
-
-
 
         for func_name in firestore_functions:
             if hasattr(firestore_service, func_name):

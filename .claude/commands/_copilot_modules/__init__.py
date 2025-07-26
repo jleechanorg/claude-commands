@@ -16,10 +16,10 @@ COMMAND_REGISTRY = {
 
 def get_command(name: str):
     """Get command class by name.
-    
+
     Args:
         name: Command name to retrieve
-        
+
     Returns:
         Command class or None if not found
     """
@@ -27,7 +27,7 @@ def get_command(name: str):
 
 def list_commands():
     """List all available commands.
-    
+
     Returns:
         List of command names
     """

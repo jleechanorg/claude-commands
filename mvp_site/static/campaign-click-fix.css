@@ -2,90 +2,92 @@
 
 /* Make campaign items clearly clickable */
 .campaign-title-link {
-    cursor: pointer;
-    transition: color 0.2s ease, opacity 0.2s ease;
-    user-select: none;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    opacity 0.2s ease;
+  user-select: none;
 }
 
 .campaign-title-link:hover {
-    color: var(--bs-primary);
-    opacity: 0.9;
+  color: var(--bs-primary);
+  opacity: 0.9;
 }
 
 /* Ensure the entire campaign item is clickable */
 .list-group-item[data-campaign-id] {
-    position: relative;
-    transition: background-color 0.2s ease;
+  position: relative;
+  transition: background-color 0.2s ease;
 }
 
 .list-group-item[data-campaign-id]:hover {
-    background-color: var(--bs-gray-100);
+  background-color: var(--bs-gray-100);
 }
 
 /* Dark theme support */
-[data-bs-theme="dark"] .list-group-item[data-campaign-id]:hover {
-    background-color: var(--bs-gray-800);
+[data-bs-theme='dark'] .list-group-item[data-campaign-id]:hover {
+  background-color: var(--bs-gray-800);
 }
 
 /* Prevent button clicks from triggering campaign navigation */
 .list-group-item[data-campaign-id] .btn {
-    position: relative;
-    z-index: 2;
+  position: relative;
+  z-index: 2;
 }
 
 /* Visual feedback on click */
 .list-group-item[data-campaign-id]:active {
-    transform: scale(0.98);
-    transition: transform 0.1s ease;
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
 }
 
 /* Ensure proper click area */
 .campaign-title-link {
-    display: block;
-    width: 100%;
+  display: block;
+  width: 100%;
 }
 
 /* Fix potential overlapping issues */
 .list-group-item[data-campaign-id] > div {
-    pointer-events: none;
+  pointer-events: none;
 }
 
 .list-group-item[data-campaign-id] .campaign-title-link,
 .list-group-item[data-campaign-id] .btn {
-    pointer-events: auto;
+  pointer-events: auto;
 }
 
 /* Campaign List Layout Consistency - Override any conflicting rules */
 .list-group-item[data-campaign-id] .d-flex {
-    flex-wrap: nowrap !important;
-    align-items: center !important;
-    pointer-events: auto !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  pointer-events: auto !important;
 }
 
 .list-group-item[data-campaign-id] .d-flex > div:last-child {
-    display: flex !important;
-    align-items: center !important;
-    flex-shrink: 0 !important;
-    white-space: nowrap !important;
-    pointer-events: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
+  pointer-events: auto !important;
 }
 
 .list-group-item[data-campaign-id] .edit-campaign-btn {
-    margin-right: 0.5rem !important;
-    flex-shrink: 0 !important;
+  margin-right: 0.5rem !important;
+  flex-shrink: 0 !important;
 }
 
 .list-group-item[data-campaign-id] .text-muted {
-    font-size: 0.875rem !important;
-    flex-shrink: 0 !important;
-    white-space: nowrap !important;
+  font-size: 0.875rem !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
 }
 
 /* Ensure campaign title doesn't overflow */
 .list-group-item[data-campaign-id] h5.mb-1 {
-    flex: 1 1 auto !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    white-space: nowrap !important;
-    margin-right: 1rem !important;
+  flex: 1 1 auto !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  margin-right: 1rem !important;
 }

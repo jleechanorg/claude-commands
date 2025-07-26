@@ -22,8 +22,8 @@ class TestNarrativeSyncValidator(unittest.TestCase):
     def test_thornwood_split_party(self):
         """Test Case 1: Split party from Thornwood Conspiracy"""
         narrative = """
-        The wizard and cleric waited anxiously in the tavern, discussing their 
-        next move. The barkeep brought them another round of ale as they pored 
+        The wizard and cleric waited anxiously in the tavern, discussing their
+        next move. The barkeep brought them another round of ale as they pored
         over the city maps.
         """
 
@@ -43,8 +43,8 @@ class TestNarrativeSyncValidator(unittest.TestCase):
     def test_sariel_ambiguous_presence(self):
         """Test Case 2: Ambiguous presence from Sariel campaign"""
         narrative = """
-        Cassian's voice was tight and strained. "Uncle Titus is leading a 
-        punitive campaign against Mordan's entire clan. We will burn them 
+        Cassian's voice was tight and strained. "Uncle Titus is leading a
+        punitive campaign against Mordan's entire clan. We will burn them
 
         """
 
@@ -61,8 +61,8 @@ class TestNarrativeSyncValidator(unittest.TestCase):
     def test_scene_transition_without_movement(self):
         """Test Case 3: Scene transition from Sariel campaign"""
         narrative = """
-        You found yourself in Valerius's study, the cold precision of his 
-        workspace reflecting his analytical nature. He looked up from his 
+        You found yourself in Valerius's study, the cold precision of his
+        workspace reflecting his analytical nature. He looked up from his
         reports with calculating eyes.
         """
 
@@ -77,7 +77,7 @@ class TestNarrativeSyncValidator(unittest.TestCase):
     def test_physical_state_continuity(self):
         """Test Case 4: Physical state tracking"""
         narrative = """
-        Sariel entered the chamber, her mourning robes trailing behind her. 
+        Sariel entered the chamber, her mourning robes trailing behind her.
         The old magister noticed her arrival and gestured to a chair.
         """
 
@@ -102,8 +102,8 @@ class TestNarrativeSyncValidator(unittest.TestCase):
     def test_invisible_character_detection(self):
         """Test Case 5: Invisible character from Darkmoor"""
         narrative = """
-        Only Finn was visible in the moonlit courtyard as the guards 
-        approached with torches raised. The cleric stood calmly, prepared 
+        Only Finn was visible in the moonlit courtyard as the guards
+        approached with torches raised. The cleric stood calmly, prepared
         to bluff their way through the encounter.
         """
 
@@ -122,9 +122,9 @@ class TestNarrativeSyncValidator(unittest.TestCase):
     def test_perfect_entity_tracking(self):
         """Test Case 6: Good entity tracking example"""
         narrative = """
-        Sariel clung to Cressida, burying her face in the soft silk of her 
-        shoulder. Cressida's hand stroked her hair gently, providing the 
-        first true comfort since Mother's death. "I don't blame you," 
+        Sariel clung to Cressida, burying her face in the soft silk of her
+        shoulder. Cressida's hand stroked her hair gently, providing the
+        first true comfort since Mother's death. "I don't blame you,"
         Cressida said firmly.
         """
 
@@ -141,7 +141,7 @@ class TestNarrativeSyncValidator(unittest.TestCase):
     def test_mass_combat_scenario(self):
         """Test Case 7: Mass combat from Frostholm Siege"""
         narrative = """
-        The siege began at dawn. Soldiers poured through the breach while 
+        The siege began at dawn. Soldiers poured through the breach while
         catapults continued their bombardment. The battlefield was chaos.
         """
 
@@ -157,8 +157,8 @@ class TestNarrativeSyncValidator(unittest.TestCase):
     def test_entity_with_descriptors(self):
         """Test Case 8: Entity referenced by descriptor only"""
         narrative = """
-        The wizard cast a protection spell while the rogue disappeared into 
-        the shadows. Meanwhile, the cleric prepared healing potions for the 
+        The wizard cast a protection spell while the rogue disappeared into
+        the shadows. Meanwhile, the cleric prepared healing potions for the
         coming battle.
         """
 
@@ -181,7 +181,7 @@ class TestEntityContextTracking(unittest.TestCase):
     def test_emotional_state_extraction(self):
         """Test extraction of emotional states"""
         narrative = """
-        Sariel stood there, grief-stricken and trembling. Her guilty 
+        Sariel stood there, grief-stricken and trembling. Her guilty
         expression told Cressida everything she needed to know.
         """
 
@@ -195,7 +195,7 @@ class TestEntityContextTracking(unittest.TestCase):
     def test_scene_transition_detection(self):
         """Test detection of scene transitions"""
         narrative = """
-        Leaving the chamber behind, Sariel moved to the archives. She 
+        Leaving the chamber behind, Sariel moved to the archives. She
         arrived at the dusty repository of ancient knowledge.
         """
 

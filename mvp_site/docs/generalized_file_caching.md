@@ -81,7 +81,7 @@ stats = get_cache_stats()
 # Returns:
 {
     'cache_hits': 101,
-    'cache_misses': 1, 
+    'cache_misses': 1,
     'total_requests': 102,
     'hit_rate_percent': 99.0,
     'total_cached_chars': 23000,
@@ -157,7 +157,7 @@ if cached_content is not None:
 content = load_from_file()
 cache_world_content("cache_key", content)
 
-# New generalized approach  
+# New generalized approach
 content = read_file_cached(file_path)  # Automatically cached
 ```
 

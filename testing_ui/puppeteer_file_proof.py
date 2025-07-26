@@ -38,11 +38,11 @@ async def take_proof_screenshot():
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
         await page.goto('https://httpbin.org/html')
-        
+
         screenshot_path = '{proof_dir}/PROOF_screenshot.png'
         await page.screenshot(path=screenshot_path)
         await browser.close()
-        
+
         print(f"✅ PROOF: Screenshot saved to {{screenshot_path}}")
         return screenshot_path
 

@@ -218,7 +218,7 @@ All core objectives achieved. Documentation is now:
 
 ## Success Metrics
 - [ ] No conflicting instructions found in final review
-- [ ] lessons.mdc reduced from 32K to <10K tokens  
+- [ ] lessons.mdc reduced from 32K to <10K tokens
 - [ ] Clear decision tree covers 95% of common scenarios
 - [ ] No circular dependencies in documentation
 - [ ] All critical workflows have single, clear path

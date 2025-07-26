@@ -66,7 +66,7 @@ def run_test():
                 () => {
                     const title = document.getElementById('game-title');
                     if (!title) return { found: false };
-                    
+
                     return {
                         found: true,
                         text: title.innerText,
@@ -115,7 +115,7 @@ def run_test():
                     const readBtn = document.getElementById('readStoryBtn');
                     const pauseBtn = document.getElementById('pauseStoryBtn');
                     const controls = document.querySelector('.story-reader-controls-inline');
-                    
+
                     return {
                         readBtnFound: readBtn !== null,
                         readBtnVisible: readBtn ? window.getComputedStyle(readBtn).display !== 'none' : false,

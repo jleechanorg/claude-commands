@@ -110,8 +110,8 @@ class MockGeminiService:
         char_text = character if character else "a brave adventurer"
         setting_text = setting if setting else "a mysterious realm"
 
-        custom_narrative = f"""Welcome to your adventure, {char_text}! 
-        
+        custom_narrative = f"""Welcome to your adventure, {char_text}!
+
 You find yourself in {setting_text}, where destiny awaits. The path ahead is uncertain, but your courage and determination will guide you through whatever challenges lie ahead.
 
 What would you like to do first in this new world?"""

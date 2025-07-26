@@ -7,7 +7,7 @@ A comprehensive multi-agent orchestration system using real Claude Code CLI inst
 This system creates and manages multiple specialized AI agents that work together to handle different aspects of software development:
 
 - **Frontend Agent**: UI/React development and styling
-- **Backend Agent**: API/Database development and server logic  
+- **Backend Agent**: API/Database development and server logic
 - **Testing Agent**: Quality assurance and automated testing
 - **Opus Master**: Task coordination and natural language interface
 

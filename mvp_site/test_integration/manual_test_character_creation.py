@@ -3,10 +3,9 @@
 
 import os
 import sys
+import traceback
 
 import logging_util
-
-import traceback
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -50,7 +49,6 @@ def test_character_creation():
 
     except Exception as e:
         print(f"\n❌ ERROR: {e}")
-
 
         traceback.print_exc()
 

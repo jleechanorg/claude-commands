@@ -202,11 +202,11 @@ class ComplexClass:
     @property
     def prop(self):
         return self._value
-    
-    @staticmethod 
+
+    @staticmethod
     def static_method():
         return "static"
-    
+
     @classmethod
     def class_method(cls):
         return cls.__name__

@@ -6,7 +6,7 @@ that preserve logger context.
 """
 
 import logging
-from typing import Any, Optional, Union
+from typing import Any
 
 # Export logging level constants
 CRITICAL = logging.CRITICAL

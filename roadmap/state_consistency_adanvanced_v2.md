@@ -61,7 +61,7 @@ class SCOREMemorySystem:
         self.dynamic_state_tracker = DynamicStateTracker()
         self.context_summarizer = ContextAwareSummarizer()
         self.hybrid_retrieval = HybridRetrievalSystem()
-    
+
     def track_entity_state(self, entity_id, state_change):
         # Symbolic logic for state validation
         current_state = self.dynamic_state_tracker.get_state(entity_id)
@@ -70,7 +70,7 @@ class SCOREMemorySystem:
             self.log_state_change(entity_id, state_change)
         else:
             raise StateConsistencyError(f"Invalid state transition for {entity_id}")
-    
+
     def retrieve_contextual_memories(self, current_scene):
         # Hybrid TF-IDF + cosine similarity retrieval
         keyword_results = self.hybrid_retrieval.tfidf_search(current_scene)
@@ -95,11 +95,11 @@ class ExplicitMemoryModule:
             'world_events': {}
         }
         self.memory_operations = MemoryOperations()
-    
+
     def read_memory(self, query, memory_type):
         """Structured read operation for specific memory types"""
         return self.memory_operations.read(self.memory_schema[memory_type], query)
-    
+
     def write_memory(self, memory_type, entity_id, data):
         """Structured write operation with validation"""
         validated_data = self.validate_memory_write(memory_type, data)
@@ -118,17 +118,17 @@ class HierarchicalMemorySystem:
         self.short_term = ShortTermMemory(capacity=50000)  # Last 5-10 interactions
         self.mid_term = MidTermMemory(capacity=200000)     # Session-based summaries
         self.long_term = LongTermMemory(unlimited=True)    # Persistent campaign data
-        
+
     def store_interaction(self, interaction_data):
         # Store in short-term immediately
         self.short_term.store(interaction_data)
-        
+
         # Compress and move to mid-term when short-term is full
         if self.short_term.is_full():
             compressed = self.compress_short_term_memory()
             self.mid_term.store(compressed)
             self.short_term.clear_oldest()
-        
+
         # Extract critical information for long-term storage
         critical_events = self.extract_critical_events(interaction_data)
         if critical_events:
@@ -147,11 +147,11 @@ class GameRAGSystem:
     def __init__(self):
         self.qdrant_client = QdrantClient("localhost", port=6333)
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-        
+
     def index_game_state(self, entity_type, entity_data):
         """Index game entities in vector database"""
         embedding = self.embedding_model.encode(entity_data['description'])
-        
+
         self.qdrant_client.upsert(
             collection_name=f"game_{entity_type}",
             points=[{
@@ -165,18 +165,18 @@ class GameRAGSystem:
                 }
             }]
         )
-    
+
     def retrieve_relevant_context(self, current_scene, limit=10):
         """Retrieve contextually relevant game state"""
         scene_embedding = self.embedding_model.encode(current_scene)
-        
+
         results = self.qdrant_client.search(
             collection_name="game_entities",
             query_vector=scene_embedding.tolist(),
             limit=limit,
             score_threshold=0.7
         )
-        
+
         return [hit.payload for hit in results]
 ```
 
@@ -190,29 +190,29 @@ class StateValidationEngine:
     def __init__(self):
         self.validation_rules = ValidationRuleSet()
         self.conflict_detector = ConflictDetector()
-        
+
     def validate_proposed_action(self, action, current_state):
         """Validate action against current game state"""
-        
+
         # Check character existence and status
         character_valid = self.validate_character_action(action.character_id, action.type)
-        
+
         # Verify item availability and ownership
         item_valid = self.validate_item_interactions(action.items, current_state.inventory)
-        
+
         # Ensure quest prerequisites are met
         quest_valid = self.validate_quest_progression(action.quest_id, current_state.quests)
-        
+
         # Check spatial and temporal consistency
         spatial_valid = self.validate_spatial_consistency(action.location, current_state.locations)
         temporal_valid = self.validate_temporal_consistency(action.timestamp, current_state.timeline)
-        
+
         validation_result = ValidationResult(
             valid=all([character_valid, item_valid, quest_valid, spatial_valid, temporal_valid]),
             conflicts=self.conflict_detector.detect_conflicts(action, current_state),
             suggestions=self.generate_correction_suggestions(action, current_state)
         )
-        
+
         return validation_result
 ```
 
@@ -228,32 +228,32 @@ class PredictiveStateManager:
     def __init__(self):
         self.personality_analyzer = PersonalityAnalyzer()
         self.causality_tracker = CausalityTracker()
-        
+
     def predict_state_conflicts(self, proposed_narrative, lookahead_steps=3):
         """Predict potential consistency issues before they occur"""
-        
+
         predicted_states = []
         current_state = self.get_current_state()
-        
+
         for step in range(lookahead_steps):
             # Analyze character motivations and likely actions
             character_predictions = self.personality_analyzer.predict_responses(
-                current_state.characters, 
+                current_state.characters,
                 proposed_narrative
             )
-            
+
             # Check for conflicts in predicted outcomes
             potential_conflicts = self.causality_tracker.analyze_outcomes(
-                character_predictions, 
+                character_predictions,
                 current_state
             )
-            
+
             if potential_conflicts:
                 return ConflictPrediction(
                     conflicts=potential_conflicts,
                     prevention_strategies=self.generate_prevention_strategies(potential_conflicts)
                 )
-        
+
         return ConflictPrediction(conflicts=[], safe_to_proceed=True)
 ```
 
@@ -267,10 +267,10 @@ class SessionContinuityManager:
     def __init__(self):
         self.session_database = SessionDatabase()
         self.state_serializer = GameStateSerializer()
-        
+
     def end_session_snapshot(self, session_id):
         """Create comprehensive session summary"""
-        
+
         session_summary = {
             'major_events': self.extract_major_events(),
             'character_progressions': self.track_character_changes(),
@@ -279,15 +279,15 @@ class SessionContinuityManager:
             'quest_progressions': self.summarize_quest_changes(),
             'item_transactions': self.log_item_changes()
         }
-        
+
         serialized_state = self.state_serializer.serialize(session_summary)
         self.session_database.store_session(session_id, serialized_state)
-        
+
     def load_session_context(self, session_id):
         """Restore complete game state from previous session"""
-        
+
         previous_state = self.session_database.retrieve_session(session_id)
-        
+
         # Validate state integrity
         if self.validate_state_integrity(previous_state):
             return self.state_serializer.deserialize(previous_state)
@@ -327,7 +327,7 @@ class EnhancedGameEntity:
         self.state_history = StateHistory()
         self.relationship_graph = RelationshipGraph()
         self.consistency_validator = StateValidator()
-        
+
     def update_state(self, new_state):
         # Validate state transition before applying
         if self.consistency_validator.validate_transition(self.current_state, new_state):
@@ -346,28 +346,28 @@ class EnhancedGameEntity:
 ```python
 def assemble_smart_context(current_scene, max_tokens=50000):
     """Optimize context for 300k+ token scenarios"""
-    
+
     # Prioritize current scene (20% of tokens)
     current_context = extract_current_context(current_scene, max_tokens * 0.2)
-    
+
     # Essential character states (30% of tokens)
     character_data = compress_character_states(
-        get_active_characters(current_scene), 
+        get_active_characters(current_scene),
         max_tokens * 0.3
     )
-    
+
     # Relevant memories from vector database (40% of tokens)
     relevant_memories = vector_retrieve_memories(
-        current_scene, 
+        current_scene,
         max_tokens * 0.4
     )
-    
+
     # World state snapshot (10% of tokens)
     world_state = compress_world_state(
-        get_current_location(current_scene), 
+        get_current_location(current_scene),
         max_tokens * 0.1
     )
-    
+
     return ContextAssembly(
         current=current_context,
         characters=character_data,
@@ -595,4 +595,3 @@ This approach transforms what could be **just another AI RPG platform** into **t
 [^37]: https://www.reddit.com/r/LocalLLaMA/comments/1ggrwt7/this_is_fully_ai_generated_realtime_gameplay_guys/
 
 [^38]: https://blog.rpggo.ai/2025/02/21/technical-overview-rpggos-text-to-game-framework-for-ai-rpg/
-

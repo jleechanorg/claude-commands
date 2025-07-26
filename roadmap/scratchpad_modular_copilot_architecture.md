@@ -237,7 +237,7 @@ cat debug.json | jq '.comments[] | select(.author == "copilot")'
 From `copilot.py`, the valuable comment fetching logic:
 ```python
 def get_pr_comments(pr_number: str) -> dict
-def get_pr_inline_comments(pr_number: str) -> list  
+def get_pr_inline_comments(pr_number: str) -> list
 def get_copilot_comments(pr_number: str) -> list
 def parse_comment_for_response(comment: dict) -> dict
 ```
@@ -279,12 +279,12 @@ Complete implementation of modular copilot architecture with 4 core commands + 1
 
 #### Command Architecture Summary
 - **`/commentfetch`**: Pure Python (100% mechanical)
-- **`/fixpr`**: Hybrid - fixpr.py collects data, fixpr.md analyzes  
+- **`/fixpr`**: Hybrid - fixpr.py collects data, fixpr.md analyzes
 - **`/commentreply`**: Hybrid - guided by copilot.md
 - **`/pushl`**: Pure Python (already exists)
 - **`/copilot`**: Pure Markdown (orchestration needs intelligence)
 
-### Timeline Estimate  
+### Timeline Estimate
 - **With subagents**: ~3 hours (parallel execution)
 - **Without subagents**: ~5-6 hours (sequential)
 - **Chunked approach**: 8-10 small milestones to avoid timeouts

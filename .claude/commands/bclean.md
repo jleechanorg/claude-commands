@@ -25,15 +25,22 @@ When `/bclean` is used, Claude should execute the enhanced branch-cleanup.sh scr
 **Action**: Execute `./claude_command_scripts/commands/branch-cleanup.sh` with any provided arguments
 
 This provides:
-- **Comprehensive Git workspace cleanup** (branches + worktrees)  
+- **Comprehensive Git workspace cleanup** (branches + worktrees)
 - **Battle-tested safety features** with PR checking
 - **Interactive confirmations** and dry-run preview
 - **Clear status reporting** with color-coded output
 - **Flexible configuration** with command-line options
 
+**Safety Features**:
+- ⚠️ **NEVER delete current branch**
+- ⚠️ **NEVER delete main/master branches**
+- ⚠️ **NEVER delete worktree branches** (automatically detected)
+- ⚠️ **NEVER delete branches with open PRs**
+- ⚠️ **NEVER delete branches with uncommitted changes**
+
 ## Examples
 - `/bclean --dry-run` - Preview cleanup without changes
-- `/bclean` - Interactive cleanup with confirmations  
+- `/bclean` - Interactive cleanup with confirmations
 - `/bclean --days 7` - Clean worktrees older than 7 days
 - `/bclean --help` - Show detailed usage information
 

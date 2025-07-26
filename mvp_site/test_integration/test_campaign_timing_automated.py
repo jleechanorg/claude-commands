@@ -34,13 +34,6 @@ sys.path.insert(0, project_root)
 
 # Try to import Selenium - skip tests if not available
 try:
-
-
-
-
-
-
-
     SELENIUM_AVAILABLE = True
 except ImportError:
     SELENIUM_AVAILABLE = False
@@ -129,8 +122,6 @@ class CampaignTimingAutomatedTests(unittest.TestCase):
                 os.path.dirname(__file__), "../../bin/chromedriver"
             )
             if os.path.exists(local_chromedriver):
-
-
                 service = Service(executable_path=local_chromedriver)
                 cls.driver = webdriver.Chrome(service=service, options=chrome_options)
             else:

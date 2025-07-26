@@ -14,10 +14,7 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import constants
-from entity_tracking import (
-    SceneManifest,
-    create_from_game_state,
-)
+from entity_tracking import SceneManifest, create_from_game_state
 
 import gemini_service
 from game_state import GameState

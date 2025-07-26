@@ -16,14 +16,14 @@
 - **Approach**: Updated both static HTML and wizard templates to use consistent "Campaign description prompt" terminology
 - **Testing**: Verified via test server that changes display correctly
 
-#### 2. Collapsible UI Enhancement  
+#### 2. Collapsible UI Enhancement
 - **Files changed**: `mvp_site/static/style.css`, `mvp_site/static/app.js`, `mvp_site/static/js/campaign-wizard.js`
 - **Implementation**: Added CSS classes and JavaScript handlers for smooth collapse/expand transitions
 - **Accessibility**: Included `aria-expanded` attributes for screen reader support
 - **Visual feedback**: Bootstrap chevron icons indicate expand/collapse state
 
 #### 3. Backend Simplification
-- **File changed**: `mvp_site/main.py:712`  
+- **File changed**: `mvp_site/main.py:712`
 - **Improvement**: Removed unused `campaign_type` parameter from `_build_campaign_prompt` function
 - **Testing**: Updated unit tests to match simplified function signature
 

@@ -7,7 +7,7 @@
 llm_response.py:
   - LLMResponse (abstract base class)
   - GeminiLLMResponse (Gemini-specific implementation)
-  
+
 gemini_response.py:
   - GeminiResponse (backwards compatibility wrapper that inherits from GeminiLLMResponse)
 ```
@@ -55,7 +55,7 @@ gemini_response.py:
 
 ## Implementation Steps ✅ COMPLETED
 1. ✅ Copy `_detect_old_tags()` method to GeminiResponse class
-2. ✅ Remove inheritance from GeminiLLMResponse  
+2. ✅ Remove inheritance from GeminiLLMResponse
 3. ✅ Update imports in test files
 4. ✅ Delete llm_response.py
 5. ✅ Delete test_llm_response.py

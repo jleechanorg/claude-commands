@@ -3,20 +3,29 @@ class ThemeManager {
     this.themes = {
       light: { name: 'Light', icon: '☀️', description: 'Clean and bright' },
       dark: { name: 'Dark', icon: '🌙', description: 'Easy on the eyes' },
-      fantasy: { name: 'Fantasy', icon: '⚔️', description: 'Medieval adventure' },
-      cyberpunk: { name: 'Cyberpunk', icon: '🤖', description: 'Futuristic neon' }
+      fantasy: {
+        name: 'Fantasy',
+        icon: '⚔️',
+        description: 'Medieval adventure',
+      },
+      cyberpunk: {
+        name: 'Cyberpunk',
+        icon: '🤖',
+        description: 'Futuristic neon',
+      },
     };
-    
+
     this.currentTheme = 'light';
     // Enable modern features by default (user doesn't need console commands)
-    this.modernThemesEnabled = localStorage.getItem('feature_new_themes') !== 'false';
+    this.modernThemesEnabled =
+      localStorage.getItem('feature_new_themes') !== 'false';
     this.init();
   }
 
   init() {
     // Force cleanup any problematic CSS
     this.forceCleanupProblematicCSS();
-    
+
     this.loadModernCSS();
     this.loadSavedTheme();
     this.setupEventListeners();
@@ -27,43 +36,49 @@ class ThemeManager {
     // Remove any existing problematic CSS files
     const problematicFiles = [
       'globals.css',
-      'components.css', 
+      'components.css',
       'bridge.css',
-      'enhanced-components.css'
+      'enhanced-components.css',
     ];
-    
-    problematicFiles.forEach(fileName => {
+
+    problematicFiles.forEach((fileName) => {
       const existing = document.querySelector(`link[href*="${fileName}"]`);
       if (existing) {
         existing.remove();
         console.log(`Removed problematic CSS: ${fileName}`);
       }
     });
-    
+
     // Remove modern-themes class if it exists
     document.body.classList.remove('modern-themes');
-    
+
     // Clean up any enhanced classes that might be causing conflicts
-    const elementsWithEnhanced = document.querySelectorAll('[class*="-enhanced"]');
-    elementsWithEnhanced.forEach(element => {
-      element.className = element.className.replace(/\b\w+-enhanced\b/g, '').trim();
+    const elementsWithEnhanced = document.querySelectorAll(
+      '[class*="-enhanced"]',
+    );
+    elementsWithEnhanced.forEach((element) => {
+      element.className = element.className
+        .replace(/\b\w+-enhanced\b/g, '')
+        .trim();
     });
   }
 
   loadModernCSS() {
     if (this.modernThemesEnabled) {
       // TEMPORARILY DISABLED - CSS conflicts causing layout issues
-      console.log('🎨 Modern theme system temporarily disabled due to layout conflicts');
+      console.log(
+        '🎨 Modern theme system temporarily disabled due to layout conflicts',
+      );
       return;
-      
+
       // Load modern CSS files
       const cssFiles = [
         '/static/styles/globals.css',
         '/static/styles/components.css',
-        '/static/styles/bridge.css'
+        '/static/styles/bridge.css',
       ];
 
-      cssFiles.forEach(file => {
+      cssFiles.forEach((file) => {
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = file;
@@ -72,7 +87,7 @@ class ThemeManager {
 
       // Add a class to body to indicate modern themes are active
       document.body.classList.add('modern-themes');
-      
+
       console.log('🎨 Modern theme system activated');
     }
   }
@@ -85,27 +100,29 @@ class ThemeManager {
 
     // Add transition class to body for smooth theme switching
     document.body.classList.add('theme-transitioning');
-    
+
     // Set the theme
     document.documentElement.setAttribute('data-theme', themeName);
-    
+
     // Save preference
     localStorage.setItem('preferred-theme', themeName);
     this.currentTheme = themeName;
-    
+
     // Update UI
     this.updateThemeIcon();
     this.updateActiveMenuItem();
-    
+
     // Remove transition class after animation
     setTimeout(() => {
       document.body.classList.remove('theme-transitioning');
     }, 300);
 
     // Dispatch custom event for other components
-    window.dispatchEvent(new CustomEvent('themeChanged', { 
-      detail: { theme: themeName } 
-    }));
+    window.dispatchEvent(
+      new CustomEvent('themeChanged', {
+        detail: { theme: themeName },
+      }),
+    );
   }
 
   loadSavedTheme() {
@@ -114,7 +131,10 @@ class ThemeManager {
       this.setTheme(savedTheme);
     } else {
       // Check for system preference
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      if (
+        window.matchMedia &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches
+      ) {
         this.setTheme('dark');
       } else {
         this.setTheme('light');
@@ -131,12 +151,14 @@ class ThemeManager {
 
   updateActiveMenuItem() {
     // Remove active class from all theme menu items
-    document.querySelectorAll('[data-theme-menu-item]').forEach(item => {
+    document.querySelectorAll('[data-theme-menu-item]').forEach((item) => {
       item.classList.remove('active');
     });
-    
+
     // Add active class to current theme
-    const currentItem = document.querySelector(`[data-theme-menu-item="${this.currentTheme}"]`);
+    const currentItem = document.querySelector(
+      `[data-theme-menu-item="${this.currentTheme}"]`,
+    );
     if (currentItem) {
       currentItem.classList.add('active');
     }
@@ -155,12 +177,14 @@ class ThemeManager {
 
     // Listen for system theme changes
     if (window.matchMedia) {
-      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-        // Only auto-switch if user hasn't manually selected a theme
-        if (!localStorage.getItem('preferred-theme')) {
-          this.setTheme(e.matches ? 'dark' : 'light');
-        }
-      });
+      window
+        .matchMedia('(prefers-color-scheme: dark)')
+        .addEventListener('change', (e) => {
+          // Only auto-switch if user hasn't manually selected a theme
+          if (!localStorage.getItem('preferred-theme')) {
+            this.setTheme(e.matches ? 'dark' : 'light');
+          }
+        });
     }
   }
 
@@ -182,8 +206,11 @@ class ThemeManager {
 
   toggleModernThemes() {
     this.modernThemesEnabled = !this.modernThemesEnabled;
-    localStorage.setItem('feature_new_themes', this.modernThemesEnabled ? 'true' : 'false');
-    
+    localStorage.setItem(
+      'feature_new_themes',
+      this.modernThemesEnabled ? 'true' : 'false',
+    );
+
     // Reload the page to apply changes
     window.location.reload();
   }
@@ -195,15 +222,18 @@ class ThemeManager {
 
   toggleEnhancedComponents() {
     const isEnabled = this.isEnhancedComponentsEnabled();
-    localStorage.setItem('feature_enhanced_components', !isEnabled ? 'true' : 'false');
-    
+    localStorage.setItem(
+      'feature_enhanced_components',
+      !isEnabled ? 'true' : 'false',
+    );
+
     // Use component enhancer if available, otherwise reload
     if (window.componentEnhancer) {
       window.componentEnhancer.toggle();
     } else {
       window.location.reload();
     }
-    
+
     console.log(`Enhanced components ${!isEnabled ? 'enabled' : 'disabled'}`);
     return !isEnabled;
   }

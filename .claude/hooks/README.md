@@ -9,7 +9,7 @@ The `.claude/hooks/` directory contains hooks that are auto-recognized by Claude
 
 **Detects**:
 - TODO/FIXME markers without implementation
-- Demo/fake return values  
+- Demo/fake return values
 - Placeholder implementations
 - Empty function bodies
 
@@ -54,13 +54,13 @@ Add to your project's `.claude/settings.json`:
         "matcher": "Write|Edit|MultiEdit",
         "hooks": [
           {
-            "type": "command", 
+            "type": "command",
             "command": "./.claude/hooks/anti_demo_check_claude.sh",
             "description": "Prevent demo/placeholder code"
           },
           {
             "type": "command",
-            "command": "./.claude/hooks/check_root_files.sh", 
+            "command": "./.claude/hooks/check_root_files.sh",
             "description": "Prevent root directory pollution"
           }
         ]
@@ -73,7 +73,7 @@ Add to your project's `.claude/settings.json`:
           {
             "type": "command",
             "command": "./.claude/hooks/detect_speculation.sh",
-            "description": "Detect speculation about command execution"  
+            "description": "Detect speculation about command execution"
           }
         ]
       }
@@ -102,14 +102,14 @@ Add to your project's `.claude/settings.json`:
 
 Hook test files located in `.claude/hooks/tests/`:
 - `hook_test_*.py` - Red/green test files for anti-demo hook
-- `test_hook_patterns.py` - Test file patterns for anti-demo hook  
+- `test_hook_patterns.py` - Test file patterns for anti-demo hook
 - `test_hook_system.md` - Complete testing guide
 - `test_directory_independence.sh` - Test hooks work from any directory
 
 ## Benefits
 
 1. **Code Quality**: No placeholder implementations
-2. **Accurate Communication**: No false waiting states  
+2. **Accurate Communication**: No false waiting states
 3. **File Organization**: Clean project structure
 4. **Immediate Feedback**: Real-time validation
 
@@ -130,7 +130,7 @@ All hooks are properly located in the auto-recognized Claude directory:
 
 ```
 .claude/hooks/
-├── anti_demo_check_claude.sh        # Demo code prevention  
+├── anti_demo_check_claude.sh        # Demo code prevention
 ├── detect_speculation.sh            # Command speculation blocker
 ├── check_root_files.sh              # Root directory protection
 ├── tests/                           # Test files directory

@@ -522,23 +522,23 @@
         text-align: center;
         gap: 1.5rem;
     }
-    
+
     .impact-visualization {
         grid-template-columns: 1fr;
     }
-    
+
     .consequence-flow {
         flex-direction: column;
     }
-    
+
     .consequence-effects {
         grid-template-columns: 1fr;
     }
-    
+
     .recap-actions {
         flex-direction: column;
     }
-    
+
     .recap-actions .btn {
         width: 100%;
     }

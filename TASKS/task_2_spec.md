@@ -20,7 +20,7 @@ You must track time passage and its consequences for every action in the game wo
 ### Action Time Costs
 Always deduct appropriate time for player actions:
 - **Combat**: 6 seconds per round
-- **Short Rest**: 1 hour 
+- **Short Rest**: 1 hour
 - **Long Rest**: 8 hours
 - **Travel**: Calculate based on distance and terrain
   - Road: 3 miles/hour walking, 6 miles/hour mounted

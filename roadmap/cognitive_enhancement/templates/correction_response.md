@@ -4,13 +4,13 @@
 
 I notice you're providing a correction to my previous response. Let me acknowledge and learn from this:
 
-**Previous Understanding:** 
+**Previous Understanding:**
 {previous_claim}
 
-**Your Correction:** 
+**Your Correction:**
 {corrected_info}
 
-**What I've Learned:** 
+**What I've Learned:**
 {learning_summary}
 
 **Confidence Level:** {confidence}

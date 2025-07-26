@@ -15,11 +15,11 @@ def test_something():
     provider = get_current_provider()
     firestore = provider.get_firestore()
     gemini = provider.get_gemini()
-    
+
     # Your test logic here - works with mock or real services
     campaigns = firestore.get_campaigns_for_user("test_user")
     response = gemini.generate_content("Test prompt")
-    
+
     # Cleanup happens automatically
     provider.cleanup()
 ```
@@ -32,7 +32,7 @@ def test_something():
 export TEST_MODE=mock
 ```
 
-### Real Mode  
+### Real Mode
 ```bash
 # Uses actual services with test isolation
 export TEST_MODE=real
@@ -60,7 +60,7 @@ class TestServiceProvider(ABC):
     def get_gemini(self) -> Any: ...
     def get_auth(self) -> Any: ...
     def cleanup(self) -> None: ...
-    
+
     @property
     def is_real_service(self) -> bool: ...
 ```
@@ -70,7 +70,7 @@ class TestServiceProvider(ABC):
 ```python
 from mvp_site.testing_framework import (
     get_service_provider,      # Create provider for specific mode
-    get_current_provider,      # Get global provider instance  
+    get_current_provider,      # Get global provider instance
     set_service_provider,      # Set global provider
     reset_global_provider      # Reset global state
 )
@@ -106,7 +106,7 @@ mvp_site/testing_framework/
 ├── service_provider.py         # Abstract interface
 ├── mock_provider.py           # Mock implementation
 ├── simple_mock_provider.py    # Fallback mock (no dependencies)
-├── real_provider.py           # Real service implementation  
+├── real_provider.py           # Real service implementation
 ├── factory.py                 # Provider factory
 ├── config.py                  # Configuration management
 └── tests/                     # Unit tests
@@ -134,7 +134,7 @@ python3 simple_test.py
 ```python
 def setUp(self):
     self.provider = get_current_provider()
-    
+
 def tearDown(self):
     self.provider.cleanup()
 ```
@@ -153,7 +153,7 @@ def test_with_different_modes():
     # Test with mock
     mock_provider = get_service_provider('mock')
     # ... test logic
-    
+
     # Test with real (if configured)
     if os.getenv('TEST_GEMINI_API_KEY'):
         real_provider = get_service_provider('real')

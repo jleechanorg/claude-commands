@@ -109,15 +109,15 @@ from prototype.game_state_integration import MockGameState
 class GameState:
     def validate_narrative_consistency(self, narrative: str) -> dict:
         from prototype.validators.fuzzy_token_validator import FuzzyTokenValidator
-        
+
         # Get current party members
         manifest = self.get_active_entity_manifest()
         expected = [e["name"] for e in manifest["entities"]]
-        
+
         # Validate
         validator = FuzzyTokenValidator()
         result = validator.validate(narrative, expected, self.current_location)
-        
+
         # Convert to game format
         return {
             "is_valid": result["all_entities_present"],
@@ -133,18 +133,18 @@ class NarrativeService:
     def generate_with_validation(self, prompt: str, game_state):
         # Get expected entities
         manifest = game_state.get_active_entity_manifest()
-        
+
         # Generate narrative
         narrative = self.generate_narrative(prompt)
-        
+
         # Validate
         validation = game_state.validate_narrative_consistency(narrative)
-        
+
         # Retry if needed
         if not validation["is_valid"] and validation["confidence"] < 0.7:
             enhanced_prompt = f"{prompt}\nInclude: {validation['missing_entities']}"
             narrative = self.generate_narrative(enhanced_prompt)
-            
+
         return narrative
 ```
 
@@ -212,14 +212,14 @@ def validate_with_metrics(validator, narrative, entities):
     start = time.time()
     result = validator.validate(narrative, entities)
     duration = time.time() - start
-    
+
     # Log metrics
     print(f"Validation took {duration*1000:.1f}ms")
-    
+
     # Get accumulated metrics
     metrics = metrics_collector.get_metrics(validator.name)
     print(f"Average time: {metrics['validators'][validator.name]['avg_duration']:.3f}s")
-    
+
     return result
 ```
 
@@ -234,14 +234,14 @@ def safe_validate(narrative: str, entities: List[str]) -> dict:
         return validator.validate(narrative, entities)
     except Exception as e:
         print(f"Fuzzy validation failed: {e}")
-        
+
         try:
             # Fall back to simple validator
             validator = SimpleTokenValidator()
             return validator.validate(narrative, entities)
         except Exception as e2:
             print(f"Simple validation failed: {e2}")
-            
+
             # Return safe default
             return {
                 "all_entities_present": False,
@@ -289,7 +289,7 @@ config = {
 ```python
 def test_validation_integration():
     """Test validators with your game's narratives."""
-    
+
     # Load test cases
     test_narratives = [
         {
@@ -298,7 +298,7 @@ def test_validation_integration():
             "location": "Current Location"
         }
     ]
-    
+
     # Test each validator
     validators = [
         SimpleTokenValidator(),
@@ -307,17 +307,17 @@ def test_validation_integration():
         LLMValidator(),
         HybridValidator()
     ]
-    
+
     for validator in validators:
         print(f"\nTesting {validator.name}:")
-        
+
         for test in test_narratives:
             result = validator.validate(
                 test["narrative"],
                 test["expected_entities"],
                 test["location"]
             )
-            
+
             print(f"  Valid: {result['all_entities_present']}")
             print(f"  Confidence: {result['confidence']:.2%}")
             print(f"  Time: {result.get('elapsed_time', 0)*1000:.1f}ms")

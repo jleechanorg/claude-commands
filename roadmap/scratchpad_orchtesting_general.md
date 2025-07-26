@@ -114,7 +114,7 @@ Transform orchestration from task executor to intelligent instruction router:
 ```python
 class InstructionAnalyzer:
     """Uses LLM to understand any instruction type"""
-    
+
     def analyze(self, instruction: str, context: dict) -> InstructionPlan:
         # Send to LLM with full context
         analysis = llm.analyze({
@@ -123,7 +123,7 @@ class InstructionAnalyzer:
             "previous_agents": context.get("agents"),
             "current_branch": context.get("branch")
         })
-        
+
         return InstructionPlan(
             intent_type=analysis.intent,  # question/task/research/etc
             continuation_of=analysis.previous_agent_id,
@@ -137,10 +137,10 @@ class InstructionAnalyzer:
 ```python
 class ContextManager:
     """Manages conversation and agent context via Redis"""
-    
+
     def __init__(self, redis_client):
         self.redis = redis_client
-        
+
     def get_conversation_context(self, session_id: str) -> dict:
         """Retrieve full conversation history and agent work"""
         return {
@@ -149,7 +149,7 @@ class ContextManager:
             "branches": self.redis.get(f"{session_id}:branches"),
             "results": self.redis.get(f"{session_id}:results")
         }
-    
+
     def save_agent_work(self, agent_id: str, work: dict):
         """Persist agent discoveries for future agents"""
         self.redis.set(f"agent:{agent_id}:work", work)
@@ -160,7 +160,7 @@ class ContextManager:
 ```python
 class AgentFactory:
     """Creates appropriate agents based on instruction analysis"""
-    
+
     def create_agent(self, plan: InstructionPlan, context: dict) -> Agent:
         if plan.continuation_of:
             # Continue existing work
@@ -168,12 +168,12 @@ class AgentFactory:
         else:
             # New agent with full context
             return self._create_contextual_agent(plan, context)
-    
+
     def _create_continuation_agent(self, plan, context):
         """Agent that continues on existing branch with prior context"""
         previous_work = context.get(f"agent:{plan.continuation_of}:work")
         branch = context.get(f"agent:{plan.continuation_of}:branch")
-        
+
         return Agent(
             type="continuation",
             branch=branch,  # Use same branch!
@@ -253,7 +253,7 @@ session:{id}:history        # Full conversation history
 session:{id}:agents         # List of agents created
 session:{id}:current_branch # Active branch
 
-# Agent tracking  
+# Agent tracking
 agent:{id}:work            # What the agent discovered/did
 agent:{id}:branch          # Which branch it worked on
 agent:{id}:status          # Current status

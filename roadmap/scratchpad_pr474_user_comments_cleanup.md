@@ -1,8 +1,8 @@
 # PR #474 User Comments Cleanup - Execution Plan
 
-**Branch**: explicit_char_design (continue on current branch)  
-**Goal**: Address all remaining user comments from PR #474  
-**Priority**: High - Complete PR review feedback  
+**Branch**: explicit_char_design (continue on current branch)
+**Goal**: Address all remaining user comments from PR #474
+**Priority**: High - Complete PR review feedback
 
 ## User Comments Status
 
@@ -29,7 +29,7 @@
    grep -r "creation" mvp_site/ --include="*.py" --include="*.js" --include="*.md"
    ```
 2. Review each occurrence and categorize:
-   - Character creation → character design  
+   - Character creation → character design
    - Campaign creation → keep (refers to creating campaigns, not characters)
    - Other contexts → evaluate case by case
 3. Update files systematically:
@@ -60,7 +60,7 @@
 - Ensure no references remain
 - Test wizard still functions properly
 
-#### Task 3: Backward Compatibility Analysis (15 min)  
+#### Task 3: Backward Compatibility Analysis (15 min)
 **Objective**: Provide recommendation on old prompt handling
 
 **Analysis Steps**:
@@ -100,7 +100,7 @@ if re.search(r"\[CHARACTER CREATION", response_text, re.IGNORECASE):
 
 **Test Areas**:
 1. Character creation flow works properly
-2. Campaign wizard functions correctly  
+2. Campaign wizard functions correctly
 3. Prompt construction handles all cases
 4. Planning block enforcement works
 5. No broken references or imports
@@ -119,7 +119,7 @@ TESTING=true python mvp_site/tests/test_character_extraction_regex_bug.py
 - `mvp_site/static/js/campaign-wizard.js` - Remove old wizard
 - `mvp_site/gemini_service.py` - Remove regex pattern
 
-### **Medium Impact** (Content updates)  
+### **Medium Impact** (Content updates)
 - `mvp_site/prompts/mechanics_system_instruction.md` - Terminology
 - `mvp_site/constants.py` - Variable names if needed
 
@@ -138,12 +138,12 @@ TESTING=true python mvp_site/tests/test_character_extraction_regex_bug.py
 ## Risk Mitigation
 
 - **Low Risk**: Most changes are refactoring/cleanup
-- **Test Coverage**: Existing tests will catch regressions  
+- **Test Coverage**: Existing tests will catch regressions
 - **Isolated Changes**: Each task can be done independently
 - **Rollback Plan**: Git commits for each task allow selective revert
 
 ---
 
-**Total Estimated Time**: 2.5 hours  
-**Branch Strategy**: Continue on explicit_char_design  
+**Total Estimated Time**: 2.5 hours
+**Branch Strategy**: Continue on explicit_char_design
 **Next Step**: User approval before execution

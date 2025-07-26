@@ -28,7 +28,7 @@ Continue systematic unit test coverage improvement focusing on the three most cr
 - **Missing**: Exception handling in API calls
 - **Missing**: Retry mechanism with exponential backoff
 - **Missing**: Model fallback logic (Gemini 2.5 → 1.5)
-- **Test Cases**: 
+- **Test Cases**:
   - API timeout scenarios
   - Rate limit errors
   - Invalid API key
@@ -616,7 +616,7 @@ import gemini_service
 6. Update PR #416 description with results
 
 #### Hour 2-4: Execute Phase 7
-- **PR #417**: https://github.com/jleechan2015/worldarchitect.ai/pull/417  
+- **PR #417**: https://github.com/jleechan2015/worldarchitect.ai/pull/417
 - **Branch**: feature/firestore-tests-phase7
 - Launch 2 subagents:
   - Subagent 5: Milestone 7.1 + 7.2 (Database errors + Complex merging)
@@ -648,7 +648,7 @@ import gemini_service
 ```
 TASK: Create database error and complex merging tests
 BRANCH: feature/firestore-tests-phase7 (checkout existing)
-FILES: 
+FILES:
 - mvp_site/test_firestore_database_errors.py
 - mvp_site/test_firestore_complex_merging.py
 
@@ -661,7 +661,7 @@ import firestore_service
 
 MILESTONE 7.1 - Database Errors (15 tests):
 - Connection timeouts/failures
-- Transaction conflicts/rollbacks  
+- Transaction conflicts/rollbacks
 - Query errors and limits
 - Document-level errors
 - Mock google.cloud.firestore appropriately
@@ -763,7 +763,7 @@ COMMIT: Every 5-7 tests
 ### Subagent 9: Security & Validation Tests
 ```
 TASK: Create security tests for main.py
-BRANCH: feature/main-tests-phase8 (checkout existing)  
+BRANCH: feature/main-tests-phase8 (checkout existing)
 FILE: mvp_site/test_main_security_validation.py
 
 MILESTONE 8.3 (25 tests):
@@ -799,7 +799,7 @@ git checkout feature/gemini-service-tests-phase6
 echo "=== PHASE 7 EXECUTION ==="
 # Launch 2 subagents for Phase 7
 
-echo "=== PHASE 8 EXECUTION ==="  
+echo "=== PHASE 8 EXECUTION ==="
 git checkout main
 git pull origin main
 git checkout -b feature/main-tests-phase8

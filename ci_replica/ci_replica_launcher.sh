@@ -94,7 +94,7 @@ echo
 while true; do
     echo -n "Please choose an option (1-5): "
     read -r choice
-    
+
     case $choice in
         1)
             print_info "Running Basic CI Replication..."
@@ -113,7 +113,7 @@ while true; do
             echo
             echo -n "Choose debug option (a-e): "
             read -r debug_choice
-            
+
             case $debug_choice in
                 a)
                     print_info "Running Debug CI Replication (standard)..."
@@ -160,7 +160,7 @@ while true; do
             echo
             echo -n "Choose isolation option (a-e): "
             read -r isolation_choice
-            
+
             case $isolation_choice in
                 a)
                     print_info "Running Maximum Isolation Reproducer (full)..."
@@ -199,7 +199,7 @@ while true; do
             echo
             echo -n "Choose script for help (1-3): "
             read -r help_choice
-            
+
             case $help_choice in
                 1)
                     echo "ci_local_replica.sh help:"

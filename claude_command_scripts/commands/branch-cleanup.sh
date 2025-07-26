@@ -112,20 +112,20 @@ declare -a unmerged=()
 for branch in $branches_to_check; do
     # Skip if no branch (empty line)
     [[ -z "$branch" ]] && continue
-    
+
     echo -n "Checking $branch... "
-    
+
     # Check if branch has unpushed commits
     if git rev-parse --verify "origin/$branch" >/dev/null 2>&1; then
         unpushed=$(git rev-list "origin/$branch..$branch" --count 2>/dev/null || echo "0")
     else
         unpushed="no remote"
     fi
-    
+
     # Check for associated PR
     pr_info=$(gh pr list --head "$branch" --json number,state --limit 1 2>/dev/null || echo "[]")
     pr_exists=$(echo "$pr_info" | jq 'length > 0')
-    
+
     if [[ "$pr_exists" == "true" ]]; then
         pr_number=$(echo "$pr_info" | jq -r '.[0].number')
         pr_state=$(echo "$pr_info" | jq -r '.[0].state')
@@ -176,7 +176,7 @@ if [[ ${#safe_to_delete[@]} -gt 0 ]]; then
         echo -e "\n${YELLOW}🔍 DRY RUN: Would delete ${#safe_to_delete[@]} branches${NC}"
     else
         echo -e "\n${YELLOW}🗑️  Preparing to delete ${#safe_to_delete[@]} branches...${NC}"
-        
+
         if [[ "$FORCE" != "true" ]]; then
             echo -n "Continue? (y/N) "
             read -r response
@@ -185,7 +185,7 @@ if [[ ${#safe_to_delete[@]} -gt 0 ]]; then
                 exit 0
             fi
         fi
-        
+
         # Delete branches
         for branch in "${safe_to_delete[@]}"; do
             echo -n "Deleting $branch... "
@@ -195,7 +195,7 @@ if [[ ${#safe_to_delete[@]} -gt 0 ]]; then
                 echo -e "${RED}✗${NC}"
             fi
         done
-        
+
         echo -e "\n${GREEN}✅ Cleanup complete!${NC}"
     fi
 else
@@ -221,16 +221,16 @@ if [[ -n "$WORKTREES" ]]; then
         if [[ "$wt" == "$CURRENT_WORKTREE" ]]; then
             continue
         fi
-        
+
         echo -n "Checking worktree $(basename "$wt")... "
-        
+
         # Check if worktree directory exists
         if [[ ! -d "$wt" ]]; then
             echo -e "${RED}missing directory${NC}"
             worktrees_to_delete+=("$wt - missing directory")
             continue
         fi
-        
+
         # Get the branch for this worktree
         WT_BRANCH=$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
         if [[ -z "$WT_BRANCH" ]]; then
@@ -238,14 +238,14 @@ if [[ -n "$WORKTREES" ]]; then
             worktrees_to_delete+=("$wt - no branch")
             continue
         fi
-        
+
         # Check for uncommitted changes
         if [[ -n $(git -C "$wt" status --porcelain 2>/dev/null) ]]; then
             echo -e "${YELLOW}uncommitted changes${NC}"
             worktrees_kept+=("$wt ($WT_BRANCH) - uncommitted changes")
             continue
         fi
-        
+
         # Check branch's last commit date
         COMMIT_DATE=$(git -C "$wt" log -1 --format="%cI" 2>/dev/null || echo "")
         if [[ -n "$COMMIT_DATE" ]]; then
@@ -279,12 +279,12 @@ if [[ ${#worktrees_to_delete[@]} -gt 0 ]] || [[ ${#worktrees_kept[@]} -gt 0 ]]; 
     echo "=================="
     echo "Stale worktrees (>$WORKTREE_DAYS days): ${#worktrees_to_delete[@]}"
     echo "Active worktrees (kept): ${#worktrees_kept[@]}"
-    
+
     if [[ ${#worktrees_to_delete[@]} -gt 0 ]]; then
         echo -e "\n${GREEN}✅ Stale worktrees (ready for cleanup):${NC}"
         printf '%s\n' "${worktrees_to_delete[@]}" | sed 's/^/  - /'
     fi
-    
+
     if [[ ${#worktrees_kept[@]} -gt 0 ]]; then
         echo -e "\n${YELLOW}🏠 Active worktrees (kept):${NC}"
         printf '%s\n' "${worktrees_kept[@]}" | sed 's/^/  - /'
@@ -297,7 +297,7 @@ if [[ ${#worktrees_to_delete[@]} -gt 0 ]]; then
         echo -e "\n${YELLOW}🔍 DRY RUN: Would remove ${#worktrees_to_delete[@]} worktrees${NC}"
     else
         echo -e "\n${YELLOW}🗑️  Preparing to remove ${#worktrees_to_delete[@]} worktrees...${NC}"
-        
+
         if [[ "$FORCE" != "true" ]]; then
             echo -n "Continue with worktree cleanup? (y/N) "
             read -r response

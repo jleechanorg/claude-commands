@@ -19,7 +19,7 @@ find_project_root() {
 PROJECT_ROOT=$(find_project_root)
 LOG_FILE="/tmp/claude_root_files_log.txt"
 
-# Read JSON input from stdin  
+# Read JSON input from stdin
 INPUT=$(cat)
 
 # Extract file path from tool input
@@ -59,7 +59,7 @@ FILENAME=$(basename "$RELATIVE_PATH")
 # Allowed root files (whitelist)
 ALLOWED_ROOT_FILES=(
     "README.md"
-    "CLAUDE.md" 
+    "CLAUDE.md"
     "LICENSE"
     "requirements.txt"
     "package.json"
@@ -85,7 +85,7 @@ if [[ "$DIR_PATH" == "." ]] || [[ "$RELATIVE_PATH" == "$FILENAME" ]]; then
             break
         fi
     done
-    
+
     if [ "$IS_ALLOWED" = false ]; then
         # Block the operation
         cat <<EOF
@@ -95,10 +95,10 @@ if [[ "$DIR_PATH" == "." ]] || [[ "$RELATIVE_PATH" == "$FILENAME" ]]; then
   "suppressOutput": false
 }
 EOF
-        
+
         # Log the violation
         echo "$(date '+%Y-%m-%d %H:%M:%S') - Root file blocked: $FILENAME" >> "$LOG_FILE"
-        
+
         exit 0  # Don't exit with error, just block via decision
     fi
 fi

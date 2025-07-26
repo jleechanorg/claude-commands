@@ -2,7 +2,7 @@
 
 ## Table of Contents
 1. [Overview](#overview)
-2. [Factions](#factions) 
+2. [Factions](#factions)
 3. [World Mechanics & Game Systems](#world-mechanics--game-systems)
 4. [Geography & Locations](#geography--locations)
 5. [World History & Timeline](#world-history--timeline)
@@ -72,7 +72,7 @@ The surviving remnant of the original divine order, now ruled by the ancient Raz
 - **The Starfall Command**: Centered around the military and the legacy of Alexiel's "Starfall Guard," this faction is comprised of legion commanders, veterans of the great wars, and those who believe the Imperium's only path forward is through martial strength. They are impatient with the Senate's slow deliberations and are fiercely loyal to their commanders. The twin princes Cassian and Valerius are the celebrated, if conflicting, figureheads of this powerful bloc.
 - **The Revisionist Scholars**: A secret society of academics, scribes, and even minor nobles who doubt the official doctrine of the Imperium. They secretly gather forbidden history and question the divinity of the Empyrean Bloodline, seeking answers to the Great Vanishing and the truth of the Empyrean Affliction. Their quiet and fearful leader is Magister Lucian Kantos, the man who knows more of the truth than anyone else still loyal to the Imperium.
 
-### The Shattered Host  
+### The Shattered Host
 The scattered remnants of Lucifer's rebellion, broken into competing factions but still united in their opposition to the Imperium. Each faction interprets Lucifer's revolutionary ideals differently, leading to internal conflicts and competing visions of freedom.
 
 **Major Sub-factions:**
@@ -3243,7 +3243,7 @@ A flask of strong dwarven ale.
 
 ### Special Titles
 - **Alexiel, the Null-Goddess**
-- **Alexiel, The Unseen Sun**  
+- **Alexiel, The Unseen Sun**
 - **Sariel, The Echo of Starlight**
 - **Sariel, The Mnemonic Sage**
 
@@ -4849,7 +4849,7 @@ These represent a new/old power rising as the Creator's order weakens.
 ### The Shadow Syndicate's True Power
 The Curator doesn't just collect information—they collect truths. In their vault are facts that could destroy nations:
 - The location of the Creator's workshop
-- The true cause of the Great Vanishing  
+- The true cause of the Great Vanishing
 - The cure for the Empyrean Affliction
 - The nature of the primordial entities stirring in the deep
 
@@ -4897,7 +4897,7 @@ Beyond common tongues, several languages hold magical power:
 
 ### Secret Societies
 - The Covenant of Chains: Imperium loyalists preparing for the Creator's return
-- The Liberators: Following Perrin's pure interpretation of Lucifer's philosophy  
+- The Liberators: Following Perrin's pure interpretation of Lucifer's philosophy
 - The Vault Wardens: Dwarves who know what their ancestors locked away
 - The Last Grove: Elves planning one final, terrible vengeance
 - The Cog Conspiracy: Gnomes who believe technology should replace magic entirely
@@ -5631,8 +5631,7 @@ All members of this lineage, including the Apex tier, are half-celestial and not
 ### Fantasy Names for Characters
 Orin, Vorlag, Zaccaria, Perrin, Valerius, Theron, Lysander, Joric, Fendrel, Braddock, Cygnus, Hesper, Linnea, Sariel, Morwen, Keris, Lyra, Vespera, Eliara, Tamsin, Zephyr, Halcyon, Kione, Ishan, Kenjiro, Ren, Sorim, Takeo, Jin, Haru, Kaida, Asami, Himari, Kaelen, Ember, Griselda, Torvin, Zanjul, Borborygmos, Rakdos, Mog, Grak, Urzok, Nazgûl, Shelob, Skarn, Malakor, Ichor, Vorinclex, Elesh Norn, Jin-Gitaxias, Sheoldred, Urabrask, Atrax, Phyrexia, Mirrodin, Zendikar, Innistrad, Ravnica, Azorius, Dimir, Gruul, Selesnya, Orzhov, Izzet, Golgari, Simic, Boros, Cyric, Talos, Myrkul, Bane, Bhaal, Asmodeus, Mephistopheles, Dispater, Mammon, Belial, Leviathan, Samael, Abaddon, Azazel, Beelzebub, Lucifuge, Rofocale, Adrammelech, Lilith, Naamah, Agrat, Mahlat, Eisheth, Zenunim, Rahab, Tanin'iver, Nehushtan, Chiviah, Zophiel, Raziel, Tzaphqiel, Cassiel
 
-### Banned Names  
+### Banned Names
 Lyra, Kaelen, Seraphina, Valerius, Silas, Blackwood
 
 ---
-

@@ -1,8 +1,8 @@
 # Debug JSON Display Bug - Investigation Scratchpad
 
-**Branch**: `luke_campaign_fixes`  
-**Issue**: Raw JSON still being displayed to users instead of parsed narrative content  
-**Context**: 90-95% used - critical for complex debugging  
+**Branch**: `luke_campaign_fixes`
+**Issue**: Raw JSON still being displayed to users instead of parsed narrative content
+**Context**: 90-95% used - critical for complex debugging
 
 ## Problem Statement
 
@@ -37,7 +37,7 @@ User is still seeing raw JSON output like this:
 
 **Key Findings**:
 - ✅ `parse_structured_response()` function works correctly
-- ✅ When given raw JSON, it properly extracts just the narrative content  
+- ✅ When given raw JSON, it properly extracts just the narrative content
 - ❌ **THE BUG**: Raw JSON is being displayed WITHOUT going through the parsing function
 
 **Test Results**:
@@ -112,13 +112,13 @@ The issue is NOT in the parsing logic itself. The problem is that somewhere in t
 - ✅ `test_raw_json_display_bug_reproduction.py` - Red test confirming bug exists
 
 ## Branch Status
-- **Branch**: `luke_campaign_fixes` 
+- **Branch**: `luke_campaign_fixes`
 - **PR**: #351 - https://github.com/jleechan2015/worldarchitect.ai/pull/351
 - **Status**: All architectural changes complete, JSON bug remains
 - **Tests**: All original failing tests fixed, new red test for JSON bug added
 
 ## Todos Status
-1. ✅ Create red test to reproduce raw JSON display bug 
+1. ✅ Create red test to reproduce raw JSON display bug
 2. ❌ Identify where raw JSON is displayed instead of parsed (NEEDS FRESH CONTEXT)
 
 ---

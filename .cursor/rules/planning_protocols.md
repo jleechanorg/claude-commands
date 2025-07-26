@@ -56,7 +56,7 @@ For large projects requiring systematic breakdown. See `coding_prompts/milestone
 
 ### Structure Hierarchy
 1. **Milestone** (1-2 weeks): Major deliverable with measurable value
-2. **Steps** (0.5-2 days): 8-12 logical units of work per milestone  
+2. **Steps** (0.5-2 days): 8-12 logical units of work per milestone
 3. **Sub-bullets** (Atomic tasks): 4-8 concrete tasks per step
 
 ### Best Practices
@@ -76,7 +76,7 @@ For large projects requiring systematic breakdown. See `coding_prompts/milestone
    - ✅ Create comprehensive inventory
    - ✅ Identify conflicts and redundancies
    - ✅ Design target structure
-   
+
 2. Core Files Restructuring (🔄 IN PROGRESS - 33%)
    - ✅ Create project_overview.md
    - ⬜ Archive old lessons

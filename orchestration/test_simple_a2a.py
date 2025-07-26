@@ -15,26 +15,26 @@ from redis_a2a_bridge import RedisA2ABridge
 async def test_simple_a2a():
     """Test basic A2A functionality"""
     print("=== Simple A2A Integration Test ===")
-    
+
     # Create bridge
     bridge = RedisA2ABridge()
-    
+
     # Test 1: Discover agents
     print("\n1. Testing agent discovery...")
     agents = await bridge.discover_agents_real()
     print(f"   Found {len(agents)} agents:")
     for agent in agents[:5]:  # Show first 5
         print(f"   - {agent['id']}: {agent.get('type', 'unknown')}")
-    
+
     if not agents:
         print("   ❌ No agents found - please start some agents first")
         return False
-    
+
     # Test 2: Execute a simple task
     print("\n2. Testing task execution...")
     test_agent = agents[0]['id']
     print(f"   Using agent: {test_agent}")
-    
+
     try:
         result = await asyncio.wait_for(
             bridge.execute_task_real(
@@ -49,7 +49,7 @@ async def test_simple_a2a():
         print("   ⚠️  Task timed out (no worker processing) - this is expected without active workers")
     except Exception as e:
         print(f"   ❌ Task failed: {e}")
-    
+
     # Test 3: Create a simple workflow
     print("\n3. Testing workflow creation...")
     workflow = {
@@ -60,7 +60,7 @@ async def test_simple_a2a():
             {"agent": test_agent, "task": "step2", "description": "Second step"}
         ]
     }
-    
+
     try:
         workflow_result = await asyncio.wait_for(
             bridge.orchestrate_workflow_real(
@@ -78,11 +78,11 @@ async def test_simple_a2a():
         print("   ⚠️  Workflow timed out - expected without active workers")
     except Exception as e:
         print(f"   ❌ Workflow failed: {e}")
-    
+
     print("\n=== Test Complete ===")
     print("Note: Timeouts are expected without active worker processes")
     print("The important thing is that the A2A bridge connects to Redis and finds agents")
-    
+
     return True
 
 

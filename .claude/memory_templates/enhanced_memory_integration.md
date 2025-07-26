@@ -6,7 +6,7 @@ This document defines how commands should integrate with Memory MCP to create hi
 
 **Before any enhanced command execution**:
 1. ✅ Search Memory MCP for relevant context
-2. ✅ Extract specific technical terms from command arguments  
+2. ✅ Extract specific technical terms from command arguments
 3. ✅ Log search results transparently
 4. ✅ Integrate found memories naturally into response
 5. ✅ Capture new learnings with structured, detailed entries
@@ -52,11 +52,11 @@ Enhanced Capture:
   "entityType": "technical_solution",
   "observations": [
     "Issue: Firebase Auth timeout in user authentication flow",
-    "Error: 'firebase.auth().signInWithEmailAndPassword() timed out'", 
+    "Error: 'firebase.auth().signInWithEmailAndPassword() timed out'",
     "Location: mvp_site/firebase_util.py:45",
     "Root Cause: Default 30s timeout insufficient for Auth API",
     "Solution: Increased timeout to 60s via firebase.auth().timeout = 60000",
-    "Code Change: Line 12 firebase_util.py timeout parameter", 
+    "Code Change: Line 12 firebase_util.py timeout parameter",
     "Test Result: 15/15 auth tests now pass",
     "Performance: Average auth time 2.3s, max observed 45s",
     "Commit: a1b2c3d 'Increase Firebase Auth timeout for reliability'"
@@ -84,14 +84,14 @@ Enhanced Capture:
 }
 ```
 
-### /fix Command Enhancement  
+### /fix Command Enhancement
 
 **Memory Pattern**: Document fix implementation and validation
 
 ```json
 {
   "name": "{component}_{fix_type}_{implementation_date}",
-  "entityType": "fix_implementation", 
+  "entityType": "fix_implementation",
   "observations": [
     "Problem Statement: {specific issue description}",
     "Impact Analysis: {who/what was affected}",
@@ -152,7 +152,7 @@ Enhanced Capture:
 
 **Search Strategy**:
 - Primary terms: {technical_keywords}
-- Related concepts: {semantic_expansions}  
+- Related concepts: {semantic_expansions}
 - Historical context: {timeline_relevance}
 
 **Results Integration**:
@@ -174,7 +174,7 @@ Enhanced Capture:
 [
   {
     "from": "firebase_auth_timeout_fix_2025_07_23",
-    "to": "firebase_auth_timeout_2025_07_23", 
+    "to": "firebase_auth_timeout_2025_07_23",
     "relationType": "fixes"
   },
   {
@@ -190,7 +190,7 @@ Enhanced Capture:
 **Pre-storage Validation**:
 - ✅ Contains specific technical details
 - ✅ Includes actionable information
-- ✅ References external artifacts  
+- ✅ References external artifacts
 - ✅ Uses canonical entity names
 - ✅ Provides measurable outcomes
 - ✅ Links to related memories
@@ -207,7 +207,7 @@ Enhanced Capture:
 1. **Always search first**: Use relevant terms to find existing context
 2. **Extract specifics**: Pull out file names, error messages, PR numbers
 3. **Structure observations**: Use the patterns defined above
-4. **Build relations**: Connect to existing memories explicitly  
+4. **Build relations**: Connect to existing memories explicitly
 5. **Validate quality**: Ensure entries meet high-quality criteria
 
 **Memory Enhancement Workflow**:
@@ -223,7 +223,7 @@ response = process_command_with_context(existing_memories)
 new_learning = structure_memory_entry(response, patterns)
 mcp__memory-server__create_entities([new_learning])
 
-# 4. Build relations  
+# 4. Build relations
 relations = identify_relations(new_learning, existing_memories)
 mcp__memory-server__create_relations(relations)
 ```

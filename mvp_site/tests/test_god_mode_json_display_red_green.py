@@ -4,7 +4,9 @@ import os
 import sys
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from narrative_response_schema import parse_structured_response
 
@@ -94,7 +96,7 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
             "narrative": "The mortal realm trembles.",
             "god_mode_response": "Lightning strikes!",
             "entities_mentioned": [],
-            "location_confirmed": "Unknown", 
+            "location_confirmed": "Unknown",
             "state_updates": {},
             "debug_info": {}
         }"""
@@ -203,14 +205,14 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
 
         # Edge case 3: Very long content in both fields
         long_text = "A" * 1000
-        response3 = f'''{{
+        response3 = f"""{{
             "narrative": "{long_text}",
             "god_mode_response": "{long_text}",
             "entities_mentioned": [],
             "location_confirmed": "Unknown",
             "state_updates": {{}},
             "debug_info": {{}}
-        }}'''
+        }}"""
         narrative3, obj3 = parse_structured_response(response3)
         # Should return only narrative when both are present
         self.assertEqual(len(narrative3), 1000)  # Only narrative, not combined

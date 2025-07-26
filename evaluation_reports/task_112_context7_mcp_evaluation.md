@@ -1,8 +1,8 @@
 # TASK-112: Context7 MCP Server Evaluation Report
 
-**Date**: January 6, 2025  
-**Evaluator**: Claude (Sonnet 4)  
-**Repository**: https://github.com/upstash/context7  
+**Date**: January 6, 2025
+**Evaluator**: Claude (Sonnet 4)
+**Repository**: https://github.com/upstash/context7
 **Status**: Comprehensive evaluation completed
 
 ## Executive Summary
@@ -59,7 +59,7 @@ For Claude Desktop - Add to `claude_desktop_config.json`:
 ```
 
 #### Method 3: Alternative Runtimes
-- **Bun**: `bunx @upstash/context7-mcp` 
+- **Bun**: `bunx @upstash/context7-mcp`
 - **Deno**: Support available
 - **Docker**: Container deployment option
 

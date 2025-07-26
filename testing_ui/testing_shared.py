@@ -244,13 +244,13 @@ def setup_test_environment(use_real_api=False, port=None):
     """Set up environment variables for testing (backward compatibility wrapper)"""
     if port is None:
         port = str(TestConfig.get_server_config(TestType.BROWSER).base_port)
-    
+
     os.environ["TESTING"] = "true"
     os.environ["PORT"] = str(port)
 
     test_mode = TestMode.REAL if use_real_api else TestMode.MOCK
     setup_centralized_env(test_mode)
-    
+
     if use_real_api:
         print("⚠️  USING REAL APIs - This will cost money!")
     else:

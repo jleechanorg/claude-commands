@@ -17,4 +17,3 @@ event = "PostToolUse"
 tool_name = "edit_file"
 command = "git status --porcelain"
 run_in_background = true
-

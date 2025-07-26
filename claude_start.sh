@@ -50,46 +50,51 @@ is_orchestration_running() {
     if ! command -v redis-cli >/dev/null 2>&1 || ! redis-cli ping &> /dev/null; then
         return 1
     fi
-    
-    # Check if orchestration agents exist
-    if tmux has-session -t opus-master 2>/dev/null; then
+
+    # Check if agent monitor process is running (more reliable indicator)
+    if pgrep -f "agent_monitor.py" > /dev/null 2>&1; then
         return 0
     fi
-    
+
+    # Alternative: Check for any active task agents
+    if tmux list-sessions 2>/dev/null | grep -q "task-agent-"; then
+        return 0
+    fi
+
     return 1
 }
 
 # Function to start orchestration in background
 start_orchestration_background() {
     local SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    
+
     # Check if orchestration directory exists
     if [ ! -d "$SCRIPT_DIR/orchestration" ]; then
         return 1
     fi
-    
+
     # Check if start script exists
     if [ ! -f "$SCRIPT_DIR/orchestration/start_system.sh" ]; then
         return 1
     fi
-    
+
     # Start orchestration silently in background
     (
         cd "$SCRIPT_DIR/orchestration"
-        
+
         # Start Redis if not running
         if ! redis-cli ping &> /dev/null; then
             redis-server --daemonize yes --bind 127.0.0.1 --protected-mode yes &> /dev/null || true
             sleep 1
         fi
-        
+
         # Start orchestration agents in quiet mode
         ./start_system.sh --quiet start &> /dev/null &
     )
-    
+
     # Wait a moment for startup
     sleep 2
-    
+
     return 0
 }
 
@@ -124,7 +129,7 @@ fi
 MCP_LIST=""
 if MCP_LIST=$(claude mcp list 2>/dev/null); then
     MCP_SERVERS=$(echo "$MCP_LIST" | grep -E "^[a-zA-Z].*:" | wc -l)
-    
+
     if [ "$MCP_SERVERS" -eq 0 ]; then
         echo -e "${YELLOW}⚠️ No MCP servers detected${NC}"
         if [ -f "./claude_mcp.sh" ]; then
@@ -135,7 +140,7 @@ if MCP_LIST=$(claude mcp list 2>/dev/null); then
         echo -e "${YELLOW}📝 Continuing with Claude startup (MCP features will be limited)...${NC}"
     else
         echo -e "${GREEN}✅ Found $MCP_SERVERS MCP servers installed:${NC}"
-        
+
         # Show server list with better formatting
         echo "$MCP_LIST" | head -5 | while read -r line; do
             if [[ "$line" =~ ^([^:]+):.* ]]; then
@@ -143,7 +148,7 @@ if MCP_LIST=$(claude mcp list 2>/dev/null); then
                 echo -e "${GREEN}  ✅ $server_name${NC}"
             fi
         done
-        
+
         if [ "$MCP_SERVERS" -gt 5 ]; then
             echo -e "${BLUE}  ... and $((MCP_SERVERS - 5)) more${NC}"
         fi
@@ -194,7 +199,7 @@ else
     for issue in "${BACKUP_ISSUES[@]}"; do
         echo -e "${YELLOW}  $issue${NC}"
     done
-    
+
     echo -e "${YELLOW}📝 For setup, use the dedicated memory backup repository at $HOME/projects/worldarchitect-memory-backups${NC}"
 fi
 
@@ -244,7 +249,7 @@ if [ -n "$MODE" ]; then
         default)
             # Check orchestration for non-worker modes
             check_orchestration
-            
+
             # Show orchestration info if available
             if is_orchestration_running; then
                 echo ""
@@ -253,14 +258,14 @@ if [ -n "$MODE" ]; then
                 echo -e "   • /orch Build X    - Delegate task to AI agents"
                 echo -e "   • /orch help       - Show orchestration help"
             fi
-            
+
             echo -e "${BLUE}🚀 Starting Claude Code with default settings...${NC}"
             claude $FLAGS "$@"
             ;;
         supervisor)
             # Check orchestration for non-worker modes
             check_orchestration
-            
+
             # Show orchestration info if available
             if is_orchestration_running; then
                 echo ""
@@ -269,7 +274,7 @@ if [ -n "$MODE" ]; then
                 echo -e "   • /orch Build X    - Delegate task to AI agents"
                 echo -e "   • /orch help       - Show orchestration help"
             fi
-            
+
             MODEL="opus"
             echo -e "${YELLOW}🚀 Starting Claude Code with $MODEL (Latest Opus)...${NC}"
             claude --model "$MODEL" $FLAGS "$@"
@@ -284,17 +289,17 @@ else
     read -p "Choice [2]: " choice
 
     case ${choice:-2} in
-    1) 
+    1)
         # Worker mode intentionally skips orchestration check
         # Workers are meant to be lightweight and don't interact with orchestration
         MODEL="sonnet"
         echo -e "${GREEN}🚀 Starting Claude Code in worker mode with $MODEL...${NC}"
         claude --model "$MODEL" $FLAGS "$@"
         ;;
-    2) 
+    2)
         # Check orchestration for non-worker modes
         check_orchestration
-        
+
         # Show orchestration info if available
         if is_orchestration_running; then
             echo ""
@@ -303,14 +308,14 @@ else
             echo -e "   • /orch Build X    - Delegate task to AI agents"
             echo -e "   • /orch help       - Show orchestration help"
         fi
-        
+
         echo -e "${BLUE}🚀 Starting Claude Code with default settings...${NC}"
         claude $FLAGS "$@"
         ;;
     3)
         # Check orchestration for non-worker modes
         check_orchestration
-        
+
         # Show orchestration info if available
         if is_orchestration_running; then
             echo ""
@@ -319,16 +324,16 @@ else
             echo -e "   • /orch Build X    - Delegate task to AI agents"
             echo -e "   • /orch help       - Show orchestration help"
         fi
-        
+
         MODEL="opus"
         echo -e "${YELLOW}🚀 Starting Claude Code with $MODEL (Latest Opus)...${NC}"
         claude --model "$MODEL" $FLAGS "$@"
         ;;
-    *) 
+    *)
         echo -e "${YELLOW}Invalid choice, using default${NC}"
         # Check orchestration for non-worker modes
         check_orchestration
-        
+
         # Show orchestration info if available
         if is_orchestration_running; then
             echo ""
@@ -337,7 +342,7 @@ else
             echo -e "   • /orch Build X    - Delegate task to AI agents"
             echo -e "   • /orch help       - Show orchestration help"
         fi
-        
+
         claude $FLAGS "$@"
         ;;
     esac

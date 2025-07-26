@@ -13,7 +13,7 @@ Replace failed static CLAUDE.md compliance with dynamic behavioral enforcement u
 
 ## Problem
 - User types /header command ~10x per day despite explicit rules
-- CLAUDE.md header protocol has ~80% violation rate  
+- CLAUDE.md header protocol has ~80% violation rate
 - Static documentation doesn't create behavioral change
 
 ## Solution: Behavioral Automation MVP
@@ -25,7 +25,7 @@ Replace failed static CLAUDE.md compliance with dynamic behavioral enforcement u
 ## Implementation Plan
 Complete technical specifications in roadmap/scratchpad_memory_mvp.md:
 - Week 1: Core engine + Memory MCP integration
-- Week 2: Claude Code pipeline integration  
+- Week 2: Claude Code pipeline integration
 - Week 3: User validation and success measurement
 
 ## Success Criteria
@@ -47,7 +47,7 @@ git push origin HEAD:memory-mvp-behavioral-automation
 gh pr create --title "Memory MCP Header Compliance MVP - Behavioral Automation System" --body "## Summary
 Replace failed static CLAUDE.md compliance with dynamic behavioral enforcement using Memory MCP. Focus on header compliance as proof of concept.
 
-## Problem Statement  
+## Problem Statement
 - User constantly types \`/header\` command (~10x per day) despite explicit rules
 - CLAUDE.md header protocol has ~80% violation rate
 - Static documentation doesn't create behavioral change
@@ -71,19 +71,19 @@ Replace failed static CLAUDE.md compliance with dynamic behavioral enforcement u
 
 ## Implementation Timeline
 - **Week 1**: Core compliance engine + Memory MCP integration
-- **Week 2**: Claude Code pipeline integration  
+- **Week 2**: Claude Code pipeline integration
 - **Week 3**: User validation and success measurement
 
 ## Why This Approach Works
 1. **Addresses Real Pain**: User's biggest compliance frustration
-2. **Measurable Success**: Clear before/after metrics  
+2. **Measurable Success**: Clear before/after metrics
 3. **Simple Technology**: Regex + existing scripts + Memory MCP
 4. **Expandable Foundation**: Proven concept scales to other behaviors
 
 ## Future Expansion Path
 Once header compliance achieves 90% success:
 - **Phase 2**: Test execution claims (stop false \"tests complete\")
-- **Phase 3**: Evidence-based debugging (show errors before fixes)  
+- **Phase 3**: Evidence-based debugging (show errors before fixes)
 - **Phase 4**: Response length optimization (context-aware verbosity)
 - **Phase 5**: Complete CLAUDE.md replacement with dynamic system
 

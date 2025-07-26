@@ -121,7 +121,7 @@ Added aggressive JSON cleanup when artifacts are detected in `narrative_response
 # Final check for JSON artifacts in returned text
 if '"narrative":' in cleaned_text or '"god_mode_response":' in cleaned_text:
     logging_util.error(f"JSON_BUG_PARSE_RETURNING_JSON: Still returning JSON artifacts!")
-    
+
     # CRITICAL FIX: Apply aggressive cleanup to remove JSON artifacts
     narrative_match = NARRATIVE_PATTERN.search(cleaned_text)
     if narrative_match:
@@ -131,7 +131,7 @@ if '"narrative":' in cleaned_text or '"god_mode_response":' in cleaned_text:
     else:
         # Final aggressive cleanup (remove JSON structure)
         # [Detailed cleanup logic]
-    
+
     # Update fallback response with cleaned text
     fallback_response = NarrativeResponse(narrative=cleaned_text, ...)
 ```
@@ -147,9 +147,9 @@ The fix successfully prevents JSON artifacts from reaching the frontend while pr
 
 ## FINAL SUMMARY
 
-**Status**: ✅ COMPLETED - Bug fixed and verified  
-**Commit**: `ebdf24c` - All changes committed to branch  
-**Test Results**: 115/116 tests passing  
+**Status**: ✅ COMPLETED - Bug fixed and verified
+**Commit**: `ebdf24c` - All changes committed to branch
+**Test Results**: 115/116 tests passing
 
 ### What Was Fixed
 - Raw JSON display bug where users saw: `Scene #2: {"narrative": "...", "god_mode_response": "", ...}`

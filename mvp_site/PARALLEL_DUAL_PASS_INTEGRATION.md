@@ -35,8 +35,8 @@ async function handleInteraction(userInput, mode) {
     // Use parallel version if available
     if (window.parallelDualPass) {
         return window.parallelDualPass.handleInteractionParallel(
-            userInput, 
-            mode, 
+            userInput,
+            mode,
             currentCampaignId
         );
     }

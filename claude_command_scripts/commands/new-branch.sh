@@ -136,18 +136,18 @@ git checkout -b "$NEW_BRANCH"
 if [[ "$PUSH_TO_REMOTE" == "true" ]]; then
     echo -e "\n${GREEN}📤 Pushing to remote...${NC}"
     git push -u origin "$NEW_BRANCH"
-    
+
     # Create PR if requested
     if [[ "$CREATE_PR" == "true" ]]; then
         echo -e "\n${GREEN}🔗 Creating pull request...${NC}"
-        
+
         # Generate PR title
         if [[ -n "$BRANCH_TYPE" ]]; then
             pr_title="${BRANCH_TYPE}: ${DESCRIPTION}"
         else
             pr_title="Development branch $(date +%Y-%m-%d)"
         fi
-        
+
         # Create PR
         gh pr create \
             --title "$pr_title" \
@@ -164,12 +164,12 @@ Created by new-branch.sh
 ## Testing
 - [ ] Tests to be added" \
             --base "$FROM_BRANCH"
-            
+
         # Get PR info
         pr_info=$(gh pr list --head "$NEW_BRANCH" --json number,url --limit 1)
         pr_number=$(echo "$pr_info" | jq -r '.[0].number')
         pr_url=$(echo "$pr_info" | jq -r '.[0].url')
-        
+
         echo -e "${GREEN}✅ PR #$pr_number created${NC}"
         echo "  URL: $pr_url"
     fi

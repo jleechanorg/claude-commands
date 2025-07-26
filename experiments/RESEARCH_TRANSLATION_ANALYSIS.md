@@ -14,7 +14,7 @@
 ### 1. **Domain Mismatch**
 **Research focused on**:
 - Specific question-answering tasks
-- Factual accuracy in constrained domains  
+- Factual accuracy in constrained domains
 - Simple input/output relationships
 - Laboratory conditions with artificial tasks
 
@@ -29,7 +29,7 @@
 ### 2. **Hallucination Definition Variance**
 **Research "hallucination"**:
 - Factual inaccuracies in knowledge retrieval
-- Made-up citations or references  
+- Made-up citations or references
 - Fabricated data in specific response formats
 
 **Our "hallucination"**:
@@ -40,7 +40,7 @@
 **Critical Insight**: Different types of "hallucination" may require different prevention strategies.
 
 ### 3. **Task Complexity Scaling Issues**
-**Research tasks**: 
+**Research tasks**:
 - Single-turn responses
 - Clearly defined correct answers
 - Limited scope and context
@@ -188,7 +188,7 @@ Task → "What's the required format?" → Template compliance → Reduced task 
 
 **Why External Research Led Us Astray**:
 1. **Context Mismatch**: Laboratory vs. real-world complexity
-2. **Task Scaling**: Simple constrained tasks vs. complex workflows  
+2. **Task Scaling**: Simple constrained tasks vs. complex workflows
 3. **Definition Variance**: Different types of "hallucination" requiring different solutions
 4. **Cognitive Load Oversight**: Research didn't account for working memory and attention trade-offs
 

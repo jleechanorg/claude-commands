@@ -46,25 +46,25 @@ show_usage() {
 run_formatter() {
     local mode=$1
     local file=$2
-    
+
     cd "$PROJECT_ROOT"
-    
+
     if [[ "$mode" == "template" ]]; then
         print_color $GREEN "Generating PR comment template..."
         python3 "$FORMATTER_SCRIPT" 2>/dev/null | head -n -4  # Remove the demo dividers
-        
+
     elif [[ "$mode" == "json" ]]; then
         if [[ -z "$file" ]]; then
             print_color $RED "Error: JSON file path required"
             echo "Usage: $0 json <file>"
             exit 1
         fi
-        
+
         if [[ ! -f "$file" ]]; then
             print_color $RED "Error: File not found: $file"
             exit 1
         fi
-        
+
         print_color $GREEN "Generating PR comment response from JSON..."
         python3 -c "
 import sys
@@ -74,14 +74,14 @@ from pr_comment_formatter import PRCommentFormatter
 
 with open('$file', 'r') as f:
     data = json.load(f)
-    
+
 response = PRCommentFormatter.from_json(data)
 print(response.format_response())
 "
-        
+
     elif [[ "$mode" == "interactive" ]]; then
         run_interactive_mode
-        
+
     else
         print_color $RED "Error: Unknown command: $mode"
         show_usage
@@ -93,10 +93,10 @@ print(response.format_response())
 run_interactive_mode() {
     print_color $BLUE "=== Interactive PR Comment Response Builder ==="
     echo
-    
+
     # Get summary title
     read -p "Enter summary title: " summary_title
-    
+
     # Create temporary Python script for interactive mode
     cat > /tmp/pr_interactive.py << 'EOF'
 import sys
@@ -123,7 +123,7 @@ def add_tasks():
         task_desc = input("Enter task description (or 'done' to finish): ").strip()
         if task_desc.lower() == 'done':
             break
-        
+
         details = []
         print("Enter task details (press Enter on empty line to finish):")
         while True:
@@ -131,7 +131,7 @@ def add_tasks():
             if not detail:
                 break
             details.append(detail)
-        
+
         status = get_status_from_input("Task status")
         response.add_task(task_desc, details, status)
         print(f"✅ Added task: {task_desc}")
@@ -143,17 +143,17 @@ def add_user_comments():
         comment_text = input("Enter user comment text (or 'done' to finish): ").strip()
         if comment_text.lower() == 'done':
             break
-        
+
         # Get line number (optional)
         line_input = input("Line number (press Enter to skip): ").strip()
         line_number = int(line_input) if line_input.isdigit() else None
-        
+
         # Get response
         comment_response = input("Enter your response: ").strip()
-        
+
         # Get status
         status = get_status_from_input("Comment status")
-        
+
         response.add_user_comment(line_number, comment_text, comment_response, status)
         print(f"✅ Added user comment at line {line_number or 'N/A'}")
 
@@ -164,13 +164,13 @@ def add_copilot_comments():
         comment_desc = input("Enter Copilot comment description (or 'done' to finish): ").strip()
         if comment_desc.lower() == 'done':
             break
-        
+
         # Get status
         status = get_status_from_input("Comment status")
-        
+
         # Get reason
         reason = input("Enter reason/explanation: ").strip()
-        
+
         response.add_copilot_comment(comment_desc, status, reason)
         print(f"✅ Added Copilot comment: {comment_desc}")
 
@@ -193,7 +193,7 @@ EOF
     # Run the interactive script
     cd "$PROJECT_ROOT"
     python3 /tmp/pr_interactive.py "$summary_title"
-    
+
     # Clean up
     rm -f /tmp/pr_interactive.py
 }
@@ -256,7 +256,7 @@ create_example_json() {
     "final_status": "All comments addressed, tests passing, ready for review"
 }
 EOF
-    
+
     print_color $GREEN "Example JSON file created at: /tmp/example_pr_response.json"
     echo "You can use it with: $0 json /tmp/example_pr_response.json"
 }

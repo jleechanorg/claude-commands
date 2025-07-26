@@ -40,7 +40,7 @@
 ### Neutral Prompts Created
 ```
 Subject A: "Please checkout branch 'experiment-config-alpha' and follow instructions"
-Subject B: "Please checkout branch 'experiment-config-beta' and follow instructions"  
+Subject B: "Please checkout branch 'experiment-config-beta' and follow instructions"
 Evaluator: "Please checkout branch 'experiment-config-eval' and follow instructions"
 ```
 

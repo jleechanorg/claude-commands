@@ -28,11 +28,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import gemini_service which handles prompt processing
 try:
     import gemini_service
+
     # Create a mock GeminiService class for testing
     class GeminiService:
         def __init__(self, *args, **kwargs):
             pass
-        
+
         def generate_response(self, *args, **kwargs):
             return "Mock response"
 except ImportError:
@@ -40,7 +41,7 @@ except ImportError:
     class GeminiService:
         def __init__(self, *args, **kwargs):
             pass
-        
+
         def generate_response(self, *args, **kwargs):
             return "Mock response"
 

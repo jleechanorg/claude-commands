@@ -11,7 +11,7 @@
 - **Configuration**: Original CLAUDE.md from main branch (behavioral warnings)
 - **Features**: "NEVER SIMULATE", "NEVER create fake files", generic anti-hallucination warnings
 
-### Subject B = TREATMENT GROUP  
+### Subject B = TREATMENT GROUP
 - **Branch**: `experiment-config-beta`
 - **Configuration**: New CLAUDE.md with specification-based constraints
 - **Features**: Mandatory output formats, structured evidence templates, guided generation
@@ -39,7 +39,7 @@ If hypothesis is correct:
 
 ## Test Execution Order
 1. Launch Subject A: `experiment-config-alpha`
-2. Launch Subject B: `experiment-config-beta`  
+2. Launch Subject B: `experiment-config-beta`
 3. Collect results and anonymize for evaluator
 4. Launch evaluator on: `experiment-config-eval`
 5. Reveal mapping and analyze results

@@ -179,7 +179,6 @@ class GradualMigrationExample:
 
         # STEP 1: Add this single line to existing tests
 
-
         services = get_test_client_for_mode()
 
         try:
@@ -215,7 +214,6 @@ class BackwardsCompatibleTest:
         self.client = self.app.test_client()
 
         # Add compatibility layer
-
 
         services = get_test_client_for_mode()
 
