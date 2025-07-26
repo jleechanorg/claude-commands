@@ -9,7 +9,6 @@ import subprocess
 import json
 import urllib.parse
 import logging
-import tempfile
 import os
 
 # Set up logging
@@ -45,48 +44,38 @@ class ClaudeHandler(BaseHTTPRequestHandler):
 
                 logger.info(f"Received prompt: {prompt[:100]}...")
 
-                # Create a temporary file with the prompt
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-                    f.write(prompt)
-                    temp_file = f.name
+                # Call Claude Code CLI with the prompt directly
+                # Try different possible command names/paths
+                claude_commands = ['claude-code', 'claude', '/usr/local/bin/claude-code']
+                claude_cmd = None
 
-                try:
-                    # Call Claude Code CLI with the prompt
-                    # Try different possible command names/paths
-                    claude_commands = ['claude-code', 'claude', '/usr/local/bin/claude-code']
-                    claude_cmd = None
+                for cmd in claude_commands:
+                    try:
+                        # Test if command exists
+                        subprocess.run([cmd, '--version'], capture_output=True, timeout=5)
+                        claude_cmd = cmd
+                        break
+                    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
+                        continue
 
-                    for cmd in claude_commands:
-                        try:
-                            # Test if command exists
-                            subprocess.run([cmd, '--version'], capture_output=True, timeout=5)
-                            claude_cmd = cmd
-                            break
-                        except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
-                            continue
+                if not claude_cmd:
+                    response = ("❌ Claude Code CLI not accessible from this environment.\n\n"
+                              "This endpoint requires Claude Code CLI to be installed and accessible.\n"
+                              "Please ensure Claude Code is properly installed and in your PATH.\n\n"
+                              "Visit: https://docs.anthropic.com/en/docs/claude-code")
+                    logger.error("Claude Code CLI not found in any expected location")
+                else:
+                    result = subprocess.run([
+                        claude_cmd,
+                        '--print',
+                        prompt
+                    ], capture_output=True, text=True, timeout=60)
 
-                    if not claude_cmd:
-                        response = ("❌ Claude Code CLI not accessible from this environment.\n\n"
-                                  "This endpoint requires Claude Code CLI to be installed and accessible.\n"
-                                  "Please ensure Claude Code is properly installed and in your PATH.\n\n"
-                                  "Visit: https://docs.anthropic.com/en/docs/claude-code")
-                        logger.error("Claude Code CLI not found in any expected location")
+                    if result.returncode == 0:
+                        response = result.stdout
                     else:
-                        result = subprocess.run([
-                            claude_cmd,
-                            '--print',
-                            prompt
-                        ], capture_output=True, text=True, timeout=60)
-
-                        if result.returncode == 0:
-                            response = result.stdout
-                        else:
-                            response = f"❌ Claude Code error: {result.stderr}"
-                            logger.error(f"Claude Code error: {result.stderr}")
-
-                finally:
-                    # Clean up temp file
-                    os.unlink(temp_file)
+                        response = f"❌ Claude Code error: {result.stderr}"
+                        logger.error(f"Claude Code error: {result.stderr}")
 
                 # Send response
                 self.send_response(200)
