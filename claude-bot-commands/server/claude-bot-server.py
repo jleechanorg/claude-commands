@@ -44,20 +44,21 @@ class ClaudeHandler(BaseHTTPRequestHandler):
 
                 logger.info(f"Received prompt: {prompt[:100]}...")
 
-                # Call Claude Code CLI with environment awareness
+                # ⚠️ WARNING: DO NOT ADD HARDCODED COMMAND PARSING PATTERNS! ⚠️
+                # ❌ NEVER use if/elif patterns to parse commands like:
+                # ❌ if prompt.lower() in ['hello', 'hi']:
+                # ❌ elif 'help' in prompt.lower():
+                # ❌ elif '2+2' in prompt:
+                # This creates fake implementations that are forbidden!
+
+                # Try Claude CLI with EBADF error fixes
+                logger.info("Attempting Claude CLI with EBADF fixes")
+
                 try:
-                    # Detect testing environment
-                    is_testing = (os.getenv('TESTING') == 'true' or
-                                os.getenv('CI') == 'true' or
-                                'test' in __file__.lower())
-
-                    # Use shorter timeout in testing environments
-                    timeout = 3 if is_testing else 15
-
-                    # Try to find Claude Code CLI
+                    # EBADF Fix 1: Find Claude CLI path
                     claude_cmd = None
                     possible_paths = [
-                        os.path.expanduser('~/.claude/local/claude'),  # User-specific path first
+                        os.path.expanduser('~/.claude/local/claude'),  # User-specific installation
                         '/usr/local/bin/claude',
                         '/opt/homebrew/bin/claude',
                         'claude'  # In PATH
@@ -65,38 +66,50 @@ class ClaudeHandler(BaseHTTPRequestHandler):
 
                     for cmd_path in possible_paths:
                         try:
+                            # Test if command exists
                             result = subprocess.run([cmd_path, '--version'],
-                                                  capture_output=True, text=True, timeout=2)
+                                                  capture_output=True, text=True, timeout=5)
                             if result.returncode == 0:
                                 claude_cmd = cmd_path
-                                logger.info(f"Found Claude CLI at: {cmd_path}")
+                                logger.info(f"Found Claude CLI: {cmd_path}")
                                 break
                         except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
                             continue
 
-                    if claude_cmd:
-                        # Use Claude CLI with appropriate timeout
-                        logger.info(f"Calling Claude CLI with timeout: {timeout}s")
-                        result = subprocess.run([claude_cmd, prompt],
-                                              capture_output=True, text=True, timeout=timeout, check=False)
+                    if not claude_cmd:
+                        response = ("❌ Claude CLI not found. Please ensure Claude Code is installed.\n\n"
+                                  "Visit: https://docs.anthropic.com/en/docs/claude-code")
+                        logger.error("Claude CLI not found in any location")
+                    else:
+                        # EBADF Fix 2: Environment cleanup
+                        env = os.environ.copy()
+                        # Remove NODE_CHANNEL_FD which causes EBADF errors
+                        env.pop('NODE_CHANNEL_FD', None)
+
+                        # EBADF Fix 3: Proper subprocess with stdin/stdout/stderr handling
+                        result = subprocess.run(
+                            [claude_cmd, prompt],
+                            capture_output=True,
+                            text=True,
+                            timeout=30,
+                            env=env,
+                            stdin=subprocess.DEVNULL,  # Prevent stdin issues
+                            check=False
+                        )
+
                         if result.returncode == 0 and result.stdout.strip():
                             response = result.stdout.strip()
-                            logger.info(f"Claude CLI response received: {len(response)} chars")
+                            logger.info(f"Claude CLI success: {len(response)} chars")
                         else:
-                            response = "❌ Error: Claude CLI execution failed or returned empty response"
-                            logger.error(f"Claude CLI error: {result.stderr}")
-                    else:
-                        response = ("❌ Error: Claude Code CLI not found.\n\n"
-                                  "Please ensure Claude Code is properly installed and in your PATH.\n\n"
-                                  "Visit: https://docs.anthropic.com/en/docs/claude-code")
-                        logger.error("Claude Code CLI not found in any expected location")
+                            response = f"❌ Claude CLI error (exit {result.returncode}): {result.stderr.strip()}"
+                            logger.error(f"Claude CLI failed: {result.stderr}")
 
                 except subprocess.TimeoutExpired:
-                    response = f"❌ Error: Claude CLI timed out after {timeout}s (testing environment detected)"
-                    logger.error(f"Claude CLI timeout after {timeout}s")
+                    response = "❌ Claude CLI timed out after 30 seconds"
+                    logger.error("Claude CLI timeout")
                 except Exception as e:
-                    response = f"❌ Error calling Claude: {str(e)}"
-                    logger.error(f"Exception calling Claude: {e}")
+                    response = f"❌ Error calling Claude CLI: {str(e)}"
+                    logger.error(f"Claude CLI exception: {e}")
 
                 # Send response
                 self.send_response(200)
