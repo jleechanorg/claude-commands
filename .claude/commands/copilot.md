@@ -442,10 +442,9 @@ PHASE 4: DIRECT EXECUTION
 > 1. Running /commentfetch 123...
 >    ✅ Found 5 comments → branch-specific directory
 >
-> 2. Running comprehensive merge readiness check...
->    ✅ CI Status: PASSING - 3 checks passed
->    🔄 Mergeable Status: MERGEABLE - No conflicts detected
->    🔍 Cross-check: ✅ CI and mergeable both green - ready to proceed
+> 2. Running /fixpr 123...
+>    ✅ Claude reads fixpr.md and checks CI status
+>    ✅ No failures or conflicts found
 >
 > 3. Analyzing comments (100% coverage):
 >    - @user "Fix pagination" - NOT DONE
@@ -473,10 +472,10 @@ PHASE 4: DIRECT EXECUTION
 > 1. Running /commentfetch 456...
 >    ✅ Found 3 comments → branch-specific directory
 >
-> 2. Running comprehensive merge readiness check...
->    ✅ CI Status: FAILING - 2 failures detected
->    🔄 Mergeable Status: MERGEABLE - No conflicts detected
->    🔍 Cross-check: ⚠️ CI failing but mergeable - need to fix CI issues
+> 2. Running /fixpr 456...
+>    ✅ Claude reads fixpr.md and analyzes CI
+>    - GitHub CI: 2 failures detected
+>    - Analyzing failure patterns...
 >
 >    ## 🔧 Planned Fixes:
 >    1. **Test failure in test_auth.py**: Missing import statement
@@ -537,10 +536,10 @@ PHASE 4: DIRECT EXECUTION
 >    - 8 need responses (NOT DONE)
 >    - 4 informational (DONE)
 >
-> 2. Running comprehensive merge readiness check...
->    ✅ CI Status: PASSING - All 4 checks passed
->    🔄 Mergeable Status: CONFLICTING - 2 files have conflicts
->    🚨 FALSE CONFIDENCE DETECTED: CI passes but cannot merge!
+> 2. Running /fixpr 789...
+>    ✅ Collected comprehensive data:
+>    - GitHub CI: 3 failures, 1 timeout
+>    - Local CI: 2 failures reproduced
 >    📋 Resolution required: main.py, config.yaml have merge conflicts
 >
 > 3. Intelligent Analysis Phase:
