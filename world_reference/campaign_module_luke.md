@@ -22,16 +22,16 @@ This campaign is pure improvisation. There is no pre-written plot. Your choiceâ€
 
 **Your Character:**
 
-* **Name:** Luke Skywalker  
-* **Age:** 19  
-* **Class:** Level 1 Jedi Padawan  
+* **Name:** Luke Skywalker
+* **Age:** 19
+* **Class:** Level 1 Jedi Padawan
 * **Background:** You are at your absolute lowest point. You are physically maimed, emotionally shattered, and your entire understanding of yourself and your place in the galaxy has been upended. You are no longer just a farm boy or a hero pilot. You are the son of Darth Vader, and you must now decide what that means.
 
 **Gear:**
 
-* A tattered, dirty, and worn Bespin fatigue uniform.  
-* Your DL-44 blaster pistol is lost.  
-* Your father's lightsaber is lost.  
+* A tattered, dirty, and worn Bespin fatigue uniform.
+* Your DL-44 blaster pistol is lost.
+* Your father's lightsaber is lost.
 * You have nothing but the clothes on your back and a choice.
 
 **Starting Abilities:** Your connection to the Force is raw and untamed, heightened by your pain and emotional turmoil. You have access to basic abilities like **Force Push**, **Force Pull**, and a desperate, unfocused ability to **sense the feelings of others**. You are a survivor, not yet a knight.
@@ -58,15 +58,15 @@ You are now caught between three powerful and morally grey destinies. Do you uph
 
 **Your Character:**
 
-* **Name:** Luke Skywalker  
-* **Age:** 21  
-* **Class:** Level 1 Dark Jedi / Sith Apprentice  
+* **Name:** Luke Skywalker
+* **Age:** 21
+* **Class:** Level 1 Dark Jedi / Sith Apprentice
 * **Background:** Torn between two worlds. For two years, you have learned the ways of the Sith, embracing the power that comes from passion and control. You have brought planets to heel and hunted your former allies. Yet, you secretly visit your mother's tomb on Naboo and meditate on the memory of Ben Kenobi. You believe you can save your father from the Emperor, but you fear that in doing so, you are becoming the very thing you once fought against.
 
 **Gear:**
 
-* **Vader's Gift:** A new lightsaber with a synthesized crimson blade. Its hilt is sleek and militaristic, but inside, you have secretly placed a small shard of the kyber crystal from your father's original blue lightsaber.  
-* **Imperial Command Uniform:** A perfectly tailored, black officer's uniform.  
+* **Vader's Gift:** A new lightsaber with a synthesized crimson blade. Its hilt is sleek and militaristic, but inside, you have secretly placed a small shard of the kyber crystal from your father's original blue lightsaber.
+* **Imperial Command Uniform:** A perfectly tailored, black officer's uniform.
 * **Personal TIE Defender:** An advanced, prototype starfighter gifted to you for your command.
 
 **Starting Abilities:** You begin with core Force powers like **Force Push** and **Saber Throw**, but taught with an emphasis on aggression. Vader has also begun teaching you the initial stages of powers like **Force Choke**, which you are reluctant to use, and you retain your innate talent for **Mind Trick**, which you now use with a colder, more manipulative edge.
@@ -95,15 +95,15 @@ You are now caught between two desperate and conflicting paths of the light. Do 
 
 **Your Character:**
 
-* **Name:** Luke Skywalker  
-* **Age:** 20  
-* **Class:** Level 1 Jedi Knight  
+* **Name:** Luke Skywalker
+* **Age:** 20
+* **Class:** Level 1 Jedi Knight
 * **Background:** You are a hero burdened by a terrible legacy. You are the son of the galaxy's greatest monster, and you now fear the darkness within yourself. The Jedi code feels like a fragile shield against the immense power and rage you feel stirring in your blood. You are desperate to save your friends and the galaxy, but you no longer know if the path of your teachers is the right one, or if you must forge a new one.
 
 **Gear:**
 
-* **Anakin's Lightsaber:** The iconic blue-bladed weapon, now repaired after your duel on Bespin. It feels both like a heroic legacy and a cursed inheritance.  
-* **Flight Suit:** Your familiar, worn X-Wing pilot's flight suit.  
+* **Anakin's Lightsaber:** The iconic blue-bladed weapon, now repaired after your duel on Bespin. It feels both like a heroic legacy and a cursed inheritance.
+* **Flight Suit:** Your familiar, worn X-Wing pilot's flight suit.
 * **X-Wing Starfighter:** Parked in a nearby swamp, a symbol of your connection to the Rebellion and your life as a soldier.
 
 **Starting Abilities:** You possess the core abilities of a Jedi Knight: **Force Push/Pull**, **Mind Trick**, and the ability to **deflect blaster bolts**. Yoda has taught you the basics of **Lightsaber Form V (Shien/Djem So)**, an aggressive style that now feels dangerously close to your father's. You have a natural, untrained talent for empathy and sensing the feelings of others.
@@ -111,4 +111,3 @@ You are now caught between two desperate and conflicting paths of the light. Do 
 ---
 
 Please choose which of the three campaignsâ€”**The Chasm**, **The Emperor's Fist**, **The Jedi's Shadow**, you would like to begin.
-

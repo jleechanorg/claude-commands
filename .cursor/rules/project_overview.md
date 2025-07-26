@@ -26,7 +26,7 @@ WorldArchitect.AI is an AI-powered tabletop RPG platform that serves as a digita
 
 The platform uses three specialized AI personas:
 - **Narrative Flair**: Storytelling and character development
-- **Mechanical Precision**: Rules and game mechanics  
+- **Mechanical Precision**: Rules and game mechanics
 - **Calibration Rigor**: Game balance and design
 
 System instructions are stored in `prompts/` directory with MBTI personality definitions in `prompts/personalities/`.
@@ -45,7 +45,7 @@ worldarchitect.ai/
 ├── mvp_site/                    # Main application
 │   ├── main.py                  # Flask routes and application factory
 │   ├── game_state.py           # Core state management
-│   ├── gemini_service.py       # AI service integration  
+│   ├── gemini_service.py       # AI service integration
 │   ├── firestore_service.py    # Database layer
 │   ├── document_generator.py   # Export functionality
 │   ├── constants.py            # Shared constants
@@ -144,7 +144,7 @@ if isinstance(item, dict):
 
 ## Key Constraints
 
-- **AI Models**: 
+- **AI Models**:
   - DEFAULT_MODEL = 'gemini-2.5-flash'
   - LARGE_CONTEXT_MODEL = 'gemini-2.5-pro'
   - TEST_MODEL = 'gemini-1.5-flash'

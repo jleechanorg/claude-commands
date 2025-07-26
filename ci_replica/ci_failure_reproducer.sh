@@ -106,24 +106,24 @@ case $ISOLATION_MODE in
         print_isolate "Full isolation mode: Creating complete isolated environment"
         mkdir -p "$ISOLATION_DIR"
         cd "$ISOLATION_DIR"
-        
+
         # Copy entire project to isolation directory
         print_info "Copying project to isolation directory..."
         cp -r "$PROJECT_ROOT"/* . 2>/dev/null || true
         cp -r "$PROJECT_ROOT"/.* . 2>/dev/null || true
-        
+
         # Remove any existing virtual environments
         rm -rf venv .venv env
-        
+
         print_success "Project copied to isolated environment"
         ;;
-        
+
     "partial")
         print_isolate "Partial isolation mode: Using original directory with environment isolation"
         cd "$PROJECT_ROOT"
         rm -rf venv .venv env
         ;;
-        
+
     "minimal")
         print_isolate "Minimal isolation mode: Clean virtual environment only"
         cd "$PROJECT_ROOT"
@@ -179,7 +179,7 @@ if [ "$PYTHON_VERSION" = "3.11" ]; then
         print_success "Using Python 3.11 (exact CI match)"
     else
         print_warning "Python 3.11 not found, checking for alternatives..."
-        
+
         # Try to install python3.11 if possible
         if command -v apt-get &> /dev/null && [ "$SKIP_SYSTEM_PACKAGES" = false ]; then
             print_info "Attempting to install Python 3.11..."

@@ -194,7 +194,7 @@ gh pr review {pull_number} --request-changes --body "Please address the security
 
 ### ❌ MUST REMOVE:
 1. **fixpr.py** - Lines 304-307: `if 'pagination' in body` pattern matching
-2. **fixpr.py** - Line 227: `if 'should be' in body` pattern matching  
+2. **fixpr.py** - Line 227: `if 'should be' in body` pattern matching
 3. **commentfetch.py** - Line 194: `if '?' in body` question detection
 4. **Any function** that analyzes text with string matching
 
@@ -211,7 +211,7 @@ gh pr review {pull_number} --request-changes --body "Please address the security
    # WRONG:
    if 'keyword' in comment:
        do_something()
-   
+
    # RIGHT:
    claude_response = get_claude_analysis(comment)
    act_on_claude_response(claude_response)
@@ -223,10 +223,10 @@ def get_claude_analysis(text: str, context: str) -> dict:
     """Get Claude's genuine analysis of text."""
     prompt = f"""
     Analyze this comment and determine what action is needed:
-    
+
     Context: {context}
     Comment: {text}
-    
+
     Respond with JSON:
     {{
         "needs_action": true/false,
@@ -235,23 +235,23 @@ def get_claude_analysis(text: str, context: str) -> dict:
         "confidence": 0.0-1.0
     }}
     """
-    
+
     # Create temp file with prompt
     with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
         f.write(prompt)
         prompt_file = f.name
-    
+
     # Call Claude CLI
     result = subprocess.run(
-        ['claude', prompt_file], 
-        capture_output=True, 
+        ['claude', prompt_file],
+        capture_output=True,
         text=True
     )
-    
+
     # Parse response
     response = json.loads(result.stdout)
     os.unlink(prompt_file)
-    
+
     return response
 ```
 

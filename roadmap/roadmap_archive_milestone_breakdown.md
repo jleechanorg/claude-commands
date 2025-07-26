@@ -1,8 +1,8 @@
 # WorldArchitect.AI Roadmap Archive - Detailed Milestone Breakdown
 
-**Archived**: 2025-01-07  
-**Source**: Lines 542-775 from roadmap.md  
-**Purpose**: Preserve detailed milestone planning while keeping main roadmap focused  
+**Archived**: 2025-01-07
+**Source**: Lines 542-775 from roadmap.md
+**Purpose**: Preserve detailed milestone planning while keeping main roadmap focused
 
 ## Detailed Milestone Breakdown
 

@@ -30,20 +30,20 @@ For each iteration:
    - Execute comprehensive fake code audit
    - Parse results to identify issues
    - Categorize by severity (🔴 Critical, 🟡 Suspicious, ✅ Verified)
-   
+
 2. **Apply Fixes**
    - Remove fake files marked for deletion
    - Replace placeholder comments with real implementations
    - Consolidate duplicate implementations
    - Fix mock/demo functions to real functionality
    - Verify integration points connect properly
-   
+
 3. **Test Fixes**
    - Run appropriate test suite for changed files
    - Verify no new failures introduced
    - Check integration still works
    - Document test results
-   
+
 4. **Update Progress**
    - Write iteration summary to scratchpad
    - Track: files fixed, issues resolved, tests passed
@@ -131,17 +131,17 @@ The LLM performs the following steps for each iteration:
    - Search for implementation in similar files
    - Generate minimal working implementation
    - Add proper error handling
-   
+
 2. **Mock Functions**
    - Connect to real services/APIs
    - Replace hardcoded data with dynamic values
    - Add configuration for endpoints
-   
+
 3. **Duplicate Implementations**
    - Identify canonical implementation
    - Update imports to use shared version
    - Remove redundant code
-   
+
 4. **Demo Files**
    - Assess if functionality needed
    - Either implement properly or remove

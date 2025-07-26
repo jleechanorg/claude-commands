@@ -92,11 +92,11 @@ from orchestration.agent_system import AgentBase
 
 class OrchestrationA2AServer(A2AServer):
     """Real A2A server for orchestrator framework"""
-    
+
     def __init__(self, redis_broker: MessageBroker):
         super().__init__()
         self.redis_broker = redis_broker
-        
+
     async def handle_task(self, task: A2ATask) -> A2AResponse:
         # Bridge A2A tasks to Redis-based agents
         # Return real A2A responses
@@ -108,14 +108,14 @@ class OrchestrationA2AServer(A2AServer):
 from a2a_sdk import A2AClient
 
 class AgentBase:
-    def __init__(self, agent_id: str, agent_type: str, broker: MessageBroker, 
+    def __init__(self, agent_id: str, agent_type: str, broker: MessageBroker,
                  enable_a2a: bool = True):
         self.a2a_client = A2AClient() if enable_a2a else None
-        
+
     async def discover_a2a_agents(self, capability: str) -> List[A2AAgent]:
         """Discover external A2A agents by capability"""
         # Use real A2A discovery protocol
-        
+
     async def send_a2a_task(self, agent_url: str, task_data: dict) -> dict:
         """Send task to external A2A agent"""
         # Use real A2A task protocol
@@ -126,10 +126,10 @@ class AgentBase:
 ```python
 class RedisA2ABridge:
     """Bridge between Redis orchestrator and A2A protocol"""
-    
+
     def redis_to_a2a(self, redis_message: TaskMessage) -> A2AMessage:
         """Convert Redis format to A2A protocol"""
-        
+
     def a2a_to_redis(self, a2a_message: A2AMessage) -> TaskMessage:
         """Convert A2A protocol to Redis format"""
 ```
@@ -159,7 +159,7 @@ async def delegate_to_external_agent(task: dict, agent_url: str):
 ```python
 class A2AWorkflowEngine:
     """Execute workflows across real A2A agents"""
-    
+
     async def execute_distributed_workflow(self, workflow: WorkflowDefinition):
         """Execute workflow using both internal and external A2A agents"""
 ```
@@ -289,7 +289,7 @@ orchestration/
 - [ ] Real A2A agent discoverable by external clients
 - [ ] Task sending/receiving working with real protocol
 
-### Post-Implementation  
+### Post-Implementation
 - [ ] External A2A agents can discover our orchestrator
 - [ ] Tasks sent through real A2A protocol execute successfully
 - [ ] Error scenarios tested with real A2A error responses

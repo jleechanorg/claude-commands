@@ -1,5 +1,5 @@
 /* Fantasy Theme */
-[data-theme="fantasy"] {
+[data-theme='fantasy'] {
   --primary-bg: #2c1810;
   --secondary-bg: #3d2318;
   --navbar-bg: #3d2318;
@@ -7,33 +7,37 @@
   --input-bg: #3d2318;
   --hover-bg: #4a2a1c;
   --overlay-bg: rgba(44, 24, 16, 0.9);
-  
+
   --text-primary: #d4af37;
   --text-secondary: #cd853f;
   --text-on-accent: #2c1810;
-  
+
   --accent-color: #daa520;
   --accent-color-alpha: rgba(218, 165, 32, 0.25);
-  
+
   --border-color: #8b4513;
-  
+
   --btn-primary-bg: #daa520;
   --btn-secondary-bg: #8b4513;
   --btn-success-bg: #9acd32;
   --btn-danger-bg: #dc143c;
 }
 
-[data-theme="fantasy"] .navbar-brand {
+[data-theme='fantasy'] .navbar-brand {
   font-family: 'Serif', Georgia, serif;
   font-weight: bold;
 }
 
-[data-theme="fantasy"] #story-content {
+[data-theme='fantasy'] #story-content {
   font-family: 'Serif', Georgia, serif;
-  background-image: linear-gradient(45deg, transparent 25%, rgba(139, 69, 19, 0.1) 25%);
+  background-image: linear-gradient(
+    45deg,
+    transparent 25%,
+    rgba(139, 69, 19, 0.1) 25%
+  );
 }
 
-[data-theme="fantasy"] .planning-block-header {
+[data-theme='fantasy'] .planning-block-header {
   background-color: rgba(139, 69, 19, 0.2);
   border-left-color: #8b4513;
   color: #daa520;

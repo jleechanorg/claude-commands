@@ -19,14 +19,14 @@
 
 ### Files to Investigate
 - mvp_site/entity_utils.py (PR #496 new file) ✅
-- mvp_site/dual_pass_generator.py (PR #496 modified) ✅ 
+- mvp_site/dual_pass_generator.py (PR #496 modified) ✅
 - mvp_site/entity_validator.py (PR #496 modified) ✅
 - mvp_site/narrative_sync_validator.py ❌ **NOT FIXED BY PR #496**
 - Current game state/entity tracking usage
 - Error logs showing "Missing entities: ['Unknown']" ✅ Found source
 
 ### ROOT CAUSE IDENTIFIED
-- PR #496 fixed `dual_pass_generator.py` and `entity_validator.py` 
+- PR #496 fixed `dual_pass_generator.py` and `entity_validator.py`
 - But `NarrativeSyncValidator` in `narrative_sync_validator.py` was missed
 - This validator is used in `gemini_service.py` lines 604 and 1382
 - It does NOT filter out "Unknown" entities like the other validators do
@@ -42,7 +42,7 @@
 
 **Files Modified by PR #496**: ✅ All work correctly
 - `dual_pass_generator.py` - filters Unknown in line 5+ addition
-- `entity_validator.py` - filters Unknown in line 4+ addition  
+- `entity_validator.py` - filters Unknown in line 4+ addition
 - `entity_utils.py` - NEW file with filter_unknown_entities() function
 
 **File Missed by PR #496**: ❌ Still broken
@@ -81,7 +81,7 @@
 
 **Summary of Achievement:**
 ✅ **Root Cause Fixed**: "Unknown" entity warnings eliminated by centralizing filtering
-✅ **Architecture Improved**: Eliminated entity logic duplication across 3 validators  
+✅ **Architecture Improved**: Eliminated entity logic duplication across 3 validators
 ✅ **Single Source of Truth**: EntityValidator now handles all entity presence logic
 ✅ **Delegation Pattern**: NarrativeSyncValidator and DualPassGenerator delegate properly
 ✅ **No Regressions**: All tests passing, backward compatibility maintained
@@ -110,7 +110,7 @@
 **Critical Findings:**
 - **5 critical missing dependencies** identified:
   1. **requests** - HTTP testing (HIGH PRIORITY)
-  2. **playwright** - Browser automation (HIGH PRIORITY) 
+  2. **playwright** - Browser automation (HIGH PRIORITY)
   3. **beautifulsoup4** - HTML parsing (MEDIUM)
   4. **psutil** - Process management (MEDIUM)
   5. **PyJWT** - Authentication testing (MEDIUM)
@@ -119,7 +119,7 @@
 
 **Phase 2: Dependency Audit (✅ COMPLETE)**
 - ✅ Added all 5 critical missing dependencies to requirements.txt
-- ✅ Local tests continue to pass (20/20)  
+- ✅ Local tests continue to pass (20/20)
 - ✅ Dependencies committed and pushed
 
 **Phase 3: Systematic Fixes (✅ COMPLETE)**

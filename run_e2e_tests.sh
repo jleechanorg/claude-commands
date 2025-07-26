@@ -6,7 +6,7 @@
 #
 # Usage:
 #   TEST_MODE=mock ./run_e2e_tests.sh     # Mock services (default)
-#   TEST_MODE=real ./run_e2e_tests.sh     # Real services 
+#   TEST_MODE=real ./run_e2e_tests.sh     # Real services
 #   TEST_MODE=capture ./run_e2e_tests.sh  # Real services with data capture
 #
 # Or via slash commands:
@@ -55,7 +55,7 @@ case "$TEST_MODE" in
     "mock")
         print_status "📱 Mock Mode: Using MockServiceProvider (fast, free)"
         ;;
-    "real") 
+    "real")
         print_status "🌐 Real Mode: Using RealServiceProvider (costs money)"
         ;;
     "capture")
@@ -77,19 +77,19 @@ fi
 # Validate environment for real/capture modes
 if [[ "$TEST_MODE" == "real" || "$TEST_MODE" == "capture" ]]; then
     print_status "Validating real service configuration..."
-    
+
     # Check for required environment variables
     missing_vars=()
-    
+
     if [[ -z "$GEMINI_API_KEY" ]]; then
         missing_vars+=("GEMINI_API_KEY")
     fi
-    
+
     if [[ -z "$TEST_FIRESTORE_PROJECT" ]]; then
         print_warning "TEST_FIRESTORE_PROJECT not set, using default: worldarchitect-test"
         export TEST_FIRESTORE_PROJECT="worldarchitect-test"
     fi
-    
+
     if [[ ${#missing_vars[@]} -gt 0 ]]; then
         print_error "Missing required environment variables for $TEST_MODE mode:"
         for var in "${missing_vars[@]}"; do
@@ -101,7 +101,7 @@ if [[ "$TEST_MODE" == "real" || "$TEST_MODE" == "capture" ]]; then
         print_error "  export TEST_FIRESTORE_PROJECT=your_test_project  # optional"
         exit 1
     fi
-    
+
     print_success "Real service configuration validated"
     print_status "Firestore Project: $TEST_FIRESTORE_PROJECT"
     print_status "Gemini API Key: ${GEMINI_API_KEY:0:10}***"
@@ -112,7 +112,7 @@ if [[ "$TEST_MODE" == "capture" ]]; then
     CAPTURE_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
     CAPTURE_DIR="/tmp/test_captures/$CAPTURE_TIMESTAMP"
     export TEST_CAPTURE_DIR="$CAPTURE_DIR"
-    
+
     print_status "Setting up data capture..."
     mkdir -p "$CAPTURE_DIR"
     print_status "Capture directory: $CAPTURE_DIR"
@@ -202,14 +202,14 @@ if [[ "$TEST_MODE" == "real" || "$TEST_MODE" == "capture" ]]; then
         print_warning "  - All service interactions will be captured and stored"
     fi
     echo ""
-    
+
     read -p "Continue with $TEST_MODE mode testing? (y/N): " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         print_error "Testing cancelled by user"
         exit 1
     fi
-    
+
     print_success "Proceeding with $TEST_MODE mode testing"
     echo ""
 fi
@@ -227,7 +227,7 @@ failed_test_files=()
 for test_file in "${e2e_test_files[@]}"; do
     if [ -f "$test_file" ]; then
         print_status "Running: $test_file"
-        
+
         if python "$test_file"; then
             print_success "✅ $test_file"
             passed_tests=$((passed_tests + 1))
@@ -267,13 +267,13 @@ if [[ "$TEST_MODE" == "capture" ]]; then
     print_status "📡 Data Capture Summary"
     echo "========================"
     print_status "Capture directory: $TEST_CAPTURE_DIR"
-    
+
     if [[ -d "$TEST_CAPTURE_DIR" && "$(ls -A "$TEST_CAPTURE_DIR" 2>/dev/null)" ]]; then
         print_status "Captured files:"
         ls -la "$TEST_CAPTURE_DIR/" | tail -n +2 | while read -r line; do
             print_status "  $line"
         done
-        
+
         echo ""
         print_status "💡 Next steps:"
         print_status "1. Review captured data in $TEST_CAPTURE_DIR"
@@ -289,7 +289,7 @@ fi
 if [[ "$TEST_MODE" == "real" || "$TEST_MODE" == "capture" ]]; then
     echo ""
     print_status "🧹 Running test data cleanup..."
-    
+
     # Attempt to run cleanup via TestServiceProvider
     if python -c "
 from testing_framework import get_current_provider

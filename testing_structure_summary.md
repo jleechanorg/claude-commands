@@ -6,7 +6,7 @@
 - **Purpose**: REAL browser automation using Playwright
 - **Technology**: Playwright, Selenium
 - **What it does**: Launches actual browsers, clicks real buttons, fills real forms
-- **Commands**: 
+- **Commands**:
   - `/testui` - Browser tests with mock APIs (free)
   - `/testuif` - Browser tests with REAL APIs (costs money)
 - **Files**:
@@ -18,7 +18,7 @@
 - **Purpose**: Direct HTTP API testing
 - **Technology**: requests library
 - **What it does**: Makes HTTP requests to test endpoints directly
-- **Commands**: 
+- **Commands**:
   - `/testhttp` - HTTP tests with mock APIs (free)
   - `/testhttpf` - HTTP tests with REAL APIs (costs money)
 - **Files**:

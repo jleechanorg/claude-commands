@@ -106,7 +106,7 @@ The command orchestrates multiple analysis tools:
 ## When to Use
 
 - Major architectural changes
-- High-risk implementations  
+- High-risk implementations
 - Performance-critical code
 - Security-sensitive features
 - Complex integrations

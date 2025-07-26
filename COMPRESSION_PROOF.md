@@ -2,7 +2,7 @@
 
 ## Overview
 - **Original**: 811 lines
-- **Compressed**: 213 lines  
+- **Compressed**: 213 lines
 - **Reduction**: 74% (598 lines removed)
 - **Compression Ratio**: 3.8:1
 
@@ -10,7 +10,7 @@
 
 ### 1. **Duplicate Git Workflow Sections**
 *Note: Line numbers below refer to the original CLAUDE.md file*
-- Lines 163-281 (first occurrence) 
+- Lines 163-281 (first occurrence)
 - Lines 265-293 (duplicate) - REMOVED
 - Lines 386-485 (third duplicate) - REMOVED
 - **Result**: Single consolidated table in compressed version
@@ -20,7 +20,7 @@ Original (5 lines):
 ```
 **Work Approach:**
 - Clarify before acting | Ask if unclear
-- User instructions = law | Never assume or override  
+- User instructions = law | Never assume or override
 - Never delete without explicit permission | Default: preserve and add
 - Leave working code alone | Don't modify for linters without permission
 ```
@@ -33,7 +33,7 @@ Clarify before acting | User instructions = law | ❌ delete without permission 
 
 ### 3. **Repetitive Examples Moved to Files**
 - Commit message example (10 lines) → examples.md
-- Safe branch creation (5 lines) → examples.md  
+- Safe branch creation (5 lines) → examples.md
 - Python execution examples (15 lines) → examples.md
 - Validation commands (20 lines) → validation_commands.md
 
@@ -41,8 +41,8 @@ Clarify before acting | User instructions = law | ❌ delete without permission 
 Example - Original (5 lines):
 ```
 **CRITICAL RULE: NO FALSE GREEN CHECKMARKS**
-NEVER use ✅ green checkmarks unless the feature/test/functionality works 100% completely. 
-Green checkmarks indicate FULL COMPLETION AND SUCCESS. If something is partially done, 
+NEVER use ✅ green checkmarks unless the feature/test/functionality works 100% completely.
+Green checkmarks indicate FULL COMPLETION AND SUCCESS. If something is partially done,
 timed out, has errors, or is "ready but not run", use ❌ ⚠️ 🔄 or plain text.
 ```
 
@@ -56,7 +56,7 @@ Compressed (1 line):
 ### ✅ **Meta-Rules** - ALL PRESERVED
 - [x] ANCHORING RULE about .cursor directory
 - [x] NO FALSE GREEN CHECKMARKS rule
-- [x] NO POSITIVITY rule  
+- [x] NO POSITIVITY rule
 - [x] NEVER SIMULATE rule
 
 ### ✅ **Core Sections** - ALL PRESERVED
@@ -115,7 +115,7 @@ Compressed (1 line):
 **What was removed**:
 - Whitespace and formatting: ~200 lines
 - Duplicate sections: ~180 lines
-- Verbose explanations: ~150 lines  
+- Verbose explanations: ~150 lines
 - Extracted examples: ~68 lines
 **Total**: 598 lines of non-essential formatting
 

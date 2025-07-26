@@ -61,7 +61,7 @@ Error: Process completed with exit code 1.
 - **File**: `.github/workflows/auto_resolve_conflicts.yml`
 - **Problem**: The workflow uses `gh pr` commands but has NO permissions block
 - **Specific commands failing**:
-  - Line 43: `gh pr list` 
+  - Line 43: `gh pr list`
   - Line 53: `gh pr view $PR_NUMBER`
   - Line 85: `gh pr comment`
 

@@ -27,7 +27,7 @@ import os  # ✅ Keep this one
 - **Trailing whitespace** on several lines
 - **Too many blank lines** in multiple locations
 
-### Code Style  
+### Code Style
 - **F-strings missing placeholders**: 3 instances
 - **Indentation issues**: Several continuation lines
 - **Multiple statements on one line**: Several colon statements
@@ -64,7 +64,7 @@ flake8 mvp_site/main.py --max-line-length=120 --ignore=E501,W503,W293,E303,E302
 ## 📝 Root Cause
 
 The issues were introduced when I:
-1. Added `import os` to module top in firestore_service.py 
+1. Added `import os` to module top in firestore_service.py
 2. Then moved the feature flag logic to main.py
 3. Left the unused import at the top
 4. Kept the local import inside the function

@@ -1,7 +1,7 @@
 # Scratchpad: Claude Code CLI Timeout Mitigation Analysis (memory-backup-2025-01-19)
 
-**Branch**: memory-backup-2025-01-19  
-**Date**: 2025-01-19  
+**Branch**: memory-backup-2025-01-19
+**Date**: 2025-01-19
 **Goal**: Analyze timeout causes in Claude Code CLI and create `/timeout` command
 
 ## Problem Statement

@@ -6,7 +6,7 @@
 
 **Usage**: `/testserver [action] [branch]`
 
-**Implementation**: 
+**Implementation**:
 - `start [branch]` - Start test server for branch (defaults to current branch)
 - `stop [branch]` - Stop test server for branch (defaults to current branch)
 - `list` - List all running test servers

@@ -7,10 +7,9 @@ import os
 import sys
 import unittest
 
-from game_state import GameState
 from main import create_app
+
 import firestore_service
-import gemini_service
 
 # Add the project root to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -23,12 +22,6 @@ from integration_test_lib import (
 
 # Handle missing dependencies gracefully
 try:
-
-
-
-
-
-
     DEPS_AVAILABLE = True
 except ImportError as e:
     print(f"Integration test dependencies not available: {e}")

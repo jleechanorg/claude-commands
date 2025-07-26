@@ -19,7 +19,8 @@ Usage:
 
 import functools
 import traceback
-from typing import Any, Callable, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import logging_util
 
@@ -27,7 +28,7 @@ import logging_util
 logger = logging_util.getLogger(__name__)
 
 # Type variable for generic function decoration
-F = TypeVar('F', bound=Callable[..., Any])
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def log_exceptions(func: F) -> F:

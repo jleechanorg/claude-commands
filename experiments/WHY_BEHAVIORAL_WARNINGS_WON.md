@@ -66,7 +66,7 @@ Our hypothesis that specification-based output constraints would reduce hallucin
 **Classic Example**: Treatment's Task 3 failure
 - **Specification mindset**: "I must create comprehensive test suite"
 - **Result**: Created 17 tests with 9 failures and 3 errors
-- **Behavioral mindset**: "Don't make false claims, find what actually exists"  
+- **Behavioral mindset**: "Don't make false claims, find what actually exists"
 - **Result**: Found existing working 9-test suite that passes
 
 ### 5. **Natural Language Processing Alignment**
@@ -87,10 +87,10 @@ Our hypothesis that specification-based output constraints would reduce hallucin
 
 ### Behavioral Warnings Create **Mindful Awareness**
 ```
-"I should not simulate results" 
+"I should not simulate results"
     ↓
 Heightened attention to truth/evidence
-    ↓  
+    ↓
 Better natural documentation
     ↓
 Higher performance
@@ -114,7 +114,7 @@ Lower performance
 - Avoid rigid procedural requirements
 - Let natural problem-solving emerge
 
-### 2. **Simplicity Over Sophistication** 
+### 2. **Simplicity Over Sophistication**
 - Simple rules often outperform complex systems
 - Cognitive load matters more than theoretical completeness
 - "Perfect is the enemy of good"
@@ -160,7 +160,7 @@ This is why scientific methodology matters - it protects us from our own biases 
 
 Behavioral warnings won because they:
 1. **Reduce cognitive load** instead of increasing it
-2. **Preserve natural flow** instead of forcing artificial structure  
+2. **Preserve natural flow** instead of forcing artificial structure
 3. **Create mindful awareness** instead of procedural burden
 4. **Work with LLM nature** instead of against it
 5. **Focus on principles** instead of rigid processes

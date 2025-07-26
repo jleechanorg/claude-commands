@@ -7,7 +7,7 @@
 ### 1. Broken File References (High Priority)
 All prompts reference missing archived files:
 - `entity_schema_instruction.md` (referenced 10+ times)
-- `destiny_ruleset.md` (referenced 8+ times) 
+- `destiny_ruleset.md` (referenced 8+ times)
 - `calibration_instruction.md` (referenced 3+ times)
 - `character_sheet_template.md` (referenced 2+ times)
 - `personalities/{mbti}_portrait.md` files
@@ -29,14 +29,14 @@ All prompts reference missing archived files:
 
 ### Phase 1: Remove Broken References (Immediate)
 - [ ] **master_directive.md**: Remove references to archived files
-- [ ] **game_state_instruction.md**: Remove entity_schema and destiny references  
+- [ ] **game_state_instruction.md**: Remove entity_schema and destiny references
 - [ ] **mechanics_system_instruction.md**: Remove destiny_ruleset references
 - [ ] **narrative_system_instruction.md**: Clean up missing file references
 - [ ] **dnd_srd_instruction.md**: Fix entity_schema reference
 
 ### Phase 2: System Consistency (Immediate)
 - [ ] **Standardize on D&D 5E**: Remove all Destiny system references
-- [ ] **Fix attribute systems**: Use D&D 6-attribute consistently  
+- [ ] **Fix attribute systems**: Use D&D 6-attribute consistently
 - [ ] **Update deprecated commands**: Replace GOD_MODE_UPDATE_STATE
 - [ ] **Consistent authority**: D&D SRD as single mechanical authority
 
@@ -55,7 +55,7 @@ All prompts reference missing archived files:
 ### 1. master_directive.md (890 → 711 words) ✅ COMPLETED
 **Fixed**:
 ✅ Removed entity_schema_instruction.md references
-✅ Removed destiny_ruleset.md references  
+✅ Removed destiny_ruleset.md references
 ✅ Removed calibration_instruction.md references
 ✅ Removed character_sheet_template.md references
 ✅ Removed personalities/ directory references
@@ -70,7 +70,7 @@ All prompts reference missing archived files:
 - Standardize on D&D 5E attribute system
 - Fix contradictory system references
 
-### 3. mechanics_system_instruction.md (4,022 words) 
+### 3. mechanics_system_instruction.md (4,022 words)
 **Issues to fix**:
 - Remove destiny_ruleset.md references
 - Standardize on D&D 5E mechanics only
@@ -80,7 +80,7 @@ All prompts reference missing archived files:
 ### 4. narrative_system_instruction.md (5,368 words)
 **Issues to fix**:
 - Remove references to missing files
-- Fix banned names implementation  
+- Fix banned names implementation
 - Remove contradictory examples
 - Clean up cross-references
 

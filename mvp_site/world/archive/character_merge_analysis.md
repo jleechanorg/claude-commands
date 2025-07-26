@@ -4,11 +4,11 @@
 
 ### Major Characters
 1. **Alexiel** - Enhanced description needed from Alexiel book
-2. **Lucifer** - More detail in Alexiel book  
+2. **Lucifer** - More detail in Alexiel book
 3. **Prince Artorius** - Similar in both
 4. **Lord Regent Raziel** - Similar in both
 
-### Supporting Characters  
+### Supporting Characters
 5. **Prince Titus** - Present in both
 6. **Magister Lucian Kantos** - Present in both
 7. **Praetor Cassius** - Present in both

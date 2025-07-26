@@ -1,8 +1,8 @@
 # JSON Mode Architecture Cleanup - Scratchpad
 
-**Branch**: To be created  
-**Goal**: Remove legacy text pattern matching and enforce consistent JSON-first architecture  
-**Priority**: Medium - Technical debt cleanup  
+**Branch**: To be created
+**Goal**: Remove legacy text pattern matching and enforce consistent JSON-first architecture
+**Priority**: Medium - Technical debt cleanup
 
 ## Problem Statement
 
@@ -78,7 +78,7 @@ Current codebase has architectural inconsistency between modern JSON mode respon
 
 ## Status Update
 
-**Current PR**: #474 (explicit_char_design branch)  
+**Current PR**: #474 (explicit_char_design branch)
 **Remaining User Comments to Address**:
 
 ### 1. main.py fallback logic ✅ **RESOLVED**
@@ -111,7 +111,7 @@ Current codebase has architectural inconsistency between modern JSON mode respon
 
 ---
 
-**Created**: 2025-07-10  
-**Updated**: 2025-07-10  
-**Context**: PR #474 Copilot comment evaluation revealed legacy regex usage  
+**Created**: 2025-07-10
+**Updated**: 2025-07-10
+**Context**: PR #474 Copilot comment evaluation revealed legacy regex usage
 **Next Steps**: Address remaining user comments + JSON cleanup

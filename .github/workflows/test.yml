@@ -10,18 +10,18 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
     # Step 1: Get your code
     - name: Checkout repository
       uses: actions/checkout@v4
-    
+
     # Step 2: Set up Python (same version as your project)
     - name: Set up Python 3.11
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-    
+
     # Step 3: Cache dependencies (speeds up future runs)
     - name: Cache pip dependencies
       uses: actions/cache@v4
@@ -30,41 +30,41 @@ jobs:
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
-    
+
     # Step 4: Create virtual environment and install dependencies (required for vpython)
     - name: Install dependencies
       run: |
         # Create virtual environment that vpython expects
         python -m venv venv
         source venv/bin/activate
-        
+
         # Upgrade pip and install resolver tools
         python -m pip install --upgrade pip setuptools wheel
-        
+
         # Pin grpcio and grpcio-status to compatible versions
         pip install grpcio==1.73.1 grpcio-status==1.73.1
-        
+
         # Install protobuf first to avoid conflicts
         pip install protobuf==4.25.3
-        
+
         # Now install other requirements
         pip install -r mvp_site/requirements.txt
-        
+
         # Verify vpython works
         chmod +x vpython
         ./vpython --version
-    
+
     # Step 5: Run tests using project's test runner
     - name: Run test suite
       run: |
         # Activate the virtual environment
         source venv/bin/activate
-        
+
         # Use the project's established test runner script
         chmod +x run_tests.sh
-        
+
         echo "Running tests using project's run_tests.sh script..."
-        
+
         # Run the full test suite
         if ./run_tests.sh; then
           echo ""
@@ -79,14 +79,14 @@ jobs:
           echo ""
           echo "Note: Test failures in CI may be due to:"
           echo "  - Missing local services (e.g., test server)"
-          echo "  - Test isolation issues" 
+          echo "  - Test isolation issues"
           echo "  - Timing-sensitive tests"
           echo "  - Environment differences"
           exit 1
         fi
       env:
         TESTING: true
-    
+
     # Step 6: Upload test results (optional)
     - name: Upload test results
       uses: actions/upload-artifact@v4

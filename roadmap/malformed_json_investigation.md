@@ -86,13 +86,13 @@ def parse_with_recovery(response_text):
         repair_truncated_json,   # Add missing brackets
         fallback_to_text         # Last resort
     ]
-    
+
     for strategy in strategies:
         try:
             return strategy(response_text)
         except:
             continue
-    
+
     raise ParseError("All recovery strategies failed")
 ```
 
@@ -100,11 +100,11 @@ def parse_with_recovery(response_text):
 ```python
 def validate_response_structure(data):
     required_fields = ["response", "state_changes", "planning_block"]
-    
+
     for field in required_fields:
         if field not in data:
             data[field] = get_default_value(field)
-    
+
     return data
 ```
 
@@ -113,11 +113,11 @@ def validate_response_structure(data):
 def handle_streaming_json(stream):
     buffer = ""
     depth = 0
-    
+
     for chunk in stream:
         buffer += chunk
         depth += chunk.count('{') - chunk.count('}')
-        
+
         if depth == 0 and buffer.strip():
             # Complete JSON object
             yield parse_json(buffer)

@@ -1,7 +1,7 @@
 # Handoff: Timeout Command Implementation
 
-**Branch**: handoff-timeout-command  
-**Created**: 2025-01-19  
+**Branch**: handoff-timeout-command
+**Created**: 2025-01-19
 **Status**: Ready for implementation
 
 ## Problem Statement
@@ -89,7 +89,7 @@ Claude Code CLI users experience frequent timeouts (10% rate) when responses exc
 
 Estimated: 2-3 hours
 - Command integration: 1 hour
-- Behavior modifications: 1 hour  
+- Behavior modifications: 1 hour
 - Testing & refinement: 1 hour
 
 ## Next Steps

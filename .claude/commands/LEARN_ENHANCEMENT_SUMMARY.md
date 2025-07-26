@@ -17,7 +17,7 @@ The enhanced /learn command transforms from a simple rule-capture tool into an i
 #### Files Created:
 - `.claude/commands/learn-enhanced.md` - Enhanced command documentation
 - `PATTERNS.md` - Living document of learned patterns
-- `CONTEXT_AWARENESS.md` - Context detection and adaptation guide  
+- `CONTEXT_AWARENESS.md` - Context detection and adaptation guide
 - `.claude/scripts/pattern_extractor.py` - Pattern extraction logic
 - `.claude/scripts/update_patterns.py` - Document update automation
 - `.claude/scripts/learn_integration.py` - System integration
@@ -30,15 +30,15 @@ graph TD
     B --> C[Correction Detection]
     B --> D[Context Analysis]
     B --> E[Preference Extraction]
-    
+
     C --> F[Pattern Validation]
     D --> F
     E --> F
-    
+
     F --> G[PATTERNS.md Update]
     F --> H[Memory System]
     F --> I[Other Commands]
-    
+
     G --> J[Apply in Future]
     H --> J
     I --> J

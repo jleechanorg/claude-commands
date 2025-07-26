@@ -41,7 +41,7 @@ gh api "/repos/{owner}/{repo}/pulls/{pr_number}/comments" \
 ## Integration with /copilot
 
 The `/copilot` command now:
-1. Fetches comments with `commentfetch.py` 
+1. Fetches comments with `commentfetch.py`
 2. Claude analyzes which need responses
 3. For inline comments, Claude fetches the original comment details
 4. Posts replies with proper threading

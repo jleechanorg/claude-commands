@@ -7,7 +7,7 @@ This document outlines the strategy for resolving conflicts and redundancies ide
 
 ### 1. Task Completion Protocol Conflict
 **Issue**: Defined in both rules.mdc (lines 427-446) and lessons.mdc (lines 20-40)
-**Resolution**: 
+**Resolution**:
 - Keep the authoritative version in rules.mdc under "Critical Lessons and Rules"
 - Remove the protocol from lessons.mdc
 - In lessons.mdc, keep only the incident that led to creating this rule

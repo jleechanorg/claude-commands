@@ -279,7 +279,7 @@ campaign_data = firestore_service.get_campaign(user_id, campaign_id)
 ```json
 {
     "text": "[Mode: STORY MODE]\n[SESSION_HEADER]\n...",
-    "mode": "character", 
+    "mode": "character",
     "state_updates": {...},
     "sequence_id": 2
 }
@@ -287,7 +287,7 @@ campaign_data = firestore_service.get_campaign(user_id, campaign_id)
 
 ### Layer 5: JavaScript Frontend Display
 **What it receives**: The API response above
-**What it does**: 
+**What it does**:
 1. Takes the `text` field
 2. Adds "Scene #X: " prefix based on sequence_id
 3. Displays in message div
@@ -333,7 +333,7 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None, metadata=None)
     logger.error("🔍   - text first 200 chars: %s", text[:200])
     logger.error("🔍   - text is JSON: %s", text.strip().startswith('{'))
     logger.error("🔍   - mode: %s", mode)
-    
+
     # Before writing to Firestore
     story_entry = {
         'text': text,
@@ -343,13 +343,13 @@ def add_story_entry(user_id, campaign_id, actor, text, mode=None, metadata=None)
         'sequence_id': next_sequence_id,
         'metadata': metadata
     }
-    
+
     logger.error("🔍 FIREBASE_WRITE_DOCUMENT being saved:")
     logger.error("🔍   - text field first 200 chars: %s", story_entry['text'][:200])
     logger.error("🔍   - text field is JSON: %s", story_entry['text'].strip().startswith('{'))
     logger.error("🔍   - type: %s", story_entry['type'])
     logger.error("🔍   - sequence_id: %s", story_entry['sequence_id'])
-    
+
     logger.error("🔍 EXPECTED text format: '[Mode: STORY MODE]\\n[SESSION_HEADER]\\n...'")
     logger.error("🔍 ACTUAL text format: %s", "JSON object" if text.strip().startswith('{') else "Plain narrative text")
 ```
@@ -361,20 +361,20 @@ def get_campaign(user_id, campaign_id):
     # After fetching story documents
     for story_doc in story_docs:
         story_data = story_doc.to_dict()
-        
+
         logger.error("🔍 FIREBASE_READ_STORY_ENTRY sequence_id=%s:", story_data.get('sequence_id'))
         logger.error("🔍   - text type: %s", type(story_data.get('text')))
         logger.error("🔍   - text first 200 chars: %s", story_data.get('text', '')[:200])
         logger.error("🔍   - text is JSON: %s", story_data.get('text', '').strip().startswith('{'))
         logger.error("🔍   - type: %s", story_data.get('type'))
         logger.error("🔍   - mode: %s", story_data.get('mode'))
-        
+
         if story_data.get('text', '').strip().startswith('{'):
             logger.error("🔍 WARNING: Story entry %s contains raw JSON!", story_data.get('sequence_id'))
-    
+
     # Before returning campaign data
     logger.error("🔍 FIREBASE_READ_RETURN total story entries: %s", len(story))
-    logger.error("🔍 FIREBASE_READ_RETURN entries with JSON: %s", 
+    logger.error("🔍 FIREBASE_READ_RETURN entries with JSON: %s",
                  sum(1 for s in story if s.get('text', '').strip().startswith('{')))
 ```
 
@@ -429,7 +429,7 @@ The fix needs to be in `gemini_service.py` where it should extract the narrative
 # Current (buggy) behavior
 if use_structured_generation:
     response_text = raw_response  # BUG: Using full JSON!
-    
+
 # Should be:
 if use_structured_generation:
     if raw_response.strip().startswith('{'):
@@ -524,17 +524,17 @@ TESTING=true USE_MOCKS=false PORT=6006 vpython testing_ui/test_campaign_creation
 # Continue the campaign multiple times
 for i in range(5):
     print(f"🔍 Interaction {i+1}: Attempting to trigger JSON bug")
-    
+
     # Type "2" if this is the first interaction (character creation)
     if i == 0:
         page.fill("#userInput", "2")  # Choose AI character generation
     else:
         page.fill("#userInput", "continue")  # Just continue
-    
+
     # Submit and wait
     page.press("#userInput", "Enter")
     time.sleep(5)  # Wait for AI response
-    
+
     # Check for JSON in display
     story_entries = page.query_selector_all(".message-bubble")
     if story_entries:
@@ -555,7 +555,7 @@ page.add_init_script("""
         console.log('🔍 API_REQUEST:', args[0]);
         const response = await originalFetch.apply(window, args);
         const clone = response.clone();
-        
+
         try {
             const data = await clone.json();
             console.log('🔍 API_RESPONSE:', {
@@ -565,13 +565,13 @@ page.add_init_script("""
                 textIsJSON: data.text && data.text.trim().startsWith('{'),
                 textPreview: data.text ? data.text.substring(0, 100) : null
             });
-            
+
             if (data.text && data.text.trim().startsWith('{')) {
                 console.error('🚨 JSON BUG: API returned JSON in text field!');
                 console.error('Full text:', data.text);
             }
         } catch (e) {}
-        
+
         return response;
     };
 """)
@@ -627,14 +627,14 @@ After running, we'll have:
    ```bash
    # Check we're on correct branch
    git branch --show-current  # Should show: json_fix_v3
-   
+
    # Check virtual environment
    source venv/bin/activate
    which python  # Should show venv python
-   
+
    # Verify Playwright is installed
    python -c "import playwright; print('✅ Playwright ready')"
-   
+
    # Verify test server can start
    TESTING=true PORT=6006 vpython mvp_site/main.py serve &
    sleep 3
@@ -686,7 +686,7 @@ After running, we'll have:
 ### Phase 3: Implement Fix (20 min)
 
 1. **Fix location confirmed**: gemini_service.py
-   
+
 2. **Safe fix implementation**:
    ```python
    # In gemini_service.py, find where response_text is set
@@ -796,7 +796,7 @@ TESTING=true vpython mvp_site/tests/test_json_bug_red.py || echo "✅ Red test f
 echo "🔧 Phase 3: Applying fix..."
 python apply_json_fix.py
 
-# Phase 4: Green test  
+# Phase 4: Green test
 echo "🟢 Phase 4: Running green test (expect pass)..."
 TESTING=true vpython mvp_site/tests/test_json_bug_green.py
 

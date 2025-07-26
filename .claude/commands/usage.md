@@ -29,7 +29,7 @@ This provides the same output as `/header` - combining both git status and API u
 ## Alerts
 - 🟢 **Above 75%**: Silent operation
 - 🟡 **50-75%**: Balloon notification on Windows
-- 🔴 **25-50%**: Warning balloon notification  
+- 🔴 **25-50%**: Warning balloon notification
 - ⚠️ **Below 25%**: Critical popup alert
 
 Use `~/projects/worldarchitect.ai/claude_command_scripts/git-header.sh --monitor` for proactive monitoring with alerts.

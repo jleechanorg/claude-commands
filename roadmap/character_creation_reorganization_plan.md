@@ -29,7 +29,7 @@ I see you want to play as [CHARACTER NAME]. Let's design [CHARACTER NAME] with D
 
 How would you like to design [CHARACTER NAME]:
 1. **AIGenerated** - I'll create a complete D&D version based on their lore
-2. **StandardDND** - You choose from D&D races and classes  
+2. **StandardDND** - You choose from D&D races and classes
 3. **CustomClass** - We'll create custom mechanics for their unique abilities
 
 Which option would you prefer? (1, 2, or 3)

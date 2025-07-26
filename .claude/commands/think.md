@@ -7,7 +7,7 @@
 ## Thinking Levels
 
 1. **Light** (`/think light` or `/think l`): 3-4 thoughts - Quick analysis
-2. **Medium** (`/think medium` or `/think m`): 5-6 thoughts - Standard reasoning  
+2. **Medium** (`/think medium` or `/think m`): 5-6 thoughts - Standard reasoning
 3. **Deep** (`/think deep` or `/think d`): 7-8 thoughts - Thorough analysis
 4. **Ultra** (`/think ultra` or `/think u`): 10+ thoughts - Maximum budget
 
@@ -31,7 +31,7 @@ Uses the `mcp__sequential-thinking__sequentialthinking` tool to:
 
 ```
 /think What's wrong with this code?                    # Light: 4 thoughts
-/think medium How should I refactor this codebase?     # Medium: 6 thoughts  
+/think medium How should I refactor this codebase?     # Medium: 6 thoughts
 /think deep What's the root cause of this issue?       # Deep: 8 thoughts
 /think ultra Plan architecture for 10M requests        # Ultra: 12+ thoughts
 
@@ -46,7 +46,7 @@ Uses the `mcp__sequential-thinking__sequentialthinking` tool to:
 
 - Uses `totalThoughts` parameter to control thinking depth:
   - Light: `totalThoughts: 4`
-  - Medium: `totalThoughts: 6` 
+  - Medium: `totalThoughts: 6`
   - Deep: `totalThoughts: 8`
   - Ultra: `totalThoughts: 12`
 - Can handle uncertainty and explore alternative approaches

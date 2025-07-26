@@ -98,14 +98,14 @@ The `/learn` command currently operates in local-only mode, updating CLAUDE.md a
 
 ### Memory MCP Integration Pattern
 ```
-1. Search: 
+1. Search:
    try:
        mcp__memory-server__search_nodes(learning_keywords)
    except Exception as e:
        log_error("Memory MCP search failed: " + str(e))
        fallback_to_local_only_mode()
-       
-2. Create: 
+
+2. Create:
    try:
        mcp__memory-server__create_entities([{
            name: "learning_topic",
@@ -115,8 +115,8 @@ The `/learn` command currently operates in local-only mode, updating CLAUDE.md a
    except Exception as e:
        log_error("Memory MCP entity creation failed: " + str(e))
        notify_user("Learning saved locally only - Memory MCP unavailable")
-       
-3. Relate: 
+
+3. Relate:
    try:
        mcp__memory-server__create_relations([{
            from: "learning_topic",

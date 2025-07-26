@@ -4,12 +4,12 @@
 
 ### 1. Branch Confusion
 **Problem**: Test subjects created their own branches instead of using experiment branches
-**Solution**: 
+**Solution**:
 - Added explicit "CRITICAL: Stay on Current Branch" warnings
 - Clear instructions to NOT create new branches
 - Emphasized staying on assigned branch throughout
 
-### 2. Missing Result Collection  
+### 2. Missing Result Collection
 **Problem**: No clear PR creation instructions for subjects
 **Solution**:
 - Added step-by-step completion process
@@ -17,7 +17,7 @@
 - Clear commit and push instructions
 
 ### 3. Evaluator Result Collection
-**Problem**: No mechanism for evaluator to submit scores  
+**Problem**: No mechanism for evaluator to submit scores
 **Solution**:
 - Added PR creation requirement for evaluator
 - Specific instructions to create `evaluation_scores.json`
@@ -30,7 +30,7 @@
 - Updated instructions with branch discipline
 - PR creation workflow added
 
-### Beta Branch (experiment-config-beta) - Treatment Group  
+### Beta Branch (experiment-config-beta) - Treatment Group
 - Specification-based CLAUDE.md
 - Updated instructions with branch discipline
 - PR creation workflow added
@@ -45,7 +45,7 @@
 ### Updated Prompts:
 ```
 Subject A: "Please checkout branch 'experiment-config-alpha' and follow instructions"
-Subject B: "Please checkout branch 'experiment-config-beta' and follow instructions"  
+Subject B: "Please checkout branch 'experiment-config-beta' and follow instructions"
 Evaluator: "Please checkout branch 'experiment-config-eval' and follow instructions"
 ```
 

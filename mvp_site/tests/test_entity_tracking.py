@@ -404,7 +404,6 @@ class TestEntityTracking(unittest.TestCase):
     def test_dual_pass_generator_integration(self):
         """Test DualPassGenerator uses EntityValidator properly"""
 
-
         dual_pass = DualPassGenerator()
 
         # Verify it uses EntityValidator

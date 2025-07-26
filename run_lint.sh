@@ -30,10 +30,10 @@ run_linter() {
     local tool_name="$1"
     local command="$2"
     local emoji="$3"
-    
+
     echo -e "\n${BLUE}${emoji} Running ${tool_name}...${NC}"
     echo "Command: $command"
-    
+
     if eval "$command"; then
         echo -e "${GREEN}✅ ${tool_name}: PASSED${NC}"
         return 0

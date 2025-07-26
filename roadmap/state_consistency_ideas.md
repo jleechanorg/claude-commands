@@ -146,17 +146,17 @@ Given your 300k+ token usage, implement **smart context compression**:
 def optimize_context_for_state(full_context, max_tokens=50000):
     # Prioritize current scene (20% of tokens)
     current_scene = extract_current_context(full_context)
-    
+
     # Essential character states (30% of tokens)
     character_data = compress_character_states(active_characters)
-    
+
     # Relevant memories (40% of tokens)
     relevant_memories = retrieve_contextual_memories(current_scene)
-    
+
     # World state snapshot (10% of tokens)
     world_state = compress_world_state(current_location)
-    
-    return combine_contexts(current_scene, character_data, 
+
+    return combine_contexts(current_scene, character_data,
                           relevant_memories, world_state)
 ```
 
@@ -284,4 +284,3 @@ This technical excellence, combined with your BYOK pricing model, positions Worl
 [^47]: https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2025.1591618/full
 
 [^48]: https://www.reddit.com/r/aiwars/comments/1ilu67i/why_arent_aipowered_rpgs_a_thing_yet/
-

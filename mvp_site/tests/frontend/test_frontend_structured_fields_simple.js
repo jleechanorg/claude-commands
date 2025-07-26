@@ -33,7 +33,7 @@ class StructuredFieldsSimpleTest {
   // Mock implementation of generateStructuredFieldsHTML
   generateStructuredFieldsHTML(fullData, debugMode) {
     let html = '';
-    
+
     // Add dice rolls if present
     if (fullData.dice_rolls && fullData.dice_rolls.length > 0) {
       html += '<div class="dice-rolls">';
@@ -43,17 +43,17 @@ class StructuredFieldsSimpleTest {
       });
       html += '</ul></div>';
     }
-    
+
     // Add resources if present
     if (fullData.resources) {
       html += `<div class="resources"><strong>📊 Resources:</strong> ${this.escapeHtml(fullData.resources)}</div>`;
     }
-    
+
     // Add planning block if present (always at the bottom)
     if (fullData.planning_block) {
       html += `<div class="planning-block">${this.escapeHtml(fullData.planning_block)}</div>`;
     }
-    
+
     // Add debug info if in debug mode
     if (debugMode && fullData.debug_info && Object.keys(fullData.debug_info).length > 0) {
       html += '<div class="debug-info">';
@@ -61,7 +61,7 @@ class StructuredFieldsSimpleTest {
       html += '<pre>' + this.escapeHtml(JSON.stringify(fullData.debug_info, null, 2)) + '</pre>';
       html += '</div>';
     }
-    
+
     return html;
   }
 
@@ -79,7 +79,7 @@ class StructuredFieldsSimpleTest {
   // Test 1: Basic HTML generation for all fields
   testGenerateStructuredFieldsHTML() {
     this.log('📝 Test 1: Basic HTML generation for all fields');
-    
+
     const testData = {
       dice_rolls: ["Attack: 1d20+5 = 18", "Damage: 2d6+3 = 11"],
       resources: "HP: 45/50 | Gold: 120",
@@ -88,7 +88,7 @@ class StructuredFieldsSimpleTest {
     };
 
     const html = this.generateStructuredFieldsHTML(testData, true);
-    
+
     // Check that all fields are present
     this.assert(html.includes('🎲 Dice Rolls:'), 'Dice rolls header present');
     this.assert(html.includes('Attack: 1d20+5 = 18'), 'First dice roll present');
@@ -98,7 +98,7 @@ class StructuredFieldsSimpleTest {
     this.assert(html.includes('**Next Steps:**'), 'Planning block present');
     this.assert(html.includes('🔍 Debug Info:'), 'Debug info header present (debug mode on)');
     this.assert(html.includes('tokens') && html.includes('100'), 'Debug info content present');
-    
+
     // Test without debug mode
     const htmlNoDebug = this.generateStructuredFieldsHTML(testData, false);
     this.assert(!htmlNoDebug.includes('🔍 Debug Info:'), 'Debug info hidden when debug mode off');
@@ -107,7 +107,7 @@ class StructuredFieldsSimpleTest {
   // Test 2: Empty fields handling
   testEmptyFieldsHandling() {
     this.log('📝 Test 2: Empty fields handling');
-    
+
     const emptyData = {
       dice_rolls: [],
       resources: "",
@@ -116,7 +116,7 @@ class StructuredFieldsSimpleTest {
     };
 
     const html = this.generateStructuredFieldsHTML(emptyData, true);
-    
+
     // Check that empty fields are not rendered
     this.assert(!html.includes('🎲 Dice Rolls:'), 'Empty dice rolls not rendered');
     this.assert(!html.includes('📊 Resources:'), 'Empty resources not rendered');
@@ -128,7 +128,7 @@ class StructuredFieldsSimpleTest {
   // Test 3: Missing fields handling
   testMissingFieldsHandling() {
     this.log('📝 Test 3: Missing fields handling');
-    
+
     const partialData = {
       dice_rolls: ["Critical Hit: 20"],
       // resources missing
@@ -137,11 +137,11 @@ class StructuredFieldsSimpleTest {
     };
 
     const html = this.generateStructuredFieldsHTML(partialData, true);
-    
+
     // Check that present fields are rendered
     this.assert(html.includes('Critical Hit: 20'), 'Present dice roll rendered');
     this.assert(html.includes('Continue forward'), 'Present planning block rendered');
-    
+
     // Check that missing fields are not causing errors
     this.assert(!html.includes('📊 Resources:'), 'Missing resources field handled gracefully');
     this.assert(!html.includes('🔍 Debug Info:'), 'Missing debug info field handled gracefully');
@@ -150,7 +150,7 @@ class StructuredFieldsSimpleTest {
   // Test 4: XSS prevention
   testXSSPrevention() {
     this.log('📝 Test 4: XSS prevention');
-    
+
     const maliciousData = {
       dice_rolls: ["<script>alert('XSS')</script>"],
       resources: "<img src=x onerror='alert(1)'>",
@@ -159,7 +159,7 @@ class StructuredFieldsSimpleTest {
     };
 
     const html = this.generateStructuredFieldsHTML(maliciousData, true);
-    
+
     // Check that dangerous content is escaped
     this.assert(!html.includes('<script>'), 'Script tags are escaped');
     this.assert(html.includes('onerror=&#039;') || !html.includes('onerror'), 'Event handlers are escaped');
@@ -171,7 +171,7 @@ class StructuredFieldsSimpleTest {
   // Test 5: Special characters and formatting
   testSpecialCharacters() {
     this.log('📝 Test 5: Special characters and formatting');
-    
+
     const specialData = {
       dice_rolls: ["🎲 Natural 20! 🎉", "Fire damage: 🔥 2d6"],
       resources: "💰 Gold: 500 | ❤️ HP: 100/100",
@@ -180,7 +180,7 @@ class StructuredFieldsSimpleTest {
     };
 
     const html = this.generateStructuredFieldsHTML(specialData, true);
-    
+
     // Check that emojis and special characters are preserved
     this.assert(html.includes('🎲 Natural 20! 🎉'), 'Emojis in dice rolls preserved');
     this.assert(html.includes('💰 Gold:'), 'Emojis in resources preserved');
@@ -192,7 +192,7 @@ class StructuredFieldsSimpleTest {
   // Test 6: Structured field CSS classes
   testCSSClasses() {
     this.log('📝 Test 6: CSS class structure');
-    
+
     const testData = {
       dice_rolls: ["Test roll"],
       resources: "Test resources",
@@ -201,7 +201,7 @@ class StructuredFieldsSimpleTest {
     };
 
     const html = this.generateStructuredFieldsHTML(testData, true);
-    
+
     // Check that proper CSS classes are applied
     this.assert(html.includes('class="dice-rolls"'), 'Dice rolls have correct CSS class');
     this.assert(html.includes('class="resources"'), 'Resources have correct CSS class');
@@ -213,7 +213,7 @@ class StructuredFieldsSimpleTest {
   runTests() {
     this.log('🚀 Starting Structured Fields Frontend Tests (Simple Version)', 'info');
     this.log('='.repeat(60), 'info');
-    
+
     // Run test suite
     this.testGenerateStructuredFieldsHTML();
     this.testEmptyFieldsHandling();
@@ -226,7 +226,7 @@ class StructuredFieldsSimpleTest {
     this.log('='.repeat(60), 'info');
     const total = this.passCount + this.failCount;
     this.log(`Test Summary: ${this.passCount}/${total} passed`, 'info');
-    
+
     if (this.failCount > 0) {
       this.log(`❌ ${this.failCount} tests failed`, 'fail');
       process.exit(1);

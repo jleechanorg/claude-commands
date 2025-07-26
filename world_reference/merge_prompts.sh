@@ -22,14 +22,14 @@ echo "" >> "$OUTPUT_FILE"
 # Find all .md files in mvp_site/prompts/ and process them
 find mvp_site/prompts/ -name "*.md" -type f | sort | while read -r file; do
     echo "Processing: $file"
-    
+
     # Add a section header for each file
     echo "## File: $file" >> "$OUTPUT_FILE"
     echo "" >> "$OUTPUT_FILE"
-    
+
     # Add the content of the file
     cat "$file" >> "$OUTPUT_FILE"
-    
+
     # Add separator between files
     echo "" >> "$OUTPUT_FILE"
     echo "---" >> "$OUTPUT_FILE"

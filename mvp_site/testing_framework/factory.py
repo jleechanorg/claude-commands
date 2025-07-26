@@ -21,12 +21,8 @@ from .service_provider import TestServiceProvider
 
 # Try to import the full mock provider, fall back to simple one
 try:
-
-
     _use_full_mocks = True
 except ImportError:
-
-
     _use_full_mocks = False
 
 

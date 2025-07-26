@@ -1,7 +1,7 @@
 # Scratchpad: JavaScript Tests & Test Server Followups
 
-**Branch**: longer_dk1  
-**Goal**: JavaScript testing improvements and test server architecture cleanup  
+**Branch**: longer_dk1
+**Goal**: JavaScript testing improvements and test server architecture cleanup
 **Started**: 2025-07-15
 
 ## Current State
@@ -84,7 +84,7 @@
 
 ## Branch Context
 
-**Current Branch**: longer_dk1  
-**Previous Work**: God mode planning blocks feature completed  
-**Current Focus**: JavaScript testing and test server architecture  
+**Current Branch**: longer_dk1
+**Previous Work**: God mode planning blocks feature completed
+**Current Focus**: JavaScript testing and test server architecture
 **Related PR**: #605 (context unclear)

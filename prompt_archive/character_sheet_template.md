@@ -2,16 +2,16 @@
 
 This document defines the mechanical attributes of a character in the game. It must be filled out completely for the Player Character (PC) and all significant NPCs who might engage in combat or skill-based challenges.
 
-<!-- 
+<!--
 SYSTEM CONSTANTS: This template references attribute systems defined in constants.py:
-- ATTRIBUTE_SYSTEM_DND = "D&D" 
+- ATTRIBUTE_SYSTEM_DND = "D&D"
 - ATTRIBUTE_SYSTEM_DESTINY = "Destiny"
 - DEFAULT_ATTRIBUTE_SYSTEM = "Destiny"
 See constants.py for complete attribute lists and helper functions.
 -->
 
 ## Campaign Configuration
-- **Active Attribute System:** [D&D / Destiny] 
+- **Active Attribute System:** [D&D / Destiny]
   - *Set at campaign creation and locked thereafter*
   - *All characters in this campaign use the same system*
 

@@ -6,7 +6,7 @@ This directory contains captured Gemini API responses from real `/testuif` runs,
 
 ### Response Files
 - `wizard_responses.json` - Wizard character/setting test responses
-- `campaign_creation_responses.json` - Campaign creation flow responses  
+- `campaign_creation_responses.json` - Campaign creation flow responses
 - `api_structure_responses.json` - API validation responses
 - `structured_fields_responses.json` - Game mechanics responses
 - `continue_campaign_responses.json` - Campaign continuation responses
@@ -20,7 +20,7 @@ This directory contains captured Gemini API responses from real `/testuif` runs,
 **For /testui (fast, no cost):**
 Tests automatically use mock data from this directory when `USE_MOCKS=true`
 
-**For /testuif (real API, costs money):**  
+**For /testuif (real API, costs money):**
 Tests use real Gemini API and optionally update mock data
 
 ## Data Capture Process

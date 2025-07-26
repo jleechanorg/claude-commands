@@ -95,7 +95,7 @@ try:
     game_state = MockGameState()
     manifest = game_state.get_active_entity_manifest()
     print(f"✅ Entity manifest: {manifest['entity_count']} entities at {manifest['location']}")
-    
+
     result = game_state.validate_narrative_consistency(
         "Gideon and Rowan entered the chamber."
     )
@@ -117,7 +117,7 @@ try:
     for _ in range(100):
         fuzzy.validate(narrative, entities)
     avg_time = (time.time() - start) / 100
-    
+
     if avg_time < 0.05:  # 50ms
         print(f"✅ Performance: {avg_time*1000:.2f}ms average (target: <50ms)")
     else:

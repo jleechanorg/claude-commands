@@ -16,7 +16,7 @@ Integrate the banned names list into the WorldArchitect.AI system to prevent AI 
   - Added "Universal Naming Rules" section
   - Added to CRITICAL REMINDERS (#7)
   - Version updated to 1.2
-  
+
 - **Narrative System Instruction** (`prompts/narrative_system_instruction.md`):
   - Added rule to Companion Generation Rules
   - Fixed example that used banned name "Aria" → "Lysandra"

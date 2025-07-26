@@ -1,219 +1,223 @@
 /* Inline Editor Styles */
 
 .inline-editable {
-    cursor: pointer;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    transition: background-color 0.2s ease, box-shadow 0.2s ease;
-    position: relative;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+  position: relative;
 }
 
 .inline-editable:hover,
 .inline-editable-hover {
-    background-color: rgba(0, 123, 255, 0.1);
-    box-shadow: 0 0 0 1px rgba(0, 123, 255, 0.2);
+  background-color: rgba(0, 123, 255, 0.1);
+  box-shadow: 0 0 0 1px rgba(0, 123, 255, 0.2);
 }
 
 .inline-editable::after {
-    content: "✏️";
-    opacity: 0;
-    font-size: 0.8em;
-    margin-left: 0.5rem;
-    transition: opacity 0.2s ease;
+  content: '✏️';
+  opacity: 0;
+  font-size: 0.8em;
+  margin-left: 0.5rem;
+  transition: opacity 0.2s ease;
 }
 
 .inline-editable:hover::after,
 .inline-editable-hover::after {
-    opacity: 0.6;
+  opacity: 0.6;
 }
 
 /* Edit Container */
 .inline-edit-container {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .inline-edit-input {
-    flex-grow: 1;
-    min-width: 200px;
-    padding: 0.375rem 0.75rem;
-    border: 1px solid #ced4da;
-    border-radius: 0.25rem;
-    font-size: inherit;
-    font-family: inherit;
-    font-weight: inherit;
-    color: inherit;
-    background-color: var(--bs-body-bg);
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  flex-grow: 1;
+  min-width: 200px;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid #ced4da;
+  border-radius: 0.25rem;
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  color: inherit;
+  background-color: var(--bs-body-bg);
+  transition:
+    border-color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out;
 }
 
 .inline-edit-input:focus {
-    outline: none;
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+  outline: none;
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
 
 .inline-edit-input.is-invalid {
-    border-color: #dc3545;
+  border-color: #dc3545;
 }
 
 .inline-edit-input.is-invalid:focus {
-    border-color: #dc3545;
-    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+  border-color: #dc3545;
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
 }
 
 /* Button Container */
 .inline-edit-buttons {
-    display: flex;
-    gap: 0.25rem;
-    flex-shrink: 0;
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
 }
 
 .inline-edit-save,
 .inline-edit-cancel {
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.25rem;
-    font-size: 0.875rem;
-    font-weight: bold;
-    line-height: 1;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: bold;
+  line-height: 1;
 }
 
 .inline-edit-save:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Error Display */
 .inline-edit-error {
-    width: 100%;
-    color: #dc3545;
-    font-size: 0.875rem;
-    margin-top: 0.25rem;
-    padding: 0.375rem 0.75rem;
-    background-color: rgba(220, 53, 69, 0.1);
-    border: 1px solid rgba(220, 53, 69, 0.2);
-    border-radius: 0.25rem;
-    animation: fadeIn 0.3s ease-in-out;
+  width: 100%;
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  background-color: rgba(220, 53, 69, 0.1);
+  border: 1px solid rgba(220, 53, 69, 0.2);
+  border-radius: 0.25rem;
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Campaign-specific styles */
 .campaign-title-editable {
-    font-size: 1.5rem;
-    font-weight: 500;
-    margin-bottom: 0;
-    display: inline-block;
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin-bottom: 0;
+  display: inline-block;
 }
 
 .campaign-title-editable .inline-edit-input {
-    font-size: 1.5rem;
-    font-weight: 500;
-    min-width: 250px;
+  font-size: 1.5rem;
+  font-weight: 500;
+  min-width: 250px;
 }
 
 /* Game view title editing */
 #game-title.inline-editable {
-    font-size: 1.5rem;
-    font-weight: 500;
-    margin-bottom: 0;
-    display: inline-block;
+  font-size: 1.5rem;
+  font-weight: 500;
+  margin-bottom: 0;
+  display: inline-block;
 }
 
 #game-title .inline-edit-input {
-    font-size: 1.5rem;
-    font-weight: 500;
-    min-width: 300px;
+  font-size: 1.5rem;
+  font-weight: 500;
+  min-width: 300px;
 }
 
 /* Dashboard campaign list editing */
 .campaign-title-link.inline-editable {
-    font-size: 1.25rem;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-    display: inline-block;
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  display: inline-block;
 }
 
 .campaign-title-link .inline-edit-input {
-    font-size: 1.25rem;
-    font-weight: 500;
-    min-width: 250px;
+  font-size: 1.25rem;
+  font-weight: 500;
+  min-width: 250px;
 }
 
 /* Theme-specific adjustments */
-[data-bs-theme="dark"] .inline-editable:hover,
-[data-bs-theme="dark"] .inline-editable-hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+[data-bs-theme='dark'] .inline-editable:hover,
+[data-bs-theme='dark'] .inline-editable-hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
-[data-bs-theme="dark"] .inline-edit-input {
-    border-color: #495057;
-    background-color: var(--bs-body-bg);
-    color: var(--bs-body-color);
+[data-bs-theme='dark'] .inline-edit-input {
+  border-color: #495057;
+  background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
 }
 
-[data-bs-theme="dark"] .inline-edit-input:focus {
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+[data-bs-theme='dark'] .inline-edit-input:focus {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
 
-[data-bs-theme="dark"] .inline-edit-error {
-    background-color: rgba(220, 53, 69, 0.2);
-    border-color: rgba(220, 53, 69, 0.3);
+[data-bs-theme='dark'] .inline-edit-error {
+  background-color: rgba(220, 53, 69, 0.2);
+  border-color: rgba(220, 53, 69, 0.3);
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .inline-edit-container {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .inline-edit-input {
-        min-width: unset;
-        width: 100%;
-    }
-    
-    .inline-edit-buttons {
-        justify-content: flex-end;
-    }
+  .inline-edit-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .inline-edit-input {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .inline-edit-buttons {
+    justify-content: flex-end;
+  }
 }
 
 /* Animation for smooth transitions */
 .inline-edit-container {
-    animation: slideIn 0.2s ease-out;
+  animation: slideIn 0.2s ease-out;
 }
 
 @keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-5px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Loading state for save button */
 .inline-edit-save .spinner-border-sm {
-    width: 0.75rem;
-    height: 0.75rem;
+  width: 0.75rem;
+  height: 0.75rem;
 }

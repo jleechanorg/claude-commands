@@ -1,8 +1,8 @@
 # Scratchpad: TASK-158 - MCP Instruction Compliance Tracking
 
-**Branch**: roadmap23423g  
-**Priority**: Medium  
-**Estimated Time**: 3-4 hours  
+**Branch**: roadmap23423g
+**Priority**: Medium
+**Estimated Time**: 3-4 hours
 **Created**: 2025-01-10
 
 ## Goal
@@ -20,7 +20,7 @@ Implement automatic instruction compliance failure measurement for Claude using 
 Through research, we found that MCP servers can provide the missing capabilities:
 
 1. **Persistent external memory** - Unlike Claude's session limitations
-2. **Real-time monitoring** - Track all interactions through MCP protocol  
+2. **Real-time monitoring** - Track all interactions through MCP protocol
 3. **Security boundaries** - Protocol-layer enforcement points
 4. **Existing infrastructure** - Several monitoring MCP servers already exist
 
@@ -127,7 +127,7 @@ uv run -m src.mcp_scan.cli proxy --local-only
    - "NO FALSE ✅" - Only use ✅ for 100% complete/working
    - "NEVER SIMULATE" - Ask if stuck, fake answer = 1000x worse
    - "NO POSITIVITY" - Be extremely self-critical
-   
+
 2. **Evidence-Based Approach**:
    - Extract exact error messages/code snippets before analyzing
    - Show actual output before suggesting fixes

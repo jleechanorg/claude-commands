@@ -10,7 +10,7 @@
 ```
 🤖 /copilot - Starting intelligent PR analysis for PR #[NUMBER]
 🔧 Reading PR status and planning workflow...
-📊 PR Status: [OPEN/MERGED/CLOSED] | CI: [PASSING/FAILING] | Mergeable: [YES/NO]
+📊 PR Status: [OPEN/MERGED/CLOSED] | ✅ CI Status: [PASSING/FAILING] | 🔄 Mergeable: [MERGEABLE/CONFLICTING/UNMERGEABLE]
 🚀 Beginning 6-phase autonomous workflow with full transparency...
 
 === COPILOT WORKFLOW INITIATED ===
@@ -37,7 +37,7 @@
    - Handles: git add, commit, push with proper messaging
 
 4. **`/commentreply`** - Comment response processing (AFTER fixes are live)
-   - Markdown: `.claude/commands/commentreply.md` (Claude executes)  
+   - Markdown: `.claude/commands/commentreply.md` (Claude executes)
    - Handles: All comment types, DONE/NOT DONE tracking, GitHub API posting
 
 5. **`/commentcheck`** - Verify 100% comment coverage
@@ -57,7 +57,7 @@ The `/copilot` command uses **universal composition** to intelligently orchestra
 
 **Before posting ANY replies or making changes**:
 1. Generate all responses/fixes
-2. Display them in chat for visibility  
+2. Display them in chat for visibility
 3. Indicate which will be auto-posted
 4. Then execute with full transparency
 
@@ -130,14 +130,14 @@ if 'copilot' in author.lower():
 - **What it handles**: All comment types, DONE/NOT DONE tracking, GitHub API threading
 - **Result**: 100% comment coverage with proper inline responses
 
-### Git Operations → Use `/pushl`  
+### Git Operations → Use `/pushl`
 - **Why**: `.claude/commands/pushl` already handles git add/commit/push workflow
 - **What it handles**: Staging, committing, pushing, verification
 - **Result**: Clean git operations with proper messaging
 
 ### Data Collection → Use `/commentfetch`
 - **Why**: `.claude/commands/_copilot_modules/commentfetch.py` already fetches all comment types
-- **What it handles**: Inline, general, review, Copilot comments → branch-specific comments file  
+- **What it handles**: Inline, general, review, Copilot comments → branch-specific comments file
 - **Result**: Complete comment data for processing
 
 ## How It Works
@@ -175,27 +175,62 @@ if 'copilot' in author.lower():
 
 **OUTPUT**: "✅ PHASE 1 COMPLETE: [X] comments collected" or "❌ PHASE 1 FAILED: [detailed error]"
 
-### PHASE 2: Fix Issues First (MANDATORY)
-**🔧 PHASE 2: ISSUE FIXING - Starting...**
+### PHASE 2: Comprehensive Merge Readiness Check (MANDATORY)
+**🔧 PHASE 2: MERGE READINESS ANALYSIS - Starting...**
 
-**MUST RUN** `/fixpr [PR]` to resolve CI failures and conflicts:
-- Show: "Running `/fixpr [PR]`..."
-- Show: "Analyzing CI status and conflicts..."
+**MUST RUN** comprehensive merge readiness check including BOTH CI and GitHub mergeable status:
+
+#### 🚨 CRITICAL: Dual Status Verification Protocol
+1. **CI Status Check** (via `gh pr checks`):
+   - Show: "✅ Checking CI Status: `gh pr checks [PR]`..."
+   - Show: "CI Status: [PASSING/FAILING] - [X] checks found"
+   - Show: Each CI check result with detailed status
+
+2. **🔄 NEW: GitHub Mergeable Status Check** (via `gh pr view [PR] --json mergeable`):
+   - Show: "🔄 Checking Mergeable Status: `gh pr view [PR] --json mergeable`..."
+   - Show: "Mergeable Status: [MERGEABLE/CONFLICTING/UNMERGEABLE]"
+   - Show: Merge conflict details if any exist
+
+3. **🚨 CRITICAL: False Confidence Detection**:
+   - Show: "🔍 Cross-checking CI vs Mergeable status..."
+   - **DETECT**: When CI=PASSING but Mergeable=CONFLICTING
+   - **ALERT**: "⚠️ FALSE CONFIDENCE DETECTED: CI passes but PR cannot merge due to conflicts"
+   - **GUIDANCE**: "Action Required: Resolve merge conflicts before proceeding"
+
+#### Issue Resolution Protocol
+**MUST RUN** `/fixpr [PR]` to resolve identified issues:
+- Show: "Running `/fixpr [PR]` for comprehensive issue resolution..."
 - **MANDATORY**: Analyze and resolve test failures, linting errors
-  - Show: "CI Status: [passing/failing] - [X] checks found"
+  - Show: "Analyzing CI failures: [list of specific failures]"
   - Show: Each CI failure with analysis and fix plan
-- **MANDATORY**: Handle merge conflicts and compatibility issues
-  - Show: "Merge Status: [mergeable/conflicts] - [X] conflicts found"  
+- **🔄 ENHANCED**: Handle merge conflicts identified by mergeable status
+  - Show: "Analyzing merge conflicts: [files in conflict]"
+  - Show: "Merge Status: [mergeable/conflicts] - [X] conflicts found"
   - Show: Each conflict with resolution strategy
-- **MANDATORY**: Apply necessary fixes based on analysis
-  - Show: "Applying [X] fixes: [list of changes]"
+  - Show: "Using `git status` and `git diff` to analyze conflicts"
+- **MANDATORY**: Apply necessary fixes based on comprehensive analysis
+  - Show: "Applying [X] CI fixes and [X] conflict resolutions"
   - Show: Each file being modified and why
-- **MANDATORY**: Ensure fixes are ready before commenting
-  - Show: "Verifying all fixes applied successfully..."
-- **FAIL IF**: CI failures remain or conflicts unresolved
-  - Show: Remaining issues and why they couldn't be resolved
+- **🔄 ENHANCED**: Re-verify both CI and mergeable status after fixes
+  - Show: "Re-checking CI status post-fixes..."
+  - Show: "Re-checking mergeable status post-fixes..."
+  - Show: "Verification: ✅ CI: [status] | 🔄 Mergeable: [status]"
 
-**OUTPUT**: "✅ PHASE 2 COMPLETE: [X] issues fixed" or "❌ PHASE 2 FAILED: [detailed issues remaining]"
+#### 🚨 Enhanced Error Detection & Guidance
+- **FAIL IF**: CI failures remain OR mergeable status shows conflicts
+  - Show: "❌ BLOCKING ISSUES DETECTED:"
+  - Show: "  - CI Status: [detailed remaining failures]"
+  - Show: "  - Mergeable Status: [CONFLICTING/FALSE with conflict details]"
+  - Show: "📋 CONFLICT RESOLUTION GUIDANCE:"
+  - Show: "  1. Pull latest changes: `git pull origin [default-branch]`"
+  - Show: "     (Note: Replace `[default-branch]` with your repository's default branch name, e.g., `main` or `master`)"
+  - Show: "  2. Resolve conflicts in: [list of conflicted files]"
+  - Show: "  3. Use conflict resolution tools or manual editing"
+  - Show: "  4. Test locally: `./run_tests.sh`"
+  - Show: "  5. Commit resolution: `git add . && git commit`"
+  - Show: "  6. Push updates: `git push`"
+
+**OUTPUT**: "✅ PHASE 2 COMPLETE: CI=[status] Mergeable=[status] - [X] issues fixed" or "❌ PHASE 2 FAILED: [detailed CI and merge status issues]"
 
 ### PHASE 3: Push Fixes (MANDATORY)
 **🔧 PHASE 3: PUSHING FIXES - Starting...**
@@ -304,7 +339,7 @@ if 'copilot' in author.lower():
 
 **MANDATORY CONTINUATION RULES**:
 - ❌ **NEVER stop silently** - Always show what's happening
-- ❌ **NEVER skip phases** - Execute all 6 phases in sequence  
+- ❌ **NEVER skip phases** - Execute all 6 phases in sequence
 - ❌ **NEVER assume success** - Verify each phase completion
 - ✅ **ALWAYS show progress** - Verbose output for every action
 - ✅ **ALWAYS continue on errors** - Show error and attempt recovery
@@ -319,7 +354,7 @@ if 'copilot' in author.lower():
 
 **Key Principles:**
 - **Zero tolerance for missed comments** - every single one gets processed
-- **Complete transparency** - show everything before doing it  
+- **Complete transparency** - show everything before doing it
 - **Systematic execution** - follow the protocol exactly, no shortcuts
 - **Proper threading** - responses appear in the right place
 - **Self-improving** - commit any improvements made during execution
@@ -401,29 +436,29 @@ PHASE 4: DIRECT EXECUTION
 ```
 /copilot 123
 > Analyzing PR #123...
-> 
+>
 > ## 🔧 Composing Commands:
-> 
+>
 > 1. Running /commentfetch 123...
 >    ✅ Found 5 comments → branch-specific directory
-> 
+>
 > 2. Running /fixpr 123...
 >    ✅ Claude reads fixpr.md and checks CI status
 >    ✅ No failures or conflicts found
-> 
+>
 > 3. Analyzing comments (100% coverage):
 >    - @user "Fix pagination" - NOT DONE
 >    - @bot "CI passed" - DONE (informational)
 >    - @reviewer "LGTM" - DONE (approval)
 >    - @user "Add tests" - NOT DONE
 >    - @user "Thanks!" - DONE (acknowledgment)
-> 
+>
 > 4. Running /commentreply...
 >    ✅ Claude reads commentreply.md
 >    ✅ Posting 2 responses directly via gh api:
 >    → "Fixed pagination in commit abc123"
 >    → "Added tests in test_edge_cases.py"
-> 
+>
 > ✅ Complete! Orchestrated all 4 modular commands
 ```
 
@@ -431,9 +466,9 @@ PHASE 4: DIRECT EXECUTION
 ```
 /copilot 456
 > Analyzing PR #456...
-> 
+>
 > ## 🔧 Composing Commands:
-> 
+>
 > 1. Running /commentfetch 456...
 >    ✅ Found 3 comments → branch-specific directory
 >
@@ -441,53 +476,85 @@ PHASE 4: DIRECT EXECUTION
 >    ✅ Claude reads fixpr.md and analyzes CI
 >    - GitHub CI: 2 failures detected
 >    - Analyzing failure patterns...
->    
+>
 >    ## 🔧 Planned Fixes:
 >    1. **Test failure in test_auth.py**: Missing import statement
 >    2. **Linting error in main.py**: Unused variable
-> 
+>
 > 3. [Shows exact changes before applying]
-> 
+>
 > 4. Applying fixes directly...
 >    ✅ Fixed both issues
-> 
+>
 > 5. Running /pushl to commit and push...
 >    ✅ Pushed fixes to remote
-> 
+>
 > ✅ Complete! Used /fixpr + direct fixes + /pushl
+```
+
+### False Confidence Detection (PR #949 scenario):
+```
+/copilot 949
+> Analyzing PR #949...
+>
+> ## 🔧 False Confidence Detection:
+>
+> 1. Running /commentfetch 949...
+>    ✅ Found 6 comments → branch-specific directory
+>
+> 2. Running comprehensive merge readiness check...
+>    ✅ CI Status: PASSING - All checks green ✅
+>    🔄 Mergeable Status: CONFLICTING - Branch has conflicts with main
+>    🚨 FALSE CONFIDENCE DETECTED: CI passes but PR cannot merge due to conflicts!
+>
+>    📋 CONFLICT RESOLUTION GUIDANCE:
+>    1. Pull latest changes: `git pull origin [default-branch]`
+>       (Note: Replace `[default-branch]` with your repository's default branch name, e.g., `main` or `master`)
+>    2. Resolve conflicts in: .claude/commands/copilot.md, main.py
+>    3. Use conflict resolution tools or manual editing
+>    4. Test locally: `./run_tests.sh`
+>    5. Commit resolution: `git add . && git commit`
+>    6. Push updates: `git push`
+>
+> 3. ⚠️ WORKFLOW PAUSED: Cannot proceed with comment responses until conflicts resolved
+>    - Reason: Comments about merge readiness would be misleading
+>    - Action: User must resolve conflicts first
+>    - Resume: Re-run /copilot after conflict resolution
+>
+> ❌ PHASE 2 FAILED: Mergeable status CONFLICTING - resolve conflicts before proceeding
 ```
 
 ### Complex PR with everything:
 ```
 /copilot 789
 > Analyzing PR #789...
-> 
+>
 > ## 🔧 Full Orchestration:
-> 
+>
 > 1. Running /commentfetch 789...
 >    ✅ Found 12 comments → branch-specific directory
 >    - 8 need responses (NOT DONE)
 >    - 4 informational (DONE)
-> 
+>
 > 2. Running /fixpr 789...
 >    ✅ Collected comprehensive data:
 >    - GitHub CI: 3 failures, 1 timeout
 >    - Local CI: 2 failures reproduced
->    - Merge conflicts: 2 files conflicted
-> 
+>    📋 Resolution required: main.py, config.yaml have merge conflicts
+>
 > 3. Intelligent Analysis Phase:
 >    [Using fixpr.md + commentreply.md intelligence]
->    
+>
 >    ## Fixes Identified:
 >    - Import error: Add missing firebase import
 >    - Test timeout: Increase async timeout to 30s
 >    - Flaky test: Add retry logic
 >    - Conflicts: Merge both feature additions
->    
+>
 >    ## Responses Generated:
 >    - Technical replies for 8 comments
 >    - Acknowledgments where appropriate
-> 
+>
 > 4. Execution Phase:
 >    a. Applying code fixes...
 >       ✅ Fixed all 3 CI issues
@@ -497,12 +564,12 @@ PHASE 4: DIRECT EXECUTION
 >       ✅ Posted 8 responses
 >    d. Running /pushl...
 >       ✅ Committed and pushed all fixes
-> 
+>
 > 5. Verification:
 >    - Re-running /fixpr 789...
 >    - ✅ All CI checks now passing
 >    - ✅ No conflicts remaining
-> 
+>
 > ✅ Complete! Full hybrid orchestration successful
 ```
 
@@ -548,7 +615,7 @@ gh pr review {pr} --comment --body "Some observations..."
 ## Adaptive Intelligence Features
 
 - **Skip unnecessary steps**: No comments? Skip comment fetching
-- **Prioritize by urgency**: Security issues first, style issues last  
+- **Prioritize by urgency**: Security issues first, style issues last
 - **Context awareness**: First-time contributors get more detailed help
 - **Error recovery**: Continue with remaining tasks if one fails
 - **State management**: All data in `/tmp/copilot_${SANITIZED_BRANCH}/` for debugging

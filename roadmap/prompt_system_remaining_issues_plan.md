@@ -1,8 +1,8 @@
 # Prompt System Remaining Issues Plan
 
-**Version:** 1.0  
-**Date:** 2025-01-01  
-**Status:** ACTIVE  
+**Version:** 1.0
+**Date:** 2025-01-01
+**Status:** ACTIVE
 **Previous Work:** Builds on PR #189 comprehensive prompt cleanup
 
 ## Overview
@@ -13,8 +13,8 @@ This plan addresses the remaining 4 of 14 identified issues from the comprehensi
 
 ### 1. Loading Order Implementation ✅ **PARTIALLY COMPLETE**
 
-**Status:** Core hierarchy implemented, needs optimization  
-**Impact:** Critical for instruction hierarchy effectiveness  
+**Status:** Core hierarchy implemented, needs optimization
+**Impact:** Critical for instruction hierarchy effectiveness
 **Complexity:** Low (remaining work)
 
 #### Current State ✅
@@ -27,10 +27,10 @@ This plan addresses the remaining 4 of 14 identified issues from the comprehensi
 ```
 ✅ IMPLEMENTED ORDER:
 1. master_directive          (CORRECT - overrides all)
-2. game_state               (CORRECT - core state)  
+2. game_state               (CORRECT - core state)
 3. entity_schema            (CORRECT - data structures)
 4. character_template       (CONDITIONAL - narrative selected)
-5. character_sheet          (CONDITIONAL - mechanics selected)  
+5. character_sheet          (CONDITIONAL - mechanics selected)
 6. narrative                (CONDITIONAL - user selected)
 7. mechanics                (CONDITIONAL - user selected)
 8. destiny_ruleset          (ALWAYS - system rules)
@@ -42,7 +42,7 @@ This plan addresses the remaining 4 of 14 identified issues from the comprehensi
 ```
 ACTUAL vs IDEAL ORDER COMPARISON:
 ✅ master_directive (1st)     - PERFECT
-✅ game_state (2nd)          - PERFECT  
+✅ game_state (2nd)          - PERFECT
 ✅ entity_schema (3rd)       - PERFECT
 ❓ destiny_ruleset (8th)     - Currently loads 8th, should be 4th
 ❓ calibration (conditional)  - Missing from current implementation
@@ -57,20 +57,20 @@ ACTUAL vs IDEAL ORDER COMPARISON:
 
 - [ ] **Testing Requirements** ✅ **MOSTLY COMPLETE**
   - ✅ Verified instruction hierarchy in generated system text
-  - ✅ Tested conditional prompt loading maintains order  
+  - ✅ Tested conditional prompt loading maintains order
   - ✅ Core prompts load in correct sequence
   - [ ] Test calibration prompt conditional loading
   - [ ] Validate personality file on-demand system
 
-**Estimated Effort:** 0.5-1 day (minor adjustments)  
+**Estimated Effort:** 0.5-1 day (minor adjustments)
 **Risk:** Low (small tweaks to working system)
 
 ---
 
 ### 2. DELETE Token Processing Investigation 🔍 **HIGH PRIORITY**
 
-**Status:** Needs investigation and potential fix  
-**Impact:** Critical for combat state consistency  
+**Status:** Needs investigation and potential fix
+**Impact:** Critical for combat state consistency
 **Complexity:** Medium
 
 #### Current State
@@ -96,15 +96,15 @@ ACTUAL vs IDEAL ORDER COMPARISON:
   - Verify related data cleanup works correctly
   - Test malformed deletion token handling
 
-**Estimated Effort:** 0.5-2 days (depending on findings)  
+**Estimated Effort:** 0.5-2 days (depending on findings)
 **Risk:** Medium (data integrity impact)
 
 ---
 
 ### 3. Long-term: Instruction Complexity Reduction 📉 **MEDIUM PRIORITY**
 
-**Status:** Future enhancement  
-**Impact:** Performance and maintainability  
+**Status:** Future enhancement
+**Impact:** Performance and maintainability
 **Complexity:** High
 
 #### Current State
@@ -135,15 +135,15 @@ Reduction Strategies:
   - Build instruction validation layer
   - Create instruction metrics and monitoring
 
-**Estimated Effort:** 2-3 weeks  
+**Estimated Effort:** 2-3 weeks
 **Risk:** Low (incremental improvements)
 
 ---
 
 ### 4. Instruction Validation Layer 🛡️ **MEDIUM PRIORITY**
 
-**Status:** Future enhancement  
-**Impact:** Quality assurance and consistency  
+**Status:** Future enhancement
+**Impact:** Quality assurance and consistency
 **Complexity:** Medium
 
 #### Current State
@@ -174,7 +174,7 @@ Validation Components:
   - Build metrics dashboard for instruction quality
   - Implement automated conflict resolution suggestions
 
-**Estimated Effort:** 1-2 weeks  
+**Estimated Effort:** 1-2 weeks
 **Risk:** Low (quality improvement tool)
 
 ---

@@ -5,11 +5,11 @@ Ensures that the integration works correctly and existing tests remain compatibl
 
 import os
 import sys
+import time
 import unittest
 
 from main import create_app
 from testing_framework.integration_utils import get_test_mode_info
-import time
 
 # Add the project root to the path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -49,7 +49,6 @@ class TestFrameworkIntegration(BaseTestCase):
         if self.is_real:
             # Use unique collection name in real mode
 
-
             collection_name = f"{collection_name}_{int(time.time())}"
 
         doc_ref = self.firestore.collection(collection_name).document("test_doc")
@@ -87,9 +86,9 @@ class TestFrameworkIntegration(BaseTestCase):
                 # Real Gemini - should get actual response
                 assert response is not None, "Should get real response from Gemini"
                 # Real responses typically have text content
-                assert hasattr(response, "text") or hasattr(response, "content"), (
-                    "Response should have text content"
-                )
+                assert hasattr(response, "text") or hasattr(
+                    response, "content"
+                ), "Response should have text content"
                 print("✅ Real Gemini operations working")
             else:
                 # Mock Gemini - should get mock response
@@ -112,8 +111,6 @@ class TestBackwardsCompatibility(DualModeTestMixin, unittest.TestCase):
 
         # Simulate existing test setup
         try:
-
-
             self.app = create_app()
             self.app.config["TESTING"] = True
             self.client = self.app.test_client()
@@ -214,9 +211,9 @@ class TestResourceManagement(BaseTestCase):
         # Store test-specific data
         if hasattr(self, "_previous_test_id"):
             # This is not the first test method
-            assert test_id != self._previous_test_id, (
-                "Should get fresh provider instance"
-            )
+            assert (
+                test_id != self._previous_test_id
+            ), "Should get fresh provider instance"
 
         self._previous_test_id = test_id
         print("✅ Test isolation working")
@@ -261,7 +258,6 @@ class TestFrameworkValidation(unittest.TestCase):
 
     def test_mode_detection(self):
         """Test that test mode is detected correctly."""
-
 
         info = get_test_mode_info()
         assert "mode" in info

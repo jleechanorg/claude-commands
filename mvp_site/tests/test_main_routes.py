@@ -21,7 +21,9 @@ mock_firestore.DELETE_FIELD = DELETE_FIELD
 # Setup module mocks
 import sys
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 sys.modules["firebase_admin"] = mock_firebase_admin
 sys.modules["firebase_admin.firestore"] = mock_firestore
 sys.modules["firebase_admin.auth"] = mock_auth
@@ -89,9 +91,11 @@ class TestCampaignRoutes(unittest.TestCase):
         self.assertIn(KEY_ERROR, data)
         self.assertIn("Database error", data[KEY_ERROR])
 
-    @patch('main.get_user_settings')
+    @patch("main.get_user_settings")
     @patch("main.firestore_service")
-    def test_get_single_campaign_success(self, mock_firestore_service, mock_get_user_settings):
+    def test_get_single_campaign_success(
+        self, mock_firestore_service, mock_get_user_settings
+    ):
         """Test successful single campaign retrieval."""
         # Mock campaign and story data
         mock_campaign = SAMPLE_CAMPAIGN.copy()
@@ -105,7 +109,7 @@ class TestCampaignRoutes(unittest.TestCase):
         )
         mock_firestore_service.get_campaign_game_state.return_value = mock_game_state
         # Mock get_user_settings for debug_mode lookup
-        mock_get_user_settings.return_value = {'debug_mode': False}
+        mock_get_user_settings.return_value = {"debug_mode": False}
 
         response = self.client.get(
             "/api/campaigns/test-campaign", headers=self.test_headers
@@ -371,7 +375,7 @@ class TestFrontendRoutes(unittest.TestCase):
             # Navigate from test file -> tests dir -> mvp_site dir -> static dir
             test_dir = os.path.dirname(os.path.abspath(__file__))
             mvp_site_dir = os.path.dirname(test_dir)
-            expected_static_path = os.path.join(mvp_site_dir, 'static')
+            expected_static_path = os.path.join(mvp_site_dir, "static")
             mock_send.assert_called_with(expected_static_path, "index.html")
 
     def test_serve_existing_static_file(self):
@@ -388,7 +392,7 @@ class TestFrontendRoutes(unittest.TestCase):
             # Navigate from test file -> tests dir -> mvp_site dir -> static dir
             test_dir = os.path.dirname(os.path.abspath(__file__))
             mvp_site_dir = os.path.dirname(test_dir)
-            expected_static_path = os.path.join(mvp_site_dir, 'static')
+            expected_static_path = os.path.join(mvp_site_dir, "static")
             mock_send.assert_called_with(expected_static_path, "styles.css")
 
     def test_serve_nonexistent_file_fallback(self):
@@ -405,67 +409,76 @@ class TestFrontendRoutes(unittest.TestCase):
             # Navigate from test file -> tests dir -> mvp_site dir -> static dir
             test_dir = os.path.dirname(os.path.abspath(__file__))
             mvp_site_dir = os.path.dirname(test_dir)
-            expected_static_path = os.path.join(mvp_site_dir, 'static')
+            expected_static_path = os.path.join(mvp_site_dir, "static")
             mock_send.assert_called_with(expected_static_path, "index.html")
-
 
     # Cache Busting Tests (moved from test_cache_busting_red_green.py)
     def test_static_js_file_normal_caching_green(self):
         """GREEN: Test that JS files have normal caching without special header."""
-        response = self.client.get('/static/app.js')
-        
+        response = self.client.get("/static/app.js")
+
         # Should have normal caching (not full no-cache)
-        cache_control = response.headers.get('Cache-Control', '')
-        self.assertNotEqual(cache_control, 'no-cache, no-store, must-revalidate')
-        self.assertNotIn('Pragma', response.headers)
-        self.assertNotIn('Expires', response.headers)
+        cache_control = response.headers.get("Cache-Control", "")
+        self.assertNotEqual(cache_control, "no-cache, no-store, must-revalidate")
+        self.assertNotIn("Pragma", response.headers)
+        self.assertNotIn("Expires", response.headers)
 
     def test_static_js_file_cache_busting_green(self):
         """GREEN: Test that JS files disable caching with X-No-Cache header."""
-        response = self.client.get('/static/app.js', headers={'X-No-Cache': 'true'})
-        
+        response = self.client.get("/static/app.js", headers={"X-No-Cache": "true"})
+
         # Should have full cache busting
-        self.assertEqual(response.headers.get('Cache-Control'), 'no-cache, no-store, must-revalidate')
-        self.assertEqual(response.headers.get('Pragma'), 'no-cache')
-        self.assertEqual(response.headers.get('Expires'), '0')
+        self.assertEqual(
+            response.headers.get("Cache-Control"), "no-cache, no-store, must-revalidate"
+        )
+        self.assertEqual(response.headers.get("Pragma"), "no-cache")
+        self.assertEqual(response.headers.get("Expires"), "0")
 
     def test_static_css_file_cache_busting_green(self):
         """GREEN: Test that CSS files also support cache busting."""
-        response = self.client.get('/static/style.css', headers={'X-No-Cache': 'true'})
-        
+        response = self.client.get("/static/style.css", headers={"X-No-Cache": "true"})
+
         # Should have full cache busting for CSS too
-        self.assertEqual(response.headers.get('Cache-Control'), 'no-cache, no-store, must-revalidate')
-        self.assertEqual(response.headers.get('Pragma'), 'no-cache')
-        self.assertEqual(response.headers.get('Expires'), '0')
+        self.assertEqual(
+            response.headers.get("Cache-Control"), "no-cache, no-store, must-revalidate"
+        )
+        self.assertEqual(response.headers.get("Pragma"), "no-cache")
+        self.assertEqual(response.headers.get("Expires"), "0")
 
     def test_non_js_css_files_unaffected_green(self):
         """GREEN: Test that non-JS/CSS files are not affected by cache busting."""
         # Create a mock image file response
-        with patch('main.send_from_directory') as mock_send:
+        with patch("main.send_from_directory") as mock_send:
             mock_response = MagicMock()
             mock_response.headers = {}
             mock_send.return_value = mock_response
-            
-            response = self.client.get('/static/image.png', headers={'X-No-Cache': 'true'})
-            
+
+            response = self.client.get(
+                "/static/image.png", headers={"X-No-Cache": "true"}
+            )
+
             # Should not have cache busting headers for non-JS/CSS files
-            self.assertNotIn('Cache-Control', mock_response.headers)
-            self.assertNotIn('Pragma', mock_response.headers)
-            self.assertNotIn('Expires', mock_response.headers)
+            self.assertNotIn("Cache-Control", mock_response.headers)
+            self.assertNotIn("Pragma", mock_response.headers)
+            self.assertNotIn("Expires", mock_response.headers)
 
     def test_handle_interaction_fallback_green(self):
         """GREEN: Test that /handle_interaction returns helpful fallback message."""
-        response = self.client.post('/handle_interaction', 
-                                   json={'input': 'test'},
-                                   headers={'Content-Type': 'application/json'})
-        
+        response = self.client.post(
+            "/handle_interaction",
+            json={"input": "test"},
+            headers={"Content-Type": "application/json"},
+        )
+
         # Should return 410 Gone with helpful message
         self.assertEqual(response.status_code, 410)
         data = response.get_json()
-        self.assertIn('error', data)
-        self.assertIn('refresh', data['error'].lower())
-        self.assertIn('cache', data['redirect_message'].lower())  # Cache is in redirect_message
-        self.assertEqual(data['status'], 'cache_issue')
+        self.assertIn("error", data)
+        self.assertIn("refresh", data["error"].lower())
+        self.assertIn(
+            "cache", data["redirect_message"].lower()
+        )  # Cache is in redirect_message
+        self.assertEqual(data["status"], "cache_issue")
 
 
 if __name__ == "__main__":

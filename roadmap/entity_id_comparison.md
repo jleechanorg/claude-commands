@@ -93,17 +93,17 @@ npc_9800f39c_guard
 class EntityIDGenerator:
     def __init__(self):
         self.sequences = {}  # {type_name: next_number}
-    
+
     def generate_id(self, entity_type: str, base_name: str) -> str:
         """Generate next sequential ID"""
         key = f"{entity_type}_{base_name}"
-        
+
         if key not in self.sequences:
             self.sequences[key] = 1
-        
+
         sequence = self.sequences[key]
         self.sequences[key] += 1
-        
+
         return f"{entity_type}_{base_name}_{sequence:03d}"
 
 # Usage

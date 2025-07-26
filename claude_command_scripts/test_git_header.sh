@@ -23,10 +23,10 @@ run_test() {
     local test_name="$1"
     local expected="$2"
     local actual="$3"
-    
+
     TESTS_RUN=$((TESTS_RUN + 1))
     echo -n "Test $TESTS_RUN: $test_name ... "
-    
+
     if [ "$actual" = "$expected" ]; then
         echo -e "${GREEN}PASS${NC}"
         TESTS_PASSED=$((TESTS_PASSED + 1))
@@ -42,7 +42,7 @@ mock_git_commands() {
     local branch="$1"
     local upstream="$2"
     local pr_json="$3"
-    
+
     # Create temporary mock script
     cat > /tmp/mock_git_header.sh << EOF
 #!/bin/bash
@@ -68,7 +68,7 @@ fi
 
 echo "[Local: \$local_branch | Remote: \$remote | PR: \$pr_text]"
 EOF
-    
+
     chmod +x /tmp/mock_git_header.sh
     /tmp/mock_git_header.sh
 }

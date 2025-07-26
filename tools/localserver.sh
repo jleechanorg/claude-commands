@@ -13,24 +13,24 @@ list_servers() {
     echo ""
     echo "📊 Currently Running Servers:"
     echo "-----------------------------"
-    
+
     # Find all Python processes running main.py
     local servers=$(ps aux | grep -E "python.*main.py.*serve" | grep -v grep || true)
-    
+
     if [ -z "$servers" ]; then
         echo "✅ No WorldArchitect.AI servers currently running"
     else
         echo "$servers" | while read -r line; do
             local pid=$(echo "$line" | awk '{print $2}')
             local cmd=$(echo "$line" | awk '{for(i=11;i<=NF;i++) printf "%s ", $i; print ""}')
-            
+
             # Try to find the port
             local port=$(lsof -p $pid 2>/dev/null | grep LISTEN | awk '{print $9}' | cut -d: -f2 | head -1)
             if [ -z "$port" ]; then
                 # Try to extract PORT from command
                 port=$(echo "$cmd" | grep -oP 'PORT=\K\d+' || echo "unknown")
             fi
-            
+
             echo "🔹 PID: $pid | Port: $port"
             echo "   Command: $cmd"
             echo "   Worktree: $(echo "$line" | grep -oP '/worktree_\w+/' | sed 's/\///' || echo "main")"
@@ -42,7 +42,7 @@ list_servers() {
 # Function to offer cleanup
 cleanup_servers() {
     local servers=$(ps aux | grep -E "python.*main.py.*serve" | grep -v grep || true)
-    
+
     if [ -n "$servers" ]; then
         echo ""
         echo "🧹 Server Cleanup Options:"
@@ -51,7 +51,7 @@ cleanup_servers() {
         echo "   [n] Keep all servers running"
         echo -n "   Choice: "
         read -r choice
-        
+
         case "$choice" in
             a|A)
                 echo "🔄 Stopping all servers..."
@@ -115,9 +115,9 @@ find_available_port() {
     local start_port=${1:-8081}
     local port=$start_port
     local max_attempts=10
-    
+
     echo "🔍 Checking for available ports starting from $start_port..." >&2
-    
+
     for ((i=0; i<$max_attempts; i++)); do
         if ! check_port $port; then
             echo "✅ Port $port is available!" >&2
@@ -131,7 +131,7 @@ find_available_port() {
             ((port++))
         fi
     done
-    
+
     echo "❌ ERROR: Could not find an available port after $max_attempts attempts" >&2
     return 1
 }
@@ -148,7 +148,7 @@ elif [ -n "$VENV_PATH" ] && [ -f "$VENV_PATH" ]; then
 elif command -v python3 &> /dev/null; then
     echo "⚠️  No virtual environment found, using system Python3"
     PYTHON_CMD="python3"
-    
+
     # Check if Flask is available
     if ! $PYTHON_CMD -c "import flask" 2>/dev/null; then
         echo "❌ ERROR: Flask is not installed and no virtual environment found"

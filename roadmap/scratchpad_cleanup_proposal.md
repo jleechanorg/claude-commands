@@ -81,7 +81,7 @@ These should stay in roadmap/:
 ```bash
 # Create archive directories
 mkdir -p roadmap/archive/completed_tasks
-mkdir -p roadmap/archive/completed_milestones  
+mkdir -p roadmap/archive/completed_milestones
 mkdir -p roadmap/archive/completed_work
 mkdir -p roadmap/archive/completed_docs
 

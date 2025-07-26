@@ -130,7 +130,7 @@ class StoryEntryParser:
             'html': self._parse_html,
             'markdown': self._parse_markdown
         }
-        
+
         # Detect format and parse
         format_type = self._detect_format(raw_content)
         return parsers[format_type](raw_content, entry_type)

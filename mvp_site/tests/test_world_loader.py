@@ -8,7 +8,6 @@ import os
 import shutil
 import sys
 import tempfile
-import time
 import unittest
 
 # Add parent directory to path for imports
@@ -142,7 +141,7 @@ if os.path.exists(os.path.join(os.path.dirname(__file__), "world")):
     WORLD_DIR = "world"
 else:
     WORLD_DIR = "../world"
-    
+
 CELESTIAL_WARS_BOOK_PATH = os.path.join(WORLD_DIR, "celestial_wars_alexiel_book.md")
 WORLD_ASSIAH_PATH = os.path.join(WORLD_DIR, "world_assiah.md")
 
@@ -157,15 +156,15 @@ def load_world_content_for_system_instruction():
             # WORLD_DIR is "world" - files are in same directory
             book_path = CELESTIAL_WARS_BOOK_PATH
             world_path = WORLD_ASSIAH_PATH
-            
+
         # Load book content
         with open(book_path, 'r', encoding='utf-8') as f:
             book_content = f.read().strip()
-        
+
         # Load world content
         with open(world_path, 'r', encoding='utf-8') as f:
             world_content = f.read().strip()
-        
+
         return {"book": book_content, "world": world_content}
     except FileNotFoundError as e:
         raise FileNotFoundError(f"World file not found: {e}")
@@ -221,7 +220,7 @@ Long ago, the Great War shaped this world..."""
         # Create test banned names file
         self.banned_content = """# Banned Names List
 - Voldemort
-- Sauron  
+- Sauron
 - Darth Vader
 - Emperor Palpatine
 - Thanos"""
@@ -387,7 +386,7 @@ Long ago, the Great War shaped this world..."""
         self.assertGreater(
             after_first_stats["cache_misses"],
             initial_stats["cache_misses"],
-            "Expected cache miss on first load"
+            "Expected cache miss on first load",
         )
 
         # Second load should result in cache hit
@@ -401,7 +400,7 @@ Long ago, the Great War shaped this world..."""
         self.assertGreater(
             after_second_stats["cache_hits"],
             after_first_stats["cache_hits"],
-            "Expected cache hit on second load"
+            "Expected cache hit on second load",
         )
 
         # Cache should have logged the improvement

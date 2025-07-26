@@ -4,8 +4,8 @@
 **Deleted:**
 ```
 -# World of Assiah - Compressed Campaign Guide
--**Source**: world_assiah.md (85k tokens)  
--**Target**: ~45k tokens (47% reduction)  
+-**Source**: world_assiah.md (85k tokens)
+-**Target**: ~45k tokens (47% reduction)
 -**Purpose**: Streamlined campaign reference maintaining all essential information
 ```
 **Replaced with:**

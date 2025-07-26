@@ -10,7 +10,7 @@
 
 **Current (Text-based):**
 ```
-You are in the Tavern of the Silver Moon. 
+You are in the Tavern of the Silver Moon.
 
 Current entities: Bartender (Level 3), Guard Captain (Level 5)
 
@@ -156,7 +156,7 @@ Player says: "I'd like to speak with the captain"
 ## Suggested Future Approach
 
 1. **Phase 1** (This PR): JSON output only
-2. **Phase 2** (Next PR): 
+2. **Phase 2** (Next PR):
    - Design comprehensive input schema
    - Include turn history format
    - Consider compression strategies

@@ -12,18 +12,18 @@ This document details the known failure modes and limitations of each validator 
 
 **Failure Modes**:
 1. **No Descriptor Matching**: Only matches exact entity names
-   - Misses "the knight" → "Gideon" 
+   - Misses "the knight" → "Gideon"
    - Misses "healer" → "Rowan"
-   
+
 2. **No Pronoun Resolution**: Cannot handle pronoun-only references
    - "He raised his shield" → Cannot identify as Gideon
-   
+
 3. **No Partial Name Matching**: Fails on interrupted names
    - "Gid--" → Cannot match to Gideon
-   
+
 4. **Case Sensitivity Issues**: While case-insensitive, compound names may fail
 
-**Best Use Cases**: 
+**Best Use Cases**:
 - Quick validation when entities are explicitly named
 - Performance-critical applications with simple narratives
 
@@ -33,12 +33,12 @@ This document details the known failure modes and limitations of each validator 
 
 **Failure Modes**:
 1. **Limited Pronoun Handling**: Still struggles with pronoun-only text
-   
+
 2. **No Fuzzy Matching**: Cannot handle typos or variations
    - "Gidoen" → Would not match "Gideon"
-   
+
 3. **Partial Names**: Cannot match interrupted names
-   
+
 4. **Context-Free**: Doesn't consider narrative context
 
 **Improvements over Simple**:
@@ -52,10 +52,10 @@ This document details the known failure modes and limitations of each validator 
 **Failure Modes**:
 1. **Action-Only Inference**: Cannot reliably infer entities from actions alone
    - "A sword struck the wall" → Cannot definitively identify Gideon
-   
+
 2. **Over-Matching Risk**: Fuzzy threshold may cause false positives
    - Similar names might be confused
-   
+
 3. **Performance Overhead**: Pattern matching is slower than simple tokens
 
 **Strengths**:
@@ -69,12 +69,12 @@ This document details the known failure modes and limitations of each validator 
 
 **Failure Modes**:
 1. **API Dependency**: Requires external service (or mock)
-   
+
 2. **Latency**: ~100ms overhead regardless of text length
-   
+
 3. **Over-Interpretation**: May infer entities not actually present
    - Generic "party" → might assume specific characters
-   
+
 4. **Cost**: Real API usage has token costs
 
 **Strengths**:
@@ -88,9 +88,9 @@ This document details the known failure modes and limitations of each validator 
 
 **Failure Modes**:
 1. **Slowest Performance**: Limited by slowest component (usually LLM)
-   
+
 2. **Complexity**: More points of failure
-   
+
 3. **Configuration Sensitivity**: Performance depends on weights/strategy
 
 **Strengths**:

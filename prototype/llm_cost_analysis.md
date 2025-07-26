@@ -110,7 +110,7 @@ Effective cost: $0.0000175 per validation
 - Per 1000 validations: 68 errors × $0.50 = $34
 
 ### LLM Validation
-- <5% error rate  
+- <5% error rate
 - Per 1000 validations: $0.175
 - **Net savings: $33.83 per 1000 validations**
 
@@ -143,24 +143,24 @@ Break-even: 2,955 validations/month
 ```yaml
 validation_budget:
   monthly_validations: 1000000
-  
+
   token_validator:
     percentage: 90%
     cost_per: $0
     monthly_cost: $0
-    
+
   llm_validator:
     percentage: 10%
     cost_per: $0.000175
     monthly_cost: $17.50
-    
+
   caching:
     hit_rate: 30%
     savings: $5.25
-    
+
   total_monthly_cost: $12.25
   annual_projection: $147
-  
+
   contingency: 20%
   final_budget: $176.40/year
 ```

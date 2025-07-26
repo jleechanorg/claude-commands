@@ -211,7 +211,7 @@ Power users want speed. New users need guidance. Currently, neither get what the
 - Positive feedback on "feeling like real D&D"
 - Increased session completion rate
 
-### Milestone 7 Success  
+### Milestone 7 Success
 - Users with 5+ campaigns stay organized
 - 50% reduction in "can't find campaign" issues
 - Increased return rate for multi-campaign users

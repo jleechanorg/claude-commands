@@ -8,7 +8,7 @@ and laws, and have a clear set of standards and beliefs.
 They expect the same of others, and
 have no patience or understanding for individuals who do not value these
 systems.  They value competence and efficiency, and like to see quick results
-for their efforts.\nESTJs are take-charge people.  They have such a clear vision of the way 
+for their efforts.\nESTJs are take-charge people.  They have such a clear vision of the way
 that things should be, that they naturally step into leadership roles.
 They are self-confident, even aggressive.
 They are extremely talented at devising systems and plans for action, and
@@ -27,9 +27,9 @@ it's important that they remember to value other people's input and opinions.
 If they neglect their Feeling side, they may have a problem with fulfilling
 other's needs for intimacy, and may unknowingly hurt people's feelings by
 applying logic and reason to situations which demand more emotional sensitivity.\nWhen bogged down by stress, an ESTJ often feels isolated from others.
-They feel as if they are misunderstood and undervalued, and that their 
-efforts are 
-taken for granted.  Although normally the ESTJ is very verbal and doesn't 
+They feel as if they are misunderstood and undervalued, and that their
+efforts are
+taken for granted.  Although normally the ESTJ is very verbal and doesn't
 have any problem expressing themself, when under stress they have a hard
 time putting their feelings into words and communicating them to others.\nESTJs value security and social order above all else, and feel obligated to
 do all that they can to enhance and promote these goals.  They will mow
@@ -41,6 +41,6 @@ realistic, and dependable.  While the ESTJ will dutifully do everything that
 is important to work towards a particular cause or goal, they might
 not naturally see or value the importance of goals that are outside of their
 practical scope.  However, if the ESTJ is able to see the relevance of such
-goals to practical concerns, you can bet that they'll put every effort into 
+goals to practical concerns, you can bet that they'll put every effort into
 understanding them and incorporating them into their quest for clarity
 and security.

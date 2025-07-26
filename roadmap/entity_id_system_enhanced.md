@@ -12,25 +12,25 @@ class EntityType(Enum):
     PLAYER_CHARACTER = "pc"
     NPC = "npc"
     CREATURE = "creature"
-    
+
     # Resources & Items
     RESOURCE = "resource"      # Gold, materials, etc.
     ITEM = "item"              # Equipment, consumables
     CONTAINER = "container"    # Chests, bags
-    
-    # Locations & Environment  
+
+    # Locations & Environment
     LOCATION = "loc"
     SCENE = "scene"
     ENVIRONMENT = "env"        # Weather, time of day
-    
+
     # Social Structures
     FACTION = "faction"
     ORGANIZATION = "org"
-    
+
     # Objects
     OBJECT = "obj"             # Main objects
     SUB_OBJECT = "sub_obj"     # Parts of objects
-    
+
     # Meta
     KNOWLEDGE = "knowledge"    # Facts, secrets, lore
     MEMORY = "memory"         # Character memories
@@ -45,14 +45,14 @@ class EntityType(Enum):
     "entity_type": "pc",
     "display_name": "Sariel Arcanus",
     "aliases": ["Sariel", "Princess Sariel", "Lady Arcanus"],
-    
+
     # Core Stats
     "level": 5,
     "experience": {
         "current": 6500,
         "to_next_level": 7500
     },
-    
+
     # Attributes/Stats
     "stats": {
         "strength": 8,
@@ -62,7 +62,7 @@ class EntityType(Enum):
         "wisdom": 13,
         "charisma": 18
     },
-    
+
     # Combat/Health
     "status": {
         "hp": 8,
@@ -71,7 +71,7 @@ class EntityType(Enum):
         "conditions": ["mourning", "injured_ear"],
         "visibility": "visible"
     },
-    
+
     # Resources
     "resources": {
         "gold": 1500,
@@ -83,7 +83,7 @@ class EntityType(Enum):
         "inspiration": false,
         "hero_points": 1
     },
-    
+
     # Inventory
     "inventory": {
         "equipped": {
@@ -97,21 +97,21 @@ class EntityType(Enum):
             "max": 80
         }
     },
-    
+
     # Location & Movement
     "location": {
         "current": "loc_chamber_001",
         "previous": "loc_throne_room_001",
         "home_base": "loc_arcanus_castle_001"
     },
-    
+
     # Knowledge & Memories
     "knowledge": {
         "facts": ["knowledge_titus_betrayal_001", "knowledge_valerius_sacrifice_001"],
         "secrets": ["knowledge_ancient_ritual_001"],
         "lore": ["knowledge_arcanus_history_001"]
     },
-    
+
     "core_memories": [
         {
             "memory_id": "memory_valerius_death_001",
@@ -120,7 +120,7 @@ class EntityType(Enum):
             "session": "session_12"
         }
     ],
-    
+
     # Recent Decisions (avoid planning block repetitions)
     "recent_decisions": [
         {
@@ -130,7 +130,7 @@ class EntityType(Enum):
             "consequences": ["faction_nobles_reputation_increase"]
         }
     ],
-    
+
     # Relationships
     "relationships": {
         "npc_cassian_001": {
@@ -170,7 +170,7 @@ class EntityType(Enum):
     "entity_type": "faction",
     "display_name": "House Arcanus",
     "aliases": ["Arcanus Family", "The Royal House"],
-    
+
     # Resources
     "resources": {
         "gold": 50000,
@@ -178,7 +178,7 @@ class EntityType(Enum):
         "influence": 85,
         "territory_count": 12
     },
-    
+
     # Members
     "members": {
         "leaders": ["pc_sariel_001", "npc_cassian_001"],
@@ -186,13 +186,13 @@ class EntityType(Enum):
         "members": ["npc_guard_001", "npc_guard_002"],
         "total_count": 523
     },
-    
+
     # Controlled Objects/Locations
     "holdings": {
         "locations": ["loc_arcanus_castle_001", "loc_northern_fort_001"],
         "objects": ["obj_throne_001", "obj_crown_001"]
     },
-    
+
     # Relationships with other factions
     "faction_relations": {
         "faction_merchants_001": "allied",
@@ -211,14 +211,14 @@ class EntityType(Enum):
     "display_name": "Throne Room Confrontation",
     "session": "session_13",
     "turn_range": [42, 58],
-    
+
     # Scene Composition
     "participants": {
         "people": ["pc_sariel_001", "npc_cassian_001", "npc_titus_001"],
         "environment": ["env_throne_room_dark_001"],
         "objects": ["obj_throne_001", "obj_crown_001", "obj_bloodied_sword_001"]
     },
-    
+
     # Dynamic Elements
     "environment_state": {
         "lighting": "dim_torchlight",
@@ -226,7 +226,7 @@ class EntityType(Enum):
         "time": "late_night",
         "mood": "tense"
     },
-    
+
     # Non-living objects in scene
     "static_objects": {
         "obj_throne_001": {
@@ -250,7 +250,7 @@ class EntityType(Enum):
     "display_name": "The Brass Compass",
     "object_type": "vehicle",
     "sub_objects": ["sub_obj_mast_001", "sub_obj_helm_001", "sub_obj_deck_001"],
-    
+
     "properties": {
         "size": "large",
         "condition": "damaged",
@@ -321,7 +321,7 @@ class EntityType(Enum):
 
 With this system, validators can:
 - Track if specific items are mentioned when relevant
-- Ensure faction resources are referenced correctly  
+- Ensure faction resources are referenced correctly
 - Validate that known facts influence dialogue
 - Check that recent decisions aren't contradicted
 - Verify object states remain consistent
