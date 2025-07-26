@@ -39,8 +39,6 @@ show_help() {
     echo "  - Never deletes current branch"
     echo "  - Warns about branches with open PRs"
     echo "  - Shows unpushed commits before deletion"
-    echo "  - Preserves worktrees with uncommitted changes"
-    echo "  - Configurable age threshold for worktrees"
     echo "  - Dry-run mode for safe preview"
     echo ""
     echo "Examples:"
@@ -95,20 +93,15 @@ fi
 current_branch=$(git branch --show-current)
 echo "Current branch: $current_branch"
 
-# Ensure we're not on a branch we might delete
+# Note current branch - it will be automatically excluded from deletion
 if [[ "$current_branch" != "main" ]] && [[ "$current_branch" != "master" ]]; then
-    echo -e "${YELLOW}⚠️  Warning: You're on branch '$current_branch'${NC}"
-    echo "   Switching to main to avoid conflicts..."
-    git checkout main 2>/dev/null || git checkout master 2>/dev/null || {
-        echo -e "${RED}❌ Could not switch to main/master branch${NC}"
-        exit 1
-    }
+    echo -e "${YELLOW}ℹ️  Note: Current branch '$current_branch' will be preserved${NC}"
 fi
 
 echo -e "\n${GREEN}🔍 Scanning for branches to clean...${NC}"
 
-# Get all local branches except main/master
-branches_to_check=$(git branch --format='%(refname:short)' | grep -v -E '^(main|master)$')
+# Get all local branches except main/master and current branch
+branches_to_check=$(git branch --format='%(refname:short)' | grep -v -E '^(main|master)$' | grep -v "^${current_branch}$")
 
 # Arrays to track branches
 declare -a safe_to_delete=()
@@ -228,35 +221,42 @@ if [[ -n "$WORKTREES" ]]; then
         if [[ "$wt" == "$CURRENT_WORKTREE" ]]; then
             continue
         fi
-        
+
         echo -n "Checking worktree $(basename "$wt")... "
-        
+
         # Check if worktree directory exists
         if [[ ! -d "$wt" ]]; then
             echo -e "${RED}missing directory${NC}"
             worktrees_to_delete+=("$wt - missing directory")
             continue
         fi
-        
+
         # Get the branch for this worktree
-        WT_BRANCH=$(git --git-dir="$wt/.git" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+        WT_BRANCH=$(git -C "$wt" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
         if [[ -z "$WT_BRANCH" ]]; then
             echo -e "${RED}no branch${NC}"
             worktrees_to_delete+=("$wt - no branch")
             continue
         fi
-        
+
         # Check for uncommitted changes
-        if [[ -n $(git --git-dir="$wt/.git" --work-tree="$wt" status --porcelain 2>/dev/null) ]]; then
+        if [[ -n $(git -C "$wt" status --porcelain 2>/dev/null) ]]; then
             echo -e "${YELLOW}uncommitted changes${NC}"
             worktrees_kept+=("$wt ($WT_BRANCH) - uncommitted changes")
             continue
         fi
-        
+
         # Check branch's last commit date
-        COMMIT_DATE=$(git --git-dir="$wt/.git" log -1 --format="%cI" 2>/dev/null || echo "")
+        COMMIT_DATE=$(git -C "$wt" log -1 --format="%cI" 2>/dev/null || echo "")
         if [[ -n "$COMMIT_DATE" ]]; then
-            COMMIT_AGE_DAYS=$(( ($(date +%s) - $(date -d "$COMMIT_DATE" +%s)) / 86400 ))
+            # Handle both GNU date (Linux) and BSD date (macOS)
+            if date -d "2021-01-01" +%s >/dev/null 2>&1; then
+                # GNU date
+                COMMIT_AGE_DAYS=$(( ($(date +%s) - $(date -d "$COMMIT_DATE" +%s)) / 86400 ))
+            else
+                # BSD date (macOS)
+                COMMIT_AGE_DAYS=$(( ($(date +%s) - $(date -j -f "%Y-%m-%dT%H:%M:%S%z" "$COMMIT_DATE" +%s)) / 86400 ))
+            fi
             if [[ $COMMIT_AGE_DAYS -gt $WORKTREE_DAYS ]]; then
                 echo -e "${GREEN}stale ($COMMIT_AGE_DAYS days old)${NC}"
                 worktrees_to_delete+=("$wt ($WT_BRANCH) - $COMMIT_AGE_DAYS days old")
@@ -277,14 +277,14 @@ fi
 if [[ ${#worktrees_to_delete[@]} -gt 0 ]] || [[ ${#worktrees_kept[@]} -gt 0 ]]; then
     echo -e "\n${BLUE}🏠 Worktree Summary${NC}"
     echo "=================="
-    echo "Stale worktrees (>${WORKTREE_DAYS} days): ${#worktrees_to_delete[@]}"
+    echo "Stale worktrees (>$WORKTREE_DAYS days): ${#worktrees_to_delete[@]}"
     echo "Active worktrees (kept): ${#worktrees_kept[@]}"
-    
+
     if [[ ${#worktrees_to_delete[@]} -gt 0 ]]; then
         echo -e "\n${GREEN}✅ Stale worktrees (ready for cleanup):${NC}"
         printf '%s\n' "${worktrees_to_delete[@]}" | sed 's/^/  - /'
     fi
-    
+
     if [[ ${#worktrees_kept[@]} -gt 0 ]]; then
         echo -e "\n${YELLOW}🏠 Active worktrees (kept):${NC}"
         printf '%s\n' "${worktrees_kept[@]}" | sed 's/^/  - /'
@@ -297,7 +297,7 @@ if [[ ${#worktrees_to_delete[@]} -gt 0 ]]; then
         echo -e "\n${YELLOW}🔍 DRY RUN: Would remove ${#worktrees_to_delete[@]} worktrees${NC}"
     else
         echo -e "\n${YELLOW}🗑️  Preparing to remove ${#worktrees_to_delete[@]} worktrees...${NC}"
-        
+
         if [[ "$FORCE" != "true" ]]; then
             echo -n "Continue with worktree cleanup? (y/N) "
             read -r response
