@@ -58,7 +58,7 @@ echo "========================================================================"
 echo "📊 Lines of Code Breakdown (mvp_site directory)"
 echo "========================================================================"
 
-# Function to count lines in files  
+# Function to count lines in files
 count_lines() {
     local pattern="$1"
     local files=$(find mvp_site -type f -name "$pattern" ! -path "*/__pycache__/*" ! -path "*/.pytest_cache/*" ! -path "*/node_modules/*" 2>/dev/null)
@@ -74,7 +74,7 @@ count_test_vs_nontest() {
     local ext="$1"
     local test_lines=$(find mvp_site -type f -name "*.$ext" ! -path "*/__pycache__/*" ! -path "*/.pytest_cache/*" ! -path "*/node_modules/*" 2>/dev/null | grep -i test | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
     local nontest_lines=$(find mvp_site -type f -name "*.$ext" ! -path "*/__pycache__/*" ! -path "*/.pytest_cache/*" ! -path "*/node_modules/*" 2>/dev/null | grep -v -i test | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
-    
+
     # Handle empty results
     test_lines=${test_lines:-0}
     nontest_lines=${nontest_lines:-0}
