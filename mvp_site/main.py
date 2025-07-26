@@ -41,7 +41,7 @@ import traceback
 import uuid
 from collections.abc import Callable
 from functools import wraps
-from typing import Any, List, Dict, Union, Tuple
+from typing import Any
 
 import constants
 
@@ -880,8 +880,8 @@ def setup_file_logging() -> None:
 
 
 def strip_game_state_fields(
-    story_entries: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
+    story_entries: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     """
     Strip game state information from story entries when debug mode is OFF.
 
@@ -1531,7 +1531,7 @@ def create_app() -> Flask:
 
     @app.route("/api/settings", methods=["GET", "POST"])
     @check_token
-    def api_settings(user_id: UserId) -> Union[Response, Tuple[Response, int]]:
+    def api_settings(user_id: UserId) -> Response | tuple[Response, int]:
         """Get or update user settings."""
         try:
             if request.method == "GET":
