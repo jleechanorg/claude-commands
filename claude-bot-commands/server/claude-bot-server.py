@@ -11,6 +11,25 @@ import urllib.parse
 import logging
 import os
 
+# Node.js environment variables that can cause EBADF errors
+NODE_VARS_TO_REMOVE = [
+    'NODE_CHANNEL_FD',      # Primary cause of EBADF errors
+    'NODE_OPTIONS',         # Can affect subprocess behavior
+    'NODE_DEBUG',           # Debug flags can interfere
+    'NODE_ENV',             # Environment settings
+    'NODE_PATH',            # Module resolution
+    'NODE_INSPECTOR',       # Inspector process communication
+    'NODE_ICU_DATA',        # ICU data path
+    'NODE_PRESERVE_SYMLINKS',  # Symlink handling
+    'NODE_REPL_HISTORY',    # REPL history file
+    'NODE_TLS_REJECT_UNAUTHORIZED',  # TLS settings
+    'NODE_PENDING_DEPRECATION',  # Deprecation warnings
+    'NODE_NO_WARNINGS',     # Warning suppression
+    'NODE_DISABLE_COLORS',  # Color output
+    'NODE_V8_COVERAGE',     # Coverage collection
+    'NODE_EXTRA_CA_CERTS',  # Certificate paths
+]
+
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -52,7 +71,7 @@ class ClaudeHandler(BaseHTTPRequestHandler):
                 # This creates fake implementations that are forbidden!
 
                 # Try Claude CLI with EBADF error fixes
-                logger.info("Attempting Claude CLI with EBADF fixes")
+                logger.info("Attempting Claude CLI with comprehensive EBADF fixes")
 
                 try:
                     # EBADF Fix 1: Find Claude CLI path
@@ -83,8 +102,11 @@ class ClaudeHandler(BaseHTTPRequestHandler):
                     else:
                         # EBADF Fix 2: Environment cleanup
                         env = os.environ.copy()
-                        # Remove NODE_CHANNEL_FD which causes EBADF errors
-                        env.pop('NODE_CHANNEL_FD', None)
+                        # Remove all Node.js environment variables that can cause EBADF errors
+                        removed_vars = [var for var in NODE_VARS_TO_REMOVE if env.pop(var, None) is not None]
+
+                        if removed_vars:
+                            logger.info(f"Removed Node.js environment variables: {removed_vars}")
 
                         # EBADF Fix 3: Proper subprocess with stdin/stdout/stderr handling
                         result = subprocess.run(
