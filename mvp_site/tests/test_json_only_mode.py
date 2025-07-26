@@ -4,11 +4,14 @@ import unittest
 from unittest.mock import Mock, patch
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 from gemini_response import GeminiResponse
+from narrative_response_schema import parse_structured_response
 
 import gemini_service
+from game_state import GameState
 
 
 class TestJSONOnlyMode(unittest.TestCase):
@@ -34,7 +37,6 @@ class TestJSONOnlyMode(unittest.TestCase):
             )
 
             # Test continue_story (need proper parameters)
-            from game_state import GameState
 
             test_game_state = GameState()
             gemini_service.continue_story("test prompt", "story", [], test_game_state)
@@ -137,7 +139,6 @@ class TestJSONOnlyMode(unittest.TestCase):
 
     def test_robust_json_parser_is_only_fallback(self):
         """Test that robust JSON parser is the only fallback for malformed JSON"""
-        from narrative_response_schema import parse_structured_response
 
         # Test with malformed JSON (no closing brace)
         malformed = '```json\n{"narrative": "test", "entities_mentioned": ["hero"]\n```'
@@ -150,7 +151,6 @@ class TestJSONOnlyMode(unittest.TestCase):
 
     def test_strip_functions_dont_affect_state_parsing(self):
         """Test that strip functions are only for display, not state extraction"""
-        from gemini_response import GeminiResponse
 
         strip_debug_content = GeminiResponse._strip_debug_content
         strip_state_updates_only = GeminiResponse._strip_state_updates_only

@@ -4,6 +4,7 @@ Provides pytest-specific fixtures, markers, and utilities.
 """
 
 import os
+import time
 from collections.abc import Generator
 from typing import Any
 
@@ -231,20 +232,20 @@ python_functions = test_*
 # Custom markers
 markers =
     mock_only: Test only runs in mock mode
-    real_only: Test only runs in real mode  
+    real_only: Test only runs in real mode
     expensive: Test is expensive in real mode
     integration: Integration test
     unit: Unit test
 
 # Output formatting
-addopts = 
+addopts =
     -v
     --tb=short
     --strict-markers
-    
+
 # Test mode filtering examples:
 # Run only mock tests: pytest -m "not real_only"
-# Run only real tests: pytest -m "not mock_only" 
+# Run only real tests: pytest -m "not mock_only"
 # Skip expensive tests: pytest -m "not expensive"
 """
 
@@ -303,7 +304,6 @@ def example_test_functions():
 
         if is_real:
             # Use unique collection name in real mode
-            import time
 
             collection_name = f"test_{int(time.time())}"
         else:

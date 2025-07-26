@@ -149,7 +149,7 @@ The most critical problems are:
 
 ### 12. Personality System Fragmentation
 
-**Files:** 
+**Files:**
 - 32 personality files (16 MBTI types × 2 files each)
 - Referenced by character templates
 - No clear integration protocol
@@ -183,7 +183,7 @@ Create a single `master_directive.md` that:
 ```
 1. master_directive.md (hierarchy and precedence)
 2. entity_schema_instruction.md (data structures)
-3. game_state_instruction.md (state management) 
+3. game_state_instruction.md (state management)
 4. mechanics_system_instruction.md (game rules)
 5. narrative_system_instruction.md (storytelling)
 6. calibration_instruction.md (only during setup)

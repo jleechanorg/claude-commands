@@ -10,7 +10,7 @@
 3. Move to Git Workflow section to consolidate
 
 ### Environment, Tooling & Scripts (Lines 460-529 and 491-530)
-**Issue**: Exact duplicate content  
+**Issue**: Exact duplicate content
 **Options**:
 1. Keep first occurrence, delete second
 2. Merge and consolidate any unique content
@@ -26,7 +26,7 @@
 
 ### Core Principles & Interaction (Lines 63-142)
 **Current**: 18 numbered items with sub-bullets, ~500 words
-**Issues**: 
+**Issues**:
 - Very wordy explanations
 - Some redundancy between items
 - Could be grouped better
@@ -119,7 +119,7 @@
 
 **Phase 3: Condense Verbose Sections (with your approval)**
 - Core Principles: 500 words → 150 words
-- Python Execution: 150 words → 50 words  
+- Python Execution: 150 words → 50 words
 - Git Workflow: Reorganize and condense
 
 ## Questions for You

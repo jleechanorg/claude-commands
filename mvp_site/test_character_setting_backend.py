@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+from testing_framework.fixtures import get_test_client_for_mode
+
 """
 Test-Driven Development for Backend Character and Setting Parameters
 Phase 2: Backend Testing
@@ -17,8 +20,6 @@ from unittest.mock import MagicMock, patch
 
 # Try to import pytest, but don't fail if not available
 try:
-    import pytest
-
     PYTEST_AVAILABLE = True
 except ImportError:
     PYTEST_AVAILABLE = False
@@ -31,8 +32,6 @@ os.environ["TESTING"] = "true"
 
 # Import testing framework for dual-mode support
 try:
-    from testing_framework.fixtures import get_test_client_for_mode
-
     FRAMEWORK_AVAILABLE = True
 except ImportError:
     print("Testing framework not available, falling back to mock-only mode")
@@ -131,18 +130,18 @@ class TestCharacterSettingBackend:
         )
 
         # Check that the request was accepted (not a 400 error)
-        assert response.status_code != 400, (
-            f"API should accept character/setting params, got {response.status_code}: {response.data}"
-        )
+        assert (
+            response.status_code != 400
+        ), f"API should accept character/setting params, got {response.status_code}: {response.data}"
 
         if self.is_real:
             print("✅ API accepts character and setting parameters (REAL services)")
             # In real mode, we might get actual data back
             if response.status_code == 200:
                 data = json.loads(response.data)
-                assert "campaign_id" in data or "id" in data, (
-                    "Should return campaign ID"
-                )
+                assert (
+                    "campaign_id" in data or "id" in data
+                ), "Should return campaign ID"
         else:
             print("✅ API accepts character and setting parameters (MOCK services)")
 
@@ -188,9 +187,9 @@ class TestCharacterSettingBackend:
             print(f"Response data: {response.data}")
 
             # Should not fail
-            assert response.status_code != 400, (
-                f"Empty character/setting should be handled gracefully, got {response.status_code}"
-            )
+            assert (
+                response.status_code != 400
+            ), f"Empty character/setting should be handled gracefully, got {response.status_code}"
 
             # Check that gemini_service was called with proper parameters
             mock_gemini.get_initial_story.assert_called_once()
@@ -198,9 +197,9 @@ class TestCharacterSettingBackend:
 
             # The prompt should be constructed properly for empty inputs
             prompt_arg = call_args[0][0]  # First positional argument
-            assert prompt_arg is not None, (
-                "Prompt should be constructed even with empty inputs"
-            )
+            assert (
+                prompt_arg is not None
+            ), "Prompt should be constructed even with empty inputs"
             print("✅ Empty character and setting handled properly")
 
     def test_character_setting_prompt_construction(self):
@@ -248,12 +247,12 @@ class TestCharacterSettingBackend:
             prompt_arg = call_args[0][0]
 
             # Check that the prompt contains the character and setting
-            assert "Astarion who ascended in BG3" in prompt_arg, (
-                f"Character should be in prompt: {prompt_arg}"
-            )
-            assert "Baldur's Gate" in prompt_arg, (
-                f"Setting should be in prompt: {prompt_arg}"
-            )
+            assert (
+                "Astarion who ascended in BG3" in prompt_arg
+            ), f"Character should be in prompt: {prompt_arg}"
+            assert (
+                "Baldur's Gate" in prompt_arg
+            ), f"Setting should be in prompt: {prompt_arg}"
 
             print("✅ Character and setting properly used in prompt construction")
 
@@ -294,9 +293,9 @@ class TestCharacterSettingBackend:
             )
 
             # Should still work for backward compatibility
-            assert response.status_code != 400, (
-                f"Old prompt parameter should still work, got {response.status_code}"
-            )
+            assert (
+                response.status_code != 400
+            ), f"Old prompt parameter should still work, got {response.status_code}"
 
             print("✅ Backward compatibility maintained")
 

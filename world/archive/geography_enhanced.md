@@ -2,7 +2,7 @@
 
 ### Major Powers & Territory Control
 **Celestial Imperium**: ~25% of world, eastern regions centered on Aeterna
-**Shattered Host Remnants**: ~25% of world in scattered western territories  
+**Shattered Host Remnants**: ~25% of world in scattered western territories
 **Independent Powers**: ~50% including Tsuran Dominion, Adamant Vault, First-Spear Clans, Nexus
 
 ### Imperial Cities & Strongholds

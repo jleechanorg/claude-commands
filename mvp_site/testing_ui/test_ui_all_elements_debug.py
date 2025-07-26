@@ -31,7 +31,7 @@ def test_all_ui_elements_debug_mode():
             print("=" * 60)
 
             # 1. Navigate with test mode
-            test_url = "http://localhost:6006?test_mode=true&test_user_id=ui-debug-test"
+            test_url = "http://localhost:8081?test_mode=true&test_user_id=ui-debug-test"
             page.goto(test_url)
             print(f"✓ Navigated to: {test_url}")
 
@@ -260,7 +260,7 @@ def test_all_ui_elements_debug_mode():
 if __name__ == "__main__":
     print("Starting UI Elements Debug Mode Verification Test")
     print(
-        "Make sure server is running with: TESTING=true PORT=6006 python main.py serve"
+        "Make sure server is running with: TESTING=true PORT=8081 python main.py serve"
     )
     print("-" * 60)
     test_all_ui_elements_debug_mode()

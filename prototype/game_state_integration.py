@@ -7,6 +7,9 @@ Demonstrates how validators would integrate with the actual game system.
 from datetime import datetime
 from typing import Any
 
+from .validators.fuzzy_token_validator import FuzzyTokenValidator
+from .validators.hybrid_validator import HybridValidator
+
 
 # Mock GameState class (simplified version)
 class MockGameState:
@@ -79,8 +82,8 @@ class MockGameState:
         This is where our validators would be integrated.
         """
         # Import our validators
-        from .validators.fuzzy_token_validator import FuzzyTokenValidator
-        from .validators.hybrid_validator import HybridValidator
+
+
 
         # Get current manifest
         manifest = self.get_active_entity_manifest()

@@ -3,6 +3,7 @@
 
 import os
 import sys
+import traceback
 
 import logging_util
 
@@ -48,7 +49,6 @@ def test_character_creation():
 
     except Exception as e:
         print(f"\n❌ ERROR: {e}")
-        import traceback
 
         traceback.print_exc()
 

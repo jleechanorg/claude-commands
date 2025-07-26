@@ -1,268 +1,513 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>WorldArchitect.AI</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
-    
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/style.css" />
+
     <!-- Theme CSS files -->
-    <link rel="stylesheet" href="/static/themes/base.css">
-    <link rel="stylesheet" href="/static/themes/light.css">
-    <link rel="stylesheet" href="/static/themes/dark.css">
-    <link rel="stylesheet" href="/static/themes/fantasy.css">
-    <link rel="stylesheet" href="/static/themes/cyberpunk.css">
-    
+    <link rel="stylesheet" href="/static/themes/base.css" />
+    <link rel="stylesheet" href="/static/themes/light.css" />
+    <link rel="stylesheet" href="/static/themes/dark.css" />
+    <link rel="stylesheet" href="/static/themes/fantasy.css" />
+    <link rel="stylesheet" href="/static/themes/cyberpunk.css" />
+
     <!-- Animation System - Milestone 3 -->
-    <link rel="stylesheet" href="/static/styles/animations.css">
-    
+    <link rel="stylesheet" href="/static/styles/animations.css" />
+
     <!-- Interactive Features - Milestone 4 -->
-    <link rel="stylesheet" href="/static/styles/interactive-features.css">
-    
+    <link rel="stylesheet" href="/static/styles/interactive-features.css" />
+
     <!-- Loading Messages - TASK-005b -->
-    <link rel="stylesheet" href="/static/loading-messages.css">
-    
+    <link rel="stylesheet" href="/static/loading-messages.css" />
+
     <!-- Campaign Click Fix - TASK-005a -->
-    <link rel="stylesheet" href="/static/campaign-click-fix.css">
-    
+    <link rel="stylesheet" href="/static/campaign-click-fix.css" />
+
     <!-- Planning Block Buttons - TASK-156 -->
-    <link rel="stylesheet" href="/static/styles/planning-blocks.css">
-    
+    <link rel="stylesheet" href="/static/styles/planning-blocks.css" />
+
     <!-- Story Reader - PR #323 -->
-    <link rel="stylesheet" href="/static/css/pagination-styles.css">
-    
+    <link rel="stylesheet" href="/static/css/pagination-styles.css" />
+
     <!-- Inline Editor - UI Bundle -->
-    <link rel="stylesheet" href="/static/css/inline-editor.css">
-    
+    <link rel="stylesheet" href="/static/css/inline-editor.css" />
+
     <style>
-        /* Smooth theme transitions */
-        .theme-transitioning * {
-            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
-        }
+      /* Smooth theme transitions */
+      .theme-transitioning * {
+        transition:
+          background-color 0.3s ease,
+          color 0.3s ease,
+          border-color 0.3s ease !important;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <!-- Top Navigation Bar -->
     <nav class="navbar navbar-expand-lg">
-        <div class="container">
-            <a href="/" class="navbar-brand mb-0 h1 text-decoration-none" aria-label="Homepage">WorldArchitect.AI</a>
-            
-            <div class="navbar-nav ms-auto">
-                <!-- User email (shown when logged in) -->
-                <span class="navbar-text me-3" id="user-email" style="display: none;"></span>
-                
-                <!-- Interface & Theme Selector -->
-                <div class="nav-item dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle btn-sm" 
-                            type="button" 
-                            data-bs-toggle="dropdown" 
-                            aria-expanded="false"
-                            title="Interface settings">
-                        <span id="current-mode-icon">✨</span>
-                        <span id="current-theme-icon">☀️</span> 
-                        <span class="d-none d-md-inline">Settings</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><h6 class="dropdown-header">Choose Theme</h6></li>
-                        <li><a class="dropdown-item" href="#" data-theme="light" data-theme-menu-item="light">
-                            ☀️ Light
-                        </a></li>
-                        <li><a class="dropdown-item" href="#" data-theme="dark" data-theme-menu-item="dark">
-                            🌙 Dark
-                        </a></li>
-                        <li><a class="dropdown-item" href="#" data-theme="fantasy" data-theme-menu-item="fantasy">
-                            ⚔️ Fantasy
-                        </a></li>
-                        <li><a class="dropdown-item" href="#" data-theme="cyberpunk" data-theme-menu-item="cyberpunk">
-                            🤖 Cyberpunk
-                        </a></li>
-                    </ul>
-                </div>
-            </div>
+      <div class="container">
+        <a
+          href="/"
+          class="navbar-brand mb-0 h1 text-decoration-none"
+          aria-label="Homepage"
+          >WorldArchitect.AI</a
+        >
+
+        <div class="navbar-nav ms-auto">
+          <!-- User email (shown when logged in) -->
+          <span
+            class="navbar-text me-3"
+            id="user-email"
+            style="display: none"
+          ></span>
+
+          <!-- Interface & Theme Selector -->
+          <div class="nav-item dropdown">
+            <button
+              class="btn btn-outline-secondary dropdown-toggle btn-sm"
+              type="button"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+              title="Interface settings"
+            >
+              <span id="current-mode-icon">✨</span>
+              <span id="current-theme-icon">☀️</span>
+              <span class="d-none d-md-inline">Settings</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><h6 class="dropdown-header">Choose Theme</h6></li>
+              <li>
+                <a
+                  class="dropdown-item"
+                  href="#"
+                  data-theme="light"
+                  data-theme-menu-item="light"
+                >
+                  ☀️ Light
+                </a>
+              </li>
+              <li>
+                <a
+                  class="dropdown-item"
+                  href="#"
+                  data-theme="dark"
+                  data-theme-menu-item="dark"
+                >
+                  🌙 Dark
+                </a>
+              </li>
+              <li>
+                <a
+                  class="dropdown-item"
+                  href="#"
+                  data-theme="fantasy"
+                  data-theme-menu-item="fantasy"
+                >
+                  ⚔️ Fantasy
+                </a>
+              </li>
+              <li>
+                <a
+                  class="dropdown-item"
+                  href="#"
+                  data-theme="cyberpunk"
+                  data-theme-menu-item="cyberpunk"
+                >
+                  🤖 Cyberpunk
+                </a>
+              </li>
+            </ul>
+          </div>
         </div>
+      </div>
     </nav>
 
-
-
     <div id="loading-overlay">
-        <div class="loading-content">
-            <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
-            <div class="loading-message"></div>
+      <div class="loading-content">
+        <div class="spinner-border" role="status">
+          <span class="visually-hidden">Loading...</span>
         </div>
+        <div class="loading-message"></div>
+      </div>
     </div>
-    
+
     <!-- Main Content Container -->
     <div class="container mt-4">
-        <div id="auth-view" class="text-center mt-4">
-            <div id="auth-container"></div>
+      <div id="auth-view" class="text-center mt-4">
+        <div id="auth-container"></div>
+      </div>
+      <div id="dashboard-view">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h2>My Campaigns</h2>
+          <div>
+            <button id="go-to-new-campaign" class="btn btn-primary">
+              Start New Campaign
+            </button>
+            <button id="settings-btn" class="btn btn-secondary ms-2">
+              <i class="bi bi-gear"></i> Settings
+            </button>
+            <button id="signOutBtnDashboard" class="btn btn-danger ms-2">
+              Sign Out
+            </button>
+          </div>
         </div>
-        <div id="dashboard-view">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2>My Campaigns</h2>
-                <div>
-                    <button id="go-to-new-campaign" class="btn btn-primary">Start New Campaign</button>
-                    <button id="signOutBtnDashboard" class="btn btn-danger ms-2">Sign Out</button>
-                </div>
+        <div id="campaign-list" class="list-group"></div>
+      </div>
+      <div id="new-campaign-view">
+        <h2 class="text-center">Start a New Campaign</h2>
+        <form id="new-campaign-form" class="mt-3">
+          <div class="mb-3">
+            <label for="campaign-title" class="form-label"
+              >Campaign Title (Pick anything!)</label
+            ><input
+              type="text"
+              class="form-control"
+              id="campaign-title"
+              value="My Epic Adventure"
+              required
+            />
+          </div>
+
+          <!-- Campaign Type Selection -->
+          <div class="mb-3">
+            <label class="form-label">Campaign Type</label>
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="campaignType"
+                id="dragonKnightCampaign"
+                value="dragon-knight"
+              />
+              <label class="form-check-label" for="dragonKnightCampaign">
+                Use Dragon Knight Campaign
+                <small class="text-muted">(Recommended starter campaign)</small>
+              </label>
             </div>
-            <div id="campaign-list" class="list-group"></div>
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="campaignType"
+                id="customCampaign"
+                value="custom"
+                checked
+              />
+              <label class="form-check-label" for="customCampaign">
+                Create Custom Campaign
+              </label>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="character-input" class="form-label"
+              >Character you want to play</label
+            >
+            <input
+              type="text"
+              class="form-control"
+              id="character-input"
+              placeholder="Random character (auto-generate)"
+            />
+          </div>
+
+          <div class="mb-3">
+            <label for="setting-input" class="form-label"
+              >Setting/world for your adventure</label
+            >
+            <input
+              type="text"
+              class="form-control"
+              id="setting-input"
+              placeholder="Random fantasy D&D world (auto-generate)"
+            />
+          </div>
+
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <label for="description-input" class="form-label"
+                >Campaign description prompt</label
+              >
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary"
+                id="toggle-description"
+                aria-expanded="true"
+                aria-controls="description-container"
+              >
+                <i class="bi bi-chevron-up"></i> Collapse
+              </button>
+            </div>
+            <div id="description-container" class="collapse show">
+              <textarea
+                class="form-control scrollable-textarea"
+                id="description-input"
+                rows="8"
+                placeholder="Describe your campaign concept, goals, or story premise (optional)"
+              ></textarea>
+              <div class="form-text">
+                Optional: Describe what kind of adventure or story you want to
+                experience. This field can handle very long prompts.
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Choose your AI's expertise:</label>
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="prompt-narrative"
+                name="selectedPrompts"
+                value="narrative"
+                checked
+              />
+              <label class="form-check-label" for="prompt-narrative"
+                >Jeff's Narrative Flair (Storytelling & Character)</label
+              >
+            </div>
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="prompt-mechanics"
+                name="selectedPrompts"
+                value="mechanics"
+                checked
+              />
+              <label class="form-check-label" for="prompt-mechanics"
+                >Jeff's Mechanical Precision (Rules & Protocols)</label
+              >
+            </div>
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="generate-companions"
+                name="customOptions"
+                value="companions"
+                checked
+              />
+              <label class="form-check-label" for="generate-companions"
+                >Generate starting Companions (Automatically creates
+                complementary party members)</label
+              >
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Custom Campaign Options:</label>
+            <div class="form-check">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="use-default-world"
+                name="customOptions"
+                value="defaultWorld"
+                checked
+              />
+              <label class="form-check-label" for="use-default-world"
+                >Use Default Fantasy World (Celestial Wars/Assiah setting with
+                rich lore and characters)</label
+              >
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-success">
+            Begin Adventure!
+          </button>
+        </form>
+      </div>
+      <div id="game-view">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h2 id="game-title"></h2>
+          <div class="d-flex align-items-center gap-2">
+            <div id="debug-indicator">🔍 Debug Mode Active</div>
+            <button id="back-to-dashboard" class="btn btn-secondary">
+              Back to Dashboard
+            </button>
+          </div>
         </div>
-        <div id="new-campaign-view">
-            <h2 class="text-center">Start a New Campaign</h2>
-            <form id="new-campaign-form" class="mt-3">
-                <div class="mb-3"><label for="campaign-title" class="form-label">Campaign Title (Pick anything!)</label><input type="text" class="form-control" id="campaign-title" value="My Epic Adventure" required></div>
-                
-                <!-- Campaign Type Selection -->
-                <div class="mb-3">
-                    <label class="form-label">Campaign Type</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="campaignType" id="dragonKnightCampaign" value="dragon-knight">
-                        <label class="form-check-label" for="dragonKnightCampaign">
-                            Use Dragon Knight Campaign <small class="text-muted">(Recommended starter campaign)</small>
-                        </label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="campaignType" id="customCampaign" value="custom" checked>
-                        <label class="form-check-label" for="customCampaign">
-                            Create Custom Campaign
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="character-input" class="form-label">Character you want to play</label>
-                    <input type="text" class="form-control" id="character-input" placeholder="Random character (auto-generate)" />
-                </div>
-                
-                <div class="mb-3">
-                    <label for="setting-input" class="form-label">Setting/world for your adventure</label>
-                    <input type="text" class="form-control" id="setting-input" placeholder="Random fantasy D&D world (auto-generate)" />
-                </div>
-                
-                <div class="mb-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <label for="description-input" class="form-label">Campaign description prompt</label>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="toggle-description" aria-expanded="true" aria-controls="description-container">
-                            <i class="bi bi-chevron-up"></i> Collapse
-                        </button>
-                    </div>
-                    <div id="description-container" class="collapse show">
-                        <textarea class="form-control scrollable-textarea" id="description-input" rows="8" placeholder="Describe your campaign concept, goals, or story premise (optional)"></textarea>
-                        <div class="form-text">Optional: Describe what kind of adventure or story you want to experience. This field can handle very long prompts.</div>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Choose your AI's expertise:</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="prompt-narrative" name="selectedPrompts" value="narrative" checked>
-                        <label class="form-check-label" for="prompt-narrative">Jeff's Narrative Flair (Storytelling & Character)</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="prompt-mechanics" name="selectedPrompts" value="mechanics" checked>
-                        <label class="form-check-label" for="prompt-mechanics">Jeff's Mechanical Precision (Rules & Protocols)</label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="generate-companions" name="customOptions" value="companions" checked>
-                        <label class="form-check-label" for="generate-companions">Generate starting Companions (Automatically creates complementary party members)</label>
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label class="form-label">Custom Campaign Options:</label>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="use-default-world" name="customOptions" value="defaultWorld" checked>
-                        <label class="form-check-label" for="use-default-world">Use Default Fantasy World (Celestial Wars/Assiah setting with rich lore and characters)</label>
-                    </div>
-                </div>
-                
-                <button type="submit" class="btn btn-success">Begin Adventure!</button>
-            </form>
+
+        <!-- Download/Share Buttons - Moved to top per TASK-137 -->
+        <div class="d-flex justify-content-end mb-3 gap-2">
+          <button
+            id="downloadStoryBtn"
+            class="btn btn-sm btn-secondary"
+            title="Download Story"
+          >
+            <i class="bi bi-download"></i>
+          </button>
+          <button
+            id="shareStoryBtn"
+            class="btn btn-sm btn-info"
+            title="Share Story"
+          >
+            <i class="bi bi-share"></i>
+          </button>
         </div>
-        <div id="game-view">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 id="game-title"></h2>
-                <div class="d-flex align-items-center gap-2">
-                    <div id="debug-indicator">🔍 Debug Mode Active</div>
-                    <button id="back-to-dashboard" class="btn btn-secondary">Back to Dashboard</button>
-                </div>
-            </div>
-            
-            <!-- Download/Share Buttons - Moved to top per TASK-137 -->
-            <div class="d-flex justify-content-end mb-3 gap-2">
-                <button id="downloadStoryBtn" class="btn btn-secondary">Download Story</button>
-                <button id="shareStoryBtn" class="btn btn-info">Share Story</button>
-            </div>
-            <div id="story-content" class="p-3 border rounded bg-light"></div>
-            <div id="timer-info" class="mt-2 text-muted text-center small"></div>
-            <form id="interaction-form" class="mt-3">
-                <div class="input-group">
-                    <textarea class="form-control" id="user-input" placeholder="What do you do?" rows="2" required></textarea>
-                    <button class="btn btn-primary" type="submit">Send</button>
-                </div>
-                <div class="form-check form-check-inline mt-2">
-                    <input class="form-check-input" type="radio" name="interactionMode" id="char-mode" value="character" checked>
-                    <label class="form-check-label" for="char-mode">Character Mode</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="radio" name="interactionMode" id="god-mode" value="god">
-                    <label class="form-check-label" for="god-mode">God Mode</label>
-                </div>
-            </form>
-            
-            <div id="loading-spinner" class="text-center mt-3" style="display: none;">
-                <div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div>
-                <div class="loading-message"></div>
-            </div>
+        <div id="story-content" class="p-3 border rounded bg-light"></div>
+        <div id="timer-info" class="mt-2 text-muted text-center small"></div>
+        <form id="interaction-form" class="mt-3">
+          <div class="input-group">
+            <textarea
+              class="form-control"
+              id="user-input"
+              placeholder="What do you do?"
+              rows="2"
+              required
+            ></textarea>
+            <button class="btn btn-primary" type="submit">Send</button>
+          </div>
+          <div class="form-check form-check-inline mt-2">
+            <input
+              class="form-check-input"
+              type="radio"
+              name="interactionMode"
+              id="char-mode"
+              value="character"
+              checked
+            />
+            <label class="form-check-label" for="char-mode"
+              >Character Mode</label
+            >
+          </div>
+          <div class="form-check form-check-inline">
+            <input
+              class="form-check-input"
+              type="radio"
+              name="interactionMode"
+              id="god-mode"
+              value="god"
+            />
+            <label class="form-check-label" for="god-mode">God Mode</label>
+          </div>
+        </form>
+
+        <div
+          id="loading-spinner"
+          class="text-center mt-3"
+          style="display: none"
+        >
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <div class="loading-message"></div>
         </div>
+      </div>
     </div>
 
     <!-- Download Options Modal -->
-    <div class="modal fade" id="downloadOptionsModal" tabindex="-1" aria-labelledby="downloadModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="downloadModalLabel">Download Story As...</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Choose a format to download your campaign story.</p>
-                    <div class="d-grid gap-2">
-                        <button class="btn btn-primary" id="download-txt-btn">Download as .txt</button>
-                        <button class="btn btn-danger" id="download-pdf-btn">Download as .pdf (takes long)</button>
-                        <button class="btn btn-success" id="download-docx-btn">Download as .docx</button>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
+    <div
+      class="modal fade"
+      id="downloadOptionsModal"
+      tabindex="-1"
+      aria-labelledby="downloadModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="downloadModalLabel">
+              Download Story As...
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p>Choose a format to download your campaign story.</p>
+            <div class="d-grid gap-2">
+              <button class="btn btn-primary" id="download-txt-btn">
+                <i class="bi bi-file-text"></i> Download as .txt
+              </button>
+              <button class="btn btn-danger" id="download-pdf-btn">
+                <i class="bi bi-file-pdf"></i> Download as .pdf (takes long)
+              </button>
+              <button class="btn btn-success" id="download-docx-btn">
+                <i class="bi bi-file-word"></i> Download as .docx
+              </button>
             </div>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Close
+            </button>
+          </div>
         </div>
+      </div>
     </div>
 
     <!-- Edit Campaign Modal -->
-    <div class="modal fade" id="editCampaignModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="editModalLabel">Edit Campaign Title</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="edit-campaign-form">
-                        <div class="mb-3">
-                            <label for="edit-campaign-title" class="form-label">Campaign Title:</label>
-                            <input type="text" class="form-control" id="edit-campaign-title" required>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="save-campaign-title-btn">Save Changes</button>
-                </div>
-            </div>
+    <div
+      class="modal fade"
+      id="editCampaignModal"
+      tabindex="-1"
+      aria-labelledby="editModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editModalLabel">Edit Campaign Title</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="edit-campaign-form">
+              <div class="mb-3">
+                <label for="edit-campaign-title" class="form-label"
+                  >Campaign Title:</label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  id="edit-campaign-title"
+                  required
+                />
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary"
+              id="save-campaign-title-btn"
+            >
+              Save Changes
+            </button>
+          </div>
         </div>
+      </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -282,5 +527,5 @@
     <script src="/static/js/loading-messages.js"></script>
     <script src="/static/js/inline-editor.js"></script>
     <script src="/static/app.js"></script>
-</body>
+  </body>
 </html>

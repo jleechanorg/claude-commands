@@ -26,7 +26,7 @@ show_help() {
     echo "  This script runs browser automation tests using Playwright with mock APIs:"
     echo "  - Activates virtual environment"
     echo "  - Verifies Playwright installation"
-    echo "  - Starts test server on port 6006"
+    echo "  - Starts test server on port 8081"
     echo "  - Runs all browser tests with mock responses"
     echo "  - Captures screenshots for failures"
     echo "  - Provides clear test results"
@@ -38,7 +38,7 @@ show_help() {
     echo ""
     echo "Notes:"
     echo "  - Uses mock APIs to avoid costs"
-    echo "  - Test server runs on port 6006 with TESTING=true"
+    echo "  - Test server runs on port 8081 with TESTING=true"
     echo "  - Screenshots saved to testing_ui/screenshots/"
     echo "  - Requires Playwright installed in venv"
     exit 0
@@ -82,29 +82,29 @@ fi
 # 2. Use the existing run_ui_tests.sh if available
 if [[ -f "./run_ui_tests.sh" ]]; then
     echo -e "${GREEN}✓ Found run_ui_tests.sh - using existing test runner${NC}"
-    
+
     # Build command
     cmd="./run_ui_tests.sh mock"
-    
+
     if [[ -n "$SPECIFIC_TEST" ]]; then
         # For specific test, we'll need to run manually
         echo -e "${YELLOW}⚠️  Specific test requested - running manually${NC}"
-        
+
         # Source shared port utilities
         source "$(dirname "$0")/../port-utils.sh"
-        
+
         TEST_PORT=$(find_available_port)
         if [[ $? -ne 0 ]]; then
             echo -e "${RED}❌ No available ports in range $BASE_PORT-$((BASE_PORT + MAX_PORTS - 1))${NC}"
             exit 1
         fi
-        
+
         # Start test server
         echo -e "\n${GREEN}🚀 Starting test server on port $TEST_PORT...${NC}"
         TESTING=true PORT=$TEST_PORT vpython mvp_site/main.py serve &
         SERVER_PID=$!
         sleep 3
-        
+
         # Run specific test
         echo -e "\n${GREEN}🧪 Running test: $SPECIFIC_TEST${NC}"
         if TESTING=true vpython "testing_ui/$SPECIFIC_TEST"; then
@@ -114,7 +114,7 @@ if [[ -f "./run_ui_tests.sh" ]]; then
             echo -e "${RED}❌ Test failed!${NC}"
             EXIT_CODE=1
         fi
-        
+
         # Cleanup
         kill $SERVER_PID 2>/dev/null || true
         exit $EXIT_CODE
@@ -124,7 +124,7 @@ if [[ -f "./run_ui_tests.sh" ]]; then
     fi
 else
     echo -e "${YELLOW}⚠️  run_ui_tests.sh not found - running manually${NC}"
-    
+
     # Manual test execution
     # 3. Verify Playwright installation
     echo -e "\n${GREEN}🔍 Checking Playwright installation...${NC}"
@@ -134,34 +134,34 @@ else
         exit 1
     fi
     echo "✓ Playwright is installed"
-    
+
     # 4. Start test server with smart port detection
     source "$(dirname "$0")/../port-utils.sh"
-    
+
     TEST_PORT=$(find_available_port)
     if [[ $? -ne 0 ]]; then
         echo -e "${RED}❌ No available ports in range $BASE_PORT-$((BASE_PORT + MAX_PORTS - 1))${NC}"
         exit 1
     fi
-    
+
     echo -e "\n${GREEN}🚀 Starting test server on port $TEST_PORT...${NC}"
     TESTING=true PORT=$TEST_PORT vpython mvp_site/main.py serve &
     SERVER_PID=$!
-    
+
     # Wait for server to start
     sleep 3
-    
+
     # Verify server is running
-    if ! curl -s http://localhost:6006 > /dev/null; then
+    if ! curl -s http://localhost:8081 > /dev/null; then
         echo -e "${RED}❌ Test server failed to start!${NC}"
         kill $SERVER_PID 2>/dev/null || true
         exit 1
     fi
-    echo "✓ Test server running on http://localhost:6006"
-    
+    echo "✓ Test server running on http://localhost:8081"
+
     # 5. Run tests
     echo -e "\n${GREEN}🧪 Running browser tests...${NC}"
-    
+
     # Determine which tests to run
     if [[ -n "$SPECIFIC_TEST" ]]; then
         test_files="testing_ui/$SPECIFIC_TEST"
@@ -169,22 +169,22 @@ else
         # Find all test files
         test_files=$(find testing_ui -name "test_*.py" -type f 2>/dev/null | sort)
     fi
-    
+
     if [[ -z "$test_files" ]]; then
         echo -e "${YELLOW}⚠️  No test files found in testing_ui/${NC}"
         kill $SERVER_PID 2>/dev/null || true
         exit 0
     fi
-    
+
     # Run each test
     TOTAL_TESTS=0
     PASSED_TESTS=0
     FAILED_TESTS=0
-    
+
     for test_file in $test_files; do
         echo -e "\n${BLUE}Running: $test_file${NC}"
         TOTAL_TESTS=$((TOTAL_TESTS + 1))
-        
+
         if [[ "$VERBOSE" == "true" ]]; then
             if TESTING=true vpython "$test_file"; then
                 PASSED_TESTS=$((PASSED_TESTS + 1))
@@ -205,18 +205,18 @@ else
             fi
         fi
     done
-    
+
     # 6. Cleanup
     echo -e "\n${GREEN}🧹 Cleaning up...${NC}"
     kill $SERVER_PID 2>/dev/null || true
-    
+
     # 7. Summary
     echo -e "\n${BLUE}📊 Test Summary${NC}"
     echo "==============="
     echo "Total tests: $TOTAL_TESTS"
     echo -e "Passed: ${GREEN}$PASSED_TESTS${NC}"
     echo -e "Failed: ${RED}$FAILED_TESTS${NC}"
-    
+
     if [[ $FAILED_TESTS -eq 0 ]]; then
         echo -e "\n${GREEN}✅ All tests passed! 🎉${NC}"
         exit 0

@@ -10,7 +10,7 @@
 ```
 Claude: "Hi! What mode are you in?
 1. HUMAN MODE - I'm actively available for rapid development
-2. AWAY MODE - Work autonomously with comprehensive implementation  
+2. AWAY MODE - Work autonomously with comprehensive implementation
 3. HEADLESS MODE - Launch extended automation (7+ hours)
 4. POWER MODE - Maximum parallelization with multiple terminals"
 
@@ -32,7 +32,7 @@ Note: You have Max 20x with 200-800 prompts per 5 hours. Use liberally!
 ### Liberal Usage Strategy
 With 200-800 prompts per 5-hour window, you can:
 - Run multiple virtual agents freely
-- Use frequent checkpoints and iterations  
+- Use frequent checkpoints and iterations
 - Launch parallel headless sessions
 - Maintain multiple terminal sessions when beneficial
 - Switch models based on task complexity
@@ -46,7 +46,7 @@ With 200-800 prompts per 5-hour window, you can:
 [ARCHITECT]: /model opus
 "Designing distributed payment system architecture..."
 
-[DEVELOPER]: /model sonnet  
+[DEVELOPER]: /model sonnet
 "Implementing standard CRUD endpoints..."
 ```
 
@@ -104,14 +104,14 @@ Write code (2 min) → Test (1 min) → Review (1 min) → Refactor (2 min)
 [BATCH-DEVELOPER]: /model sonnet
 "Implementing all components with:
 - Primary implementation
-- Error handling pass  
+- Error handling pass
 - Performance optimization pass
 - Security hardening pass
 - Documentation pass"
 
 [SPECIALIST-TEAM]: "Running all specialists:
 - SECURITY-AUDITOR (Opus mode)
-- PERFORMANCE-ANALYST  
+- PERFORMANCE-ANALYST
 - TEST-ENGINEER
 - DOC-WRITER"
 ```
@@ -138,7 +138,7 @@ claude -p "As TEST-ENGINEER using Sonnet: Write comprehensive test suite achievi
 claude -p "As SECURITY-AUDITOR using Opus: Deep security analysis with threat modeling" \
   --allowedTools "read,analyze" &
 
-# Performance profiling  
+# Performance profiling
 claude -p "As PERFORMANCE-ANALYST: Profile and optimize all critical paths" \
   --allowedTools "all" &
 
@@ -161,7 +161,7 @@ echo "Parallel overnight development complete"
 /model opus
 Virtual Agents: ARCHITECT, DEVELOPER, DB-SPECIALIST, API-DESIGNER
 
-# Terminal 2: Frontend Team (sonnet-heavy)  
+# Terminal 2: Frontend Team (sonnet-heavy)
 /model sonnet
 Virtual Agents: UI-DEVELOPER, FRONTEND-SPECIALIST, UX-DESIGNER
 
@@ -202,7 +202,7 @@ With your prompt capacity, optimize for quality over conservation:
 ```markdown
 /model opus
 - ARCHITECT: Complex system design
-- SECURITY-AUDITOR: Threat analysis  
+- SECURITY-AUDITOR: Threat analysis
 - ALGORITHM-DESIGNER: Complex algorithms
 - REVIEWER: Catching subtle bugs
 ```
@@ -222,7 +222,7 @@ With your prompt capacity, optimize for quality over conservation:
 ```markdown
 # Launch multiple specialists simultaneously
 [SECURITY-AUDITOR]: "Analyzing auth flow..."
-[PERFORMANCE-ANALYST]: "Profiling database queries..."  
+[PERFORMANCE-ANALYST]: "Profiling database queries..."
 [API-DESIGNER]: "Reviewing REST conventions..."
 [TEST-ENGINEER]: "Checking coverage gaps..."
 
@@ -267,7 +267,7 @@ Run specialists in parallel, not sequential:
 [SUPERVISOR]: Orchestrating 3 teams
 [ARCHITECT]: Designing next phase
 
-# Terminal 2-4  
+# Terminal 2-4
 [TEAM-BACKEND]: 5 virtual agents
 [TEAM-FRONTEND]: 5 virtual agents
 [TEAM-INFRA]: 5 virtual agents
@@ -287,7 +287,7 @@ Run specialists in parallel, not sequential:
 # Parallel execution
 [DEVELOPER-1]: Backend features
 [DEVELOPER-2]: Frontend features
-[DEVELOPER-3]: Infrastructure 
+[DEVELOPER-3]: Infrastructure
 [TEST-ENGINEER]: Following behind all devs
 [REVIEWER]: Continuous review cycle
 
@@ -345,7 +345,7 @@ WINDOW_USAGE=$(awk -v start="$WINDOW_START" '$1" "$2 >= start {sum += $3} END {p
 if [ $WINDOW_USAGE -lt 200 ]; then
     STATUS="🟢 AGGRESSIVE MODE"
 elif [ $WINDOW_USAGE -lt 500 ]; then
-    STATUS="🟡 NORMAL USAGE"  
+    STATUS="🟡 NORMAL USAGE"
 elif [ $WINDOW_USAGE -lt 700 ]; then
     STATUS="🟠 MONITOR USAGE"
 else

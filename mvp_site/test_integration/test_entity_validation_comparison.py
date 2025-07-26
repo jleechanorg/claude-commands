@@ -7,6 +7,7 @@ Uses real Sariel campaign data to test entity sync performance.
 import json
 import os
 import sys
+import tempfile
 import time
 import unittest
 from typing import Any
@@ -251,7 +252,6 @@ class TestEntityValidationComparison(unittest.TestCase):
     def _save_metrics(self, metrics: ValidationMetrics, filename: str):
         """Save metrics to file"""
         # Use temporary directory for test outputs
-        import tempfile
 
         temp_dir = tempfile.mkdtemp(prefix="validation_metrics_")
 

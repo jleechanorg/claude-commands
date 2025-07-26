@@ -9,6 +9,8 @@ from typing import Any
 
 from playwright.sync_api import Page
 
+from screenshot_utils import take_screenshot
+
 
 def wait_and_click(
     page: Page, selector: str, timeout: int = 5000, force: bool = False
@@ -237,7 +239,7 @@ def is_element_in_viewport(page: Page, selector: str) -> bool:
         (() => {{
             const element = document.querySelector('{selector}');
             if (!element) return false;
-            
+
             const rect = element.getBoundingClientRect();
             return (
                 rect.top >= 0 &&
@@ -276,7 +278,7 @@ def get_all_text_content(page: Page, selector: str) -> list[str]:
 def navigate_to_test_game(
     page: Page,
     campaign_name: str = "All Fields Test Campaign",
-    port: int = 6006,
+    port: int = 8081,
     test_user_id: str = "test-user-123",
 ) -> bool:
     """
@@ -339,7 +341,7 @@ def capture_structured_fields_sequence(
     Returns:
         Dictionary mapping field names to screenshot paths
     """
-    from screenshot_utils import take_screenshot
+
 
     screenshots = {}
 

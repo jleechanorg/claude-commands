@@ -3,8 +3,10 @@ Function tests for the hybrid checkpoint validation system.
 Tests cross-module interactions with mocked external dependencies.
 """
 
+import copy
 import os
 import sys
+import time
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -89,13 +91,11 @@ class TestFunctionValidationFlow(unittest.TestCase):
 
         # Create game state with HP that will conflict with AI response
         test_state = GameState(
-            **{
-                "player_character_data": {
-                    "hp_current": 25,  # Low HP
-                    "hp_max": 100,
-                },
-                "world_data": {"current_location_name": "Ancient Tavern"},
-            }
+            player_character_data={
+                "hp_current": 25,  # Low HP
+                "hp_max": 100,
+            },
+            world_data={"current_location_name": "Ancient Tavern"},
         )
         mock_get_state.return_value = self.mock_firestore.get_campaign_game_state(
             self.test_user_id, self.test_campaign_id
@@ -269,7 +269,6 @@ class TestFunctionValidationFlow(unittest.TestCase):
         initial_state = GameState(**fresh_state_data)
 
         # Test state changes with unique memory to avoid duplicates
-        import time
 
         unique_memory = f"Test memory added at {time.time()}"
         changes = {
@@ -278,7 +277,6 @@ class TestFunctionValidationFlow(unittest.TestCase):
         }
 
         # Apply changes using firestore_service function (use a copy to avoid mutation)
-        import copy
 
         initial_state_copy = copy.deepcopy(initial_state.to_dict())
         updated_state_dict = firestore_service.update_state_with_changes(

@@ -5,6 +5,8 @@ import os
 import sys
 import unittest
 
+from pydantic import ValidationError
+
 # Add the mvp_site directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -168,7 +170,6 @@ class TestEntitiesWithDefensiveConverter(unittest.TestCase):
 
     def test_hp_validation_after_conversion(self):
         """Test that HP validation works after defensive conversion"""
-        from pydantic import ValidationError
 
         # HP=10, HP_MAX=unknown (converts to 1) -> Should fail validation (hp > hp_max)
         with self.assertRaises(ValidationError):

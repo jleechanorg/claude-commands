@@ -6,7 +6,9 @@ import sys
 import unittest
 from unittest.mock import Mock
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from narrative_response_schema import parse_structured_response
 

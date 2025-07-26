@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -16,10 +17,11 @@ DELETE_FIELD = object()
 mock_firestore.DELETE_FIELD = DELETE_FIELD
 
 # Apply the mock
-import sys
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 sys.modules["firebase_admin"] = mock_firebase_admin
 sys.modules["firebase_admin.firestore"] = mock_firestore

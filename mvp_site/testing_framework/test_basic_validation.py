@@ -7,17 +7,23 @@ import os
 import sys
 import unittest
 
+from testing_framework.factory import (
+    get_current_provider,
+    get_service_provider,
+    reset_global_provider,
+)
+from testing_framework.fixtures import get_test_client_for_mode
+
 # Add the project root to the path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from testing_framework.integration_utils import TestServiceProvider
 
 # Set testing environment
 os.environ["TESTING"] = "true"
 
 # Test core framework imports
 try:
-    from testing_framework.factory import get_service_provider, reset_global_provider
-    from testing_framework.service_provider import TestServiceProvider
-
     FRAMEWORK_AVAILABLE = True
     print("✅ Core framework imports successful")
 except ImportError as e:
@@ -73,7 +79,6 @@ class TestBasicFramework(unittest.TestCase):
 
     def test_global_provider_management(self):
         """Test global provider management."""
-        from testing_framework.factory import get_current_provider
 
         # Reset to clean state
         reset_global_provider()
@@ -108,8 +113,6 @@ class TestBackwardCompatibility(unittest.TestCase):
     def test_get_test_client_helper(self):
         """Test the backward compatibility helper."""
         try:
-            from testing_framework.fixtures import get_test_client_for_mode
-
             services = get_test_client_for_mode()
 
             # Should have all expected keys

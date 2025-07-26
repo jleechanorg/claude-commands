@@ -12,6 +12,21 @@ ACTOR_GEMINI = "gemini"
 ACTOR_UNKNOWN = "NO_ACTOR"  # Default when actor is missing from data
 
 
+# --- SETTINGS ---
+# Allowed Gemini model selections for user preferences (aligned with SDK format)
+ALLOWED_GEMINI_MODELS = ["gemini-2.5-pro", "gemini-2.5-flash"]
+
+# Gemini model mapping from user preference to full model name (now using SDK format directly)
+GEMINI_MODEL_MAPPING = {
+    "gemini-2.5-flash": "gemini-2.5-flash",
+    "gemini-2.5-pro": "gemini-2.5-pro",
+}
+
+# Debug mode settings
+DEFAULT_DEBUG_MODE = False
+ALLOWED_DEBUG_MODE_VALUES = [True, False]
+
+
 # --- INTERACTION MODES ---
 # Used to determine the style of user input and AI response
 MODE_CHARACTER = "character"
@@ -60,7 +75,6 @@ KEY_MBTI = "mbti"
 # --- ATTRIBUTE SYSTEMS ---
 # Used to determine which attribute system a campaign uses
 ATTRIBUTE_SYSTEM_DND = "D&D"
-# ATTRIBUTE_SYSTEM_DESTINY = "Destiny" # Archived with dual-system files
 
 # D&D Attribute System
 DND_ATTRIBUTES = [
@@ -74,13 +88,6 @@ DND_ATTRIBUTES = [
 
 DND_ATTRIBUTE_CODES = ["STR", "DEX", "CON", "INT", "WIS", "CHA"]
 
-# ARCHIVED: Destiny Attribute System (moved to prompt_archive/)
-# DESTINY_ATTRIBUTES = [
-#     "Physique", "Coordination", "Health", "Intelligence", "Wisdom"
-# ]
-# BIG_FIVE_TRAITS = [
-#     "Openness", "Conscientiousness", "Extraversion", "Agreeableness", "Neuroticism"
-# ]
 
 # Default attribute system for new campaigns
 DEFAULT_ATTRIBUTE_SYSTEM = ATTRIBUTE_SYSTEM_DND
@@ -91,8 +98,6 @@ def get_attributes_for_system(system):
     """Get the list of attributes for the given system."""
     if system == ATTRIBUTE_SYSTEM_DND:
         return DND_ATTRIBUTES.copy()
-    # elif system == ATTRIBUTE_SYSTEM_DESTINY: # Archived
-    #     return DESTINY_ATTRIBUTES.copy()
     # Default to D&D for unknown systems
     return DND_ATTRIBUTES.copy()
 
@@ -101,8 +106,6 @@ def get_attribute_codes_for_system(system):
     """Get the list of attribute codes for the given system."""
     if system == ATTRIBUTE_SYSTEM_DND:
         return DND_ATTRIBUTE_CODES.copy()
-    # elif system == ATTRIBUTE_SYSTEM_DESTINY: # Archived
-    #     return DESTINY_ATTRIBUTES.copy()
     # Default to D&D for unknown systems
     return DND_ATTRIBUTE_CODES.copy()
 
@@ -114,7 +117,7 @@ def uses_charisma(system):
 
 def uses_big_five(system):
     """Check if the given system uses Big Five personality traits for social mechanics."""
-    # return system == ATTRIBUTE_SYSTEM_DESTINY # Archived
+    del system  # Unused argument - no current systems use Big Five
     return False  # No current systems use Big Five
 
 
@@ -133,7 +136,6 @@ MIMETYPE_TXT = "text/plain"
 FILENAME_NARRATIVE = "narrative_system_instruction.md"
 FILENAME_MECHANICS = "mechanics_system_instruction.md"
 FILENAME_GAME_STATE = "game_state_instruction.md"
-# FILENAME_ENTITY_SCHEMA = "entity_schema_instruction.md" # Integrated into game_state_instruction.md
 FILENAME_MASTER_DIRECTIVE = "master_directive.md"
 FILENAME_DND_SRD = "dnd_srd_instruction.md"
 FILENAME_CHARACTER_TEMPLATE = "character_template.md"
@@ -152,17 +154,9 @@ PROMPT_TYPE_NARRATIVE = "narrative"
 PROMPT_TYPE_MECHANICS = "mechanics"
 PROMPT_TYPE_GAME_STATE = "game_state"
 PROMPT_TYPE_CHARACTER_TEMPLATE = "character_template"
-# PROMPT_TYPE_ENTITY_SCHEMA = "entity_schema" # Integrated into game_state_instruction.md
 PROMPT_TYPE_MASTER_DIRECTIVE = "master_directive"
 PROMPT_TYPE_DND_SRD = "dnd_srd"
 
-# --- ARCHIVED PROMPT TYPES (for reference) ---
-# These prompt types have been archived:
-# PROMPT_TYPE_CALIBRATION = "calibration"
-# PROMPT_TYPE_DESTINY = "destiny_ruleset"
-# PROMPT_TYPE_DUAL_SYSTEM_REFERENCE = "dual_system_reference"
-# PROMPT_TYPE_ATTRIBUTE_CONVERSION = "attribute_conversion"
-# PROMPT_TYPE_CHARACTER_SHEET = "character_sheet"
 
 # --- PROMPT PATHS ---
 PROMPTS_DIR = "prompts"
@@ -174,7 +168,6 @@ MECHANICS_SYSTEM_INSTRUCTION_PATH = os.path.join(
 )
 CHARACTER_TEMPLATE_PATH = os.path.join(PROMPTS_DIR, "character_template.md")
 GAME_STATE_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "game_state_instruction.md")
-# ENTITY_SCHEMA_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "entity_schema_instruction.md") # Integrated into game_state
 MASTER_DIRECTIVE_PATH = os.path.join(PROMPTS_DIR, "master_directive.md")
 DND_SRD_INSTRUCTION_PATH = os.path.join(PROMPTS_DIR, "dnd_srd_instruction.md")
 
@@ -198,7 +191,7 @@ IMPORTANT: State updates must be included in a JSON field, not in the narrative 
 
 🚨 MANDATORY CAMPAIGN LAUNCH SUMMARY: After character approval, you MUST display the CAMPAIGN LAUNCH SUMMARY showing:
 - Character details and mechanics choices made
-- Campaign setting and world details  
+- Campaign setting and world details
 - Available companions (if enabled)
 - Starting location and campaign theme
 This summary helps players see their choices before the story begins.

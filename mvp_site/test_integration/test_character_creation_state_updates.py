@@ -2,7 +2,9 @@
 """Test that state updates are proposed during character creation."""
 
 import os
+import re
 import sys
+import traceback
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -50,7 +52,6 @@ def test_character_creation_state_updates():
             print("✅ SUCCESS: State updates block found in response")
 
             # Extract the state update block
-            import re
 
             state_match = re.search(
                 r"\[STATE_UPDATES_PROPOSED\](.*?)\[END_STATE_UPDATES_PROPOSED\]",
@@ -93,7 +94,6 @@ def test_character_creation_state_updates():
 
     except Exception as e:
         print(f"\n❌ ERROR: {e}")
-        import traceback
 
         traceback.print_exc()
 

@@ -44,7 +44,7 @@ These are reference formats:
 
 **Essential Files for All Operations:**
 1. `master_directive.md` (this file) - Loading hierarchy
-2. `game_state_instruction.md` - State management and entity schemas  
+2. `game_state_instruction.md` - State management and entity schemas
 3. `dnd_srd_instruction.md` - D&D 5E mechanical authority
 
 **Context-Dependent Files:**
@@ -57,7 +57,7 @@ These are reference formats:
 When instructions conflict, follow this precedence:
 
 1. **State Management Always Wins**: If any instruction conflicts with state management protocol, state management takes precedence
-2. **D&D 5E Mechanics Over Narrative**: Combat mechanics in dnd_srd_instruction.md override narrative descriptions  
+2. **D&D 5E Mechanics Over Narrative**: Combat mechanics in dnd_srd_instruction.md override narrative descriptions
 3. **Specific Over General**: More specific instructions override general ones
 4. **Templates Are Examples**: Templates show format but don't override rules
 5. **This Document Is Supreme**: If there's ambiguity, this hierarchy decides

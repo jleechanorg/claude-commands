@@ -7,7 +7,9 @@ import os
 import sys
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 import datetime
 import unittest
@@ -1218,7 +1220,7 @@ class TestMainStateFunctions(unittest.TestCase):
         """Test parsing set commands with 3 layers of nesting and all data types."""
         test_datetime_str = "2023-06-15T14:30:45+00:00"
 
-        payload = f'''
+        payload = f"""
         player.stats.combat.strength = 18
         player.stats.combat.dexterity = 14.5
         player.stats.combat.is_veteran = true
@@ -1237,7 +1239,7 @@ class TestMainStateFunctions(unittest.TestCase):
         metadata.session.notes = null
         metadata.session.participants.append = "player1"
         metadata.session.participants.append = "player2"
-        '''
+        """
 
         result = main.parse_set_command(payload)
 

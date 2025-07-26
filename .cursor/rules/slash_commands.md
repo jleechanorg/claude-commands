@@ -6,10 +6,49 @@ This document provides comprehensive documentation for all available slash comma
 
 ### Development Workflow Commands
 
+#### `/fake`
+**Purpose**: Comprehensive fake code detection using command composition
+
+**Usage**:
+```
+/fake
+```
+
+**Command Composition**: `/arch /thinku /devilsadvocate /diligent`
+
+**Behavior**:
+- Combines architectural analysis, deep thinking, devil's advocate, and diligent review
+- Compares local branch vs main and remote PR context
+- Detects fake implementations, demo code, placeholder comments, duplicate protocols
+- Provides structured audit report with specific remediation guidance
+
+**Detection Targets**:
+- Placeholder comments (`# Note: In the real implementation`)
+- Demo files that don't actually work
+- Python files simulating .md logic
+- Duplicate systematic protocols
+- Template responses without real analysis
+- Mock implementations that fake functionality
+
+**Example**:
+```
+User: /fake
+Assistant: Running comprehensive fake code audit...
+
+🚨 FAKE CODE AUDIT RESULTS
+📊 Files Analyzed: 45
+⚠️  Fake Patterns Found: 3
+✅ Verified Working Code: 42
+
+🔴 CRITICAL ISSUES:
+- .claude/commands/demo.py:15 - Placeholder comment found
+- src/fake_api.py:23 - Mock implementation simulating real API
+```
+
 #### `/tdd` or `/rg`
 **Purpose**: Execute Test-Driven Development (red-green-refactor) workflow
 
-**Usage**: 
+**Usage**:
 ```
 /tdd
 /rg
@@ -148,7 +187,7 @@ Provides detailed breakdown including:
 ```
 Session Context Usage: ~75-85% used
 - System messages: ~10-15%
-- File operations: ~30-40%  
+- File operations: ~30-40%
 - Conversation: ~25-35%
 - Tool outputs: ~10-15%
 

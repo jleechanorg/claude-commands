@@ -7,6 +7,7 @@ Tests entity tracking performance with what's actually integrated.
 import json
 import os
 import sys
+import tempfile
 import time
 import unittest
 from datetime import datetime
@@ -194,7 +195,6 @@ class TestRealValidationComparison(unittest.TestCase):
     def _save_results(self, results: dict[str, Any]):
         """Save results to file"""
         # Use temporary directory for test outputs
-        import tempfile
 
         temp_dir = tempfile.mkdtemp(prefix="real_comparison_")
 

@@ -3,6 +3,7 @@
 
 import os
 import sys
+import traceback
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -72,7 +73,6 @@ def test_clean_character_creation_format():
 
     except Exception as e:
         print(f"\n❌ ERROR: {e}")
-        import traceback
 
         traceback.print_exc()
 

@@ -12,14 +12,14 @@ from memory_integration import memory_integration, enhance_slash_command
 def demo_query_extraction():
     """Show query term extraction"""
     print("=== Query Term Extraction Demo ===")
-    
+
     test_inputs = [
         "How do I fix GitHub API errors?",
         "Review PR #609 for compliance issues",
         "Debug the ImportError in auth module",
         "What's the proper git workflow?"
     ]
-    
+
     for user_input in test_inputs:
         terms = memory_integration.extract_query_terms(user_input)
         print(f"\nInput: {user_input}")
@@ -28,11 +28,11 @@ def demo_query_extraction():
 def demo_memory_search():
     """Show memory search in action"""
     print("\n\n=== Memory Search Demo ===")
-    
+
     # Search for git-related memories
     print("\nSearching for 'git' memories...")
     memories = memory_integration.search_relevant_memory(['git'])
-    
+
     for memory in memories:
         print(f"\nFound: {memory.get('name')} ({memory.get('entityType')})")
         for obs in memory.get('observations', [])[:2]:
@@ -41,14 +41,14 @@ def demo_memory_search():
 def demo_slash_command_enhancement():
     """Show slash command enhancement"""
     print("\n\n=== Slash Command Enhancement Demo ===")
-    
+
     commands = [
         ("/learn", "test execution patterns"),
         ("/debug", "urgent context issue"),
         ("/think", "git workflow optimization"),
         ("/push", "feature branch")  # This shouldn't get enhanced
     ]
-    
+
     for cmd, args in commands:
         print(f"\nCommand: {cmd} {args}")
         context = enhance_slash_command(cmd, args)
@@ -61,7 +61,7 @@ def demo_slash_command_enhancement():
 def demo_relevance_scoring():
     """Show relevance scoring"""
     print("\n\n=== Relevance Scoring Demo ===")
-    
+
     # Mock entity for scoring
     entity = {
         "name": "urgent_context_pattern",
@@ -71,14 +71,14 @@ def demo_relevance_scoring():
             "Skip comprehensive refactoring when context is low"
         ]
     }
-    
+
     queries = [
         "urgent fix needed",
         "context is getting low",
         "random unrelated query",
         "pattern analysis"
     ]
-    
+
     for query in queries:
         score = memory_integration.calculate_relevance_score(entity, query)
         print(f"\nQuery: '{query}'")
@@ -87,11 +87,11 @@ def demo_relevance_scoring():
 def demo_performance_metrics():
     """Show performance tracking"""
     print("\n\n=== Performance Metrics Demo ===")
-    
+
     # Do some searches to generate metrics
     for _ in range(3):
         memory_integration.search_relevant_memory(['test'])
-    
+
     metrics = memory_integration.metrics
     print(f"Cache hit rate: {metrics.cache_hit_rate:.1%}")
     print(f"Average latency: {metrics.avg_latency:.3f}s")
@@ -100,13 +100,13 @@ def demo_performance_metrics():
 if __name__ == "__main__":
     print("Memory MCP Integration Demonstration")
     print("=" * 40)
-    
+
     demo_query_extraction()
     demo_memory_search()
     demo_slash_command_enhancement()
     demo_relevance_scoring()
     demo_performance_metrics()
-    
+
     print("\n\n=== Integration Complete ===")
     print("The memory system is ready to enhance LLM responses!")
     print("\nTo enable in production:")

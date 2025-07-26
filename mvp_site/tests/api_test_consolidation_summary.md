@@ -4,7 +4,7 @@
 
 ### 1. Removed Redundant Tests (saved ~108 API calls)
 - ✅ `test_sariel_single_campaign_full.py` - 21 API calls
-- ✅ `test_sariel_with_prompts.py` - 11 API calls  
+- ✅ `test_sariel_with_prompts.py` - 11 API calls
 - ✅ `test_sariel_production_validation.py` - 8 API calls
 - ✅ `test_sariel_production_flow.py` - 10 API calls
 
@@ -24,7 +24,7 @@
 - Regular test runs: ~178 API calls
 - With full validation: ~288 API calls
 
-### After Consolidation  
+### After Consolidation
 - Regular test runs: ~10-20 API calls (94% reduction)
 - Full test (SARIEL_FULL_TEST=true): ~30 API calls
 - Manual tests available when needed
@@ -36,7 +36,7 @@
 # Basic test (3 interactions)
 TESTING=true vpython tests/test_sariel_consolidated.py
 
-# Full test (10 interactions)  
+# Full test (10 interactions)
 SARIEL_FULL_TEST=true TESTING=true vpython tests/test_sariel_consolidated.py
 
 # Debug prompts

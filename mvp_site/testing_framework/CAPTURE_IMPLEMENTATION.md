@@ -79,7 +79,7 @@ Successfully implemented the data capture framework for the Real-Mode Testing Fr
 - Error handling and edge cases
 
 ### 6. Documentation and Examples
-**Files**: 
+**Files**:
 - `mvp_site/testing_framework/CAPTURE_README.md`: Complete usage guide
 - `mvp_site/testing_framework/examples/capture_example.py`: Working demonstration
 
@@ -187,7 +187,7 @@ python -m mvp_site.testing_framework.capture_cli baseline capture.json new_mocks
 ### Development Workflow
 1. **Develop with mocks** for fast iteration
 2. **Validate with real services** using `/tester` mode
-3. **Capture interactions** using `/testerc` mode  
+3. **Capture interactions** using `/testerc` mode
 4. **Analyze differences** to improve mock accuracy
 5. **Update mocks** based on real data patterns
 

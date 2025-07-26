@@ -10,7 +10,9 @@ import tempfile
 import unittest
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 
 class TestAnimationSystem(unittest.TestCase):
@@ -146,8 +148,8 @@ class TestAnimationSystem(unittest.TestCase):
 
         # Theme-specific features
         theme_features = [
-            '[data-theme="fantasy"]',
-            '[data-theme="cyberpunk"]',
+            "[data-theme='fantasy']",
+            "[data-theme='cyberpunk']",
             "@keyframes sparkle",
             "box-shadow:",
         ]

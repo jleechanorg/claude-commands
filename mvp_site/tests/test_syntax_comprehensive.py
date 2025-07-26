@@ -1,7 +1,13 @@
 import ast
 import importlib.util
 import os
+import sys
 import unittest
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from game_state import GameState
 
 
 class TestComprehensiveSyntax(unittest.TestCase):
@@ -53,8 +59,6 @@ class TestComprehensiveSyntax(unittest.TestCase):
 
         # Then test import
         try:
-            from game_state import GameState
-
             # Test basic instantiation
             gs = GameState()
             self.assertIsNotNone(gs)
@@ -95,14 +99,10 @@ class TestComprehensiveSyntax(unittest.TestCase):
         """Test basic GameState instantiation without combat-specific features."""
         try:
             # Add parent directory to path for imports
-            import os
-            import sys
 
             sys.path.insert(
                 0, os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             )
-
-            from game_state import GameState
 
             gs = GameState()
 

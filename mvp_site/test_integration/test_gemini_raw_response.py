@@ -5,7 +5,11 @@ Test to capture and examine the raw Gemini API response.
 import json
 import os
 import sys
+import traceback
 import unittest
+
+import gemini_service
+from game_state import GameState
 
 # Add the project root to the Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -15,9 +19,6 @@ from integration_test_lib import setup_integration_test_environment
 
 # Handle missing dependencies gracefully
 try:
-    import gemini_service
-    from game_state import GameState
-
     DEPS_AVAILABLE = True
 except ImportError as e:
     print(f"Integration test dependencies not available: {e}")
@@ -94,7 +95,6 @@ class TestGeminiRawResponse(unittest.TestCase):
 
         except Exception as e:
             print(f"\nError calling Gemini: {e}")
-            import traceback
 
             traceback.print_exc()
 

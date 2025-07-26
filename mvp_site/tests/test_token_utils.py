@@ -7,15 +7,18 @@ and consistent logging across the application.
 """
 
 import os
+import shutil
 import sys
 import tempfile
 import threading
 import time
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, mock_open, patch
 
 # Add the parent directory to sys.path so we can import from mvp_site
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 import file_cache
 from token_utils import estimate_tokens, format_token_count, log_with_tokens
@@ -228,7 +231,6 @@ class TestFileCache(unittest.TestCase):
         file_cache.clear_file_cache()
 
         # Clean up temporary files
-        import shutil
 
         if os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)
@@ -558,7 +560,6 @@ class TestFileCache(unittest.TestCase):
 
 def mock_open_read(content):
     """Helper function to create mock for file reading."""
-    from unittest.mock import mock_open
 
     return mock_open(read_data=content)
 

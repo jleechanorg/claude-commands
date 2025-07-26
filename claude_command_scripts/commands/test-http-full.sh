@@ -145,10 +145,10 @@ FAILED_TESTS=0
 for test_file in $test_files; do
     echo -e "\n${BLUE}Running: $test_file (REAL APIs)${NC}"
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
-    
+
     # Set test server URL
     export TEST_SERVER_URL="http://localhost:$PORT"
-    
+
     if [[ "$VERBOSE" == "true" ]]; then
         if vpython "$test_file"; then
             PASSED_TESTS=$((PASSED_TESTS + 1))

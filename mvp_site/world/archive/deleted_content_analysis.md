@@ -10,7 +10,7 @@ During the merge of Alexiel book content into world_assiah_compressed.md, the fo
 
 **Sub-factions deleted:**
 - **The Stillwood Sentinels**: Largest traditionalist faction supporting absolute isolationism - Led by archdruid Lianor
-- **The Whisper-Binders**: Secret society believing hiding is slow death - Led by Silas  
+- **The Whisper-Binders**: Secret society believing hiding is slow death - Led by Silas
 - **The Ashen-Sworn**: Radicalized elves rejecting isolationism for vengeance - Led by Mira
 
 ### 2. The Glimmering Combine (Gnomes)

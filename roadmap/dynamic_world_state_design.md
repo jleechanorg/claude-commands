@@ -63,7 +63,7 @@ class WorldStateSnapshot:
     base_state: Dict[str, Any]
     applied_events: List[WorldEvent]
     invalidation_rules: List[InvalidationRule]
-    
+
     def get_current_state(self) -> Dict[str, Any]:
         """Reconstruct current state from base + events"""
         pass

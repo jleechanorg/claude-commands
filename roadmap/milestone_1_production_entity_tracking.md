@@ -44,7 +44,7 @@ class Visibility(Enum):
 class SceneManifest:
     """Complete scene state for validation"""
     def __init__(self, scene_id: str, session_number: int, turn_number: int,
-                 current_location: str, player_characters: List[Dict], 
+                 current_location: str, player_characters: List[Dict],
                  npcs: List[Dict] = None):
         self.scene_id = scene_id
         self.session_number = session_number
@@ -52,23 +52,23 @@ class SceneManifest:
         self.current_location = current_location
         self.player_characters = player_characters
         self.npcs = npcs or []
-        
+
     def get_expected_entities(self) -> List[str]:
         """Returns list of entities that MUST appear in narrative"""
         expected = []
-        
+
         # Add visible, conscious PCs
         for pc in self.player_characters:
             if pc.get('visible', True) and pc.get('conscious', True):
                 expected.append(pc['name'])
-        
+
         # Add visible, conscious NPCs
         for npc in self.npcs:
             if npc.get('visible', True) and npc.get('conscious', True):
                 expected.append(npc['name'])
-                
+
         return expected
-        
+
     def to_prompt_format(self) -> str:
         """Converts manifest to structured prompt injection format"""
         lines = [
@@ -78,7 +78,7 @@ class SceneManifest:
             "",
             "PRESENT CHARACTERS:"
         ]
-        
+
         # Add characters with their status
         for pc in self.player_characters:
             if pc.get('present', True):
@@ -87,7 +87,7 @@ class SceneManifest:
                     f"Status: {pc.get('status', 'conscious')}, "
                     f"Visibility: {pc.get('visibility', 'visible')}"
                 )
-                
+
         for npc in self.npcs:
             if npc.get('present', True):
                 lines.append(
@@ -95,7 +95,7 @@ class SceneManifest:
                     f"Status: {npc.get('status', 'conscious')}, "
                     f"Visibility: {npc.get('visibility', 'visible')}"
                 )
-                
+
         lines.append("=== END MANIFEST ===")
         return "\n".join(lines)
 
@@ -111,7 +111,7 @@ def create_from_game_state(game_state: Dict[str, Any], session: int, turn: int) 
         'visibility': 'visible',
         'present': True
     }]
-    
+
     # Extract NPCs
     npcs = []
     npc_data = game_state.get('npc_data', {})
@@ -125,7 +125,7 @@ def create_from_game_state(game_state: Dict[str, Any], session: int, turn: int) 
                 'visibility': 'invisible' if npc_info.get('hidden', False) else 'visible',
                 'present': True
             })
-    
+
     return SceneManifest(
         scene_id=f"scene_s{session}_t{turn}",
         session_number=session,
@@ -174,7 +174,7 @@ class NarrativeSyncValidator:
   validator = NarrativeSyncValidator()
   expected_entities = manifest.get_expected_entities()
   result = validator.validate(narrative, expected_entities)
-  
+
   if not result.all_entities_present:
       logger.warning(f"Missing entities: {result.entities_missing}")
       # Optional: Regenerate with stronger prompt
@@ -186,20 +186,20 @@ class NarrativeSyncValidator:
 - [ ] Add structured format to all narrative prompts:
   ```
   [Previous prompt content...]
-  
+
   === SCENE MANIFEST ===
   Location: The Silver Stag Tavern
   Session: 2, Turn: 15
-  
+
   PRESENT CHARACTERS:
   - Lyra (PC): HP 28/32, Status: conscious, Visibility: visible
   - Theron (NPC): HP 45/45, Status: conscious, Visibility: visible
   - Marcus (NPC): HP 38/40, Status: conscious, Visibility: visible
   - Elara (NPC): HP 22/25, Status: conscious, Visibility: visible
   === END MANIFEST ===
-  
+
   IMPORTANT: You must mention ALL characters listed above in your narrative.
-  
+
   Format your response as JSON:
   {
     "narrative": "Your narrative text here...",
@@ -215,26 +215,26 @@ class NarrativeSyncValidator:
 # In gemini_service.py
 def generate_narrative_with_tracking(self, prompt, game_state, session, turn):
     """Enhanced narrative generation with entity tracking"""
-    
+
     # 1. Create entity manifest
     manifest = create_from_game_state(game_state, session, turn)
     expected_entities = manifest.get_expected_entities()
-    
+
     # 2. Add manifest to prompt
     enhanced_prompt = f"{prompt}\n\n{manifest.to_prompt_format()}"
     enhanced_prompt += """
-    
+
 IMPORTANT: You must mention ALL characters listed in the manifest.
 Format your response as JSON with 'narrative', 'entities_mentioned', and 'location_confirmed' fields.
 """
-    
+
     # 3. Generate with structured output
     response = self.generate_content(
         model=self.model,
         contents=enhanced_prompt,
         generation_config={"response_mime_type": "application/json"}
     )
-    
+
     # 4. Parse response
     try:
         result = json.loads(response.text)
@@ -244,15 +244,15 @@ Format your response as JSON with 'narrative', 'entities_mentioned', and 'locati
         # Fallback to plain text
         narrative = response.text
         entities_mentioned = []
-    
+
     # 5. Validate
     validator = NarrativeSyncValidator()
     validation = validator.validate(narrative, expected_entities)
-    
+
     if not validation.all_entities_present:
         logger.warning(f"Entity tracking failed: Missing {validation.entities_missing}")
         # Could regenerate here with stronger prompt
-    
+
     return narrative, validation
 ```
 

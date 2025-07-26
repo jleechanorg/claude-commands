@@ -11,7 +11,9 @@ import sys
 import unittest
 from unittest.mock import patch
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from main import parse_set_command
 
@@ -48,7 +50,7 @@ valid_array=[1, 2, 3]"""
         """Test handling of empty values and whitespace"""
         command = """
         hp=50
-        
+
         name="Hero"
         """
 
@@ -137,9 +139,9 @@ items=["⚔️", "🛡️"]"""
     def test_very_long_values(self):
         """Test handling of very long values"""
         long_string = "x" * 1000
-        command = f'''short=123
+        command = f"""short=123
 long="{long_string}"
-after=456'''
+after=456"""
 
         result = parse_set_command(command)
         self.assertEqual(result["short"], 123)

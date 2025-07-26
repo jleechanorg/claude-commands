@@ -65,6 +65,7 @@ class TestRealProvider(unittest.TestCase):
         provider = RealServiceProvider()
         # Test that it attempts to import and create the client
         # Since google-generativeai isn't installed, this should raise ImportError
+        # Note: We use 'from google import genai' but error message mentions google-generativeai
         with self.assertRaises(ImportError) as cm:
             provider.get_gemini()
         self.assertIn("google-generativeai", str(cm.exception))

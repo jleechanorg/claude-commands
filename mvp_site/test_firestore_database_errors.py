@@ -10,6 +10,8 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
+from google.api_core import exceptions
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -36,7 +38,6 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
     @patch("firestore_service.get_db")
     def test_connection_timeout_recovery(self, mock_get_db):
         """Test recovery from database connection timeouts"""
-        from google.api_core import exceptions
 
         # Mock timeout exception
         timeout_error = exceptions.DeadlineExceeded("Connection timeout")
@@ -53,7 +54,6 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
     @patch("firestore_service.get_db")
     def test_connection_refused_handling(self, mock_get_db):
         """Test handling of network connection failures"""
-        from google.api_core import exceptions
 
         # Mock connection refused
         connection_error = exceptions.ServiceUnavailable("Connection refused")
@@ -70,7 +70,6 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
     @patch("firestore_service.get_db")
     def test_auth_token_expiry_refresh(self, mock_get_db):
         """Test handling of expired authentication tokens"""
-        from google.api_core import exceptions
 
         # Mock authentication error
         auth_error = exceptions.Unauthenticated("Token expired")
@@ -89,7 +88,6 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
     @patch("firestore_service.get_db")
     def test_transaction_conflict_resolution(self, mock_get_db):
         """Test handling of concurrent transaction conflicts"""
-        from google.api_core import exceptions
 
         # Mock transaction conflict
         conflict_error = exceptions.Aborted("Transaction aborted due to conflict")
@@ -132,7 +130,6 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
     @patch("firestore_service.get_db")
     def test_deadlock_detection_recovery(self, mock_get_db):
         """Test recovery from transaction deadlocks"""
-        from google.api_core import exceptions
 
         # Mock deadlock scenario
         deadlock_error = exceptions.DeadlineExceeded("Deadlock detected")
@@ -155,7 +152,6 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
     @patch("firestore_service.get_db")
     def test_invalid_query_syntax_handling(self, mock_get_db):
         """Test handling of malformed database queries"""
-        from google.api_core import exceptions
 
         # Mock invalid query
         query_error = exceptions.InvalidArgument("Invalid query syntax")
@@ -173,7 +169,6 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
     @patch("firestore_service.get_db")
     def test_query_timeout_with_retry(self, mock_get_db):
         """Test handling of slow queries that timeout"""
-        from google.api_core import exceptions
 
         # Mock query timeout
         timeout_error = exceptions.DeadlineExceeded("Query timeout")
@@ -191,7 +186,6 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
     @patch("firestore_service.get_db")
     def test_query_size_limit_exceeded(self, mock_get_db):
         """Test handling when query results are too large"""
-        from google.api_core import exceptions
 
         # Mock result size limit exceeded
         size_error = exceptions.OutOfRange("Result set too large")
@@ -209,7 +203,6 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
     @patch("firestore_service.get_db")
     def test_collection_not_found_error(self, mock_get_db):
         """Test handling when collections don't exist"""
-        from google.api_core import exceptions
 
         # Mock collection not found
         not_found_error = exceptions.NotFound("Collection not found")
@@ -248,7 +241,6 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
     @patch("firestore_service.get_db")
     def test_document_size_limit_handling(self, mock_get_db):
         """Test handling of oversized documents (>1MB)"""
-        from google.api_core import exceptions
 
         # Mock document too large error
         size_error = exceptions.InvalidArgument("Document too large")
@@ -274,7 +266,6 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
     @patch("firestore_service.get_db")
     def test_invalid_document_id_format(self, mock_get_db):
         """Test handling of malformed document IDs"""
-        from google.api_core import exceptions
 
         # Mock invalid document ID error
         id_error = exceptions.InvalidArgument("Invalid document ID")
@@ -293,7 +284,6 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
     @patch("firestore_service.get_db")
     def test_document_permission_denied(self, mock_get_db):
         """Test handling of access control failures"""
-        from google.api_core import exceptions
 
         # Mock permission denied error
         perm_error = exceptions.PermissionDenied("Access denied")
@@ -319,7 +309,6 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         mock_db.batch.return_value = mock_batch
 
         # Mock partial failure in batch commit
-        from google.api_core import exceptions
 
         batch_error = exceptions.Aborted("Partial batch failure")
         mock_batch.commit.side_effect = batch_error

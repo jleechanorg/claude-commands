@@ -22,7 +22,7 @@ log_error_details() {
     local operation="$1"
     local package="$2"
     local error_output="$3"
-    
+
     log_with_timestamp "ERROR: $operation failed for $package"
     log_with_timestamp "Error details: $error_output"
     echo "Error details: $error_output" >> "$LOG_FILE"
@@ -97,7 +97,7 @@ install_package() {
         else
             echo -e "${YELLOW}  ⚠️ Global installation failed, trying alternative methods...${NC}"
             log_error_details "npm install -g" "$package" "$install_output"
-            
+
             # Check if it's a permission error
             if echo "$install_output" | grep -q "EACCES\|permission denied"; then
                 echo -e "${YELLOW}  🔧 Permission issue detected - switching to npx-only mode${NC}"
@@ -120,7 +120,7 @@ install_package() {
 test_mcp_server() {
     local name="$1"
     echo -e "${BLUE}  🧪 Testing server $name...${NC}"
-    
+
     # Try to get server info (this will fail if server can't start)
     if timeout 5s claude mcp list | grep -q "^$name:"; then
         echo -e "${GREEN}  ✅ Server $name is responding${NC}"
@@ -144,11 +144,11 @@ add_mcp_server() {
     local package="$2"
     shift 2
     local args="$@"
-    
+
     TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
     echo -e "${BLUE}🔧 Setting up $name...${NC}"
     log_with_timestamp "Setting up MCP server: $name (package: $package)"
-    
+
     # Check if server already exists
     if server_already_exists "$name"; then
         echo -e "${GREEN}  ✅ Server $name already exists, skipping installation${NC}"
@@ -157,13 +157,13 @@ add_mcp_server() {
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
         return 0
     fi
-    
+
     # Check if package exists in npm registry
     echo -e "${BLUE}  🔍 Checking if package $package exists in npm registry...${NC}"
     local registry_check
     registry_check=$(npm view "$package" version 2>&1)
     local registry_exit_code=$?
-    
+
     if [ $registry_exit_code -ne 0 ]; then
         echo -e "${RED}  ❌ Package $package not found in npm registry${NC}"
         log_error_details "npm view" "$package" "$registry_check"
@@ -174,14 +174,14 @@ add_mcp_server() {
         echo -e "${GREEN}  ✅ Package $package exists (version: $(echo "$registry_check" | head -1))${NC}"
         log_with_timestamp "Package $package exists in registry"
     fi
-    
+
     # Check if package is installed globally (only if using global mode)
     if [ "$USE_GLOBAL" = true ]; then
         echo -e "${BLUE}  🔍 Checking global npm installation...${NC}"
         local global_check
         global_check=$(npm list -g "$package" 2>&1)
         local global_exit_code=$?
-        
+
         if [ $global_exit_code -ne 0 ]; then
             echo -e "${YELLOW}  📦 Package $package not installed globally, installing...${NC}"
             log_with_timestamp "Package $package not installed globally, attempting installation"
@@ -204,23 +204,23 @@ add_mcp_server() {
         echo -e "${BLUE}  🔄 Using npx direct execution - no global installation required${NC}"
         log_with_timestamp "Using npx direct execution for $package"
     fi
-    
+
     # Remove existing server if present
     claude mcp remove "$name" >/dev/null 2>&1 || true
-    
+
     # Add server with error checking
     echo -e "${BLUE}  🔗 Adding MCP server $name...${NC}"
     log_with_timestamp "Attempting to add MCP server: $name"
-    
+
     # Capture detailed error output from claude mcp add
     local add_output
     add_output=$(claude mcp add --scope user "$name" "$NPX_PATH" "$package" $args 2>&1)
     local add_exit_code=$?
-    
+
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully added $name${NC}"
         log_with_timestamp "Successfully added MCP server: $name"
-        
+
         # Test if server actually works
         sleep 1  # Give server time to initialize
         if test_mcp_server "$name"; then
@@ -243,11 +243,11 @@ add_mcp_server() {
 
 # GitHub Token Configuration (for private repository access)
 # Uses centralized token loading system for better maintainability
-# 
+#
 # Generate tokens at:
 # - GitHub: https://github.com/settings/tokens (scopes: repo, read:org, read:user)
 # - Perplexity: https://www.perplexity.ai/settings/api
-# 
+#
 # NOTE: This script uses GitHub's NEW official MCP server (github/github-mcp-server)
 # which is HTTP-based and hosted remotely, replacing the old deprecated npm package
 
@@ -258,14 +258,14 @@ TOKEN_HELPER="$SCRIPT_DIR/scripts/load_tokens.sh"
 if [ -f "$TOKEN_HELPER" ]; then
     echo -e "${BLUE}📋 Loading tokens using centralized helper...${NC}"
     log_with_timestamp "Using centralized token helper: $TOKEN_HELPER"
-    
+
     # Source the token helper to load functions and tokens
     source "$TOKEN_HELPER"
-    
+
     # Load tokens
     if load_tokens; then
         log_with_timestamp "Tokens loaded successfully via centralized helper"
-        
+
         # Ensure tokens are properly exported for use in this script
         # The load_tokens function may not export variables to parent shell properly
         if [ -f "$HOME/.token" ]; then
@@ -282,7 +282,7 @@ if [ -f "$TOKEN_HELPER" ]; then
 else
     echo -e "${YELLOW}⚠️ Centralized token helper not found, falling back to legacy method${NC}"
     log_with_timestamp "WARNING: Token helper not found at $TOKEN_HELPER, using fallback"
-    
+
     # Fallback to legacy token loading
     HOME_TOKEN_FILE="$HOME/.token"
     if [ -f "$HOME_TOKEN_FILE" ]; then
@@ -299,11 +299,11 @@ fi
 # Ensure GITHUB_PERSONAL_ACCESS_TOKEN is exported for compatibility
 export GITHUB_PERSONAL_ACCESS_TOKEN
 
-# Function to check environment requirements  
+# Function to check environment requirements
 check_github_requirements() {
     if [ "$GITHUB_TOKEN_LOADED" = true ]; then
         echo -e "${GREEN}✅ GitHub token loaded - GitHub remote server will have full access${NC}"
-        
+
         # Test token validity using the centralized helper
         echo -e "${BLUE}  🔍 Testing GitHub token validity...${NC}"
         if test_github_token; then
@@ -330,7 +330,7 @@ if EXISTING_SERVERS=$(claude mcp list 2>&1); then
     EXISTING_COUNT=$(echo "$EXISTING_SERVERS" | grep -E "^[a-zA-Z].*:" | wc -l)
     echo -e "${GREEN}✅ Found $EXISTING_COUNT existing MCP servers${NC}"
     log_with_timestamp "Found $EXISTING_COUNT existing MCP servers"
-    
+
     if [ "$EXISTING_COUNT" -gt 0 ]; then
         echo -e "${BLUE}📋 Currently installed servers:${NC}"
         echo "$EXISTING_SERVERS" | head -10
@@ -356,7 +356,7 @@ echo ""
 # Core MCP Servers Installation
 echo -e "${BLUE}📊 Installing Core MCP Servers...${NC}"
 
-echo -e "\n${BLUE}1/9 Setting up GitHub MCP Server (Official Remote)...${NC}"
+echo -e "\n${BLUE}1/10 Setting up GitHub MCP Server (Official Remote)...${NC}"
 # GitHub released a new official MCP server that replaces @modelcontextprotocol/server-github
 # The new server is HTTP-based and hosted by GitHub for better reliability and features
 echo -e "${BLUE}🔧 Setting up github-server (NEW Official Remote HTTP Server)...${NC}"
@@ -369,14 +369,14 @@ if server_already_exists "github-server"; then
 else
     echo -e "${BLUE}  🔗 Adding GitHub official remote MCP server...${NC}"
     log_with_timestamp "Adding GitHub official remote MCP server"
-    
+
     # Remove any old deprecated GitHub server first
     claude mcp remove "github-server" >/dev/null 2>&1 || true
-    
+
     # Add the new official GitHub HTTP MCP server
     add_output=$(claude mcp add-json --scope user "github-server" '{"type": "http", "url": "https://api.githubcopilot.com/mcp/", "authorization_token": "Bearer '"$GITHUB_PERSONAL_ACCESS_TOKEN"'"}' 2>&1)
     add_exit_code=$?
-    
+
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully added GitHub remote MCP server${NC}"
         log_with_timestamp "Successfully added GitHub remote MCP server"
@@ -391,10 +391,10 @@ else
     fi
 fi
 
-echo -e "\n${BLUE}2/9 Setting up Sequential Thinking MCP Server...${NC}"
+echo -e "\n${BLUE}2/10 Setting up Sequential Thinking MCP Server...${NC}"
 add_mcp_server "sequential-thinking" "@modelcontextprotocol/server-sequential-thinking"
 
-echo -e "\n${BLUE}3/9 Setting up Memory MCP Server...${NC}"
+echo -e "\n${BLUE}3/10 Setting up Memory MCP Server...${NC}"
 # Create memory data directory in user's home
 mkdir -p ~/.cache/mcp-memory
 echo -e "${BLUE}  📁 Memory data directory: ~/.cache/mcp-memory/${NC}"
@@ -417,10 +417,10 @@ if [ $add_exit_code -eq 0 ]; then
 else
     echo -e "${YELLOW}  ⚠️ Environment variable method failed, trying fallback...${NC}"
     log_with_timestamp "Environment variable method failed: $add_output"
-    
+
     # Fallback: use standard add but create a symlink or wrapper script
     echo -e "${BLUE}  🔄 Using fallback configuration method...${NC}"
-    
+
     # Create wrapper script that sets the environment variable
     WRAPPER_SCRIPT="$HOME/.cache/mcp-memory/memory-server-wrapper.sh"
     cat > "$WRAPPER_SCRIPT" << 'EOF'
@@ -429,11 +429,11 @@ export MEMORY_FILE_PATH="$HOME/.cache/mcp-memory/memory.json"
 exec npx @modelcontextprotocol/server-memory "$@"
 EOF
     chmod +x "$WRAPPER_SCRIPT"
-    
+
     # Add server using the wrapper script
     fallback_output=$(claude mcp add --scope user "memory-server" "$WRAPPER_SCRIPT" 2>&1)
     fallback_exit_code=$?
-    
+
     if [ $fallback_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully added memory server with wrapper script${NC}"
         log_with_timestamp "Successfully added memory server with wrapper script"
@@ -444,19 +444,19 @@ EOF
     fi
 fi
 
-echo -e "\n${BLUE}4/9 Setting up Playwright MCP Server (Microsoft Official)...${NC}"
+echo -e "\n${BLUE}4/10 Setting up Playwright MCP Server (Microsoft Official)...${NC}"
 add_mcp_server "playwright-mcp" "@playwright/mcp"
 
-echo -e "\n${BLUE}5/9 Setting up Puppeteer MCP Server (Legacy Support)...${NC}"
+echo -e "\n${BLUE}5/10 Setting up Puppeteer MCP Server (Legacy Support)...${NC}"
 add_mcp_server "puppeteer-server" "@modelcontextprotocol/server-puppeteer"
 
-echo -e "\n${BLUE}6/9 Setting up Context7 MCP Server...${NC}"
+echo -e "\n${BLUE}6/10 Setting up Context7 MCP Server...${NC}"
 add_mcp_server "context7" "@upstash/context7-mcp"
 
-echo -e "\n${BLUE}7/9 Setting up Gemini CLI MCP Server...${NC}"
+echo -e "\n${BLUE}7/10 Setting up Gemini CLI MCP Server...${NC}"
 add_mcp_server "gemini-cli-mcp" "@yusukedev/gemini-cli-mcp"
 
-echo -e "\n${BLUE}8/9 Setting up Web Search MCP Servers...${NC}"
+echo -e "\n${BLUE}8/10 Setting up Web Search MCP Servers...${NC}"
 echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
 
 # Remove existing web search servers to avoid conflicts
@@ -465,22 +465,22 @@ claude mcp remove "perplexity-ask" >/dev/null 2>&1 || true
 claude mcp remove "ddg-search" >/dev/null 2>&1 || true
 
 # Install DuckDuckGo search server (free, no API key)
-echo -e "\n${BLUE}  8a/9 DuckDuckGo Web Search (Free)...${NC}"
+echo -e "\n${BLUE}  8a/10 DuckDuckGo Web Search (Free)...${NC}"
 echo -e "${GREEN}✅ DuckDuckGo search - completely free, no API key needed${NC}"
 echo -e "${BLUE}📋 Features: Web search, content fetching, privacy-focused${NC}"
 add_mcp_server "ddg-search" "@oevortex/ddg_search"
 
 # Install Perplexity search server (premium, requires API key)
-echo -e "\n${BLUE}  8b/9 Perplexity AI Search (Premium)...${NC}"
+echo -e "\n${BLUE}  8b/10 Perplexity AI Search (Premium)...${NC}"
 if [ -n "$PERPLEXITY_API_KEY" ]; then
     echo -e "${GREEN}✅ Perplexity API key found - installing premium search server${NC}"
     echo -e "${BLUE}📋 Features: AI-powered search, real-time web research, advanced queries${NC}"
-    
+
     # Add Perplexity server with API key
     echo -e "${BLUE}    🔧 Installing Perplexity search server...${NC}"
     add_output=$(claude mcp add --scope user "perplexity-ask" "npx" "server-perplexity-ask" --env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY" 2>&1)
     add_exit_code=$?
-    
+
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}    ✅ Successfully added Perplexity search server${NC}"
         log_with_timestamp "Successfully added Perplexity search server with API key"
@@ -500,7 +500,40 @@ else
 fi
 
 # Optional: Notion Server (if available)
-echo -e "\n${BLUE}9/9 Checking for Notion MCP Server...${NC}"
+echo -e "\n${BLUE}9/10 Setting up Filesystem MCP Server...${NC}"
+TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+echo -e "${BLUE}  📁 Configuring filesystem access for projects directory...${NC}"
+log_with_timestamp "Setting up MCP server: filesystem (package: @modelcontextprotocol/server-filesystem)"
+
+# Check if server already exists
+if server_already_exists "filesystem"; then
+    echo -e "${GREEN}  ✅ Server filesystem already exists, skipping installation${NC}"
+    log_with_timestamp "Server filesystem already exists, skipping"
+    INSTALL_RESULTS["filesystem"]="ALREADY_EXISTS"
+    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+else
+    # Remove existing filesystem server to reconfigure with proper directory access
+    claude mcp remove "filesystem" >/dev/null 2>&1 || true
+
+    # Add filesystem server with proper directory configuration
+    echo -e "${BLUE}  🔗 Adding filesystem server with /home/jleechan/projects access...${NC}"
+    add_output=$(claude mcp add --scope user "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "/home/jleechan/projects" 2>&1)
+    add_exit_code=$?
+
+    if [ $add_exit_code -eq 0 ]; then
+        echo -e "${GREEN}  ✅ Successfully configured filesystem server with project directory access${NC}"
+        log_with_timestamp "Successfully added filesystem server with /home/jleechan/projects access"
+        INSTALL_RESULTS["filesystem"]="SUCCESS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+    else
+        echo -e "${RED}  ❌ Failed to add filesystem server${NC}"
+        log_error_details "claude mcp add filesystem" "filesystem" "$add_output"
+        INSTALL_RESULTS["filesystem"]="ADD_FAILED"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+    fi
+fi
+
+echo -e "\n${BLUE}10/10 Checking for Notion MCP Server...${NC}"
 if package_exists "@notionhq/notion-mcp-server"; then
     add_mcp_server "notion-server" "@notionhq/notion-mcp-server"
 elif package_exists "@makenotion/notion-mcp-server"; then

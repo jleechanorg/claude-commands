@@ -10,6 +10,10 @@ from datetime import UTC, datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
 
+import firebase_user_analytics
+import sys
+import traceback
+
 
 def initialize_firebase():
     """Initialize Firebase with service account key."""
@@ -131,10 +135,10 @@ def test_analytics_on_test_data(db, test_user_id):
     print("\n📊 Testing Analytics Functions...")
 
     # Import our analytics functions
-    import sys
+
 
     sys.path.append(os.path.dirname(__file__))
-    import firebase_user_analytics
+
 
     # Get all users (should include our test user)
     user_ids = firebase_user_analytics.get_all_users(db)
@@ -210,7 +214,7 @@ def main():
 
     except Exception as e:
         print(f"\n❌ ERROR: {e}")
-        import traceback
+
 
         traceback.print_exc()
 

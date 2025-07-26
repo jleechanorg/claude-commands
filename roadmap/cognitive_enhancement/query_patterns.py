@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+from enhanced_learn import LearningPattern
+
 """
 Pattern Query System for Cognitive Enhancement Framework
 ========================================================
@@ -455,7 +458,7 @@ def main():
     query_engine = PatternQueryEngine(learner)
 
     # Add some example patterns for testing
-    from enhanced_learn import LearningPattern
+
 
     example_patterns = [
         LearningPattern(

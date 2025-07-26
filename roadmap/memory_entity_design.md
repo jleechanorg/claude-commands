@@ -157,7 +157,7 @@
 entities = [
     {
         "name": "jleechan2015",
-        "entityType": "developer", 
+        "entityType": "developer",
         "observations": [...]  # As defined above
     },
     # ... all other entities
@@ -171,7 +171,7 @@ relations = [
         "relationType": "prefers"
     },
     {
-        "from": "jleechan2015", 
+        "from": "jleechan2015",
         "to": "code_quality_standards",
         "relationType": "enforces"
     },

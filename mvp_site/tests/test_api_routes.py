@@ -14,7 +14,14 @@ mock_firebase_admin.auth = mock_auth
 import sys
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+import constants
+from gemini_response import GeminiResponse
+from narrative_response_schema import NarrativeResponse
+
+from game_state import GameState
 
 sys.modules["firebase_admin"] = mock_firebase_admin
 sys.modules["firebase_admin.firestore"] = mock_firestore
@@ -86,8 +93,9 @@ class TestAPIRoutes(unittest.TestCase):
         data = json.loads(response.data)
         self.assertIn("error", data)
 
+    @patch("main.get_user_settings")
     @patch("main.firestore_service")
-    def test_get_campaign_success(self, mock_firestore_service):
+    def test_get_campaign_success(self, mock_firestore_service, mock_get_user_settings):
         """Test successful retrieval of a specific campaign."""
         mock_campaign_data = {
             "id": "test-campaign",
@@ -95,7 +103,6 @@ class TestAPIRoutes(unittest.TestCase):
             "player": {"name": "Hero", "level": 5},
         }
         # Mock game state
-        from game_state import GameState
 
         mock_game_state = GameState()  # Will default to debug_mode=True
 
@@ -104,6 +111,8 @@ class TestAPIRoutes(unittest.TestCase):
             [],
         )
         mock_firestore_service.get_campaign_game_state.return_value = mock_game_state
+        # Mock get_user_settings for debug_mode lookup
+        mock_get_user_settings.return_value = {"debug_mode": True}
 
         response = self.client.get(
             "/api/campaigns/test-campaign", headers=self.test_headers
@@ -367,6 +376,7 @@ class TestCreateCampaignRoute(unittest.TestCase):
         # Verify service calls
         mock_gemini_service.get_initial_story.assert_called_once_with(
             "Create a fantasy adventure",
+            user_id="test-user",
             selected_prompts=["narrative", "mechanics"],
             generate_companions=False,
             use_default_world=False,
@@ -573,7 +583,6 @@ class TestCreateCampaignRoute(unittest.TestCase):
     ):
         """Test campaign creation with Destiny system checkbox checked (default)."""
         # Import constants for comparison
-        import constants
 
         # Mock constants
         mock_constants.KEY_TITLE = "title"
@@ -630,7 +639,6 @@ class TestCreateCampaignRoute(unittest.TestCase):
     ):
         """Test campaign creation with Destiny system checkbox unchecked (uses D&D)."""
         # Import constants for comparison
-        import constants
 
         # Mock constants
         mock_constants.KEY_TITLE = "title"
@@ -687,7 +695,6 @@ class TestCreateCampaignRoute(unittest.TestCase):
     ):
         """Test campaign creation with multiple custom options including destinySystem."""
         # Import constants for comparison
-        import constants
 
         # Mock constants
         mock_constants.KEY_TITLE = "title"
@@ -764,8 +771,6 @@ class TestCreateCampaignRoute(unittest.TestCase):
         )
 
         # Create a mock GeminiResponse with god_mode_response
-        from gemini_response import GeminiResponse
-        from narrative_response_schema import NarrativeResponse
 
         mock_gemini_response = Mock(spec=GeminiResponse)
         mock_gemini_response.get_narrative_text.return_value = "The battle continues!"

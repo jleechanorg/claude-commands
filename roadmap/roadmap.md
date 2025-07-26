@@ -6,9 +6,9 @@
 ## 🎯 WHAT TO DO NOW (Quick Navigation)
 
 ### 🚨 CRITICAL PRIORITY: Memory MCP Header Compliance MVP
-**Status**: Ready for Implementation  
-**Branch**: handoff-memory_impl  
-**Timeline**: 1 week MVP  
+**Status**: Ready for Implementation
+**Branch**: handoff-memory_impl
+**Timeline**: 1 week MVP
 **Goal**: 90% reduction in user `/header` commands
 
 **Problem**: Static CLAUDE.md fails - user types `/header` ~10x/day despite rules
@@ -18,11 +18,13 @@
 ### Active WIP Tasks (Check PR status)
 - **TASK-001a** 🔴 Malformed JSON investigation - PR #296 OPEN
 - **TASK-006a** 🟡 Editable campaign names - PR #301 OPEN
-- **HANDOFF-ARCH** 🟢 Real AST-based /arch implementation - PR #600 READY FOR HANDOFF  
+- **HANDOFF-ARCH** 🟢 Real AST-based /arch implementation - PR #600 READY FOR HANDOFF
 - **HANDOFF-MEMORY-CLEANUP** 🟢 Memory system cleanup and migration - PR #725 READY FOR HANDOFF
 - **HANDOFF-SELF-CRITICAL** 🟢 Self-critical Claude Code CLI - PR #747 READY FOR HANDOFF
 - **HANDOFF-SLASH-COMMANDS** 🟢 Enhance /handoff + create /commentreply - PR #755 READY FOR HANDOFF
 - **HANDOFF-COPILOT-ENHANCEMENTS** 🟢 Advanced copilot command features - PR #780 READY FOR HANDOFF
+- **HANDOFF-SETTINGS-PAGE** 🟢 Settings page with Gemini model selection - PR #870 READY FOR HANDOFF
+- **HANDOFF-PUSHL_FIX** 🟢 Fix /pushl command context isolation and add branch awareness - PR #934 READY FOR HANDOFF
 - **TASK-006b** 🟡 Background story pause button - PR #323 OPEN
 - **TASK-140** 🔴 Hard stop for integrity failures - PR #336 OPEN
 - **TASK-142** 🔴 Fix send button unclickable - PR #338 OPEN
@@ -145,7 +147,7 @@
 #### CONSOLIDATED: Sequential Testing (6 hrs)
 - **TASK-004+004b+004c** 🟡 Complete continuity testing pipeline - GROUPED
   - [ ] **Phase 1:** 10 interactions automated testing (2 hrs)
-  - [ ] **Phase 2:** 20 interactions with failure analysis (2 hrs) 
+  - [ ] **Phase 2:** 20 interactions with failure analysis (2 hrs)
   - [ ] **Phase 3:** 50 interactions stress test (2 hrs)
 
 ### Research Tasks (Lower Priority)
@@ -197,7 +199,7 @@
 
 ### Currently In Progress (WIP)
 - [ ] **TASK-140** 🔴 Hard stop for integrity failures - WIP (PR #406 OPEN)
-- [ ] **TASK-001a** 🔴 Malformed JSON investigation - WIP (PR #405 OPEN) 
+- [ ] **TASK-001a** 🔴 Malformed JSON investigation - WIP (PR #405 OPEN)
 - [ ] **TASK-133** 🟡 Universal calendar system - WIP (PR #403 OPEN)
 - [ ] **TASK-137** 🟡 Move download/share story buttons - WIP (PR #396 OPEN)
 - [ ] **TASK-145** 🟡 Consolidate roadmap files - WIP (PR #377 OPEN)
@@ -236,7 +238,7 @@
 ### PR Status Legend
 🚨 **CRITICAL**: GitHub PR states mean:
 - **OPEN** = Work In Progress (WIP) - NOT completed
-- **MERGED** = Completed and integrated into main branch  
+- **MERGED** = Completed and integrated into main branch
 - **CLOSED** = Abandoned or rejected - NOT completed
 - ❌ Tasks are NOT completed just because PR exists
 - ✅ Tasks are ONLY completed when PR state = "MERGED"
@@ -635,11 +637,11 @@ For different worktrees:
 ## 📚 Planning & Archive References
 
 ### Detailed Milestone Planning
-**Archived**: Complete milestone breakdown with 10 detailed phases moved to preserve all content  
-**Location**: [roadmap_archive_milestone_breakdown.md](./roadmap_archive_milestone_breakdown.md)  
+**Archived**: Complete milestone breakdown with 10 detailed phases moved to preserve all content
+**Location**: [roadmap_archive_milestone_breakdown.md](./roadmap_archive_milestone_breakdown.md)
 **Contents**: All milestone details, Derek feedback implementation, development schedules
 
-### Future Planning & Ideas  
+### Future Planning & Ideas
 **Location**: Various sections above contain long-term planning items
 **Categories**: Campaign worlds, narrative systems, technical optimization, launch preparation
 

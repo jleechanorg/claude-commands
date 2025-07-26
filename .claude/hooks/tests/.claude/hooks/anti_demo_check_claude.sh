@@ -90,16 +90,16 @@ ISSUE_DETAILS=""
 for pattern in "${!PATTERNS[@]}"; do
     if echo "$CONTENT" | grep -i -E "$pattern" > /dev/null 2>&1; then
         description="${PATTERNS[$pattern]}"
-        
+
         # Context-aware checking
         if is_test_file "$FILE_PATH" || is_mock_file "$FILE_PATH"; then
             continue
         fi
-        
+
         # Found suspicious pattern
         FOUND_ISSUES=true
         ((ISSUE_COUNT++))
-        
+
         # Build issue details
         ISSUE_DETAILS="${ISSUE_DETAILS}⚠️  ${description} detected in ${FILE_PATH}\n"
     fi
@@ -109,10 +109,10 @@ done
 if [ "$FOUND_ISSUES" = true ]; then
     # Log to verification file
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $FILE_PATH - $ISSUE_COUNT issues" >> "$LOG_FILE"
-    
+
     # Create warning message
     WARNING_MSG=$(printf "${YELLOW}Anti-Demo Warning:${NC} Found $ISSUE_COUNT potential demo/placeholder patterns in $FILE_PATH")
-    
+
     # Output JSON response to block or warn
     cat <<EOF
 {

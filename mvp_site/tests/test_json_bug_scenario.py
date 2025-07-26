@@ -8,6 +8,7 @@ import sys
 
 mvp_site_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, mvp_site_path)
+from gemini_service import _process_structured_response
 
 
 def test_exact_bug_scenario():
@@ -30,7 +31,6 @@ def test_exact_bug_scenario():
     raw_response_text = raw_response  # This simulates _get_text_from_response
 
     print("2. Testing _process_structured_response...")
-    from gemini_service import _process_structured_response
 
     response_text, structured_response = _process_structured_response(
         raw_response_text, []

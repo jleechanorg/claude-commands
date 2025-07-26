@@ -22,7 +22,7 @@
 • **Network Disruption**: Communication and scrying networks fail within nullification fields
 • **Psychological Effects**: Magic-dependent beings experience disorientation and panic
 • **Absolute Nature**: Cannot be overcome by higher-tier magical power - even Tier 7 beings affected
-• **Special Cases**: 
+• **Special Cases**:
   - Alexiel's Layer 1: Public "Null" status - unable to use magic, exceptional physical prowess
   - Alexiel's Layer 2: Nullification Field (30-foot radius, shuts down all magic, feigned agony)
   - Alexiel's Layer 3: Secret magical prodigy whose magic functions inside her own nullification field

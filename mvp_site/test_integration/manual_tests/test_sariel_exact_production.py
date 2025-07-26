@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+import traceback
+
 """
 Manual test to reproduce the exact Sariel campaign production scenario.
 This test makes real API calls and validates entity tracking behavior.
@@ -51,8 +54,8 @@ def run_sariel_exact_production():
     app.config["TESTING"] = True
 
     # Initial prompt - Sariel meeting Cassian
-    initial_prompt = """You are Sariel, a member of House Arcanus known for magical prowess. 
-    You've been summoned to the throne room where you find your estranged brother Cassian 
+    initial_prompt = """You are Sariel, a member of House Arcanus known for magical prowess.
+    You've been summoned to the throne room where you find your estranged brother Cassian
     waiting with grave news about your family's legacy."""
 
     print_section("1. INITIAL STORY GENERATION")
@@ -191,7 +194,6 @@ if __name__ == "__main__":
         run_sariel_exact_production()
     except Exception as e:
         print(f"\n❌ Test failed with error: {e}")
-        import traceback
 
         traceback.print_exc()
         sys.exit(1)

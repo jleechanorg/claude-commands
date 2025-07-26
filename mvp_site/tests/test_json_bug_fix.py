@@ -3,6 +3,7 @@
 Test the JSON bug fix by calling parse_structured_response directly
 """
 
+import json
 import os
 import sys
 
@@ -43,7 +44,6 @@ def test_parse_structured_response_fix():
         print("   This is the root cause of the JSON display bug")
 
         # What it should return
-        import json
 
         expected = json.loads(raw_json)["narrative"]
         print(f"\n   Expected: {expected[:100]}...")

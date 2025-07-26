@@ -31,27 +31,25 @@ import datetime
 import json
 import os
 import time
+from typing import Any, Optional, Dict, List
 
 import constants
 import logging_util
+from custom_types import CampaignId, UserId
 from decorators import log_exceptions
 from firebase_admin import firestore
+from numeric_field_converter import NumericFieldConverter
 
 from game_state import GameState
 
-# Import numeric field converter
-# This handles both package imports (relative) and direct script execution
-try:
-    from .numeric_field_converter import NumericFieldConverter
-except ImportError:
-    from numeric_field_converter import NumericFieldConverter
-
-MAX_TEXT_BYTES = 1000000
-MAX_LOG_LINES = 20
-DELETE_TOKEN = "__DELETE__"  # Token used to mark fields for deletion in state updates
+MAX_TEXT_BYTES: int = 1000000
+MAX_LOG_LINES: int = 20
+DELETE_TOKEN: str = (
+    "__DELETE__"  # Token used to mark fields for deletion in state updates
+)
 
 
-def _truncate_log_json(data, max_lines=MAX_LOG_LINES):
+def _truncate_log_json(data: Any, max_lines: int = MAX_LOG_LINES) -> str:
     """Truncate JSON logs to max_lines to prevent log spam."""
     try:
         json_str = json.dumps(data, indent=2, default=str)
@@ -70,8 +68,11 @@ def _truncate_log_json(data, max_lines=MAX_LOG_LINES):
 
 
 def _perform_append(
-    target_list: list, items_to_append, key_name: str, deduplicate: bool = False
-):
+    target_list: list,
+    items_to_append: Any | list[Any],
+    key_name: str,
+    deduplicate: bool = False,
+) -> None:
     """
     Safely appends one or more items to a target list, with an option to prevent duplicates.
     This function modifies the target_list in place.
@@ -79,7 +80,7 @@ def _perform_append(
     if not isinstance(items_to_append, list):
         items_to_append = [items_to_append]  # Standardize to list
 
-    newly_added_items = []
+    newly_added_items: list[Any] = []
     for item in items_to_append:
         # If deduplication is on, skip items already in the list
         if deduplicate and item in target_list:
@@ -104,13 +105,15 @@ class MissionHandler:
     """
 
     @staticmethod
-    def initialize_missions_list(state_to_update: dict, key: str) -> None:
+    def initialize_missions_list(state_to_update: dict[str, Any], key: str) -> None:
         """Initialize active_missions as empty list if it doesn't exist or is wrong type."""
         if key not in state_to_update or not isinstance(state_to_update.get(key), list):
             state_to_update[key] = []
 
     @staticmethod
-    def find_existing_mission_index(missions_list: list, mission_id: str) -> int:
+    def find_existing_mission_index(
+        missions_list: list[dict[str, Any]], mission_id: str
+    ) -> int:
         """Find the index of an existing mission by mission_id. Returns -1 if not found."""
         for i, existing_mission in enumerate(missions_list):
             if (
@@ -122,7 +125,10 @@ class MissionHandler:
 
     @staticmethod
     def process_mission_data(
-        state_to_update: dict, key: str, mission_id: str, mission_data: dict
+        state_to_update: dict[str, Any],
+        key: str,
+        mission_id: str,
+        mission_data: dict[str, Any],
     ) -> None:
         """Process a single mission, either updating existing or adding new."""
         # Ensure the mission has an ID
@@ -145,7 +151,7 @@ class MissionHandler:
 
     @staticmethod
     def handle_missions_dict_conversion(
-        state_to_update: dict, key: str, missions_dict: dict
+        state_to_update: dict[str, Any], key: str, missions_dict: dict[str, Any]
     ) -> None:
         """Convert dictionary format missions to list append format."""
         for mission_id, mission_data in missions_dict.items():
@@ -160,7 +166,7 @@ class MissionHandler:
 
     @staticmethod
     def handle_active_missions_conversion(
-        state_to_update: dict, key: str, value
+        state_to_update: dict[str, Any], key: str, value: Any
     ) -> None:
         """Handle smart conversion of active_missions from various formats to list."""
         logging_util.warning(
@@ -181,7 +187,9 @@ class MissionHandler:
             )
 
 
-def _handle_append_syntax(state_to_update: dict, key: str, value: dict) -> bool:
+def _handle_append_syntax(
+    state_to_update: dict[str, Any], key: str, value: dict[str, Any]
+) -> bool:
     """
     Handle explicit append syntax {'append': ...}.
 
@@ -200,7 +208,9 @@ def _handle_append_syntax(state_to_update: dict, key: str, value: dict) -> bool:
     return True
 
 
-def _handle_core_memories_safeguard(state_to_update: dict, key: str, value) -> bool:
+def _handle_core_memories_safeguard(
+    state_to_update: dict[str, Any], key: str, value: Any
+) -> bool:
     """
     Handle safeguard for direct 'core_memories' overwrite.
 
@@ -219,7 +229,7 @@ def _handle_core_memories_safeguard(state_to_update: dict, key: str, value) -> b
     return True
 
 
-def _handle_dict_merge(state_to_update: dict, key: str, value) -> bool:
+def _handle_dict_merge(state_to_update: dict[str, Any], key: str, value: Any) -> bool:
     """
     Handle dictionary merging and creation.
 
@@ -241,7 +251,7 @@ def _handle_dict_merge(state_to_update: dict, key: str, value) -> bool:
     return True
 
 
-def _handle_delete_token(state_to_update: dict, key: str, value) -> bool:
+def _handle_delete_token(state_to_update: dict[str, Any], key: str, value: Any) -> bool:
     """
     Handle DELETE_TOKEN for field deletion.
 
@@ -261,7 +271,9 @@ def _handle_delete_token(state_to_update: dict, key: str, value) -> bool:
     return True
 
 
-def _handle_string_to_dict_update(state_to_update: dict, key: str, value) -> bool:
+def _handle_string_to_dict_update(
+    state_to_update: dict[str, Any], key: str, value: Any
+) -> bool:
     """
     Handle string updates to existing dictionaries (preserve dict structure).
 
@@ -281,7 +293,9 @@ def _handle_string_to_dict_update(state_to_update: dict, key: str, value) -> boo
     return True
 
 
-def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
+def update_state_with_changes(
+    state_to_update: dict[str, Any], changes: dict[str, Any]
+) -> dict[str, Any]:
     """
     Recursively updates a state dictionary with a changes dictionary using intelligent merge logic.
 
@@ -368,12 +382,12 @@ def update_state_with_changes(state_to_update: dict, changes: dict) -> dict:
     return state_to_update
 
 
-def _expand_dot_notation(d: dict) -> dict:
+def _expand_dot_notation(d: dict[str, Any]) -> dict[str, Any]:
     """
     Expands a dictionary with dot-notation keys into a nested dictionary.
     Example: {'a.b': 1, 'c': 2} -> {'a': {'b': 1}, 'c': 2}
     """
-    expanded_dict = {}
+    expanded_dict: dict[str, Any] = {}
     for k, v in d.items():
         if "." in k:
             keys = k.split(".")
@@ -386,7 +400,7 @@ def _expand_dot_notation(d: dict) -> dict:
     return expanded_dict
 
 
-def json_serial(obj):
+def json_serial(obj: Any) -> str | None:
     """JSON serializer for objects not serializable by default json code"""
     if hasattr(obj, "isoformat"):
         return obj.isoformat()
@@ -395,7 +409,7 @@ def json_serial(obj):
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
-def json_default_serializer(o):
+def json_default_serializer(o: Any) -> str | None | dict[str, Any]:
     """Handles serialization of data types json doesn't know, like datetimes."""
     if isinstance(o, (datetime.datetime, datetime.date)):
         return o.isoformat()
@@ -410,19 +424,19 @@ def json_default_serializer(o):
     raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
 
 
-def get_db():
+def get_db() -> firestore.Client:
     """Returns the Firestore client."""
     return firestore.client()
 
 
 @log_exceptions
-def get_campaigns_for_user(user_id):
+def get_campaigns_for_user(user_id: UserId) -> list[dict[str, Any]]:
     """Retrieves all campaigns for a given user, ordered by most recently played."""
     db = get_db()
     campaigns_ref = db.collection("users").document(user_id).collection("campaigns")
     campaigns_query = campaigns_ref.order_by("last_played", direction="DESCENDING")
 
-    campaign_list = []
+    campaign_list: list[dict[str, Any]] = []
     for campaign in campaigns_query.stream():
         campaign_data = campaign.to_dict()
         campaign_data["id"] = campaign.id
@@ -442,7 +456,9 @@ def get_campaigns_for_user(user_id):
 
 
 @log_exceptions
-def get_campaign_by_id(user_id, campaign_id):
+def get_campaign_by_id(
+    user_id: UserId, campaign_id: CampaignId
+) -> tuple[dict[str, Any] | None, list[dict[str, Any]] | None]:
     """
     Retrieves a single campaign and its full story using a robust, single query
     and in-memory sort to handle all data types.
@@ -465,7 +481,7 @@ def get_campaign_by_id(user_id, campaign_id):
     story_docs = story_ref.stream()
 
     # 2. Convert to a list of dictionaries
-    all_story_entries = [doc.to_dict() for doc in story_docs]
+    all_story_entries: list[dict[str, Any]] = [doc.to_dict() for doc in story_docs]
 
     # 🚨 DEBUG: Log story retrieval details
     logging_util.info(
@@ -474,13 +490,13 @@ def get_campaign_by_id(user_id, campaign_id):
     )
 
     # Count entries by actor
-    user_entries = [
+    user_entries: list[dict[str, Any]] = [
         entry for entry in all_story_entries if entry.get("actor") == "user"
     ]
-    ai_entries = [
+    ai_entries: list[dict[str, Any]] = [
         entry for entry in all_story_entries if entry.get("actor") == "gemini"
     ]
-    other_entries = [
+    other_entries: list[dict[str, Any]] = [
         entry
         for entry in all_story_entries
         if entry.get("actor") not in ["user", "gemini"]
@@ -493,7 +509,7 @@ def get_campaign_by_id(user_id, campaign_id):
 
     # Log recent entries for debugging
     if all_story_entries:
-        recent_entries = all_story_entries[-5:]  # Last 5 entries
+        recent_entries: list[dict[str, Any]] = all_story_entries[-5:]  # Last 5 entries
         logging_util.info(f"🔍 RECENT ENTRIES (last {len(recent_entries)}):")
         for i, entry in enumerate(recent_entries, 1):
             actor = entry.get("actor", "unknown")
@@ -515,7 +531,7 @@ def get_campaign_by_id(user_id, campaign_id):
 
     # 4. Add a sequence ID and convert timestamps AFTER sorting.
     # Also add user_scene_number that only increments for AI responses
-    user_scene_counter = 0
+    user_scene_counter: int = 0
     for i, entry in enumerate(all_story_entries):
         entry["sequence_id"] = i + 1
 
@@ -526,15 +542,23 @@ def get_campaign_by_id(user_id, campaign_id):
         else:
             entry["user_scene_number"] = None
 
-        entry["timestamp"] = entry["timestamp"].isoformat()
+        # Convert timestamp to ISO format if it's not already a string
+        if hasattr(entry["timestamp"], "isoformat"):
+            entry["timestamp"] = entry["timestamp"].isoformat()
+        # If it's already a string, leave it as is
 
     return campaign_doc.to_dict(), all_story_entries
 
 
 @log_exceptions
 def add_story_entry(
-    user_id, campaign_id, actor, text, mode=None, structured_fields=None
-):
+    user_id: UserId,
+    campaign_id: CampaignId,
+    actor: str,
+    text: str,
+    mode: str | None = None,
+    structured_fields: dict[str, Any] | None = None,
+) -> None:
     """Add a story entry to Firestore with write-then-read pattern for data integrity.
 
     This function implements the write-then-read pattern:
@@ -553,12 +577,12 @@ def add_story_entry(
         structured_fields: Required dict for AI responses containing structured response fields
     """
     # Start timing for latency measurement
-    start_time = time.time()
+    start_time: float = time.time()
 
     # In mock services mode, skip verification since mocks don't support read-back
     # NOTE: Can't rely on fakes alone - even perfect fakes add 0.9s latency per test
     # Unit tests need to be fast, so bypassing verification entirely is correct
-    mock_mode = os.getenv("MOCK_SERVICES_MODE") == "true"
+    mock_mode: bool = os.getenv("MOCK_SERVICES_MODE") == "true"
     if mock_mode:
         # Use original write-only implementation for testing
         _write_story_entry_to_firestore(
@@ -572,24 +596,24 @@ def add_story_entry(
         return
 
     # Write to Firestore and capture document ID for verification
-    write_start_time = time.time()
-    document_id = _write_story_entry_to_firestore(
+    write_start_time: float = time.time()
+    document_id: str = _write_story_entry_to_firestore(
         user_id, campaign_id, actor, text, mode, structured_fields
     )
-    write_duration = time.time() - write_start_time
+    write_duration: float = time.time() - write_start_time
 
     logging_util.info(
         f"✍️ Write completed: {write_duration:.3f}s, document_id: {document_id}"
     )
 
     # Direct document verification using document ID (much more reliable than text matching)
-    verify_start_time = time.time()
-    entry_found = False
+    verify_start_time: float = time.time()
+    entry_found: bool = False
 
     # Try verification with progressive delays for Firestore eventual consistency
     # NOTE: Keeping synchronous sleep - Flask is sync, async would require major refactor
     for attempt in range(constants.VERIFICATION_MAX_ATTEMPTS):
-        delay = constants.VERIFICATION_INITIAL_DELAY + (
+        delay: float = constants.VERIFICATION_INITIAL_DELAY + (
             attempt * constants.VERIFICATION_DELAY_INCREMENT
         )
         time.sleep(delay)
@@ -610,7 +634,7 @@ def add_story_entry(
                 f"⚠️ VERIFICATION: Attempt {attempt + 1} failed, retrying..."
             )
 
-    verify_duration = time.time() - verify_start_time
+    verify_duration: float = time.time() - verify_start_time
 
     if not entry_found:
         logging_util.error(
@@ -622,7 +646,7 @@ def add_story_entry(
         )
 
     # Calculate total latency
-    total_duration = time.time() - start_time
+    total_duration: float = time.time() - start_time
 
     logging_util.info(
         f"📖 Verify-latest timing: {verify_duration:.3f}s (checked latest 10 entries)"
@@ -641,8 +665,13 @@ def add_story_entry(
 
 
 def _write_story_entry_to_firestore(
-    user_id, campaign_id, actor, text, mode=None, structured_fields=None
-):
+    user_id: UserId,
+    campaign_id: CampaignId,
+    actor: str,
+    text: str,
+    mode: str | None = None,
+    structured_fields: dict[str, Any] | None = None,
+) -> str:
     """Internal implementation to write story entry data directly to Firestore
 
     Writes story entries using the standard collection.add() method without transactions.
@@ -658,8 +687,8 @@ def _write_story_entry_to_firestore(
         .collection("campaigns")
         .document(campaign_id)
     )
-    text_bytes = text.encode("utf-8")
-    chunks = [
+    text_bytes: bytes = text.encode("utf-8")
+    chunks: list[bytes] = [
         text_bytes[i : i + MAX_TEXT_BYTES]
         for i in range(0, len(text_bytes), MAX_TEXT_BYTES)
     ]
@@ -673,7 +702,7 @@ def _write_story_entry_to_firestore(
             # Create a placeholder for empty user inputs
             placeholder_text = "[Empty input]"
         chunks = [placeholder_text.encode("utf-8")]
-    base_entry_data = {"actor": actor}
+    base_entry_data: dict[str, Any] = {"actor": actor}
     if mode:
         base_entry_data["mode"] = mode
 
@@ -693,11 +722,11 @@ def _write_story_entry_to_firestore(
         )
 
     # Simple and reliable write with document ID capture
-    timestamp = datetime.datetime.now(datetime.UTC)
-    document_id = None
+    timestamp: datetime.datetime = datetime.datetime.now(datetime.UTC)
+    document_id: str | None = None
 
     for i, chunk in enumerate(chunks):
-        entry_data = base_entry_data.copy()
+        entry_data: dict[str, Any] = base_entry_data.copy()
         entry_data["text"] = chunk.decode("utf-8")
         entry_data["timestamp"] = timestamp
         entry_data["part"] = i + 1
@@ -756,7 +785,9 @@ def _write_story_entry_to_firestore(
     )
 
 
-def verify_document_by_id(user_id, campaign_id, document_id, expected_actor):
+def verify_document_by_id(
+    user_id: UserId, campaign_id: CampaignId, document_id: str, expected_actor: str
+) -> bool:
     """Verify a story entry was written by directly reading the document by ID
 
     Args:
@@ -808,7 +839,9 @@ def verify_document_by_id(user_id, campaign_id, document_id, expected_actor):
         return False
 
 
-def verify_latest_entry(user_id, campaign_id, actor, text, limit=10):
+def verify_latest_entry(
+    user_id: UserId, campaign_id: CampaignId, actor: str, text: str, limit: int = 10
+) -> bool:
     """Efficiently verify a story entry was written by reading only the latest entries
 
     Args:
@@ -853,23 +886,23 @@ def verify_latest_entry(user_id, campaign_id, actor, text, limit=10):
 
 @log_exceptions
 def create_campaign(
-    user_id,
-    title,
-    initial_prompt,
-    opening_story,
-    initial_game_state: dict,
-    selected_prompts=None,
-    use_default_world=False,
-    opening_story_structured_fields=None,
-):
+    user_id: UserId,
+    title: str,
+    initial_prompt: str,
+    opening_story: str,
+    initial_game_state: dict[str, Any],
+    selected_prompts: list[str] | None = None,
+    use_default_world: bool = False,
+    opening_story_structured_fields: dict[str, Any] | None = None,
+) -> CampaignId:
     db = get_db()
     campaigns_collection = (
         db.collection("users").document(user_id).collection("campaigns")
     )
 
     # Create the main campaign document
-    campaign_ref = campaigns_collection.document()
-    campaign_data = {
+    campaign_ref: firestore.DocumentReference = campaigns_collection.document()
+    campaign_data: dict[str, Any] = {
         "title": title,
         "initial_prompt": initial_prompt,
         "created_at": datetime.datetime.now(datetime.UTC),
@@ -880,7 +913,9 @@ def create_campaign(
     campaign_ref.set(campaign_data)
 
     # Create the initial game state document
-    game_state_ref = campaign_ref.collection("game_states").document("current_state")
+    game_state_ref: firestore.DocumentReference = campaign_ref.collection(
+        "game_states"
+    ).document("current_state")
     game_state_ref.set(initial_game_state)
 
     # Assuming 'god' mode for the very first conceptual prompt.
@@ -899,7 +934,9 @@ def create_campaign(
 
 
 @log_exceptions
-def get_campaign_game_state(user_id, campaign_id) -> GameState | None:
+def get_campaign_game_state(
+    user_id: UserId, campaign_id: CampaignId
+) -> GameState | None:
     """Fetches the current game state for a given campaign."""
     db = get_db()
     game_state_ref = (
@@ -918,7 +955,9 @@ def get_campaign_game_state(user_id, campaign_id) -> GameState | None:
 
 
 @log_exceptions
-def update_campaign_game_state(user_id, campaign_id, game_state_update: dict):
+def update_campaign_game_state(
+    user_id: UserId, campaign_id: CampaignId, game_state_update: dict[str, Any]
+) -> None:
     """Updates the game state for a campaign, overwriting with the provided dict."""
     if not user_id or not campaign_id:
         raise ValueError("User ID and Campaign ID are required.")
@@ -960,7 +999,9 @@ def update_campaign_game_state(user_id, campaign_id, game_state_update: dict):
 
 # --- NEWLY ADDED FUNCTION ---
 @log_exceptions
-def update_campaign_title(user_id, campaign_id, new_title):
+def update_campaign_title(
+    user_id: UserId, campaign_id: CampaignId, new_title: str
+) -> bool:
     """Updates the title of a specific campaign."""
     db = get_db()
     campaign_ref = (
@@ -971,3 +1012,90 @@ def update_campaign_title(user_id, campaign_id, new_title):
     )
     campaign_ref.update({"title": new_title})
     return True
+
+
+# --- USER SETTINGS FUNCTIONS ---
+@log_exceptions
+def get_user_settings(user_id: UserId) -> Optional[Dict[str, Any]]:
+    """Get user settings from Firestore.
+
+    Args:
+        user_id: User ID to get settings for
+
+    Returns:
+        Dict containing user settings, empty dict if user exists but no settings,
+        or None if user doesn't exist or database error
+    """
+    try:
+        db = get_db()
+        user_ref = db.collection("users").document(user_id)
+        user_doc = user_ref.get()
+
+        if user_doc.exists:
+            data = user_doc.to_dict()
+            return data.get("settings", {})  # Empty dict for user with no settings
+        # Return None for users that don't exist yet
+        return None
+    except Exception as e:
+        # Hash user_id for security in logs
+        user_hash = str(hash(user_id))[-6:] if user_id else "unknown"
+        logging_util.error(
+            f"Failed to get user settings for user_{user_hash}: {str(e)}"
+        )
+        # Return None to distinguish database errors from no settings
+        return None
+
+
+@log_exceptions
+def update_user_settings(user_id: UserId, settings: Dict[str, Any]) -> bool:
+    """Update user settings in Firestore.
+
+    Uses nested field updates to prevent clobbering sibling settings fields.
+
+    Args:
+        user_id: User ID to update settings for
+        settings: Dictionary of settings to update
+
+    Returns:
+        bool: True if update succeeded, False otherwise
+    """
+    try:
+        db = get_db()
+        user_ref = db.collection("users").document(user_id)
+
+        # Check if user document exists first
+        user_doc = user_ref.get()
+
+        # Get timestamp - use datetime for CI compatibility
+        try:
+            timestamp = firestore.SERVER_TIMESTAMP
+        except Exception:
+            # Fallback for CI environments where SERVER_TIMESTAMP might fail
+            import datetime
+
+            timestamp = datetime.datetime.utcnow()
+
+        if user_doc.exists:
+            # Use nested field update to avoid clobbering sibling settings
+            update_data = {}
+            for key, value in settings.items():
+                update_data[f"settings.{key}"] = value
+            update_data["lastUpdated"] = timestamp
+
+            user_ref.update(update_data)
+        else:
+            # Create new document with settings
+            user_data = {
+                "settings": settings,
+                "lastUpdated": timestamp,
+                "createdAt": timestamp,
+            }
+            user_ref.set(user_data)
+
+        logging_util.info(f"Updated settings for user {user_id}: {settings}")
+        return True
+    except Exception as e:
+        logging_util.error(
+            f"Failed to update user settings for {user_id}: {str(e)}", exc_info=True
+        )
+        return False

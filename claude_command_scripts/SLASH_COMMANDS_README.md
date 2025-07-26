@@ -73,7 +73,7 @@ These scripts fix that by providing exact, tested implementations.
 - Uses Playwright for browser automation
 - Mock APIs to avoid costs
 - Screenshots on failures
-- Test server on port 6006
+- Test server on port 8081
 
 ### 🌐 `/testuif` → `test-ui-full.sh`
 **Purpose**: Run browser tests with REAL APIs (costs money!)

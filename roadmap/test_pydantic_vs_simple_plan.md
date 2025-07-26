@@ -49,17 +49,17 @@ def verify_test_module(module_name, module):
 try:
     from schemas.entities_pydantic import SceneManifest
     verify_test_module("Pydantic", entities_pydantic)
-    
+
     # Should fail - bad pattern
     manifest = SceneManifest(scene_id="wrong_format")
 except ValidationError as e:
     print(f"Pydantic error: {e}")
 
-# Simple approach  
+# Simple approach
 try:
     from schemas.entities_simple import SceneManifest
     verify_test_module("Simple", entities_simple)
-    
+
     # Should fail - bad pattern
     manifest = SceneManifest(scene_id="wrong_format")
 except ValueError as e:
@@ -98,19 +98,19 @@ import tracemalloc
 def benchmark_approach(module_name, create_func, n=1000):
     """Benchmark entity creation"""
     verify_test_module(module_name, module)
-    
+
     # Time test
     start = time.time()
     for i in range(n):
         obj = create_func(i)
     duration = time.time() - start
-    
+
     # Memory test
     tracemalloc.start()
     objects = [create_func(i) for i in range(100)]
     current, peak = tracemalloc.get_traced_memory()
     tracemalloc.stop()
-    
+
     return {
         "duration": duration,
         "objects_per_second": n / duration,
@@ -134,7 +134,7 @@ def test_entity_desync_prevention(validation_approach):
     # Use real Gemini models (not TEST_MODEL)
     # Use real campaign prompts from prompts/
     # Run multiple story turns with entity state changes
-    
+
     test_scenarios = [
         "multi_character_combat",    # 4+ NPCs in combat scenario
         "npc_state_changes",        # NPCs gaining/losing status effects
@@ -143,22 +143,22 @@ def test_entity_desync_prevention(validation_approach):
         "wounded_recovery",         # Entities with changing HP/status
         "complex_scene_transitions" # Scene changes with entity persistence
     ]
-    
+
     desync_metrics = {
         "entities_missing_from_narrative": 0,
-        "entities_missing_from_state": 0, 
+        "entities_missing_from_state": 0,
         "entity_status_mismatches": 0,
         "entity_hp_inconsistencies": 0,
         "validation_errors_caught": 0,
         "total_entity_state_updates": 0
     }
-    
+
     # Run each scenario 5 times to get statistical significance
     for scenario in test_scenarios:
         for run in range(5):
             result = run_real_campaign_scenario(scenario, validation_approach)
             update_desync_metrics(desync_metrics, result)
-    
+
     return calculate_desync_rate(desync_metrics)
 
 def run_real_campaign_scenario(scenario, validation_approach):
@@ -179,15 +179,15 @@ def measure_entity_tracking_accuracy():
     3. Combat state becoming inconsistent with narrative
     4. Entity HP/status mismatches between state and story
     """
-    
+
     pydantic_results = test_entity_desync_prevention("pydantic")
     simple_results = test_entity_desync_prevention("simple")
-    
+
     # Statistical comparison
     desync_rate_improvement = (
         simple_results.desync_rate - pydantic_results.desync_rate
     ) / simple_results.desync_rate * 100
-    
+
     return {
         "pydantic_desync_rate": pydantic_results.desync_rate,
         "simple_desync_rate": simple_results.desync_rate,

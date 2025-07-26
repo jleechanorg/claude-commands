@@ -59,7 +59,7 @@ class TestStateUpdateBugs(unittest.TestCase):
 
         self.markdown_style_response = """
         You swing your sword at the orc.
-        
+
         [STATE_UPDATES_PROPOSED]
         player_character_data: {"hp_current": "18"}
         npc_data: {"orc_warrior": {"status": "wounded"}}
@@ -73,7 +73,7 @@ class TestStateUpdateBugs(unittest.TestCase):
                 "player_character_data": {"hp_current": "18"}
             }
         }
-        
+
         [STATE_UPDATES_PROPOSED]
         This shouldn't appear in new format
         [END_STATE_UPDATES_PROPOSED]

@@ -22,7 +22,7 @@ def test_structured_fields_display():
 
         try:
             # Navigate with test mode enabled
-            test_url = "http://localhost:6006?test_mode=true&test_user_id=ui-test-user"
+            test_url = "http://localhost:8081?test_mode=true&test_user_id=ui-test-user"
             page.goto(test_url)
             print(f"✓ Navigated to app with test mode: {test_url}")
 
@@ -313,9 +313,9 @@ def test_campaign_wizard_functionality():
 
                 # Test campaign title input
                 title_input = page.locator("#wizard-campaign-title")
-                assert title_input.is_visible(), (
-                    "Campaign title input should be visible"
-                )
+                assert (
+                    title_input.is_visible()
+                ), "Campaign title input should be visible"
                 title_input.fill("Wizard Test Campaign")
                 print("✓ Campaign title filled")
 
@@ -323,9 +323,9 @@ def test_campaign_wizard_functionality():
                 dragon_knight_radio = page.locator("#wizard-dragon-knight-campaign")
                 custom_radio = page.locator("#wizard-customCampaign")
 
-                assert dragon_knight_radio.is_checked(), (
-                    "Dragon Knight should be selected by default"
-                )
+                assert (
+                    dragon_knight_radio.is_checked()
+                ), "Dragon Knight should be selected by default"
                 print("✓ Dragon Knight campaign type is default")
 
                 # Test character input field
@@ -338,9 +338,9 @@ def test_campaign_wizard_functionality():
 
                 # Test the key field mentioned in scratchpad: wizard-setting-input
                 setting_input = page.locator("#wizard-setting-input")
-                assert setting_input.is_visible(), (
-                    "Setting input (wizard-setting-input) should be visible"
-                )
+                assert (
+                    setting_input.is_visible()
+                ), "Setting input (wizard-setting-input) should be visible"
 
                 # Check auto-generation placeholder
                 setting_placeholder = setting_input.get_attribute("placeholder")

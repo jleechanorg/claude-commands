@@ -3,6 +3,7 @@
 
 import os
 import sys
+import traceback
 
 import logging_util
 
@@ -101,7 +102,6 @@ def test_numeric_race_selection():
 
     except Exception as e:
         print(f"\n❌ ERROR: {e}")
-        import traceback
 
         traceback.print_exc()
 

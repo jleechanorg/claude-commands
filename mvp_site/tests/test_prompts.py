@@ -1,9 +1,12 @@
 import os
+import re
 import sys
 import unittest
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 
 import constants
@@ -194,7 +197,6 @@ class TestPromptLoading(unittest.TestCase):
                                 in content
                             ):
                                 # Extract the constant names used in _load_instruction_file calls
-                                import re
 
                                 matches = re.findall(
                                     r"_load_instruction_file\(constants\.(PROMPT_TYPE_\w+)\)",

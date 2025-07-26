@@ -9,6 +9,8 @@ import time
 
 from playwright.sync_api import sync_playwright
 
+import traceback
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -64,7 +66,7 @@ def run_test():
                 () => {
                     const title = document.getElementById('game-title');
                     if (!title) return { found: false };
-                    
+
                     return {
                         found: true,
                         text: title.innerText,
@@ -113,7 +115,7 @@ def run_test():
                     const readBtn = document.getElementById('readStoryBtn');
                     const pauseBtn = document.getElementById('pauseStoryBtn');
                     const controls = document.querySelector('.story-reader-controls-inline');
-                    
+
                     return {
                         readBtnFound: readBtn !== null,
                         readBtnVisible: readBtn ? window.getComputedStyle(readBtn).display !== 'none' : false,
@@ -154,7 +156,7 @@ def run_test():
 
         except Exception as e:
             print(f"\n❌ Test failed: {e}")
-            import traceback
+
 
             traceback.print_exc()
 

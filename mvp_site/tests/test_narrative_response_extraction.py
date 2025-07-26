@@ -10,7 +10,9 @@ import sys
 import unittest
 
 # Add the parent directory to the Python path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from gemini_response import GeminiResponse
 from narrative_response_schema import NarrativeResponse

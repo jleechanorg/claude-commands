@@ -6,15 +6,14 @@ Provides a single point to configure all fake services instead of complex mockin
 import os
 import sys
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from fake_auth import FakeFirebaseAuth, FakeUserRecord
 
 # Import our fake implementations
-from fake_firestore import (
-    FakeFirestoreClient,
-)
+from fake_firestore import FakeFirestoreClient
 from fake_gemini import create_fake_gemini_client
+from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, create_app
 
 
 class FakeServiceManager:
@@ -90,7 +89,6 @@ class FakeServiceManager:
 
     def _setup_mock_modules(self):
         """Set up mock modules when real ones aren't available."""
-        from unittest.mock import MagicMock
 
         # Store original modules for cleanup
         self._original_modules = {}
@@ -141,8 +139,6 @@ class FakeServiceManager:
 
         # Restore original modules if we mocked them
         if hasattr(self, "_original_modules"):
-            import sys
-
             for module_name, original_module in self._original_modules.items():
                 sys.modules[module_name] = original_module
             self._original_modules.clear()
@@ -256,7 +252,6 @@ def with_fake_services():
 
 def create_test_app():
     """Create a test Flask app with fake services configured."""
-    from main import create_app
 
     # Set up fake services
     services = FakeServiceManager()
@@ -275,7 +270,6 @@ def create_test_app():
 
 def get_test_headers(user_id: str = "test-user-123") -> dict[str, str]:
     """Get test headers for bypassing authentication."""
-    from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID
 
     return {HEADER_TEST_BYPASS: "true", HEADER_TEST_USER_ID: user_id}
 

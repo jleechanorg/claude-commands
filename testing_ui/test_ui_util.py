@@ -11,15 +11,23 @@ from typing import Any
 
 from playwright.sync_api import Browser, Page, sync_playwright
 
+import json
+
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(__file__))
 from screenshot_utils import take_screenshot
 
-# Default test configuration
-DEFAULT_TEST_USER = "test-user-123"
-DEFAULT_PORT = 6006
+# Import centralized configuration
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from testing_util import TestConfig, TestType
+
+# Default test configuration (now using centralized config)
+DEFAULT_TEST_USER = TestConfig.DEFAULT_TEST_USER_ID
+DEFAULT_PORT = TestConfig.get_server_config(TestType.BROWSER).base_port
 DEFAULT_HEADLESS = False
-DEFAULT_TIMEOUT = 30000  # 30 seconds
+DEFAULT_TIMEOUT = TestConfig.LONG_TIMEOUT_MS  # 30 seconds
 
 
 def setup_browser(
@@ -155,7 +163,7 @@ def capture_api_request(
     def handle_request(request):
         if url_pattern in request.url and request.method == method:
             try:
-                import json
+
 
                 data = json.loads(request.post_data) if request.post_data else {}
                 captured_data["request"] = {

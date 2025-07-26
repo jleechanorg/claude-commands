@@ -29,7 +29,7 @@ echo -e "\n📝 Test 2: From subdirectory (claude_command_scripts/)"
 cd claude_command_scripts
 echo '{"tool_name": "Write", "tool_input": {"file_path": "bad_file.py", "content": "def test(): pass"}}' | ./check_root_files.sh | head -3
 
-# Test from parent directory  
+# Test from parent directory
 echo -e "\n📝 Test 3: From parent directory"
 cd ../..
 echo '{"tool_name": "Write", "tool_input": {"file_path": "bad_file.py", "content": "def test(): pass"}}' | ./worktree_roadmap/claude_command_scripts/check_root_files.sh | head -3

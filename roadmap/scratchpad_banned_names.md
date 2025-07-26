@@ -5,7 +5,7 @@ Replace overused LLM names with unique alternatives across world documents
 
 ## Banned Names Found
 1. **Valerius val Artorius** (twin prince in world_assiah.md)
-2. **Rowan Thorne** (scholar/healer in world_assiah.md)  
+2. **Rowan Thorne** (scholar/healer in world_assiah.md)
 3. **Corvus** (elven spymaster in world_assiah.md)
 4. **Elara** (Ashen-Sworn leader in world_assiah.md)
 5. **Valerius** (Alexiel's twin son in celestial_wars_alexiel_book.md)
@@ -19,7 +19,7 @@ Replace overused LLM names with unique alternatives across world documents
 
 ## Files to Update
 - world/world_assiah.md
-- world/world_assiah_v1.md 
+- world/world_assiah_v1.md
 - world/celestial_wars_alexiel_book.md
 
 ## Status

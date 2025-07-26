@@ -37,7 +37,7 @@ NEVER create manual API key checks or custom infrastructure when the project alr
 **MANDATORY COMPLETION CHECKLIST**: For every error resolution, bug fix, or user correction, I MUST follow this checklist:
 - [ ] Problem solved to user satisfaction
 - [ ] Lessons documented in .cursor/rules/lessons.mdc
-- [ ] Memory updated with prevention strategy  
+- [ ] Memory updated with prevention strategy
 - [ ] Self-audit: "Did I follow all mandatory procedures?"
 - [ ] Task marked complete only after ALL steps finished
 
@@ -70,7 +70,7 @@ NEVER create manual API key checks or custom infrastructure when the project alr
 
 ### TECHNICAL FAILURES:
 - **Incomplete State Analysis**: Didn't trace how wizard state persists between campaign creations
-- **Method Integration Issues**: Added reset methods without understanding existing initialization flow  
+- **Method Integration Issues**: Added reset methods without understanding existing initialization flow
 - **Missing Edge Cases**: Didn't consider scenarios like partial wizard creation, form submission failures, or modal state conflicts
 - **No Testing Protocol**: Didn't test the complete workflow: create campaign → finish → try to create another
 - **DOM State Corruption**: The spinner insertion in `showDetailedSpinner()` polluted the wizard container, making DOM references stale
@@ -101,14 +101,14 @@ NEVER create manual API key checks or custom infrastructure when the project alr
 
 ## Campaign Wizard Repeated Fix Failure Pattern (January 2025)
 
-### CRITICAL FAILURE: Multiple Broken Fix Attempts Despite Claims Each Would Work  
+### CRITICAL FAILURE: Multiple Broken Fix Attempts Despite Claims Each Would Work
 *   **ONGOING ISSUE:** User continues reporting "when i click on new campaign it is still not clearing the old campaign creation spinner" after multiple fix attempts
 *   **PATTERN:** Repeated failures to fix same issue despite implementing different technical solutions
 *   **USER FRUSTRATION:** "10 whys on why your previous attempts to fix it were wrong. you really screwed up"
 
 ### 10 WHYS ROOT CAUSE ANALYSIS: Why Multiple Fix Attempts Failed
 1. **Why did my repeated campaign wizard fixes fail?** → I was solving the wrong problem - focused on DOM cleanup instead of understanding the actual user workflow and state management
-2. **Why didn't I understand the actual user workflow?** → I never traced the complete path: Create Campaign → Complete → Navigate Back → Click "New Campaign" → What should happen vs what actually happens  
+2. **Why didn't I understand the actual user workflow?** → I never traced the complete path: Create Campaign → Complete → Navigate Back → Click "New Campaign" → What should happen vs what actually happens
 3. **Why didn't I trace the complete user workflow?** → I assumed the problem was technical (DOM corruption) rather than investigating the actual user actions and expected vs actual behavior
 4. **Why did I assume it was a DOM corruption problem?** → I focused on the symptoms (spinner showing) rather than identifying when and how the wizard should be reset in the application lifecycle
 5. **Why didn't I identify when the wizard should reset?** → I never mapped out the application's navigation flow and state transitions - when users go from campaign creation → dashboard → back to creation
@@ -123,7 +123,7 @@ NEVER create manual API key checks or custom infrastructure when the project alr
 
 ### TECHNICAL FAILURES:
 - **Never traced user navigation flow**: Dashboard → Create Campaign → Complete → Dashboard → Create Again
-- **Assumed DOM issues**: Focused on element cleanup rather than application state transitions  
+- **Assumed DOM issues**: Focused on element cleanup rather than application state transitions
 - **No end-to-end testing**: Never actually clicked through the workflow to validate fixes
 - **Method-level thinking**: Fixed individual functions without understanding their role in the broader application lifecycle
 - **Code-first approach**: Started with technical implementation rather than user experience mapping
@@ -140,7 +140,7 @@ NEVER create manual API key checks or custom infrastructure when the project alr
 **MANDATORY SEQUENCE for UI workflow issues:**
 1. **Trace Complete User Journey**: Never debug individual components - always map the full user workflow
 2. **Identify Expected vs Actual Behavior**: What should happen at each step vs what actually happens?
-3. **Test Current State**: Actually use the application as a user would before implementing any fixes  
+3. **Test Current State**: Actually use the application as a user would before implementing any fixes
 4. **Map Integration Points**: How do different systems (routing, state, UI) interact?
 5. **Design Holistic Solution**: Address the workflow, not just the symptoms
 6. **End-to-End Validation**: Test the complete user journey after implementing fixes
@@ -325,7 +325,7 @@ NEVER create manual API key checks or custom infrastructure when the project alr
 4.  **Assemble the Download Link:** The script creates a blob URL from the response data (`URL.createObjectURL(blob)`), creates a temporary `<a>` element, sets its `href` to the blob URL, and critically, sets its `download` attribute to the filename extracted from the header.
 5.  **Include Authentication:** If the backend endpoint is protected, the frontend `fetch` call must include the necessary authorization token in its headers.
 
-By strictly adhering to this pattern, the backend has full control over the final filename, and the frontend correctly respects it, preventing truncation and other errors. 
+By strictly adhering to this pattern, the backend has full control over the final filename, and the frontend correctly respects it, preventing truncation and other errors.
 
 ## Lesson: Robust PDF Generation with `fpdf`
 
@@ -338,7 +338,7 @@ By strictly adhering to this pattern, the backend has full control over the fina
 2.  **Avoid Manual, Restrictive Encoding:** Do not manually encode text into a limited character set like `latin-1`. This is a common source of `UnicodeEncodeError` and can corrupt text. Rely on the library's built-in Unicode support.
     *   **Incorrect:** `paragraph.encode('latin-1', 'replace').decode('latin-1')`
     *   **Correct:** Simply pass the raw string: `pdf.multi_cell(..., text=paragraph)`
-3.  **Robust Font Loading:** A missing font file can cause a runtime error that crashes the server. Wrap font loading in a `try...except` block to gracefully fall back to a default, safe font if the custom font is not found. 
+3.  **Robust Font Loading:** A missing font file can cause a runtime error that crashes the server. Wrap font loading in a `try...except` block to gracefully fall back to a default, safe font if the custom font is not found.
 
 ## VIII. Debugging & Verification Protocol (June 2024)
 
@@ -372,7 +372,7 @@ By strictly adhering to this pattern, the backend has full control over the fina
     ```python
     # Bad: Assumes all items are dictionaries
     names = [item.get('name', item) for item in collection]
-    
+
     # Good: Validates type first
     names = []
     for item in collection:
@@ -403,7 +403,7 @@ By strictly adhering to this pattern, the backend has full control over the fina
     ```python
     # In gemini_service.py
     model_to_use = TEST_MODEL if os.environ.get('TESTING') else DEFAULT_MODEL
-    
+
     # In test files
     os.environ["TESTING"] = "true"
     ```
@@ -447,7 +447,7 @@ By strictly adhering to this pattern, the backend has full control over the fina
         // ...
       }
     });
-    
+
     // Safe: Only matches intended elements
     document.addEventListener('click', (e) => {
       const themeItem = e.target.closest('[data-theme-menu-item]');
@@ -472,7 +472,7 @@ By strictly adhering to this pattern, the backend has full control over the fina
 *   **Root Cause:** Treating the feature as isolated instead of testing it against the complete application ecosystem.
 *   **Solution:** After ANY system modification, regardless of perceived scope, test the top 3-5 core user workflows:
     1. User authentication flow
-    2. Campaign creation and loading  
+    2. Campaign creation and loading
     3. Game interaction submission
     4. All form submissions
     5. All button clicks
@@ -483,7 +483,7 @@ By strictly adhering to this pattern, the backend has full control over the fina
 *   **Root Cause:** Pattern cargo-culting - copied familiar JavaScript patterns without analyzing their fit for this specific application context.
 *   **Solution:** Before adding ANY event listeners:
     1. Audit existing event patterns in codebase
-    2. Verify new listeners won't intercept existing event flows  
+    2. Verify new listeners won't intercept existing event flows
     3. Use most specific possible selectors/targets
     4. Never call `preventDefault()` without explicit justification
     5. Test all form submissions and interactive elements after event changes
@@ -573,7 +573,7 @@ By strictly adhering to this pattern, the backend has full control over the fina
 ### Lesson: Critical Screenshot Analysis Protocol
 **MANDATORY**: When user provides screenshot showing UI problems:
 1. **Systematic Visual Inspection** - Always analyze screenshots for overlapping elements, misaligned components, broken layouts
-2. **Never Assume Functionality** - If visual evidence suggests problems, treat as broken until proven otherwise  
+2. **Never Assume Functionality** - If visual evidence suggests problems, treat as broken until proven otherwise
 3. **Ask Specific Questions** - "What specific visual problems do you see?" rather than assuming code is working
 4. **Test Integration Workflows** - Don't just test individual components, test complete user workflows
 
@@ -701,7 +701,7 @@ nonDropdownButtons.forEach(btn => {
 ### PROCESS DISCIPLINE FAILURE PATTERN:
 - ✅ **Have clear instructions** (rules.mdc explicitly states mandatory updates)
 - ✅ **Understand instructions** (I know what I'm supposed to do)
-- ❌ **Remember during execution** (I forget during complex problem solving)  
+- ❌ **Remember during execution** (I forget during complex problem solving)
 - ❌ **Integrate into workflow** (No systematic completion checklists)
 - ❌ **Self-monitor compliance** (No self-auditing of procedure adherence)
 
@@ -711,7 +711,7 @@ nonDropdownButtons.forEach(btn => {
 **COMPLETION CHECKLIST (MANDATORY):**
 1. Solve user's immediate problem
 2. Update .cursor/rules/lessons.mdc with failure analysis
-3. Update memory with lesson learned  
+3. Update memory with lesson learned
 4. Self-audit: "Did I follow all mandatory procedures?"
 5. Only then consider task complete
 
@@ -727,7 +727,7 @@ nonDropdownButtons.forEach(btn => {
     if (window.interfaceManager && window.interfaceManager.isModernMode()) {
         this.enableModernFeatures();
     }
-    
+
     // BAD: Assume modern features are always available
     this.setupWizard(); // Breaks in classic mode
     ```
@@ -745,10 +745,10 @@ nonDropdownButtons.forEach(btn => {
             this.enableInteractiveFeatures();
             this.enableEnhancedComponents();
         }
-        
+
         enableClassicMode() {
             this.disableAnimations();
-            this.disableInteractiveFeatures(); 
+            this.disableInteractiveFeatures();
             this.disableEnhancedComponents();
         }
     }
@@ -767,9 +767,9 @@ nonDropdownButtons.forEach(btn => {
     ```python
     # BRITTLE: Exact string matching
     self.assertIn("?.querySelector", content)
-    
+
     # FLEXIBLE: Multiple valid patterns
-    has_safe_dom = ("document.getElementById" in content or 
+    has_safe_dom = ("document.getElementById" in content or
                     "document.querySelector" in content)
     self.assertTrue(has_safe_dom)
     ```
@@ -818,7 +818,7 @@ nonDropdownButtons.forEach(btn => {
             this.totalSteps = 4;
             this.formData = {};
         }
-        
+
         nextStep() {
             if (!this.validateCurrentStep()) return;
             this.goToStep(this.currentStep + 1);
@@ -842,7 +842,7 @@ nonDropdownButtons.forEach(btn => {
     /* GOOD: Scoped to modern mode */
     .modern-mode .campaign-wizard { }
     body[data-interface-mode="modern"] .enhanced-features { }
-    
+
     /* BAD: Global changes */
     .campaign-item { /* affects classic mode too */ }
     ```
@@ -977,7 +977,7 @@ nonDropdownButtons.forEach(btn => {
 4.  **Assemble the Download Link:** The script creates a blob URL from the response data (`URL.createObjectURL(blob)`), creates a temporary `<a>` element, sets its `href` to the blob URL, and critically, sets its `download` attribute to the filename extracted from the header.
 5.  **Include Authentication:** If the backend endpoint is protected, the frontend `fetch` call must include the necessary authorization token in its headers.
 
-By strictly adhering to this pattern, the backend has full control over the final filename, and the frontend correctly respects it, preventing truncation and other errors. 
+By strictly adhering to this pattern, the backend has full control over the final filename, and the frontend correctly respects it, preventing truncation and other errors.
 
 ## Lesson: Robust PDF Generation with `fpdf`
 
@@ -990,7 +990,7 @@ By strictly adhering to this pattern, the backend has full control over the fina
 2.  **Avoid Manual, Restrictive Encoding:** Do not manually encode text into a limited character set like `latin-1`. This is a common source of `UnicodeEncodeError` and can corrupt text. Rely on the library's built-in Unicode support.
     *   **Incorrect:** `paragraph.encode('latin-1', 'replace').decode('latin-1')`
     *   **Correct:** Simply pass the raw string: `pdf.multi_cell(..., text=paragraph)`
-3.  **Robust Font Loading:** A missing font file can cause a runtime error that crashes the server. Wrap font loading in a `try...except` block to gracefully fall back to a default, safe font if the custom font is not found. 
+3.  **Robust Font Loading:** A missing font file can cause a runtime error that crashes the server. Wrap font loading in a `try...except` block to gracefully fall back to a default, safe font if the custom font is not found.
 
 ## VIII. Debugging & Verification Protocol (June 2024)
 
@@ -1024,7 +1024,7 @@ By strictly adhering to this pattern, the backend has full control over the fina
     ```python
     # Bad: Assumes all items are dictionaries
     names = [item.get('name', item) for item in collection]
-    
+
     # Good: Validates type first
     names = []
     for item in collection:
@@ -1055,7 +1055,7 @@ By strictly adhering to this pattern, the backend has full control over the fina
     ```python
     # In gemini_service.py
     model_to_use = TEST_MODEL if os.environ.get('TESTING') else DEFAULT_MODEL
-    
+
     # In test files
     os.environ["TESTING"] = "true"
     ```
@@ -1099,7 +1099,7 @@ By strictly adhering to this pattern, the backend has full control over the fina
         // ...
       }
     });
-    
+
     // Safe: Only matches intended elements
     document.addEventListener('click', (e) => {
       const themeItem = e.target.closest('[data-theme-menu-item]');
@@ -1124,7 +1124,7 @@ By strictly adhering to this pattern, the backend has full control over the fina
 *   **Root Cause:** Treating the feature as isolated instead of testing it against the complete application ecosystem.
 *   **Solution:** After ANY system modification, regardless of perceived scope, test the top 3-5 core user workflows:
     1. User authentication flow
-    2. Campaign creation and loading  
+    2. Campaign creation and loading
     3. Game interaction submission
     4. All form submissions
     5. All button clicks
@@ -1135,7 +1135,7 @@ By strictly adhering to this pattern, the backend has full control over the fina
 *   **Root Cause:** Pattern cargo-culting - copied familiar JavaScript patterns without analyzing their fit for this specific application context.
 *   **Solution:** Before adding ANY event listeners:
     1. Audit existing event patterns in codebase
-    2. Verify new listeners won't intercept existing event flows  
+    2. Verify new listeners won't intercept existing event flows
     3. Use most specific possible selectors/targets
     4. Never call `preventDefault()` without explicit justification
     5. Test all form submissions and interactive elements after event changes
@@ -1225,7 +1225,7 @@ By strictly adhering to this pattern, the backend has full control over the fina
 ### Lesson: Critical Screenshot Analysis Protocol
 **MANDATORY**: When user provides screenshot showing UI problems:
 1. **Systematic Visual Inspection** - Always analyze screenshots for overlapping elements, misaligned components, broken layouts
-2. **Never Assume Functionality** - If visual evidence suggests problems, treat as broken until proven otherwise  
+2. **Never Assume Functionality** - If visual evidence suggests problems, treat as broken until proven otherwise
 3. **Ask Specific Questions** - "What specific visual problems do you see?" rather than assuming code is working
 4. **Test Integration Workflows** - Don't just test individual components, test complete user workflows
 
@@ -1353,7 +1353,7 @@ nonDropdownButtons.forEach(btn => {
 ### PROCESS DISCIPLINE FAILURE PATTERN:
 - ✅ **Have clear instructions** (rules.mdc explicitly states mandatory updates)
 - ✅ **Understand instructions** (I know what I'm supposed to do)
-- ❌ **Remember during execution** (I forget during complex problem solving)  
+- ❌ **Remember during execution** (I forget during complex problem solving)
 - ❌ **Integrate into workflow** (No systematic completion checklists)
 - ❌ **Self-monitor compliance** (No self-auditing of procedure adherence)
 
@@ -1363,7 +1363,7 @@ nonDropdownButtons.forEach(btn => {
 **COMPLETION CHECKLIST (MANDATORY):**
 1. Solve user's immediate problem
 2. Update .cursor/rules/lessons.mdc with failure analysis
-3. Update memory with lesson learned  
+3. Update memory with lesson learned
 4. Self-audit: "Did I follow all mandatory procedures?"
 5. Only then consider task complete
 
@@ -1389,13 +1389,13 @@ async testSearchAndFilters() {
     const searchInput = document.querySelector('input[type="search"]');
     searchInput.value = "Epic";
     searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-    
+
     await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const visibleCards = Array.from(campaignCards).filter(card => 
+
+    const visibleCards = Array.from(campaignCards).filter(card =>
         getComputedStyle(card).display !== 'none'
     );
-    
+
     if (visibleCards.length === campaignCards.length) {
         throw new Error("FAIL: Search filter not working");
     }
@@ -1437,7 +1437,7 @@ async testSearchAndFilters() {
 
 **INITIAL STATE (RED)**: All 6 behavioral tests failing, confirming user feedback was accurate:
 1. Modern mode defaulted to classic instead of modern
-2. No detailed spinner when clicking "Begin Adventure" 
+2. No detailed spinner when clicking "Begin Adventure"
 3. Search and filtering appeared broken
 4. Sort functionality missing dedicated function
 5. Theme readability issues with opacity: 0 text
@@ -1485,7 +1485,7 @@ async testSearchAndFilters() {
 
 ### Broken Dependency Detection Protocol
 **When files stop working after being moved:**
-1. **Check Script Tags**: Look for missing JavaScript files in `<script src="">` 
+1. **Check Script Tags**: Look for missing JavaScript files in `<script src="">`
 2. **Check CSS Links**: Verify all `<link href="">` references are valid
 3. **Check Relative Paths**: Update any relative file references that broke
 4. **Choose Fix Strategy**: Either update paths or create minimal inline replacements
@@ -1529,13 +1529,13 @@ class ScreenshotValidator:
         self.baseline_dir = "test_screenshots/baseline"
         self.current_dir = "test_screenshots/current"
         self.diff_dir = "test_screenshots/diff"
-        
+
     async def capture_ui_states(self):
         """Capture screenshots of all critical UI states"""
         async with async_playwright() as p:
             browser = await p.chromium.launch()
             page = await browser.new_page()
-            
+
             # Test scenarios
             scenarios = [
                 {
@@ -1567,20 +1567,20 @@ class ScreenshotValidator:
                     ]
                 }
             ]
-            
+
             for scenario in scenarios:
                 await self.run_scenario(page, scenario)
-                
+
             await browser.close()
-    
+
     def compare_screenshots(self, baseline, current):
         """Compare screenshots using perceptual hashing"""
         img1 = Image.open(baseline)
         img2 = Image.open(current)
-        
+
         hash1 = imagehash.phash(img1)
         hash2 = imagehash.phash(img2)
-        
+
         difference = hash1 - hash2
         return {
             "similar": difference < 10,
@@ -1605,10 +1605,10 @@ class ScreenshotValidator:
 class UserIntentTests:
     def test_user_can_create_campaign(self):
         """Full workflow: click button → see spinner → campaign created"""
-        
+
     def test_user_can_find_campaigns(self):
         """Search → filter → sort → see results"""
-        
+
     def test_user_can_customize_experience(self):
         """Change theme → toggle mode → preferences persist"""
 ```
@@ -1625,12 +1625,12 @@ const visualChecks = {
             el,
             rect: el.getBoundingClientRect()
         }));
-        
-        return rects.filter((a, i) => 
+
+        return rects.filter((a, i) =>
             rects.some((b, j) => i !== j && rectsOverlap(a.rect, b.rect))
         );
     },
-    
+
     textReadability: () => {
         // Check if any text has poor contrast or is invisible
         const textElements = document.querySelectorAll('p, span, h1, h2, h3, h4, h5, h6');
@@ -1639,23 +1639,23 @@ const visualChecks = {
             const opacity = parseFloat(styles.opacity);
             const color = styles.color;
             const bgColor = styles.backgroundColor;
-            
-            return opacity === 0 || 
+
+            return opacity === 0 ||
                    color === bgColor ||
                    getContrastRatio(color, bgColor) < 4.5;
         });
     },
-    
+
     misalignment: () => {
         // Check common alignment issues
         const checkboxes = document.querySelectorAll('input[type="checkbox"]');
         return Array.from(checkboxes).filter(cb => {
             const label = cb.nextElementSibling || cb.parentElement;
             if (!label) return true;
-            
+
             const cbRect = cb.getBoundingClientRect();
             const labelRect = label.getBoundingClientRect();
-            
+
             return Math.abs(cbRect.top - labelRect.top) > 5;
         });
     }
@@ -1674,22 +1674,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      
+
       - name: Start application
         run: |
           cd mvp_site
           python main.py &
           sleep 5
-          
+
       - name: Run behavioral tests
         run: python mvp_site/run_behavioral_tests.py
-        
+
       - name: Capture screenshots
         run: python mvp_site/screenshot_validator.py
-        
+
       - name: Compare with baseline
         run: python mvp_site/compare_screenshots.py
-        
+
       - name: Upload diff artifacts
         if: failure()
         uses: actions/upload-artifact@v2
@@ -1707,13 +1707,13 @@ jobs:
 5. **Show me it works on mobile** (responsive)
 
 ### Critical Mindset Shift
-**FROM**: "I wrote the code, so it must work"  
+**FROM**: "I wrote the code, so it must work"
 **TO**: "I haven't seen it work with my own eyes yet"
 
-**FROM**: "The test passes, so it's functional"  
+**FROM**: "The test passes, so it's functional"
 **TO**: "The user can successfully complete their goal"
 
-**FROM**: "No errors in console"  
+**FROM**: "No errors in console"
 **TO**: "Delightful user experience"
 
 ### Implementation Roadmap
@@ -1792,7 +1792,7 @@ jobs:
 *   **Implementation Pattern:** Self-contained JavaScript that can be loaded into any page for immediate validation
 *   **Key Features:** Visual highlighting of problems, console logging with styling, comprehensive UI checks
 
-### Lesson: Python-Based Screenshot Testing for Regression Prevention  
+### Lesson: Python-Based Screenshot Testing for Regression Prevention
 *   **Tool Created:** `screenshot_validator.py` using Selenium for automated visual regression testing
 *   **Dependencies:** Selenium, Pillow, imagehash for perceptual comparison
 *   **Pattern:** Capture UI states → Compare with baselines → Generate visual diffs for failures
@@ -1820,7 +1820,7 @@ jobs:
 
 ## Systematic Issue Resolution Methodology (January 2025)
 
-### Lesson: Red State Confirmation Prevents False Progress Claims  
+### Lesson: Red State Confirmation Prevents False Progress Claims
 *   **Critical Step:** Always confirm tests FAIL before implementing fixes (red state validation)
 *   **Problem Prevented:** Claiming fixes work when tests pass due to incorrect test design
 *   **Pattern:** Run behavioral tests → Confirm all expected issues show as FAILED → Only then implement fixes
@@ -1843,7 +1843,7 @@ jobs:
 *   **Modern Mode Default:** Change fallback value in localStorage pattern: `|| 'classic'` → `|| 'modern'`
 *   **Missing Spinners:** Add detailed progress states with user-friendly messaging ("Building characters...", "Establishing factions...")
 *   **Search Filtering:** Verify cross-function calls exist (function A calls function B that does actual work)
-*   **Sort Functionality:** Extract embedded logic into dedicated functions for better testability  
+*   **Sort Functionality:** Extract embedded logic into dedicated functions for better testability
 *   **Theme Readability:** Exclude intentional design effects (animations, hover states) from accessibility tests
 *   **Checkbox Alignment:** Use flexbox containers with `align-items: center` and `vertical-align: middle` for reliable cross-browser alignment
 
@@ -1860,7 +1860,7 @@ jobs:
 *   **Problem:** JWT tokens fail with "Token used too early" errors when system clocks are slightly out of sync
 *   **Root Cause:** Even 1-second clock differences cause authentication failures in strict JWT validation
 *   **Solution:** Build automatic retry logic with forced token refresh rather than requiring clock synchronization
-*   **Implementation:** 
+*   **Implementation:**
     ```javascript
     // Auto-retry auth failures with fresh tokens
     if (response.status === 401 && retryCount < 2) {
@@ -1874,7 +1874,7 @@ jobs:
 
 ### Lesson: Defensive Programming Beats Perfect Conditions
 *   **Principle:** Build systems that work despite imperfect external conditions (clock skew, network issues, server problems)
-*   **Techniques:** 
+*   **Techniques:**
     - Automatic retry with exponential backoff
     - Forced token refresh on auth failures
     - Graceful degradation to cached data
@@ -1902,7 +1902,7 @@ jobs:
 
 ### Lesson: Connection Status Monitoring Enables Smart UI
 *   **Implementation:** Monitor `navigator.onLine` and backend health checks
-*   **UI Adaptations:** 
+*   **UI Adaptations:**
     - Hide "Create Campaign" button when offline
     - Show connection status indicators
     - Disable edit functionality in offline mode
@@ -1919,7 +1919,7 @@ jobs:
 ### Test Coverage for Responsiveness Enforcement
 **5 Core Tests for Zero Artificial Delays:**
 1. **Immediate Form Submission**: Verifies form submission happens within 10ms of button click
-2. **Non-Blocking Progress Animation**: Ensures visual feedback doesn't delay actual form submission  
+2. **Non-Blocking Progress Animation**: Ensures visual feedback doesn't delay actual form submission
 3. **Progress Override Capability**: Tests that `completeProgress()` can jump to 100% when backend finishes
 4. **No Critical Path Delays**: Monitors `setTimeout` calls to detect blocking delays in form submission
 5. **End-to-End Timing**: Validates button click to backend call happens under 100ms
@@ -1942,7 +1942,7 @@ window.setTimeout = function(callback, delay) {
 };
 
 // Verify no blocking delays in critical path
-const blockingDelays = setTimeoutCalls.filter(call => 
+const blockingDelays = setTimeoutCalls.filter(call =>
   call.delay > 100 && call.callback.includes('submit')
 );
 ```
@@ -2039,11 +2039,11 @@ def test_pydantic_validation_approach():
     import entities
     assert 'pydantic' in entities.__file__, f"Wrong module: {entities.__file__}"
     assert hasattr(entities.SceneManifest, '__pydantic_model__'), "Not using Pydantic\!"
-    
+
     # Test that validation REJECTS bad data
     with pytest.raises(ValidationError):
         entities.SceneManifest(scene_id="bad_format")
-    
+
     # Test that good data passes
     manifest = entities.SceneManifest(scene_id="scene_s1_t1_001", ...)
     assert manifest.scene_id == "scene_s1_t1_001"

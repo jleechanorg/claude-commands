@@ -3,10 +3,11 @@ import sys
 import unittest
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 from gemini_response import GeminiResponse
-from narrative_response_schema import NarrativeResponse
+from narrative_response_schema import NarrativeResponse, parse_structured_response
 
 import gemini_service
 
@@ -98,13 +99,12 @@ class TestJSONModePreference(unittest.TestCase):
     def test_strip_debug_content_preserves_json_state_updates(self):
         """Test that strip_debug_content doesn't interfere with JSON state updates"""
         # Import strip_debug_content
-        from gemini_response import GeminiResponse
 
         strip_debug_content = GeminiResponse._strip_debug_content
 
         # Text with debug content
         text_with_debug = """Story text here.
-        
+
 [DEBUG_START]
 Debug info
 [DEBUG_END]
@@ -122,7 +122,6 @@ More story."""
 
     def test_json_extraction_from_code_blocks(self):
         """Test JSON extraction from markdown code blocks"""
-        from narrative_response_schema import parse_structured_response
 
         # Test with json language identifier
         json_block = """Here's the response:

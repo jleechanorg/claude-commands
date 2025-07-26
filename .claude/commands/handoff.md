@@ -17,7 +17,7 @@ Creates a structured handoff for another worker with PR, scratchpad, and worker 
    - Files to modify
    - Testing requirements
 3. **Creates PR**: With detailed description and ready-to-implement status
-4. **Auto-Updates Roadmap**: Automatically uses `/r` command logic to add entry to `roadmap/roadmap.md` 
+4. **Auto-Updates Roadmap**: Automatically uses `/r` command logic to add entry to `roadmap/roadmap.md`
 5. **Generates Worker Prompt**: Copy-paste prompt for next worker
 6. **Creates Clean Branch**: `roadmap[timestamp]` for continued work
 
@@ -77,18 +77,20 @@ START: Read the handoff scratchpad for complete details
 ## Implementation Details
 
 ### Automatic Roadmap Update Process
-After creating the PR, the command automatically invokes `/r` logic:
+After creating the PR, the command automatically invokes `/r` logic with PR workflow:
 
 1. **Record current branch** for restoration
 2. **Switch to main branch**: `git checkout main`
-3. **Pull latest**: `git pull origin main` 
-4. **Add handoff entry** to `roadmap/roadmap.md` in "Active WIP Tasks" section:
+3. **Pull latest**: `git pull origin main`
+4. **Create clean roadmap branch**: `git checkout -b roadmap-handoff-[task_name]`
+5. **Add handoff entry** to `roadmap/roadmap.md` in "Active WIP Tasks" section:
    ```
    - **HANDOFF-[TASK_NAME]** 🟢 [description] - PR #[number] READY FOR HANDOFF
    ```
-5. **Commit changes**: `git commit -m "docs(roadmap): Add handoff task [task_name]"`
-6. **Push to main**: `git push origin main`
-7. **Switch back**: `git checkout [original-branch]`
+6. **Commit changes**: `git commit -m "docs(roadmap): Add handoff task [task_name]"`
+7. **Push branch**: `git push origin HEAD:roadmap-handoff-[task_name]`
+8. **Create roadmap PR**: `gh pr create --title "docs(roadmap): Add handoff task [task_name]" --body "Roadmap update for handoff task"`
+9. **Switch back**: `git checkout [original-branch]`
 
 ### Task Name Format
 - Convert to uppercase: `logging_fix` → `LOGGING_FIX`

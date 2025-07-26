@@ -6,7 +6,7 @@
 
 Claude Code hooks provide deterministic control at lifecycle points:
 - **PreToolUse**: Execute before tool calls
-- **PostToolUse**: Execute after tool calls  
+- **PostToolUse**: Execute after tool calls
 - **Notification**: Custom notification handling
 
 **Key Capabilities**:
@@ -31,7 +31,7 @@ Claude Code hooks provide deterministic control at lifecycle points:
   },
   "PostToolUse": {
     "match": "files were modified during review",
-    "command": "scripts/post-review-cleanup.sh", 
+    "command": "scripts/post-review-cleanup.sh",
     "description": "Format code, run tests, update PR status"
   }
 }
@@ -166,7 +166,7 @@ echo "New branch '$new_branch' setup complete"
       "enabled": true
     },
     {
-      "event": "PostToolUse", 
+      "event": "PostToolUse",
       "match": {
         "toolUsed": "Edit",
         "contextContains": "/review"
@@ -191,7 +191,7 @@ echo "New branch '$new_branch' setup complete"
         "toolUsed": "Bash",
         "commandContains": "git checkout -b"
       },
-      "command": "scripts/setup-new-branch.sh", 
+      "command": "scripts/setup-new-branch.sh",
       "workingDirectory": ".",
       "enabled": true
     }
@@ -206,7 +206,7 @@ echo "New branch '$new_branch' setup complete"
 - **Proper error handling** with exit codes
 - **Validation before execution** prevents bad states
 
-### Automation  
+### Automation
 - **Automatic PR detection** for /review
 - **Branch validation** for /integrate
 - **Post-action cleanup** (formatting, testing)
@@ -214,7 +214,7 @@ echo "New branch '$new_branch' setup complete"
 
 ### Developer Experience
 - **Seamless workflow** with no manual steps
-- **Consistent behavior** across team members  
+- **Consistent behavior** across team members
 - **Better error messages** and guidance
 - **Automatic environment management**
 
@@ -236,7 +236,7 @@ echo "New branch '$new_branch' setup complete"
 # Test PR detection
 ./scripts/auto-detect-pr.sh
 
-# Test integration validation  
+# Test integration validation
 ./scripts/validate-integration.sh
 
 # Test branch setup
@@ -252,7 +252,7 @@ echo "New branch '$new_branch' setup complete"
 # 4. Make changes during review
 # 5. Verify post-review cleanup
 
-# Test full /integrate workflow  
+# Test full /integrate workflow
 # 1. Create feature branch
 # 2. Run /integrate customname
 # 3. Verify validation and setup

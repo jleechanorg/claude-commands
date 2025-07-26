@@ -12,7 +12,7 @@ class EnhancedSearch {
       sortBy: 'lastPlayed',
       sortOrder: 'desc',
       theme: '',
-      status: ''
+      status: '',
     };
     this.isEnabled = false;
     this.searchDebounce = null;
@@ -70,8 +70,14 @@ class EnhancedSearch {
   setupSearchInterface() {
     const dashboardView = document.getElementById('dashboard-view');
     const campaignList = document.getElementById('campaign-list');
-    
-    if (!dashboardView || !campaignList || campaignList.previousElementSibling?.classList.contains('search-filter-container')) {
+
+    if (
+      !dashboardView ||
+      !campaignList ||
+      campaignList.previousElementSibling?.classList.contains(
+        'search-filter-container',
+      )
+    ) {
       return;
     }
 
@@ -93,12 +99,12 @@ class EnhancedSearch {
       <div class="search-filter-container">
         <div class="search-box">
           <i class="fas fa-search search-icon"></i>
-          <input type="text" 
-                 class="form-control" 
-                 id="campaign-search" 
+          <input type="text"
+                 class="form-control"
+                 id="campaign-search"
                  placeholder="Search campaigns...">
         </div>
-        
+
         <div class="filter-controls">
           <div class="filter-group">
             <label for="sort-by">Sort by:</label>
@@ -108,7 +114,7 @@ class EnhancedSearch {
               <option value="title">Title (A-Z)</option>
             </select>
           </div>
-          
+
           <div class="filter-group">
             <label for="sort-order">Order:</label>
             <select class="filter-select" id="sort-order">
@@ -116,7 +122,7 @@ class EnhancedSearch {
               <option value="asc">Oldest First</option>
             </select>
           </div>
-          
+
           <div class="filter-group">
             <label for="theme-filter">Theme:</label>
             <select class="filter-select" id="theme-filter">
@@ -127,7 +133,7 @@ class EnhancedSearch {
               <option value="horror">Horror</option>
             </select>
           </div>
-          
+
           <div class="filter-group">
             <label for="status-filter">Status:</label>
             <select class="filter-select" id="status-filter">
@@ -138,14 +144,14 @@ class EnhancedSearch {
             </select>
           </div>
 
-          
+
           <button type="button" class="btn btn-outline-secondary" id="clear-filters">
             <i class="fas fa-times me-1"></i>Clear
           </button>
         </div>
-        
+
         <div class="filter-tags" id="active-filters"></div>
-        
+
         <div class="search-stats mt-2">
           <small class="text-muted">
             Showing <span id="results-count">0</span> of <span id="total-count">0</span> campaigns
@@ -208,7 +214,7 @@ class EnhancedSearch {
   updateSortOrderLabel() {
     const sortOrder = document.getElementById('sort-order');
     const sortBy = this.currentFilters.sortBy;
-    
+
     if (sortOrder) {
       const options = sortOrder.querySelectorAll('option');
       if (sortBy === 'title') {
@@ -232,7 +238,7 @@ class EnhancedSearch {
 
     observer.observe(campaignList, {
       childList: true,
-      subtree: true
+      subtree: true,
     });
   }
 
@@ -241,16 +247,18 @@ class EnhancedSearch {
     if (!campaignList) return;
 
     // Extract campaign data from DOM
-    this.campaigns = Array.from(campaignList.children).map(item => {
+    this.campaigns = Array.from(campaignList.children).map((item) => {
       const titleElement = item.querySelector('h5, .campaign-title');
-      const lastPlayedElement = item.querySelector('.text-muted, .campaign-meta');
-      
+      const lastPlayedElement = item.querySelector(
+        '.text-muted, .campaign-meta',
+      );
+
       return {
         element: item,
         title: titleElement?.textContent || '',
         lastPlayed: this.parseDateFromElement(lastPlayedElement),
         created: this.extractCreatedDate(item),
-        searchText: this.buildSearchText(item)
+        searchText: this.buildSearchText(item),
       };
     });
 
@@ -259,13 +267,13 @@ class EnhancedSearch {
 
   parseDateFromElement(element) {
     if (!element) return new Date(0);
-    
+
     const text = element.textContent || '';
     const dateMatch = text.match(/Last played: (.+)/);
     if (dateMatch) {
       return new Date(dateMatch[1]);
     }
-    
+
     return new Date(0);
   }
 
@@ -275,7 +283,7 @@ class EnhancedSearch {
     if (created) {
       return new Date(created);
     }
-    
+
     // Fallback to current date if not available
     return new Date();
   }
@@ -283,18 +291,18 @@ class EnhancedSearch {
   buildSearchText(element) {
     // Build searchable text from all campaign content
     const texts = [];
-    
+
     // Title
     const title = element.querySelector('h5, .campaign-title');
     if (title) texts.push(title.textContent);
-    
+
     // Description or preview text
     const description = element.querySelector('.campaign-description, p');
     if (description) texts.push(description.textContent);
-    
+
     // Any other text content
     texts.push(element.textContent);
-    
+
     return texts.join(' ').toLowerCase();
   }
 
@@ -305,13 +313,15 @@ class EnhancedSearch {
     }
 
     // Apply search filter
-    this.filteredCampaigns = this.campaigns.filter(campaign => {
+    this.filteredCampaigns = this.campaigns.filter((campaign) => {
       // Search filter
-      if (this.currentFilters.search && 
-          !campaign.searchText.includes(this.currentFilters.search)) {
+      if (
+        this.currentFilters.search &&
+        !campaign.searchText.includes(this.currentFilters.search)
+      ) {
         return false;
       }
-      
+
       return true;
     });
 
@@ -326,7 +336,7 @@ class EnhancedSearch {
   sortCampaigns(campaigns) {
     campaigns.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (this.currentFilters.sortBy) {
         case 'title':
           comparison = a.title.localeCompare(b.title);
@@ -339,10 +349,12 @@ class EnhancedSearch {
           comparison = a.lastPlayed - b.lastPlayed;
           break;
       }
-      
-      return this.currentFilters.sortOrder === 'desc' ? -comparison : comparison;
+
+      return this.currentFilters.sortOrder === 'desc'
+        ? -comparison
+        : comparison;
     });
-    
+
     return campaigns;
   }
 
@@ -351,7 +363,7 @@ class EnhancedSearch {
     if (!campaignList) return;
 
     // Hide all campaigns first
-    this.campaigns.forEach(campaign => {
+    this.campaigns.forEach((campaign) => {
       campaign.element.style.display = 'none';
     });
 
@@ -359,7 +371,7 @@ class EnhancedSearch {
     this.filteredCampaigns.forEach((campaign, index) => {
       campaign.element.style.display = 'block';
       campaign.element.style.order = index;
-      
+
       // Add modern styling if in modern mode
       if (this.isEnabled) {
         campaign.element.classList.add('campaign-item');
@@ -373,7 +385,7 @@ class EnhancedSearch {
   showNoResultsMessage() {
     const campaignList = document.getElementById('campaign-list');
     let noResultsMessage = document.getElementById('no-results-message');
-    
+
     if (this.filteredCampaigns.length === 0) {
       if (!noResultsMessage) {
         noResultsMessage = document.createElement('div');
@@ -395,7 +407,7 @@ class EnhancedSearch {
   updateStats() {
     const resultsCount = document.getElementById('results-count');
     const totalCount = document.getElementById('total-count');
-    
+
     if (resultsCount) resultsCount.textContent = this.filteredCampaigns.length;
     if (totalCount) totalCount.textContent = this.campaigns.length;
   }
@@ -410,20 +422,24 @@ class EnhancedSearch {
     if (this.currentFilters.search) {
       tags.push({
         label: `Search: "${this.currentFilters.search}"`,
-        key: 'search'
+        key: 'search',
       });
     }
 
     // Render tags
-    activeFilters.innerHTML = tags.map(tag => `
+    activeFilters.innerHTML = tags
+      .map(
+        (tag) => `
       <span class="filter-tag">
         ${tag.label}
         <span class="remove-tag" data-filter-key="${tag.key}">×</span>
       </span>
-    `).join('');
+    `,
+      )
+      .join('');
 
     // Add click handlers for tag removal
-    activeFilters.querySelectorAll('.remove-tag').forEach(removeBtn => {
+    activeFilters.querySelectorAll('.remove-tag').forEach((removeBtn) => {
       removeBtn.addEventListener('click', (e) => {
         const filterKey = e.target.dataset.filterKey;
         this.removeFilter(filterKey);
@@ -439,7 +455,7 @@ class EnhancedSearch {
         if (searchInput) searchInput.value = '';
         break;
     }
-    
+
     this.applyFilters();
   }
 
@@ -449,7 +465,7 @@ class EnhancedSearch {
       sortBy: 'lastPlayed',
       sortOrder: 'desc',
       theme: '',
-      status: ''
+      status: '',
     };
 
     // Reset form controls
@@ -482,13 +498,15 @@ class EnhancedSearch {
   setFilter(filterType, value) {
     if (this.currentFilters.hasOwnProperty(filterType)) {
       this.currentFilters[filterType] = value;
-      
+
       // Update corresponding form control
-      const element = document.getElementById(filterType.replace(/([A-Z])/g, '-$1').toLowerCase());
+      const element = document.getElementById(
+        filterType.replace(/([A-Z])/g, '-$1').toLowerCase(),
+      );
       if (element) {
         element.value = value;
       }
-      
+
       this.applyFilters();
     }
   }
@@ -509,4 +527,4 @@ class EnhancedSearch {
 // Initialize enhanced search when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   window.enhancedSearch = new EnhancedSearch();
-}); 
+});

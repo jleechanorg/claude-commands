@@ -22,7 +22,7 @@ def test_choice_id_mobile_responsive():
 
         try:
             # Navigate to test page with planning blocks
-            page.goto("http://localhost:6006?test_mode=true&test_user_id=test-user-123")
+            page.goto("http://localhost:8081?test_mode=true&test_user_id=test-user-123")
             page.wait_for_load_state("networkidle")
 
             # Inject test CSS to ensure we have .choice-id elements
@@ -119,20 +119,20 @@ def test_choice_id_mobile_responsive():
             )
 
             # Assertions for responsive behavior
-            assert mobile_px < desktop_px, (
-                f"Mobile font-size ({mobile_px}px) should be smaller than desktop ({desktop_px}px)"
-            )
-            assert mobile_px <= 12, (
-                f"Mobile font-size ({mobile_px}px) should be small (≤12px for readability)"
-            )
-            assert mobile_px >= 8, (
-                f"Mobile font-size ({mobile_px}px) should be readable (≥8px)"
-            )
+            assert (
+                mobile_px < desktop_px
+            ), f"Mobile font-size ({mobile_px}px) should be smaller than desktop ({desktop_px}px)"
+            assert (
+                mobile_px <= 12
+            ), f"Mobile font-size ({mobile_px}px) should be small (≤12px for readability)"
+            assert (
+                mobile_px >= 8
+            ), f"Mobile font-size ({mobile_px}px) should be readable (≥8px)"
 
             # Tablet should be between mobile and desktop, or same as mobile
-            assert tablet_px <= desktop_px, (
-                f"Tablet font-size ({tablet_px}px) should not be larger than desktop ({desktop_px}px)"
-            )
+            assert (
+                tablet_px <= desktop_px
+            ), f"Tablet font-size ({tablet_px}px) should not be larger than desktop ({desktop_px}px)"
 
             print("✅ Mobile responsive font scaling works correctly")
             print(f"   Mobile (320px): {mobile_px}px")
@@ -155,7 +155,7 @@ def test_choice_button_mobile_layout():
         page = browser.new_page()
 
         try:
-            page.goto("http://localhost:6006?test_mode=true&test_user_id=test-user-123")
+            page.goto("http://localhost:8081?test_mode=true&test_user_id=test-user-123")
             page.wait_for_load_state("networkidle")
 
             # Load planning-blocks.css
@@ -167,16 +167,16 @@ def test_choice_button_mobile_layout():
                         margin-right: 0.25rem;
                         margin-bottom: 0.15rem;
                     }
-                    
+
                     .choice-id {
                         font-size: 0.7rem;
                     }
-                    
+
                     .planning-block-choices {
                         padding: 0.15rem;
                     }
                 }
-                
+
                 .choice-button {
                     display: block;
                     width: 100%;
@@ -188,7 +188,7 @@ def test_choice_button_mobile_layout():
                     border-radius: 3px;
                     cursor: pointer;
                 }
-                
+
                 .choice-id {
                     font-weight: bold;
                     color: #0d6efd;
@@ -237,12 +237,12 @@ def test_choice_button_mobile_layout():
             print(f"Mobile choice button margin-bottom: {mobile_margin_bottom}")
 
             # Verify mobile adaptations
-            assert "0.08rem" in mobile_padding or "1.28px" in mobile_padding, (
-                "Mobile padding should be reduced"
-            )
-            assert "0.7rem" in mobile_font_size or "11.2px" in mobile_font_size, (
-                "Mobile font should be 0.7rem"
-            )
+            assert (
+                "0.08rem" in mobile_padding or "1.28px" in mobile_padding
+            ), "Mobile padding should be reduced"
+            assert (
+                "0.7rem" in mobile_font_size or "11.2px" in mobile_font_size
+            ), "Mobile font should be 0.7rem"
 
             print("✅ Mobile choice button layout is properly optimized")
 

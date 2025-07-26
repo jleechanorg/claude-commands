@@ -31,13 +31,13 @@ is_running() {
 # Function to start the server
 start_server() {
     echo -e "${GREEN}🚀 Starting WorldArchitect.AI Test Server${NC}"
-    
+
     # Check if already running
     if is_running; then
         echo -e "${YELLOW}⚠️  Server is already running (PID: $(cat $PID_FILE))${NC}"
         return 1
     fi
-    
+
     # Find available port
     echo "🔍 Finding available port..."
     TEST_PORT=$(find_available_port)
@@ -46,10 +46,10 @@ start_server() {
         return 1
     fi
     echo "✅ Found available port: $TEST_PORT"
-    
+
     # Update log file name to include port
     LOG_FILE="/tmp/worldarchitectai_test_server_$TEST_PORT.log"
-    
+
     # Activate virtual environment
     if [ -f "$VENV_PATH" ]; then
         echo "🔧 Activating virtual environment..."
@@ -58,25 +58,25 @@ start_server() {
         echo -e "${RED}❌ Virtual environment not found at $VENV_PATH${NC}"
         exit 1
     fi
-    
+
     # Set environment variables
     export TESTING=true
     export PORT=$TEST_PORT
-    export USE_MOCKS=false  # Change to true for mock APIs
-    
+    export USE_MOCKS=false
+
     echo "📝 Environment variables set:"
     echo "   TESTING=$TESTING"
     echo "   PORT=$PORT ($TEST_PORT)"
     echo "   USE_MOCKS=$USE_MOCKS"
-    
+
     # Start the server in background
     echo "🏃 Starting server on port $TEST_PORT..."
     nohup python3 mvp_site/main.py serve > "$LOG_FILE" 2>&1 &
     SERVER_PID=$!
-    
+
     # Save PID and port info
     echo "$SERVER_PID:$TEST_PORT" > "$PID_FILE"
-    
+
     # Wait for server to be ready
     echo "⏳ Waiting for server to be ready..."
     for i in {1..30}; do
@@ -105,26 +105,26 @@ start_server() {
 # Function to stop the server
 stop_server() {
     echo -e "${YELLOW}🛑 Stopping WorldArchitect.AI Test Server${NC}"
-    
+
     if is_running; then
         PID_PORT=$(cat "$PID_FILE")
         PID=$(echo "$PID_PORT" | cut -d: -f1)
         echo "   Killing process $PID..."
         kill $PID 2>/dev/null || true
         sleep 2
-        
+
         # Force kill if still running
         if ps -p "$PID" > /dev/null 2>&1; then
             echo "   Force killing process $PID..."
             kill -9 $PID 2>/dev/null || true
         fi
-        
+
         rm -f "$PID_FILE"
         echo -e "${GREEN}✅ Server stopped${NC}"
     else
         echo "⚠️  Server is not running"
     fi
-    
+
     # Also clean up any processes on ports 8081-8090 range
     for port in $(seq $BASE_PORT $((BASE_PORT + MAX_PORTS - 1))); do
         lsof -ti:$port | xargs kill -9 2>/dev/null || true
@@ -138,13 +138,13 @@ check_status() {
         PID=$(echo "$PID_PORT" | cut -d: -f1)
         STORED_PORT=$(echo "$PID_PORT" | cut -d: -f2)
         LOG_FILE="/tmp/worldarchitectai_test_server_$STORED_PORT.log"
-        
+
         echo -e "${GREEN}✅ Server is running${NC}"
         echo "   PID: $PID"
         echo "   Port: $STORED_PORT"
         echo "   URL: http://localhost:$STORED_PORT"
         echo "   Log: $LOG_FILE"
-        
+
         # Show recent log entries
         echo ""
         echo "📋 Recent log entries:"

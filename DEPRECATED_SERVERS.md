@@ -1,6 +1,6 @@
 # Deprecated Server Scripts
 
-**Created**: 2025-07-15  
+**Created**: 2025-07-15
 **Status**: These scripts are deprecated in favor of the unified test server management system.
 
 ## Deprecated Scripts
@@ -10,7 +10,7 @@
 - **Issues**: Single server only, no branch isolation, port conflicts
 - **Migration**: Use `/testserver start` instead
 
-### 2. `run_local_server.sh` 
+### 2. `run_local_server.sh`
 - **Replaced by**: `test_server_manager.sh` with port 5005 allocation
 - **Issues**: Hardcoded port 5005, no multi-branch support
 - **Migration**: Use `/testserver start` (auto-allocates ports)
@@ -48,7 +48,7 @@
 ### Features
 
 - `/testserver start [branch]` - Start server for branch
-- `/testserver stop [branch]` - Stop server for branch  
+- `/testserver stop [branch]` - Stop server for branch
 - `/testserver list` - Show all running servers
 - `/testserver status` - Show current branch status
 - `/testserver cleanup` - Stop all servers

@@ -11,7 +11,7 @@ Browser tests cannot set custom HTTP headers like API tests can. Instead, WorldA
 ### 1. Server Setup
 Start the server with testing mode enabled:
 ```bash
-TESTING=true PORT=6006 python main.py serve
+TESTING=true PORT=8081 python main.py serve
 ```
 
 The `TESTING=true` environment variable enables the test bypass in the backend.
@@ -19,7 +19,7 @@ The `TESTING=true` environment variable enables the test bypass in the backend.
 ### 2. Browser Navigation
 Navigate to the app with test mode parameters:
 ```
-http://localhost:6006?test_mode=true&test_user_id=test-user-123
+http://localhost:8081?test_mode=true&test_user_id=test-user-123
 ```
 
 Parameters:
@@ -60,16 +60,16 @@ from playwright.sync_api import sync_playwright
 with sync_playwright() as p:
     browser = p.chromium.launch()
     page = browser.new_page()
-    
+
     # Navigate with test mode
-    page.goto("http://localhost:6006?test_mode=true&test_user_id=test-123")
-    
+    page.goto("http://localhost:8081?test_mode=true&test_user_id=test-123")
+
     # Wait for test mode to initialize
     page.wait_for_function("window.testAuthBypass !== undefined")
-    
+
     # Should be on dashboard, not sign-in page
     page.wait_for_selector("#dashboard")
-    
+
     # All API calls will now work without authentication
 ```
 
@@ -114,7 +114,7 @@ helper.debug_element_state("#campaign-title", "Campaign Title Field")
 
 The helper navigates through all 5 steps:
 1. **Basics** - Campaign title and settings
-2. **AI Style** - AI behavior preferences  
+2. **AI Style** - AI behavior preferences
 3. **Options** - Game options
 4. **Launch** - Begin adventure button
 5. **Campaign View** - Wait for game to load

@@ -6,8 +6,10 @@ Shows how to use capture mode to record API calls and analyze the data.
 
 import json
 import os
+import shutil
 import sys
 import tempfile
+import traceback
 
 # Add project root to path
 project_root = os.path.dirname(
@@ -246,7 +248,6 @@ def demo_mock_capture():
         print(f"     Differences found: {len(diff['differences'])}")
 
     # Clean up
-    import shutil
 
     shutil.rmtree(temp_dir)
     print("\n7. Cleaned up temporary files")
@@ -323,7 +324,6 @@ def main():
 
     except Exception as e:
         print(f"\nDemo failed: {e}")
-        import traceback
 
         traceback.print_exc()
 

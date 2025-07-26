@@ -20,7 +20,7 @@ def test_something(service_provider):
     firestore = service_provider.get_firestore()
     # Works with mock or real services
 
-# unittest style  
+# unittest style
 class TestMyFeature(BaseTestCase):
     def test_something(self):
         result = self.firestore.get_document('test/doc')
@@ -127,7 +127,7 @@ TestServiceProvider (ABC)
 # Automatic mode selection
 provider = get_service_provider()  # Uses TEST_MODE env var
 
-# Explicit mode selection  
+# Explicit mode selection
 provider = get_service_provider('mock')
 provider = get_service_provider('real')
 provider = get_service_provider('capture')
@@ -256,7 +256,7 @@ def test_adaptive_behavior(self):
 ## Success Criteria Met ✅
 
 - [x] Existing tests unchanged in mock mode
-- [x] Critical tests support real mode  
+- [x] Critical tests support real mode
 - [x] Proper cleanup prevents cost overruns
 - [x] Zero breaking changes to existing codebase
 - [x] Clear migration path for future updates

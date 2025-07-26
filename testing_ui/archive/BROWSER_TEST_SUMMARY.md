@@ -46,7 +46,7 @@ Created comprehensive browser tests for WorldArchitect.AI that demonstrate real 
    - No authentication configured (401 errors)
    - Limited API endpoints (405 errors)
    - Static files work perfectly
-   
+
 3. **Real Server Proof**:
    - Server: Werkzeug/3.1.3 Python/3.12.3
    - Response times: ~1ms (local server)

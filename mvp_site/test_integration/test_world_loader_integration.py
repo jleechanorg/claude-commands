@@ -3,6 +3,7 @@
 Integration tests for world_loader.py using the actual implementation.
 """
 
+import importlib
 import os
 import shutil
 import sys
@@ -70,7 +71,6 @@ class TestWorldLoaderIntegration(unittest.TestCase):
         mock_exists.side_effect = exists_side_effect
 
         # Reload the module to trigger path detection with mock
-        import importlib
 
         importlib.reload(world_loader)
 

@@ -5,6 +5,8 @@ import os
 import sys
 import unittest
 
+from pydantic import ValidationError
+
 # Add the mvp_site directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -24,7 +26,6 @@ class TestPydanticValidation(unittest.TestCase):
 
     def test_entity_id_validation(self):
         """Test entity ID validation in Pydantic models"""
-        from pydantic import ValidationError
 
         # Valid entity IDs should work
         location = Location(entity_id="loc_tavern_001", display_name="The Tavern")
@@ -122,7 +123,6 @@ class TestHealthStatus(unittest.TestCase):
 
     def test_health_status_hp_validation(self):
         """Test HP validation - should reject hp > hp_max"""
-        from pydantic import ValidationError
 
         # Pydantic should reject hp > hp_max rather than clamping
         with self.assertRaises(ValidationError) as context:

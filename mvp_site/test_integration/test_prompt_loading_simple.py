@@ -9,6 +9,8 @@ import sys
 import unittest
 from unittest.mock import MagicMock, call, patch
 
+import gemini_service
+
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -92,7 +94,6 @@ class TestPromptLoadingLogic(unittest.TestCase):
     def test_prompt_loading_order_get_initial_story(self, mock_load):
         """Test the exact loading order in get_initial_story."""
         # Import here after mocks are set up
-        import gemini_service
 
         mock_load.return_value = "content"
 
@@ -162,7 +163,6 @@ class TestPromptLoadingLogic(unittest.TestCase):
     def test_prompt_loading_order_continue_story(self, mock_load):
         """Test the exact loading order in continue_story."""
         # Import here after mocks are set up
-        import gemini_service
 
         mock_load.return_value = "content"
 

@@ -39,7 +39,7 @@ Game state data contains HP value as string 'unknown' instead of numeric value, 
 
 ## Test Plan ✅ COMPLETED
 - ✅ Test HP='unknown' scenario
-- ✅ Test HP=None scenario  
+- ✅ Test HP=None scenario
 - ✅ Test HP=0, negative values
 - ✅ Test HP > max_hp scenarios
 - ✅ Integration test with actual campaign data
@@ -55,20 +55,20 @@ Game state data contains HP value as string 'unknown' instead of numeric value, 
 - **Comprehensive coverage** of all numeric entity fields
 
 ## Programming Principles Applied
-**Single Responsibility Principle (SRP)**: 
+**Single Responsibility Principle (SRP)**:
 - Separated conversion logic from field knowledge
 - NumericFieldConverter now only converts, doesn't define which fields are numeric
 - Entity classes define their own numeric field requirements
 
-**Open/Closed Principle**: 
+**Open/Closed Principle**:
 - Converter is open for extension, closed for modification
 - New numeric fields don't require changing the converter class
 
-**Separation of Concerns**: 
+**Separation of Concerns**:
 - Domain knowledge (which fields are numeric) stays in domain classes
 - Utility functions (conversion) stay in utility classes
 
-**Defensive Programming**: 
+**Defensive Programming**:
 - All numeric conversions handle invalid input gracefully
 - No crashes on malformed data from external sources
 

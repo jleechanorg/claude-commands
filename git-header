@@ -1,20 +1,19 @@
 #!/bin/bash
-# Global git header command wrapper
-# Works from any directory within a git repository
+# Universal git header command wrapper
+# Uses hardcoded project root for reliability
 
-# Find git root
-git_root=$(git rev-parse --show-toplevel 2>/dev/null)
-if [ $? -ne 0 ]; then
-    echo "[Not in a git repository]"
+# Use hardcoded project root for reliability
+project_root="$HOME/projects/worldarchitect.ai"
+if [ ! -d "$project_root" ]; then
+    echo "[ERROR] Project root directory not found: $project_root"
     exit 1
 fi
 
-# Find and execute the git-header.sh script
-if [ -f "$git_root/claude_command_scripts/git-header.sh" ]; then
-    exec "$git_root/claude_command_scripts/git-header.sh" "$@"
-elif [ -f "$git_root/worktree_roadmap/claude_command_scripts/git-header.sh" ]; then
-    exec "$git_root/worktree_roadmap/claude_command_scripts/git-header.sh" "$@"
+# Find and execute the git-header.sh script relative to project root
+header_script="$project_root/claude_command_scripts/git-header.sh"
+if [ -f "$header_script" ]; then
+    exec "$header_script" "$@"
 else
-    echo "[git-header.sh not found in repository]"
+    echo "[ERROR] git-header.sh not found at: $header_script"
     exit 1
 fi

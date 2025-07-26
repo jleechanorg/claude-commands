@@ -1,14 +1,14 @@
 # UI Structured Fields Display Fix Summary
 
-**Date**: 2025-07-08  
-**Issue**: Planning blocks and other structured fields were not showing in the UI  
+**Date**: 2025-07-08
+**Issue**: Planning blocks and other structured fields were not showing in the UI
 **Status**: FIXED ✅
 
 ## Problem
 
 The backend API was correctly sending structured response fields:
 - `session_header` - Character stats and location
-- `planning_block` - "What would you like to do?" with action options  
+- `planning_block` - "What would you like to do?" with action options
 - `dice_rolls` - Dice roll results
 - `resources` - Resource tracking
 

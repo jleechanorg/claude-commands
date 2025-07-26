@@ -3,6 +3,17 @@
 line-length = 88
 target-version = "py311"
 
+# Exclude common non-source directories
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "*.egg-info",
+]
+
 [tool.ruff.lint]
 # Enable comprehensive rule set
 select = [
@@ -20,6 +31,7 @@ select = [
     "RET",  # flake8-return
     "SIM",  # flake8-simplify
     "TID",  # flake8-tidy-imports
+    "ICN",  # flake8-import-conventions
     "ARG",  # flake8-unused-arguments
     "DTZ",  # flake8-datetimez
     "ERA",  # eradicate (commented-out code)
@@ -44,16 +56,13 @@ ignore = [
 fixable = ["ALL"]
 unfixable = []
 
-# Exclude common non-source directories
-exclude = [
-    ".git",
-    ".venv",
-    "venv",
-    "__pycache__",
-    "build",
-    "dist",
-    "*.egg-info",
-]
+# Custom rules for import enforcement
+[tool.ruff.lint.flake8-tidy-imports]
+# Ban try/except around imports
+ban-relative-imports = "parents"  # Only allow relative imports within same package
+
+[tool.ruff.lint.flake8-import-conventions]
+# Enforce import conventions
 
 [tool.ruff.lint.per-file-ignores]
 # Test files can have additional flexibility

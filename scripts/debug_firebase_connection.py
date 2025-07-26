@@ -8,6 +8,8 @@ import os
 import firebase_admin
 from firebase_admin import credentials, firestore
 
+import traceback
+
 
 def initialize_firebase():
     """Initialize Firebase with service account key."""
@@ -94,7 +96,7 @@ def main():
 
     except Exception as e:
         print(f"❌ Error: {e}")
-        import traceback
+
 
         traceback.print_exc()
 

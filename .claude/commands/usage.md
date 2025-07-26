@@ -16,7 +16,7 @@ Shows current Claude API usage including:
 - Git branch and PR status for context
 
 ## Implementation
-**Single Command**: `./claude_command_scripts/git-header.sh --with-api`
+**Single Command**: `~/projects/worldarchitect.ai/claude_command_scripts/git-header.sh --with-api`
 
 This provides the same output as `/header` - combining both git status and API usage in one convenient command.
 
@@ -29,7 +29,7 @@ This provides the same output as `/header` - combining both git status and API u
 ## Alerts
 - 🟢 **Above 75%**: Silent operation
 - 🟡 **50-75%**: Balloon notification on Windows
-- 🔴 **25-50%**: Warning balloon notification  
+- 🔴 **25-50%**: Warning balloon notification
 - ⚠️ **Below 25%**: Critical popup alert
 
-Use `./claude_command_scripts/git-header.sh --monitor` for proactive monitoring with alerts.
+Use `~/projects/worldarchitect.ai/claude_command_scripts/git-header.sh --monitor` for proactive monitoring with alerts.

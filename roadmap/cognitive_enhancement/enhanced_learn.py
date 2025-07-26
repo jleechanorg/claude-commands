@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+
+from datetime import datetime, timedelta
+
 """
 Enhanced Learning System for Cognitive Enhancement Framework
 ============================================================
@@ -255,7 +258,7 @@ class EnhancedLearner:
 
     def get_recent_patterns(self, days: int = 7) -> list[LearningPattern]:
         """Get patterns learned in the last N days."""
-        from datetime import datetime, timedelta
+
 
         cutoff = datetime.now() - timedelta(days=days)
 

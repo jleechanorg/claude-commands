@@ -22,8 +22,8 @@ def test_thornwood_split_party():
     print("\n🧪 Test 1: Thornwood Split Party Scenario")
 
     narrative = """
-    The wizard and cleric waited anxiously in the tavern, discussing their 
-    next move. The barkeep brought them another round of ale as they pored 
+    The wizard and cleric waited anxiously in the tavern, discussing their
+    next move. The barkeep brought them another round of ale as they pored
     over the city maps.
     """
 
@@ -50,9 +50,9 @@ def test_sariel_ambiguous_presence():
     print("\n🧪 Test 2: Sariel Ambiguous Presence")
 
     narrative = """
-    Cassian's voice was tight and strained. "Uncle Titus is leading a 
-    punitive campaign against Mordan's entire clan. We will burn them 
-    from the history books."
+    Cassian's voice was tight and strained. "Uncle Titus is leading a
+    punitive campaign against Mordan's entire clan. We will burn them
+
     """
 
     expected_entities = ["Cassian", "Titus"]
@@ -79,7 +79,7 @@ def test_physical_state_continuity():
     print("\n🧪 Test 3: Physical State Continuity")
 
     narrative = """
-    Sariel entered the chamber, her mourning robes trailing behind her. 
+    Sariel entered the chamber, her mourning robes trailing behind her.
     The old magister noticed her arrival and gestured to a chair.
     """
 
@@ -118,9 +118,9 @@ def test_perfect_entity_tracking():
     print("\n🧪 Test 4: Perfect Entity Tracking")
 
     narrative = """
-    Sariel clung to Cressida, burying her face in the soft silk of her 
-    shoulder. Cressida's hand stroked her hair gently, providing the 
-    first true comfort since Mother's death. "I don't blame you," 
+    Sariel clung to Cressida, burying her face in the soft silk of her
+    shoulder. Cressida's hand stroked her hair gently, providing the
+    first true comfort since Mother's death. "I don't blame you,"
     Cressida said firmly.
     """
 
@@ -148,7 +148,7 @@ def test_scene_transitions():
     print("\n🧪 Test 5: Scene Transition Detection")
 
     narrative = """
-    Leaving the chamber behind, Sariel moved to the archives. She 
+    Leaving the chamber behind, Sariel moved to the archives. She
     arrived at the dusty repository of ancient knowledge.
     """
 

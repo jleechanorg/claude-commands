@@ -65,25 +65,79 @@
 - Failure/success pattern tracking for auto-triggers
 - Integration with other slash commands (/integrate, merge detection)
 
-**Memory MCP Entity Schema**:
-- **Entity Types**: 
-  - `learning` - General learnings and corrections
-  - `pattern` - Recurring patterns (🚨 Critical, ⚠️ Mandatory)
-  - `lesson` - Specific technical lessons (✅ Best Practices)
-  - `context` - Project/domain context (❌ Anti-patterns, tool availability)
-- **Observations**: Learning content, classification, category, context, evidence
-- **Relations**: `relates_to`, `caused_by`, `prevents`, `applies_to`
-- **Duplicate Detection**: Search existing entities before creating new ones
-- **Error Handling**: Graceful fallback when Memory MCP unavailable
+**Enhanced Memory MCP Entity Schema**:
 
-**Memory MCP Implementation Steps**:
-1. **Parse Learning Content**: Extract key terms and concepts from learning
-2. **Search Existing Graph**: Use `mcp__memory-server__search_nodes` with key terms
-3. **Entity Decision Logic**:
-   - If similar entity found: Use `mcp__memory-server__add_observations` to extend
-   - If no similar entity: Use `mcp__memory-server__create_entities` to create new
-4. **Relation Building**: Use `mcp__memory-server__create_relations` to connect related concepts
-5. **Validation**: Confirm successful integration and report results
+**High-Quality Entity Types**:
+- `technical_learning` - Specific technical solutions with code/errors
+- `implementation_pattern` - Successful code patterns with reusable details
+- `debug_session` - Complete debugging journeys with root causes
+- `fix_implementation` - Documented fixes with validation steps
+- `workflow_insight` - Process improvements with measurable outcomes
+- `architecture_decision` - Design choices with rationale and trade-offs
+- `user_preference_pattern` - User interaction patterns with optimization
+
+**Enhanced Observations Format**:
+- **Context**: Specific situation with timestamp and circumstances
+- **Technical Detail**: Exact errors, code snippets, file locations (file:line)
+- **Solution Applied**: Specific steps taken with measurable results
+- **References**: PR links, commits, files, documentation URLs
+- **Reusable Pattern**: How learning applies to other contexts
+- **Verification**: How solution was confirmed (test results, metrics)
+- **Related Issues**: Connected problems this addresses
+
+**Quality Requirements**:
+- ✅ Specific file paths with line numbers (mvp_site/auth.py:45)
+- ✅ Exact error messages or code snippets
+- ✅ Actionable implementation steps
+- ✅ References to PRs, commits, or external resources
+- ✅ Measurable outcomes (test counts, performance metrics)
+- ✅ Canonical entity names for disambiguation
+
+**Enhanced Relations**: `fixes`, `implemented_in`, `tested_by`, `caused_by`, `prevents`, `optimizes`, `supersedes`, `requires`
+
+**Enhanced Memory MCP Implementation Steps**:
+
+1. **Enhanced Search & Context**:
+   - Extract specific technical terms (file names, error messages, PR numbers)
+   - Search: `mcp__memory-server__search_nodes(technical_terms)`
+   - Log: "🔍 Memory searched: X relevant memories found"
+   - Integrate found context naturally into response
+
+2. **Quality-Enhanced Entity Creation**:
+   - Use high-quality entity patterns with specific technical details
+   - Include canonical naming: `{system}_{issue}_{timestamp}` format
+   - Ensure actionable observations with file:line references
+   - Add measurable outcomes and verification steps
+
+3. **Structured Observation Capture**:
+   ```json
+   {
+     "name": "{canonical_identifier}",
+     "entityType": "{technical_learning|implementation_pattern|debug_session}",
+     "observations": [
+       "Context: {specific situation with timestamp}",
+       "Technical Detail: {exact error/solution/code with file:line}",
+       "Solution Applied: {specific steps taken}",
+       "Verification: {test results, metrics, confirmation}",
+       "References: {PR URLs, commits, files}",
+       "Reusable Pattern: {how to apply elsewhere}"
+     ]
+   }
+   ```
+
+4. **Enhanced Relation Building**:
+   - Link fixes to original problems: `{fix} fixes {problem}`
+   - Connect implementations to locations: `{solution} implemented_in {file}`
+   - Associate patterns with users: `{pattern} preferred_by {user}`
+   - Build implementation genealogies: `{new_pattern} supersedes {old_pattern}`
+
+5. **Quality Validation**:
+   - ✅ Contains specific technical details (error messages, file paths)
+   - ✅ Includes actionable information (reproduction steps, fixes)
+   - ✅ References external artifacts (PRs, commits, documentation)
+   - ✅ Uses canonical entity names
+   - ✅ Provides measurable outcomes
+   - ✅ Links to related memories explicitly
 
 **Integration Function Calls**:
 ```
@@ -97,17 +151,21 @@ except Exception as e:
     log_error("Memory MCP search failed: " + str(e))
     fallback_to_local_only_mode()
 
-# Create new entity if needed (with error handling)
+# Create enhanced entity with high-quality patterns (with error handling)
 try:
     mcp__memory-server__create_entities([{
-      "name": "[descriptive-learning-name]",
-      "entityType": "[learning|pattern|lesson|context]",
+      "name": "{system}_{issue_type}_{timestamp}",  # Canonical naming
+      "entityType": "{technical_learning|implementation_pattern|debug_session|workflow_insight}",  # Select appropriate type
       "observations": [
-        "Classification: [🚨|⚠️|✅|❌]",
-        "Category: [Commands|Testing|Tools|Misconceptions|Patterns]",
-        "Content: [actual learning content]",
-        "Context: [what triggered this learning]",
-        "Evidence: [examples or error messages]"
+        "Context: {specific situation with timestamp and circumstances}",
+        "Technical Detail: {exact error message or code with file:line}",
+        "Root Cause: {identified cause with evidence}",
+        "Solution Applied: {specific implementation steps taken}",
+        "Code Changes: {file paths and line numbers modified}",
+        "Verification: {test results, performance metrics, confirmation}",
+        "References: {PR URLs, commit hashes, related documentation}",
+        "Reusable Pattern: {how this solution applies to other contexts}",
+        "Classification: [🚨|⚠️|✅|❌] {reason for classification}"
       ]
     }])
 except Exception as e:

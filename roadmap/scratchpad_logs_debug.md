@@ -1,7 +1,7 @@
 # Scratchpad: Logging Debug Analysis
 
-**Branch**: logs_debug  
-**Goal**: Document root cause analysis of missing logs in /tmp/worldarchitectai_logs/  
+**Branch**: logs_debug
+**Goal**: Document root cause analysis of missing logs in /tmp/worldarchitectai_logs/
 **Status**: Analysis complete, ready for implementation handoff
 
 ## Problem Statement
@@ -12,17 +12,17 @@ Logs documented in CLAUDE.md as being in `/tmp/worldarchitectai_logs/[branch-nam
 
 ### Current Logging Architecture
 
-1. **`mvp_site/logging_util.py`**: 
+1. **`mvp_site/logging_util.py`**:
    - Pure wrapper around Python's standard logging
    - No file handlers configured
    - Only provides console output with emoji enhancements
 
-2. **`prototype/logging_config.py`**: 
+2. **`prototype/logging_config.py`**:
    - Has proper file logging setup with FileHandler
    - Creates timestamped logs in `prototype/logs/`
    - NOT used by main application
 
-3. **`test_server_manager.sh`**: 
+3. **`test_server_manager.sh`**:
    - Creates logs in `/tmp/worldarchitectai_logs/` via stdout/stderr redirection
    - Line 101: `nohup python3 mvp_site/main.py serve > "$BRANCH_LOG_FILE" 2>&1 &`
    - Only works when app runs through test server manager
@@ -57,21 +57,21 @@ def setup_file_logging():
     """Configure file logging for current git branch."""
     import os
     import subprocess
-    
+
     # Create log directory
     log_dir = "/tmp/worldarchitectai_logs"
     os.makedirs(log_dir, exist_ok=True)
-    
+
     # Get current branch name
     try:
         branch = subprocess.check_output(
-            ["git", "branch", "--show-current"], 
+            ["git", "branch", "--show-current"],
             cwd=os.path.dirname(__file__),
             text=True
         ).strip()
     except:
         branch = "unknown"
-    
+
     # Configure file logging
     log_file = os.path.join(log_dir, f"{branch}.log")
     logging_util.basicConfig(
@@ -82,7 +82,7 @@ def setup_file_logging():
             logging_util.FileHandler(log_file)  # File
         ]
     )
-    
+
     logging_util.info(f"File logging configured: {log_file}")
 ```
 

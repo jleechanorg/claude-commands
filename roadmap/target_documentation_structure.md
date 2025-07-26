@@ -187,7 +187,7 @@ All operating protocols are in `.cursor/rules/rules.mdc`.
 ### In rules.mdc:
 ```markdown
 ## Project Overview
-WorldArchitect.AI is an AI-powered tabletop RPG platform. 
+WorldArchitect.AI is an AI-powered tabletop RPG platform.
 See `.cursor/rules/project_overview.md` for full details.
 
 ## Planning Approaches

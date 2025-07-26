@@ -10,6 +10,7 @@ import unittest
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from dual_pass_generator import DualPassGenerator
 from entity_tracking import create_from_game_state, get_validation_info
 from entity_validator import EntityValidator
 from narrative_sync_validator import NarrativeSyncValidator
@@ -402,7 +403,6 @@ class TestEntityTracking(unittest.TestCase):
 
     def test_dual_pass_generator_integration(self):
         """Test DualPassGenerator uses EntityValidator properly"""
-        from dual_pass_generator import DualPassGenerator
 
         dual_pass = DualPassGenerator()
 

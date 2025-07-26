@@ -79,16 +79,21 @@ CAMPAIGN_TEST_DATA = {
     },
 }
 
-# Common test configuration
+# Import centralized configuration
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from testing_util import TestConfig, TestType, get_browser_base_url, get_http_base_url
+
+# Common test configuration (now using centralized config)
 TEST_CONFIG = {
-    "browser_base_url": "http://localhost:6006",
-    "http_base_url": "http://localhost:8086",
-    "structured_fields_port": "6006",
-    "wizard_bug_port": "8088",
-    "timeout_ms": 15000,
+    "browser_base_url": get_browser_base_url(),
+    "http_base_url": get_http_base_url(),
+    "structured_fields_port": str(TestConfig.get_server_config(TestType.BROWSER).base_port),
+    "wizard_bug_port": str(TestConfig.get_server_config(TestType.INTEGRATION).base_port),
+    "timeout_ms": TestConfig.DEFAULT_TIMEOUT_MS,
     "retry_count": 10,
     "wait_between_retries": 1000,
-    "screenshot_dir": "/tmp/worldarchitectai/browser",
+    "screenshot_dir": TestConfig.SCREENSHOT_DIR,
     "server_start_timeout": 30,
 }
 
@@ -232,23 +237,27 @@ TEST_SCENARIOS = {
 }
 
 
-# Server management utilities
-def setup_test_environment(use_real_api=False, port="6006"):
-    """Set up environment variables for testing"""
+# Server management utilities (now using centralized server manager)
+from testing_util import TestMode, setup_test_environment as setup_centralized_env
+
+def setup_test_environment(use_real_api=False, port=None):
+    """Set up environment variables for testing (backward compatibility wrapper)"""
+    if port is None:
+        port = str(TestConfig.get_server_config(TestType.BROWSER).base_port)
+
     os.environ["TESTING"] = "true"
-    os.environ["PORT"] = port
+    os.environ["PORT"] = str(port)
+
+    test_mode = TestMode.REAL if use_real_api else TestMode.MOCK
+    setup_centralized_env(test_mode)
 
     if use_real_api:
-        os.environ.pop("USE_MOCK_FIREBASE", None)
-        os.environ.pop("USE_MOCK_GEMINI", None)
         print("⚠️  USING REAL APIs - This will cost money!")
     else:
-        os.environ["USE_MOCK_FIREBASE"] = "true"
-        os.environ["USE_MOCK_GEMINI"] = "true"
         print("✓ Using mock APIs")
 
 
-def start_test_server(port="6006") -> subprocess.Popen | None:
+def start_test_server(port=None) -> subprocess.Popen | None:
     """Start the test server and wait for it to be ready"""
     print(f"🚀 Starting test server on port {port}...")
 

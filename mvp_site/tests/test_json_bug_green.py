@@ -6,6 +6,7 @@ It verifies that narrative_text no longer contains raw JSON.
 
 import os
 import sys
+import traceback
 
 mvp_site_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, mvp_site_path)
@@ -32,9 +33,9 @@ def test_json_bug_fixed():
     response_text = gemini_response.narrative_text
     print(f"  Result starts with '{{': {response_text.strip().startswith('{')}")
     print(f"  Result: {response_text[:50]}...")
-    assert not response_text.strip().startswith("{"), (
-        "Well-formed JSON should extract narrative"
-    )
+    assert not response_text.strip().startswith(
+        "{"
+    ), "Well-formed JSON should extract narrative"
 
     # Test case 2: Malformed JSON (the bug case)
     print("\nTest 2: Malformed JSON without proper structure")
@@ -65,9 +66,9 @@ def test_json_bug_fixed():
     gemini_response = GeminiResponse.create(json_with_narrative)
     response_text = gemini_response.narrative_text
     print(f"  Result: {response_text}")
-    assert response_text == "The story text that should be extracted", (
-        "Should extract narrative field"
-    )
+    assert (
+        response_text == "The story text that should be extracted"
+    ), "Should extract narrative field"
     print("  ✅ Narrative correctly extracted")
 
     return True
@@ -93,9 +94,9 @@ def test_full_flow():
         f"  narrative_text starts with '{{': {gemini_response.narrative_text.strip().startswith('{')}"
     )
 
-    assert not gemini_response.narrative_text.strip().startswith("{"), (
-        "GeminiResponse.narrative_text should not contain JSON"
-    )
+    assert not gemini_response.narrative_text.strip().startswith(
+        "{"
+    ), "GeminiResponse.narrative_text should not contain JSON"
 
     print("  ✅ Full flow works correctly - no JSON in narrative_text")
 
@@ -123,7 +124,6 @@ if __name__ == "__main__":
 
     except Exception as e:
         print(f"\n❌ Test error: {e}")
-        import traceback
 
         traceback.print_exc()
         sys.exit(1)

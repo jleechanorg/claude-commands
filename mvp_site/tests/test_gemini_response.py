@@ -14,9 +14,15 @@ import unittest
 from unittest.mock import Mock, patch
 
 # Add the parent directory to the Python path so we can import modules
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
+from gemini_response import GeminiResponse
 from narrative_response_schema import NarrativeResponse
+
+from game_state import GameState
+from gemini_service import continue_story, get_initial_story
 
 
 class TestGeminiResponse(unittest.TestCase):
@@ -44,7 +50,6 @@ class TestGeminiResponse(unittest.TestCase):
 
     def test_gemini_response_creation(self):
         """Test creating a GeminiResponse object."""
-        from gemini_response import GeminiResponse
 
         response = GeminiResponse.create(self.sample_raw_response)
 
@@ -60,7 +65,6 @@ class TestGeminiResponse(unittest.TestCase):
 
     def test_debug_tags_detection_with_content(self):
         """Test debug tags are properly detected when content exists."""
-        from gemini_response import GeminiResponse
 
         response = GeminiResponse.create(self.sample_raw_response)
 
@@ -73,7 +77,6 @@ class TestGeminiResponse(unittest.TestCase):
 
     def test_debug_tags_detection_no_content(self):
         """Test debug tags detection when no debug content exists."""
-        from gemini_response import GeminiResponse
 
         # Create raw response without debug content
         clean_raw_response = json.dumps(
@@ -101,7 +104,6 @@ class TestGeminiResponse(unittest.TestCase):
 
     def test_state_updates_property(self):
         """Test state_updates property returns correct data."""
-        from gemini_response import GeminiResponse
 
         response = GeminiResponse.create(self.sample_raw_response)
 
@@ -112,7 +114,6 @@ class TestGeminiResponse(unittest.TestCase):
 
     def test_entities_mentioned_property(self):
         """Test entities_mentioned property returns correct data."""
-        from gemini_response import GeminiResponse
 
         response = GeminiResponse.create(self.sample_raw_response)
 
@@ -121,7 +122,6 @@ class TestGeminiResponse(unittest.TestCase):
 
     def test_location_confirmed_property(self):
         """Test location_confirmed property returns correct data."""
-        from gemini_response import GeminiResponse
 
         response = GeminiResponse.create(self.sample_raw_response)
 
@@ -130,7 +130,6 @@ class TestGeminiResponse(unittest.TestCase):
 
     def test_debug_info_property(self):
         """Test debug_info property returns correct data."""
-        from gemini_response import GeminiResponse
 
         response = GeminiResponse.create(self.sample_raw_response)
 
@@ -141,7 +140,6 @@ class TestGeminiResponse(unittest.TestCase):
 
     def test_none_structured_response_handling(self):
         """Test GeminiResponse handles plain text gracefully."""
-        from gemini_response import GeminiResponse
 
         # Test with plain text (no JSON)
         plain_response = self.sample_narrative
@@ -163,7 +161,6 @@ class TestGeminiResponse(unittest.TestCase):
     @patch("gemini_service._get_text_from_response")
     def test_get_initial_story_returns_gemini_response(self, mock_get_text, mock_api):
         """Test that get_initial_story returns a GeminiResponse object."""
-        from gemini_service import get_initial_story
 
         # Setup mocks - return raw response text
         mock_api.return_value = Mock()
@@ -182,8 +179,6 @@ class TestGeminiResponse(unittest.TestCase):
     @patch("gemini_service._get_text_from_response")
     def test_continue_story_returns_gemini_response(self, mock_get_text, mock_api):
         """Test that continue_story returns a GeminiResponse object."""
-        from game_state import GameState
-        from gemini_service import continue_story
 
         # Setup mocks
         mock_api.return_value = Mock()
@@ -207,7 +202,6 @@ class TestGeminiResponse(unittest.TestCase):
     def test_main_py_handles_gemini_response_object(self):
         """Test that main.py properly handles GeminiResponse objects."""
         # This is more of an integration test - checking the interface contract
-        from gemini_response import GeminiResponse
 
         response = GeminiResponse.create(self.sample_raw_response)
 
@@ -226,7 +220,6 @@ class TestGeminiResponse(unittest.TestCase):
 
     def test_legacy_create_method(self):
         """Test that the legacy create method still works for backwards compatibility."""
-        from gemini_response import GeminiResponse
 
         # Mock structured response
         mock_structured = Mock(spec=NarrativeResponse)

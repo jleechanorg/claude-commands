@@ -11,7 +11,7 @@
 ```
 
 **Header Generation Methods:**
-- **PREFERRED:** Use `/header` command (single command: `./claude_command_scripts/git-header.sh`)
+- **PREFERRED:** Use `/header` command (finds project root automatically by looking for CLAUDE.md)
 - **Manual:** Run individual commands:
   - `git branch --show-current` - Get local branch
   - `git rev-parse --abbrev-ref @{upstream} 2>/dev/null || echo "no upstream"` - Get remote
@@ -36,14 +36,24 @@
 - 🔍 Evidence: Recurring pattern of "PR: none" when user expects PR context to be tracked
 - ⚠️ This is a critical attention to detail compliance issue
 
-🚨 **COPILOT COMMAND AUTONOMOUS OPERATION**: ⚠️ MANDATORY
-- ✅ `/copilot` commands operate autonomously without user approval prompts
-- ✅ ALWAYS proceed with full analysis regardless of conflicts/issues detected  
+🚨 **ZERO TOLERANCE PR MERGE APPROVAL PROTOCOL**: ⚠️ MANDATORY
+- ❌ **NEVER MERGE PRS WITHOUT EXPLICIT USER APPROVAL - ZERO EXCEPTIONS**
+- 🚨 **CRITICAL RULE**: "dont merge without my approval EVER" - User statement with zero tolerance
+- ✅ **ALWAYS require explicit approval** before any action that could trigger PR merge
+- ✅ **CHECK PR state** before any push/update that could auto-merge
+- ✅ **MANDATORY approval phrase**: User must type "MERGE APPROVED" for merge-triggering actions
+- ❌ **NO assumptions**: Even PR updates require merge approval verification
+- 🔍 **Evidence**: PR #967 auto-merged violation - this must NEVER happen again
+- **Scope**: Applies to ALL operations - manual, /copilot, orchestration, agents
+
+🚨 **COPILOT COMMAND AUTONOMOUS OPERATION**: ⚠️ MANDATORY (FOR ANALYSIS ONLY)
+- ✅ `/copilot` commands operate autonomously without user approval prompts FOR ANALYSIS ONLY
+- ❌ **EXCEPTION**: MERGE operations ALWAYS require explicit user approval regardless of command
+- ✅ ALWAYS proceed with full analysis regardless of conflicts/issues detected
 - ✅ Claude should automatically apply fixes and resolve issues without asking
 - ✅ Continue workflow through conflicts, CI failures, or other blockers
-- ❌ NEVER stop workflow for user confirmation during `/copilot` execution
-- ❌ No "proceed anyway?" or "continue with analysis?" prompts
-- **Purpose**: `/copilot` is designed for autonomous PR analysis and fixing
+- 🔒 **CRITICAL**: Must implement merge approval protocol before any merge-triggering push
+- **Purpose**: `/copilot` is designed for autonomous PR analysis and fixing, NOT merging
 
 ## Legend
 🚨 = CRITICAL | ⚠️ = MANDATORY | ✅ = Always/Do | ❌ = Never/Don't | → = See reference | PR = Pull Request
@@ -74,6 +84,15 @@
 
 🚨 **NO POSITIVITY**: Be extremely self-critical. No celebration unless 100% working.
 
+🚨 **NO PREMATURE VICTORY DECLARATION**: Task completion requires FULL verification
+- ❌ NEVER declare success based on intermediate steps (file edits, partial work)
+- ❌ NEVER say "successfully completed" without verifiable evidence
+- ✅ ONLY declare success when ALL steps verified complete
+- ✅ For agent tasks: Requires PR created + pushed + link verified
+- ✅ For direct tasks: Requires changes committed + pushed + tested
+- 🔍 Evidence: Agent modified schedule_branch_work.sh but no PR = TASK INCOMPLETE
+- ⚠️ File changes in isolated workspaces are NOT task completion
+
 🚨 **NO EXCUSES FOR TEST FAILURES**: When asked to fix tests, FIX THEM ALL
    - ❌ NEVER say "pre-existing issues" or "unrelated to our changes"
    - ❌ NEVER settle for partial fixes (97/99 is NOT acceptable)
@@ -81,9 +100,9 @@
    - ✅ ALWAYS fix ALL failing tests to 100% pass rate
    - ✅ ALWAYS take ownership of test failures, especially in new code
 
-🚨 **NO ASSUMPTIONS ABOUT RUNNING COMMANDS**: 
+🚨 **NO ASSUMPTIONS ABOUT RUNNING COMMANDS**:
    - ❌ NEVER explain what a command "will do" when it's already running
-   - ❌ NEVER make assumptions about command execution or results  
+   - ❌ NEVER make assumptions about command execution or results
    - ✅ ALWAYS wait for actual command output and results
    - ✅ ALWAYS trust command execution and observe real behavior
    - **Pattern**: User says "X is running..." → Wait for actual results, don't speculate
@@ -96,19 +115,67 @@
    - ❌ Avoid generic advice about "command overload" or "cognitive load"
    - ❌ Avoid patronizing about user interface complexity or learning curves
 
+🚨 **NO FAKE IMPLEMENTATIONS**: ⚠️ MANDATORY
+
+**CRITICAL ANTI-PATTERN**: Always audit existing functionality before implementing new code
+
+- ❌ NEVER create files with "# Note: In the real implementation" comments
+- ❌ NEVER write placeholder code that doesn't actually work
+- ❌ NEVER create demonstration files instead of working implementations
+- ❌ NEVER create Python intelligence files when .md files handle the logic
+- ❌ NEVER duplicate systematic protocols that already exist in other .md files
+- ❌ NEVER reimplement existing command functionality (use orchestration instead)
+- ✅ ALWAYS audit existing commands and .md files before writing new implementations
+- ✅ ALWAYS build real, functional code that works immediately
+- ✅ ALWAYS enhance existing systems rather than creating fake parallel ones
+- ✅ ALWAYS check if functionality exists: Read existing commands, Grep for patterns
+- **Pattern**: Real implementation > No implementation > Fake implementation
+- **Evidence**: PR #820 - 563+ lines of fake code removed (fixpr.py, commentreply.py, copilot.md duplication)
+- **Evidence**: orchestrate_enhanced.py with placeholder comments frustrated user
+- **Rule**: If you can't implement it properly, don't create the file at all
+
+🚨 **ORCHESTRATION OVER DUPLICATION**: ⚠️ MANDATORY
+- **Principle**: Orchestrators delegate to existing commands, never reimplement their functionality
+- ✅ Pattern: New commands should be orchestrators, not implementers
+- ✅ Use existing /commentreply, /pushl, /fixpr rather than duplicating their logic
+- ✅ Add command summary at top of orchestrator .md files to prevent confusion
+- ❌ NEVER copy systematic protocols from other .md files into new commands
+- ❌ NEVER duplicate GitHub API commands that already exist in other commands
+- **Evidence**: PR #812 (https://github.com/WorldArchitectAI/repo/pull/812) - 120 lines of duplicate systematic protocol removed from copilot.md
+- **Architecture**: copilot = orchestrator, not implementer
+
 🚨 **NO OVER-ENGINEERING**: Prevent building parallel inferior systems vs enhancing existing ones
    - ✅ ALWAYS ask "Can the LLM handle this naturally?" before building parsers/analytics systems
-   - ✅ ALWAYS try enhancing existing systems before building parallel new ones  
+   - ✅ ALWAYS try enhancing existing systems before building parallel new ones
    - ✅ ALWAYS prioritize user workflow integration over technical sophistication
    - ❌ NEVER build parallel command execution systems - enhance Claude Code CLI instead
    - ❌ NEVER build complex parsing when LLM can understand intent naturally
    - ❌ NEVER add analytics/tracking beyond core functionality needs
    - **Pattern**: Trust LLM capabilities, enhance existing systems, prioritize immediate user value
    - **Evidence**: Command composition over-engineering (PR #737) - a parallel command execution system was built instead of enhancing the existing Claude Code CLI. This led to unnecessary complexity, duplication of functionality, and reduced maintainability.
-   - **Root Causes**: LLM capability underestimation, perfectionist engineering, integration avoidance, demo-driven development
+   - **Evidence**: Orchestration parallel development (PR #790) - created .claude/commands/orchestrate.py instead of enhancing existing orchestration/ directory with Redis infrastructure. Fixed by migrating LLM features TO the mature system and deleting parallel implementation.
+   - **Root Causes**: LLM capability underestimation, perfectionist engineering, integration avoidance, demo-driven development, insufficient analysis of existing infrastructure
 
 🚨 **NO FALSE PROMISES**: Be honest about capabilities | Conservative language | Deliver or don't promise
 
+🚨 **NO UNNECESSARY EXTERNAL APIS**: Before adding ANY external API integration:
+   - ✅ FIRST ask "Can Claude solve this directly without external APIs?"
+   - ✅ ALWAYS try direct implementation before adding dependencies
+   - ✅ TEST the direct solution - if it works, STOP there
+   - ❌ NEVER default to Gemini API just because it exists in codebase
+   - ❌ NEVER add external LLM calls when Claude can generate responses directly
+   - **Pattern**: Direct solution → Justify external need → Only then integrate
+   - **Anti-pattern**: See AI task → Immediately reach for Gemini API
+   - **Evidence**: GitHub comment fiasco (PR #796) - built Gemini integration that degraded to useless generic templates when Claude could have generated responses directly
+
+🚨 **GEMINI API JUSTIFICATION REQUIRED**: Gemini should ONLY be used when:
+   - ✅ The task requires capabilities Claude doesn't have (e.g., image generation)
+   - ✅ The system needs to work autonomously without Claude present
+   - ✅ Specific model features are required (e.g., specific Gemini models)
+   - ✅ User explicitly requests Gemini integration
+   - ❌ NEVER use Gemini just for text generation that Claude can do
+   - ❌ NEVER add complexity without clear unique value
+   - **Question to ask**: "What can Gemini do here that Claude cannot?"
 🚨 **USE LLM CAPABILITIES**: When designing command systems or natural language features:
    - ❌ NEVER suggest keyword matching, regex patterns, or rule-based parsing
    - ❌ NEVER propose "if word in text" simplistic approaches
@@ -116,6 +183,18 @@
    - ✅ ALWAYS trust the LLM to understand context, nuance, and intent
    - **Pattern**: User intent → LLM understanding → Natural response
    - **Anti-pattern**: Keywords → Rules → Rigid behavior
+
+🚨 **NEVER SIMULATE INTELLIGENCE**: When building response generation systems:
+   - ❌ NEVER create Python functions that simulate Claude's responses with templates
+   - ❌ NEVER use pattern matching to generate "intelligent" responses
+   - ❌ NEVER build `_create_contextual_response()` methods that fake understanding
+   - ❌ NEVER generate generic replies like "I'll fix the issue" or "Thanks for the suggestion"
+   - ✅ ALWAYS invoke actual Claude for genuine response generation
+   - ✅ ALWAYS pass full comment context to Claude for analysis
+   - ✅ ALWAYS ensure responses address specific technical points, not patterns
+   - **Pattern**: Collect data → Claude analyzes → Claude responds
+   - **Anti-pattern**: Collect data → Python templates → Fake responses
+   - **Violation Count**: 100+ times - STOP THIS PATTERN IMMEDIATELY
 
 🚨 **EVIDENCE-BASED APPROACH**: Core principles for all analysis
    - ✅ Extract exact error messages/code snippets before analyzing
@@ -157,7 +236,7 @@
 11. 🚨 **PUSH VERIFICATION**: ⚠️ ALWAYS verify push success by querying remote commits after every `git push` | Use `gh pr view` or `git log origin/branch` to confirm changes are on remote
 12. 🚨 **PR STATUS INTERPRETATION**: ⚠️ CRITICAL - GitHub PR states mean:
    - **OPEN** = Work In Progress (WIP) - NOT completed
-   - **MERGED** = Completed and integrated into main branch  
+   - **MERGED** = Completed and integrated into main branch
    - **CLOSED** = Abandoned or rejected - NOT completed
    - ❌ NEVER mark tasks as completed just because PR exists
    - ✅ ONLY mark completed when PR state = "MERGED"
@@ -183,25 +262,47 @@
    - Benefits: Immediate results, reliable API access, no command completion uncertainty
 16. 🚨 **MEMORY ENHANCEMENT PROTOCOL**: ⚠️ MANDATORY for specific commands
 - **Enhanced Commands**: `/think`, `/learn`, `/debug`, `/analyze`, `/fix`, `/plan`, `/execute`, `/arch`, `/test`, `/pr`, `/perp`, `/research`
+- **High-Quality Memory Standards**: ⚠️ MANDATORY - Based on Memory MCP best practices research (via Perplexity API research)
+  - ✅ **Specific Technical Details**: Include exact error messages, file paths with line numbers (file:line), code snippets
+  - ✅ **Actionable Information**: Provide reproduction steps, implementation details, verification methods
+  - ✅ **External References**: Link to PRs, commits, files, documentation URLs for verification
+  - ✅ **Canonical Naming**: Use `{system}_{issue_type}_{timestamp}` format for disambiguation
+  - ✅ **Measurable Outcomes**: Include test results, performance metrics, quantified improvements
+  - ✅ **Contextual Details**: Timestamp, circumstances, specific situations that triggered learning
+  - ❌ **Avoid Low-Quality**: Generic statements, missing context, vague observations without actionable detail
+- **Enhanced Entity Types**: Use specific, technical entity types
+  - `technical_learning` - Specific solutions with code/errors/fixes
+  - `implementation_pattern` - Successful code patterns with reusable details
+  - `debug_session` - Complete debugging journeys with root causes
+  - `workflow_insight` - Process improvements with measurable outcomes
+  - `architecture_decision` - Design choices with rationale and trade-offs
 - **Execution Steps**:
-  1. ✅ **Extract key terms** from command arguments (entities, technical terms, PR references)
-  2. ✅ **Search Memory MCP**: Call `mcp__memory-server__search_nodes(query)` with extracted terms (MCP functions use double underscores as namespace separators)
-  3. ✅ **Log results**: Always show "🔍 Memory searched: X relevant memories found"
+  1. ✅ **Extract specific technical terms** from command arguments (file names, error messages, PR numbers, technologies)
+  2. ✅ **Search Memory MCP**: Call `mcp__memory-server__search_nodes(query)` with extracted technical terms
+  3. ✅ **Log results transparently**: Always show "📚 Found X relevant memories"
   4. ✅ **Natural integration**: If memories found, incorporate context naturally into response
-  5. ❌ **Memory search is mandatory** for listed commands unless performance/availability exceptions apply (see constraints below)
+  5. ✅ **Capture high-quality learnings**: Use structured patterns with technical details, references, and actionable information
+  6. ❌ **Memory search is mandatory** for listed commands unless performance/availability exceptions apply
+- **Quality Validation Before Storage**:
+  - Contains specific technical details (error messages, file paths, code snippets)
+  - Includes actionable information (how to reproduce, fix, or implement)
+  - References external artifacts (PRs, commits, files, documentation)
+  - Uses canonical entity names for disambiguation
+  - Provides measurable outcomes (test counts, performance metrics)
+  - Links to related memories explicitly through relations
 - **Transparency Requirements**:
   - Show "🔍 Searching memory..." when search begins
   - Report "📚 Found X relevant memories" or "💭 No relevant memories found"
   - Indicate when response is enhanced: "📚 Enhanced with memory context"
 - **Performance Constraints**:
   - Batch all terms into single search (not multiple calls)
-  - Skip if search would take >100ms with notice to user (100ms chosen as UX threshold for perceived instant response)
+  - Skip if search would take >100ms with notice to user
   - Continue without enhancement if MCP unavailable (with notice)
 - **Integration Approach**:
   - Use natural language understanding to weave context seamlessly
   - Don't mechanically inject memory blocks
   - Judge relevance using semantic understanding, not keyword matching
-  - Prioritize recent and relevant memories
+  - Prioritize recent and relevant memories with actionable technical detail
 
 ### 🔧 GitHub MCP Setup
 **Token**: Set in `claude_mcp.sh` line ~247 via `export GITHUB_TOKEN="your_token_here"`
@@ -210,11 +311,23 @@
 
 ## Orchestration System
 
+**Full Documentation**: → `.claude/commands/orchestrate.md` for complete system details
+
 ### 🚨 Agent Operation
-**Headless**: `claude -p "[task]" --output-format stream-json --verbose --dangerously-skip-permissions`
-**Worktree**: `git worktree add -b <branch> agent_workspace_<name> main` (isolated branches)
-**Monitoring**: Stream JSON for visibility ($0.003-$0.050/task) | Ignore "Context low" warnings
-**Paths**: Use relative paths, not `/tmp/` for agent compatibility
+**System**: Uses tmux sessions with dynamic task agents (task-agent-*) managed by Python monitor
+**Startup**: `./claude_start.sh` auto-starts orchestration | Manual: `./orchestration/start_system.sh start`
+**Monitoring**: `/orch What's the status?` or `/orch monitor agents` | Direct tmux: `tmux attach -t [agent-name]`
+**Cost**: $0.003-$0.050/task | Redis required for coordination
+**Working Directory**: ❌ NEVER cd into agent workspaces | ✅ Provide cd command for user to copy if needed
+**CRITICAL**: ❌ NEVER execute orchestration tasks yourself | ✅ ALWAYS delegate to agents when /orch or /orchestrate is used
+**ENFORCEMENT**: When user runs /orch, you MUST ONLY monitor agents - NO direct execution allowed! The entire point of /orch is agent delegation!
+**NO HARDCODING**: ❌ NEVER hardcode task patterns - agents execute EXACT tasks requested | ✅ General task agents, not pattern-matched types
+
+🚨 **ORCHESTRATION TASK COMPLETION**: When using /orch, task completion requires FULL end-to-end verification
+- ✅ Agent must complete entire workflow (find issue → fix → commit → push → create PR)
+- ✅ Verify PR creation with link before declaring success
+- ❌ NEVER declare success based on agent creation alone
+- 🔍 Evidence: task-agent-3570 completed full workflow creating PR #887
 
 ## Project Overview
 
@@ -261,6 +374,14 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 ### Code Standards
 **Principles**: SOLID, DRY | **Templates**: Use existing code patterns | **Validation**: `isinstance()` checks
 **Constants**: Module-level (>1x) or constants.py (cross-file) | **Imports**: Module-level only, NO inline/try-except
+**Path Computation**: ✅ Use `os.path.dirname()` to retrieve the parent directory of a file path | ✅ Use `os.path.join()` for constructing paths | ✅ Use `pathlib.Path` for modern path operations | ❌ NEVER use `string.replace()` for paths
+- 🔍 Evidence: PR #818 - Replaced fragile `.replace('/tests', '')` with proper directory navigation
+
+🚨 **DYNAMIC AGENT ASSIGNMENT**: Replace ALL hardcoded agent mappings with capability-based selection
+- ❌ NEVER use patterns like `if "test" in task: return "testing-agent"`
+- ✅ ALWAYS use capability scoring with load balancing
+- ✅ Consider: agent capabilities, current workload, task requirements
+- 🔍 Evidence: PR #873 removed 150+ lines of hardcoded mappings
 
 ### Feature Compatibility
 **Critical**: Audit integration points | Update filters for new formats | Test object/string conversion
@@ -271,11 +392,33 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 ### Gemini SDK
 ✅ `from google import genai` | ✅ `client = genai.Client(api_key=api_key)`
 Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
+🚨 **WARNING**: See "NO UNNECESSARY EXTERNAL APIS" rule before using Gemini
 
 ### Development Practices
 `tempfile.mkdtemp()` for test files | Verify before assuming | ❌ unsolicited refactoring |
 **Logging**: ✅ `import logging_util` | ❌ `import logging` | Use project's unified logging
 Use docstrings, proper JS loading
+
+🚨 **PR Review Verification**: Always verify current state before applying review suggestions
+- ✅ Check if suggested fix already exists in code
+- ✅ Read the actual file content before making changes
+- ❌ NEVER blindly apply review comments without verification
+- 🔍 Evidence: PR #818 - Copilot suggested fixing 'string_type' that was already correct
+
+⚠️ **PR COMMENT PRIORITY**: Address review comments in strict priority order
+1. **CRITICAL**: Undefined variables, inline imports, runtime errors
+2. **HIGH**: Bare except clauses, security issues
+3. **MEDIUM**: Logging violations, format issues
+4. **LOW**: Style preferences, optimizations
+- 🔍 Evidence: PR #873 review - fixed critical inline imports first
+
+🚨 **BOT COMMENT FILTERING**: ⚠️ MANDATORY - Ignore specific bot comment patterns when explicitly overridden
+- ❌ **IGNORE**: Bot comments about `--dangerously-skip-permissions` flag when user has explicitly chosen to keep it
+- ✅ **ACKNOWLEDGE**: Still respond to bot comments but indicate user decision to retain flag
+- ✅ **AUDIT TRAIL**: Label ignored comment and link to user request for compliance
+- ✅ **CONTEXT**: "Thanks for the security suggestion. For this specific use case, we're keeping the flag as requested per user direction. Audit: [Link to user decision]"
+- **Scope**: Apply only when user has explicitly stated intention to keep controversial patterns
+- **Evidence**: Memory automation testing requires bypass permissions for development/testing scenarios
 
 ### Website Testing & Deployment Expectations (🚨 CRITICAL)
 🚨 **BRANCH ≠ WEBSITE**: ❌ NEVER assume branch changes are visible on websites without deployment
@@ -303,6 +446,11 @@ Use docstrings, proper JS loading
 - 🔍 Evidence: PR #780 with real conflicts revealed false negative bug that clean PRs missed
 - **Why Critical**: Clean PRs won't expose detection failures - need real conflicts to validate
 **Validation**: Verify PASS/FAIL detection | Output must match summary | Parse output, don't trust exit codes
+**Test Assertions**: ⚠️ MANDATORY - Must match actual validation behavior exactly
+- 🔍 Evidence: PR #818 - MBTI test checked .lower() but validation only does .strip()
+- ✅ Always verify what transformations validation actually performs
+**Exception Specificity**: ✅ Use specific exception types in tests (ValidationError, not Exception)
+- 🔍 Evidence: PR #818 - Improved test precision with Pydantic's ValidationError
 **Methodology**: Fix one issue at a time | Run after each fix | Prefer test fixes over core logic
 **Rules**: ✅ Run before task completion | ❌ NEVER skip without permission | ✅ Only use ✅ after real results
 
@@ -318,7 +466,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - **Budget 2-3x normal effort** for large file deletions due to cleanup cascade
 - **Evidence**: PR #722 required 36-file cleanup after deleting copilot.sh (695 lines)
 
-### Scope Management Protocol (⚠️ MANDATORY)  
+### Scope Management Protocol (⚠️ MANDATORY)
 **Distinguish rewrite vs consolidation** to set proper effort expectations
 - **Consolidation**: Reorganizing existing functionality (preserve files, move/rename)
 - **Rewrite**: Replacing with new implementation (delete old, extensive cleanup needed)
@@ -333,6 +481,10 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - **Exception**: Only when user explicitly requests file creation in mvp_site/
 
 🚨 **Test File Policy**: Add to existing files, NEVER create new test files
+- ⚠️ MANDATORY: Always add tests to existing test files that match the functionality
+- ❌ NEVER create `test_new_feature.py` - add to `test_existing_module.py` instead
+- 🔍 Evidence: PR #818 - CodeRabbit caught test_cache_busting_red_green.py violation
+- ✅ Moved cache busting tests to test_main_routes.py to comply with policy
 🚨 **Code Review**: Check README.md and CODE_REVIEW_SUMMARY.md before mvp_site/ changes
 
 ### Repository Separation
@@ -350,7 +502,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - **Command Structure** (Claude Code CLI defaults to Playwright MCP):
   - `/testui` = Browser (Playwright MCP) + Mock APIs
   - `/testuif` = Browser (Playwright MCP) + REAL APIs (costs $)
-  - `/testhttp` = HTTP + Mock APIs  
+  - `/testhttp` = HTTP + Mock APIs
   - `/testhttpf` = HTTP + REAL APIs (costs $)
   - `/tester` = End-to-end tests with REAL APIs (user decides cost)
 
@@ -371,7 +523,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 **Commands**: `./run_ui_tests.sh mock --playwright` (default) | `./run_ui_tests.sh mock --puppeteer` (secondary) | `./run_ui_tests.sh mock` (Playwright fallback)
 
-**Test Mode URL**: `http://localhost:6006?test_mode=true&test_user_id=test-user-123` - Required for auth bypass!
+**Test Mode URL**: `http://localhost:8081?test_mode=true&test_user_id=test-user-123` - Required for auth bypass!
 
 **Details**: → `.cursor/rules/test_protocols.md`
 
@@ -387,7 +539,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 | Rule | Description | Commands/Actions |
 |------|-------------|------------------|
-| **Main = Truth** | Use `git show main:<file>` for originals | ❌ push to main (except roadmap/sprint files) |
+| **Main = Truth** | Use `git show main:<file>` for originals | ❌ push to main (no exceptions) |
 | **PR Workflow** | All changes via PRs | `gh pr create` + test results in description |
 | **Branch Safety** | Verify before push | `git push origin HEAD:branch-name` |
 | **🚨 Upstream Tracking** | Set tracking to avoid "no upstream" in headers | `git push -u origin branch-name` OR `git branch --set-upstream-to=origin/branch-name` |
@@ -396,7 +548,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 | **Post-Merge** | Check unpushed files | `git status` → follow-up PR if needed |
 | **Progress Track** | Scratchpad + JSON | `roadmap/scratchpad_[branch].md` + `tmp/milestone_*.json` |
 | **PR Testing** | Apply PRs locally | `gh pr checkout <PR#>` |
-| **Roadmap Updates** | Always create PR | All files require PR workflow |
+| **Roadmap Updates** | Always create PR | All files require PR workflow - including roadmap files |
 
 🚨 **No Main Push**: ✅ `git push origin HEAD:feature` | ❌ `git push origin main`
    - **ALL changes require PR**: Including roadmap files, documentation, everything
@@ -411,9 +563,20 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 🚨 **Conflict Resolution**: Analyze both versions | Assess critical files | Test resolution | Document decisions
 **Critical Files**: CSS, main.py, configs, schemas | **Process**: `./resolve_conflicts.sh`
 
+🚨 **GIT ANALYSIS CONTEXT CHECKPOINT**: ⚠️ MANDATORY protocol before any git comparison
+- ✅ **Step 1**: Identify current branch (`git branch --show-current`)
+- ✅ **Step 2**: Determine branch type (sync-main-*, feature branch, main)
+- ✅ **Step 3**: Select appropriate remote comparison:
+  - **sync-main-*** branches → Compare to `origin/main`
+  - **Feature branches** → Compare to `origin/branch-name` if the branch is tracked locally and changes need to be compared to the remote branch on the same repository. Use `upstream` if the branch is forked from another repository and changes need to be compared to the original repository.
+  - **main branch** → Compare to `origin/main`
+- ✅ **Step 4**: Execute comparison commands with correct remote
+- ❌ NEVER run git comparisons without context verification (i.e., identifying the current branch, determining the branch type, and selecting the appropriate remote comparison as outlined in Steps 1–3 above)
+- **Evidence**: Prevents autopilot execution errors that waste user time
+
 🚨 **COMMAND FAILURE TRANSPARENCY** (⚠️ MANDATORY): When user commands fail unexpectedly:
    - ✅ Immediately explain what failed and why
-   - ✅ Show system messages/errors received  
+   - ✅ Show system messages/errors received
    - ✅ Explain resolution approach being taken
    - ✅ Ask preference for alternatives (merge vs rebase, etc.)
    - ❌ NEVER silently fix without explanation
@@ -432,7 +595,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
    - 🔍 **Evidence**: setup_automation.sh successfully deployed complete cron job + monitoring system
    - **Application**: Cron jobs, service configuration, system initialization, deployment automation
 4. **Python Execution**: ✅ Run from project root | ❌ cd into subdirs
-5. **vpython Tests**: 
+5. **vpython Tests**:
    - ⚠️ "run all tests" → `./run_tests.sh`
    - ⚠️ Test fails → fix immediately or ask user
    - ✅ `TESTING=true vpython mvp_site/test_file.py` (from root)
@@ -507,6 +670,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 ### 🚨 Anti-Patterns
 **Silent Breaking Changes**: Update all str() usage when changing objects | Test backward compatibility
 **Branch Confusion**: Verify context before changes | Check PR destination | Evidence: PR #627/628
+**Orchestration Hardcoding**: ❌ NEVER pattern-match tasks to agent types | ✅ Execute exact requested tasks | Evidence: task_dispatcher.py created test agents for all tasks
 
 ### Debugging Protocol (🚨 MANDATORY)
 **Process**: Extract evidence → Analyze → Verify → Fix | Trace: Backend → API → Frontend
@@ -526,9 +690,14 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 **🧠 Cognitive Commands** (Semantic Composition):
 - `/think`, `/arch`, `/debug` - Modify thinking approach, compose naturally
+- `/learn` - Capture structured technical learnings with Memory MCP integration
+- `/analyze` - Deep analysis with memory context enhancement
+- `/fix` - Problem resolution with memory-guided solutions
+- `/perp` - Research validation using Perplexity API
+- `/research` - Knowledge gathering with memory pattern recognition
 - **Behavior**: Automatic semantic understanding and tool integration
 
-**⚙️ Operational Commands** (Protocol Enforcement):  
+**⚙️ Operational Commands** (Protocol Enforcement):
 - `/headless`, `/handoff`, `/orchestrate` - Modify execution environment
 - **Behavior**: Mandatory workflow execution before task processing
 
@@ -537,18 +706,38 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - **Behavior**: Immediate execution with optional parameters
 
 ### Critical Enforcement
+🚨 **SLASH COMMAND PROTOCOL RECOGNITION**: ⚠️ MANDATORY - Before processing ANY slash command:
+- ✅ **Recognition Phase**: Scan input for "/" → Identify command type → Look up required workflow in `.claude/commands/[command].md`
+- ✅ **Execution Phase**: Follow COMPLETE documented workflow → No partial execution allowed
+- ✅ **Verification Phase**: Confirm all protocol steps completed before declaring task done
+- ❌ NEVER treat slash commands as content suggestions - they are execution mandates
+- ❌ NEVER stop midway through documented workflows (e.g., stopping after Execute phase of `/pr`)
+- **Evidence**: PR #938 - Failed `/pr` protocol by stopping after Execute instead of continuing to Push→Copilot→Review
+- **Pattern**: Protocol execution deficit causes user frustration and incomplete deliverables
+
 🚨 **EXECUTE CIRCUIT BREAKER**: `/e` or `/execute` → TodoWrite checklist MANDATORY
 - Context % | Complexity | Subagents? | Plan presented | Approval received
 - ❌ NEVER start work without approval | TodoWrite = safety protocol
 
-🚨 **OPERATIONAL COMMAND ENFORCEMENT**: `/headless`, `/handoff`, `/orchestrate`
+🚨 **OPERATIONAL COMMAND ENFORCEMENT**: `/headless`, `/handoff`, `/orchestrate`, `/orch`
 - ✅ ALWAYS trigger protocol workflow before task execution
-- ✅ Create isolated environments as specified in command documentation  
+- ✅ Create isolated environments as specified in command documentation
 - ❌ NEVER process as regular tasks without environment setup
+- ❌ NEVER execute /orch or /orchestrate tasks yourself - ONLY monitor agents
+- ✅ For /orch: Create agents → Monitor progress → Report results ONLY
 
-**Key Commands**: `/execute` (no approval) | `/plan` (requires approval) | `/replicate` (PR analysis)
+**Key Commands**: `/execute` (no approval) | `/plan` (requires approval) | `/replicate` (PR analysis) | `/fake` (code quality audit)
 **Dual Composition**: Cognitive (semantic) + Operational (protocol) + Tool (direct)
 **Unified Learning**: ONE `/learn` command with Memory MCP integration
+
+### Quality Assurance Commands
+
+#### `/fake`
+**Purpose**: Comprehensive fake code detection using command composition
+**Composition**: `/arch /thinku /devilsadvocate /diligent`
+**Usage**: `/fake`
+**Detection**: Identifies fake implementations, demo code, placeholder comments, duplicate protocols
+**Output**: Structured audit report with actionable remediation guidance
 
 ## Special Protocols
 

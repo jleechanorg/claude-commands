@@ -1,9 +1,12 @@
 import os
 import sys
+import tempfile
 import unittest
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 # We ONLY import the document_generator, which has no cloud dependencies.
 import document_generator
@@ -29,7 +32,6 @@ def test_export():
     try:
         if file_format == "pdf":
             # This is the line we are truly testing
-            import tempfile
 
             file_path = tempfile.mktemp(suffix=".pdf")
             document_generator.generate_pdf(story_text, file_path, campaign_title)

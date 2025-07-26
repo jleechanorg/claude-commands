@@ -22,7 +22,7 @@
   --border: #e4e4e7;
   --input: #e4e4e7;
   --ring: #030213;
-  
+
   /* Enhanced Color Palette */
   --success: #10b981;
   --success-foreground: #ffffff;
@@ -30,19 +30,22 @@
   --warning-foreground: #ffffff;
   --info: #3b82f6;
   --info-foreground: #ffffff;
-  
+
   /* Gradients */
   --gradient-from: #ffffff;
   --gradient-via: #f8f9fa;
   --gradient-to: #e9ecef;
-  
+
   /* Shadows - Modern elevation system */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-md:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  
+
   /* Border Radius */
   --radius-sm: 0.25rem;
   --radius: 0.5rem;
@@ -50,11 +53,15 @@
   --radius-lg: 1rem;
   --radius-xl: 1.5rem;
   --radius-full: 9999px;
-  
+
   /* Typography Scale */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono',
+    monospace;
+
   /* Font Sizes */
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
@@ -65,7 +72,7 @@
   --text-3xl: 1.875rem;
   --text-4xl: 2.25rem;
   --text-5xl: 3rem;
-  
+
   /* Line Heights */
   --leading-none: 1;
   --leading-tight: 1.25;
@@ -73,7 +80,7 @@
   --leading-normal: 1.5;
   --leading-relaxed: 1.625;
   --leading-loose: 2;
-  
+
   /* Font Weights */
   --font-thin: 100;
   --font-light: 300;
@@ -82,7 +89,7 @@
   --font-semibold: 600;
   --font-bold: 700;
   --font-extrabold: 800;
-  
+
   /* Spacing Scale */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -96,7 +103,7 @@
   --space-16: 4rem;
   --space-20: 5rem;
   --space-24: 6rem;
-  
+
   /* Z-Index Scale */
   --z-dropdown: 1000;
   --z-sticky: 1020;
@@ -105,7 +112,7 @@
   --z-modal: 1050;
   --z-popover: 1060;
   --z-tooltip: 1070;
-  
+
   /* Animation */
   --transition-fast: 150ms;
   --transition-base: 300ms;
@@ -113,14 +120,14 @@
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
-  
+
   /* Backdrop Filters */
   --backdrop-blur: blur(10px);
   --backdrop-saturate: saturate(180%);
 }
 
 /* Dark Theme */
-[data-theme="dark"] {
+[data-theme='dark'] {
   --background: #09090b;
   --foreground: #fafafa;
   --card: #09090b;
@@ -140,22 +147,25 @@
   --border: #27272a;
   --input: #27272a;
   --ring: #d4d4d8;
-  
+
   /* Dark theme gradients */
   --gradient-from: #09090b;
   --gradient-via: #18181b;
   --gradient-to: #27272a;
-  
+
   /* Adjusted shadows for dark theme */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
-  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
+  --shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-md:
+    0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg:
+    0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3);
   --shadow-xl: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
 }
 
 /* Fantasy Theme */
-[data-theme="fantasy"] {
+[data-theme='fantasy'] {
   --background: #faf4ed;
   --foreground: #3e2723;
   --card: #ffffff;
@@ -175,22 +185,26 @@
   --border: #bcaaa4;
   --input: #efebe9;
   --ring: #5d4037;
-  
+
   /* Fantasy gradients - warm, magical */
   --gradient-from: #faf4ed;
   --gradient-via: #f5e6d3;
   --gradient-to: #efebe9;
-  
+
   /* Warm shadows */
   --shadow-sm: 0 1px 2px 0 rgba(62, 39, 35, 0.1);
-  --shadow: 0 4px 6px -1px rgba(62, 39, 35, 0.2), 0 2px 4px -1px rgba(62, 39, 35, 0.1);
-  --shadow-md: 0 10px 15px -3px rgba(62, 39, 35, 0.2), 0 4px 6px -2px rgba(62, 39, 35, 0.1);
-  --shadow-lg: 0 20px 25px -5px rgba(62, 39, 35, 0.2), 0 10px 10px -5px rgba(62, 39, 35, 0.1);
+  --shadow:
+    0 4px 6px -1px rgba(62, 39, 35, 0.2), 0 2px 4px -1px rgba(62, 39, 35, 0.1);
+  --shadow-md:
+    0 10px 15px -3px rgba(62, 39, 35, 0.2), 0 4px 6px -2px rgba(62, 39, 35, 0.1);
+  --shadow-lg:
+    0 20px 25px -5px rgba(62, 39, 35, 0.2),
+    0 10px 10px -5px rgba(62, 39, 35, 0.1);
   --shadow-xl: 0 25px 50px -12px rgba(62, 39, 35, 0.3);
 }
 
 /* Cyberpunk Theme */
-[data-theme="cyberpunk"] {
+[data-theme='cyberpunk'] {
   --background: #0a0e1a;
   --foreground: #e0f2fe;
   --card: #0f172a;
@@ -210,17 +224,22 @@
   --border: #1e293b;
   --input: #1e293b;
   --ring: #00d9ff;
-  
+
   /* Cyberpunk gradients - neon glow */
   --gradient-from: #0a0e1a;
   --gradient-via: #0f1729;
   --gradient-to: #1a1f3a;
-  
+
   /* Neon glow shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 217, 255, 0.1);
-  --shadow: 0 4px 6px -1px rgba(0, 217, 255, 0.2), 0 2px 4px -1px rgba(255, 0, 128, 0.1);
-  --shadow-md: 0 10px 15px -3px rgba(0, 217, 255, 0.3), 0 4px 6px -2px rgba(255, 0, 128, 0.2);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 217, 255, 0.4), 0 10px 10px -5px rgba(255, 0, 128, 0.3);
+  --shadow:
+    0 4px 6px -1px rgba(0, 217, 255, 0.2), 0 2px 4px -1px rgba(255, 0, 128, 0.1);
+  --shadow-md:
+    0 10px 15px -3px rgba(0, 217, 255, 0.3),
+    0 4px 6px -2px rgba(255, 0, 128, 0.2);
+  --shadow-lg:
+    0 20px 25px -5px rgba(0, 217, 255, 0.4),
+    0 10px 10px -5px rgba(255, 0, 128, 0.3);
   --shadow-xl: 0 25px 50px -12px rgba(0, 217, 255, 0.5);
 }
 
@@ -230,13 +249,19 @@
 }
 
 .gradient-bg {
-  background: linear-gradient(135deg, var(--gradient-from), var(--gradient-via), var(--gradient-to));
+  background: linear-gradient(
+    135deg,
+    var(--gradient-from),
+    var(--gradient-via),
+    var(--gradient-to)
+  );
 }
 
 /* Theme transition helper */
 .theme-transitioning * {
-  transition: background-color var(--transition-base) var(--ease-in-out),
-              color var(--transition-base) var(--ease-in-out),
-              border-color var(--transition-base) var(--ease-in-out),
-              box-shadow var(--transition-base) var(--ease-in-out) !important;
-} 
+  transition:
+    background-color var(--transition-base) var(--ease-in-out),
+    color var(--transition-base) var(--ease-in-out),
+    border-color var(--transition-base) var(--ease-in-out),
+    box-shadow var(--transition-base) var(--ease-in-out) !important;
+}

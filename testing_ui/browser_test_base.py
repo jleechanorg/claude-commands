@@ -14,6 +14,8 @@ from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
 from testing_ui.config import BASE_URL, SCREENSHOT_DIR
 
+import requests
+
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -88,7 +90,7 @@ class FlaskServerManager:
 
         # Verify server is running
         try:
-            import requests
+
 
             response = requests.get(BASE_URL, timeout=5)
             if response.status_code == 200:
@@ -195,7 +197,7 @@ class BrowserTestBase:
                 enabled: true,
                 userId: '{TEST_USER_ID}'
             }};
-            
+
             // Hide auth view and show dashboard
             const authView = document.getElementById('auth-view');
             const dashboardView = document.getElementById('dashboard-view');
@@ -203,10 +205,10 @@ class BrowserTestBase:
                 authView.classList.remove('active-view');
                 dashboardView.classList.add('active-view');
             }}
-            
+
             // Fire test mode ready event
-            window.dispatchEvent(new CustomEvent('testModeReady', {{ 
-                detail: {{ userId: '{TEST_USER_ID}' }} 
+            window.dispatchEvent(new CustomEvent('testModeReady', {{
+                detail: {{ userId: '{TEST_USER_ID}' }}
             }}));
         """)
 

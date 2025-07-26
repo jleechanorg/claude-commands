@@ -6,7 +6,7 @@
 
 **Usage**: `/tdd` or `/rg`
 
-**Implementation**: 
+**Implementation**:
 1. **Red Phase**: Write failing tests FIRST
 2. **Green Phase**: Write minimal code to pass tests
 3. **Refactor Phase**: Improve code while keeping tests passing

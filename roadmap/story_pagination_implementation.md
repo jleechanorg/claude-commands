@@ -11,11 +11,11 @@ Implemented "load more" pagination for story content to improve performance and 
 def get_story_paginated(campaign_id):
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
-    
+
     # Fetch paginated story entries
     total_entries = get_story_count(campaign_id)
     entries = get_story_entries(campaign_id, page, per_page)
-    
+
     return jsonify({
         'entries': entries,
         'page': page,
@@ -55,24 +55,24 @@ class StoryPagination {
         this.hasMore = true;
         this.campaignId = null;
     }
-    
+
     async loadMore() {
         if (this.isLoading || !this.hasMore) return;
-        
+
         this.isLoading = true;
         this.showLoadingState();
-        
+
         try {
             const response = await fetch(
                 `/api/story/${this.campaignId}?page=${this.currentPage}&per_page=${this.perPage}`
             );
             const data = await response.json();
-            
+
             this.appendEntries(data.entries);
             this.updatePaginationInfo(data);
             this.currentPage++;
             this.hasMore = data.has_more;
-            
+
             if (!this.hasMore) {
                 this.hideLoadMoreButton();
             }
@@ -83,7 +83,7 @@ class StoryPagination {
             this.hideLoadingState();
         }
     }
-    
+
     appendEntries(entries) {
         const container = document.getElementById('story-content');
         entries.forEach(entry => {

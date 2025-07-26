@@ -20,7 +20,7 @@ async def demonstrate_wizard_fix():
         {
             "step": 1,
             "action": "Navigate to homepage",
-            "url": "http://localhost:6006?test_mode=true&test_user_id=puppeteer-demo",
+            "url": "http://localhost:8081?test_mode=true&test_user_id=puppeteer-demo",
             "description": "Initial page load with test authentication",
         },
         {

@@ -4,7 +4,11 @@ import os
 import sys
 import unittest
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from pydantic import ValidationError
+
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from schemas.entities_pydantic import NPC, HealthStatus
 
@@ -75,18 +79,31 @@ class TestLukeCampaignJediMasterGenderFix(unittest.TestCase):
 
         self.assertTrue(narrative_safe, "Narrative should respect gender field")
 
-    def test_invalid_gender_prevention(self):
-        """Test that invalid genders are rejected."""
+    def test_creative_gender_acceptance(self):
+        """Test that creative gender values are accepted for LLM flexibility."""
         health = HealthStatus(hp=100, hp_max=100)
 
-        # Test invalid gender
-        with self.assertRaises(ValueError):
+        # Test creative gender values are now accepted
+        creative_npc = NPC(
+            entity_id="npc_creative_gender_001",
+            display_name="Creative Gender NPC",
+            health=health,
+            current_location="loc_test_001",
+            gender="shapeshifter",  # Creative values now accepted
+        )
+
+        # Verify creative gender is stored
+        self.assertEqual(creative_npc.gender, "shapeshifter")
+
+        # Test that type validation still works
+
+        with self.assertRaises(ValidationError):  # More specific exception type
             NPC(
-                entity_id="npc_invalid_gender_001",
-                display_name="Invalid Gender NPC",
+                entity_id="npc_invalid_type_001",
+                display_name="Invalid Type NPC",
                 health=health,
                 current_location="loc_test_001",
-                gender="invalid_gender",
+                gender=123,  # Wrong type should still fail
             )
 
     def _get_pronouns_for_gender(self, gender: str) -> dict:
@@ -97,6 +114,7 @@ class TestLukeCampaignJediMasterGenderFix(unittest.TestCase):
             "non-binary": {"subject": "they", "object": "them", "possessive": "their"},
             "other": {"subject": "they", "object": "them", "possessive": "their"},
         }
+        # For creative genders, default to they/them pronouns to be inclusive
         return pronoun_map.get(gender, pronoun_map["other"])
 
 

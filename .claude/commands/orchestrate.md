@@ -6,10 +6,21 @@
 
 **Usage**: `/orchestrate [task_description]`
 
-**Implementation**: 
+**CRITICAL RULE**: When `/orchestrate` is used, NEVER execute the task yourself. ALWAYS delegate to the orchestration agents. The orchestration system will handle all task execution through specialized agents.
+
+**🚨 CRITICAL BRANCH PROTECTION RULE**: When monitoring orchestration agents:
+- ❌ **NEVER switch branches** without explicit user permission
+- ❌ **NEVER leave the current branch** to investigate agent work
+- ✅ **ALWAYS stay on your current branch** while agents work in their isolated workspaces
+- ✅ **Request explicit approval** before any branch switch: "May I switch to branch X? Please approve with 'approve [number]'"
+- 🔒 **Branch Context**: Your branch = your workspace. Agent branches = their workspaces. Never mix them!
+- ⚠️ **Violation Impact**: Switching branches disrupts user's work context and can cause lost changes
+
+**Implementation**:
 - **Python Script**: `python3 .claude/commands/orchestrate.py [task_description]`
 - **Shell Wrapper**: `./claude_command_scripts/orchestrate.sh` (if available)
 - **Direct Execution**: Uses real Claude Code CLI agents in separate tmux sessions
+- **System Check**: ALWAYS checks system status first before executing tasks
 
 **Features**:
 - **Real tmux sessions**: Creates separate terminal sessions for each agent
@@ -23,11 +34,22 @@
 **System Requirements**:
 - Redis server running (for coordination)
 - Orchestration system started: `./orchestration/start_system.sh start`
-- Or started via: `./claude_start.sh`
+- Or started via: `./claude_start.sh` (auto-starts orchestration when not running git hooks)
+
+**Automatic Behavior**:
+- `/orch` commands automatically check if the orchestration system is running
+- If not running, attempts to start it before executing the task
+- Shows clear status messages about system state
+- **Memory Integration**: Automatically queries Memory MCP for:
+  - Past mistakes and learnings related to the task
+  - Previous similar orchestration patterns
+  - Known issues and their solutions
+  - This helps agents avoid repeating past errors
+  - **Note**: If Memory MCP is unavailable, tasks proceed without memory context (non-blocking)
 
 **Agent Types**:
 - **Frontend Agent**: UI, React components, styling (`frontend-agent`)
-- **Backend Agent**: APIs, database, server logic (`backend-agent`) 
+- **Backend Agent**: APIs, database, server logic (`backend-agent`)
 - **Testing Agent**: Tests, QA, validation (`testing-agent`)
 - **Opus Master**: Coordination and oversight (`opus-master`)
 
@@ -54,3 +76,59 @@
 - **Connect to backend**: `tmux attach -t backend-agent`
 - **Connect to testing**: `tmux attach -t testing-agent`
 - **Monitor all**: `tmux list-sessions | grep -E '(frontend|backend|testing|opus)'`
+
+## Important Notes
+
+- **Working Directory**: The orchestration system creates agent workspaces as subdirectories. Always ensure you're in the main project directory when running orchestration commands, not inside an agent workspace
+- **Monitoring**: Use `tmux attach -t [agent-name]` to watch agent progress
+- **Results**: Check `/tmp/orchestration_results/` for agent completion status
+- **Cleanup**: Run `orchestration/cleanup_agents.sh` to remove completed agent worktrees
+- **Branch Context**: Agents inherit from your current branch, so their changes build on your work
+
+## 🚨 AGENT TASK PATIENCE
+
+Agent tasks require TIME - wait for completion before ANY declaration:
+- ⚠️ Orchestrate agents work autonomously and may take 5-10+ minutes
+- ❌ NEVER declare success OR failure without checking completion status
+- ❌ NEVER make declarations based on quick checks (10s, 30s, 60s too soon)
+- ✅ ALWAYS check tmux output for "Task completed" message
+- ✅ ALWAYS verify PR creation in agent output before declaring results
+- 🔍 Evidence: Agent task-agent-5819 succeeded with PR #851 after 270 seconds
+- 📋 Proper verification: tmux output → "Task completed" → PR URL → verify PR exists
+- ⚠️ Status warnings like "agent may still be working" mean WAIT, don't declare
+
+## 🔄 PR UPDATE MODE vs CREATE MODE
+
+**CRITICAL**: Agents must detect whether to UPDATE existing PRs or CREATE new ones:
+
+### 🔍 PR Update Pattern Detection
+The orchestration system recognizes these patterns as PR UPDATE requests:
+- **Explicit PR references**: "fix PR #123", "update pull request #456", "adjust PR #789"
+- **Contextual PR references**: "adjust the PR", "fix the pull request", "update that PR"
+- **Action words with PR**: "modify", "fix", "adjust", "update", "enhance", "improve" + "PR/pull request"
+- **Continuation phrases**: "continue with PR", "add to the PR", "the PR needs", "PR should also"
+
+### 🆕 PR Create Patterns (Default)
+These patterns trigger NEW PR creation:
+- **No PR mentioned**: "implement feature X", "fix bug Y", "create Z"
+- **Explicit new work**: "create new PR for", "start fresh PR", "new pull request"
+- **Independent tasks**: Tasks that don't reference existing work
+
+### 📢 User Feedback
+Orchestration will clearly indicate the detected mode:
+```
+🔍 Detected PR context: #950 - Agent will UPDATE existing PR
+   Branch: feature-xyz
+   Status: OPEN
+```
+OR
+```
+🆕 No PR context detected - Agent will create NEW PR
+   New branch will be created from main
+```
+
+### ⚠️ Edge Cases
+- **Merged/Closed PRs**: Agent will warn and ask for confirmation
+- **Multiple PR mentions**: Agent will ask which PR to update
+- **Ambiguous "the PR"**: System will show recent PRs and ask for selection
+- **Branch conflicts**: Agent will attempt rebase/merge with clear messaging

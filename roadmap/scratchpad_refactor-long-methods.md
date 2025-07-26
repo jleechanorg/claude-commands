@@ -66,10 +66,10 @@ Refactor long methods in mvp_site (gemini_service.py, main.py, firestore_service
 1. **gemini_service.py**:
    - `continue_story`: 268 → 136 lines (49% reduction)
    - `get_initial_story`: Extracted debug instructions helper
-   
+
 2. **main.py**:
    - `handle_interaction`: 266 → 112 lines (58% reduction)
-   
+
 3. **firestore_service.py**:
    - `update_state_with_changes`: 59 → 39 lines (34% reduction)
 
@@ -280,7 +280,7 @@ The uncovered items in main.py are Flask route helpers that:
 
 ### Merge Summary
 - **Commit**: 5d447dc - Merge main and resolve conflicts in firestore_service.py and gemini_service.py
-- **Conflicts Resolved**: 
+- **Conflicts Resolved**:
   - firestore_service.py - Mission handling logic conflicts
   - gemini_service.py - Prompt loading and DELETE token changes
 - **Changes Incorporated**:

@@ -73,6 +73,6 @@ The evidence proves command composition produces measurably different problem-so
 
 ## Files Generated
 - `tmp/group_a_output.txt` - Full JSON log from Group A
-- `tmp/group_b_output.txt` - Full JSON log from Group B  
+- `tmp/group_b_output.txt` - Full JSON log from Group B
 - `tmp/headless_ab_comparison.md` - Extracted comparison
 - `tmp/ab_test_simple_task_fixed.py` - Working fix from Group B

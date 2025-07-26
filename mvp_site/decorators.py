@@ -19,26 +19,31 @@ Usage:
 
 import functools
 import traceback
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import logging_util
 
 # Get a logger instance for this module
 logger = logging_util.getLogger(__name__)
 
+# Type variable for generic function decoration
+F = TypeVar("F", bound=Callable[..., Any])
 
-def log_exceptions(func):
+
+def log_exceptions(func: F) -> F:
     """A decorator that wraps a function in a try-except block
     and logs any exceptions with a full stack trace.
 
     Args:
-        func (callable): The function to be decorated.
+        func: The function to be decorated.
 
     Returns:
-        callable: The wrapper function that includes exception logging.
+        The wrapper function that includes exception logging.
     """
 
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         """Wrapper function that executes the decorated function and logs exceptions.
 
         Args:
@@ -71,4 +76,4 @@ def log_exceptions(func):
             # Re-raise the exception so it can be handled by the calling code (e.g., the route)
             raise
 
-    return wrapper
+    return wrapper  # type: ignore[return-value]

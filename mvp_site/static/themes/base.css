@@ -2,7 +2,9 @@
 body {
   background-color: var(--primary-bg);
   color: var(--text-primary);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 #story-content {
@@ -21,7 +23,8 @@ body {
   border-bottom: 1px solid var(--border-color);
 }
 
-.navbar-brand, .navbar-text {
+.navbar-brand,
+.navbar-text {
   color: var(--text-primary) !important;
 }
 

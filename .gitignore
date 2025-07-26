@@ -131,3 +131,4 @@ agent_workspace_*
 orchestration/tasks/health_report.json
 agent_dir/
 headless_*/
+[workspace]

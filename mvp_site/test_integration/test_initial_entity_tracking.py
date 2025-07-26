@@ -36,7 +36,7 @@ class TestInitialEntityTracking(unittest.TestCase):
         # Create campaign with Sariel
         campaign_data = {
             "prompt": """Create a new D&D campaign with the following setup:
-            
+
 Player Character: Sariel, a member of House Arcanus
 Setting: A medieval fantasy world with political intrigue
 Starting Location: The throne room of a grand castle

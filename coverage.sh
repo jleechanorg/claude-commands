@@ -131,7 +131,7 @@ if [ "$include_integration" = true ]; then
             test_files+=("$file")
         done < <(find ./test_integration -name "test_*.py" -type f -print0)
     fi
-    
+
     if [ -d "./tests/test_integration" ]; then
         print_status "Including integration tests from tests/test_integration/"
         while IFS= read -r -d '' file; do
@@ -167,7 +167,7 @@ for test_file in "${test_files[@]}"; do
     if [ -f "$test_file" ]; then
         total_tests=$((total_tests + 1))
         echo -n "[$total_tests/${#test_files[@]}] Running: $test_file ... "
-        
+
         if TESTING=true coverage run --append --source=. "$test_file" >/dev/null 2>&1; then
             passed_tests=$((passed_tests + 1))
             echo -e "${GREEN}✓${NC}"
@@ -198,28 +198,28 @@ coverage_report_exit_code=$?
 # Display key coverage metrics
 if [ $coverage_report_exit_code -eq 0 ]; then
     print_success "Coverage report generated successfully"
-    
+
     # Extract and display key metrics
     echo
     print_status "📈 Coverage Summary:"
     echo "----------------------------------------"
-    
+
     # Show overall coverage
     overall_coverage=$(tail -1 "$COVERAGE_DIR/coverage_report.txt" | awk '{print $4}')
     echo "Overall Coverage: $overall_coverage"
-    
+
     # Show key file coverage
     echo
     echo "Key Files Coverage:"
     grep -E "(main\.py|gemini_service\.py|game_state\.py|firestore_service\.py)" "$COVERAGE_DIR/coverage_report.txt" | head -10
-    
+
     echo "----------------------------------------"
-    
+
     # Save full report to tmp and display excerpt
     echo
     print_status "📋 Full Coverage Report (saved to $COVERAGE_DIR/coverage_report.txt):"
     cat "$COVERAGE_DIR/coverage_report.txt"
-    
+
 else
     print_error "Failed to generate coverage report"
 fi
@@ -230,7 +230,7 @@ if [ "$generate_html" = true ]; then
     if coverage html --directory="$COVERAGE_DIR"; then
         print_success "HTML coverage report generated in $COVERAGE_DIR/"
         print_status "Open $COVERAGE_DIR/index.html in your browser to view detailed coverage"
-        
+
         # Create a convenient symlink if possible
         if [ -w "/tmp" ]; then
             ln -sf "$COVERAGE_DIR/index.html" "/tmp/coverage.html" 2>/dev/null

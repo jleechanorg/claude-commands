@@ -10,6 +10,8 @@ import time
 
 from playwright.sync_api import sync_playwright
 
+import traceback
+
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -155,11 +157,11 @@ def test_inline_editing_features():
                         () => {
                             const titleEl = document.getElementById('game-title');
                             if (!titleEl) return 'No title element found';
-                            
+
                             if (typeof window.InlineEditor === 'undefined') {
                                 return 'InlineEditor class not defined';
                             }
-                            
+
                             // Try to create a new instance manually
                             try {
                                 const editor = new window.InlineEditor(titleEl, {
@@ -190,7 +192,7 @@ def test_inline_editing_features():
                         '.pause-story',
                         '.continue-story'
                     ];
-                    
+
                     const found = [];
                     for (const selector of selectors) {
                         const els = document.querySelectorAll(selector);
@@ -198,19 +200,19 @@ def test_inline_editing_features():
                             found.push(`${selector}: ${els.length} element(s)`);
                         }
                     }
-                    
+
                     // Also check for any buttons with story-related text
                     const buttons = Array.from(document.querySelectorAll('button'));
-                    const storyButtons = buttons.filter(b => 
+                    const storyButtons = buttons.filter(b =>
                         b.textContent.toLowerCase().includes('pause') ||
                         b.textContent.toLowerCase().includes('continue') ||
                         b.textContent.toLowerCase().includes('story')
                     );
-                    
+
                     if (storyButtons.length > 0) {
                         found.push(`Story-related buttons: ${storyButtons.map(b => b.textContent).join(', ')}`);
                     }
-                    
+
                     return found.length > 0 ? found : ['No story reader controls found'];
                 }
             """)
@@ -241,7 +243,7 @@ def test_inline_editing_features():
 
         except Exception as e:
             print(f"\n[ERROR] Test failed: {e}")
-            import traceback
+
 
             traceback.print_exc()
 

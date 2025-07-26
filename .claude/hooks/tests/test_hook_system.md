@@ -23,7 +23,7 @@ class DataProcessor:
 ```
 **Expected**: Hook should detect "placeholder" and "fake" patterns
 
-### Test 3: GREEN - Clean Implementation  
+### Test 3: GREEN - Clean Implementation
 Create a proper implementation:
 ```python
 def calculate_tax(amount, rate=0.08):
@@ -71,7 +71,7 @@ jq '.hooks' ~/.claude/settings.json
 ## Success Criteria
 
 ✅ Anti-demo hook detects placeholder patterns
-✅ Clean code passes without warnings  
+✅ Clean code passes without warnings
 ✅ Test files are properly excluded
 ✅ Issues are logged to verification file
 ✅ Header hook generates branch info consistently

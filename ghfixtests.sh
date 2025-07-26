@@ -15,7 +15,7 @@ while IFS=$'\t' read -r number title; do
     if gh pr checks "$number" 2>/dev/null | grep -q "fail"; then
         # Get failing check details
         failing_checks=$(gh pr checks "$number" 2>/dev/null | grep "fail" | awk '{print $2}' | tr '\n' ', ' | sed 's/, $//')
-        
+
         failing_prs="${failing_prs}${number}|${title}|${failing_checks}\n"
         ((pr_count++))
     fi
@@ -82,10 +82,10 @@ echo
 echo "📝 Posting Claude comments to fix tests..."
 for pr in $prs_to_fix; do
     echo -n "Commenting on PR #$pr... "
-    
+
     # Get more details about failures if possible
     failure_details=$(gh pr checks "$pr" 2>/dev/null | grep "fail" | head -5 | sed 's/^/  - /')
-    
+
     comment="@claude-code-action fix unit tests
 
 The CI checks are failing. Please investigate and fix all failing tests.
@@ -94,7 +94,7 @@ Failing checks:
 $failure_details
 
 Please ensure all tests pass before completing."
-    
+
     if gh pr comment "$pr" --body "$comment" 2>/dev/null; then
         echo "✅ Done"
     else

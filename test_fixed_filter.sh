@@ -3,13 +3,13 @@
 filter_sensitive_data() {
     local input_file="$1"
     local output_file="$2"
-    
+
     # Create a temporary file for processing
     local temp_file=$(mktemp)
-    
+
     # Copy the original file to temp
     cp "$input_file" "$temp_file"
-    
+
     # Define sensitive patterns to filter out
     local sensitive_patterns=(
         # API Keys - Various formats
@@ -24,18 +24,18 @@ filter_sensitive_data() {
         "ghu_[A-Za-z0-9]{36}"                              # GitHub User tokens
         "ghs_[A-Za-z0-9]{36}"                              # GitHub Server tokens
         "ghr_[A-Za-z0-9]{36}"                              # GitHub Refresh tokens
-        
+
         # Generic patterns for common sensitive data
         "['\"][A-Za-z0-9+/]{40,}['\"]"                     # Base64-like long strings in quotes
         "bearer [A-Za-z0-9._-]+"                           # Bearer tokens
         "token [A-Za-z0-9._-]+"                            # Token prefixes
     )
-    
+
     # Apply filtering for each pattern
     for pattern in "${sensitive_patterns[@]}"; do
         sed -i -E "s|$pattern|[REDACTED]|g" "$temp_file"
     done
-    
+
     # Also filter lines containing sensitive environment variable patterns
     sed -i -E '/export.*API_KEY.*=/s/=.*/=[REDACTED]/' "$temp_file"
     sed -i -E '/export.*SECRET.*=/s/=.*/=[REDACTED]/' "$temp_file"
@@ -45,7 +45,7 @@ filter_sensitive_data() {
     sed -i -E '/export.*PASS.*=/s/=.*/=[REDACTED]/' "$temp_file"
     sed -i -E '/export.*ACCESS_KEY.*=/s/=.*/=[REDACTED]/' "$temp_file"
     sed -i -E '/export.*GEMINI.*=/s/=.*/=[REDACTED]/' "$temp_file"
-    
+
     # Add header to indicate this file has been filtered
     {
         echo "# ======================================================================"
@@ -56,7 +56,7 @@ filter_sensitive_data() {
         echo ""
         cat "$temp_file"
     } > "$output_file"
-    
+
     # Clean up temp file
     rm -f "$temp_file"
 }

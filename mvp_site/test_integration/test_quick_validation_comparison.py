@@ -7,6 +7,7 @@ Runs fewer iterations for faster results.
 import json
 import os
 import sys
+import tempfile
 import time
 import unittest
 from datetime import datetime
@@ -139,7 +140,6 @@ class TestQuickValidationComparison(unittest.TestCase):
     def _save_results(self, results: dict):
         """Save results to file"""
         # Use temporary directory for test outputs
-        import tempfile
 
         temp_dir = tempfile.mkdtemp(prefix="cassian_test_")
 

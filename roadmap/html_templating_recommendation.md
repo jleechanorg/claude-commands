@@ -46,7 +46,7 @@ The current codebase has significant HTML generation issues:
             </div>
             <div class="mb-3">
                 <label for="wizard-title-input">Campaign Title</label>
-                <input type="text" class="form-control" id="wizard-title-input" 
+                <input type="text" class="form-control" id="wizard-title-input"
                        placeholder="{{titlePlaceholder}}" value="{{title}}">
             </div>
             <div class="mb-3">
@@ -57,20 +57,20 @@ The current codebase has significant HTML generation issues:
             <div class="mb-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <label for="wizard-description-input">Campaign description prompt</label>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" 
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
                             id="toggle-description" aria-expanded="true">
                         <i class="bi bi-chevron-up"></i> Collapse
                     </button>
                 </div>
                 <div id="description-container" class="collapse show">
-                    <textarea class="form-control scrollable-textarea" 
+                    <textarea class="form-control scrollable-textarea"
                               id="wizard-description-input" rows="8"
                               placeholder="{{descriptionPlaceholder}}">{{description}}</textarea>
                 </div>
             </div>
         </div>
     </template>
-    
+
     <!-- More templates for other wizard steps... -->
 </div>
 ```
@@ -81,7 +81,7 @@ The current codebase has significant HTML generation issues:
 const TemplateHelper = {
     // Cache for compiled templates
     cache: new Map(),
-    
+
     // Get and clone a template
     getTemplate(templateId) {
         const template = document.getElementById(templateId);
@@ -90,7 +90,7 @@ const TemplateHelper = {
         }
         return template.content.cloneNode(true);
     },
-    
+
     // Fill template with data using simple {{key}} placeholders
     fillTemplate(element, data) {
         // Replace text content
@@ -100,7 +100,7 @@ const TemplateHelper = {
             null,
             false
         );
-        
+
         let node;
         while (node = walker.nextNode()) {
             node.textContent = node.textContent.replace(
@@ -108,7 +108,7 @@ const TemplateHelper = {
                 (match, key) => data[key] ?? match
             );
         }
-        
+
         // Replace attributes
         element.querySelectorAll('*').forEach(el => {
             Array.from(el.attributes).forEach(attr => {
@@ -118,16 +118,16 @@ const TemplateHelper = {
                 );
             });
         });
-        
+
         return element;
     },
-    
+
     // Render template with data
     renderTemplate(templateId, data = {}) {
         const template = this.getTemplate(templateId);
         return this.fillTemplate(template, data);
     },
-    
+
     // Helper to convert template to HTML string if needed
     templateToString(templateId, data = {}) {
         const filled = this.renderTemplate(templateId, data);
@@ -142,7 +142,7 @@ const TemplateHelper = {
 ```javascript
 class CampaignWizard {
     // ... existing code ...
-    
+
     generateWizardHTML() {
         // OLD: 600+ lines of HTML string
         // NEW: Use templates
@@ -156,7 +156,7 @@ class CampaignWizard {
             description: this.formData.description || '',
             descriptionPlaceholder: 'Describe your campaign concept...'
         };
-        
+
         return `
             <div id="campaign-wizard" class="campaign-wizard">
                 ${this.generateProgressBar()}
@@ -167,7 +167,7 @@ class CampaignWizard {
             </div>
         `;
     }
-    
+
     generateProgressBar() {
         return TemplateHelper.templateToString('tmpl-wizard-progress', {
             currentStep: this.currentStep,

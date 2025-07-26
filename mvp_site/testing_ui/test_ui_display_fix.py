@@ -25,7 +25,7 @@ def test_ui_displays_all_fields():
 
         try:
             # Navigate to the app
-            page.goto("http://localhost:6006")
+            page.goto("http://localhost:8081")
             print("✓ Navigated to app")
 
             # Wait for page to load

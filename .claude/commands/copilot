@@ -1,0 +1,7 @@
+#!/bin/bash
+# /copilot command - intelligent PR analysis and orchestration
+# Invokes copilot.md for Claude to execute universal composition
+
+echo "🤖 /copilot - Analyzing PR and orchestrating intelligent responses..."
+echo "Claude will read copilot.md for universal composition workflow"
+echo "Transparency first - all actions will be shown before execution"

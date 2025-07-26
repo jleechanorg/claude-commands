@@ -4,7 +4,7 @@
 
 **Action**: Commit local changes, switch to main, update roadmap/*.md, push to origin, switch back
 
-**Usage**: 
+**Usage**:
 - `/roadmap` or `/r` - Single task (traditional mode)
 - `/roadmap task1, task2, task3` - Multi-task parallel processing
 - `/roadmap "complex task 1" "simple task 2"` - Multiple quoted tasks
@@ -38,22 +38,26 @@
 
 8. Pull latest changes: `git pull origin main`
 
-9. Make requested changes to:
+9. Create clean roadmap update branch: `git checkout -b roadmap-update-[timestamp]`
+
+10. Make requested changes to:
    - `roadmap/roadmap.md` (main roadmap file)
    - `roadmap/sprint_current.md` (current sprint status)
    - `roadmap/scratchpad_task[NUMBER]_[description].md` (if applicable)
 
-10. Commit changes with format: `docs(roadmap): [description]`
+11. Commit changes with format: `docs(roadmap): [description]`
 
-11. Push directly to main: `git push origin main`
+12. Push branch: `git push origin HEAD:roadmap-update-[timestamp]`
 
-12. Switch back to original branch: `git checkout [original-branch]`
+13. Create PR: `gh pr create --title "docs(roadmap): [description]" --body "Roadmap update via /roadmap command"`
 
-13. **MANDATORY**: Explicitly report merge status: "✅ MERGED" or "❌ NOT MERGED" with explanation
+14. Switch back to original branch: `git checkout [original-branch]`
+
+15. **MANDATORY**: Explicitly report merge status: "✅ PR CREATED" with PR link for user to merge
 
 **Files Updated**: `roadmap/roadmap.md`, `roadmap/sprint_current.md`, and task scratchpads as needed
 
-**Exception**: This is the ONLY case where direct push to main is allowed
+**Workflow**: All roadmap changes now follow standard PR workflow - no exceptions to main push policy
 
 ## Enhanced Multi-Task Parallel Processing
 
@@ -108,7 +112,7 @@ User: /roadmap implement auth system, create API docs, add unit testsAssistant: 
 [Executes /think light for each task]
 
 Task 1: Implement auth system - Complex, needs design
-Task 2: Create API docs - Medium, documentation task  
+Task 2: Create API docs - Medium, documentation task
 Task 3: Add unit tests - Small, testing task
 
 [Executes /plan for each task with subagent strategies]

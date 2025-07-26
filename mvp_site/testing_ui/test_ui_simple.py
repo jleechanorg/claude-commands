@@ -21,7 +21,7 @@ def test_simple_ui_check():
 
         try:
             # Go directly to a campaign if one exists, or create via API
-            page.goto("http://localhost:6006")
+            page.goto("http://localhost:8081")
             page.wait_for_load_state("networkidle")
 
             # Check current page

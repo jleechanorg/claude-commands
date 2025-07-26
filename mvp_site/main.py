@@ -34,11 +34,14 @@ import collections
 import json
 import logging
 import os
+import random
 import subprocess
 import sys
 import traceback
 import uuid
+from collections.abc import Callable
 from functools import wraps
+from typing import Any
 
 import constants
 
@@ -48,22 +51,40 @@ import document_generator
 # Firebase imports
 import firebase_admin
 import logging_util
+import structured_fields_utils
+from custom_types import CampaignId, UserId
+from debug_hybrid_system import process_story_for_display
 from debug_mode_parser import DebugModeParser
 from firebase_admin import auth
 
 # Flask and web imports
-from flask import Flask, jsonify, request, send_file, send_from_directory
+from flask import (
+    Flask,
+    Response,
+    jsonify,
+    render_template,
+    request,
+    send_file,
+    send_from_directory,
+)
 from flask_cors import CORS
+from mocks import mock_firestore_service_wrapper, mock_gemini_service_wrapper
 from token_utils import log_with_tokens
 
+import firestore_service as real_firestore_service
+
+# Service imports that may be conditionally used
+import gemini_service as real_gemini_service
 from firestore_service import (
     _truncate_log_json,
+    get_user_settings,
     json_default_serializer,
     update_state_with_changes,
+    update_user_settings,
 )
 from game_state import GameState
 
-# --- Service Imports ---
+# --- Service Selection Logic ---
 # Granular mock control - check individual service mock flags
 use_mock_gemini = os.environ.get("USE_MOCK_GEMINI", "").lower() in ["true", "1", "yes"]
 use_mock_firebase = os.environ.get("USE_MOCK_FIREBASE", "").lower() in [
@@ -80,19 +101,17 @@ if os.environ.get("USE_MOCKS", "").lower() in ["true", "1", "yes"]:
     if "USE_MOCK_FIREBASE" not in os.environ:
         use_mock_firebase = True
 
-# Import Gemini service based on flag
+# Choose which service to use based on flags
 if use_mock_gemini:
-    from mocks import mock_gemini_service_wrapper as gemini_service
+    gemini_service = mock_gemini_service_wrapper
 else:
-    import gemini_service
+    gemini_service = real_gemini_service
 
-# Import Firestore service based on flag
+# Choose which firestore service to use based on flags
 if use_mock_firebase:
-    from mocks import mock_firestore_service_wrapper as firestore_service
+    firestore_service = mock_firestore_service_wrapper
 else:
-    import firestore_service
-
-import structured_fields_utils
+    firestore_service = real_firestore_service
 
 # --- CONSTANTS ---
 # API Configuration
@@ -154,7 +173,9 @@ RANDOM_SETTINGS = [
 # --- END CONSTANTS ---
 
 
-def _prepare_game_state(user_id, campaign_id):
+def _prepare_game_state(
+    user_id: UserId, campaign_id: CampaignId
+) -> tuple[GameState, bool, int]:
     """
     Load and prepare game state, including legacy cleanup.
 
@@ -169,8 +190,8 @@ def _prepare_game_state(user_id, campaign_id):
     - Logs cleanup operations for debugging
 
     Args:
-        user_id (str): Firebase user ID
-        campaign_id (str): Campaign identifier from Firestore
+        user_id: Firebase user ID
+        campaign_id: Campaign identifier from Firestore
 
     Returns:
         tuple: (current_game_state, was_cleaned, num_cleaned)
@@ -205,7 +226,12 @@ def _prepare_game_state(user_id, campaign_id):
     return current_game_state, was_cleaned, num_cleaned
 
 
-def _handle_set_command(user_input, current_game_state, user_id, campaign_id):
+def _handle_set_command(
+    user_input: str,
+    current_game_state: GameState,
+    user_id: UserId,
+    campaign_id: CampaignId,
+) -> Response | None:
     """
     Handle GOD_MODE_SET command.
 
@@ -272,7 +298,12 @@ def _handle_set_command(user_input, current_game_state, user_id, campaign_id):
     )
 
 
-def _handle_ask_state_command(user_input, current_game_state, user_id, campaign_id):
+def _handle_ask_state_command(
+    user_input: str,
+    current_game_state: GameState,
+    user_id: UserId,
+    campaign_id: CampaignId,
+) -> Response | None:
     """
     Handle GOD_ASK_STATE command.
 
@@ -297,7 +328,9 @@ def _handle_ask_state_command(user_input, current_game_state, user_id, campaign_
     return jsonify({KEY_SUCCESS: True, KEY_RESPONSE: response_text})
 
 
-def _handle_update_state_command(user_input, user_id, campaign_id):
+def _handle_update_state_command(
+    user_input: str, user_id: UserId, campaign_id: CampaignId
+) -> Response | None:
     """
     Handle GOD_MODE_UPDATE_STATE command.
 
@@ -364,22 +397,22 @@ def _handle_update_state_command(user_input, user_id, campaign_id):
 
 
 def _apply_state_changes_and_respond(
-    proposed_changes,
-    current_game_state,
-    gemini_response_obj,
-    structured_response,
-    mode,
-    story_context,
-    campaign_id,
-    user_id,
-):
+    proposed_changes: dict[str, Any] | None,
+    current_game_state: GameState,
+    gemini_response_obj: Any,  # GeminiResponse type from gemini_service
+    structured_response: Any | None,  # NarrativeResponse type from gemini_service
+    mode: str,
+    story_context: list[dict[str, Any]],
+    campaign_id: CampaignId,
+    user_id: UserId,
+) -> Response:
     """
     Apply state changes from AI response and prepare final response.
 
     Args:
         proposed_changes: Proposed state changes dict
         current_game_state: Current GameState object
-        gemini_response: Processed narrative text
+        gemini_response_obj: Processed narrative text object
         structured_response: Parsed NarrativeResponse object or None
         mode: Game mode
         story_context: Story context list
@@ -508,8 +541,12 @@ def _apply_state_changes_and_respond(
 
 
 def _handle_debug_mode_command(
-    user_input, mode, current_game_state, user_id, campaign_id
-):
+    user_input: str,
+    mode: str,
+    current_game_state: GameState,
+    user_id: UserId,
+    campaign_id: CampaignId,
+) -> Response | None:
     """
     Handle debug mode command parsing and state updates.
 
@@ -558,7 +595,9 @@ def _handle_debug_mode_command(
     )
 
 
-def truncate_game_state_for_logging(game_state_dict, max_lines=20):
+def truncate_game_state_for_logging(
+    game_state_dict: dict[str, Any], max_lines: int = 20
+) -> str:
     """
     Truncates a game state dictionary for logging to improve readability.
     Only shows the first max_lines lines of the JSON representation.
@@ -575,8 +614,8 @@ def truncate_game_state_for_logging(game_state_dict, max_lines=20):
 
 
 def apply_automatic_combat_cleanup(
-    updated_state_dict: dict, proposed_changes: dict
-) -> dict:
+    updated_state_dict: dict[str, Any], proposed_changes: dict[str, Any]
+) -> dict[str, Any]:
     """
     Automatically cleans up defeated enemies from combat state when combat updates are applied.
 
@@ -627,7 +666,9 @@ def apply_automatic_combat_cleanup(
     return updated_state_dict
 
 
-def _cleanup_legacy_state(state_dict: dict) -> tuple[dict, bool, int]:
+def _cleanup_legacy_state(
+    state_dict: dict[str, Any],
+) -> tuple[dict[str, Any], bool, int]:
     """
     Removes legacy data structures from a game state dictionary.
     Specifically, it removes top-level keys with '.' in them and the old 'world_time' key.
@@ -653,14 +694,14 @@ def _cleanup_legacy_state(state_dict: dict) -> tuple[dict, bool, int]:
     return cleaned_state, True, num_deleted
 
 
-def format_state_changes(changes: dict, for_html: bool = False) -> str:
+def format_state_changes(changes: dict[str, Any], for_html: bool = False) -> str:
     """Formats a dictionary of state changes into a readable string, counting the number of leaf-node changes."""
     if not changes:
         return "No state changes."
 
-    log_lines = []
+    log_lines: list[str] = []
 
-    def recurse_items(d, prefix=""):
+    def recurse_items(d: dict[str, Any], prefix: str = "") -> None:
         for key, value in d.items():
             path = f"{prefix}.{key}" if prefix else key
             if isinstance(value, dict):
@@ -685,13 +726,13 @@ def format_state_changes(changes: dict, for_html: bool = False) -> str:
     return f"{header}\\n{items_text}"
 
 
-def parse_set_command(payload_str: str) -> dict:
+def parse_set_command(payload_str: str) -> dict[str, Any]:
     """
     Parses a multi-line string of `key.path = value` into a nested
     dictionary of proposed changes. Handles multiple .append operations correctly.
     """
-    proposed_changes = {}
-    append_ops = collections.defaultdict(list)
+    proposed_changes: dict[str, Any] = {}
+    append_ops: dict[str, list[Any]] = collections.defaultdict(list)
 
     for line in payload_str.strip().splitlines():
         line = line.strip()
@@ -731,7 +772,12 @@ def parse_set_command(payload_str: str) -> dict:
     return proposed_changes
 
 
-def _build_campaign_prompt(character, setting, description, old_prompt):
+def _build_campaign_prompt(
+    character: str | None,
+    setting: str | None,
+    description: str | None,
+    old_prompt: str | None,
+) -> str:
     """
     Build campaign prompt from character, setting, and description parameters.
 
@@ -741,15 +787,14 @@ def _build_campaign_prompt(character, setting, description, old_prompt):
     - Backward compatibility with old_prompt format is maintained
 
     Args:
-        character (str): Character description or None/empty
-        setting (str): Setting description or None/empty
-        description (str): Campaign description or None/empty
-        old_prompt (str): Legacy prompt format for backward compatibility
+        character: Character description or None/empty
+        setting: Setting description or None/empty
+        description: Campaign description or None/empty
+        old_prompt: Legacy prompt format for backward compatibility
 
     Returns:
-        str: Constructed campaign prompt with proper character/setting/description format
+        Constructed campaign prompt with proper character/setting/description format
     """
-    import random
 
     # Normalize inputs: convert None to empty string and strip whitespace
     character = (character or "").strip()
@@ -783,7 +828,7 @@ def _build_campaign_prompt(character, setting, description, old_prompt):
     return "\n".join(prompt_parts)
 
 
-def setup_file_logging():
+def setup_file_logging() -> None:
     """
     Configure file logging for current git branch.
 
@@ -834,7 +879,47 @@ def setup_file_logging():
     logging_util.info(f"File logging configured: {log_file}")
 
 
-def create_app():
+def strip_game_state_fields(
+    story_entries: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """
+    Strip game state information from story entries when debug mode is OFF.
+
+    Removes fields that should only be visible in debug mode:
+    - entities_mentioned
+    - entities
+    - state_updates
+    - debug_info
+
+    Args:
+        story_entries: List of story entry dictionaries
+
+    Returns:
+        List of story entries with game state fields removed
+    """
+    if not story_entries:
+        return story_entries
+
+    # Fields to strip when debug mode is OFF
+    game_state_fields = {
+        "entities_mentioned",
+        "entities",
+        "state_updates",
+        "debug_info",
+    }
+
+    stripped_story = []
+    for entry in story_entries:
+        # Create a copy without the game state fields
+        stripped_entry = {
+            key: value for key, value in entry.items() if key not in game_state_fields
+        }
+        stripped_story.append(stripped_entry)
+
+    return stripped_story
+
+
+def create_app() -> Flask:
     """
     Create and configure the Flask application.
 
@@ -860,13 +945,28 @@ def create_app():
     - /* - Frontend SPA fallback
 
     Returns:
-        Flask: Configured Flask application instance
+        Configured Flask application instance
     """
     # Set up file logging before creating app
     setup_file_logging()
 
-    app = Flask(__name__, static_folder="static")
+    app = Flask(__name__, static_folder=None)  # Disable default static serving
     CORS(app, resources=CORS_RESOURCES)
+
+    # Cache busting route for testing - only activates with special header
+    @app.route("/static/<path:filename>")
+    def static_files_with_cache_busting(filename):
+        """Serve static files with optional cache-busting for testing"""
+        static_folder = os.path.join(os.path.dirname(__file__), "static")
+        response = send_from_directory(static_folder, filename)
+
+        # Only disable cache if X-No-Cache header is present (for testing)
+        if request.headers.get("X-No-Cache") and filename.endswith((".js", ".css")):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+            response.headers["Pragma"] = "no-cache"
+            response.headers["Expires"] = "0"
+
+        return response
 
     # Set TESTING config from environment
     if os.environ.get("TESTING", "").lower() in ["true", "1", "yes"]:
@@ -895,9 +995,9 @@ def create_app():
         if not firebase_admin._apps:
             firebase_admin.initialize_app()
 
-    def check_token(f):
+    def check_token(f: Callable[..., Response]) -> Callable[..., Response]:
         @wraps(f)
-        def wrap(*args, **kwargs):
+        def wrap(*args: Any, **kwargs: Any) -> Response:
             # Check for auth skip mode (for testing with real services)
             auth_skip_enabled = (
                 app.config.get("TESTING") or os.getenv("AUTH_SKIP_MODE") == "true"
@@ -931,7 +1031,7 @@ def create_app():
     # --- API Routes ---
     @app.route("/api/campaigns", methods=["GET"])
     @check_token
-    def get_campaigns(user_id):
+    def get_campaigns(user_id: UserId) -> Response | tuple[Response, int]:
         # --- RESTORED TRY-EXCEPT BLOCK ---
         try:
             return jsonify(firestore_service.get_campaigns_for_user(user_id))
@@ -947,7 +1047,9 @@ def create_app():
 
     @app.route("/api/campaigns/<campaign_id>", methods=["GET"])
     @check_token
-    def get_campaign(user_id, campaign_id):
+    def get_campaign(
+        user_id: UserId, campaign_id: CampaignId
+    ) -> Response | tuple[Response, int]:
         # --- RESTORED TRY-EXCEPT BLOCK ---
         try:
             logging_util.info(
@@ -961,11 +1063,21 @@ def create_app():
             game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
             game_state_dict = game_state.to_dict() if game_state else {}
 
-            # Apply hybrid debug processing to story entries for backward compatibility
-            debug_mode = game_state_dict.get("debug_mode", False)
-            from debug_hybrid_system import process_story_for_display
+            # Get debug mode from user settings, not game state
+            user_settings = get_user_settings(user_id)
+            debug_mode = (
+                user_settings.get("debug_mode", False) if user_settings else False
+            )
 
+            # Apply debug mode from user settings to game state dict for UI consistency
+            game_state_dict["debug_mode"] = debug_mode
+
+            # Apply hybrid debug processing to story entries for backward compatibility
             processed_story = process_story_for_display(story, debug_mode)
+
+            # Strip game state fields when debug mode is OFF
+            if not debug_mode:
+                processed_story = strip_game_state_fields(processed_story)
 
             # Debug logging for structured fields
             logging_util.info(
@@ -1007,7 +1119,7 @@ def create_app():
 
     @app.route("/api/campaigns", methods=["POST"])
     @check_token
-    def create_campaign_route(user_id):
+    def create_campaign_route(user_id: UserId) -> Response | tuple[Response, int]:
         data = request.get_json()
 
         # Handle both new (character/setting/description) and old (prompt) formats
@@ -1053,6 +1165,7 @@ def create_app():
         try:
             opening_story_response = gemini_service.get_initial_story(
                 prompt,
+                user_id=user_id,
                 selected_prompts=selected_prompts,
                 generate_companions=generate_companions,
                 use_default_world=use_default_world,
@@ -1083,7 +1196,9 @@ def create_app():
 
     @app.route("/api/campaigns/<campaign_id>", methods=["PATCH"])
     @check_token
-    def update_campaign(user_id, campaign_id):
+    def update_campaign(
+        user_id: UserId, campaign_id: CampaignId
+    ) -> Response | tuple[Response, int]:
         data = request.get_json()
         new_title = data.get(constants.KEY_TITLE)
         if not new_title:
@@ -1102,7 +1217,9 @@ def create_app():
 
     @app.route("/api/campaigns/<campaign_id>/interaction", methods=["POST"])
     @check_token
-    def handle_interaction(user_id, campaign_id):
+    def handle_interaction(
+        user_id: UserId, campaign_id: CampaignId
+    ) -> Response | tuple[Response, int]:
         try:
             data = request.get_json()
             user_input, mode = (
@@ -1126,6 +1243,15 @@ def create_app():
                 user_id, campaign_id
             )
             game_state_dict = current_game_state.to_dict()
+
+            # --- Apply User Settings to Game State ---
+            # Override game state with current user settings (e.g., debug_mode)
+            user_settings = get_user_settings(user_id)
+            if user_settings and "debug_mode" in user_settings:
+                current_game_state.debug_mode = user_settings["debug_mode"]
+                logging_util.info(
+                    f"Applied user debug mode setting: {user_settings['debug_mode']}"
+                )
 
             # --- Debug Mode Command Parsing (BEFORE other commands) ---
             debug_response = _handle_debug_mode_command(
@@ -1307,7 +1433,9 @@ def create_app():
 
     @app.route("/api/campaigns/<campaign_id>/export", methods=["GET"])
     @check_token
-    def export_campaign(user_id, campaign_id):
+    def export_campaign(
+        user_id: UserId, campaign_id: CampaignId
+    ) -> Response | tuple[Response, int]:
         try:
             export_format = request.args.get("format", "txt").lower()
 
@@ -1369,7 +1497,7 @@ def create_app():
                 )
 
                 @response.call_on_close
-                def cleanup():
+                def cleanup() -> None:
                     try:
                         os.remove(safe_file_path)
                         logging_util.info(
@@ -1393,19 +1521,137 @@ def create_app():
                 }
             ), 500
 
+    # --- Settings Routes ---
+    @app.route("/settings")
+    @check_token
+    def settings_page(user_id: UserId) -> Response:
+        """Settings page for authenticated users."""
+        logging_util.info(f"User {user_id} visited settings page")
+        return render_template("settings.html")
+
+    @app.route("/api/settings", methods=["GET", "POST"])
+    @check_token
+    def api_settings(user_id: UserId) -> Response | tuple[Response, int]:
+        """Get or update user settings."""
+        try:
+            if request.method == "GET":
+                settings = get_user_settings(user_id)
+                # Return default settings for new users or database errors
+                if settings is None:
+                    settings = {
+                        "debug_mode": constants.DEFAULT_DEBUG_MODE,
+                        "gemini_model": "gemini-2.5-flash",  # Default model
+                    }
+                return jsonify(settings)
+
+            elif request.method == "POST":
+                # Validate settings data
+                data = request.get_json()
+                # Enhanced validation
+                if not isinstance(data, dict):
+                    return jsonify(
+                        {"error": "Invalid request format", "success": False}
+                    ), 400
+                if not data:
+                    return jsonify({"error": "No data provided", "success": False}), 400
+
+                settings_to_update = {}
+
+                # Validate gemini_model if provided
+                if "gemini_model" in data:
+                    model = data["gemini_model"]
+                    if not isinstance(model, str):
+                        return jsonify(
+                            {"error": "Invalid model selection", "success": False}
+                        ), 400
+
+                    # Case-insensitive validation to prevent case manipulation attacks
+                    model_lower = model.lower()
+                    allowed_models = {
+                        m.lower() for m in constants.ALLOWED_GEMINI_MODELS
+                    }
+                    if model_lower not in allowed_models:
+                        return jsonify(
+                            {"error": "Invalid model selection", "success": False}
+                        ), 400
+                    settings_to_update["gemini_model"] = model
+
+                # Validate debug_mode if provided
+                if "debug_mode" in data:
+                    debug_mode = data["debug_mode"]
+                    if (
+                        not isinstance(debug_mode, bool)
+                        or debug_mode not in constants.ALLOWED_DEBUG_MODE_VALUES
+                    ):
+                        return jsonify(
+                            {
+                                "error": "Invalid debug mode value. Must be true or false.",
+                                "success": False,
+                            }
+                        ), 400
+                    settings_to_update["debug_mode"] = debug_mode
+
+                # Ensure at least one setting is being updated
+                if not settings_to_update:
+                    return jsonify(
+                        {"error": "No valid settings provided", "success": False}
+                    ), 400
+
+                # Update settings
+                success = update_user_settings(user_id, settings_to_update)
+
+                # Log the changes
+                if "gemini_model" in settings_to_update:
+                    logging_util.info(
+                        f"User {user_id} changed Gemini model to {settings_to_update['gemini_model']}"
+                    )
+                if "debug_mode" in settings_to_update:
+                    logging_util.info(
+                        f"User {user_id} changed debug mode to {settings_to_update['debug_mode']}"
+                    )
+
+                if success:
+                    return jsonify({"success": True, "message": "Settings saved"})
+                else:
+                    return jsonify(
+                        {"error": "Failed to save settings", "success": False}
+                    ), 500
+
+        except Exception as e:
+            logging_util.error(f"Settings API error: {str(e)}")
+            return jsonify({"error": "Internal server error", "success": False}), 500
+
     # --- Frontend Serving ---
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
-    def serve_frontend(path):
+    def serve_frontend(path: str) -> Response:
         """Serve the frontend files. This is the fallback for any non-API routes."""
-        if path and os.path.exists(os.path.join(app.static_folder, path)):
-            return send_from_directory(app.static_folder, path)
-        return send_from_directory(app.static_folder, "index.html")
+        static_folder = os.path.join(os.path.dirname(__file__), "static")
+        if path and os.path.exists(os.path.join(static_folder, path)):
+            return send_from_directory(static_folder, path)
+        return send_from_directory(static_folder, "index.html")
+
+    # Fallback route for old cached frontend code calling /handle_interaction
+    @app.route("/handle_interaction", methods=["POST"])
+    def handle_interaction_fallback():
+        """Fallback for cached frontend code calling old endpoint"""
+        return jsonify(
+            {
+                "error": "This endpoint has been moved. Please refresh your browser (Ctrl+Shift+R) to get the latest version.",
+                "redirect_message": "Hard refresh required to clear browser cache",
+                "status": "cache_issue",
+            }
+        ), 410  # 410 Gone - indicates this endpoint no longer exists
 
     return app
 
 
-def run_god_command(campaign_id, user_id, action, command_string=None):
+def run_god_command(
+    campaign_id: CampaignId,
+    user_id: UserId,
+    action: str,
+    command_string: str | None = None,
+) -> None:
     """Runs a GOD_MODE command directly against Firestore."""
     # We need to initialize the app to get the context for Firestore
     if not firebase_admin._apps:
@@ -1469,12 +1715,12 @@ def run_god_command(campaign_id, user_id, action, command_string=None):
         )
 
 
-def run_test_command(command):
+def run_test_command(command: str) -> None:
     """
     Run a test command.
 
     Args:
-        command (str): The test command to run ('testui', 'testuif', 'testhttp', 'testhttpf')
+        command: The test command to run ('testui', 'testuif', 'testhttp', 'testhttpf')
     """
     if command == "testui":
         # Run browser tests with mock APIs
@@ -1614,7 +1860,7 @@ if __name__ == "__main__":
         args = parser.parse_args()
         if args.command == "serve":
             app = create_app()
-            port = int(os.environ.get("PORT", 8080))
+            port = int(os.environ.get("PORT", 8081))
             logging_util.info(f"Development server running: http://localhost:{port}")
             app.run(host="0.0.0.0", port=port, debug=True)
         elif args.command == "testui":

@@ -1,3 +1,5 @@
+import json
+
 """
 Red/Green Test for GeminiResponse Integration Bug Fix
 
@@ -17,7 +19,10 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+from narrative_response_schema import NarrativeResponse
 
 # Mock firebase_admin before importing main
 mock_firebase_admin = MagicMock()
@@ -83,9 +88,6 @@ class TestGeminiResponseIntegration(unittest.TestCase):
         raw_json_response = '{"narrative": "Your adventure begins in a bustling tavern...", "entities_mentioned": [], "location_confirmed": "Tavern", "state_updates": {}, "debug_info": {}}'
 
         # Parse JSON and create GeminiResponse object
-        import json
-
-        from narrative_response_schema import NarrativeResponse
 
         parsed_json = json.loads(raw_json_response)
         structured_response = NarrativeResponse(**parsed_json)
@@ -154,9 +156,6 @@ class TestGeminiResponseIntegration(unittest.TestCase):
         # Act: Create GeminiResponse
         raw_json_response = '{"narrative": "Test narrative", "entities_mentioned": [], "location_confirmed": "Unknown", "state_updates": {}, "debug_info": {}}'
         # Parse JSON and create GeminiResponse object
-        import json
-
-        from narrative_response_schema import NarrativeResponse
 
         parsed_json = json.loads(raw_json_response)
         structured_response = NarrativeResponse(**parsed_json)

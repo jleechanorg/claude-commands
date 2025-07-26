@@ -8,15 +8,20 @@ import json
 import time
 from datetime import datetime
 
+from validators.fuzzy_token_validator import FuzzyTokenValidator
+from validators.llm_validator import LLMValidator
+from validators.token_validator import SimpleTokenValidator, TokenValidator
+import os
+
 
 # Test with different narrative lengths
 def test_length_performance():
     """Test validator performance with different narrative lengths."""
 
     # Import validators
-    from validators.fuzzy_token_validator import FuzzyTokenValidator
-    from validators.llm_validator import LLMValidator
-    from validators.token_validator import SimpleTokenValidator, TokenValidator
+
+
+
 
     lengths = [100, 500, 1000, 2000, 5000]
     validators = {
@@ -77,7 +82,7 @@ def test_length_performance():
 
 
 if __name__ == "__main__":
-    import os
+
 
     os.makedirs("benchmarks", exist_ok=True)
     test_length_performance()

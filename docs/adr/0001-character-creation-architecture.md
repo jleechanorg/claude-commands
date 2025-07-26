@@ -1,7 +1,7 @@
 # ADR-0001: Character Creation Architecture
 
-**Status**: Accepted  
-**Date**: 2025-07-14  
+**Status**: Accepted
+**Date**: 2025-07-14
 **Participants**: Claude (analysis), Gemini (architecture consultation)
 
 ## Context
@@ -19,13 +19,13 @@ The character creation system needs reorganization to support three creation pat
 ```python
 class BaseCreationStrategy(ABC):
     # 80% shared logic: ability scores, equipment, etc.
-    
+
 class AIGeneratedStrategy(BaseCreationStrategy):
     # AI-specific logic only
-    
+
 class StandardDNDStrategy(BaseCreationStrategy):
     # Standard D&D specific logic only
-    
+
 class CustomClassStrategy(BaseCreationStrategy):
     # Custom class specific logic only
 ```

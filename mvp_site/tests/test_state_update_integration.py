@@ -7,6 +7,7 @@ by testing the complete flow from AI response to state application.
 
 import json
 import os
+import shutil
 import sys
 import unittest
 
@@ -63,7 +64,6 @@ class TestStateUpdateIntegration(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test fixtures"""
-        import shutil
 
         if os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)

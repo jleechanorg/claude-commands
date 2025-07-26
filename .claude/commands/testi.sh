@@ -103,10 +103,10 @@ fi
 # Check for existing integration test
 if [[ -f "mvp_site/test_integration/test_integration.py" ]] && [[ -z "$SPECIFIC_TEST" ]]; then
     echo -e "${GREEN}✓ Found test_integration.py${NC}"
-    
+
     # Run the main integration test
     echo -e "\n${GREEN}🧪 Running integration tests...${NC}"
-    
+
     if [[ "$USE_REAL_APIS" == "true" ]]; then
         echo "Mode: REAL APIs"
         cmd="python mvp_site/test_integration/test_integration.py"
@@ -114,25 +114,27 @@ if [[ -f "mvp_site/test_integration/test_integration.py" ]] && [[ -z "$SPECIFIC_
         echo "Mode: Mock APIs"
         cmd="env TESTING=true python mvp_site/test_integration/test_integration.py"
     fi
-    
+
     if [[ "$VERBOSE" == "true" ]]; then
         $cmd
     else
-        if $cmd > /tmp/integration_output.log 2>&1; then
+        BRANCH=$(git branch --show-current)
+        SANITIZED_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/_/g' | sed 's/^[.-]*//g')
+        if $cmd > /tmp/integration_output_${SANITIZED_BRANCH}.log 2>&1; then
             echo -e "${GREEN}✅ Integration tests passed!${NC}"
             exit 0
         else
             echo -e "${RED}❌ Integration tests failed!${NC}"
             echo ""
             echo "Error output:"
-            tail -30 /tmp/integration_output.log
+            tail -30 /tmp/integration_output_${SANITIZED_BRANCH}.log
             exit 1
         fi
     fi
 else
     # Run specific tests or search for test files
     echo -e "\n${GREEN}🔍 Looking for integration tests...${NC}"
-    
+
     # Determine which tests to run
     if [[ -n "$SPECIFIC_TEST" ]]; then
         if [[ -f "mvp_site/test_integration/$SPECIFIC_TEST" ]]; then
@@ -145,7 +147,7 @@ else
         # Find all integration test files
         test_files=$(find mvp_site/test_integration -name "test_*.py" -type f 2>/dev/null | sort)
     fi
-    
+
     if [[ -z "$test_files" ]]; then
         echo -e "${YELLOW}⚠️  No integration test files found${NC}"
         echo ""
@@ -153,23 +155,23 @@ else
         echo "Example: mvp_site/test_integration/test_game_workflow.py"
         exit 0
     fi
-    
+
     # Run each test
     TOTAL_TESTS=0
     PASSED_TESTS=0
     FAILED_TESTS=0
-    
+
     for test_file in $test_files; do
         echo -e "\n${BLUE}Running: $test_file${NC}"
         TOTAL_TESTS=$((TOTAL_TESTS + 1))
-        
+
         # Build command
         if [[ "$USE_REAL_APIS" == "true" ]]; then
             cmd="vpython $test_file"
         else
             cmd="env TESTING=true vpython $test_file"
         fi
-        
+
         if [[ "$VERBOSE" == "true" ]]; then
             if $cmd; then
                 PASSED_TESTS=$((PASSED_TESTS + 1))
@@ -179,29 +181,29 @@ else
                 echo -e "${RED}❌ FAILED${NC}"
             fi
         else
-            if $cmd > /tmp/test_output.log 2>&1; then
+            if $cmd > /tmp/test_output_${SANITIZED_BRANCH}.log 2>&1; then
                 PASSED_TESTS=$((PASSED_TESTS + 1))
                 echo -e "${GREEN}✅ PASSED${NC}"
             else
                 FAILED_TESTS=$((FAILED_TESTS + 1))
                 echo -e "${RED}❌ FAILED${NC}"
                 echo "Error output:"
-                tail -20 /tmp/test_output.log
+                tail -20 /tmp/test_output_${SANITIZED_BRANCH}.log
             fi
         fi
     done
-    
+
     # Summary
     echo -e "\n${BLUE}📊 Test Summary${NC}"
     echo "==============="
     echo "Total tests: $TOTAL_TESTS"
     echo -e "Passed: ${GREEN}$PASSED_TESTS${NC}"
     echo -e "Failed: ${RED}$FAILED_TESTS${NC}"
-    
+
     if [[ "$USE_REAL_APIS" == "true" ]]; then
         echo -e "\n${YELLOW}💰 These tests used REAL API calls${NC}"
     fi
-    
+
     if [[ $FAILED_TESTS -eq 0 ]]; then
         echo -e "\n${GREEN}✅ All integration tests passed! 🎉${NC}"
         exit 0

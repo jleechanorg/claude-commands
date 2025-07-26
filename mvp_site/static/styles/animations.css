@@ -19,7 +19,7 @@
 
 /* Smooth theme transitions for all elements */
 * {
-  transition: 
+  transition:
     background-color var(--animation-duration-normal) var(--animation-easing),
     border-color var(--animation-duration-normal) var(--animation-easing),
     color var(--animation-duration-normal) var(--animation-easing),
@@ -28,9 +28,11 @@
 
 /* Enhanced theme transition state */
 .theme-transitioning * {
-  transition: 
-    background-color var(--animation-duration-slow) var(--animation-easing) !important,
-    border-color var(--animation-duration-slow) var(--animation-easing) !important,
+  transition:
+    background-color var(--animation-duration-slow) var(--animation-easing)
+      !important,
+    border-color var(--animation-duration-slow) var(--animation-easing)
+      !important,
     color var(--animation-duration-slow) var(--animation-easing) !important,
     box-shadow var(--animation-duration-slow) var(--animation-easing) !important;
 }
@@ -46,7 +48,7 @@
 #game-view {
   opacity: 0;
   transform: translateY(20px);
-  transition: 
+  transition:
     opacity var(--animation-duration-normal) var(--animation-easing),
     transform var(--animation-duration-normal) var(--animation-easing);
 }
@@ -64,7 +66,7 @@
 #loading-overlay {
   opacity: 0;
   backdrop-filter: blur(0px);
-  transition: 
+  transition:
     opacity var(--animation-duration-normal) var(--animation-easing),
     backdrop-filter var(--animation-duration-normal) var(--animation-easing);
 }
@@ -83,7 +85,7 @@
   position: relative;
   overflow: hidden;
   transform: translateY(0);
-  transition: 
+  transition:
     transform var(--animation-duration-fast) var(--animation-easing),
     box-shadow var(--animation-duration-fast) var(--animation-easing),
     background-color var(--animation-duration-fast) var(--animation-easing);
@@ -131,7 +133,7 @@
 
 /* Form control focus animations */
 .form-control {
-  transition: 
+  transition:
     border-color var(--animation-duration-fast) var(--animation-easing),
     box-shadow var(--animation-duration-fast) var(--animation-easing),
     transform var(--animation-duration-fast) var(--animation-easing);
@@ -154,7 +156,7 @@
 
 /* Campaign cards hover effects */
 .list-group-item {
-  transition: 
+  transition:
     transform var(--animation-duration-fast) var(--animation-easing),
     box-shadow var(--animation-duration-fast) var(--animation-easing),
     background-color var(--animation-duration-fast) var(--animation-easing);
@@ -167,7 +169,7 @@
 
 /* Card animations */
 .card {
-  transition: 
+  transition:
     transform var(--animation-duration-fast) var(--animation-easing),
     box-shadow var(--animation-duration-fast) var(--animation-easing);
 }
@@ -185,7 +187,7 @@
 .dropdown-menu {
   opacity: 0;
   transform: translateY(-10px) scale(0.95);
-  transition: 
+  transition:
     opacity var(--animation-duration-fast) var(--animation-easing),
     transform var(--animation-duration-fast) var(--animation-easing);
   pointer-events: none;
@@ -199,7 +201,7 @@
 
 /* Dropdown item hover effects */
 .dropdown-item {
-  transition: 
+  transition:
     background-color var(--animation-duration-fast) var(--animation-easing),
     padding-left var(--animation-duration-fast) var(--animation-easing);
 }
@@ -215,7 +217,8 @@
 /* Enhanced modal animations */
 .modal.fade .modal-dialog {
   transform: scale(0.8) translateY(-50px);
-  transition: transform var(--animation-duration-normal) var(--animation-easing-bounce);
+  transition: transform var(--animation-duration-normal)
+    var(--animation-easing-bounce);
 }
 
 .modal.show .modal-dialog {
@@ -250,7 +253,7 @@
 
 /* Story content loading animation */
 #story-content {
-  transition: 
+  transition:
     opacity var(--animation-duration-normal) var(--animation-easing),
     transform var(--animation-duration-normal) var(--animation-easing);
 }
@@ -266,7 +269,7 @@
 
 /* Checkbox and radio animations */
 .form-check-input {
-  transition: 
+  transition:
     transform var(--animation-duration-fast) var(--animation-easing),
     box-shadow var(--animation-duration-fast) var(--animation-easing);
 }
@@ -277,7 +280,7 @@
 
 /* Link hover animations */
 a {
-  transition: 
+  transition:
     color var(--animation-duration-fast) var(--animation-easing),
     text-decoration-color var(--animation-duration-fast) var(--animation-easing);
 }
@@ -301,11 +304,21 @@ a {
   animation-fill-mode: both;
 }
 
-.list-group-item:nth-child(1) { animation-delay: 0.1s; }
-.list-group-item:nth-child(2) { animation-delay: 0.15s; }
-.list-group-item:nth-child(3) { animation-delay: 0.2s; }
-.list-group-item:nth-child(4) { animation-delay: 0.25s; }
-.list-group-item:nth-child(5) { animation-delay: 0.3s; }
+.list-group-item:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.list-group-item:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.list-group-item:nth-child(3) {
+  animation-delay: 0.2s;
+}
+.list-group-item:nth-child(4) {
+  animation-delay: 0.25s;
+}
+.list-group-item:nth-child(5) {
+  animation-delay: 0.3s;
+}
 
 @keyframes slideInUp {
   from {
@@ -354,7 +367,7 @@ a {
    ================================== */
 
 /* Fantasy theme sparkle effect */
-[data-theme="fantasy"] .btn:hover::before {
+[data-theme='fantasy'] .btn:hover::before {
   content: '✨';
   position: absolute;
   top: -5px;
@@ -380,8 +393,8 @@ a {
 }
 
 /* Cyberpunk theme glow effect */
-[data-theme="cyberpunk"] .btn:hover {
-  box-shadow: 
+[data-theme='cyberpunk'] .btn:hover {
+  box-shadow:
     0 0 20px rgba(0, 255, 255, 0.3),
     0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -412,10 +425,11 @@ a {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.7;
   }
   50% {
     opacity: 1;
   }
-} 
+}

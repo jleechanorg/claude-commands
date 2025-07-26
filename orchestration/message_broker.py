@@ -64,13 +64,17 @@ class MessageBroker:
         agent_info = {
             "id": agent_id,
             "type": agent_type,
-            "capabilities": capabilities,
+            "capabilities": json.dumps(capabilities),  # JSON encode list for Redis
             "status": "active",
             "last_heartbeat": datetime.now().isoformat(),
         }
 
         self.redis_client.hset(f"agent:{agent_id}", mapping=agent_info)
-        self.agent_registry[agent_id] = agent_info
+        # Store original list in local registry
+        self.agent_registry[agent_id] = {
+            **agent_info,
+            "capabilities": capabilities  # Keep as list in memory
+        }
         print(f"Agent {agent_id} registered with type {agent_type}")
 
     def send_task(self, from_agent: str, to_agent: str, task_data: dict[str, Any]):
