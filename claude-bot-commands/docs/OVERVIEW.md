@@ -1,4 +1,4 @@
-# GitHub Claude Slash Commands - Implementation Summary
+# GitHub Claude Bot Commands - Implementation Summary
 
 ## ✅ What Was Created
 
@@ -11,24 +11,25 @@ This implementation provides a complete, cost-free GitHub automation system that
 - **`.github/workflows/claude-processor.yml`** - Processes commands on self-hosted runner
 
 ### Local Infrastructure  
-- **`claude-endpoint-server.py`** - HTTP server that forwards prompts to Claude Code CLI
-- **`test-claude-endpoint.py`** - Test script to verify the endpoint works correctly
-- **`start-claude-slash-commands.sh`** - Convenient startup script with checks and configuration
+- **`claude-bot-commands/server/claude-bot-server.py`** - HTTP server that forwards prompts to Claude Code CLI
+- **`claude-bot-commands/server/claude-bot-server-test.py`** - Test server for development
+- **`claude-bot-commands/scripts/test-claude-bot.py`** - Test script to verify the system works
+- **`start-claude-bot.sh`** - Convenient startup script with checks and configuration
 
 ### Documentation
-- **`GITHUB_CLAUDE_SLASH_COMMANDS.md`** - Complete setup and usage guide
-- **`CLAUDE_SLASH_COMMANDS_SUMMARY.md`** - This summary file
+- **`claude-bot-commands/docs/SETUP_GUIDE.md`** - Complete setup and usage guide
+- **`claude-bot-commands/docs/OVERVIEW.md`** - This summary file
 
 ## 🚀 Quick Start
 
-1. **Start the local endpoint:**
+1. **Start the local server:**
    ```bash
-   ./start-claude-slash-commands.sh
+   ./start-claude-bot.sh
    ```
 
-2. **Test the endpoint:**
+2. **Test the system:**
    ```bash
-   python3 test-claude-endpoint.py
+   python3 claude-bot-commands/scripts/test-claude-bot.py
    ```
 
 3. **Set up GitHub runner and secrets** (see full guide for details)

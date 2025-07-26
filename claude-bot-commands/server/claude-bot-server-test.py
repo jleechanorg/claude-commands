@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 """
-Local Claude endpoint server for GitHub slash commands.
-Runs a simple HTTP server that accepts prompts and forwards them to Claude Code CLI.
+Test version of Claude endpoint server for GitHub slash commands.
+This version simulates Claude responses without requiring the actual Claude Code CLI.
+Use this for testing the GitHub integration workflow.
 """
 
 from http.server import HTTPServer, BaseHTTPRequestHandler
-import subprocess
 import json
 import urllib.parse
 import logging
-import tempfile
+import time
 import os
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-class ClaudeHandler(BaseHTTPRequestHandler):
+class ClaudeTestHandler(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path == '/claude':
             try:
@@ -35,28 +35,28 @@ class ClaudeHandler(BaseHTTPRequestHandler):
                 
                 logger.info(f"Received prompt: {prompt[:100]}...")
                 
-                # Create a temporary file with the prompt
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-                    f.write(prompt)
-                    temp_file = f.name
+                # Simulate processing time
+                time.sleep(2)
                 
-                try:
-                    # Call Claude Code CLI with the prompt
-                    # Adjust this command based on how Claude Code is installed on your system
-                    result = subprocess.run([
-                        'claude-code', 
-                        '--message', prompt
-                    ], capture_output=True, text=True, timeout=60)
-                    
-                    if result.returncode == 0:
-                        response = result.stdout
-                    else:
-                        response = f"Error: {result.stderr}"
-                        logger.error(f"Claude Code error: {result.stderr}")
-                    
-                finally:
-                    # Clean up temp file
-                    os.unlink(temp_file)
+                # Generate a test response
+                response = f"""**🤖 Claude Test Response**
+
+You asked: "{prompt}"
+
+This is a simulated response from the Claude endpoint test server. The actual system would forward this prompt to Claude Code CLI and return the real response.
+
+**System Status:**
+- ✅ Endpoint server working
+- ✅ Request parsing successful
+- ✅ Response formatting complete
+- 🧪 Test mode active
+
+**Next Steps:**
+1. Configure GitHub secrets (REPO_ACCESS_TOKEN, CLAUDE_ENDPOINT)
+2. Set up self-hosted runner with 'claude' label
+3. Replace with real claude-endpoint-server.py for production
+
+Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}"""
                 
                 # Send response
                 self.send_response(200)
@@ -64,7 +64,7 @@ class ClaudeHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(response.encode('utf-8'))
                 
-                logger.info(f"Sent response: {response[:100]}...")
+                logger.info(f"Sent test response for prompt: {prompt[:50]}...")
                 
             except Exception as e:
                 logger.error(f"Error processing request: {e}")
@@ -81,7 +81,7 @@ class ClaudeHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'text/plain')
             self.end_headers()
-            self.wfile.write(b"Claude endpoint server is running")
+            self.wfile.write(b"Claude test endpoint server is running")
         else:
             self.send_response(404)
             self.end_headers()
@@ -92,12 +92,12 @@ class ClaudeHandler(BaseHTTPRequestHandler):
 
 if __name__ == '__main__':
     port = int(os.getenv('CLAUDE_ENDPOINT_PORT', '5001'))
-    server = HTTPServer(('127.0.0.1', port), ClaudeHandler)
-    logger.info(f"Starting Claude endpoint server on http://127.0.0.1:{port}")
+    server = HTTPServer(('127.0.0.1', port), ClaudeTestHandler)
+    logger.info(f"Starting Claude TEST endpoint server on http://127.0.0.1:{port}")
+    logger.info("🧪 TEST MODE: This server simulates Claude responses")
     logger.info("Health check available at http://127.0.0.1:{}/health".format(port))
     
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        logger.info("Shutting down server...")
-        server.shutdown()
+        logger.info("Shutting down test server...")

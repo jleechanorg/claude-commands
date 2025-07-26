@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for the Claude endpoint server.
+Test script for the Claude bot server.
 Verifies that the server can accept requests and process them.
 """
 
@@ -62,13 +62,13 @@ def test_json_request():
         return False
 
 def main():
-    print("Testing Claude Endpoint Server...")
+    print("Testing Claude Bot Server...")
     print("=" * 50)
     
     # Test health check
     print("1. Testing health check...")
     if not test_health_check():
-        print("❌ Server appears to be down. Start it with: python3 claude-endpoint-server.py")
+        print("❌ Server appears to be down. Start it with: ./start-claude-bot.sh")
         sys.exit(1)
     
     print()

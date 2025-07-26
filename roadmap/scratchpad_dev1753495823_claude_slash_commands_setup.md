@@ -1,4 +1,4 @@
-# GitHub Claude Slash Commands Setup - Your Action Items
+# GitHub Claude Bot Commands Setup - Your Action Items
 
 Branch: `dev1753495823`  
 Goal: Set up self-hosted GitHub runner and test the `/claude` slash command system
@@ -16,14 +16,14 @@ This system lets you type `/claude <prompt>` in any GitHub PR comment, and it wi
 
 ### Phase 1: Local Testing (Do This First)
 
-#### 1.1 Test the Local Endpoint
+#### 1.1 Test the Local Server
 ```bash
-# Start the Claude endpoint server
-./start-claude-slash-commands.sh
+# Start the Claude bot server
+./start-claude-bot.sh
 # Keep this running in one terminal
 
 # In another terminal, test it
-python3 test-claude-endpoint.py
+python3 claude-bot-commands/scripts/test-claude-bot.py
 ```
 
 **Expected result:** Server starts on port 5001, health check passes, test requests work.
@@ -98,7 +98,7 @@ sudo ./svc.sh status
 ### Phase 4: End-to-End Test
 
 #### 4.1 Make Sure Everything is Running
-- [ ] Claude endpoint server is running (`./start-claude-slash-commands.sh`)
+- [ ] Claude bot server is running (`./start-claude-bot.sh`)
 - [ ] GitHub runner service is online
 - [ ] GitHub secrets are configured
 
@@ -117,8 +117,8 @@ sudo ./svc.sh status
 claude-code --version
 
 # Check if server can start
-python3 claude-endpoint-server.py
-# Should show: "Starting Claude endpoint server on http://127.0.0.1:5001"
+./start-claude-bot.sh
+# Should show: "Starting Claude bot server on http://127.0.0.1:5001"
 
 # Check port availability
 netstat -an | grep 5001

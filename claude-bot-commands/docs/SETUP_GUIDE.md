@@ -1,13 +1,13 @@
-# GitHub Claude Slash Commands Setup Guide
+# GitHub Claude Bot Commands Setup Guide
 
-This guide implements a complete GitHub slash-command system that responds to `/claude` comments in pull requests by sending prompts to your locally-hosted Claude instance and posting replies back to GitHub.
+This guide implements a complete GitHub bot command system that responds to `/claude` comments in pull requests by sending prompts to your locally-hosted Claude instance and posting replies back to GitHub.
 
 ## Overview
 
 The system consists of:
-1. **Slash Command Dispatcher** - GitHub Actions workflow that captures `/claude` comments
-2. **Claude Processor** - GitHub Actions workflow that processes the commands on a self-hosted runner
-3. **Local Claude Endpoint** - Python server that forwards prompts to Claude Code CLI
+1. **Bot Command Dispatcher** - GitHub Actions workflow that captures `/claude` comments
+2. **Claude Bot Processor** - GitHub Actions workflow that processes the commands on a self-hosted runner
+3. **Local Claude Bot Server** - Python server that forwards prompts to Claude Code CLI
 4. **Self-hosted GitHub Runner** - Connects GitHub to your local Claude instance
 
 ## Prerequisites
@@ -62,17 +62,17 @@ sudo ./svc.sh start
 
 Replace `OWNER/REPO` with your GitHub repository path and get the runner token from your repository's Settings → Actions → Runners → New self-hosted runner.
 
-### 4. Start the Local Claude Endpoint
+### 4. Start the Local Claude Bot Server
 
 ```bash
-# Start the Claude endpoint server
-python3 claude-endpoint-server.py
+# Start the Claude bot server
+./start-claude-bot.sh
 ```
 
 The server will run on `http://127.0.0.1:5001` by default. You can change the port with:
 
 ```bash
-CLAUDE_ENDPOINT_PORT=8080 python3 claude-endpoint-server.py
+CLAUDE_ENDPOINT_PORT=8080 ./start-claude-bot.sh
 ```
 
 ### 5. Test the Health Check
@@ -81,7 +81,7 @@ Verify the endpoint is running:
 
 ```bash
 curl http://127.0.0.1:5001/health
-# Should return: Claude endpoint server is running
+# Should return: Claude bot server is running
 ```
 
 ## Usage

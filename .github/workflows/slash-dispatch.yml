@@ -1,4 +1,4 @@
-name: Slash Command Dispatch
+name: Claude Bot Command Dispatch
 on:
   issue_comment:
     types: [created]

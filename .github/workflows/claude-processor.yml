@@ -1,4 +1,4 @@
-name: Claude Processor
+name: Claude Bot Processor
 on:
   repository_dispatch:
     types: [claude-command]
@@ -28,7 +28,7 @@ jobs:
         with:
           comment-id: ${{ steps.x.outputs.cid }}
           body: |
-            **💬 Claude replies**  
+            **🤖 Claude Bot Reply**  
             ```
             ${{ steps.y.outputs.answer }}
             ```
