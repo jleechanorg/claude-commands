@@ -33,6 +33,16 @@ class ClaudeHandler(BaseHTTPRequestHandler):
                     parsed_data = urllib.parse.parse_qs(post_data)
                     prompt = parsed_data.get('prompt', [''])[0]
 
+                # Handle null/empty prompts
+                if not prompt or prompt == 'null' or prompt.strip() == '':
+                    response = "❌ Error: No prompt provided or prompt is empty"
+                    logger.warning("Received empty or null prompt")
+                    self.send_response(400)
+                    self.send_header('Content-Type', 'text/plain')
+                    self.end_headers()
+                    self.wfile.write(response.encode('utf-8'))
+                    return
+
                 logger.info(f"Received prompt: {prompt[:100]}...")
 
                 # Create a temporary file with the prompt
