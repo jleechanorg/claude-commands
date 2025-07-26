@@ -30,7 +30,7 @@ echo ""
 
 echo "📊 Current filtering statistics:"
 echo "  mvp_site references: $(grep -r "mvp_site" .claude/commands --include="*.md" --include="*.py" 2>/dev/null | wc -l || echo 0)"
-echo "  Personal references: $(grep -r "worldarchitect\.ai\|jleechan" .claude/commands --include="*.md" --include="*.py" 2>/dev/null | wc -l || echo 0)"
+echo "  Personal references: $(grep -rE "worldarchitect\.ai|jleechan" .claude/commands --include="*.md" --include="*.py" 2>/dev/null | wc -l || echo 0)"
 echo "  Project branding: $(grep -r "WorldArchitect\.AI" .claude/commands --include="*.md" --include="*.py" 2>/dev/null | wc -l || echo 0)"
 echo ""
 

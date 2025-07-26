@@ -36,7 +36,7 @@ EOF
 
 # Filter files before export
 while IFS= read -r pattern; do
-    find .claude/commands -path "*$pattern" -delete 2>/dev/null || true
+    find .claude/commands -path "*${pattern}" -exec rm -rf {} + 2>/dev/null || true
 done < /tmp/export_exclusions.txt
 ```
 
@@ -64,7 +64,7 @@ cp CLAUDE.md /tmp/claude_filtered.md
 # Apply content filtering
 sed -i 's|mvp_site/|$PROJECT_ROOT/|g' /tmp/claude_filtered.md
 sed -i 's|worldarchitect\.ai|your-project.com|g' /tmp/claude_filtered.md
-sed -i 's|jleechan|$USER|g' /tmp/claude_filtered.md
+sed -i "s|jleechan|${USER}|g" /tmp/claude_filtered.md
 cat /tmp/claude_filtered.md >> staging/CLAUDE.md
 ```
 
@@ -86,7 +86,7 @@ for file in .claude/commands/*.md .claude/commands/*.py; do
     # Apply content transformations
     sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/commands/$(basename "$file")"
     sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/commands/$(basename "$file")"
-    sed -i 's|jleechan|$USER|g' "staging/commands/$(basename "$file")"
+    sed -i "s|jleechan|${USER}|g" "staging/commands/$(basename "$file")"
     sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/commands/$(basename "$file")"
     
     # Add project-specific warning to commands with mvp_site references
@@ -266,7 +266,7 @@ See README.md for installation and adaptation guidance."
 # File content transformations
 sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "$file"
 sed -i 's|worldarchitect\.ai|your-project.com|g' "$file"
-sed -i 's|jleechan|$USER|g' "$file"
+sed -i "s|jleechan|${USER}|g" "$file"
 sed -i 's|WorldArchitect\.AI|Your Project|g' "$file"
 sed -i 's|TESTING=true vpython|TESTING=true python|g' "$file"
 sed -i 's|Flask/Gunicorn|Web Framework|g' "$file"

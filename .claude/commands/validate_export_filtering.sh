@@ -4,9 +4,7 @@
 
 echo "🔍 Validating export filtering rules..."
 
-# Create temporary test directory
-TEST_DIR="/tmp/export_filter_test_$(date +%s)"
-mkdir -p "$TEST_DIR"
+# Note: Removed unused TEST_DIR variable per CodeRabbit feedback
 
 echo "📋 Checking for files that should be excluded..."
 
@@ -20,7 +18,7 @@ EXCLUDED_FILES=(
 
 echo "❌ Files that should be excluded from export:"
 for file in "${EXCLUDED_FILES[@]}"; do
-    if find .claude/commands -name "$file" -type f | grep -q .; then
+    if find .claude/commands -name "$file" -type f -quit | grep -q .; then
         echo "  - $file (FOUND - should be filtered)"
     fi
 done
@@ -53,5 +51,4 @@ echo "   - Found $(find .claude/commands -name "*.sh" -not -path "*/tests/*" | w
 echo "   - Found $(grep -r "mvp_site" .claude/commands --include="*.md" --include="*.py" | wc -l) mvp_site references" 
 echo "   - Found $(grep -r "worldarchitect\.ai\|jleechan" .claude/commands --include="*.md" --include="*.py" | wc -l) personal references"
 
-# Cleanup
-rm -rf "$TEST_DIR"
+# Note: No cleanup needed since TEST_DIR was removed
