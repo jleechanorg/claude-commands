@@ -93,20 +93,15 @@ fi
 current_branch=$(git branch --show-current)
 echo "Current branch: $current_branch"
 
-# Ensure we're not on a branch we might delete
+# Note current branch - it will be automatically excluded from deletion
 if [[ "$current_branch" != "main" ]] && [[ "$current_branch" != "master" ]]; then
-    echo -e "${YELLOW}⚠️  Warning: You're on branch '$current_branch'${NC}"
-    echo "   Switching to main to avoid conflicts..."
-    git checkout main 2>/dev/null || git checkout master 2>/dev/null || {
-        echo -e "${RED}❌ Could not switch to main/master branch${NC}"
-        exit 1
-    }
+    echo -e "${YELLOW}ℹ️  Note: Current branch '$current_branch' will be preserved${NC}"
 fi
 
 echo -e "\n${GREEN}🔍 Scanning for branches to clean...${NC}"
 
-# Get all local branches except main/master
-branches_to_check=$(git branch --format='%(refname:short)' | grep -v -E '^(main|master)$')
+# Get all local branches except main/master and current branch
+branches_to_check=$(git branch --format='%(refname:short)' | grep -v -E '^(main|master)$' | grep -v "^${current_branch}$")
 
 # Arrays to track branches
 declare -a safe_to_delete=()
