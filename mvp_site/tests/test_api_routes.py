@@ -91,8 +91,9 @@ class TestAPIRoutes(unittest.TestCase):
         data = json.loads(response.data)
         self.assertIn("error", data)
 
+    @patch('main.get_user_settings')
     @patch("main.firestore_service")
-    def test_get_campaign_success(self, mock_firestore_service):
+    def test_get_campaign_success(self, mock_firestore_service, mock_get_user_settings):
         """Test successful retrieval of a specific campaign."""
         mock_campaign_data = {
             "id": "test-campaign",
@@ -109,6 +110,8 @@ class TestAPIRoutes(unittest.TestCase):
             [],
         )
         mock_firestore_service.get_campaign_game_state.return_value = mock_game_state
+        # Mock get_user_settings for debug_mode lookup
+        mock_get_user_settings.return_value = {'debug_mode': True}
 
         response = self.client.get(
             "/api/campaigns/test-campaign", headers=self.test_headers
@@ -372,6 +375,7 @@ class TestCreateCampaignRoute(unittest.TestCase):
         # Verify service calls
         mock_gemini_service.get_initial_story.assert_called_once_with(
             "Create a fantasy adventure",
+            user_id="test-user",
             selected_prompts=["narrative", "mechanics"],
             generate_companions=False,
             use_default_world=False,

@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
         auth: document.getElementById('auth-view'), 
         dashboard: document.getElementById('dashboard-view'), 
         newCampaign: document.getElementById('new-campaign-view'), 
-        game: document.getElementById('game-view') 
+        game: document.getElementById('game-view')
     };
     const loadingOverlay = document.getElementById('loading-overlay');
     let currentCampaignId = null;
@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     
     const showView = (viewName) => {
-        Object.values(views).forEach(v => v.classList.remove('active-view'));
+        Object.values(views).forEach(v => v && v.classList.remove('active-view'));
         if(views[viewName]) {
             views[viewName].classList.add('active-view');
             
@@ -150,11 +150,107 @@ document.addEventListener('DOMContentLoaded', () => {
                 isNavigatingToNewCampaignDirectly = false; // Reset the flag after use
             }
             showView('newCampaign');
+        } else if (path === '/settings') {
+            // Load settings within the SPA
+            loadSettingsPage();
         } else {
             currentCampaignId = null;
             renderCampaignList();
             showView('dashboard');
         }
+    };
+    
+    // Load settings page dynamically
+    const loadSettingsPage = async () => {
+        try {
+            showSpinner('Loading settings...');
+            
+            // Fetch settings content from server
+            const response = await fetch('/settings', {
+                headers: {
+                    'Authorization': `Bearer ${await firebase.auth().currentUser.getIdToken()}`
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Failed to load settings: ${response.status}`);
+            }
+            
+            const settingsHtml = await response.text();
+            
+            // Create settings view if it doesn't exist
+            let settingsView = document.getElementById('settings-view');
+            if (!settingsView) {
+                settingsView = document.createElement('div');
+                settingsView.id = 'settings-view';
+                settingsView.className = 'content-view';
+                document.body.appendChild(settingsView);
+                
+                // Update views object
+                views.settings = settingsView;
+            }
+            
+            // Hide all other views
+            Object.values(views).forEach(v => v && v.classList.remove('active-view'));
+            
+            // Load settings content
+            settingsView.innerHTML = settingsHtml;
+            
+            // Initialize settings functionality manually
+            initializeSettings();
+            
+            // Show settings view
+            settingsView.classList.add('active-view');
+            
+        } catch (error) {
+            console.error('Failed to load settings:', error);
+            alert('Failed to load settings page. Please try again.');
+            
+            // Fall back to dashboard
+            history.pushState({}, '', '/');
+            handleRouteChange();
+        } finally {
+            hideSpinner();
+        }
+    };
+    
+    // Initialize settings functionality when dynamically loaded
+    const initializeSettings = async () => {
+        console.log('Initializing settings functionality...');
+        
+        // Load settings.js if not already loaded
+        if (typeof loadSettings === 'undefined') {
+            const script = document.createElement('script');
+            script.src = '/static/js/settings.js';
+            script.onload = () => {
+                console.log('Settings JavaScript loaded');
+                setupSettingsEventListeners();
+            };
+            document.head.appendChild(script);
+        } else {
+            setupSettingsEventListeners();
+        }
+    };
+    
+    const setupSettingsEventListeners = () => {
+        // Load current settings
+        if (typeof loadSettings === 'function') {
+            loadSettings();
+        }
+        
+        // Add change listeners to radio buttons
+        const radioButtons = document.querySelectorAll('input[name="geminiModel"]');
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', saveSettings);
+        });
+        
+        // Add change listener to debug mode switch
+        const debugSwitch = document.getElementById('debugModeSwitch');
+        if (debugSwitch) {
+            debugSwitch.addEventListener('change', saveSettings);
+        }
+        
+        console.log('Settings event listeners attached');
     };
     
     // Helper function for elements 2-4: location, resources, dice rolls
@@ -228,18 +324,16 @@ document.addEventListener('DOMContentLoaded', () => {
             html += '</div>';
         }
 
-        // 9. State updates (visible in debug mode or when significant)
+        // 9. State updates (backend now handles debug mode filtering)
         if (fullData.state_updates && Object.keys(fullData.state_updates).length > 0) {
-            if (debugMode || (fullData.state_updates.npc_data && Object.keys(fullData.state_updates.npc_data).length > 0)) {
-                html += '<div class="state-updates">';
-                html += '<strong>🔧 State Updates:</strong>';
-                html += '<pre>' + sanitizeHtml(JSON.stringify(fullData.state_updates, null, 2)) + '</pre>';
-                html += '</div>';
-            }
+            html += '<div class="state-updates">';
+            html += '<strong>🔧 State Updates:</strong>';
+            html += '<pre>' + sanitizeHtml(JSON.stringify(fullData.state_updates, null, 2)) + '</pre>';
+            html += '</div>';
         }
 
-        // 10. Debug info (only in debug mode)
-        if (debugMode && fullData.debug_info && Object.keys(fullData.debug_info).length > 0) {
+        // 10. Debug info (backend now handles debug mode filtering)
+        if (fullData.debug_info && Object.keys(fullData.debug_info).length > 0) {
             html += '<div class="debug-info">';
             html += '<strong>🔍 Debug Info:</strong>';
 
@@ -691,14 +785,10 @@ document.addEventListener('DOMContentLoaded', () => {
             // Render story with debug mode awareness and structured fields
             console.log(`Loading campaign ${campaignId} - Story entries: ${data.story.length}, Debug mode: ${debugMode}`);
             
-            // Filter out god-mode entries (internal prompts) from display
+            // Display all story entries
             let visibleEntries = 0;
             data.story.forEach(entry => {
-                // Skip god-mode entries unless we're in debug mode
-                if (entry.mode === 'god' && !debugMode) {
-                    console.log('Skipping god mode entry:', entry.text.substring(0, 50) + '...');
-                    return;
-                }
+                // All entries should be visible (god mode is a gameplay feature, not debug)
                 visibleEntries++;
                 appendToStory(entry.actor, entry.text, entry.mode, debugMode, entry.user_scene_number, entry);
             });
@@ -1132,7 +1222,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Main navigation listeners (these must remain at the end of DOMContentLoaded)
-    document.getElementById('go-to-new-campaign').onclick = () => {
+    document.getElementById('go-to-new-campaign').addEventListener('click', () => {
         isNavigatingToNewCampaignDirectly = true;
         history.pushState({}, '', '/new-campaign'); 
         handleRouteChange(); 
@@ -1141,7 +1231,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.campaignWizard) {
             window.campaignWizard.enable();
         }
-    };
-    document.getElementById('back-to-dashboard').onclick = () => { history.pushState({}, '', '/'); handleRouteChange(); };
+    });
+    
+    document.getElementById('back-to-dashboard').addEventListener('click', () => { 
+        history.pushState({}, '', '/'); 
+        handleRouteChange(); 
+    });
+    
+    // Settings button navigation
+    document.getElementById('settings-btn').addEventListener('click', () => {
+        history.pushState({}, '', '/settings');
+        handleRouteChange();
+    });
     window.addEventListener('popstate', handleRouteChange);
 });

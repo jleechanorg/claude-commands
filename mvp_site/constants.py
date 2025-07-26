@@ -12,6 +12,21 @@ ACTOR_GEMINI = "gemini"
 ACTOR_UNKNOWN = "NO_ACTOR"  # Default when actor is missing from data
 
 
+# --- SETTINGS ---
+# Allowed Gemini model selections for user preferences (aligned with SDK format)
+ALLOWED_GEMINI_MODELS = ["gemini-2.5-pro", "gemini-2.5-flash"]
+
+# Gemini model mapping from user preference to full model name (now using SDK format directly)
+GEMINI_MODEL_MAPPING = {
+    'gemini-2.5-flash': 'gemini-2.5-flash',
+    'gemini-2.5-pro': 'gemini-2.5-pro'
+}
+
+# Debug mode settings
+DEFAULT_DEBUG_MODE = False
+ALLOWED_DEBUG_MODE_VALUES = [True, False]
+
+
 # --- INTERACTION MODES ---
 # Used to determine the style of user input and AI response
 MODE_CHARACTER = "character"

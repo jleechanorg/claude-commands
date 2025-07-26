@@ -525,7 +525,10 @@ def get_campaign_by_id(user_id: UserId, campaign_id: CampaignId) -> Tuple[Option
         else:
             entry["user_scene_number"] = None
 
-        entry["timestamp"] = entry["timestamp"].isoformat()
+        # Convert timestamp to ISO format if it's not already a string
+        if hasattr(entry["timestamp"], 'isoformat'):
+            entry["timestamp"] = entry["timestamp"].isoformat()
+        # If it's already a string, leave it as is
 
     return campaign_doc.to_dict(), all_story_entries
 
@@ -970,3 +973,85 @@ def update_campaign_title(user_id: UserId, campaign_id: CampaignId, new_title: s
     )
     campaign_ref.update({"title": new_title})
     return True
+
+
+# --- USER SETTINGS FUNCTIONS ---
+@log_exceptions
+def get_user_settings(user_id: UserId) -> Optional[Dict[str, Any]]:
+    """Get user settings from Firestore.
+    
+    Args:
+        user_id: User ID to get settings for
+        
+    Returns:
+        Dict containing user settings, empty dict if user exists but no settings, 
+        or None if user doesn't exist or database error
+    """
+    try:
+        db = get_db()
+        user_ref = db.collection('users').document(user_id)
+        user_doc = user_ref.get()
+        
+        if user_doc.exists:
+            data = user_doc.to_dict()
+            return data.get('settings', {})  # Empty dict for user with no settings
+        # Return None for users that don't exist yet
+        return None
+    except Exception as e:
+        # Hash user_id for security in logs
+        user_hash = str(hash(user_id))[-6:] if user_id else 'unknown'
+        logging_util.error(f"Failed to get user settings for user_{user_hash}: {str(e)}")
+        # Return None to distinguish database errors from no settings
+        return None
+
+
+@log_exceptions
+def update_user_settings(user_id: UserId, settings: Dict[str, Any]) -> bool:
+    """Update user settings in Firestore.
+    
+    Uses nested field updates to prevent clobbering sibling settings fields.
+    
+    Args:
+        user_id: User ID to update settings for
+        settings: Dictionary of settings to update
+        
+    Returns:
+        bool: True if update succeeded, False otherwise
+    """
+    try:
+        db = get_db()
+        user_ref = db.collection('users').document(user_id)
+        
+        # Check if user document exists first
+        user_doc = user_ref.get()
+        
+        # Get timestamp - use datetime for CI compatibility
+        try:
+            timestamp = firestore.SERVER_TIMESTAMP
+        except Exception:
+            # Fallback for CI environments where SERVER_TIMESTAMP might fail
+            import datetime
+            timestamp = datetime.datetime.utcnow()
+            
+        if user_doc.exists:
+            # Use nested field update to avoid clobbering sibling settings
+            update_data = {}
+            for key, value in settings.items():
+                update_data[f'settings.{key}'] = value
+            update_data['lastUpdated'] = timestamp
+            
+            user_ref.update(update_data)
+        else:
+            # Create new document with settings
+            user_data = {
+                'settings': settings,
+                'lastUpdated': timestamp,
+                'createdAt': timestamp
+            }
+            user_ref.set(user_data)
+        
+        logging_util.info(f"Updated settings for user {user_id}: {settings}")
+        return True
+    except Exception as e:
+        logging_util.error(f"Failed to update user settings for {user_id}: {str(e)}", exc_info=True)
+        return False

@@ -55,7 +55,7 @@ from debug_mode_parser import DebugModeParser
 from firebase_admin import auth
 
 # Flask and web imports
-from flask import Flask, jsonify, request, send_file, send_from_directory, Response, Request
+from flask import Flask, jsonify, request, send_file, send_from_directory, Response, Request, render_template
 from flask_cors import CORS
 from token_utils import log_with_tokens
 
@@ -63,6 +63,8 @@ from firestore_service import (
     _truncate_log_json,
     json_default_serializer,
     update_state_with_changes,
+    get_user_settings,
+    update_user_settings,
 )
 from game_state import GameState
 from debug_hybrid_system import process_story_for_display
@@ -842,6 +844,45 @@ def setup_file_logging() -> None:
     logging_util.info(f"File logging configured: {log_file}")
 
 
+def strip_game_state_fields(story_entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Strip game state information from story entries when debug mode is OFF.
+    
+    Removes fields that should only be visible in debug mode:
+    - entities_mentioned
+    - entities
+    - state_updates
+    - debug_info
+    
+    Args:
+        story_entries: List of story entry dictionaries
+        
+    Returns:
+        List of story entries with game state fields removed
+    """
+    if not story_entries:
+        return story_entries
+        
+    # Fields to strip when debug mode is OFF
+    game_state_fields = {
+        'entities_mentioned',
+        'entities',
+        'state_updates',
+        'debug_info'
+    }
+    
+    stripped_story = []
+    for entry in story_entries:
+        # Create a copy without the game state fields
+        stripped_entry = {
+            key: value for key, value in entry.items() 
+            if key not in game_state_fields
+        }
+        stripped_story.append(stripped_entry)
+    
+    return stripped_story
+
+
 def create_app() -> Flask:
     """
     Create and configure the Flask application.
@@ -984,9 +1025,19 @@ def create_app() -> Flask:
             game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
             game_state_dict = game_state.to_dict() if game_state else {}
 
+            # Get debug mode from user settings, not game state
+            user_settings = get_user_settings(user_id)
+            debug_mode = user_settings.get('debug_mode', False) if user_settings else False
+            
+            # Apply debug mode from user settings to game state dict for UI consistency
+            game_state_dict['debug_mode'] = debug_mode
+            
             # Apply hybrid debug processing to story entries for backward compatibility
-            debug_mode = game_state_dict.get("debug_mode", False)
             processed_story = process_story_for_display(story, debug_mode)
+            
+            # Strip game state fields when debug mode is OFF
+            if not debug_mode:
+                processed_story = strip_game_state_fields(processed_story)
 
             # Debug logging for structured fields
             logging_util.info(
@@ -1074,6 +1125,7 @@ def create_app() -> Flask:
         try:
             opening_story_response = gemini_service.get_initial_story(
                 prompt,
+                user_id=user_id,
                 selected_prompts=selected_prompts,
                 generate_companions=generate_companions,
                 use_default_world=use_default_world,
@@ -1147,6 +1199,13 @@ def create_app() -> Flask:
                 user_id, campaign_id
             )
             game_state_dict = current_game_state.to_dict()
+
+            # --- Apply User Settings to Game State ---
+            # Override game state with current user settings (e.g., debug_mode)
+            user_settings = get_user_settings(user_id)
+            if user_settings and 'debug_mode' in user_settings:
+                current_game_state.debug_mode = user_settings['debug_mode']
+                logging_util.info(f"Applied user debug mode setting: {user_settings['debug_mode']}")
 
             # --- Debug Mode Command Parsing (BEFORE other commands) ---
             debug_response = _handle_debug_mode_command(
@@ -1413,6 +1472,82 @@ def create_app() -> Flask:
                     KEY_DETAILS: str(e),
                 }
             ), 500
+
+    # --- Settings Routes ---
+    @app.route("/settings")
+    @check_token
+    def settings_page(user_id: UserId) -> Response:
+        """Settings page for authenticated users."""
+        logging_util.info(f"User {user_id} visited settings page")
+        return render_template('settings.html')
+
+    @app.route("/api/settings", methods=["GET", "POST"])
+    @check_token  
+    def api_settings(user_id: UserId) -> Union[Response, Tuple[Response, int]]:
+        """Get or update user settings."""
+        try:
+            if request.method == "GET":
+                settings = get_user_settings(user_id)
+                # Return default settings for new users or database errors
+                if settings is None:
+                    settings = {
+                        'debug_mode': constants.DEFAULT_DEBUG_MODE,
+                        'gemini_model': 'gemini-2.5-flash'  # Default model
+                    }
+                return jsonify(settings)
+            
+            elif request.method == "POST":
+                # Validate settings data
+                data = request.get_json()
+                # Enhanced validation
+                if not isinstance(data, dict):
+                    return jsonify({'error': 'Invalid request format', 'success': False}), 400
+                if not data:
+                    return jsonify({'error': 'No data provided', 'success': False}), 400
+                
+                settings_to_update = {}
+                
+                # Validate gemini_model if provided
+                if 'gemini_model' in data:
+                    model = data['gemini_model']
+                    if not isinstance(model, str):
+                        return jsonify({'error': 'Invalid model selection', 'success': False}), 400
+                    
+                    # Case-insensitive validation to prevent case manipulation attacks
+                    model_lower = model.lower()
+                    allowed_models = {m.lower() for m in constants.ALLOWED_GEMINI_MODELS}
+                    if model_lower not in allowed_models:
+                        return jsonify({'error': 'Invalid model selection', 'success': False}), 400
+                    settings_to_update['gemini_model'] = model
+                
+                # Validate debug_mode if provided
+                if 'debug_mode' in data:
+                    debug_mode = data['debug_mode']
+                    if not isinstance(debug_mode, bool) or debug_mode not in constants.ALLOWED_DEBUG_MODE_VALUES:
+                        return jsonify({'error': 'Invalid debug mode value. Must be true or false.', 'success': False}), 400
+                    settings_to_update['debug_mode'] = debug_mode
+                
+                # Ensure at least one setting is being updated
+                if not settings_to_update:
+                    return jsonify({'error': 'No valid settings provided', 'success': False}), 400
+                
+                # Update settings
+                success = update_user_settings(user_id, settings_to_update)
+                
+                # Log the changes
+                if 'gemini_model' in settings_to_update:
+                    logging_util.info(f"User {user_id} changed Gemini model to {settings_to_update['gemini_model']}")
+                if 'debug_mode' in settings_to_update:
+                    logging_util.info(f"User {user_id} changed debug mode to {settings_to_update['debug_mode']}")
+                
+                if success:
+                    return jsonify({'success': True, 'message': 'Settings saved'})
+                else:
+                    return jsonify({'error': 'Failed to save settings', 'success': False}), 500
+                    
+        except Exception as e:
+            logging_util.error(f"Settings API error: {str(e)}")
+            return jsonify({'error': 'Internal server error', 'success': False}), 500
 
     # --- Frontend Serving ---
     @app.route("/", defaults={"path": ""})

@@ -20,8 +20,20 @@ class FakeFirestoreDocument:
         self._data = data
 
     def update(self, data):
-        """Simulate updating document data."""
-        self._data.update(data)
+        """Simulate updating document data with nested field support."""
+        for key, value in data.items():
+            if '.' in key:
+                # Handle nested field updates like 'settings.gemini_model'
+                parts = key.split('.')
+                current = self._data
+                for part in parts[:-1]:
+                    if part not in current:
+                        current[part] = {}
+                    current = current[part]
+                current[parts[-1]] = value
+            else:
+                # Handle regular field updates
+                self._data[key] = value
 
     def get(self):
         """Simulate getting the document."""

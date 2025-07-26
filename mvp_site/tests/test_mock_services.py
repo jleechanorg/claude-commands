@@ -72,11 +72,9 @@ class TestMockServices(unittest.TestCase):
         """Test creating a campaign with mock services."""
         campaign_data = {
             "title": "Mock Test Campaign",
-            "genre": "Fantasy",
-            "tone": "Epic",
-            "characterName": "Mock Hero",
-            "characterBackground": "Testing mocks",
-            "selectedPrompts": [],
+            "prompt": "Create a fantasy adventure",
+            "selected_prompts": ["narrative"],
+            "custom_options": [],
         }
 
         response = self.client.post(

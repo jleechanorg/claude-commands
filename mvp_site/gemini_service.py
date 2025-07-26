@@ -72,7 +72,8 @@ from token_utils import estimate_tokens, log_with_tokens
 from world_loader import load_world_content_for_system_instruction
 
 from game_state import GameState
-from custom_types import GeminiRequest, GeminiResponse as GeminiResponseType, JsonDict
+from custom_types import GeminiRequest, GeminiResponse as GeminiResponseType, JsonDict, UserId
+from firestore_service import get_user_settings
 
 logging_util.basicConfig(
     level=logging_util.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -995,7 +996,7 @@ def _truncate_context(
 
 @log_exceptions
 def get_initial_story(
-    prompt: str, selected_prompts: Optional[List[str]] = None, generate_companions: bool = False, use_default_world: bool = False
+    prompt: str, user_id: Optional[UserId] = None, selected_prompts: Optional[List[str]] = None, generate_companions: bool = False, use_default_world: bool = False
 ) -> GeminiResponse:
     """
     Generates the initial story part, including character, narrative, and mechanics instructions.
@@ -1122,10 +1123,38 @@ def get_initial_story(
     contents: List[types.Content] = [types.Content(role="user", parts=[types.Part(text=enhanced_prompt)])]
 
     # --- MODEL SELECTION ---
-    # Use default model for all operations.
-    # Use test model in mock services mode for faster/cheaper testing
+    # Use user preferred model if available, fallback to default
     mock_mode: bool = os.environ.get("MOCK_SERVICES_MODE") == "true"
-    model_to_use: str = TEST_MODEL if mock_mode else DEFAULT_MODEL
+    
+    if mock_mode:
+        model_to_use: str = TEST_MODEL
+    elif user_id:
+        # Get user settings and use preferred model
+        try:
+            user_settings = get_user_settings(user_id)
+            if user_settings is None:
+                # Database error occurred
+                logging_util.warning(f"Database error retrieving settings for user, falling back to default model")
+                model_to_use = DEFAULT_MODEL
+            else:
+                user_preferred_model = user_settings.get('gemini_model')
+                
+                # Validate user preference against allowed models
+                if user_preferred_model and user_preferred_model in constants.ALLOWED_GEMINI_MODELS:
+                    # Use centralized model mapping from constants
+                    model_to_use = constants.GEMINI_MODEL_MAPPING.get(user_preferred_model, DEFAULT_MODEL)
+                    if model_to_use == DEFAULT_MODEL and user_preferred_model in constants.ALLOWED_GEMINI_MODELS:
+                        logging_util.warning(f"No mapping found for allowed model: {user_preferred_model}")
+                else:
+                    if user_preferred_model:
+                        logging_util.warning(f"Invalid user model preference: {user_preferred_model}")
+                    model_to_use = DEFAULT_MODEL
+        except (KeyError, AttributeError, ValueError) as e:
+            logging_util.warning(f"Failed to get user settings for {user_id}: {e}")
+            model_to_use = DEFAULT_MODEL
+    else:
+        model_to_use = DEFAULT_MODEL
+    
     logging_util.info(f"Using model: {model_to_use} for initial story generation.")
 
     # Call Gemini API - returns raw Gemini API response object
