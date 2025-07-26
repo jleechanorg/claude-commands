@@ -259,7 +259,6 @@ class TestApiEndpoints(unittest.TestCase):
     @patch("main.firestore_service")
     def test_legacy_migration_status_handling(self, mock_firestore_service):
         """Test handling of different legacy migration statuses."""
-        # MigrationStatus already imported at the top
 
         # Mock campaign
         mock_campaign = {"id": "test-campaign", "title": "Test"}
