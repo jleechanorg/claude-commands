@@ -58,12 +58,12 @@ SAFETY FEATURES:
     • Hard stops for unpushed commits (override with --force)
     • Warnings for integration PR conflicts (override with --force)
     • Smart branch deletion only when safe (merged/clean branches)
-    • Automatic PR creation for divergent main histories
+    • Divergence detection with manual resolution options
 
 WORKFLOW:
     1. Check current branch safety (uncommitted/unpushed changes)
     2. Switch to main branch
-    3. Smart sync with origin/main (handles divergence)
+    3. Smart sync with origin/main (detects divergence)
     4. Check for problematic integration PRs
     5. Create fresh branch from updated main
     6. Optionally delete old branch if safe
@@ -325,65 +325,69 @@ Please review and merge to complete the integration process."
     fi
 
 else
-    # Branches have diverged → create PR with merged changes
-    echo "⚠️  Local main and origin/main have diverged"
-    echo "🔄 Creating merge branch to sync histories..."
+    # Branches have diverged → warn and stop
+    echo -e "${RED}❌ DIVERGENCE DETECTED: Local main and origin/main have diverged${NC}"
+    echo ""
+    echo "📊 Divergence Details:"
+    echo "   • Local main has commits that aren't on origin/main"
+    echo "   • Origin/main has commits that aren't on local main"
+    echo "   • Manual resolution required to prevent contaminated branches"
+    echo ""
 
-    # Generate timestamp for branch naming
-    timestamp=$(date +%Y%m%d-%H%M%S)
+    # Show divergence information
+    local_only=$(git rev-list --count origin/main..HEAD)
+    remote_only=$(git rev-list --count HEAD..origin/main)
+    echo "📈 Commit Counts:"
+    echo "   • Local-only commits: $local_only"
+    echo "   • Remote-only commits: $remote_only"
+    echo ""
 
-    # Create temporary branch for merge PR
-    merge_branch="merge-main-$timestamp"
-    echo "   Creating merge branch: $merge_branch"
-
-    if ! git checkout -b "$merge_branch"; then
-        echo "❌ Error: Failed to create merge branch" >&2
-        exit 1
+    if [ "$local_only" -gt 0 ]; then
+        echo "🔍 Recent local-only commits:"
+        git log --oneline origin/main..HEAD | head -5 | sed 's/^/   /'
+        [ "$local_only" -gt 5 ] && echo "   ...and $((local_only - 5)) more commits"
+        echo ""
     fi
 
-    # Perform the merge on the temporary branch
-    if ! git merge --no-ff origin/main -m "integrate.sh: Auto-merge divergent main histories
-
-This merge resolves the divergence between local main (with unpushed commits)
-and origin/main (with merged PR changes). This prevents the integration script
-from failing and requiring manual intervention.
-
-Equivalent to: git merge --no-ff origin/main"; then
-        echo "❌ Error: Auto-merge of divergent main histories failed. Please resolve conflicts manually." >&2
-        exit 1
+    if [ "$remote_only" -gt 0 ]; then
+        echo "🔍 Recent remote-only commits:"
+        git log --oneline HEAD..origin/main | head -5 | sed 's/^/   /'
+        [ "$remote_only" -gt 5 ] && echo "   ...and $((remote_only - 5)) more commits"
+        echo ""
     fi
 
-    if ! git push -u origin HEAD; then
-        echo "❌ Error: Failed to push merge branch" >&2
-        exit 1
-    fi
+    echo -e "${YELLOW}🛠️  Resolution Options:${NC}"
+    echo ""
+    echo "1. 🔄 Merge origin/main into local main:"
+    echo "   git merge origin/main"
+    echo "   (Creates merge commit, preserves both histories)"
+    echo ""
+    echo "2. ⏮️  Reset local main to match origin/main:"
+    echo "   git reset --hard origin/main"
+    echo "   (⚠️  WARNING: Discards local commits permanently)"
+    echo ""
+    echo "3. 🚀 Push local commits as separate PR:"
+    echo "   git checkout -b sync-local-commits"
+    echo "   git push -u origin sync-local-commits"
+    echo "   gh pr create"
+    echo "   git checkout main && git reset --hard origin/main"
+    echo ""
+    echo "4. 🔍 Manual review and resolution:"
+    echo "   Review each commit and decide what to keep"
+    echo ""
 
-    # Create PR if gh is available
-    if command -v gh >/dev/null 2>&1; then
-        pr_title="Merge divergent main histories (integrate.sh)"
-        pr_body="Auto-generated PR to merge divergent main histories.
-
-This PR was created by integrate.sh to handle repository branch protection rules
-when local main and origin/main have diverged.
-
-This merge resolves the divergence and allows integration to proceed normally.
-
-Please review and merge to complete the integration process."
-
-        if pr_url=$(gh pr create --title "$pr_title" --body "$pr_body" 2>/dev/null); then
-            echo -e "${GREEN}✅ Created merge PR: $pr_url${NC}"
-            echo "   Please review and merge the PR, then re-run integrate.sh"
-            exit 0
-        else
-            echo "⚠️  Could not create PR automatically. Please create one manually:"
-            echo "   Branch: $merge_branch"
-            echo "   URL: https://github.com/$(get_github_repo_url)/compare/$merge_branch"
+    if [ "$FORCE_MODE" = true ]; then
+        echo -e "${RED}🚨 FORCE MODE: Would normally stop here, but --force was used${NC}"
+        echo "   Performing merge to resolve divergence..."
+        if ! git merge --no-ff origin/main -m "integrate.sh: Force merge divergent main histories (--force mode)"; then
+            echo "❌ Error: Force merge failed. Please resolve conflicts manually." >&2
             exit 1
         fi
+        echo "   ✅ Force merge completed"
     else
-        echo "⚠️  gh CLI not available. Please create PR manually:"
-        echo "   Branch: $merge_branch"
-        echo "   URL: https://github.com/$(get_github_repo_url)/compare/$merge_branch"
+        echo -e "${RED}🛑 Integration stopped to prevent branch contamination${NC}"
+        echo "   Choose one of the resolution options above, then re-run integrate.sh"
+        echo "   Or use: ./integrate.sh --force (to auto-merge, may create contaminated branches)"
         exit 1
     fi
 fi
