@@ -335,6 +335,46 @@ if 'copilot' in author.lower():
 
 🚨 **ENFORCEMENT**: Each phase MUST complete successfully before proceeding to next phase. NO skipping steps.
 
+## 🚨 CRITICAL: ZERO TOLERANCE MERGE APPROVAL PROTOCOL
+
+**❌ NEVER MERGE WITHOUT EXPLICIT USER APPROVAL - ZERO EXCEPTIONS:**
+
+🚨 **MANDATORY MERGE PREVENTION**: Before ANY action that could trigger PR merge:
+1. **ALWAYS check PR state**: Use `gh pr view --json state` to verify PR status
+2. **BLOCK if auto-merge risk**: If any action could trigger automatic merge, STOP immediately
+3. **REQUIRE explicit approval**: User must type "MERGE APPROVED" for any merge-triggering action
+4. **NO assumptions**: Even "update PR" actions require merge approval verification
+
+### ⚠️ **High-Risk Actions Requiring Merge Approval:**
+- Any `git push` to PR branch when PR is in mergeable state
+- Any `/pushl` execution on PR branches
+- Any commit that could satisfy merge requirements
+- Any workflow that updates PR status to "ready for merge"
+
+### ✅ **Implementation Protocol:**
+```bash
+# MANDATORY: Check before any push operation
+PR_STATE=$(gh pr view --json state --jq '.state' 2>/dev/null)
+PR_MERGEABLE=$(gh pr view --json mergeable --jq '.mergeable' 2>/dev/null)
+
+if [[ "$PR_STATE" == "OPEN" ]] && [[ "$PR_MERGEABLE" == "MERGEABLE" ]]; then
+    echo "⚠️  WARNING: This action could trigger PR merge"
+    echo "🔒 MERGE APPROVAL REQUIRED: Type 'MERGE APPROVED' to continue"
+    read -r approval
+    if [[ "$approval" != "MERGE APPROVED" ]]; then
+        echo "❌ Operation cancelled - merge approval required"
+        exit 1
+    fi
+fi
+```
+
+### 🚨 **Violation Examples to NEVER Repeat:**
+- ❌ PR #967 merged automatically during manual task execution
+- ❌ Agent workflows that push changes without merge approval
+- ❌ /copilot workflows that trigger merges silently
+
+**This protocol applies to ALL PR operations: manual, /copilot, orchestration agents, and any automated workflow.**
+
 ## 🚨 CRITICAL: NO SILENT FAILURES
 
 **MANDATORY CONTINUATION RULES**:
