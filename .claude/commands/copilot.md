@@ -10,7 +10,7 @@
 ```
 🤖 /copilot - Starting intelligent PR analysis for PR #[NUMBER]
 🔧 Reading PR status and planning workflow...
-📊 PR Status: [OPEN/MERGED/CLOSED] | CI: [PASSING/FAILING] | Mergeable: [YES/NO]
+📊 PR Status: [OPEN/MERGED/CLOSED] | ✅ CI Status: [PASSING/FAILING] | 🔄 Mergeable: [TRUE/FALSE/CONFLICTING]
 🚀 Beginning 6-phase autonomous workflow with full transparency...
 
 === COPILOT WORKFLOW INITIATED ===
@@ -175,27 +175,60 @@ if 'copilot' in author.lower():
 
 **OUTPUT**: "✅ PHASE 1 COMPLETE: [X] comments collected" or "❌ PHASE 1 FAILED: [detailed error]"
 
-### PHASE 2: Fix Issues First (MANDATORY)
-**🔧 PHASE 2: ISSUE FIXING - Starting...**
+### PHASE 2: Comprehensive Merge Readiness Check (MANDATORY)
+**🔧 PHASE 2: MERGE READINESS ANALYSIS - Starting...**
 
-**MUST RUN** `/fixpr [PR]` to resolve CI failures and conflicts:
-- Show: "Running `/fixpr [PR]`..."
-- Show: "Analyzing CI status and conflicts..."
+**MUST RUN** comprehensive merge readiness check including BOTH CI and GitHub mergeable status:
+
+#### 🚨 CRITICAL: Dual Status Verification Protocol
+1. **CI Status Check** (via `gh pr checks`):
+   - Show: "✅ Checking CI Status: `gh pr checks [PR]`..."
+   - Show: "CI Status: [PASSING/FAILING] - [X] checks found"
+   - Show: Each CI check result with detailed status
+
+2. **🔄 NEW: GitHub Mergeable Status Check** (via `gh pr view --json mergeable`):
+   - Show: "🔄 Checking Mergeable Status: `gh pr view [PR] --json mergeable`..."
+   - Show: "Mergeable Status: [TRUE/FALSE/CONFLICTING]"
+   - Show: Merge conflict details if any exist
+
+3. **🚨 CRITICAL: False Confidence Detection**:
+   - Show: "🔍 Cross-checking CI vs Mergeable status..."
+   - **DETECT**: When CI=PASSING but Mergeable=CONFLICTING
+   - **ALERT**: "⚠️ FALSE CONFIDENCE DETECTED: CI passes but PR cannot merge due to conflicts"
+   - **GUIDANCE**: "Action Required: Resolve merge conflicts before proceeding"
+
+#### Issue Resolution Protocol
+**MUST RUN** `/fixpr [PR]` to resolve identified issues:
+- Show: "Running `/fixpr [PR]` for comprehensive issue resolution..."
 - **MANDATORY**: Analyze and resolve test failures, linting errors
-  - Show: "CI Status: [passing/failing] - [X] checks found"
+  - Show: "Analyzing CI failures: [list of specific failures]"
   - Show: Each CI failure with analysis and fix plan
-- **MANDATORY**: Handle merge conflicts and compatibility issues
-  - Show: "Merge Status: [mergeable/conflicts] - [X] conflicts found"  
+- **🔄 ENHANCED**: Handle merge conflicts identified by mergeable status
+  - Show: "Analyzing merge conflicts: [files in conflict]"  
   - Show: Each conflict with resolution strategy
-- **MANDATORY**: Apply necessary fixes based on analysis
-  - Show: "Applying [X] fixes: [list of changes]"
+  - Show: "Using `git status` and `git diff` to analyze conflicts"
+- **MANDATORY**: Apply necessary fixes based on comprehensive analysis
+  - Show: "Applying [X] CI fixes and [X] conflict resolutions"
   - Show: Each file being modified and why
-- **MANDATORY**: Ensure fixes are ready before commenting
-  - Show: "Verifying all fixes applied successfully..."
-- **FAIL IF**: CI failures remain or conflicts unresolved
-  - Show: Remaining issues and why they couldn't be resolved
+- **🔄 ENHANCED**: Re-verify both CI and mergeable status after fixes
+  - Show: "Re-checking CI status post-fixes..."
+  - Show: "Re-checking mergeable status post-fixes..."
+  - Show: "Verification: ✅ CI: [status] | 🔄 Mergeable: [status]"
 
-**OUTPUT**: "✅ PHASE 2 COMPLETE: [X] issues fixed" or "❌ PHASE 2 FAILED: [detailed issues remaining]"
+#### 🚨 Enhanced Error Detection & Guidance
+- **FAIL IF**: CI failures remain OR mergeable status shows conflicts
+  - Show: "❌ BLOCKING ISSUES DETECTED:"
+  - Show: "  - CI Status: [detailed remaining failures]"
+  - Show: "  - Mergeable Status: [CONFLICTING/FALSE with conflict details]"
+  - Show: "📋 CONFLICT RESOLUTION GUIDANCE:"
+  - Show: "  1. Pull latest changes: `git pull origin main`"
+  - Show: "  2. Resolve conflicts in: [list of conflicted files]" 
+  - Show: "  3. Use conflict resolution tools or manual editing"
+  - Show: "  4. Test locally: `./run_tests.sh`"
+  - Show: "  5. Commit resolution: `git add . && git commit`"
+  - Show: "  6. Push updates: `git push`"
+
+**OUTPUT**: "✅ PHASE 2 COMPLETE: CI=[status] Mergeable=[status] - [X] issues fixed" or "❌ PHASE 2 FAILED: [detailed CI and merge status issues]"
 
 ### PHASE 3: Push Fixes (MANDATORY)
 **🔧 PHASE 3: PUSHING FIXES - Starting...**
@@ -407,9 +440,10 @@ PHASE 4: DIRECT EXECUTION
 > 1. Running /commentfetch 123...
 >    ✅ Found 5 comments → branch-specific directory
 > 
-> 2. Running /fixpr 123...
->    ✅ Claude reads fixpr.md and checks CI status
->    ✅ No failures or conflicts found
+> 2. Running comprehensive merge readiness check...
+>    ✅ CI Status: PASSING - 3 checks passed
+>    🔄 Mergeable Status: TRUE - No conflicts detected
+>    🔍 Cross-check: ✅ CI and mergeable both green - ready to proceed
 > 
 > 3. Analyzing comments (100% coverage):
 >    - @user "Fix pagination" - NOT DONE
@@ -437,10 +471,10 @@ PHASE 4: DIRECT EXECUTION
 > 1. Running /commentfetch 456...
 >    ✅ Found 3 comments → branch-specific directory
 >
-> 2. Running /fixpr 456...
->    ✅ Claude reads fixpr.md and analyzes CI
->    - GitHub CI: 2 failures detected
->    - Analyzing failure patterns...
+> 2. Running comprehensive merge readiness check...
+>    ✅ CI Status: FAILING - 2 failures detected  
+>    🔄 Mergeable Status: TRUE - No conflicts detected
+>    🔍 Cross-check: ⚠️ CI failing but mergeable - need to fix CI issues
 >    
 >    ## 🔧 Planned Fixes:
 >    1. **Test failure in test_auth.py**: Missing import statement
@@ -457,6 +491,37 @@ PHASE 4: DIRECT EXECUTION
 > ✅ Complete! Used /fixpr + direct fixes + /pushl
 ```
 
+### False Confidence Detection (PR #949 scenario):
+```
+/copilot 949
+> Analyzing PR #949...
+> 
+> ## 🔧 False Confidence Detection:
+> 
+> 1. Running /commentfetch 949...
+>    ✅ Found 6 comments → branch-specific directory
+> 
+> 2. Running comprehensive merge readiness check...
+>    ✅ CI Status: PASSING - All checks green ✅
+>    🔄 Mergeable Status: CONFLICTING - Branch has conflicts with main
+>    🚨 FALSE CONFIDENCE DETECTED: CI passes but PR cannot merge due to conflicts!
+>    
+>    📋 CONFLICT RESOLUTION GUIDANCE:
+>    1. Pull latest changes: `git pull origin main`
+>    2. Resolve conflicts in: .claude/commands/copilot.md, main.py
+>    3. Use conflict resolution tools or manual editing
+>    4. Test locally: `./run_tests.sh`
+>    5. Commit resolution: `git add . && git commit`
+>    6. Push updates: `git push`
+> 
+> 3. ⚠️ WORKFLOW PAUSED: Cannot proceed with comment responses until conflicts resolved
+>    - Reason: Comments about merge readiness would be misleading
+>    - Action: User must resolve conflicts first
+>    - Resume: Re-run /copilot after conflict resolution
+> 
+> ❌ PHASE 2 FAILED: Mergeable status CONFLICTING - resolve conflicts before proceeding
+```
+
 ### Complex PR with everything:
 ```
 /copilot 789
@@ -469,11 +534,11 @@ PHASE 4: DIRECT EXECUTION
 >    - 8 need responses (NOT DONE)
 >    - 4 informational (DONE)
 > 
-> 2. Running /fixpr 789...
->    ✅ Collected comprehensive data:
->    - GitHub CI: 3 failures, 1 timeout
->    - Local CI: 2 failures reproduced
->    - Merge conflicts: 2 files conflicted
+> 2. Running comprehensive merge readiness check...
+>    ✅ CI Status: PASSING - All 4 checks passed
+>    🔄 Mergeable Status: CONFLICTING - 2 files have conflicts  
+>    🚨 FALSE CONFIDENCE DETECTED: CI passes but cannot merge!
+>    📋 Resolution required: main.py, config.yaml have merge conflicts
 > 
 > 3. Intelligent Analysis Phase:
 >    [Using fixpr.md + commentreply.md intelligence]
