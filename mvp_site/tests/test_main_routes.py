@@ -91,8 +91,11 @@ class TestCampaignRoutes(unittest.TestCase):
         self.assertIn(KEY_ERROR, data)
         self.assertIn("Database error", data[KEY_ERROR])
 
+    @patch("main.get_user_settings")
     @patch("main.firestore_service")
-    def test_get_single_campaign_success(self, mock_firestore_service):
+    def test_get_single_campaign_success(
+        self, mock_firestore_service, mock_get_user_settings
+    ):
         """Test successful single campaign retrieval."""
         # Mock campaign and story data
         mock_campaign = SAMPLE_CAMPAIGN.copy()
@@ -105,6 +108,8 @@ class TestCampaignRoutes(unittest.TestCase):
             mock_story,
         )
         mock_firestore_service.get_campaign_game_state.return_value = mock_game_state
+        # Mock get_user_settings for debug_mode lookup
+        mock_get_user_settings.return_value = {"debug_mode": False}
 
         response = self.client.get(
             "/api/campaigns/test-campaign", headers=self.test_headers

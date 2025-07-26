@@ -145,14 +145,18 @@
 #auth-view,
 #dashboard-view,
 #new-campaign-view,
-#game-view {
+#game-view,
+#settings-view {
   display: none;
 }
 
 #auth-view.active-view,
 #dashboard-view.active-view,
-#new-campaign-view.active-view {
+#new-campaign-view.active-view,
+#settings-view.active-view {
   display: block;
+  position: relative;
+  z-index: 1100;
 }
 
 #game-view.active-view {

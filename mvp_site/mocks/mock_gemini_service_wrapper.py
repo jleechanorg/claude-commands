@@ -59,7 +59,11 @@ def generate_content(
 
 
 def get_initial_story(
-    prompt, selected_prompts=None, generate_companions=False, use_default_world=False
+    prompt,
+    user_id=None,
+    selected_prompts=None,
+    generate_companions=False,
+    use_default_world=False,
 ):
     """
     Mock get_initial_story function that returns predefined content.
