@@ -24,13 +24,15 @@ show_help() {
     echo "  -h, --help     Show this help message"
     echo "  --dry-run      Show what would be deleted without actually deleting"
     echo "  --force        Skip confirmation prompts (use with caution)"
+    echo "  --days N       Age threshold for worktree cleanup (default: 2 days)"
     echo ""
     echo "Description:"
-    echo "  This script safely cleans up local git branches by:"
+    echo "  This script safely cleans up local git branches and worktrees by:"
     echo "  1. Checking for associated PRs (won't delete branches with open PRs)"
     echo "  2. Identifying branches with unpushed commits"
     echo "  3. Preserving main/master and current branch"
     echo "  4. Showing clear status for each branch before deletion"
+    echo "  5. Cleaning up stale worktrees based on commit age"
     echo ""
     echo "Safety features:"
     echo "  - Never deletes main/master branch"
@@ -40,15 +42,18 @@ show_help() {
     echo "  - Dry-run mode for safe preview"
     echo ""
     echo "Examples:"
-    echo "  $0 --dry-run    # Preview what would be deleted"
-    echo "  $0              # Interactive cleanup with confirmations"
-    echo "  $0 --force      # Delete without confirmations (dangerous!)"
+    echo "  $0 --dry-run         # Preview what would be deleted"
+    echo "  $0                   # Interactive cleanup with confirmations"
+    echo "  $0 --force           # Delete without confirmations (dangerous!)"
+    echo "  $0 --days 7          # Clean worktrees older than 7 days"
+    echo "  $0 --dry-run --days 1  # Preview cleanup of 1-day-old worktrees"
     exit 0
 }
 
 # Parse arguments
 DRY_RUN=false
 FORCE=false
+WORKTREE_DAYS=2
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -63,9 +68,17 @@ while [[ $# -gt 0 ]]; do
             FORCE=true
             shift
             ;;
+        --days)
+            WORKTREE_DAYS="$2"
+            if ! [[ "$WORKTREE_DAYS" =~ ^[0-9]+$ ]]; then
+                echo "Error: --days must be a positive integer"
+                exit 1
+            fi
+            shift 2
+            ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--dry-run] [--force]"
+            echo "Usage: $0 [--dry-run] [--force] [--days N]"
             echo "Use --help for more information"
             exit 1
             ;;
@@ -192,6 +205,131 @@ if [[ ${#safe_to_delete[@]} -gt 0 ]]; then
     fi
 else
     echo -e "\n${GREEN}✅ No branches to clean up!${NC}"
+fi
+
+# Worktree cleanup section
+echo -e "\n${BLUE}🏠 Checking worktrees for cleanup...${NC}"
+
+# Get current worktree path for comparison
+CURRENT_WORKTREE=$(git rev-parse --show-toplevel)
+
+# Get all worktrees
+WORKTREES=$(git worktree list --porcelain 2>/dev/null | grep '^worktree ' | awk '{print $2}' || echo "")
+
+# Arrays to track worktrees
+declare -a worktrees_to_delete=()
+declare -a worktrees_kept=()
+
+if [[ -n "$WORKTREES" ]]; then
+    for wt in $WORKTREES; do
+        # Skip main worktree
+        if [[ "$wt" == "$CURRENT_WORKTREE" ]]; then
+            continue
+        fi
+        
+        echo -n "Checking worktree $(basename "$wt")... "
+        
+        # Check if worktree directory exists
+        if [[ ! -d "$wt" ]]; then
+            echo -e "${RED}missing directory${NC}"
+            worktrees_to_delete+=("$wt - missing directory")
+            continue
+        fi
+        
+        # Get the branch for this worktree
+        WT_BRANCH=$(git --git-dir="$wt/.git" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+        if [[ -z "$WT_BRANCH" ]]; then
+            echo -e "${RED}no branch${NC}"
+            worktrees_to_delete+=("$wt - no branch")
+            continue
+        fi
+        
+        # Check for uncommitted changes
+        if [[ -n $(git --git-dir="$wt/.git" --work-tree="$wt" status --porcelain 2>/dev/null) ]]; then
+            echo -e "${YELLOW}uncommitted changes${NC}"
+            worktrees_kept+=("$wt ($WT_BRANCH) - uncommitted changes")
+            continue
+        fi
+        
+        # Check branch's last commit date
+        COMMIT_DATE=$(git --git-dir="$wt/.git" log -1 --format="%cI" 2>/dev/null || echo "")
+        if [[ -n "$COMMIT_DATE" ]]; then
+            COMMIT_AGE_DAYS=$(( ($(date +%s) - $(date -d "$COMMIT_DATE" +%s)) / 86400 ))
+            if [[ $COMMIT_AGE_DAYS -gt $WORKTREE_DAYS ]]; then
+                echo -e "${GREEN}stale ($COMMIT_AGE_DAYS days old)${NC}"
+                worktrees_to_delete+=("$wt ($WT_BRANCH) - $COMMIT_AGE_DAYS days old")
+            else
+                echo -e "${YELLOW}recent ($COMMIT_AGE_DAYS days old)${NC}"
+                worktrees_kept+=("$wt ($WT_BRANCH) - $COMMIT_AGE_DAYS days old")
+            fi
+        else
+            echo -e "${YELLOW}no commits${NC}"
+            worktrees_kept+=("$wt ($WT_BRANCH) - no commits")
+        fi
+    done
+else
+    echo "No additional worktrees found."
+fi
+
+# Display worktree summary
+if [[ ${#worktrees_to_delete[@]} -gt 0 ]] || [[ ${#worktrees_kept[@]} -gt 0 ]]; then
+    echo -e "\n${BLUE}🏠 Worktree Summary${NC}"
+    echo "=================="
+    echo "Stale worktrees (>$WORKTREE_DAYS days): ${#worktrees_to_delete[@]}"
+    echo "Active worktrees (kept): ${#worktrees_kept[@]}"
+    
+    if [[ ${#worktrees_to_delete[@]} -gt 0 ]]; then
+        echo -e "\n${GREEN}✅ Stale worktrees (ready for cleanup):${NC}"
+        printf '%s\n' "${worktrees_to_delete[@]}" | sed 's/^/  - /'
+    fi
+    
+    if [[ ${#worktrees_kept[@]} -gt 0 ]]; then
+        echo -e "\n${YELLOW}🏠 Active worktrees (kept):${NC}"
+        printf '%s\n' "${worktrees_kept[@]}" | sed 's/^/  - /'
+    fi
+fi
+
+# Delete stale worktrees
+if [[ ${#worktrees_to_delete[@]} -gt 0 ]]; then
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo -e "\n${YELLOW}🔍 DRY RUN: Would remove ${#worktrees_to_delete[@]} worktrees${NC}"
+    else
+        echo -e "\n${YELLOW}🗑️  Preparing to remove ${#worktrees_to_delete[@]} worktrees...${NC}"
+        
+        if [[ "$FORCE" != "true" ]]; then
+            echo -n "Continue with worktree cleanup? (y/N) "
+            read -r response
+            if [[ ! "$response" =~ ^[Yy]$ ]]; then
+                echo "Worktree cleanup cancelled."
+            else
+                # Remove worktrees
+                for wt_info in "${worktrees_to_delete[@]}"; do
+                    wt_path=$(echo "$wt_info" | cut -d' ' -f1)
+                    echo -n "Removing worktree $(basename "$wt_path")... "
+                    if git worktree remove --force "$wt_path" 2>/dev/null; then
+                        echo -e "${GREEN}✓${NC}"
+                    else
+                        echo -e "${RED}✗${NC}"
+                    fi
+                done
+                echo -e "\n${GREEN}✅ Worktree cleanup complete!${NC}"
+            fi
+        else
+            # Force mode - remove without confirmation
+            for wt_info in "${worktrees_to_delete[@]}"; do
+                wt_path=$(echo "$wt_info" | cut -d' ' -f1)
+                echo -n "Removing worktree $(basename "$wt_path")... "
+                if git worktree remove --force "$wt_path" 2>/dev/null; then
+                    echo -e "${GREEN}✓${NC}"
+                else
+                    echo -e "${RED}✗${NC}"
+                fi
+            done
+            echo -e "\n${GREEN}✅ Worktree cleanup complete!${NC}"
+        fi
+    fi
+else
+    echo -e "\n${GREEN}✅ No stale worktrees to clean up!${NC}"
 fi
 
 # Offer to prune remotes
