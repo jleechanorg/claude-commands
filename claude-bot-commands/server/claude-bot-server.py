@@ -44,38 +44,59 @@ class ClaudeHandler(BaseHTTPRequestHandler):
 
                 logger.info(f"Received prompt: {prompt[:100]}...")
 
-                # Call Claude Code CLI with the prompt directly
-                # Try different possible command names/paths
-                claude_commands = ['claude-code', 'claude', '/usr/local/bin/claude-code']
-                claude_cmd = None
+                # Call Claude Code CLI with environment awareness
+                try:
+                    # Detect testing environment
+                    is_testing = (os.getenv('TESTING') == 'true' or
+                                os.getenv('CI') == 'true' or
+                                'test' in __file__.lower())
 
-                for cmd in claude_commands:
-                    try:
-                        # Test if command exists
-                        subprocess.run([cmd, '--version'], capture_output=True, timeout=5)
-                        claude_cmd = cmd
-                        break
-                    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.CalledProcessError):
-                        continue
+                    # Use shorter timeout in testing environments
+                    timeout = 3 if is_testing else 15
 
-                if not claude_cmd:
-                    response = ("❌ Claude Code CLI not accessible from this environment.\n\n"
-                              "This endpoint requires Claude Code CLI to be installed and accessible.\n"
-                              "Please ensure Claude Code is properly installed and in your PATH.\n\n"
-                              "Visit: https://docs.anthropic.com/en/docs/claude-code")
-                    logger.error("Claude Code CLI not found in any expected location")
-                else:
-                    result = subprocess.run([
-                        claude_cmd,
-                        '--print',
-                        prompt
-                    ], capture_output=True, text=True, timeout=60)
+                    # Try to find Claude Code CLI
+                    claude_cmd = None
+                    possible_paths = [
+                        os.path.expanduser('~/.claude/local/claude'),  # User-specific path first
+                        '/usr/local/bin/claude',
+                        '/opt/homebrew/bin/claude',
+                        'claude'  # In PATH
+                    ]
 
-                    if result.returncode == 0:
-                        response = result.stdout
+                    for cmd_path in possible_paths:
+                        try:
+                            result = subprocess.run([cmd_path, '--version'],
+                                                  capture_output=True, text=True, timeout=2)
+                            if result.returncode == 0:
+                                claude_cmd = cmd_path
+                                logger.info(f"Found Claude CLI at: {cmd_path}")
+                                break
+                        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                            continue
+
+                    if claude_cmd:
+                        # Use Claude CLI with appropriate timeout
+                        logger.info(f"Calling Claude CLI with timeout: {timeout}s")
+                        result = subprocess.run([claude_cmd, prompt],
+                                              capture_output=True, text=True, timeout=timeout, check=False)
+                        if result.returncode == 0 and result.stdout.strip():
+                            response = result.stdout.strip()
+                            logger.info(f"Claude CLI response received: {len(response)} chars")
+                        else:
+                            response = "❌ Error: Claude CLI execution failed or returned empty response"
+                            logger.error(f"Claude CLI error: {result.stderr}")
                     else:
-                        response = f"❌ Claude Code error: {result.stderr}"
-                        logger.error(f"Claude Code error: {result.stderr}")
+                        response = ("❌ Error: Claude Code CLI not found.\n\n"
+                                  "Please ensure Claude Code is properly installed and in your PATH.\n\n"
+                                  "Visit: https://docs.anthropic.com/en/docs/claude-code")
+                        logger.error("Claude Code CLI not found in any expected location")
+
+                except subprocess.TimeoutExpired:
+                    response = f"❌ Error: Claude CLI timed out after {timeout}s (testing environment detected)"
+                    logger.error(f"Claude CLI timeout after {timeout}s")
+                except Exception as e:
+                    response = f"❌ Error calling Claude: {str(e)}"
+                    logger.error(f"Exception calling Claude: {e}")
 
                 # Send response
                 self.send_response(200)

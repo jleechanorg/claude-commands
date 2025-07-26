@@ -196,6 +196,18 @@
    - **Anti-pattern**: Collect data → Python templates → Fake responses
    - **Violation Count**: 100+ times - STOP THIS PATTERN IMMEDIATELY
 
+🚨 **NO COMMAND PARSING PATTERNS**: ⚠️ MANDATORY - When building Claude integration systems:
+- ❌ NEVER use `if prompt.lower() in ['hello', 'hi']:` patterns
+- ❌ NEVER parse commands with `elif 'help' in prompt.lower():` approaches
+- ❌ NEVER implement hardcoded response dictionaries or lookup tables
+- ❌ NEVER create fake command parsing that mimics Claude responses
+- ✅ ALWAYS call actual Claude CLI or API for real responses
+- ✅ ALWAYS handle Claude CLI integration issues properly (path, auth, environment)
+- ✅ ALWAYS provide proper error handling when Claude integration fails
+- **Pattern**: Receive prompt → Call real Claude → Return real response
+- **Anti-pattern**: Receive prompt → Pattern match → Return fake response
+- **Evidence**: claude-bot-server.py fake patterns removed per user correction
+
 🚨 **EVIDENCE-BASED APPROACH**: Core principles for all analysis
    - ✅ Extract exact error messages/code snippets before analyzing
    - ✅ Show actual output before suggesting fixes
@@ -223,7 +235,7 @@
 3. **Test Execution**: Use `TESTING=true vpython` from project root
 4. **File Paths**: Always absolute paths
 5. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
-6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
+6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root | ✅ **USE ~ NOT /home/jleechan**: Always use `~` instead of `/home/jleechan` in paths for portability
 7. 🚨 **DATE INTERPRETATION**: Environment date format is YYYY-MM-DD where MM is the month number (01=Jan, 07=July)
 8. 🚨 **Branch Protocol**: → See "Git Workflow" section
 9. 🚨 **TOOL EXPLANATION VS EXECUTION**: ⚠️ MANDATORY distinction

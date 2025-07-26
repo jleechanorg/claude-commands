@@ -189,6 +189,14 @@ if [ -d "claude_command_scripts/commands" ]; then
     done < <(find claude_command_scripts/commands -name "test_*.py" -type f -print0)
 fi
 
+# Include claude-bot-commands tests if they exist
+if [ -d "claude-bot-commands/tests" ]; then
+    print_status "Including claude-bot-commands tests..."
+    while IFS= read -r -d '' file; do
+        test_files+=("$file")
+    done < <(find claude-bot-commands/tests -name "test_*.py" -type f -print0)
+fi
+
 # Check if any test files exist
 if [ ${#test_files[@]} -eq 0 ]; then
     if [ "$include_integration" = false ]; then

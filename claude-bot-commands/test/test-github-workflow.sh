@@ -130,7 +130,21 @@ test_claude_call() {
         return 1
     fi
 
-    echo "✅ Claude call successful"
+    # TDD Quality Check: Ensure response is meaningful, not just metadata
+    if [[ "$A" =~ ^\[Local:.*\]$ ]]; then
+        echo "❌ Response is ONLY branch metadata - no actual content"
+        echo "❌ Got: '$A'"
+        return 1
+    fi
+
+    # TDD Quality Check: Response should be reasonably substantial
+    if [ ${#A} -lt 20 ]; then
+        echo "❌ Response too short to be meaningful (${#A} chars)"
+        echo "❌ Got: '$A'"
+        return 1
+    fi
+
+    echo "✅ Claude call successful with quality validation"
 
     # Export for next test
     export CLAUDE_RESPONSE="$A"
