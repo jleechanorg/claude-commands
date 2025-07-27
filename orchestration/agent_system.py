@@ -9,7 +9,18 @@ import time
 from typing import Any
 
 from message_broker import MessageBroker, MessageType, TaskMessage
-from a2a_adapter import A2AAdapter, A2AMessage, A2AMessageBroker
+try:
+    from a2a_agent_wrapper import create_a2a_wrapper
+    A2A_WRAPPER_AVAILABLE = True
+except ImportError:
+    A2A_WRAPPER_AVAILABLE = False
+
+# Keep legacy adapter for compatibility
+try:
+    from a2a_adapter import A2AAdapter, A2AMessage
+    LEGACY_A2A_AVAILABLE = True
+except ImportError:
+    LEGACY_A2A_AVAILABLE = False
 
 import sys
 
@@ -26,12 +37,28 @@ class AgentBase:
         self.capabilities = capabilities or []
         self.children = []
 
-        # A2A Integration
+        # A2A Integration - Use new wrapper if available, fallback to legacy
         self.enable_a2a = enable_a2a
-        self.a2a_adapter = None
+        self.a2a_wrapper = None
+        self.a2a_adapter = None  # Legacy adapter
+
         if enable_a2a:
-            self.a2a_adapter = A2AAdapter()
-            self.a2a_adapter.start_message_listener()
+            if A2A_WRAPPER_AVAILABLE:
+                # Use new A2A wrapper system
+                self.a2a_wrapper = create_a2a_wrapper(
+                    agent_id=agent_id,
+                    agent_type=agent_type,
+                    capabilities=self.capabilities,
+                    workspace=f"/tmp/orchestration/agents/{agent_id}"
+                )
+                print(f"Agent {agent_id} initialized with new A2A wrapper")
+            elif LEGACY_A2A_AVAILABLE:
+                # Fallback to legacy adapter
+                self.a2a_adapter = A2AAdapter()
+                self.a2a_adapter.start_message_listener()
+                print(f"Agent {agent_id} initialized with legacy A2A adapter")
+            else:
+                print(f"Warning: A2A requested but not available for agent {agent_id}")
 
     def start(self):
         """Start the agent with A2A support."""
@@ -41,8 +68,11 @@ class AgentBase:
         # Register with legacy broker
         self.broker.register_agent(self.agent_id, self.agent_type, self.capabilities)
 
-        # Register with A2A adapter if enabled
-        if self.enable_a2a and self.a2a_adapter:
+        # Start A2A wrapper if enabled
+        if self.enable_a2a and self.a2a_wrapper:
+            self.a2a_wrapper.start()
+        # Register with legacy A2A adapter if enabled
+        elif self.enable_a2a and self.a2a_adapter:
             self.a2a_adapter.register_agent(self.agent_id, self.agent_type, self.capabilities)
 
         # Start message processing thread

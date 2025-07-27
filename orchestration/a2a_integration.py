@@ -1,394 +1,738 @@
 #!/usr/bin/env python3
 """
-REAL A2A SDK Integration for WorldArchitect.AI Orchestrator
+Simplified A2A Integration for WorldArchitect.AI Orchestrator
 
-This replaces our fake A2A simulation with authentic Google A2A SDK integration
-using proper SDK components and patterns.
+Lightweight file-based Agent-to-Agent protocol wrapper that enables
+direct agent communication while preserving existing tmux orchestration.
 """
 
-import asyncio
+import json
+import os
+import time
 import uuid
 import logging
-import sys
-from typing import Optional, Dict, Any
+import fcntl
+import tempfile
+from pathlib import Path
+from typing import Dict, List, Optional, Any, Union
+from dataclasses import dataclass, asdict
 
-import uvicorn
-from a2a.types import (
-    AgentCard, AgentSkill, AgentCapabilities, Task, Message,
-    TaskState, TaskStatus, TextPart, Role
-)
-from a2a.server.apps.jsonrpc.fastapi_app import A2AFastAPIApplication
-from a2a.server.request_handlers.default_request_handler import DefaultRequestHandler
-from a2a.server.tasks.inmemory_task_store import InMemoryTaskStore
-from a2a.server.agent_execution import AgentExecutor, RequestContext
-from a2a.server.events import EventQueue
-
-from redis_a2a_bridge import RedisA2ABridge, ProductionErrorHandler
-
-
-class WorldArchitectA2AAgent(AgentExecutor):
-    """
-    Real A2A SDK integration for WorldArchitect.AI orchestrator framework.
-
-    This uses authentic A2A SDK components instead of simulating the protocol.
-    """
-
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-        self.redis_bridge = RedisA2ABridge()
-        self.error_handler = ProductionErrorHandler()
-
-    async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
-        """Execute agent logic for incoming A2A requests using real SDK patterns"""
-
-        if not context.message:
-            self.logger.warning("No message in request context")
-            return
-
-        # Extract user message using real A2A message structure
-        user_text = ""
-        for part in context.message.parts:
-            if part.kind == 'text':
-                user_text += part.text
-
-        self.logger.info(f"Processing A2A request: {user_text[:100]}...")
-
-        # Process using real orchestrator integration
-        response_text = await self._process_orchestrator_request(user_text, context)
-
-        # Create real A2A response message
-        response_message = Message(
-            message_id=str(uuid.uuid4()),
-            role=Role.agent,
-            parts=[TextPart(text=response_text)],
-            task_id=context.task_id,
-            context_id=context.context_id
-        )
-
-        # Build task history using real A2A Task structure
-        task_history = []
-        if context.task and context.task.history:
-            task_history = context.task.history[:]
-        if context.message:
-            task_history.append(context.message)
-        task_history.append(response_message)
-
-        # Create completed task using real A2A TaskStatus
-        completed_task = Task(
-            id=context.task_id,
-            context_id=context.context_id,
-            status=TaskStatus(state=TaskState.completed),
-            history=task_history
-        )
-
-        # Publish to real A2A event queue
-        await event_queue.put(response_message)
-        await event_queue.put(completed_task)
-
-        self.logger.info(f"A2A task {context.task_id} completed successfully")
-
-    async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
-        """Handle A2A task cancellation using real SDK patterns"""
-        self.logger.info(f"Canceling A2A task {context.task_id}")
-
-        canceled_task = Task(
-            id=context.task_id,
-            context_id=context.context_id,
-            status=TaskStatus(state=TaskState.canceled),
-            history=context.task.history if context.task else []
-        )
-        await event_queue.put(canceled_task)
-
-    async def _process_orchestrator_request(self, user_input: str, context: RequestContext) -> str:
-        """
-        Process request using real orchestrator framework integration.
-
-        This is where we bridge A2A requests to our existing Redis-based
-        orchestrator system.
-        """
-
-        # Parse request for orchestrator actions
-        if "orchestrate" in user_input.lower():
-            return await self._orchestrate_workflow(user_input, context)
-        elif "discover" in user_input.lower():
-            return await self._discover_agents(user_input, context)
-        elif "execute" in user_input.lower():
-            return await self._execute_task(user_input, context)
-        else:
-            return await self._general_response(user_input, context)
-
-    async def _orchestrate_workflow(self, user_input: str, context: RequestContext) -> str:
-        """Handle workflow orchestration requests via real Redis integration"""
-
-        try:
-            # Use real Redis bridge to orchestrate workflow
-            workflow_result = await self.error_handler.handle_with_retry(
-                self.redis_bridge.orchestrate_workflow_real,
-                user_input,
-                context.context_id
-            )
-
-            self.logger.info(f"Workflow {workflow_result['workflow_id']} completed: {workflow_result['status']}")
-
-            return f"""Production workflow orchestration completed:
-- Workflow ID: {workflow_result['workflow_id']}
-- Status: {workflow_result['status']}
-- Steps completed: {workflow_result['steps_completed']}/{workflow_result['total_steps']}
-- Integration: Real Redis operations via A2A bridge
-- Results: {len(workflow_result['results'])} step results captured"""
-
-        except Exception as e:
-            self.logger.error(f"Workflow orchestration failed: {e}")
-            return f"""Workflow orchestration failed:
-- Error: {str(e)}
-- Integration: Production Redis bridge
-- Recommendation: Check Redis connectivity and agent availability"""
-
-    async def _discover_agents(self, user_input: str, context: RequestContext) -> str:
-        """Handle agent discovery via real Redis agent registry queries"""
-
-        try:
-            # Query live Redis agent registry
-            discovered_agents = await self.error_handler.handle_with_retry(
-                self.redis_bridge.discover_agents_real
-            )
-
-            # Create detailed agent report
-            agent_details = []
-            for agent in discovered_agents:
-                agent_details.append(
-                    f"  - {agent['id']} ({agent['type']}): "
-                    f"queue={agent['queue_size']}, "
-                    f"heartbeat={agent['last_heartbeat']}"
-                )
-
-            self.logger.info(f"Discovered {len(discovered_agents)} active agents from Redis")
-
-            return f"""Live agent discovery completed:
-- Active agents found: {len(discovered_agents)}
-- Registry source: Redis agent registry (live data)
-- Integration: Production Redis bridge
-Agent details:
-{chr(10).join(agent_details) if agent_details else "  No active agents found"}"""
-
-        except Exception as e:
-            self.logger.error(f"Agent discovery failed: {e}")
-            return f"""Agent discovery failed:
-- Error: {str(e)}
-- Registry source: Redis agent registry
-- Recommendation: Verify Redis connectivity and agent heartbeats"""
-
-    async def _execute_task(self, user_input: str, context: RequestContext) -> str:
-        """Handle task execution via real Redis agent delegation"""
-
-        try:
-            # Execute task on real Redis agent with load balancing
-            task_result = await self.error_handler.handle_with_retry(
-                self.redis_bridge.execute_task_real,
-                user_input,
-                context.context_id
-            )
-
-            # Handle successful execution
-            if task_result.get("status") == "failed":
-                self.logger.warning(f"Task execution failed: {task_result.get('error')}")
-                return f"""Task execution failed:
-- Task ID: {task_result.get('task_id')}
-- Agent: {task_result.get('agent')}
-- Error: {task_result.get('error')}
-- Integration: Production Redis task delegation"""
-            else:
-                self.logger.info(f"Task {task_result.get('task_id')} completed successfully")
-                return f"""Task execution completed:
-- Task ID: {task_result.get('task_id')}
-- Agent: {task_result.get('agent', 'auto-selected')}
-- Status: Success
-- Integration: Real Redis agent execution
-- Result: Task completed by production agent"""
-
-        except Exception as e:
-            self.logger.error(f"Task execution failed: {e}")
-            return f"""Task execution failed:
-- Error: {str(e)}
-- Integration: Production Redis bridge
-- Recommendation: Check agent availability and Redis connectivity"""
-
-    async def _general_response(self, user_input: str, context: RequestContext) -> str:
-        """Handle general queries via real A2A"""
-
-        return f"""WorldArchitect.AI Agent (Real A2A Integration):
-- Input processed: {user_input[:50]}{'...' if len(user_input) > 50 else ''}
-- Integration: Authentic Google A2A SDK
-- Components: Real AgentExecutor, TaskStore, EventQueue
-- Protocol: True A2A compliance, not simulation
-- Context: {context.context_id}"""
-
-
-def create_real_agent_card() -> AgentCard:
-    """Create real AgentCard using authentic A2A SDK components"""
-
-    return AgentCard(
-        name="WorldArchitect AI Orchestrator",
-        description="AI-powered tabletop RPG orchestrator with real A2A integration",
-        version="2.0.0",
-        url="http://localhost:8000/rpc",
-        default_input_modes=["text/plain", "application/json"],
-        default_output_modes=["text/plain", "application/json"],
-        capabilities=AgentCapabilities(
-            streaming=True,
-            push_notifications=False,
-            state_transition_history=True
-        ),
-        skills=[
-            AgentSkill(
-                id="orchestration",
-                name="Workflow Orchestration",
-                description="Orchestrate complex multi-agent workflows using A2A protocol",
-                tags=["orchestration", "workflow", "a2a", "multi-agent"]
-            ),
-            AgentSkill(
-                id="agent_discovery",
-                name="Agent Discovery",
-                description="Discover and manage agents in the orchestrator network",
-                tags=["discovery", "agents", "registry", "management"]
-            ),
-            AgentSkill(
-                id="task_execution",
-                name="Task Execution",
-                description="Execute tasks across distributed agent network",
-                tags=["tasks", "execution", "distributed", "coordination"]
-            ),
-            AgentSkill(
-                id="campaign_management",
-                name="D&D Campaign Management",
-                description="Manage D&D 5e campaigns and game sessions",
-                tags=["dnd", "rpg", "campaign", "gamemaster"]
-            )
-        ]
-    )
-
-
-def create_real_a2a_server() -> A2AFastAPIApplication:
-    """
-    Create real A2A server using authentic SDK components.
-
-    This replaces our fake FastAPI endpoints with proper A2A integration.
-    """
-
-    # Create real agent card using A2A SDK
-    agent_card = create_real_agent_card()
-
-    # Create real task store (in-memory for POC, could be database)
-    task_store = InMemoryTaskStore()
-
-    # Create real agent executor
-    agent_executor = WorldArchitectA2AAgent()
-
-    # Create real request handler using A2A SDK
-    request_handler = DefaultRequestHandler(
-        agent_executor=agent_executor,
-        task_store=task_store
-    )
-
-    # Create real A2A FastAPI application using SDK
-    app_builder = A2AFastAPIApplication(
-        agent_card=agent_card,
-        http_handler=request_handler
-    )
-
-    return app_builder
-
-
-async def start_real_a2a_server(host: str = "0.0.0.0", port: int = 8000):
-    """Start the real A2A server with proper SDK integration"""
-
+# Use project logging utility
+try:
+    import logging_util
+    logger = logging_util.setup_logging(__name__)
+except ImportError:
+    # Fallback to basic logging if logging_util not available
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
-    logger.info("🚀 Starting REAL A2A SDK Integration Server")
-    logger.info("=" * 60)
-
-    try:
-        # Create real A2A server using SDK components
-        app_builder = create_real_a2a_server()
-
-        # Build FastAPI app with real A2A integration
-        fastapi_app = app_builder.build(
-            title="WorldArchitect AI - Real A2A Integration",
-            description="Authentic A2A SDK integration for orchestrator framework"
-        )
-
-        logger.info("✅ Real A2A server components initialized")
-        logger.info(f"📡 Server starting on {host}:{port}")
-        logger.info("🔍 Real agent card available at /.well-known/agent.json")
-        logger.info("🎯 Real A2A JSON-RPC endpoint at /rpc")
-
-        # Start server with real A2A integration
-        config = uvicorn.Config(
-            app=fastapi_app,
-            host=host,
-            port=port,
-            log_level="info"
-        )
-
-        server = uvicorn.Server(config)
-        await server.serve()
-
-    except KeyboardInterrupt:
-        logger.info("\n🛑 Stopping real A2A server...")
-    except Exception as e:
-        logger.error(f"❌ Real A2A server error: {e}")
-        raise
+# A2A Communication Directory - configurable for production
+A2A_BASE_DIR = os.environ.get('A2A_BASE_DIR', '/tmp/orchestration/a2a')
 
 
-async def test_real_a2a_integration():
-    """Test the real A2A integration to prove it's authentic"""
+@dataclass
+class A2AMessage:
+    """Simple A2A message format for file-based communication"""
+    id: str
+    from_agent: str
+    to_agent: str  # or "broadcast" for all agents
+    message_type: str  # discover, claim, delegate, status, result
+    payload: Dict[str, Any]
+    timestamp: float
+    reply_to: Optional[str] = None
 
-    print("🧪 Testing Real A2A SDK Integration")
-    print("=" * 50)
+    def to_json(self) -> str:
+        """Serialize to JSON string"""
+        return json.dumps(asdict(self), indent=2)
 
-    # Test 1: Verify real SDK components are being used
-    print("🔍 Testing real SDK component usage...")
+    @classmethod
+    def from_json(cls, json_str: str) -> 'A2AMessage':
+        """Deserialize from JSON string"""
+        data = json.loads(json_str)
+        return cls(**data)
 
-    try:
-        app_builder = create_real_a2a_server()
-        agent_card = create_real_agent_card()
 
-        # Verify we're using real A2A SDK classes
-        assert isinstance(agent_card, AgentCard), "Not using real AgentCard class"
-        assert isinstance(app_builder, A2AFastAPIApplication), "Not using real A2AFastAPIApplication"
+@dataclass
+class AgentInfo:
+    """Agent capabilities and status information"""
+    agent_id: str
+    agent_type: str  # frontend, backend, testing, opus-master
+    capabilities: List[str]
+    status: str  # idle, busy, offline
+    current_task: str | None
+    created_at: float
+    last_heartbeat: float
+    workspace: str
 
-        print("✅ Real A2A SDK components verified")
+    def to_json(self) -> str:
+        """Serialize to JSON string"""
+        return json.dumps(asdict(self), indent=2)
 
-        # Test 2: Build real app
-        fastapi_app = app_builder.build()
-        print("✅ Real A2A FastAPI app built successfully")
+    @classmethod
+    def from_json(cls, json_str: str) -> 'AgentInfo':
+        """Deserialize from JSON string"""
+        data = json.loads(json_str)
+        return cls(**data)
 
-        # Test 3: Verify agent card structure
-        assert agent_card.name == "WorldArchitect AI Orchestrator"
-        assert len(agent_card.skills) == 4
-        assert agent_card.capabilities.streaming == True
 
-        print("✅ Real AgentCard structure validated")
+class FileBasedMessaging:
+    """Handles file-based inbox/outbox messaging between agents"""
 
-        print("\n🎉 REAL A2A SDK INTEGRATION VERIFIED!")
-        print("✅ Using authentic A2A SDK components")
-        print("✅ Real AgentCard, A2AFastAPIApplication, AgentExecutor")
-        print("✅ No manual JSON endpoints - using SDK patterns")
-        print("✅ Ready for production deployment")
+    def __init__(self, agent_id: str):
+        self.agent_id = agent_id
+        self.agent_dir = Path(A2A_BASE_DIR) / "agents" / agent_id
+        self.inbox_dir = self.agent_dir / "inbox"
+        self.outbox_dir = self.agent_dir / "outbox"
+
+        # Ensure directories exist
+        self.inbox_dir.mkdir(parents=True, exist_ok=True)
+        self.outbox_dir.mkdir(parents=True, exist_ok=True)
+
+    def send_message(self, message: A2AMessage) -> bool:
+        """Send message to another agent's inbox"""
+        try:
+            if message.to_agent == "broadcast":
+                return self._broadcast_message(message)
+            else:
+                return self._send_direct_message(message)
+        except Exception as e:
+            logger.error(f"Failed to send message: {e}")
+            return False
+
+    def _send_direct_message(self, message: A2AMessage) -> bool:
+        """Send direct message to specific agent"""
+        target_inbox = Path(A2A_BASE_DIR) / "agents" / message.to_agent / "inbox"
+        target_inbox.mkdir(parents=True, exist_ok=True)
+
+        filename = f"{message.timestamp}_{message.from_agent}_{message.id}.json"
+        filepath = target_inbox / filename
+
+        with open(filepath, 'w') as f:
+            f.write(message.to_json())
+
+        logger.info(f"Sent message {message.id} to {message.to_agent}")
+        return True
+
+    def _broadcast_message(self, message: A2AMessage) -> bool:
+        """Broadcast message to all registered agents"""
+        agents_dir = Path(A2A_BASE_DIR) / "agents"
+        if not agents_dir.exists():
+            return False
+
+        success_count = 0
+        for agent_dir in agents_dir.iterdir():
+            if agent_dir.is_dir() and agent_dir.name != self.agent_id:
+                target_message = A2AMessage(
+                    id=message.id,
+                    from_agent=message.from_agent,
+                    to_agent=agent_dir.name,
+                    message_type=message.message_type,
+                    payload=message.payload,
+                    timestamp=message.timestamp,
+                    reply_to=message.reply_to
+                )
+                if self._send_direct_message(target_message):
+                    success_count += 1
+
+        logger.info(f"Broadcast message {message.id} to {success_count} agents")
+        return success_count > 0
+
+    def receive_messages(self) -> List[A2AMessage]:
+        """Retrieve all messages from inbox"""
+        messages = []
+
+        if not self.inbox_dir.exists():
+            return messages
+
+        for message_file in self.inbox_dir.glob("*.json"):
+            try:
+                with open(message_file, 'r') as f:
+                    message = A2AMessage.from_json(f.read())
+                    messages.append(message)
+
+                # Move processed message to prevent re-processing
+                processed_dir = self.inbox_dir / "processed"
+                processed_dir.mkdir(exist_ok=True)
+                message_file.rename(processed_dir / message_file.name)
+
+            except Exception as e:
+                logger.error(f"Failed to process message {message_file}: {e}")
+
+        return messages
+
+
+class AgentRegistry:
+    """Manages agent discovery and registration"""
+
+    def __init__(self):
+        self.registry_file = Path(A2A_BASE_DIR) / "registry.json"
+        self.registry_file.parent.mkdir(parents=True, exist_ok=True)
+
+    def register_agent(self, agent_info: AgentInfo) -> bool:
+        """Register an agent in the registry"""
+        try:
+            registry = self._load_registry()
+            registry[agent_info.agent_id] = asdict(agent_info)
+            self._save_registry(registry)
+
+            # Also save agent info to its directory
+            agent_dir = Path(A2A_BASE_DIR) / "agents" / agent_info.agent_id
+            agent_dir.mkdir(parents=True, exist_ok=True)
+
+            with open(agent_dir / "info.json", 'w') as f:
+                f.write(agent_info.to_json())
+
+            logger.info(f"Registered agent {agent_info.agent_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to register agent: {e}")
+            return False
+
+    def unregister_agent(self, agent_id: str) -> bool:
+        """Remove agent from registry"""
+        try:
+            registry = self._load_registry()
+            if agent_id in registry:
+                del registry[agent_id]
+                self._save_registry(registry)
+                logger.info(f"Unregistered agent {agent_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to unregister agent: {e}")
+            return False
+
+    def discover_agents(self, capability_filter: Optional[List[str]] = None) -> List[AgentInfo]:
+        """Discover available agents, optionally filtered by capabilities"""
+        try:
+            registry = self._load_registry()
+            agents = []
+
+            for agent_data in registry.values():
+                agent_info = AgentInfo(**agent_data)
+
+                # Filter by capabilities if specified
+                if capability_filter:
+                    if not any(cap in agent_info.capabilities for cap in capability_filter):
+                        continue
+
+                # Check if agent is still alive (heartbeat within last 60 seconds)
+                if time.time() - agent_info.last_heartbeat < 60:
+                    agents.append(agent_info)
+
+            return agents
+
+        except Exception as e:
+            logger.error(f"Failed to discover agents: {e}")
+            return []
+
+    def update_heartbeat(self, agent_id: str) -> bool:
+        """Update agent heartbeat timestamp"""
+        try:
+            registry = self._load_registry()
+            if agent_id in registry:
+                registry[agent_id]['last_heartbeat'] = time.time()
+                self._save_registry(registry)
+
+                # Also update heartbeat file
+                agent_dir = Path(A2A_BASE_DIR) / "agents" / agent_id
+                heartbeat_file = agent_dir / "heartbeat.json"
+                with open(heartbeat_file, 'w') as f:
+                    json.dump({"last_heartbeat": time.time()}, f)
+
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update heartbeat: {e}")
+            return False
+
+    def _load_registry(self) -> Dict[str, Any]:
+        """Load registry from file"""
+        if self.registry_file.exists():
+            with open(self.registry_file, 'r') as f:
+                return json.load(f)
+        return {}
+
+    def _save_registry(self, registry: Dict[str, Any]) -> None:
+        """Save registry to file"""
+        with open(self.registry_file, 'w') as f:
+            json.dump(registry, f, indent=2)
+
+
+class TaskPool:
+    """Manages task distribution and claiming"""
+
+    def __init__(self):
+        self.tasks_dir = Path(A2A_BASE_DIR) / "tasks"
+        self.available_dir = self.tasks_dir / "available"
+        self.claimed_dir = self.tasks_dir / "claimed"
+        self.completed_dir = self.tasks_dir / "completed"
+
+        # Ensure directories exist
+        for dir_path in [self.available_dir, self.claimed_dir, self.completed_dir]:
+            dir_path.mkdir(parents=True, exist_ok=True)
+
+    def publish_task(self, task_id: str, task_description: str,
+                    requirements: Optional[List[str]] = None,
+                    constraints: Optional[Dict[str, Any]] = None) -> bool:
+        """Publish a task to the available pool with optional constraints
+
+        Args:
+            task_id: Unique identifier for the task
+            task_description: Description of the task to be performed
+            requirements: List of capability requirements for agents
+            constraints: Optional constraint information for task execution
+                        Can include: resource limits, timing constraints,
+                        validation rules, execution preferences, etc.
+        """
+        try:
+            task_data = {
+                "task_id": task_id,
+                "description": task_description,
+                "requirements": requirements or [],
+                "constraints": constraints or {},
+                "constraint_enforcement": {
+                    "enabled": bool(constraints),
+                    "validation_required": bool(constraints and constraints.get('validation_rules')),
+                    "created_at": time.time()
+                },
+                "created_at": time.time(),
+                "status": "available"
+            }
+
+            task_file = self.available_dir / f"{task_id}.json"
+            with open(task_file, 'w') as f:
+                json.dump(task_data, f, indent=2)
+
+            logger.info(f"Published task {task_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to publish task: {e}")
+            return False
+
+    def claim_task(self, task_id: str, agent_id: str, timeout: float = 10.0) -> Dict[str, Any]:
+        """Claim a task from the available pool and return task data with constraints
+
+        Uses atomic file locking to prevent race conditions when multiple agents
+        attempt to claim the same task simultaneously.
+
+        Args:
+            task_id: ID of the task to claim
+            agent_id: ID of the agent claiming the task
+            timeout: Timeout in seconds for lock acquisition (default: 10.0)
+
+        Returns:
+            Dict containing task data including constraints, or empty dict if claim failed
+        """
+        lock_file = None
+        lock_fd = None
+
+        try:
+            available_file = self.available_dir / f"{task_id}.json"
+            if not available_file.exists():
+                return {}
+
+            # Create lock file for atomic task claiming
+            lock_file = self.available_dir / f"{task_id}.lock"
+            lock_fd = os.open(lock_file, os.O_CREAT | os.O_WRONLY | os.O_TRUNC)
+
+            # Attempt to acquire exclusive lock with timeout
+            start_time = time.time()
+            while True:
+                try:
+                    fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    break  # Lock acquired successfully
+                except BlockingIOError:
+                    if time.time() - start_time >= timeout:
+                        logger.warning(f"Lock acquisition timeout for task {task_id} by agent {agent_id}")
+                        return {}
+                    time.sleep(0.01)  # Short sleep before retry
+
+            # Double-check file still exists after acquiring lock
+            if not available_file.exists():
+                logger.info(f"Task {task_id} no longer available (claimed by another agent)")
+                return {}
+
+            # Load and validate task data
+            with open(available_file, 'r') as f:
+                task_data = json.load(f)
+
+            # Add claiming timestamp for conflict detection
+            claim_timestamp = time.time()
+
+            # Check if task was recently claimed (additional safety check)
+            if task_data.get('status') == 'claimed':
+                logger.warning(f"Task {task_id} already claimed by {task_data.get('claimed_by')}")
+                return {}
+
+            # Update task status and claimer with atomic timestamp
+            task_data['status'] = 'claimed'
+            task_data['claimed_by'] = agent_id
+            task_data['claimed_at'] = claim_timestamp
+            task_data['claim_lock_acquired_at'] = claim_timestamp
+
+            # Update constraint enforcement metadata
+            if 'constraint_enforcement' in task_data:
+                task_data['constraint_enforcement']['claimed_at'] = claim_timestamp
+                task_data['constraint_enforcement']['claimed_by'] = agent_id
+
+            # Atomic move operation: write to temp file first, then move
+            claimed_file = self.claimed_dir / f"{task_id}_{agent_id}.json"
+
+            # Use atomic write with temp file
+            with tempfile.NamedTemporaryFile(mode='w', dir=self.claimed_dir,
+                                           suffix='.tmp', delete=False) as temp_file:
+                json.dump(task_data, temp_file, indent=2)
+                temp_file.flush()
+                os.fsync(temp_file.fileno())  # Force write to disk
+                temp_path = temp_file.name
+
+            # Atomic move to final location
+            os.rename(temp_path, claimed_file)
+
+            # Remove from available directory (atomic operation)
+            available_file.unlink()
+
+            logger.info(f"Task {task_id} claimed by {agent_id} with atomic locking")
+            if task_data.get('constraints'):
+                logger.info(f"Task {task_id} includes constraints: {list(task_data['constraints'].keys())}")
+
+            return task_data
+
+        except (OSError, IOError) as e:
+            logger.error(f"File operation failed during task claim for {task_id}: {e}")
+            return {}
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in task file {task_id}: {e}")
+            return {}
+        except Exception as e:
+            logger.error(f"Failed to claim task {task_id}: {e}")
+            return {}
+        finally:
+            # Always release lock and cleanup
+            if lock_fd is not None:
+                try:
+                    fcntl.flock(lock_fd, fcntl.LOCK_UN)
+                    os.close(lock_fd)
+                except (OSError, IOError):
+                    pass  # Ignore cleanup errors
+
+            if lock_file and lock_file.exists():
+                try:
+                    lock_file.unlink()
+                except (OSError, IOError):
+                    pass  # Ignore cleanup errors
+
+    def complete_task(self, task_id: str, agent_id: str, result: Dict[str, Any]) -> bool:
+        """Mark a task as completed"""
+        try:
+            claimed_file = self.claimed_dir / f"{task_id}_{agent_id}.json"
+            if not claimed_file.exists():
+                return False
+
+            # Load task data
+            with open(claimed_file, 'r') as f:
+                task_data = json.load(f)
+
+            # Update task status and result
+            task_data['status'] = 'completed'
+            task_data['completed_at'] = time.time()
+            task_data['result'] = result
+
+            # Move to completed directory
+            completed_file = self.completed_dir / f"{task_id}_complete.json"
+            with open(completed_file, 'w') as f:
+                json.dump(task_data, f, indent=2)
+
+            # Remove from claimed
+            claimed_file.unlink()
+
+            logger.info(f"Task {task_id} completed by {agent_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to complete task: {e}")
+            return False
+
+    def get_available_tasks(self, capability_filter: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        """Get list of available tasks, optionally filtered by requirements"""
+        tasks = []
+
+        for task_file in self.available_dir.glob("*.json"):
+            try:
+                with open(task_file, 'r') as f:
+                    task_data = json.load(f)
+
+                # Filter by capabilities if specified
+                if capability_filter and task_data.get('requirements'):
+                    if not any(req in capability_filter for req in task_data['requirements']):
+                        continue
+
+                tasks.append(task_data)
+
+            except Exception as e:
+                logger.error(f"Failed to load task {task_file}: {e}")
+
+        return tasks
+
+    def validate_task_constraints(self, task_data: Dict[str, Any],
+                                agent_capabilities: List[str]) -> bool:
+        """Validate if an agent can handle task constraints
+
+        Args:
+            task_data: Complete task data including constraints
+            agent_capabilities: List of agent capabilities
+
+        Returns:
+            True if agent can handle constraints, False otherwise
+        """
+        constraints = task_data.get('constraints', {})
+        if not constraints:
+            return True
+
+        # Check resource constraints
+        if 'resource_limits' in constraints:
+            # Could be extended to check actual resource availability
+            pass
+
+        # Check capability constraints
+        if 'required_capabilities' in constraints:
+            required = constraints['required_capabilities']
+            if not all(cap in agent_capabilities for cap in required):
+                return False
+
+        # Check timing constraints
+        if 'deadline' in constraints:
+            deadline = constraints['deadline']
+            if isinstance(deadline, (int, float)) and deadline < time.time():
+                return False
+
+        # Check validation rules
+        if 'validation_rules' in constraints:
+            # Could be extended with specific validation logic
+            # For now, assume agent can handle if it has validation capability
+            if 'validation' not in agent_capabilities:
+                logger.warning(f"Task requires validation but agent lacks validation capability")
 
         return True
 
-    except Exception as e:
-        print(f"❌ Real A2A integration test failed: {e}")
-        return False
+
+class A2AClient:
+    """Main A2A client for agent integration"""
+
+    def __init__(self, agent_id: str, agent_type: str, capabilities: List[str],
+                 workspace: str):
+        self.agent_id = agent_id
+        self.agent_type = agent_type
+        self.capabilities = capabilities
+        self.workspace = workspace
+
+        # Initialize components
+        self.messaging = FileBasedMessaging(agent_id)
+        self.registry = AgentRegistry()
+        self.task_pool = TaskPool()
+
+        # Register this agent
+        self.agent_info = AgentInfo(
+            agent_id=agent_id,
+            agent_type=agent_type,
+            capabilities=capabilities,
+            status="idle",
+            current_task=None,
+            created_at=time.time(),
+            last_heartbeat=time.time(),
+            workspace=workspace
+        )
+        self.registry.register_agent(self.agent_info)
+
+    def send_message(self, to_agent: str, message_type: str, payload: Dict[str, Any]) -> bool:
+        """Send message to another agent"""
+        message = A2AMessage(
+            id=str(uuid.uuid4()),
+            from_agent=self.agent_id,
+            to_agent=to_agent,
+            message_type=message_type,
+            payload=payload,
+            timestamp=time.time()
+        )
+        return self.messaging.send_message(message)
+
+    def receive_messages(self) -> List[A2AMessage]:
+        """Receive all pending messages"""
+        return self.messaging.receive_messages()
+
+    def discover_agents(self) -> List[AgentInfo]:
+        """Discover other available agents"""
+        return self.registry.discover_agents()
+
+    def publish_task(self, task_description: str, requirements: Optional[List[str]] = None,
+                    constraints: Optional[Dict[str, Any]] = None) -> str:
+        """Publish a new task with optional constraints
+
+        Args:
+            task_description: Description of the task
+            requirements: List of capability requirements
+            constraints: Optional constraint information for task execution
+        """
+        task_id = str(uuid.uuid4())
+        if self.task_pool.publish_task(task_id, task_description, requirements, constraints):
+            return task_id
+        return None
+
+    def claim_task(self, task_id: str, timeout: float = 10.0) -> Dict[str, Any]:
+        """Claim an available task and return task data with constraints
+
+        Args:
+            task_id: ID of the task to claim
+            timeout: Timeout in seconds for lock acquisition (default: 10.0)
+
+        Returns:
+            Dict containing complete task data including constraints,
+            or empty dict if claim failed
+        """
+        return self.task_pool.claim_task(task_id, self.agent_id, timeout)
+
+    def complete_task(self, task_id: str, result: Dict[str, Any]) -> bool:
+        """Complete a claimed task"""
+        return self.task_pool.complete_task(task_id, self.agent_id, result)
+
+    def get_available_tasks(self) -> List[Dict[str, Any]]:
+        """Get available tasks matching this agent's capabilities"""
+        return self.task_pool.get_available_tasks(self.capabilities)
+
+    def get_compatible_tasks(self) -> List[Dict[str, Any]]:
+        """Get available tasks that are compatible with agent capabilities and constraints
+
+        Returns:
+            List of tasks that this agent can handle, including constraint validation
+        """
+        all_tasks = self.task_pool.get_available_tasks(self.capabilities)
+        compatible_tasks = []
+
+        for task in all_tasks:
+            if self.task_pool.validate_task_constraints(task, self.capabilities):
+                compatible_tasks.append(task)
+            else:
+                logger.info(f"Task {task.get('task_id')} filtered out due to constraint mismatch")
+
+        return compatible_tasks
+
+    def can_handle_task(self, task_data: Dict[str, Any]) -> bool:
+        """Check if this agent can handle a specific task including constraints
+
+        Args:
+            task_data: Complete task data including constraints
+
+        Returns:
+            True if agent can handle the task, False otherwise
+        """
+        return self.task_pool.validate_task_constraints(task_data, self.capabilities)
+
+    def update_status(self, status: str, current_task: str = None) -> None:
+        """Update agent status"""
+        self.agent_info.status = status
+        self.agent_info.current_task = current_task
+        self.agent_info.last_heartbeat = time.time()
+        self.registry.register_agent(self.agent_info)
+
+    def heartbeat(self) -> None:
+        """Send heartbeat to maintain registration"""
+        self.registry.update_heartbeat(self.agent_id)
+
+    def shutdown(self) -> None:
+        """Clean shutdown - unregister agent"""
+        self.registry.unregister_agent(self.agent_id)
+
+
+# Utility functions for orchestration integration
+def create_a2a_client(agent_id: str, agent_type: str, capabilities: List[str],
+                     workspace: str) -> A2AClient:
+    """Factory function to create A2A client for agents"""
+    return A2AClient(agent_id, agent_type, capabilities, workspace)
+
+
+def get_a2a_status() -> Dict[str, Any]:
+    """Get overall A2A system status"""
+    registry = AgentRegistry()
+    task_pool = TaskPool()
+
+    agents = registry.discover_agents()
+    available_tasks = task_pool.get_available_tasks()
+
+    return {
+        "agents_online": len(agents),
+        "available_tasks": len(available_tasks),
+        "a2a_directory": A2A_BASE_DIR,
+        "agents": [asdict(agent) for agent in agents],
+        "tasks": available_tasks
+    }
 
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1 and sys.argv[1] == "test":
-        # Run integration test
-        success = asyncio.run(test_real_a2a_integration())
-        sys.exit(0 if success else 1)
-    else:
-        # Start real A2A server
-        asyncio.run(start_real_a2a_server())
+    # Test the A2A system
+    import tempfile
+    import shutil
+
+    # Use temp directory for testing
+    test_dir = tempfile.mkdtemp()
+    A2A_BASE_DIR = test_dir + "/a2a"
+
+    try:
+        # Create secure temporary directories for test agents
+        agent1_workspace = tempfile.mkdtemp(prefix="agent1_")
+        agent2_workspace = tempfile.mkdtemp(prefix="agent2_")
+
+        # Create test agents with secure temporary workspaces
+        agent1 = create_a2a_client("agent-1", "frontend", ["javascript", "react", "validation"], agent1_workspace)
+        agent2 = create_a2a_client("agent-2", "backend", ["python", "api"], agent2_workspace)
+
+        # Test task publishing with constraints
+        constraints = {
+            "resource_limits": {"memory_mb": 512, "timeout_seconds": 300},
+            "required_capabilities": ["javascript"],
+            "deadline": time.time() + 3600,  # 1 hour from now
+            "validation_rules": {"code_review": True, "testing": True}
+        }
+        task_id = agent1.publish_task("Build login form with constraints", ["javascript"], constraints)
+        print(f"Published task with constraints: {task_id}")
+
+        # Test basic task publishing (backward compatibility)
+        simple_task_id = agent1.publish_task("Simple task", ["python"])
+        print(f"Published simple task: {simple_task_id}")
+
+        # Agent 2 discovers tasks
+        tasks = agent2.get_available_tasks()
+        print(f"Available tasks: {len(tasks)}")
+
+        # Test constraint compatibility
+        compatible_tasks = agent2.get_compatible_tasks()
+        print(f"Compatible tasks for agent2: {len(compatible_tasks)}")
+
+        # Test task claiming with constraint information
+        if compatible_tasks:
+            claimed_task = agent2.claim_task(compatible_tasks[0]['task_id'])
+            if claimed_task:
+                print(f"Claimed task: {claimed_task.get('task_id')}")
+                print(f"Task constraints: {claimed_task.get('constraints', {})}")
+                print(f"Constraint enforcement: {claimed_task.get('constraint_enforcement', {})}")
+
+        # Test messaging
+        agent1.send_message("agent-2", "status", {"message": "Hello from agent 1"})
+        messages = agent2.receive_messages()
+        print(f"Agent 2 received {len(messages)} messages")
+
+        # Get system status
+        status = get_a2a_status()
+        print(f"System status: {status}")
+        print(f"Tasks with constraints: {sum(1 for task in status['tasks'] if task.get('constraints'))}")
+
+    finally:
+        # Cleanup test directories and agent workspaces
+        shutil.rmtree(test_dir, ignore_errors=True)
+        # Clean up agent workspaces if they exist
+        try:
+            shutil.rmtree(agent1_workspace, ignore_errors=True)
+            shutil.rmtree(agent2_workspace, ignore_errors=True)
+        except NameError:
+            # Variables not defined if creation failed
+            pass

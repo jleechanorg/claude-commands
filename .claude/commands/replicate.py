@@ -12,7 +12,7 @@ import re
 import subprocess
 import sys
 from typing import Dict, List, Optional, Tuple, Any
-from urllib.parse import urlparse
+# urllib.parse import removed - not used in this implementation
 
 # Constants
 ANALYSIS_COMPLETE_MESSAGE = (

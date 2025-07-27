@@ -38,26 +38,7 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1" >&2
 }
 
-# Check if Redis is running
-check_redis() {
-    if ! command -v redis-cli &> /dev/null; then
-        log_error "Redis CLI not found. Please install Redis first."
-        exit 1
-    fi
-
-    if ! redis-cli ping &> /dev/null; then
-        log_warn "Redis not running. Starting Redis server..."
-        redis-server --daemonize yes --bind 127.0.0.1 --protected-mode yes
-        sleep 2
-
-        if ! redis-cli ping &> /dev/null; then
-            log_error "Failed to start Redis server"
-            exit 1
-        fi
-    fi
-
-    log_info "Redis server is running"
-}
+# Redis functionality removed - using file-based A2A only
 
 # Check if tmux is available
 check_tmux() {
@@ -68,13 +49,9 @@ check_tmux() {
     log_info "tmux is available"
 }
 
-# Check Python dependencies
+# Check Python dependencies (Redis removed)
 check_dependencies() {
-    if ! python3 -c "import redis" &> /dev/null; then
-        log_error "Redis Python module not found. Install with: pip install redis"
-        exit 1
-    fi
-    log_info "Python dependencies available"
+    log_info "File-based A2A system - no external dependencies required"
 }
 
 # Create task directories
@@ -118,7 +95,7 @@ start_monitor() {
 show_status() {
     echo
     log_info "Real Claude Agent System Status:"
-    echo "├── Redis: $(redis-cli ping 2>/dev/null || echo 'Not running')"
+    echo "├── Coordination: File-based A2A protocol"
     echo "├── Claude Agents:"
 
     # Check for dynamic agents
@@ -196,9 +173,7 @@ stop_system() {
         log_info "Stopped Python monitor"
     fi
 
-    # Clear Redis agent data
-    redis-cli flushdb &> /dev/null || true
-    log_info "Cleared Redis data"
+    # File-based coordination cleanup handled automatically
 
     # Update status file
     echo "=== Agent Status Dashboard ===" > "${TASK_DIR:-tasks}/shared_status.txt"
@@ -209,45 +184,12 @@ stop_system() {
     log_info "System stopped"
 }
 
-# Run basic functionality test
-run_test() {
-    log_info "Running basic functionality test..."
-
-    # Start system
-    check_redis
-    check_tmux
-    check_dependencies
-    setup_directories
-    start_monitor
-
-    # Wait for system to start
-    sleep 3
-
-    # Test Redis connectivity
-    if redis-cli ping &> /dev/null; then
-        log_info "✓ Redis connectivity test passed"
-    else
-        log_error "✗ Redis connectivity test failed"
-        return 1
-    fi
-
-    # Test Python monitor
-    if pgrep -f "agent_monitor.py" > /dev/null; then
-        log_info "✓ Python monitor test passed"
-    else
-        log_error "✗ Python monitor test failed"
-        return 1
-    fi
-
-    log_info "All basic tests passed!"
-    show_status
-}
+# Basic functionality test integrated into main command handler
 
 # Main command handling
 case "${1:-start}" in
     start)
         log_info "Starting AI Agent Orchestration System..."
-        check_redis
         check_tmux
         check_dependencies
         setup_directories
@@ -282,7 +224,23 @@ case "${1:-start}" in
         tail -n 50 logs/*.log 2>/dev/null || echo "No logs available"
         ;;
     test)
-        run_test
+        log_info "Running basic functionality test..."
+        check_tmux
+        check_dependencies
+        setup_directories
+        start_monitor
+        sleep 3
+
+        # Test Python monitor
+        if pgrep -f "agent_monitor.py" > /dev/null; then
+            log_info "✓ Python monitor test passed"
+        else
+            log_error "✗ Python monitor test failed"
+            exit 1
+        fi
+
+        log_info "All basic tests passed!"
+        show_status
         ;;
     help|--help|-h)
         show_usage

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Unified Orchestration System - LLM-Driven with Redis Coordination
-Combines the best of both systems: Redis infrastructure + LLM intelligence
+Unified Orchestration System - LLM-Driven with File-based Coordination
+Pure file-based A2A protocol without Redis dependencies
 """
 
 import sys
@@ -14,10 +14,10 @@ import json
 sys.path.insert(0, os.path.dirname(__file__))
 
 from task_dispatcher import TaskDispatcher
-from message_broker import MessageBroker
+# Constraint system removed - using simple safety boundaries only
 
 class UnifiedOrchestration:
-    """Unified orchestration combining Redis coordination with LLM-driven intelligence."""
+    """Unified orchestration using file-based A2A coordination with LLM-driven intelligence."""
 
     # Configuration constants
     INITIAL_DELAY = 5  # Initial delay before checking for PRs
@@ -25,17 +25,8 @@ class UnifiedOrchestration:
 
     def __init__(self):
         self.task_dispatcher = TaskDispatcher()
-        self.message_broker = None
-        self._init_redis_broker()
-
-    def _init_redis_broker(self):
-        """Initialize Redis message broker if available."""
-        try:
-            self.message_broker = MessageBroker()
-            print("🔄 Redis: Connected")
-        except Exception as e:
-            print(f"📡 Redis: Unavailable ({e}) - Using file-based coordination")
-            self.message_broker = None
+        # Simple safety boundaries only - no complex constraint parsing needed
+        print("📁 File-based A2A coordination initialized")
 
     def _check_dependencies(self):
         """Check system dependencies and report status."""
@@ -68,9 +59,72 @@ class UnifiedOrchestration:
             return False
         return True
 
+    def _should_continue_existing_work(self, task_description: str) -> bool:
+        """Check if task should continue existing agent work."""
+        continuation_keywords = [
+            "continue from", "same agent", "keep working", "follow up",
+            "also", "and then", "make it run", "ensure", "verify"
+        ]
+        task_lower = task_description.lower()
+        return any(keyword in task_lower for keyword in continuation_keywords)
+
+    def _find_recent_agent_work(self, task_description: str) -> dict:
+        """Find recent agent work that matches the task context."""
+        try:
+            # Check recent PRs for agent work
+            result = subprocess.run(
+                ["gh", "pr", "list", "--author", "@me", "--limit", "5", "--json", "number,title,headRefName,createdAt"],
+                capture_output=True, text=True, check=True
+            )
+            prs = json.loads(result.stdout)
+
+            # Look for recent agent PRs (created in last hour)
+            from datetime import datetime, timedelta
+            one_hour_ago = datetime.now() - timedelta(hours=1)
+
+            for pr in prs:
+                if "task-agent-" in pr["title"] and "settings" in task_description.lower():
+                    if "settings" in pr["title"].lower() or "gear" in pr["title"].lower():
+                        agent_name = pr["headRefName"].replace("-work", "")
+                        return {
+                            "name": agent_name,
+                            "branch": pr["headRefName"],
+                            "pr_number": pr["number"]
+                        }
+        except Exception as e:
+            print(f"⚠️  Could not check recent agent work: {e}")
+        return None
+
+    def _continue_existing_agent_work(self, existing_agent: dict, task_description: str):
+        """Continue work on existing agent branch."""
+        try:
+            # Check out the existing branch
+            subprocess.run(["git", "checkout", existing_agent["branch"]], check=True)
+            print(f"✅ Switched to existing branch: {existing_agent['branch']}")
+
+            # Create new agent session on existing branch
+            agent_spec = {
+                "name": f"{existing_agent['name']}-continue",
+                "focus": task_description,
+                "existing_branch": existing_agent["branch"],
+                "existing_pr": existing_agent.get("pr_number")
+            }
+
+            if self.task_dispatcher.create_dynamic_agent(agent_spec):
+                print(f"✅ Created continuation agent: {agent_spec['name']}")
+                print(f"📂 Working directory: {os.getcwd()}/agent_workspace_{agent_spec['name']}")
+                print(f"📋 Monitor logs: tail -f /tmp/orchestration_logs/{agent_spec['name']}.log")
+                print(f"⏳ Monitor with: tmux attach -t {agent_spec['name']}")
+            else:
+                print("❌ Failed to create continuation agent")
+
+        except Exception as e:
+            print(f"❌ Failed to continue existing work: {e}")
+            print("🔄 Falling back to new agent creation")
+
     def orchestrate(self, task_description: str):
         """Main orchestration method with LLM-driven agent creation."""
-        print("🤖 Unified LLM-Driven Orchestration with Redis Coordination")
+        print("🤖 Unified LLM-Driven Orchestration with File-based A2A")
         print("=" * 60)
 
         # Pre-flight checks
@@ -80,7 +134,15 @@ class UnifiedOrchestration:
 
         print(f"📋 Task: {task_description}")
 
-        # LLM-driven task analysis and agent creation
+        # Check for continuation keywords and existing agent work
+        if self._should_continue_existing_work(task_description):
+            existing_agent = self._find_recent_agent_work(task_description)
+            if existing_agent:
+                print(f"🔄 Continuing work from {existing_agent['name']} on branch {existing_agent['branch']}")
+                self._continue_existing_agent_work(existing_agent, task_description)
+                return
+
+        # LLM-driven task analysis and agent creation with constraints
         agents = self.task_dispatcher.analyze_task_and_create_agents(task_description)
 
         print(f"\n🚀 Creating {len(agents)} dynamic agents...")
@@ -90,38 +152,30 @@ class UnifiedOrchestration:
             if self.task_dispatcher.create_dynamic_agent(agent_spec):
                 created_agents.append(agent_spec)
 
-                # Register with Redis if available
-                if self.message_broker:
-                    try:
-                        self.message_broker.register_agent(
-                            agent_spec["name"],
-                            agent_spec["type"],
-                            agent_spec["capabilities"]
-                        )
-                    except Exception as e:
-                        print(f"⚠️ Redis registration failed for {agent_spec['name']}: {e}")
+                # Agent coordination handled via file-based A2A protocol
 
         if created_agents:
             print(f"\n⏳ {len(created_agents)} agents working... Monitor with:")
             for agent in created_agents:
                 print(f"   tmux attach -t {agent['name']}")
 
-            print(f"\n📂 To explore agent workspaces (optional):")
+            print(f"\n📂 Agent working directories:")
             for agent in created_agents:
                 workspace_path = os.path.join(os.getcwd(), f"agent_workspace_{agent['name']}")
-                print(f"   cd {workspace_path}")
+                print(f"   {workspace_path}")
+
+            print(f"\n📋 Monitor agent logs:")
+            for agent in created_agents:
+                print(f"   tail -f /tmp/orchestration_logs/{agent['name']}.log")
 
             print(f"\n🏠 You remain in: {os.getcwd()}")
-
-            if self.message_broker:
-                print(f"\n🔄 Redis coordination active - agents can communicate")
-            else:
-                print(f"\n📁 File-based coordination - check orchestration/results/")
+            print(f"\n📁 File-based A2A coordination - check orchestration/results/")
 
             # Wait briefly and check for PR creation
             self._check_and_display_prs(created_agents)
         else:
             print("❌ No agents were created successfully")
+
 
     def _check_and_display_prs(self, agents, max_wait=30):
         """Check for PRs created by agents and display them."""

@@ -17,7 +17,7 @@ from typing import Dict, List, Set
 # Add orchestration directory to path
 sys.path.insert(0, os.path.dirname(__file__))
 
-from message_broker import MessageBroker
+# MessageBroker removed - using file-based A2A only
 
 # Configure logging
 logging.basicConfig(
@@ -35,16 +35,12 @@ class AgentMonitor:
 
     def __init__(self):
         self.running = False
-        self.message_broker = None
         self.monitored_agents: Dict[str, Dict] = {}
         self.last_ping_time = 0
         self.ping_interval = 120  # 2 minutes
 
         # Setup logging
         self.setup_logging()
-
-        # Try to connect to Redis
-        self.init_message_broker()
 
         self.logger.info("🤖 Agent Monitor starting up...")
 
@@ -55,14 +51,7 @@ class AgentMonitor:
         log_dir = "/tmp/orchestration_logs"
         os.makedirs(log_dir, exist_ok=True)
 
-    def init_message_broker(self):
-        """Initialize Redis message broker if available"""
-        try:
-            self.message_broker = MessageBroker()
-            self.logger.info("✅ Connected to Redis message broker")
-        except Exception as e:
-            self.logger.warning(f"❌ Redis unavailable: {e} - monitoring without Redis")
-            self.message_broker = None
+    # Redis/MessageBroker functionality removed - using file-based A2A only
 
     def discover_active_agents(self) -> Set[str]:
         """Discover currently active agents from tmux sessions"""
@@ -232,19 +221,8 @@ class AgentMonitor:
             self.logger.info(f"🏁 {agent_name} finished with status: {status['result_info']['status']}")
 
     def register_with_a2a(self):
-        """Register monitor with A2A protocol (if available)"""
-        if not self.message_broker:
-            return
-
-        try:
-            self.message_broker.register_agent(
-                "agent-monitor",
-                "coordinator",
-                ["monitoring", "status_reporting", "agent_discovery"]
-            )
-            self.logger.info("📡 Registered with A2A protocol as coordinator")
-        except Exception as e:
-            self.logger.warning(f"Failed to register with A2A: {e}")
+        """A2A registration handled via file-based protocol only"""
+        self.logger.info("📡 File-based A2A monitoring active")
 
     def cleanup_completed_agents(self):
         """Clean up completed agents from monitoring"""
@@ -290,10 +268,7 @@ class AgentMonitor:
         """Shutdown monitor gracefully"""
         self.logger.info("👋 Agent Monitor shutting down...")
         self.running = False
-
-        if self.message_broker:
-            # Could send shutdown message via A2A if needed
-            pass
+        # File-based A2A cleanup handled automatically via filesystem
 
 
 def main():

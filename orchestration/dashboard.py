@@ -86,7 +86,7 @@ class OrchestrationDashboard:
             except Exception as e:
                 print(f"Error loading health report: {e}")
 
-        return {"system_status": "unknown", "agents": {}}\n
+        return {"system_status": "unknown", "agents": {}}
     def load_task_report(self) -> Dict[str, Any]:
         """Load task report if available"""
         task_file = os.path.join(self.tasks_dir, "task_report.json")
@@ -98,7 +98,7 @@ class OrchestrationDashboard:
             except Exception as e:
                 print(f"Error loading task report: {e}")
 
-        return {"total_tasks": 0, "agent_workload": {}}\n
+        return {"total_tasks": 0, "agent_workload": {}}
     def get_task_files_status(self) -> Dict[str, int]:
         """Get status of task files"""
         # No static task files - check orchestration/results/ for completed tasks

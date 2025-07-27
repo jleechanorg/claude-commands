@@ -32,12 +32,10 @@ Edit `mvp_site/memory_mcp_real.py` and replace the TODO section with actual MCP 
 
 ```python
 # Replace this section in search_nodes():
-# TODO: Replace this with actual MCP function call
-
-# With the real MCP function calls:
-from memory_mcp_functions import search_nodes as mcp_search
-result = mcp_search(query=query)
-return result.get('entities', [])
+# Replace with actual MCP function call:
+# In Claude Code CLI, use the mcp__memory_server__ functions directly:
+result = mcp__memory_server__search_nodes(query)
+return result.get('entities', []) if result else []
 ```
 
 ### Step 3: Test Integration

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-import redis
+# Redis removed - using file-based health monitoring
 
 import shutil
 
@@ -38,26 +38,15 @@ class AgentHealthMonitor:
         self.orchestration_dir = orchestration_dir or os.path.dirname(__file__)
         self.tasks_dir = os.path.join(self.orchestration_dir, "tasks")
         self.agents = {}  # agent_name -> AgentStatus
-        self.redis_client = None
         self.monitoring_interval = 30  # seconds
         self.max_error_count = 3
         self.startup_script = os.path.join(self.orchestration_dir, "start_system.sh")
-
-        # Initialize Redis connection
-        self._init_redis()
 
         # Dynamic agent system - no fixed expected agents
         # Agents are created on-demand via /orch command
         self.expected_agents = {}
 
-    def _init_redis(self):
-        """Initialize Redis connection"""
-        try:
-            self.redis_client = redis.Redis(host="localhost", port=6379, db=0)
-            self.redis_client.ping()
-        except Exception as e:
-            print(f"Redis connection failed: {e}")
-            self.redis_client = None
+    # Redis initialization removed - using file-based health monitoring
 
     def get_tmux_sessions(self) -> list[str]:
         """Get list of active tmux sessions"""

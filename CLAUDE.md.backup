@@ -36,24 +36,14 @@
 - 🔍 Evidence: Recurring pattern of "PR: none" when user expects PR context to be tracked
 - ⚠️ This is a critical attention to detail compliance issue
 
-🚨 **ZERO TOLERANCE PR MERGE APPROVAL PROTOCOL**: ⚠️ MANDATORY
-- ❌ **NEVER MERGE PRS WITHOUT EXPLICIT USER APPROVAL - ZERO EXCEPTIONS**
-- 🚨 **CRITICAL RULE**: "dont merge without my approval EVER" - User statement with zero tolerance
-- ✅ **ALWAYS require explicit approval** before any action that could trigger PR merge
-- ✅ **CHECK PR state** before any push/update that could auto-merge
-- ✅ **MANDATORY approval phrase**: User must type "MERGE APPROVED" for merge-triggering actions
-- ❌ **NO assumptions**: Even PR updates require merge approval verification
-- 🔍 **Evidence**: PR #967 auto-merged violation - this must NEVER happen again
-- **Scope**: Applies to ALL operations - manual, /copilot, orchestration, agents
-
-🚨 **COPILOT COMMAND AUTONOMOUS OPERATION**: ⚠️ MANDATORY (FOR ANALYSIS ONLY)
-- ✅ `/copilot` commands operate autonomously without user approval prompts FOR ANALYSIS ONLY
-- ❌ **EXCEPTION**: MERGE operations ALWAYS require explicit user approval regardless of command
+🚨 **COPILOT COMMAND AUTONOMOUS OPERATION**: ⚠️ MANDATORY
+- ✅ `/copilot` commands operate autonomously without user approval prompts
 - ✅ ALWAYS proceed with full analysis regardless of conflicts/issues detected
 - ✅ Claude should automatically apply fixes and resolve issues without asking
 - ✅ Continue workflow through conflicts, CI failures, or other blockers
-- 🔒 **CRITICAL**: Must implement merge approval protocol before any merge-triggering push
-- **Purpose**: `/copilot` is designed for autonomous PR analysis and fixing, NOT merging
+- ❌ NEVER stop workflow for user confirmation during `/copilot` execution
+- ❌ No "proceed anyway?" or "continue with analysis?" prompts
+- **Purpose**: `/copilot` is designed for autonomous PR analysis and fixing
 
 ## Legend
 🚨 = CRITICAL | ⚠️ = MANDATORY | ✅ = Always/Do | ❌ = Never/Don't | → = See reference | PR = Pull Request
@@ -196,32 +186,6 @@
    - **Anti-pattern**: Collect data → Python templates → Fake responses
    - **Violation Count**: 100+ times - STOP THIS PATTERN IMMEDIATELY
 
-🚨 **NEVER FAKE "LLM-NATIVE" SYSTEMS**: ⚠️ MANDATORY - Constraint systems and AI-powered features
-   - ❌ NEVER use hardcoded keyword matching and call it "LLM-native"
-   - ❌ NEVER build `if word in task.lower() for word in keywords` and claim LLM understanding
-   - ❌ NEVER name files "llm_*" that contain zero LLM API calls
-   - ❌ NEVER create fake "natural language understanding" with pattern matching
-   - ❌ NEVER use `any(keyword in task_lower for keyword in keyword_list)` patterns
-   - ✅ ALWAYS use actual LLM API calls for natural language analysis
-   - ✅ ALWAYS be honest about keyword matching vs LLM usage
-   - ✅ ALWAYS name files accurately (pattern_matcher.py not llm_inference.py)
-   - **Pattern**: Task → LLM API → Analysis → Constraints
-   - **Anti-pattern**: Task → Keywords → Fake "LLM" analysis → Constraints
-   - **Evidence**: PR #979 falsely claimed "LLM-native" but implemented sophisticated keyword matching
-   - **Rule**: If it's not using LLM APIs, don't call it LLM-native
-
-🚨 **NO COMMAND PARSING PATTERNS**: ⚠️ MANDATORY - When building Claude integration systems:
-- ❌ NEVER use `if prompt.lower() in ['hello', 'hi']:` patterns
-- ❌ NEVER parse commands with `elif 'help' in prompt.lower():` approaches
-- ❌ NEVER implement hardcoded response dictionaries or lookup tables
-- ❌ NEVER create fake command parsing that mimics Claude responses
-- ✅ ALWAYS call actual Claude CLI or API for real responses
-- ✅ ALWAYS handle Claude CLI integration issues properly (path, auth, environment)
-- ✅ ALWAYS provide proper error handling when Claude integration fails
-- **Pattern**: Receive prompt → Call real Claude → Return real response
-- **Anti-pattern**: Receive prompt → Pattern match → Return fake response
-- **Evidence**: claude-bot-server.py fake patterns removed per user correction
-
 🚨 **EVIDENCE-BASED APPROACH**: Core principles for all analysis
    - ✅ Extract exact error messages/code snippets before analyzing
    - ✅ Show actual output before suggesting fixes
@@ -249,7 +213,7 @@
 3. **Test Execution**: Use `TESTING=true vpython` from project root
 4. **File Paths**: Always absolute paths
 5. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
-6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root | ✅ **USE ~ NOT /home/jleechan**: Always use `~` instead of `/home/jleechan` in paths for portability
+6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root
 7. 🚨 **DATE INTERPRETATION**: Environment date format is YYYY-MM-DD where MM is the month number (01=Jan, 07=July)
 8. 🚨 **Branch Protocol**: → See "Git Workflow" section
 9. 🚨 **TOOL EXPLANATION VS EXECUTION**: ⚠️ MANDATORY distinction
@@ -340,7 +304,7 @@
 **Full Documentation**: → `.claude/commands/orchestrate.md` for complete system details
 
 ### 🚨 Agent Operation
-**System**: Uses tmux sessions with dynamic task agents (task-agent-*) managed by Python monitor
+**System**: Uses tmux sessions with specialized agents (frontend, backend, testing, opus-master)
 **Startup**: `./claude_start.sh` auto-starts orchestration | Manual: `./orchestration/start_system.sh start`
 **Monitoring**: `/orch What's the status?` or `/orch monitor agents` | Direct tmux: `tmux attach -t [agent-name]`
 **Cost**: $0.003-$0.050/task | Redis required for coordination
@@ -437,14 +401,6 @@ Use docstrings, proper JS loading
 3. **MEDIUM**: Logging violations, format issues
 4. **LOW**: Style preferences, optimizations
 - 🔍 Evidence: PR #873 review - fixed critical inline imports first
-
-🚨 **BOT COMMENT FILTERING**: ⚠️ MANDATORY - Ignore specific bot comment patterns when explicitly overridden
-- ❌ **IGNORE**: Bot comments about `--dangerously-skip-permissions` flag when user has explicitly chosen to keep it
-- ✅ **ACKNOWLEDGE**: Still respond to bot comments but indicate user decision to retain flag
-- ✅ **AUDIT TRAIL**: Label ignored comment and link to user request for compliance
-- ✅ **CONTEXT**: "Thanks for the security suggestion. For this specific use case, we're keeping the flag as requested per user direction. Audit: [Link to user decision]"
-- **Scope**: Apply only when user has explicitly stated intention to keep controversial patterns
-- **Evidence**: Memory automation testing requires bypass permissions for development/testing scenarios
 
 ### Website Testing & Deployment Expectations (🚨 CRITICAL)
 🚨 **BRANCH ≠ WEBSITE**: ❌ NEVER assume branch changes are visible on websites without deployment
@@ -797,17 +753,6 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 ### PR References (⚠️)
 **MANDATORY**: Include full GitHub URL - Format: "PR #123: https://github.com/jleechan2015/worldarchitect.ai/pull/123"
-
-### PR Description Protocol (⚠️ MANDATORY)
-**PR descriptions must reflect complete delta vs origin/main, not just recent work**:
-- ✅ Use `git diff --stat origin/main...HEAD` to get comprehensive change summary
-- ✅ Analyze actual file changes, additions, deletions vs main branch
-- ✅ Document all new features, systems, and architectural changes
-- ✅ Include performance impact, testing status, and migration notes
-- ❌ NEVER describe only latest commits or recent work
-- ❌ NEVER assume PR scope from branch name or recent activity
-- **Pattern**: Complete delta analysis → Comprehensive feature documentation → Clear change categorization
-- **Evidence**: User feedback "pr desc is wrong. We should see the delta of the PR vs main"
 
 
 ## Project-Specific

@@ -152,7 +152,7 @@ def store_observation_local(content, context):
     return entity_id
 
 
-def query_relevant_patterns(current_context, action_type=None):
+def query_relevant_patterns(current_context, _action_type=None):
     """Query memory for relevant patterns"""
     memory = load_memory()
     relevant_patterns = []

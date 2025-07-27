@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Simplified Task Dispatcher for Multi-Agent Orchestration
-Handles dynamic agent creation without complex task categorization
+A2A-Enhanced Task Dispatcher for Multi-Agent Orchestration
+Handles dynamic agent creation with Agent-to-Agent communication support
 """
 
 import glob
@@ -11,7 +11,17 @@ import re
 import subprocess
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
+
+# Import A2A components
+try:
+    from a2a_integration import TaskPool, get_a2a_status
+    from a2a_monitor import get_monitor
+    A2A_AVAILABLE = True
+except ImportError:
+    A2A_AVAILABLE = False
+
+# Constraint system removed - using simple safety rules only
 
 # Constants
 TIMESTAMP_MODULO = 100000000  # 8 digits from microseconds for unique name generation
@@ -36,6 +46,16 @@ class TaskDispatcher:
         self.active_agents = set()  # Track active agent names for collision detection
         self.result_dir = "/tmp/orchestration_results"
         os.makedirs(self.result_dir, exist_ok=True)
+
+        # A2A Integration
+        self.a2a_enabled = A2A_AVAILABLE
+        if self.a2a_enabled:
+            self.task_pool = TaskPool()
+            print("A2A task broadcasting enabled")
+        else:
+            print("A2A not available - running in legacy mode")
+
+        # Basic safety rules only - no constraint system needed
 
         # All tasks are now dynamic - no static loading needed
 
@@ -111,7 +131,7 @@ class TaskDispatcher:
         self.active_agents.add(candidate)
         return candidate
 
-    def _detect_pr_context(self, task_description: str) -> Tuple[Optional[str], str]:
+    def _detect_pr_context(self, task_description: str) -> tuple[str | None, str]:
         """Detect if task is about updating an existing PR.
         Returns: (pr_number, mode) where mode is 'update' or 'create'
         """
@@ -154,7 +174,7 @@ class TaskDispatcher:
 
         return None, 'create'
 
-    def _find_recent_pr(self) -> Optional[str]:
+    def _find_recent_pr(self) -> str | None:
         """Try to find a recent PR from current branch or user."""
         try:
             # Try to get PR from current branch
@@ -190,7 +210,53 @@ class TaskDispatcher:
 
         return None
 
-    def analyze_task_and_create_agents(self, task_description: str) -> List[Dict]:
+    def broadcast_task_to_a2a(self, task_description: str, requirements: list[str] | None = None) -> str | None:
+        """Broadcast task to A2A system for agent claiming"""
+        if not self.a2a_enabled:
+            return None
+
+        try:
+            task_id = self.task_pool.publish_task(
+                task_id=f"orch-{int(time.time() * 1000000) % TIMESTAMP_MODULO}",
+                task_description=task_description,
+                requirements=requirements or []
+            )
+            if task_id:
+                print(f"Task broadcast to A2A system: {task_id}")
+                return task_id
+        except Exception as e:
+            print(f"Error broadcasting task to A2A: {e}")
+
+        return None
+
+
+    def get_a2a_status(self) -> dict[str, Any]:
+        """Get A2A system status including agents and tasks"""
+        if not self.a2a_enabled:
+            return {"a2a_enabled": False, "message": "A2A system not available"}
+
+        try:
+            # Get overall A2A status
+            status = get_a2a_status()
+
+            # Get monitor health
+            monitor = get_monitor()
+            health = monitor.get_system_health()
+
+            return {
+                "a2a_enabled": True,
+                "system_status": status,
+                "health": health,
+                "timestamp": time.time()
+            }
+        except Exception as e:
+            return {
+                "a2a_enabled": True,
+                "error": str(e),
+                "timestamp": time.time()
+            }
+
+    def analyze_task_and_create_agents(self, task_description: str) -> list[dict]:
         """Create appropriate agent for the given task with PR context awareness."""
         print("\n🧠 Processing task request...")
 
@@ -279,7 +345,8 @@ Complete the task, then use /pr to create a new pull request."""
             "prompt": prompt
         }]
 
-    def create_dynamic_agent(self, agent_spec: Dict) -> bool:
+
+    def create_dynamic_agent(self, agent_spec: dict) -> bool:
         """Create agent with enhanced Redis coordination and worktree management."""
         agent_name = agent_spec.get("name")
         agent_focus = agent_spec.get("focus", "general task completion")
@@ -293,17 +360,8 @@ Complete the task, then use /pr to create a new pull request."""
             return False
 
         # Initialize A2A protocol integration if available
-        message_broker = None
-        try:
-            # Try to import and initialize message broker for A2A protocol
-            import sys
-            sys.path.insert(0, self.orchestration_dir)
-            from message_broker import MessageBroker
-            message_broker = MessageBroker()
-            print(f"✅ A2A protocol available for {agent_name}")
-        except Exception as e:
-            print(f"⚠️ A2A protocol unavailable for {agent_name}: {e}")
-            message_broker = None
+        # File-based A2A protocol is always available
+        print(f"📁 File-based A2A protocol available for {agent_name}")
 
         try:
             # Find Claude
@@ -467,17 +525,8 @@ sleep 5
                 print(f"⚠️ Error creating tmux session: {result.stderr}")
                 return False
 
-            # Register agent with A2A protocol if available
-            if message_broker:
-                try:
-                    message_broker.register_agent(
-                        agent_name,
-                        agent_type,
-                        capabilities
-                    )
-                    print(f"📡 Registered {agent_name} with A2A protocol")
-                except Exception as e:
-                    print(f"⚠️ Failed to register {agent_name} with A2A: {e}")
+            # A2A registration happens automatically via file system
+            # Agent will register itself when it starts using A2AAgentWrapper
 
             print(f"✅ Created {agent_name} - Focus: {agent_focus}")
             return True
@@ -485,6 +534,7 @@ sleep 5
         except Exception as e:
             print(f"❌ Failed to create {agent_name}: {e}")
             return False
+
 
 
 if __name__ == "__main__":

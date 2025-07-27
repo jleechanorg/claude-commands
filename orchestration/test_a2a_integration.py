@@ -15,8 +15,7 @@ from a2a.types import Message, TextPart, Role
 import httpx
 
 from a2a.client.client import A2AClient
-from a2a.server.apps.jsonrpc.fastapi_app import A2AFastAPIApplication
-from a2a.types import AgentCard, Task, Message, TaskState, TaskStatus
+from a2a.types import AgentCard, Message
 from a2a_integration import create_real_agent_card, WorldArchitectA2AAgent
 import httpx
 
