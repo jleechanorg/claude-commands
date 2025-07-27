@@ -8,6 +8,15 @@
 
 **CRITICAL RULE**: When `/orchestrate` is used, NEVER execute the task yourself. ALWAYS delegate to the orchestration agents. The orchestration system will handle all task execution through specialized agents.
 
+🚨 **ORCHESTRATION DIRECT EXECUTION PREVENTION**: ⚠️ MANDATORY HARD STOP PROTOCOL
+- **Hard Stop Pattern**: `/orchestrate` or `/orch` prefix detected → immediate agent delegation via orchestration system
+- **User Urgency Safeguard**: "just decide", "just start", "you choose" are guidance for AGENTS, NOT permission for direct execution
+- **Mental Model**: `/orch` = "create agents to do this", NEVER "I should implement this directly"
+- **Zero Exception Rule**: Orchestration commands ALWAYS trigger agent creation regardless of user urgency
+- **Behavioral Firewall**: Automatic "Delegating to orchestration system..." response followed by agent creation
+- **Pattern Recognition**: Operational command classification → mandatory protocol enforcement
+- 🔍 **Evidence**: Session violation prevented by this protocol (see CLAUDE.md)
+
 **🚨 CRITICAL BRANCH PROTECTION RULE**: When monitoring orchestration agents:
 - ❌ **NEVER switch branches** without explicit user permission
 - ❌ **NEVER leave the current branch** to investigate agent work
