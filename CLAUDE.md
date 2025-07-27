@@ -347,6 +347,18 @@
 **Working Directory**: ❌ NEVER cd into agent workspaces | ✅ Provide cd command for user to copy if needed
 **CRITICAL**: ❌ NEVER execute orchestration tasks yourself | ✅ ALWAYS delegate to agents when /orch or /orchestrate is used
 **ENFORCEMENT**: When user runs /orch, you MUST ONLY monitor agents - NO direct execution allowed! The entire point of /orch is agent delegation!
+
+🚨 **ORCHESTRATION DIRECT EXECUTION PREVENTION**: ⚠️ MANDATORY HARD STOP PROTOCOL
+- **Hard Stop Pattern**: Input scan for "/orch" prefix → immediate Task tool delegation, NO exceptions
+- **User Urgency Safeguard**: "just decide", "just start", "you choose" are guidance WITHIN protocol, NOT bypass permissions
+- **Mental Model**: "/orch" = "create agent to do this", NEVER "/orch" = "I should do this directly"
+- **Pre-Execution Checkpoint**: Before ANY task execution, check for "/orch" and enforce mandatory delegation
+- **Zero Exception Rule**: "/orch" ALWAYS triggers Task tool regardless of context or user statements
+- **Behavioral Firewall**: Automatic "Delegating to orchestration system..." response followed by Task tool call
+- **Pattern Recognition**: "/" prefix → operational command classification → protocol enforcement
+- **Prevention Over Correction**: Stop violation before it happens, don't rely on post-error recovery
+- 🔍 **Evidence**: Session violation (PR #979) when "just decide for me and start" bypassed delegation protocol
+
 **NO HARDCODING**: ❌ NEVER hardcode task patterns - agents execute EXACT tasks requested | ✅ General task agents, not pattern-matched types
 
 🚨 **ORCHESTRATION TASK COMPLETION**: When using /orch, task completion requires FULL end-to-end verification
