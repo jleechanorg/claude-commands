@@ -16,6 +16,9 @@ from typing import Any
 
 import shutil
 
+# Import shared utilities from task_dispatcher
+from task_dispatcher import get_tmux_config_path
+
 
 @dataclass
 class AgentStatus:
@@ -227,10 +230,22 @@ class AgentHealthMonitor:
                 print(f"❌ Claude executable not found for agent {agent_name}")
                 return False
 
-            subprocess.run([
-                'tmux', 'new-session', '-d', '-s', agent_name,
+            # Use agent-specific tmux config for 24-hour sessions
+            tmux_config = get_tmux_config_path()
+
+            # Build tmux command with optional config file
+            tmux_cmd = ['tmux']
+            if os.path.exists(tmux_config):
+                tmux_cmd.extend(['-f', tmux_config])
+            else:
+                print(f"⚠️ Warning: tmux config file not found at {tmux_config}, using default config")
+
+            tmux_cmd.extend([
+                'new-session', '-d', '-s', agent_name,
                 '-c', project_root, claude_path
-            ], capture_output=True, check=False)
+            ])
+
+            subprocess.run(tmux_cmd, capture_output=True, check=False)
             # Send initialization message
             time.sleep(3)
             subprocess.run(

@@ -25,10 +25,15 @@ except ImportError:
 
 # Constants
 TIMESTAMP_MODULO = 100000000  # 8 digits from microseconds for unique name generation
-
+AGENT_SESSION_TIMEOUT_SECONDS = 86400  # 24 hours
 
 # Production safety limits
 MAX_CONCURRENT_AGENTS = 5
+
+# Shared configuration paths
+def get_tmux_config_path():
+    """Get the path to the tmux agent configuration file."""
+    return os.path.join(os.path.dirname(__file__), "tmux-agent.conf")
 
 
 class TaskDispatcher:
@@ -309,7 +314,22 @@ IMPORTANT INSTRUCTIONS:
 Key points:
 - This is about UPDATING an existing PR, not creating a new one
 - Stay on the PR's branch throughout your work
-- Your commits will automatically update the PR"""
+- Your commits will automatically update the PR
+
+🔧 EXECUTION GUIDELINES:
+1. **Always use /execute for your work**: Use the /execute command for all task execution to ensure proper planning and execution. This provides structured approach and prevents missing critical steps.
+
+2. **Consider subagents for complex tasks**: For complex or multi-part tasks, always evaluate if subagents would help:
+   - Use Task() tool to spawn subagents for parallel work
+   - Consider subagents when task has 3+ independent components
+   - Use subagents for different skill areas (testing, documentation, research)
+   - Example: Task(description="Run comprehensive tests", prompt="Execute all test suites and report results")
+
+3. **Task delegation patterns**:
+   - Research tasks: Delegate investigation of large codebases
+   - Testing tasks: Separate agents for different test types
+   - Documentation: Dedicated agents for complex documentation needs
+   - Code analysis: Parallel analysis of multiple files/systems"""
             else:
                 prompt = f"""Task: {task_description}
 
@@ -320,7 +340,22 @@ The user referenced "the PR" but didn't specify which one. You must:
 2. Identify which PR the user meant based on the task context
 3. If unclear, show the PRs and ask: "Which PR should I update? Please specify the PR number."
 4. Once identified, checkout that PR's branch and make the requested changes
-5. DO NOT create a new PR"""
+5. DO NOT create a new PR
+
+🔧 EXECUTION GUIDELINES:
+1. **Always use /execute for your work**: Use the /execute command for all task execution to ensure proper planning and execution. This provides structured approach and prevents missing critical steps.
+
+2. **Consider subagents for complex tasks**: For complex or multi-part tasks, always evaluate if subagents would help:
+   - Use Task() tool to spawn subagents for parallel work
+   - Consider subagents when task has 3+ independent components
+   - Use subagents for different skill areas (testing, documentation, research)
+   - Example: Task(description="Run comprehensive tests", prompt="Execute all test suites and report results")
+
+3. **Task delegation patterns**:
+   - Research tasks: Delegate investigation of large codebases
+   - Testing tasks: Separate agents for different test types
+   - Documentation: Dedicated agents for complex documentation needs
+   - Code analysis: Parallel analysis of multiple files/systems"""
         else:
             prompt = f"""Task: {task_description}
 
@@ -333,6 +368,21 @@ Execute the task exactly as requested. Key points:
 - If asked to run commands, execute them
 - If asked to test, run the appropriate tests
 - Always follow the specific instructions given
+
+🔧 EXECUTION GUIDELINES:
+1. **Always use /execute for your work**: Use the /execute command for all task execution to ensure proper planning and execution. This provides structured approach and prevents missing critical steps.
+
+2. **Consider subagents for complex tasks**: For complex or multi-part tasks, always evaluate if subagents would help:
+   - Use Task() tool to spawn subagents for parallel work
+   - Consider subagents when task has 3+ independent components
+   - Use subagents for different skill areas (testing, documentation, research)
+   - Example: Task(description="Run comprehensive tests", prompt="Execute all test suites and report results")
+
+3. **Task delegation patterns**:
+   - Research tasks: Delegate investigation of large codebases
+   - Testing tasks: Separate agents for different test types
+   - Documentation: Dedicated agents for complex documentation needs
+   - Code analysis: Parallel analysis of multiple files/systems
 
 Complete the task, then use /pr to create a new pull request."""
 
@@ -387,38 +437,19 @@ Complete the task, then use /pr to create a new pull request."""
             result_file = os.path.join(self.result_dir, f"{agent_name}_results.json")
 
             # Enhanced prompt with completion enforcement
-            full_prompt = f"""{agent_prompt}
+            # Determine if we're in PR update mode
+            pr_context = agent_spec.get("pr_context", {})
+            is_update_mode = pr_context and pr_context.get("mode") == "update"
 
-Agent Configuration:
-- Name: {agent_name}
-- Type: {agent_type}
-- Focus: {agent_focus}
-- Capabilities: {', '.join(capabilities)}
-- Working Directory: {agent_dir}
-- Branch: {branch_name} (fresh from main)
+            if is_update_mode:
+                completion_instructions = f"""
+🚨 MANDATORY COMPLETION STEPS FOR PR UPDATE:
 
-🚨 CRITICAL: You are starting with a FRESH BRANCH from main
-- Your branch contains ONLY the main branch code
-- Make ONLY the changes needed for this specific task
-- Do NOT include unrelated changes
+1. Complete the assigned task on the existing PR branch
+2. Commit and push your changes:
 
-🚨 MANDATORY COMPLETION STEPS - DO NOT SKIP:
-
-1. Complete the assigned task
-2. When done, use the /pr command to create a pull request:
-
-   /pr
-
-   This will automatically:
-   - Stage and commit all changes
-   - Push the branch to origin
-   - Create a properly formatted PR
-
-   If /pr fails for any reason, fall back to manual commands:
-
-   # Stage and commit all changes
    git add -A
-   git commit -m "Complete {agent_focus}
+   git commit -m "Update PR #{pr_context.get('pr_number', 'unknown')}: {agent_focus}
 
    Agent: {agent_name}
    Task: {agent_focus}
@@ -427,40 +458,100 @@ Agent Configuration:
 
    Co-Authored-By: Claude <noreply@anthropic.com>"
 
-   # Push the branch
-   git push -u origin {branch_name}
+   git push
 
-   # Create the PR (REQUIRED - DO NOT SKIP)
-   gh pr create --title "Agent {agent_name}: {agent_focus}" \\
-     --body "## Summary
-   Agent {agent_name} completed task: {agent_focus}
+3. Verify the PR was updated (if PR number exists):
+   {f"gh pr view {pr_context.get('pr_number')} --json state,mergeable" if pr_context.get('pr_number') else "echo 'No PR number provided, skipping verification'"}
 
-   ## Changes
-   [List changes made]
+4. Create completion report:
+   echo '{{"agent": "{agent_name}", "status": "completed", "pr_updated": "{pr_context.get('pr_number', 'none')}"}}' > {result_file}
 
-   ## Test Plan
-   [Describe testing if applicable]
+🛑 EXIT CRITERIA - AGENT MUST NOT TERMINATE UNTIL:
+1. ✓ Task completed and tested
+2. ✓ All changes committed and pushed
+3. ✓ PR #{pr_context.get('pr_number', 'unknown')} successfully updated
+4. ✓ Completion report written to {result_file}
+"""
+            else:
+                completion_instructions = f"""
+🚨 MANDATORY COMPLETION STEPS:
 
-   Auto-generated by orchestration system
+1. Complete the assigned task
+2. Commit your changes:
+
+   git add -A
+   git commit -m "Complete: {agent_focus}
+
+   Agent: {agent_name}
+   Task: {agent_focus}
 
    🤖 Generated with [Claude Code](https://claude.ai/code)
 
    Co-Authored-By: Claude <noreply@anthropic.com>"
 
-   # Verify PR was created
-   gh pr view --json number,url || echo "ERROR: PR creation failed!"
+3. Push your branch:
+   git push -u origin {branch_name}
 
-3. Create completion report:
+4. Decide if a PR is needed based on the context and nature of the work:
+
+   # Use your judgment to determine if a PR is appropriate:
+   # - Did the user ask for review or collaboration?
+   # - Are the changes significant enough to warrant review?
+   # - Would a PR help with tracking or documentation?
+   # - Is this experimental work that needs feedback?
+
+   # If you determine a PR is needed:
+   /pr  # Or use gh pr create with appropriate title and body
+
+5. Create completion report:
    echo '{{"agent": "{agent_name}", "status": "completed", "branch": "{branch_name}"}}' > {result_file}
 
 🛑 EXIT CRITERIA - AGENT MUST NOT TERMINATE UNTIL:
 1. ✓ Task completed and tested
 2. ✓ All changes committed
 3. ✓ Branch pushed to origin
-4. ✓ Pull Request created successfully (verify with gh pr view)
-5. ✓ Completion report written to {result_file}
+4. ✓ Completion report written to {result_file}
 
-❌ FAILURE TO CREATE PR = INCOMPLETE TASK
+Note: PR creation is OPTIONAL - use your judgment based on:
+- User intent: Did they ask for review, collaboration, or visibility?
+- Change significance: Are these substantial modifications?
+- Work nature: Is this exploratory, fixing issues, or adding features?
+- Context: Would a PR help track this work or get feedback?
+
+Trust your understanding of the task context, not keyword patterns.
+"""
+
+            full_prompt = f"""{agent_prompt}
+
+Agent Configuration:
+- Name: {agent_name}
+- Type: {agent_type}
+- Focus: {agent_focus}
+- Capabilities: {', '.join(capabilities)}
+- Working Directory: {agent_dir}
+- Branch: {branch_name} {'(updating existing PR)' if is_update_mode else '(fresh from main)'}
+
+🚨 CRITICAL: {'You are updating an EXISTING PR' if is_update_mode else 'You are starting with a FRESH BRANCH from main'}
+- {'Work on the existing PR branch' if is_update_mode else 'Your branch contains ONLY the main branch code'}
+- Make ONLY the changes needed for this specific task
+- Do NOT include unrelated changes
+
+🔧 EXECUTION GUIDELINES:
+1. **Always use /execute for your work**: Use the /execute command for all task execution to ensure proper planning and execution. This provides structured approach and prevents missing critical steps.
+
+2. **Consider subagents for complex tasks**: For complex or multi-part tasks, always evaluate if subagents would help:
+   - Use Task() tool to spawn subagents for parallel work
+   - Consider subagents when task has 3+ independent components
+   - Use subagents for different skill areas (testing, documentation, research)
+   - Example: Task(description="Run comprehensive tests", prompt="Execute all test suites and report results")
+
+3. **Task delegation patterns**:
+   - Research tasks: Delegate investigation of large codebases
+   - Testing tasks: Separate agents for different test types
+   - Documentation: Dedicated agents for complex documentation needs
+   - Code analysis: Parallel analysis of multiple files/systems
+
+{completion_instructions}
 """
 
             # Write prompt to file to avoid shell quoting issues
@@ -509,16 +600,27 @@ else
     echo '{{"agent": "{agent_name}", "status": "failed", "exit_code": '$CLAUDE_EXIT'}}' > {result_file}
 fi
 
-# Keep session alive for debugging
-echo "[$(date)] Session ending. Check log at: {log_file}"
-echo "Session will close in 5 seconds (stdin redirected, no keyboard input)..."
-sleep 5
+# Keep session alive for 24 hours for monitoring and debugging
+echo "[$(date)] Agent execution completed. Session remains active for monitoring."
+echo "[$(date)] Session will auto-close in 24 hours. Check log at: {log_file}"
+echo "[$(date)] Monitor with: tmux attach -t {agent_name}"
+sleep {AGENT_SESSION_TIMEOUT_SECONDS}
 '''
 
-            tmux_cmd = [
-                "tmux", "new-session", "-d", "-s", agent_name,
+            # Use agent-specific tmux config for 24-hour sessions
+            tmux_config = get_tmux_config_path()
+
+            # Build tmux command with optional config file
+            tmux_cmd = ["tmux"]
+            if os.path.exists(tmux_config):
+                tmux_cmd.extend(["-f", tmux_config])
+            else:
+                print(f"⚠️ Warning: tmux config file not found at {tmux_config}, using default config")
+
+            tmux_cmd.extend([
+                "new-session", "-d", "-s", agent_name,
                 "-c", agent_dir, "bash", "-c", bash_cmd
-            ]
+            ])
 
             result = subprocess.run(tmux_cmd, capture_output=True, text=True)
             if result.returncode != 0:
