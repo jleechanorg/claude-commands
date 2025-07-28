@@ -2,225 +2,216 @@
 
 **Usage**: `/fixpr <PR_NUMBER> [--auto-apply]`
 
-**Purpose**: Analyze CI failures and merge conflicts using GitHub MCP tools and existing commands, then intelligently determine and apply fixes.
+**Purpose**: Make GitHub PRs mergeable by analyzing and fixing CI failures, merge conflicts, and bot feedback - without merging.
 
 ## Description
 
-The `/fixpr` command is a pure markdown orchestrator that leverages Claude's intelligence and existing tools to analyze and fix PR issues. It uses GitHub MCP tools, git commands, and Claude Code CLI capabilities directly without requiring external Python scripts.
+The `/fixpr` command leverages Claude's natural language understanding to analyze PR blockers and fix them. The goal is to get the PR into a mergeable state (all checks passing, no conflicts) but **never actually merge it**. It orchestrates GitHub tools and git commands through intent-based descriptions rather than explicit syntax.
 
 ## Workflow
 
-### Step 1: Data Collection (Using GitHub MCP & Git Commands)
+### Step 1: Gather Repository Context
 
-Automatically collect PR data using existing tools:
+Dynamically detect repository information from the git environment:
+- Extract the repository owner and name from git remote (handling both HTTPS and SSH URL formats)
+- Determine the default branch without assuming it's 'main' (could be 'master', 'develop', etc.)
+- Validate the extraction succeeded before proceeding
+- Store these values for reuse throughout the workflow
 
-```bash
-# Get PR details using GitHub MCP
-mcp__github-server__get_pull_request(owner="jleechan2015", repo="worldarchitect.ai", pull_number=PR_NUMBER)
+💡 **Implementation hints**:
+- Repository URLs come in formats like `https://github.com/owner/repo.git` or `git@github.com:owner/repo.git`
+- Default branch detection should have fallbacks for fresh clones
+- Always quote variables in bash to handle spaces safely
 
-# Get PR files and status
-mcp__github-server__get_pull_request_files(owner="jleechan2015", repo="worldarchitect.ai", pull_number=PR_NUMBER)
-mcp__github-server__get_pull_request_status(owner="jleechan2015", repo="worldarchitect.ai", pull_number=PR_NUMBER)
+### Step 2: Fetch Critical GitHub PR Data
 
-# Get comments and reviews for analysis
-mcp__github-server__get_pull_request_comments(owner="jleechan2015", repo="worldarchitect.ai", pull_number=PR_NUMBER)
-mcp__github-server__get_pull_request_reviews(owner="jleechan2015", repo="worldarchitect.ai", pull_number=PR_NUMBER)
+**MANDATORY**: Fetch these specific items from GitHub to understand what's blocking mergeability:
 
-# Check local branch status and conflicts
-git status
-git diff --check
-git merge-tree $(git merge-base HEAD main) HEAD main
-```
+1. **CI State & Test Failures**:
+   - Get all CI check results from GitHub (passing/failing/pending)
+   - For any failing checks, fetch the specific error messages and logs
+   - Identify which tests are broken and their failure reasons
+   - Distinguish between required checks and optional ones
 
-### Step 2: Intelligent Analysis (Direct Claude Analysis)
+2. **Merge Conflicts**:
+   - Check GitHub's mergeable status (MERGEABLE/CONFLICTING/UNKNOWN)
+   - If conflicting, identify exactly which files have conflicts
+   - Fetch the conflict markers and understand what's clashing
+   - Determine if conflicts are with the base branch or other PRs
 
-Claude analyzes the collected data directly using natural language understanding:
+3. **Bot Feedback & Review Comments**:
+   - Fetch all automated bot comments (Copilot, CodeRabbit, etc.)
+   - Get human reviewer comments and requested changes
+   - Identify which feedback is blocking vs suggestions
+   - Check if any reviews have "Request Changes" status
+
+4. **PR Metadata**:
+   - Current PR state (open/closed/merged)
+   - Which branch it's targeting
+   - Protection rules that might block merging
+   - Any failing status checks beyond CI
+
+The goal is to gather everything that GitHub shows as preventing the green "Merge" button from being available.
+
+### Step 3: Analyze Issues with Intelligence
+
+Examine the collected data to understand what needs fixing:
 
 **CI Status Analysis**:
-- GitHub CI vs local test discrepancies
-- Failure pattern recognition (timeouts, imports, assertions)
-- Environment-specific issues identification
+- Distinguish between flaky tests (timeouts, network issues) and real failures
+- Identify patterns in failures (missing imports, assertion errors, environment issues)
+- Compare GitHub CI results with local test runs to spot environment-specific problems
 
 **Merge Conflict Analysis**:
-- Conflict complexity assessment
-- Auto-resolvable vs manual review categorization
-- Risk level evaluation for each conflict
+- Assess conflict complexity - are they simple formatting issues or complex logic changes?
+- Categorize conflicts by risk level (low risk: comments/formatting, high risk: business logic)
+- Determine which conflicts can be safely auto-resolved vs requiring human review
 
-**Bot Comment Analysis**:
-- Extract actionable suggestions from code review bots
-- Identify implementable fixes (imports, formatting, patterns)
-- Prioritize by criticality and safety
+**Bot Feedback Processing**:
+- Extract actionable suggestions from automated code reviews
+- Prioritize fixes by impact and safety
+- Identify quick wins vs changes requiring careful consideration
 
-### Step 3: Fix Strategy Determination
+### Step 4: Apply Fixes Intelligently
 
-Based on analysis, determine appropriate fixes:
+Based on the analysis, apply appropriate fixes:
 
 **For CI Failures**:
-1. **Test Environment Issues**:
-   - Missing dependencies: Update requirements
-   - Environment variables: Check .env configuration
-   - Race conditions: Add proper wait conditions
-
-2. **Code Issues**:
-   - Import errors: Fix import statements
-   - Assertion failures: Fix logic or update tests
-   - Type errors: Add proper type annotations
+- **Environment issues**: Update dependencies, fix missing environment variables, adjust timeouts
+- **Code issues**: Correct import statements, fix failing assertions, add type annotations
+- **Test issues**: Update test expectations, fix race conditions, handle edge cases
 
 **For Merge Conflicts**:
-1. **Safe Auto-Resolution**:
-   - Import statement reordering
-   - Whitespace/formatting conflicts
-   - Non-functional comment conflicts
+- **Safe resolutions**: Combine imports from both branches, merge non-conflicting configuration
+- **Function signatures**: Preserve parameters from both versions when possible
+- **Complex conflicts**: Flag for human review with clear explanation of the conflict
 
-2. **Manual Review Required**:
-   - Business logic conflicts
-   - Database schema changes
-   - Security-related modifications
+**For Bot Suggestions**:
+- Apply formatting and style fixes
+- Implement suggested error handling improvements
+- Add missing documentation or type hints
 
-### Step 4: Execute Fixes
+### Step 5: Verify Mergeability Status
 
-Apply fixes using existing Claude Code CLI tools:
+After applying fixes, verify progress toward mergeability:
 
-**For Code Changes**:
-```bash
-# Use Edit or MultiEdit tools to apply specific fixes
-# Example: Fix import statements
-Edit(file_path="path/to/file.py", old_string="old import", new_string="new import")
+1. **Re-fetch GitHub Status**:
+   - Check if CI checks are now passing
+   - Verify mergeable status changed from CONFLICTING to MERGEABLE
+   - Confirm no new test failures were introduced
+   - Ensure bot feedback has been addressed
 
-# Example: Resolve simple merge conflicts
-Edit(file_path="conflicted_file.py", old_string="<<<<<<< HEAD\ncode1\n=======\ncode2\n>>>>>>> branch", new_string="merged_code")
-```
+2. **Local Verification**:
+   - Run tests locally to confirm fixes work
+   - Check git status for uncommitted changes
+   - Verify no conflicts remain with the base branch
 
-**For Environment Issues**:
-```bash
-# Update configuration files
-Edit(file_path=".env", old_string="OLD_VAR=value", new_string="NEW_VAR=new_value")
+3. **Push and Monitor**:
+   - Push fixes to the PR branch
+   - Wait for GitHub to re-run CI checks
+   - Monitor the PR page to see blockers clearing
 
-# Update dependencies
-Edit(file_path="requirements.txt", old_string="package==1.0", new_string="package==1.1")
-```
+4. **Success Criteria**:
+   - All required CI checks show green checkmarks
+   - GitHub shows "This branch has no conflicts"
+   - No "Changes requested" reviews blocking merge
+   - The merge button would be green (but we don't click it!)
 
-**For Test Fixes**:
-```bash
-# Run tests locally to verify fixes
-./run_tests.sh
-
-# Run specific test files
-TESTING=true vpython mvp_site/test_specific.py
-```
-
-### Step 5: Verification & Re-analysis
-
-After applying fixes:
-
-```bash
-# Check git status
-git status
-git diff
-
-# Re-run local tests
-./run_tests.sh
-
-# Check if conflicts resolved
-git merge-tree $(git merge-base HEAD main) HEAD main
-
-# Re-fetch PR status if needed
-mcp__github-server__get_pull_request_status(owner="jleechan2015", repo="worldarchitect.ai", pull_number=PR_NUMBER)
-```
+If blockers remain, iterate through the analysis and fix process again until the PR is fully mergeable.
 
 ## Auto-Apply Mode
 
-When `--auto-apply` is specified:
+When `--auto-apply` is specified, the command operates more autonomously:
 
-1. **Safe Fixes Only**: Only apply fixes that are low-risk:
-   - Import statement cleanup
-   - Whitespace/formatting fixes
-   - Obvious typo corrections
-   - Bot-suggested code improvements
+**Safe Fixes Only**:
+- Import statement corrections
+- Whitespace and formatting cleanup
+- Documentation updates
+- Bot-suggested improvements that don't change logic
 
-2. **Validation Required**: Always verify before applying:
-   - Preserve existing functionality
-   - Don't modify business logic
-   - Keep security-related code unchanged
+**Always Preserve**:
+- Existing functionality from both branches
+- Business logic integrity
+- Security-related code patterns
 
-3. **Incremental Application**: Apply one fix at a time and test:
-   - Apply fix
-   - Run relevant tests
-   - Verify no new issues
-   - Continue to next fix
+**Incremental Approach**:
+- Apply one category of fixes at a time
+- Test after each change
+- Stop if tests fail unexpectedly
 
 ## Intelligence Guidelines
 
-### Pattern Recognition for CI Failures
+### CI Failure Patterns
 
-**Timeout Patterns** → Likely flaky tests:
-- Network timeouts in API tests
-- Database connection timeouts
-- External service unavailability
+**Flaky Test Indicators**:
+- Timeouts in external API calls
+- Intermittent database connection failures
+- Time-dependent test failures
 
-**Import/Environment Patterns** → Configuration issues:
-- ModuleNotFoundError
-- Missing environment variables
-- Path resolution failures
+**Real Issues Requiring Fixes**:
+- Import errors (ModuleNotFoundError)
+- Assertion failures with consistent patterns
+- Type errors and missing dependencies
 
-**Assertion Patterns** → Logic bugs:
-- Unexpected values in tests
-- Changed API responses
-- Modified business logic
-
-### Conflict Resolution Principles
+### Merge Conflict Resolution Strategy
 
 **Preservation Priority**:
-1. Never lose functionality from either branch
-2. Combine features when possible
-3. Prefer bug fixes over new features
-4. Maintain security and stability
+1. Never lose functionality - combine features when possible
+2. Prefer bug fixes over new features in conflicts
+3. Maintain backward compatibility
+4. Keep security improvements from both branches
 
-**Risk Assessment**:
-- **Low Risk**: Comments, documentation, formatting
-- **Medium Risk**: Non-critical features, UI changes
-- **High Risk**: Authentication, payments, data handling
+**Risk-Based Approach**:
+- **Low Risk**: Documentation, comments, formatting, test additions
+- **Medium Risk**: UI changes, non-critical features, configuration updates
+- **High Risk**: Authentication, data handling, payment processing, API changes
 
-### Communication and Documentation
+### Fix Documentation
 
-For all fixes applied:
-1. Document the reasoning behind each resolution
-2. Add comments explaining complex merges
-3. Flag high-risk changes for human review
-4. Provide clear commit messages
+For every fix applied:
+- Document why the specific resolution was chosen
+- Add comments for complex merge decisions
+- Create clear commit messages explaining changes
+- Flag any high-risk modifications for review
 
 ## Example Usage
 
 ```bash
-# Basic analysis
+# Analyze and show what would be fixed
 /fixpr 1234
 
-# With auto-apply for safe fixes
+# Analyze and automatically apply safe fixes
 /fixpr 1234 --auto-apply
 ```
 
-## Integration with Other Commands
+## Integration Points
 
-This command works seamlessly with:
-- `/copilot` - For comprehensive PR review
-- `/commentreply` - For responding to review comments
-- `/push` - For creating and updating PRs
-- `/test` - For running validation tests
+This command works naturally with:
+- `/copilot` - For comprehensive PR workflow orchestration
+- `/commentreply` - To respond to review feedback
+- `/pushl` - To push fixes to remote
+- Testing commands - To verify fixes work correctly
 
 ## Error Recovery
 
-If analysis encounters issues:
-1. Fall back to manual analysis prompts
-2. Use partial data collection if MCP tools fail
-3. Provide clear error messages with next steps
-4. Suggest alternative approaches
+When issues arise:
+- Gracefully handle missing tools by trying alternatives
+- Provide clear explanations of what failed and why
+- Suggest manual steps when automation isn't possible
+- Maintain partial progress rather than failing completely
 
-## Architecture Benefits
+## Natural Language Advantage
 
-**Pure Orchestration**: No custom Python scripts needed
-**Tool Integration**: Leverages existing GitHub MCP and CLI tools
-**Intelligence Focus**: Claude provides the analysis and decision-making
-**Maintainability**: Uses established patterns from other .md commands
-**Reliability**: Depends on proven tools rather than custom data collectors
+This approach leverages Claude's understanding to:
+- Adapt to different repository structures
+- Handle edge cases without explicit programming
+- Provide context-aware solutions
+- Explain decisions in human terms
 
-Remember: This command focuses on intelligent analysis and safe automation. Complex conflicts and high-risk changes should always be flagged for human review.
+The focus is on describing intent and letting Claude determine the best implementation, making the command more flexible and maintainable than rigid scripted approaches.
+
+## Important Notes
+
+**🚨 NEVER MERGE**: This command's job is to make PRs mergeable, not to merge them. The user retains control over when/if to actually merge.
+
+**📊 Success Metric**: A successful run means GitHub would show a green merge button with no blockers - all CI passing, no conflicts, no blocking reviews.
