@@ -6,7 +6,7 @@
 
 ## Description
 
-Pure Python implementation that handles git operations for pushing changes. This is a simple wrapper around git commands with added verification and result tracking.
+**NON-INTERACTIVE** bash implementation designed for automated copilot workflows. This is a simple wrapper around git commands with added verification and result tracking. Separate from interactive pushlite.sh to prevent automation conflicts.
 
 ## Features
 
