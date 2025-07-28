@@ -237,6 +237,7 @@ if 'copilot' in author.lower():
 
 **MUST RUN** `/pushl` to push all fixes to remote:
 - Show: "Running `/pushl`..."
+- **Environment**: Set `COPILOT_WORKFLOW=1` for automation mode
 - **MANDATORY**: Stage and commit all code improvements
   - Show: "Staging [X] modified files..."
   - Show: "Commit message: [message]"
@@ -319,6 +320,7 @@ if 'copilot' in author.lower():
 **🔧 PHASE 6: FINAL OPERATIONS - Starting...**
 
 **MUST RUN** `/pushl` if additional changes made during verification:
+- **Environment**: Set `COPILOT_WORKFLOW=1` for automation mode
 - Show: "Checking for uncommitted changes..."
 - Show: "Git status: [X] files modified, [X] files staged"
 - **MANDATORY**: Final commit for any updates made during comment verification

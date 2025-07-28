@@ -42,6 +42,12 @@ show_help() {
 # Parse arguments
 CREATE_PR=false
 FORCE_PUSH=false
+AUTOMATION_MODE=false
+
+# Check for environment automation mode
+if [[ -n "${COPILOT_WORKFLOW:-}" ]] || [[ -n "${CI:-}" ]] || [[ ! -t 0 ]]; then
+    AUTOMATION_MODE=true
+fi
 
 for arg in "$@"; do
     case "$arg" in
@@ -50,6 +56,9 @@ for arg in "$@"; do
             ;;
         force)
             FORCE_PUSH=true
+            ;;
+        --automation)
+            AUTOMATION_MODE=true
             ;;
         -h|--help)
             show_help
@@ -110,22 +119,26 @@ echo "  Untracked files: $untracked_count"
 
 # Handle untracked files if present
 if [[ $untracked_count -gt 0 ]]; then
-    echo -e "\n${YELLOW}📁 Untracked Files Found:${NC}"
-    echo "$untracked_files" | head -20
-    if [[ $untracked_count -gt 20 ]]; then
-        echo "... and $((untracked_count - 20)) more files"
-    fi
+    if [[ "$AUTOMATION_MODE" == "true" ]]; then
+        echo -e "\n${BLUE}📁 Automation: Adding all untracked files...${NC}"
+        choice="1"
+    else
+        echo -e "\n${YELLOW}📁 Untracked Files Found:${NC}"
+        echo "$untracked_files" | head -20
+        if [[ $untracked_count -gt 20 ]]; then
+            echo "... and $((untracked_count - 20)) more files"
+        fi
 
-    echo -e "\n${YELLOW}Options:${NC}"
-    echo "  [1] Add all untracked files and commit"
-    echo "  [2] Select specific files to add"
-    echo "  [3] Continue without adding (push existing commits only)"
-    echo "  [4] Cancel push operation"
-    echo ""
+        echo -e "\n${YELLOW}Options:${NC}"
+        echo "  [1] Add all untracked files and commit"
+        echo "  [2] Select specific files to add"
+        echo "  [3] Continue without adding (push existing commits only)"
+        echo "  [4] Cancel push operation"
+        echo ""
 
-    while true; do
-        read -p "Choose option [1-4]: " -n 1 -r choice
-        echo
+        while true; do
+            read -p "Choose option [1-4]: " -n 1 -r choice
+            echo
 
         case "$choice" in
             1)
@@ -147,9 +160,13 @@ if [[ $untracked_count -gt 0 ]]; then
                 fi
 
                 echo "Suggested commit message: $commit_msg"
-                read -p "Enter commit message (or press Enter to use suggestion): " user_msg
-                if [[ -n "$user_msg" ]]; then
-                    commit_msg="$user_msg"
+                if [[ "$AUTOMATION_MODE" == "true" ]]; then
+                    echo "Automation: Using suggested commit message"
+                else
+                    read -p "Enter commit message (or press Enter to use suggestion): " user_msg
+                    if [[ -n "$user_msg" ]]; then
+                        commit_msg="$user_msg"
+                    fi
                 fi
 
                 git commit -m "$commit_msg"
@@ -203,7 +220,43 @@ if [[ $untracked_count -gt 0 ]]; then
                 continue
                 ;;
         esac
-    done
+        done
+    fi
+
+    # Handle automation choice execution (for both modes)
+    if [[ "$choice" == "1" ]]; then
+        echo -e "${BLUE}📝 Adding all untracked files...${NC}"
+        git add .
+
+        # Suggest commit message based on files
+        commit_msg="Add untracked files"
+        if echo "$untracked_files" | grep -q "test_"; then
+            commit_msg="Add tests and supporting files"
+        elif echo "$untracked_files" | grep -q "\.md$"; then
+            commit_msg="Add documentation"
+        elif echo "$untracked_files" | grep -q "\.sh$"; then
+            commit_msg="Add scripts and tools"
+        elif echo "$untracked_files" | grep -q "ci_replica"; then
+            commit_msg="Add CI replica tools"
+        elif echo "$untracked_files" | grep -q "chrome"; then
+            commit_msg="Add browser automation tools"
+        fi
+
+        echo "Suggested commit message: $commit_msg"
+        if [[ "$AUTOMATION_MODE" == "true" ]]; then
+            echo "Automation: Using suggested commit message"
+        else
+            read -p "Enter commit message (or press Enter to use suggestion): " user_msg
+            if [[ -n "$user_msg" ]]; then
+                commit_msg="$user_msg"
+            fi
+        fi
+
+        git commit -m "$commit_msg"
+        echo -e "${GREEN}✅ Files committed${NC}"
+    elif [[ "$choice" == "3" ]]; then
+        echo -e "${YELLOW}⚠️ Continuing without adding untracked files${NC}"
+    fi
 fi
 
 # Handle modified files if present (not staged)
@@ -242,9 +295,13 @@ if [[ $modified_count -gt 0 ]]; then
                 fi
 
                 echo "Suggested commit message: $commit_msg"
-                read -p "Enter commit message (or press Enter to use suggestion): " user_msg
-                if [[ -n "$user_msg" ]]; then
-                    commit_msg="$user_msg"
+                if [[ "$AUTOMATION_MODE" == "true" ]]; then
+                    echo "Automation: Using suggested commit message"
+                else
+                    read -p "Enter commit message (or press Enter to use suggestion): " user_msg
+                    if [[ -n "$user_msg" ]]; then
+                        commit_msg="$user_msg"
+                    fi
                 fi
 
                 git commit -m "$commit_msg"
