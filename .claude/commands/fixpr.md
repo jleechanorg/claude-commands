@@ -1,241 +1,226 @@
 # /fixpr Command - Intelligent PR Fix Analysis
 
-**Usage**: `/fixpr <PR_NUMBER> [--comments FILE] [--auto-apply]`
+**Usage**: `/fixpr <PR_NUMBER> [--auto-apply]`
 
-**Purpose**: Analyze CI failures and merge conflicts, then intelligently determine fixes. With `--auto-apply`, automatically implement fixes based on bot suggestions.
+**Purpose**: Analyze CI failures and merge conflicts using GitHub MCP tools and existing commands, then intelligently determine and apply fixes.
 
 ## Description
 
-The `/fixpr` command is a hybrid Python + Markdown command that leverages Claude's intelligence to analyze and fix PR issues. The Python component (fixpr.py) collects data, while this Markdown component provides the intelligence for analysis and decision-making.
+The `/fixpr` command is a pure markdown orchestrator that leverages Claude's intelligence and existing tools to analyze and fix PR issues. It uses GitHub MCP tools, git commands, and Claude Code CLI capabilities directly without requiring external Python scripts.
 
 ## Workflow
 
-### Step 1: Data Collection (Automated by fixpr.py)
+### Step 1: Data Collection (Using GitHub MCP & Git Commands)
 
-The Python component automatically:
-1. Runs three-layer CI verification (local, GitHub, merge-tree)
-2. Detects merge conflicts
-3. Compares CI results to find discrepancies
-4. Outputs comparison data to `/tmp/copilot_${SANITIZED_BRANCH}/`
-5. **NEW**: With `--auto-apply`, extracts and applies fixes from bot comments
-6. **NEW**: Re-runs CI after applying fixes to verify success
+Automatically collect PR data using existing tools:
 
-### Step 2: Intelligent Analysis (This Document)
-
-Read the collected data:
 ```bash
-# Check what fixpr.py collected (using PR #941 standard)
-BRANCH=$(git branch --show-current)
-SANITIZED_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/_/g' | sed 's/^[.-]*//g')
-cat /tmp/copilot_${SANITIZED_BRANCH}/fixes.json
-cat /tmp/copilot_${SANITIZED_BRANCH}/comparison.json
-cat /tmp/copilot_${SANITIZED_BRANCH}/conflicts.json
-# NEW: Check applied fixes if --auto-apply was used
-cat /tmp/copilot_${SANITIZED_BRANCH}/applied_fixes.json
+# Get PR details using GitHub MCP
+mcp__github-server__get_pull_request(owner="jleechan2015", repo="worldarchitect.ai", pull_number=PR_NUMBER)
+
+# Get PR files and status
+mcp__github-server__get_pull_request_files(owner="jleechan2015", repo="worldarchitect.ai", pull_number=PR_NUMBER)
+mcp__github-server__get_pull_request_status(owner="jleechan2015", repo="worldarchitect.ai", pull_number=PR_NUMBER)
+
+# Get comments and reviews for analysis
+mcp__github-server__get_pull_request_comments(owner="jleechan2015", repo="worldarchitect.ai", pull_number=PR_NUMBER)
+mcp__github-server__get_pull_request_reviews(owner="jleechan2015", repo="worldarchitect.ai", pull_number=PR_NUMBER)
+
+# Check local branch status and conflicts
+git status
+git diff --check
+git merge-tree $(git merge-base HEAD main) HEAD main
 ```
 
-**Auto-Fix Mode**: When `--auto-apply` is enabled:
-- Bot comments are analyzed for actionable fixes
-- Code suggestions (```suggestion blocks) are automatically applied
-- Pattern-based fixes (pagination, imports) are implemented
-- CI is re-run to verify fixes worked
-- Results are saved to `applied_fixes.json`
+### Step 2: Intelligent Analysis (Direct Claude Analysis)
 
-### Step 3: Analyze CI Discrepancies
+Claude analyzes the collected data directly using natural language understanding:
 
-**Key Intelligence Required**: When GitHub CI and local CI disagree, determine why:
+**CI Status Analysis**:
+- GitHub CI vs local test discrepancies
+- Failure pattern recognition (timeouts, imports, assertions)
+- Environment-specific issues identification
 
-1. **GitHub FAIL, Local PASS**:
-   - Possible flaky test (network timeouts, race conditions)
-   - Environment differences (missing env vars, different OS)
-   - External dependencies (API rate limits, service availability)
-   - **Action**: Suggest retry or environment fix
+**Merge Conflict Analysis**:
+- Conflict complexity assessment
+- Auto-resolvable vs manual review categorization
+- Risk level evaluation for each conflict
 
-2. **GitHub PASS, Local FAIL**:
-   - Outdated local branch
-   - Missing local dependencies
-   - Configuration differences
-   - **Action**: Update branch or fix local setup
+**Bot Comment Analysis**:
+- Extract actionable suggestions from code review bots
+- Identify implementable fixes (imports, formatting, patterns)
+- Prioritize by criticality and safety
 
-3. **Different Test Counts**:
-   - Test discovery issues
-   - Conditional test execution
-   - **Action**: Investigate test configuration
+### Step 3: Fix Strategy Determination
 
-### Step 4: Conflict Resolution Strategy
+Based on analysis, determine appropriate fixes:
 
-Analyze conflict patterns from conflicts.json:
+**For CI Failures**:
+1. **Test Environment Issues**:
+   - Missing dependencies: Update requirements
+   - Environment variables: Check .env configuration
+   - Race conditions: Add proper wait conditions
 
-**Safe to Auto-Resolve**:
-- Import statement conflicts (usually just ordering)
-- Whitespace/formatting conflicts
-- Comment-only conflicts
-- Version number conflicts in expected files
+2. **Code Issues**:
+   - Import errors: Fix import statements
+   - Assertion failures: Fix logic or update tests
+   - Type errors: Add proper type annotations
 
-**Requires Manual Review**:
-- Logic conflicts in critical files
-- Database schema changes
-- API contract modifications
-- Security-related code
+**For Merge Conflicts**:
+1. **Safe Auto-Resolution**:
+   - Import statement reordering
+   - Whitespace/formatting conflicts
+   - Non-functional comment conflicts
 
-### Step 5: Generate Fix Plan
+2. **Manual Review Required**:
+   - Business logic conflicts
+   - Database schema changes
+   - Security-related modifications
 
-Based on analysis, create actionable fix plan:
+### Step 4: Execute Fixes
 
-1. **For CI Failures**:
-   ```python
-   # If test failure is environment-related
-   - Update test configuration
-   - Add missing environment variables
-   - Fix import paths
+Apply fixes using existing Claude Code CLI tools:
 
-   # If test failure is code-related
-   - Fix the actual bug
-   - Update test expectations
-   - Add error handling
-   ```
+**For Code Changes**:
+```bash
+# Use Edit or MultiEdit tools to apply specific fixes
+# Example: Fix import statements
+Edit(file_path="path/to/file.py", old_string="old import", new_string="new import")
 
-2. **For Merge Conflicts**:
-   ```python
-   # For each conflict in conflicts.json
-   - Determine if auto-resolvable
-   - Preserve functionality from both branches
-   - Prefer incoming changes for features
-   - Prefer current changes for bug fixes
-   ```
+# Example: Resolve simple merge conflicts
+Edit(file_path="conflicted_file.py", old_string="<<<<<<< HEAD\ncode1\n=======\ncode2\n>>>>>>> branch", new_string="merged_code")
+```
 
-### Step 6: Execute Fixes
+**For Environment Issues**:
+```bash
+# Update configuration files
+Edit(file_path=".env", old_string="OLD_VAR=value", new_string="NEW_VAR=new_value")
 
-After analysis, use appropriate tools to apply fixes:
+# Update dependencies
+Edit(file_path="requirements.txt", old_string="package==1.0", new_string="package==1.1")
+```
 
-1. **For Auto-Resolvable Conflicts**:
-   ```bash
-   # Use Edit tool to resolve specific conflicts
-   # Preserve functionality from both sides
-   ```
+**For Test Fixes**:
+```bash
+# Run tests locally to verify fixes
+./run_tests.sh
 
-2. **For CI Fixes**:
-   ```bash
-   # Apply specific fixes based on failure type
-   # Update configuration files
-   # Fix failing tests
-   ```
+# Run specific test files
+TESTING=true vpython mvp_site/test_specific.py
+```
 
-3. **For Environment Issues**:
-   ```bash
-   # Update .env files
-   # Fix dependency versions
-   # Add missing configuration
-   ```
-
-### Step 7: Verification
+### Step 5: Verification & Re-analysis
 
 After applying fixes:
-1. Re-run fixpr.py to verify fixes worked
-2. Check that CI would now pass
-3. Ensure no new issues introduced
 
-### Step 8: Auto-Fix Results Analysis (When --auto-apply Used)
+```bash
+# Check git status
+git status
+git diff
 
-Review the `applied_fixes.json` to understand what was automatically fixed:
+# Re-run local tests
+./run_tests.sh
 
-```json
-{
-  "applied": [
-    {
-      "type": "code_suggestion",
-      "path": "file.py",
-      "line": 123,
-      "comment_id": "123456"
-    }
-  ],
-  "failed": [],
-  "total": 1
-}
+# Check if conflicts resolved
+git merge-tree $(git merge-base HEAD main) HEAD main
+
+# Re-fetch PR status if needed
+mcp__github-server__get_pull_request_status(owner="jleechan2015", repo="worldarchitect.ai", pull_number=PR_NUMBER)
 ```
 
-**Success Criteria**:
-- All bot suggestions successfully applied
-- CI status improved after fixes
-- No new failures introduced
-- Code still follows project standards
+## Auto-Apply Mode
 
-**Common Auto-Fix Patterns**:
-1. **Import Cleanup**: Removes unused imports flagged by linters
-2. **Pagination Handling**: Adds empty result checks
-3. **Type Annotations**: Adds missing type hints
-4. **Error Handling**: Adds try-except blocks where suggested
-5. **Code Formatting**: Applies style suggestions
+When `--auto-apply` is specified:
+
+1. **Safe Fixes Only**: Only apply fixes that are low-risk:
+   - Import statement cleanup
+   - Whitespace/formatting fixes
+   - Obvious typo corrections
+   - Bot-suggested code improvements
+
+2. **Validation Required**: Always verify before applying:
+   - Preserve existing functionality
+   - Don't modify business logic
+   - Keep security-related code unchanged
+
+3. **Incremental Application**: Apply one fix at a time and test:
+   - Apply fix
+   - Run relevant tests
+   - Verify no new issues
+   - Continue to next fix
 
 ## Intelligence Guidelines
 
-### When Analyzing CI Failures
+### Pattern Recognition for CI Failures
 
-1. **Pattern Recognition**:
-   - Look for timeout patterns → Likely flaky test
-   - Import errors → Missing dependencies
-   - Permission errors → Environment issue
-   - Assertion failures → Real bug
+**Timeout Patterns** → Likely flaky tests:
+- Network timeouts in API tests
+- Database connection timeouts
+- External service unavailability
 
-2. **Context Integration**:
-   - Check comment_context for user concerns
-   - Consider PR description for intent
-   - Review recent changes for cause
+**Import/Environment Patterns** → Configuration issues:
+- ModuleNotFoundError
+- Missing environment variables
+- Path resolution failures
 
-3. **Risk Assessment**:
-   - High risk: Core business logic, auth, payments
-   - Medium risk: UI, non-critical features
-   - Low risk: Tests, documentation, formatting
+**Assertion Patterns** → Logic bugs:
+- Unexpected values in tests
+- Changed API responses
+- Modified business logic
 
-### When Resolving Conflicts
+### Conflict Resolution Principles
 
-1. **Preservation Principle**:
-   - Never lose functionality
-   - Combine changes when possible
-   - Document resolution rationale
+**Preservation Priority**:
+1. Never lose functionality from either branch
+2. Combine features when possible
+3. Prefer bug fixes over new features
+4. Maintain security and stability
 
-2. **Priority Rules**:
-   - Security fixes > Feature additions
-   - Bug fixes > Refactoring
-   - User-facing > Internal changes
+**Risk Assessment**:
+- **Low Risk**: Comments, documentation, formatting
+- **Medium Risk**: Non-critical features, UI changes
+- **High Risk**: Authentication, payments, data handling
 
-3. **Communication**:
-   - Add comments explaining resolution
-   - Flag complex merges for review
-   - Document assumptions made
+### Communication and Documentation
 
-## Example Analysis
+For all fixes applied:
+1. Document the reasoning behind each resolution
+2. Add comments explaining complex merges
+3. Flag high-risk changes for human review
+4. Provide clear commit messages
 
-```json
-// Given comparison.json showing discrepancy:
-{
-  "github_ci": {"status": "FAILURE", "test_results": {"failed": 2}},
-  "local_ci": {"status": "SUCCESS", "test_results": {"failed": 0}},
-  "discrepancies": [{"type": "status_mismatch"}]
-}
+## Example Usage
 
-// Intelligence Applied:
-// - GitHub shows 2 failures that local doesn't
-// - Likely environment-specific (API keys, network)
-// - Check failed test names for "api" or "integration"
-// - If true, suggest environment configuration fix
-// - If false, investigate test isolation issues
+```bash
+# Basic analysis
+/fixpr 1234
+
+# With auto-apply for safe fixes
+/fixpr 1234 --auto-apply
 ```
+
+## Integration with Other Commands
+
+This command works seamlessly with:
+- `/copilot` - For comprehensive PR review
+- `/commentreply` - For responding to review comments
+- `/push` - For creating and updating PRs
+- `/test` - For running validation tests
 
 ## Error Recovery
 
-If analysis fails:
-1. Check all JSON files were created
-2. Verify fixpr.py completed successfully
-3. Fall back to manual analysis mode
-4. Report specific failure point
+If analysis encounters issues:
+1. Fall back to manual analysis prompts
+2. Use partial data collection if MCP tools fail
+3. Provide clear error messages with next steps
+4. Suggest alternative approaches
 
-## Integration with Orchestrator
+## Architecture Benefits
 
-This command is designed to work with `/copilot` orchestrator:
-- Receives PR number and optional context
-- Outputs actionable fixes
-- Can be called multiple times
-- Maintains state through JSON files
+**Pure Orchestration**: No custom Python scripts needed
+**Tool Integration**: Leverages existing GitHub MCP and CLI tools
+**Intelligence Focus**: Claude provides the analysis and decision-making
+**Maintainability**: Uses established patterns from other .md commands
+**Reliability**: Depends on proven tools rather than custom data collectors
 
-Remember: The goal is intelligent analysis that a mechanical Python script cannot provide. Use Claude's understanding of code, context, and intent to make smart decisions about fixes.
+Remember: This command focuses on intelligent analysis and safe automation. Complex conflicts and high-risk changes should always be flagged for human review.
