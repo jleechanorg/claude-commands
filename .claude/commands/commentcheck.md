@@ -2,24 +2,30 @@
 
 **Usage**: `/commentcheck [PR_NUMBER]`
 
-🚨 **CRITICAL PURPOSE**: Verify 100% **INDIVIDUAL COMMENT** coverage and response quality after comment reply process.
+🚨 **CRITICAL PURPOSE**: Verify 100% **UNRESPONDED COMMENT** coverage and response quality after comment reply process. Explicitly count and warn about any unresponded comments found.
+
+## Universal Composition Integration
+
+**Enhanced with /execute**: `/commentcheck` benefits from universal composition when called through `/execute`, which automatically provides intelligent optimization for large-scale comment verification while preserving systematic coverage analysis.
 
 ## 🎯 INDIVIDUAL COMMENT VERIFICATION MANDATE
 
-**MANDATORY**: This command MUST verify that EVERY single individual comment received a direct reply:
-- **Zero tolerance policy** - No individual comment may be left without a response
+**MANDATORY**: This command MUST explicitly count UNRESPONDED comments and provide clear warnings:
+- **Zero tolerance policy** - No unresponded comment may be left without a response
+- **Explicit counting** - Count and display total unresponded comments found
+- **Warning system** - Clear alerts when unresponded comments > 0
 - **Bot comment priority** - Copilot, CodeRabbit, GitHub Actions comments are REQUIRED responses
-- **Evidence requirement** - Must show specific comment ID → reply ID mapping
-- **Failure prevention** - Must catch cases like PR #864 (11 individual comments, 0 replies)
+- **Evidence requirement** - Must show specific comment ID → reply ID mapping for unresponded items
+- **Failure prevention** - Must catch cases like PR #864 (11 unresponded comments, 0 replies)
 - **Direct reply verification** - Code fixes alone are insufficient; direct replies must be posted
 
 ## Description
 
-Pure markdown command (no Python executable) that systematically verifies all PR comments have been properly addressed with appropriate responses. This command runs AFTER `/commentreply` to ensure nothing was missed.
+Pure markdown command (no Python executable) that systematically verifies all PR comments have been properly addressed with appropriate responses. Always fetches fresh data from GitHub API - no cache dependencies. This command runs AFTER `/commentreply` to ensure nothing was missed.
 
 ## What It Does
 
-1. **Loads comments data** from `/tmp/copilot_{branch}/comments_{branch}.json`
+1. **Fetches fresh comments data** directly from GitHub API
 2. **Fetches current PR comment responses** from GitHub API
 3. **Cross-references** original comments with posted responses
 4. **Verifies coverage** - ensures every comment has a corresponding response
@@ -32,17 +38,20 @@ Pure markdown command (no Python executable) that systematically verifies all PR
 🚨 **MANDATORY**: Systematically fetch every individual comment by type:
 
 ```bash
-# 1. Load original comment data from /commentfetch
-BRANCH=$(git branch --show-current)
-SANITIZED_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/_/g' | sed 's/^[.-]*//g')
-TOTAL_ORIGINAL=$(cat /tmp/copilot_${SANITIZED_BRANCH}/comments_${SANITIZED_BRANCH}.json | jq '.comments | length')
-echo "Original comments found: $TOTAL_ORIGINAL"
+# 1. Fetch fresh comment data directly from GitHub API
+PR_NUMBER=${1:-$(gh pr view --json number --jq .number)}
+OWNER=$(gh repo view --json owner --jq .owner.login)
+REPO=$(gh repo view --json name --jq .name)
 
-# 2. Fetch current individual pull request comments
+# Get fresh comment counts from GitHub
+TOTAL_ORIGINAL=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq length)
+echo "Fresh comments found: $TOTAL_ORIGINAL"
+
+# 2. Fetch current individual pull request comments (fresh)
 PULL_COMMENTS=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq length)
 echo "Current pull request comments: $PULL_COMMENTS"
 
-# 3. Fetch current issue comments
+# 3. Fetch current issue comments (fresh)
 ISSUE_COMMENTS=$(gh api "repos/$OWNER/$REPO/issues/$PR_NUMBER/comments" --paginate | jq length)
 echo "Current issue comments: $ISSUE_COMMENTS"
 
@@ -70,6 +79,33 @@ fi
 
 TOTAL_CURRENT=$((PULL_COMMENTS + ISSUE_COMMENTS + REVIEW_COMMENTS))
 echo "Total individual comments found: $TOTAL_CURRENT"
+
+# 🚨 CRITICAL: Count unresponded comments explicitly
+echo "=== UNRESPONDED COMMENTS ANALYSIS ==="
+UNRESPONDED_COMMENTS=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
+  jq '[.[] | select(.in_reply_to_id == null)] | length')
+echo "🔍 Original (unreplied) comments: $UNRESPONDED_COMMENTS"
+
+# Check if any original comment lacks replies
+ORPHANED_COUNT=0
+gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
+  jq -r '.[] | select(.in_reply_to_id == null) | .id' | \
+  while read -r original_id; do
+    REPLIES_TO_THIS=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
+      jq "[.[] | select(.in_reply_to_id == $original_id)] | length")
+    if [ "$REPLIES_TO_THIS" -eq 0 ]; then
+      ORPHANED_COUNT=$((ORPHANED_COUNT + 1))
+      echo "⚠️ UNRESPONDED: Comment #$original_id has NO replies"
+    fi
+  done
+
+echo "📊 UNRESPONDED COMMENT COUNT: $ORPHANED_COUNT"
+if [ "$ORPHANED_COUNT" -gt 0 ]; then
+  echo "🚨 WARNING: $ORPHANED_COUNT unresponded comments detected!"
+  echo "🚨 ACTION REQUIRED: All comments must receive responses"
+else
+  echo "✅ SUCCESS: All comments have been responded to"
+fi
 ```
 
 ### Step 2: Individual Comment Threading Verification (ENHANCED)
@@ -193,37 +229,39 @@ if [ "$GENERIC_COUNT" -gt 5 ] || [ "$CODERABBIT_RESPONSES" -gt 10 ] || [ "$COPIL
 fi
 ```
 
-## Individual Comment Coverage Report (MANDATORY FORMAT)
+## 🚨 UNRESPONDED COMMENT WARNING SYSTEM (MANDATORY FORMAT)
 
-🚨 **CRITICAL**: Report must show individual comment coverage with zero tolerance for missing replies:
+🚨 **CRITICAL**: Report must explicitly count unresponded comments and provide clear warnings:
 
 ```
-## 🎯 Individual Comment Coverage Analysis
+## 🚨 UNRESPONDED COMMENT WARNING REPORT
 
-### 📊 INDIVIDUAL COMMENT INVENTORY
-**Total Individual Comments**: 11
-- Copilot bot comments: 3
-- CodeRabbit bot comments: 8
-- Human reviewer comments: 0
-- GitHub Actions comments: 0
+### 📊 UNRESPONDED COMMENT COUNT
+🔍 **TOTAL UNRESPONDED COMMENTS**: 3
 
-### ✅ Individual Comments WITH Responses (TARGET: 100%)
-1. Comment #2223812756 (Copilot): "Function parameter docs inconsistent"
-   → Reply #XXXXX: "✅ DONE: Updated table to show all parameters consistently"
+⚠️ **WARNING LEVEL**: HIGH (>0 unresponded comments detected)
 
-2. Comment #2223812765 (Copilot): "Migration status column missing"
-   → Reply #XXXXX: "✅ DONE: Added Migration Status column with tracking"
+### 🚨 UNRESPONDED COMMENTS REQUIRING IMMEDIATE ATTENTION
+1. **Comment #2223812756** (Copilot): "Function parameter docs inconsistent"
+   - ❌ **STATUS**: NO RESPONSE POSTED
+   - 🚨 **ACTION REQUIRED**: Technical feedback must be addressed
 
-3. Comment #2223812783 (Copilot): "Port inconsistency 8081 vs 6006"
-   → Reply #XXXXX: "✅ DONE: Fixed all references to use port 6006"
+2. **Comment #2223812765** (Copilot): "Migration status column missing"
+   - ❌ **STATUS**: NO RESPONSE POSTED
+   - 🚨 **ACTION REQUIRED**: Feature suggestion needs acknowledgment
 
-[... continues for ALL individual comments ...]
+3. **Comment #2223812783** (CodeRabbit): "Port inconsistency 8081 vs 6006"
+   - ❌ **STATUS**: NO RESPONSE POSTED
+   - 🚨 **ACTION REQUIRED**: Configuration issue must be resolved
 
-### ❌ Individual Comments WITHOUT Responses (TARGET: 0)
-[THIS SECTION MUST BE EMPTY - Any entries here indicate FAILURE]
+### ✅ RESPONDED COMMENTS (FOR REFERENCE)
+[List of comments that have received responses]
 
-### ⚠️ Poor Quality Individual Responses (TARGET: 0)
-[List any generic/template responses that don't address specific technical content]
+### 🚨 CRITICAL WARNINGS
+- **UNRESPONDED COUNT**: 3 comments
+- **WARNING**: Comment processing incomplete
+- **REQUIRED ACTION**: Run `/commentreply` to address unresponded comments
+- **ZERO TOLERANCE**: All comments must receive responses before PR completion
 
 ### 🚨 FAILURE CASE REFERENCES
 
@@ -239,34 +277,39 @@ fi
 - Result: False claim of "100% coverage" when actual coverage was 0%
 - **Corrected**: Direct replies posted to achieve actual 100% coverage
 
-### 📈 Individual Comment Coverage Statistics
-- **Individual comments found: 11**
-- **Individual comments with responses: 11 (100%)**
-- **Missing individual responses: 0 (0%)**
-- **Bot comment coverage: 100% (11/11)**
-- **COVERAGE SCORE: 100% ✅**
+### 📈 UNRESPONDED COMMENT STATISTICS
+- **Total comments found: 11**
+- **Unresponded comments: 3 (27%)**
+- **Responded comments: 8 (73%)**
+- **Bot comment coverage: 67% (incomplete)**
+- **COVERAGE SCORE: 73% ❌ FAILED**
+- **🚨 CRITICAL**: 3 unresponded comments must be addressed immediately
 ```
 
 ## Individual Comment Success Criteria (ZERO TOLERANCE)
 
-🚨 **✅ PASS REQUIREMENTS**: 100% individual comment coverage with quality responses
-- **ALL individual comments have direct replies** (no exceptions for bots)
+🚨 **✅ PASS REQUIREMENTS**: ZERO unresponded comments with quality responses
+- **ZERO unresponded comments detected** (explicit count must be 0)
+- **Clear warning system shows no alerts** (unresponded count = 0)
 - **Every Copilot comment has a response** (technical feedback must be addressed)
 - **Every CodeRabbit comment has a response** (AI suggestions require acknowledgment)
 - **All responses address specific technical content** (not generic acknowledgments)
 - **Appropriate ✅ DONE/❌ NOT DONE status** (clear resolution indication)
 - **Professional and substantial replies** (meaningful engagement with feedback)
 
-🚨 **❌ FAIL CONDITIONS**: Any individual comment coverage gap
-- **ANY individual comment without response** (immediate failure)
+🚨 **❌ FAIL CONDITIONS**: ANY unresponded comments detected
+- **ANY unresponded comment count > 0** (immediate failure with clear warning)
+- **Warning system alerts triggered** (explicit alerts when unresponded comments found)
 - **Generic/template responses** ("Thanks!" or "Will consider" are insufficient)
 - **Bot comments ignored** (Copilot/CodeRabbit feedback requires responses)
 - **Responses don't address technical content** (must engage with specific suggestions)
 - **Unprofessional or inadequate replies** (maintain PR review standards)
 
-### 🎯 SPECIFIC FAIL TRIGGERS
-- **Zero individual responses** (like PR #864 - complete failure)
+### 🎯 SPECIFIC FAIL TRIGGERS (UNRESPONDED COMMENT FOCUS)
+- **Unresponded comment count > 0** (explicit count detection and warning)
+- **Zero individual responses** (like PR #864 - complete failure with 11 unresponded)
 - **Partial bot coverage** (some Copilot/CodeRabbit comments without replies)
+- **Warning system triggered** (any alerts about unresponded comments)
 - **Template responses only** (generic acknowledgments without substance)
 - **Ignored technical suggestions** (failing to address specific code feedback)
 
@@ -338,7 +381,7 @@ echo "All bot comments MUST have responses or this check FAILS"
 
 ## Error Handling
 
-- **No comments.json found**: Clear error with guidance to run `/commentfetch` first
+- **GitHub API failures**: Clear error with guidance to check authentication
 - **GitHub API failures**: Retry mechanism with exponential backoff
 - **Permission issues**: Clear explanation of authentication requirements
 - **Malformed data**: Skip problematic entries with warnings

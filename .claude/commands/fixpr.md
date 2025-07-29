@@ -4,9 +4,47 @@
 
 **Purpose**: Make GitHub PRs mergeable by analyzing and fixing CI failures, merge conflicts, and bot feedback - without merging.
 
+## 🚨 FUNDAMENTAL PRINCIPLE: GITHUB IS THE AUTHORITATIVE SOURCE
+
+**CRITICAL RULE**: GitHub PR status is the ONLY source of truth. Local conditions (tests, conflicts, etc.) may differ from GitHub's reality.
+
+**MANDATORY APPROACH**:
+- ✅ **ALWAYS start by fetching fresh GitHub PR status**
+- ✅ **ALWAYS display GitHub status inline for transparency**
+- ✅ **ALWAYS verify fixes against GitHub, not local assumptions**
+- ❌ **NEVER assume local tests/conflicts match what GitHub sees**
+- ❌ **NEVER fix local issues without confirming they block the GitHub PR**
+
+**WHY THIS MATTERS**: GitHub uses different CI environments, merge algorithms, and caching than local development. A PR may be mergeable locally but blocked on GitHub, or vice versa.
+
 ## Description
 
 The `/fixpr` command leverages Claude's natural language understanding to analyze PR blockers and fix them. The goal is to get the PR into a mergeable state (all checks passing, no conflicts) but **never actually merge it**. It orchestrates GitHub tools and git commands through intent-based descriptions rather than explicit syntax.
+
+## 🚀 Subagent Integration Enhancement
+
+**Enhanced Universal Composition**: `/fixpr` now supports intelligent subagent coordination for complex PR analysis while preserving its core universal composition architecture.
+
+### Subagent Decision Logic
+
+**Sequential Mode** (Default):
+- **Trigger**: Simple PRs with ≤10 issues or straightforward CI failures
+- **Behavior**: Standard universal composition approach with direct Claude analysis
+- **Benefits**: Fast execution, minimal overhead, reliable for common cases
+
+**Parallel Mode** (Enhanced):
+- **Trigger**: Complex PRs with >10 distinct issues, multiple conflict types, or extensive CI failures
+- **Behavior**: Spawn specialized analysis agents while Claude orchestrates integration
+- **Benefits**: Faster processing of complex scenarios, parallel issue resolution
+
+### Agent Types for PR Analysis
+
+1. **CI-Analysis-Agent**: Specializes in GitHub CI failure analysis and fix recommendations
+2. **Conflict-Resolution-Agent**: Focuses on merge conflict analysis and safe resolution strategies
+3. **Bot-Feedback-Agent**: Processes automated bot comments and implements applicable suggestions
+4. **Verification-Agent**: Validates fix effectiveness and re-checks mergeability status
+
+**Coordination Protocol**: Claude maintains overall workflow control, orchestrating agent results through natural language understanding integration.
 
 ## Workflow
 
@@ -23,35 +61,70 @@ Dynamically detect repository information from the git environment:
 - Default branch detection should have fallbacks for fresh clones
 - Always quote variables in bash to handle spaces safely
 
-### Step 2: Fetch Critical GitHub PR Data
+### Step 2: Fetch Critical GitHub PR Data - **GITHUB IS THE AUTHORITATIVE SOURCE**
 
-**MANDATORY**: Fetch these specific items from GitHub to understand what's blocking mergeability:
+🚨 **CRITICAL PRINCIPLE**: GitHub PR status is the ONLY authoritative source of truth. NEVER assume local conditions match GitHub reality.
 
-1. **CI State & Test Failures**:
-   - Get all CI check results from GitHub (passing/failing/pending)
-   - For any failing checks, fetch the specific error messages and logs
-   - Identify which tests are broken and their failure reasons
-   - Distinguish between required checks and optional ones
+**MANDATORY GITHUB FIRST APPROACH**:
+- ✅ **ALWAYS fetch fresh GitHub status** before any analysis or fixes
+- ✅ **NEVER assume local tests/conflicts match GitHub**
+- ✅ **ALWAYS print GitHub status inline** for full transparency
+- ❌ **NEVER fix local issues without confirming they exist on GitHub**
+- ❌ **NEVER trust cached or stale GitHub data**
 
-2. **Merge Conflicts**:
-   - Check GitHub's mergeable status (MERGEABLE/CONFLICTING/UNKNOWN)
-   - If conflicting, identify exactly which files have conflicts
-   - Fetch the conflict markers and understand what's clashing
-   - Determine if conflicts are with the base branch or other PRs
+**EXPLICIT GITHUB STATUS FETCHING** - Fetch these specific items from GitHub to understand what's blocking mergeability:
 
-3. **Bot Feedback & Review Comments**:
-   - Fetch all automated bot comments (Copilot, CodeRabbit, etc.)
-   - Get human reviewer comments and requested changes
-   - Identify which feedback is blocking vs suggestions
-   - Check if any reviews have "Request Changes" status
+1. **CI State & Test Failures** (GitHub Authoritative):
+   - **MANDATORY**: `gh pr view <PR> --json statusCheckRollup` - Get ALL CI check results
+   - **DISPLAY INLINE**: Print exact GitHub CI status: `❌ FAILING: test-unit (exit code 1)`
+   - **FETCH LOGS**: For failing checks, get specific error messages from GitHub
+   - **VERIFY AUTHORITY**: Cross-check GitHub vs local - local is NEVER authoritative
+   - **EXAMPLE OUTPUT**:
+     ```
+     🔍 GITHUB CI STATUS (Authoritative):
+     ❌ test-unit: FAILING (required) - TypeError: Cannot read property 'id' of undefined
+     ✅ test-lint: PASSING (required)
+     ⏳ test-integration: PENDING (required)
+     ```
 
-4. **PR Metadata**:
-   - Current PR state (open/closed/merged)
-   - Which branch it's targeting
-   - Protection rules that might block merging
-   - Any failing status checks beyond CI
+2. **Merge Conflicts** (GitHub Authoritative):
+   - **MANDATORY**: `gh pr view <PR> --json mergeable,mergeableState` - Get GitHub merge status
+   - **DISPLAY INLINE**: Print exact GitHub merge state: `❌ CONFLICTING: 3 files have conflicts`
+   - **FETCH DETAILS**: `gh pr diff <PR>` - Get actual conflict content from GitHub
+   - **NEVER ASSUME LOCAL**: Local git status may not match GitHub's merge analysis
+   - **EXAMPLE OUTPUT**:
+     ```
+     🔍 GITHUB MERGE STATUS (Authoritative):
+     ❌ mergeable: false
+     ❌ mergeableState: CONFLICTING
+     📄 Conflicting files: src/main.py, tests/test_main.py, README.md
+     ```
 
-The goal is to gather everything that GitHub shows as preventing the green "Merge" button from being available.
+3. **Bot Feedback & Review Comments** (GitHub Authoritative):
+   - **MANDATORY**: `gh pr view <PR> --json reviews,comments` - Get ALL review data from GitHub
+   - **DISPLAY INLINE**: Print blocking reviews: `❌ CHANGES_REQUESTED by @reviewer`
+   - **FETCH COMMENTS**: Get all bot and human feedback directly from GitHub API
+   - **EXAMPLE OUTPUT**:
+     ```
+     🔍 GITHUB REVIEW STATUS (Authoritative):
+     ❌ @coderabbit: CHANGES_REQUESTED - Fix security vulnerability in auth.py
+     ✅ @teammate: APPROVED
+     ⏳ @senior-dev: REVIEW_REQUESTED
+     ```
+
+4. **PR Metadata & Protection Rules** (GitHub Authoritative):
+   - **MANDATORY**: `gh pr view <PR> --json state,mergeable,requiredStatusChecks` - Get current GitHub PR state
+   - **DISPLAY INLINE**: Print exact GitHub merge button status and blocking factors
+   - **FETCH PROTECTION**: Get branch protection rules that may prevent merging
+   - **EXAMPLE OUTPUT**:
+     ```
+     🔍 GITHUB PR METADATA (Authoritative):
+     📄 State: OPEN | Mergeable: false
+     🛡️ Required checks: [test-unit, test-lint, security-scan]
+     🚫 Blocking factors: 1 failing check, 1 requested change
+     ```
+
+🎯 **THE GOAL**: Gather everything that GitHub shows as preventing the green "Merge" button from being available - NEVER assume, ALWAYS verify with fresh GitHub data.
 
 ### Step 3: Analyze Issues with Intelligence
 
@@ -91,12 +164,30 @@ Based on the analysis, apply appropriate fixes:
 - Implement suggested error handling improvements
 - Add missing documentation or type hints
 
-### Step 5: Verify Mergeability Status
+### Step 5: Verify Mergeability Status - **MANDATORY GITHUB RE-VERIFICATION**
 
-After applying fixes, verify progress toward mergeability:
+🚨 **CRITICAL**: After applying fixes, ALWAYS re-fetch fresh GitHub status. NEVER assume fixes worked without GitHub confirmation.
 
-1. **Re-fetch GitHub Status**:
-   - Check if CI checks are now passing
+**MANDATORY GITHUB RE-VERIFICATION PROTOCOL**:
+
+1. **Re-fetch Fresh GitHub Status** (Wait for CI to complete):
+   - **WAIT**: Allow 30-60 seconds for GitHub CI to register changes after push
+   - **RE-FETCH**: `gh pr view <PR> --json statusCheckRollup,mergeable,mergeableState`
+   - **DISPLAY**: Print updated GitHub status inline with before/after comparison
+   - **EXAMPLE**:
+     ```text
+     🔄 GITHUB STATUS VERIFICATION (After Fixes):
+
+     BEFORE:
+     ❌ test-unit: FAILING - TypeError in auth.py
+     ❌ mergeable: false
+
+     AFTER (Fresh from GitHub):
+     ✅ test-unit: PASSING - All tests pass
+     ✅ mergeable: true
+
+     📊 RESULT: PR is now mergeable on GitHub
+     ```
    - Verify mergeable status changed from CONFLICTING to MERGEABLE
    - Confirm no new test failures were introduced
    - Ensure bot feedback has been addressed

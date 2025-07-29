@@ -34,11 +34,7 @@ class CopilotCommandBase(ABC):
         self.repo = self._get_repo_info()
         self.current_branch = self._get_current_branch()
 
-        # Branch-specific directory for I/O files to prevent conflicts between branches
-        self.IO_DIR = Path(f"/tmp/copilot_{self.current_branch}")
-
-        # Ensure I/O directory exists
-        self.IO_DIR.mkdir(exist_ok=True)
+        # No caching - always fetch fresh data from GitHub API
 
     def _get_repo_info(self) -> str:
         """Get repository info from GitHub CLI or git remote."""
@@ -110,45 +106,7 @@ class CopilotCommandBase(ABC):
             self.log_error(f"JSON parsing error: {e}")
             return {}
 
-    def load_json_file(self, filename: str) -> Dict[str, Any]:
-        """Load JSON from standard I/O directory.
-
-        Args:
-            filename: Name of file to load
-
-        Returns:
-            Parsed JSON data or empty dict if not found
-        """
-        filepath = self.IO_DIR / filename
-        if not filepath.exists():
-            self.log_error(f"File not found: {filepath}")
-            return {}
-
-        try:
-            with open(filepath, 'r') as f:
-                return json.load(f)
-        except json.JSONDecodeError as e:
-            self.log_error(f"JSON decode error in {filename}: {e}")
-            return {}
-
-    def save_json_file(self, filename: str, data: Dict[str, Any]) -> bool:
-        """Save JSON to standard I/O directory.
-
-        Args:
-            filename: Name of file to save
-            data: Data to save as JSON
-
-        Returns:
-            True if successful, False otherwise
-        """
-        filepath = self.IO_DIR / filename
-        try:
-            with open(filepath, 'w') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-            return True
-        except Exception as e:
-            self.log_error(f"Failed to save {filename}: {e}")
-            return False
+    # JSON file operations removed - using stateless approach
 
     def log(self, message: str):
         """Log informational message with timestamp in CI environments."""
@@ -193,9 +151,7 @@ class CopilotCommandBase(ABC):
             result = self.execute()
             result['execution_time'] = self.get_execution_time()
 
-            # Save result to branch-specific output file
-            output_file = f"{self.__class__.__name__.lower()}_result_{self.current_branch}.json"
-            self.save_json_file(output_file, result)
+            # No file saving - stateless operation
 
             # Print summary
             if result.get('success'):
@@ -212,7 +168,7 @@ class CopilotCommandBase(ABC):
                 'message': str(e),
                 'execution_time': self.get_execution_time()
             }
-            self.save_json_file(f"{self.__class__.__name__.lower()}_error_{self.current_branch}.json", error_result)
+            # No file saving - error logged to stderr
             return 1
 
     def run_ci_replica(self, script_path: str = "run_ci_replica.sh") -> Dict[str, Any]:

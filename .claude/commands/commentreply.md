@@ -146,7 +146,7 @@ Before posting ANY response, verify:
 5. ✅ **Technical Substance**: "Does my response show technical understanding, not generic acknowledgment?"
 
 **AUTONOMOUS WORKFLOW**:
-1. **Load comment data**: Read comment.body from comments.json/API directly
+1. **Load comment data**: Read comment.body from GitHub API directly
 2. **Genuine analysis**: Address SPECIFIC technical points raised in each comment
 3. **Self-validate**: Apply 5-point validation protocol above
 4. **Status determination**: Mark as DONE or NOT DONE with technical substance

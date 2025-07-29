@@ -1,7 +1,11 @@
 #!/bin/bash
-# /copilot command - intelligent PR analysis and orchestration
-# Invokes copilot.md for Claude to execute universal composition
+# /copilot Command - Universal Composition with Execute
+#
+# This minimal script serves as the entry point for the copilot command.
+# The actual workflow is defined in copilot.md and executed via /execute
+# for intelligent optimization and subagent orchestration.
 
 echo "🤖 /copilot - Analyzing PR and orchestrating intelligent responses..."
-echo "Claude will read copilot.md for universal composition workflow"
-echo "Transparency first - all actions will be shown before execution"
+echo "📖 Claude will read copilot.md for universal composition workflow"
+echo "🚀 Delegating to /execute for intelligent workflow optimization..."
+echo "✨ Transparency first - all actions will be shown before execution"

@@ -1,8 +1,10 @@
-# Fake3 Command - Automated Iterative Fake Code Detection and Fixing
+# Fake3 Command - Branch-Focused Iterative Fake Code Detection and Fixing
 
-**Purpose**: Automate 3 iterations of fake code detection and fixing with comprehensive tracking, testing, and learning capture
+**Purpose**: Automate 3 iterations of fake code detection and fixing for all files modified in the current branch with comprehensive tracking, testing, and learning capture
 
-**Usage**: `/fake3` - Runs 3 iterations of fake detection, fixing, testing, and progress tracking
+**Usage**: `/fake3` - Runs 3 iterations of fake detection, fixing, testing, and progress tracking **on all branch-modified files**
+
+**Scope**: This command analyzes all files modified in the current branch (including dynamically created files), not just original PR changes
 
 **Type**: Pure LLM-orchestrated command (leverages a Large Language Model to coordinate tasks without external dependencies, no Python dependencies)
 
@@ -21,15 +23,17 @@ The `/fake3` command orchestrates a complete fake code remediation workflow:
 ### Phase 1: Setup and Initialization
 - Create or update iteration tracking scratchpad
 - Initialize Memory MCP context for fake patterns
-- Check current branch status
-- Prepare fix tracking data structure
+- **Get all branch changes**: `git diff --name-only origin/main...HEAD` and `git ls-files --others --exclude-standard` (for untracked files)
+- Check current branch status and PR context
+- Prepare fix tracking data structure for all branch-modified files
 
 ### Phase 2: Iterative Detection and Fixing (3 iterations max)
 For each iteration:
-1. **Run Fake Detection** (`/fake`)
-   - Execute comprehensive fake code audit
-   - Parse results to identify issues
+1. **Run Fake Detection** (`/fake` on all branch files)
+   - Execute fake code audit on all branch-modified files (tracked + untracked)
+   - Parse results to identify issues across entire branch changes
    - Categorize by severity (🔴 Critical, 🟡 Suspicious, ✅ Verified)
+   - Include dynamically created files from command execution
 
 2. **Apply Fixes**
    - Remove fake files marked for deletion

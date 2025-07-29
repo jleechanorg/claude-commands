@@ -111,7 +111,7 @@ The copilot system follows a **clean architecture** where only /commentfetch use
 
 1. **`/commentfetch`** - Fetch all PR comments ✅
    - Pure Python: Collects comments from all sources
-   - Output: `/tmp/copilot_${SANITIZED_BRANCH}/comments_${SANITIZED_BRANCH}.json`
+   - Output: Returns fresh data directly (no caching)
    - The ONLY command that needs Python (pure data collection)
 
 2. **`/fixpr`** - Analyze CI failures and conflicts ✅
@@ -149,7 +149,7 @@ The clean approach:
 Clean data flow:
 ```
 PHASE 1: DATA COLLECTION (Only /commentfetch uses Python)
-commentfetch.py → comments.json
+commentfetch.py → fresh comment data
 fixpr.py → fixes.json, comparison.json, conflicts.json
         ↓
 PHASE 2: INTELLIGENT ANALYSIS (Claude + .md)

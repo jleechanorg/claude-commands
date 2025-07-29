@@ -93,6 +93,15 @@
 - ✅ ALWAYS wait for actual command output and results
 - **Pattern**: User says "X is running..." → Wait for actual results, don't speculate
 
+🚨 **SOLO DEVELOPER CONTEXT**: Never give enterprise advice to solo developers
+   - ✅ **Solo Approach**: "Test it on real PRs" vs complex validation frameworks
+   - ✅ **Practical Testing**: Direct usage validation vs enterprise testing infrastructure
+   - ✅ **Simple Solutions**: Focus on "does it work?" rather than distributed systems thinking
+   - ❌ **NEVER suggest**: Complex testing frameworks, enterprise validation, or infrastructure
+   - ❌ **NEVER apply**: Enterprise patterns to solo development workflows
+   - **User Context**: Solo developer needs practical, simple approaches that work immediately
+   - **Evidence**: User feedback "i am a solo developer and not enterprise. stop giving me enterprise advice"
+
 🚨 **NO FAKE IMPLEMENTATIONS**: ⚠️ MANDATORY
 - ❌ NEVER create files with "# Note: In the real implementation" comments
 - ❌ NEVER write placeholder code that doesn't actually work
