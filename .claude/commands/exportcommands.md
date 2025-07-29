@@ -21,7 +21,23 @@
 - Transform project-specific paths to generic placeholders
 - Set up warning header templates for exported files
 
-### Phase 2: Content Export & Transformation
+### Phase 2: Repository Cleanup & Content Export
+
+**🚨 MANDATORY CLEANUP PHASE**: Remove obsolete files that no longer exist in source repository
+```bash
+# Clone fresh repository from main
+export REPO_DIR="/tmp/claude_commands_repo_fresh"
+gh repo clone jleechanorg/claude-commands "$REPO_DIR"
+cd "$REPO_DIR" && git checkout main
+
+# Create export branch from clean main
+export NEW_BRANCH="export-fresh-$(date +%Y%m%d-%H%M%S)"
+git checkout -b "$NEW_BRANCH"
+
+# CRITICAL: Clear existing directories for fresh export
+rm -rf commands/* orchestration/* scripts/* || true
+echo "Cleared existing export directories for fresh sync"
+```
 
 **Pre-Export File Filtering**:
 ```bash
@@ -79,16 +95,16 @@ for file in .claude/commands/*.md .claude/commands/*.py; do
             continue
             ;;
     esac
-    
+
     # Copy and filter content
     cp "$file" "staging/commands/$(basename "$file")"
-    
+
     # Apply content transformations
     sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/commands/$(basename "$file")"
     sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/commands/$(basename "$file")"
     sed -i "s|jleechan|${USER}|g" "staging/commands/$(basename "$file")"
     sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/commands/$(basename "$file")"
-    
+
     # Add project-specific warning to commands with mvp_site references
     if grep -q "PROJECT_ROOT" "staging/commands/$(basename "$file")"; then
         sed -i '1i\# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment\n' "staging/commands/$(basename "$file")"
@@ -106,7 +122,7 @@ done
 for script in claude_command_scripts/*.sh claude_command_scripts/*.py; do
     if [[ -f "$script" ]]; then
         script_name=$(basename "$script")
-        
+
         # Skip project-specific scripts
         case "$script_name" in
             "run_tests.sh"|"testi.sh"|"*integration*")
@@ -114,16 +130,16 @@ for script in claude_command_scripts/*.sh claude_command_scripts/*.py; do
                 continue
                 ;;
         esac
-        
+
         # Copy and transform
         cp "$script" "staging/scripts/$script_name"
-        
+
         # Apply transformations
         sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/scripts/$script_name"
         sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/scripts/$script_name"
         sed -i 's|/home/jleechan/projects/worldarchitect.ai|$WORKSPACE_ROOT|g' "staging/scripts/$script_name"
         sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/scripts/$script_name"
-        
+
         # Add dependency header
         sed -i '1i\#!/bin/bash\n# ⚠️ REQUIRES PROJECT ADAPTATION\n# This script contains project-specific paths and may need modification\n' "staging/scripts/$script_name"
     fi
@@ -175,26 +191,26 @@ done
 
 **Repository Management**:
 ```bash
-# Clone or update target repository
-gh repo clone jleechanorg/claude-commands /tmp/claude_commands_repo
-cd /tmp/claude_commands_repo
+# Repository cleanup and fresh export already completed in Phase 2
+cd "$REPO_DIR"
 
-# Create export branch
-export_branch="export-$(date +%Y%m%d-%H%M%S)"
-git checkout -b "$export_branch"
-
-# Copy exported content
+# Copy exported content from staging
 cp -r /tmp/claude_commands_export_*/. .
 
-# Commit changes
+# Commit changes with cleanup notation
 git add .
-git commit -m "Export Claude commands and configurations
+git commit -m "Fresh export: Remove obsolete files, add current command system
 
-- CLAUDE.md with reference warnings
-- All command definitions with categorization  
-- Scripts with dependency documentation
-- Orchestration system with setup guides
-- Comprehensive README and documentation
+🚨 CLEANUP APPLIED:
+- Removed obsolete files that no longer exist in source repository
+- Cleared existing directories for fresh sync from main branch
+- Eliminated incorrect claude/ directory structure
+
+✅ CURRENT EXPORT:
+- $(ls commands/ | wc -l) command definitions with proper filtering
+- Complete orchestration system ($(ls orchestration/ | wc -l) files)
+- Content filtering: mvp_site → \$PROJECT_ROOT, worldarchitect.ai → your-project.com
+- Reference warnings added to all exported content
 
 ⚠️ Reference export - requires adaptation for other projects"
 
