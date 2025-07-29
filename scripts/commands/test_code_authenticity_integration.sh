@@ -1,4 +1,8 @@
 #!/bin/bash
+# ⚠️ REQUIRES PROJECT ADAPTATION
+# This script contains project-specific paths and may need modification
+
+#!/bin/bash
 # Integration test for code authenticity detection
 # Tests the script in a real-world scenario
 

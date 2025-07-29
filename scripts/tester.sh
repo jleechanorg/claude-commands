@@ -1,4 +1,8 @@
 #!/bin/bash
+# ⚠️ REQUIRES PROJECT ADAPTATION
+# This script contains project-specific paths and may need modification
+
+#!/bin/bash
 # /tester - Run End2End Tests (Real Mode)
 # Runs end2end tests using actual services (Firestore, Gemini)
 

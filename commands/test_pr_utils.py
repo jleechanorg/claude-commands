@@ -17,7 +17,7 @@ class TestPRUtils(unittest.TestCase):
         """Test parsing scratchpad content"""
         content = """# Implementation: Test Feature
 
-**Goal**: Add test functionality  
+**Goal**: Add test functionality
 **Status**: In Progress
 
 ## Summary

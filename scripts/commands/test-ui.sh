@@ -1,4 +1,8 @@
 #!/bin/bash
+# ⚠️ REQUIRES PROJECT ADAPTATION
+# This script contains project-specific paths and may need modification
+
+#!/bin/bash
 # test-ui.sh - Run browser tests with mock APIs
 # Replaces unreliable /testui command behavior
 
@@ -73,48 +77,48 @@ echo -e "${BLUE}🌐 Browser Test Runner (Mock APIs)${NC}"
 echo "=================================="
 
 # 1. Check if we're in project root
-if [[ ! -f "mvp_site/main.py" ]]; then
+if [[ ! -f "$PROJECT_ROOT/main.py" ]]; then
     echo -e "${RED}❌ Error: Not in project root directory${NC}"
-    echo "Please run from the WorldArchitect.AI project root"
+    echo "Please run from the Your Project project root"
     exit 1
 fi
 
 # 2. Use the existing run_ui_tests.sh if available
 if [[ -f "./run_ui_tests.sh" ]]; then
     echo -e "${GREEN}✓ Found run_ui_tests.sh - using existing test runner${NC}"
-    
+
     # Build command
     cmd="./run_ui_tests.sh mock"
-    
+
     if [[ -n "$SPECIFIC_TEST" ]]; then
         # For specific test, we'll need to run manually
         echo -e "${YELLOW}⚠️  Specific test requested - running manually${NC}"
-        
+
         # Source shared port utilities
         source "$(dirname "$0")/../port-utils.sh"
-        
+
         TEST_PORT=$(find_available_port)
         if [[ $? -ne 0 ]]; then
             echo -e "${RED}❌ No available ports in range $BASE_PORT-$((BASE_PORT + MAX_PORTS - 1))${NC}"
             exit 1
         fi
-        
+
         # Start test server
         echo -e "\n${GREEN}🚀 Starting test server on port $TEST_PORT...${NC}"
-        TESTING=true PORT=$TEST_PORT vpython mvp_site/main.py serve &
+        TESTING=true PORT=$TEST_PORT vpython $PROJECT_ROOT/main.py serve &
         SERVER_PID=$!
         sleep 3
-        
+
         # Run specific test
         echo -e "\n${GREEN}🧪 Running test: $SPECIFIC_TEST${NC}"
-        if TESTING=true vpython "testing_ui/$SPECIFIC_TEST"; then
+        if TESTING=true python "testing_ui/$SPECIFIC_TEST"; then
             echo -e "${GREEN}✅ Test passed!${NC}"
             EXIT_CODE=0
         else
             echo -e "${RED}❌ Test failed!${NC}"
             EXIT_CODE=1
         fi
-        
+
         # Cleanup
         kill $SERVER_PID 2>/dev/null || true
         exit $EXIT_CODE
@@ -124,7 +128,7 @@ if [[ -f "./run_ui_tests.sh" ]]; then
     fi
 else
     echo -e "${YELLOW}⚠️  run_ui_tests.sh not found - running manually${NC}"
-    
+
     # Manual test execution
     # 3. Verify Playwright installation
     echo -e "\n${GREEN}🔍 Checking Playwright installation...${NC}"
@@ -134,23 +138,23 @@ else
         exit 1
     fi
     echo "✓ Playwright is installed"
-    
+
     # 4. Start test server with smart port detection
     source "$(dirname "$0")/../port-utils.sh"
-    
+
     TEST_PORT=$(find_available_port)
     if [[ $? -ne 0 ]]; then
         echo -e "${RED}❌ No available ports in range $BASE_PORT-$((BASE_PORT + MAX_PORTS - 1))${NC}"
         exit 1
     fi
-    
+
     echo -e "\n${GREEN}🚀 Starting test server on port $TEST_PORT...${NC}"
-    TESTING=true PORT=$TEST_PORT vpython mvp_site/main.py serve &
+    TESTING=true PORT=$TEST_PORT vpython $PROJECT_ROOT/main.py serve &
     SERVER_PID=$!
-    
+
     # Wait for server to start
     sleep 3
-    
+
     # Verify server is running
     if ! curl -s http://localhost:8081 > /dev/null; then
         echo -e "${RED}❌ Test server failed to start!${NC}"
@@ -158,10 +162,10 @@ else
         exit 1
     fi
     echo "✓ Test server running on http://localhost:8081"
-    
+
     # 5. Run tests
     echo -e "\n${GREEN}🧪 Running browser tests...${NC}"
-    
+
     # Determine which tests to run
     if [[ -n "$SPECIFIC_TEST" ]]; then
         test_files="testing_ui/$SPECIFIC_TEST"
@@ -169,24 +173,24 @@ else
         # Find all test files
         test_files=$(find testing_ui -name "test_*.py" -type f 2>/dev/null | sort)
     fi
-    
+
     if [[ -z "$test_files" ]]; then
         echo -e "${YELLOW}⚠️  No test files found in testing_ui/${NC}"
         kill $SERVER_PID 2>/dev/null || true
         exit 0
     fi
-    
+
     # Run each test
     TOTAL_TESTS=0
     PASSED_TESTS=0
     FAILED_TESTS=0
-    
+
     for test_file in $test_files; do
         echo -e "\n${BLUE}Running: $test_file${NC}"
         TOTAL_TESTS=$((TOTAL_TESTS + 1))
-        
+
         if [[ "$VERBOSE" == "true" ]]; then
-            if TESTING=true vpython "$test_file"; then
+            if TESTING=true python "$test_file"; then
                 PASSED_TESTS=$((PASSED_TESTS + 1))
                 echo -e "${GREEN}✅ PASSED${NC}"
             else
@@ -194,7 +198,7 @@ else
                 echo -e "${RED}❌ FAILED${NC}"
             fi
         else
-            if TESTING=true vpython "$test_file" > /tmp/test_output.log 2>&1; then
+            if TESTING=true python "$test_file" > /tmp/test_output.log 2>&1; then
                 PASSED_TESTS=$((PASSED_TESTS + 1))
                 echo -e "${GREEN}✅ PASSED${NC}"
             else
@@ -205,18 +209,18 @@ else
             fi
         fi
     done
-    
+
     # 6. Cleanup
     echo -e "\n${GREEN}🧹 Cleaning up...${NC}"
     kill $SERVER_PID 2>/dev/null || true
-    
+
     # 7. Summary
     echo -e "\n${BLUE}📊 Test Summary${NC}"
     echo "==============="
     echo "Total tests: $TOTAL_TESTS"
     echo -e "Passed: ${GREEN}$PASSED_TESTS${NC}"
     echo -e "Failed: ${RED}$FAILED_TESTS${NC}"
-    
+
     if [[ $FAILED_TESTS -eq 0 ]]; then
         echo -e "\n${GREEN}✅ All tests passed! 🎉${NC}"
         exit 0

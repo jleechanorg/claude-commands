@@ -1,16 +1,16 @@
 # /commentfetch Command
 
-**Usage**: `/commentfetch <PR_NUMBER> [--output FILE]`
+**Usage**: `/commentfetch <PR_NUMBER>`
 
-**Purpose**: Fetch all comments from a GitHub PR including inline code reviews, general comments, review comments, and Copilot suggestions.
+**Purpose**: Fetch UNRESPONDED comments from a GitHub PR including inline code reviews, general comments, review comments, and Copilot suggestions. Always fetches fresh data from GitHub API - no caching.
 
 ## Description
 
-Pure Python implementation that collects comments from all GitHub PR sources. This is a mechanical data collection command with no intelligence - it simply fetches and standardizes comment data.
+Pure Python implementation that collects UNRESPONDED comments from all GitHub PR sources. Uses GitHub API `in_reply_to_id` field analysis to filter out already-replied comments. Always fetches fresh data on each execution - no caching or temp files. Returns structured comment data for immediate downstream processing.
 
 ## Output Format
 
-Creates a JSON file at `/tmp/copilot_${SANITIZED_BRANCH}/comments_${SANITIZED_BRANCH}.json` (or specified output) with:
+Returns structured JSON data directly (no file creation) with:
 
 ```json
 {
@@ -25,6 +25,7 @@ Creates a JSON file at `/tmp/copilot_${SANITIZED_BRANCH}/comments_${SANITIZED_BR
       "created_at": "2025-01-21T11:00:00Z",
       "file": "path/to/file.py",  // for inline comments
       "line": 42,                  // for inline comments
+      "already_replied": false,
       "requires_response": true
     }
   ],
@@ -36,7 +37,7 @@ Creates a JSON file at `/tmp/copilot_${SANITIZED_BRANCH}/comments_${SANITIZED_BR
       "review": 2,
       "copilot": 6
     },
-    "needs_response": 8,
+    "unresponded_count": 8,
     "repo": "owner/repo"
   }
 }
@@ -49,29 +50,39 @@ Creates a JSON file at `/tmp/copilot_${SANITIZED_BRANCH}/comments_${SANITIZED_BR
 - **review**: Review summary comments
 - **copilot**: GitHub Copilot suggestions (including suppressed)
 
-## Response Detection
+## Unresponded Comment Filtering
 
-The command automatically determines if comments need responses based on:
-- Question marks in the comment
-- Keywords like "please", "could you", "fix", "issue"
+🚨 **CRITICAL EFFICIENCY ENHANCEMENT**: The command automatically identifies and filters unresponded comments:
+
+### 1. Already-Replied Detection (PRIMARY FILTER)
+- **Method**: Analyze GitHub API `in_reply_to_id` field to identify threaded responses
+- **Logic**: If comment #12345 has any replies with `in_reply_to_id: 12345`, mark as ALREADY_REPLIED
+- **Efficiency**: Skip already-replied comments from downstream processing entirely
+
+### 2. Response Requirement Analysis (SECONDARY FILTER)
+For comments that are NOT already replied, determine if they need responses based on:
+- Question marks in the comment text
+- Keywords like "please", "could you", "fix", "issue", "suggestion"
 - Review states (CHANGES_REQUESTED, COMMENTED)
-- Bot comments are usually skipped unless they contain questions
+- Bot comments (Copilot, CodeRabbit) - ALWAYS require responses
+- Human reviewer feedback - ALWAYS require responses
+
+### 3. Output Optimization
+- **JSON field**: `"already_replied": false` (only unresponded comments included)
+- **Metadata**: `"unresponded_count": X` for quick verification
+- **Fresh Data**: Always fetches current GitHub state, no stale cache issues
+- **Efficiency**: Downstream commands process only comments needing responses
 
 ## Examples
 
 ```bash
-# Fetch all comments for PR 820
+# Fetch all fresh comments for PR 820
 /commentfetch 820
 
-# Fetch with custom output file
-/commentfetch 820 --output pr820_comments.json
-
-# Check results (using PR #941 standard)
-BRANCH=$(git branch --show-current)
-SANITIZED_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/_/g' | sed 's/^[.-]*//g')
-cat /tmp/copilot_${SANITIZED_BRANCH}/comments_${SANITIZED_BRANCH}.json | jq '.metadata'
+# Returns JSON data directly - no file output
+# Downstream commands receive fresh comment data immediately
 ```
 
 ## Integration
 
-This command is typically the first step in the `/copilot` workflow, providing comment data to other commands like `/fixpr` and `/commentreply`.
+This command is typically the first step in the `/copilot` workflow, providing fresh comment data directly to other commands like `/fixpr` and `/commentreply`. No caching means always current data.

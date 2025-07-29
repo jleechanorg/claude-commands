@@ -1,3 +1,5 @@
+# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
+
 # HTTP Tests (FULL) Command
 
 **Purpose**: Run HTTP request tests with REAL APIs (costs money!)

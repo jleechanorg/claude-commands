@@ -1,3 +1,5 @@
+# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
+
 #!/usr/bin/env python3
 """
 Enhanced /push command implementation

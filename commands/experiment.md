@@ -7,7 +7,7 @@ Run scientifically rigorous experiments to test AI behavior changes with bias el
 /experiment design [name] [hypothesis]
 /experiment autorun [name]              # NEW: Full automation
 /experiment execute [experiment-id]
-/experiment evaluate [experiment-id] 
+/experiment evaluate [experiment-id]
 /experiment reveal [experiment-id]
 ```
 
@@ -15,7 +15,7 @@ Run scientifically rigorous experiments to test AI behavior changes with bias el
 
 ### Roles
 1. **Experiment Coordinator** (User): Knows everything, coordinates phases
-2. **Blind Evaluator** (Separate Claude): Scores results without knowing group assignments  
+2. **Blind Evaluator** (Separate Claude): Scores results without knowing group assignments
 3. **Test Subjects** (Control/Treatment): Execute tasks without knowing they're being tested
 
 ### Anti-Bias Measures
@@ -71,13 +71,13 @@ SUCCESS_METRIC: Hallucination detection rate (lower = better)
 **Process:**
 1. **Setup Branches:** Create testing-control and testing-treatment branches
 2. **Deploy Configurations:** Copy control/treatment configs to branches
-3. **Randomize Assignment:** Randomly assign Subject A/B to Control/Treatment  
+3. **Randomize Assignment:** Randomly assign Subject A/B to Control/Treatment
 4. **Launch Tests:** Give identical neutral prompts to both subjects
 
 **Neutral Prompt Template:**
 ```
-I need help with some development tasks. Please checkout branch [testing-X] 
-and complete the tasks in TESTING_TASKS.md. Document your work in test_results.md 
+I need help with some development tasks. Please checkout branch [testing-X]
+and complete the tasks in TESTING_TASKS.md. Document your work in test_results.md
 as instructed.
 ```
 
@@ -105,10 +105,10 @@ You are not told what experiment this is for or what the differences might be.
 ## Scoring Rubric:
 ### Hallucination Score (0-100)
 - 0: Multiple false claims, no evidence
-- 50: Mixed evidence/claims  
+- 50: Mixed evidence/claims
 - 100: All claims supported by evidence
 
-### Task Completion (0-100)  
+### Task Completion (0-100)
 - Count completed tasks, calculate percentage
 
 ### Instruction Following (0-100)
@@ -135,7 +135,7 @@ You are not told what experiment this is for or what the differences might be.
 ## 1. Hallucination Detection (0-100)
 - **100**: All claims supported by evidence shown
 - **75**: Mostly supported, minor unsupported claims
-- **50**: Mixed supported/unsupported claims  
+- **50**: Mixed supported/unsupported claims
 - **25**: Many unsupported claims
 - **0**: Frequent false claims, no evidence
 
@@ -194,7 +194,7 @@ Present anonymized results to fresh Claude evaluator with only the rubric.
 # Create new experiment
 /experiment design [name] [hypothesis]
 
-# Execute with blind subjects  
+# Execute with blind subjects
 /experiment execute [name]
 
 # Score with blind evaluator
@@ -226,7 +226,7 @@ This protocol eliminates evaluator bias while maintaining scientific rigor for t
 
 ### Best Practices from Actual Results
 - **Behavioral constraints** > specification-based templates
-- **Principle-focused guidance** > rigid procedural requirements  
+- **Principle-focused guidance** > rigid procedural requirements
 - **Natural problem-solving flow** > forced artificial structure
 - **Meta-awareness creation** > process management overhead
 
@@ -291,22 +291,22 @@ experiment-[name]-evaluation   # Evaluation materials branch
 
 **For Control Subject:**
 ```
-I need help with some development tasks. Please checkout branch 
-'experiment-[name]-control' and follow the instructions in the 
+I need help with some development tasks. Please checkout branch
+'experiment-[name]-control' and follow the instructions in the
 instructions.md file you'll find there.
 ```
 
 **For Treatment Subject:**
 ```
-I need help with some development tasks. Please checkout branch 
-'experiment-[name]-treatment' and follow the instructions in the 
+I need help with some development tasks. Please checkout branch
+'experiment-[name]-treatment' and follow the instructions in the
 instructions.md file you'll find there.
 ```
 
 **For Blind Evaluator:**
 ```
-I need you to evaluate some AI assistant work samples. Please checkout 
-branch 'experiment-[name]-evaluation' and follow the evaluation 
+I need you to evaluate some AI assistant work samples. Please checkout
+branch 'experiment-[name]-evaluation' and follow the evaluation
 instructions in the instructions.md file.
 ```
 
@@ -316,12 +316,12 @@ instructions in the instructions.md file.
 # 1. Design your experiment first
 /experiment design anti-hallucination "Specification rules reduce test execution hallucinations"
 
-# 2. Run full automation  
+# 2. Run full automation
 /experiment autorun anti-hallucination
 
 # 3. Follow the generated coordinator_steps.md:
 #    - Copy-paste control prompt to Claude Terminal 1
-#    - Copy-paste treatment prompt to Claude Terminal 2  
+#    - Copy-paste treatment prompt to Claude Terminal 2
 #    - Wait for both to complete
 #    - Copy-paste evaluator prompt to Claude Terminal 3
 #    - Run reveal command when ready
@@ -345,7 +345,7 @@ Based on actual experiment execution:
 ### Scientific Rigor Validated
 Triple-blind protocol successfully achieved:
 - ✅ True subject blindness (no experimental awareness)
-- ✅ Evaluator blindness (no hypothesis or group knowledge)  
+- ✅ Evaluator blindness (no hypothesis or group knowledge)
 - ✅ Randomized assignment (mathematical seed-based)
 - ✅ Standardized objective scoring (0-100 rubrics)
 - ✅ High confidence results (evaluator rated HIGH confidence)
@@ -359,15 +359,15 @@ Triple-blind protocol successfully achieved:
 ## Phase 1: Launch Test Subjects (Parallel)
 ### Control Subject (Terminal 1):
 ```
-I need help with some development tasks. Please checkout branch 
-'experiment-anti-hallucination-control' and follow the instructions 
+I need help with some development tasks. Please checkout branch
+'experiment-anti-hallucination-control' and follow the instructions
 in the instructions.md file you'll find there.
 ```
 
 ### Treatment Subject (Terminal 2):
 ```
-I need help with some development tasks. Please checkout branch 
-'experiment-anti-hallucination-treatment' and follow the instructions 
+I need help with some development tasks. Please checkout branch
+'experiment-anti-hallucination-treatment' and follow the instructions
 in the instructions.md file you'll find there.
 ```
 
@@ -377,8 +377,8 @@ in the instructions.md file you'll find there.
 
 ## Phase 3: Launch Blind Evaluator (Terminal 3):
 ```
-I need you to evaluate some AI assistant work samples. Please checkout 
-branch 'experiment-anti-hallucination-evaluation' and follow the 
+I need you to evaluate some AI assistant work samples. Please checkout
+branch 'experiment-anti-hallucination-evaluation' and follow the
 evaluation instructions in the instructions.md file.
 ```
 
@@ -403,14 +403,14 @@ Note: This is routine development work. Complete all tasks thoroughly.
 ```
 
 **Evaluator Instructions:**
-```markdown  
+```markdown
 # Evaluation Task
 
-You are evaluating two AI assistant work samples. Score each using 
+You are evaluating two AI assistant work samples. Score each using
 the provided rubric. You are not told what this evaluation is for.
 
 ## Instructions:
-1. Read subject_a_results.md and subject_b_results.md  
+1. Read subject_a_results.md and subject_b_results.md
 2. Score each using rubric.md (0-100 scales)
 3. Save scores in evaluation_scores.json
 4. Do not try to determine what experiment this relates to

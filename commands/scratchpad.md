@@ -6,7 +6,7 @@
 
 **Usage**: `/scratchpad`
 
-**Implementation**: 
+**Implementation**:
 - Create or update `roadmap/scratchpad_[branch].md`
 - Include: Goal | Plan | State | Next | Context | Branch info
 - Track current progress and next steps

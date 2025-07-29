@@ -5,7 +5,7 @@ Automatically applies timeout mitigation strategies to prevent Claude Code CLI t
 ## Usage
 ```
 /timeout              # Standard optimization mode
-/timeout strict       # Maximum performance restrictions  
+/timeout strict       # Maximum performance restrictions
 /timeout emergency    # Crisis mode - absolute minimum
 /timeout off          # Disable timeout optimizations
 ```
@@ -14,7 +14,7 @@ Automatically applies timeout mitigation strategies to prevent Claude Code CLI t
 
 Prevents response timeouts by enforcing efficient patterns:
 - Limits response verbosity
-- Batches operations aggressively  
+- Batches operations aggressively
 - Constrains thinking steps
 - Optimizes file operations
 - Forces concise output format
@@ -24,7 +24,7 @@ Prevents response timeouts by enforcing efficient patterns:
 ### 1. Tool Usage (All Modes)
 - **MultiEdit**: Enforced for >2 edits, with exact limits per mode:
   - Standard Mode: Max 4 operations
-  - Strict Mode: Max 3 operations  
+  - Strict Mode: Max 3 operations
   - Emergency Mode: Max 2 operations
 - **Batching**: All tool calls in single message
 - **Search**: Task tool for >3 files, Grep/Glob preferred
@@ -52,7 +52,7 @@ Prevents response timeouts by enforcing efficient patterns:
 
 ### 3. Thinking Limits
 - **Standard**: 5 thoughts max
-- **Strict**: 3 thoughts max  
+- **Strict**: 3 thoughts max
 - **Emergency**: 2 thoughts max
 - No branching/revision thoughts
 
@@ -68,7 +68,7 @@ Prevents response timeouts by enforcing efficient patterns:
 🚀 TIMEOUT MODE: STANDARD
 Optimizations: Batching ON | Brevity ON | Think-limit 5
 
-⚡ TIMEOUT MODE: STRICT  
+⚡ TIMEOUT MODE: STRICT
 Optimizations: Max-batching | Min-output | Think-limit 3
 
 🚨 TIMEOUT MODE: EMERGENCY
@@ -83,7 +83,7 @@ User: /timeout /execute refactor authentication
 Claude: 🚀 TIMEOUT MODE: STANDARD
 Task: Refactor auth
 - Scan files with Task tool
-- Batch edits with MultiEdit  
+- Batch edits with MultiEdit
 - Test changes
 - Commit results
 [Executes with optimizations]
@@ -100,7 +100,7 @@ Fix imports:
 [Minimal output]
 ```
 
-### Emergency Mode  
+### Emergency Mode
 ```
 User: /timeout emergency server is down fix now
 Claude: 🚨 EMERGENCY MODE

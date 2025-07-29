@@ -1,3 +1,7 @@
+#!/bin/bash
+# ⚠️ ORCHESTRATION SYSTEM - WIP PROTOTYPE
+# Requires Redis, tmux, and agent workspace setup
+
 #!/usr/bin/env python3
 """
 Simple agent system for multi-terminal orchestration.
@@ -9,7 +13,18 @@ import time
 from typing import Any
 
 from message_broker import MessageBroker, MessageType, TaskMessage
-from a2a_adapter import A2AAdapter, A2AMessage, A2AMessageBroker
+try:
+    from a2a_agent_wrapper import create_a2a_wrapper
+    A2A_WRAPPER_AVAILABLE = True
+except ImportError:
+    A2A_WRAPPER_AVAILABLE = False
+
+# Keep legacy adapter for compatibility
+try:
+    from a2a_adapter import A2AAdapter, A2AMessage
+    LEGACY_A2A_AVAILABLE = True
+except ImportError:
+    LEGACY_A2A_AVAILABLE = False
 
 import sys
 
@@ -17,7 +32,7 @@ import sys
 class AgentBase:
     """Base class for all agents with A2A support."""
 
-    def __init__(self, agent_id: str, agent_type: str, broker: MessageBroker, 
+    def __init__(self, agent_id: str, agent_type: str, broker: MessageBroker,
                  enable_a2a: bool = True, capabilities: list = None):
         self.agent_id = agent_id
         self.agent_type = agent_type
@@ -25,24 +40,43 @@ class AgentBase:
         self.running = False
         self.capabilities = capabilities or []
         self.children = []
-        
-        # A2A Integration
+
+        # A2A Integration - Use new wrapper if available, fallback to legacy
         self.enable_a2a = enable_a2a
-        self.a2a_adapter = None
+        self.a2a_wrapper = None
+        self.a2a_adapter = None  # Legacy adapter
+
         if enable_a2a:
-            self.a2a_adapter = A2AAdapter()
-            self.a2a_adapter.start_message_listener()
+            if A2A_WRAPPER_AVAILABLE:
+                # Use new A2A wrapper system
+                self.a2a_wrapper = create_a2a_wrapper(
+                    agent_id=agent_id,
+                    agent_type=agent_type,
+                    capabilities=self.capabilities,
+                    workspace=f"/tmp/orchestration/agents/{agent_id}"
+                )
+                print(f"Agent {agent_id} initialized with new A2A wrapper")
+            elif LEGACY_A2A_AVAILABLE:
+                # Fallback to legacy adapter
+                self.a2a_adapter = A2AAdapter()
+                self.a2a_adapter.start_message_listener()
+                print(f"Agent {agent_id} initialized with legacy A2A adapter")
+            else:
+                print(f"Warning: A2A requested but not available for agent {agent_id}")
 
     def start(self):
         """Start the agent with A2A support."""
         self.running = True
         self.start_time = time.time()
-        
+
         # Register with legacy broker
         self.broker.register_agent(self.agent_id, self.agent_type, self.capabilities)
-        
-        # Register with A2A adapter if enabled
-        if self.enable_a2a and self.a2a_adapter:
+
+        # Start A2A wrapper if enabled
+        if self.enable_a2a and self.a2a_wrapper:
+            self.a2a_wrapper.start()
+        # Register with legacy A2A adapter if enabled
+        elif self.enable_a2a and self.a2a_adapter:
             self.a2a_adapter.register_agent(self.agent_id, self.agent_type, self.capabilities)
 
         # Start message processing thread
@@ -93,10 +127,10 @@ class AgentBase:
                     messages = self.a2a_adapter.get_messages(self.agent_id)
                     for message in messages:
                         self._handle_a2a_message(message)
-                    
+
                     # Send heartbeat via A2A
                     self.a2a_adapter.heartbeat(self.agent_id)
-                
+
                 time.sleep(1)
             except Exception as e:
                 print(f"Error processing A2A message: {e}")
@@ -105,7 +139,7 @@ class AgentBase:
     def _handle_a2a_message(self, message: A2AMessage):
         """Handle A2A message - override in subclasses."""
         print(f"Agent {self.agent_id} received A2A message: {message.payload}")
-        
+
         # Basic protocol handling
         if message.payload.get('action') == 'ping':
             # Respond to ping
@@ -126,16 +160,16 @@ class AgentBase:
                     "capabilities": self.capabilities,
                     "last_task": getattr(self, 'last_task_time', None)
                 }
-                
+
                 success = self.broker.heartbeat(self.agent_id, health_data)
-                
+
                 if success:
                     consecutive_failures = 0
                 else:
                     consecutive_failures += 1
                     if consecutive_failures >= 3:
                         print(f"Agent {self.agent_id} heartbeat failed {consecutive_failures} times - may be disconnected")
-                
+
                 time.sleep(30)
             except Exception as e:
                 print(f"Heartbeat error for {self.agent_id}: {e}")
@@ -160,10 +194,10 @@ class AgentBase:
 
 
 class OpusAgent(AgentBase):
-    """Opus master coordinator agent."""
+    """Opus coordinator agent."""
 
     def __init__(self, broker: MessageBroker):
-        super().__init__("opus-master", "opus", broker)
+        super().__init__("task-coordinator", "opus", broker)
         self.capabilities = ["coordination", "task_breakdown", "management"]
         self.subordinates = []
 
@@ -300,12 +334,12 @@ while True:
     def _process_simple_task(self, description: str, requester: str):
         """Process simple task directly."""
         start_time = time.time()
-        
+
         # Execute actual task based on description content
         output = self._execute_task_logic(description)
-        
+
         processing_time = time.time() - start_time
-        
+
         result = {
             "status": "completed",
             "description": description,
@@ -315,11 +349,11 @@ while True:
         }
 
         self.send_result(requester, result)
-    
+
     def _execute_task_logic(self, description: str) -> str:
         """Execute actual task logic based on description."""
         desc_lower = description.lower()
-        
+
         # Analyze task and execute appropriate logic
         if "analyze" in desc_lower:
             # Perform analysis
@@ -354,10 +388,10 @@ class SubAgent(AgentBase):
 
         # Execute specialized processing
         start_time = time.time()
-        
+
         # Perform specialized work based on task
         output = self._execute_specialized_task(task_description, parent_agent)
-        
+
         processing_time = time.time() - start_time
 
         result = {
@@ -371,11 +405,11 @@ class SubAgent(AgentBase):
 
         self.send_result(parent_agent, result)
         print(f"SubAgent {self.agent_id} completed task")
-    
+
     def _execute_specialized_task(self, description: str, parent_agent: str) -> str:
         """Execute specialized task logic."""
         desc_lower = description.lower()
-        
+
         # Specialized processing based on task type
         if "complex" in desc_lower or "detailed" in desc_lower:
             # Handle complex tasks

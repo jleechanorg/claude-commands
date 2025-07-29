@@ -6,7 +6,7 @@
 
 **Usage**: `/optimize`
 
-**Implementation**: 
+**Implementation**:
 - Analyze code for duplicated patterns
 - Remove redundant code
 - Improve algorithmic efficiency

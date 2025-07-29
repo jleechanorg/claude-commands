@@ -1,4 +1,8 @@
 #!/bin/bash
+# ⚠️ REQUIRES PROJECT ADAPTATION
+# This script contains project-specific paths and may need modification
+
+#!/bin/bash
 # orch.sh - Orchestration command wrapper (alias for orchestrate)
 
 # Get the directory where this script is located

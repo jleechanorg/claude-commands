@@ -14,7 +14,8 @@
 - [ ] Context check: ___% remaining
   *Guidance*: Estimate the percentage of the task or project that remains incomplete. For example, if 3 out of 10 subtasks are done, the remaining percentage is 70%.
 - [ ] Complexity assessment: Simple/Complex
-- [ ] Subagent benefit: Would parallel work help?
+- [ ] Subagent decision: YES/NO with explicit reasoning
+  *Required*: Must state "Subagents: YES - [reason]" or "Subagents: NO - [reason]"
 - [ ] Tool requirements: Read, Write, Edit, Bash, Task
 - [ ] Execution plan presented to user
 - [ ] User approval received
@@ -26,7 +27,9 @@
 
 **Analysis Presentation**:
 - **Task complexity**: Simple (direct execution) or Complex (subagents beneficial)
-- **Subagent strategy**: Whether parallel work would help
+- **Subagent decision**: **YES** or **NO** with explicit reasoning
+  - If YES: Specific parallel work strategy
+  - If NO: Why sequential execution is better
 - **Tool requirements**: Which tools will be used
 - **Implementation approach**: Step-by-step plan
 - **Expected timeline**: Realistic estimate
@@ -60,7 +63,7 @@ Assistant: I'll create a plan for implementing user authentication system.
 
 Execution Plan:
 - Complexity: Complex
-- Subagent benefit: Yes - parallel work beneficial
+- **Subagent decision: YES** - Multiple independent subtasks (auth logic, research, testing) with estimated 30% time savings from parallel work
 - Strategy:
   * Main: Core authentication logic implementation
   * Subagent 1: Research existing auth patterns in codebase
@@ -80,6 +83,6 @@ Assistant: [Executes same protocol as /execute command]
 - ✅ **User approval required** before execution
 - ✅ **Plan presentation** with realistic assessment
 - ✅ **Same execution protocol** as `/execute` after approval
-- ✅ **Honest subagent evaluation** - only when beneficial
+- ✅ **Explicit subagent decision** - always YES/NO with reasoning
 
 **Memory Enhancement**: This command automatically searches memory context using Memory MCP for relevant past planning approaches, execution patterns, and lessons learned to enhance plan quality and accuracy. See CLAUDE.md Memory Enhancement Protocol for details.

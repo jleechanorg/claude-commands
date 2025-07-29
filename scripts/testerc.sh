@@ -1,4 +1,8 @@
 #!/bin/bash
+# ⚠️ REQUIRES PROJECT ADAPTATION
+# This script contains project-specific paths and may need modification
+
+#!/bin/bash
 # /testerc - Run End2End Tests (Real Mode + Capture)
 # Runs end2end tests using real services AND captures data for mock generation
 
@@ -68,5 +72,5 @@ echo "📊 Analysis and cleanup handled by run_e2e_tests.sh"
 echo ""
 echo "📋 Next Steps:"
 echo "   - Review captured data in $CAPTURE_DIR"
-echo "   - Use data to improve mock implementations"  
+echo "   - Use data to improve mock implementations"
 echo "   - Run /teste to validate mock accuracy"

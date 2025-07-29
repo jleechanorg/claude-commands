@@ -1,47 +1,51 @@
 # GitHub Copilot Super Command
 
-**Purpose**: Run comprehensive Copilot analysis on multiple PRs in isolated environments
+**Purpose**: Run comprehensive Copilot analysis on multiple PRs using orchestration agents
 
-**Usage**: `/copilotsuper PR1 [PR2 PR3...]`
+**Usage**: `/copilotsuper PR1 [PR2 PR3...]` or `/copilots PR1 [PR2 PR3...]`
 
-**Action**: Batch process multiple PRs with full Copilot analysis and fixes while preserving current branch context
+**Action**: Spawn orchestration agents to process multiple PRs in parallel with full Copilot analysis and fixes
 
 ## 🚀 Key Features
 
-- **Complete Isolation**: Uses fresh branches to protect current work
-- **Batch Processing**: Handle multiple PRs in sequence
-- **Option 3 Architecture**: Uses new integrated `copilot.py` with parallel data collection
-- **Comprehensive Analysis**: Full GitHub comment extraction (488 comments in 18.25s), test fixing, and CI resolution
-- **Automatic Fixes**: Commits and pushes changes to make PRs mergeable
-- **Clean Restoration**: Returns to original branch when complete
+- **Parallel Processing**: Each PR gets its own orchestration agent working simultaneously
+- **Complete Isolation**: Each agent uses isolated worktree to protect current work
+- **Scalability**: Handle 10+ PRs concurrently (limited only by system resources)
+- **Option 3 Architecture**: Uses integrated `copilot.py` with parallel data collection
+- **Comprehensive Analysis**: Full GitHub comment extraction, test fixing, and CI resolution
+- **Automatic Fixes**: Each agent commits and pushes changes to make PRs mergeable
+- **Real-time Monitoring**: Track all agents' progress and aggregate results
 
 ## 🔧 Implementation Approach
 
 **Core Workflow**:
-1. **Save Current Context**: Record original branch and working state
-2. **For Each PR**:
-   - Create isolated branch using `/nb` equivalent
-   - Checkout target PR using `gh pr checkout`
-   - Execute `python3 .claude/commands/copilot.py PR#`
-   - Collect results and status
-3. **Aggregate Results**: Compile summary of all PR fixes
-4. **Return to Original**: Restore user's working context
+1. **Parse PR Numbers**: Validate and collect PR arguments
+2. **Spawn Orchestration Agents**: Create one agent per PR using `/orch`
+3. **Agent Tasks**: Each agent independently:
+   - Checkouts PR branch in isolated worktree
+   - Pulls latest from origin/main
+   - Resolves any merge conflicts
+   - Runs `/copilot` for comprehensive analysis
+   - Commits and pushes fixes
+4. **Monitor Progress**: Track all agents in real-time
+5. **Aggregate Results**: Compile summary from all agent results
 
-**Implementation Preference**:
+**Implementation Architecture**:
 ```bash
-# Primary (preferred): Python implementation
-python3 .claude/commands/copilot.py [PR_NUMBER]
+# Uses orchestration system to spawn agents
+/orchestrate "Run copilot analysis on PR #$PR_NUMBER"
 
-# Fallback: Shell implementation  
-./claude_command_scripts/commands/copilot.sh [PR_NUMBER]
+# Each agent executes in isolation:
+python3 .claude/commands/copilot.py [PR_NUMBER]
 ```
 
-**Benefits over Task tool approach**:
-- ✅ Uses proven working implementations (Python preferred, Shell fallback)
-- ✅ Direct GitHub API integration  
-- ✅ Reliable execution (no slash command issues)
-- ✅ Consistent behavior across environments
-- ✅ Automatic selection of best available implementation
+**Benefits of Orchestration Approach**:
+- ✅ **Parallel Execution**: All PRs processed simultaneously
+- ✅ **Resource Isolation**: Each agent has dedicated workspace
+- ✅ **No Branch Conflicts**: Worktrees prevent collisions
+- ✅ **Scalable**: Handle many PRs concurrently
+- ✅ **Fault Tolerant**: One agent failure doesn't affect others
+- ✅ **Real-time Visibility**: Monitor all agents' progress
 
 ## 📋 Command Specification
 
@@ -54,22 +58,24 @@ python3 .claude/commands/copilot.py [PR_NUMBER]
 ```
 User: /copilotsuper 718 719 720
 
-1. Save context: current branch = handoff-reviewsuper-command
-2. Create workspace: dev_copilotsuper_[timestamp]
-3. Process PR #718:
-   - gh pr checkout 718
-   - python3 .claude/commands/copilot.py 718
-   - Record: ✅ 5 issues fixed, 2 tests resolved
-4. Process PR #719:
-   - gh pr checkout 719  
-   - python3 .claude/commands/copilot.py 719
-   - Record: ✅ 3 security issues fixed, CI passing
-5. Process PR #720:
-   - gh pr checkout 720
-   - python3 .claude/commands/copilot.py 720
-   - Record: ❌ 1 blocking issue remains
-6. Return to: handoff-reviewsuper-command
-7. Summary report with all results
+1. Validate PRs: Check accessibility of 718, 719, 720
+2. Spawn 3 agents simultaneously:
+   - Agent task-agent-XXXXX1 → PR #718
+   - Agent task-agent-XXXXX2 → PR #719
+   - Agent task-agent-XXXXX3 → PR #720
+3. Agents work in parallel:
+   - Each checks out PR in isolated worktree
+   - Pulls latest from main, resolves conflicts
+   - Runs copilot.py for analysis and fixes
+   - Commits and pushes changes
+4. Monitor progress:
+   - Real-time status updates
+   - Agent completion tracking
+5. Aggregate results:
+   - Agent 1: ✅ PR #718 - 5 issues fixed, ready to merge
+   - Agent 2: ✅ PR #719 - 3 security fixes, CI passing
+   - Agent 3: ⚠️ PR #720 - 1 blocking issue remains
+6. Present comprehensive summary report
 ```
 
 ### Output Format
@@ -85,7 +91,7 @@ User: /copilotsuper 718 719 720
 
 ✅ PR #718: handoff-reviewsuper-command
 - Fixed: 5 Copilot suggestions
-- Resolved: 2 failing tests  
+- Resolved: 2 failing tests
 - Status: Ready to merge
 - Commits: 3 new commits pushed
 
@@ -120,29 +126,31 @@ User: /copilotsuper 718 719 720
 
 **Daily Review Cycle**:
 ```bash
-/copilotsuper $(gh pr list --json number -q '.[].number' | head -5)
-# Process 5 most recent PRs
+/copilots $(gh pr list --json number -q '.[].number' | head -5)
+# Process 5 most recent PRs using convenient alias
 ```
 
 ## ⚡ Performance Considerations
 
-- **Sequential Processing**: PRs processed one at a time to avoid conflicts
-- **Isolated Workspaces**: Each PR gets clean environment  
-- **Resource Management**: Cleanup temporary branches after completion
-- **Timeout Handling**: Skip PRs that take too long to process
+- **Parallel Processing**: All PRs processed simultaneously by independent agents
+- **Resource Limits**: System can handle ~10 agents concurrently
+- **Isolated Workspaces**: Each agent has dedicated worktree (no conflicts)
+- **Automatic Scaling**: Agents spawned based on PR count
+- **Timeout Handling**: Each agent has independent timeout (no blocking)
 
 ## 🚨 Safety Features
 
-- **No Current Branch Changes**: Original work remains untouched
-- **Failure Recovery**: Continue processing remaining PRs if one fails
-- **State Preservation**: Always return to original branch and state
-- **Conflict Prevention**: Use isolated branches for all operations
+- **No Current Branch Changes**: Your work remains untouched
+- **Agent Isolation**: Each agent works in separate worktree
+- **Failure Recovery**: Other agents continue if one fails
+- **Resource Cleanup**: Agents clean up their workspaces automatically
+- **Conflict Prevention**: Worktrees eliminate branch conflicts
 
 ## 🔄 Integration with Existing Commands
 
 **Relationship to `/copilot`**:
-- `/copilot`: Single PR analysis (user runs directly)
-- `/copilotsuper`: Multi-PR batch processing (AI orchestrated)
+- `/copilot`: Single PR analysis (runs in current terminal)
+- `/copilotsuper`: Multi-PR parallel processing (spawns orchestration agents)
 
 **Synergy with `/reviewsuper`**:
 - `/reviewsuper`: Critical architectural review
@@ -164,9 +172,10 @@ User: /copilotsuper 718 719 720
 
 **Error Handling**:
 - Invalid PR numbers: Skip with warning
-- Network failures: Retry with exponential backoff
-- Script failures: Continue with remaining PRs
-- Context restoration: Always return to original state
+- Agent failures: Other agents continue independently
+- Network issues: Each agent retries independently
+- Resource limits: Queue additional PRs if agent limit reached
+- Monitoring: Real-time status tracking for all agents
 
 ## 🎉 Expected Benefits
 

@@ -1,4 +1,8 @@
 #!/bin/bash
+# ⚠️ REQUIRES PROJECT ADAPTATION
+# This script contains project-specific paths and may need modification
+
+#!/bin/bash
 # /teste - Run End2End Tests (Mock Mode)
 # Runs end2end tests using mocked services (current behavior)
 

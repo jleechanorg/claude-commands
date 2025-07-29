@@ -1,4 +1,8 @@
 #!/bin/bash
+# ⚠️ REQUIRES PROJECT ADAPTATION
+# This script contains project-specific paths and may need modification
+
+#!/bin/bash
 # test-http-full.sh - Run HTTP tests with REAL APIs
 # Replaces unreliable /testhttpf command behavior
 
@@ -98,16 +102,16 @@ if [[ "$CONFIRMED" != "true" ]]; then
 fi
 
 # Check project root
-if [[ ! -f "mvp_site/main.py" ]]; then
+if [[ ! -f "$PROJECT_ROOT/main.py" ]]; then
     echo -e "${RED}❌ Error: Not in project root directory${NC}"
-    echo "Please run from the WorldArchitect.AI project root"
+    echo "Please run from the Your Project project root"
     exit 1
 fi
 
 # Start REAL server
 echo -e "\n${GREEN}🚀 Starting REAL server on port $PORT...${NC}"
 echo -e "${YELLOW}⚠️  Server running with REAL APIs${NC}"
-PORT=$PORT vpython mvp_site/main.py serve &
+PORT=$PORT vpython $PROJECT_ROOT/main.py serve &
 SERVER_PID=$!
 
 # Wait for server
@@ -145,10 +149,10 @@ FAILED_TESTS=0
 for test_file in $test_files; do
     echo -e "\n${BLUE}Running: $test_file (REAL APIs)${NC}"
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
-    
+
     # Set test server URL
     export TEST_SERVER_URL="http://localhost:$PORT"
-    
+
     if [[ "$VERBOSE" == "true" ]]; then
         if vpython "$test_file"; then
             PASSED_TESTS=$((PASSED_TESTS + 1))

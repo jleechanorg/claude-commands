@@ -1,3 +1,5 @@
+# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
+
 # Integration Test Command
 
 **Purpose**: Run integration tests
@@ -6,7 +8,7 @@
 
 **Usage**: `/testi`
 
-**Implementation**: 
+**Implementation**:
 - Run: `source venv/bin/activate && TESTING=true python3 $PROJECT_ROOT/test_integration/test_integration.py`
 - Execute from project root
 - Ensure virtual environment is activated

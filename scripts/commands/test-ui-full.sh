@@ -1,4 +1,8 @@
 #!/bin/bash
+# ⚠️ REQUIRES PROJECT ADAPTATION
+# This script contains project-specific paths and may need modification
+
+#!/bin/bash
 # test-ui-full.sh - Run browser tests with REAL APIs
 # Replaces unreliable /testuif command behavior
 
@@ -95,9 +99,9 @@ if [[ "$CONFIRMED" != "true" ]]; then
 fi
 
 # Check project root
-if [[ ! -f "mvp_site/main.py" ]]; then
+if [[ ! -f "$PROJECT_ROOT/main.py" ]]; then
     echo -e "${RED}❌ Error: Not in project root directory${NC}"
-    echo "Please run from the WorldArchitect.AI project root"
+    echo "Please run from the Your Project project root"
     exit 1
 fi
 
@@ -115,25 +119,25 @@ else
         exit 1
     fi
     echo "✓ Playwright is installed"
-    
+
     # Source shared port utilities
     source "$(dirname "$0")/../port-utils.sh"
-    
+
     REAL_PORT=$(find_available_port)
     if [[ $? -ne 0 ]]; then
         echo -e "${RED}❌ No available ports in range $BASE_PORT-$((BASE_PORT + MAX_PORTS - 1))${NC}"
         exit 1
     fi
-    
+
     # Start REAL server (no TESTING=true)
     echo -e "\n${GREEN}🚀 Starting REAL server on port $REAL_PORT...${NC}"
     echo -e "${YELLOW}⚠️  Server running with REAL APIs${NC}"
-    PORT=$REAL_PORT vpython mvp_site/main.py serve &
+    PORT=$REAL_PORT vpython $PROJECT_ROOT/main.py serve &
     SERVER_PID=$!
-    
+
     # Wait for server
     sleep 3
-    
+
     # Verify server
     if ! curl -s http://localhost:8081 > /dev/null; then
         echo -e "${RED}❌ Server failed to start!${NC}"
@@ -141,32 +145,32 @@ else
         exit 1
     fi
     echo "✓ Server running on http://localhost:8081 (REAL MODE)"
-    
+
     # Run tests
     echo -e "\n${GREEN}🧪 Running browser tests with REAL APIs...${NC}"
-    
+
     # Determine tests
     if [[ -n "$SPECIFIC_TEST" ]]; then
         test_files="testing_ui/$SPECIFIC_TEST"
     else
         test_files=$(find testing_ui -name "test_*.py" -type f 2>/dev/null | sort)
     fi
-    
+
     if [[ -z "$test_files" ]]; then
         echo -e "${YELLOW}⚠️  No test files found${NC}"
         kill $SERVER_PID 2>/dev/null || true
         exit 0
     fi
-    
+
     # Run each test
     TOTAL_TESTS=0
     PASSED_TESTS=0
     FAILED_TESTS=0
-    
+
     for test_file in $test_files; do
         echo -e "\n${BLUE}Running: $test_file (REAL APIs)${NC}"
         TOTAL_TESTS=$((TOTAL_TESTS + 1))
-        
+
         if [[ "$VERBOSE" == "true" ]]; then
             if vpython "$test_file"; then
                 PASSED_TESTS=$((PASSED_TESTS + 1))
@@ -187,11 +191,11 @@ else
             fi
         fi
     done
-    
+
     # Cleanup
     echo -e "\n${GREEN}🧹 Cleaning up...${NC}"
     kill $SERVER_PID 2>/dev/null || true
-    
+
     # Summary
     echo -e "\n${BLUE}📊 Test Summary (REAL APIs)${NC}"
     echo "=========================="
@@ -200,7 +204,7 @@ else
     echo -e "Failed: ${RED}$FAILED_TESTS${NC}"
     echo ""
     echo -e "${YELLOW}💰 Remember: These tests used REAL API calls${NC}"
-    
+
     if [[ $FAILED_TESTS -eq 0 ]]; then
         echo -e "\n${GREEN}✅ All tests passed! 🎉${NC}"
         exit 0

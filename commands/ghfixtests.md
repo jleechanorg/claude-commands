@@ -31,10 +31,10 @@ Found 3 PRs with failing tests:
 
 1. PR #424: Fix JSON display bug
    ❌ 11 tests failing in TestGeminiResponse
-   
+
 2. PR #420: Debug: Raw JSON appearing in campaign logs
    ❌ Test suite failing (details not visible)
-   
+
 3. PR #415: Add new feature
    ❌ 2 tests failing in test_auth.py
 
@@ -43,7 +43,7 @@ Would you like to:
 [1,2,3] Fix specific PRs (comma-separated)
 [n] Cancel
 
-Your choice: 
+Your choice:
 ```
 
 ## Implementation Notes
