@@ -1,49 +1,50 @@
-# Execute Command - Realistic Implementation
+# Execute Command - Plan-Approve-Execute Composition
 
-**Purpose**: Execute tasks immediately using available tools, with optional subagent coordination
+> **Summary**: `/execute` runs `/plan`, auto-approves the generated plan,
+> then performs execution with TodoWrite progress tracking in a single
+> uninterrupted workflow.
 
-**Usage**: `/execute` or `/e` - Analyze task and execute immediately
+**Purpose**: Execute tasks by composing `/plan` → auto-approve → execute workflow
 
-## 🚨 REALISTIC EXECUTION PROTOCOL
+**Usage**: `/execute` or `/e` - Plan, auto-approve, then execute immediately
 
-### Phase 1: Task Analysis
+## 🚨 COMPOSITION PROTOCOL
 
-**Assessment**:
-- Task complexity: Simple/Complex
-- Subagent benefit: Would parallel work help?
-- Tool requirements: Read, Write, Edit, Bash, etc.
-- Time estimate: Based on similar tasks
+### Command Flow
 
-**Subagent Decision**:
-- **Use subagents when**:
-  - Task has multiple independent subtasks
-  - Estimated time savings >20% from parallel work
-  - Resources available for independent operation
-- **Skip subagents when**:
-  - Sequential dependencies prevent parallel execution
-  - Coordination overhead exceeds parallel benefits
-  - Task completion time <15 minutes
-- **Examples of good subagent use**:
-  - Analysis while I implement (subagent researches patterns while I write code)
-  - Documentation while I code (subagent drafts docs for completed modules)
-  - Testing while I develop (subagent creates test cases for implemented features)
-  - Research while I build (subagent explores libraries while I develop core functionality)
+**The `/execute` command is a composition of**:
+1. **`/plan`** - Create detailed implementation plan with TodoWrite
+2. **`/preapprove`** - Prepare approval context and validation
+3. **`/autoapprove`** - Automatic approval mechanism that displays message: "User already approves - proceeding with execution"
+4. **Execute** - Proceed with planned implementation
 
-### Phase 2: Execution Strategy
+### Phase 1: Planning (/plan)
 
-**Direct Execution** (Most common):
-1. Use available tools systematically
-2. Work through implementation step by step
-3. Test and validate as I go
-4. Commit changes when complete
+**Plan Generation**:
+- Analyze task complexity and requirements
+- Create TodoWrite checklist with specific steps
+- **Explicit subagent decision**: Always state YES/NO with reasoning
+  - YES: Multiple independent subtasks benefit from parallel work
+  - NO: Sequential dependencies or coordination overhead exceeds benefits
+- Identify tool requirements and dependencies
+- Present comprehensive implementation strategy
 
-**Subagent Coordination** (When beneficial):
-1. Spawn Task agents for independent work
-2. Continue with main implementation
-3. Integrate subagent results when ready
-4. Coordinate final testing and validation
+### Phase 2: Approval Chain
+
+**Full Approval Workflow**:
+- **`/preapprove`**: Prepare approval context, validate plan completeness
+- **`/autoapprove`**: Trigger automatic approval mechanism and display message: "User already approves - proceeding with execution"
+- Bypass manual approval prompt that `/plan` normally requires
+- Proceed directly to execution phase
 
 ### Phase 3: Implementation
+
+**Execution Strategy**:
+- Follow the plan created in Phase 1
+- Update TodoWrite status as tasks complete
+- Use systematic tool progression (Read → Write/Edit → Test)
+- Coordinate subagents if planned
+- Validate and commit when complete
 
 **Tool Usage**:
 - `Read` - Understand existing code
@@ -51,45 +52,60 @@
 - `Edit` - Modify existing files
 - `Bash` - Run tests, git operations
 - `Task` - Spawn subagents for parallel work
-
-**Progress Updates**:
-- Regular commits during long work
-- Update user on major milestones
-- Show progress on complex tasks
+- `TodoWrite` - Track implementation progress
 
 ## Example Flows
 
-**Simple task (direct execution)**:
+**Simple task**:
 ```
 User: /e fix the login button styling
-Assistant: Fixing login button styling immediately.
+Assistant:
+Phase 1 - Planning (/plan):
+Creating implementation plan with TodoWrite...
+[Creates checklist: Check styles, Update CSS, Test changes, Commit]
+**Subagent decision: NO** - Simple task with sequential dependencies, coordination overhead exceeds benefits
 
-[Uses Read to check current styles]
-[Uses Edit to update CSS]
-[Uses Bash to test changes]
-[Commits fix]
+Phase 2 - Approval Chain:
+/preapprove - Validating plan completeness and context
+/autoapprove - Triggering automatic approval mechanism
+User already approves - proceeding with execution
+
+Phase 3 - Implementation:
+[Follows plan: Read current styles, Edit CSS, Test, Commit]
 ```
 
-**Complex task (with subagents)**:
+**Complex task**:
 ```
 User: /e implement user authentication system
-Assistant: Implementing user authentication system.
+Assistant:
+Phase 1 - Planning (/plan):
+Creating comprehensive implementation plan...
+[Creates detailed TodoWrite with multiple subtasks]
+**Subagent decision: YES** - Multiple independent components (auth logic, research, testing) with estimated 35% time savings from parallel work
 
-Strategy: Complex task - using subagents for parallel work
-- Main: Core authentication logic
-- Subagent 1: Research existing patterns
-- Subagent 2: Create test suite
+Phase 2 - Approval Chain:
+/preapprove - Validating comprehensive plan and dependencies
+/autoapprove - Triggering automatic approval for complex implementation
+User already approves - proceeding with execution
 
-[Spawns Task agents]
-[Implements core functionality]
-[Integrates subagent results]
-[Commits complete system]
+Phase 3 - Implementation:
+[Executes planned approach with optional subagents]
+[Updates TodoWrite progress throughout]
+[Coordinates and integrates all components]
 ```
 
 ## Key Characteristics
 
-- ✅ **Immediate execution** - no approval needed
-- ✅ **Realistic tool usage** - actual capabilities only
-- ✅ **Optional subagents** - when genuinely beneficial
-- ✅ **Honest assessment** - no fantasy workflows
-- ✅ **Sequential work** - with parallel support when useful
+- ✅ **Planned execution** - `/plan` creates structured approach
+- ✅ **Full approval chain** - `/preapprove` + `/autoapprove` sequence
+- ✅ **TodoWrite integration** - progress tracking built-in
+- ✅ **Composition pattern** - combines 3 commands seamlessly
+- ✅ **User approval message** - clear indication of auto-approval
+- ✅ **Structured workflow** - plan → approval chain → execute phases
+
+## Relationship to Other Commands
+
+- **`/plan`** - Just planning, requires manual approval
+- **`/execute`** - Planning + full approval chain + execution
+- **`/preapprove`** - Prepare approval context and validation
+- **`/autoapprove`** - Automatic approval mechanism that skips the manual approval step required by `/plan`. When invoked, `/autoapprove` treats the plan as if the user explicitly approved it and proceeds directly to the execution phase. This command is integral to the `/execute` workflow, enabling seamless transitions from planning to implementation without user intervention.
