@@ -16,20 +16,20 @@ def main():
         print("Usage: /orchestrate [task description]")
         print("Example: /orchestrate Find security vulnerabilities and create coverage report")
         return 1
-    
+
     # Find orchestration directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(os.path.dirname(script_dir))
     orchestration_dir = os.path.join(project_root, "orchestration")
     unified_script = os.path.join(orchestration_dir, "orchestrate_unified.py")
-    
+
     if not os.path.exists(unified_script):
         print(f"❌ Unified orchestration script not found: {unified_script}")
         return 1
-    
+
     # Redirect to unified system
     task_args = sys.argv[1:]
-    
+
     try:
         result = subprocess.run([
             sys.executable, unified_script

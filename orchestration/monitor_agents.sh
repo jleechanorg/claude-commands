@@ -1,4 +1,8 @@
 #!/bin/bash
+# ⚠️ ORCHESTRATION SYSTEM - WIP PROTOTYPE
+# Requires Redis, tmux, and agent workspace setup
+
+#!/bin/bash
 # Monitor status of all running agents
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -9,7 +13,7 @@ while true; do
     echo "Agent Status Monitor - $(date)"
     echo "=========================================="
     echo
-    
+
     # Check running tmux sessions
     echo "Running Agent Sessions:"
     tmux list-sessions 2>/dev/null | grep -E "(agent|opus)" | while IFS=: read -r session rest; do
@@ -18,7 +22,7 @@ while true; do
         echo "$pane_lines" | sed 's/^/   /'
         echo
     done
-    
+
     # Check shared status file
     if [ -f "$SCRIPT_DIR/tasks/shared_status.txt" ]; then
         echo "----------------------------------------"
@@ -26,7 +30,7 @@ while true; do
         cat "$SCRIPT_DIR/tasks/shared_status.txt"
         echo
     fi
-    
+
     # Check task files
     echo "----------------------------------------"
     echo "Task Files:"
@@ -37,7 +41,7 @@ while true; do
             echo "   $filename: $count pending tasks"
         fi
     done
-    
+
     echo
     echo "Press Ctrl+C to exit..."
     sleep 10

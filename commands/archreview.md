@@ -1,3 +1,5 @@
+# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
+
 # Architecture Review Command
 
 **Usage**: `/archreview [scope]` or `/arch [scope]`
@@ -17,7 +19,7 @@
 **Default Thinking Mode**: Architecture reviews use sequential thinking (4-6 thoughts) by default.
 **Ultra-Think Upgrade**: When combined with `/thinku`, automatically upgrades to deep analysis (12+ thoughts).
 
-**Dual-Perspective Analysis**: 
+**Dual-Perspective Analysis**:
 1. **Claude Perspective**: System architecture, design patterns, maintainability, technical debt
 2. **Gemini Perspective**: Performance optimization, scalability concerns, alternative approaches, industry best practices
 
@@ -32,15 +34,19 @@
 
 ## Review Process
 
-### Phase 1: Context Gathering & Validation
-1. **PR Content Validation** (if reviewing a PR/branch):
+### Phase 1: Context Gathering & Memory-Enhanced Validation
+1. **Memory MCP Search**: Query memory for relevant architectural patterns and decisions before analysis
+   - Search for: architecture decisions, design patterns, performance insights, solo developer patterns
+   - Extract context from previous similar architectural challenges and solutions
+   - Log findings: "📚 Found X relevant architectural memories"
+2. **PR Content Validation** (if reviewing a PR/branch):
    - Use `gh api repos/owner/repo/pulls/<PR#>/files --jq '.[].filename'` to get actual PR files
    - Compare claimed capabilities against actual PR contents
    - **CRITICAL CHECK**: Verify implementation files exist in PR, not just documentation
    - **STOP IMMEDIATELY**: If documentation claims features that aren't in the PR
-2. **Codebase Analysis**: Examine current state, recent changes, and architectural patterns
-3. **Documentation Review**: Check existing architecture docs and design decisions
-4. **Dependencies Analysis**: Review external dependencies and integrations
+3. **Memory-Enhanced Codebase Analysis**: Examine current state using insights from memory
+4. **Documentation Review**: Check existing architecture docs against memory patterns
+5. **Dependencies Analysis**: Review external dependencies with memory context
 
 ### Phase 2: Claude Primary, Gemini Consultant (MVP Focus)
 Claude leads analysis with MVP priorities:
@@ -70,6 +76,14 @@ Both perspectives focus on MVP shipping priorities:
 - **Breaking Change Freedom**: Take advantage of MVP flexibility
 - **Next Feature Readiness**: Will this help or hinder next features?
 
+### Phase 5: Memory MCP Integration (Capture New Learnings)
+Store new architectural insights discovered during review:
+- **New Decision Capture**: Store key architectural decisions with rationale and trade-offs
+- **Pattern Documentation**: Record successful and failed design patterns discovered
+- **Performance Insights**: Capture performance-related decisions and outcomes
+- **MVP Lessons**: Document new solo developer learnings and pragmatic approaches
+- **Relation Building**: Connect new learnings to existing memory patterns from Phase 1
+
 ## Role Switching Protocol
 
 **Phase 2: Claude Primary / Gemini Consultant (MVP Pragmatism)**
@@ -87,7 +101,7 @@ Both perspectives focus on MVP shipping priorities:
 **Phase 4: Equal Partnership (Shipping Focus)**
 - **Both evaluate**: MVP shipping readiness
 - **Joint focus**: Speed, simplicity, user value
-- **Key questions**: 
+- **Key questions**:
   - "Can one person build and maintain this?"
   - "Does this help users or just satisfy engineering perfectionism?"
   - "Can we ship without this refinement?"
@@ -103,11 +117,22 @@ Both perspectives focus on MVP shipping priorities:
 
 **Ultra Mode** (when combined with `/thinku`):
 - **Initial Analysis**: 4-6 thoughts for context gathering
-- **Deep Review**: 8-12 thoughts for architectural analysis  
+- **Deep Review**: 8-12 thoughts for architectural analysis
 - **Synthesis**: 4-6 thoughts for final recommendations
 - **Total Budget**: 16-24 thoughts for comprehensive review
 
-**MCP Integration**: Leverages `mcp__gemini-cli-mcp__gemini_chat_pro` for alternative perspective analysis
+**MCP Integration**:
+- **Gemini MCP**: `mcp__gemini-cli-mcp__gemini_chat_pro` for alternative perspective analysis
+- **Memory MCP**: `mcp__memory-server__*` for capturing architectural insights and design decisions
+
+**Memory MCP Workflow**:
+1. **Pre-Analysis Memory Search**: Query memory for relevant architectural patterns, decisions, and learnings BEFORE starting review
+2. **Context Enhancement**: Integrate found memories into analysis for more informed architectural assessment
+3. **Pattern Recognition**: Identify similar architectural challenges and successful solutions from memory
+4. **Decision History**: Reference previous architectural decisions and their outcomes
+5. **Post-Analysis Capture**: Store new architectural insights, design patterns, and performance learnings
+6. **Relation Building**: Connect new decisions to existing architectural patterns and outcomes
+7. **Entity Types**: `architecture_decision`, `design_pattern`, `performance_insight`, `mvp_tradeoff`, `solo_dev_pattern`
 
 **Output Format**:
 ```
@@ -116,8 +141,11 @@ Both perspectives focus on MVP shipping priorities:
 ## Executive Summary
 [MVP shipping readiness and key blockers]
 
-## Phase 1: Context & Current State
-[System understanding focused on shipping blockers]
+## Phase 1: Memory-Enhanced Context & Current State
+### 📚 Architectural Memory Context
+[Relevant patterns and decisions from memory search]
+### Current System Analysis
+[System understanding enhanced with memory insights]
 
 ## Phase 2: Claude-Led Analysis (MVP Pragmatism)
 ### Primary Analysis (Claude)
@@ -125,7 +153,7 @@ Both perspectives focus on MVP shipping priorities:
 ### Consultant Insights (Gemini)
 [Performance red flags, simpler alternatives]
 
-## Phase 3: Gemini-Led Analysis (Reality Check)  
+## Phase 3: Gemini-Led Analysis (Reality Check)
 ### Primary Analysis (Gemini)
 [Optimization opportunities, cleaner patterns]
 ### Consultant Reality Check (Claude)
@@ -139,9 +167,17 @@ Both perspectives focus on MVP shipping priorities:
 ### MVP Recommendations
 [Focus on shipping, iterate later]
 
-## Action Items
+### Phase 5: Architectural Learnings Captured
+#### Key Decisions Stored
+[Architectural decisions captured in memory for future reference]
+#### Patterns Identified
+[Design patterns and approaches documented]
+#### Solo Developer Insights
+[MVP-specific learnings for solo development context]
+
+### Action Items
 - [ ] Ship Blockers: [Must fix before users see this]
-- [ ] Quick Wins: [Easy improvements while building]  
+- [ ] Quick Wins: [Easy improvements while building]
 - [ ] Post-MVP: [Save for after initial user feedback]
 ```
 

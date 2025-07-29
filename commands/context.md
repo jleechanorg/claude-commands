@@ -6,7 +6,7 @@
 
 **Usage**: `/context` or `/con`
 
-**Implementation**: 
+**Implementation**:
 - Analyze current conversation context usage
 - Show percentage of context used
 - Provide breakdown of what's consuming context

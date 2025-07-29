@@ -1,4 +1,8 @@
 #!/bin/bash
+# ⚠️ REQUIRES PROJECT ADAPTATION
+# This script contains project-specific paths and may need modification
+
+#!/bin/bash
 # test-http.sh - Run HTTP tests with mock APIs
 # Replaces unreliable /testhttp command behavior
 
@@ -83,9 +87,9 @@ echo -e "${BLUE}🔌 HTTP Test Runner (Mock APIs)${NC}"
 echo "==============================="
 
 # Check project root
-if [[ ! -f "mvp_site/main.py" ]]; then
+if [[ ! -f "$PROJECT_ROOT/main.py" ]]; then
     echo -e "${RED}❌ Error: Not in project root directory${NC}"
-    echo "Please run from the WorldArchitect.AI project root"
+    echo "Please run from the Your Project project root"
     exit 1
 fi
 
@@ -98,7 +102,7 @@ fi
 
 # Start test server
 echo -e "\n${GREEN}🚀 Starting test server on port $PORT...${NC}"
-source venv/bin/activate && TESTING=true PORT=$PORT python mvp_site/main.py serve &
+source venv/bin/activate && TESTING=true PORT=$PORT python $PROJECT_ROOT/main.py serve &
 SERVER_PID=$!
 
 # Wait for server
@@ -161,10 +165,10 @@ FAILED_TESTS=0
 for test_file in $test_files; do
     echo -e "\n${BLUE}Running: $test_file${NC}"
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
-    
+
     # Set test server URL for tests
     export TEST_SERVER_URL="http://localhost:$PORT"
-    
+
     if [[ "$VERBOSE" == "true" ]]; then
         if source venv/bin/activate && TESTING=true python "$test_file"; then
             PASSED_TESTS=$((PASSED_TESTS + 1))

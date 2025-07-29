@@ -46,7 +46,7 @@ The command uses GitHub MCP tools to:
 ### Recent PRs (Last 2 Days) - All CI Passing ✅
 
 1. **PR #775**: File deletion impact protocols - Minor doc improvements needed
-2. **PR #773**: /arch command update - Minor grammar fixes  
+2. **PR #773**: /arch command update - Minor grammar fixes
 3. **PR #771**: Python type annotations - Import issue already fixed
 4. **PR #769**: Memory MCP integration - Code quality improvements needed
 5. **PR #768**: Slash command architecture - Scratchpad format already fixed

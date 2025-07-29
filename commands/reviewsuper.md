@@ -7,7 +7,7 @@ Performs critical architectural reviews of recent PRs with focus on problems, fl
 /reviewsuper              # Review latest 10 PRs critically
 /reviewsuper 5            # Review latest 5 PRs
 /reviewsuper --arch       # Architecture-only focus
-/reviewsuper --security   # Security-focused review  
+/reviewsuper --security   # Security-focused review
 /reviewsuper --debt       # Technical debt focus
 /reviewsuper --all        # All open PRs
 ```
@@ -16,7 +16,7 @@ Performs critical architectural reviews of recent PRs with focus on problems, fl
 
 Provides critical, problem-focused architectural reviews that identify:
 - Design flaws and anti-patterns
-- Performance bottlenecks and inefficiencies  
+- Performance bottlenecks and inefficiencies
 - Security vulnerabilities and risks
 - Technical debt and maintenance burdens
 - Code quality issues and complexity
@@ -73,7 +73,7 @@ Rating: 9/10
 ### ✅ Use (Critical Focus)
 ```
 ❌ **Major Issue**: Specific problem with impact
-⚠️ **Design Flaw**: Pattern violation with consequences  
+⚠️ **Design Flaw**: Pattern violation with consequences
 🔧 **Refactor Needed**: Complex logic requires simplification
 📈 **Performance Risk**: Inefficient algorithm in critical path
 🚨 **Security Gap**: Missing validation creates vulnerability
@@ -145,7 +145,7 @@ class UserService:
     def __init__(self):
         self.db = MySQLDatabase()  # Hard dependency
 
-# ❌ God Object  
+# ❌ God Object
 class UserManager:  # 500+ lines doing everything
     def create_user(self): pass
     def authenticate(self): pass
@@ -159,7 +159,7 @@ class UserManager:  # 500+ lines doing everything
 for user in users:
     for other in users:  # Nested iteration
         if user.matches(other):
-            
+
 # ❌ Database in Loop
 for item in items:
     db.query(f"SELECT * FROM related WHERE id={item.id}")
@@ -198,7 +198,7 @@ def update_user(user_id, data):
 
 ### Every Review Must Include:
 1. **Specific Problems**: Not generic concerns
-2. **Code Examples**: Actual problematic code snippets  
+2. **Code Examples**: Actual problematic code snippets
 3. **Impact Analysis**: Why each issue matters
 4. **Actionable Fixes**: Concrete steps to improve
 5. **Honest Rating**: Realistic score reflecting issues
@@ -220,7 +220,7 @@ def update_user(user_id, data):
 ## Example Output
 
 ```
-## 🔍 Critical Architecture Review  
+## 🔍 Critical Architecture Review
 **from super reviewer**
 
 ### Major Concerns
@@ -233,7 +233,7 @@ The authentication system violates dependency inversion by hard-coding email dep
 
 ### Required Actions
 1. Extract EmailProvider interface and inject dependency
-2. Add input sanitization layer before database operations  
+2. Add input sanitization layer before database operations
 3. Refactor payment logic using strategy pattern
 4. Add unit tests for edge cases (currently 0% coverage)
 

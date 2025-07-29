@@ -25,7 +25,7 @@ This command analyzes the requested command combination and:
 
 All combinations defined in `.claude/command-compositions.json`:
 - arch + plan
-- arch + think  
+- arch + think
 - plan + think
 - arch + plan + think
 - brief + think

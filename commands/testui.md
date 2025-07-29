@@ -18,14 +18,14 @@
 ```
 
 **Fallback**: If MCP unavailable, use Playwright:
-```bash  
+```bash
 ./run_ui_tests.sh mock
 ```
 
 **MANDATORY CONFIRMATIONS TO REPORT**:
 After test execution, ALWAYS explicitly confirm these 3 points:
 
-1. **📸 BROWSER TEST EVIDENCE**: 
+1. **📸 BROWSER TEST EVIDENCE**:
    - List actual screenshot file paths from `/tmp/worldarchitectai/browser/`
    - Confirm real Playwright browser automation worked
    - Show count of PNG files generated
@@ -42,7 +42,7 @@ After test execution, ALWAYS explicitly confirm these 3 points:
 
 **CRITICAL REQUIREMENTS**:
 - 🚨 **REAL browser automation only** - Must use Puppeteer MCP (preferred) or Playwright
-- 🚨 **NO HTTP simulation** - This is browser testing, not API testing  
+- 🚨 **NO HTTP simulation** - This is browser testing, not API testing
 - 🚨 **Mock APIs** - Uses mocked external API responses (free)
 - 🚨 **Real screenshots** - PNG/JPG images or visual captures, never text files
 - ❌ **NEVER simulate** - If browser tests can't run, report honestly
@@ -50,6 +50,6 @@ After test execution, ALWAYS explicitly confirm these 3 points:
 
 **PUPPETEER MCP BENEFITS** (Claude Code CLI default):
 - ✅ **No dependencies** - Works immediately without setup
-- ✅ **Visual capture** - Built-in screenshot functionality  
+- ✅ **Visual capture** - Built-in screenshot functionality
 - ✅ **Real browsers** - Actual Chrome/Chromium automation
 - ✅ **Direct integration** - Native Claude Code environment support

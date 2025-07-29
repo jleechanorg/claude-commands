@@ -1,3 +1,7 @@
+#!/bin/bash
+# ⚠️ ORCHESTRATION SYSTEM - WIP PROTOTYPE
+# Requires Redis, tmux, and agent workspace setup
+
 #!/usr/bin/env python3
 """Debug task flow between A2A bridge and worker"""
 
@@ -6,14 +10,14 @@ from message_broker import MessageBroker
 
 def debug_queue_contents():
     broker = MessageBroker()
-    
+
     # Check what's in the queues
     print("=== Queue Analysis ===")
-    
+
     # Check test-worker-1 queue
     queue_contents = broker.redis_client.lrange("queue:test-worker-1", 0, -1)
     print(f"\nqueue:test-worker-1 has {len(queue_contents)} messages")
-    
+
     for i, msg in enumerate(queue_contents):
         try:
             data = json.loads(msg)
@@ -25,11 +29,11 @@ def debug_queue_contents():
             print(f"  Payload: {data.get('payload')}")
         except Exception as e:
             print(f"  Error parsing message {i}: {e}")
-    
+
     # Check a2a_bridge queue
     bridge_queue = broker.redis_client.lrange("queue:a2a_bridge", 0, -1)
     print(f"\nqueue:a2a_bridge has {len(bridge_queue)} messages")
-    
+
     for i, msg in enumerate(bridge_queue):
         try:
             data = json.loads(msg)

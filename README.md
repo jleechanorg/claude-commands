@@ -7,9 +7,9 @@
 ## 🚨 Important Notice
 
 This export contains:
-- Project-specific paths and configurations (`$PROJECT_ROOT/`, database configs)
+- Project-specific paths and configurations (`$PROJECT_ROOT/`, database configs) 
 - Hardcoded assumptions and dependencies
-- Personal GitHub repository references 
+- Personal GitHub repository references
 - Setup-specific requirements
 
 **Use as inspiration and reference, not direct implementation.**
@@ -19,23 +19,23 @@ This export contains:
 This is a comprehensive command system built for Claude Code CLI that provides:
 
 - **70+ Commands**: Categorized by function (cognitive, operational, testing, development)
-- **Command Composition**: Natural language execution of markdown-defined workflows  
-- **Multi-Agent Orchestration**: WIP prototype system for autonomous task delegation
-- **Memory Integration**: MCP-based learning and knowledge persistence
+- **Command Composition**: Natural language execution of markdown-defined workflows
+- **🚨 Multi-Agent Orchestration**: WIP prototype system for autonomous task delegation
+- **Memory Integration**: MCP-based learning and knowledge persistence  
 - **Git Workflow Integration**: Automated PR creation, testing, and deployment
 
 ### Command Categories
 
 **🧠 Cognitive Commands** (Semantic Composition):
-- `/think`, `/arch`, `/debug`, `/learn`, `/analyze`, `/fix` 
+- `/think`, `/arch`, `/debug`, `/learn`, `/analyze`, `/fix`
 - Natural language understanding with automatic tool integration
 
 **⚙️ Operational Commands** (Protocol Enforcement):
-- `/headless`, `/handoff`, `/orchestrate` 
+- `/headless`, `/handoff`, `/orchestrate`
 - Modify execution environment with mandatory workflow execution
 
 **🔧 Tool Commands** (Direct Execution):
-- `/execute`, `/test`, `/pr` 
+- `/execute`, `/test`, `/pr`
 - Immediate task execution with optional parameters
 
 ## 🚨 Orchestration System (WIP Prototype)
@@ -52,7 +52,7 @@ This is a comprehensive command system built for Claude Code CLI that provides:
 ### Usage Examples
 ```bash
 /orch "fix failing tests"           # Autonomous test fixing
-/orch "implement feature X"         # End-to-end feature development
+/orch "implement feature X"         # End-to-end feature development  
 /orch monitor agents               # System monitoring
 ```
 
@@ -77,7 +77,7 @@ pip install rg fd-find
 
 ### Environment Setup
 ```bash
-# Clone the repository
+# Clone your project repository
 git clone https://github.com/yourusername/your-project
 cd your-project
 
@@ -106,7 +106,7 @@ export GITHUB_TOKEN="your_token_here"
 # Memory MCP for learning integration
 npm install @modelcontextprotocol/memory-server
 
-# GitHub MCP for repository operations  
+# GitHub MCP for repository operations
 npm install @modelcontextprotocol/github-server
 
 # Configure in Claude Code MCP settings
@@ -242,6 +242,11 @@ claude-commands/
 │   ├── orchestrate.sh    # Orchestration runner
 │   ├── git-header.sh     # Branch header generation
 │   └── ...              # Supporting utilities
+├── orchestration/        # Multi-agent system (WIP)
+│   ├── README.md         # Setup and usage guide
+│   ├── agent_system.py   # Core agent management
+│   ├── task_dispatcher.py# Task routing logic
+│   └── ...              # A2A communication system
 └── docs/                # Additional documentation
     ├── INSTALLATION.md   # Detailed setup guide
     ├── CONFIGURATION.md  # Environment configuration
@@ -267,7 +272,7 @@ Reference export for educational and development purposes. Adapt as needed for y
 
 This is a reference export. For contributions:
 1. Fork the repository
-2. Adapt for your environment  
+2. Adapt for your environment
 3. Share improvements via pull requests
 4. Document your adaptations and lessons learned
 

@@ -4,7 +4,7 @@
 
 **Action**: Commit local changes, switch to main, update roadmap/*.md, push to origin, switch back
 
-**Usage**: 
+**Usage**:
 - `/roadmap` or `/r` - Single task (traditional mode)
 - `/roadmap task1, task2, task3` - Multi-task parallel processing
 - `/roadmap "complex task 1" "simple task 2"` - Multiple quoted tasks
@@ -112,7 +112,7 @@ User: /roadmap implement auth system, create API docs, add unit testsAssistant: 
 [Executes /think light for each task]
 
 Task 1: Implement auth system - Complex, needs design
-Task 2: Create API docs - Medium, documentation task  
+Task 2: Create API docs - Medium, documentation task
 Task 3: Add unit tests - Small, testing task
 
 [Executes /plan for each task with subagent strategies]

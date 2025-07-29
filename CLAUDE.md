@@ -1,7 +1,7 @@
 # ⚠️ REFERENCE ONLY - DO NOT USE DIRECTLY
 
 **WARNING**: This is a reference export from a specific project setup. These configurations:
-- May contain project-specific paths and settings ($PROJECT_ROOT/, specific database configs)  
+- May contain project-specific paths and settings ($PROJECT_ROOT/, specific database configs)
 - Have not been tested in isolation
 - May require significant adaptation for your environment
 - Include setup-specific assumptions and dependencies
@@ -191,7 +191,7 @@ Use this as inspiration and reference, not direct implementation.
 
 1. **Directory Context**: Operates in worktree directory shown in environment ([Claude Code Overview](https://docs.anthropic.com/en/docs/claude-code/overview))
 2. **Test Execution**: Use `TESTING=true python` from project root
-3. **File Paths**: Always absolute paths | ✅ Use `~` NOT `/home/$USER`
+3. **File Paths**: Always absolute paths | ✅ Use `~` NOT `/home/jleechan`
 4. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
 5. 🚨 **Branch Protocol**: → See "Git Workflow" section
 6. 🚨 **TOOL EXPLANATION VS EXECUTION**: ⚠️ MANDATORY distinction
@@ -245,9 +245,9 @@ Use this as inspiration and reference, not direct implementation.
 
 ## Project Overview
 
-Your Project = AI-powered tabletop RPG platform (digital Tabletop RPG GM)
+Your Project = AI-powered tabletop RPG platform (digital Tabletop RPG Platform)
 
-**Stack**: Python 3.11/Flask ([Flask Documentation](https://flask.palletsprojects.com/))/Gunicorn | Gemini API ([Google AI Documentation](https://ai.google.dev/gemini-api/docs)) | Firebase Firestore ([Firebase Docs](https://firebase.google.com/docs/firestore)) | Vanilla JS/Bootstrap | Docker/Cloud Run ([Google Cloud Run](https://cloud.google.com/run/docs))
+**Stack**: Python 3.11/Flask ([Flask Documentation](https://flask.palletsprojects.com/))/Gunicorn | Gemini API ([Google AI Documentation](https://ai.google.dev/gemini-api/docs)) | Database ([Firebase Docs](https://firebase.google.com/docs/firestore)) | Vanilla JS/Bootstrap | Docker/Cloud Run ([Google Cloud Run](https://cloud.google.com/run/docs))
 
 **Docs**: → `.cursor/rules/project_overview.md` (full details)
 - **AI Assistant Guide**: → `$PROJECT_ROOT/README_FOR_AI.md` (CRITICAL system architecture)
@@ -510,7 +510,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT"
 **Zero Tolerance**: Module-level only | No inline/try-except/conditionals | Use `as` for conflicts
 
 ### PR References (⚠️)
-**MANDATORY**: Include full GitHub URL - Format: "PR #123: https://github.com/$USER2015/your-project.com/pull/123"
+**MANDATORY**: Include full GitHub URL - Format: "PR #123: https://github.com/jleechan2015/your-project.com/pull/123"
 
 ### PR Description Protocol (⚠️ MANDATORY)
 **PR descriptions must reflect complete delta vs origin/main, not just recent work**:

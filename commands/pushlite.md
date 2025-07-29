@@ -4,7 +4,7 @@
 
 **Action**: Push current branch to origin and create PR if requested
 
-**Usage**: 
+**Usage**:
 - `/pushlite` or `/pushl` - Push current branch to origin
 - `/pushlite pr` or `/pushl pr` - Push and create PR
 - `/pushlite force` or `/pushl force` - Force push to origin

@@ -1,3 +1,7 @@
+#!/bin/bash
+# ⚠️ ORCHESTRATION SYSTEM - WIP PROTOTYPE
+# Requires Redis, tmux, and agent workspace setup
+
 #!/usr/bin/env python3
 """
 Agent Health Monitor for Multi-Agent Orchestration System
@@ -12,9 +16,12 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-import redis
+# Redis removed - using file-based health monitoring
 
 import shutil
+
+# Import shared utilities from task_dispatcher
+from task_dispatcher import get_tmux_config_path
 
 
 @dataclass
@@ -38,31 +45,15 @@ class AgentHealthMonitor:
         self.orchestration_dir = orchestration_dir or os.path.dirname(__file__)
         self.tasks_dir = os.path.join(self.orchestration_dir, "tasks")
         self.agents = {}  # agent_name -> AgentStatus
-        self.redis_client = None
         self.monitoring_interval = 30  # seconds
         self.max_error_count = 3
         self.startup_script = os.path.join(self.orchestration_dir, "start_system.sh")
 
-        # Initialize Redis connection
-        self._init_redis()
+        # Dynamic agent system - no fixed expected agents
+        # Agents are created on-demand via /orch command
+        self.expected_agents = {}
 
-        # Define expected agents - only opus-master for dynamic system
-        self.expected_agents = {
-            "opus-master": {
-                "type": "orchestrator",
-                "specialization": "Task coordination",
-                "task_file": "shared_status.txt",
-            },
-        }
-
-    def _init_redis(self):
-        """Initialize Redis connection"""
-        try:
-            self.redis_client = redis.Redis(host="localhost", port=6379, db=0)
-            self.redis_client.ping()
-        except Exception as e:
-            print(f"Redis connection failed: {e}")
-            self.redis_client = None
+    # Redis initialization removed - using file-based health monitoring
 
     def get_tmux_sessions(self) -> list[str]:
         """Get list of active tmux sessions"""
@@ -221,52 +212,58 @@ class AgentHealthMonitor:
             # Wait a moment
             time.sleep(2)
 
-            # Restart based on agent type
-            if agent_name == "opus-master":
-                subprocess.run(
-                    [self.startup_script, "start"], check=False, capture_output=True
-                )
-            else:
-                # Start Claude agent with portable path discovery
-                try:
-                    project_root = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
-                                                capture_output=True, text=True, check=True).stdout.strip()
-                except subprocess.CalledProcessError as e:
-                    print(f"⚠️ Warning: Failed to determine project root using 'git rev-parse': {e}")
-                    project_root = os.path.dirname(self.orchestration_dir)
-                
-                # Find Claude executable portably
-                claude_path = None
-                if 'CLAUDE_PATH' in os.environ and os.path.exists(os.environ['CLAUDE_PATH']):
-                    claude_path = os.environ['CLAUDE_PATH']
-                else:
+            # Restart dynamic agents (task-agent-*)
+            # Start Claude agent with portable path discovery
+            try:
+                project_root = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
+                                            capture_output=True, text=True, check=True).stdout.strip()
+            except subprocess.CalledProcessError as e:
+                print(f"⚠️ Warning: Failed to determine project root using 'git rev-parse': {e}")
+                project_root = os.path.dirname(self.orchestration_dir)
 
-                    claude_path = shutil.which('claude')
-                    if not claude_path:
-                        claude_path = os.path.expanduser('~/.claude/local/claude')
-                
-                if not claude_path or not os.path.exists(claude_path):
-                    print(f"❌ Claude executable not found for agent {agent_name}")
-                    return False
-                
-                subprocess.run([
-                    'tmux', 'new-session', '-d', '-s', agent_name,
-                    '-c', project_root, claude_path
-                ], capture_output=True, check=False)
-                # Send initialization message
-                time.sleep(3)
-                subprocess.run(
-                    [
-                        "tmux",
-                        "send-keys",
-                        "-t",
-                        agent_name,
-                        f"I am the {config['type'].title()} Agent specialized in {config['specialization']}.",
-                        "Enter",
-                    ],
-                    check=False,
-                    capture_output=True,
-                )
+            # Find Claude executable portably
+            claude_path = None
+            if 'CLAUDE_PATH' in os.environ and os.path.exists(os.environ['CLAUDE_PATH']):
+                claude_path = os.environ['CLAUDE_PATH']
+            else:
+                claude_path = shutil.which('claude')
+                if not claude_path:
+                    claude_path = os.path.expanduser('~/.claude/local/claude')
+
+            if not claude_path or not os.path.exists(claude_path):
+                print(f"❌ Claude executable not found for agent {agent_name}")
+                return False
+
+            # Use agent-specific tmux config for 24-hour sessions
+            tmux_config = get_tmux_config_path()
+
+            # Build tmux command with optional config file
+            tmux_cmd = ['tmux']
+            if os.path.exists(tmux_config):
+                tmux_cmd.extend(['-f', tmux_config])
+            else:
+                print(f"⚠️ Warning: tmux config file not found at {tmux_config}, using default config")
+
+            tmux_cmd.extend([
+                'new-session', '-d', '-s', agent_name,
+                '-c', project_root, claude_path
+            ])
+
+            subprocess.run(tmux_cmd, capture_output=True, check=False)
+            # Send initialization message
+            time.sleep(3)
+            subprocess.run(
+                [
+                    "tmux",
+                    "send-keys",
+                    "-t",
+                    agent_name,
+                    f"I am the {config['type'].title()} Agent specialized in {config['specialization']}.",
+                    "Enter",
+                ],
+                check=False,
+                capture_output=True,
+            )
 
             # Update agent status
             if agent_name in self.agents:

@@ -6,7 +6,7 @@
 
 **MANDATORY**: This command MUST reply to every single individual comment, including:
 - **Copilot bot comments** - Automated suggestions and feedback
-- **CodeRabbit comments** - AI code review feedback  
+- **CodeRabbit comments** - AI code review feedback
 - **Human reviewer comments** - Inline code suggestions
 - **Suppressed comments** - Including hidden/collapsed feedback
 
@@ -42,7 +42,7 @@
 - **Bot-Generated Comments**: Copilot, CodeRabbit, GitHub Actions feedback
 - **Suppressed/Collapsed Comments**: Hidden or minimized feedback
 
-### Secondary Sources  
+### Secondary Sources
 - **General Issue Comments**: Overall PR discussion
 - **Review Summary Comments**: High-level review feedback
 
@@ -51,17 +51,17 @@
 ❌ FAILED: These 11 individual comments received ZERO replies:
 
 Copilot Comments (3):
-- #2223812756: "Function reference table shows inconsistent parameter documentation"  
+- #2223812756: "Function reference table shows inconsistent parameter documentation"
 - #2223812765: "Table lists all existing test files as using 'Local Playwright'"
 - #2223812783: "Test URL format shows port 8081, but other docs use port 6006"
 
-CodeRabbit Comments (8):  
+CodeRabbit Comments (8):
 - #2223818404: "Primary method section violates tooling standard"
 - #2223818407: "Repeats Playwright-first message contrary to CLAUDE.md"
 - #2223818409: "Example section should showcase Puppeteer MCP"
 - #2223818412: "Contradicts project-wide mandate: Puppeteer MCP must be primary"
 - #2223818415: "Function reference table tied to Playwright MCP will become obsolete"
-- #2223818416: "Statement enforces Playwright MCP for new tests – conflicts with mandate"  
+- #2223818416: "Statement enforces Playwright MCP for new tests – conflicts with mandate"
 - #2223887761: "Fallback hierarchy wording is inverted"
 ```
 
@@ -69,7 +69,7 @@ CodeRabbit Comments (8):
 
 🚨 **EXECUTION REQUIREMENT**: For EACH individual comment, you must BOTH:
 1. ✅ **Implement technical fix** (if applicable) - address the actual issue
-2. ✅ **Post direct reply** - use `gh pr comment [PR] --body "📍 Reply to Comment #[ID]..."` 
+2. ✅ **Post direct reply** - use `gh pr comment [PR] --body "📍 Reply to Comment #[ID]..."`
 
 **ANTI-PATTERN**: Claiming "100% coverage" after only implementing fixes without posting replies.
 
@@ -92,7 +92,7 @@ REPO=$(gh repo view --json name -q .name)
 # 1. Fetch ALL inline pull request comments (PRIMARY SOURCE)
 gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate
 
-# 2. Fetch review comments from all reviews  
+# 2. Fetch review comments from all reviews
 gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/reviews" --paginate | \
   jq -r '.[] | select(.body != null) | .id' | \
   xargs -I {} gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/reviews/{}/comments"
@@ -100,7 +100,7 @@ gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/reviews" --paginate | \
 # 3. Fetch general issue comments
 gh api "repos/$OWNER/$REPO/issues/$PR_NUMBER/comments" --paginate
 
-# 4. VERIFY: Aggregate ALL sources and count total individual comments 
+# 4. VERIFY: Aggregate ALL sources and count total individual comments
 pull_comments=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate)
 issue_comments=$(gh api "repos/$OWNER/$REPO/issues/$PR_NUMBER/comments" --paginate)
 review_comments=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/reviews" --paginate | \
@@ -146,7 +146,7 @@ Before posting ANY response, verify:
 5. ✅ **Technical Substance**: "Does my response show technical understanding, not generic acknowledgment?"
 
 **AUTONOMOUS WORKFLOW**:
-1. **Load comment data**: Read comment.body from comments.json/API directly
+1. **Load comment data**: Read comment.body from GitHub API directly
 2. **Genuine analysis**: Address SPECIFIC technical points raised in each comment
 3. **Self-validate**: Apply 5-point validation protocol above
 4. **Status determination**: Mark as DONE or NOT DONE with technical substance
@@ -169,14 +169,14 @@ Before posting ANY response, verify:
 create_true_threaded_reply() {
   local original_comment_id="$1"
   local response_body="$2"
-  
+
   echo "🔄 Creating TRUE threaded reply to comment #$original_comment_id..."
-  
+
   # THE CORRECT GITHUB API FOR THREADING - FIXED: JSON envelope format
   printf '{"body": "📍 **Threaded Reply**: %s"}' "$response_body" | \
     gh api -X POST "repos/$OWNER/$REPO/pulls/comments/$original_comment_id/replies" \
       --input -
-  
+
   if [ $? -eq 0 ]; then
     echo "✅ SUCCESS: Threaded reply created for comment #$original_comment_id"
     return 0
@@ -191,22 +191,22 @@ create_true_threaded_reply() {
 verify_true_threading() {
   local original_id="$1"
   local max_attempts=3
-  
+
   for attempt in $(seq 1 $max_attempts); do
     sleep 2  # Allow API to process
-    
+
     # Check if any new comment has in_reply_to_id matching our original
     THREADED_REPLY=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
       jq -r '.[] | select(.in_reply_to_id == '$original_id') | .id')
-    
+
     if [ -n "$THREADED_REPLY" ]; then
       echo "✅ VERIFIED: Threaded reply $THREADED_REPLY created for comment $original_id"
       return 0
     fi
-    
+
     echo "⏳ Attempt $attempt: Waiting for threading verification..."
   done
-  
+
   echo "❌ THREADING FAILED: No threaded reply found for comment $original_id"
   return 1
 }
@@ -216,11 +216,11 @@ verify_true_threading() {
 create_fallback_comment() {
   local original_id="$1"
   local response_body="$2"
-  
-  gh pr comment $PR_NUMBER --body "📍 **FALLBACK Reply to Comment #$original_id**: 
+
+  gh pr comment $PR_NUMBER --body "📍 **FALLBACK Reply to Comment #$original_id**:
 $response_body
 🔗 Threading failed - this is a general comment reference"
-  
+
   echo "⚠️ FALLBACK: General comment created for #$original_id"
 }
 
@@ -229,14 +229,14 @@ $response_body
 reply_to_individual_comment() {
   local comment_data="$1"
   local response_body="$2"
-  
+
   # Extract comment details
   local comment_id=$(echo "$comment_data" | jq -r '.id')
   local file_path=$(echo "$comment_data" | jq -r '.path // empty')
   local line_number=$(echo "$comment_data" | jq -r '.line // .original_line // empty')
-  
+
   echo "🔄 Processing comment #$comment_id..."
-  
+
   # Step 1: Attempt true threaded reply
   if create_true_threaded_reply "$comment_id" "$response_body"; then
     # Step 2: Verify threading worked
@@ -245,7 +245,7 @@ reply_to_individual_comment() {
       return 0
     fi
   fi
-  
+
   # Step 3: Fallback to general comment
   create_fallback_comment "$comment_id" "$response_body"
   return 1
@@ -275,7 +275,7 @@ Each reply follows this format:
 
 ### 🎯 INDIVIDUAL COMMENT COVERAGE
 **Total Individual Comments Found**: 11
-- Copilot bot comments: 3  
+- Copilot bot comments: 3
 - CodeRabbit comments: 8
 - Human reviewer comments: 0
 
@@ -290,15 +290,15 @@ Each reply follows this format:
 ### ❌ Individual Comments NOT Addressed (0 comments)
 [MUST BE ZERO - Every individual comment requires a response]
 
-### 📊 Coverage Statistics  
+### 📊 Coverage Statistics
 - **Individual comment coverage: 100% (11/11)**
 - **Threading success rate: 90% (10/11 threaded, 1/11 fallback)**
-- **API replies posted: 11 responses (10 threaded + 1 general)**  
+- **API replies posted: 11 responses (10 threaded + 1 general)**
 - **Bot comment coverage: 100% (11/11)**
 - **Verification success: 100% (all replies confirmed via API)**
 ```
 
-**SUCCESS CRITERIA**: 
+**SUCCESS CRITERIA**:
 - ✅ 100% individual comment coverage (zero unaddressed)
 - ✅ Every Copilot/CodeRabbit comment has a reply
 - ✅ All API responses successfully posted to GitHub
@@ -324,7 +324,7 @@ Each reply follows this format:
 
 # Will process all comments like:
 # Comment 1: "This function needs error handling"
-# → User: "Added try/catch block"  
+# → User: "Added try/catch block"
 # → Status: ✅ DONE
 # → Reply: "✅ DONE: Added try/catch block for error handling"
 ```
