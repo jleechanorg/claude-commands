@@ -1,8 +1,4 @@
 #!/bin/bash
-# ⚠️ REQUIRES PROJECT ADAPTATION
-# This script contains project-specific paths and may need modification
-
-#!/bin/bash
 # /orch command - Multi-agent orchestration system (short alias)
 # Usage: /orch [task_description] or ./orch.sh [task_description]
 # Works from any directory within a git repository or worktree

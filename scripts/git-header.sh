@@ -1,7 +1,3 @@
-#!/bin/bash
-# ⚠️ REQUIRES PROJECT ADAPTATION
-# This script contains project-specific paths and may need modification
-
 #!/usr/bin/env bash
 # Git header generator script
 # Usage: ./git-header.sh or git header (if aliased)

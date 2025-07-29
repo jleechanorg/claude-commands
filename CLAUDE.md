@@ -9,8 +9,7 @@
 
 Use this as inspiration and reference, not direct implementation.
 
----
-# CLAUDE.md - Primary Rules and Operating Protocol
+---# CLAUDE.md - Primary Rules and Operating Protocol
 
 **Primary rules file for AI collaboration on Your Project**
 *Research: AI pair programming increases task completion speed by 55.8% ([Microsoft Research](https://www.microsoft.com/en-us/research/publication/the-impact-of-ai-on-developer-productivity-evidence-from-github-copilot/))*

@@ -1,8 +1,4 @@
 #!/bin/bash
-# ⚠️ REQUIRES PROJECT ADAPTATION
-# This script contains project-specific paths and may need modification
-
-#!/bin/bash
 # /list command - Display all available slash commands with descriptions
 # Usage: /list or ./list.sh
 # Works from any directory within a git repository or worktree

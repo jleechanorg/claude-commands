@@ -18,7 +18,7 @@ This export contains:
 
 This is a comprehensive command system built for Claude Code CLI that provides:
 
-- **70+ Commands**: Categorized by function (cognitive, operational, testing, development)
+- **Command Definitions**: Categorized by function (cognitive, operational, testing, development)
 - **Command Composition**: Natural language execution of markdown-defined workflows  
 - **Multi-Agent Orchestration**: WIP prototype system for autonomous task delegation
 - **Memory Integration**: MCP-based learning and knowledge persistence
@@ -130,7 +130,6 @@ npm install @modelcontextprotocol/github-server
 - `/pr` - Automated PR creation with comprehensive descriptions
 - `/push` - Smart push with conflict detection and resolution
 - `/header` - Mandatory branch header for context tracking
-- `/integrate` - Branch integration with testing and validation
 
 ### Orchestration & Scaling
 - `/orch [task]` - Multi-agent task delegation (WIP prototype)
@@ -237,15 +236,15 @@ claude-commands/
 │   ├── execute.md        # Task execution framework
 │   ├── orchestrate.md    # Multi-agent coordination
 │   ├── think.md          # Enhanced reasoning
-│   └── ...              # 70+ additional commands
+│   └── ...              # Additional commands
 ├── scripts/              # Implementation scripts
-│   ├── orchestrate.sh    # Orchestration runner
+│   ├── orch.sh          # Orchestration runner
 │   ├── git-header.sh     # Branch header generation
 │   └── ...              # Supporting utilities
-└── docs/                # Additional documentation
-    ├── INSTALLATION.md   # Detailed setup guide
-    ├── CONFIGURATION.md  # Environment configuration
-    └── TROUBLESHOOTING.md # Common issues and solutions
+└── orchestration/       # Multi-agent system
+    ├── README.md        # System overview
+    ├── agent_system.py  # Core agent framework
+    └── ...              # Implementation files
 ```
 
 ## 🔗 Resources

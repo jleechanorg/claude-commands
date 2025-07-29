@@ -1,8 +1,4 @@
 #!/bin/bash
-# ⚠️ REQUIRES PROJECT ADAPTATION
-# This script contains project-specific paths and may need modification
-
-#!/bin/bash
 
 # /headless - Enhanced Automated Development with Planning and PR Creation
 # Usage: /headless [prompt]
