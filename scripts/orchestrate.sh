@@ -1,4 +1,8 @@
 #!/bin/bash
+# ⚠️ REQUIRES PROJECT ADAPTATION
+# This script contains project-specific paths and may need modification
+
+#!/bin/bash
 # /orchestrate command - Multi-agent orchestration system
 # Usage: /orchestrate [task_description] or ./orchestrate.sh [task_description]
 # Works from any directory within a git repository or worktree

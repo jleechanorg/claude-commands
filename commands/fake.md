@@ -125,10 +125,10 @@ After analysis completes, store new findings:
    pattern_name = f"{pattern_type}_{timestamp}"
    mcp__memory-server__create_entities([{
      "name": pattern_name,
-     "entityType": "fake_code_pattern", 
+     "entityType": "fake_code_pattern",
      "observations": [
        "Description of pattern",
-       f"Location: {file}:{line}", 
+       f"Location: {file}:{line}",
        f"Detection method: {method}",
        f"Found on branch: {current_branch}",
        f"Detected by: /fake command"
@@ -181,7 +181,7 @@ After analysis completes, store new findings:
 🚨 FAKE CODE AUDIT RESULTS (Memory-Enhanced)
 
 📊 Files Analyzed: X
-⚠️  Fake Patterns Found: Y  
+⚠️  Fake Patterns Found: Y
 ✅ Verified Working Code: Z
 🧠 Memory Patterns Used: A
 📚 New Patterns Learned: B
@@ -210,7 +210,7 @@ For each fake pattern found:
 - **File**: Exact location (file:line)
 - **Pattern**: Type of fake implementation
 - **Evidence**: Code snippet showing the issue
-- **Impact**: How this affects system functionality  
+- **Impact**: How this affects system functionality
 - **Recommendation**: Specific action to resolve the issue
 
 ## 🧠 MEMORY-ENHANCED DETECTION BENEFITS
@@ -231,7 +231,7 @@ For each fake pattern found:
 
 ### Memory Integration Flow
 1. **Search**: Query memory for relevant fake patterns before analysis
-2. **Analyze**: Use memory context to enhance detection accuracy  
+2. **Analyze**: Use memory context to enhance detection accuracy
 3. **Learn**: Store new findings and update existing knowledge
 4. **Evolve**: Each run improves future detection capabilities
 
