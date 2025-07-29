@@ -102,6 +102,14 @@
 - **Pattern**: Real implementation > No implementation > Fake implementation
 - **Evidence**: PR #820 - 563+ lines of fake code removed
 
+⚠️ **COMMAND COMPOSITION ARCHITECTURE DOCUMENTATION**: When sophisticated functionality is documented without shell scripts:
+- ✅ **CLARIFY IMPLEMENTATION APPROACH**: Add explicit note about command composition architecture
+- ✅ **EXPLAIN NATURAL LANGUAGE EXECUTION**: Document that Claude executes markdown-defined workflows
+- ✅ **PREVENT FAKE IMPLEMENTATION CONCERNS**: Clear architectural rationale prevents confusion
+- ❌ **NEVER leave sophisticated documentation without implementation explanation**
+- 🔍 **Evidence**: Session 2025-01-29 - push.sh deletion required architectural clarification
+- **Pattern**: "Implementation: This command uses Claude Code's command composition architecture..."
+
 🚨 **ORCHESTRATION OVER DUPLICATION**: ⚠️ MANDATORY
 - **Principle**: Orchestrators delegate to existing commands, never reimplement
 - ✅ Use existing /commentreply, /pushl, /fixpr rather than duplicating their logic
@@ -172,6 +180,24 @@
     - **Enhanced Commands**: `/think`, `/learn`, `/debug`, `/analyze`, `/fix`, `/plan`, `/execute`, `/arch`, `/test`, `/pr`
     - **Execution Steps**: Extract terms → Search Memory MCP → Log results → Integrate naturally
     - **Transparency**: Show "🔍 Searching memory..." and report results
+11. 🚨 **COMPREHENSIVE REVIEW COMMENT EXTRACTION**: ⚠️ MANDATORY - When executing `/review` command:
+    - ✅ **Extract ALL Comments**: Use multiple GitHub API endpoints to capture complete conversation
+      - `gh pr view --comments` (general comments)
+      - `gh api repos/owner/repo/pulls/PR#/comments` (inline review comments)
+      - `gh api repos/owner/repo/pulls/PR#/reviews` (review summaries)
+      - Include verification comments, follow-up clarifications, pattern recognition analysis
+    - ✅ **Count Verification**: Report total comment count including verification responses
+    - ❌ **NEVER claim complete analysis** without extracting verification and follow-up comments
+    - 🔍 **Evidence**: Session 2025-01-29 - missed 5+ critical verification comments from CodeRabbit
+    - **Pattern**: Incomplete extraction leads to missed implementation gaps and poor review quality
+12. 🚨 **IMPLEMENTATION VERIFICATION REQUIREMENT**: ⚠️ MANDATORY - Before claiming any implementation:
+    - ✅ **ALWAYS verify file state** using direct file reads after making changes
+    - ✅ **NEVER claim implementation** without confirming actual file modifications
+    - ✅ **Use commit evidence** to back all resolution claims with specific technical details
+    - ❌ **NEVER rely on intent** - verify actual implementation vs claimed changes
+    - 🔍 **Evidence**: Session 2025-01-29 - CodeRabbit verification caught false implementation claims
+    - **Pattern**: "Claimed to add X but file verification shows Y" indicates verification failure
+    - **Anti-Pattern**: Making resolution claims without verifying actual file state changes
 
 ### 🔧 GitHub MCP Setup
 **Token**: Set in `claude_mcp.sh` line ~247 via `export GITHUB_TOKEN="your_token_here"` ([GitHub MCP Integration](https://github.com/modelcontextprotocol/servers))
@@ -210,6 +236,14 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 - **Seek clarification**: Ask follow-up questions when requirements are ambiguous
 - **Propose improvements**: Suggest better patterns, robust solutions, cleaner implementations
 - **Be a thoughtful collaborator**: Act as good teammate who helps improve overall quality
+
+⚠️ **VERIFICATION TOOL ACKNOWLEDGMENT**: When verification tools (CodeRabbit, Cursor, etc.) identify implementation gaps:
+- ✅ **ACKNOWLEDGE ACCURACY**: "You were absolutely right" rather than defensive responses
+- ✅ **EXPRESS GRATITUDE**: "Thank you for catching this" - verification improves quality
+- ✅ **IMPLEMENT ACTUAL FIXES**: Address identified gaps with verifiable implementations
+- ✅ **DOCUMENT IMPROVED PROCESS**: Learn from verification to prevent repeated patterns
+- 🔍 **Evidence**: Session 2025-01-29 - positive user response to acknowledgment approach
+- **User Preference**: Expects acknowledgment of verification accuracy and actual fixes
 
 **Response Modes**: Default = structured for complex | Direct for simple | Override: "be brief"
 
