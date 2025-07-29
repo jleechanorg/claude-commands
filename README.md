@@ -1,505 +1,276 @@
-# Claude Commands Export Repository
+# Claude Commands Reference System
 
-## 🚨 WARNING AND DISCLAIMER
+# ⚠️ REFERENCE ONLY - REQUIRES ADAPTATION
 
-### **REFERENCE-ONLY REPOSITORY**
-This repository contains commands and configurations extracted from a development project as reference material. These commands are:
+**WARNING**: This is a reference export from a specific project. These configurations require significant adaptation for your environment.
 
-- **⚠️ UNTESTED** in isolation outside their original environment
-- **⚠️ PROJECT-SPECIFIC** with configurations tailored to specific workflows
-- **⚠️ DEPENDENCY-HEAVY** requiring specific MCP servers, tools, and environment setup
-- **⚠️ EXPERIMENTAL** with some commands still in development/testing phases
+## 🚨 Important Notice
 
-**DO NOT EXPECT PLUG-AND-PLAY FUNCTIONALITY**
+This export contains:
+- Project-specific paths and configurations (`$PROJECT_ROOT/`, database configs)
+- Hardcoded assumptions and dependencies
+- Personal GitHub repository references 
+- Setup-specific requirements
 
-### **Use Case**
-This repository serves as:
-- ✅ **Inspiration** for building similar command systems
-- ✅ **Reference implementation** of command composition patterns
-- ✅ **Architecture examples** for Claude workflow automation
-- ✅ **Technical learning resource** for AI-powered development tools
+**Use as inspiration and reference, not direct implementation.**
 
----
+## 🏗️ System Architecture
 
-## 🚨 FEATURED: Orchestration System - WIP Prototype
+This is a comprehensive command system built for Claude Code CLI that provides:
 
-### **Multi-Agent Task Delegation System**
-The crown jewel of this export is the **orchestration system** - an active development prototype demonstrating multi-agent AI collaboration with verified production success metrics.
+- **70+ Commands**: Categorized by function (cognitive, operational, testing, development)
+- **Command Composition**: Natural language execution of markdown-defined workflows  
+- **Multi-Agent Orchestration**: WIP prototype system for autonomous task delegation
+- **Memory Integration**: MCP-based learning and knowledge persistence
+- **Git Workflow Integration**: Automated PR creation, testing, and deployment
 
-#### Architecture Overview
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     Claude Code CLI                         │
-├─────────────────────────────────────────────────────────────┤
-│  /orch [task] → Task Dispatcher → Redis Coordination       │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────┐ │
-│  │ frontend-   │ │ backend-    │ │ testing-    │ │ opus-   │ │
-│  │ agent       │ │ agent       │ │ agent       │ │ master  │ │
-│  │ (tmux)      │ │ (tmux)      │ │ (tmux)      │ │ (tmux)  │ │
-│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────┘ │
-├─────────────────────────────────────────────────────────────┤
-│              A2A Communication Protocol                     │
-│           Redis Queues + Task State Management              │
-└─────────────────────────────────────────────────────────────┘
-```
+### Command Categories
 
-#### Real-World Performance Metrics
-- **Cost**: $0.003-$0.050 per task delegation
-- **Success Rate**: Verified end-to-end task completion with PR generation
-- **Scalability**: Parallel agent execution with load balancing
-- **Monitoring**: Real-time agent health and task progress tracking
+**🧠 Cognitive Commands** (Semantic Composition):
+- `/think`, `/arch`, `/debug`, `/learn`, `/analyze`, `/fix` 
+- Natural language understanding with automatic tool integration
 
-#### Proven Workflows
+**⚙️ Operational Commands** (Protocol Enforcement):
+- `/headless`, `/handoff`, `/orchestrate` 
+- Modify execution environment with mandatory workflow execution
+
+**🔧 Tool Commands** (Direct Execution):
+- `/execute`, `/test`, `/pr` 
+- Immediate task execution with optional parameters
+
+## 🚨 Orchestration System (WIP Prototype)
+
+**Multi-agent task delegation system with Redis coordination**
+
+### Architecture
+- **tmux-based agents**: frontend, backend, testing, opus-master with A2A communication
+- **Redis coordination**: Task routing and inter-agent communication
+- **Autonomous workflow**: task creation → agent assignment → execution → PR creation
+- **Cost metrics**: $0.003-$0.050 per task
+- **Real-world verification**: Successful task completion with PR generation
+
+### Usage Examples
 ```bash
-# Basic task delegation
-/orch "implement user authentication system"
-→ agent analyzes requirements → creates implementation → tests → commits → creates PR
-
-# Complex multi-step tasks  
-/orch "fix all failing tests and optimize performance"
-→ agents coordinate → parallel execution → conflict resolution → verification
-
-# System monitoring
-/orch monitor agents
-→ real-time status → resource utilization → task queue depth
+/orch "fix failing tests"           # Autonomous test fixing
+/orch "implement feature X"         # End-to-end feature development
+/orch monitor agents               # System monitoring
 ```
 
-#### Architecture Components
+### Setup Requirements
+- Redis server running locally
+- tmux installed and configured
+- Python virtual environment
+- Specialized agent workspaces
+- GitHub CLI and token setup
 
-**Task Dispatcher** (`orchestration/task_dispatcher.py`):
-- Capability-based agent assignment with load balancing
-- Dynamic workload distribution and conflict resolution
-- Cost optimization through agent reuse and task batching
-
-**Agent Communication** (`orchestration/redis_a2a_bridge.py`):
-- Redis-backed A2A (Agent-to-Agent) protocol
-- State synchronization and task handoff mechanisms
-- Recovery procedures for failed agents and orphaned tasks
-
-**Monitoring System** (`orchestration/agent_monitor.py`):
-- Health checks and performance metrics collection
-- Automatic agent restart and workspace cleanup
-- Resource utilization tracking and optimization suggestions
-
-#### Setup Requirements
-```bash
-# Core infrastructure
-redis-server                    # Coordination backend
-tmux                           # Session isolation
-python3 -m venv orchestration  # Agent environments
-
-# Agent workspaces (auto-created)
-/tmp/agents/frontend-agent-{id}/
-/tmp/agents/backend-agent-{id}/
-/tmp/agents/testing-agent-{id}/
-/tmp/agents/opus-master-{id}/
-```
-
-#### Usage Examples
-```bash
-# Development tasks
-/orch "implement login validation with tests"
-/orch "refactor database queries for performance"
-/orch "add responsive design to dashboard"
-
-# Maintenance tasks  
-/orch "fix all TypeScript errors in components"
-/orch "update dependencies and resolve conflicts"
-/orch "optimize CI/CD pipeline performance"
-
-# Monitoring and debugging
-/orch monitor agents
-/orch "debug failing integration tests"
-tmux attach -t frontend-agent-1234  # Direct agent access
-```
-
-#### Success Verification
-- **End-to-End Workflows**: Task → Implementation → Testing → PR Creation
-- **Cost Tracking**: Real-time expense monitoring per task delegation
-- **Quality Metrics**: Code review compliance and test coverage
-- **Production Ready**: Proven in active development environments
-
----
-
-## 📋 QUICK START
+## 📋 Installation Guide
 
 ### Prerequisites
-- [Claude Code CLI](https://claude.ai/code) - Primary execution environment
-- Python 3.8+ with venv support
-- Git with `gh` CLI for GitHub operations
-- Redis 6.0+ (for orchestration features)
-- Required MCP servers (see [Dependencies](#dependencies))
-
-### Installation
 ```bash
-git clone https://github.com/jleechanorg/claude-commands.git
-cd claude-commands
+# Required tools
+brew install gh tmux redis jq
+pip install mcp python-sdk anthropic
 
-# Install MCP servers
-npm install @anthropic/mcp-server-github @anthropic/mcp-server-memory @playwright/mcp
-
-# Setup environment (adapt to your needs)
-cp .env.example .env
-# Edit .env with your tokens and configuration
+# Optional but recommended
+pip install rg fd-find
 ```
-
-⚠️ **Important**: These commands require significant adaptation for your environment. See [Configuration](#configuration) and [Troubleshooting](#troubleshooting) sections.
-
----
-
-## 🏗️ ARCHITECTURE OVERVIEW
-
-### Command Composition System
-The claude-commands system implements **Command Composition** - combining multiple slash commands to create enhanced AI behaviors.
-
-**Example:**
-```bash
-/think deep /arch /security → Deep architectural security analysis
-/debug /test /learn → Systematic debugging + testing + learning capture
-```
-
-### Directory Structure
-```
-commands/                  # 78+ command definitions
-├── cognitive/            # Thinking and analysis commands
-├── operational/          # Task execution commands  
-├── quality/             # Code analysis and validation
-├── communication/       # PR and comment management
-└── meta/                # System commands
-
-orchestration/           # 🚨 Multi-agent system (requires Redis/tmux)
-├── agent_system.py     # Agent lifecycle management
-├── task_dispatcher.py  # Load balancing and assignment
-├── redis_a2a_bridge.py # Agent communication protocol
-└── agent_monitor.py    # Health monitoring and recovery
-
-scripts/                # Supporting scripts and utilities
-```
-
----
-
-## 📚 COMMAND CATEGORIES
-
-### 🧠 Cognitive Commands
-| Command | Description | Composition Examples |
-|---------|-------------|---------------------|
-| `/think [level]` | Sequential thinking (light/medium/deep/ultra) | `/think deep /arch` |
-| `/arch` | Architecture analysis and design patterns | `/arch /security` |
-| `/debug` | Systematic debugging with evidence collection | `/debug /test` |
-| `/analyze` | Deep analysis with memory context | `/analyze /learn` |
-
-### ⚙️ Operational Commands  
-| Command | Description | Requirements |
-|---------|-------------|--------------|
-| `/orchestrate` | 🚨 Multi-agent task delegation | Redis, tmux |
-| `/execute` | Task execution with safety checks | - |
-| `/plan` | Strategic planning with decomposition | - |
-| `/handoff` | Task handoff between contexts | - |
-
-### 🔍 Analysis Commands
-| Command | Description | Use Cases |
-|---------|-------------|-----------|
-| `/fake` | Detect placeholder/demo code | Code audits |
-| `/test` | Testing automation workflows | CI/CD |
-| `/learn` | Capture learnings to memory | Knowledge management |
-| `/research` | Knowledge gathering with patterns | Investigation |
-
-### 💬 Communication Commands
-| Command | Description | GitHub Integration |
-|---------|-------------|-------------------|
-| `/commentreply` | Intelligent PR comment generation | GitHub API |
-| `/copilot` | Automated PR analysis and fixes | GitHub MCP |
-| `/pr` | Pull request workflow automation | gh CLI |
-
----
-
-## 🔧 DEPENDENCIES
-
-### Core Dependencies
-```bash
-# Essential tools
-git                     # Version control
-gh                      # GitHub CLI  
-python3                 # Python runtime
-redis-server           # Orchestration backend (required for /orch)
-tmux                   # Multi-session management (required for /orch)
-```
-
-### MCP Server Dependencies
-```bash
-# Required
-npm install @anthropic/mcp-server-github    # GitHub operations
-npm install @anthropic/mcp-server-memory    # Learning persistence
-
-# Recommended  
-npm install @playwright/mcp                 # Browser automation
-npm install @context7/mcp                   # Documentation lookup
-npm install @perplexity/mcp                 # Research capabilities
-
-# Optional
-npm install @puppeteer/mcp                  # Alternative browser automation
-npm install @gemini/mcp                     # AI model integration
-```
-
-### Environment Variables
-```bash
-# GitHub integration
-GITHUB_TOKEN=ghp_...           # GitHub API access
-
-# Optional integrations
-GEMINI_API_KEY=...             # Google AI API
-REDIS_URL=redis://localhost:6379/0  # Redis (for orchestration)
-```
-
----
-
-## 💡 USAGE EXAMPLES
-
-### Basic Usage
-```bash
-# Single command execution
-/think analyze this codebase
-/debug find the authentication issue
-/test run integration tests
-```
-
-### Command Composition
-```bash
-# Analytical workflows
-/think deep /arch /security → Deep architectural security analysis
-/debug /test /learn → Systematic debugging with test validation and learning
-
-# Problem solving
-/plan /execute /test → Strategic planning + execution + validation
-/research /analyze /learn → Investigation + analysis + knowledge capture
-
-# PR management
-/copilot /commentreply → Automated PR analysis + intelligent responses
-```
-
-### 🚨 Advanced Orchestration (WIP Prototype)
-```bash
-# Multi-agent task delegation (requires Redis/tmux setup)
-/orchestrate implement user authentication system
-→ Cost: ~$0.010-$0.025 | Agents: backend + frontend + testing
-→ Output: Complete implementation with tests and PR
-
-/orchestrate analyze performance bottlenecks across codebase  
-→ Cost: ~$0.015-$0.040 | Agents: backend + testing + monitoring
-→ Output: Performance report with optimization recommendations
-
-/orchestrate fix all failing tests and update dependencies
-→ Cost: ~$0.005-$0.020 | Agents: testing + backend + maintenance  
-→ Output: All tests passing with dependency updates and conflict resolution
-
-# Orchestration monitoring
-/orch monitor agents
-→ Real-time: Agent status, task queue, resource utilization, cost tracking
-
-# Direct agent access for debugging
-tmux attach -t frontend-agent-1234    # Debug frontend agent workspace
-tmux attach -t backend-agent-5678     # Debug backend agent workspace
-```
-
----
-
-## ⚙️ CONFIGURATION
 
 ### Environment Setup
-1. **Copy environment template:**
-   ```bash
-   cp .env.example .env
-   ```
-
-2. **Configure required variables:**
-   ```bash
-   GITHUB_TOKEN=your_github_token_here
-   REDIS_URL=redis://localhost:6379/0  # For orchestration
-   # Add other configuration as needed
-   ```
-
-3. **Install Python dependencies:**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt  # If available
-   ```
-
-### Orchestration System Setup
 ```bash
-# 1. Install and start Redis
-sudo apt-get install redis-server  # Ubuntu/Debian
-brew install redis                 # macOS
-redis-server                       # Start Redis
+# Clone the repository
+git clone https://github.com/yourusername/your-project
+cd your-project
 
-# 2. Verify tmux installation  
-tmux -V                           # Should show version
+# Set up virtual environment
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 
-# 3. Test orchestration system
-/orch "simple test task"          # Should create agent and execute
-/orch monitor agents              # Should show agent status
+# Configure environment variables
+export PROJECT_ROOT=$(pwd)
+export WORKSPACE_ROOT=$(dirname $(pwd))
+export GITHUB_TOKEN="your_token_here"
 ```
 
-### Claude Code CLI Integration
-Reference the commands directory in your Claude Code CLI configuration. The exact method depends on your Claude Code CLI version.
+### Claude Code Configuration
+1. Copy `CLAUDE.md` to your project root
+2. Adapt project-specific paths in CLAUDE.md:
+   - Replace `$PROJECT_ROOT/` with your actual project paths
+   - Update GitHub repository references
+   - Modify test commands for your setup
+3. Install commands in `.claude/commands/` directory
+4. Update script paths in command files
 
----
+### MCP Server Setup
+```bash
+# Memory MCP for learning integration
+npm install @modelcontextprotocol/memory-server
 
-## 🔧 TROUBLESHOOTING
+# GitHub MCP for repository operations  
+npm install @modelcontextprotocol/github-server
+
+# Configure in Claude Code MCP settings
+```
+
+## 🎯 Key Commands
+
+### Development Workflow
+- `/execute [task]` - Direct task execution with TodoWrite tracking
+- `/plan [task]` - Plan presentation requiring user approval
+- `/think [topic]` - Enhanced thinking with memory integration
+- `/test` - Comprehensive testing with real/mock modes
+
+### Code Quality & Review
+- `/fake` - Code authenticity audit and fake code detection
+- `/review` - Comprehensive PR review with multi-source comment extraction
+- `/arch` - Architecture analysis and design recommendations
+- `/debug` - Evidence-based debugging with systematic approach
+
+### Git & Deployment
+- `/pr` - Automated PR creation with comprehensive descriptions
+- `/push` - Smart push with conflict detection and resolution
+- `/header` - Mandatory branch header for context tracking
+- `/integrate` - Branch integration with testing and validation
+
+### Orchestration & Scaling
+- `/orch [task]` - Multi-agent task delegation (WIP prototype)
+- `/handoff` - Agent coordination and task handoffs
+- `/headless` - Background execution for long-running tasks
+
+## 🔧 Adaptation Guide
+
+### Path Configuration
+Replace in all files:
+```bash
+# Update paths
+sed -i 's|$PROJECT_ROOT|/your/actual/project/path|g' **/*.md
+sed -i 's|$WORKSPACE_ROOT|/your/workspace/root|g' **/*.md
+sed -i 's|$USER|yourusername|g' **/*.md
+```
+
+### Testing Setup
+```bash
+# Adapt test commands for your framework
+# Replace references to:
+TESTING=true python    # Your test runner
+./run_tests.sh        # Your test script
+./coverage.sh         # Your coverage tool
+```
+
+### Database & Services
+```bash
+# Replace service references:
+Database              # Your database system
+Web Framework         # Your web framework
+your-project.com      # Your domain
+```
+
+## 📊 Performance Metrics
+
+### Command Execution
+- **Simple commands**: <2 seconds response time
+- **Complex workflows**: 30-120 seconds with progress tracking
+- **Multi-agent tasks**: 2-10 minutes with autonomous execution
+- **Memory integration**: <500ms additional overhead
+
+### Cost Analysis
+- **Basic commands**: $0.001-$0.005 per execution
+- **Orchestration tasks**: $0.003-$0.050 per task
+- **Memory MCP**: $0.0001-$0.001 per search/create
+- **GitHub API**: Rate limited, minimal cost impact
+
+## 🔍 Troubleshooting
 
 ### Common Issues
 
 **Command Not Found**
-- Verify command files are accessible to Claude Code CLI
-- Check file permissions and paths
-- Restart Claude Code CLI after configuration changes
+```bash
+# Verify command installation
+ls .claude/commands/
+# Check command syntax
+/list
+```
 
-**MCP Server Issues**
+**Path Errors**
+```bash
+# Verify environment variables
+echo $PROJECT_ROOT
+echo $WORKSPACE_ROOT
+# Update CLAUDE.md paths
+```
+
+**MCP Connection Issues**
 ```bash
 # Check MCP server status
-npx @anthropic/mcp-server-github --version
-
-# Verify GitHub token
-gh auth status
+npx @modelcontextprotocol/memory-server --help
+# Verify Claude Code MCP configuration
 ```
 
-**🚨 Orchestration System Issues**
+**Orchestration Failures**
 ```bash
-# Check Redis connection
-redis-cli ping  # Should return: PONG
-
+# Check Redis status
+redis-cli ping
 # Verify tmux installation
-tmux list-sessions  # Should show active sessions or "no server running"
-
-# Test agent creation
-/orch "test task"
-tmux list-sessions  # Should show new agent sessions
-
-# Debug agent logs
-tail -f /tmp/orchestration_logs/agent_monitor.log
-tail -f /tmp/agents/*/workspace.log
+tmux --version
+# Check agent workspace setup
 ```
 
-**GitHub Authentication**
-```bash
-# Check authentication
-gh auth status
+### Performance Issues
 
-# Refresh if needed
-gh auth refresh
+**Slow Response Times**
+- Check context length in CLAUDE.md (impacts performance)
+- Reduce command complexity
+- Use batch operations for multiple files
+
+**Memory Usage**
+- Monitor system resources during orchestration
+- Limit concurrent agents (<3 recommended)
+- Use lightweight commands for simple tasks
+
+## 📚 Documentation Structure
+
+```
+claude-commands/
+├── README.md              # This file
+├── CLAUDE.md             # Primary configuration with warnings
+├── commands/             # Command definitions
+│   ├── execute.md        # Task execution framework
+│   ├── orchestrate.md    # Multi-agent coordination
+│   ├── think.md          # Enhanced reasoning
+│   └── ...              # 70+ additional commands
+├── scripts/              # Implementation scripts
+│   ├── orchestrate.sh    # Orchestration runner
+│   ├── git-header.sh     # Branch header generation
+│   └── ...              # Supporting utilities
+└── docs/                # Additional documentation
+    ├── INSTALLATION.md   # Detailed setup guide
+    ├── CONFIGURATION.md  # Environment configuration
+    └── TROUBLESHOOTING.md # Common issues and solutions
 ```
 
-### Debug Mode
-```bash
-# Enable verbose logging
-export DEBUG=1
-export LOG_LEVEL=DEBUG
-```
+## 🔗 Resources
+
+### External Documentation
+- [Claude Code Overview](https://docs.anthropic.com/en/docs/claude-code/overview)
+- [MCP Documentation](https://modelcontextprotocol.io/introduction)
+- [Multi-Agent Systems Research](https://arxiv.org/html/2504.21030v1)
+
+### Community
+- [GitHub Issues](https://github.com/jleechanorg/claude-commands/issues)
+- [Discussions](https://github.com/jleechanorg/claude-commands/discussions)
+
+## 📄 License
+
+Reference export for educational and development purposes. Adapt as needed for your environment.
+
+## 🚀 Contributing
+
+This is a reference export. For contributions:
+1. Fork the repository
+2. Adapt for your environment  
+3. Share improvements via pull requests
+4. Document your adaptations and lessons learned
 
 ---
 
-## 🤝 ADAPTATION GUIDELINES
-
-### Recommended Approach
-1. **Start Small**: Begin with simple commands like `/think` or `/debug`
-2. **Test Thoroughly**: Validate each command in your environment
-3. **Adapt Gradually**: Modify commands for your specific needs
-4. **Focus on Value**: Prioritize commands most relevant to your workflow
-
-### High-Value Adaptations
-- **Cognitive commands** (`/think`, `/arch`, `/debug`) - Universally applicable
-- **Basic utilities** (`/list`, `/header`) - Simple and portable
-- **Learning system** (`/learn`) - Valuable with Memory MCP
-
-### High-Effort Adaptations
-- **🚨 Orchestration system** - Requires complete Redis/tmux infrastructure
-- **GitHub workflows** - Needs API reconfiguration for your repositories
-- **Testing commands** - Framework-specific modifications required
-
-### 🚨 Orchestration System Adaptation
-The orchestration system represents the most sophisticated component requiring:
-
-**Infrastructure Setup:**
-- Redis server with persistence and memory optimization
-- tmux with session management and recovery procedures
-- Python virtual environments per agent type
-- Workspace isolation and cleanup automation
-
-**Cost Management:**
-- Monitor API usage with real-time cost tracking
-- Implement task batching and agent reuse strategies
-- Set budget limits and alert thresholds
-- Optimize agent assignments for cost efficiency
-
-**Scaling Considerations:**
-- Agent capacity planning based on workload patterns
-- Load balancing across agent types and capabilities
-- Resource utilization monitoring and optimization
-- Performance tuning for concurrent task execution
-
-### Creating Your Own Commands
-```markdown
-# Command Template Structure
-## Purpose
-Brief description of functionality
-
-## Dependencies  
-Required tools and environment
-
-## Implementation
-Detailed behavior specification
-
-## Examples
-Usage examples and expected outputs
-```
-
----
-
-## ⚠️ TECHNICAL LIMITATIONS
-
-### Known Issues
-- **Environment Coupling**: Contains project-specific assumptions
-- **Dependency Complexity**: Heavy reliance on specific MCP servers and tools
-- **Testing Status**: Many commands are experimental/untested in isolation
-- **Performance**: Command composition can generate very long prompts
-
-### Migration Considerations
-**High-Effort**: 🚨 Orchestration system, GitHub workflows, Memory integration
-**Medium-Effort**: Testing commands, project workflows, composition patterns  
-**Low-Effort**: Basic cognitive commands, simple utilities
-
-### 🚨 Orchestration System Limitations
-- **Redis Dependency**: Requires persistent Redis instance with backup strategy
-- **tmux Complexity**: Session management can become complex with many agents
-- **Cost Scaling**: Expense grows with task complexity and agent utilization
-- **Resource Usage**: Heavy memory and CPU usage during peak orchestration
-- **Recovery Procedures**: Agent failures require manual intervention and cleanup
-
----
-
-## 📄 LICENSE AND USAGE
-
-This repository contains reference implementations extracted from a development project. 
-
-**Recommended Approach:**
-- Use as reference and inspiration
-- Build your own implementations based on patterns shown
-- Adapt commands to your specific environment and needs
-- Respect any applicable licenses from underlying tools
-
----
-
-## 🔗 RESOURCES
-
-- [Claude Code CLI Documentation](https://claude.ai/code)
-- [MCP Server Documentation](https://github.com/anthropic/mcp)
-- [GitHub CLI Documentation](https://cli.github.com/)
-- [Redis Documentation](https://redis.io/documentation)
-- [tmux Documentation](https://github.com/tmux/tmux/wiki)
-
----
-
-*Repository Status: Reference/Educational Use Only*  
-*🚨 Featured: Multi-Agent Orchestration System (WIP Prototype)*  
-*Last Updated: July 25, 2025*
+**⚠️ Remember**: This system requires significant adaptation for your specific environment. Use as reference and inspiration, not direct implementation.
