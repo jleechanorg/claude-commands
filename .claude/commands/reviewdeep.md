@@ -1,6 +1,8 @@
 # /reviewdeep Command
 
-Deep architecture and implementation review using ultra thinking mode, /arch review, and Gemini MCP with role switching.
+**Command Summary**: Comprehensive multi-perspective review through orchestrated command composition
+
+**Purpose**: Deep analysis combining code review, architectural assessment, and ultra thinking for complete evaluation
 
 ## Usage
 ```
@@ -10,52 +12,60 @@ Deep architecture and implementation review using ultra thinking mode, /arch rev
 /reviewd <pr_number|file|feature>     # Short alias with specific target
 ```
 
-## What it does
+## Command Composition
 
-Performs a comprehensive multi-phase analysis:
+**`/reviewdeep` = `/review` + `/arch` + `/thinku`**
 
-### Phase 1: Ultra Thinking (12-point analysis)
+The command executes three specialized commands in sequence for comprehensive analysis:
 
-1. **Architecture Soundness** - Design patterns, separation of concerns
-2. **Implementation Quality** - Code correctness, best practices
-3. **Practical Feasibility** - Real-world usability, edge cases
-4. **Error Handling** - Failure modes, recovery mechanisms
-5. **Performance Impact** - Resource usage, scalability
-6. **Integration Issues** - Compatibility with existing systems
-7. **Security Concerns** - Vulnerabilities, data protection
-8. **Testing Strategy** - Coverage, quality, maintainability
-9. **Cost Analysis** - Resource consumption, API usage
-10. **Success Probability** - Realistic assessment of outcomes
-11. **Required Improvements** - Specific actionable items
-12. **Final Verdict** - Go/no-go recommendation with conditions
+### 1. `/review` - Code Quality Analysis
+- Virtual [AI reviewer] agent performs comprehensive code analysis
+- Identifies bugs, security issues, performance problems, best practice violations
+- Posts categorized review comments (🔴 Critical, 🟡 Important, 🔵 Suggestion, 🟢 Nitpick)
+- Provides file-by-file analysis with specific line references
 
-### Phase 2: Architecture Review (/arch integration)
+### 2. `/arch` - Architectural Assessment
+- Dual-perspective architectural analysis
+- System design patterns and scalability considerations
+- Integration points and long-term maintainability
+- Structural soundness and design quality evaluation
 
-- Executes `/arch` command for dual-perspective analysis
-- Claude and Gemini alternate architect/reviewer roles
-- Provides architectural insights and recommendations
+### 3. `/thinku` - Ultra Deep Thinking
+- 12+ sequential thoughts for thorough analysis
+- Multi-step reasoning with revision capability
+- Complex problem decomposition and solution synthesis
+- Considers second-order effects and edge cases
 
-### Phase 3: Gemini MCP Multi-Role Analysis
+## Analysis Flow
 
-Analyzes from three distinct perspectives using role switching:
+```
+INPUT: PR/Code/Feature
+    ↓
+1. /review → Code quality findings & review comments
+    ↓
+2. /arch  → Architectural insights & design assessment
+    ↓
+3. /thinku → Deep reasoning synthesis & recommendations
+    ↓
+OUTPUT: Comprehensive multi-perspective analysis
+```
 
-1. **Developer Role**
-   - Code quality and maintainability
-   - Implementation correctness
-   - Performance and security
-   - Testing adequacy
+## What You Get
 
-2. **Architect Role**
-   - System design patterns
-   - Scalability considerations
-   - Integration points
-   - Long-term maintainability
+### Comprehensive Coverage
+- **Code Level**: Bug detection, security analysis, performance issues
+- **Architecture Level**: Design patterns, scalability, integration concerns
+- **Strategic Level**: Deep reasoning about implications and recommendations
 
-3. **Business Analyst Role**
-   - Business value delivered
-   - User experience impact
-   - Cost-benefit analysis
-   - ROI considerations
+### Multi-Perspective Analysis
+- **Technical Perspective**: From `/review` - immediate code quality issues
+- **Design Perspective**: From `/arch` - structural and architectural concerns
+- **Strategic Perspective**: From `/thinku` - deep reasoning and synthesis
+
+### Actionable Output
+- Specific inline code comments with improvement suggestions
+- Architectural recommendations with design alternatives
+- Reasoned conclusions with prioritized action items
 
 ## Examples
 
@@ -73,59 +83,26 @@ Analyzes from three distinct perspectives using role switching:
 /reviewd "velocity doubling implementation"
 ```
 
-## Output Format
-
-### Core Analysis
-- **Verdict**: X% production ready with summary
-- **Strengths**: Architectural and implementation wins
-- **Critical Flaws**: Must-fix issues with severity
-- **Realistic Assessment**: Probability of success
-- **Required Improvements**: Prioritized action items
-- **Bottom Line**: Executive summary
-
-### Additional Insights
-- **Architecture Review**: Detailed /arch output with dual perspectives
-- **Gemini Multi-Role**: Insights from developer, architect, and analyst viewpoints
-- **Synthesized Recommendations**: Combined insights from all analysis methods
-
-## Integration Details
-
-The command orchestrates multiple analysis tools:
-
-1. **Ultra Thinking Mode**: 12+ sequential thoughts for deep analysis
-2. **/arch Command**: Automatic execution for architecture review
-3. **Gemini MCP**: Three separate API calls with role switching
-4. **Synthesis Engine**: Combines all perspectives into cohesive recommendations
-
-## Comparison with Other Review Commands
-
-- `/review` - Standard code review with basic checks
-- `/arch` - Architecture-focused dual perspective only
-- `/reviewdeep` - Complete analysis: ultra thinking + /arch + Gemini multi-role
-
 ## When to Use
 
-- Major architectural changes
-- High-risk implementations
-- Performance-critical code
-- Security-sensitive features
-- Complex integrations
-- Before production deployment
+- **Major architectural changes** - Need both code and design analysis
+- **High-risk implementations** - Require thorough multi-angle examination
+- **Performance-critical code** - Need technical + strategic assessment
+- **Security-sensitive features** - Comprehensive vulnerability analysis
+- **Complex integrations** - Architectural + implementation concerns
+- **Before production deployment** - Complete readiness evaluation
 
-## Configuration
+## Comparison with Individual Commands
 
-The command automatically:
-- Enables ultra thinking mode (12+ sequential thoughts)
-- Executes /arch for architecture review
-- Calls Gemini MCP with 3 role switches
-- Analyzes from 5+ distinct perspectives
-- Considers second-order effects
-- Provides probability assessments
-- Generates actionable improvements
+- **`/review`**: Code quality analysis only
+- **`/arch`**: Architectural assessment only
+- **`/thinku`**: Deep reasoning only
+- **`/reviewdeep`**: All three perspectives combined for complete analysis
 
-## API Usage
+## Benefits of Composition
 
-- **Ultra Thinking**: 1 extended call with 12+ thoughts
-- **/arch Integration**: 1 architecture review call
-- **Gemini MCP**: 3 separate calls (one per role)
-- **Total**: ~5 API calls for comprehensive analysis
+- **Modular**: Each component serves a distinct analytical purpose
+- **Comprehensive**: No blind spots - covers code, design, and strategic levels
+- **Efficient**: Leverages existing specialized commands rather than duplicating functionality
+- **Flexible**: Individual commands can be used separately when full analysis isn't needed
+- **Maintainable**: Changes to individual commands automatically improve the composite

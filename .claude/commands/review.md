@@ -1,21 +1,24 @@
 # Code Review Command
 
-**Purpose**: Process ALL PR comments systematically with proper tracking and replies using enhanced analysis
+**Command Summary**: Systematic PR comment processing with virtual [AI reviewer] agent for comprehensive code quality analysis
 
-**Action**: List EVERY comment individually, apply changes, commit, and post replies to show resolution
+**Purpose**: Perform comprehensive code analysis and post review comments using virtual AI reviewer agent
+
+**Action**: Analyze PR changes, identify issues, and post proactive review comments with `[AI reviewer]` tag for systematic code quality assessment
 
 **Usage**:
-- `/review` - Automatically reviews the PR associated with current branch
-- `/review [PR#]` - Reviews specific PR number
-- (automatically enables ultrathink mode for thorough analysis)
+- `/review` - Perform code review analysis on current branch PR
+- `/review [PR#]` - Analyze and review specific PR number
+- (automatically enables virtual agent mode for comprehensive code analysis)
 
-**Enhanced Analysis**: Uses `/think` mode by default for deep code review analysis, ensuring comprehensive understanding of comments, context, and optimal solutions
+**Virtual Agent Integration**: Uses `[AI reviewer]` virtual agent that provides specialized code review expertise with proactive analysis and professional comment generation
 
-**Thinking Protocol**:
-- **Deep Analysis**: Use sequential thinking to understand comment context and implications
-- **Solution Planning**: Think through multiple approaches before implementing fixes
-- **Impact Assessment**: Consider ripple effects of changes across the codebase
-- **Test Strategy**: Plan comprehensive testing approach for each fix
+**Virtual Agent Protocol**:
+- **[AI reviewer]**: Specialized virtual agent for comprehensive code analysis
+- **Code Analysis**: Identify bugs, security issues, performance problems, and best practice violations
+- **Review Comments**: Generate insightful comments with `[AI reviewer]` tag
+- **Impact Assessment**: Consider architectural implications and code quality impact
+- **Best Practices**: Ensure adherence to coding standards and project conventions
 
 **Auto-Detection Protocol**:
 1. **Current Branch PR Detection**:
@@ -24,70 +27,57 @@
    - If no PR found, report "No PR found for current branch [branch-name]"
    - If multiple PRs found, use the most recent (first in list)
 
-**Enhanced Implementation**:
-1. **PR Content Validation** (CRITICAL FIRST STEP):
-   - Use `gh api repos/owner/repo/pulls/<PR#>/files --jq '.[].filename'` to get actual PR files
-   - Compare PR contents against local implementation claims
-   - **FLAG IMMEDIATELY**: If documented features exist locally but NOT in PR
-   - **STOP REVIEW**: If PR contents don't match what's being reviewed
-   - Only proceed after confirming PR contains expected implementation files
+**Code Analysis Implementation**:
+1. **PR File Analysis** (CRITICAL FIRST STEP):
+   - Use GitHub API to get all changed files (see canonical GitHub API documentation)
+   - Retrieve diff content for each file to understand changes
+   - Analyze code patterns, potential issues, and improvement opportunities
+   - Focus on new code additions and significant modifications
 
-2. **Extract ALL Comments** (with thoughtful analysis):
-   - Auto-detect PR number or use provided PR#
-   - Use `gh pr view <PR#> --comments` to get general comments
-   - Use `gh api repos/owner/repo/pulls/<PR#>/comments` for inline code comments
-   - Include "suppressed" and "low confidence" Copilot comments
-   - Extract from ALL review sources (user reviews, bot reviews, issue comments)
+2. **Virtual Agent Code Review**:
+   - **[AI reviewer]** performs systematic analysis of each file
+   - Identify: security vulnerabilities, performance issues, code smells, bugs
+   - Check: coding standards compliance, best practices, architecture patterns
+   - Evaluate: error handling, edge cases, maintainability, testability
 
-2. **Categorize and Track**:
-   - Group by comment type: User vs Bot vs Copilot
-   - Track file:line location for inline comments
-   - Assign unique tracking IDs for reference
-   - Identify comment priority: Critical, Important, Suggestion, Nitpick
+3. **Issue Categorization**:
+   - **🔴 Critical**: Security vulnerabilities, runtime errors, data corruption risks
+   - **🟡 Important**: Performance issues, maintainability problems, architectural concerns
+   - **🔵 Suggestion**: Style improvements, refactoring opportunities, optimizations
+   - **🟢 Nitpick**: Minor style issues, documentation improvements, conventions
 
-3. **Status Tracking Matrix**:
-   ```
-   | ID | Author | File:Line | Comment Summary | Status | Reply Link |
-   |----|--------|-----------|-----------------|--------|------------|
-   | C1 | user   | main.py:655 | Logic fix needed | ❌ Pending | - |
-   | C2 | bot    | wizard.js:233 | Remove old wizard | ✅ Fixed | #r2198653108 |
-   ```
+4. **Review Comment Generation**:
+   - Create targeted inline comments for specific code locations
+   - Generate comprehensive review summary with overall assessment
+   - Use `[AI reviewer]` tag for all generated comments
+   - Provide actionable feedback with suggested improvements
 
-4. **Apply Changes Systematically**:
-   - Process comments by priority (Critical → Important → Suggestions)
-   - Make focused commits for each logical group of fixes
-   - Update status tracking as changes are applied
+5. **Post Review Comments**:
+   - Post inline comments using GitHub API (see canonical GitHub API documentation)
+   - Post general review comment with overall findings summary
+   - Include file-by-file breakdown with key issues identified
 
-5. **Post Replies and Updates**:
-   - For each addressed comment, post an inline reply using:
-     ```bash
-     gh api -X POST repos/owner/repo/pulls/PR#/comments \
-       -f body="✅ RESOLVED: [description of fix]" \
-       -f commit_id="sha" -f path="file" --field position=N
-     ```
-   - Reference original comment in reply: "Addressing comment #ID by @author"
-   - Post summary comment with status matrix showing all addressed issues
+6. **Review Completion**:
+   - Generate comprehensive review report
+   - Provide overall code quality assessment
+   - Suggest next steps for addressing identified issues
 
-6. **Final Verification**:
-   - Run all tests to ensure fixes don't break anything
-   - Update PR description with resolution summary
-   - Mark PR as ready for re-review if needed
+**Virtual Agent Review Comment Protocol**:
+- `[AI reviewer] 🔴 **CRITICAL**`: Security vulnerabilities, runtime errors, data corruption risks
+- `[AI reviewer] 🟡 **IMPORTANT**`: Performance issues, maintainability problems, architectural concerns
+- `[AI reviewer] 🔵 **SUGGESTION**`: Style improvements, refactoring opportunities, optimizations
+- `[AI reviewer] 🟢 **NITPICK**`: Minor style issues, documentation improvements, conventions
+- `[AI reviewer] ✅ **APPROVED**`: Code meets quality standards with no significant issues identified
 
-**Comment Reply Protocol**:
-- ✅ **RESOLVED**: Issue completely fixed with code changes
-- 🔄 **PARTIALLY ADDRESSED**: Some progress made, more work needed
-- 📝 **ACKNOWLEDGED**: Comment noted, will address in future work
-- ❌ **DECLINED**: Intentionally not implementing with reasoning
-- 🤔 **NEEDS CLARIFICATION**: Requires more information from commenter
-
-**Tracking Features**:
-- Maintain comment resolution log in `tmp/review_status_PR#.md`
-- Generate before/after summary showing all addressed issues
-- Create commit messages that reference specific comment IDs
-- Post follow-up summary comment with complete resolution matrix
+**Review Features**:
+- Generate comprehensive review report in `tmp/review_analysis_PR#.md`
+- Provide file-by-file analysis with issue breakdown
+- Track code quality metrics and improvement suggestions
+- Create actionable feedback with specific line references
 
 **Branch Integration**:
-- Automatically works with current working branch and its associated PR
+- Automatically analyzes current working branch and its associated PR
 - No need to remember or look up PR numbers for current work
 - Seamlessly integrates with branch-based development workflow
 - Falls back to manual PR specification when needed
+- Focuses on changes introduced in the PR vs base branch
