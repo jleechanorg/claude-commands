@@ -88,6 +88,16 @@
 - ❌ NEVER settle for partial fixes (97/99 is NOT acceptable)
 - ✅ ALWAYS fix ALL failing tests to 100% pass rate
 
+🚨 **DELEGATION DECISION MATRIX**: ⚠️ MANDATORY - Before using Task tool for any workflow:
+- **Parallelism Test**: ✅ Can subtasks run simultaneously without dependencies?
+- **Resource Test**: ✅ System memory < 50% AND < 3 Claude instances running?
+- **Overhead Test**: ✅ Agent startup time < estimated task execution time?
+- **Specialization Test**: ✅ Task requires expertise current instance lacks?
+- **Independence Test**: ✅ Can task complete without frequent coordination?
+- ❌ **NEVER delegate sequential workflows** - Execute directly for 10x better performance
+- ❌ **NEVER delegate simple command orchestration** - Basic workflows should run in current instance
+- 🔍 **Evidence**: Copilot PR #1062 - Direct execution (2 min) vs Task delegation (5+ min timeout)
+
 🚨 **NO ASSUMPTIONS ABOUT RUNNING COMMANDS**:
 - ❌ NEVER explain what a command "will do" when it's already running
 - ✅ ALWAYS wait for actual command output and results

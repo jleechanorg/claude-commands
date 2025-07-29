@@ -23,6 +23,28 @@
 **ALWAYS BE VERBOSE**: Show commands, results, progress, and decisions in real-time
 **ALWAYS FIX ALL PROBLEMS**: No failing allowed - autonomously fix all problems encountered
 
+## ⚡ **Execution Strategy**
+
+**DEFAULT: Direct Execution** ✅ (Recommended for most PRs)
+- **Performance**: Immediate startup vs 5-10s Task delegation overhead
+- **Resource Efficiency**: Critical for solo developers with limited resources
+- **Progress Tracking**: Clear TodoWrite-based phase tracking
+- **Universal Composition**: Claude naturally orchestrates commands without delegation
+
+**Consider Task Delegation Only When ALL Criteria Met**:
+- ✅ **Parallelism Opportunity**: Many comments that can be processed simultaneously
+- ✅ **Resource Availability**: System memory <50% AND <3 Claude instances running
+- ✅ **Independence**: Multiple unrelated CI failures or research tasks
+- ✅ **Specialization Needed**: Complex domain-specific analysis required
+
+**NEVER Delegate When**:
+- ❌ **Sequential 6-Phase Workflow**: Phases have dependencies, no parallel benefit
+- ❌ **Resource Constraints**: >50% memory usage, multiple Claude instances
+- ❌ **Simple Orchestration**: Just calling existing commands in sequence
+- ❌ **Solo Developer Context**: Speed and simplicity preferred over architectural complexity
+
+**Performance Evidence**: PR #1062 - Direct execution (2 min) vs Task delegation timeout (5+ min)
+
 ## How It Works
 
 The `/copilot` command uses **universal composition** to intelligently orchestrate PR analysis and fixes:
