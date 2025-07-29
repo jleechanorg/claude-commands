@@ -48,7 +48,7 @@ The `/replicate` command automates the process of analyzing a pull request and r
 
 ## Features
 
-- **Intelligent Analysis**: Uses subagents for thorough PR examination
+- **Intelligent Analysis**: Uses `/e` for thorough PR examination
 - **Selective Application**: Only applies relevant improvements
 - **Conflict Resolution**: Smart handling of overlapping changes
 - **Comprehensive Reporting**: Detailed logs of what was replicated and why

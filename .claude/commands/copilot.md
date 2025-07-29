@@ -51,8 +51,7 @@ The `/copilot` command uses **universal composition** to intelligently orchestra
 
 1. **Delegates to `/execute`**: The entire copilot workflow is executed via `/execute` which automatically:
    - Analyzes task complexity and PR size
-   - Determines if subagents would be beneficial
-   - Spawns parallel agents when thresholds are met
+   - Determines optimal execution strategy (parallel tasks vs sequential)
    - Provides intelligent execution optimization
 
 2. **Natural Workflow Composition**: Composes the workflow using existing commands:
@@ -64,12 +63,12 @@ The `/copilot` command uses **universal composition** to intelligently orchestra
    - `/pushl` - Final push if needed
 
 3. **Intelligent Optimization**: `/execute` handles all optimization decisions:
-   - Large comment volumes → Parallel comment processing agents
-   - Multiple CI failures → Specialized CI analysis agents
-   - Complex conflicts → Merge resolution agents
-   - Quality verification → Coverage validation agents
+   - Large comment volumes → Parallel comment processing
+   - Multiple CI failures → Specialized CI analysis
+   - Complex conflicts → Merge resolution
+   - Quality verification → Coverage validation
 
-   **Note**: All substeps like `/fixpr`, `/commentreply` etc. also benefit from `/execute`'s intelligent subagent optimization when invoked within the copilot workflow.
+   **Note**: All substeps like `/fixpr`, `/commentreply` etc. also benefit from `/execute`'s intelligent optimization when invoked within the copilot workflow.
 
 ## 🚨 MANDATORY WORKFLOW STEPS
 

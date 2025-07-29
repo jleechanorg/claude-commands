@@ -23,29 +23,13 @@
 **Plan Generation**:
 - Analyze task complexity and requirements
 - Create TodoWrite checklist with specific steps
-- **Explicit subagent decision**: Always state YES/NO with reasoning
-  - YES: Multiple independent subtasks benefit from parallel work
-  - NO: Sequential dependencies or coordination overhead exceeds benefits
+- **Execution method decision**: Choose optimal approach
+  - **Parallel Tasks** (0 tokens): Simple, independent operations < 30s
+  - **Sequential Tasks**: Complex workflows, coordinated operations
+  - **Hybrid**: Parallel for research, sequential for implementation
+  - See [parallel-vs-subagents.md](./parallel-vs-subagents.md) for criteria
 - Identify tool requirements and dependencies
 - Present comprehensive implementation strategy
-
-**Parallel Execution Decision Matrix**:
-
-**✅ USE SUBAGENTS** (YES) when:
-- **Comment Processing**: >25 comments requiring individual responses
-- **Multi-file Analysis**: >15 files needing independent review/modification
-- **Research Tasks**: Independent API research, documentation analysis, testing protocols
-- **CI Analysis**: >2 different CI failures requiring specialized investigation
-- **Security Scanning**: Sensitive files (auth, crypto, permissions) need dedicated analysis
-- **Performance**: Task estimated >10 minutes can be parallelized effectively
-
-**❌ NO SUBAGENTS** (NO) when:
-- **Sequential Dependencies**: Each step requires previous step completion
-- **Single File Focus**: Working on 1-3 related files with tight coupling
-- **Simple Tasks**: <5 minute estimated completion time
-- **Coordination Overhead**: Communication costs exceed parallel benefits
-- **Resource Constraints**: Limited API quota or system resources
-- **Solo Developer Context**: User prefers direct, simple approaches over complex orchestration
 
 ### Phase 2: Approval Chain
 
@@ -61,7 +45,7 @@
 - Follow the plan created in Phase 1
 - Update TodoWrite status as tasks complete
 - Use systematic tool progression (Read → Write/Edit → Test)
-- Coordinate subagents if planned
+- Execute tasks as planned (parallel or sequential)
 - Validate and commit when complete
 
 **Tool Usage**:
@@ -69,19 +53,19 @@
 - `Write` - Create new files
 - `Edit` - Modify existing files
 - `Bash` - Run tests, git operations
-- `Task` - Spawn subagents for parallel work
+- `Task` - Handle parallel work coordination
 - `TodoWrite` - Track implementation progress
 
 ## Example Flows
 
 **Simple task**:
 ```
-User: /e fix the login button styling
+User: /execute fix the login button styling
 Assistant:
 Phase 1 - Planning (/plan):
 Creating implementation plan with TodoWrite...
 [Creates checklist: Check styles, Update CSS, Test changes, Commit]
-**Subagent decision: NO** - Simple task with sequential dependencies, coordination overhead exceeds benefits
+**Execution method: Direct execution** - Simple file edits, no parallelization needed
 
 Phase 2 - Approval Chain:
 /preapprove - Validating plan completeness and context
@@ -94,17 +78,14 @@ Phase 3 - Implementation:
 
 **Complex task**:
 ```
-User: /e implement user authentication system
+User: /execute implement user authentication system
 Assistant:
 Phase 1 - Planning (/plan):
 Creating comprehensive implementation plan...
 [Creates detailed TodoWrite with multiple subtasks]
-**Subagent decision: YES** - Multiple independent components (auth logic, research, testing) with estimated 35% time savings from parallel work
-  - Agent 1: Research security best practices and OAuth integration
-  - Agent 2: Design database schema and user models
-  - Agent 3: Create authentication middleware and session handling
-  - Agent 4: Develop frontend login/register components
-  - Claude: Orchestrate integration and ensure security consistency
+**Execution method: Sequential approach**
+- Sequential workflow: Research patterns, implement core system, testing
+- Coordinated implementation following security best practices
 
 Phase 2 - Approval Chain:
 /preapprove - Validating comprehensive plan and dependencies
@@ -112,32 +93,10 @@ Phase 2 - Approval Chain:
 User already approves - proceeding with execution
 
 Phase 3 - Implementation:
-[Spawns 4 parallel agents for independent components]
+[Research: Auth patterns across codebase]
+[Implement: Core authentication system systematically]
 [Updates TodoWrite progress throughout]
-[Coordinates and integrates all components]
-```
-
-**Real-world PR example**:
-```
-User: /e /copilot 1062
-Assistant:
-Phase 1 - Planning (/plan):
-Analyzing PR #1062 with 47 comments across 15 files...
-**Subagent decision: YES** - 47 comments exceed threshold (>25), multiple CI failures detected
-  - Agent 1: Process comments 1-16 (CodeRabbit batch)
-  - Agent 2: Process comments 17-32 (Copilot batch)
-  - Agent 3: Process comments 33-47 (Review comments)
-  - Agent 4: Analyze CI failures and generate fixes
-  - Claude: Coordinate responses and ensure consistency
-
-Phase 2 - Approval Chain:
-/preapprove - Large PR scope validated, parallel processing beneficial
-/autoapprove - User already approves - proceeding with execution
-
-Phase 3 - Implementation:
-[Agents work in parallel while Claude orchestrates]
-[Real-time progress updates for each agent's completion]
-[Integration and final verification by Claude]
+[Integrates findings with implementation]
 ```
 
 ## Key Characteristics

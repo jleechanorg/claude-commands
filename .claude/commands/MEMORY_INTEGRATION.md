@@ -66,7 +66,7 @@ Found 3 relevant patterns
   ⚠️ Always use --puppeteer for browser tests
 
 🎯 USER PREFERENCES (1):
-  • Prefer subagent coordination for complex tasks
+  • Prefer optimal coordination strategy for complex tasks
 
 💡 RECOMMENDATIONS (1):
   • Apply defensive programming patterns

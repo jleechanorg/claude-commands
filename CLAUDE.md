@@ -407,7 +407,9 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT"
 **Pattern**: Search first → Create if new → Add observations to existing → Build relationships
 
 ### Task Agent Patterns
-**When to Spawn**: 3+ parallel subtasks | Independent research needed | Complex analysis ([Multi-Agent Systems](https://arxiv.org/html/2504.21030v1))
+**⚠️ Token Cost**: Each agent loads ~50k+ tokens. See `.claude/commands/parallel-vs-subagents.md` for alternatives.
+**When to Spawn**: Complex workflows | Different directories | Long operations (>5 min)
+**When NOT to Spawn**: Simple searches | Independent file ops | Data gathering (<30s each)
 **Basic Pattern**: `Task(description="Research X", prompt="Detailed instructions...")`
 
 ### TodoWrite Protocol

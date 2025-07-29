@@ -21,13 +21,13 @@
 
 The `/fixpr` command leverages Claude's natural language understanding to analyze PR blockers and fix them. The goal is to get the PR into a mergeable state (all checks passing, no conflicts) but **never actually merge it**. It orchestrates GitHub tools and git commands through intent-based descriptions rather than explicit syntax.
 
-## 🚀 Subagent Integration Enhancement
+## 🚀 Enhanced Execution
 
-**Enhanced Universal Composition**: `/fixpr` now supports intelligent subagent coordination for complex PR analysis while preserving its core universal composition architecture.
+**Enhanced Universal Composition**: `/fixpr` now uses `/e` (execute) for intelligent optimization while preserving its core universal composition architecture.
 
-### Subagent Decision Logic
+### Execution Strategy
 
-**Sequential Mode** (Default):
+**Default Mode**: Uses `/e` to determine optimal approach
 - **Trigger**: Simple PRs with ≤10 issues or straightforward CI failures
 - **Behavior**: Standard universal composition approach with direct Claude analysis
 - **Benefits**: Fast execution, minimal overhead, reliable for common cases
