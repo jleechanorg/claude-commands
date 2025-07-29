@@ -1,3 +1,4 @@
-=== Agent Status Dashboard ===
-Updated: Tue Jul 22 20:09:07 PDT 2025
+=== Dynamic Agent Status Dashboard ===
+Updated: Fri Jul 25 20:26:19 PDT 2025
 
+Use 'python3 orchestration/orchestrate_unified.py "task"' to create agents
