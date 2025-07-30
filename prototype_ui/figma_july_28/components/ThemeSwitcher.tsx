@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from './ui/button'
-import { 
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -10,11 +10,11 @@ import {
   DropdownMenuSeparator,
 } from './ui/dropdown-menu'
 import { Badge } from './ui/badge'
-import { 
-  Palette, 
-  Sun, 
-  Moon, 
-  Crown, 
+import {
+  Palette,
+  Sun,
+  Moon,
+  Crown,
   Zap,
   Check,
   Skull
@@ -72,8 +72,8 @@ export function ThemeSwitcher({ currentTheme, onThemeChange }: ThemeSwitcherProp
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           size="sm"
           className="text-foreground/80 hover:text-foreground hover:bg-accent/20 transition-colors border-0 shadow-none"
         >
@@ -81,8 +81,8 @@ export function ThemeSwitcher({ currentTheme, onThemeChange }: ThemeSwitcherProp
           <span className="hidden sm:inline">{currentThemeData?.name || 'Theme'}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent 
-        align="end" 
+      <DropdownMenuContent
+        align="end"
         className="w-64 bg-popover/95 backdrop-blur-sm border-border shadow-lg"
         sideOffset={8}
       >

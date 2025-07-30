@@ -45,7 +45,7 @@ def test_basic_task_flow():
     """Test: User request → orchestrate_unified → task_dispatcher → agent creation"""
     # Given: A simple task request
     task = "Fix all failing tests"
-    
+
     # When: orchestrate_unified.py is called
     # Then: Verify the call chain:
     # 1. UnifiedOrchestration.orchestrate() called
@@ -86,7 +86,7 @@ def test_multi_agent_creation():
     """Test: Complex task → Multiple agents created"""
     # Given: Task requiring parallel work
     task = "Update UI, fix backend bugs, and run all tests"
-    
+
     # When: Task analyzed
     # Then: Verify:
     # 1. Multiple agents created (if LLM decides so)
@@ -140,7 +140,7 @@ def test_tmux_session_creation(mock_run):
     """Mock tmux session creation"""
     # Setup mock to succeed for tmux commands
     mock_run.return_value = Mock(returncode=0, stdout='', stderr='')
-    
+
     # Run agent creation
     # Verify tmux new-session called with correct args
 ```
@@ -155,7 +155,7 @@ def test_claude_execution(mock_run):
             # Simulate claude running
             return Mock(returncode=0)
         return original_run(cmd, **kwargs)
-    
+
     mock_run.side_effect = side_effect
 ```
 
@@ -166,7 +166,7 @@ def test_with_redis(mock_redis_class):
     """Test with Redis available"""
     mock_redis = Mock()
     mock_redis_class.return_value = mock_redis
-    
+
     # Run orchestration
     # Verify Redis operations called
 ```
@@ -226,7 +226,7 @@ class TestOrchestration(unittest.TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.old_cwd = os.getcwd()
         os.chdir(self.test_dir)
-    
+
     def tearDown(self):
         os.chdir(self.old_cwd)
         shutil.rmtree(self.test_dir)

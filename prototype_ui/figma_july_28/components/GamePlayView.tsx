@@ -4,11 +4,11 @@ import { Card, CardContent } from './ui/card'
 import { Badge } from './ui/badge'
 import { Textarea } from './ui/textarea'
 import { ScrollArea } from './ui/scroll-area'
-import { 
-  ArrowLeft, 
-  Send, 
-  User, 
-  Crown, 
+import {
+  ArrowLeft,
+  Send,
+  User,
+  Crown,
   Settings,
   RefreshCw,
   Download,
@@ -67,12 +67,12 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
       ]
     }
   ])
-  
+
   const [playerInput, setPlayerInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isSoundEnabled, setIsSoundEnabled] = useState(true)
   const [mode, setMode] = useState<'character' | 'god'>('character')
-  
+
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -109,7 +109,7 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
         timestamp: new Date().toISOString(),
         author: 'ai'
       }
-      
+
       setStory(prev => [...prev, aiResponse])
       setIsLoading(false)
     }, 2000)
@@ -148,7 +148,7 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
           </div>
           <div className="space-y-2">
             {entry.choices.map((choice, index) => (
-              <div 
+              <div
                 key={index}
                 className="bg-white/80 hover:bg-purple-50/80 border border-purple-200 rounded-lg p-3 cursor-pointer transition-all duration-200 backdrop-blur-sm hover:border-purple-300 hover:shadow-sm"
                 onClick={() => handleChoiceClick(choice)}
@@ -222,23 +222,23 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
                 <h1 className="text-xl font-semibold text-purple-900">WorldArchitect.AI</h1>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <span className="text-sm text-purple-700">Epic Adventurer</span>
               <div className="flex items-center space-x-1">
                 <span className="text-yellow-500">⭐</span>
                 <span className="text-yellow-500">😀</span>
               </div>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 onClick={() => setIsSoundEnabled(!isSoundEnabled)}
                 className="text-purple-700 hover:text-purple-900 hover:bg-purple-100"
               >
                 {isSoundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
               </Button>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 className="text-purple-700 hover:text-purple-900 hover:bg-purple-100"
               >
@@ -253,8 +253,8 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
         <div className="bg-white/60 backdrop-blur-md border-b border-purple-200 px-6 py-4">
           <div className="flex items-center justify-between max-w-7xl mx-auto">
             <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 onClick={onBack}
                 className="text-purple-700 hover:text-purple-900 hover:bg-purple-100"
@@ -268,17 +268,17 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
                 Fantasy Campaign
               </Badge>
             </div>
-            
+
             <div className="flex items-center space-x-2">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 className="text-purple-700 hover:text-purple-900 hover:bg-purple-100"
               >
                 <Download className="w-4 h-4" />
               </Button>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
                 className="text-purple-700 hover:text-purple-900 hover:bg-purple-100"
               >
@@ -294,7 +294,7 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
             <ScrollArea ref={scrollAreaRef} className="h-[60vh] rounded-lg">
               <div className="space-y-4 pr-4">
                 {story.map((entry) => renderStoryEntry(entry))}
-                
+
                 {isLoading && (
                   <div className="bg-purple-100/50 border-l-4 border-purple-400 p-4 rounded-r-lg backdrop-blur-sm">
                     <div className="flex items-center space-x-3">
@@ -329,13 +329,13 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
                 }}
               />
             </div>
-            
+
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
                   <div className={`w-3 h-3 rounded-full ${mode === 'character' ? 'bg-purple-500' : 'bg-purple-300'}`}></div>
                   <Button
-                    variant="ghost" 
+                    variant="ghost"
                     size="sm"
                     onClick={() => setMode('character')}
                     className={`${mode === 'character' ? 'text-purple-700 bg-purple-100' : 'text-purple-600'} hover:bg-purple-100`}
@@ -344,11 +344,11 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
                     Character Mode
                   </Button>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <div className={`w-3 h-3 rounded-full ${mode === 'god' ? 'bg-purple-500' : 'bg-purple-300'}`}></div>
                   <Button
-                    variant="ghost" 
+                    variant="ghost"
                     size="sm"
                     onClick={() => setMode('god')}
                     className={`${mode === 'god' ? 'text-purple-700 bg-purple-100' : 'text-purple-600'} hover:bg-purple-100`}
@@ -358,7 +358,7 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
                   </Button>
                 </div>
               </div>
-              
+
               <Button
                 onClick={handleSubmit}
                 disabled={!playerInput.trim() || isLoading}

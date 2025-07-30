@@ -23,12 +23,12 @@ interface CampaignData {
 export default function App() {
   const [currentView, setCurrentView] = useState<'landing' | 'campaigns' | 'wizard' | 'gameplay'>('landing')
   const [selectedCampaign, setSelectedCampaign] = useState<string>('The Dragon\'s Hoard')
-  
+
   // Override global body background with lighter purple theme
   document.body.style.background = 'linear-gradient(135deg, rgb(147 51 234), rgb(126 34 206), rgb(79 70 229))'
 
   if (currentView === 'campaigns') {
-    return <CampaignList 
+    return <CampaignList
       onPlayCampaign={(campaignTitle) => {
         setSelectedCampaign(campaignTitle)
         setCurrentView('gameplay')
@@ -38,7 +38,7 @@ export default function App() {
   }
 
   if (currentView === 'wizard') {
-    return <CampaignWizard 
+    return <CampaignWizard
       onBack={() => setCurrentView('campaigns')}
       onComplete={(campaignData: CampaignData) => {
         setSelectedCampaign(campaignData.title)
@@ -48,9 +48,9 @@ export default function App() {
   }
 
   if (currentView === 'gameplay') {
-    return <GamePlayView 
+    return <GamePlayView
       campaignTitle={selectedCampaign}
-      onBack={() => setCurrentView('campaigns')} 
+      onBack={() => setCurrentView('campaigns')}
     />
   }
 
@@ -59,22 +59,22 @@ export default function App() {
       {/* Background Section */}
       <div className="relative min-h-screen">
         {/* Fantasy Background Image */}
-        <div 
+        <div
           className="absolute inset-0 bg-center bg-cover md:bg-center"
-          style={{ 
+          style={{
             backgroundImage: `url(${backgroundImage})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center center'
           }}
         />
-        
+
         {/* Light Purple Overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-purple-600/40 via-purple-500/35 to-indigo-600/40" />
-        
+
         {/* Content over background */}
         <div className="relative z-10 min-h-screen flex flex-col">
           <Header />
-          
+
           {/* Main Content - Upper portion */}
           <main className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 pt-4 sm:pt-8 md:pt-8 pb-8 sm:pb-12">
             <div className="text-center max-w-4xl mx-auto">
@@ -93,8 +93,8 @@ export default function App() {
                 <h2 className="text-2xl sm:text-3xl md:text-5xl text-white mb-6 sm:mb-8 leading-tight">
                   Forge Your Legend
                 </h2>
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 sm:px-12 md:px-16 py-4 sm:py-5 md:py-6 text-base sm:text-lg md:text-xl rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 w-full sm:w-auto"
                   onClick={() => setCurrentView('campaigns')}
                 >

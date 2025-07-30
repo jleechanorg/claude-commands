@@ -37,9 +37,9 @@ class FakeFirestoreDocument:
     def update(self, data):
         """Simulate updating document data with support for nested field updates."""
         for key, value in data.items():
-            if '.' in key:
+            if "." in key:
                 # Handle nested field updates like 'settings.debug_mode'
-                parts = key.split('.')
+                parts = key.split(".")
                 current = self._data
                 for part in parts[:-1]:
                     if part not in current:
@@ -171,9 +171,9 @@ class TestDebugModeEnd2End(unittest.TestCase):
         user_data = {
             "settings": {
                 "debug_mode": False,  # Default user setting
-                "gemini_model": "gemini-2.5-flash"
+                "gemini_model": "gemini-2.5-flash",
             },
-            "lastUpdated": "2025-01-01T00:00:00Z"
+            "lastUpdated": "2025-01-01T00:00:00Z",
         }
         users_collection = self.fake_firestore.collection("users")
         user_doc = users_collection.document(self.test_user_id)
@@ -185,7 +185,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
             "prompt": "Test campaign for debug mode",
             "user_id": self.test_user_id,
         }
-        
+
         # Set up campaign in fake Firestore (using the user_doc already created above)
         campaigns_collection = user_doc.collection("campaigns")
         campaign_doc = campaigns_collection.document(self.test_campaign_id)
@@ -200,7 +200,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
                 "level": 1,
                 "hp_current": 10,
                 "hp_max": 10,
-            }
+            },
         }
         game_state_doc = campaign_doc.collection("game_state").document("current")
         game_state_doc.set(game_state_data)
@@ -212,7 +212,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
             "text": "Welcome to the adventure!",
             "timestamp": datetime.fromisoformat("2025-01-01T00:00:00"),
             "debug_info": "This is debug information",
-            "planning_block": "GM planning notes"
+            "planning_block": "GM planning notes",
         }
         story_collection.add(story_entry)
 
@@ -315,14 +315,14 @@ class TestDebugModeEnd2End(unittest.TestCase):
         self.assertIn("story", campaign_data)
         story_entries = campaign_data["story"]
         self.assertGreater(len(story_entries), 0)
-        
+
         # Debug fields should be present in story entries
         gemini_entry = None
         for entry in story_entries:
             if entry.get("actor") == "gemini":
                 gemini_entry = entry
                 break
-        
+
         self.assertIsNotNone(gemini_entry)
         # With debug mode ON, debug fields should be preserved
         self.assertIn("debug_info", gemini_entry)
@@ -361,14 +361,14 @@ class TestDebugModeEnd2End(unittest.TestCase):
         self.assertIn("story", campaign_data)
         story_entries = campaign_data["story"]
         self.assertGreater(len(story_entries), 0)
-        
+
         # Debug fields should be stripped from story entries
         gemini_entry = None
         for entry in story_entries:
             if entry.get("actor") == "gemini":
                 gemini_entry = entry
                 break
-        
+
         self.assertIsNotNone(gemini_entry)
         # With debug mode OFF, only debug fields should be removed (planning_block remains as it's a gameplay feature)
         self.assertNotIn("debug_info", gemini_entry)
@@ -387,18 +387,18 @@ class TestDebugModeEnd2End(unittest.TestCase):
         self.fake_genai_client.models.count_tokens.return_value = MagicMock(
             total_tokens=1000
         )
-        
+
         # Mock Gemini response with debug content
         gemini_response_data = {
             "narrative": "The hero continues their journey...",
             "debug_content": {
                 "dm_notes": "This is GM-only information",
                 "dice_rolls": ["1d20: 15"],
-                "state_changes": {"test": "data"}
-            }
+                "state_changes": {"test": "data"},
+            },
         }
-        self.fake_genai_client.models.generate_content.return_value = FakeGeminiResponse(
-            json.dumps(gemini_response_data)
+        self.fake_genai_client.models.generate_content.return_value = (
+            FakeGeminiResponse(json.dumps(gemini_response_data))
         )
 
         # Test with debug mode OFF
@@ -422,15 +422,15 @@ class TestDebugModeEnd2End(unittest.TestCase):
         # Verify interaction succeeds
         self.assertEqual(response.status_code, 200)
         response_data = json.loads(response.data)
-        
+
         # With debug mode OFF, debug_mode should be False in the response
         self.assertEqual(response_data.get("debug_mode"), False)
-        
+
         # Debug content should not be in the narrative response
         narrative = response_data.get("narrative", "")
         self.assertNotIn("GM-only information", narrative)
 
-    @patch("firebase_admin.firestore.client") 
+    @patch("firebase_admin.firestore.client")
     def test_debug_mode_persistence_across_requests(self, mock_firestore_client):
         """Test that debug mode setting persists across multiple requests."""
         mock_firestore_client.return_value = self.fake_firestore
@@ -450,7 +450,9 @@ class TestDebugModeEnd2End(unittest.TestCase):
             response = self.client.get("/api/settings", headers=self.test_headers)
             self.assertEqual(response.status_code, 200)
             settings_data = json.loads(response.data)
-            self.assertEqual(settings_data["debug_mode"], True, f"Failed on request {i+1}")
+            self.assertEqual(
+                settings_data["debug_mode"], True, f"Failed on request {i+1}"
+            )
 
             # Also test campaign endpoint consistency
             response = self.client.get(
@@ -460,20 +462,27 @@ class TestDebugModeEnd2End(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             campaign_data = json.loads(response.data)
             self.assertEqual(
-                campaign_data["game_state"]["debug_mode"], 
-                True, 
-                f"Campaign debug mode inconsistent on request {i+1}"
+                campaign_data["game_state"]["debug_mode"],
+                True,
+                f"Campaign debug mode inconsistent on request {i+1}",
             )
 
     @patch("firebase_admin.firestore.client")
-    def test_backend_strips_game_state_fields_when_debug_off(self, mock_firestore_client):
+    def test_backend_strips_game_state_fields_when_debug_off(
+        self, mock_firestore_client
+    ):
         """Test that backend strips game state fields (entities, state_updates, debug_info) when debug mode is OFF."""
         mock_firestore_client.return_value = self.fake_firestore
-        
+
         # Create a story entry with all possible fields including game state fields
-        campaign_doc = self.fake_firestore.collection("users").document(self.test_user_id).collection("campaigns").document(self.test_campaign_id)
+        campaign_doc = (
+            self.fake_firestore.collection("users")
+            .document(self.test_user_id)
+            .collection("campaigns")
+            .document(self.test_campaign_id)
+        )
         story_collection = campaign_doc.collection("story")
-        
+
         # Add a story entry with comprehensive structured fields
         story_entry_with_game_state = {
             "actor": "gemini",
@@ -481,24 +490,27 @@ class TestDebugModeEnd2End(unittest.TestCase):
             "timestamp": datetime.fromisoformat("2025-01-01T01:00:00"),
             # Fields that should be STRIPPED when debug mode is OFF
             "entities_mentioned": ["Dragon", "Knight", "Castle"],
-            "entities": [{"name": "Dragon", "status": "hostile"}, {"name": "Knight", "status": "friendly"}],
+            "entities": [
+                {"name": "Dragon", "status": "hostile"},
+                {"name": "Knight", "status": "friendly"},
+            ],
             "state_updates": {
                 "player_character_data": {"hp_current": 8, "hp_max": 10},
-                "npc_data": {"dragon_001": {"name": "Ancient Red Dragon", "hp": 100}}
+                "npc_data": {"dragon_001": {"name": "Ancient Red Dragon", "hp": 100}},
             },
             "debug_info": {
                 "dm_notes": ["Player rolled well", "Dragon should retreat"],
-                "state_rationale": "HP reduced due to combat"
+                "state_rationale": "HP reduced due to combat",
             },
             # Fields that should REMAIN when debug mode is OFF
             "resources": "Lost 1 healing potion",
             "dice_rolls": ["1d20+5: 18 (Attack)", "1d8+3: 7 (Damage)"],
             "location_confirmed": "Ancient Dragon's Lair",
             "planning_block": "What do you do next?",
-            "god_mode_response": "The dragon roars menacingly"
+            "god_mode_response": "The dragon roars menacingly",
         }
         story_collection.add(story_entry_with_game_state)
-        
+
         # Test with debug mode OFF - game state fields should be stripped
         debug_settings = {"debug_mode": False}
         response = self.client.post(
@@ -508,7 +520,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
             headers=self.test_headers,
         )
         self.assertEqual(response.status_code, 200)
-        
+
         # Get campaign data with debug mode OFF
         response = self.client.get(
             f"/api/campaigns/{self.test_campaign_id}",
@@ -516,33 +528,75 @@ class TestDebugModeEnd2End(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         campaign_data = json.loads(response.data)
-        
+
         # Find the gemini story entry
-        gemini_entries = [entry for entry in campaign_data["story"] if entry.get("actor") == "gemini"]
-        self.assertGreater(len(gemini_entries), 0, "Should have at least one Gemini entry")
-        
+        gemini_entries = [
+            entry for entry in campaign_data["story"] if entry.get("actor") == "gemini"
+        ]
+        self.assertGreater(
+            len(gemini_entries), 0, "Should have at least one Gemini entry"
+        )
+
         latest_entry = gemini_entries[-1]  # Get the latest entry we just added
-        
+
         # CRITICAL: Fields that should be STRIPPED when debug mode is OFF
-        self.assertNotIn("entities_mentioned", latest_entry, "entities_mentioned should be stripped when debug mode is OFF")
-        self.assertNotIn("entities", latest_entry, "entities should be stripped when debug mode is OFF")
-        self.assertNotIn("state_updates", latest_entry, "state_updates should be stripped when debug mode is OFF")
-        self.assertNotIn("debug_info", latest_entry, "debug_info should be stripped when debug mode is OFF")
-        
+        self.assertNotIn(
+            "entities_mentioned",
+            latest_entry,
+            "entities_mentioned should be stripped when debug mode is OFF",
+        )
+        self.assertNotIn(
+            "entities",
+            latest_entry,
+            "entities should be stripped when debug mode is OFF",
+        )
+        self.assertNotIn(
+            "state_updates",
+            latest_entry,
+            "state_updates should be stripped when debug mode is OFF",
+        )
+        self.assertNotIn(
+            "debug_info",
+            latest_entry,
+            "debug_info should be stripped when debug mode is OFF",
+        )
+
         # CRITICAL: Fields that should REMAIN when debug mode is OFF
-        self.assertIn("resources", latest_entry, "resources should remain when debug mode is OFF")
-        self.assertIn("dice_rolls", latest_entry, "dice_rolls should remain when debug mode is OFF")
-        self.assertIn("location_confirmed", latest_entry, "location_confirmed should remain when debug mode is OFF")
-        self.assertIn("planning_block", latest_entry, "planning_block should remain when debug mode is OFF")
-        self.assertIn("god_mode_response", latest_entry, "god_mode_response should remain when debug mode is OFF")
-        
+        self.assertIn(
+            "resources", latest_entry, "resources should remain when debug mode is OFF"
+        )
+        self.assertIn(
+            "dice_rolls",
+            latest_entry,
+            "dice_rolls should remain when debug mode is OFF",
+        )
+        self.assertIn(
+            "location_confirmed",
+            latest_entry,
+            "location_confirmed should remain when debug mode is OFF",
+        )
+        self.assertIn(
+            "planning_block",
+            latest_entry,
+            "planning_block should remain when debug mode is OFF",
+        )
+        self.assertIn(
+            "god_mode_response",
+            latest_entry,
+            "god_mode_response should remain when debug mode is OFF",
+        )
+
         # Verify the content of remaining fields
         self.assertEqual(latest_entry["resources"], "Lost 1 healing potion")
-        self.assertEqual(latest_entry["dice_rolls"], ["1d20+5: 18 (Attack)", "1d8+3: 7 (Damage)"])
+        self.assertEqual(
+            latest_entry["dice_rolls"], ["1d20+5: 18 (Attack)", "1d8+3: 7 (Damage)"]
+        )
         self.assertEqual(latest_entry["location_confirmed"], "Ancient Dragon's Lair")
         self.assertEqual(latest_entry["planning_block"], "What do you do next?")
-        self.assertEqual(latest_entry["god_mode_response"], "The dragon roars menacingly")
-        
+        self.assertEqual(
+            latest_entry["god_mode_response"], "The dragon roars menacingly"
+        )
+
         # Now test with debug mode ON - all fields should be present
         debug_settings = {"debug_mode": True}
         response = self.client.post(
@@ -552,7 +606,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
             headers=self.test_headers,
         )
         self.assertEqual(response.status_code, 200)
-        
+
         # Get campaign data with debug mode ON
         response = self.client.get(
             f"/api/campaigns/{self.test_campaign_id}",
@@ -560,21 +614,47 @@ class TestDebugModeEnd2End(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         campaign_data = json.loads(response.data)
-        
+
         # Find the gemini story entry again
-        gemini_entries = [entry for entry in campaign_data["story"] if entry.get("actor") == "gemini"]
+        gemini_entries = [
+            entry for entry in campaign_data["story"] if entry.get("actor") == "gemini"
+        ]
         latest_entry = gemini_entries[-1]
-        
+
         # With debug mode ON, ALL fields should be present
-        self.assertIn("entities_mentioned", latest_entry, "entities_mentioned should be present when debug mode is ON")
-        self.assertIn("entities", latest_entry, "entities should be present when debug mode is ON")
-        self.assertIn("state_updates", latest_entry, "state_updates should be present when debug mode is ON")
-        self.assertIn("debug_info", latest_entry, "debug_info should be present when debug mode is ON")
-        self.assertIn("resources", latest_entry, "resources should be present when debug mode is ON")
-        self.assertIn("dice_rolls", latest_entry, "dice_rolls should be present when debug mode is ON")
-        
+        self.assertIn(
+            "entities_mentioned",
+            latest_entry,
+            "entities_mentioned should be present when debug mode is ON",
+        )
+        self.assertIn(
+            "entities", latest_entry, "entities should be present when debug mode is ON"
+        )
+        self.assertIn(
+            "state_updates",
+            latest_entry,
+            "state_updates should be present when debug mode is ON",
+        )
+        self.assertIn(
+            "debug_info",
+            latest_entry,
+            "debug_info should be present when debug mode is ON",
+        )
+        self.assertIn(
+            "resources",
+            latest_entry,
+            "resources should be present when debug mode is ON",
+        )
+        self.assertIn(
+            "dice_rolls",
+            latest_entry,
+            "dice_rolls should be present when debug mode is ON",
+        )
+
         # Verify the content of game state fields that should only appear in debug mode
-        self.assertEqual(latest_entry["entities_mentioned"], ["Dragon", "Knight", "Castle"])
+        self.assertEqual(
+            latest_entry["entities_mentioned"], ["Dragon", "Knight", "Castle"]
+        )
         self.assertEqual(len(latest_entry["entities"]), 2)
         self.assertIn("player_character_data", latest_entry["state_updates"])
         self.assertIn("dm_notes", latest_entry["debug_info"])

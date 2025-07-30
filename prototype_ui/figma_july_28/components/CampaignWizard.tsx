@@ -28,7 +28,7 @@ interface CampaignData {
 export function CampaignWizard({ onBack, onComplete }: CampaignWizardProps) {
   const [currentStep, setCurrentStep] = useState(1)
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
-  
+
   const [campaignData, setCampaignData] = useState<CampaignData>({
     title: 'My Epic Adventure',
     type: 'dragon-knight',
@@ -79,8 +79,8 @@ export function CampaignWizard({ onBack, onComplete }: CampaignWizardProps) {
         {/* Step 1 */}
         <div className="flex items-center space-x-2">
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-            currentStep >= 1 
-              ? 'bg-purple-600 text-white' 
+            currentStep >= 1
+              ? 'bg-purple-600 text-white'
               : 'bg-gray-600 text-gray-300'
           }`}>
             {currentStep > 1 ? '✓' : '1'}
@@ -100,8 +100,8 @@ export function CampaignWizard({ onBack, onComplete }: CampaignWizardProps) {
         {/* Step 2 */}
         <div className="flex items-center space-x-2">
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-            currentStep >= 2 
-              ? 'bg-purple-600 text-white' 
+            currentStep >= 2
+              ? 'bg-purple-600 text-white'
               : 'bg-gray-600 text-gray-300'
           }`}>
             {currentStep > 2 ? '✓' : '2'}
@@ -121,8 +121,8 @@ export function CampaignWizard({ onBack, onComplete }: CampaignWizardProps) {
         {/* Step 3 */}
         <div className="flex items-center space-x-2">
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-            currentStep >= 3 
-              ? 'bg-purple-600 text-white' 
+            currentStep >= 3
+              ? 'bg-purple-600 text-white'
               : 'bg-gray-600 text-gray-300'
           }`}>
             3
@@ -166,10 +166,10 @@ export function CampaignWizard({ onBack, onComplete }: CampaignWizardProps) {
         <div>
           <label className="block text-purple-200 mb-3">Campaign Type</label>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card 
+            <Card
               className={`cursor-pointer transition-all duration-200 bg-black/60 backdrop-blur-sm border hover:bg-black/70 ${
-                campaignData.type === 'dragon-knight' 
-                  ? 'border-purple-400 border-2 bg-gradient-to-br from-purple-500/20 to-pink-600/20' 
+                campaignData.type === 'dragon-knight'
+                  ? 'border-purple-400 border-2 bg-gradient-to-br from-purple-500/20 to-pink-600/20'
                   : 'border-purple-500/30 hover:border-purple-400/50'
               }`}
               onClick={() => updateCampaignData('type', 'dragon-knight')}
@@ -187,10 +187,10 @@ export function CampaignWizard({ onBack, onComplete }: CampaignWizardProps) {
               </CardContent>
             </Card>
 
-            <Card 
+            <Card
               className={`cursor-pointer transition-all duration-200 bg-black/60 backdrop-blur-sm border hover:bg-black/70 ${
-                campaignData.type === 'custom' 
-                  ? 'border-purple-400 border-2 bg-gradient-to-br from-purple-500/20 to-pink-600/20' 
+                campaignData.type === 'custom'
+                  ? 'border-purple-400 border-2 bg-gradient-to-br from-purple-500/20 to-pink-600/20'
                   : 'border-purple-500/30 hover:border-purple-400/50'
               }`}
               onClick={() => updateCampaignData('type', 'custom')}
@@ -243,12 +243,12 @@ export function CampaignWizard({ onBack, onComplete }: CampaignWizardProps) {
             className="text-purple-300 hover:text-white hover:bg-purple-500/20 p-0 h-auto"
           >
             Campaign description prompt
-            {isDescriptionExpanded ? 
-              <ChevronUp className="w-4 h-4 ml-2" /> : 
+            {isDescriptionExpanded ?
+              <ChevronUp className="w-4 h-4 ml-2" /> :
               <ChevronDown className="w-4 h-4 ml-2" />
             }
           </Button>
-          
+
           {isDescriptionExpanded && (
             <div className="mt-3">
               <Textarea
@@ -277,8 +277,8 @@ export function CampaignWizard({ onBack, onComplete }: CampaignWizardProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Default Fantasy World */}
         <Card className={`bg-black/60 backdrop-blur-sm border transition-all duration-200 hover:bg-black/70 ${
-          campaignData.aiPersonalities.defaultWorld 
-            ? 'border-cyan-400/50 bg-gradient-to-br from-cyan-500/20 to-blue-600/20' 
+          campaignData.aiPersonalities.defaultWorld
+            ? 'border-cyan-400/50 bg-gradient-to-br from-cyan-500/20 to-blue-600/20'
             : 'border-purple-500/30 hover:border-purple-400/50'
         }`}>
           <CardContent className="p-6 text-center">
@@ -302,8 +302,8 @@ export function CampaignWizard({ onBack, onComplete }: CampaignWizardProps) {
 
         {/* Mechanical Precision */}
         <Card className={`bg-black/60 backdrop-blur-sm border transition-all duration-200 hover:bg-black/70 ${
-          campaignData.aiPersonalities.mechanicalPrecision 
-            ? 'border-purple-400/50 bg-gradient-to-br from-purple-500/20 to-pink-600/20' 
+          campaignData.aiPersonalities.mechanicalPrecision
+            ? 'border-purple-400/50 bg-gradient-to-br from-purple-500/20 to-pink-600/20'
             : 'border-purple-500/30 hover:border-purple-400/50'
         }`}>
           <CardContent className="p-6 text-center">
@@ -327,8 +327,8 @@ export function CampaignWizard({ onBack, onComplete }: CampaignWizardProps) {
 
         {/* Starting Companions */}
         <Card className={`bg-black/60 backdrop-blur-sm border transition-all duration-200 hover:bg-black/70 ${
-          campaignData.aiPersonalities.companions 
-            ? 'border-green-400/50 bg-gradient-to-br from-green-500/20 to-emerald-600/20' 
+          campaignData.aiPersonalities.companions
+            ? 'border-green-400/50 bg-gradient-to-br from-green-500/20 to-emerald-600/20'
             : 'border-purple-500/30 hover:border-purple-400/50'
         }`}>
           <CardContent className="p-6 text-center">
@@ -366,25 +366,25 @@ export function CampaignWizard({ onBack, onComplete }: CampaignWizardProps) {
       <Card className="bg-black/40 backdrop-blur-sm border border-purple-500/30">
         <CardContent className="p-6">
           <h3 className="text-xl text-white mb-4">Campaign Summary</h3>
-          
+
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center">
               <span className="text-purple-300 font-medium w-24 flex-shrink-0">Title:</span>
               <span className="text-white">{campaignData.title}</span>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row sm:items-center">
               <span className="text-purple-300 font-medium w-24 flex-shrink-0">Character:</span>
               <span className="text-white">{campaignData.character || 'Random Character'}</span>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row sm:items-start">
               <span className="text-purple-300 font-medium w-24 flex-shrink-0">Description:</span>
               <span className="text-purple-200 text-sm">
                 # Campaign summary You are {campaignData.character}, a 16 year o...
               </span>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row sm:items-center">
               <span className="text-purple-300 font-medium w-24 flex-shrink-0">AI Personalities:</span>
               <div className="flex flex-wrap gap-2">
@@ -399,7 +399,7 @@ export function CampaignWizard({ onBack, onComplete }: CampaignWizardProps) {
                 )}
               </div>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row sm:items-center">
               <span className="text-purple-300 font-medium w-24 flex-shrink-0">Options:</span>
               <div className="flex flex-wrap gap-2">

@@ -9,10 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from './ui/checkbox'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from './ui/sheet'
 import { ImageWithFallback } from './figma/ImageWithFallback'
-import { 
-  Search, 
-  ShoppingCart, 
-  Star, 
+import {
+  Search,
+  ShoppingCart,
+  Star,
   Filter,
   Shield,
   SlidersHorizontal,
@@ -34,10 +34,10 @@ interface BrowsePageProps {
 type SortOption = 'price-low' | 'price-high' | 'condition' | 'newest' | 'rating'
 type ViewMode = 'grid' | 'list'
 
-export function BrowsePage({ 
-  jerseys, 
-  onNavigate, 
-  onSearch, 
+export function BrowsePage({
+  jerseys,
+  onNavigate,
+  onSearch,
   cartItemCount,
   selectedSport,
   onSportChange
@@ -63,16 +63,16 @@ export function BrowsePage({
   }
 
   const toggleSize = (size: string) => {
-    setSelectedSizes(prev => 
-      prev.includes(size) 
+    setSelectedSizes(prev =>
+      prev.includes(size)
         ? prev.filter(s => s !== size)
         : [...prev, size]
     )
   }
 
   const toggleCondition = (condition: string) => {
-    setSelectedConditions(prev => 
-      prev.includes(condition) 
+    setSelectedConditions(prev =>
+      prev.includes(condition)
         ? prev.filter(c => c !== condition)
         : [...prev, condition]
     )
@@ -80,19 +80,19 @@ export function BrowsePage({
 
   const filteredAndSortedJerseys = jerseys
     .filter(jersey => {
-      const matchesQuery = searchQuery === '' || 
+      const matchesQuery = searchQuery === '' ||
         jersey.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         jersey.player.toLowerCase().includes(searchQuery.toLowerCase()) ||
         jersey.team.toLowerCase().includes(searchQuery.toLowerCase())
-      
+
       const matchesSport = selectedSport === 'All' || jersey.sport === selectedSport
       const matchesPrice = jersey.price >= priceRange[0] && jersey.price <= priceRange[1]
       const matchesSize = selectedSizes.length === 0 || selectedSizes.includes(jersey.size)
       const matchesCondition = selectedConditions.length === 0 || selectedConditions.includes(jersey.condition)
       const matchesAuthentic = !showAuthentic || jersey.isAuthentic
       const matchesVintage = !showVintage || jersey.isVintage
-      
-      return matchesQuery && matchesSport && matchesPrice && matchesSize && 
+
+      return matchesQuery && matchesSport && matchesPrice && matchesSize &&
              matchesCondition && matchesAuthentic && matchesVintage
     })
     .sort((a, b) => {
@@ -231,10 +231,10 @@ export function BrowsePage({
                 </Button>
               </nav>
             </div>
-            
+
             <div className="flex items-center space-x-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="icon"
                 onClick={() => onNavigate('cart')}
                 className="relative"
@@ -268,7 +268,7 @@ export function BrowsePage({
                 </Button>
               </div>
             </form>
-            
+
             <div className="flex items-center space-x-4">
               <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
                 <SelectTrigger className="w-48">
@@ -283,7 +283,7 @@ export function BrowsePage({
                   <SelectItem value="rating">Highest Rated</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <div className="flex items-center space-x-1 border rounded-md">
                 <Button
                   variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -300,7 +300,7 @@ export function BrowsePage({
                   <List className="w-4 h-4" />
                 </Button>
               </div>
-              
+
               <Sheet>
                 <SheetTrigger asChild>
                   <Button variant="outline">
@@ -349,8 +349,8 @@ export function BrowsePage({
             {viewMode === 'grid' ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredAndSortedJerseys.map((jersey) => (
-                  <Card 
-                    key={jersey.id} 
+                  <Card
+                    key={jersey.id}
                     className="group hover:shadow-lg transition-all duration-300 cursor-pointer"
                     onClick={() => onNavigate('product', jersey)}
                   >
@@ -399,8 +399,8 @@ export function BrowsePage({
             ) : (
               <div className="space-y-4">
                 {filteredAndSortedJerseys.map((jersey) => (
-                  <Card 
-                    key={jersey.id} 
+                  <Card
+                    key={jersey.id}
                     className="group hover:shadow-lg transition-all duration-300 cursor-pointer"
                     onClick={() => onNavigate('product', jersey)}
                   >

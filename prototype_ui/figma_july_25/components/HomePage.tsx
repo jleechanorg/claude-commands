@@ -5,11 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Badge } from './ui/badge'
 import { Input } from './ui/input'
 import { ImageWithFallback } from './figma/ImageWithFallback'
-import { 
-  Search, 
-  ShoppingCart, 
-  Star, 
-  TrendingUp, 
+import {
+  Search,
+  ShoppingCart,
+  Star,
+  TrendingUp,
   Filter,
   Heart,
   Shield,
@@ -28,7 +28,7 @@ interface HomePageProps {
 export function HomePage({ jerseys, onNavigate, onSearch, cartItemCount }: HomePageProps) {
   const featuredJerseys = jerseys.filter(jersey => jersey.isVintage || jersey.sellerRating >= 4.8).slice(0, 6)
   const dealJerseys = jerseys.filter(jersey => (jersey.originalPrice - jersey.price) / jersey.originalPrice > 0.3).slice(0, 4)
-  
+
   const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.currentTarget)
@@ -73,10 +73,10 @@ export function HomePage({ jerseys, onNavigate, onSearch, cartItemCount }: HomeP
                 </Button>
               </nav>
             </div>
-            
+
             <div className="flex items-center space-x-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="icon"
                 onClick={() => onNavigate('cart')}
                 className="relative"
@@ -102,7 +102,7 @@ export function HomePage({ jerseys, onNavigate, onSearch, cartItemCount }: HomeP
           <p className="text-xl mb-8 max-w-2xl mx-auto opacity-90">
             Discover authentic used sports jerseys from your favorite teams and players. Great condition, unbeatable prices.
           </p>
-          
+
           {/* Search Bar */}
           <form onSubmit={handleSearchSubmit} className="max-w-2xl mx-auto mb-8">
             <div className="flex">
@@ -180,11 +180,11 @@ export function HomePage({ jerseys, onNavigate, onSearch, cartItemCount }: HomeP
               View All Deals
             </Button>
           </div>
-          
+
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {dealJerseys.map((jersey) => (
-              <Card 
-                key={jersey.id} 
+              <Card
+                key={jersey.id}
                 className="group hover:shadow-lg transition-all duration-300 cursor-pointer border-2 border-red-200"
                 onClick={() => onNavigate('product', jersey)}
               >
@@ -243,11 +243,11 @@ export function HomePage({ jerseys, onNavigate, onSearch, cartItemCount }: HomeP
               View All
             </Button>
           </div>
-          
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {featuredJerseys.map((jersey) => (
-              <Card 
-                key={jersey.id} 
+              <Card
+                key={jersey.id}
                 className="group hover:shadow-lg transition-all duration-300 cursor-pointer"
                 onClick={() => onNavigate('product', jersey)}
               >

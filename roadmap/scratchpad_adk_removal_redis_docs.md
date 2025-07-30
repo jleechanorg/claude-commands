@@ -22,7 +22,7 @@ Remove A2A SDK/ADK complexity from orchestration system and create comprehensive
 **Discovery Commands:**
 ```bash
 grep -r -i "a2a\|adk" . --exclude-dir=.git
-find . -name "*a2a*" -o -name "*adk*" 
+find . -name "*a2a*" -o -name "*adk*"
 grep -r "redis.*required\|require.*redis" .
 ```
 

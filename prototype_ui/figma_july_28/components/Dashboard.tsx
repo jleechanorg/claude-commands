@@ -5,14 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Badge } from './ui/badge'
 import { Separator } from './ui/separator'
 import { ThemeSwitcher } from './ThemeSwitcher'
-import { 
-  Plus, 
-  PlayCircle, 
-  Calendar, 
-  Clock, 
-  Trash2, 
-  BookOpen, 
-  Users, 
+import {
+  Plus,
+  PlayCircle,
+  Calendar,
+  Clock,
+  Trash2,
+  BookOpen,
+  Users,
   Crown,
   LogOut,
   Sparkles,
@@ -38,15 +38,15 @@ interface DashboardProps {
   onDeleteCampaign: (campaignId: string) => void
 }
 
-export function Dashboard({ 
-  user, 
-  campaigns, 
+export function Dashboard({
+  user,
+  campaigns,
   theme,
   onThemeChange,
-  onLogout, 
-  onCreateCampaign, 
-  onSelectCampaign, 
-  onDeleteCampaign 
+  onLogout,
+  onCreateCampaign,
+  onSelectCampaign,
+  onDeleteCampaign
 }: DashboardProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -61,7 +61,7 @@ export function Dashboard({
     const date = new Date(dateString)
     const diffMs = now.getTime() - date.getTime()
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-    
+
     if (diffDays === 0) return 'Today'
     if (diffDays === 1) return 'Yesterday'
     if (diffDays < 7) return `${diffDays} days ago`
@@ -149,20 +149,20 @@ export function Dashboard({
                   <p className="text-muted-foreground text-sm">Campaign Dashboard</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center space-x-6">
                 <div className="relative z-50">
                   <ThemeSwitcher currentTheme={theme} onThemeChange={onThemeChange} />
                 </div>
-                
+
                 <div className="flex items-center space-x-4">
                   <div className="text-right">
                     <p className="text-foreground">{user.name}</p>
                     <p className="text-muted-foreground text-sm">{user.email}</p>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={onLogout}
                     className="text-muted-foreground hover:text-foreground hover:bg-accent/10"
                   >
@@ -177,17 +177,17 @@ export function Dashboard({
         {/* Hero Section */}
         <div className="relative min-h-[calc(100vh-80px)] flex items-center justify-center">
           {/* Hero Background Image */}
-          <div 
+          <div
             className="absolute inset-0 bg-cover bg-no-repeat opacity-80"
-            style={{ 
+            style={{
               backgroundImage: `url(${heroImage})`,
               backgroundPosition: 'center center'
             }}
           />
-          
+
           {/* Dark overlay for better text readability */}
           <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/60 to-background/30" />
-          
+
           {/* Floating particles effect */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             {[...Array(15)].map((_, i) => (
@@ -227,7 +227,7 @@ export function Dashboard({
                 </div>
 
                 {/* CTA Button */}
-                <Button 
+                <Button
                   onClick={onCreateCampaign}
                   size="lg"
                   className={`h-16 px-12 text-xl bg-gradient-to-r ${colors.primary} hover:opacity-90 shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110`}
@@ -282,20 +282,20 @@ export function Dashboard({
                 <p className="text-muted-foreground text-sm">Campaign Dashboard</p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-6">
               <div className="relative z-50">
                 <ThemeSwitcher currentTheme={theme} onThemeChange={onThemeChange} />
               </div>
-              
+
               <div className="flex items-center space-x-4">
                 <div className="text-right">
                   <p className="text-foreground">{user.name}</p>
                   <p className="text-muted-foreground text-sm">{user.email}</p>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={onLogout}
                   className="text-muted-foreground hover:text-foreground hover:bg-accent/10"
                 >
@@ -350,7 +350,7 @@ export function Dashboard({
 
             {/* Quick Actions */}
             <div className="flex flex-wrap gap-4">
-              <Button 
+              <Button
                 onClick={onCreateCampaign}
                 size="lg"
                 className={`bg-gradient-to-r ${colors.primary} hover:opacity-90 shadow-lg hover:shadow-xl transition-all duration-300`}
@@ -358,9 +358,9 @@ export function Dashboard({
                 <Plus className="w-5 h-5 mr-2" />
                 Create New Campaign
               </Button>
-              
+
               {recentCampaigns.length > 0 && (
-                <Button 
+                <Button
                   onClick={() => onSelectCampaign(recentCampaigns[0])}
                   variant="outline"
                   size="lg"
@@ -387,8 +387,8 @@ export function Dashboard({
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                   {recentCampaigns.map((campaign) => (
-                    <Card 
-                      key={campaign.id} 
+                    <Card
+                      key={campaign.id}
                       className="bg-card/40 backdrop-blur-sm border-border/50 hover:bg-card/60 transition-all duration-300 group hover:scale-[1.02] cursor-pointer shadow-lg hover:shadow-xl"
                       onClick={() => onSelectCampaign(campaign)}
                     >
@@ -412,9 +412,9 @@ export function Dashboard({
 
                         <div className="flex flex-wrap gap-1">
                           {campaign.aiPersonas.slice(0, 2).map((persona) => (
-                            <Badge 
-                              key={persona} 
-                              variant="outline" 
+                            <Badge
+                              key={persona}
+                              variant="outline"
                               className="text-xs border-secondary/30 text-secondary-foreground"
                             >
                               {persona.replace('Jeff\'s ', '')}
@@ -440,7 +440,7 @@ export function Dashboard({
                           </div>
                         </div>
 
-                        <Button 
+                        <Button
                           className={`w-full bg-gradient-to-r ${colors.secondary} hover:opacity-90 transition-all duration-300`}
                           onClick={(e) => {
                             e.stopPropagation()
@@ -468,8 +468,8 @@ export function Dashboard({
 
               <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {campaigns.map((campaign) => (
-                  <Card 
-                    key={campaign.id} 
+                  <Card
+                    key={campaign.id}
                     className="bg-card/30 backdrop-blur-sm border-border/50 hover:bg-card/50 transition-all duration-300 group hover:scale-[1.02] shadow-lg hover:shadow-xl"
                   >
                     <CardHeader className="space-y-3">
@@ -497,17 +497,17 @@ export function Dashboard({
 
                       <div className="flex flex-wrap gap-1">
                         {campaign.aiPersonas.map((persona) => (
-                          <Badge 
-                            key={persona} 
-                            variant="outline" 
+                          <Badge
+                            key={persona}
+                            variant="outline"
                             className="text-xs border-primary/30 text-primary"
                           >
                             {persona.replace('Jeff\'s ', '')}
                           </Badge>
                         ))}
                         {campaign.hasCompanions && (
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className="text-xs border-accent/30 text-accent-foreground"
                           >
                             <Users className="w-3 h-3 mr-1" />
@@ -515,8 +515,8 @@ export function Dashboard({
                           </Badge>
                         )}
                         {campaign.useDefaultWorld && (
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className="text-xs border-secondary/30 text-secondary-foreground"
                           >
                             World of Assiah
@@ -527,7 +527,7 @@ export function Dashboard({
 
                     <CardContent className="space-y-4">
                       <Separator className="bg-border/30" />
-                      
+
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
                         <div className="flex items-center space-x-1">
                           <Calendar className="w-3 h-3" />
@@ -539,7 +539,7 @@ export function Dashboard({
                         </div>
                       </div>
 
-                      <Button 
+                      <Button
                         onClick={() => onSelectCampaign(campaign)}
                         className={`w-full bg-gradient-to-r ${colors.secondary} hover:opacity-90 transition-all duration-300`}
                       >

@@ -44,7 +44,7 @@ cat /tmp/comprehensive_exclusions.txt
 echo ""
 echo "🔍 Comprehensive content patterns to filter:"
 echo "  - mvp_site/ → \$PROJECT_ROOT/"
-echo "  - worldarchitect.ai → your-project.com" 
+echo "  - worldarchitect.ai → your-project.com"
 echo "  - jleechan → \$USER"
 echo "  - WorldArchitect.AI → Your Project"
 echo "  - Firebase/Firestore → Database"

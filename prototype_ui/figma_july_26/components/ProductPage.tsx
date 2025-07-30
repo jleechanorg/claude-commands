@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Badge } from './ui/badge'
 import { Separator } from './ui/separator'
 import { ImageWithFallback } from './figma/ImageWithFallback'
-import { 
-  ShoppingCart, 
-  Star, 
+import {
+  ShoppingCart,
+  Star,
   Shield,
   ArrowLeft,
   Heart,
@@ -66,10 +66,10 @@ export function ProductPage({ jersey, onNavigate, onAddToCart, cartItemCount }: 
                 🏆 JerseyHub
               </h1>
             </div>
-            
+
             <div className="flex items-center space-x-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="icon"
                 onClick={() => onNavigate('cart')}
                 className="relative"
@@ -122,7 +122,7 @@ export function ProductPage({ jersey, onNavigate, onAddToCart, cartItemCount }: 
               <p className="text-xl text-muted-foreground mb-4">
                 {jersey.team} • #{jersey.number} • {jersey.year && `${jersey.year} Season`}
               </p>
-              
+
               <div className="flex items-center space-x-4 mb-6">
                 <div className="flex items-center space-x-1">
                   <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
@@ -150,7 +150,7 @@ export function ProductPage({ jersey, onNavigate, onAddToCart, cartItemCount }: 
                   </div>
                 )}
               </div>
-              
+
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Size:</span>
@@ -170,7 +170,7 @@ export function ProductPage({ jersey, onNavigate, onAddToCart, cartItemCount }: 
               </div>
 
               <div className="space-y-3">
-                <Button 
+                <Button
                   onClick={handleAddToCart}
                   disabled={isAddingToCart}
                   className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700"
@@ -184,7 +184,7 @@ export function ProductPage({ jersey, onNavigate, onAddToCart, cartItemCount }: 
                     </>
                   )}
                 </Button>
-                
+
                 <div className="flex space-x-2">
                   <Button variant="outline" className="flex-1">
                     <Heart className="w-4 h-4 mr-2" />
@@ -227,7 +227,7 @@ export function ProductPage({ jersey, onNavigate, onAddToCart, cartItemCount }: 
             <p className="text-muted-foreground leading-relaxed">
               {jersey.description}
             </p>
-            
+
             <div className="mt-6 grid md:grid-cols-2 gap-6">
               <div>
                 <h3>Jersey Details</h3>
@@ -240,7 +240,7 @@ export function ProductPage({ jersey, onNavigate, onAddToCart, cartItemCount }: 
                   {jersey.year && <li>• Year: {jersey.year}</li>}
                 </ul>
               </div>
-              
+
               <div>
                 <h3>Quality & Authentication</h3>
                 <ul className="space-y-2 text-sm text-muted-foreground">

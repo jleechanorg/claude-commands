@@ -8,7 +8,7 @@ Detailed explanations and evidence for core meta-rules referenced in CLAUDE.md.
 
 ### Specific Violations to Avoid:
 - ❌ NEVER create files with "# Note: In the real implementation" comments
-- ❌ NEVER write placeholder code that doesn't actually work  
+- ❌ NEVER write placeholder code that doesn't actually work
 - ❌ NEVER create demonstration files instead of working implementations
 - ❌ NEVER create Python intelligence files when .md files handle the logic
 - ❌ NEVER duplicate systematic protocols that already exist in other .md files
@@ -49,7 +49,7 @@ Prevent building parallel inferior systems vs enhancing existing ones
 
 ### Key Questions to Ask:
 - ✅ ALWAYS ask "Can the LLM handle this naturally?" before building parsers/analytics systems
-- ✅ ALWAYS try enhancing existing systems before building parallel new ones  
+- ✅ ALWAYS try enhancing existing systems before building parallel new ones
 - ✅ ALWAYS prioritize user workflow integration over technical sophistication
 
 ### Specific Prohibitions:
@@ -99,7 +99,7 @@ Gemini should ONLY be used when:
 ### Core Prohibition:
 When building response generation systems:
 - ❌ NEVER create Python functions that simulate Claude's responses with templates
-- ❌ NEVER use pattern matching to generate "intelligent" responses  
+- ❌ NEVER use pattern matching to generate "intelligent" responses
 - ❌ NEVER build `_create_contextual_response()` methods that fake understanding
 - ❌ NEVER generate generic replies like "I'll fix the issue" or "Thanks for the suggestion"
 

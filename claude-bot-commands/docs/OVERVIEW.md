@@ -10,7 +10,7 @@ This implementation provides a complete, cost-free GitHub automation system that
 - **`.github/workflows/slash-dispatch.yml`** - Captures `/claude` comments and triggers processing
 - **`.github/workflows/claude-processor.yml`** - Processes commands on self-hosted runner
 
-### Local Infrastructure  
+### Local Infrastructure
 - **`claude-bot-commands/server/claude-bot-server.py`** - HTTP server that forwards prompts to Claude Code CLI
 - **`claude-bot-commands/server/claude-bot-server-test.py`** - Test server for development
 - **`claude-bot-commands/scripts/test-claude-bot.py`** - Test script to verify the system works
@@ -56,7 +56,7 @@ GitHub PR Comment (/claude prompt)
 Slash Command Dispatch Workflow (GitHub Actions)
      ↓
 Repository Dispatch Event
-     ↓  
+     ↓
 Claude Processor Workflow (Self-hosted runner)
      ↓
 HTTP POST to Local Endpoint (127.0.0.1:5001/claude)
@@ -86,7 +86,7 @@ Response Posted Back to GitHub PR
 The implementation includes comprehensive testing:
 
 - **Health check endpoint** - Verify server is running
-- **Form-encoded requests** - Test GitHub Actions compatibility  
+- **Form-encoded requests** - Test GitHub Actions compatibility
 - **JSON requests** - Test direct API usage
 - **Error handling** - Graceful failure modes
 - **Timeout protection** - Prevents hanging requests
@@ -119,7 +119,7 @@ The implementation includes comprehensive testing:
 Common issues and solutions are covered in the main documentation:
 
 - Runner connectivity problems
-- Endpoint server issues  
+- Endpoint server issues
 - GitHub Actions workflow failures
 - Network configuration problems
 

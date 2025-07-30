@@ -6,8 +6,8 @@ import { Badge } from './ui/badge'
 import { Separator } from './ui/separator'
 import { Input } from './ui/input'
 import { ImageWithFallback } from './figma/ImageWithFallback'
-import { 
-  ShoppingCart, 
+import {
+  ShoppingCart,
   ArrowLeft,
   Plus,
   Minus,
@@ -28,12 +28,12 @@ interface CartPageProps {
   total: number
 }
 
-export function CartPage({ 
-  cartItems, 
-  onNavigate, 
-  onUpdateQuantity, 
-  onRemoveItem, 
-  total 
+export function CartPage({
+  cartItems,
+  onNavigate,
+  onUpdateQuantity,
+  onRemoveItem,
+  total
 }: CartPageProps) {
   const subtotal = total
   const shipping = subtotal > 50 ? 0 : 9.99
@@ -63,7 +63,7 @@ export function CartPage({
                 🏆 JerseyHub
               </h1>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <Badge variant="outline" className="text-sm px-3 py-1">
                 {cartItems.reduce((sum, item) => sum + item.quantity, 0)} items
@@ -80,7 +80,7 @@ export function CartPage({
             <ShoppingCart className="w-24 h-24 text-muted-foreground mx-auto mb-6" />
             <h2 className="text-2xl text-slate-900 mb-4">Your cart is empty</h2>
             <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-              Looks like you haven't added any jerseys to your cart yet. 
+              Looks like you haven't added any jerseys to your cart yet.
               Browse our collection to find your perfect jersey!
             </p>
             <Button onClick={() => onNavigate('browse')} size="lg">
@@ -114,7 +114,7 @@ export function CartPage({
                           </Badge>
                         )}
                       </div>
-                      
+
                       <div className="flex-1">
                         <div className="flex justify-between items-start mb-2">
                           <div>
@@ -143,7 +143,7 @@ export function CartPage({
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-                        
+
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             <Button
@@ -184,7 +184,7 @@ export function CartPage({
             <div className="space-y-6">
               <Card className="p-6">
                 <h2 className="text-xl text-slate-900 mb-4">Order Summary</h2>
-                
+
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Subtotal</span>

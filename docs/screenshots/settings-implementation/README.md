@@ -10,7 +10,7 @@ This directory contains screenshots from the Playwright browser automation tests
 - User is authenticated and can access all features
 
 ### 2. Initial Settings Page Load
-![Initial Model Selection](./04_initial_model_selection.png) 
+![Initial Model Selection](./04_initial_model_selection.png)
 - Settings page loads with Pro 2.5 initially selected (default)
 - Clean Bootstrap UI with radio button interface
 - Shows "Choose your preferred Gemini model" instructions
@@ -32,20 +32,20 @@ This directory contains screenshots from the Playwright browser automation tests
 
 - **Framework**: Playwright browser automation
 - **Authentication**: Test mode bypass with custom headers
-- **Backend**: Real Flask server with Firestore integration  
+- **Backend**: Real Flask server with Firestore integration
 - **Browser**: Chromium with slow motion for visibility
 - **Resolution**: 1280x720 for consistent screenshots
 - **Auto-save**: 300ms debounce with visual feedback
 
 ## Key Features Demonstrated
 
-✅ Settings button navigation from dashboard  
-✅ Initial model selection (Pro 2.5 default)  
-✅ Model change functionality (Pro ↔ Flash)  
-✅ Auto-save with debouncing  
-✅ Success message confirmation  
-✅ Firestore persistence  
-✅ Authentication integration  
-✅ Responsive Bootstrap UI  
+✅ Settings button navigation from dashboard
+✅ Initial model selection (Pro 2.5 default)
+✅ Model change functionality (Pro ↔ Flash)
+✅ Auto-save with debouncing
+✅ Success message confirmation
+✅ Firestore persistence
+✅ Authentication integration
+✅ Responsive Bootstrap UI
 
 All tests pass and demonstrate complete working functionality.

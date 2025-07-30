@@ -119,7 +119,7 @@ When encountering API/library issues:
 ### Critical Status Understanding (🚨 MANDATORY):
 GitHub PR states mean:
 - **OPEN** = Work In Progress (WIP) - NOT completed
-- **MERGED** = Completed and integrated into main branch  
+- **MERGED** = Completed and integrated into main branch
 - **CLOSED** = Abandoned or rejected - NOT completed
 - ❌ NEVER mark tasks as completed just because PR exists
 - ✅ ONLY mark completed when PR state = "MERGED"

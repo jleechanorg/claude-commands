@@ -1,6 +1,6 @@
 # GitHub Claude Bot Commands Setup - Your Action Items
 
-Branch: `dev1753495823`  
+Branch: `dev1753495823`
 Goal: Set up self-hosted GitHub runner and test the `/claude` slash command system
 
 ## 🎯 What This Does
@@ -179,7 +179,7 @@ You'll know it's working when:
 
 All these files are now in your repository:
 - `.github/workflows/slash-dispatch.yml` - GitHub Actions dispatcher
-- `.github/workflows/claude-processor.yml` - GitHub Actions processor  
+- `.github/workflows/claude-processor.yml` - GitHub Actions processor
 - `claude-endpoint-server.py` - Local HTTP server
 - `test-claude-endpoint.py` - Testing script
 - `start-claude-slash-commands.sh` - Startup script

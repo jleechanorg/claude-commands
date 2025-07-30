@@ -7,10 +7,10 @@ import { Badge } from './ui/badge'
 import { Input } from './ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 import { ImageWithFallback } from './figma/ImageWithFallback'
-import { 
-  Search, 
-  ShoppingCart, 
-  Star, 
+import {
+  Search,
+  ShoppingCart,
+  Star,
   Shield,
   ArrowUpDown,
   X,
@@ -30,11 +30,11 @@ interface SearchPageProps {
 
 type SortOption = 'relevance' | 'price-low' | 'price-high' | 'condition' | 'rating'
 
-export function SearchPage({ 
-  jerseys, 
+export function SearchPage({
+  jerseys,
   searchQuery: initialQuery,
   selectedSport,
-  onNavigate, 
+  onNavigate,
   onSearch,
   onSportChange,
   cartItemCount
@@ -42,7 +42,7 @@ export function SearchPage({
   const [searchQuery, setSearchQuery] = useState(initialQuery)
   const [sortBy, setSortBy] = useState<SortOption>('relevance')
   const [suggestions] = useState([
-    'Tom Brady', 'Michael Jordan', 'Kobe Bryant', 'Derek Jeter', 
+    'Tom Brady', 'Michael Jordan', 'Kobe Bryant', 'Derek Jeter',
     'Wayne Gretzky', 'Messi', 'Lakers', 'Patriots', 'Bulls', 'Yankees'
   ])
 
@@ -89,9 +89,9 @@ export function SearchPage({
   const getHighlightedText = (text: string, query: string) => {
     if (!query) return text
     const parts = text.split(new RegExp(`(${query})`, 'gi'))
-    return parts.map((part, index) => 
-      part.toLowerCase() === query.toLowerCase() ? 
-        <mark key={index} className="bg-yellow-200 px-1 rounded">{part}</mark> : 
+    return parts.map((part, index) =>
+      part.toLowerCase() === query.toLowerCase() ?
+        <mark key={index} className="bg-yellow-200 px-1 rounded">{part}</mark> :
         part
     )
   }
@@ -134,10 +134,10 @@ export function SearchPage({
                 </Button>
               </nav>
             </div>
-            
+
             <div className="flex items-center space-x-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="icon"
                 onClick={() => onNavigate('cart')}
                 className="relative"
@@ -178,7 +178,7 @@ export function SearchPage({
                   </Button>
                 )}
               </div>
-              
+
               <Select value={selectedSport} onValueChange={onSportChange}>
                 <SelectTrigger className="w-full lg:w-48 h-12">
                   <SelectValue />
@@ -189,7 +189,7 @@ export function SearchPage({
                   ))}
                 </SelectContent>
               </Select>
-              
+
               <Button type="submit" size="lg" className="h-12 px-8">
                 <Search className="w-5 h-5 mr-2" />
                 Search
@@ -216,10 +216,10 @@ export function SearchPage({
                   ))}
                 </div>
               </div>
-              
+
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
                 {popularSearches.map((search, index) => (
-                  <div 
+                  <div
                     key={index}
                     className="p-3 bg-slate-100 rounded-lg cursor-pointer hover:bg-slate-200 transition-colors"
                     onClick={() => handleSuggestionClick(search.term)}
@@ -252,7 +252,7 @@ export function SearchPage({
                 {selectedSport !== 'All' && ` in ${selectedSport}`}
               </p>
             </div>
-            
+
             <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
               <SelectTrigger className="w-full lg:w-48">
                 <ArrowUpDown className="w-4 h-4 mr-2" />
@@ -271,8 +271,8 @@ export function SearchPage({
           {sortedJerseys.length > 0 ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {sortedJerseys.map((jersey) => (
-                <Card 
-                  key={jersey.id} 
+                <Card
+                  key={jersey.id}
                   className="group hover:shadow-lg transition-all duration-300 cursor-pointer"
                   onClick={() => onNavigate('product', jersey)}
                 >

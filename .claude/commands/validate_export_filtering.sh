@@ -11,7 +11,7 @@ echo "📋 Checking for files that should be excluded..."
 # List of files that should NOT be in public export
 EXCLUDED_FILES=(
     "testi.sh"
-    "run_tests.sh" 
+    "run_tests.sh"
     "copilot_inline_reply_example.sh"
     "run_ci_replica.sh"
 )
@@ -48,7 +48,7 @@ echo ""
 echo "✅ Export filtering validation complete!"
 echo "📊 Summary:"
 echo "   - Found $(find .claude/commands -name "*.sh" -not -path "*/tests/*" | wc -l) shell scripts"
-echo "   - Found $(grep -r "mvp_site" .claude/commands --include="*.md" --include="*.py" | wc -l) mvp_site references" 
+echo "   - Found $(grep -r "mvp_site" .claude/commands --include="*.md" --include="*.py" | wc -l) mvp_site references"
 echo "   - Found $(grep -r "worldarchitect\.ai\|jleechan" .claude/commands --include="*.md" --include="*.py" | wc -l) personal references"
 
 # Note: No cleanup needed since TEST_DIR was removed

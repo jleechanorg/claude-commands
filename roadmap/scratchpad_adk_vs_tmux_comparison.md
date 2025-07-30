@@ -159,7 +159,7 @@ Comparing two orchestration systems for agent coordination:
 - **Architecture**: Production-ready but requires active worker processes
 - **Setup Complexity**: High - requires Redis, worker processes, and agent registration
 
-### tmux System Results  
+### tmux System Results
 **Test Environment**: Terminal-based with dynamic agent creation
 - **System Status**: ✅ Immediate response and active agent detection
 - **Agent Creation**: ✅ 0.24 seconds to create and deploy agent
@@ -186,7 +186,7 @@ Comparing two orchestration systems for agent coordination:
 - ✅ **Message Persistence**: Redis-backed reliability
 - ✅ **Agent Health Monitoring**: Sophisticated health checks
 
-#### A2A SDK Challenges  
+#### A2A SDK Challenges
 - ❌ **Complexity**: Requires Redis, workers, and agent registration
 - ❌ **Setup Overhead**: Multiple components must be running
 - ❌ **Debugging**: Issues hidden in Redis queues and worker processes
@@ -240,7 +240,7 @@ The A2A SDK shows agents in Redis but lacks the worker processes needed to actua
 ### Decision Framework
 Choose based on:
 1. **Time Constraint**: tmux for immediate results
-2. **Scale Requirements**: A2A SDK for large deployments  
+2. **Scale Requirements**: A2A SDK for large deployments
 3. **Debugging Needs**: tmux for visibility
 4. **Production Requirements**: A2A SDK for fault tolerance
 

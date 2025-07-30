@@ -29,7 +29,7 @@ const mockCampaigns: Campaign[] = [
     difficulty: 'intermediate'
   },
   {
-    id: '2', 
+    id: '2',
     title: 'Neon Shadows',
     description: 'In the sprawling megacity of Neo-Tokyo 2087, corporate espionage and cyber-enhanced mercenaries clash in the digital underground.',
     theme: 'cyberpunk',
@@ -82,7 +82,7 @@ export function CampaignList() {
             <h1 className="text-4xl text-white mb-2">Your Campaigns</h1>
             <p className="text-purple-200">Choose your adventure or create a new one</p>
           </div>
-          <Button 
+          <Button
             size="lg"
             className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
           >
@@ -95,10 +95,10 @@ export function CampaignList() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {campaigns.map((campaign) => {
             const DifficultyIcon = difficultyIcons[campaign.difficulty]
-            
+
             return (
-              <Card 
-                key={campaign.id} 
+              <Card
+                key={campaign.id}
                 className={`bg-black/60 backdrop-blur-sm border hover:bg-black/70 transition-all duration-300 hover:scale-105 ${themeColors[campaign.theme]}`}
               >
                 <CardHeader className="pb-3">
@@ -115,12 +115,12 @@ export function CampaignList() {
                     <span className="capitalize">{campaign.theme.replace('-', ' ')}</span>
                   </div>
                 </CardHeader>
-                
+
                 <CardContent className="space-y-4">
                   <p className="text-purple-100 text-sm leading-relaxed line-clamp-3">
                     {campaign.description}
                   </p>
-                  
+
                   <div className="flex justify-between items-center text-sm">
                     <div className="flex items-center gap-2 text-purple-200">
                       <Users className="w-4 h-4" />
@@ -131,19 +131,19 @@ export function CampaignList() {
                       <span>{campaign.lastPlayed}</span>
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-2 pt-2">
-                    <Button 
-                      variant="default" 
-                      size="sm" 
+                    <Button
+                      variant="default"
+                      size="sm"
                       className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
                     >
                       <Play className="w-4 h-4 mr-2" />
                       {campaign.status === 'recruiting' ? 'Join' : 'Continue'}
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="border-purple-500/30 text-purple-200 hover:bg-purple-500/20"
                     >
                       <Settings className="w-4 h-4" />
@@ -153,7 +153,7 @@ export function CampaignList() {
               </Card>
             )
           })}
-          
+
           {/* Create New Campaign Card */}
           <Card className="bg-black/40 backdrop-blur-sm border-dashed border-purple-500/50 hover:border-purple-400/70 hover:bg-black/50 transition-all duration-300 flex items-center justify-center min-h-[300px] cursor-pointer group">
             <div className="text-center">
@@ -168,25 +168,25 @@ export function CampaignList() {
 
         {/* Quick Actions */}
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Button 
-            variant="outline" 
-            size="lg" 
+          <Button
+            variant="outline"
+            size="lg"
             className="border-purple-500/30 text-purple-200 hover:bg-purple-500/20 h-16"
           >
             <BookOpen className="w-6 h-6 mr-3" />
             Browse Templates
           </Button>
-          <Button 
-            variant="outline" 
-            size="lg" 
+          <Button
+            variant="outline"
+            size="lg"
             className="border-purple-500/30 text-purple-200 hover:bg-purple-500/20 h-16"
           >
             <Users className="w-6 h-6 mr-3" />
             Find Players
           </Button>
-          <Button 
-            variant="outline" 
-            size="lg" 
+          <Button
+            variant="outline"
+            size="lg"
             className="border-purple-500/30 text-purple-200 hover:bg-purple-500/20 h-16"
           >
             <Crown className="w-6 h-6 mr-3" />

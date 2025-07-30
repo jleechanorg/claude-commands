@@ -7,14 +7,14 @@ import { Badge } from './ui/badge'
 import { Textarea } from './ui/textarea'
 import { Separator } from './ui/separator'
 import { ScrollArea } from './ui/scroll-area'
-import { 
-  ArrowLeft, 
-  Send, 
-  Dice6, 
-  User, 
-  Crown, 
-  Sword, 
-  Shield, 
+import {
+  ArrowLeft,
+  Send,
+  Dice6,
+  User,
+  Crown,
+  Sword,
+  Shield,
   Heart,
   Zap,
   BookOpen,
@@ -73,7 +73,7 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
       author: 'ai'
     }
   ])
-  
+
   const [playerInput, setPlayerInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [character] = useState<Character>({
@@ -87,7 +87,7 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
   })
   const [mode, setMode] = useState<'character' | 'god'>('character')
   const [showSuggestions, setShowSuggestions] = useState(true)
-  
+
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -194,10 +194,10 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
         timestamp: new Date().toISOString(),
         author: 'ai'
       }
-      
+
       setStory(prev => [...prev, aiResponse])
       setIsLoading(false)
-      
+
       // Update campaign
       const updatedCampaign = {
         ...campaign,
@@ -277,15 +277,15 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
         <header className="border-b border-border/20 bg-card/10 backdrop-blur-md px-6 py-4 shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={onBack}
                 className="text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
-              
+
               <div>
                 <h1 className="text-foreground text-xl">{campaign.title}</h1>
                 <p className="text-muted-foreground text-sm">
@@ -296,7 +296,7 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
 
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <Badge 
+                <Badge
                   variant={mode === 'character' ? 'default' : 'outline'}
                   className="cursor-pointer"
                   onClick={() => setMode('character')}
@@ -304,7 +304,7 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
                   <User className="w-3 h-3 mr-1" />
                   Character Mode
                 </Badge>
-                <Badge 
+                <Badge
                   variant={mode === 'god' ? 'default' : 'outline'}
                   className="cursor-pointer"
                   onClick={() => setMode('god')}
@@ -313,7 +313,7 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
                   God Mode
                 </Badge>
               </div>
-              
+
               <Button variant="ghost" size="icon">
                 <Download className="w-4 h-4" />
               </Button>
@@ -338,7 +338,7 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
                   <span className="text-muted-foreground">Level</span>
                   <Badge variant="secondary">{character.level}</Badge>
                 </div>
-                
+
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Class</span>
                   <span className="text-foreground">{character.class}</span>
@@ -354,9 +354,9 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
                     </div>
                     <span className="text-foreground">{character.hp}/{character.maxHp}</span>
                   </div>
-                  
+
                   <div className="w-full bg-muted/30 rounded-full h-2">
-                    <div 
+                    <div
                       className={`h-2 rounded-full bg-gradient-to-r ${
                         character.hp / character.maxHp > 0.6 ? 'from-green-500 to-green-400' :
                         character.hp / character.maxHp > 0.3 ? 'from-yellow-500 to-yellow-400' :
@@ -408,8 +408,8 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
               <ScrollArea ref={scrollAreaRef} className="h-full">
                 <div className="space-y-4 pb-6">
                   {story.map((entry) => (
-                    <Card 
-                      key={entry.id} 
+                    <Card
+                      key={entry.id}
                       className={`${getEntryStyle(entry)} backdrop-blur-sm transition-all duration-300 hover:shadow-lg`}
                     >
                       <CardContent className="p-4">
@@ -417,7 +417,7 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
                           <div className="flex items-center space-x-2 shrink-0">
                             {getEntryIcon(entry)}
                             <Badge variant="outline" className="text-xs">
-                              {entry.author === 'player' ? 'You' : 
+                              {entry.author === 'player' ? 'You' :
                                entry.author === 'ai' ? 'GM' : 'System'}
                             </Badge>
                           </div>
@@ -431,7 +431,7 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
                       </CardContent>
                     </Card>
                   ))}
-                  
+
                   {isLoading && (
                     <Card className="bg-card/50 backdrop-blur-sm border-border/50">
                       <CardContent className="p-4">
@@ -497,13 +497,13 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
                       }
                     }}
                   />
-                  
+
                   {/* Character counter */}
                   <div className="absolute bottom-2 right-2 text-xs text-muted-foreground">
                     {playerInput.length}/500
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col space-y-2">
                   <Button
                     onClick={handleSubmit}
@@ -513,7 +513,7 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
                     <Send className="w-4 h-4 mr-2" />
                     {mode === 'character' ? 'Act' : 'Continue'}
                   </Button>
-                  
+
                   <Button
                     variant="outline"
                     size="icon"
@@ -540,7 +540,7 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
                     </>
                   )}
                 </div>
-                
+
                 {!showSuggestions && (
                   <Button
                     variant="ghost"

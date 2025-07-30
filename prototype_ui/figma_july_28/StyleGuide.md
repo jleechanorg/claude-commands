@@ -302,7 +302,7 @@ When creating new components, ensure they follow these patterns:
       <p className="text-purple-200">Section description text.</p>
     </div>
   </div>
-  
+
   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
     {/* Feature cards */}
   </div>
@@ -316,7 +316,7 @@ When creating new components, ensure they follow these patterns:
     <label className="block text-purple-200 mb-2">
       Field Name <span className="text-purple-300">(Optional)</span>
     </label>
-    <Input 
+    <Input
       className="bg-black/40 border-purple-500/30 text-white placeholder-purple-300/50 focus:border-purple-400 focus:ring-purple-400"
       placeholder="Enter value..."
     />

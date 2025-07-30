@@ -44,7 +44,7 @@ Detailed git workflows and conflict resolution procedures referenced in CLAUDE.m
 ### Required Response Protocol:
 When user commands fail unexpectedly:
 - ✅ Immediately explain what failed and why
-- ✅ Show system messages/errors received  
+- ✅ Show system messages/errors received
 - ✅ Explain resolution approach being taken
 - ✅ Ask preference for alternatives (merge vs rebase, etc.)
 - ❌ NEVER silently fix without explanation

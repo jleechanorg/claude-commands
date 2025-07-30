@@ -9,13 +9,13 @@ import { Textarea } from './ui/textarea'
 import { Badge } from './ui/badge'
 import { Separator } from './ui/separator'
 import { Switch } from './ui/switch'
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  Check, 
-  Sparkles, 
-  Crown, 
-  Brain, 
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Sparkles,
+  Crown,
+  Brain,
   Target,
   Users,
   Globe,
@@ -218,7 +218,7 @@ export function CampaignCreation({ onCreateCampaign, onBack, theme }: CampaignCr
             className="bg-card/50 backdrop-blur-sm border-border/50"
           />
         </div>
-        
+
         <div className="space-y-2">
           <Label htmlFor="description">Campaign Description</Label>
           <Textarea
@@ -250,11 +250,11 @@ export function CampaignCreation({ onCreateCampaign, onBack, theme }: CampaignCr
         {aiPersonas.map((persona) => {
           const isSelected = formData.aiPersonas.includes(persona.name)
           return (
-            <Card 
+            <Card
               key={persona.id}
               className={`cursor-pointer transition-all duration-300 hover:scale-[1.02] ${
-                isSelected 
-                  ? 'bg-primary/20 border-primary/50 shadow-lg' 
+                isSelected
+                  ? 'bg-primary/20 border-primary/50 shadow-lg'
                   : 'bg-card/50 backdrop-blur-sm border-border/50 hover:bg-card/70'
               }`}
               onClick={() => togglePersona(persona.name)}
@@ -264,15 +264,15 @@ export function CampaignCreation({ onCreateCampaign, onBack, theme }: CampaignCr
                   <div className={`w-12 h-12 bg-gradient-to-r ${persona.color} rounded-xl flex items-center justify-center shadow-lg`}>
                     <persona.icon className="w-6 h-6 text-white" />
                   </div>
-                  
+
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
                       <h3 className="text-lg text-card-foreground">{persona.name}</h3>
                       {isSelected && <Check className="w-5 h-5 text-primary" />}
                     </div>
-                    
+
                     <p className="text-muted-foreground mb-3">{persona.description}</p>
-                    
+
                     <div className="flex flex-wrap gap-2">
                       {persona.features.map((feature, index) => (
                         <Badge key={index} variant="outline" className="text-xs border-primary/30 text-primary">
@@ -313,10 +313,10 @@ export function CampaignCreation({ onCreateCampaign, onBack, theme }: CampaignCr
 
       <div className="space-y-4">
         {/* Default World Option */}
-        <Card 
+        <Card
           className={`cursor-pointer transition-all duration-300 hover:scale-[1.02] ${
-            formData.useDefaultWorld 
-              ? 'bg-primary/20 border-primary/50 shadow-lg' 
+            formData.useDefaultWorld
+              ? 'bg-primary/20 border-primary/50 shadow-lg'
               : 'bg-card/50 backdrop-blur-sm border-border/50 hover:bg-card/70'
           }`}
           onClick={() => updateFormData({ useDefaultWorld: true })}
@@ -326,19 +326,19 @@ export function CampaignCreation({ onCreateCampaign, onBack, theme }: CampaignCr
               <div className={`w-12 h-12 bg-gradient-to-r ${colors.accent} rounded-xl flex items-center justify-center shadow-lg`}>
                 <Wand2 className="w-6 h-6 text-white" />
               </div>
-              
+
               <div className="flex-1">
                 <div className="flex items-center space-x-2 mb-2">
                   <h3 className="text-lg text-card-foreground">World of Assiah</h3>
                   {formData.useDefaultWorld && <Check className="w-5 h-5 text-primary" />}
                   <Badge variant="secondary" className="text-xs">Recommended</Badge>
                 </div>
-                
+
                 <p className="text-muted-foreground mb-3">
-                  A rich fantasy realm with ancient kingdoms, mystical forests, and legendary artifacts. 
+                  A rich fantasy realm with ancient kingdoms, mystical forests, and legendary artifacts.
                   Perfect for classic D&D adventures with established lore and locations.
                 </p>
-                
+
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="outline" className="text-xs border-primary/30 text-primary">High Fantasy</Badge>
                   <Badge variant="outline" className="text-xs border-primary/30 text-primary">Rich Lore</Badge>
@@ -350,10 +350,10 @@ export function CampaignCreation({ onCreateCampaign, onBack, theme }: CampaignCr
         </Card>
 
         {/* Custom World Option */}
-        <Card 
+        <Card
           className={`cursor-pointer transition-all duration-300 hover:scale-[1.02] ${
-            !formData.useDefaultWorld 
-              ? 'bg-primary/20 border-primary/50 shadow-lg' 
+            !formData.useDefaultWorld
+              ? 'bg-primary/20 border-primary/50 shadow-lg'
               : 'bg-card/50 backdrop-blur-sm border-border/50 hover:bg-card/70'
           }`}
           onClick={() => updateFormData({ useDefaultWorld: false })}
@@ -363,15 +363,15 @@ export function CampaignCreation({ onCreateCampaign, onBack, theme }: CampaignCr
               <div className={`w-12 h-12 bg-gradient-to-r ${colors.secondary} rounded-xl flex items-center justify-center shadow-lg`}>
                 <User className="w-6 h-6 text-white" />
               </div>
-              
+
               <div className="flex-1">
                 <div className="flex items-center space-x-2 mb-2">
                   <h3 className="text-lg text-card-foreground">Custom World</h3>
                   {!formData.useDefaultWorld && <Check className="w-5 h-5 text-primary" />}
                 </div>
-                
+
                 <p className="text-muted-foreground mb-3">
-                  Create your own unique world with custom lore, locations, and themes. 
+                  Create your own unique world with custom lore, locations, and themes.
                   Perfect for specific campaign ideas or alternative settings.
                 </p>
               </div>
@@ -416,7 +416,7 @@ export function CampaignCreation({ onCreateCampaign, onBack, theme }: CampaignCr
               <div className="flex-1">
                 <h3 className="text-lg text-card-foreground mb-2">Include AI Companions</h3>
                 <p className="text-muted-foreground">
-                  AI companions will join your party as NPCs, helping in combat and providing 
+                  AI companions will join your party as NPCs, helping in combat and providing
                   roleplay opportunities. They adapt to your playstyle and the story.
                 </p>
               </div>
@@ -461,7 +461,7 @@ export function CampaignCreation({ onCreateCampaign, onBack, theme }: CampaignCr
             <Dice6 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
             <div>
               <p className="text-sm text-primary">
-                <span className="font-medium">Note:</span> You can always add or remove companions later during your campaign. 
+                <span className="font-medium">Note:</span> You can always add or remove companions later during your campaign.
                 The AI will seamlessly integrate them into your ongoing story.
               </p>
             </div>
@@ -592,15 +592,15 @@ export function CampaignCreation({ onCreateCampaign, onBack, theme }: CampaignCr
         <header className="border-b border-border/20 bg-card/10 backdrop-blur-md px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={onBack}
                 className="text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
-              
+
               <div>
                 <h1 className="text-foreground text-xl">Create New Campaign</h1>
                 <p className="text-muted-foreground text-sm">
@@ -614,7 +614,7 @@ export function CampaignCreation({ onCreateCampaign, onBack, theme }: CampaignCr
               {steps.map((step, index) => {
                 const isActive = step.id === currentStep
                 const isCompleted = getCurrentStepIndex() > index
-                
+
                 return (
                   <div key={step.id} className="flex items-center space-x-2">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
@@ -628,7 +628,7 @@ export function CampaignCreation({ onCreateCampaign, onBack, theme }: CampaignCr
                         <step.icon className="w-4 h-4" />
                       )}
                     </div>
-                    
+
                     {index < steps.length - 1 && (
                       <div className={`w-8 h-0.5 transition-all duration-300 ${
                         isCompleted ? 'bg-primary' : 'bg-border/30'

@@ -41,7 +41,7 @@ import os
 import re
 import sys
 import traceback
-from typing import Any, Optional, Dict, List
+from typing import Any
 
 import constants
 import logging_util
@@ -1016,8 +1016,8 @@ def _truncate_context(
 @log_exceptions
 def get_initial_story(
     prompt: str,
-    user_id: Optional[UserId] = None,
-    selected_prompts: Optional[List[str]] = None,
+    user_id: UserId | None = None,
+    selected_prompts: list[str] | None = None,
     generate_companions: bool = False,
     use_default_world: bool = False,
 ) -> GeminiResponse:

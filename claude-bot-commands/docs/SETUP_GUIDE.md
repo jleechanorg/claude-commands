@@ -175,7 +175,7 @@ Modify `claude-endpoint-server.py` to customize how prompts are sent to Claude:
 ```python
 # Example: Add custom system prompts
 result = subprocess.run([
-    'claude-code', 
+    'claude-code',
     '--message', f"System: You are a code reviewer.\n\nUser: {prompt}"
 ], capture_output=True, text=True, timeout=60)
 ```
@@ -186,9 +186,9 @@ Modify the comment template in `claude-processor.yml`:
 ```yaml
 body: |
   **🤖 Claude Analysis**
-  
+
   ${{ steps.y.outputs.answer }}
-  
+
   *Powered by local Claude instance*
 ```
 

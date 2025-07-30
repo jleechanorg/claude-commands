@@ -97,7 +97,7 @@ export function SignupForm() {
               {currentStep === 3 && 'Your account has been created successfully'}
             </CardDescription>
           </div>
-          
+
           {/* Progress Bar */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-muted-foreground">
@@ -114,7 +114,7 @@ export function SignupForm() {
             {currentStep === 1 && (
               <div className="space-y-4">
                 <SocialSigninButtons />
-                
+
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <Separator />
@@ -252,8 +252,8 @@ export function SignupForm() {
                   Previous
                 </Button>
               )}
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className={`${currentStep === 1 || currentStep === 3 ? 'w-full' : 'flex-1'}`}
               >
                 {currentStep === 1 && 'Continue'}

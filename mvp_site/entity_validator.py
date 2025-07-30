@@ -145,7 +145,9 @@ class EntityValidator:
         entity_lower = entity.lower()
 
         # Check for explicit absence indicators first (using compiled patterns)
-        compiled_absent_patterns: list[re.Pattern[str]] = self._compiled_patterns.get("absent_reference", [])
+        compiled_absent_patterns: list[re.Pattern[str]] = self._compiled_patterns.get(
+            "absent_reference", []
+        )
         for pattern in compiled_absent_patterns:
             pattern_str = pattern.pattern.replace(r"(\w+)", entity_lower)
             if re.search(pattern_str, narrative_lower, re.IGNORECASE):
@@ -175,7 +177,9 @@ class EntityValidator:
         states: dict[str, list[str]] = {}
 
         # Use pre-compiled patterns for better performance
-        compiled_patterns: list[re.Pattern[str]] = self._compiled_patterns.get("physical_states", [])
+        compiled_patterns: list[re.Pattern[str]] = self._compiled_patterns.get(
+            "physical_states", []
+        )
         for pattern in compiled_patterns:
             matches = pattern.finditer(narrative)
             for match in matches:
@@ -199,8 +203,8 @@ class EntityValidator:
         transitions = []
 
         # Use compiled patterns for better performance
-        compiled_transition_patterns: list[re.Pattern[str]] = self._compiled_patterns.get(
-            "location_transition", []
+        compiled_transition_patterns: list[re.Pattern[str]] = (
+            self._compiled_patterns.get("location_transition", [])
         )
         for pattern in compiled_transition_patterns:
             matches = pattern.finditer(narrative)

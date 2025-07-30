@@ -28,7 +28,7 @@ def test_form_encoded_request():
     try:
         data = {'prompt': 'Hello Claude, this is a test prompt. Please respond with "Test successful".'}
         response = requests.post('http://127.0.0.1:5001/claude', data=data, timeout=30)
-        
+
         if response.status_code == 200:
             print("✅ Form-encoded request successful")
             print(f"Response: {response.text[:200]}...")
@@ -46,9 +46,9 @@ def test_json_request():
     try:
         data = {'prompt': 'Hello Claude, this is a JSON test. Please respond with "JSON test successful".'}
         headers = {'Content-Type': 'application/json'}
-        response = requests.post('http://127.0.0.1:5001/claude', 
+        response = requests.post('http://127.0.0.1:5001/claude',
                                json=data, headers=headers, timeout=30)
-        
+
         if response.status_code == 200:
             print("✅ JSON request successful")
             print(f"Response: {response.text[:200]}...")
@@ -64,25 +64,25 @@ def test_json_request():
 def main():
     print("Testing Claude Bot Server...")
     print("=" * 50)
-    
+
     # Test health check
     print("1. Testing health check...")
     if not test_health_check():
         print("❌ Server appears to be down. Start it with: ./start-claude-bot.sh")
         sys.exit(1)
-    
+
     print()
-    
-    # Test form-encoded request  
+
+    # Test form-encoded request
     print("2. Testing form-encoded request...")
     test_form_encoded_request()
-    
+
     print()
-    
+
     # Test JSON request
     print("3. Testing JSON request...")
     test_json_request()
-    
+
     print()
     print("=" * 50)
     print("✅ All tests completed!")

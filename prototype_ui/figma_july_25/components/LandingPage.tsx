@@ -31,10 +31,10 @@ export function LandingPage({ onLogin }: LandingPageProps) {
     <div className="min-h-screen relative">
       {/* Purple Gradient Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-900" />
-      
+
       {/* Subtle Pattern Overlay */}
       <div className="absolute inset-0 bg-black/20" />
-      
+
       {/* Content */}
       <div className="relative z-10 min-h-screen">
         {/* Header */}
@@ -68,7 +68,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
                     <div className="text-4xl mb-4">{feature.icon}</div>
                     <h3 className="text-xl text-white mb-2">{feature.title}</h3>
                     <p className="text-purple-100 text-sm mb-4">{feature.description}</p>
-                    
+
                     {feature.isAction && (
                       <button
                         onClick={handleSignIn}

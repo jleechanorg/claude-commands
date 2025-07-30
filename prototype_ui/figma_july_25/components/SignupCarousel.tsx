@@ -85,7 +85,7 @@ export function SignupCarousel() {
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            
+
             {/* Dots Indicator */}
             <div className="flex space-x-2">
               {carouselItems.map((_, index) => (

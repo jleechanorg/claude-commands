@@ -65,7 +65,7 @@ case "$(uname -s)" in
     Linux*)     OS="linux" ;;
     Darwin*)    OS="osx" ;;
     MINGW*)     OS="win" ;;
-    *)          
+    *)
         print_error "Unsupported operating system: $(uname -s)"
         echo "This script supports Linux, macOS, and Windows (Git Bash)"
         exit 1
@@ -76,7 +76,7 @@ case "$(uname -m)" in
     x86_64*)    ARCH="x64" ;;
     arm64*)     ARCH="arm64" ;;
     aarch64*)   ARCH="arm64" ;;
-    *)          
+    *)
         print_warning "Architecture $(uname -m) detected. Using x64 as default."
         ARCH="x64"
         ;;
@@ -165,7 +165,7 @@ fi
 # Install and start service (Linux/macOS only)
 if [[ "$OS" != "win" ]]; then
     print_step "Installing runner as system service..."
-    
+
     if [[ $EUID -eq 0 ]]; then
         print_warning "Running as root. Installing service directly..."
         ./svc.sh install
@@ -173,10 +173,10 @@ if [[ "$OS" != "win" ]]; then
     else
         print_step "Installing service (requires sudo)..."
         sudo ./svc.sh install
-        
+
         print_step "Starting service..."
         sudo ./svc.sh start
-        
+
         # Check service status
         print_step "Checking service status..."
         if sudo ./svc.sh status; then

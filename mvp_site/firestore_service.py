@@ -31,7 +31,7 @@ import datetime
 import json
 import os
 import time
-from typing import Any, Optional, Dict, List
+from typing import Any
 
 import constants
 import logging_util
@@ -1016,7 +1016,7 @@ def update_campaign_title(
 
 # --- USER SETTINGS FUNCTIONS ---
 @log_exceptions
-def get_user_settings(user_id: UserId) -> Optional[Dict[str, Any]]:
+def get_user_settings(user_id: UserId) -> dict[str, Any] | None:
     """Get user settings from Firestore.
 
     Args:
@@ -1047,7 +1047,7 @@ def get_user_settings(user_id: UserId) -> Optional[Dict[str, Any]]:
 
 
 @log_exceptions
-def update_user_settings(user_id: UserId, settings: Dict[str, Any]) -> bool:
+def update_user_settings(user_id: UserId, settings: dict[str, Any]) -> bool:
     """Update user settings in Firestore.
 
     Uses nested field updates to prevent clobbering sibling settings fields.

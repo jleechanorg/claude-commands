@@ -23,7 +23,7 @@ class ClaudeTestHandler(BaseHTTPRequestHandler):
                 # Parse the POST data
                 content_length = int(self.headers['Content-Length'])
                 post_data = self.rfile.read(content_length).decode('utf-8')
-                
+
                 # Handle both form-encoded and JSON data
                 if self.headers.get('Content-Type', '').startswith('application/json'):
                     data = json.loads(post_data)
@@ -32,12 +32,12 @@ class ClaudeTestHandler(BaseHTTPRequestHandler):
                     # Form-encoded data
                     parsed_data = urllib.parse.parse_qs(post_data)
                     prompt = parsed_data.get('prompt', [''])[0]
-                
+
                 logger.info(f"Received prompt: {prompt[:100]}...")
-                
+
                 # Simulate processing time
                 time.sleep(2)
-                
+
                 # Generate a test response
                 response = f"""**🤖 Claude Test Response**
 
@@ -57,15 +57,15 @@ This is a simulated response from the Claude endpoint test server. The actual sy
 3. Replace with real claude-endpoint-server.py for production
 
 Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}"""
-                
+
                 # Send response
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/plain')
                 self.end_headers()
                 self.wfile.write(response.encode('utf-8'))
-                
+
                 logger.info(f"Sent test response for prompt: {prompt[:50]}...")
-                
+
             except Exception as e:
                 logger.error(f"Error processing request: {e}")
                 self.send_response(500)
@@ -75,7 +75,7 @@ Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}"""
         else:
             self.send_response(404)
             self.end_headers()
-    
+
     def do_GET(self):
         if self.path == '/health':
             self.send_response(200)
@@ -85,7 +85,7 @@ Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}"""
         else:
             self.send_response(404)
             self.end_headers()
-    
+
     def log_message(self, format, *args):
         # Override to use our logger
         logger.info(format % args)
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     logger.info(f"Starting Claude TEST endpoint server on http://127.0.0.1:{port}")
     logger.info("🧪 TEST MODE: This server simulates Claude responses")
     logger.info("Health check available at http://127.0.0.1:{}/health".format(port))
-    
+
     try:
         server.serve_forever()
     except KeyboardInterrupt:

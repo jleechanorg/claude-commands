@@ -46,7 +46,7 @@ Never confuse browser automation with HTTP simulation
 ### Command Structure (Claude Code CLI defaults to Playwright MCP):
 - `/testui` = Browser (Playwright MCP) + Mock APIs
 - `/testuif` = Browser (Playwright MCP) + REAL APIs (costs $)
-- `/testhttp` = HTTP + Mock APIs  
+- `/testhttp` = HTTP + Mock APIs
 - `/testhttpf` = HTTP + REAL APIs (costs $)
 - `/tester` = End-to-end tests with REAL APIs (user decides cost)
 
