@@ -105,7 +105,7 @@ def run_pydantic_tests():
                 else 0
             )
             print(f"  Improvement over baseline: {improvement:+.1f}%")
-    except:
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
         print("  (Baseline comparison not available)")
 
     # By campaign

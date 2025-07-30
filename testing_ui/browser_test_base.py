@@ -185,7 +185,7 @@ class BrowserTestBase:
             page.wait_for_selector("#dashboard-view.active-view", timeout=5000)
             print("✅ Dashboard view is active")
             return True
-        except:
+        except Exception:
             print("❌ Failed to reach dashboard view")
             return False
 
@@ -283,7 +283,7 @@ def wait_for_element(page: Page, selector: str, timeout: int = 5000) -> bool:
     try:
         page.wait_for_selector(selector, timeout=timeout)
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -296,7 +296,7 @@ def click_button_with_text(page: Page, text: str) -> bool:
             if page.is_visible(selector):
                 page.click(selector)
                 return True
-        except:
+        except Exception:
             continue
 
     return False

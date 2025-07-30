@@ -18,8 +18,6 @@ sys.path.append(os.path.dirname(__file__))
 from screenshot_utils import take_screenshot
 
 # Import centralized configuration
-import sys
-import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from testing_util import TestConfig, TestType
 

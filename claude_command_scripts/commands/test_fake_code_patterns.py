@@ -151,19 +151,19 @@ class TestFakeCodeDetection(unittest.TestCase):
         # Test hardcoded response generator
         response1 = fake.fake_ai_response_generator("I found an error in the code")
         response2 = fake.fake_ai_response_generator("I have a suggestion")
-        self.assertEqual(response1, "Thank you for identifying this issue! We'll look into it.")
-        self.assertEqual(response2, "Excellent suggestion! We appreciate your feedback.")
+        assert response1 == "Thank you for identifying this issue! We'll look into it."
+        assert response2 == "Excellent suggestion! We appreciate your feedback."
 
         # Test keyword-based sentiment
         sentiment1 = fake.fake_sentiment_analyzer("This is great!")
         sentiment2 = fake.fake_sentiment_analyzer("This is terrible!")
-        self.assertEqual(sentiment1['sentiment'], 'positive')
-        self.assertEqual(sentiment2['sentiment'], 'negative')
+        assert sentiment1['sentiment'] == 'positive'
+        assert sentiment2['sentiment'] == 'negative'
 
         # Test mock data processor
         result = fake.fake_data_processor([1, 2, 3, 4, 5])
-        self.assertEqual(len(result), 3)  # Always returns 3 items
-        self.assertTrue(all(item['status'] == 'processed' for item in result))
+        assert len(result) == 3  # Always returns 3 items
+        assert all(item['status'] == 'processed' for item in result)
 
     def test_real_patterns_work(self):
         """Verify that real code examples function properly"""
@@ -171,18 +171,18 @@ class TestFakeCodeDetection(unittest.TestCase):
 
         # Test real validation
         valid, msg = real.real_input_validator("valid input")
-        self.assertTrue(valid)
+        assert valid
 
         invalid, msg = real.real_input_validator("DROP TABLE users")
-        self.assertFalse(invalid)
-        self.assertIn("dangerous pattern", msg)
+        assert not invalid
+        assert "dangerous pattern" in msg
 
         # Test real transformation
         data = {"name": "  TEST  ", "value": 100, "items": [{"x": 1}]}
         result = real.real_data_transformer(data)
-        self.assertEqual(result['name'], 'test')
-        self.assertEqual(result['value'], 110.0)
-        self.assertIn('_processed_at', result)
+        assert result['name'] == 'test'
+        assert result['value'] == 110.0
+        assert '_processed_at' in result
 
     def test_pattern_characteristics(self):
         """Test specific characteristics that identify fake code"""
@@ -192,7 +192,7 @@ class TestFakeCodeDetection(unittest.TestCase):
         inputs = ["error here", "ERROR!", "An error occurred", "erRoR"]
         outputs = [fake.fake_ai_response_generator(inp) for inp in inputs]
         # All should produce the same output despite different inputs
-        self.assertEqual(len(set(outputs)), 1)
+        assert len(set(outputs)) == 1
 
         # Characteristic 2: High confidence scores without actual analysis
         sentiments = [
@@ -201,7 +201,7 @@ class TestFakeCodeDetection(unittest.TestCase):
         ]
         # Fake code often has unrealistically high confidence
         for s in sentiments:
-            self.assertGreater(s['confidence'], 0.85)
+            assert s['confidence'] > 0.85
 
 
 class TestMockPatterns(unittest.TestCase):
@@ -214,7 +214,7 @@ class TestMockPatterns(unittest.TestCase):
 
         # This is legitimate mock usage in a test
         response = mock_get('http://api.example.com/status')
-        self.assertEqual(response.json()['status'], 'ok')
+        assert response.json()['status'] == 'ok'
 
     def test_mock_vs_fake_code(self):
         """Distinguish between legitimate mocks and fake implementations"""
@@ -227,8 +227,8 @@ class TestMockPatterns(unittest.TestCase):
             # This would be fake if used in production
             return "processed"
 
-        self.assertEqual(mock_service.process("data"), "processed")
-        self.assertEqual(fake_service_process("data"), "processed")
+        assert mock_service.process("data") == "processed"
+        assert fake_service_process("data") == "processed"
 
 
 if __name__ == '__main__':

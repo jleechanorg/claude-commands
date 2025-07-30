@@ -96,7 +96,7 @@ class TaskDispatcher:
             )
             if result.returncode == 0:
                 existing.update(result.stdout.strip().split('\n'))
-        except:
+        except subprocess.SubprocessError:
             pass
 
         # Check worktrees

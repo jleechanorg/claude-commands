@@ -61,7 +61,7 @@ def try_multiple_selectors(
                 element = page.wait_for_selector(selector, timeout=timeout)
                 if element:
                     return selector
-        except:
+        except Exception:
             continue
     return None
 
@@ -134,7 +134,7 @@ def get_element_text_safe(page: Page, selector: str, default: str = "NOT FOUND")
     """
     try:
         return page.text_content(selector) or default
-    except:
+    except Exception:
         return default
 
 
@@ -260,7 +260,7 @@ def wait_for_text_to_appear(page: Page, text: str, timeout: int = 5000) -> bool:
             f"document.body.innerText.includes('{text}')", timeout=timeout
         )
         return True
-    except:
+    except Exception:
         return False
 
 

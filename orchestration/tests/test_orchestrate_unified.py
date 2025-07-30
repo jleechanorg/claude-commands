@@ -49,22 +49,22 @@ class TestUnifiedOrchestration(unittest.TestCase):
             # Then: Verify the call chain
 
             # 1. Verify task dispatcher was called to create agents
-            self.assertGreater(len(mock_tmux.sessions), 0, "No tmux sessions created")
+            assert len(mock_tmux.sessions) > 0, "No tmux sessions created"
 
             # 2. Verify agent was created with correct name pattern
             session_names = list(mock_tmux.sessions.keys())
             agent_session = session_names[0]
-            self.assertTrue(agent_session.startswith('task-agent-'),
-                          f"Agent session name doesn't match pattern: {agent_session}")
+            assert agent_session.startswith('task-agent-'), \
+                f"Agent session name doesn't match pattern: {agent_session}"
 
             # 3. Verify tmux session was created
-            self.assertIn('new-session', str(mock_tmux.call_history))
+            assert 'new-session' in str(mock_tmux.call_history)
 
             # 4. Verify claude was called with correct model
-            self.assertTrue(mock_claude.assert_called_with_model('sonnet'))
+            assert mock_claude.assert_called_with_model('sonnet')
 
             # 5. Verify prompt file was used
-            self.assertTrue(mock_claude.assert_called_with_prompt_file())
+            assert mock_claude.assert_called_with_prompt_file()
 
     def test_redis_integration_success(self):
         """Test: Agent creation → Redis registration when available"""

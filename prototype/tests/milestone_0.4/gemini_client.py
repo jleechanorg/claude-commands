@@ -236,7 +236,7 @@ class GeminiClient:
                     json_str = response_text.strip()
 
                 return json.loads(json_str)
-            except:
+            except json.JSONDecodeError:
                 logger.warning("Failed to parse JSON response")
                 return None
 
