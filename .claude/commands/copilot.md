@@ -1,14 +1,30 @@
 # /copilot Command - Universal Composition with Execute
 
-**Usage**: `/copilot <PR_NUMBER>`
+**Usage**: `/copilot [PR_NUMBER]`
 
 **Purpose**: Comprehensively analyze and address PR issues using universal composition with intelligent execution optimization.
+
+## 🎯 **DEFAULT BEHAVIOR** (No Arguments)
+
+**When you run `/copilot` without arguments**:
+- ✅ **Automatically targets the current branch's PR**
+- ✅ **Shows clear confirmation**: `🎯 Targeting current branch PR: #123`
+- ✅ **No guessing required**: You'll see exactly which PR is being processed
+
+**Examples**:
+```bash
+/copilot           # ← Applies to current branch PR (most common usage)
+/copilot 1062      # ← Applies to specific PR #1062
+```
+
+**🚨 IMPORTANT**: If your current branch doesn't have a PR, the command will display an error message indicating that no PR is associated with the branch.
 
 ## 🚨 CRITICAL: EXECUTION GUARANTEE
 
 **MANDATORY STARTUP PROTOCOL**:
 ```
-🤖 /copilot - Starting intelligent PR analysis for PR #[NUMBER]
+🤖 /copilot - Starting intelligent PR analysis
+🎯 Targeting: [Current branch PR: #123] OR [Specified PR: #456]
 🔧 Reading PR status and planning workflow...
 📊 PR Status: [OPEN/MERGED/CLOSED] | ✅ CI Status: [PASSING/FAILING] | 🔄 Mergeable: [MERGEABLE/CONFLICTING/UNMERGEABLE]
 🚀 Beginning 6-phase autonomous workflow with full transparency...
@@ -153,10 +169,23 @@ gh pr view $PR_NUMBER --json state,mergeable,statusCheckRollup
 - **Maintainability**: Clean separation of concerns
 - **Performance**: Same optimization benefits with cleaner architecture
 
-## Example Workflow
+## Example Workflows
 
+### Most Common Usage (No Arguments)
+```
+/copilot
+🎯 Targeting: Current branch PR: #1074
+→ Composes task: "Execute comprehensive PR analysis workflow"
+→ /execute analyzes: PR complexity, comment count, CI status
+→ /execute decides: Direct execution optimal for this PR
+→ /execute orchestrates: All commands with intelligent optimization
+→ Result: Fast, thorough PR analysis with minimal complexity
+```
+
+### Specific PR Targeting
 ```
 /copilot 1062
+🎯 Targeting: Specified PR: #1062
 → Composes task: "Execute comprehensive PR analysis workflow"
 → /execute analyzes: PR complexity, comment count, CI status
 → /execute decides: Parallel processing beneficial, spawning agents

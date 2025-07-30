@@ -6,6 +6,11 @@
 # for intelligent optimization and subagent orchestration.
 
 echo "🤖 /copilot - Analyzing PR and orchestrating intelligent responses..."
+if [ -z "$1" ]; then
+    echo "🎯 No PR specified - will target current branch's PR"
+else
+    echo "🎯 Targeting specified PR: #$1"
+fi
 echo "📖 Claude will read copilot.md for universal composition workflow"
 echo "🚀 Delegating to /execute for intelligent workflow optimization..."
 echo "✨ Transparency first - all actions will be shown before execution"
