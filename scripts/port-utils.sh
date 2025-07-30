@@ -3,7 +3,7 @@
 # This script contains project-specific paths and may need modification
 
 #!/bin/bash
-# port-utils.sh - Shared port detection utilities for Your Project scripts
+# port-utils.sh - Shared port detection utilities for WorldArchitect.AI scripts
 #
 # This module provides common port detection functionality to avoid code duplication
 # across multiple command scripts that need to find available ports.

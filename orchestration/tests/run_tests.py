@@ -27,14 +27,14 @@ def run_all_tests():
     # Discover and run all tests in the tests directory
     test_dir = os.path.dirname(__file__)
     loader = unittest.TestLoader()
-    
+
     # Load all test modules
     suite = loader.discover(test_dir, pattern='test_*.py')
-    
+
     # Run tests with detailed output
     runner = TextTestRunner(verbosity=2)
     result = runner.run(suite)
-    
+
     return result.wasSuccessful()
 
 def main():
@@ -43,9 +43,9 @@ def main():
     parser.add_argument('test', nargs='?', help='Specific test to run (e.g., "unified" for test_orchestrate_unified.py)')
     parser.add_argument('--verbose', '-v', action='store_true', help='Verbose output')
     parser.add_argument('--list', '-l', action='store_true', help='List available tests')
-    
+
     args = parser.parse_args()
-    
+
     if args.list:
         print("Available tests:")
         test_files = [f for f in os.listdir('.') if f.startswith('test_') and f.endswith('.py')]
@@ -53,17 +53,17 @@ def main():
             test_name = test_file[5:-3]  # Remove 'test_' prefix and '.py' suffix
             print(f"  {test_name}")
         return
-    
+
     print("🤖 Orchestration System Test Suite")
     print("=" * 50)
-    
+
     if args.test:
         print(f"Running specific test: {args.test}")
         success = run_specific_test(args.test)
     else:
         print("Running all tests...")
         success = run_all_tests()
-    
+
     if success:
         print("\n✅ All tests passed!")
         sys.exit(0)

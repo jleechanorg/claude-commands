@@ -1,7 +1,3 @@
-#!/bin/bash
-# ⚠️ ORCHESTRATION SYSTEM - WIP PROTOTYPE
-# Requires Redis, tmux, and agent workspace setup
-
 #!/usr/bin/env python3
 """
 Test suite for A2A system integration

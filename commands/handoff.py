@@ -20,7 +20,7 @@ def get_current_branch():
             check=True,
         )
         return result.stdout.strip()
-    except:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return "unknown"
 
 
@@ -46,7 +46,7 @@ def create_handoff_branch(task_name):
     try:
         subprocess.run(["git", "checkout", "-b", branch_name], check=True)
         return branch_name
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         print(f"❌ Failed to create branch {branch_name}")
         return None
 
@@ -228,7 +228,7 @@ def create_new_roadmap_branch():
         subprocess.run(["git", "pull", "origin", "main"], check=True)
         subprocess.run(["git", "checkout", "-b", branch_name], check=True)
         return branch_name
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         print("❌ Failed to create new roadmap branch")
         return None
 

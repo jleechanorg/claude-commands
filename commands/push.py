@@ -35,7 +35,7 @@ def get_git_status():
             ["git", "status", "--porcelain"], capture_output=True, text=True, check=True
         )
         return result.stdout.strip()
-    except:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return ""
 
 
@@ -119,7 +119,7 @@ def find_available_port(start_port=6006):
             try:
                 s.bind(("", port))
                 return port
-            except:
+            except OSError:
                 continue
 
     return None

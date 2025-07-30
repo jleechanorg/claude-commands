@@ -86,6 +86,7 @@
 - **Connect to testing**: `tmux attach -t testing-agent`
 - **Monitor all**: `tmux list-sessions | grep -E '(frontend|backend|testing|opus)'`
 
+
 ## Important Notes
 
 - **Working Directory**: The orchestration system creates agent workspaces as subdirectories. Always ensure you're in the main project directory when running orchestration commands, not inside an agent workspace

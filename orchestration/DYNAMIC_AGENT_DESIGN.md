@@ -9,7 +9,7 @@ This document describes the transformation of the orchestration system from stat
 ### Before: Static Agent System
 ```
 ├── frontend-agent (predefined)
-├── backend-agent (predefined)  
+├── backend-agent (predefined)
 ├── testing-agent (predefined)
 └── opus-master (coordinator)
 ```
@@ -62,7 +62,7 @@ Each agent:
    - Handles task parsing and agent spawning
    - Manages worktree creation
 
-2. **task_dispatcher.py** 
+2. **task_dispatcher.py**
    - Dynamic agent capability discovery
    - Load balancing across agents
    - No hardcoded agent mappings
@@ -82,7 +82,7 @@ User Task → orchestrate_unified.py → Create Worktree → Spawn Agent → Exe
 
 1. **Simplicity**: One command creates any agent needed
 2. **Flexibility**: Agents adapt to task requirements
-3. **Isolation**: Each task gets clean environment  
+3. **Isolation**: Each task gets clean environment
 4. **Scalability**: No artificial agent type limits
 5. **Maintainability**: No static configuration to update
 

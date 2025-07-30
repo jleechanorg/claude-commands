@@ -1,7 +1,7 @@
 # ⚠️ REFERENCE ONLY - DO NOT USE DIRECTLY
 
 **WARNING**: This is a reference export from a specific project setup. These configurations:
-- May contain project-specific paths and settings ($PROJECT_ROOT/, specific database configs)
+- May contain project-specific paths and settings (mvp_site/, specific database configs)
 - Have not been tested in isolation
 - May require significant adaptation for your environment
 - Include setup-specific assumptions and dependencies
@@ -158,6 +158,19 @@ Use this as inspiration and reference, not direct implementation.
 - ❌ NEVER default to Gemini API just because it exists in codebase
 - **Question to ask**: "What can Gemini do here that Claude cannot?"
 
+🚨 **SLASH COMMAND ARCHITECTURE UNDERSTANDING**: ⚠️ CRITICAL - DO NOT FORGET
+- **SLASH COMMANDS ARE NOT DOCUMENTATION - THEY ARE EXECUTABLE COMMANDS**
+- **`.claude/commands/*.md` = EXECUTABLE PROMPT TEMPLATES that Claude reads and executes**
+- **`.claude/commands/*.py` = EXECUTABLE SCRIPTS that run in local environment**
+- **When user types `/pushl` → Claude reads `pushl.md` → Executes the implementation**
+- **Command discovery**: CLI scans directories, filename becomes command name (`pushl.md` → `/pushl`)
+- **$ARGUMENTS placeholder**: Inject user arguments into command templates
+- **Universal composition**: Commands combine through semantic understanding
+- **Two types**: Cognitive (semantic understanding) vs Operational (protocol enforcement)
+- 🔍 **Evidence**: Research shows this is executable documentation architecture
+- ❌ **NEVER treat .md files as documentation** - they are executable instructions for Claude
+- ✅ **ALWAYS remember**: Slash commands execute content, they don't document it
+
 🚨 **NEVER SIMULATE INTELLIGENCE**: When building response generation systems:
 - ❌ NEVER create Python functions that simulate Claude's responses with templates
 - ❌ NEVER use pattern matching to generate "intelligent" responses
@@ -245,9 +258,9 @@ Use this as inspiration and reference, not direct implementation.
 
 ## Project Overview
 
-Your Project = AI-powered tabletop RPG platform (digital Tabletop RPG Platform)
+Your Project = AI-powered tabletop RPG platform (digital D&D 5e GM)
 
-**Stack**: Python 3.11/Flask ([Flask Documentation](https://flask.palletsprojects.com/))/Gunicorn | Gemini API ([Google AI Documentation](https://ai.google.dev/gemini-api/docs)) | Database ([Firebase Docs](https://firebase.google.com/docs/firestore)) | Vanilla JS/Bootstrap | Docker/Cloud Run ([Google Cloud Run](https://cloud.google.com/run/docs))
+**Stack**: Python 3.11/Flask ([Flask Documentation](https://flask.palletsprojects.com/))/Gunicorn | Gemini API ([Google AI Documentation](https://ai.google.dev/gemini-api/docs)) | Firebase Firestore ([Firebase Docs](https://firebase.google.com/docs/firestore)) | Vanilla JS/Bootstrap | Docker/Cloud Run ([Google Cloud Run](https://cloud.google.com/run/docs))
 
 **Docs**: → `.cursor/rules/project_overview.md` (full details)
 - **AI Assistant Guide**: → `$PROJECT_ROOT/README_FOR_AI.md` (CRITICAL system architecture)
@@ -401,6 +414,20 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT"
 - Integration: `./integrate.sh`
 - Progress: `roadmap/scratchpad_[branch].md`
 
+🚨 **GITHUB API PAGINATION PROTOCOL**: ⚠️ MANDATORY - Before ANY GitHub API analysis:
+- ✅ **Check total count first**: Use `gh pr view [PR] --json changed_files` to get file count before analysis
+- ✅ **Verify pagination**: GitHub API defaults to 30 items per page - always check if more pages exist
+- ✅ **Use pagination parameters**: Add `?per_page=100&page=N` for complete results when file count > 30
+- ✅ **Sanity check**: If API returns small number but PR shows major changes, investigate pagination
+- ✅ **Multiple verification**: Use both API and web interface to cross-check important analysis
+- ❌ **NEVER assume**: API returns complete results without verifying pagination and total counts
+
+🚨 **CHALLENGE RESPONSE PROTOCOL**: ⚠️ MANDATORY - When user provides specific evidence:
+- ✅ **Immediate re-verification**: Treat user evidence as debugging signal, not personal attack
+- ✅ **Methodology review**: Re-check approach when user mentions details not in your analysis
+- ✅ **Humble language**: Use "appears to be" until verified through multiple independent sources
+- ❌ **NEVER defend**: Wrong analysis - acknowledge error and re-verify immediately
+
 ## Environment, Tooling & Scripts
 
 1. **Python venv**: Verify activated before running Python/tests
@@ -419,7 +446,9 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT"
 **Pattern**: Search first → Create if new → Add observations to existing → Build relationships
 
 ### Task Agent Patterns
-**When to Spawn**: 3+ parallel subtasks | Independent research needed | Complex analysis ([Multi-Agent Systems](https://arxiv.org/html/2504.21030v1))
+**⚠️ Token Cost**: Each agent loads ~50k+ tokens. See `.claude/commands/parallel-vs-subagents.md` for alternatives.
+**When to Spawn**: Complex workflows | Different directories | Long operations (>5 min)
+**When NOT to Spawn**: Simple searches | Independent file ops | Data gathering (<30s each)
 **Basic Pattern**: `Task(description="Research X", prompt="Detailed instructions...")`
 
 ### TodoWrite Protocol

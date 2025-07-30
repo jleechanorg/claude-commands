@@ -1,8 +1,4 @@
 #!/bin/bash
-# ⚠️ ORCHESTRATION SYSTEM - WIP PROTOTYPE
-# Requires Redis, tmux, and agent workspace setup
-
-#!/bin/bash
 # Start the agent monitoring coordinator
 # This runs a lightweight Python process that monitors agents without LLM capabilities
 

@@ -9,7 +9,7 @@
 ### Integrated Command Composition
 **Default Execution**: `/research` automatically combines:
 1. **`/thinku`** - Ultra-depth sequential thinking for research planning and analysis
-2. **`/perp`** - Multi-engine search across Claude, DuckDuckGo, and Perplexity
+2. **`/perp`** - Multi-engine search across Claude, DuckDuckGo, Perplexity, and Gemini
 
 ### Research Methodology
 1. **Research Planning** (`/thinku`) - Deep analytical thinking to:
@@ -22,6 +22,7 @@
    - Claude WebSearch for current information
    - DuckDuckGo for privacy-focused results
    - Perplexity for AI-powered synthesis
+   - Gemini for development consultation
    - Cross-reference and validate findings
 
 3. **Analysis Integration** (`/thinku` + findings) - Deep analytical processing:
@@ -66,7 +67,8 @@
 - **Claude WebSearch**: Current information and recent developments
 - **DuckDuckGo**: Privacy-focused alternative perspectives and sources
 - **Perplexity**: AI-powered synthesis and academic analysis
-- Cross-validate information across all three engines
+- **Gemini**: Development-focused technical consultation
+- Cross-validate information across all four engines
 - Extract and organize findings by source and credibility
 
 ### Phase 3: Deep Analysis Integration (`/thinku` + findings)
@@ -97,7 +99,7 @@ Analyzing research scope for microservices authentication patterns...
 - Identifying validation criteria: performance, security standards, adoption rates
 
 🔍 Multi-source Information Gathering (/perp):
-Searching across Claude, DuckDuckGo, and Perplexity for: "microservices authentication patterns"
+Searching across Claude, DuckDuckGo, Perplexity, and Gemini for: "microservices authentication patterns"
 
 📊 Claude WebSearch Results:
 [Latest industry trends and documentation]
@@ -107,6 +109,9 @@ Searching across Claude, DuckDuckGo, and Perplexity for: "microservices authenti
 
 🧠 Perplexity Analysis:
 [AI-synthesized current best practices and comparisons]
+
+💎 Gemini Consultation:
+[Development-focused technical guidance and code perspectives]
 
 🧠 Deep Analysis Integration (/thinku):
 Processing findings from all sources...
@@ -126,7 +131,10 @@ Processing findings from all sources...
    - Perplexity: [AI synthesis of best practices]
 
 2. Service-to-Service Authentication
-   - Sources across all engines with credibility assessment
+   - Claude: [Industry standards and recent updates]
+   - DuckDuckGo: [Alternative implementations and community tools]
+   - Perplexity: [Comparative analysis of authentication methods]
+   - Gemini: [Technical implementation guidance and code examples]
    - Pattern analysis from /thinku integration
 
 🧠 Strategic Analysis:
@@ -146,7 +154,7 @@ Processing findings from all sources...
 
 ### Research Quality Features
 - ✅ **Academic Rigor** - Systematic methodology and source validation
-- ✅ **Multi-source Verification** - Cross-reference information across three search engines
+- ✅ **Multi-source Verification** - Cross-reference information across four search engines
 - ✅ **Deep Analysis** - Sequential thinking applied to research findings
 - ✅ **Structured Output** - Clear, organized research summaries with methodology
 - ✅ **Source Attribution** - Proper citations for all claims with engine-specific results

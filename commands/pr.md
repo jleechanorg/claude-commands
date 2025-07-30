@@ -23,8 +23,7 @@ This command **MANDATORILY** combines the functionality of: `/think /execute /pu
 ### Phase 2: Execute (/execute)
 
 **Implement the solution**:
-- Use realistic execution protocol
-- Consider subagents for parallel work
+- Use realistic execution protocol with optimal strategy
 - Work through implementation systematically
 - Test and validate as we go
 
@@ -73,7 +72,7 @@ Phase 1 - Think:
 [Deep analysis of login validation requirements]
 
 Phase 2 - Execute:
-[Implementation with optional subagents]
+[Implementation with optimal execution strategy]
 
 Phase 3 - Push:
 [Create PR with comprehensive description]

@@ -1,281 +1,202 @@
-# Claude Commands Reference System
+# Claude Commands Reference Repository
 
-# ⚠️ REFERENCE ONLY - REQUIRES ADAPTATION
+> ⚠️ **REFERENCE ONLY - DO NOT USE DIRECTLY**
+> 
+> This is a reference export from a specific project setup. These configurations:
+> - May contain project-specific paths and settings
+> - Have not been tested in isolation
+> - May require significant adaptation for your environment
+> - Include setup-specific assumptions and dependencies
 
-**WARNING**: This is a reference export from a specific project. These configurations require significant adaptation for your environment.
+## Overview
 
-## 🚨 Important Notice
-
-This export contains:
-- Project-specific paths and configurations (`$PROJECT_ROOT/`, database configs) 
-- Hardcoded assumptions and dependencies
-- Personal GitHub repository references
-- Setup-specific requirements
-
-**Use as inspiration and reference, not direct implementation.**
-
-## 🏗️ System Architecture
-
-This is a comprehensive command system built for Claude Code CLI that provides:
-
-- **70+ Commands**: Categorized by function (cognitive, operational, testing, development)
-- **Command Composition**: Natural language execution of markdown-defined workflows
-- **🚨 Multi-Agent Orchestration**: WIP prototype system for autonomous task delegation
-- **Memory Integration**: MCP-based learning and knowledge persistence  
-- **Git Workflow Integration**: Automated PR creation, testing, and deployment
-
-### Command Categories
-
-**🧠 Cognitive Commands** (Semantic Composition):
-- `/think`, `/arch`, `/debug`, `/learn`, `/analyze`, `/fix`
-- Natural language understanding with automatic tool integration
-
-**⚙️ Operational Commands** (Protocol Enforcement):
-- `/headless`, `/handoff`, `/orchestrate`
-- Modify execution environment with mandatory workflow execution
-
-**🔧 Tool Commands** (Direct Execution):
-- `/execute`, `/test`, `/pr`
-- Immediate task execution with optional parameters
+This repository contains a comprehensive Claude command system export, including:
+- **100+ slash commands** for enhanced AI collaboration
+- **Multi-agent orchestration system** (WIP prototype) with proven production usage
+- **Supporting scripts and utilities**
+- **Complete documentation and setup guides**
 
 ## 🚨 Orchestration System (WIP Prototype)
 
-**Multi-agent task delegation system with Redis coordination**
+The orchestration system is an active development prototype with real-world production metrics:
 
 ### Architecture
-- **tmux-based agents**: frontend, backend, testing, opus-master with A2A communication
-- **Redis coordination**: Task routing and inter-agent communication
-- **Autonomous workflow**: task creation → agent assignment → execution → PR creation
-- **Cost metrics**: $0.003-$0.050 per task
-- **Real-world verification**: Successful task completion with PR generation
+- **tmux-based agent isolation**: Each agent runs in its own session
+- **Redis coordination**: Agent-to-agent (A2A) communication protocol
+- **Dynamic agent pool**: frontend, backend, testing, opus-master agents
+- **Autonomous workflows**: Task delegation → execution → PR creation
 
-### Usage Examples
+### Real-World Metrics
+- **Cost**: $0.003-$0.050 per task
+- **Success rate**: Verified PR generation from autonomous execution
+- **Scale**: Handles complex multi-step workflows
+
+### Quick Start
 ```bash
-/orch "fix failing tests"           # Autonomous test fixing
-/orch "implement feature X"         # End-to-end feature development  
-/orch monitor agents               # System monitoring
+# Start Redis server
+redis-server
+
+# Basic usage
+/orch "fix all failing tests and create PR"
+
+# Monitor agents
+/orch monitor agents
+
+# Direct tmux access
+tmux attach -t agent-frontend-1
 ```
 
-### Setup Requirements
-- Redis server running locally
-- tmux installed and configured
-- Python virtual environment
-- Specialized agent workspaces
-- GitHub CLI and token setup
+## Command Categories
 
-## 📋 Installation Guide
+### 🧠 Cognitive Commands
+Semantic understanding and analysis:
+- `/think` - Structured problem-solving
+- `/arch` - Architecture analysis
+- `/debug` - Systematic debugging
+- `/analyze` - Code analysis
+- `/perp` - Multi-AI perspective analysis
+
+### ⚙️ Operational Commands
+Protocol enforcement and execution:
+- `/headless` - Headless execution mode
+- `/handoff` - Task handoff protocol
+- `/orchestrate` - Multi-agent delegation
+- `/execute` - Direct task execution
+
+### 🔧 Tool Commands
+Direct action commands:
+- `/test` - Test execution
+- `/pr` - Pull request operations
+- `/fixpr` - PR issue resolution
+- `/pushl` - Enhanced git push
+- `/review` - Code review extraction
+
+### 📚 Meta Commands
+System and learning:
+- `/learn` - Memory enhancement
+- `/list` - Command listing
+- `/help` - Help system
+- `/exportcommands` - Export workflow
+
+## Installation
 
 ### Prerequisites
-```bash
-# Required tools
-brew install gh tmux redis jq
-pip install mcp python-sdk anthropic
+- Claude Code CLI installed
+- Git and GitHub CLI configured
+- Python 3.11+ with virtual environment
+- Redis server (for orchestration)
+- tmux (for agent management)
 
-# Optional but recommended
-pip install rg fd-find
+### Basic Setup
+```bash
+# Clone this repository
+git clone https://github.com/jleechanorg/claude-commands.git
+cd claude-commands
+
+# Create .claude directory structure
+mkdir -p ~/.claude/commands
+cp -r commands/* ~/.claude/commands/
+
+# Copy scripts
+mkdir -p ~/claude_command_scripts
+cp -r scripts/* ~/claude_command_scripts/
+
+# Set up orchestration (optional)
+cp -r orchestration ~/
 ```
 
-### Environment Setup
+### Environment Variables
 ```bash
-# Clone your project repository
-git clone https://github.com/yourusername/your-project
-cd your-project
-
-# Set up virtual environment
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Configure environment variables
-export PROJECT_ROOT=$(pwd)
-export WORKSPACE_ROOT=$(dirname $(pwd))
-export GITHUB_TOKEN="your_token_here"
+export WORKSPACE_ROOT="$HOME/projects/your-project"
+export PROJECT_ROOT="$WORKSPACE_ROOT/your-app"
+export GITHUB_TOKEN="your-token-here"
 ```
 
-### Claude Code Configuration
-1. Copy `CLAUDE.md` to your project root
-2. Adapt project-specific paths in CLAUDE.md:
-   - Replace `$PROJECT_ROOT/` with your actual project paths
-   - Update GitHub repository references
-   - Modify test commands for your setup
-3. Install commands in `.claude/commands/` directory
-4. Update script paths in command files
+## Adapting for Your Project
 
-### MCP Server Setup
+### Path Replacements
+All exported files use placeholders that need replacement:
+- `$PROJECT_ROOT` → Your project's root directory
+- `$WORKSPACE_ROOT` → Your workspace directory
+- `${USER}` → Your username
+- `your-project.com` → Your project domain
+
+### Example Adaptation
 ```bash
-# Memory MCP for learning integration
-npm install @modelcontextprotocol/memory-server
-
-# GitHub MCP for repository operations
-npm install @modelcontextprotocol/github-server
-
-# Configure in Claude Code MCP settings
+# Replace placeholders in all files
+find ~/.claude -type f -exec sed -i \
+  -e "s|\$PROJECT_ROOT|/path/to/your/project|g" \
+  -e "s|\$WORKSPACE_ROOT|/path/to/workspace|g" \
+  -e "s|your-project.com|myproject.com|g" {} \;
 ```
 
-## 🎯 Key Commands
+## Command Composition Architecture
 
-### Development Workflow
-- `/execute [task]` - Direct task execution with TodoWrite tracking
-- `/plan [task]` - Plan presentation requiring user approval
-- `/think [topic]` - Enhanced thinking with memory integration
-- `/test` - Comprehensive testing with real/mock modes
+Claude commands use two composition mechanisms:
 
-### Code Quality & Review
-- `/fake` - Code authenticity audit and fake code detection
-- `/review` - Comprehensive PR review with multi-source comment extraction
-- `/arch` - Architecture analysis and design recommendations
-- `/debug` - Evidence-based debugging with systematic approach
+### Universal Composition (Cognitive Commands)
+- Natural language understanding
+- Semantic tool integration
+- Adaptive execution
 
-### Git & Deployment
-- `/pr` - Automated PR creation with comprehensive descriptions
-- `/push` - Smart push with conflict detection and resolution
-- `/header` - Mandatory branch header for context tracking
-- `/integrate` - Branch integration with testing and validation
+### Protocol Enforcement (Operational Commands)
+- Mandatory workflow execution
+- State management
+- Error recovery
 
-### Orchestration & Scaling
-- `/orch [task]` - Multi-agent task delegation (WIP prototype)
-- `/handoff` - Agent coordination and task handoffs
-- `/headless` - Background execution for long-running tasks
+## Memory MCP Integration
 
-## 🔧 Adaptation Guide
+Many commands integrate with Memory MCP for enhanced context:
+- Automatic memory search
+- Learning persistence
+- Context enhancement
 
-### Path Configuration
-Replace in all files:
-```bash
-# Update paths
-sed -i 's|$PROJECT_ROOT|/your/actual/project/path|g' **/*.md
-sed -i 's|$WORKSPACE_ROOT|/your/workspace/root|g' **/*.md
-sed -i 's|$USER|yourusername|g' **/*.md
-```
+Enhanced commands: `/think`, `/learn`, `/debug`, `/analyze`, `/fix`, `/plan`, `/execute`, `/arch`, `/test`, `/pr`
 
-### Testing Setup
-```bash
-# Adapt test commands for your framework
-# Replace references to:
-TESTING=true python    # Your test runner
-./run_tests.sh        # Your test script
-./coverage.sh         # Your coverage tool
-```
-
-### Database & Services
-```bash
-# Replace service references:
-Database              # Your database system
-Web Framework         # Your web framework
-your-project.com      # Your domain
-```
-
-## 📊 Performance Metrics
-
-### Command Execution
-- **Simple commands**: <2 seconds response time
-- **Complex workflows**: 30-120 seconds with progress tracking
-- **Multi-agent tasks**: 2-10 minutes with autonomous execution
-- **Memory integration**: <500ms additional overhead
-
-### Cost Analysis
-- **Basic commands**: $0.001-$0.005 per execution
-- **Orchestration tasks**: $0.003-$0.050 per task
-- **Memory MCP**: $0.0001-$0.001 per search/create
-- **GitHub API**: Rate limited, minimal cost impact
-
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
-**Command Not Found**
-```bash
-# Verify command installation
-ls .claude/commands/
-# Check command syntax
-/list
-```
+1. **Command not found**
+   - Verify `.claude/commands/` directory exists
+   - Check file permissions (should be readable)
+   - Restart Claude Code CLI
 
-**Path Errors**
-```bash
-# Verify environment variables
-echo $PROJECT_ROOT
-echo $WORKSPACE_ROOT
-# Update CLAUDE.md paths
-```
+2. **Path errors**
+   - Replace all placeholder variables
+   - Use absolute paths
+   - Check environment variables
 
-**MCP Connection Issues**
-```bash
-# Check MCP server status
-npx @modelcontextprotocol/memory-server --help
-# Verify Claude Code MCP configuration
-```
+3. **Orchestration issues**
+   - Ensure Redis is running
+   - Verify tmux is installed
+   - Check agent workspace permissions
 
-**Orchestration Failures**
-```bash
-# Check Redis status
-redis-cli ping
-# Verify tmux installation
-tmux --version
-# Check agent workspace setup
-```
+### Getting Help
 
-### Performance Issues
+For issues specific to:
+- **This export**: Open issue on this repository
+- **Claude Code**: Visit https://github.com/anthropics/claude-code/issues
+- **Your adaptation**: Check original project documentation
 
-**Slow Response Times**
-- Check context length in CLAUDE.md (impacts performance)
-- Reduce command complexity
-- Use batch operations for multiple files
+## Contributing
 
-**Memory Usage**
-- Monitor system resources during orchestration
-- Limit concurrent agents (<3 recommended)
-- Use lightweight commands for simple tasks
+This is a reference repository. Contributions should focus on:
+- Improving documentation clarity
+- Adding adaptation examples
+- Fixing export issues
+- Enhancing filtering rules
 
-## 📚 Documentation Structure
+## License
 
-```
-claude-commands/
-├── README.md              # This file
-├── CLAUDE.md             # Primary configuration with warnings
-├── commands/             # Command definitions
-│   ├── execute.md        # Task execution framework
-│   ├── orchestrate.md    # Multi-agent coordination
-│   ├── think.md          # Enhanced reasoning
-│   └── ...              # 70+ additional commands
-├── scripts/              # Implementation scripts
-│   ├── orchestrate.sh    # Orchestration runner
-│   ├── git-header.sh     # Branch header generation
-│   └── ...              # Supporting utilities
-├── orchestration/        # Multi-agent system (WIP)
-│   ├── README.md         # Setup and usage guide
-│   ├── agent_system.py   # Core agent management
-│   ├── task_dispatcher.py# Task routing logic
-│   └── ...              # A2A communication system
-└── docs/                # Additional documentation
-    ├── INSTALLATION.md   # Detailed setup guide
-    ├── CONFIGURATION.md  # Environment configuration
-    └── TROUBLESHOOTING.md # Common issues and solutions
-```
+This export is provided as-is for reference purposes. Original commands may have their own licensing terms.
 
-## 🔗 Resources
+## Acknowledgments
 
-### External Documentation
-- [Claude Code Overview](https://docs.anthropic.com/en/docs/claude-code/overview)
-- [MCP Documentation](https://modelcontextprotocol.io/introduction)
-- [Multi-Agent Systems Research](https://arxiv.org/html/2504.21030v1)
-
-### Community
-- [GitHub Issues](https://github.com/jleechanorg/claude-commands/issues)
-- [Discussions](https://github.com/jleechanorg/claude-commands/discussions)
-
-## 📄 License
-
-Reference export for educational and development purposes. Adapt as needed for your environment.
-
-## 🚀 Contributing
-
-This is a reference export. For contributions:
-1. Fork the repository
-2. Adapt for your environment
-3. Share improvements via pull requests
-4. Document your adaptations and lessons learned
+- Claude Code team for the command system architecture
+- Original project contributors
+- Community feedback and improvements
 
 ---
 
-**⚠️ Remember**: This system requires significant adaptation for your specific environment. Use as reference and inspiration, not direct implementation.
+Remember: This is a reference implementation. Always adapt commands to your specific environment and requirements.

@@ -71,14 +71,14 @@
 ### 2. **Integrated Workflow Execution**
 For each task, execute in sequence:
 - **`/think light`** - Quick analysis to understand task scope
-- **`/plan`** - Create detailed execution plan with subagent strategy
-- **`/handoff`** - Generate handoff branches and spawn parallel agents
+- **`/plan`** - Create detailed execution plan with optimal strategy
+- **`/handoff`** - Generate handoff branches and coordinate parallel work
 
-### 3. **Parallel Subagent Coordination**
-- Spawn dedicated agents for each task using `/orchestrate`
+### 3. **Parallel Task Coordination**
+- Spawn dedicated tasks for each work item using `/orchestrate`
 - Create isolated worktrees for conflict-free parallel work
-- Each agent works on its own feature branch
-- Agents execute autonomously with progress tracking
+- Each task works on its own feature branch
+- Tasks execute autonomously with progress tracking
 
 ### 4. **Progress Tracking**
 - Update `roadmap/roadmap.md` with parallel task status:
@@ -115,14 +115,14 @@ Task 1: Implement auth system - Complex, needs design
 Task 2: Create API docs - Medium, documentation task
 Task 3: Add unit tests - Small, testing task
 
-[Executes /plan for each task with subagent strategies]
+[Executes /plan for each task with optimal strategies]
 
 [Executes /handoff for each task, creating branches]
 
-Now spawning parallel agents:
-- Agent task-1234 → Implementing auth system
-- Agent task-1235 → Creating API docs
-- Agent task-1236 → Adding unit tests
+Now spawning parallel tasks:
+- Task task-1234 → Implementing auth system
+- Task task-1235 → Creating API docs
+- Task task-1236 → Adding unit tests
 
 [Updates roadmap.md with parallel task tracking]
 

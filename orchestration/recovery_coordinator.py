@@ -1,7 +1,3 @@
-#!/bin/bash
-# ⚠️ ORCHESTRATION SYSTEM - WIP PROTOTYPE
-# Requires Redis, tmux, and agent workspace setup
-
 #!/usr/bin/env python3
 """
 Recovery Coordinator for Orchestration System
@@ -128,7 +124,7 @@ class RecoveryCoordinator:
 
     def analyze_partial_work(self, agent_name: str) -> List[str]:
         """Analyze what work was completed before failure"""
-        workspace = f"/home/jleechan/projects/your-project.com/worktree_roadmap/agent_workspace_{agent_name}"
+        workspace = f"/home/${USER}/projects/your-project.com/worktree_roadmap/agent_workspace_{agent_name}"
         partial_work = []
 
         if not os.path.exists(workspace):
