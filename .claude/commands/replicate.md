@@ -23,7 +23,9 @@ The `/replicate` command automates the process of analyzing a pull request and r
 
 ### 1. PR Analysis Phase
 - Parses the PR URL/number to identify the repository and PR
-- Uses GitHub MCP tools to fetch complete file changes
+- **🚨 MANDATORY PAGINATION PROTOCOL**: Checks total file count first using GitHub MCP tools
+- Uses GitHub MCP tools to fetch complete file changes with pagination verification
+- **Verification**: Ensures ALL files are analyzed, not just first 30 from API default
 - Reads every single delta line (additions and deletions)
 - Focuses on relevant directories (configurable)
 
@@ -64,7 +66,9 @@ The `/replicate` command automates the process of analyzing a pull request and r
 ## Implementation Details
 
 The command leverages:
-- GitHub MCP integration for PR data fetching
+- **GitHub MCP integration for PR data fetching with mandatory pagination protocols**
+- **🚨 CRITICAL**: Always verifies total file count before analysis to prevent missing files
+- **Pagination handling**: Automatically detects large PRs and uses appropriate API pagination
 - Advanced diff analysis algorithms
 - Subagent orchestration for complex comparisons
 - AST-based code understanding where applicable

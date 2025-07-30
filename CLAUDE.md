@@ -402,6 +402,20 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT"
 - Integration: `./integrate.sh`
 - Progress: `roadmap/scratchpad_[branch].md`
 
+🚨 **GITHUB API PAGINATION PROTOCOL**: ⚠️ MANDATORY - Before ANY GitHub API analysis:
+- ✅ **Check total count first**: Use `gh pr view [PR] --json changed_files` to get file count before analysis
+- ✅ **Verify pagination**: GitHub API defaults to 30 items per page - always check if more pages exist
+- ✅ **Use pagination parameters**: Add `?per_page=100&page=N` for complete results when file count > 30
+- ✅ **Sanity check**: If API returns small number but PR shows major changes, investigate pagination
+- ✅ **Multiple verification**: Use both API and web interface to cross-check important analysis
+- ❌ **NEVER assume**: API returns complete results without verifying pagination and total counts
+
+🚨 **CHALLENGE RESPONSE PROTOCOL**: ⚠️ MANDATORY - When user provides specific evidence:
+- ✅ **Immediate re-verification**: Treat user evidence as debugging signal, not personal attack
+- ✅ **Methodology review**: Re-check approach when user mentions details not in your analysis
+- ✅ **Humble language**: Use "appears to be" until verified through multiple independent sources
+- ❌ **NEVER defend**: Wrong analysis - acknowledge error and re-verify immediately
+
 ## Environment, Tooling & Scripts
 
 1. **Python venv**: Verify activated before running Python/tests
