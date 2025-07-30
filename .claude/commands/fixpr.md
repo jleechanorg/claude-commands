@@ -72,13 +72,40 @@ Dynamically detect repository information from the git environment:
 - ❌ **NEVER fix local issues without confirming they exist on GitHub**
 - ❌ **NEVER trust cached or stale GitHub data**
 
+🚨 **DEFENSIVE PROGRAMMING FOR GITHUB API RESPONSES**:
+- ✅ **ALWAYS handle both list and dict responses** from GitHub API
+- ✅ **NEVER use .get() on variables that might be lists**
+- ✅ **Use isinstance() checks** before accessing dict methods
+- ❌ **NEVER assume GitHub API response structure**
+
+**SAFE DATA ACCESS PATTERN**:
+```python
+# When processing GitHub API responses like statusCheckRollup, reviews, or comments
+if isinstance(data, dict):
+    value = data.get('key', default)
+elif isinstance(data, list) and len(data) > 0:
+    # Handle list responses (checks, comments, reviews)
+    value = data[0].get('key', default) if isinstance(data[0], dict) else default  # Default if data[0] is not a dict
+else:
+    value = default  # Default if data is neither a dict nor a non-empty list
+```
+
 **EXPLICIT GITHUB STATUS FETCHING** - Fetch these specific items from GitHub to understand what's blocking mergeability:
 
 1. **CI State & Test Failures** (GitHub Authoritative):
    - **MANDATORY**: `gh pr view <PR> --json statusCheckRollup` - Get ALL CI check results
+   - **DEFENSIVE**: statusCheckRollup is often a LIST of checks, not a single object
+   - **SAFE ACCESS**: Use list iteration, never .get() on the rollup array
    - **DISPLAY INLINE**: Print exact GitHub CI status: `❌ FAILING: test-unit (exit code 1)`
    - **FETCH LOGS**: For failing checks, get specific error messages from GitHub
    - **VERIFY AUTHORITY**: Cross-check GitHub vs local - local is NEVER authoritative
+   - **SAFE PROCESSING PATTERN**:
+     ```
+     # When processing statusCheckRollup (which is a list):
+     for check in statusCheckRollup:  # DON'T use .get() on statusCheckRollup itself
+         status = check.get('state', 'unknown')  # OK - check is a dict
+         name = check.get('context', 'unknown')
+     ```
    - **EXAMPLE OUTPUT**:
      ```
      🔍 GITHUB CI STATUS (Authoritative):
@@ -102,8 +129,22 @@ Dynamically detect repository information from the git environment:
 
 3. **Bot Feedback & Review Comments** (GitHub Authoritative):
    - **MANDATORY**: `gh pr view <PR> --json reviews,comments` - Get ALL review data from GitHub
+   - **DEFENSIVE**: reviews and comments are LISTS, not single objects
+   - **SAFE ACCESS**: Iterate through lists, never .get() on the arrays themselves
    - **DISPLAY INLINE**: Print blocking reviews: `❌ CHANGES_REQUESTED by @reviewer`
    - **FETCH COMMENTS**: Get all bot and human feedback directly from GitHub API
+   - **SAFE PROCESSING PATTERN**:
+     ```
+     # When processing reviews (which is a list):
+     for review in reviews:  # DON'T use .get() on reviews itself
+         state = review.get('state', 'unknown')  # OK - review is a dict
+         user = review.get('user', {}).get('login', 'unknown')
+
+     # When processing comments (which is a list):
+     for comment in comments:  # DON'T use .get() on comments itself
+         body = comment.get('body', '')  # OK - comment is a dict
+         author = comment.get('user', {}).get('login', 'unknown')
+     ```
    - **EXAMPLE OUTPUT**:
      ```
      🔍 GITHUB REVIEW STATUS (Authoritative):
@@ -128,9 +169,18 @@ Dynamically detect repository information from the git environment:
 
 ### Step 3: Analyze Issues with Intelligence
 
+🚨 **CRITICAL BUG PREVENTION**: Before analyzing any GitHub API data, ALWAYS verify data structure to prevent "'list' object has no attribute 'get'" errors.
+
+**MANDATORY DATA STRUCTURE VERIFICATION**:
+- ✅ **Check if data is list or dict** before using .get() methods
+- ✅ **Use isinstance(data, dict)** before accessing dict methods
+- ✅ **Iterate through lists** rather than treating them as single objects
+- ❌ **NEVER assume API response structure**
+
 Examine the collected data to understand what needs fixing:
 
 **CI Status Analysis**:
+- **SAFE APPROACH**: Remember statusCheckRollup is a list - iterate through checks
 - Distinguish between flaky tests (timeouts, network issues) and real failures
 - Identify patterns in failures (missing imports, assertion errors, environment issues)
 - Compare GitHub CI results with local test runs to spot environment-specific problems
@@ -141,6 +191,7 @@ Examine the collected data to understand what needs fixing:
 - Determine which conflicts can be safely auto-resolved vs requiring human review
 
 **Bot Feedback Processing**:
+- **SAFE APPROACH**: Remember reviews and comments are lists - iterate through them
 - Extract actionable suggestions from automated code reviews
 - Prioritize fixes by impact and safety
 - Identify quick wins vs changes requiring careful consideration
@@ -153,6 +204,7 @@ Based on the analysis, apply appropriate fixes:
 - **Environment issues**: Update dependencies, fix missing environment variables, adjust timeouts
 - **Code issues**: Correct import statements, fix failing assertions, add type annotations
 - **Test issues**: Update test expectations, fix race conditions, handle edge cases
+- **MANDATORY VERIFICATION**: After each fix category, run `./run_ci_replica.sh` to confirm fix works in CI environment
 
 **For Merge Conflicts**:
 - **Safe resolutions**: Combine imports from both branches, merge non-conflicting configuration
@@ -192,8 +244,11 @@ Based on the analysis, apply appropriate fixes:
    - Confirm no new test failures were introduced
    - Ensure bot feedback has been addressed
 
-2. **Local Verification**:
-   - Run tests locally to confirm fixes work
+2. **Local CI Replica Verification**:
+   - **MANDATORY**: Run `./run_ci_replica.sh` to verify fixes in CI-equivalent environment
+   - **PURPOSE**: Ensures fixes work in the same environment as GitHub Actions CI
+   - **ENVIRONMENT**: Sets CI=true, GITHUB_ACTIONS=true, TESTING=true, TEST_MODE=mock
+   - **VALIDATION**: Must pass completely before considering fixes successful
    - Check git status for uncommitted changes
    - Verify no conflicts remain with the base branch
 
@@ -274,6 +329,33 @@ For every fix applied:
 # Analyze and automatically apply safe fixes
 /fixpr 1234 --auto-apply
 ```
+
+## Integrated CI Verification Workflow
+
+**Complete Fix and Verification Cycle**:
+```bash
+# 1. Apply fixes based on GitHub status analysis
+# (implement fixes for failing CI checks, conflicts, etc.)
+
+# 2. MANDATORY: Verify fixes work in CI-equivalent environment
+./run_ci_replica.sh
+
+# 3. If CI replica passes, push fixes to GitHub
+git add . && git commit -m "fix: Address CI failures and merge conflicts"
+git push
+
+# 4. Wait 30-60 seconds for GitHub CI to process
+sleep 60
+
+# 5. Re-verify GitHub status shows green
+gh pr view <PR> --json statusCheckRollup,mergeable,mergeStateStatus
+```
+
+**Key Benefits of run_ci_replica.sh Integration**:
+- **Environment Parity**: Exact match with GitHub Actions CI environment variables
+- **Early Detection**: Catch CI failures locally before pushing to GitHub
+- **Time Efficiency**: Avoid multiple push/wait/fail cycles
+- **Confidence**: Know fixes will work in CI before pushing
 
 ## Integration Points
 
