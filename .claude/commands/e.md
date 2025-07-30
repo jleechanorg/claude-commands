@@ -1,7 +1,9 @@
-# Execute Command (Alias)
+Execute the task: $ARGUMENTS
 
-**Alias for**: `/execute`
+Follow the complete /execute workflow:
 
-**Usage**: `/e` or `/execute`
+1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method decision (parallel vs sequential), tool requirements, implementation approach, and timeline estimate
 
-See [execute.md](./execute.md) for full documentation.
+2. **Phase 2 - Auto-approval**: Display "User already approves - proceeding with execution"
+
+3. **Phase 3 - Implementation**: Execute the plan using TodoWrite progress tracking

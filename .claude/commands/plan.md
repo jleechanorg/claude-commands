@@ -38,7 +38,11 @@
 
 ### Phase 2: Present Execution Plan
 
-**Analysis Presentation**:
+## 📋 Standard Plan Display Format
+
+*This format is used by both `/plan` and `/execute` commands for consistent presentation.*
+
+**Execution Plan Presentation**:
 - **Task complexity**: Simple (direct execution) or Complex (coordination needed)
 - **Execution method decision** (memory-informed):
   - **Parallel Tasks** (0 extra tokens): For simple, independent operations < 30s
