@@ -26,7 +26,7 @@ class TestCampaignClicks(unittest.TestCase):
         # This test verifies the CSS file exists and can be loaded
 
         css_path = os.path.join(
-            os.path.dirname(__file__), "..", "static", "campaign-click-fix.css"
+            os.path.dirname(__file__), "..", "frontend_v1", "campaign-click-fix.css"
         )
         self.assertTrue(
             os.path.exists(css_path), "Campaign click fix CSS file should exist"
@@ -44,7 +44,7 @@ class TestCampaignClicks(unittest.TestCase):
     def test_javascript_click_handler_structure(self):
         """Test that JavaScript has proper click handler structure"""
 
-        js_path = os.path.join(os.path.dirname(__file__), "..", "static", "app.js")
+        js_path = os.path.join(os.path.dirname(__file__), "..", "frontend_v1", "app.js")
 
         with open(js_path) as f:
             js_content = f.read()
@@ -59,7 +59,7 @@ class TestCampaignClicks(unittest.TestCase):
         """Test that index.html includes the campaign click fix CSS"""
 
         html_path = os.path.join(
-            os.path.dirname(__file__), "..", "static", "index.html"
+            os.path.dirname(__file__), "..", "frontend_v1", "index.html"
         )
 
         with open(html_path) as f:

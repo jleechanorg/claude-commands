@@ -226,20 +226,30 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Initializing settings functionality...');
 
     // Load settings.js if not already loaded
-    if (typeof loadSettings === 'undefined') {
+    if (!window.settingsScriptLoaded) {
       const script = document.createElement('script');
-      script.src = '/static/js/settings.js';
+      script.src = '/frontend_v1/js/settings.js';
       script.onload = () => {
+        window.settingsScriptLoaded = true;
         console.log('Settings JavaScript loaded');
         setupSettingsEventListeners();
       };
       document.head.appendChild(script);
     } else {
-      setupSettingsEventListeners();
+      // First visit already loaded the bundle – just show the UI once.
+      if (!window.settingsListenersAttached) {
+        setupSettingsEventListeners();
+      }
     }
   };
 
   const setupSettingsEventListeners = () => {
+    // Prevent re-attachment
+    if (window.settingsListenersAttached) {
+      return;
+    }
+    window.settingsListenersAttached = true;
+
     // Load current settings
     if (typeof loadSettings === 'function') {
       loadSettings();

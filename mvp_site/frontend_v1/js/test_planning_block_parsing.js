@@ -2,7 +2,7 @@
  * JavaScript Unit Tests for Planning Block Parsing
  * Tests the new string format for pros/cons in deep think mode
  *
- * Run with: node mvp_site/static/js/test_planning_block_parsing.js
+ * Run with: node mvp_site/frontend_v1/js/test_planning_block_parsing.js
  */
 
 // Mock functions that would normally be in app.js

@@ -845,7 +845,7 @@ def setup_file_logging() -> None:
             cwd=os.path.dirname(__file__),
             text=True,
         ).strip()
-    except:
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
         branch = "unknown"
 
     # Configure file logging using standard logging module
@@ -928,7 +928,7 @@ def create_app() -> Flask:
     and all API endpoints.
 
     Key Configuration:
-    - Static file serving from 'static' folder
+    - Static file serving from 'frontend_v1' folder
     - CORS enabled for all /api/* routes
     - Testing mode configuration from environment
     - Firebase Admin SDK initialization
@@ -950,14 +950,14 @@ def create_app() -> Flask:
     # Set up file logging before creating app
     setup_file_logging()
 
-    app = Flask(__name__, static_folder=None)  # Disable default static serving
+    app = Flask(__name__)
     CORS(app, resources=CORS_RESOURCES)
 
     # Cache busting route for testing - only activates with special header
-    @app.route("/static/<path:filename>")
-    def static_files_with_cache_busting(filename):
+    @app.route("/frontend_v1/<path:filename>")
+    def frontend_files_with_cache_busting(filename):
         """Serve static files with optional cache-busting for testing"""
-        static_folder = os.path.join(os.path.dirname(__file__), "static")
+        static_folder = os.path.join(os.path.dirname(__file__), "frontend_v1")
         response = send_from_directory(static_folder, filename)
 
         # Only disable cache if X-No-Cache header is present (for testing)
@@ -1626,7 +1626,7 @@ def create_app() -> Flask:
     @app.route("/<path:path>")
     def serve_frontend(path: str) -> Response:
         """Serve the frontend files. This is the fallback for any non-API routes."""
-        static_folder = os.path.join(os.path.dirname(__file__), "static")
+        static_folder = os.path.join(os.path.dirname(__file__), "frontend_v1")
         if path and os.path.exists(os.path.join(static_folder, path)):
             return send_from_directory(static_folder, path)
         return send_from_directory(static_folder, "index.html")

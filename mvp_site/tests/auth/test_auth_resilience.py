@@ -26,7 +26,7 @@ class AuthResilienceTest(unittest.TestCase):
         print("🔴 RED TEST: Testing clock skew auto-retry mechanism")
 
         # Read the updated api.js file
-        api_js_file = self.test_dir / "static/api.js"
+        api_js_file = self.test_dir / "frontend_v1/api.js"
         if not api_js_file.exists():
             self.fail("api.js file not found - cannot test resilience features")
 
@@ -83,7 +83,7 @@ class AuthResilienceTest(unittest.TestCase):
         print("🔴 RED TEST: Testing user-friendly error messaging")
 
         # Read the updated app.js file
-        app_js_file = self.test_dir / "static/app.js"
+        app_js_file = self.test_dir / "frontend_v1/app.js"
         if not app_js_file.exists():
             self.fail("app.js file not found - cannot test error messaging")
 
@@ -127,7 +127,7 @@ class AuthResilienceTest(unittest.TestCase):
         """
         print("🔴 RED TEST: Testing offline campaign caching")
 
-        app_js_file = self.test_dir / "static/app.js"
+        app_js_file = self.test_dir / "frontend_v1/app.js"
         app_js_content = app_js_file.read_text()
 
         # 🔴 RED: Check for localStorage caching implementation
@@ -164,7 +164,7 @@ class AuthResilienceTest(unittest.TestCase):
         """
         print("🔴 RED TEST: Testing connection status monitoring")
 
-        api_js_file = self.test_dir / "static/api.js"
+        api_js_file = self.test_dir / "frontend_v1/api.js"
         api_js_content = api_js_file.read_text()
 
         # 🔴 RED: Check for connection monitoring
@@ -211,8 +211,8 @@ class AuthResilienceTest(unittest.TestCase):
         # This would be a more complex integration test in a real browser environment
         # For now, we verify that all required components are present and properly integrated
 
-        api_js_file = self.test_dir / "static/api.js"
-        app_js_file = self.test_dir / "static/app.js"
+        api_js_file = self.test_dir / "frontend_v1/api.js"
+        app_js_file = self.test_dir / "frontend_v1/app.js"
 
         api_content = api_js_file.read_text()
         app_content = app_js_file.read_text()

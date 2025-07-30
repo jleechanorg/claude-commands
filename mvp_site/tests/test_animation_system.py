@@ -24,18 +24,18 @@ class TestAnimationSystem(unittest.TestCase):
         # Fix paths to point to parent directory
         parent_dir = os.path.dirname(os.path.dirname(__file__))
         self.animation_css_path = os.path.join(
-            parent_dir, "static", "styles", "animations.css"
+            parent_dir, "frontend_v1", "styles", "animations.css"
         )
         self.animation_js_path = os.path.join(
-            parent_dir, "static", "js", "animation-helpers.js"
+            parent_dir, "frontend_v1", "js", "animation-helpers.js"
         )
-        self.index_html_path = os.path.join(parent_dir, "static", "index.html")
+        self.index_html_path = os.path.join(parent_dir, "frontend_v1", "index.html")
 
     def test_animation_css_exists_and_valid(self):
         """Test that animation CSS file exists and contains expected animations"""
-        self.assertTrue(
-            os.path.exists(self.animation_css_path), "animations.css file should exist"
-        )
+        assert os.path.exists(
+            self.animation_css_path
+        ), "animations.css file should exist"
 
         with open(self.animation_css_path) as f:
             css_content = f.read()
@@ -54,21 +54,18 @@ class TestAnimationSystem(unittest.TestCase):
         ]
 
         for animation in essential_animations:
-            self.assertIn(animation, css_content, f"CSS should contain {animation}")
+            assert animation in css_content, f"CSS should contain {animation}"
 
         # Test for accessibility support
-        self.assertIn(
-            "@media (prefers-reduced-motion: reduce)",
-            css_content,
-            "Should include reduced motion support",
-        )
+        assert (
+            "@media (prefers-reduced-motion: reduce)" in css_content
+        ), "Should include reduced motion support"
 
     def test_animation_js_exists_and_valid(self):
         """Test that animation JavaScript file exists and is valid"""
-        self.assertTrue(
-            os.path.exists(self.animation_js_path),
-            "animation-helpers.js file should exist",
-        )
+        assert os.path.exists(
+            self.animation_js_path
+        ), "animation-helpers.js file should exist"
 
         with open(self.animation_js_path) as f:
             js_content = f.read()
@@ -84,30 +81,22 @@ class TestAnimationSystem(unittest.TestCase):
         ]
 
         for component in essential_components:
-            self.assertIn(
-                component, js_content, f"JavaScript should contain {component}"
-            )
+            assert component in js_content, f"JavaScript should contain {component}"
 
     def test_index_html_includes_animation_files(self):
         """Test that index.html includes animation CSS and JS"""
-        self.assertTrue(
-            os.path.exists(self.index_html_path), "index.html file should exist"
-        )
+        assert os.path.exists(self.index_html_path), "index.html file should exist"
 
         with open(self.index_html_path) as f:
             html_content = f.read()
 
         # Test for animation file inclusions
-        self.assertIn(
-            'href="/static/styles/animations.css"',
-            html_content,
-            "Should include animations.css",
-        )
-        self.assertIn(
-            'src="/static/js/animation-helpers.js"',
-            html_content,
-            "Should include animation-helpers.js",
-        )
+        assert (
+            'href="/frontend_v1/styles/animations.css"' in html_content
+        ), "Should include animations.css"
+        assert (
+            'src="/frontend_v1/js/animation-helpers.js"' in html_content
+        ), "Should include animation-helpers.js"
 
     def test_animation_css_syntax_validation(self):
         """Test CSS syntax is valid (basic validation)"""
@@ -117,11 +106,11 @@ class TestAnimationSystem(unittest.TestCase):
         # Basic syntax checks
         open_braces = css_content.count("{")
         close_braces = css_content.count("}")
-        self.assertEqual(open_braces, close_braces, "CSS should have matching braces")
+        assert open_braces == close_braces, "CSS should have matching braces"
 
         # Check for common syntax errors
-        self.assertNotIn(";;", css_content, "Should not have double semicolons")
-        self.assertNotIn(": ;", css_content, "Should not have space before semicolon")
+        assert ";;" not in css_content, "Should not have double semicolons"
+        assert ": ;" not in css_content, "Should not have space before semicolon"
 
     def test_animation_performance_properties(self):
         """Test that performance-enhancing CSS properties are present"""
@@ -155,9 +144,7 @@ class TestAnimationSystem(unittest.TestCase):
         ]
 
         for feature in theme_features:
-            self.assertIn(
-                feature, css_content, f"Should include theme feature {feature}"
-            )
+            assert feature in css_content, f"Should include theme feature {feature}"
 
     def test_accessibility_features(self):
         """Test that accessibility features are properly implemented"""
@@ -165,16 +152,12 @@ class TestAnimationSystem(unittest.TestCase):
             css_content = f.read()
 
         # Accessibility checks
-        self.assertIn(
-            "prefers-reduced-motion",
-            css_content,
-            "Should respect user motion preferences",
-        )
-        self.assertIn(
-            "animation-duration: 0.01ms",
-            css_content,
-            "Should disable animations for reduced motion",
-        )
+        assert (
+            "prefers-reduced-motion" in css_content
+        ), "Should respect user motion preferences"
+        assert (
+            "animation-duration: 0.01ms" in css_content
+        ), "Should disable animations for reduced motion"
 
     def test_javascript_error_handling(self):
         """Test that JavaScript has proper error handling patterns"""
@@ -190,9 +173,9 @@ class TestAnimationSystem(unittest.TestCase):
         ]
 
         for pattern in error_handling:
-            self.assertIn(
-                pattern, js_content, f"Should include error handling pattern {pattern}"
-            )
+            assert (
+                pattern in js_content
+            ), f"Should include error handling pattern {pattern}"
 
 
 class TestAnimationIntegration(unittest.TestCase):
@@ -201,7 +184,7 @@ class TestAnimationIntegration(unittest.TestCase):
     def setUp(self):
         """Set up integration test environment"""
         self.app_js_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), "static", "app.js"
+            os.path.dirname(os.path.dirname(__file__)), "frontend_v1", "app.js"
         )
 
     def test_animation_system_compatibility(self):
@@ -209,15 +192,13 @@ class TestAnimationIntegration(unittest.TestCase):
         # Check that both files exist
         animation_js_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            "static",
+            "frontend_v1",
             "js",
             "animation-helpers.js",
         )
 
-        self.assertTrue(os.path.exists(self.app_js_path), "app.js should exist")
-        self.assertTrue(
-            os.path.exists(animation_js_path), "animation-helpers.js should exist"
-        )
+        assert os.path.exists(self.app_js_path), "app.js should exist"
+        assert os.path.exists(animation_js_path), "animation-helpers.js should exist"
 
         # Read both files
         with open(self.app_js_path) as f:
@@ -229,11 +210,9 @@ class TestAnimationIntegration(unittest.TestCase):
         # Test for compatibility patterns
         # Animation system should enhance, not replace
         if "showView" in app_content:
-            self.assertIn(
-                "originalShowView",
-                animation_content,
-                "Should preserve original showView function",
-            )
+            assert (
+                "originalShowView" in animation_content
+            ), "Should preserve original showView function"
 
         # Should not conflict with existing global variables
         app_globals = []
@@ -245,7 +224,7 @@ class TestAnimationIntegration(unittest.TestCase):
     def test_loading_order_in_html(self):
         """Test that scripts are loaded in correct order"""
         index_html_path = os.path.join(
-            os.path.dirname(os.path.dirname(__file__)), "static", "index.html"
+            os.path.dirname(os.path.dirname(__file__)), "frontend_v1", "index.html"
         )
 
         with open(index_html_path) as f:
@@ -254,19 +233,15 @@ class TestAnimationIntegration(unittest.TestCase):
         # Find script positions
         theme_manager_pos = html_content.find("theme-manager.js")
         animation_helpers_pos = html_content.find("animation-helpers.js")
-        app_js_pos = html_content.find('src="/static/app.js"')
+        app_js_pos = html_content.find('src="/frontend_v1/app.js"')
 
         # Animation helpers should load before app.js but after theme-manager
-        self.assertLess(
-            theme_manager_pos,
-            animation_helpers_pos,
-            "theme-manager.js should load before animation-helpers.js",
-        )
-        self.assertLess(
-            animation_helpers_pos,
-            app_js_pos,
-            "animation-helpers.js should load before app.js",
-        )
+        assert (
+            theme_manager_pos < animation_helpers_pos
+        ), "theme-manager.js should load before animation-helpers.js"
+        assert (
+            animation_helpers_pos < app_js_pos
+        ), "animation-helpers.js should load before app.js"
 
 
 class TestAnimationPerformance(unittest.TestCase):
@@ -276,7 +251,7 @@ class TestAnimationPerformance(unittest.TestCase):
         """Test that CSS file size is reasonable"""
         animation_css_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            "static",
+            "frontend_v1",
             "styles",
             "animations.css",
         )
@@ -284,17 +259,15 @@ class TestAnimationPerformance(unittest.TestCase):
         if os.path.exists(animation_css_path):
             file_size = os.path.getsize(animation_css_path)
             # Should be under 50KB for performance
-            self.assertLess(
-                file_size,
-                50 * 1024,
-                f"animations.css should be under 50KB, got {file_size} bytes",
-            )
+            assert (
+                file_size < 50 * 1024
+            ), f"animations.css should be under 50KB, got {file_size} bytes"
 
     def test_javascript_file_size(self):
         """Test that JavaScript file size is reasonable"""
         animation_js_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            "static",
+            "frontend_v1",
             "js",
             "animation-helpers.js",
         )
@@ -302,17 +275,15 @@ class TestAnimationPerformance(unittest.TestCase):
         if os.path.exists(animation_js_path):
             file_size = os.path.getsize(animation_js_path)
             # Should be under 30KB for performance
-            self.assertLess(
-                file_size,
-                30 * 1024,
-                f"animation-helpers.js should be under 30KB, got {file_size} bytes",
-            )
+            assert (
+                file_size < 30 * 1024
+            ), f"animation-helpers.js should be under 30KB, got {file_size} bytes"
 
     def test_css_selector_efficiency(self):
         """Test that CSS selectors are efficient"""
         animation_css_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            "static",
+            "frontend_v1",
             "styles",
             "animations.css",
         )
@@ -327,11 +298,9 @@ class TestAnimationPerformance(unittest.TestCase):
         ]
 
         for pattern in inefficient_patterns:
-            self.assertNotIn(
-                pattern,
-                css_content,
-                f"Should avoid inefficient selector pattern: {pattern}",
-            )
+            assert (
+                pattern not in css_content
+            ), f"Should avoid inefficient selector pattern: {pattern}"
 
 
 class TestAnimationFunctionality(unittest.TestCase):
@@ -341,7 +310,7 @@ class TestAnimationFunctionality(unittest.TestCase):
         """Test that animation duration variables are properly defined"""
         animation_css_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            "static",
+            "frontend_v1",
             "styles",
             "animations.css",
         )
@@ -357,13 +326,13 @@ class TestAnimationFunctionality(unittest.TestCase):
         ]
 
         for var in duration_vars:
-            self.assertIn(var, css_content, f"Should define duration variable: {var}")
+            assert var in css_content, f"Should define duration variable: {var}"
 
     def test_keyframe_animations_defined(self):
         """Test that essential keyframe animations are defined"""
         animation_css_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            "static",
+            "frontend_v1",
             "styles",
             "animations.css",
         )
@@ -381,13 +350,13 @@ class TestAnimationFunctionality(unittest.TestCase):
         ]
 
         for keyframe in keyframes:
-            self.assertIn(keyframe, css_content, f"Should define keyframe: {keyframe}")
+            assert keyframe in css_content, f"Should define keyframe: {keyframe}"
 
     def test_javascript_api_methods(self):
         """Test that JavaScript API provides expected methods"""
         animation_js_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            "static",
+            "frontend_v1",
             "js",
             "animation-helpers.js",
         )
@@ -407,7 +376,7 @@ class TestAnimationFunctionality(unittest.TestCase):
         ]
 
         for method in api_methods:
-            self.assertIn(method, js_content, f"Should provide API method: {method}")
+            assert method in js_content, f"Should provide API method: {method}"
 
 
 def run_animation_tests():

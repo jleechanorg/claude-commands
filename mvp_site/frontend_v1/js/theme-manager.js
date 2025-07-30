@@ -73,9 +73,9 @@ class ThemeManager {
 
       // Load modern CSS files
       const cssFiles = [
-        '/static/styles/globals.css',
-        '/static/styles/components.css',
-        '/static/styles/bridge.css',
+        '/frontend_v1/styles/globals.css',
+        '/frontend_v1/styles/components.css',
+        '/frontend_v1/styles/bridge.css',
       ];
 
       cssFiles.forEach((file) => {

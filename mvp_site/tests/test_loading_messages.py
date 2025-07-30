@@ -10,7 +10,7 @@ class TestLoadingMessages(unittest.TestCase):
     def test_loading_messages_css_exists(self):
         """Test that loading messages CSS file exists"""
         css_path = os.path.join(
-            os.path.dirname(__file__), "..", "static", "loading-messages.css"
+            os.path.dirname(__file__), "..", "frontend_v1", "loading-messages.css"
         )
         self.assertTrue(
             os.path.exists(css_path), "Loading messages CSS file should exist"
@@ -29,7 +29,7 @@ class TestLoadingMessages(unittest.TestCase):
     def test_loading_messages_js_exists(self):
         """Test that loading messages JavaScript module exists"""
         js_path = os.path.join(
-            os.path.dirname(__file__), "..", "static", "js", "loading-messages.js"
+            os.path.dirname(__file__), "..", "frontend_v1", "js", "loading-messages.js"
         )
         self.assertTrue(
             os.path.exists(js_path), "Loading messages JS file should exist"
@@ -49,7 +49,7 @@ class TestLoadingMessages(unittest.TestCase):
     def test_index_html_includes_resources(self):
         """Test that index.html includes loading messages resources"""
         html_path = os.path.join(
-            os.path.dirname(__file__), "..", "static", "index.html"
+            os.path.dirname(__file__), "..", "frontend_v1", "index.html"
         )
 
         with open(html_path) as f:
@@ -66,7 +66,7 @@ class TestLoadingMessages(unittest.TestCase):
 
     def test_app_js_integration(self):
         """Test that app.js integrates with loading messages"""
-        js_path = os.path.join(os.path.dirname(__file__), "..", "static", "app.js")
+        js_path = os.path.join(os.path.dirname(__file__), "..", "frontend_v1", "app.js")
 
         with open(js_path) as f:
             js_content = f.read()
@@ -82,7 +82,7 @@ class TestLoadingMessages(unittest.TestCase):
     def test_message_content_variety(self):
         """Test that various contextual messages exist"""
         js_path = os.path.join(
-            os.path.dirname(__file__), "..", "static", "js", "loading-messages.js"
+            os.path.dirname(__file__), "..", "frontend_v1", "js", "loading-messages.js"
         )
 
         with open(js_path) as f:

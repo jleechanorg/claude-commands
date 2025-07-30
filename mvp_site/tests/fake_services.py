@@ -201,7 +201,7 @@ class FakeServiceManager:
         """Set up a test user."""
         try:
             return self.auth.get_user(user_id)
-        except:
+        except Exception:
             return self.auth.create_user(
                 uid=user_id, email=email, display_name="Test User"
             )

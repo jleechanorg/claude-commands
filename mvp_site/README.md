@@ -134,7 +134,7 @@ This stack positions WorldArchitect.AI as a technically sophisticated yet mainta
 
 #### Source Code
 - **Core Application**: `mvp_site/` - All production application code
-- **Static Assets**: `mvp_site/static/` - CSS, JS, images, themes
+- **Static Assets**: `mvp_site/frontend_v1/` - CSS, JS, images, themes
 - **AI Prompts**: `mvp_site/prompts/` - AI system instructions and templates
 
 **Rule**: When in doubt about file placement, ask for clarification rather than creating new directories.

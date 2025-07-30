@@ -37,7 +37,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
     def test_interface_manager_js_exists(self):
         """Test that interface manager JavaScript file exists"""
-        interface_manager_path = mvp_site_path / "static/js/interface-manager.js"
+        interface_manager_path = mvp_site_path / "frontend_v1/js/interface-manager.js"
         self.assertTrue(
             interface_manager_path.exists(),
             "Interface manager JavaScript file should exist",
@@ -53,7 +53,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
     def test_campaign_wizard_js_exists(self):
         """Test that campaign wizard JavaScript file exists"""
-        wizard_path = mvp_site_path / "static/js/campaign-wizard.js"
+        wizard_path = mvp_site_path / "frontend_v1/js/campaign-wizard.js"
         self.assertTrue(
             wizard_path.exists(), "Campaign wizard JavaScript file should exist"
         )
@@ -71,7 +71,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
     def test_enhanced_search_js_exists(self):
         """Test that enhanced search JavaScript file exists"""
-        search_path = mvp_site_path / "static/js/enhanced-search.js"
+        search_path = mvp_site_path / "frontend_v1/js/enhanced-search.js"
         self.assertTrue(
             search_path.exists(), "Enhanced search JavaScript file should exist"
         )
@@ -88,7 +88,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
     def test_interactive_features_css_exists(self):
         """Test that interactive features CSS file exists"""
-        css_path = mvp_site_path / "static/styles/interactive-features.css"
+        css_path = mvp_site_path / "frontend_v1/styles/interactive-features.css"
         self.assertTrue(css_path.exists(), "Interactive features CSS file should exist")
 
         # Check CSS has meaningful content
@@ -101,7 +101,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
     def test_index_html_includes_scripts(self):
         """Test that index.html includes all necessary script files"""
-        index_path = mvp_site_path / "static/index.html"
+        index_path = mvp_site_path / "frontend_v1/index.html"
         self.assertTrue(index_path.exists(), "index.html should exist")
 
         content = index_path.read_text()
@@ -118,7 +118,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
     def test_index_html_has_modern_interface(self):
         """Test that index.html supports modern interface system"""
-        index_path = mvp_site_path / "static/index.html"
+        index_path = mvp_site_path / "frontend_v1/index.html"
         content = index_path.read_text()
 
         # Check for modern interface elements (no longer toggle, just modern)
@@ -133,7 +133,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         js_files = ["interface-manager.js", "campaign-wizard.js", "enhanced-search.js"]
 
         for js_file in js_files:
-            file_path = mvp_site_path / f"static/js/{js_file}"
+            file_path = mvp_site_path / f"frontend_v1/js/{js_file}"
             content = file_path.read_text()
 
             # Check for proper class structure
@@ -160,7 +160,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
     def test_css_modern_mode_selectors(self):
         """Test CSS has proper modern mode selectors"""
-        css_path = mvp_site_path / "static/styles/interactive-features.css"
+        css_path = mvp_site_path / "frontend_v1/styles/interactive-features.css"
         content = css_path.read_text()
 
         # Check for modern mode specific selectors
@@ -181,7 +181,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
     def test_campaign_wizard_html_structure(self):
         """Test campaign wizard generates proper HTML structure"""
-        wizard_path = mvp_site_path / "static/js/campaign-wizard.js"
+        wizard_path = mvp_site_path / "frontend_v1/js/campaign-wizard.js"
         content = wizard_path.read_text()
 
         # Check for wizard HTML elements
@@ -200,7 +200,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
     def test_enhanced_search_features(self):
         """Test enhanced search has all required features"""
-        search_path = mvp_site_path / "static/js/enhanced-search.js"
+        search_path = mvp_site_path / "frontend_v1/js/enhanced-search.js"
         content = search_path.read_text()
 
         # Check for search functionality
@@ -223,7 +223,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
     def test_interface_manager_feature_control(self):
         """Test interface manager can control features"""
-        manager_path = mvp_site_path / "static/js/interface-manager.js"
+        manager_path = mvp_site_path / "frontend_v1/js/interface-manager.js"
         content = manager_path.read_text()
 
         # Check for feature control methods
@@ -246,7 +246,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         dependent_js_files = ["campaign-wizard.js", "enhanced-search.js"]
 
         for js_file in dependent_js_files:
-            file_path = mvp_site_path / f"static/js/{js_file}"
+            file_path = mvp_site_path / f"frontend_v1/js/{js_file}"
             content = file_path.read_text()
 
             # Check for backward compatibility checks
@@ -262,7 +262,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
             )
 
         # Test interface manager itself has safe defaults
-        manager_path = mvp_site_path / "static/js/interface-manager.js"
+        manager_path = mvp_site_path / "frontend_v1/js/interface-manager.js"
         manager_content = manager_path.read_text()
         self.assertIn(
             "modern",
@@ -275,7 +275,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
     def test_progressive_enhancement(self):
         """Test that features use progressive enhancement"""
         # Test interface manager has proper default handling
-        manager_path = mvp_site_path / "static/js/interface-manager.js"
+        manager_path = mvp_site_path / "frontend_v1/js/interface-manager.js"
         content = manager_path.read_text()
 
         # Check for safe defaults and feature control
@@ -284,7 +284,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
         # Test features only activate in modern mode
         for js_file in ["campaign-wizard.js", "enhanced-search.js"]:
-            file_path = mvp_site_path / f"static/js/{js_file}"
+            file_path = mvp_site_path / f"frontend_v1/js/{js_file}"
             content = file_path.read_text()
 
             self.assertIn(
@@ -298,7 +298,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
     def test_file_integration_order(self):
         """Test that files are loaded in the correct order"""
-        index_path = mvp_site_path / "static/index.html"
+        index_path = mvp_site_path / "frontend_v1/index.html"
         content = index_path.read_text()
 
         # Find script tag positions
@@ -318,7 +318,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
     def test_css_theme_integration(self):
         """Test CSS integrates properly with existing theme system"""
-        css_path = mvp_site_path / "static/styles/interactive-features.css"
+        css_path = mvp_site_path / "frontend_v1/styles/interactive-features.css"
         content = css_path.read_text()
 
         # Check for theme support (light theme is default, doesn't need explicit selectors)
@@ -340,7 +340,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         js_files = ["campaign-wizard.js", "enhanced-search.js"]
 
         for js_file in js_files:
-            file_path = mvp_site_path / f"static/js/{js_file}"
+            file_path = mvp_site_path / f"frontend_v1/js/{js_file}"
             content = file_path.read_text()
 
             # Check for performance optimizations
@@ -360,7 +360,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
     def test_accessibility_features(self):
         """Test that interactive features maintain accessibility"""
         # Test HTML structure for accessibility
-        wizard_path = mvp_site_path / "static/js/campaign-wizard.js"
+        wizard_path = mvp_site_path / "frontend_v1/js/campaign-wizard.js"
         content = wizard_path.read_text()
 
         # Check for accessibility-related attributes (role, aria, or label)
@@ -373,7 +373,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         self.assertIn("addEventListener", content)
 
         # Test CSS respects accessibility preferences
-        css_path = mvp_site_path / "static/styles/interactive-features.css"
+        css_path = mvp_site_path / "frontend_v1/styles/interactive-features.css"
         css_content = css_path.read_text()
 
         # Should have smooth transitions but respect reduced motion
@@ -386,7 +386,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         js_files = ["interface-manager.js", "campaign-wizard.js", "enhanced-search.js"]
 
         for js_file in js_files:
-            file_path = mvp_site_path / f"static/js/{js_file}"
+            file_path = mvp_site_path / f"frontend_v1/js/{js_file}"
             content = file_path.read_text()
 
             # Check for defensive programming

@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Read the actual app.js file
-const appJsPath = path.join(__dirname, '../../static/app.js');
+const appJsPath = path.join(__dirname, '../../frontend_v1/app.js');
 const appJsContent = fs.readFileSync(appJsPath, 'utf8');
 
 console.log("=== Testing Actual app.js Implementation ===\n");

@@ -41,13 +41,7 @@ jobs:
         # Upgrade pip and install resolver tools
         python -m pip install --upgrade pip setuptools wheel
 
-        # Pin grpcio and grpcio-status to compatible versions
-        pip install grpcio==1.73.1 grpcio-status==1.73.1
-
-        # Install protobuf first to avoid conflicts
-        pip install protobuf==4.25.3
-
-        # Now install other requirements
+        # Install requirements (dependency resolver will handle compatibility)
         pip install -r mvp_site/requirements.txt
 
         # Verify vpython works

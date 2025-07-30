@@ -22,10 +22,10 @@ add_parallel_dual_pass_routes(app, get_campaign_info)
 ### Frontend (index.html)
 ```html
 <!-- Add in <head> -->
-<link rel="stylesheet" href="/static/parallel_dual_pass.css">
+<link rel="stylesheet" href="/frontend_v1/parallel_dual_pass.css">
 
 <!-- Add before closing </body> -->
-<script src="/static/parallel_dual_pass.js"></script>
+<script src="/frontend_v1/parallel_dual_pass.js"></script>
 ```
 
 ### Frontend (app.js)

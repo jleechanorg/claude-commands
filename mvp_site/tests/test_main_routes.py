@@ -371,11 +371,11 @@ class TestFrontendRoutes(unittest.TestCase):
 
             response = self.client.get("/")
 
-            # Should serve index.html from static folder (explicit path since static_folder=None)
-            # Navigate from test file -> tests dir -> mvp_site dir -> static dir
+            # Should serve index.html from frontend_v1 folder (explicit path since static_folder=None)
+            # Navigate from test file -> tests dir -> mvp_site dir -> frontend_v1 dir
             test_dir = os.path.dirname(os.path.abspath(__file__))
             mvp_site_dir = os.path.dirname(test_dir)
-            expected_static_path = os.path.join(mvp_site_dir, "static")
+            expected_static_path = os.path.join(mvp_site_dir, "frontend_v1")
             mock_send.assert_called_with(expected_static_path, "index.html")
 
     def test_serve_existing_static_file(self):
@@ -389,10 +389,10 @@ class TestFrontendRoutes(unittest.TestCase):
             response = self.client.get("/styles.css")
 
             # Should serve the actual file (explicit path since static_folder=None)
-            # Navigate from test file -> tests dir -> mvp_site dir -> static dir
+            # Navigate from test file -> tests dir -> mvp_site dir -> frontend_v1 dir
             test_dir = os.path.dirname(os.path.abspath(__file__))
             mvp_site_dir = os.path.dirname(test_dir)
-            expected_static_path = os.path.join(mvp_site_dir, "static")
+            expected_static_path = os.path.join(mvp_site_dir, "frontend_v1")
             mock_send.assert_called_with(expected_static_path, "styles.css")
 
     def test_serve_nonexistent_file_fallback(self):
@@ -406,16 +406,16 @@ class TestFrontendRoutes(unittest.TestCase):
             response = self.client.get("/nonexistent/path")
 
             # Should fallback to index.html (explicit path since static_folder=None)
-            # Navigate from test file -> tests dir -> mvp_site dir -> static dir
+            # Navigate from test file -> tests dir -> mvp_site dir -> frontend_v1 dir
             test_dir = os.path.dirname(os.path.abspath(__file__))
             mvp_site_dir = os.path.dirname(test_dir)
-            expected_static_path = os.path.join(mvp_site_dir, "static")
+            expected_static_path = os.path.join(mvp_site_dir, "frontend_v1")
             mock_send.assert_called_with(expected_static_path, "index.html")
 
     # Cache Busting Tests (moved from test_cache_busting_red_green.py)
     def test_static_js_file_normal_caching_green(self):
         """GREEN: Test that JS files have normal caching without special header."""
-        response = self.client.get("/static/app.js")
+        response = self.client.get("/frontend_v1/app.js")
 
         # Should have normal caching (not full no-cache)
         cache_control = response.headers.get("Cache-Control", "")
@@ -425,7 +425,9 @@ class TestFrontendRoutes(unittest.TestCase):
 
     def test_static_js_file_cache_busting_green(self):
         """GREEN: Test that JS files disable caching with X-No-Cache header."""
-        response = self.client.get("/static/app.js", headers={"X-No-Cache": "true"})
+        response = self.client.get(
+            "/frontend_v1/app.js", headers={"X-No-Cache": "true"}
+        )
 
         # Should have full cache busting
         self.assertEqual(
@@ -436,7 +438,9 @@ class TestFrontendRoutes(unittest.TestCase):
 
     def test_static_css_file_cache_busting_green(self):
         """GREEN: Test that CSS files also support cache busting."""
-        response = self.client.get("/static/style.css", headers={"X-No-Cache": "true"})
+        response = self.client.get(
+            "/frontend_v1/style.css", headers={"X-No-Cache": "true"}
+        )
 
         # Should have full cache busting for CSS too
         self.assertEqual(
@@ -454,7 +458,7 @@ class TestFrontendRoutes(unittest.TestCase):
             mock_send.return_value = mock_response
 
             response = self.client.get(
-                "/static/image.png", headers={"X-No-Cache": "true"}
+                "/frontend_v1/image.png", headers={"X-No-Cache": "true"}
             )
 
             # Should not have cache busting headers for non-JS/CSS files

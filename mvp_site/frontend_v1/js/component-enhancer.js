@@ -74,7 +74,7 @@ class ComponentEnhancer {
 
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = '/static/styles/enhanced-components.css';
+    link.href = '/frontend_v1/styles/enhanced-components.css';
     link.id = 'enhanced-components-css';
     document.head.appendChild(link);
 
