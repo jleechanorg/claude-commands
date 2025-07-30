@@ -144,31 +144,29 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
         fi
     fi
 
-    # Check if current branch has unpushed commits - HARD STOP
-    ahead_ref="$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || true)"
-    if [[ -n "$ahead_ref" ]]; then
-        commit_count=$(git rev-list --count "${ahead_ref}..HEAD")
-        if [[ $commit_count -gt 0 ]]; then
-            echo -e "${RED}❌ HARD STOP: Branch '$current_branch' has $commit_count unpushed commit(s):${NC}"
-            echo ""
-            echo "   📋 COMMIT SUMMARY:"
-            git log --oneline -n "$commit_count" | head -10 | sed 's/^/     /'
-            echo ""
-            echo "   📊 FILES CHANGED:"
-            git diff --name-only HEAD~"$commit_count" | head -10 | sed 's/^/     /'
-            echo ""
-            if [ "$FORCE_MODE" = true ]; then
-                echo -e "${RED}🚨 FORCE MODE: Proceeding anyway (unpushed commits will be abandoned)${NC}"
-            else
-                echo "   Please push these changes or create a PR before integrating."
-                echo "   Use: git push origin HEAD:$current_branch"
-                echo "   Or:  gh pr create"
-                echo "   Or:  ./integrate.sh --force (to abandon commits)"
-                exit 1
-            fi
+    # Check if current branch has unmerged commits (against origin/main) - HARD STOP
+    commit_count=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
+    if [[ $commit_count -gt 0 ]]; then
+        echo -e "${RED}❌ HARD STOP: Branch '$current_branch' has $commit_count commit(s) not in origin/main:${NC}"
+        echo ""
+        echo "   📋 COMMIT SUMMARY:"
+        git log --oneline origin/main..HEAD | head -10 | sed 's/^/     /'
+        echo ""
+        echo "   📊 FILES CHANGED:"
+        git diff --name-only origin/main..HEAD | head -10 | sed 's/^/     /'
+        echo ""
+        if [ "$FORCE_MODE" = true ]; then
+            echo -e "${RED}🚨 FORCE MODE: Proceeding anyway (commits not in origin/main will be abandoned)${NC}"
+        else
+            echo "   These commits are not in origin/main. Options:"
+            echo "   • If already merged via PR: Changes were likely squash-merged, safe to proceed with --force"
+            echo "   • If not merged: Push changes first: git push origin HEAD:$current_branch"
+            echo "   • Create PR: gh pr create"
+            echo "   • Force proceed: ./integrate.sh --force (abandons commits)"
+            exit 1
         fi
     else
-        # Branch is clean (no uncommitted changes, no unpushed commits)
+        # Branch is clean (no uncommitted changes, no commits not in origin/main)
         should_delete_branch=true
         echo -e "${GREEN}✅ Branch '$current_branch' is clean and will be deleted after integration${NC}"
     fi
