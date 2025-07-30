@@ -43,10 +43,11 @@ show_help() {
     echo "  Enhanced push command with reliability improvements:"
     echo "  1. Comprehensive error handling and reporting"
     echo "  2. Selective staging with include/exclude patterns"
-    echo "  3. Verbose mode for debugging complex scenarios"
-    echo "  4. Dry-run mode to preview operations"
-    echo "  5. Progress indicators and status messages"
-    echo "  6. Always creates result JSON for automation"
+    echo "  3. Automatic lint fixes for staged files only"
+    echo "  4. Verbose mode for debugging complex scenarios"
+    echo "  5. Dry-run mode to preview operations"
+    echo "  6. Progress indicators and status messages"
+    echo "  7. Always creates result JSON for automation"
     echo ""
     echo "Examples:"
     echo "  $0                                    # Simple push"
@@ -391,6 +392,80 @@ if [[ "$VERBOSE" == "true" ]]; then
     fi
 fi
 
+# Apply conditional lint fixes to staged files only
+apply_conditional_lint_fixes() {
+    # Skip if linting is disabled or script not found
+    if [[ "${SKIP_LINT:-false}" == "true" ]] || [[ ! -f "./run_lint.sh" ]] || [[ ! -x "./run_lint.sh" ]]; then
+        if [[ "${SKIP_LINT:-false}" == "true" ]]; then
+            log_verbose "Skipping conditional lint fixes (SKIP_LINT=true)"
+        else
+            log_verbose "Lint script not found or not executable, skipping conditional fixes"
+        fi
+        return 0
+    fi
+
+    # Get list of staged files
+    local staged_files
+    if ! staged_files=$(git diff --cached --name-only 2>"$ERROR_LOG"); then
+        log_verbose "Could not get staged files list, skipping lint fixes"
+        return 0
+    fi
+
+    # Filter for Python files that are staged
+    local python_files
+    python_files=$(echo "$staged_files" | grep -E '\.(py)$' || true)
+
+    if [[ -z "$python_files" ]]; then
+        log_verbose "No Python files staged, skipping lint fixes"
+        return 0
+    fi
+
+    local python_count=$(echo "$python_files" | sed '/^$/d' | wc -l)
+    log_info "Applying lint fixes to $python_count staged Python files"
+
+    if [[ "$VERBOSE" == "true" ]]; then
+        echo -e "${CYAN}Staged Python files for lint fixes:${NC}"
+        echo "$python_files" | sed 's/^/  - /'
+    fi
+
+    # Apply lint fixes only to staged Python files
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo -e "${YELLOW}[DRY RUN]${NC} Would run: ./run_lint.sh fix (on staged files only)"
+    else
+        # Run lint fixes on the staged files
+        if ./run_lint.sh fix 2>>"$ERROR_LOG"; then
+            log_verbose "Lint fixes applied successfully"
+
+            # Re-stage any files that were modified by lint fixes
+            local modified_by_lint
+            if modified_by_lint=$(git diff --name-only 2>/dev/null); then
+                local restage_files=""
+                # Check each Python file to see if it was modified by lint fixes
+                while IFS= read -r python_file; do
+                    if echo "$modified_by_lint" | grep -Fxq "$python_file"; then
+                        restage_files="${restage_files}${python_file}"$'\n'
+                    fi
+                done <<< "$python_files"
+
+                if [[ -n "$restage_files" ]]; then
+                    log_info "Re-staging $(echo "$restage_files" | wc -l) files modified by lint fixes"
+                    if [[ "$VERBOSE" == "true" ]]; then
+                        echo -e "${CYAN}Re-staging files:${NC}"
+                        echo "$restage_files" | sed 's/^/  - /'
+                    fi
+
+                    while IFS= read -r file; do
+                        [[ -n "$file" ]] && safe_execute "git add '$file'" "Re-stage lint-fixed file: $file"
+                    done <<< "$restage_files"
+                fi
+            fi
+        else
+            log_warning "Lint fixes encountered issues (non-fatal)"
+            log_verbose "Check $ERROR_LOG for lint fix details"
+        fi
+    fi
+}
+
 # Enhanced file handling with selective staging
 handle_files() {
     local file_type="$1"
@@ -426,6 +501,9 @@ handle_files() {
             safe_execute "git add ." "Stage all modified files"
         fi
 
+        # Apply lint fixes to staged files before committing
+        apply_conditional_lint_fixes
+
         safe_execute "git commit -m '$commit_msg'" "Commit $file_type files"
         return $?
     fi
@@ -457,6 +535,10 @@ handle_files() {
 
                 log_info "Adding all $file_type files..."
                 safe_execute "git add ." "Stage all $file_type files"
+
+                # Apply lint fixes to staged files before committing
+                apply_conditional_lint_fixes
+
                 safe_execute "git commit -m '$commit_msg'" "Commit $file_type files"
                 return $?
                 ;;
@@ -482,6 +564,9 @@ handle_files() {
                     done
 
                     local commit_msg="${COMMIT_MESSAGE:-Add selected $file_type files}"
+                    # Apply lint fixes to staged files before committing
+                    apply_conditional_lint_fixes
+
                     safe_execute "git commit -m '$commit_msg'" "Commit selected files"
                     return $?
                 else

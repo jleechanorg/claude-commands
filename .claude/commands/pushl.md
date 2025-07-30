@@ -9,6 +9,12 @@
 - `/pushl pr` - Push and create PR
 - `/pushl force` - Force push to origin
 
+**🆕 Conditional Lint Fixes**:
+- Automatically applies lint fixes to Python files that are being staged/committed
+- Only fixes files already being modified (safe and targeted)
+- Runs `./run_lint.sh fix` before committing and re-stages any fixed files
+- Skips lint fixes if no Python files are staged or if `SKIP_LINT=true`
+
 **Enhanced Options**:
 - `/pushl --verbose` - Enable detailed debugging output
 - `/pushl --dry-run` - Preview operations without executing

@@ -2,7 +2,7 @@
 
 **Usage**: `/fixpr <PR_NUMBER> [--auto-apply]`
 
-**Purpose**: Make GitHub PRs mergeable by analyzing and fixing CI failures, merge conflicts, and bot feedback - without merging.
+**Purpose**: Make GitHub PRs mergeable by analyzing and fixing CI failures, merge conflicts, and bot feedback - without merging. **NEW**: Automatically uses `/redgreen` methodology when GitHub CI fails but local tests pass.
 
 ## 🚨 FUNDAMENTAL PRINCIPLE: GITHUB IS THE AUTHORITATIVE SOURCE
 
@@ -20,6 +20,8 @@
 ## Description
 
 The `/fixpr` command leverages Claude's natural language understanding to analyze PR blockers and fix them. The goal is to get the PR into a mergeable state (all checks passing, no conflicts) but **never actually merge it**. It orchestrates GitHub tools and git commands through intent-based descriptions rather than explicit syntax.
+
+**🆕 Enhanced with `/redgreen` Integration**: When GitHub CI shows test failures that don't reproduce locally, `/fixpr` automatically triggers the Red-Green-Refactor methodology to create failing tests locally, fix the environment-specific issues, and verify the solution works in both environments.
 
 ## 🚀 Enhanced Execution
 
@@ -196,7 +198,36 @@ Examine the collected data to understand what needs fixing:
 - Prioritize fixes by impact and safety
 - Identify quick wins vs changes requiring careful consideration
 
-### Step 4: Apply Fixes Intelligently
+### Step 4: Detect CI Environment Discrepancies
+
+🚨 **CRITICAL DETECTION**: Before applying fixes, detect if GitHub CI failures are environment-specific.
+
+**GitHub CI vs Local Test Discrepancy Detection**:
+- **MANDATORY CHECK**: Run local tests first: `./run_tests.sh`
+- **DISCREPANCY INDICATOR**: Local tests pass (✅) but GitHub CI shows failures (❌)
+- **COMMON CAUSES**:
+  - Different Python versions between local and CI
+  - Missing environment variables in CI
+  - Different package versions or dependencies
+  - Race conditions that only manifest in CI environment
+  - Time zone or locale differences
+  - File system case sensitivity (CI often Linux, local might be macOS/Windows)
+
+**When Discrepancy Detected, Trigger `/redgreen` Workflow**:
+```bash
+# 1. Verify local tests pass
+./run_tests.sh
+# ✅ All tests pass locally
+
+# 2. Check GitHub CI status
+gh pr view <PR> --json statusCheckRollup
+# ❌ test-unit: FAILING - AssertionError: Expected 'foo' but got 'FOO'
+
+# 3. AUTO-TRIGGER /redgreen methodology for this specific failure
+# This should be handled by the enhanced fixpr logic
+```
+
+### Step 5: Apply Fixes Intelligently
 
 Based on the analysis, apply appropriate fixes:
 
@@ -204,6 +235,87 @@ Based on the analysis, apply appropriate fixes:
 - **Environment issues**: Update dependencies, fix missing environment variables, adjust timeouts
 - **Code issues**: Correct import statements, fix failing assertions, add type annotations
 - **Test issues**: Update test expectations, fix race conditions, handle edge cases
+- **🚨 GitHub CI vs Local Discrepancy**: When GitHub CI fails but local tests pass, use `/redgreen` methodology:
+  - **RED PHASE**: Create failing tests that reproduce the GitHub CI failure locally
+  - **GREEN PHASE**: Fix the code to make both local and GitHub tests pass
+  - **REFACTOR PHASE**: Clean up the solution while maintaining test coverage
+  - **Trigger**: GitHub shows failing tests but `./run_tests.sh` passes locally
+  - **Process**: Extract GitHub CI error → Write failing test → Implement fix → Verify both environments
+
+### 🚨 Integrated `/redgreen` Workflow for CI Discrepancies
+
+**AUTOMATIC ACTIVATION**: When GitHub CI fails but local tests pass, `/fixpr` automatically implements this workflow:
+
+#### RED PHASE: Reproduce GitHub Failure Locally
+```bash
+# 1. Extract specific GitHub CI failure details
+gh pr view <PR> --json statusCheckRollup | jq '.[] | select(.state == "FAILURE")'
+# Example: "AssertionError: Expected 'foo' but got 'FOO' in test_case_sensitivity"
+
+# 2. Create a failing test that reproduces the CI environment condition
+# Example: Create test that fails due to case sensitivity like CI environment
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+TESTS_DIR="$PROJECT_ROOT/tests"
+cat > "$TESTS_DIR/test_ci_discrepancy_redgreen.py" << 'EOF'
+"""RED-GREEN test to reproduce GitHub CI failure locally."""
+import os
+import unittest
+
+class TestCIDiscrepancy(unittest.TestCase):
+    def test_case_sensitivity_like_ci(self):
+        """RED: Reproduce the case sensitivity issue from GitHub CI."""
+        # Simulate CI environment behavior (Linux case-sensitive)
+        os.environ['FORCE_CASE_SENSITIVE'] = 'true'
+
+        # This should fail locally to match GitHub CI failure
+        result = some_function_that_failed_in_ci()
+        self.assertEqual(result, 'foo')  # This will fail like CI if function returns 'FOO'
+
+def some_function_that_failed_in_ci():
+    """Simulate the CI failure condition - replace with actual failing function."""
+    # Example: Simulate a case sensitivity issue by returning 'FOO' instead of 'foo'
+    return 'FOO'
+EOF
+
+# 3. Verify test fails locally (RED confirmed)
+# Use project-specific test runner (examples: python -m pytest, TESTING=true vpython, etc.)
+<RUN_TEST_COMMAND> "$TESTS_DIR/test_ci_discrepancy_redgreen.py"
+# ❌ FAIL: AssertionError: Expected 'foo' but got 'FOO'
+```
+
+#### GREEN PHASE: Fix Code to Pass Both Environments
+```bash
+# 4. Implement fix that works in both local and CI environments
+# Example: Fix the case sensitivity issue
+# Edit the source code to handle both environments consistently
+
+# 5. Verify local test now passes (GREEN confirmed)
+<RUN_TEST_COMMAND> "$TESTS_DIR/test_ci_discrepancy_redgreen.py"
+# ✅ PASS: Test now passes locally
+
+# 6. Verify all existing tests still pass
+./run_tests.sh
+# ✅ All tests pass
+```
+
+#### REFACTOR PHASE: Clean Up and Optimize
+```bash
+# 7. Clean up the fix while maintaining test coverage
+# - Remove any temporary debugging code
+# - Optimize the solution
+# - Add proper error handling
+# - Update documentation if needed
+
+# 8. Final verification
+./run_tests.sh && ./run_ci_replica.sh
+# ✅ All tests pass in both local and CI-equivalent environments
+```
+
+**INTEGRATION WITH FIXPR WORKFLOW**:
+- This `/redgreen` workflow is triggered automatically within `/fixpr` when CI discrepancies are detected
+- Results in more robust fixes that work across environments
+- Prevents push/fail/fix cycles by reproducing CI conditions locally
+- Creates test cases that prevent regression of environment-specific issues
 - **MANDATORY VERIFICATION**: After each fix category, run `./run_ci_replica.sh` to confirm fix works in CI environment
 
 **For Merge Conflicts**:
@@ -328,6 +440,16 @@ For every fix applied:
 
 # Analyze and automatically apply safe fixes
 /fixpr 1234 --auto-apply
+
+# Example with GitHub CI vs Local discrepancy (auto-triggers /redgreen workflow):
+# Local: ./run_tests.sh → ✅ All tests pass
+# GitHub: CI shows ❌ test-unit FAILING - Environment-specific test failure
+/fixpr 1234
+# → Automatically detects discrepancy
+# → Triggers RED-GREEN workflow
+# → Creates failing test locally
+# → Fixes code to work in both environments
+# → Verifies GitHub CI passes
 ```
 
 ## Integrated CI Verification Workflow
@@ -363,7 +485,9 @@ This command works naturally with:
 - `/copilot` - For comprehensive PR workflow orchestration
 - `/commentreply` - To respond to review feedback
 - `/pushl` - To push fixes to remote
+- `/redgreen` (alias `/tdd`) - **NEW**: Automatically triggered for GitHub CI vs local test discrepancies
 - Testing commands - To verify fixes work correctly
+- `./run_ci_replica.sh` - To verify fixes work in CI-equivalent environment
 
 ## Error Recovery
 
