@@ -126,9 +126,7 @@ class TestAnimationSystem(unittest.TestCase):
         ]
 
         for prop in performance_props:
-            self.assertIn(
-                prop, css_content, f"Should include performance property {prop}"
-            )
+            assert prop in css_content, f"Should include performance property {prop}"
 
     def test_theme_specific_animations(self):
         """Test that theme-specific animations are included"""
@@ -215,7 +213,6 @@ class TestAnimationIntegration(unittest.TestCase):
             ), "Should preserve original showView function"
 
         # Should not conflict with existing global variables
-        app_globals = []
         if "window." in app_content:
             # Basic check for global variable conflicts
             # This is a simplified check - in real testing you'd parse more carefully
@@ -403,4 +400,4 @@ if __name__ == "__main__":
         print("✅ All animation tests passed!")
     else:
         print("❌ Some animation tests failed.")
-        exit(1)
+        sys.exit(1)

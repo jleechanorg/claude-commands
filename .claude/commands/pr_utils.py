@@ -19,7 +19,7 @@ def get_current_branch() -> str:
             check=True,
         )
         return result.stdout.strip()
-    except:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return "unknown"
 
 
@@ -272,5 +272,5 @@ def ensure_pushed_to_remote() -> bool:
         else:
             subprocess.run(["git", "push"], check=True)
         return True
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return False

@@ -236,9 +236,8 @@ Respond with only the JSON object, no other text."""
     finally:
         # Clean up temp file
         try:
-            import os
             os.unlink(temp_file)
-        except:
+        except OSError:
             pass
 
 def fallback_interpretation(command_line, commands_context):

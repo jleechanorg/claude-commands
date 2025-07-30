@@ -105,7 +105,7 @@ def run_combined_tests():
                 if baseline_success > 0
                 else 0
             )
-    except:
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
         pass
 
     try:
@@ -117,7 +117,7 @@ def run_combined_tests():
                 if pydantic_success > 0
                 else 0
             )
-    except:
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
         pass
 
     if improvements:

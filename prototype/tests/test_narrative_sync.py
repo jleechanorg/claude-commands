@@ -32,13 +32,13 @@ class TestNarrativeSyncValidator(unittest.TestCase):
         result = self.validator.validate(narrative, expected_entities)
 
         # Should detect Kira as missing
-        self.assertIn("Kira", result.entities_missing)
-        self.assertIn("Aldric", result.entities_found)
-        self.assertIn("Finn", result.entities_found)
-        self.assertFalse(result.all_entities_present)
+        assert "Kira" in result.entities_missing
+        assert "Aldric" in result.entities_found
+        assert "Finn" in result.entities_found
+        assert not result.all_entities_present
 
         # Check metadata
-        self.assertEqual(result.metadata["entity_analysis"]["Kira"], "missing")
+        assert result.metadata["entity_analysis"]["Kira"] == "missing"
 
     def test_sariel_ambiguous_presence(self):
         """Test Case 2: Ambiguous presence from Sariel campaign"""
@@ -53,9 +53,9 @@ class TestNarrativeSyncValidator(unittest.TestCase):
         result = self.validator.validate(narrative, expected_entities)
 
         # Should detect Cassian as present, Titus as mentioned-absent
-        self.assertIn("Cassian", result.entities_found)
-        self.assertEqual(
-            result.metadata["entity_analysis"]["Titus"], "mentioned_absent"
+        assert "Cassian" in result.entities_found
+        assert (
+            result.metadata["entity_analysis"]["Titus"] == "mentioned_absent"
         )
 
     def test_scene_transition_without_movement(self):
@@ -72,7 +72,7 @@ class TestNarrativeSyncValidator(unittest.TestCase):
         result = self.validator.validate(narrative, expected_entities, location)
 
         # Should warn about unclear transition
-        self.assertTrue(any("transition" in warning for warning in result.warnings))
+        assert any("transition" in warning for warning in result.warnings)
 
     def test_physical_state_continuity(self):
         """Test Case 4: Physical state tracking"""
@@ -97,7 +97,7 @@ class TestNarrativeSyncValidator(unittest.TestCase):
         )
 
         # Should warn about missing physical markers
-        self.assertTrue(any("bandaged ear" in warning for warning in result.warnings))
+        assert any("bandaged ear" in warning for warning in result.warnings)
 
     def test_invisible_character_detection(self):
         """Test Case 5: Invisible character from Darkmoor"""
@@ -113,7 +113,7 @@ class TestNarrativeSyncValidator(unittest.TestCase):
 
         # Special case: "Only Finn visible" implies others are present but hidden
         # This is a complex inference case
-        self.assertIn("Finn", result.entities_found)
+        assert "Finn" in result.entities_found
         # Kira and Aldric should be detected as ambiguous or missing
         self.assertTrue(
             result.metadata["entity_analysis"]["Kira"] in ["missing", "ambiguous"]
@@ -133,10 +133,10 @@ class TestNarrativeSyncValidator(unittest.TestCase):
         result = self.validator.validate(narrative, expected_entities)
 
         # Should detect both as physically present
-        self.assertEqual(len(result.entities_found), 2)
-        self.assertEqual(len(result.entities_missing), 0)
-        self.assertTrue(result.all_entities_present)
-        self.assertGreater(result.confidence, 0.9)
+        assert len(result.entities_found) == 2
+        assert len(result.entities_missing) == 0
+        assert result.all_entities_present
+        assert result.confidence > 0.9
 
     def test_mass_combat_scenario(self):
         """Test Case 7: Mass combat from Frostholm Siege"""
@@ -151,8 +151,8 @@ class TestNarrativeSyncValidator(unittest.TestCase):
         result = self.validator.validate(narrative, expected_entities)
 
         # Should detect all as missing in this generic description
-        self.assertEqual(len(result.entities_missing), 3)
-        self.assertLess(result.confidence, 0.1)
+        assert len(result.entities_missing) == 3
+        assert result.confidence < 0.1
 
     def test_entity_with_descriptors(self):
         """Test Case 8: Entity referenced by descriptor only"""
@@ -169,7 +169,7 @@ class TestNarrativeSyncValidator(unittest.TestCase):
         result = self.validator.validate(narrative, expected_entities)
 
         # All should be missing since only descriptors used
-        self.assertEqual(len(result.entities_missing), 3)
+        assert len(result.entities_missing) == 3
 
 
 class TestEntityContextTracking(unittest.TestCase):
@@ -189,8 +189,8 @@ class TestEntityContextTracking(unittest.TestCase):
         states = self.validator._extract_physical_states(narrative)
 
         # Should detect trembling associated with Sariel
-        self.assertIn("Sariel", states)
-        self.assertTrue(any("trembling" in s for s in states["Sariel"]))
+        assert "Sariel" in states
+        assert any("trembling" in s for s in states["Sariel"])
 
     def test_scene_transition_detection(self):
         """Test detection of scene transitions"""
@@ -201,9 +201,9 @@ class TestEntityContextTracking(unittest.TestCase):
 
         transitions = self.validator._detect_scene_transitions(narrative)
 
-        self.assertGreater(len(transitions), 0)
-        self.assertTrue(any("moved to" in t for t in transitions))
-        self.assertTrue(any("arrived at" in t for t in transitions))
+        assert len(transitions) > 0
+        assert any("moved to" in t for t in transitions)
+        assert any("arrived at" in t for t in transitions)
 
     def test_presence_type_analysis(self):
         """Test entity presence type detection"""
@@ -229,7 +229,7 @@ class TestEntityContextTracking(unittest.TestCase):
             result = self.validator._analyze_entity_presence(
                 case["narrative"], case["entity"]
             )
-            self.assertEqual(result, case["expected"])
+            assert result == case["expected"]
 
 
 if __name__ == "__main__":

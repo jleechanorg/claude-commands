@@ -4,10 +4,9 @@ Test script for the Claude bot server.
 Verifies that the server can accept requests and process them.
 """
 
-import requests
-import json
-import time
 import sys
+
+import requests
 
 def test_health_check():
     """Test the health check endpoint."""
@@ -16,9 +15,8 @@ def test_health_check():
         if response.status_code == 200:
             print("✅ Health check passed:", response.text)
             return True
-        else:
-            print(f"❌ Health check failed: {response.status_code}")
-            return False
+        print(f"❌ Health check failed: {response.status_code}")
+        return False
     except requests.exceptions.RequestException as e:
         print(f"❌ Health check failed: {e}")
         return False

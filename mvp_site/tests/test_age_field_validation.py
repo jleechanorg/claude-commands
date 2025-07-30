@@ -1,5 +1,5 @@
 """Test age field validation in Character classes."""
-
+# ruff: noqa: PT027
 import os
 import sys
 import unittest
@@ -31,8 +31,8 @@ class TestAgeFieldValidation(unittest.TestCase):
             age=45,
         )
 
-        self.assertEqual(npc.age, 45)
-        self.assertEqual(npc.gender, "female")
+        assert npc.age == 45
+        assert npc.gender == "female"
 
     def test_npc_without_age(self):
         """Test NPC creation without age (should be allowed)."""
@@ -45,8 +45,8 @@ class TestAgeFieldValidation(unittest.TestCase):
             # No age specified
         )
 
-        self.assertIsNone(npc.age)
-        self.assertEqual(npc.gender, "male")
+        assert npc.age is None
+        assert npc.gender == "male"
 
     def test_pc_with_age(self):
         """Test PlayerCharacter creation with age field."""
@@ -59,8 +59,8 @@ class TestAgeFieldValidation(unittest.TestCase):
             age=23,
         )
 
-        self.assertEqual(pc.age, 23)
-        self.assertEqual(pc.gender, "non-binary")
+        assert pc.age == 23
+        assert pc.gender == "non-binary"
 
     def test_pc_without_age(self):
         """Test PlayerCharacter creation without age (should be allowed)."""
@@ -73,8 +73,8 @@ class TestAgeFieldValidation(unittest.TestCase):
             # No age specified
         )
 
-        self.assertIsNone(pc.age)
-        self.assertEqual(pc.gender, "female")
+        assert pc.age is None
+        assert pc.gender == "female"
 
     def test_age_validation_negative(self):
         """Test that negative ages are rejected."""
@@ -89,7 +89,7 @@ class TestAgeFieldValidation(unittest.TestCase):
                 age=-5,
             )
 
-        self.assertIn("greater than or equal to 0", str(context.exception))
+        assert "greater than or equal to 0" in str(context.exception)
 
     def test_age_validation_too_high(self):
         """Test that unreasonably high ages are rejected."""
@@ -104,7 +104,7 @@ class TestAgeFieldValidation(unittest.TestCase):
                 age=100000,  # Beyond 50000 limit
             )
 
-        self.assertIn("less than or equal to 50000", str(context.exception))
+        assert "less than or equal to 50000" in str(context.exception)
 
     def test_fantasy_ages(self):
         """Test that fantasy-appropriate ages work."""
@@ -120,7 +120,7 @@ class TestAgeFieldValidation(unittest.TestCase):
                 age=age,
             )
 
-            self.assertEqual(npc.age, age)
+            assert npc.age == age
 
     def test_age_type_validation(self):
         """Test that non-integer ages are rejected."""
@@ -171,9 +171,9 @@ class TestAgeFieldValidation(unittest.TestCase):
         )
 
         # Verify narrative consistency can be checked
-        self.assertTrue(young_npc.age < 20)  # Can describe as "young"
-        self.assertTrue(20 <= middle_npc.age < 60)  # Can describe as "middle-aged"
-        self.assertTrue(ancient_npc.age > 500)  # Can describe as "ancient"
+        assert young_npc.age < 20  # Can describe as "young"
+        assert 20 <= middle_npc.age < 60  # Can describe as "middle-aged"
+        assert ancient_npc.age > 500  # Can describe as "ancient"
 
         # This prevents inconsistent descriptions like:
         # - 16-year-old described as "grizzled veteran"

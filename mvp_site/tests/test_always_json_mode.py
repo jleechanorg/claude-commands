@@ -84,49 +84,48 @@ class TestAlwaysJSONMode(unittest.TestCase):
 
             # Verify the API was called
             # JSON mode is now always enabled internally, no need to check for use_json_mode parameter
-            self.assertTrue(
-                mock_api.called,
-                "API should have been called (JSON mode is always enabled)",
-            )
+            assert (
+                mock_api.called
+            ), "API should have been called (JSON mode is always enabled)"
 
             # Verify we got a clean GeminiResponse with JSON-first structure
-            self.assertIsNotNone(result)
+            assert result is not None
             # The narrative should be clean (no planning block in narrative_text)
-            self.assertIn("Welcome to character creation!", result.narrative_text)
-            self.assertNotIn(
-                "--- PLANNING BLOCK ---", result.narrative_text
+            assert "Welcome to character creation!" in result.narrative_text
+            assert (
+                "--- PLANNING BLOCK ---" not in result.narrative_text
             )  # Should be in separate field
-            self.assertNotIn(
-                '"narrative":', result.narrative_text
+            assert (
+                '"narrative":' not in result.narrative_text
             )  # Should be clean text, not JSON
 
             # Planning block should be in structured response as JSON object
-            self.assertIsNotNone(result.structured_response)
-            self.assertIsInstance(result.structured_response.planning_block, dict)
+            assert result.structured_response is not None
+            assert isinstance(result.structured_response.planning_block, dict)
 
             # Check for choice structure in JSON format
             planning_block = result.structured_response.planning_block
-            self.assertIn("choices", planning_block)
+            assert "choices" in planning_block
 
             # Check that choices exist (the exact keys may be converted to snake_case)
             choices = planning_block.get("choices", {})
-            self.assertGreater(len(choices), 0, "Should have at least one choice")
+            assert len(choices) > 0, "Should have at least one choice"
 
             # Check for specific choices we mocked
             choice_keys = list(choices.keys())
-            choice_texts = [choice.get("text", "") for choice in choices.values()]
+            [choice.get("text", "") for choice in choices.values()]
 
             # Should have both create and skip choices
-            self.assertIn("create_character", choice_keys)
-            self.assertIn("skip_creation", choice_keys)
+            assert "create_character" in choice_keys
+            assert "skip_creation" in choice_keys
 
             # Verify choice structure
             create_choice = choices["create_character"]
-            self.assertEqual(create_choice["text"], "Create Character")
-            self.assertEqual(
-                create_choice["description"], "Begin the character creation process"
+            assert create_choice["text"] == "Create Character"
+            assert (
+                create_choice["description"] == "Begin the character creation process"
             )
-            self.assertEqual(create_choice["risk_level"], "safe")
+            assert create_choice["risk_level"] == "safe"
 
     def test_json_mode_with_entities(self):
         """Test that JSON mode is used when entities are present"""
@@ -163,7 +162,7 @@ class TestAlwaysJSONMode(unittest.TestCase):
             mock_api.return_value = mock_response
 
             # Call continue_story
-            result = continue_story(
+            continue_story(
                 user_input="Talk to NPC",
                 mode="character",
                 story_context=self.story_context,
@@ -173,10 +172,9 @@ class TestAlwaysJSONMode(unittest.TestCase):
 
             # Verify the API was called
             # JSON mode is now always enabled internally, no need to check for use_json_mode parameter
-            self.assertTrue(
-                mock_api.called,
-                "API should have been called (JSON mode is always enabled)",
-            )
+            assert (
+                mock_api.called
+            ), "API should have been called (JSON mode is always enabled)"
 
     def test_generic_json_instruction_format(self):
         """Test the generic JSON instruction format"""
@@ -184,11 +182,9 @@ class TestAlwaysJSONMode(unittest.TestCase):
 
         # Since always-JSON mode is enabled, this function returns empty string
         # JSON format is handled automatically by the system
-        self.assertEqual(
-            instruction,
-            "",
-            "Generic JSON instruction should be empty when always-JSON mode is enabled",
-        )
+        assert (
+            instruction == ""
+        ), "Generic JSON instruction should be empty when always-JSON mode is enabled"
 
     def test_structured_prompt_injection_without_entities(self):
         """Test that structured prompt injection works without entities"""
@@ -196,11 +192,9 @@ class TestAlwaysJSONMode(unittest.TestCase):
         instruction = create_structured_prompt_injection("", [])
 
         # Should return empty string since JSON format is handled automatically
-        self.assertEqual(
-            instruction,
-            "",
-            "Structured prompt injection should be empty when no entities and always-JSON mode is enabled",
-        )
+        assert (
+            instruction == ""
+        ), "Structured prompt injection should be empty when no entities and always-JSON mode is enabled"
 
     def test_structured_prompt_injection_with_entities(self):
         """Test that structured prompt injection works with entities"""
@@ -210,9 +204,9 @@ class TestAlwaysJSONMode(unittest.TestCase):
         instruction = create_structured_prompt_injection(manifest, entities)
 
         # Should include entity tracking requirements
-        self.assertIn("CRITICAL ENTITY TRACKING REQUIREMENT", instruction)
-        self.assertIn("Hero", instruction)
-        self.assertIn("Villain", instruction)
+        assert "CRITICAL ENTITY TRACKING REQUIREMENT" in instruction
+        assert "Hero" in instruction
+        assert "Villain" in instruction
 
 
 if __name__ == "__main__":

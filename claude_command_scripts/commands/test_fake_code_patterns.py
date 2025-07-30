@@ -8,7 +8,7 @@ import datetime
 import logging
 import traceback
 import unittest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 
 class FakeCodeExamples:
