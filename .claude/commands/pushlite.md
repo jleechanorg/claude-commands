@@ -1,13 +1,20 @@
-# Push Lite Command
+# Push Lite Command - Enhanced Reliability Version
 
-**Purpose**: Simple push to GitHub without test server or additional automation
+**Purpose**: Enhanced reliable push to GitHub with selective staging, error handling, and debugging capabilities
 
-**Action**: Push current branch to origin and create PR if requested
+**Action**: Push current branch to origin with comprehensive reliability improvements and optional PR creation
 
-**Usage**:
+**Basic Usage**:
 - `/pushlite` or `/pushl` - Push current branch to origin
 - `/pushlite pr` or `/pushl pr` - Push and create PR
 - `/pushlite force` or `/pushl force` - Force push to origin
+
+**Enhanced Options**:
+- `/pushlite --verbose` - Enable detailed debugging output
+- `/pushlite --dry-run` - Preview operations without executing
+- `/pushlite --include "*.py"` - Include only files matching pattern
+- `/pushlite --exclude "test_*"` - Exclude files matching pattern
+- `/pushlite -m "message"` - Custom commit message
 
 **Examples**:
 - `/pushl` - Pushes current branch to origin/branch-name

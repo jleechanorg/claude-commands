@@ -146,6 +146,19 @@
 - ❌ NEVER default to Gemini API just because it exists in codebase
 - **Question to ask**: "What can Gemini do here that Claude cannot?"
 
+🚨 **SLASH COMMAND ARCHITECTURE UNDERSTANDING**: ⚠️ CRITICAL - DO NOT FORGET
+- **SLASH COMMANDS ARE NOT DOCUMENTATION - THEY ARE EXECUTABLE COMMANDS**
+- **`.claude/commands/*.md` = EXECUTABLE PROMPT TEMPLATES that Claude reads and executes**
+- **`.claude/commands/*.py` = EXECUTABLE SCRIPTS that run in local environment**
+- **When user types `/pushl` → Claude reads `pushl.md` → Executes the implementation**
+- **Command discovery**: CLI scans directories, filename becomes command name (`pushl.md` → `/pushl`)
+- **$ARGUMENTS placeholder**: Inject user arguments into command templates
+- **Universal composition**: Commands combine through semantic understanding
+- **Two types**: Cognitive (semantic understanding) vs Operational (protocol enforcement)
+- 🔍 **Evidence**: Research shows this is executable documentation architecture
+- ❌ **NEVER treat .md files as documentation** - they are executable instructions for Claude
+- ✅ **ALWAYS remember**: Slash commands execute content, they don't document it
+
 🚨 **NEVER SIMULATE INTELLIGENCE**: When building response generation systems:
 - ❌ NEVER create Python functions that simulate Claude's responses with templates
 - ❌ NEVER use pattern matching to generate "intelligent" responses
