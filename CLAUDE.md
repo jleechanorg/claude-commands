@@ -479,10 +479,19 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 4. **Python Execution**: ✅ Run from project root | ❌ cd into subdirs
 5. **vpython Tests**: ⚠️ "run all tests" → `./run_tests.sh` | ⚠️ Test fails → fix immediately or ask user
    - ✅ `TESTING=true vpython mvp_site/test_file.py` (from root)
-6. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
-7. **Log Files Location**: Server logs in `/tmp/worldarchitectai_logs/` with branch-specific files
-   - **Current branch log**: `/tmp/worldarchitectai_logs/$(git branch --show-current).log`
-   - **Commands**: `tail -f /tmp/worldarchitectai_logs/[branch].log` | `grep -i "pattern" /tmp/worldarchitectai_logs/[branch].log`
+6. 🚨 **Test Compliance**: → See "Testing Protocol" section
+7. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
+8. **Web Scraping**: Use full-content tools (curl) not search snippets
+9. **Log Files Location**:
+   - ✅ **Server logs are in `/tmp/worldarchitect.ai/`** with branch isolation and service-specific files
+   - ✅ **Branch-specific structure**: `/tmp/worldarchitect.ai/[branch-name]/`
+   - ✅ **Service logs**: `/tmp/worldarchitect.ai/[branch]/[service-name].log`
+   - ✅ **Flask server**: `/tmp/worldarchitect.ai/[branch]/flask-server.log`
+   - ✅ **MCP server**: `/tmp/worldarchitect.ai/[branch]/mcp-server.log`
+   - ✅ **Test server**: `/tmp/worldarchitect.ai/[branch]/test-server.log`
+   - ✅ **Log commands**: `tail -f /tmp/worldarchitect.ai/[branch]/[service].log` for real-time monitoring
+   - ✅ **Search logs**: `grep -i "pattern" /tmp/worldarchitect.ai/[branch]/[service].log`
+   - ✅ **Find current log**: `git branch --show-current` then check corresponding log file
 
 **Test Commands**: → `.cursor/rules/validation_commands.md`
 

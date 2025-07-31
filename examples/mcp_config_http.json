@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "worldarchitect-http": {
+      "transport": {
+        "type": "http",
+        "url": "http://localhost:7000/rpc"
+      }
+    }
+  }
+}

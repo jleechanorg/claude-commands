@@ -225,6 +225,89 @@ fi
 
 echo ""
 
+# Game MCP Server auto-start
+echo -e "${BLUE}🎮 Checking Game MCP Server status...${NC}"
+
+# Function to check if Game MCP server is running
+is_game_mcp_running() {
+    if curl -s http://127.0.0.1:7000/health &> /dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Function to start Game MCP server in background
+start_game_mcp_background() {
+    local SCRIPT_DIR
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+    # Get current git branch for log directory
+    local CURRENT_BRANCH
+    CURRENT_BRANCH=$(git -C "$SCRIPT_DIR" branch --show-current 2>/dev/null || echo "unknown")
+    local LOG_DIR="/tmp/worldarchitect.ai/${CURRENT_BRANCH}"
+    local STARTUP_LOG_FILE="$LOG_DIR/game-mcp-server-startup.log"
+
+    # Ensure log directory exists
+    mkdir -p "$LOG_DIR"
+
+    # Check if start script exists
+    if [ -f "$SCRIPT_DIR/start_game_mcp.sh" ]; then
+        echo -e "${BLUE}🚀 Starting Game MCP server in background...${NC}"
+
+        # Start the server in background, redirecting output to log file
+        nohup "$SCRIPT_DIR/start_game_mcp.sh" start > "$STARTUP_LOG_FILE" 2>&1 &
+
+        # Wait a moment for startup
+        sleep 3
+
+        return 0
+    else
+        echo -e "${YELLOW}⚠️  start_game_mcp.sh not found${NC}"
+        return 1
+    fi
+}
+
+# Check and start Game MCP server
+if is_game_mcp_running; then
+    echo -e "${GREEN}✅ Game MCP server already running on port 7000${NC}"
+else
+    echo -e "${YELLOW}⚠️  Game MCP server not running${NC}"
+
+    if start_game_mcp_background; then
+        # Give it a moment to start up
+        sleep 2
+
+        if is_game_mcp_running; then
+            # Calculate log directory for display
+            CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
+            LOG_DIR="/tmp/worldarchitect.ai/${CURRENT_BRANCH}"
+            
+            echo -e "${GREEN}✅ Game MCP server started successfully${NC}"
+            echo -e "${BLUE}📋 Server info:${NC}"
+            echo -e "   • Health check: http://127.0.0.1:7000/health"
+            echo -e "   • JSON-RPC endpoint: http://127.0.0.1:7000/rpc"
+            echo -e "   • Log directory: $LOG_DIR"
+            echo -e "   • Server log: $LOG_DIR/game-mcp-server.log"
+            echo -e "   • Startup log: $LOG_DIR/game-mcp-server-startup.log"
+            echo -e "   • Available tools: D&D campaign management, character creation, etc."
+        else
+            # Calculate log directory for troubleshooting
+            CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
+            LOG_DIR="/tmp/worldarchitect.ai/${CURRENT_BRANCH}"
+            
+            echo -e "${RED}❌ Failed to start Game MCP server${NC}"
+            echo -e "${BLUE}💡 Check startup log: tail -f $LOG_DIR/game-mcp-server-startup.log${NC}"
+            echo -e "${BLUE}💡 Check server log: tail -f $LOG_DIR/game-mcp-server.log${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Could not start Game MCP server automatically${NC}"
+        echo -e "${BLUE}💡 To start manually: ./start_game_mcp.sh start${NC}"
+    fi
+fi
+
+echo ""
+
 # Memory backup system checks
 echo -e "${BLUE}🧠 Verifying Memory MCP backup system status...${NC}"
 
@@ -462,5 +545,57 @@ claude_bot_status() {
     fi
 }
 
+# Function to stop Game MCP server
+stop_game_mcp() {
+    local PID_FILE="$HOME/.game-mcp-server.pid"
+    if [ -f "$PID_FILE" ]; then
+        local PID
+        PID=$(cat "$PID_FILE")
+        if kill -0 "$PID" 2>/dev/null; then
+            echo -e "${BLUE}🛑 Stopping Game MCP server (PID: $PID)...${NC}"
+            kill "$PID"
+            rm -f "$PID_FILE"
+            echo -e "${GREEN}✅ Game MCP server stopped${NC}"
+        else
+            echo -e "${YELLOW}⚠️  Process not running, cleaning up PID file${NC}"
+            rm -f "$PID_FILE"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  No PID file found${NC}"
+    fi
+}
+
+# Function to restart Game MCP server
+restart_game_mcp() {
+    echo -e "${BLUE}🔄 Restarting Game MCP server...${NC}"
+    stop_game_mcp
+    sleep 2
+    start_game_mcp_background
+    sleep 3
+    if is_game_mcp_running; then
+        echo -e "${GREEN}✅ Game MCP server restarted successfully${NC}"
+    else
+        echo -e "${RED}❌ Failed to restart Game MCP server${NC}"
+    fi
+}
+
+# Function to show Game MCP server status
+game_mcp_status() {
+    if is_game_mcp_running; then
+        echo -e "${GREEN}✅ Game MCP server is running on port 7000${NC}"
+        local PID_FILE="$HOME/.game-mcp-server.pid"
+        if [ -f "$PID_FILE" ]; then
+            local PID
+            PID=$(cat "$PID_FILE")
+            echo -e "${BLUE}📋 PID: $PID${NC}"
+        fi
+        echo -e "${BLUE}📋 Health check: curl http://127.0.0.1:7000/health${NC}"
+        echo -e "${BLUE}📋 JSON-RPC endpoint: http://127.0.0.1:7000/rpc${NC}"
+    else
+        echo -e "${RED}❌ Game MCP server is not running${NC}"
+    fi
+}
+
 # Export functions so they're available in the shell
 export -f stop_claude_bot restart_claude_bot claude_bot_status is_claude_bot_running start_claude_bot_background
+export -f stop_game_mcp restart_game_mcp game_mcp_status is_game_mcp_running start_game_mcp_background

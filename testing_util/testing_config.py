@@ -87,7 +87,7 @@ class TestConfig:
 
     # Directory paths
     SCREENSHOT_DIR = "/tmp/worldarchitectai/browser"
-    LOGS_DIR = "/tmp/worldarchitectai_logs"
+    LOGS_DIR = "/tmp/worldarchitect.ai"  # Updated to use standardized directory
     TEMP_DIR = "/tmp/worldarchitectai"
 
     @classmethod

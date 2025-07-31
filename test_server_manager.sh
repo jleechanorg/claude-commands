@@ -8,7 +8,10 @@ set -e
 BASE_PORT=8081
 MAX_SERVERS=10
 PID_DIR="/tmp/worldarchitectai_servers"
-LOG_DIR="/tmp/worldarchitectai_logs"
+# Get standardized log directory with branch isolation
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
+LOG_DIR="/tmp/worldarchitect.ai/${CURRENT_BRANCH}"
+mkdir -p "$LOG_DIR"
 VENV_PATH="venv/bin/activate"
 
 # Colors for output

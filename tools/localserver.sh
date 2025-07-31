@@ -211,7 +211,11 @@ echo "   [3] Run with logs displayed AND saved"
 echo -n "   Choice (1-3, default 1): "
 read -r log_choice
 
-LOG_FILE="/tmp/worldarchitect_server_$(date +%Y%m%d_%H%M%S).log"
+# Get standardized log directory with branch isolation
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
+LOG_DIR="/tmp/worldarchitect.ai/${CURRENT_BRANCH}"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/local-server_$(date +%Y%m%d_%H%M%S).log"
 
 # Run the server with better error handling
 if [ -f "mvp_site/main.py" ]; then

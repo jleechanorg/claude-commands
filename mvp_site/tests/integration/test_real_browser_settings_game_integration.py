@@ -28,7 +28,14 @@ class RealBrowserSettingsGameTest:
     def __init__(self):
         self.base_url = "http://localhost:8081"
         self.test_user_id = "real-browser-test-user"
-        self.log_file = f"/tmp/worldarchitectai_logs/{self.get_current_branch()}.log"
+        # Use centralized logging utility for consistent paths
+        import sys
+        import os
+        # Add parent directory to path to import logging_util
+        parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        sys.path.insert(0, parent_dir)
+        import logging_util
+        self.log_file = logging_util.LoggingUtil.get_log_file("integration-test")
 
         self.headers = {
             "X-Test-Bypass-Auth": "true",

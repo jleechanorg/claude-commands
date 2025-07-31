@@ -131,7 +131,11 @@ class TestInfrastructureCommands(unittest.TestCase):
 
     def test_log_file_management(self):
         """Test that server management creates proper log files."""
-        log_dir = "/tmp/worldarchitectai_logs"
+        # Use standardized logging directory
+        current_branch = subprocess.check_output(
+            ["git", "branch", "--show-current"], text=True
+        ).strip()
+        log_dir = f"/tmp/worldarchitect.ai/{current_branch}"
 
         # Log directory should exist or be creatable
         if not os.path.exists(log_dir):

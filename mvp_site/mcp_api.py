@@ -20,6 +20,7 @@ Key MCP Tools:
 - export_campaign: Generate campaign documents
 """
 
+import asyncio
 import json
 import logging
 import traceback
@@ -415,6 +416,36 @@ async def handle_read_resource(uri: str) -> str:
     raise ValueError(f"Unknown resource: {uri}")
 
 
+def setup_mcp_logging() -> None:
+    """Configure centralized logging for MCP server."""
+    log_file = logging_util.LoggingUtil.get_log_file("mcp-server")
+
+    # Clear any existing handlers
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+
+    # Set up formatting
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    root_logger.addHandler(console_handler)
+
+    # File handler
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setFormatter(formatter)
+    root_logger.addHandler(file_handler)
+
+    # Set level
+    root_logger.setLevel(logging.INFO)
+
+    logging_util.info(f"MCP server logging configured: {log_file}")
+
+
 def run_server():
     """Run the World Logic MCP server."""
     import argparse  # noqa: PLC0415
@@ -426,8 +457,8 @@ def run_server():
 
     logging_util.info(f"Starting World Logic MCP server on {args.host}:{args.port}")
 
-    # Configure logging
-    logging.basicConfig(level=logging.INFO)
+    # Configure centralized logging
+    setup_mcp_logging()
 
     # Run HTTP server with JSON-RPC support
     from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -499,8 +530,6 @@ def run_server():
                 arguments = params.get("arguments", {})
 
                 # Convert to async and call tool
-                import asyncio
-
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:
@@ -517,13 +546,58 @@ def run_server():
                 finally:
                     loop.close()
 
+            elif method == "tools/list":
+                # Handle tools list
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    tools = loop.run_until_complete(handle_list_tools())
+                    # Convert tools to JSON-serializable format
+                    tools_data = [
+                        {
+                            "name": tool.name,
+                            "description": tool.description,
+                            "inputSchema": tool.inputSchema,
+                        }
+                        for tool in tools
+                    ]
+                    return {
+                        "jsonrpc": "2.0",
+                        "result": {"tools": tools_data},
+                        "id": request_id,
+                    }
+                finally:
+                    loop.close()
+
+            elif method == "resources/list":
+                # Handle resources list
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    resources = loop.run_until_complete(handle_list_resources())
+                    # Convert resources to JSON-serializable format
+                    resources_data = [
+                        {
+                            "uri": str(resource.uri),  # Convert AnyUrl to string
+                            "name": resource.name,
+                            "description": resource.description,
+                            "mimeType": resource.mimeType,
+                        }
+                        for resource in resources
+                    ]
+                    return {
+                        "jsonrpc": "2.0",
+                        "result": {"resources": resources_data},
+                        "id": request_id,
+                    }
+                finally:
+                    loop.close()
+
             elif method == "resources/read":
                 # Handle resource read
                 uri = params.get("uri")
 
                 # Convert to async and call resource handler
-                import asyncio
-
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
                 try:

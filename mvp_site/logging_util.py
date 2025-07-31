@@ -6,6 +6,8 @@ that preserve logger context.
 """
 
 import logging
+import os
+import subprocess
 from typing import Any
 
 # Export logging level constants
@@ -32,6 +34,47 @@ class LoggingUtil:
     # Emoji constants
     ERROR_EMOJI = "🔥🔴"
     WARNING_EMOJI = "⚠️"
+
+    @staticmethod
+    def get_log_directory() -> str:
+        """
+        Get the standardized log directory path with branch isolation.
+        
+        Returns:
+            str: Path to the log directory in format /tmp/worldarchitect.ai/{branch_name}
+        """
+        try:
+            # Get current git branch
+            branch = subprocess.check_output(
+                ["git", "branch", "--show-current"],
+                cwd=os.path.dirname(__file__),
+                text=True,
+            ).strip()
+        except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+            branch = "unknown"
+        
+        # Convert forward slashes to underscores for valid directory name
+        safe_branch = branch.replace("/", "_")
+        log_dir = f"/tmp/worldarchitect.ai/{safe_branch}"
+        
+        # Ensure directory exists
+        os.makedirs(log_dir, exist_ok=True)
+        
+        return log_dir
+
+    @staticmethod
+    def get_log_file(service_name: str) -> str:
+        """
+        Get the standardized log file path for a specific service.
+        
+        Args:
+            service_name: Name of the service (e.g., 'flask-server', 'mcp-server', 'test-server')
+            
+        Returns:
+            str: Full path to the log file
+        """
+        log_dir = LoggingUtil.get_log_directory()
+        return os.path.join(log_dir, f"{service_name}.log")
 
     @staticmethod
     def error(

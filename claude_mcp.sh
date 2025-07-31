@@ -533,13 +533,54 @@ else
     fi
 fi
 
-echo -e "\n${BLUE}10/10 Checking for Notion MCP Server...${NC}"
+echo -e "\n${BLUE}10/11 Checking for Notion MCP Server...${NC}"
 if package_exists "@notionhq/notion-mcp-server"; then
     add_mcp_server "notion-server" "@notionhq/notion-mcp-server"
 elif package_exists "@makenotion/notion-mcp-server"; then
     add_mcp_server "notion-server" "@makenotion/notion-mcp-server"
 else
     echo -e "${YELLOW}  ⚠️ Notion MCP server package not found, skipping...${NC}"
+fi
+
+echo -e "\n${BLUE}11/11 Setting up WorldArchitect Game MCP Server...${NC}"
+TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+echo -e "${BLUE}  🎮 Configuring local game MCP server for D&D campaign management...${NC}"
+log_with_timestamp "Setting up MCP server: worldarchitect-game (HTTP: http://localhost:7000/rpc)"
+
+# Check if server already exists
+if server_already_exists "worldarchitect-game"; then
+    echo -e "${GREEN}  ✅ Server worldarchitect-game already exists, skipping installation${NC}"
+    log_with_timestamp "Server worldarchitect-game already exists, skipping"
+    INSTALL_RESULTS["worldarchitect-game"]="ALREADY_EXISTS"
+    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+else
+    # Remove existing worldarchitect-game server to reconfigure
+    claude mcp remove "worldarchitect-game" >/dev/null 2>&1 || true
+
+    # Add HTTP-based game MCP server
+    echo -e "${BLUE}  🔗 Adding WorldArchitect Game MCP server via HTTP...${NC}"
+    log_with_timestamp "Attempting to add HTTP MCP server: worldarchitect-game"
+
+    # Use add-json for HTTP transport configuration
+    add_output=$(claude mcp add-json --scope user "worldarchitect-game" '{"type": "http", "url": "http://localhost:7000/rpc"}' 2>&1)
+    add_exit_code=$?
+
+    if [ $add_exit_code -eq 0 ]; then
+        echo -e "${GREEN}  ✅ Successfully configured WorldArchitect Game MCP server${NC}"
+        echo -e "${BLUE}  📋 Server info:${NC}"
+        echo -e "     • Health check: http://localhost:7000/health"
+        echo -e "     • JSON-RPC endpoint: http://localhost:7000/rpc"
+        echo -e "     • Available tools: D&D campaign management, character creation, etc."
+        echo -e "     • Start server: ./start_game_mcp.sh start"
+        log_with_timestamp "Successfully added WorldArchitect Game MCP server via HTTP"
+        INSTALL_RESULTS["worldarchitect-game"]="SUCCESS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+    else
+        echo -e "${RED}  ❌ Failed to add WorldArchitect Game MCP server${NC}"
+        log_error_details "claude mcp add-json worldarchitect-game" "worldarchitect-game" "$add_output"
+        INSTALL_RESULTS["worldarchitect-game"]="ADD_FAILED"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+    fi
 fi
 
 # Final verification and results

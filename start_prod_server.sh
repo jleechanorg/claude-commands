@@ -27,7 +27,11 @@ echo "=================================="
 # Start MCP server (world_logic.py) in background
 echo "1. Starting MCP server on port 8000..."
 cd mvp_site
-python mcp_api.py --port 8000 --host localhost > /tmp/mcp_server.log 2>&1 &
+# Use standardized logging directory
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
+LOG_DIR="/tmp/worldarchitect.ai/${CURRENT_BRANCH}"
+mkdir -p "$LOG_DIR"
+python mcp_api.py --port 8000 --host localhost > "$LOG_DIR/mcp-server.log" 2>&1 &
 MCP_PID=$!
 cd ..
 
@@ -40,7 +44,7 @@ for i in {1..10}; do
     fi
     if [ $i -eq 10 ]; then
         echo "   ❌ MCP server failed to start"
-        echo "   Check logs: tail -f /tmp/mcp_server.log"
+        echo "   Check logs: tail -f $LOG_DIR/mcp-server.log"
         exit 1
     fi
     sleep 1
@@ -85,7 +89,7 @@ echo ""
 echo "Access the application at: http://localhost:$PORT"
 echo ""
 echo "Logs:"
-echo "  - MCP Server: tail -f /tmp/mcp_server.log"
+echo "  - MCP Server: tail -f $LOG_DIR/mcp-server.log"
 echo "  - API Gateway: Check gunicorn output"
 echo ""
 echo "To stop all servers: pkill -f 'python.*mcp_api.py' && pkill -f 'gunicorn'"

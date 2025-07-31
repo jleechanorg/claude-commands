@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "worldarchitect": {
+      "command": "python",
+      "args": ["mvp_site/mcp_api.py", "--port", "7000", "--host", "localhost"],
+      "env": {
+        "PYTHONPATH": ".",
+        "FIREBASE_CREDENTIALS": "$HOME/.config/worldarchitect/firebase_credentials.json"
+      }
+    }
+  }
+}

@@ -84,8 +84,8 @@ HEADER_AUTH = "Authorization"
 HEADER_TEST_BYPASS = "X-Test-Bypass-Auth"
 HEADER_TEST_USER_ID = "X-Test-User-ID"
 
-# Logging Configuration
-LOG_DIRECTORY = "/tmp/worldarchitectai_logs"
+# Logging Configuration (using centralized logging_util)
+# LOG_DIRECTORY moved to logging_util.get_log_directory() for consistency
 
 # Request/Response Data Keys (specific to main.py)
 KEY_PROMPT = "prompt"
@@ -108,28 +108,13 @@ DEFAULT_TEST_USER = "test-user"
 
 def setup_file_logging() -> None:
     """
-    Configure file logging for current git branch.
+    Configure file logging for current git branch using centralized logging_util.
 
-    Creates branch-specific log files in /tmp/worldarchitectai_logs/{branch}.log
+    Creates branch-specific log files in /tmp/worldarchitect.ai/{branch}/flask-server.log
     and configures logging_util to write to both console and file.
     """
-    # Create log directory
-    os.makedirs(LOG_DIRECTORY, exist_ok=True)
-
-    # Get current branch name
-    try:
-        branch = subprocess.check_output(
-            ["git", "branch", "--show-current"],
-            cwd=os.path.dirname(__file__),
-            text=True,
-        ).strip()
-    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
-        branch = "unknown"
-
-    # Configure file logging using standard logging module
-    # Convert forward slashes to underscores for valid filename
-    safe_branch = branch.replace("/", "_")
-    log_file = os.path.join(LOG_DIRECTORY, f"{safe_branch}.log")
+    # Use centralized logging utility for consistent directory structure
+    log_file = logging_util.LoggingUtil.get_log_file("flask-server")
 
     # Clear any existing handlers
     root_logger = logging.getLogger()
@@ -187,7 +172,7 @@ def create_app() -> Flask:
     - Testing mode configuration from environment
     - Firebase Admin SDK initialization
     - Authentication decorator for protected routes
-    - File logging to /tmp/worldarchitectai_logs/{branch}.log
+    - File logging to /tmp/worldarchitect.ai/{branch}/flask-server.log
 
     Routes Configured:
     - GET /api/campaigns - List user's campaigns

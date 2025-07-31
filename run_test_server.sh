@@ -5,9 +5,16 @@
 set -e
 
 # Configuration
-PID_FILE="/tmp/worldarchitectai_test_server.pid"
-LOG_FILE="/tmp/worldarchitectai_test_server.log"
 VENV_PATH="venv/bin/activate"
+
+# Get standardized log directory with branch isolation
+CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
+LOG_DIR="/tmp/worldarchitect.ai/${CURRENT_BRANCH}"
+PID_FILE="$LOG_DIR/test-server.pid"
+LOG_FILE="$LOG_DIR/test-server.log"
+
+# Ensure log directory exists
+mkdir -p "$LOG_DIR"
 
 # Source shared port utilities
 source "$(dirname "$0")/claude_command_scripts/port-utils.sh"
@@ -48,7 +55,7 @@ start_server() {
     echo "✅ Found available port: $TEST_PORT"
 
     # Update log file name to include port
-    LOG_FILE="/tmp/worldarchitectai_test_server_$TEST_PORT.log"
+    LOG_FILE="$LOG_DIR/test-server_$TEST_PORT.log"
 
     # Activate virtual environment
     if [ -f "$VENV_PATH" ]; then
@@ -137,7 +144,7 @@ check_status() {
         PID_PORT=$(cat "$PID_FILE")
         PID=$(echo "$PID_PORT" | cut -d: -f1)
         STORED_PORT=$(echo "$PID_PORT" | cut -d: -f2)
-        LOG_FILE="/tmp/worldarchitectai_test_server_$STORED_PORT.log"
+        LOG_FILE="$LOG_DIR/test-server_$STORED_PORT.log"
 
         echo -e "${GREEN}✅ Server is running${NC}"
         echo "   PID: $PID"

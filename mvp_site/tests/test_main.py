@@ -287,7 +287,7 @@ player.class = "Warrior\""""
 
         # Verify that the FileHandler was called with the converted filename
         expected_log_path = os.path.join(
-            "/tmp/worldarchitectai_logs", "fix_god-mode-planning-blocks.log"
+            "/tmp/worldarchitect.ai", "fix_god-mode-planning-blocks", "flask-server.log"
         )
         mock_file_handler.assert_called_once_with(expected_log_path)
 
