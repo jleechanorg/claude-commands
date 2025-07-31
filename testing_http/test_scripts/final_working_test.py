@@ -42,7 +42,7 @@ def run_working_test():
 
     # Verify server
     try:
-        resp = session.get(BASE_URL)
+        session.get(BASE_URL)
         log("Server running on port 8083 with TESTING=True", "SUCCESS")
     except:
         log("Server not ready", "ERROR")

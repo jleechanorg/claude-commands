@@ -13,52 +13,55 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # Node.js environment variables that can cause EBADF errors
 NODE_VARS_TO_REMOVE = [
-    'NODE_CHANNEL_FD',      # Primary cause of EBADF errors
-    'NODE_OPTIONS',         # Can affect subprocess behavior
-    'NODE_DEBUG',           # Debug flags can interfere
-    'NODE_ENV',             # Environment settings
-    'NODE_PATH',            # Module resolution
-    'NODE_INSPECTOR',       # Inspector process communication
-    'NODE_ICU_DATA',        # ICU data path
-    'NODE_PRESERVE_SYMLINKS',  # Symlink handling
-    'NODE_REPL_HISTORY',    # REPL history file
-    'NODE_TLS_REJECT_UNAUTHORIZED',  # TLS settings
-    'NODE_PENDING_DEPRECATION',  # Deprecation warnings
-    'NODE_NO_WARNINGS',     # Warning suppression
-    'NODE_DISABLE_COLORS',  # Color output
-    'NODE_V8_COVERAGE',     # Coverage collection
-    'NODE_EXTRA_CA_CERTS',  # Certificate paths
+    "NODE_CHANNEL_FD",  # Primary cause of EBADF errors
+    "NODE_OPTIONS",  # Can affect subprocess behavior
+    "NODE_DEBUG",  # Debug flags can interfere
+    "NODE_ENV",  # Environment settings
+    "NODE_PATH",  # Module resolution
+    "NODE_INSPECTOR",  # Inspector process communication
+    "NODE_ICU_DATA",  # ICU data path
+    "NODE_PRESERVE_SYMLINKS",  # Symlink handling
+    "NODE_REPL_HISTORY",  # REPL history file
+    "NODE_TLS_REJECT_UNAUTHORIZED",  # TLS settings
+    "NODE_PENDING_DEPRECATION",  # Deprecation warnings
+    "NODE_NO_WARNINGS",  # Warning suppression
+    "NODE_DISABLE_COLORS",  # Color output
+    "NODE_V8_COVERAGE",  # Coverage collection
+    "NODE_EXTRA_CA_CERTS",  # Certificate paths
 ]
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
+
 
 class ClaudeHandler(BaseHTTPRequestHandler):
     def do_POST(self):
-        if self.path == '/claude':
+        if self.path == "/claude":
             try:
                 # Parse the POST data
-                content_length = int(self.headers['Content-Length'])
-                post_data = self.rfile.read(content_length).decode('utf-8')
+                content_length = int(self.headers["Content-Length"])
+                post_data = self.rfile.read(content_length).decode("utf-8")
 
                 # Handle both form-encoded and JSON data
-                if self.headers.get('Content-Type', '').startswith('application/json'):
+                if self.headers.get("Content-Type", "").startswith("application/json"):
                     data = json.loads(post_data)
-                    prompt = data.get('prompt', '')
+                    prompt = data.get("prompt", "")
                 else:
                     # Form-encoded data
                     parsed_data = urllib.parse.parse_qs(post_data)
-                    prompt = parsed_data.get('prompt', [''])[0]
+                    prompt = parsed_data.get("prompt", [""])[0]
 
                 # Handle null/empty prompts
-                if not prompt or prompt == 'null' or prompt.strip() == '':
+                if not prompt or prompt == "null" or prompt.strip() == "":
                     response = "❌ Error: No prompt provided or prompt is empty"
                     logger.warning("Received empty or null prompt")
                     self.send_response(400)
-                    self.send_header('Content-Type', 'text/plain')
+                    self.send_header("Content-Type", "text/plain")
                     self.end_headers()
-                    self.wfile.write(response.encode('utf-8'))
+                    self.wfile.write(response.encode("utf-8"))
                     return
 
                 logger.info(f"Received prompt: {prompt[:100]}...")
@@ -77,36 +80,55 @@ class ClaudeHandler(BaseHTTPRequestHandler):
                     # EBADF Fix 1: Find Claude CLI path
                     claude_cmd = None
                     possible_paths = [
-                        os.path.expanduser('~/.claude/local/claude'),  # User-specific installation
-                        '/usr/local/bin/claude',
-                        '/opt/homebrew/bin/claude',
-                        'claude'  # In PATH
+                        os.path.expanduser(
+                            "~/.claude/local/claude"
+                        ),  # User-specific installation
+                        "/usr/local/bin/claude",
+                        "/opt/homebrew/bin/claude",
+                        "claude",  # In PATH
                     ]
 
                     for cmd_path in possible_paths:
                         try:
                             # Test if command exists
-                            result = subprocess.run([cmd_path, '--version'],
-                                                  check=False, capture_output=True, text=True, timeout=5)
+                            result = subprocess.run(
+                                [cmd_path, "--version"],
+                                check=False,
+                                capture_output=True,
+                                text=True,
+                                timeout=5,
+                            )
                             if result.returncode == 0:
                                 claude_cmd = cmd_path
                                 logger.info(f"Found Claude CLI: {cmd_path}")
                                 break
-                        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                        except (
+                            subprocess.CalledProcessError,
+                            FileNotFoundError,
+                            subprocess.TimeoutExpired,
+                        ):
                             continue
 
                     if not claude_cmd:
-                        response = ("❌ Claude CLI not found. Please ensure Claude Code is installed.\n\n"
-                                  "Visit: https://docs.anthropic.com/en/docs/claude-code")
+                        response = (
+                            "❌ Claude CLI not found. Please ensure Claude Code is installed.\n\n"
+                            "Visit: https://docs.anthropic.com/en/docs/claude-code"
+                        )
                         logger.error("Claude CLI not found in any location")
                     else:
                         # EBADF Fix 2: Environment cleanup
                         env = os.environ.copy()
                         # Remove all Node.js environment variables that can cause EBADF errors
-                        removed_vars = [var for var in NODE_VARS_TO_REMOVE if env.pop(var, None) is not None]
+                        removed_vars = [
+                            var
+                            for var in NODE_VARS_TO_REMOVE
+                            if env.pop(var, None) is not None
+                        ]
 
                         if removed_vars:
-                            logger.info(f"Removed Node.js environment variables: {removed_vars}")
+                            logger.info(
+                                f"Removed Node.js environment variables: {removed_vars}"
+                            )
 
                         # EBADF Fix 3: Proper subprocess with stdin/stdout/stderr handling
                         result = subprocess.run(
@@ -116,7 +138,7 @@ class ClaudeHandler(BaseHTTPRequestHandler):
                             timeout=30,
                             env=env,
                             stdin=subprocess.DEVNULL,  # Prevent stdin issues
-                            check=False
+                            check=False,
                         )
 
                         if result.returncode == 0 and result.stdout.strip():
@@ -135,16 +157,16 @@ class ClaudeHandler(BaseHTTPRequestHandler):
 
                 # Send response
                 self.send_response(200)
-                self.send_header('Content-Type', 'text/plain')
+                self.send_header("Content-Type", "text/plain")
                 self.end_headers()
-                self.wfile.write(response.encode('utf-8'))
+                self.wfile.write(response.encode("utf-8"))
 
                 logger.info(f"Sent response: {response[:100]}...")
 
             except Exception as e:
                 logger.error(f"Error processing request: {e}")
                 self.send_response(500)
-                self.send_header('Content-Type', 'text/plain')
+                self.send_header("Content-Type", "text/plain")
                 self.end_headers()
                 self.wfile.write(f"Internal server error: {str(e)}".encode())
         else:
@@ -152,9 +174,9 @@ class ClaudeHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
     def do_GET(self):
-        if self.path == '/health':
+        if self.path == "/health":
             self.send_response(200)
-            self.send_header('Content-Type', 'text/plain')
+            self.send_header("Content-Type", "text/plain")
             self.end_headers()
             self.wfile.write(b"Claude endpoint server is running")
         else:
@@ -165,9 +187,10 @@ class ClaudeHandler(BaseHTTPRequestHandler):
         # Override to use our logger
         logger.info(format % args)
 
-if __name__ == '__main__':
-    port = int(os.getenv('CLAUDE_ENDPOINT_PORT', '5001'))
-    server = HTTPServer(('127.0.0.1', port), ClaudeHandler)
+
+if __name__ == "__main__":
+    port = int(os.getenv("CLAUDE_ENDPOINT_PORT", "5001"))
+    server = HTTPServer(("127.0.0.1", port), ClaudeHandler)
     logger.info(f"Starting Claude endpoint server on http://127.0.0.1:{port}")
     logger.info(f"Health check available at http://127.0.0.1:{port}/health")
 

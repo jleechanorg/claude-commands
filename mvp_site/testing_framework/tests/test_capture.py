@@ -10,6 +10,8 @@ import time
 import unittest
 from unittest.mock import MagicMock
 
+import pytest
+
 # Import capture modules
 from mvp_site.testing_framework.capture import (
     CaptureFirestoreClient,
@@ -38,9 +40,9 @@ class TestCaptureManager(unittest.TestCase):
 
     def test_initialization(self):
         """Test capture manager initialization."""
-        self.assertEqual(self.capture_manager.capture_dir, self.temp_dir)
-        self.assertEqual(len(self.capture_manager.interactions), 0)
-        self.assertTrue(os.path.exists(self.temp_dir))
+        assert self.capture_manager.capture_dir == self.temp_dir
+        assert len(self.capture_manager.interactions) == 0
+        assert os.path.exists(self.temp_dir)
 
     def test_capture_interaction_success(self):
         """Test successful interaction capture."""
@@ -52,30 +54,30 @@ class TestCaptureManager(unittest.TestCase):
                 interaction["id"], {"result": "success"}
             )
 
-        self.assertEqual(len(self.capture_manager.interactions), 1)
+        assert len(self.capture_manager.interactions) == 1
         interaction = self.capture_manager.interactions[0]
 
-        self.assertEqual(interaction["service"], "test_service")
-        self.assertEqual(interaction["operation"], "test_operation")
-        self.assertEqual(interaction["request"], {"key": "value"})
-        self.assertEqual(interaction["response"], {"result": "success"})
-        self.assertEqual(interaction["status"], "success")
-        self.assertIn("duration_ms", interaction)
+        assert interaction["service"] == "test_service"
+        assert interaction["operation"] == "test_operation"
+        assert interaction["request"] == {"key": "value"}
+        assert interaction["response"] == {"result": "success"}
+        assert interaction["status"] == "success"
+        assert "duration_ms" in interaction
 
     def test_capture_interaction_error(self):
         """Test error handling in interaction capture."""
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             with self.capture_manager.capture_interaction(
                 "test_service", "test_operation", {"key": "value"}
             ):
                 raise ValueError("Test error")
 
-        self.assertEqual(len(self.capture_manager.interactions), 1)
+        assert len(self.capture_manager.interactions) == 1
         interaction = self.capture_manager.interactions[0]
 
-        self.assertEqual(interaction["status"], "error")
-        self.assertEqual(interaction["error"], "Test error")
-        self.assertEqual(interaction["error_type"], "ValueError")
+        assert interaction["status"] == "error"
+        assert interaction["error"] == "Test error"
+        assert interaction["error_type"] == "ValueError"
 
     def test_save_captures(self):
         """Test saving captures to file."""
@@ -94,16 +96,16 @@ class TestCaptureManager(unittest.TestCase):
         filepath = self.capture_manager.save_captures()
 
         # Verify file was created
-        self.assertTrue(os.path.exists(filepath))
+        assert os.path.exists(filepath)
 
         # Verify content
         with open(filepath) as f:
             data = json.load(f)
 
-        self.assertEqual(data["total_interactions"], 2)
-        self.assertEqual(len(data["interactions"]), 2)
-        self.assertIn("session_id", data)
-        self.assertIn("timestamp", data)
+        assert data["total_interactions"] == 2
+        assert len(data["interactions"]) == 2
+        assert "session_id" in data
+        assert "timestamp" in data
 
     def test_sanitize_data(self):
         """Test data sanitization for sensitive fields."""
@@ -117,12 +119,12 @@ class TestCaptureManager(unittest.TestCase):
 
         sanitized = self.capture_manager._sanitize_data(test_data)
 
-        self.assertEqual(sanitized["username"], "test_user")
-        self.assertEqual(sanitized["password"], "[REDACTED]")
-        self.assertEqual(sanitized["api_key"], "[REDACTED]")
-        self.assertEqual(sanitized["normal_field"], "normal_value")
-        self.assertEqual(sanitized["nested"]["secret"], "[REDACTED]")
-        self.assertEqual(sanitized["nested"]["visible"], "shown")
+        assert sanitized["username"] == "test_user"
+        assert sanitized["password"] == "[REDACTED]"
+        assert sanitized["api_key"] == "[REDACTED]"
+        assert sanitized["normal_field"] == "normal_value"
+        assert sanitized["nested"]["secret"] == "[REDACTED]"
+        assert sanitized["nested"]["visible"] == "shown"
 
     def test_get_summary(self):
         """Test getting summary statistics."""
@@ -145,17 +147,17 @@ class TestCaptureManager(unittest.TestCase):
             )
 
         # Test error case
-        with self.assertRaises(Exception):
+        with pytest.raises(Exception):
             with self.capture_manager.capture_interaction("test", "error", {}):
                 raise Exception("Test error")
 
         summary = self.capture_manager.get_summary()
 
-        self.assertEqual(summary["total"], 4)
-        self.assertEqual(summary["services"]["firestore"]["count"], 2)
-        self.assertEqual(summary["services"]["gemini"]["count"], 1)
-        self.assertEqual(summary["errors"], 1)
-        self.assertEqual(summary["success_rate"], 0.75)
+        assert summary["total"] == 4
+        assert summary["services"]["firestore"]["count"] == 2
+        assert summary["services"]["gemini"]["count"] == 1
+        assert summary["errors"] == 1
+        assert summary["success_rate"] == 0.75
 
 
 class TestCaptureFirestoreClient(unittest.TestCase):
@@ -185,17 +187,17 @@ class TestCaptureFirestoreClient(unittest.TestCase):
 
         # Perform operation
         collection = self.capture_client.collection("test_collection")
-        result = collection.add({"test": "data"})
+        collection.add({"test": "data"})
 
         # Verify capture
-        self.assertEqual(len(self.capture_manager.interactions), 1)
+        assert len(self.capture_manager.interactions) == 1
         interaction = self.capture_manager.interactions[0]
 
-        self.assertEqual(interaction["service"], "firestore")
-        self.assertEqual(interaction["operation"], "collection.add")
-        self.assertEqual(interaction["request"]["collection"], "test_collection")
-        self.assertEqual(interaction["request"]["data"], {"test": "data"})
-        self.assertEqual(interaction["response"]["document_id"], "test_doc_id")
+        assert interaction["service"] == "firestore"
+        assert interaction["operation"] == "collection.add"
+        assert interaction["request"]["collection"] == "test_collection"
+        assert interaction["request"]["data"] == {"test": "data"}
+        assert interaction["response"]["document_id"] == "test_doc_id"
 
     def test_document_get(self):
         """Test document get with capture."""
@@ -208,16 +210,16 @@ class TestCaptureFirestoreClient(unittest.TestCase):
 
         # Perform operation
         doc = self.capture_client.document("test_collection/test_doc")
-        result = doc.get()
+        doc.get()
 
         # Verify capture
-        self.assertEqual(len(self.capture_manager.interactions), 1)
+        assert len(self.capture_manager.interactions) == 1
         interaction = self.capture_manager.interactions[0]
 
-        self.assertEqual(interaction["service"], "firestore")
-        self.assertEqual(interaction["operation"], "document.get")
-        self.assertEqual(interaction["response"]["exists"], True)
-        self.assertEqual(interaction["response"]["data"], {"field": "value"})
+        assert interaction["service"] == "firestore"
+        assert interaction["operation"] == "document.get"
+        assert interaction["response"]["exists"]
+        assert interaction["response"]["data"] == {"field": "value"}
 
 
 class TestCaptureGeminiClient(unittest.TestCase):
@@ -246,17 +248,17 @@ class TestCaptureGeminiClient(unittest.TestCase):
         self.mock_client.generate_content.return_value = mock_response
 
         # Perform operation
-        response = self.capture_client.generate_content("Test prompt")
+        self.capture_client.generate_content("Test prompt")
 
         # Verify capture
-        self.assertEqual(len(self.capture_manager.interactions), 1)
+        assert len(self.capture_manager.interactions) == 1
         interaction = self.capture_manager.interactions[0]
 
-        self.assertEqual(interaction["service"], "gemini")
-        self.assertEqual(interaction["operation"], "generate_content")
-        self.assertEqual(interaction["request"]["prompt"], "Test prompt")
-        self.assertEqual(interaction["response"]["text"], "Generated response text")
-        self.assertEqual(interaction["response"]["finish_reason"], "STOP")
+        assert interaction["service"] == "gemini"
+        assert interaction["operation"] == "generate_content"
+        assert interaction["request"]["prompt"] == "Test prompt"
+        assert interaction["response"]["text"] == "Generated response text"
+        assert interaction["response"]["finish_reason"] == "STOP"
 
 
 class TestCaptureAnalyzer(unittest.TestCase):
@@ -317,13 +319,13 @@ class TestCaptureAnalyzer(unittest.TestCase):
         """Test interaction analysis."""
         analysis = self.analyzer._analyze_interactions(self.test_data["interactions"])
 
-        self.assertEqual(analysis["total_interactions"], 3)
-        self.assertEqual(analysis["by_service"]["firestore"]["count"], 2)
-        self.assertEqual(analysis["by_service"]["gemini"]["count"], 1)
-        self.assertEqual(analysis["by_service"]["firestore"]["errors"], 1)
-        self.assertEqual(len(analysis["errors"]), 1)
-        self.assertEqual(analysis["performance"]["total_duration"], 350)
-        self.assertEqual(analysis["performance"]["avg_duration"], 350 / 3)
+        assert analysis["total_interactions"] == 3
+        assert analysis["by_service"]["firestore"]["count"] == 2
+        assert analysis["by_service"]["gemini"]["count"] == 1
+        assert analysis["by_service"]["firestore"]["errors"] == 1
+        assert len(analysis["errors"]) == 1
+        assert analysis["performance"]["total_duration"] == 350
+        assert analysis["performance"]["avg_duration"] == 350 / 3
 
     def test_compare_with_mock(self):
         """Test comparison with mock responses."""
@@ -335,25 +337,23 @@ class TestCaptureAnalyzer(unittest.TestCase):
 
         comparison = self.analyzer.compare_with_mock(self.test_file, mock_responses)
 
-        self.assertEqual(
-            comparison["total_comparisons"], 2
-        )  # Only success interactions
-        self.assertEqual(comparison["matches"], 1)  # firestore.get matches
-        self.assertEqual(len(comparison["differences"]), 1)  # gemini.generate differs
-        self.assertEqual(
-            len(comparison["missing_mocks"]), 0
+        assert comparison["total_comparisons"] == 2  # Only success interactions
+        assert comparison["matches"] == 1  # firestore.get matches
+        assert len(comparison["differences"]) == 1  # gemini.generate differs
+        assert (
+            len(comparison["missing_mocks"]) == 0
         )  # firestore.set was error, so not compared
-        self.assertEqual(comparison["accuracy_score"], 0.5)
+        assert comparison["accuracy_score"] == 0.5
 
     def test_generate_report(self):
         """Test report generation."""
         analysis = self.analyzer._analyze_interactions(self.test_data["interactions"])
         report = self.analyzer.generate_report(analysis)
 
-        self.assertIn("Capture Analysis Report", report)
-        self.assertIn("Total Interactions: 3", report)
-        self.assertIn("firestore", report)
-        self.assertIn("gemini", report)
+        assert "Capture Analysis Report" in report
+        assert "Total Interactions: 3" in report
+        assert "firestore" in report
+        assert "gemini" in report
 
 
 class TestUtilityFunctions(unittest.TestCase):
@@ -388,11 +388,9 @@ class TestUtilityFunctions(unittest.TestCase):
         cleanup_old_captures(self.temp_dir, days_to_keep=7)
 
         # Verify results
-        self.assertFalse(os.path.exists(old_file))  # Should be deleted
-        self.assertTrue(os.path.exists(new_file))  # Should remain
-        self.assertTrue(
-            os.path.exists(non_capture_file)
-        )  # Should remain (not a capture file)
+        assert not os.path.exists(old_file)  # Should be deleted
+        assert os.path.exists(new_file)  # Should remain
+        assert os.path.exists(non_capture_file)  # Should remain (not a capture file)
 
     def test_create_mock_baseline(self):
         """Test creating mock baseline from capture data."""
@@ -429,17 +427,17 @@ class TestUtilityFunctions(unittest.TestCase):
         count = create_mock_baseline(capture_file, output_file)
 
         # Verify results
-        self.assertEqual(count, 2)  # Only success interactions
-        self.assertTrue(os.path.exists(output_file))
+        assert count == 2  # Only success interactions
+        assert os.path.exists(output_file)
 
         with open(output_file) as f:
             baseline = json.load(f)
 
-        self.assertIn("firestore.get", baseline)
-        self.assertIn("gemini.generate", baseline)
-        self.assertNotIn("firestore.set", baseline)  # Error case excluded
-        self.assertEqual(baseline["firestore.get"], {"docs": []})
-        self.assertEqual(baseline["gemini.generate"], {"text": "test"})
+        assert "firestore.get" in baseline
+        assert "gemini.generate" in baseline
+        assert "firestore.set" not in baseline  # Error case excluded
+        assert baseline["firestore.get"] == {"docs": []}
+        assert baseline["gemini.generate"] == {"text": "test"}
 
 
 if __name__ == "__main__":

@@ -80,8 +80,8 @@ def test_real_provider_validation():
 
     try:
         # Should raise ValueError without API key
-        provider = RealServiceProvider()
-        assert False, "Should have raised ValueError"
+        RealServiceProvider()
+        raise AssertionError("Should have raised ValueError")
     except ValueError as e:
         assert "TEST_GEMINI_API_KEY" in str(e)
     except ImportError:
@@ -130,7 +130,7 @@ def test_factory_switching():
     # Test invalid mode
     try:
         get_service_provider("invalid")
-        assert False, "Should have raised ValueError"
+        raise AssertionError("Should have raised ValueError")
     except ValueError:
         results["invalid_mode"] = "correctly_rejected"
 

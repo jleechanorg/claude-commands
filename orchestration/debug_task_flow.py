@@ -42,5 +42,6 @@ def debug_queue_contents():
         except Exception as e:
             print(f"  Error parsing message {i}: {e}")
 
+
 if __name__ == "__main__":
     debug_queue_contents()

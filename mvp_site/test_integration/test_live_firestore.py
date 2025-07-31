@@ -22,7 +22,7 @@ try:
             print(
                 "Please ensure 'serviceAccountKey.json' is in the project root directory."
             )
-            exit()
+            sys.exit()
 
         cred = credentials.Certificate(firebase_key_path)
         firebase_admin.initialize_app(cred)
@@ -31,7 +31,7 @@ except Exception as e:
     print("--- FATAL ERROR: Could not initialize Firebase Admin. ---")
     print("Please ensure 'serviceAccountKey.json' is in the project root directory.")
     print(f"Error details: {e}")
-    exit()
+    sys.exit()
 
 
 class TestLiveFirestoreFetching(unittest.TestCase):
@@ -124,12 +124,12 @@ class TestLiveFirestoreFetching(unittest.TestCase):
             self.user_id, self.campaign_id
         )
 
-        self.assertIsNotNone(story, "The returned story should not be None.")
-        self.assertEqual(len(story), 4, "Should have retrieved all 4 story documents.")
-        self.assertIn("Old data, entry 1", story[0]["text"])
-        self.assertIn("New data, entry 2", story[1]["text"])
-        self.assertIn("New data, entry 3, part 1", story[2]["text"])
-        self.assertIn("New data, entry 3, part 2", story[3]["text"])
+        assert story is not None, "The returned story should not be None."
+        assert len(story) == 4, "Should have retrieved all 4 story documents."
+        assert "Old data, entry 1" in story[0]["text"]
+        assert "New data, entry 2" in story[1]["text"]
+        assert "New data, entry 3, part 1" in story[2]["text"]
+        assert "New data, entry 3, part 2" in story[3]["text"]
 
         print("--- Test Finished Successfully ---")
 
@@ -144,13 +144,11 @@ class TestLiveFirestoreFetching(unittest.TestCase):
         _campaign, story = firestore_service.get_campaign_by_id(
             self.user_id, self.campaign_id
         )
-        self.assertIsNotNone(story)
+        assert story is not None
         initial_count = len(story)
-        self.assertEqual(
-            story[-1].get("sequence_id"),
-            initial_count,
-            "Initial sequence IDs should be correct.",
-        )
+        assert (
+            story[-1].get("sequence_id") == initial_count
+        ), "Initial sequence IDs should be correct."
 
         # Turn 1
         print("--- Adding Turn 1 ---")
@@ -160,14 +158,12 @@ class TestLiveFirestoreFetching(unittest.TestCase):
         _campaign, story = firestore_service.get_campaign_by_id(
             self.user_id, self.campaign_id
         )
-        self.assertIsNotNone(story)
-        self.assertEqual(len(story), initial_count + 1)
-        self.assertEqual(
-            story[-1].get("sequence_id"),
-            initial_count + 1,
-            "Sequence ID should increment after Turn 1.",
-        )
-        self.assertIn("First new entry", story[-1]["text"])
+        assert story is not None
+        assert len(story) == initial_count + 1
+        assert (
+            story[-1].get("sequence_id") == initial_count + 1
+        ), "Sequence ID should increment after Turn 1."
+        assert "First new entry" in story[-1]["text"]
 
         # Turn 2
         print("--- Adding Turn 2 ---")
@@ -177,13 +173,11 @@ class TestLiveFirestoreFetching(unittest.TestCase):
         _campaign, story = firestore_service.get_campaign_by_id(
             self.user_id, self.campaign_id
         )
-        self.assertIsNotNone(story)
-        self.assertEqual(len(story), initial_count + 2)
-        self.assertEqual(
-            story[-1].get("sequence_id"),
-            initial_count + 2,
-            "Sequence ID should increment after Turn 2.",
-        )
+        assert story is not None
+        assert len(story) == initial_count + 2
+        assert (
+            story[-1].get("sequence_id") == initial_count + 2
+        ), "Sequence ID should increment after Turn 2."
 
         # Turn 3
         print("--- Adding Turn 3 ---")
@@ -193,13 +187,11 @@ class TestLiveFirestoreFetching(unittest.TestCase):
         _campaign, story = firestore_service.get_campaign_by_id(
             self.user_id, self.campaign_id
         )
-        self.assertIsNotNone(story)
-        self.assertEqual(len(story), initial_count + 3)
-        self.assertEqual(
-            story[-1].get("sequence_id"),
-            initial_count + 3,
-            "Sequence ID should increment after Turn 3.",
-        )
+        assert story is not None
+        assert len(story) == initial_count + 3
+        assert (
+            story[-1].get("sequence_id") == initial_count + 3
+        ), "Sequence ID should increment after Turn 3."
 
         print("--- Test Finished Successfully ---")
 

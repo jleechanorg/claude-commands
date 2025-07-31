@@ -23,7 +23,7 @@ class MockUnifiedAPI:
             "title": request_data.get("title"),
             "opening_story": "Mock opening story...",
             "game_state": {"mock": "state"},
-            "attribute_system": "dnd"
+            "attribute_system": "dnd",
         }
 
     @staticmethod
@@ -35,7 +35,7 @@ class MockUnifiedAPI:
             "game_state": {"mock": "updated_state"},
             "state_changes": {"mock": "changes"},
             "mode": request_data.get("mode", "character"),
-            "user_input": request_data.get("user_input")
+            "user_input": request_data.get("user_input"),
         }
 
     @staticmethod
@@ -46,7 +46,7 @@ class MockUnifiedAPI:
             "campaign": {"title": "Mock Campaign"},
             "game_state": {"mock": "state"},
             "state_cleaned": False,
-            "entries_cleaned": 0
+            "entries_cleaned": 0,
         }
 
 
@@ -55,7 +55,7 @@ async def demonstrate_current_mcp_approach(args):
     print("=== Current MCP Approach (Before Integration) ===")
 
     # This simulates current world_logic.py approach
-    user_id = args["user_id"]
+    args["user_id"]
     title = args["title"]
     character = args.get("character", "")
     setting = args.get("setting", "")
@@ -67,9 +67,12 @@ async def demonstrate_current_mcp_approach(args):
 
     # Build prompt (DUPLICATE logic)
     prompt_parts = []
-    if character: prompt_parts.append(f"Character: {character}")
-    if setting: prompt_parts.append(f"Setting: {setting}")
-    if description: prompt_parts.append(f"Description: {description}")
+    if character:
+        prompt_parts.append(f"Character: {character}")
+    if setting:
+        prompt_parts.append(f"Setting: {setting}")
+    if description:
+        prompt_parts.append(f"Description: {description}")
     prompt = " | ".join(prompt_parts) if prompt_parts else ""
 
     # Create campaign (DUPLICATE service calls)
@@ -77,7 +80,7 @@ async def demonstrate_current_mcp_approach(args):
         "campaign_id": "current-approach-123",
         "title": title,
         "prompt": prompt,
-        "approach": "current_duplicate_logic"
+        "approach": "current_duplicate_logic",
     }
 
     print(f"📊 Current Result: {json.dumps(result, indent=2)}")
@@ -100,7 +103,7 @@ async def demonstrate_integrated_mcp_approach(args):
             "title": result["title"],
             "opening_story": result["opening_story"],
             "game_state": result["game_state"],
-            "approach": "integrated_world_logic"
+            "approach": "integrated_world_logic",
         }
 
         print(f"📊 Integrated Result: {json.dumps(mcp_result, indent=2)}")
@@ -119,13 +122,13 @@ def demonstrate_response_format_consistency():
         "success": True,
         "campaign_id": "test-123",
         "title": "Test Campaign",
-        "data": "..."
+        "data": "...",
     }
 
     error_response = {
         "success": False,
         "error": "Test error message",
-        "status_code": 400
+        "status_code": 400,
     }
 
     print("✅ Standard Success Response:")
@@ -141,7 +144,7 @@ def generate_integration_code_example():
     """Generate example code showing how to integrate MCP tools with world_logic."""
     print("\n=== Integration Code Example ===")
 
-    integration_example = '''
+    integration_example = """
 # BEFORE: world_logic.py with duplicate business logic
 async def _create_campaign_tool(args: dict[str, Any]) -> list[TextContent]:
     user_id = args["user_id"]
@@ -170,7 +173,7 @@ async def _create_campaign_tool(args: dict[str, Any]) -> list[TextContent]:
 # ✅ Single source of truth for game logic
 # ✅ Easier testing and maintenance
 # ✅ Bug fixes apply to both Flask and MCP automatically
-'''
+"""
 
     print(integration_example)
 
@@ -187,14 +190,14 @@ async def run_comparison_tests():
         "title": "Test Campaign",
         "character": "A brave knight",
         "setting": "Medieval fantasy",
-        "description": "An epic adventure"
+        "description": "An epic adventure",
     }
 
     # Test current approach
-    current_result = await demonstrate_current_mcp_approach(test_args)
+    await demonstrate_current_mcp_approach(test_args)
 
     # Test integrated approach
-    integrated_result = await demonstrate_integrated_mcp_approach(test_args)
+    await demonstrate_integrated_mcp_approach(test_args)
 
     # Compare results
     print("\n=== Comparison Analysis ===")
@@ -230,7 +233,9 @@ def main():
     print("INTEGRATION RECOMMENDATIONS")
     print("=" * 80)
 
-    print("1. ❌ CRITICAL: world_logic.py currently has 12 duplicated business logic patterns")
+    print(
+        "1. ❌ CRITICAL: world_logic.py currently has 12 duplicated business logic patterns"
+    )
     print("2. ❌ CRITICAL: MCP tools do NOT use world_logic functions")
     print("3. ✅ SOLUTION: Update all MCP tools to call world_logic functions")
     print("4. ✅ BENEFIT: Eliminate business logic duplication")

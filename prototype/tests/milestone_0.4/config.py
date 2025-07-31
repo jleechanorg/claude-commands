@@ -26,8 +26,6 @@ WARNING_THRESHOLD_USD = 0.50  # Warn at 50% budget
 
 # Safety Settings (matching mvp_site)
 try:
-
-
     SAFETY_SETTINGS = [
         types.SafetySetting(
             category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,

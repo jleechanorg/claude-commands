@@ -85,7 +85,7 @@ class BenchmarkRunner:
 
             try:
                 start_time = time.time()
-                result = validator.validate(narrative, expected)
+                validator.validate(narrative, expected)
                 duration = time.time() - start_time
 
                 results["timings"].append(duration)

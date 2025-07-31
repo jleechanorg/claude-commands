@@ -77,7 +77,7 @@ class ValidationOnlyApproach:
                 entities["player_characters"].add(pc_data["name"])
                 entities["active_entities"].add(pc_data["name"])
             # Handle multiple PCs
-            for key, value in pc_data.items():
+            for _key, value in pc_data.items():
                 if isinstance(value, dict) and "name" in value:
                     entities["player_characters"].add(value["name"])
                     entities["active_entities"].add(value["name"])

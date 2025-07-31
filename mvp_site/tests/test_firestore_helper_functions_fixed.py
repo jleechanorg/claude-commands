@@ -174,7 +174,7 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
 
         assert len(target_list) == 3
         assert target_list[1]["id"] == 2
-        assert target_list[2]["data"]["nested"] == True
+        assert target_list[2]["data"]["nested"]
 
     @patch("logging_util.info")
     def test_perform_append_deduplicate_complex_objects(self, mock_log):

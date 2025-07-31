@@ -93,7 +93,6 @@ def cleanup_old_screenshots(test_name=None, keep_latest=10, days_old=None):
         days_old: Remove screenshots older than this many days (if specified)
     """
 
-
     if test_name:
         # Clean specific test directory
         test_dir = os.path.join(SCREENSHOT_BASE_DIR, test_name)
@@ -122,7 +121,7 @@ def cleanup_old_screenshots(test_name=None, keep_latest=10, days_old=None):
         current_time = time.time()
         cutoff_time = current_time - (days_old * 24 * 60 * 60)
 
-        for root, dirs, files in os.walk(SCREENSHOT_BASE_DIR):
+        for root, _dirs, files in os.walk(SCREENSHOT_BASE_DIR):
             for file in files:
                 if file.endswith(".png"):
                     filepath = os.path.join(root, file)

@@ -96,7 +96,7 @@ class TestMainRouteEdgeCases(unittest.TestCase):
         # Create deeply nested JSON
         nested_data = {}
         current = nested_data
-        for i in range(50):  # 50 levels deep
+        for _i in range(50):  # 50 levels deep
             current["level"] = {}
             current = current["level"]
         current["value"] = "deep_value"
@@ -319,9 +319,10 @@ class TestMainRouteEdgeCases(unittest.TestCase):
         )
 
         # MCP should handle empty campaigns gracefully (404 = not found, 400 = validation error are valid)
-        assert (
-            response.status_code in [400, 404]
-        ), f"Expected 400 or 404 for empty campaign export, got {response.status_code}"
+        assert response.status_code in [
+            400,
+            404,
+        ], f"Expected 400 or 404 for empty campaign export, got {response.status_code}"
 
     # ===== CORS Edge Cases =====
 
@@ -392,7 +393,7 @@ class TestMainRouteEdgeCases(unittest.TestCase):
             ('{"input": "valid request", "mode": "character"}', [200, 404, 500]),
         ]
 
-        for payload, expected_codes in test_scenarios:
+        for payload, _expected_codes in test_scenarios:
             response = self.client.post(
                 f"/api/campaigns/{self.test_campaign_id}/interaction",
                 headers=self.test_headers,

@@ -8,17 +8,20 @@ import json
 import os
 import sys
 from collections.abc import Callable
-from screenshot_utils import take_screenshot
 from typing import Any
 
 from playwright.sync_api import Browser, Page, sync_playwright
+from screenshot_utils import take_screenshot
 
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(__file__))
 import os
 
 # Import centralized configuration
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+import builtins
+import contextlib
+
 from testing_util import TestConfig, TestType
 
 # Default test configuration (now using centralized config)
@@ -161,8 +164,6 @@ def capture_api_request(
     def handle_request(request):
         if url_pattern in request.url and request.method == method:
             try:
-
-
                 data = json.loads(request.post_data) if request.post_data else {}
                 captured_data["request"] = {
                     "url": request.url,
@@ -302,15 +303,11 @@ def cleanup_browser(playwright, browser: Browser):
         playwright: Playwright instance
         browser: Browser instance
     """
-    try:
+    with contextlib.suppress(Exception):
         browser.close()
-    except Exception:
-        pass
 
-    try:
+    with contextlib.suppress(Exception):
         playwright.stop()
-    except Exception:
-        pass
 
 
 # Test runner helper for common test setup
@@ -355,10 +352,8 @@ def run_ui_test(
     except Exception as e:
         print(f"\n❌ Test '{test_name}' failed: {e}")
         if page:
-            try:
+            with contextlib.suppress(builtins.BaseException):
                 take_screenshot(page, test_name, "error")
-            except:
-                pass
         raise
 
     finally:

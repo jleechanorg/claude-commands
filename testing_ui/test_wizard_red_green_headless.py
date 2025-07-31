@@ -56,7 +56,7 @@ def main():
             page.fill("#wizard-campaign-title", "Red Test - Bug Demo")
 
             # Navigate to preview
-            for i in range(3):
+            for _i in range(3):
                 page.click("button:has-text('Next')")
                 page.wait_for_timeout(500)
 
@@ -88,7 +88,7 @@ def main():
             page.fill("#wizard-campaign-title", "Green Test - Fixed")
 
             # Navigate to preview
-            for i in range(3):
+            for _i in range(3):
                 page.click("button:has-text('Next')")
                 page.wait_for_timeout(500)
 
@@ -123,7 +123,7 @@ def main():
             page.fill("#wizard-setting-input", "Middle Earth")
 
             # Navigate to preview
-            for i in range(3):
+            for _i in range(3):
                 page.click("button:has-text('Next')")
                 page.wait_for_timeout(500)
 

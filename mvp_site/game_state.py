@@ -59,7 +59,7 @@ class GameState:
         # Remove any internal cache attributes that shouldn't be serialized
         # These are typically prefixed with underscore and added at runtime
         keys_to_remove = [
-            key for key in data.keys() if key.startswith("_") and key != "__dict__"
+            key for key in data if key.startswith("_") and key != "__dict__"
         ]
         for key in keys_to_remove:
             del data[key]

@@ -87,8 +87,13 @@ class TestStateUpdateBugs(unittest.TestCase):
 
         # Verify state updates are captured
         assert "state_updates" in parsed_response.to_dict()
-        assert parsed_response.state_updates["player_character_data"]["hp_current"] == "18"
-        assert parsed_response.state_updates["npc_data"]["orc_warrior"]["status"] == "wounded"
+        assert (
+            parsed_response.state_updates["player_character_data"]["hp_current"] == "18"
+        )
+        assert (
+            parsed_response.state_updates["npc_data"]["orc_warrior"]["status"]
+            == "wounded"
+        )
 
     def test_state_updates_not_in_narrative(self):
         """Test that state updates don't leak into narrative text"""

@@ -110,16 +110,16 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
         )
 
         # Should succeed through MCP architecture (201=success, 400=bad request, 500=server error)
-        self.assertIn(
-            response.status_code,
-            [201, 400, 500],
-            "MCP integration should handle campaign creation",
-        )
+        assert response.status_code in [
+            201,
+            400,
+            500,
+        ], "MCP integration should handle campaign creation"
 
         if response.status_code == 201:
             response_data = response.get_json()
-            self.assertIsInstance(response_data, dict)
-            self.assertIn("campaign_id", response_data)
+            assert isinstance(response_data, dict)
+            assert "campaign_id" in response_data
 
             # Test campaign retrieval through MCP
             campaign_id = response_data["campaign_id"]
@@ -127,11 +127,11 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
                 f"/api/campaigns/{campaign_id}", headers=self.test_headers
             )
 
-            self.assertIn(
-                get_response.status_code,
-                [200, 404, 500],
-                "MCP should handle campaign retrieval",
-            )
+            assert get_response.status_code in [
+                200,
+                404,
+                500,
+            ], "MCP should handle campaign retrieval"
 
     def test_mcp_direct_server_communication(self):
         """Test direct MCP server communication if available."""
@@ -145,11 +145,9 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
             health_response = requests.get(
                 f"http://localhost:{self.mcp_port}", timeout=5
             )
-            self.assertEqual(
-                health_response.status_code,
-                200,
-                "MCP server should respond to health checks",
-            )
+            assert (
+                health_response.status_code == 200
+            ), "MCP server should respond to health checks"
         except Exception as e:
             self.fail(f"MCP server direct communication failed: {e}")
 
@@ -161,11 +159,10 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
         )
 
         # MCP should handle invalid IDs gracefully
-        self.assertIn(
-            response.status_code,
-            [404, 500],
-            "MCP should handle invalid campaign IDs gracefully",
-        )
+        assert response.status_code in [
+            404,
+            500,
+        ], "MCP should handle invalid campaign IDs gracefully"
 
         # Test malformed requests through MCP
         malformed_response = self.client.post(
@@ -174,11 +171,10 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
             json={"invalid": "malformed_campaign_data"},
         )
 
-        self.assertIn(
-            malformed_response.status_code,
-            [400, 500],
-            "MCP should handle malformed requests",
-        )
+        assert malformed_response.status_code in [
+            400,
+            500,
+        ], "MCP should handle malformed requests"
 
     def test_mcp_interaction_workflow(self):
         """Test user interaction workflow through MCP."""
@@ -209,20 +205,19 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
                 json=interaction_data,
             )
 
-            self.assertIn(
-                interaction_response.status_code,
-                [200, 500],
-                "MCP should handle user interactions",
-            )
+            assert interaction_response.status_code in [
+                200,
+                500,
+            ], "MCP should handle user interactions"
 
             if interaction_response.status_code == 200:
                 response_data = interaction_response.get_json()
-                self.assertIsInstance(response_data, dict)
+                assert isinstance(response_data, dict)
                 # Should contain standard game response fields
                 expected_fields = ["success", "game_state", "story"]
                 for field in expected_fields:
                     if field in response_data:
-                        self.assertIsNotNone(response_data[field])
+                        assert response_data[field] is not None
 
     def test_mcp_concurrent_requests(self):
         """Test MCP handling of concurrent requests."""
@@ -262,20 +257,18 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
             "/api/campaigns", json={"title": "No Auth Test"}
         )
 
-        self.assertEqual(
-            no_auth_response.status_code, 401, "MCP should enforce authentication"
-        )
+        assert no_auth_response.status_code == 401, "MCP should enforce authentication"
 
         # Test with valid auth bypass
         valid_auth_response = self.client.get(
             "/api/campaigns", headers=self.test_headers
         )
 
-        self.assertIn(
-            valid_auth_response.status_code,
-            [200, 404, 500],
-            "MCP should handle authenticated requests",
-        )
+        assert valid_auth_response.status_code in [
+            200,
+            404,
+            500,
+        ], "MCP should handle authenticated requests"
 
     def test_mcp_settings_integration(self):
         """Test settings management through MCP."""
@@ -284,11 +277,10 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
             "/api/settings", headers=self.test_headers
         )
 
-        self.assertIn(
-            get_settings_response.status_code,
-            [200, 500],
-            "MCP should handle settings retrieval",
-        )
+        assert get_settings_response.status_code in [
+            200,
+            500,
+        ], "MCP should handle settings retrieval"
 
         # Test updating settings through MCP
         settings_data = {
@@ -301,11 +293,10 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
             "/api/settings", headers=self.test_headers, json=settings_data
         )
 
-        self.assertIn(
-            update_response.status_code,
-            [200, 500],
-            "MCP should handle settings updates",
-        )
+        assert update_response.status_code in [
+            200,
+            500,
+        ], "MCP should handle settings updates"
 
     def test_mcp_export_functionality(self):
         """Test campaign export through MCP."""
@@ -329,11 +320,11 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
                 headers=self.test_headers,
             )
 
-            self.assertIn(
-                export_response.status_code,
-                [200, 404, 500],
-                "MCP should handle campaign export",
-            )
+            assert export_response.status_code in [
+                200,
+                404,
+                500,
+            ], "MCP should handle campaign export"
 
     def test_mcp_god_mode_commands(self):
         """Test God Mode commands through MCP architecture."""
@@ -358,11 +349,10 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
                 json={"input": "GOD_ASK_STATE", "mode": "character"},
             )
 
-            self.assertIn(
-                god_response.status_code,
-                [200, 500],
-                "MCP should handle God Mode commands",
-            )
+            assert god_response.status_code in [
+                200,
+                500,
+            ], "MCP should handle God Mode commands"
 
     def test_mcp_campaign_update_patch_endpoint(self):
         """Test campaign updates via PATCH endpoint through MCP."""
@@ -390,11 +380,11 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
                 json=update_data,
             )
 
-            self.assertIn(
-                patch_response.status_code,
-                [200, 404, 500],
-                "MCP should handle campaign PATCH updates",
-            )
+            assert patch_response.status_code in [
+                200,
+                404,
+                500,
+            ], "MCP should handle campaign PATCH updates"
 
             # Test multiple field updates
             multi_update_data = {
@@ -408,11 +398,11 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
                 json=multi_update_data,
             )
 
-            self.assertIn(
-                multi_patch_response.status_code,
-                [200, 404, 500],
-                "MCP should handle multi-field PATCH updates",
-            )
+            assert multi_patch_response.status_code in [
+                200,
+                404,
+                500,
+            ], "MCP should handle multi-field PATCH updates"
 
         # Test PATCH on non-existent campaign
         invalid_patch_response = self.client.patch(
@@ -421,11 +411,11 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
             json={"title": "Should Fail"},
         )
 
-        self.assertIn(
-            invalid_patch_response.status_code,
-            [400, 404, 500],
-            "MCP should handle PATCH on non-existent campaigns",
-        )
+        assert invalid_patch_response.status_code in [
+            400,
+            404,
+            500,
+        ], "MCP should handle PATCH on non-existent campaigns"
 
 
 if __name__ == "__main__":

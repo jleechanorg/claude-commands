@@ -56,19 +56,15 @@ class TestArchitecturalBoundaryValidation(unittest.TestCase):
         print("\n🔍 Testing Frontend → main.py Field Constants")
 
         # Frontend sends "input" field
-        self.assertEqual(
-            FRONTEND_KEY, "input", "main.py should expect 'input' field from frontend"
-        )
+        assert (
+            FRONTEND_KEY == "input"
+        ), "main.py should expect 'input' field from frontend"
 
         # Standard response fields
-        self.assertEqual(
-            MAIN_SUCCESS,
-            "success",
-            "main.py should use 'success' for success responses",
-        )
-        self.assertEqual(
-            MAIN_ERROR, "error", "main.py should use 'error' for error responses"
-        )
+        assert (
+            MAIN_SUCCESS == "success"
+        ), "main.py should use 'success' for success responses"
+        assert MAIN_ERROR == "error", "main.py should use 'error' for error responses"
 
         print("✅ Frontend → main.py field constants: VALIDATED")
 
@@ -79,21 +75,17 @@ class TestArchitecturalBoundaryValidation(unittest.TestCase):
         print("\n🔍 Testing main.py → MCP Protocol Field Constants")
 
         # MCP protocol uses "user_input" field
-        self.assertEqual(
-            KEY_USER_INPUT,
-            "user_input",
-            "world_logic.py should expect 'user_input' field from MCP",
-        )
+        assert (
+            KEY_USER_INPUT == "user_input"
+        ), "world_logic.py should expect 'user_input' field from MCP"
 
         # Standard response fields should match main.py
-        self.assertEqual(
-            KEY_SUCCESS,
-            "success",
-            "world_logic.py should use 'success' for success responses",
-        )
-        self.assertEqual(
-            KEY_ERROR, "error", "world_logic.py should use 'error' for error responses"
-        )
+        assert (
+            KEY_SUCCESS == "success"
+        ), "world_logic.py should use 'success' for success responses"
+        assert (
+            KEY_ERROR == "error"
+        ), "world_logic.py should use 'error' for error responses"
 
         print("✅ main.py → MCP field constants: VALIDATED")
 
@@ -104,16 +96,12 @@ class TestArchitecturalBoundaryValidation(unittest.TestCase):
         print("\n🔍 Testing MCP API Layer Field Constants")
 
         # MCP API should match world_logic.py
-        self.assertEqual(
-            KEY_USER_INPUT,
-            "user_input",
-            "mcp_api.py should use 'user_input' field for MCP protocol",
-        )
-        self.assertEqual(
-            KEY_ERROR,
-            "error",
-            "mcp_api.py should use 'error' field for error responses",
-        )
+        assert (
+            KEY_USER_INPUT == "user_input"
+        ), "mcp_api.py should use 'user_input' field for MCP protocol"
+        assert (
+            KEY_ERROR == "error"
+        ), "mcp_api.py should use 'error' field for error responses"
 
         print("✅ MCP API field constants: VALIDATED")
 
@@ -124,23 +112,17 @@ class TestArchitecturalBoundaryValidation(unittest.TestCase):
         print("\n🔍 Testing Cross-Boundary Field Consistency")
 
         # Error fields must be identical across all layers
-        self.assertEqual(
-            MAIN_ERROR,
-            WL_ERROR,
-            "Error field must be consistent: main.py vs world_logic.py",
-        )
-        self.assertEqual(
-            MAIN_ERROR,
-            MCP_ERROR,
-            "Error field must be consistent: main.py vs mcp_api.py",
-        )
+        assert (
+            MAIN_ERROR == WL_ERROR
+        ), "Error field must be consistent: main.py vs world_logic.py"
+        assert (
+            MAIN_ERROR == MCP_ERROR
+        ), "Error field must be consistent: main.py vs mcp_api.py"
 
         # Success fields must be identical across all layers
-        self.assertEqual(
-            MAIN_SUCCESS,
-            WL_SUCCESS,
-            "Success field must be consistent: main.py vs world_logic.py",
-        )
+        assert (
+            MAIN_SUCCESS == WL_SUCCESS
+        ), "Success field must be consistent: main.py vs world_logic.py"
 
         print("✅ Cross-boundary field consistency: VALIDATED")
 
@@ -153,15 +135,9 @@ class TestArchitecturalBoundaryValidation(unittest.TestCase):
         print("\n🔍 Testing Translation Layer Field Conversion")
 
         # This difference is INTENTIONAL and CORRECT
-        self.assertEqual(
-            FRONTEND_KEY, "input", "Frontend interface should use 'input' field"
-        )
-        self.assertEqual(
-            MCP_KEY, "user_input", "MCP protocol should use 'user_input' field"
-        )
-        self.assertNotEqual(
-            FRONTEND_KEY, MCP_KEY, "Translation layer SHOULD convert field names"
-        )
+        assert FRONTEND_KEY == "input", "Frontend interface should use 'input' field"
+        assert MCP_KEY == "user_input", "MCP protocol should use 'user_input' field"
+        assert FRONTEND_KEY != MCP_KEY, "Translation layer SHOULD convert field names"
 
         print("✅ Translation layer conversion: VALIDATED")
         print("   Frontend field: 'input' → MCP field: 'user_input' ✅")
@@ -179,34 +155,28 @@ class TestArchitecturalBoundaryValidation(unittest.TestCase):
 
         # WRONG: If main.py tried to use MCP field name for frontend
         wrong_extraction = frontend_request.get("user_input")  # Should be None
-        self.assertIsNone(
-            wrong_extraction, "Using wrong field name should result in None"
-        )
+        assert wrong_extraction is None, "Using wrong field name should result in None"
 
         # CORRECT: main.py using proper frontend field name
         correct_extraction = frontend_request.get("input")
-        self.assertEqual(
-            correct_extraction,
-            "Test message",
-            "Using correct field name should extract data",
-        )
+        assert (
+            correct_extraction == "Test message"
+        ), "Using correct field name should extract data"
 
         # Simulate MCP request
         mcp_request = {"user_input": "Test message", "user_id": "test"}
 
         # WRONG: If world_logic.py tried to use frontend field name for MCP
         wrong_mcp_extraction = mcp_request.get("input")  # Should be None
-        self.assertIsNone(
-            wrong_mcp_extraction, "Using wrong MCP field name should result in None"
-        )
+        assert (
+            wrong_mcp_extraction is None
+        ), "Using wrong MCP field name should result in None"
 
         # CORRECT: world_logic.py using proper MCP field name
         correct_mcp_extraction = mcp_request.get("user_input")
-        self.assertEqual(
-            correct_mcp_extraction,
-            "Test message",
-            "Using correct MCP field name should extract data",
-        )
+        assert (
+            correct_mcp_extraction == "Test message"
+        ), "Using correct MCP field name should extract data"
 
         print("🔴 RED TESTS CONFIRM: Wrong field names cause None extraction")
 
@@ -224,22 +194,18 @@ class TestArchitecturalBoundaryValidation(unittest.TestCase):
 
         # UI expects "text" field
         narrative_text = correct_story_entry.get("text", "")
-        self.assertEqual(
-            narrative_text,
-            "The adventure begins in the tavern.",
-            "Story entry should use 'text' field for UI compatibility",
-        )
+        assert (
+            narrative_text == "The adventure begins in the tavern."
+        ), "Story entry should use 'text' field for UI compatibility"
 
         # RED PHASE: Wrong story entry format (the original bug)
         wrong_story_entry = {"story": "The adventure begins in the tavern."}
 
         # This would result in empty narrative (the bug we fixed)
         empty_narrative = wrong_story_entry.get("text", "")
-        self.assertEqual(
-            empty_narrative,
-            "",
-            "Wrong story field format should result in empty narrative",
-        )
+        assert (
+            empty_narrative == ""
+        ), "Wrong story field format should result in empty narrative"
 
         print("✅ Story field format: VALIDATED")
         print("   Story entries must use 'text' field (not 'story') ✅")
@@ -257,7 +223,7 @@ class TestArchitecturalBoundaryValidation(unittest.TestCase):
 
         # Step 2: main.py extracts with correct field
         user_input = frontend_data.get(FRONTEND_KEY)
-        self.assertEqual(user_input, "I explore the chamber.")
+        assert user_input == "I explore the chamber."
 
         # Step 3: main.py creates MCP request with translated field
         mcp_request = {
@@ -269,14 +235,14 @@ class TestArchitecturalBoundaryValidation(unittest.TestCase):
 
         # Step 4: world_logic.py extracts with correct MCP field
         extracted_input = mcp_request.get(MCP_KEY)
-        self.assertEqual(extracted_input, "I explore the chamber.")
+        assert extracted_input == "I explore the chamber."
 
         # Step 5: world_logic.py creates story entry with correct field
         story_entry = {"text": f"You {extracted_input.lower()}"}
 
         # Step 6: UI displays story with correct field access
         displayed_text = story_entry.get("text", "")
-        self.assertEqual(displayed_text, "You i explore the chamber.")
+        assert displayed_text == "You i explore the chamber."
 
         print("🟢 GREEN TESTS CONFIRM: Complete flow works correctly")
         print("   Frontend 'input' → MCP 'user_input' → Story 'text' ✅")

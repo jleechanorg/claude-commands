@@ -207,16 +207,15 @@ class BaseTestCase(unittest.TestCase):
 
     def assert_json_error(self, response, status_code: int, error_substring: str):
         """Assert response contains JSON error with specific status and message."""
-        self.assertEqual(response.status_code, status_code)
+        assert response.status_code == status_code
         data = json.loads(response.data)
-        self.assertIn("error", data)
-        self.assertIn(error_substring.lower(), data["error"].lower())
+        assert "error" in data
+        assert error_substring.lower() in data["error"].lower()
 
     def assert_json_success(self, response, status_code: int = 200):
         """Assert response is successful JSON."""
-        self.assertEqual(response.status_code, status_code)
-        data = json.loads(response.data)
-        return data
+        assert response.status_code == status_code
+        return json.loads(response.data)
 
     def create_temp_file(self, content: str = "", suffix: str = ".txt") -> str:
         """Create a temporary file for testing."""
@@ -234,7 +233,7 @@ class BaseAPITest(BaseTestCase):
         """Helper to get campaigns with standard headers."""
         response = self.client.get("/api/campaigns", headers=self.test_headers)
         if expected_status:
-            self.assertEqual(response.status_code, expected_status)
+            assert response.status_code == expected_status
         return response
 
     def get_campaign(self, campaign_id: str, expected_status: int = 200):
@@ -243,7 +242,7 @@ class BaseAPITest(BaseTestCase):
             f"/api/campaigns/{campaign_id}", headers=self.test_headers
         )
         if expected_status:
-            self.assertEqual(response.status_code, expected_status)
+            assert response.status_code == expected_status
         return response
 
     def update_campaign(self, campaign_id: str, data: dict, expected_status: int = 200):
@@ -252,7 +251,7 @@ class BaseAPITest(BaseTestCase):
             f"/api/campaigns/{campaign_id}", headers=self.test_headers, json=data
         )
         if expected_status:
-            self.assertEqual(response.status_code, expected_status)
+            assert response.status_code == expected_status
         return response
 
     def create_campaign(self, data: dict, expected_status: int = 201):
@@ -261,7 +260,7 @@ class BaseAPITest(BaseTestCase):
             "/api/campaigns", headers=self.test_headers, json=data
         )
         if expected_status:
-            self.assertEqual(response.status_code, expected_status)
+            assert response.status_code == expected_status
         return response
 
     def export_campaign(
@@ -273,7 +272,7 @@ class BaseAPITest(BaseTestCase):
             headers=self.test_headers,
         )
         if expected_status:
-            self.assertEqual(response.status_code, expected_status)
+            assert response.status_code == expected_status
         return response
 
 
@@ -344,7 +343,7 @@ class LoggingTestMixin:
     def assert_logged(self, message: str):
         """Assert that message was logged."""
         log_output = self.get_log_output()
-        self.assertIn(message, log_output)
+        assert message in log_output
 
 
 class ErrorTestingMixin:

@@ -16,6 +16,7 @@ from typing import Any
 # Import shared utilities from task_dispatcher
 from task_dispatcher import get_tmux_config_path
 
+
 @dataclass
 class AgentStatus:
     """Status of an individual agent"""
@@ -141,7 +142,7 @@ class AgentHealthMonitor:
         """Update status of all agents"""
         active_sessions = self.get_tmux_sessions()
 
-        for agent_name, config in self.expected_agents.items():
+        for agent_name, _config in self.expected_agents.items():
             if agent_name in active_sessions:
                 # Agent session exists - check health
                 is_responsive = self.is_agent_responsive(agent_name)
@@ -207,20 +208,28 @@ class AgentHealthMonitor:
             # Restart dynamic agents (task-agent-*)
             # Start Claude agent with portable path discovery
             try:
-                project_root = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
-                                            capture_output=True, text=True, check=True).stdout.strip()
+                project_root = subprocess.run(
+                    ["git", "rev-parse", "--show-toplevel"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                ).stdout.strip()
             except subprocess.CalledProcessError as e:
-                print(f"⚠️ Warning: Failed to determine project root using 'git rev-parse': {e}")
+                print(
+                    f"⚠️ Warning: Failed to determine project root using 'git rev-parse': {e}"
+                )
                 project_root = os.path.dirname(self.orchestration_dir)
 
             # Find Claude executable portably
             claude_path = None
-            if 'CLAUDE_PATH' in os.environ and os.path.exists(os.environ['CLAUDE_PATH']):
-                claude_path = os.environ['CLAUDE_PATH']
+            if "CLAUDE_PATH" in os.environ and os.path.exists(
+                os.environ["CLAUDE_PATH"]
+            ):
+                claude_path = os.environ["CLAUDE_PATH"]
             else:
-                claude_path = shutil.which('claude')
+                claude_path = shutil.which("claude")
                 if not claude_path:
-                    claude_path = os.path.expanduser('~/.claude/local/claude')
+                    claude_path = os.path.expanduser("~/.claude/local/claude")
 
             if not claude_path or not os.path.exists(claude_path):
                 print(f"❌ Claude executable not found for agent {agent_name}")
@@ -230,16 +239,17 @@ class AgentHealthMonitor:
             tmux_config = get_tmux_config_path()
 
             # Build tmux command with optional config file
-            tmux_cmd = ['tmux']
+            tmux_cmd = ["tmux"]
             if os.path.exists(tmux_config):
-                tmux_cmd.extend(['-f', tmux_config])
+                tmux_cmd.extend(["-f", tmux_config])
             else:
-                print(f"⚠️ Warning: tmux config file not found at {tmux_config}, using default config")
+                print(
+                    f"⚠️ Warning: tmux config file not found at {tmux_config}, using default config"
+                )
 
-            tmux_cmd.extend([
-                'new-session', '-d', '-s', agent_name,
-                '-c', project_root, claude_path
-            ])
+            tmux_cmd.extend(
+                ["new-session", "-d", "-s", agent_name, "-c", project_root, claude_path]
+            )
 
             subprocess.run(tmux_cmd, capture_output=True, check=False)
             # Send initialization message

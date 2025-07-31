@@ -76,7 +76,7 @@ def test_custom_campaign_no_dragon_knight_defaults():
                 for entry in campaign_details["narrative_history"]:
                     if isinstance(entry, dict):
                         # Collect all text fields
-                        for key, value in entry.items():
+                        for _key, value in entry.items():
                             if isinstance(value, str):
                                 full_content += f" {value}"
 

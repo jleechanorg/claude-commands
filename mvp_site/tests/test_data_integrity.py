@@ -148,7 +148,9 @@ class TestDataIntegrity(unittest.TestCase):
 
         # Verify NPC data is still dictionaries
         for npc_id, npc_data in updated_state["npc_data"].items():
-            assert isinstance(npc_data, dict), f"NPC '{npc_id}' should be dict, got {type(npc_data)}: {npc_data}"
+            assert isinstance(
+                npc_data, dict
+            ), f"NPC '{npc_id}' should be dict, got {type(npc_data)}: {npc_data}"
 
         # Verify specific NPC was updated correctly
         assert updated_state["npc_data"]["dragon_boss"]["hp_current"] == 150
@@ -185,7 +187,9 @@ class TestDataIntegrity(unittest.TestCase):
 
         # Verify NPCs are still dictionaries after GameState initialization
         for npc_id, npc_data in game_state.npc_data.items():
-            assert isinstance(npc_data, dict), f"NPC '{npc_id}' should be dict after GameState init, got {type(npc_data)}"
+            assert isinstance(
+                npc_data, dict
+            ), f"NPC '{npc_id}' should be dict after GameState init, got {type(npc_data)}"
 
     def test_combat_cleanup_preserves_data_types(self):
         """Test that combat cleanup doesn't corrupt NPC data types."""
@@ -242,7 +246,9 @@ class TestDataIntegrity(unittest.TestCase):
 
         # Verify all remaining NPCs are still dictionaries
         for npc_id, npc_data in game_state.npc_data.items():
-            assert isinstance(npc_data, dict), f"NPC '{npc_id}' should be dict after cleanup, got {type(npc_data)}: {npc_data}"
+            assert isinstance(
+                npc_data, dict
+            ), f"NPC '{npc_id}' should be dict after cleanup, got {type(npc_data)}: {npc_data}"
 
         # Verify expected cleanup happened
         assert "Dragon Boss" in defeated
@@ -273,7 +279,9 @@ class TestDataIntegrity(unittest.TestCase):
 
         # Verify NPCs are still dictionaries even with suspicious mission data
         for npc_id, npc_data in game_state.npc_data.items():
-            assert isinstance(npc_data, dict), f"NPC '{npc_id}' should be dict despite mixed mission data, got {type(npc_data)}"
+            assert isinstance(
+                npc_data, dict
+            ), f"NPC '{npc_id}' should be dict despite mixed mission data, got {type(npc_data)}"
 
     def test_state_consistency_after_multiple_updates(self):
         """Test that multiple state updates maintain data integrity."""
@@ -314,7 +322,9 @@ class TestDataIntegrity(unittest.TestCase):
 
             # After each update, verify NPC data integrity
             for npc_id, npc_data in current_state["npc_data"].items():
-                assert isinstance(npc_data, dict), f"After update, NPC '{npc_id}' should be dict, got {type(npc_data)}: {npc_data}"
+                assert isinstance(
+                    npc_data, dict
+                ), f"After update, NPC '{npc_id}' should be dict, got {type(npc_data)}: {npc_data}"
 
     def test_npc_string_update_preservation(self):
         """
@@ -345,7 +355,9 @@ class TestDataIntegrity(unittest.TestCase):
 
         # Verify the NPC data structure is preserved
         npc_data = updated_state["npc_data"]["goblin_skirmisher_1"]
-        assert isinstance(npc_data, dict), f"NPC data was corrupted! Expected dict but got {type(npc_data)}: {npc_data}"
+        assert isinstance(
+            npc_data, dict
+        ), f"NPC data was corrupted! Expected dict but got {type(npc_data)}: {npc_data}"
 
         # Original data should be preserved
         assert npc_data.get("hp_current") == 7
@@ -407,7 +419,9 @@ class TestDataIntegrity(unittest.TestCase):
         # VERIFY: The smart conversion should have converted string to status update.
         # The NPC should still be a dict with the string converted to status field.
         assert "Grishnak" in updated_state["npc_data"]
-        assert isinstance(updated_state["npc_data"]["Grishnak"], dict), "NPC data should remain a dictionary!"
+        assert isinstance(
+            updated_state["npc_data"]["Grishnak"], dict
+        ), "NPC data should remain a dictionary!"
 
         # Check that the original data is preserved
         npc_data = updated_state["npc_data"]["Grishnak"]
@@ -417,7 +431,9 @@ class TestDataIntegrity(unittest.TestCase):
         assert npc_data["role"] == "Goblin Warband Leader"
 
         # Check that the string was converted to status
-        assert npc_data["status"] == "defeated", "String should be converted to status field"
+        assert (
+            npc_data["status"] == "defeated"
+        ), "String should be converted to status field"
 
     def test_list_overwrite_on_missions_is_converted(self):
         """
@@ -450,10 +466,14 @@ class TestDataIntegrity(unittest.TestCase):
         active_missions = updated_state.get("custom_campaign_state", {}).get(
             "active_missions"
         )
-        assert isinstance(active_missions, list), "active_missions should remain a list after smart conversion!"
+        assert isinstance(
+            active_missions, list
+        ), "active_missions should remain a list after smart conversion!"
 
         # Should now have 3 missions: the 2 original plus the converted one
-        assert len(active_missions) == 3, "Should have 2 original missions plus 1 converted mission"
+        assert (
+            len(active_missions) == 3
+        ), "Should have 2 original missions plus 1 converted mission"
 
         # Check that the converted mission has proper structure
         converted_mission = None

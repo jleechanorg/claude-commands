@@ -62,7 +62,10 @@ class TestStateUpdatesJSONParsing(unittest.TestCase):
         assert response.state_updates is not None
         assert "pc_data" in response.state_updates
         assert "npc_data" in response.state_updates
-        assert response.state_updates["pc_data"]["inventory"]["magical_sword"]["name"] == "Excalibur"
+        assert (
+            response.state_updates["pc_data"]["inventory"]["magical_sword"]["name"]
+            == "Excalibur"
+        )
 
     def test_main_py_uses_json_state_updates_not_markdown_blocks(self):
         """Test that main.py correctly uses state_updates from structured response"""
@@ -80,7 +83,9 @@ class TestStateUpdatesJSONParsing(unittest.TestCase):
         )
 
         # Test that state_updates property works correctly
-        assert gemini_response.state_updates == self.sample_json_response["state_updates"]
+        assert (
+            gemini_response.state_updates == self.sample_json_response["state_updates"]
+        )
 
         # Test the actual bug: when structured_response exists, it should use state_updates from it
         # This simulates the code at main.py:877-878
@@ -188,8 +193,16 @@ The temple guardian greets him."""
         )
 
         # Verify complex structure is preserved
-        assert response.state_updates["pc_data"]["inventory"]["backpack"]["current_weight"] == 15.5
-        assert response.state_updates["world_state"]["active_quests"]["main_quest"]["stage"] == 3
+        assert (
+            response.state_updates["pc_data"]["inventory"]["backpack"]["current_weight"]
+            == 15.5
+        )
+        assert (
+            response.state_updates["world_state"]["active_quests"]["main_quest"][
+                "stage"
+            ]
+            == 3
+        )
 
 
 if __name__ == "__main__":

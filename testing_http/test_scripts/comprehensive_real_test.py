@@ -92,7 +92,7 @@ class RealBrowserTest:
         log("Testing form submission with browser behavior...", "TEST")
 
         # First, get CSRF token or session cookie if any
-        homepage = self.session.get(f"{BASE_URL}/")
+        self.session.get(f"{BASE_URL}/")
 
         # Prepare form data as browser would send it
         form_data = {
@@ -234,7 +234,7 @@ class RealBrowserTest:
         # Summary stats
         total_tests = len(self.results)
         successful = sum(
-            1 for k, v in self.results.items() if v == 200 or v == 201 or v is True
+            1 for k, v in self.results.items() if v in {200, 201} or v is True
         )
 
         log(f"Total checks performed: {total_tests}", "INFO")
@@ -297,7 +297,6 @@ def main():
 
     except Exception as e:
         log(f"Test suite failed: {e}", "ERROR")
-
 
         traceback.print_exc()
 

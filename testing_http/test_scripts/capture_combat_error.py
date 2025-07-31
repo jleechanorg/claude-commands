@@ -4,6 +4,7 @@ Comprehensive test to capture the combat AttributeError with full details
 """
 
 import json
+import sys
 import time
 from datetime import datetime
 
@@ -45,7 +46,7 @@ campaign_resp = requests.post(
 if campaign_resp.status_code != 201:
     log(f"Campaign creation failed: {campaign_resp.status_code}", "ERROR")
     log(f"Response: {campaign_resp.text[:500]}", "ERROR")
-    exit(1)
+    sys.exit(1)
 
 campaign_data = campaign_resp.json()
 campaign_id = campaign_data.get("campaignId") or campaign_data.get("campaign_id")

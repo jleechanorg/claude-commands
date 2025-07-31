@@ -20,7 +20,7 @@ os.environ["TESTING"] = "true"
 os.environ["GEMINI_API_KEY"] = "test-api-key"
 
 # Add the parent directory to the path to import main
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
 class TestFieldFormatValidation(unittest.TestCase):
@@ -107,27 +107,23 @@ class TestFieldFormatValidation(unittest.TestCase):
         result = asyncio.run(process_action_unified(request_data))
 
         # Validate that world_logic returns story entries with correct field format
-        self.assertIn("story", result, "world_logic should return story field")
+        assert "story" in result, "world_logic should return story field"
         story_entries = result["story"]
-        self.assertIsInstance(story_entries, list, "Story should be a list")
-        self.assertGreater(len(story_entries), 0, "Story should contain entries")
+        assert isinstance(story_entries, list), "Story should be a list"
+        assert len(story_entries) > 0, "Story should contain entries"
 
         # CRITICAL TEST: Check field format
         first_entry = story_entries[0]
-        self.assertIsInstance(first_entry, dict, "Story entry should be dict")
+        assert isinstance(first_entry, dict), "Story entry should be dict"
 
         # The critical assertion: ensure "text" field is present (not "story")
-        self.assertIn(
-            "text",
-            first_entry,
-            "Story entry should have 'text' field for main.py compatibility",
-        )
-        self.assertIsInstance(
-            first_entry["text"], str, "Story entry text field should be string"
-        )
-        self.assertGreater(
-            len(first_entry["text"]), 0, "Story entry text should not be empty"
-        )
+        assert (
+            "text" in first_entry
+        ), "Story entry should have 'text' field for main.py compatibility"
+        assert isinstance(
+            first_entry["text"], str
+        ), "Story entry text field should be string"
+        assert len(first_entry["text"]) > 0, "Story entry text should not be empty"
 
         print("✅ world_logic.py creates entries with correct 'text' field")
         print(f"   Entry content: {first_entry['text'][:100]}...")
@@ -160,24 +156,20 @@ class TestFieldFormatValidation(unittest.TestCase):
         )
 
         # Validate HTTP response
-        self.assertEqual(
-            response.status_code,
-            200,
-            "HTTP request should succeed through translation layer",
-        )
+        assert (
+            response.status_code == 200
+        ), "HTTP request should succeed through translation layer"
 
         response_data = json.loads(response.data)
-        self.assertIn(
-            "narrative",
-            response_data,
-            "Translation layer should extract narrative from story entries",
-        )
+        assert (
+            "narrative" in response_data
+        ), "Translation layer should extract narrative from story entries"
 
         narrative_text = response_data["narrative"]
-        self.assertIsInstance(narrative_text, str, "Narrative should be string")
-        self.assertGreater(
-            len(narrative_text), 0, "Narrative should not be empty after translation"
-        )
+        assert isinstance(narrative_text, str), "Narrative should be string"
+        assert (
+            len(narrative_text) > 0
+        ), "Narrative should not be empty after translation"
 
         print("✅ main.py translation layer successfully extracts narrative")
         print(f"   Narrative content: {narrative_text[:100]}...")
@@ -210,9 +202,9 @@ class TestFieldFormatValidation(unittest.TestCase):
         )
 
         # This should result in empty narrative due to field mismatch
-        self.assertEqual(
-            narrative_text, "", "Wrong field format should result in empty narrative"
-        )
+        assert (
+            narrative_text == ""
+        ), "Wrong field format should result in empty narrative"
 
         print("🔴 RED TEST CONFIRMED: 'story' field format causes empty narrative")
         print("   Expected field: 'text', Actual field: 'story', Result: empty")
@@ -226,11 +218,9 @@ class TestFieldFormatValidation(unittest.TestCase):
             else str(first_entry_correct)
         )
 
-        self.assertEqual(
-            narrative_text_correct,
-            "This works with translation layer",
-            "Correct field format should preserve narrative content",
-        )
+        assert (
+            narrative_text_correct == "This works with translation layer"
+        ), "Correct field format should preserve narrative content"
 
         print("🟢 CORRECTION CONFIRMED: 'text' field format works correctly")
         print("   Field: 'text', Result: narrative content preserved")

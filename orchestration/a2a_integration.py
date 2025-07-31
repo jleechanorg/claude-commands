@@ -20,6 +20,7 @@ from typing import Any
 # Use project logging utility
 try:
     import logging_util
+
     logger = logging_util.setup_logging(__name__)
 except ImportError:
     # Fallback to basic logging if logging_util not available
@@ -27,12 +28,13 @@ except ImportError:
     logger = logging.getLogger(__name__)
 
 # A2A Communication Directory - configurable for production
-A2A_BASE_DIR = os.environ.get('A2A_BASE_DIR', '/tmp/orchestration/a2a')
+A2A_BASE_DIR = os.environ.get("A2A_BASE_DIR", "/tmp/orchestration/a2a")
 
 
 @dataclass
 class A2AMessage:
     """Simple A2A message format for file-based communication"""
+
     id: str
     from_agent: str
     to_agent: str  # or "broadcast" for all agents
@@ -46,7 +48,7 @@ class A2AMessage:
         return json.dumps(asdict(self), indent=2)
 
     @classmethod
-    def from_json(cls, json_str: str) -> 'A2AMessage':
+    def from_json(cls, json_str: str) -> "A2AMessage":
         """Deserialize from JSON string"""
         data = json.loads(json_str)
         return cls(**data)
@@ -55,6 +57,7 @@ class A2AMessage:
 @dataclass
 class AgentInfo:
     """Agent capabilities and status information"""
+
     agent_id: str
     agent_type: str  # frontend, backend, testing, opus-master
     capabilities: list[str]
@@ -69,7 +72,7 @@ class AgentInfo:
         return json.dumps(asdict(self), indent=2)
 
     @classmethod
-    def from_json(cls, json_str: str) -> 'AgentInfo':
+    def from_json(cls, json_str: str) -> "AgentInfo":
         """Deserialize from JSON string"""
         data = json.loads(json_str)
         return cls(**data)
@@ -106,7 +109,7 @@ class FileBasedMessaging:
         filename = f"{message.timestamp}_{message.from_agent}_{message.id}.json"
         filepath = target_inbox / filename
 
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             f.write(message.to_json())
 
         logger.info(f"Sent message {message.id} to {message.to_agent}")
@@ -128,7 +131,7 @@ class FileBasedMessaging:
                     message_type=message.message_type,
                     payload=message.payload,
                     timestamp=message.timestamp,
-                    reply_to=message.reply_to
+                    reply_to=message.reply_to,
                 )
                 if self._send_direct_message(target_message):
                     success_count += 1
@@ -178,7 +181,7 @@ class AgentRegistry:
             agent_dir = Path(A2A_BASE_DIR) / "agents" / agent_info.agent_id
             agent_dir.mkdir(parents=True, exist_ok=True)
 
-            with open(agent_dir / "info.json", 'w') as f:
+            with open(agent_dir / "info.json", "w") as f:
                 f.write(agent_info.to_json())
 
             logger.info(f"Registered agent {agent_info.agent_id}")
@@ -201,7 +204,9 @@ class AgentRegistry:
             logger.error(f"Failed to unregister agent: {e}")
             return False
 
-    def discover_agents(self, capability_filter: list[str] | None = None) -> list[AgentInfo]:
+    def discover_agents(
+        self, capability_filter: list[str] | None = None
+    ) -> list[AgentInfo]:
         """Discover available agents, optionally filtered by capabilities"""
         try:
             registry = self._load_registry()
@@ -211,9 +216,10 @@ class AgentRegistry:
                 agent_info = AgentInfo(**agent_data)
 
                 # Filter by capabilities if specified
-                if capability_filter:
-                    if not any(cap in agent_info.capabilities for cap in capability_filter):
-                        continue
+                if capability_filter and not any(
+                    cap in agent_info.capabilities for cap in capability_filter
+                ):
+                    continue
 
                 # Check if agent is still alive (heartbeat within last 60 seconds)
                 if time.time() - agent_info.last_heartbeat < 60:
@@ -230,13 +236,13 @@ class AgentRegistry:
         try:
             registry = self._load_registry()
             if agent_id in registry:
-                registry[agent_id]['last_heartbeat'] = time.time()
+                registry[agent_id]["last_heartbeat"] = time.time()
                 self._save_registry(registry)
 
                 # Also update heartbeat file
                 agent_dir = Path(A2A_BASE_DIR) / "agents" / agent_id
                 heartbeat_file = agent_dir / "heartbeat.json"
-                with open(heartbeat_file, 'w') as f:
+                with open(heartbeat_file, "w") as f:
                     json.dump({"last_heartbeat": time.time()}, f)
 
             return True
@@ -253,7 +259,7 @@ class AgentRegistry:
 
     def _save_registry(self, registry: dict[str, Any]) -> None:
         """Save registry to file"""
-        with open(self.registry_file, 'w') as f:
+        with open(self.registry_file, "w") as f:
             json.dump(registry, f, indent=2)
 
 
@@ -270,9 +276,13 @@ class TaskPool:
         for dir_path in [self.available_dir, self.claimed_dir, self.completed_dir]:
             dir_path.mkdir(parents=True, exist_ok=True)
 
-    def publish_task(self, task_id: str, task_description: str,
-                    requirements: list[str] | None = None,
-                    constraints: dict[str, Any] | None = None) -> bool:
+    def publish_task(
+        self,
+        task_id: str,
+        task_description: str,
+        requirements: list[str] | None = None,
+        constraints: dict[str, Any] | None = None,
+    ) -> bool:
         """Publish a task to the available pool with optional constraints
 
         Args:
@@ -291,15 +301,17 @@ class TaskPool:
                 "constraints": constraints or {},
                 "constraint_enforcement": {
                     "enabled": bool(constraints),
-                    "validation_required": bool(constraints and constraints.get('validation_rules')),
-                    "created_at": time.time()
+                    "validation_required": bool(
+                        constraints and constraints.get("validation_rules")
+                    ),
+                    "created_at": time.time(),
                 },
                 "created_at": time.time(),
-                "status": "available"
+                "status": "available",
             }
 
             task_file = self.available_dir / f"{task_id}.json"
-            with open(task_file, 'w') as f:
+            with open(task_file, "w") as f:
                 json.dump(task_data, f, indent=2)
 
             logger.info(f"Published task {task_id}")
@@ -309,7 +321,9 @@ class TaskPool:
             logger.error(f"Failed to publish task: {e}")
             return False
 
-    def claim_task(self, task_id: str, agent_id: str, timeout: float = 10.0) -> dict[str, Any]:
+    def claim_task(
+        self, task_id: str, agent_id: str, timeout: float = 10.0
+    ) -> dict[str, Any]:
         """Claim a task from the available pool and return task data with constraints
 
         Uses atomic file locking to prevent race conditions when multiple agents
@@ -343,13 +357,17 @@ class TaskPool:
                     break  # Lock acquired successfully
                 except BlockingIOError:
                     if time.time() - start_time >= timeout:
-                        logger.warning(f"Lock acquisition timeout for task {task_id} by agent {agent_id}")
+                        logger.warning(
+                            f"Lock acquisition timeout for task {task_id} by agent {agent_id}"
+                        )
                         return {}
                     time.sleep(0.01)  # Short sleep before retry
 
             # Double-check file still exists after acquiring lock
             if not available_file.exists():
-                logger.info(f"Task {task_id} no longer available (claimed by another agent)")
+                logger.info(
+                    f"Task {task_id} no longer available (claimed by another agent)"
+                )
                 return {}
 
             # Load and validate task data
@@ -360,27 +378,30 @@ class TaskPool:
             claim_timestamp = time.time()
 
             # Check if task was recently claimed (additional safety check)
-            if task_data.get('status') == 'claimed':
-                logger.warning(f"Task {task_id} already claimed by {task_data.get('claimed_by')}")
+            if task_data.get("status") == "claimed":
+                logger.warning(
+                    f"Task {task_id} already claimed by {task_data.get('claimed_by')}"
+                )
                 return {}
 
             # Update task status and claimer with atomic timestamp
-            task_data['status'] = 'claimed'
-            task_data['claimed_by'] = agent_id
-            task_data['claimed_at'] = claim_timestamp
-            task_data['claim_lock_acquired_at'] = claim_timestamp
+            task_data["status"] = "claimed"
+            task_data["claimed_by"] = agent_id
+            task_data["claimed_at"] = claim_timestamp
+            task_data["claim_lock_acquired_at"] = claim_timestamp
 
             # Update constraint enforcement metadata
-            if 'constraint_enforcement' in task_data:
-                task_data['constraint_enforcement']['claimed_at'] = claim_timestamp
-                task_data['constraint_enforcement']['claimed_by'] = agent_id
+            if "constraint_enforcement" in task_data:
+                task_data["constraint_enforcement"]["claimed_at"] = claim_timestamp
+                task_data["constraint_enforcement"]["claimed_by"] = agent_id
 
             # Atomic move operation: write to temp file first, then move
             claimed_file = self.claimed_dir / f"{task_id}_{agent_id}.json"
 
             # Use atomic write with temp file
-            with tempfile.NamedTemporaryFile(mode='w', dir=self.claimed_dir,
-                                           suffix='.tmp', delete=False) as temp_file:
+            with tempfile.NamedTemporaryFile(
+                mode="w", dir=self.claimed_dir, suffix=".tmp", delete=False
+            ) as temp_file:
                 json.dump(task_data, temp_file, indent=2)
                 temp_file.flush()
                 os.fsync(temp_file.fileno())  # Force write to disk
@@ -393,8 +414,10 @@ class TaskPool:
             available_file.unlink()
 
             logger.info(f"Task {task_id} claimed by {agent_id} with atomic locking")
-            if task_data.get('constraints'):
-                logger.info(f"Task {task_id} includes constraints: {list(task_data['constraints'].keys())}")
+            if task_data.get("constraints"):
+                logger.info(
+                    f"Task {task_id} includes constraints: {list(task_data['constraints'].keys())}"
+                )
 
             return task_data
 
@@ -422,7 +445,9 @@ class TaskPool:
                 except OSError:
                     pass  # Ignore cleanup errors
 
-    def complete_task(self, task_id: str, agent_id: str, result: dict[str, Any]) -> bool:
+    def complete_task(
+        self, task_id: str, agent_id: str, result: dict[str, Any]
+    ) -> bool:
         """Mark a task as completed"""
         try:
             claimed_file = self.claimed_dir / f"{task_id}_{agent_id}.json"
@@ -434,13 +459,13 @@ class TaskPool:
                 task_data = json.load(f)
 
             # Update task status and result
-            task_data['status'] = 'completed'
-            task_data['completed_at'] = time.time()
-            task_data['result'] = result
+            task_data["status"] = "completed"
+            task_data["completed_at"] = time.time()
+            task_data["result"] = result
 
             # Move to completed directory
             completed_file = self.completed_dir / f"{task_id}_complete.json"
-            with open(completed_file, 'w') as f:
+            with open(completed_file, "w") as f:
                 json.dump(task_data, f, indent=2)
 
             # Remove from claimed
@@ -453,7 +478,9 @@ class TaskPool:
             logger.error(f"Failed to complete task: {e}")
             return False
 
-    def get_available_tasks(self, capability_filter: list[str] | None = None) -> list[dict[str, Any]]:
+    def get_available_tasks(
+        self, capability_filter: list[str] | None = None
+    ) -> list[dict[str, Any]]:
         """Get list of available tasks, optionally filtered by requirements"""
         tasks = []
 
@@ -463,8 +490,10 @@ class TaskPool:
                     task_data = json.load(f)
 
                 # Filter by capabilities if specified
-                if capability_filter and task_data.get('requirements'):
-                    if not any(req in capability_filter for req in task_data['requirements']):
+                if capability_filter and task_data.get("requirements"):
+                    if not any(
+                        req in capability_filter for req in task_data["requirements"]
+                    ):
                         continue
 
                 tasks.append(task_data)
@@ -474,8 +503,9 @@ class TaskPool:
 
         return tasks
 
-    def validate_task_constraints(self, task_data: dict[str, Any],
-                                agent_capabilities: list[str]) -> bool:
+    def validate_task_constraints(
+        self, task_data: dict[str, Any], agent_capabilities: list[str]
+    ) -> bool:
         """Validate if an agent can handle task constraints
 
         Args:
@@ -485,33 +515,35 @@ class TaskPool:
         Returns:
             True if agent can handle constraints, False otherwise
         """
-        constraints = task_data.get('constraints', {})
+        constraints = task_data.get("constraints", {})
         if not constraints:
             return True
 
         # Check resource constraints
-        if 'resource_limits' in constraints:
+        if "resource_limits" in constraints:
             # Could be extended to check actual resource availability
             pass
 
         # Check capability constraints
-        if 'required_capabilities' in constraints:
-            required = constraints['required_capabilities']
+        if "required_capabilities" in constraints:
+            required = constraints["required_capabilities"]
             if not all(cap in agent_capabilities for cap in required):
                 return False
 
         # Check timing constraints
-        if 'deadline' in constraints:
-            deadline = constraints['deadline']
-            if isinstance(deadline, (int, float)) and deadline < time.time():
+        if "deadline" in constraints:
+            deadline = constraints["deadline"]
+            if isinstance(deadline, int | float) and deadline < time.time():
                 return False
 
         # Check validation rules
-        if 'validation_rules' in constraints:
+        if "validation_rules" in constraints:
             # Could be extended with specific validation logic
             # For now, assume agent can handle if it has validation capability
-            if 'validation' not in agent_capabilities:
-                logger.warning("Task requires validation but agent lacks validation capability")
+            if "validation" not in agent_capabilities:
+                logger.warning(
+                    "Task requires validation but agent lacks validation capability"
+                )
 
         return True
 
@@ -519,8 +551,9 @@ class TaskPool:
 class A2AClient:
     """Main A2A client for agent integration"""
 
-    def __init__(self, agent_id: str, agent_type: str, capabilities: list[str],
-                 workspace: str):
+    def __init__(
+        self, agent_id: str, agent_type: str, capabilities: list[str], workspace: str
+    ):
         self.agent_id = agent_id
         self.agent_type = agent_type
         self.capabilities = capabilities
@@ -540,11 +573,13 @@ class A2AClient:
             current_task=None,
             created_at=time.time(),
             last_heartbeat=time.time(),
-            workspace=workspace
+            workspace=workspace,
         )
         self.registry.register_agent(self.agent_info)
 
-    def send_message(self, to_agent: str, message_type: str, payload: dict[str, Any]) -> bool:
+    def send_message(
+        self, to_agent: str, message_type: str, payload: dict[str, Any]
+    ) -> bool:
         """Send message to another agent"""
         message = A2AMessage(
             id=str(uuid.uuid4()),
@@ -552,7 +587,7 @@ class A2AClient:
             to_agent=to_agent,
             message_type=message_type,
             payload=payload,
-            timestamp=time.time()
+            timestamp=time.time(),
         )
         return self.messaging.send_message(message)
 
@@ -564,8 +599,12 @@ class A2AClient:
         """Discover other available agents"""
         return self.registry.discover_agents()
 
-    def publish_task(self, task_description: str, requirements: list[str] | None = None,
-                    constraints: dict[str, Any] | None = None) -> str:
+    def publish_task(
+        self,
+        task_description: str,
+        requirements: list[str] | None = None,
+        constraints: dict[str, Any] | None = None,
+    ) -> str:
         """Publish a new task with optional constraints
 
         Args:
@@ -574,7 +613,9 @@ class A2AClient:
             constraints: Optional constraint information for task execution
         """
         task_id = str(uuid.uuid4())
-        if self.task_pool.publish_task(task_id, task_description, requirements, constraints):
+        if self.task_pool.publish_task(
+            task_id, task_description, requirements, constraints
+        ):
             return task_id
         return None
 
@@ -612,7 +653,9 @@ class A2AClient:
             if self.task_pool.validate_task_constraints(task, self.capabilities):
                 compatible_tasks.append(task)
             else:
-                logger.info(f"Task {task.get('task_id')} filtered out due to constraint mismatch")
+                logger.info(
+                    f"Task {task.get('task_id')} filtered out due to constraint mismatch"
+                )
 
         return compatible_tasks
 
@@ -644,8 +687,9 @@ class A2AClient:
 
 
 # Utility functions for orchestration integration
-def create_a2a_client(agent_id: str, agent_type: str, capabilities: list[str],
-                     workspace: str) -> A2AClient:
+def create_a2a_client(
+    agent_id: str, agent_type: str, capabilities: list[str], workspace: str
+) -> A2AClient:
     """Factory function to create A2A client for agents"""
     return A2AClient(agent_id, agent_type, capabilities, workspace)
 
@@ -663,7 +707,7 @@ def get_a2a_status() -> dict[str, Any]:
         "available_tasks": len(available_tasks),
         "a2a_directory": A2A_BASE_DIR,
         "agents": [asdict(agent) for agent in agents],
-        "tasks": available_tasks
+        "tasks": available_tasks,
     }
 
 
@@ -682,17 +726,26 @@ if __name__ == "__main__":
         agent2_workspace = tempfile.mkdtemp(prefix="agent2_")
 
         # Create test agents with secure temporary workspaces
-        agent1 = create_a2a_client("agent-1", "frontend", ["javascript", "react", "validation"], agent1_workspace)
-        agent2 = create_a2a_client("agent-2", "backend", ["python", "api"], agent2_workspace)
+        agent1 = create_a2a_client(
+            "agent-1",
+            "frontend",
+            ["javascript", "react", "validation"],
+            agent1_workspace,
+        )
+        agent2 = create_a2a_client(
+            "agent-2", "backend", ["python", "api"], agent2_workspace
+        )
 
         # Test task publishing with constraints
         constraints = {
             "resource_limits": {"memory_mb": 512, "timeout_seconds": 300},
             "required_capabilities": ["javascript"],
             "deadline": time.time() + 3600,  # 1 hour from now
-            "validation_rules": {"code_review": True, "testing": True}
+            "validation_rules": {"code_review": True, "testing": True},
         }
-        task_id = agent1.publish_task("Build login form with constraints", ["javascript"], constraints)
+        task_id = agent1.publish_task(
+            "Build login form with constraints", ["javascript"], constraints
+        )
         print(f"Published task with constraints: {task_id}")
 
         # Test basic task publishing (backward compatibility)
@@ -709,11 +762,13 @@ if __name__ == "__main__":
 
         # Test task claiming with constraint information
         if compatible_tasks:
-            claimed_task = agent2.claim_task(compatible_tasks[0]['task_id'])
+            claimed_task = agent2.claim_task(compatible_tasks[0]["task_id"])
             if claimed_task:
                 print(f"Claimed task: {claimed_task.get('task_id')}")
                 print(f"Task constraints: {claimed_task.get('constraints', {})}")
-                print(f"Constraint enforcement: {claimed_task.get('constraint_enforcement', {})}")
+                print(
+                    f"Constraint enforcement: {claimed_task.get('constraint_enforcement', {})}"
+                )
 
         # Test messaging
         agent1.send_message("agent-2", "status", {"message": "Hello from agent 1"})
@@ -723,7 +778,9 @@ if __name__ == "__main__":
         # Get system status
         status = get_a2a_status()
         print(f"System status: {status}")
-        print(f"Tasks with constraints: {sum(1 for task in status['tasks'] if task.get('constraints'))}")
+        print(
+            f"Tasks with constraints: {sum(1 for task in status['tasks'] if task.get('constraints'))}"
+        )
 
     finally:
         # Cleanup test directories and agent workspaces

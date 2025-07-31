@@ -78,9 +78,10 @@ class TestProductionParity(unittest.TestCase):
         response = self.client.get("/api/campaigns", headers=self.test_headers)
 
         # Should succeed with proper auth bypass
-        self.assertIn(
-            response.status_code, [200, 404], "Should handle campaigns list request"
-        )
+        assert response.status_code in [
+            200,
+            404,
+        ], "Should handle campaigns list request"
 
         if response.status_code == 200:
             response_data = response.get_json()
@@ -101,22 +102,19 @@ class TestProductionParity(unittest.TestCase):
                 )
 
             # Verify campaigns is iterable (prevents forEach error)
-            self.assertTrue(
-                hasattr(campaigns, "__iter__"),
-                "Campaigns should be iterable for forEach()",
-            )
+            assert hasattr(
+                campaigns, "__iter__"
+            ), "Campaigns should be iterable for forEach()"
 
             # Verify it's specifically a list (what forEach expects)
-            self.assertIsInstance(
-                campaigns,
-                list,
-                "Campaigns should be a list for forEach() compatibility",
-            )
+            assert isinstance(
+                campaigns, list
+            ), "Campaigns should be a list for forEach() compatibility"
 
     def test_direct_calls_mode_response_format(self):
         """Test response format when using direct calls mode (default).
 
-        This tests the production configuration where world_logic.py 
+        This tests the production configuration where world_logic.py
         functions are called directly without HTTP overhead.
         """
         # Create app instance with default direct calls mode
@@ -126,11 +124,10 @@ class TestProductionParity(unittest.TestCase):
 
         response = direct_client.get("/api/campaigns", headers=self.test_headers)
 
-        self.assertIn(
-            response.status_code,
-            [200, 404],
-            "Direct calls mode should handle campaigns request",
-        )
+        assert response.status_code in [
+            200,
+            404,
+        ], "Direct calls mode should handle campaigns request"
 
         if response.status_code == 200:
             response_data = response.get_json()
@@ -140,17 +137,15 @@ class TestProductionParity(unittest.TestCase):
             # This means response_data should be the campaigns array directly,
             # or the destructuring will fail
 
-            self.assertIsInstance(
-                response_data, (list, dict), "Response should be list or dict"
-            )
+            assert isinstance(
+                response_data, list | dict
+            ), "Response should be list or dict"
 
             if isinstance(response_data, dict):
                 # If it's a dict, it should have campaigns field
-                self.assertIn(
-                    "campaigns",
-                    response_data,
-                    "Dict response should have 'campaigns' field",
-                )
+                assert (
+                    "campaigns" in response_data
+                ), "Dict response should have 'campaigns' field"
                 campaigns = response_data["campaigns"]
             else:
                 campaigns = response_data
@@ -167,7 +162,6 @@ class TestProductionParity(unittest.TestCase):
                 )
 
         # No environment cleanup needed - direct calls are default
-        pass
 
 
 if __name__ == "__main__":

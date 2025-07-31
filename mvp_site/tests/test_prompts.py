@@ -10,8 +10,10 @@ sys.path.insert(
 
 
 import constants
-import gemini_service
 import logging_util
+import pytest
+
+import gemini_service
 from gemini_service import _load_instruction_file, _loaded_instructions_cache
 
 # The list of all known prompt types to test, using shared constants.
@@ -36,7 +38,7 @@ class TestPromptLoading(unittest.TestCase):
             "--- Running Test: test_all_prompts_are_loadable_via_service ---"
         )
 
-        for p_type in gemini_service.PATH_MAP.keys():
+        for p_type in gemini_service.PATH_MAP:
             content = _load_instruction_file(p_type)
             assert isinstance(content, str)
             assert len(content) > 0, f"Prompt file for {p_type} should not be empty."
@@ -49,7 +51,7 @@ class TestPromptLoading(unittest.TestCase):
         logging_util.info(
             "--- Running Test: test_loading_unknown_prompt_raises_error ---"
         )
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             _load_instruction_file("this_is_not_a_real_prompt_type")
 
     def test_all_prompt_files_are_registered_in_service(self):
@@ -81,10 +83,14 @@ class TestPromptLoading(unittest.TestCase):
 
         # 3. Compare the sets
         unregistered_files = disk_files - service_files
-        assert len(unregistered_files) == 0, f"Found .md files in prompts/ dir not registered in gemini_service.path_map: {unregistered_files}"
+        assert (
+            len(unregistered_files) == 0
+        ), f"Found .md files in prompts/ dir not registered in gemini_service.path_map: {unregistered_files}"
 
         missing_files = service_files - disk_files
-        assert len(missing_files) == 0, f"Found files in gemini_service.path_map that do not exist in prompts/: {missing_files}"
+        assert (
+            len(missing_files) == 0
+        ), f"Found files in gemini_service.path_map that do not exist in prompts/: {missing_files}"
 
     def test_all_registered_prompts_are_actually_used(self):
         """
@@ -119,7 +125,7 @@ class TestPromptLoading(unittest.TestCase):
             )
 
             # Search through Python files for usage
-            for root, dirs, files in os.walk(codebase_dir):
+            for root, _dirs, files in os.walk(codebase_dir):
                 # Skip test directories and __pycache__
                 # More specific: only skip if the directory name itself starts with 'test' or is __pycache__
                 basename = os.path.basename(root)
@@ -150,7 +156,9 @@ class TestPromptLoading(unittest.TestCase):
                 unused_prompts.add(prompt_type)
 
         # This test should pass now that we're looking for the right patterns
-        assert len(unused_prompts) == 0, f"Found prompt types registered in PATH_MAP but not used in codebase: {unused_prompts}"
+        assert (
+            len(unused_prompts) == 0
+        ), f"Found prompt types registered in PATH_MAP but not used in codebase: {unused_prompts}"
 
         # Also verify that prompt types are actually called via _load_instruction_file
         # This is a more specific check for actual loading via constants
@@ -164,7 +172,7 @@ class TestPromptLoading(unittest.TestCase):
             )
 
         # Search for _load_instruction_file calls with constants
-        for root, dirs, files in os.walk(codebase_dir):
+        for root, _dirs, files in os.walk(codebase_dir):
             # Skip test directories and __pycache__
             basename = os.path.basename(root)
             if basename.startswith("test") or basename == "__pycache__":
@@ -232,14 +240,16 @@ class TestPromptLoading(unittest.TestCase):
         not_loaded_always = always_loaded_prompts - used_in_loading
 
         # All always-loaded prompts should be found
-        assert len(not_loaded_always) == 0, f"Found always-loaded prompt types that are never loaded: {not_loaded_always}"
+        assert (
+            len(not_loaded_always) == 0
+        ), f"Found always-loaded prompt types that are never loaded: {not_loaded_always}"
 
         # Conditional prompts should be loaded when conditions are met
-        conditional_not_loaded = conditional_prompts - used_in_loading
+        conditional_prompts - used_in_loading
 
         # Verify conditional prompts are at least referenced in conditional logic
         conditional_referenced = set()
-        for root, dirs, files in os.walk(codebase_dir):
+        for root, _dirs, files in os.walk(codebase_dir):
             # Skip test directories and __pycache__
             basename = os.path.basename(root)
             if basename.startswith("test") or basename == "__pycache__":
@@ -285,7 +295,9 @@ class TestPromptLoading(unittest.TestCase):
                         continue
 
         unreferenced_conditionals = conditional_prompts - conditional_referenced
-        assert len(unreferenced_conditionals) == 0, f"Found conditional prompt types that are not referenced in conditional logic: {unreferenced_conditionals}"
+        assert (
+            len(unreferenced_conditionals) == 0
+        ), f"Found conditional prompt types that are not referenced in conditional logic: {unreferenced_conditionals}"
 
         print(
             f"✓ Always-loaded prompts: {len(always_loaded_prompts - not_loaded_always)}/{len(always_loaded_prompts)} verified"

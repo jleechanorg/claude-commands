@@ -42,17 +42,29 @@ class TestLukeCampaignGodModeJsonBug(unittest.TestCase):
         # Our fix should return clean narrative text, not raw JSON
 
         # Test 1: Should NOT contain raw JSON structure
-        assert '"narrative":' not in narrative_text, "Processed narrative should not contain raw JSON keys"
-        assert '"god_mode_response":' not in narrative_text, "Processed narrative should not contain raw JSON keys"
-        assert '"entities_mentioned":' not in narrative_text, "Processed narrative should not contain raw JSON keys"
-        assert "{" not in narrative_text, "Processed narrative should not contain JSON braces"
-        assert "}" not in narrative_text, "Processed narrative should not contain JSON braces"
+        assert (
+            '"narrative":' not in narrative_text
+        ), "Processed narrative should not contain raw JSON keys"
+        assert (
+            '"god_mode_response":' not in narrative_text
+        ), "Processed narrative should not contain raw JSON keys"
+        assert (
+            '"entities_mentioned":' not in narrative_text
+        ), "Processed narrative should not contain raw JSON keys"
+        assert (
+            "{" not in narrative_text
+        ), "Processed narrative should not contain JSON braces"
+        assert (
+            "}" not in narrative_text
+        ), "Processed narrative should not contain JSON braces"
 
         # Test 2: Should contain the actual god mode response text
         expected_content = (
             "That's another excellent point, and I understand why you'd expect EXP"
         )
-        assert expected_content in narrative_text, "Should contain the actual god mode response text"
+        assert (
+            expected_content in narrative_text
+        ), "Should contain the actual god mode response text"
 
         # Test 3: Should properly parse structured response
         assert structured_response is not None

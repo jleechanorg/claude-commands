@@ -220,7 +220,7 @@ class ConfidenceTracker:
         confidences = [p.get("confidence", 0.5) for p in patterns]
         applications = [p.get("applied_count", 0) for p in patterns]
 
-        stats = {
+        return {
             "total_patterns": len(patterns),
             "avg_confidence": sum(confidences) / len(confidences),
             "high_confidence": len([c for c in confidences if c >= 0.8]),
@@ -230,7 +230,6 @@ class ConfidenceTracker:
             "patterns_ready_for_promotion": len(self.get_high_confidence_patterns()),
         }
 
-        return stats
 
 
 def track_pattern_feedback(pattern_ids, user_feedback):

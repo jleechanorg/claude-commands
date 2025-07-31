@@ -83,7 +83,7 @@ def analyze_replay_results(all_results: list[dict[str, Any]]) -> dict[str, Any]:
     interaction_stats = {}
 
     # Analyze each interaction across all replays
-    for replay_idx, replay_result in enumerate(all_results):
+    for _replay_idx, replay_result in enumerate(all_results):
         for detail in replay_result.get("detailed_results", []):
             interaction_num = detail.get("interaction", 0)
 

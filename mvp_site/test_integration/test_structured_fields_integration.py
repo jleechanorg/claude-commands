@@ -129,34 +129,34 @@ class TestStructuredFieldsIntegration(unittest.TestCase):
         )
 
         # Verify response
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         response_data = json.loads(response.data.decode("utf-8"))
 
         # Verify structured fields in API response
-        self.assertEqual(
-            response_data[constants.FIELD_SESSION_HEADER],
-            self.structured_fields[constants.FIELD_SESSION_HEADER],
+        assert (
+            response_data[constants.FIELD_SESSION_HEADER]
+            == self.structured_fields[constants.FIELD_SESSION_HEADER]
         )
-        self.assertEqual(
-            response_data[constants.FIELD_PLANNING_BLOCK],
-            self.structured_fields[constants.FIELD_PLANNING_BLOCK],
+        assert (
+            response_data[constants.FIELD_PLANNING_BLOCK]
+            == self.structured_fields[constants.FIELD_PLANNING_BLOCK]
         )
-        self.assertEqual(
-            response_data[constants.FIELD_DICE_ROLLS],
-            self.structured_fields[constants.FIELD_DICE_ROLLS],
+        assert (
+            response_data[constants.FIELD_DICE_ROLLS]
+            == self.structured_fields[constants.FIELD_DICE_ROLLS]
         )
-        self.assertEqual(
-            response_data[constants.FIELD_RESOURCES],
-            self.structured_fields[constants.FIELD_RESOURCES],
+        assert (
+            response_data[constants.FIELD_RESOURCES]
+            == self.structured_fields[constants.FIELD_RESOURCES]
         )
-        self.assertEqual(
-            response_data[constants.FIELD_DEBUG_INFO],
-            self.structured_fields[constants.FIELD_DEBUG_INFO],
+        assert (
+            response_data[constants.FIELD_DEBUG_INFO]
+            == self.structured_fields[constants.FIELD_DEBUG_INFO]
         )
 
         # Verify Firestore add was called with structured fields
         story_add_calls = mock_story_collection.add.call_args_list
-        self.assertGreater(len(story_add_calls), 0)
+        assert len(story_add_calls) > 0
 
         # Get the Gemini response story entry (should be the second call, after player input)
         gemini_story_data = None
@@ -166,28 +166,28 @@ class TestStructuredFieldsIntegration(unittest.TestCase):
                 gemini_story_data = data
                 break
 
-        self.assertIsNotNone(gemini_story_data, "Gemini story entry not found")
+        assert gemini_story_data is not None, "Gemini story entry not found"
 
         # Verify structured fields were stored
-        self.assertEqual(
-            gemini_story_data[constants.FIELD_SESSION_HEADER],
-            self.structured_fields[constants.FIELD_SESSION_HEADER],
+        assert (
+            gemini_story_data[constants.FIELD_SESSION_HEADER]
+            == self.structured_fields[constants.FIELD_SESSION_HEADER]
         )
-        self.assertEqual(
-            gemini_story_data[constants.FIELD_PLANNING_BLOCK],
-            self.structured_fields[constants.FIELD_PLANNING_BLOCK],
+        assert (
+            gemini_story_data[constants.FIELD_PLANNING_BLOCK]
+            == self.structured_fields[constants.FIELD_PLANNING_BLOCK]
         )
-        self.assertEqual(
-            gemini_story_data[constants.FIELD_DICE_ROLLS],
-            self.structured_fields[constants.FIELD_DICE_ROLLS],
+        assert (
+            gemini_story_data[constants.FIELD_DICE_ROLLS]
+            == self.structured_fields[constants.FIELD_DICE_ROLLS]
         )
-        self.assertEqual(
-            gemini_story_data[constants.FIELD_RESOURCES],
-            self.structured_fields[constants.FIELD_RESOURCES],
+        assert (
+            gemini_story_data[constants.FIELD_RESOURCES]
+            == self.structured_fields[constants.FIELD_RESOURCES]
         )
-        self.assertEqual(
-            gemini_story_data[constants.FIELD_DEBUG_INFO],
-            self.structured_fields[constants.FIELD_DEBUG_INFO],
+        assert (
+            gemini_story_data[constants.FIELD_DEBUG_INFO]
+            == self.structured_fields[constants.FIELD_DEBUG_INFO]
         )
 
     @patch("gemini_service.genai.Client")
@@ -245,19 +245,15 @@ class TestStructuredFieldsIntegration(unittest.TestCase):
             json={"input": "I look around carefully"},
         )
 
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         response_data = json.loads(response.data.decode("utf-8"))
 
         # Verify only present fields are in response
-        self.assertEqual(
-            response_data[constants.FIELD_SESSION_HEADER], "Session 2: Exploration"
-        )
-        self.assertEqual(
-            response_data[constants.FIELD_DICE_ROLLS], ["Perception: 1d20+3 = 16"]
-        )
-        self.assertEqual(response_data.get(constants.FIELD_PLANNING_BLOCK, ""), "")
-        self.assertEqual(response_data.get(constants.FIELD_RESOURCES, ""), "")
-        self.assertEqual(response_data.get(constants.FIELD_DEBUG_INFO, {}), {})
+        assert response_data[constants.FIELD_SESSION_HEADER] == "Session 2: Exploration"
+        assert response_data[constants.FIELD_DICE_ROLLS] == ["Perception: 1d20+3 = 16"]
+        assert response_data.get(constants.FIELD_PLANNING_BLOCK, "") == ""
+        assert response_data.get(constants.FIELD_RESOURCES, "") == ""
+        assert response_data.get(constants.FIELD_DEBUG_INFO, {}) == {}
 
     @patch("gemini_service.genai.Client")
     @patch("firestore_service.firestore")
@@ -310,15 +306,15 @@ class TestStructuredFieldsIntegration(unittest.TestCase):
             json={"input": "Simple action"},
         )
 
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         response_data = json.loads(response.data.decode("utf-8"))
 
         # Verify empty defaults
-        self.assertEqual(response_data.get(constants.FIELD_SESSION_HEADER, ""), "")
-        self.assertEqual(response_data.get(constants.FIELD_PLANNING_BLOCK, ""), "")
-        self.assertEqual(response_data.get(constants.FIELD_DICE_ROLLS, []), [])
-        self.assertEqual(response_data.get(constants.FIELD_RESOURCES, ""), "")
-        self.assertEqual(response_data.get(constants.FIELD_DEBUG_INFO, {}), {})
+        assert response_data.get(constants.FIELD_SESSION_HEADER, "") == ""
+        assert response_data.get(constants.FIELD_PLANNING_BLOCK, "") == ""
+        assert response_data.get(constants.FIELD_DICE_ROLLS, []) == []
+        assert response_data.get(constants.FIELD_RESOURCES, "") == ""
+        assert response_data.get(constants.FIELD_DEBUG_INFO, {}) == {}
 
 
 if __name__ == "__main__":

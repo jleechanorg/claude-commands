@@ -127,11 +127,10 @@ class DemoAssistant:
             return f"I understand you're asking about: {message}. Let me provide helpful information based on what I know and have learned from our conversations."
 
         # Use memory manager to enhance the response
-        enhanced_response = self.memory_manager.process_turn(
+        return self.memory_manager.process_turn(
             user_message, base_response_generator
         )
 
-        return enhanced_response
 
     def show_learning_stats(self) -> str:
         """Show current learning statistics."""
@@ -298,7 +297,6 @@ def demonstrate_direct_integration():
     print("-" * 40)
 
     # Example 1: Enhance existing function
-
 
     @memory_enhanced_response()
     def my_chat_function(user_input: str) -> str:

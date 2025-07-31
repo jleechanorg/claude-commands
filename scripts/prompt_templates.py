@@ -21,7 +21,7 @@ class PromptTemplates:
             "name", "the character"
         )
 
-        prompt = f"""Continue the narrative from this game state:
+        return f"""Continue the narrative from this game state:
 Location: {location}
 Character: {pc_name}
 
@@ -29,12 +29,11 @@ Character: {pc_name}
 
 Write a narrative paragraph continuing the story."""
 
-        return prompt
 
     @staticmethod
     def get_structured_json_prompt(manifest: SceneManifest) -> str:
         """Structured prompt with JSON schema"""
-        prompt = f"""{manifest.to_prompt_format()}
+        return f"""{manifest.to_prompt_format()}
 
 Generate a narrative response following this JSON structure:
 {{
@@ -48,14 +47,13 @@ REQUIREMENTS:
 - Maintain narrative flow and quality
 - Be specific about who is present"""
 
-        return prompt
 
     @staticmethod
     def get_xml_structured_prompt(manifest: SceneManifest) -> str:
         """XML-formatted structure prompt"""
         entities = manifest.get_expected_entities()
 
-        prompt = f"""{manifest.to_prompt_format()}
+        return f"""{manifest.to_prompt_format()}
 
 Generate narrative in this XML format:
 
@@ -69,7 +67,6 @@ Generate narrative in this XML format:
     </story>
 </narrative>"""
 
-        return prompt
 
     @staticmethod
     def get_chain_of_thought_prompt(
@@ -78,7 +75,7 @@ Generate narrative in this XML format:
         """Chain-of-thought entity tracking prompt"""
         location = game_state.get("location", "the location")
 
-        prompt = f"""Location: {location}
+        return f"""Location: {location}
 
 First, identify who is present:
 {chr(10).join(f"- {entity}: [present/absent/status]" for entity in expected_entities)}
@@ -92,24 +89,22 @@ Think step by step:
 
 Narrative:"""
 
-        return prompt
 
     @staticmethod
     def get_minimal_prompt(expected_entities: list[str], location: str) -> str:
         """Minimal intervention prompt (list only)"""
-        prompt = f"""Location: {location}
+        return f"""Location: {location}
 Present: {", ".join(expected_entities)}
 
 Continue the narrative. Include everyone listed above."""
 
-        return prompt
 
     @staticmethod
     def get_validation_hints_prompt(manifest: SceneManifest) -> str:
         """Prompt with validation hints embedded"""
         entities = manifest.get_expected_entities()
 
-        prompt = f"""{manifest.to_prompt_format()}
+        return f"""{manifest.to_prompt_format()}
 
 CRITICAL VALIDATION REQUIREMENTS:
 1. Must mention each character by name: {", ".join(entities)}
@@ -119,7 +114,6 @@ CRITICAL VALIDATION REQUIREMENTS:
 
 Write a narrative paragraph that will pass entity validation."""
 
-        return prompt
 
 
 def get_prompt_for_approach(
@@ -151,9 +145,6 @@ def get_prompt_for_approach(
 
 def test_prompts():
     """Test prompt generation"""
-
-
-
 
     # Get a test scenario
     scenario = get_scenario("multi_character")

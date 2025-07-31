@@ -69,7 +69,6 @@ def test_all_structured_fields(page, test_name):
     except Exception as e:
         print(f"❌ Test failed: {e}")
 
-
         traceback.print_exc()
         return False
 

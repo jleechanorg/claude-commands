@@ -54,15 +54,15 @@ class TestCharacterCreationTrigger(unittest.TestCase):
         mock_call_api.side_effect = capture_prompt
 
         # Call the function
-        result = get_initial_story(user_prompt, selected_prompts=selected_prompts)
+        get_initial_story(user_prompt, selected_prompts=selected_prompts)
 
         # Verify the character creation reminder was added
-        self.assertIsNotNone(actual_prompt)
+        assert actual_prompt is not None
         # Check that the constant text is in the prompt
-        self.assertIn(constants.CHARACTER_CREATION_REMINDER, actual_prompt)
+        assert constants.CHARACTER_CREATION_REMINDER in actual_prompt
 
         # Verify the original user prompt is still there
-        self.assertIn(user_prompt, actual_prompt)
+        assert user_prompt in actual_prompt
 
         print("✓ Character creation reminder properly added to prompt")
         print(f"✓ Actual prompt sent: {actual_prompt[:200]}...")
@@ -97,12 +97,12 @@ class TestCharacterCreationTrigger(unittest.TestCase):
         mock_call_api.side_effect = capture_prompt
 
         # Call the function
-        result = get_initial_story(user_prompt, selected_prompts=selected_prompts)
+        get_initial_story(user_prompt, selected_prompts=selected_prompts)
 
         # Verify NO character creation reminder was added
-        self.assertIsNotNone(actual_prompt)
-        self.assertNotIn("CRITICAL REMINDER", actual_prompt)
-        self.assertNotIn("character creation", actual_prompt)
+        assert actual_prompt is not None
+        assert "CRITICAL REMINDER" not in actual_prompt
+        assert "character creation" not in actual_prompt
 
         print("✓ No character creation reminder when mechanics disabled")
 
@@ -136,11 +136,11 @@ class TestCharacterCreationTrigger(unittest.TestCase):
         mock_call_api.side_effect = capture_prompt
 
         # Call the function
-        result = get_initial_story(user_prompt, selected_prompts=selected_prompts)
+        get_initial_story(user_prompt, selected_prompts=selected_prompts)
 
         # Verify the character creation reminder was added
-        self.assertIsNotNone(actual_prompt)
-        self.assertIn(constants.CHARACTER_CREATION_REMINDER, actual_prompt)
+        assert actual_prompt is not None
+        assert constants.CHARACTER_CREATION_REMINDER in actual_prompt
 
         print("✓ Character creation reminder added with mechanics only")
 

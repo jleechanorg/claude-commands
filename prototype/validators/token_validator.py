@@ -5,8 +5,8 @@ Uses string matching techniques to detect entity presence in narratives.
 
 import re
 
-from ..logging_config import setup_logging, with_metrics
-from ..validation_utils import (
+from prototype.logging_config import setup_logging, with_metrics
+from prototype.validation_utils import (
     check_narrative_coherence,
     detect_entity_states,
     extract_pronouns,
@@ -14,7 +14,7 @@ from ..validation_utils import (
     merge_entity_references,
     normalize_text,
 )
-from ..validator import BaseValidator, EntityManifest, ValidationResult
+from prototype.validator import BaseValidator, EntityManifest, ValidationResult
 
 
 class SimpleTokenValidator(BaseValidator):

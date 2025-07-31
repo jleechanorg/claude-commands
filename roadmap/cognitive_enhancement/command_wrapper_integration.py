@@ -191,7 +191,7 @@ Enhanced command wrappers provide memory pattern integration for improved execut
 
 """
 
-        for base_cmd, mapping in self.command_mappings.items():
+        for _base_cmd, mapping in self.command_mappings.items():
             doc += f"### /{mapping.enhanced_command}\n"
             doc += f"**Aliases**: {', '.join(['/' + alias for alias in mapping.aliases])}\n"
             doc += f"**Description**: {mapping.description}\n"

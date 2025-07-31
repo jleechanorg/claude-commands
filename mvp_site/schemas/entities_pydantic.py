@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field, model_validator, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # Import defensive numeric field converter for robust data handling
 from .defensive_numeric_converter import DefensiveNumericConverter
@@ -44,9 +44,7 @@ def sanitize_entity_name_for_id(name: str) -> str:
     name = re.sub(r"_+", "_", name)
 
     # Strip leading/trailing underscores
-    name = name.strip("_")
-
-    return name
+    return name.strip("_")
 
 
 class EntityType(Enum):
@@ -93,27 +91,33 @@ class Stats(BaseModel):
     wisdom: int = Field(ge=1, le=30, default=10)
     charisma: int = Field(ge=1, le=30, default=10)
 
-    @validator("strength", pre=True)
+    @field_validator("strength", mode="before")
+    @classmethod
     def convert_strength(cls, v):
         return DefensiveNumericConverter.convert_value("strength", v)
 
-    @validator("dexterity", pre=True)
+    @field_validator("dexterity", mode="before")
+    @classmethod
     def convert_dexterity(cls, v):
         return DefensiveNumericConverter.convert_value("dexterity", v)
 
-    @validator("constitution", pre=True)
+    @field_validator("constitution", mode="before")
+    @classmethod
     def convert_constitution(cls, v):
         return DefensiveNumericConverter.convert_value("constitution", v)
 
-    @validator("intelligence", pre=True)
+    @field_validator("intelligence", mode="before")
+    @classmethod
     def convert_intelligence(cls, v):
         return DefensiveNumericConverter.convert_value("intelligence", v)
 
-    @validator("wisdom", pre=True)
+    @field_validator("wisdom", mode="before")
+    @classmethod
     def convert_wisdom(cls, v):
         return DefensiveNumericConverter.convert_value("wisdom", v)
 
-    @validator("charisma", pre=True)
+    @field_validator("charisma", mode="before")
+    @classmethod
     def convert_charisma(cls, v):
         return DefensiveNumericConverter.convert_value("charisma", v)
 
@@ -134,15 +138,18 @@ class HealthStatus(BaseModel):
         default_factory=lambda: {"successes": 0, "failures": 0}
     )
 
-    @validator("hp", pre=True)
+    @field_validator("hp", mode="before")
+    @classmethod
     def convert_hp(cls, v):
         return DefensiveNumericConverter.convert_value("hp", v)
 
-    @validator("hp_max", pre=True)
+    @field_validator("hp_max", mode="before")
+    @classmethod
     def convert_hp_max(cls, v):
         return DefensiveNumericConverter.convert_value("hp_max", v)
 
-    @validator("temp_hp", pre=True)
+    @field_validator("temp_hp", mode="before")
+    @classmethod
     def convert_temp_hp(cls, v):
         return DefensiveNumericConverter.convert_value("temp_hp", v)
 
@@ -200,7 +207,8 @@ class Character(BaseModel):
     # Core attributes
     level: int = Field(ge=1, le=20, default=1)
 
-    @validator("level", pre=True)
+    @field_validator("level", mode="before")
+    @classmethod
     def convert_level(cls, v):
         return DefensiveNumericConverter.convert_value("level", v)
 
@@ -229,12 +237,13 @@ class Character(BaseModel):
     # Relationships
     relationships: dict[str, str] = Field(default_factory=dict)
 
-    @validator("gender")
-    def validate_gender(cls, v, values):
+    @field_validator("gender")
+    @classmethod
+    def validate_gender(cls, v, info):
         """Validate gender field for narrative consistency (permissive for LLM creativity)"""
         # Check if this is an NPC
-        entity_type = values.get("entity_type")
-        entity_id = values.get("entity_id", "")
+        entity_type = info.data.get("entity_type")
+        entity_id = info.data.get("entity_id", "")
 
         # Determine entity type from entity_id if not set
         if entity_type is None:
@@ -265,7 +274,8 @@ class Character(BaseModel):
 
         return v
 
-    @validator("age")
+    @field_validator("age")
+    @classmethod
     def validate_age(cls, v):
         """Validate age field for narrative consistency"""
         if v is not None:
@@ -275,7 +285,8 @@ class Character(BaseModel):
                 raise ValueError(f"Age {v} seems unreasonably high (max: 50000)")
         return v
 
-    @validator("mbti")
+    @field_validator("mbti")
+    @classmethod
     def validate_mbti(cls, v):
         """Validate personality field (accepts MBTI or creative descriptions)"""
         if v is not None:
@@ -287,7 +298,8 @@ class Character(BaseModel):
             return v.strip()
         return v
 
-    @validator("alignment")
+    @field_validator("alignment")
+    @classmethod
     def validate_alignment(cls, v):
         """Validate alignment field (accepts D&D or creative alignments)"""
         if v is not None:
@@ -299,12 +311,13 @@ class Character(BaseModel):
             return v.strip()
         return v
 
-    @validator("entity_type")
-    def validate_entity_type(cls, v, values):
-        if "entity_id" in values:
-            if values["entity_id"].startswith("pc_"):
+    @field_validator("entity_type")
+    @classmethod
+    def validate_entity_type(cls, v, info):
+        if "entity_id" in info.data:
+            if info.data["entity_id"].startswith("pc_"):
                 return EntityType.PLAYER_CHARACTER
-            if values["entity_id"].startswith("npc_"):
+            if info.data["entity_id"].startswith("npc_"):
                 return EntityType.NPC
         return v
 
@@ -354,11 +367,12 @@ class CombatState(BaseModel):
     active_combatant: str | None = None
     participants: list[str] = Field(default_factory=list)
 
-    @validator("participants")
-    def validate_participants(cls, v, values):
+    @field_validator("participants")
+    @classmethod
+    def validate_participants(cls, v, info):
         # All turn_order entities must be in participants
-        if "turn_order" in values:
-            for entity in values["turn_order"]:
+        if "turn_order" in info.data:
+            for entity in info.data["turn_order"]:
                 if entity not in v:
                     raise ValueError(f"Turn order entity {entity} not in participants")
         return v
@@ -392,15 +406,18 @@ class SceneManifest(BaseModel):
     weather: str | None = None
     special_conditions: list[str] = Field(default_factory=list)
 
-    @validator("present_entities")
-    def validate_present_entities(cls, v, values):
+    @field_validator("present_entities")
+    @classmethod
+    def validate_present_entities(cls, v, info):
         """Ensure all present entities exist in the scene"""
         all_entity_ids = []
 
-        if "player_characters" in values:
-            all_entity_ids.extend([pc.entity_id for pc in values["player_characters"]])
-        if "npcs" in values:
-            all_entity_ids.extend([npc.entity_id for npc in values["npcs"]])
+        if "player_characters" in info.data:
+            all_entity_ids.extend(
+                [pc.entity_id for pc in info.data["player_characters"]]
+            )
+        if "npcs" in info.data:
+            all_entity_ids.extend([npc.entity_id for npc in info.data["npcs"]])
 
         for entity_id in v:
             if entity_id not in all_entity_ids:
@@ -416,9 +433,7 @@ class SceneManifest(BaseModel):
 
         # Add all visible, conscious entities
         for pc in self.player_characters:
-            pc_visible = (
-                pc.visibility == Visibility.VISIBLE or pc.visibility == "visible"
-            )
+            pc_visible = pc.visibility in (Visibility.VISIBLE, "visible")
             pc_conscious = (
                 EntityStatus.CONSCIOUS in pc.status or "conscious" in pc.status
             )
@@ -426,9 +441,7 @@ class SceneManifest(BaseModel):
                 expected.append(pc.display_name)
 
         for npc in self.npcs:
-            npc_visible = (
-                npc.visibility == Visibility.VISIBLE or npc.visibility == "visible"
-            )
+            npc_visible = npc.visibility in (Visibility.VISIBLE, "visible")
             npc_conscious = (
                 EntityStatus.CONSCIOUS in npc.status or "conscious" in npc.status
             )
@@ -555,7 +568,7 @@ def create_from_game_state(
                 npc_entity_id = npc_info["string_id"]
             else:
                 npc_entity_id = (
-                    f"npc_{sanitize_entity_name_for_id(npc_key)}_{idx+1:03d}"
+                    f"npc_{sanitize_entity_name_for_id(npc_key)}_{idx + 1:03d}"
                 )
 
             # Use "name" field if present, otherwise fall back to the key
@@ -596,7 +609,7 @@ def create_from_game_state(
         )
 
     # Create scene manifest
-    manifest = SceneManifest(
+    return SceneManifest(
         scene_id=f"scene_s{session_number}_t{turn_number}_001",
         session_number=session_number,
         turn_number=turn_number,
@@ -606,5 +619,3 @@ def create_from_game_state(
         present_entities=present_entities,
         combat_state=combat_state,
     )
-
-    return manifest

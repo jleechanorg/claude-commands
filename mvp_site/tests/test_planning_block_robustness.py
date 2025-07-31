@@ -34,7 +34,9 @@ class TestPlanningBlockRobustness(unittest.TestCase):
         # Empty strings are rejected and converted to empty dict
         assert response.planning_block == {}
         # Should log error about string format no longer supported
-        assert any("STRING PLANNING BLOCKS NO LONGER SUPPORTED" in log for log in cm.output)
+        assert any(
+            "STRING PLANNING BLOCKS NO LONGER SUPPORTED" in log for log in cm.output
+        )
 
     def test_whitespace_only_planning_block(self):
         """Test handling of whitespace-only planning block"""
@@ -44,7 +46,9 @@ class TestPlanningBlockRobustness(unittest.TestCase):
             )
         # Whitespace-only strings are rejected and converted to empty dict
         assert response.planning_block == {}
-        assert any("STRING PLANNING BLOCKS NO LONGER SUPPORTED" in log for log in cm.output)
+        assert any(
+            "STRING PLANNING BLOCKS NO LONGER SUPPORTED" in log for log in cm.output
+        )
 
     def test_non_string_planning_block(self):
         """Test handling of non-string/dict planning block values"""
@@ -82,7 +86,9 @@ class TestPlanningBlockRobustness(unittest.TestCase):
             )
 
         # String format is rejected
-        assert any("STRING PLANNING BLOCKS NO LONGER SUPPORTED" in log for log in cm.output)
+        assert any(
+            "STRING PLANNING BLOCKS NO LONGER SUPPORTED" in log for log in cm.output
+        )
         # Should convert to empty dict
         assert response.planning_block == {}
 

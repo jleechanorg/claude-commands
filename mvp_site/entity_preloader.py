@@ -147,17 +147,20 @@ class EntityPreloader:
 
         # Check NPCs with location data
         for npc in manifest.npcs:
-            if hasattr(npc, "location") and npc.location:
-                if (
+            if (
+                hasattr(npc, "location")
+                and npc.location
+                and (
                     location.lower() in npc.location.lower()
                     or npc.location.lower() in location.lower()
-                ):
-                    npc_name = (
-                        npc.display_name
-                        if hasattr(npc, "display_name")
-                        else getattr(npc, "name", "Unknown")
-                    )
-                    location_entities.append(f"{npc_name} (resident)")
+                )
+            ):
+                npc_name = (
+                    npc.display_name
+                    if hasattr(npc, "display_name")
+                    else getattr(npc, "name", "Unknown")
+                )
+                location_entities.append(f"{npc_name} (resident)")
 
         # Generic location-based ambiance (not campaign-specific)
         location_lower = location.lower()

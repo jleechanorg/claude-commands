@@ -25,7 +25,9 @@ class TestDebugModeBrowser(unittest.TestCase):
         self.test_user_id = "test-user-debug-browser"
 
         # URL with test mode parameters for auth bypass
-        self.test_url = f"{self.base_url}/settings?test_mode=true&test_user_id={self.test_user_id}"
+        self.test_url = (
+            f"{self.base_url}/settings?test_mode=true&test_user_id={self.test_user_id}"
+        )
 
         print("🌐 Browser test setup for debug mode")
         print(f"📡 Test URL: {self.test_url}")
@@ -90,7 +92,7 @@ class TestDebugModeBrowser(unittest.TestCase):
         self.skipTest("Browser automation to be implemented with Playwright MCP")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("🔴 RED PHASE: Running browser tests for debug mode setting")
     print("Expected: Tests will be skipped until browser automation is implemented")
     unittest.main()

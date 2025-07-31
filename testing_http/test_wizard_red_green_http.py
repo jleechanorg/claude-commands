@@ -73,7 +73,7 @@ def test_red_empty_custom_campaign():
             ):
                 for entry in campaign_details["narrative_history"]:
                     if isinstance(entry, dict):
-                        for key, value in entry.items():
+                        for _key, value in entry.items():
                             if isinstance(value, str):
                                 full_content += f" {value}"
 
@@ -166,7 +166,7 @@ def test_green_filled_custom_campaign():
             ):
                 for entry in campaign_details["narrative_history"]:
                     if isinstance(entry, dict):
-                        for key, value in entry.items():
+                        for _key, value in entry.items():
                             if isinstance(value, str):
                                 full_content += f" {value}"
 

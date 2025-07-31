@@ -30,7 +30,7 @@ class TestNumericFieldConverter(unittest.TestCase):
     def test_try_convert_to_int_non_string(self):
         """Test non-string values are returned unchanged"""
         assert NumericFieldConverter.try_convert_to_int(123) == 123
-        assert NumericFieldConverter.try_convert_to_int(None) == None
+        assert NumericFieldConverter.try_convert_to_int(None) is None
         assert NumericFieldConverter.try_convert_to_int([1, 2, 3]) == [1, 2, 3]
         assert NumericFieldConverter.try_convert_to_int({"a": 1}) == {"a": 1}
 
@@ -156,8 +156,11 @@ class TestNumericFieldConverter(unittest.TestCase):
     def test_invalid_data_handling(self):
         """Test handling of invalid data types"""
         # Non-dict input to dict methods should return unchanged
-        assert NumericFieldConverter.convert_dict_with_fields("not_a_dict", set()) == "not_a_dict"
-        assert NumericFieldConverter.convert_all_possible_ints(None) == None
+        assert (
+            NumericFieldConverter.convert_dict_with_fields("not_a_dict", set())
+            == "not_a_dict"
+        )
+        assert NumericFieldConverter.convert_all_possible_ints(None) is None
         assert NumericFieldConverter.convert_dict([1, 2, 3]) == [1, 2, 3]
 
 

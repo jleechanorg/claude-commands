@@ -58,7 +58,9 @@ class TestNPCDataHandling(unittest.TestCase):
 
         # Verify status was updated with the string value
         assert goblin["status"] == "defeated"
-        assert updated_state["npc_data"]["Merchant_Tim"]["status"] == "grateful for rescue"
+        assert (
+            updated_state["npc_data"]["Merchant_Tim"]["status"] == "grateful for rescue"
+        )
 
     def test_ai_updates_specific_npc_fields(self):
         """Test that AI can update specific fields of an NPC normally."""

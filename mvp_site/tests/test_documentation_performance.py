@@ -77,12 +77,11 @@ def test_read_performance(filepath):
     start_time = time.time()
     try:
         with open(filepath, encoding="utf-8") as f:
-            content = f.read()
+            f.read()
     except Exception:
         return None
 
-    read_time = time.time() - start_time
-    return read_time
+    return time.time() - start_time
 
 
 def simulate_api_read(filepath, chunk_lines=2000):

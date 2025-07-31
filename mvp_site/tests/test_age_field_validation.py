@@ -1,4 +1,5 @@
 """Test age field validation in Character classes."""
+
 # ruff: noqa: PT027
 import os
 import sys

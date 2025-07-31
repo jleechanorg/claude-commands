@@ -42,7 +42,7 @@ class TestOldTagDetection(unittest.TestCase):
             patch("gemini_response.logging.warning") as mock_warning,
             patch("gemini_response.logging.error") as mock_error,
         ):
-            response = GeminiResponse(
+            GeminiResponse(
                 narrative_text=narrative_with_old_tags,
                 provider="gemini",
                 model="test-model",
@@ -69,7 +69,7 @@ class TestOldTagDetection(unittest.TestCase):
         """
 
         with patch("gemini_response.logging.warning") as mock_warning:
-            response = GeminiResponse(
+            GeminiResponse(
                 narrative_text=narrative_with_debug,
                 provider="gemini",
                 model="test-model",
@@ -91,7 +91,7 @@ class TestOldTagDetection(unittest.TestCase):
             patch("gemini_response.logging.warning") as mock_warning,
             patch("gemini_response.logging.error") as mock_error,
         ):
-            response = GeminiResponse(
+            GeminiResponse(
                 narrative_text=clean_narrative, provider="gemini", model="test-model"
             )
 
@@ -146,7 +146,7 @@ class TestOldTagDetection(unittest.TestCase):
         )
 
         with patch("gemini_response.logging.warning") as mock_warning:
-            response = GeminiResponse(
+            GeminiResponse(
                 narrative_text="Clean narrative",
                 provider="gemini",
                 model="test-model",

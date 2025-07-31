@@ -10,8 +10,8 @@ from typing import Any
 
 import google.generativeai as genai
 
-from ..logging_config import setup_logging, with_metrics
-from ..validator import BaseValidator, ValidationResult
+from prototype.logging_config import setup_logging, with_metrics
+from prototype.validator import BaseValidator, ValidationResult
 
 # Prompt templates for LLM validation
 VALIDATION_PROMPT_TEMPLATE = """You are a narrative analyzer for a role-playing game. Your task is to identify which characters are present or mentioned in a given narrative text.
@@ -95,7 +95,6 @@ class LLMValidator(BaseValidator):
         try:
             # Import here to avoid dependency if not using real API
 
-
             # Read API key
             with open(api_key_path) as f:
                 api_key = f.read().strip()
@@ -174,9 +173,8 @@ class LLMValidator(BaseValidator):
 
         # Remove comments (some LLMs add them)
         json_str = re.sub(r"//.*$", "", json_str, flags=re.MULTILINE)
-        json_str = re.sub(r"/\*.*?\*/", "", json_str, flags=re.DOTALL)
+        return re.sub(r"/\*.*?\*/", "", json_str, flags=re.DOTALL)
 
-        return json_str
 
     def _normalize_llm_response(self, parsed: dict[str, Any]) -> dict[str, Any]:
         """Normalize LLM response to expected format."""
@@ -265,10 +263,10 @@ class LLMValidator(BaseValidator):
 
         # Deduplicate and capitalize
         result["entities_found"] = list(
-            set(e.capitalize() for e in result["entities_found"] if e and len(e) > 2)
+            {e.capitalize() for e in result["entities_found"] if e and len(e) > 2}
         )
         result["entities_missing"] = list(
-            set(e.capitalize() for e in result["entities_missing"] if e and len(e) > 2)
+            {e.capitalize() for e in result["entities_missing"] if e and len(e) > 2}
         )
 
         # Adjust confidence if we found something
@@ -321,7 +319,6 @@ class LLMValidator(BaseValidator):
             try:
                 if self.gemini_service:
                     # Real API call with timeout
-
 
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(

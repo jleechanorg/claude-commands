@@ -123,10 +123,9 @@ class SpecializedResponseHandler:
         # Enhance with memory if relevant patterns found
         if query_result.matches:
             memory_insights = self._extract_memory_insights(query_result)
-            enhanced_response = (
+            return (
                 f"{base_response}\n\n## Memory Insights\n{memory_insights}"
             )
-            return enhanced_response
 
         return base_response
 
@@ -236,7 +235,7 @@ class LearningFromFeedback:
         self.learner.add_pattern(pattern)
 
         # Generate acknowledgment
-        acknowledgment = f"""
+        return f"""
 ## Feedback Acknowledged
 
 **Feedback Type:** {feedback_type.title()}
@@ -246,7 +245,6 @@ class LearningFromFeedback:
 I've integrated this into my knowledge base to improve future responses.
 """
 
-        return acknowledgment
 
     def _classify_feedback(self, feedback: str) -> str:
         """Classify the type of feedback."""

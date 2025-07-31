@@ -41,14 +41,18 @@ class TestMCPSettingsAuthBypass(unittest.TestCase):
         response = self.client.get("/settings", headers=self.bypass_headers)
 
         # MCP gateway should handle settings page requests with auth bypass
-        assert response.status_code == 200, "MCP gateway should handle settings page with auth bypass"
+        assert (
+            response.status_code == 200
+        ), "MCP gateway should handle settings page with auth bypass"
 
     def test_mcp_settings_api_get_auth_bypass(self):
         """Test settings API GET with auth bypass through MCP."""
         response = self.client.get("/api/settings", headers=self.bypass_headers)
 
         # MCP gateway should handle settings API GET with auth bypass
-        assert response.status_code == 200, "MCP gateway should handle settings API GET with auth bypass"
+        assert (
+            response.status_code == 200
+        ), "MCP gateway should handle settings API GET with auth bypass"
 
         # If successful, should return valid response
         if response.status_code == 200:
@@ -64,7 +68,9 @@ class TestMCPSettingsAuthBypass(unittest.TestCase):
         )
 
         # MCP gateway should handle settings API POST with auth bypass
-        assert response.status_code == 200, "MCP gateway should handle settings API POST with auth bypass"
+        assert (
+            response.status_code == 200
+        ), "MCP gateway should handle settings API POST with auth bypass"
 
         # If successful, should return valid response
         if response.status_code == 200:
@@ -77,7 +83,9 @@ class TestMCPSettingsAuthBypass(unittest.TestCase):
         response = self.client.get("/settings")
 
         # MCP gateway should handle missing auth appropriately
-        assert response.status_code == 401, "MCP gateway should handle missing auth for settings"
+        assert (
+            response.status_code == 401
+        ), "MCP gateway should handle missing auth for settings"
 
     def test_mcp_settings_partial_auth_headers(self):
         """Test settings with partial auth headers through MCP."""
@@ -88,7 +96,9 @@ class TestMCPSettingsAuthBypass(unittest.TestCase):
         response = self.client.get("/api/settings", headers=partial_headers)
 
         # MCP gateway should handle partial auth headers
-        assert response.status_code == 401, "MCP gateway should handle partial auth headers by requiring user ID"
+        assert (
+            response.status_code == 401
+        ), "MCP gateway should handle partial auth headers by requiring user ID"
 
     def test_mcp_settings_invalid_auth_headers(self):
         """Test settings with invalid auth headers through MCP."""
@@ -99,7 +109,9 @@ class TestMCPSettingsAuthBypass(unittest.TestCase):
         response = self.client.get("/api/settings", headers=invalid_headers)
 
         # MCP gateway should handle invalid auth headers
-        assert response.status_code == 401, "MCP gateway should handle invalid auth headers"
+        assert (
+            response.status_code == 401
+        ), "MCP gateway should handle invalid auth headers"
 
     def test_mcp_settings_concurrent_auth_requests(self):
         """Test concurrent settings requests with auth bypass through MCP."""
@@ -122,7 +134,9 @@ class TestMCPSettingsAuthBypass(unittest.TestCase):
         # All concurrent requests should be handled
         assert len(results) == 3
         for req_num, status_code in results:
-            assert status_code == 200, f"Concurrent settings request {req_num} should be handled by MCP with proper auth headers"
+            assert (
+                status_code == 200
+            ), f"Concurrent settings request {req_num} should be handled by MCP with proper auth headers"
 
 
 if __name__ == "__main__":

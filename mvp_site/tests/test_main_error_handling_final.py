@@ -91,8 +91,8 @@ null_value=null"""
         result = parse_set_command(command)
         assert result["int"] == 42
         assert result["float"] == 3.14
-        assert result["bool_true"] == True
-        assert result["bool_false"] == False
+        assert result["bool_true"]
+        assert not result["bool_false"]
         assert result["null_value"] is None
 
     def test_arrays_and_objects(self):

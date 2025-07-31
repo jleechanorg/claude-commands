@@ -53,23 +53,28 @@ class GitHubAPI:
             Dict with PR status information
         """
         # Check cache first
-        cache_key = cls._get_cache_key('get_pr_status', repo, pr_number)
+        cache_key = cls._get_cache_key("get_pr_status", repo, pr_number)
         cached = cls._get_cached(cache_key)
         if cached is not None:
             return cached
 
         try:
             cmd = [
-                "gh", "pr", "view", pr_number,
-                "--repo", repo,
-                "--json", "state,mergeable,statusCheckRollup,number,title"
+                "gh",
+                "pr",
+                "view",
+                pr_number,
+                "--repo",
+                repo,
+                "--json",
+                "state,mergeable,statusCheckRollup,number,title",
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             data = json.loads(result.stdout)
             cls._set_cache(cache_key, data)
             return data
         except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
-            return {'error': str(e)}
+            return {"error": str(e)}
 
     @staticmethod
     def get_ci_checks(repo: str, pr_number: str) -> List[Dict[str, Any]]:
@@ -85,9 +90,14 @@ class GitHubAPI:
         try:
             # First try MCP if available
             cmd = [
-                "gh", "pr", "checks", pr_number,
-                "--repo", repo,
-                "--json", "name,status,conclusion,startedAt,completedAt,detailsUrl"
+                "gh",
+                "pr",
+                "checks",
+                pr_number,
+                "--repo",
+                repo,
+                "--json",
+                "name,status,conclusion,startedAt,completedAt,detailsUrl",
             ]
             result = subprocess.run(cmd, capture_output=True, text=True)
 
@@ -96,7 +106,7 @@ class GitHubAPI:
 
             # Fallback to status from PR view
             pr_data = GitHubAPI.get_pr_status(repo, pr_number)
-            checks = pr_data.get('statusCheckRollup', [])
+            checks = pr_data.get("statusCheckRollup", [])
             return checks if isinstance(checks, list) else []
 
         except Exception:
@@ -117,7 +127,7 @@ class GitHubAPI:
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
             return json.loads(result.stdout)
         except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
-            return {'error': str(e)}
+            return {"error": str(e)}
 
 
 class GitCommands:
@@ -129,7 +139,9 @@ class GitCommands:
         try:
             result = subprocess.run(
                 ["git", "branch", "--show-current"],
-                capture_output=True, text=True, check=True
+                capture_output=True,
+                text=True,
+                check=True,
             )
             return result.stdout.strip()
         except subprocess.CalledProcessError:
@@ -141,7 +153,9 @@ class GitCommands:
         try:
             result = subprocess.run(
                 ["git", "diff", "--name-only", "--diff-filter=U"],
-                capture_output=True, text=True, check=True
+                capture_output=True,
+                text=True,
+                check=True,
             )
             return [f.strip() for f in result.stdout.splitlines() if f.strip()]
         except subprocess.CalledProcessError:
@@ -161,20 +175,22 @@ class GitCommands:
             # Get default branch
             cmd = ["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"]
             result = subprocess.run(cmd, capture_output=True, text=True)
-            default_branch = result.stdout.strip().split('/')[-1] if result.returncode == 0 else "main"
+            default_branch = (
+                result.stdout.strip().split("/")[-1]
+                if result.returncode == 0
+                else "main"
+            )
 
             # Run merge-tree
             cmd = [
-                "git", "merge-tree",
+                "git",
+                "merge-tree",
                 f"$(git merge-base {default_branch} HEAD)",
                 default_branch,
-                "HEAD"
+                "HEAD",
             ]
             result = subprocess.run(
-                ' '.join(cmd),
-                shell=True,
-                capture_output=True,
-                text=True
+                " ".join(cmd), shell=True, capture_output=True, text=True
             )
 
             # Check for conflict markers
@@ -196,7 +212,7 @@ class GitCommands:
         """
         markers = []
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 lines = f.readlines()
 
             in_conflict = False
@@ -207,12 +223,14 @@ class GitCommands:
                     in_conflict = True
                     conflict_start = i
                 elif line.startswith(">>>>>>>") and in_conflict:
-                    markers.append({
-                        'file': file_path,
-                        'start_line': conflict_start,
-                        'end_line': i,
-                        'lines': i - conflict_start + 1
-                    })
+                    markers.append(
+                        {
+                            "file": file_path,
+                            "start_line": conflict_start,
+                            "end_line": i,
+                            "lines": i - conflict_start + 1,
+                        }
+                    )
                     in_conflict = False
         except Exception:
             pass
@@ -240,12 +258,12 @@ class JSONSchemas:
                         "body": {"type": "string"},
                         "author": {"type": "string"},
                         "created_at": {"type": "string"},
-                        "requires_response": {"type": "boolean"}
-                    }
-                }
+                        "requires_response": {"type": "boolean"},
+                    },
+                },
             },
-            "metadata": {"type": "object"}
-        }
+            "metadata": {"type": "object"},
+        },
     }
 
     FIXES_SCHEMA = {
@@ -257,12 +275,14 @@ class JSONSchemas:
             "ci_status": {"type": "object"},
             "conflicts": {"type": "object"},
             "fixes_applied": {"type": "array"},
-            "metadata": {"type": "object"}
-        }
+            "metadata": {"type": "object"},
+        },
     }
 
     @staticmethod
-    def validate(data: Dict[str, Any], schema: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    def validate(
+        data: Dict[str, Any], schema: Dict[str, Any]
+    ) -> Tuple[bool, Optional[str]]:
         """Basic JSON schema validation.
 
         Args:
@@ -274,7 +294,7 @@ class JSONSchemas:
         """
         # This is a simplified validator - in production use jsonschema library
         try:
-            required = schema.get('required', [])
+            required = schema.get("required", [])
             for field in required:
                 if field not in data:
                     return False, f"Missing required field: {field}"

@@ -13,6 +13,7 @@ import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
+import pytest
 from file_cache import (
     clear_file_cache,
     get_cache_stats,
@@ -84,14 +85,14 @@ class TestFileCache(unittest.TestCase):
         """Test error handling for non-existent files."""
         non_existent_path = "/path/that/does/not/exist.txt"
 
-        with self.assertRaises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError):
             read_file_cached(non_existent_path)
 
     def test_cache_clear_functionality(self):
         """Test that cache clearing works correctly."""
         # Read file to populate cache
         read_file_cached(self.test_file_path)
-        stats_before_clear = get_cache_stats()
+        get_cache_stats()
 
         # Clear cache
         clear_file_cache()
@@ -206,7 +207,9 @@ class TestFileCache(unittest.TestCase):
 
         # Try to invalidate a file that wasn't cached
         result_not_cached = invalidate_file(self.test_file_path)
-        assert not result_not_cached, "invalidate_file should return False when file wasn't cached"
+        assert (
+            not result_not_cached
+        ), "invalidate_file should return False when file wasn't cached"
 
         # Verify invalidating nonexistent file doesn't crash
         nonexistent_file = os.path.join(self.temp_dir, "nonexistent.txt")

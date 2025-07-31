@@ -10,6 +10,7 @@ from pydantic import ValidationError
 # Add the mvp_site directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+import pytest
 from schemas.entities_pydantic import (
     Character,
     EntityStatus,
@@ -32,7 +33,7 @@ class TestPydanticValidation(unittest.TestCase):
         assert location.entity_id == "loc_tavern_001"
 
         # Invalid entity IDs should be rejected
-        with self.assertRaises(ValidationError):
+        with pytest.raises(ValidationError):
             Location(entity_id="invalid_format", display_name="Test")
 
     def test_pydantic_field_validation(self):
@@ -125,10 +126,10 @@ class TestHealthStatus(unittest.TestCase):
         """Test HP validation - should reject hp > hp_max"""
 
         # Pydantic should reject hp > hp_max rather than clamping
-        with self.assertRaises(ValidationError) as context:
+        with pytest.raises(ValidationError) as context:
             HealthStatus(hp=20, hp_max=10)
 
-        assert "cannot exceed max HP" in str(context.exception)
+        assert "cannot exceed max HP" in str(context.value)
 
         # Valid HP should work
         health = HealthStatus(hp=10, hp_max=10)
@@ -185,7 +186,7 @@ class TestLocation(unittest.TestCase):
 
     def test_location_invalid_id(self):
         """Test Location with invalid entity ID"""
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             Location(entity_id="invalid_id", display_name="Test Location")
 
 
@@ -252,19 +253,25 @@ class TestCharacter(unittest.TestCase):
         assert character.aliases == ["Greenleaf", "Elf Prince"]
         assert character.level == 3
         assert character.stats == self.stats
-        assert character.status == ["conscious", "hidden"]  # Explicit values become strings
+        assert character.status == [
+            "conscious",
+            "hidden",
+        ]  # Explicit values become strings
         assert character.visibility == "hidden"  # Explicit values become strings
         assert character.equipped_items == ["item_bow_001", "item_arrows_001"]
         assert character.inventory == ["item_rope_001", "item_bread_001"]
         assert character.resources == {"gold": 50, "arrows": 30}
         assert character.knowledge == ["Forest Lore", "Archery Mastery"]
         assert character.core_memories == ["Childhood in Mirkwood", "First battle"]
-        assert character.recent_decisions == ["Joined the Fellowship", "Tracked the Uruk-hai"]
+        assert character.recent_decisions == [
+            "Joined the Fellowship",
+            "Tracked the Uruk-hai",
+        ]
         assert character.relationships == {"Gimli": "friend", "Aragorn": "ally"}
 
     def test_character_invalid_entity_id(self):
         """Test Character with invalid entity ID"""
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             Character(
                 entity_id="invalid_id",
                 entity_type=EntityType.PLAYER_CHARACTER,
@@ -275,7 +282,7 @@ class TestCharacter(unittest.TestCase):
 
     def test_character_invalid_location_id(self):
         """Test Character with invalid location ID"""
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             Character(
                 entity_id="pc_test_001",
                 entity_type=EntityType.PLAYER_CHARACTER,

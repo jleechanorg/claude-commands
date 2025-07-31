@@ -52,9 +52,13 @@ class TestBannedNamesVisibilityBehavior(unittest.TestCase):
         try:
             content = world_loader.load_world_content_for_system_instruction()
 
-            assert self._has_naming_restrictions_section(content), "World content should have identifiable naming restrictions section"
+            assert self._has_naming_restrictions_section(
+                content
+            ), "World content should have identifiable naming restrictions section"
 
-            assert self._has_source_identification(content), "Should identify the source of naming restrictions"
+            assert self._has_source_identification(
+                content
+            ), "Should identify the source of naming restrictions"
 
         except FileNotFoundError:
             self.skipTest("World files not found - skipping visibility test")
@@ -68,7 +72,9 @@ class TestBannedNamesVisibilityBehavior(unittest.TestCase):
         assert len(content) > 100, "Should have substantial content"
 
         # Check for directive structure
-        assert self._has_enforcement_directive(content), "Banned names should include enforcement directive"
+        assert self._has_enforcement_directive(
+            content
+        ), "Banned names should include enforcement directive"
 
     def test_world_content_structure_includes_all_sections(self):
         """Test that world content has proper structure with all expected sections."""

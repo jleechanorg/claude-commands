@@ -155,7 +155,9 @@ class TestEntityInstructionGenerator(unittest.TestCase):
     def test_is_location_owner_cressida(self):
         """Test location owner detection for Lady Cressida"""
         # Method now returns False for all (no hardcoding)
-        assert not self.generator._is_location_owner("Lady Cressida", "Lady Cressida's Chambers")
+        assert not self.generator._is_location_owner(
+            "Lady Cressida", "Lady Cressida's Chambers"
+        )
         assert not self.generator._is_location_owner("Cressida", "Private Chambers")
         assert not self.generator._is_location_owner("Cressida", "Throne Room")
 

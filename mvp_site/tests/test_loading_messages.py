@@ -65,9 +65,7 @@ class TestLoadingMessages(unittest.TestCase):
 
     def test_app_js_integration(self):
         """Test that app.js integrates with loading messages"""
-        js_path = os.path.join(
-            os.path.dirname(__file__), "..", "frontend_v1", "app.js"
-        )
+        js_path = os.path.join(os.path.dirname(__file__), "..", "frontend_v1", "app.js")
 
         with open(js_path) as f:
             js_content = f.read()

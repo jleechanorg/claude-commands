@@ -11,8 +11,6 @@ import google.generativeai as genai
 
 # Try to import Gemini
 try:
-
-
     GEMINI_AVAILABLE = True
 except ImportError:
     GEMINI_AVAILABLE = False

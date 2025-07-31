@@ -8,6 +8,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
+import pytest
 from schemas.entities_pydantic import NPC, HealthStatus, PlayerCharacter, Stats
 
 
@@ -23,7 +24,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
         # Test that we can create an NPC without gender first (to verify Pydantic allows it)
         # then check that our custom validation catches it
         try:
-            npc = NPC(
+            NPC(
                 entity_id="npc_test_001",
                 display_name="Test NPC",
                 health=self.health,
@@ -97,7 +98,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
     def test_age_validation_invalid_ranges(self):
         """Test age validation rejects invalid ranges"""
         # Test negative age
-        with self.assertRaises(ValueError) as context:
+        with pytest.raises(ValueError) as context:
             NPC(
                 entity_id="npc_negative_age_001",
                 display_name="Negative Age NPC",
@@ -106,10 +107,10 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 gender="female",
                 age=-1,
             )
-        assert "greater than or equal to 0" in str(context.exception)
+        assert "greater than or equal to 0" in str(context.value)
 
         # Test unreasonably high age
-        with self.assertRaises(ValueError) as context:
+        with pytest.raises(ValueError) as context:
             NPC(
                 entity_id="npc_too_old_001",
                 display_name="Too Old NPC",
@@ -118,7 +119,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 gender="male",
                 age=100000,  # Exceeds 50,000 limit
             )
-        assert "less than or equal to 50000" in str(context.exception)
+        assert "less than or equal to 50000" in str(context.value)
 
     def test_mbti_validation(self):
         """Test MBTI personality type validation"""
@@ -151,7 +152,9 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 gender="male",
                 mbti=mbti.lower(),  # Test case insensitivity
             )
-            assert npc.mbti == mbti.lower().strip()  # We passed mbti.lower(), validation strips whitespace
+            assert (
+                npc.mbti == mbti.lower().strip()
+            )  # We passed mbti.lower(), validation strips whitespace
 
         # Test creative personality description (now accepted)
         npc2 = NPC(
@@ -266,8 +269,8 @@ class TestPydanticEntityIntegration(unittest.TestCase):
 
     def test_npc_invalid_gender_types_still_fail(self):
         """Test that non-string gender values still fail validation"""
-        with self.assertRaises(ValueError) as context:
-            npc = NPC(
+        with pytest.raises(ValueError) as context:
+            NPC(
                 entity_id="npc_invalid_test_001",
                 display_name="Invalid Gender Type Test NPC",
                 health=self.health,
@@ -275,7 +278,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 gender=123,  # Wrong type - should fail
             )
         # Check that the error message indicates type validation failure
-        assert "string_type" in str(context.exception)
+        assert "string_type" in str(context.value)
 
     def test_creative_alignment_values(self):
         """Test that creative alignment values are accepted"""

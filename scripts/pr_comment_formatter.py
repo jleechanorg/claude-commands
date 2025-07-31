@@ -206,10 +206,7 @@ class PRCommentFormatter:
     @staticmethod
     def from_json(json_data: str | dict[str, Any]) -> PRCommentResponse:
         """Create PR comment response from JSON data."""
-        if isinstance(json_data, str):
-            data = json.loads(json_data)
-        else:
-            data = json_data
+        data = json.loads(json_data) if isinstance(json_data, str) else json_data
 
         response = PRCommentResponse(summary_title=data.get("summary_title", ""))
 

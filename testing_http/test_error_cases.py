@@ -104,7 +104,6 @@ def test_error_cases():
     # Test 6: Concurrent requests
     print("\n6️⃣ Testing concurrent requests...")
 
-
     def make_request():
         return SESSION.get(BASE_URL)
 

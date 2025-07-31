@@ -121,48 +121,46 @@ class TestThinkBlockIntegration(unittest.TestCase):
         response1 = self.simulator.process_user_input("think about what to do")
 
         # Should generate thoughts + options and enter waiting state
-        self.assertIn("THINK BLOCK RESPONSE", response1)
-        self.assertIn("1.", response1)
-        self.assertIn("2.", response1)
-        self.assertIn("3.", response1)
-        self.assertEqual(self.simulator.state, "WAITING_FOR_PLAYER_CHOICE")
+        assert "THINK BLOCK RESPONSE" in response1
+        assert "1." in response1
+        assert "2." in response1
+        assert "3." in response1
+        assert self.simulator.state == "WAITING_FOR_PLAYER_CHOICE"
 
         # Step 2: User selects option
         response2 = self.simulator.process_user_input("2")
 
         # Should continue with selected option
-        self.assertIn("CONTINUING WITH", response2)
-        self.assertIn("Option 2", response2)
-        self.assertEqual(self.simulator.state, "NORMAL")
+        assert "CONTINUING WITH" in response2
+        assert "Option 2" in response2
+        assert self.simulator.state == "NORMAL"
 
     def test_think_block_with_invalid_continuation(self):
         """Test that invalid continuation gets error response"""
         # Step 1: User issues think command
         self.simulator.process_user_input("think about the situation")
-        self.assertEqual(self.simulator.state, "WAITING_FOR_PLAYER_CHOICE")
+        assert self.simulator.state == "WAITING_FOR_PLAYER_CHOICE"
 
         # Step 2: User tries invalid continuation
         response = self.simulator.process_user_input("continue")
 
         # Should get error message
-        self.assertIn("Please select one of the numbered options", response)
-        self.assertEqual(
-            self.simulator.state, "WAITING_FOR_PLAYER_CHOICE"
-        )  # Still waiting
+        assert "Please select one of the numbered options" in response
+        assert self.simulator.state == "WAITING_FOR_PLAYER_CHOICE"  # Still waiting
 
     def test_think_block_with_option_description(self):
         """Test selecting option by description rather than number"""
         # Step 1: User issues think command
         self.simulator.process_user_input("plan how to proceed")
-        self.assertEqual(self.simulator.state, "WAITING_FOR_PLAYER_CHOICE")
+        assert self.simulator.state == "WAITING_FOR_PLAYER_CHOICE"
 
         # Step 2: User describes choice
         response = self.simulator.process_user_input("I'll sneak around the back")
 
         # Should continue with described choice
-        self.assertIn("CONTINUING WITH USER CHOICE", response)
-        self.assertIn("sneak around", response)
-        self.assertEqual(self.simulator.state, "NORMAL")
+        assert "CONTINUING WITH USER CHOICE" in response
+        assert "sneak around" in response
+        assert self.simulator.state == "NORMAL"
 
     def test_multiple_think_keywords(self):
         """Test that all think keywords trigger the protocol"""
@@ -178,8 +176,8 @@ class TestThinkBlockIntegration(unittest.TestCase):
                     f"{keyword} about the problem"
                 )
 
-                self.assertIn("THINK BLOCK RESPONSE", response)
-                self.assertEqual(self.simulator.state, "WAITING_FOR_PLAYER_CHOICE")
+                assert "THINK BLOCK RESPONSE" in response
+                assert self.simulator.state == "WAITING_FOR_PLAYER_CHOICE"
 
     def test_normal_input_after_selection(self):
         """Test that normal input works after completing think block workflow"""
@@ -189,21 +187,21 @@ class TestThinkBlockIntegration(unittest.TestCase):
 
         # Normal input should work normally
         response = self.simulator.process_user_input("look around the room")
-        self.assertIn("NORMAL RESPONSE", response)
-        self.assertEqual(self.simulator.state, "NORMAL")
+        assert "NORMAL RESPONSE" in response
+        assert self.simulator.state == "NORMAL"
 
     def test_nested_think_blocks_prevented(self):
         """Test that new think blocks during waiting state get error"""
         # Issue think command
         self.simulator.process_user_input("think about the situation")
-        self.assertEqual(self.simulator.state, "WAITING_FOR_PLAYER_CHOICE")
+        assert self.simulator.state == "WAITING_FOR_PLAYER_CHOICE"
 
         # Try another think block
         response = self.simulator.process_user_input("think about something else")
 
         # Should get error (simulated as invalid input)
-        self.assertIn("Please select one of the numbered options", response)
-        self.assertEqual(self.simulator.state, "WAITING_FOR_PLAYER_CHOICE")
+        assert "Please select one of the numbered options" in response
+        assert self.simulator.state == "WAITING_FOR_PLAYER_CHOICE"
 
 
 class TestThinkBlockErrorHandling(unittest.TestCase):
@@ -223,8 +221,8 @@ class TestThinkBlockErrorHandling(unittest.TestCase):
         for invalid_input in invalid_inputs:
             with self.subTest(invalid_input=invalid_input):
                 response = self.simulator.process_user_input(invalid_input)
-                self.assertIn("Please select one of the numbered options", response)
-                self.assertEqual(self.simulator.state, "WAITING_FOR_PLAYER_CHOICE")
+                assert "Please select one of the numbered options" in response
+                assert self.simulator.state == "WAITING_FOR_PLAYER_CHOICE"
 
     def test_error_message_format(self):
         """Test that error message follows specified format"""
@@ -233,9 +231,9 @@ class TestThinkBlockErrorHandling(unittest.TestCase):
         response = self.simulator.process_user_input("continue")
 
         # Check error message contains required elements
-        self.assertIn("Please select", response)
-        self.assertIn("numbered options", response)
-        self.assertIn("1, 2, 3", response)
+        assert "Please select" in response
+        assert "numbered options" in response
+        assert "1, 2, 3" in response
 
     def test_recovery_after_error(self):
         """Test that valid input works after error"""
@@ -245,8 +243,8 @@ class TestThinkBlockErrorHandling(unittest.TestCase):
         response = self.simulator.process_user_input("2")  # Valid
 
         # Should recover and continue normally
-        self.assertIn("CONTINUING WITH", response)
-        self.assertEqual(self.simulator.state, "NORMAL")
+        assert "CONTINUING WITH" in response
+        assert self.simulator.state == "NORMAL"
 
 
 class TestThinkBlockStateTransitions(unittest.TestCase):
@@ -258,24 +256,24 @@ class TestThinkBlockStateTransitions(unittest.TestCase):
 
     def test_initial_state(self):
         """Test initial state is normal"""
-        self.assertEqual(self.simulator.state, "NORMAL")
+        assert self.simulator.state == "NORMAL"
 
     def test_state_transition_on_think(self):
         """Test state changes to waiting on think command"""
         self.simulator.process_user_input("think about options")
-        self.assertEqual(self.simulator.state, "WAITING_FOR_PLAYER_CHOICE")
+        assert self.simulator.state == "WAITING_FOR_PLAYER_CHOICE"
 
     def test_state_transition_on_selection(self):
         """Test state returns to normal after valid selection"""
         self.simulator.process_user_input("think about choices")
         self.simulator.process_user_input("1")
-        self.assertEqual(self.simulator.state, "NORMAL")
+        assert self.simulator.state == "NORMAL"
 
     def test_state_persistence_on_error(self):
         """Test state remains waiting after invalid input"""
         self.simulator.process_user_input("think about the situation")
         self.simulator.process_user_input("continue")  # Invalid
-        self.assertEqual(self.simulator.state, "WAITING_FOR_PLAYER_CHOICE")
+        assert self.simulator.state == "WAITING_FOR_PLAYER_CHOICE"
 
 
 def run_integration_tests():
@@ -309,7 +307,7 @@ if __name__ == "__main__":
     if success:
         print("\n✅ All integration tests passed!")
         print("Think block protocol should work correctly!")
-        exit(0)
+        sys.exit(0)
     else:
         print("\n❌ Some integration tests failed!")
-        exit(1)
+        sys.exit(1)

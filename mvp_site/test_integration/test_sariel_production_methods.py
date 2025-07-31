@@ -28,16 +28,14 @@ class TestSarielProductionMethods(unittest.TestCase):
         waiting with grave news about your family's legacy."""
 
         initial_result = get_initial_story(initial_prompt)
-        self.assertIsNotNone(initial_result)
+        assert initial_result is not None
 
         # get_initial_story now returns a string directly
         narrative = initial_result
-        self.assertIsInstance(
-            narrative, str, "get_initial_story should return a string"
-        )
-        self.assertIn(
-            "Sariel", narrative, "Player character Sariel missing from initial story"
-        )
+        assert isinstance(narrative, str), "get_initial_story should return a string"
+        assert (
+            "Sariel" in narrative
+        ), "Player character Sariel missing from initial story"
 
         # Create game state from initial story
         # Since get_initial_story only returns narrative now, we need to initialize game state manually
@@ -70,10 +68,10 @@ class TestSarielProductionMethods(unittest.TestCase):
             current_game_state=game_state,
         )
 
-        self.assertIsNotNone(continue_result)
+        assert continue_result is not None
         # continue_story returns the narrative string directly
         continue_narrative = continue_result
-        self.assertIsInstance(continue_narrative, str)
+        assert isinstance(continue_narrative, str)
 
         # Check for both Sariel and Cassian
         sariel_found = "Sariel" in continue_narrative
@@ -102,7 +100,7 @@ class TestSarielProductionMethods(unittest.TestCase):
         )
 
         # Assert basic functionality
-        self.assertTrue(sariel_found, "Sariel missing from continue_story response")
+        assert sariel_found, "Sariel missing from continue_story response"
 
 
 if __name__ == "__main__":

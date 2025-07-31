@@ -8,6 +8,7 @@ def process_data(items):
             results.append(item * -1)  # Fixed: multiply by -1 instead of dividing by 0
     return results
 
+
 # Test with this data
 test_data = [1, 2, -1, 3, 0, 4]
 print("Processing:", test_data)

@@ -19,6 +19,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["FIRESTORE_EMULATOR_HOST"] = "localhost:8080"
 os.environ["TESTING"] = "true"
 
+import pytest
+
 import firestore_service
 from game_state import GameState
 
@@ -45,11 +47,11 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         mock_db.collection.side_effect = timeout_error
 
         # Test that connection timeout raises exception (current behavior)
-        with self.assertRaises(Exception) as context:
-            result = firestore_service.get_campaigns_for_user(self.test_user_id)
+        with pytest.raises(Exception) as context:
+            firestore_service.get_campaigns_for_user(self.test_user_id)
 
         # Should raise timeout exception
-        self.assertIn("timeout", str(context.exception).lower())
+        assert "timeout" in str(context.value).lower()
 
     @patch("firestore_service.get_db")
     def test_connection_refused_handling(self, mock_get_db):
@@ -61,11 +63,11 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         mock_db.collection.side_effect = connection_error
 
         # Test connection error handling (current behavior: raises exception)
-        with self.assertRaises(Exception) as context:
-            result = firestore_service.get_campaigns_for_user(self.test_user_id)
+        with pytest.raises(Exception) as context:
+            firestore_service.get_campaigns_for_user(self.test_user_id)
 
         # Should raise connection exception
-        self.assertIn("connection", str(context.exception).lower())
+        assert "connection" in str(context.value).lower()
 
     @patch("firestore_service.get_db")
     def test_auth_token_expiry_refresh(self, mock_get_db):
@@ -77,11 +79,11 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         mock_db.collection.side_effect = auth_error
 
         # Test auth error handling (current behavior: raises exception)
-        with self.assertRaises(Exception) as context:
-            result = firestore_service.get_campaigns_for_user(self.test_user_id)
+        with pytest.raises(Exception) as context:
+            firestore_service.get_campaigns_for_user(self.test_user_id)
 
         # Should raise auth exception
-        self.assertIn("token", str(context.exception).lower())
+        assert "token" in str(context.value).lower()
 
     # Group 2 - Transaction Errors
 
@@ -102,8 +104,8 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         )
 
         # Should return the merged state even if database update fails
-        self.assertIsInstance(result, dict)
-        self.assertEqual(result["new"], "changes")
+        assert isinstance(result, dict)
+        assert result["new"] == "changes"
 
     @patch("firestore_service.get_db")
     def test_transaction_rollback_on_failure(self, mock_get_db):
@@ -114,7 +116,7 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         mock_db.transaction.return_value = mock_transaction
 
         # Mock successful get but failed update
-        mock_doc_ref = MagicMock()
+        MagicMock()
         mock_transaction.get.return_value.exists = True
         mock_transaction.update.side_effect = Exception("Update failed")
 
@@ -125,7 +127,7 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         )
 
         # Should still return merged state locally even if transaction fails
-        self.assertIsInstance(result, dict)
+        assert isinstance(result, dict)
 
     @patch("firestore_service.get_db")
     def test_deadlock_detection_recovery(self, mock_get_db):
@@ -144,8 +146,8 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         )
 
         # Should handle deadlock and return merged state
-        self.assertIsInstance(result, dict)
-        self.assertEqual(result["nested"]["new"], "data")
+        assert isinstance(result, dict)
+        assert result["nested"]["new"] == "data"
 
     # Group 3 - Query Errors
 
@@ -164,7 +166,7 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         result = firestore_service.get_campaigns_for_user(self.test_user_id)
 
         # Should handle query error gracefully
-        self.assertEqual(result, [])
+        assert result == []
 
     @patch("firestore_service.get_db")
     def test_query_timeout_with_retry(self, mock_get_db):
@@ -181,7 +183,7 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         result = firestore_service.get_campaigns_for_user(self.test_user_id)
 
         # Should handle timeout gracefully
-        self.assertEqual(result, [])
+        assert result == []
 
     @patch("firestore_service.get_db")
     def test_query_size_limit_exceeded(self, mock_get_db):
@@ -198,7 +200,7 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         result = firestore_service.get_campaigns_for_user(self.test_user_id)
 
         # Should handle size limit gracefully
-        self.assertEqual(result, [])
+        assert result == []
 
     @patch("firestore_service.get_db")
     def test_collection_not_found_error(self, mock_get_db):
@@ -210,11 +212,11 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         mock_db.collection.side_effect = not_found_error
 
         # Test collection not found handling (current behavior: raises exception)
-        with self.assertRaises(Exception) as context:
-            result = firestore_service.get_campaigns_for_user(self.test_user_id)
+        with pytest.raises(Exception) as context:
+            firestore_service.get_campaigns_for_user(self.test_user_id)
 
         # Should raise not found exception
-        self.assertIn("not found", str(context.exception).lower())
+        assert "not found" in str(context.value).lower()
 
     # Group 4 - Document Errors
 
@@ -235,8 +237,8 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         )
 
         # Should handle missing document gracefully and return merged state
-        self.assertIsInstance(result, dict)
-        self.assertEqual(result["new"], "value")
+        assert isinstance(result, dict)
+        assert result["new"] == "value"
 
     @patch("firestore_service.get_db")
     def test_document_size_limit_handling(self, mock_get_db):
@@ -260,8 +262,8 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         )
 
         # Should handle locally even if database write fails
-        self.assertIsInstance(result, dict)
-        self.assertIn("large_field", result)
+        assert isinstance(result, dict)
+        assert "large_field" in result
 
     @patch("firestore_service.get_db")
     def test_invalid_document_id_format(self, mock_get_db):
@@ -275,11 +277,11 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         mock_db.collection.return_value = mock_collection
 
         # Test invalid ID handling (current behavior: raises exception)
-        with self.assertRaises(Exception) as context:
-            result = firestore_service.get_campaigns_for_user("invalid/id/with/slashes")
+        with pytest.raises(Exception) as context:
+            firestore_service.get_campaigns_for_user("invalid/id/with/slashes")
 
         # Should raise invalid ID exception
-        self.assertIn("invalid", str(context.exception).lower())
+        assert "invalid" in str(context.value).lower()
 
     @patch("firestore_service.get_db")
     def test_document_permission_denied(self, mock_get_db):
@@ -298,7 +300,7 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         result = firestore_service.get_campaigns_for_user(self.test_user_id)
 
         # Should handle permission error gracefully
-        self.assertEqual(result, [])
+        assert result == []
 
     @patch("firestore_service.get_db")
     def test_batch_operation_partial_failure(self, mock_get_db):
@@ -319,10 +321,10 @@ class TestFirestoreDatabaseErrors(unittest.TestCase):
         result2 = firestore_service.update_state_with_changes({"test": 3}, {"test": 4})
 
         # Should handle partial failure gracefully
-        self.assertIsInstance(result1, dict)
-        self.assertIsInstance(result2, dict)
-        self.assertEqual(result1["test"], 2)
-        self.assertEqual(result2["test"], 4)
+        assert isinstance(result1, dict)
+        assert isinstance(result2, dict)
+        assert result1["test"] == 2
+        assert result2["test"] == 4
 
 
 if __name__ == "__main__":

@@ -26,7 +26,7 @@ class MockRedisClient:
     def hset(self, name, key=None, value=None, mapping=None):
         """Mock Redis HSET command."""
         self._check_connection()
-        self.call_history.append(('hset', name, key, value, mapping))
+        self.call_history.append(("hset", name, key, value, mapping))
 
         if name not in self.hashes:
             self.hashes[name] = {}
@@ -41,46 +41,47 @@ class MockRedisClient:
     def hget(self, name, key):
         """Mock Redis HGET command."""
         self._check_connection()
-        self.call_history.append(('hget', name, key))
+        self.call_history.append(("hget", name, key))
 
         return self.hashes.get(name, {}).get(key)
 
     def hgetall(self, name):
         """Mock Redis HGETALL command."""
         self._check_connection()
-        self.call_history.append(('hgetall', name))
+        self.call_history.append(("hgetall", name))
 
         return self.hashes.get(name, {})
 
     def publish(self, channel, message):
         """Mock Redis PUBLISH command."""
         self._check_connection()
-        self.call_history.append(('publish', channel, message))
+        self.call_history.append(("publish", channel, message))
         return 1
 
     def get(self, key):
         """Mock Redis GET command."""
         self._check_connection()
-        self.call_history.append(('get', key))
+        self.call_history.append(("get", key))
         return self.data.get(key)
 
     def set(self, key, value):
         """Mock Redis SET command."""
         self._check_connection()
-        self.call_history.append(('set', key, value))
+        self.call_history.append(("set", key, value))
         self.data[key] = value
         return True
 
-    def keys(self, pattern='*'):
+    def keys(self, pattern="*"):
         """Mock Redis KEYS command."""
         self._check_connection()
-        self.call_history.append(('keys', pattern))
+        self.call_history.append(("keys", pattern))
 
-        if pattern == '*':
+        if pattern == "*":
             return list(self.data.keys()) + list(self.hashes.keys())
 
         # Simple pattern matching
         import fnmatch
+
         all_keys = list(self.data.keys()) + list(self.hashes.keys())
         return [key for key in all_keys if fnmatch.fnmatch(key, pattern)]
 
@@ -100,11 +101,15 @@ class MockRedisClient:
         agent_data = self.hashes[agent_key]
 
         if agent_type:
-            assert agent_data.get('type') == agent_type, f"Agent type mismatch: expected {agent_type}, got {agent_data.get('type')}"
+            assert agent_data.get("type") == agent_type, (
+                f"Agent type mismatch: expected {agent_type}, got {agent_data.get('type')}"
+            )
 
         if capabilities:
-            stored_capabilities = json.loads(agent_data.get('capabilities', '[]'))
-            assert stored_capabilities == capabilities, f"Capabilities mismatch: expected {capabilities}, got {stored_capabilities}"
+            stored_capabilities = json.loads(agent_data.get("capabilities", "[]"))
+            assert stored_capabilities == capabilities, (
+                f"Capabilities mismatch: expected {capabilities}, got {stored_capabilities}"
+            )
 
 
 class MockRedisPubSub:
@@ -144,28 +149,33 @@ class MockMessageBroker:
     def register_agent(self, agent_id, agent_type, capabilities):
         """Mock agent registration."""
         self.registered_agents[agent_id] = {
-            'type': agent_type,
-            'capabilities': capabilities,
-            'registered_at': datetime.now().isoformat()
+            "type": agent_type,
+            "capabilities": capabilities,
+            "registered_at": datetime.now().isoformat(),
         }
 
         # Also register with mock Redis
-        self.redis_client.hset(f"agent:{agent_id}", mapping={
-            'id': agent_id,
-            'type': agent_type,
-            'capabilities': json.dumps(capabilities),
-            'status': 'active',
-            'last_heartbeat': datetime.now().isoformat()
-        })
+        self.redis_client.hset(
+            f"agent:{agent_id}",
+            mapping={
+                "id": agent_id,
+                "type": agent_type,
+                "capabilities": json.dumps(capabilities),
+                "status": "active",
+                "last_heartbeat": datetime.now().isoformat(),
+            },
+        )
 
     def send_task(self, from_agent, to_agent, task_data):
         """Mock task sending."""
-        self.sent_tasks.append({
-            'from': from_agent,
-            'to': to_agent,
-            'data': task_data,
-            'sent_at': datetime.now().isoformat()
-        })
+        self.sent_tasks.append(
+            {
+                "from": from_agent,
+                "to": to_agent,
+                "data": task_data,
+                "sent_at": datetime.now().isoformat(),
+            }
+        )
 
     def get_registered_agents(self):
         """Get all registered agents."""
@@ -192,7 +202,7 @@ def mock_redis_fixture(should_fail=False):
             raise ConnectionError("Redis connection failed")
         return mock_redis
 
-    with patch('redis.Redis', side_effect=mock_redis_constructor):
+    with patch("redis.Redis", side_effect=mock_redis_constructor):
         yield mock_redis
 
 

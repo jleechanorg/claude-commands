@@ -36,9 +36,9 @@ class TestEntitySchemaIntegration(unittest.TestCase):
 
         # Test wrapper function
         manifest = create_from_game_state(game_state, session_number=1, turn_number=1)
-        self.assertIsInstance(manifest, SceneManifest)
-        self.assertEqual(manifest.session_number, 1)
-        self.assertEqual(manifest.turn_number, 1)
+        assert isinstance(manifest, SceneManifest)
+        assert manifest.session_number == 1
+        assert manifest.turn_number == 1
 
     def test_entity_id_format_standardization(self):
         """Test that entity IDs follow underscore format"""
@@ -59,16 +59,16 @@ class TestEntitySchemaIntegration(unittest.TestCase):
         manifest = create_from_game_state(game_state, 1, 1)
 
         # Check PC ID format
-        self.assertEqual(len(manifest.player_characters), 1)
+        assert len(manifest.player_characters) == 1
         pc = manifest.player_characters[0]
-        self.assertRegex(pc.entity_id, r"^pc_[a-z_]+_\d{3}$")
-        self.assertIn("test_hero", pc.entity_id.lower())
+        assert re.search(r"^pc_[a-z_]+_\d{3}$", pc.entity_id)
+        assert "test_hero" in pc.entity_id.lower()
 
         # Check NPC ID format
-        self.assertEqual(len(manifest.npcs), 1)
+        assert len(manifest.npcs) == 1
         npc = manifest.npcs[0]
-        self.assertRegex(npc.entity_id, r"^npc_[a-z_]+_\d{3}$")
-        self.assertIn("guard_captain", npc.entity_id.lower())
+        assert re.search(r"^npc_[a-z_]+_\d{3}$", npc.entity_id)
+        assert "guard_captain" in npc.entity_id.lower()
 
     def test_entity_schema_loaded_in_gemini_service(self):
         """Test that entity schema instructions are loaded in both story functions"""
@@ -94,7 +94,7 @@ class TestEntitySchemaIntegration(unittest.TestCase):
                     for call in load_calls
                     if call[0][0] == constants.PROMPT_TYPE_GAME_STATE
                 ]
-                self.assertGreaterEqual(len(game_state_calls), 1)
+                assert len(game_state_calls) >= 1
 
             mock_load.reset_mock()
 
@@ -122,7 +122,7 @@ class TestEntitySchemaIntegration(unittest.TestCase):
                     for call in load_calls
                     if call[0][0] == constants.PROMPT_TYPE_GAME_STATE
                 ]
-                self.assertGreaterEqual(len(game_state_calls), 1)
+                assert len(game_state_calls) >= 1
 
 
 class TestDebugModeDefaults(unittest.TestCase):
@@ -131,23 +131,23 @@ class TestDebugModeDefaults(unittest.TestCase):
     def test_game_state_defaults_to_debug_true(self):
         """Test that GameState now defaults to debug_mode=True"""
         gs = GameState()
-        self.assertTrue(gs.debug_mode)
+        assert gs.debug_mode
 
     def test_game_state_respects_explicit_debug_false(self):
         """Test that debug_mode can still be set to False explicitly"""
         gs = GameState(debug_mode=False)
-        self.assertFalse(gs.debug_mode)
+        assert not gs.debug_mode
 
     def test_debug_mode_serialization(self):
         """Test that debug_mode is properly serialized"""
         gs = GameState(debug_mode=True)
         data = gs.to_dict()
-        self.assertIn("debug_mode", data)
-        self.assertTrue(data["debug_mode"])
+        assert "debug_mode" in data
+        assert data["debug_mode"]
 
         # Test deserialization
         gs2 = GameState.from_dict(data)
-        self.assertTrue(gs2.debug_mode)
+        assert gs2.debug_mode
 
 
 class TestResourceTracking(unittest.TestCase):
@@ -178,11 +178,11 @@ class TestResourceTracking(unittest.TestCase):
             system_instruction = call_args[1]["config"].system_instruction.text
 
             # Verify resource tracking instructions are present
-            self.assertIn("DEBUG_RESOURCES_START", system_instruction)
-            self.assertIn("DEBUG_RESOURCES_END", system_instruction)
-            self.assertIn("EP used", system_instruction)
-            self.assertIn("spell slots", system_instruction)
-            self.assertIn("short rests", system_instruction)
+            assert "DEBUG_RESOURCES_START" in system_instruction
+            assert "DEBUG_RESOURCES_END" in system_instruction
+            assert "EP used" in system_instruction
+            assert "spell slots" in system_instruction
+            assert "short rests" in system_instruction
 
     def test_resource_examples_in_debug_instructions(self):
         """Test that debug instructions include proper resource examples"""
@@ -212,9 +212,9 @@ class TestResourceTracking(unittest.TestCase):
                 debug_text = str(system_instruction)
 
                 # Look for resource example patterns
-                self.assertIn("Resources: 2 EP used (6/8 remaining)", debug_text)
-                self.assertIn("DEBUG_RESOURCES_START", debug_text)
-                self.assertIn("DEBUG_RESOURCES_END", debug_text)
+                assert "Resources: 2 EP used (6/8 remaining)" in debug_text
+                assert "DEBUG_RESOURCES_START" in debug_text
+                assert "DEBUG_RESOURCES_END" in debug_text
 
 
 class TestManifestCacheExclusion(unittest.TestCase):
@@ -232,12 +232,12 @@ class TestManifestCacheExclusion(unittest.TestCase):
         data = gs.to_dict()
 
         # Verify underscore attributes are excluded
-        self.assertNotIn("_test_cache", data)
-        self.assertNotIn("_another_cache", data)
+        assert "_test_cache" not in data
+        assert "_another_cache" not in data
 
         # Verify normal attributes are included
-        self.assertIn("game_state_version", data)
-        self.assertIn("player_character_data", data)
+        assert "game_state_version" in data
+        assert "player_character_data" in data
 
     def test_manifest_cache_exclusion(self):
         """Test specific manifest cache exclusion"""
@@ -251,12 +251,12 @@ class TestManifestCacheExclusion(unittest.TestCase):
         data = gs.to_dict()
 
         # Verify manifest cache is excluded
-        self.assertNotIn("_manifest_cache", data)
-        self.assertNotIn("manifest_cache", data)
+        assert "_manifest_cache" not in data
+        assert "manifest_cache" not in data
 
         # Verify serialization doesn't error
         json_str = json.dumps(data, default=str)
-        self.assertIsInstance(json_str, str)
+        assert isinstance(json_str, str)
 
 
 class TestEntityStringIdPreservation(unittest.TestCase):
@@ -280,8 +280,8 @@ class TestEntityStringIdPreservation(unittest.TestCase):
         manifest = create_from_game_state(game_state, 1, 1)
 
         # Verify IDs are preserved
-        self.assertEqual(manifest.player_characters[0].entity_id, "pc_custom_id_999")
-        self.assertEqual(manifest.npcs[0].entity_id, "npc_special_villain_042")
+        assert manifest.player_characters[0].entity_id == "pc_custom_id_999"
+        assert manifest.npcs[0].entity_id == "npc_special_villain_042"
 
 
 class TestEntitySchemaIntegrationInGameState(unittest.TestCase):
@@ -295,22 +295,21 @@ class TestEntitySchemaIntegrationInGameState(unittest.TestCase):
         )
 
         # Verify it contains entity schema sections
-        self.assertIn("Entity Schema", game_state_content)
-        self.assertIn("SceneManifest", game_state_content)
-        self.assertIn("CharacterEntity", game_state_content)
-        self.assertIn("entity_id", game_state_content)
+        assert "Entity Schema" in game_state_content
+        assert "SceneManifest" in game_state_content
+        assert "CharacterEntity" in game_state_content
+        assert "entity_id" in game_state_content
 
     def test_game_state_path_exists(self):
         """Test that game state instruction file exists"""
-        self.assertIn(constants.PROMPT_TYPE_GAME_STATE, gemini_service.PATH_MAP)
+        assert constants.PROMPT_TYPE_GAME_STATE in gemini_service.PATH_MAP
 
         # Verify the file exists
         path = gemini_service.PATH_MAP[constants.PROMPT_TYPE_GAME_STATE]
         full_path = os.path.join(os.path.dirname(gemini_service.__file__), path)
-        self.assertTrue(
-            os.path.exists(full_path),
-            f"Game state instruction file not found at {full_path}",
-        )
+        assert os.path.exists(
+            full_path
+        ), f"Game state instruction file not found at {full_path}"
 
 
 if __name__ == "__main__":

@@ -20,8 +20,14 @@ logger = logging.getLogger(__name__)
 class A2AAgentWrapper:
     """Wraps existing agents with A2A communication capabilities"""
 
-    def __init__(self, agent_id: str, agent_type: str, capabilities: list[str],
-                 workspace: str, message_handler: Callable | None = None):
+    def __init__(
+        self,
+        agent_id: str,
+        agent_type: str,
+        capabilities: list[str],
+        workspace: str,
+        message_handler: Callable | None = None,
+    ):
         """
         Initialize A2A wrapper for an agent
 
@@ -57,9 +63,7 @@ class A2AAgentWrapper:
 
         # Start message processing thread
         self._message_thread = threading.Thread(
-            target=self._message_loop,
-            name=f"A2A-Messages-{self.agent_id}",
-            daemon=True
+            target=self._message_loop, name=f"A2A-Messages-{self.agent_id}", daemon=True
         )
         self._message_thread.start()
 
@@ -67,7 +71,7 @@ class A2AAgentWrapper:
         self._heartbeat_thread = threading.Thread(
             target=self._heartbeat_loop,
             name=f"A2A-Heartbeat-{self.agent_id}",
-            daemon=True
+            daemon=True,
         )
         self._heartbeat_thread.start()
 
@@ -140,12 +144,14 @@ class A2AAgentWrapper:
 
             for task in tasks:
                 # Simple task claiming logic - agents claim tasks they can handle
-                task_requirements = task.get('requirements', [])
+                task_requirements = task.get("requirements", [])
 
                 # Check if agent can handle this task
                 if self._can_handle_task(task_requirements):
-                    if self.a2a_client.claim_task(task['task_id']):
-                        logger.info(f"Agent {self.agent_id} claimed task {task['task_id']}")
+                    if self.a2a_client.claim_task(task["task_id"]):
+                        logger.info(
+                            f"Agent {self.agent_id} claimed task {task['task_id']}"
+                        )
                         self._execute_task(task)
                         break  # Only claim one task at a time
 
@@ -163,10 +169,12 @@ class A2AAgentWrapper:
     def _execute_task(self, task: dict[str, Any]) -> None:
         """Execute a claimed task"""
         try:
-            task_id = task['task_id']
-            description = task['description']
+            task_id = task["task_id"]
+            description = task["description"]
 
-            logger.info(f"Agent {self.agent_id} executing task {task_id}: {description}")
+            logger.info(
+                f"Agent {self.agent_id} executing task {task_id}: {description}"
+            )
 
             # Update status to busy
             self.a2a_client.update_status("busy", task_id)
@@ -192,15 +200,15 @@ class A2AAgentWrapper:
         Perform actual task execution based on agent type
         This is a simplified implementation - real agents would have more complex logic
         """
-        task_id = task['task_id']
-        description = task['description']
+        task["task_id"]
+        description = task["description"]
 
         result = {
             "status": "completed",
             "agent_id": self.agent_id,
             "agent_type": self.agent_type,
             "execution_time": time.time(),
-            "output": f"Task '{description}' executed by {self.agent_type} agent"
+            "output": f"Task '{description}' executed by {self.agent_type} agent",
         }
 
         # Agent-type specific execution logic
@@ -226,7 +234,7 @@ class A2AAgentWrapper:
                 "agent_id": self.agent_id,
                 "agent_type": self.agent_type,
                 "capabilities": self.capabilities,
-                "status": "online"
+                "status": "online",
             }
 
         if message_type == "status":
@@ -235,7 +243,7 @@ class A2AAgentWrapper:
                 "agent_id": self.agent_id,
                 "status": self.a2a_client.agent_info.status,
                 "current_task": self.a2a_client.agent_info.current_task,
-                "message": f"Agent {self.agent_id} is operational"
+                "message": f"Agent {self.agent_id} is operational",
             }
 
         if message_type == "delegate":
@@ -249,31 +257,36 @@ class A2AAgentWrapper:
                 return {
                     "status": "accepted",
                     "task_id": task_id,
-                    "message": f"Task delegated and published as {task_id}"
+                    "message": f"Task delegated and published as {task_id}",
                 }
             return {
                 "status": "declined",
-                "message": f"Agent {self.agent_id} cannot handle this task"
+                "message": f"Agent {self.agent_id} cannot handle this task",
             }
 
         if message_type == "collaborate":
             # Handle collaboration requests
             return {
                 "status": "ready",
-                "message": f"Agent {self.agent_id} ready to collaborate"
+                "message": f"Agent {self.agent_id} ready to collaborate",
             }
 
         # Unknown message type
         logger.warning(f"Unknown message type: {message_type}")
         return {
             "status": "unknown_message_type",
-            "message": f"Agent {self.agent_id} doesn't handle '{message_type}' messages"
+            "message": f"Agent {self.agent_id} doesn't handle '{message_type}' messages",
         }
 
     # Public API methods for agent interaction
 
-    def send_message(self, to_agent: str, message_type: str, payload: dict[str, Any],
-                    reply_to: str = None) -> bool:
+    def send_message(
+        self,
+        to_agent: str,
+        message_type: str,
+        payload: dict[str, Any],
+        reply_to: str = None,
+    ) -> bool:
         """Send message to another agent"""
         return self.a2a_client.send_message(to_agent, message_type, payload)
 
@@ -284,10 +297,13 @@ class A2AAgentWrapper:
     def discover_agents(self) -> list[dict[str, Any]]:
         """Discover other available agents"""
         from dataclasses import asdict
+
         agents = self.a2a_client.discover_agents()
         return [asdict(agent) for agent in agents]
 
-    def publish_task(self, description: str, requirements: list[str] = None) -> str | None:
+    def publish_task(
+        self, description: str, requirements: list[str] = None
+    ) -> str | None:
         """Publish a new task for other agents to claim"""
         return self.a2a_client.publish_task(description, requirements)
 
@@ -302,13 +318,21 @@ class A2AAgentWrapper:
     def get_agent_info(self) -> dict[str, Any]:
         """Get current agent information"""
         from dataclasses import asdict
+
         return asdict(self.a2a_client.agent_info)
 
 
-def create_a2a_wrapper(agent_id: str, agent_type: str, capabilities: list[str],
-                      workspace: str, message_handler: Callable | None = None) -> A2AAgentWrapper:
+def create_a2a_wrapper(
+    agent_id: str,
+    agent_type: str,
+    capabilities: list[str],
+    workspace: str,
+    message_handler: Callable | None = None,
+) -> A2AAgentWrapper:
     """Factory function to create A2A wrapper for agents"""
-    return A2AAgentWrapper(agent_id, agent_type, capabilities, workspace, message_handler)
+    return A2AAgentWrapper(
+        agent_id, agent_type, capabilities, workspace, message_handler
+    )
 
 
 def get_all_agents_status() -> dict[str, Any]:
@@ -325,7 +349,7 @@ if __name__ == "__main__":
         agent_id="test-agent-1",
         agent_type="testing",
         capabilities=["python", "testing", "automation"],
-        workspace="/tmp/test-agent-1"
+        workspace="/tmp/test-agent-1",
     )
 
     try:

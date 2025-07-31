@@ -80,31 +80,27 @@ class TestAPIBackwardCompatibility(unittest.TestCase):
         response = self.client.get("/api/campaigns", headers=self.test_headers)
 
         # Should return 200 or 404 (if no campaigns)
-        self.assertIn(response.status_code, [200, 404])
+        assert response.status_code in [200, 404]
 
         if response.status_code == 200:
             data = response.get_json()
 
             # CRITICAL: Response must be an array directly
-            self.assertIsInstance(
-                data,
-                list,
-                f"API must return array directly for backward compatibility. Got: {type(data)}",
-            )
+            assert isinstance(
+                data, list
+            ), f"API must return array directly for backward compatibility. Got: {type(data)}"
 
             # Verify it's not wrapped in an object
-            self.assertNotIsInstance(
-                data,
-                dict,
-                "API must NOT return object wrapper for backward compatibility",
-            )
+            assert not isinstance(
+                data, dict
+            ), "API must NOT return object wrapper for backward compatibility"
 
             # If we have campaigns, verify structure
             if data:
                 first_campaign = data[0]
-                self.assertIsInstance(first_campaign, dict)
-                self.assertIn("id", first_campaign)
-                self.assertIn("title", first_campaign)
+                assert isinstance(first_campaign, dict)
+                assert "id" in first_campaign
+                assert "title" in first_campaign
 
     def test_campaigns_api_supports_foreach(self):
         """Test that campaigns response supports JavaScript forEach operation."""
@@ -118,8 +114,8 @@ class TestAPIBackwardCompatibility(unittest.TestCase):
                 # In JavaScript: campaigns.forEach(campaign => ...)
                 for campaign in data:
                     # This should work without error
-                    self.assertIsInstance(campaign, dict)
-                    self.assertIn("id", campaign)
+                    assert isinstance(campaign, dict)
+                    assert "id" in campaign
             except TypeError as e:
                 self.fail(
                     f"Response format would break JavaScript forEach: {e}\n"
@@ -144,8 +140,8 @@ class TestAPIBackwardCompatibility(unittest.TestCase):
         if response.status_code in [200, 201]:
             data = response.get_json()
             # Create endpoint should return object with success field
-            self.assertIsInstance(data, dict)
-            self.assertIn("success", data)
+            assert isinstance(data, dict)
+            assert "success" in data
 
     def test_response_format_documentation(self):
         """Document expected response formats for key endpoints."""
@@ -160,7 +156,7 @@ class TestAPIBackwardCompatibility(unittest.TestCase):
         for endpoint, format_desc in expected_formats.items():
             with self.subTest(endpoint=endpoint):
                 # Just document the expected format
-                self.assertTrue(True, f"{endpoint} should return: {format_desc}")
+                assert True, f"{endpoint} should return: {format_desc}"
 
 
 if __name__ == "__main__":

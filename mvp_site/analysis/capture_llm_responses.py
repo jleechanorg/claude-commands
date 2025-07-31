@@ -32,7 +32,7 @@ def capture_sariel_responses():
     # Import test modules
 
     # Set up environment
-    test_setup = setup_integration_test_environment(project_root)
+    setup_integration_test_environment(project_root)
 
     # Create Flask app
     app = create_app()

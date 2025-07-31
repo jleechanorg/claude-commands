@@ -2,16 +2,20 @@
 Integrates Memory MCP auto-read into slash command processing.
 """
 
-import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'mvp_site'))
+import sys
 
-from memory_integration import memory_integration
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "mvp_site"))
+
 import logging_util
+from memory_integration import memory_integration
 
 logger = logging_util.getLogger(__name__)
 
-def enhance_command_with_memory(command_line: str, interpretation_result: dict = None) -> str:
+
+def enhance_command_with_memory(
+    command_line: str, interpretation_result: dict = None
+) -> str:
     """
     Enhance command execution with relevant memory context.
 
@@ -25,19 +29,26 @@ def enhance_command_with_memory(command_line: str, interpretation_result: dict =
     try:
         # Commands that benefit from memory enhancement
         memory_enhanced_commands = {
-            '/learn', '/debug', '/think', '/analyze', '/fix',
-            '/troubleshoot', '/investigate', '/research', '/review'
+            "/learn",
+            "/debug",
+            "/think",
+            "/analyze",
+            "/fix",
+            "/troubleshoot",
+            "/investigate",
+            "/research",
+            "/review",
         }
 
         # Extract the main command
         if interpretation_result:
-            main_command = interpretation_result.get('protocol_command', '')
-            args_text = ' '.join(interpretation_result.get('arguments', []))
+            main_command = interpretation_result.get("protocol_command", "")
+            args_text = " ".join(interpretation_result.get("arguments", []))
             search_context = f"{main_command} {args_text}"
         else:
             # Parse command directly
             tokens = command_line.strip().split()
-            main_command = tokens[0] if tokens else ''
+            main_command = tokens[0] if tokens else ""
             search_context = command_line
 
         # Check if this command should be enhanced
@@ -47,7 +58,9 @@ def enhance_command_with_memory(command_line: str, interpretation_result: dict =
         logger.debug(f"Enhancing command with memory: {main_command}")
 
         # Get relevant memory context
-        memory_context = memory_integration.get_enhanced_response_context(search_context)
+        memory_context = memory_integration.get_enhanced_response_context(
+            search_context
+        )
 
         if memory_context:
             logger.info(f"Injected memory context for command: {main_command}")
@@ -60,17 +73,30 @@ def enhance_command_with_memory(command_line: str, interpretation_result: dict =
         logger.error(f"Memory enhancement failed: {e}")
         return ""
 
+
 def should_enhance_command(command_line: str) -> bool:
     """Check if command should be enhanced with memory"""
     enhance_commands = {
-        '/learn', '/debug', '/think', '/analyze', '/fix',
-        '/troubleshoot', '/investigate', '/research', '/review',
-        '/replicate', '/understand', '/explain'
+        "/learn",
+        "/debug",
+        "/think",
+        "/analyze",
+        "/fix",
+        "/troubleshoot",
+        "/investigate",
+        "/research",
+        "/review",
+        "/replicate",
+        "/understand",
+        "/explain",
     }
 
     return any(cmd in command_line for cmd in enhance_commands)
 
-def get_memory_enhanced_prompt(base_prompt: str, command_line: str, interpretation_result: dict = None) -> str:
+
+def get_memory_enhanced_prompt(
+    base_prompt: str, command_line: str, interpretation_result: dict = None
+) -> str:
     """
     Get a memory-enhanced version of the prompt.
 
@@ -100,6 +126,7 @@ def get_memory_enhanced_prompt(base_prompt: str, command_line: str, interpretati
 
     return base_prompt
 
+
 # Integration functions for the command system
 def memory_pre_process_hook(command_line: str) -> dict:
     """
@@ -109,9 +136,10 @@ def memory_pre_process_hook(command_line: str) -> dict:
         dict: Memory enhancement metadata
     """
     return {
-        'memory_enhanced': should_enhance_command(command_line),
-        'memory_context_available': bool(enhance_command_with_memory(command_line))
+        "memory_enhanced": should_enhance_command(command_line),
+        "memory_context_available": bool(enhance_command_with_memory(command_line)),
     }
+
 
 def memory_post_process_hook(command_line: str, result: str) -> str:
     """
@@ -124,6 +152,7 @@ def memory_post_process_hook(command_line: str, result: str) -> str:
     # Could add memory storage of results here in future
     return result
 
+
 # Example usage and testing
 if __name__ == "__main__":
     test_commands = [
@@ -132,7 +161,7 @@ if __name__ == "__main__":
         "/think about architecture improvements",
         "/test src/",  # Should not be enhanced
         "/analyze memory leaks in performance",
-        "/fix authentication issues"
+        "/fix authentication issues",
     ]
 
     print("=== Memory Enhancement Hook Test ===\n")

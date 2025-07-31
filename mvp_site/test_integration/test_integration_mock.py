@@ -246,8 +246,8 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
             game_state = json.loads(state_json)
 
             # Basic sanity assertions. We cannot predict the exact content, but the structure should exist.
-            self.assertIn("player_character_data", game_state)
-            self.assertIn("npc_data", game_state)
+            assert "player_character_data" in game_state
+            assert "npc_data" in game_state
         finally:
             test_setup.cancel_timeout()  # Cancel timeout
 
@@ -295,7 +295,7 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
                 "X-Test-User-ID": self.user_id,
             },
         )
-        self.assertEqual(initial_response.status_code, 200)
+        assert initial_response.status_code == 200
         initial_data = initial_response.get_json()
 
         # Extract game state from the campaign data
@@ -308,7 +308,7 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
         if not initial_state:
             initial_state = {"player_character_data": {"gold": 0, "attributes": {}}}
 
-        self.assertIsInstance(initial_state, dict)
+        assert isinstance(initial_state, dict)
 
         # Use a very explicit prompt that demands state updates
         targeted_prompt = (
@@ -329,7 +329,7 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
             data=json.dumps(interaction_data),
         )
 
-        self.assertEqual(interaction_response.status_code, 200)
+        assert interaction_response.status_code == 200
 
         # Get final state using the same API approach for consistency
         final_response = self.client.get(
@@ -340,7 +340,7 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
                 "X-Test-User-ID": self.user_id,
             },
         )
-        self.assertEqual(final_response.status_code, 200)
+        assert final_response.status_code == 200
         final_data = final_response.get_json()
 
         # Extract game state from the campaign data
@@ -350,7 +350,7 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
             final_state = final_data.get("game_state", {})
 
         # Check that the AI made some stat changes (we can't predict exact values with natural state)
-        self.assertIsInstance(final_state, dict)
+        assert isinstance(final_state, dict)
         pc_data = final_state.get("player_character_data", {})
 
         # Verify that either stats were updated OR gold was updated (showing AI responded)
@@ -362,12 +362,12 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
         if "attributes" in pc_data and isinstance(pc_data["attributes"], dict):
             # Check if any numeric stats exist (STR, strength, etc.)
             stats_updated = any(
-                isinstance(v, (int, float)) for v in pc_data["attributes"].values()
+                isinstance(v, int | float) for v in pc_data["attributes"].values()
             )
         elif "stats" in pc_data and isinstance(pc_data["stats"], dict):
             # Fallback check for old structure
             stats_updated = any(
-                isinstance(v, (int, float)) for v in pc_data["stats"].values()
+                isinstance(v, int | float) for v in pc_data["stats"].values()
             )
 
         # Check for gold in various locations
@@ -406,15 +406,14 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
 
         # Also accept if AI created any new numeric fields
         new_numeric_fields = any(
-            isinstance(v, (int, float))
+            isinstance(v, int | float)
             for k, v in pc_data.items()
             if k not in initial_pc_data
         )
 
-        self.assertTrue(
-            stats_updated or gold_updated or new_numeric_fields,
-            f"AI should have updated stats, gold, or added numeric fields. Initial: {initial_pc_data}, Final: {pc_data}",
-        )
+        assert (
+            stats_updated or gold_updated or new_numeric_fields
+        ), f"AI should have updated stats, gold, or added numeric fields. Initial: {initial_pc_data}, Final: {pc_data}"
 
     def test_comprehensive_mock_infrastructure(self):
         """
@@ -438,7 +437,7 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
             data=json.dumps(complex_interaction_data),
         )
 
-        self.assertEqual(interaction_response.status_code, 200)
+        assert interaction_response.status_code == 200
 
         # Get the final state to verify the response structure
         final_response = self.client.get(
@@ -450,11 +449,11 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
             },
         )
 
-        self.assertEqual(final_response.status_code, 200)
+        assert final_response.status_code == 200
         final_data = final_response.get_json()
 
         # Verify that the campaign data structure is intact
-        self.assertIn("campaign", final_data)
+        assert "campaign" in final_data
         campaign_data = final_data["campaign"]
 
         # Verify essential campaign fields exist (mocking preserved the structure)
@@ -464,12 +463,12 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
             "id",
         ]  # Use actual field names from mock data
         for field in expected_fields:
-            self.assertIn(field, campaign_data, f"Campaign should have {field} field")
+            assert field in campaign_data, f"Campaign should have {field} field"
 
         # Verify the mocking framework allows state updates
         game_state = campaign_data.get("game_state", {})
         if game_state:
-            self.assertIsInstance(game_state, dict, "Game state should be a dictionary")
+            assert isinstance(game_state, dict), "Game state should be a dictionary"
 
         print(
             "✅ Comprehensive deep merge test with all Python types completed successfully!"
@@ -489,33 +488,33 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
         # 1. Verify that get_db is properly mocked
 
         db = firestore_service.get_db()
-        self.assertIsNotNone(db)
+        assert db is not None
 
         # 2. Verify that firebase_admin.initialize_app is mocked
 
         result = firebase_admin.initialize_app()
-        self.assertIsNone(result)  # Our mock returns None
+        assert result is None  # Our mock returns None
 
         # 3. Verify that direct firestore.client() calls are mocked
 
         client = firestore.client()
-        self.assertIsNotNone(client)
+        assert client is not None
 
         # 4. Verify that google.auth.default is mocked (prevents CI credential errors)
 
         credentials, project = google.auth.default()
-        self.assertIsNotNone(credentials)
-        self.assertEqual(project, "mock-project")
+        assert credentials is not None
+        assert project == "mock-project"
 
         # 5. Test that we can perform database operations without authentication errors
         try:
             # These should all work with our mocks
             campaigns = db.collection("campaigns")
-            self.assertIsNotNone(campaigns)
+            assert campaigns is not None
 
             # Mock collection should support queries
             query = campaigns.where("user_id", "==", "test-user")
-            self.assertIsNotNone(query)
+            assert query is not None
 
             print(
                 "✅ All Firebase operations successfully mocked - no authentication required"
@@ -631,13 +630,13 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
         )
 
         # Verify response
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         response_data = response.get_json()
-        self.assertIn("response", response_data)
-        self.assertIsInstance(response_data["response"], str)
-        self.assertGreater(
-            len(response_data["response"]), 50, "Story response should be substantive"
-        )
+        assert "response" in response_data
+        assert isinstance(response_data["response"], str)
+        assert (
+            len(response_data["response"]) > 50
+        ), "Story response should be substantive"
 
         # Verify the response contains story elements
         response_text = response_data["response"].lower()
@@ -645,9 +644,7 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
         found_keywords = sum(
             1 for keyword in story_keywords if keyword in response_text
         )
-        self.assertGreater(
-            found_keywords, 0, "Response should relate to the story command"
-        )
+        assert found_keywords > 0, "Response should relate to the story command"
 
         print("✅ Story progression smoke test passed!")
 

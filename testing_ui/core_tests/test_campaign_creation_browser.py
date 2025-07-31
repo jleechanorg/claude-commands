@@ -8,19 +8,26 @@ MODES:
 - Real API Mode: Slow, costs money, uses real Gemini + Firebase
 """
 
+import json
 import os
 import sys
-import json
 
 from playwright.sync_api import TimeoutError
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(
+    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 
 from testing_ui.browser_test_base import BrowserTestBase
 from testing_ui.browser_test_helpers import BrowserTestHelper
-from testing_ui.config import BASE_URL, get_test_mode, is_real_api_mode, get_api_timeouts
+from testing_ui.config import (
+    BASE_URL,
+    get_api_timeouts,
+    get_test_mode,
+    is_real_api_mode,
+)
 
 
 class CampaignCreationTest(BrowserTestBase):
@@ -39,7 +46,9 @@ class CampaignCreationTest(BrowserTestBase):
             print(f"🔧 Running in {test_mode.upper()} API mode")
             if is_real_api_mode():
                 print("⚠️  WARNING: Using REAL APIs - this costs money!")
-                print(f"⏰ Extended timeouts: Campaign creation={timeouts['campaign_creation']/1000}s, AI response={timeouts['ai_response']/1000}s")
+                print(
+                    f"⏰ Extended timeouts: Campaign creation={timeouts['campaign_creation'] / 1000}s, AI response={timeouts['ai_response'] / 1000}s"
+                )
             else:
                 print("🏃 Using MOCK APIs - fast and free")
 
@@ -154,8 +163,10 @@ class CampaignCreationTest(BrowserTestBase):
                         break
 
             # Wait for campaign creation to complete with mode-appropriate timeout
-            creation_timeout = timeouts['campaign_creation']
-            print(f"⏳ Waiting for campaign creation ({creation_timeout/1000}s timeout for {test_mode} mode)...")
+            creation_timeout = timeouts["campaign_creation"]
+            print(
+                f"⏳ Waiting for campaign creation ({creation_timeout / 1000}s timeout for {test_mode} mode)..."
+            )
             try:
                 # Wait for spinner to disappear and game view to appear
                 page.wait_for_selector(".spinner", state="hidden", timeout=5000)
@@ -168,7 +179,7 @@ class CampaignCreationTest(BrowserTestBase):
                 print("✅ Game view is active - campaign created!")
                 helper.take_screenshot(f"creation_04_game_view_{test_mode}")
 
-                pass  # Campaign created successfully
+                # Campaign created successfully
             except TimeoutError:
                 print("⚠️  Game view not active, checking other states...")
                 helper.take_screenshot(f"creation_04_timeout_state_{test_mode}")
@@ -186,7 +197,9 @@ class CampaignCreationTest(BrowserTestBase):
                     print("✅ Campaign created successfully!")
                 else:
                     if is_real_api_mode():
-                        print("❌ Real API campaign creation failed - check Gemini API status")
+                        print(
+                            "❌ Real API campaign creation failed - check Gemini API status"
+                        )
                     else:
                         print("❌ Mock campaign creation failed - check mock responses")
                     return False
@@ -195,8 +208,8 @@ class CampaignCreationTest(BrowserTestBase):
             print("💬 Testing complete chat interface...")
 
             # Wait for story content and input to load
-            page.wait_for_selector("#story-content", timeout=timeouts['page_load'])
-            page.wait_for_selector("#user-input", timeout=timeouts['page_load'])
+            page.wait_for_selector("#story-content", timeout=timeouts["page_load"])
+            page.wait_for_selector("#user-input", timeout=timeouts["page_load"])
             print("✅ Chat interface loaded")
 
             helper.take_screenshot(f"creation_05_chat_interface_{test_mode}")
@@ -206,8 +219,12 @@ class CampaignCreationTest(BrowserTestBase):
             print(f"📖 Found {initial_entries} initial story entries")
 
             # Send a test message to validate complete flow
-            print(f"🤖 Sending test message (timeout: {timeouts['ai_response']/1000}s)...")
-            test_message = "I look around carefully and check my surroundings. What do I see?"
+            print(
+                f"🤖 Sending test message (timeout: {timeouts['ai_response'] / 1000}s)..."
+            )
+            test_message = (
+                "I look around carefully and check my surroundings. What do I see?"
+            )
 
             page.fill("#user-input", test_message)
             helper.take_screenshot(f"creation_06_message_typed_{test_mode}")
@@ -217,19 +234,21 @@ class CampaignCreationTest(BrowserTestBase):
             print(f"📤 Sent: {test_message[:50]}...")
 
             # Wait for AI response with appropriate timeout
-            ai_timeout = timeouts['ai_response']
+            ai_timeout = timeouts["ai_response"]
             try:
-                print(f"⏳ Waiting for AI response ({ai_timeout/1000}s timeout)...")
+                print(f"⏳ Waiting for AI response ({ai_timeout / 1000}s timeout)...")
                 page.wait_for_function(
                     "document.querySelector('#user-input').disabled === false",
-                    timeout=ai_timeout
+                    timeout=ai_timeout,
                 )
                 page.wait_for_timeout(2000)  # Extra time for DOM updates
                 print("✅ AI response received!")
 
             except TimeoutError:
                 if is_real_api_mode():
-                    print("⚠️  Real Gemini API response timed out - may still be processing")
+                    print(
+                        "⚠️  Real Gemini API response timed out - may still be processing"
+                    )
                 else:
                     print("⚠️  Mock API response timed out - check mock service")
                 # Continue to capture current state
@@ -240,7 +259,9 @@ class CampaignCreationTest(BrowserTestBase):
             # Validate response format and compare fake vs real if needed
             final_entries = page.locator(".story-entry").count()
             if final_entries > initial_entries:
-                print(f"✅ New story entry added ({final_entries - initial_entries} new entries)")
+                print(
+                    f"✅ New story entry added ({final_entries - initial_entries} new entries)"
+                )
 
                 # Get the latest response for format validation
                 latest_entry = page.locator(".story-entry").last
@@ -251,10 +272,15 @@ class CampaignCreationTest(BrowserTestBase):
 
                 # Screenshot just the latest response
                 from testing_ui.config import SCREENSHOT_DIR
-                latest_entry.screenshot(path=f"{SCREENSHOT_DIR}/creation_08_latest_response_{test_mode}.png")
+
+                latest_entry.screenshot(
+                    path=f"{SCREENSHOT_DIR}/creation_08_latest_response_{test_mode}.png"
+                )
 
             else:
-                print(f"⚠️  No new story entries detected (still {final_entries} entries)")
+                print(
+                    f"⚠️  No new story entries detected (still {final_entries} entries)"
+                )
                 if is_real_api_mode():
                     print("   Real API may have failed - check Gemini API status")
                 else:
@@ -297,13 +323,13 @@ class CampaignCreationTest(BrowserTestBase):
             "mode": test_mode,
             "elements": elements_found,
             "html_length": len(response_html),
-            "has_structured_content": any(elements_found.values())
+            "has_structured_content": any(elements_found.values()),
         }
 
         # Save format info for potential comparison
         format_file = f"/tmp/worldarchitectai/response_format_{test_mode}.json"
         os.makedirs(os.path.dirname(format_file), exist_ok=True)
-        with open(format_file, 'w') as f:
+        with open(format_file, "w") as f:
             json.dump(format_info, f, indent=2)
 
         print(f"   💾 Format info saved: {format_file}")
@@ -318,28 +344,32 @@ class CampaignCreationTest(BrowserTestBase):
     def _compare_response_formats(self, fake_file, real_file):
         """Compare fake vs real response formats and warn about differences."""
         try:
-            with open(fake_file, 'r') as f:
+            with open(fake_file) as f:
                 fake_format = json.load(f)
-            with open(real_file, 'r') as f:
+            with open(real_file) as f:
                 real_format = json.load(f)
 
             print("\n⚖️  FAKE vs REAL API FORMAT COMPARISON:")
 
-            fake_elements = fake_format['elements']
-            real_elements = real_format['elements']
+            fake_elements = fake_format["elements"]
+            real_elements = real_format["elements"]
 
             differences = []
             for element in fake_elements:
                 if fake_elements[element] != real_elements.get(element, False):
                     fake_status = "✅" if fake_elements[element] else "❌"
                     real_status = "✅" if real_elements.get(element, False) else "❌"
-                    differences.append(f"   {element}: Fake {fake_status} vs Real {real_status}")
+                    differences.append(
+                        f"   {element}: Fake {fake_status} vs Real {real_status}"
+                    )
 
             if differences:
                 print("   🚨 FORMAT DIFFERENCES DETECTED:")
                 for diff in differences:
                     print(diff)
-                print("   ⚠️  WARNING: Mock and real API responses have different formats!")
+                print(
+                    "   ⚠️  WARNING: Mock and real API responses have different formats!"
+                )
                 print("   📝 This may indicate mock responses need updating.")
             else:
                 print("   ✅ Fake and real API formats match - good consistency!")

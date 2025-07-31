@@ -57,6 +57,7 @@ def test_settings_button_navigation_fix_works(page: Page):
         print(f"Current URL: {page.url}")
         raise
 
+
 def test_compare_with_working_button_for_proof(page: Page):
     """
     Additional proof: Settings button now works like other working buttons
@@ -92,6 +93,7 @@ def test_compare_with_working_button_for_proof(page: Page):
     assert "/settings" in settings_url
 
     print("🎉 PROOF COMPLETE: Both buttons use working navigation!")
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])

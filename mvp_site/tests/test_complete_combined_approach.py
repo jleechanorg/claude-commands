@@ -120,8 +120,14 @@ class TestCompleteCombinedApproach(unittest.TestCase):
         # Validate parsing
         assert narrative == mock_llm_response["narrative"]
         assert isinstance(structured_response, NarrativeResponse)
-        assert structured_response.entities_mentioned == mock_llm_response["entities_mentioned"]
-        assert structured_response.location_confirmed == mock_llm_response["location_confirmed"]
+        assert (
+            structured_response.entities_mentioned
+            == mock_llm_response["entities_mentioned"]
+        )
+        assert (
+            structured_response.location_confirmed
+            == mock_llm_response["location_confirmed"]
+        )
 
         print("   ✅ JSON parsed successfully")
         print(f"   ✅ Narrative extracted ({len(narrative)} chars)")

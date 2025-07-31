@@ -28,9 +28,7 @@ def demonstrate_red_phase():
     print("=" * 50)
 
     # Create a GeminiResponse object (what get_initial_story returns now)
-    narrative_text = "Your adventure begins in a bustling tavern..."
-    mock_structured_response = MagicMock()
-    raw_response = '{"narrative": "Your adventure begins..."}'
+    MagicMock()
 
     # Create a raw JSON response
     raw_json_response = '{"narrative": "Your adventure begins in a bustling tavern...", "entities_mentioned": [], "location_confirmed": "Tavern", "state_updates": {}, "debug_info": {}}'
@@ -51,7 +49,7 @@ def demonstrate_red_phase():
 
     try:
         # This is what would happen before the fix
-        text_bytes = gemini_response.encode("utf-8")  # This will fail!
+        gemini_response.encode("utf-8")  # This will fail!
         print("   This should not print!")
     except AttributeError as e:
         print(f"   ❌ AttributeError: {e}")
@@ -66,9 +64,7 @@ def demonstrate_green_phase():
     print("=" * 50)
 
     # Create a GeminiResponse object
-    narrative_text = "Your adventure begins in a bustling tavern..."
-    mock_structured_response = MagicMock()
-    raw_response = '{"narrative": "Your adventure begins..."}'
+    MagicMock()
 
     # Create a raw JSON response
     raw_json_response = '{"narrative": "Your adventure begins in a bustling tavern...", "entities_mentioned": [], "location_confirmed": "Tavern", "state_updates": {}, "debug_info": {}}'

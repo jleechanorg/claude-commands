@@ -233,7 +233,11 @@ class TestFirestoreStateHelpers(unittest.TestCase):
         result = _handle_string_to_dict_update(state, "quest", value)
 
         assert result
-        assert state["quest"] == {"name": "Main Quest", "level": 5, "status": "completed"}
+        assert state["quest"] == {
+            "name": "Main Quest",
+            "level": 5,
+            "status": "completed",
+        }
         mock_log.assert_called_once()
 
     def test_handle_string_to_dict_update_non_dict_existing(self):

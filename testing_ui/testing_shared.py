@@ -82,15 +82,19 @@ CAMPAIGN_TEST_DATA = {
 # Import centralized configuration
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from testing_util import TestConfig, TestType, get_browser_base_url, get_http_base_url
 
 # Common test configuration (now using centralized config)
 TEST_CONFIG = {
     "browser_base_url": get_browser_base_url(),
     "http_base_url": get_http_base_url(),
-    "structured_fields_port": str(TestConfig.get_server_config(TestType.BROWSER).base_port),
-    "wizard_bug_port": str(TestConfig.get_server_config(TestType.INTEGRATION).base_port),
+    "structured_fields_port": str(
+        TestConfig.get_server_config(TestType.BROWSER).base_port
+    ),
+    "wizard_bug_port": str(
+        TestConfig.get_server_config(TestType.INTEGRATION).base_port
+    ),
     "timeout_ms": TestConfig.DEFAULT_TIMEOUT_MS,
     "retry_count": 10,
     "wait_between_retries": 1000,
@@ -138,7 +142,7 @@ def validate_campaign_created_successfully(response_data, test_mode="http"):
     """Common validation for successful campaign creation"""
     if test_mode == "http":
         # HTTP API returns simple confirmation
-        assert response_data.get("success") == True, (
+        assert response_data.get("success"), (
             f"Campaign creation not successful: {response_data}"
         )
         assert response_data.get("campaign_id") is not None, (
@@ -288,7 +292,7 @@ def start_test_server(port=None) -> subprocess.Popen | None:
         )
 
     print("⏳ Waiting for server to start...")
-    for i in range(TEST_CONFIG["server_start_timeout"]):
+    for _i in range(TEST_CONFIG["server_start_timeout"]):
         try:
             with urllib.request.urlopen(f"http://localhost:{port}") as resp:
                 if resp.status == 200:

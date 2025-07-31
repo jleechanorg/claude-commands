@@ -67,7 +67,7 @@ class RealBrowserSettingsGameTest:
                     print("✅ Server is ready")
                     return True
             except requests.RequestException:
-                print(f"   Attempt {i+1}/{max_retries}: Server not ready, waiting...")
+                print(f"   Attempt {i + 1}/{max_retries}: Server not ready, waiting...")
                 time.sleep(2)
 
         raise Exception("❌ Server not available for testing")

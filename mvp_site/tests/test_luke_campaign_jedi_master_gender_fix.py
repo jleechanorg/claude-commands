@@ -10,6 +10,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
+import pytest
 from schemas.entities_pydantic import NPC, HealthStatus
 
 
@@ -97,7 +98,7 @@ class TestLukeCampaignJediMasterGenderFix(unittest.TestCase):
 
         # Test that type validation still works
 
-        with self.assertRaises(ValidationError):  # More specific exception type
+        with pytest.raises(ValidationError):  # More specific exception type
             NPC(
                 entity_id="npc_invalid_type_001",
                 display_name="Invalid Type NPC",

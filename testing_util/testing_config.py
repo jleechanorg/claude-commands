@@ -14,22 +14,25 @@ from enum import Enum
 
 class TestMode(Enum):
     """Test execution modes"""
-    MOCK = "mock"           # Use mock APIs (free)
-    REAL = "real"           # Use real APIs (costs money)
+
+    MOCK = "mock"  # Use mock APIs (free)
+    REAL = "real"  # Use real APIs (costs money)
     INTEGRATION = "integration"  # Mixed mock/real for integration tests
 
 
 class TestType(Enum):
     """Types of tests that need server configuration"""
-    BROWSER = "browser"     # Playwright/Puppeteer browser automation
-    HTTP = "http"           # Direct HTTP API testing
+
+    BROWSER = "browser"  # Playwright/Puppeteer browser automation
+    HTTP = "http"  # Direct HTTP API testing
     INTEGRATION = "integration"  # End-to-end integration tests
-    DEVELOPMENT = "dev"     # Local development server
+    DEVELOPMENT = "dev"  # Local development server
 
 
 @dataclass
 class ServerConfig:
     """Configuration for a test server instance"""
+
     base_port: int
     port_range: tuple[int, int]  # (min, max) for dynamic allocation
     host: str = "localhost"
@@ -60,41 +63,26 @@ class TestConfig:
 
     # Server configurations by test type
     SERVERS: dict[TestType, ServerConfig] = {
-        TestType.BROWSER: ServerConfig(
-            base_port=8081,
-            port_range=(8080, 8090)
-        ),
-        TestType.HTTP: ServerConfig(
-            base_port=8086,
-            port_range=(8085, 8095)
-        ),
-        TestType.INTEGRATION: ServerConfig(
-            base_port=8088,
-            port_range=(8087, 8097)
-        ),
-        TestType.DEVELOPMENT: ServerConfig(
-            base_port=5005,
-            port_range=(5000, 5010)
-        ),
+        TestType.BROWSER: ServerConfig(base_port=8081, port_range=(8080, 8090)),
+        TestType.HTTP: ServerConfig(base_port=8086, port_range=(8085, 8095)),
+        TestType.INTEGRATION: ServerConfig(base_port=8088, port_range=(8087, 8097)),
+        TestType.DEVELOPMENT: ServerConfig(base_port=5005, port_range=(5000, 5010)),
     }
 
     # Common test parameters
     DEFAULT_TEST_USER_ID = "test-user-123"
     DEFAULT_TIMEOUT_MS = 10000  # 10 seconds
-    SHORT_TIMEOUT_MS = 5000     # 5 seconds
-    LONG_TIMEOUT_MS = 30000     # 30 seconds
+    SHORT_TIMEOUT_MS = 5000  # 5 seconds
+    LONG_TIMEOUT_MS = 30000  # 30 seconds
 
     # Test mode parameters
-    TEST_MODE_PARAMS = {
-        "test_mode": "true",
-        "test_user_id": DEFAULT_TEST_USER_ID
-    }
+    TEST_MODE_PARAMS = {"test_mode": "true", "test_user_id": DEFAULT_TEST_USER_ID}
 
     # Mock API control
     MOCK_ENV_VARS = {
         "USE_MOCK_FIREBASE": "true",
         "USE_MOCK_GEMINI": "true",
-        "TESTING": "true"
+        "TESTING": "true",
     }
 
     # Directory paths
@@ -114,8 +102,13 @@ class TestConfig:
         return server_config.get_base_url(port)
 
     @classmethod
-    def get_test_url(cls, test_type: TestType, port: int | None = None,
-                     with_test_params: bool = True, **extra_params) -> str:
+    def get_test_url(
+        cls,
+        test_type: TestType,
+        port: int | None = None,
+        with_test_params: bool = True,
+        **extra_params,
+    ) -> str:
         """Get test URL with standard test parameters"""
         server_config = cls.get_server_config(test_type)
 
@@ -153,23 +146,30 @@ def get_browser_base_url(port: int | None = None) -> str:
     """Get browser test base URL"""
     return TestConfig.get_base_url(TestType.BROWSER, port)
 
+
 def get_http_base_url(port: int | None = None) -> str:
     """Get HTTP test base URL"""
     return TestConfig.get_base_url(TestType.HTTP, port)
+
 
 def get_browser_test_url(port: int | None = None, **params) -> str:
     """Get browser test URL with test mode parameters"""
     return TestConfig.get_test_url(TestType.BROWSER, port, **params)
 
+
 def get_http_test_url(port: int | None = None, **params) -> str:
     """Get HTTP test URL"""
-    return TestConfig.get_test_url(TestType.HTTP, port, with_test_params=False, **params)
+    return TestConfig.get_test_url(
+        TestType.HTTP, port, with_test_params=False, **params
+    )
+
 
 def setup_test_environment(test_mode: TestMode = TestMode.MOCK) -> None:
     """Set up test environment"""
     if test_mode == TestMode.MOCK:
         TestConfig.setup_mock_environment()
     # Add real API setup if needed
+
 
 # Export key constants for easy access
 BROWSER_PORT = TestConfig.get_server_config(TestType.BROWSER).base_port

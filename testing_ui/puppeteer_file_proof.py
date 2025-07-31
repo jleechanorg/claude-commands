@@ -95,7 +95,7 @@ def list_proof_files():
     print("\n🔍 PROOF FILES VERIFICATION:")
     print("=" * 50)
 
-    for root, dirs, files in os.walk("/tmp"):
+    for root, _dirs, files in os.walk("/tmp"):
         for file in files:
             if "proof" in file.lower() and file.endswith(".png"):
                 filepath = os.path.join(root, file)

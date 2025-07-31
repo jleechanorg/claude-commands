@@ -96,7 +96,7 @@ def run_tests():
     avg_time = (time.time() - start) / 100
 
     print("\nPerformance:")
-    print(f"  Average time: {avg_time*1000:.2f}ms")
+    print(f"  Average time: {avg_time * 1000:.2f}ms")
     print("  Target: <50ms")
     print(f"  Result: {'✅ PASS' if avg_time < 0.05 else '❌ FAIL'}")
 

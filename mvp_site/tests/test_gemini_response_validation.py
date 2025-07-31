@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Set testing environment
 os.environ["TESTING"] = "true"
 
+import pytest
 from narrative_response_schema import NarrativeResponse, parse_structured_response
 
 
@@ -42,18 +43,18 @@ class TestGeminiResponseValidation(unittest.TestCase):
         response_text = json.dumps(valid_json, indent=2)
         parsed_text, structured = parse_structured_response(response_text)
 
-        self.assertIsInstance(structured, NarrativeResponse)
-        self.assertEqual(structured.narrative, "The wizard enters the room cautiously.")
-        self.assertEqual(structured.entities_mentioned, ["wizard", "room"])
-        self.assertEqual(structured.location_confirmed, "Dungeon Chamber")
-        self.assertEqual(parsed_text, "The wizard enters the room cautiously.")
+        assert isinstance(structured, NarrativeResponse)
+        assert structured.narrative == "The wizard enters the room cautiously."
+        assert structured.entities_mentioned == ["wizard", "room"]
+        assert structured.location_confirmed == "Dungeon Chamber"
+        assert parsed_text == "The wizard enters the room cautiously."
 
         # Test with markdown-wrapped JSON
         markdown_response = f"```json\n{response_text}\n```"
         parsed_text, structured = parse_structured_response(markdown_response)
 
-        self.assertIsInstance(structured, NarrativeResponse)
-        self.assertEqual(structured.narrative, "The wizard enters the room cautiously.")
+        assert isinstance(structured, NarrativeResponse)
+        assert structured.narrative == "The wizard enters the room cautiously."
 
     def test_invalid_json_recovery(self):
         """Test that malformed JSON triggers proper error handling."""
@@ -65,15 +66,15 @@ class TestGeminiResponseValidation(unittest.TestCase):
         parsed_text, structured = parse_structured_response(malformed_json)
 
         # Should recover partial data or fall back
-        self.assertIsInstance(structured, NarrativeResponse)
+        assert isinstance(structured, NarrativeResponse)
         # The robust parser should recover what it can
-        self.assertIn("story", parsed_text.lower())
+        assert "story" in parsed_text.lower()
 
         # Test JSON with syntax errors
         syntax_error_json = '{"narrative": "Test", "entities_mentioned": ["a", "b",], "location": "here"}'
 
         parsed_text, structured = parse_structured_response(syntax_error_json)
-        self.assertIsInstance(structured, NarrativeResponse)
+        assert isinstance(structured, NarrativeResponse)
 
     def test_partial_json_handling(self):
         """Test handling of truncated JSON responses."""
@@ -87,12 +88,12 @@ class TestGeminiResponseValidation(unittest.TestCase):
         parsed_text, structured = parse_structured_response(truncated_json)
 
         # Should recover partial narrative
-        self.assertIsInstance(structured, NarrativeResponse)
-        self.assertIn("adventurer walks through", parsed_text)
-        self.assertIn("ancient forest", parsed_text)
+        assert isinstance(structured, NarrativeResponse)
+        assert "adventurer walks through" in parsed_text
+        assert "ancient forest" in parsed_text
         # Entities should be recovered if possible
         if structured.entities_mentioned:
-            self.assertIn("adventurer", structured.entities_mentioned)
+            assert "adventurer" in structured.entities_mentioned
 
     # Group 2 - Required Fields Tests
 
@@ -111,14 +112,14 @@ class TestGeminiResponseValidation(unittest.TestCase):
         parsed_text, structured = parse_structured_response(response_text)
 
         # Should still create a valid response
-        self.assertIsInstance(structured, NarrativeResponse)
+        assert isinstance(structured, NarrativeResponse)
         # When narrative is missing, it seems to return empty string for parsed_text
         # but the structured response should have the data
-        self.assertIsNotNone(parsed_text)  # Can be empty string
-        self.assertIsNotNone(structured.narrative)
+        assert parsed_text is not None  # Can be empty string
+        assert structured.narrative is not None
         # Other fields should be parsed correctly
-        self.assertEqual(structured.entities_mentioned, ["wizard", "goblin"])
-        self.assertEqual(structured.location_confirmed, "Cave")
+        assert structured.entities_mentioned == ["wizard", "goblin"]
+        assert structured.location_confirmed == "Cave"
 
     def test_missing_role_field(self):
         """Test response parsing when role-related fields are missing."""
@@ -134,11 +135,9 @@ class TestGeminiResponseValidation(unittest.TestCase):
         parsed_text, structured = parse_structured_response(response_text)
 
         # Should handle missing entities_mentioned gracefully
-        self.assertIsInstance(structured, NarrativeResponse)
-        self.assertEqual(
-            structured.entities_mentioned, []
-        )  # Should default to empty list
-        self.assertEqual(structured.narrative, "The battle rages on.")
+        assert isinstance(structured, NarrativeResponse)
+        assert structured.entities_mentioned == []  # Should default to empty list
+        assert structured.narrative == "The battle rages on."
 
     def test_missing_parts_field(self):
         """Test response parsing when complex structure fields are missing."""
@@ -152,12 +151,10 @@ class TestGeminiResponseValidation(unittest.TestCase):
         parsed_text, structured = parse_structured_response(response_text)
 
         # Should handle missing fields gracefully
-        self.assertIsInstance(structured, NarrativeResponse)
-        self.assertEqual(structured.state_updates, {})  # Should default to empty dict
-        self.assertEqual(
-            structured.location_confirmed, "Unknown"
-        )  # Should have default
-        self.assertIsNone(structured.turn_summary)  # Optional field can be None
+        assert isinstance(structured, NarrativeResponse)
+        assert structured.state_updates == {}  # Should default to empty dict
+        assert structured.location_confirmed == "Unknown"  # Should have default
+        assert structured.turn_summary is None  # Optional field can be None
 
     # Group 3 - Type Validation Tests
 
@@ -176,12 +173,12 @@ class TestGeminiResponseValidation(unittest.TestCase):
         try:
             parsed_text, structured = parse_structured_response(response_text)
             # If it succeeds, check that it converted to string
-            self.assertIsInstance(structured, NarrativeResponse)
-            self.assertIsInstance(structured.narrative, str)
-            self.assertEqual(structured.narrative, "12345")
+            assert isinstance(structured, NarrativeResponse)
+            assert isinstance(structured.narrative, str)
+            assert structured.narrative == "12345"
         except (ValueError, TypeError) as e:
             # If it fails, that's also acceptable
-            self.assertIn("must be", str(e).lower())
+            assert "must be" in str(e).lower()
 
     def test_invalid_parts_structure(self):
         """Test response parsing when parts/list fields have wrong structure."""
@@ -195,12 +192,12 @@ class TestGeminiResponseValidation(unittest.TestCase):
         response_text = json.dumps(invalid_structure)
 
         # Should raise error or handle gracefully
-        with self.assertRaises((ValueError, TypeError)) as context:
+        with pytest.raises((ValueError, TypeError)) as context:
             parsed_text, structured = parse_structured_response(response_text)
 
         # Error should mention list/entities
-        error_msg = str(context.exception).lower()
-        self.assertTrue("must be a list" in error_msg or "entities" in error_msg)
+        error_msg = str(context.value).lower()
+        assert "must be a list" in error_msg or "entities" in error_msg
 
     def test_null_values_handling(self):
         """Test response parsing with null values in required fields."""
@@ -215,14 +212,14 @@ class TestGeminiResponseValidation(unittest.TestCase):
         parsed_text, structured = parse_structured_response(response_text)
 
         # Should handle null narrative by using fallback
-        self.assertIsInstance(structured, NarrativeResponse)
-        self.assertIsNotNone(structured.narrative)
+        assert isinstance(structured, NarrativeResponse)
+        assert structured.narrative is not None
         # Should use fallback for null narrative - could be response_text or default message
-        self.assertIsNotNone(parsed_text)
+        assert parsed_text is not None
         # For null narrative, we now return empty string which is acceptable
         # The important thing is that it doesn't crash and returns a valid structure
-        self.assertIsInstance(parsed_text, str)
-        self.assertIsInstance(structured.narrative, str)
+        assert isinstance(parsed_text, str)
+        assert isinstance(structured.narrative, str)
 
         # Test null in list fields
         null_entities = {
@@ -235,9 +232,9 @@ class TestGeminiResponseValidation(unittest.TestCase):
 
         # Parse and check - null entities_mentioned should become empty list
         parsed_text2, structured2 = parse_structured_response(response_text2)
-        self.assertIsInstance(structured2, NarrativeResponse)
-        self.assertEqual(structured2.entities_mentioned, [])  # Null becomes empty list
-        self.assertEqual(structured2.narrative, "The quest continues.")
+        assert isinstance(structured2, NarrativeResponse)
+        assert structured2.entities_mentioned == []  # Null becomes empty list
+        assert structured2.narrative == "The quest continues."
 
     # Group 4 - Size Limits Tests
 
@@ -260,14 +257,14 @@ class TestGeminiResponseValidation(unittest.TestCase):
         # Should handle large responses without crashing
         parsed_text, structured = parse_structured_response(response_text)
 
-        self.assertIsInstance(structured, NarrativeResponse)
+        assert isinstance(structured, NarrativeResponse)
         # Narrative is stripped, so it will be slightly shorter
-        self.assertEqual(len(structured.narrative), len(large_text.strip()))
-        self.assertTrue(structured.narrative.startswith("Once upon a time..."))
+        assert len(structured.narrative) == len(large_text.strip())
+        assert structured.narrative.startswith("Once upon a time...")
         # Large entity list should be preserved
-        self.assertEqual(len(structured.entities_mentioned), 1000)
+        assert len(structured.entities_mentioned) == 1000
         # State updates should be preserved
-        self.assertEqual(len(structured.state_updates), 1000)
+        assert len(structured.state_updates) == 1000
 
     def test_empty_content_handling(self):
         """Test handling of empty content fields."""
@@ -282,19 +279,19 @@ class TestGeminiResponseValidation(unittest.TestCase):
         parsed_text, structured = parse_structured_response(response_text)
 
         # Should handle empty narrative
-        self.assertIsInstance(structured, NarrativeResponse)
-        self.assertEqual(structured.narrative, "")
-        self.assertEqual(structured.entities_mentioned, [])
-        self.assertEqual(parsed_text, "")  # Empty narrative returns empty parsed_text
+        assert isinstance(structured, NarrativeResponse)
+        assert structured.narrative == ""
+        assert structured.entities_mentioned == []
+        assert parsed_text == ""  # Empty narrative returns empty parsed_text
 
         # Test completely empty response
         empty_response = ""
         parsed_text2, structured2 = parse_structured_response(empty_response)
 
         # Should return default response
-        self.assertIsInstance(structured2, NarrativeResponse)
-        self.assertEqual(structured2.narrative, "The story awaits your input...")
-        self.assertEqual(parsed_text2, "The story awaits your input...")
+        assert isinstance(structured2, NarrativeResponse)
+        assert structured2.narrative == "The story awaits your input..."
+        assert parsed_text2 == "The story awaits your input..."
 
     def test_whitespace_only_content(self):
         """Test handling of whitespace-only content."""
@@ -327,12 +324,10 @@ class TestGeminiResponseValidation(unittest.TestCase):
             parsed_text, structured = parse_structured_response(response_text)
 
             # Should preserve whitespace in narrative
-            self.assertIsInstance(structured, NarrativeResponse)
+            assert isinstance(structured, NarrativeResponse)
             # Narrative should be stripped in validation but original preserved
-            self.assertEqual(len(structured.narrative.strip()), 0)
-            self.assertEqual(
-                structured.location_confirmed, test_case["location_confirmed"]
-            )
+            assert len(structured.narrative.strip()) == 0
+            assert structured.location_confirmed == test_case["location_confirmed"]
 
         # Test response with Unicode and emojis
         unicode_response = {
@@ -345,12 +340,12 @@ class TestGeminiResponseValidation(unittest.TestCase):
         parsed_text, structured = parse_structured_response(response_text)
 
         # Should handle Unicode and emojis correctly
-        self.assertIsInstance(structured, NarrativeResponse)
-        self.assertIn("✨", structured.narrative)
-        self.assertIn("🔮", structured.narrative)
-        self.assertIn("Абракадабра", structured.narrative)
-        self.assertIn("中文测试", structured.narrative)
-        self.assertIn("🏰", structured.location_confirmed)
+        assert isinstance(structured, NarrativeResponse)
+        assert "✨" in structured.narrative
+        assert "🔮" in structured.narrative
+        assert "Абракадабра" in structured.narrative
+        assert "中文测试" in structured.narrative
+        assert "🏰" in structured.location_confirmed
 
 
 if __name__ == "__main__":

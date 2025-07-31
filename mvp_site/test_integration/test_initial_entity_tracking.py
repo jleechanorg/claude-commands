@@ -59,11 +59,9 @@ Begin the narrative with Sariel arriving at court for an important meeting.""",
             content_type="application/json",
         )
 
-        self.assertEqual(
-            response.status_code,
-            201,
-            f"Campaign creation failed: {response.status_code}",
-        )
+        assert (
+            response.status_code == 201
+        ), f"Campaign creation failed: {response.status_code}"
 
         response_json = response.get_json()
         campaign_id = response_json["campaign_id"]
@@ -145,9 +143,7 @@ Begin the narrative with Sariel arriving at court for an important meeting.""",
                     f"✗ FAILURE: Expected Sariel, got {pc_data.get('name', 'NO NAME')}"
                 )
 
-        self.assertGreater(
-            sariel_count, 0, "Sariel should be mentioned in initial narrative"
-        )
+        assert sariel_count > 0, "Sariel should be mentioned in initial narrative"
 
 
 if __name__ == "__main__":

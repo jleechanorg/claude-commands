@@ -70,12 +70,20 @@ class TestRealJsonBugReproduction(unittest.TestCase):
         print(f"Result preview: {narrative_text[:200]}...")
 
         # The critical test: should NOT return raw JSON
-        assert '"narrative":' not in narrative_text, "Parsed result should not contain raw JSON keys"
-        assert '"god_mode_response":' not in narrative_text, "Parsed result should not contain raw JSON keys"
-        assert '"entities_mentioned":' not in narrative_text, "Parsed result should not contain raw JSON keys"
+        assert (
+            '"narrative":' not in narrative_text
+        ), "Parsed result should not contain raw JSON keys"
+        assert (
+            '"god_mode_response":' not in narrative_text
+        ), "Parsed result should not contain raw JSON keys"
+        assert (
+            '"entities_mentioned":' not in narrative_text
+        ), "Parsed result should not contain raw JSON keys"
 
         # Should contain the actual narrative content
-        assert "CHARACTER CREATION - Step 2 of 7" in narrative_text, "Should contain the actual narrative content"
+        assert (
+            "CHARACTER CREATION - Step 2 of 7" in narrative_text
+        ), "Should contain the actual narrative content"
         assert "Mark Grayson" in narrative_text, "Should contain character information"
 
         # Structured response should be valid

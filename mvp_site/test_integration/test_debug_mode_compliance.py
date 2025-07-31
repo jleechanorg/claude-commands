@@ -18,6 +18,9 @@ from game_state import GameState
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
 
+import builtins
+import contextlib
+
 from integration_test_lib import (
     IntegrationTestSetup,
     setup_integration_test_environment,
@@ -53,18 +56,14 @@ class TestDebugModeCompliance(unittest.TestCase):
     def setUp(self):
         """Set up for each test."""
         # Clean up any existing test campaign
-        try:
+        with contextlib.suppress(builtins.BaseException):
             firestore_service.delete_campaign(TEST_USER_ID, TEST_CAMPAIGN_ID)
-        except:
-            pass
 
     def tearDown(self):
         """Clean up after each test."""
         # Clean up test campaign
-        try:
+        with contextlib.suppress(builtins.BaseException):
             firestore_service.delete_campaign(TEST_USER_ID, TEST_CAMPAIGN_ID)
-        except:
-            pass
 
     def create_test_campaign(self, debug_mode=False):
         """Create a test campaign with debug mode setting."""
@@ -91,9 +90,7 @@ class TestDebugModeCompliance(unittest.TestCase):
         if hasattr(self.test_setup, "clear_timeout"):
             self.test_setup.clear_timeout()
 
-        self.assertEqual(
-            response.status_code, 201
-        )  # 201 Created is correct for new resources
+        assert response.status_code == 201  # 201 Created is correct for new resources
         data = json.loads(response.data)
         campaign_id = data["campaign_id"]
 
@@ -130,7 +127,7 @@ class TestDebugModeCompliance(unittest.TestCase):
         if hasattr(self.test_setup, "clear_timeout"):
             self.test_setup.clear_timeout()
 
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         return json.loads(response.data)
 
     def test_debug_mode_on_compliance(self):
@@ -151,10 +148,8 @@ class TestDebugModeCompliance(unittest.TestCase):
         campaign, story = firestore_service.get_campaign_by_id(
             TEST_USER_ID, campaign_id
         )
-        self.assertIsNotNone(story)
-        self.assertGreater(
-            len(story), 1
-        )  # Should have at least user input and AI response
+        assert story is not None
+        assert len(story) > 1  # Should have at least user input and AI response
 
         # Find the AI response
         ai_response = None
@@ -168,7 +163,7 @@ class TestDebugModeCompliance(unittest.TestCase):
                     print(f"Found raw_response field: {raw_response[:200]}...")
                 break
 
-        self.assertIsNotNone(ai_response, "No AI response found in story")
+        assert ai_response is not None, "No AI response found in story"
         print(f"\nAI Response Length: {len(ai_response)} chars")
         print(f"AI Response Preview: {ai_response[:500]}...")
 
@@ -176,21 +171,15 @@ class TestDebugModeCompliance(unittest.TestCase):
         # The structured response data should be available in the API response
 
         # Check that we got structured data in the API response
-        self.assertIn(
-            "debug_info", result, "API response should contain debug_info field"
-        )
-        self.assertIn(
-            "session_header", result, "API response should contain session_header field"
-        )
-        self.assertIn(
-            "planning_block", result, "API response should contain planning_block field"
-        )
-        self.assertIn(
-            "dice_rolls", result, "API response should contain dice_rolls field"
-        )
-        self.assertIn(
-            "resources", result, "API response should contain resources field"
-        )
+        assert "debug_info" in result, "API response should contain debug_info field"
+        assert (
+            "session_header" in result
+        ), "API response should contain session_header field"
+        assert (
+            "planning_block" in result
+        ), "API response should contain planning_block field"
+        assert "dice_rolls" in result, "API response should contain dice_rolls field"
+        assert "resources" in result, "API response should contain resources field"
 
         # Check debug_info content
         debug_info = result.get("debug_info", {})
@@ -222,10 +211,7 @@ class TestDebugModeCompliance(unittest.TestCase):
         print(f"- Stored narrative preview: {ai_response[:200]}...")
 
         # EXPECTED: Structured data in API response, clean narrative in storage
-        self.assertFalse(
-            has_debug_tags,
-            f"Stored narrative should be clean, but found debug tags: {[tag for tag in debug_tags if tag in ai_response]}",
-        )
+        assert not has_debug_tags, f"Stored narrative should be clean, but found debug tags: {[tag for tag in debug_tags if tag in ai_response]}"
 
         print("\n✅ SUCCESS: Debug mode compliance test passed!")
 
@@ -258,11 +244,9 @@ class TestDebugModeCompliance(unittest.TestCase):
         ]
 
         for tag in debug_tags:
-            self.assertNotIn(
-                tag,
-                user_visible_response,
-                f"Debug tag {tag} should not be visible when debug mode is OFF",
-            )
+            assert (
+                tag not in user_visible_response
+            ), f"Debug tag {tag} should not be visible when debug mode is OFF"
 
     def test_combat_interaction_debug_compliance(self):
         """Test debug compliance during combat (dice rolls should go to debug_info)."""
@@ -285,15 +269,15 @@ class TestDebugModeCompliance(unittest.TestCase):
             if entry.get("actor") == "gemini":
                 ai_response = entry.get("text", "")
 
-        self.assertIsNotNone(ai_response)
+        assert ai_response is not None
 
         # Check that we got structured data in the API response for combat
-        self.assertIn(
-            "debug_info", result, "Combat API response should contain debug_info field"
-        )
-        self.assertIn(
-            "dice_rolls", result, "Combat API response should contain dice_rolls field"
-        )
+        assert (
+            "debug_info" in result
+        ), "Combat API response should contain debug_info field"
+        assert (
+            "dice_rolls" in result
+        ), "Combat API response should contain dice_rolls field"
 
         # Check dice rolls are in the correct place
         dice_rolls = result.get("dice_rolls", [])
@@ -320,10 +304,7 @@ class TestDebugModeCompliance(unittest.TestCase):
         print(f"- Stored narrative preview: {ai_response[:200]}...")
 
         # EXPECTED: No debug tags in stored narrative, dice rolls in API response
-        self.assertFalse(
-            has_debug_tags,
-            f"Stored narrative should be clean, but found debug tags: {[tag for tag in debug_tags if tag in ai_response]}",
-        )
+        assert not has_debug_tags, f"Stored narrative should be clean, but found debug tags: {[tag for tag in debug_tags if tag in ai_response]}"
 
         print("\n✅ SUCCESS: Combat debug compliance test passed!")
 

@@ -12,6 +12,7 @@ from playwright.sync_api import sync_playwright
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
 def test_gemini_settings_browser():
     """Test Gemini model settings through real browser automation."""
 
@@ -24,10 +25,12 @@ def test_gemini_settings_browser():
         page.set_viewport_size({"width": 1280, "height": 720})
 
         # Set authentication headers for all requests
-        page.set_extra_http_headers({
-            "X-Test-Bypass-Auth": "true",
-            "X-Test-User-ID": "gemini-settings-test-user"
-        })
+        page.set_extra_http_headers(
+            {
+                "X-Test-Bypass-Auth": "true",
+                "X-Test-User-ID": "gemini-settings-test-user",
+            }
+        )
 
         # Monitor console logs and errors
         page.on("console", lambda msg: print(f"CONSOLE: {msg.text}"))
@@ -54,7 +57,9 @@ def test_gemini_settings_browser():
 
             # Find and click the Settings button (the one that navigates to /settings)
             print("🔍 Looking for Settings button...")
-            settings_button = page.locator("button[onclick=\"window.location.href='/settings'\"]")
+            settings_button = page.locator(
+                "button[onclick=\"window.location.href='/settings'\"]"
+            )
             settings_button.wait_for(timeout=5000)
 
             # Take screenshot before clicking settings
@@ -84,7 +89,9 @@ def test_gemini_settings_browser():
             else:
                 print("⚠️  Not on settings page, trying direct navigation...")
                 # Try direct navigation with auth headers in URL
-                direct_url = f"{base_url}/settings?test_mode=true&test_user_id={test_user_id}"
+                direct_url = (
+                    f"{base_url}/settings?test_mode=true&test_user_id={test_user_id}"
+                )
                 page.goto(direct_url)
                 page.wait_for_load_state("networkidle", timeout=10000)
 
@@ -134,7 +141,9 @@ def test_gemini_settings_browser():
             print("✅ Pro 2.5 is initially selected (default)")
 
             # Take screenshot of initial state
-            page.screenshot(path="testing_ui/test_results/04_initial_model_selection.png")
+            page.screenshot(
+                path="testing_ui/test_results/04_initial_model_selection.png"
+            )
             print("📸 Screenshot: Initial model selection (Pro 2.5)")
 
             # Change to Flash 2.5
@@ -158,9 +167,13 @@ def test_gemini_settings_browser():
                 save_message.wait_for(state="visible", timeout=10000)
                 print("✅ Save message appeared")
             except:
-                print("⚠️  Save message didn't appear, checking if API call completed...")
+                print(
+                    "⚠️  Save message didn't appear, checking if API call completed..."
+                )
                 # Take screenshot to debug
-                page.screenshot(path="testing_ui/test_results/05_debug_no_save_message.png")
+                page.screenshot(
+                    path="testing_ui/test_results/05_debug_no_save_message.png"
+                )
 
                 # Check if message is there but hidden
                 if page.locator("#save-message").count() > 0:
@@ -171,7 +184,9 @@ def test_gemini_settings_browser():
                 # Still continue test to see if functionality works
 
             # Take screenshot of Flash selection with save message
-            page.screenshot(path="testing_ui/test_results/05_flash_selected_with_message.png")
+            page.screenshot(
+                path="testing_ui/test_results/05_flash_selected_with_message.png"
+            )
             print("📸 Screenshot: Flash 2.5 selected with save confirmation")
 
             # Verify save message content
@@ -230,6 +245,7 @@ def test_gemini_settings_browser():
 
         finally:
             browser.close()
+
 
 if __name__ == "__main__":
     # Create results directory

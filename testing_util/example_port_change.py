@@ -12,10 +12,17 @@ from .testing_config import TestConfig, TestType
 def show_current_ports():
     """Show current port configuration"""
     print("Current Test Server Ports:")
-    print(f"  Browser tests: {TestConfig.get_server_config(TestType.BROWSER).base_port}")
+    print(
+        f"  Browser tests: {TestConfig.get_server_config(TestType.BROWSER).base_port}"
+    )
     print(f"  HTTP tests:    {TestConfig.get_server_config(TestType.HTTP).base_port}")
-    print(f"  Integration:   {TestConfig.get_server_config(TestType.INTEGRATION).base_port}")
-    print(f"  Development:   {TestConfig.get_server_config(TestType.DEVELOPMENT).base_port}")
+    print(
+        f"  Integration:   {TestConfig.get_server_config(TestType.INTEGRATION).base_port}"
+    )
+    print(
+        f"  Development:   {TestConfig.get_server_config(TestType.DEVELOPMENT).base_port}"
+    )
+
 
 def demonstrate_url_generation():
     """Show how URLs are generated from centralized config"""
@@ -23,6 +30,7 @@ def demonstrate_url_generation():
     print(f"  Browser test URL: {TestConfig.get_test_url(TestType.BROWSER)}")
     print(f"  HTTP test URL:    {TestConfig.get_base_url(TestType.HTTP)}")
     print(f"  Integration URL:  {TestConfig.get_test_url(TestType.INTEGRATION)}")
+
 
 if __name__ == "__main__":
     print("🎯 Centralized Test Configuration Demo")

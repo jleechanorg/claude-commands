@@ -53,9 +53,7 @@ def generate_content(
     )
 
     # The mock doesn't use these parameters but accepts them for compatibility
-    response = client.generate_content(prompt_parts, model=model_name)
-
-    return response
+    return client.generate_content(prompt_parts, model=model_name)
 
 
 def get_initial_story(
@@ -150,11 +148,9 @@ What do you do?"""
         )
 
     # Create GeminiResponse object
-    response = GeminiResponse(
+    return GeminiResponse(
         narrative_text=narrative_text, structured_response=narrative_response
     )
-
-    return response
 
 
 def continue_story(
@@ -168,7 +164,7 @@ def continue_story(
     """
     Mock continue_story function that returns predefined content.
     """
-    client = get_client()
+    get_client()
     logging_util.info(f"Mock Gemini Service: continue_story called with mode={mode}")
 
     # Use the imported classes
@@ -228,11 +224,9 @@ The world responds to your actions, and new possibilities unfold before you."""
             state_updates=state_updates,
         )
 
-    response = GeminiResponse(
+    return GeminiResponse(
         narrative_text=narrative_text, structured_response=narrative_response
     )
-
-    return response
 
 
 # Export the same functions as the real service

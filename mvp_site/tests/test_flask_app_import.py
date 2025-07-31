@@ -20,8 +20,8 @@ class TestFlaskAppImport(unittest.TestCase):
         try:
             from main import app
 
-            self.assertIsNotNone(app, "App should not be None")
-            self.assertTrue(hasattr(app, "run"), "App should have run method")
+            assert app is not None, "App should not be None"
+            assert hasattr(app, "run"), "App should have run method"
         except ImportError as e:
             self.fail(f"Failed to import app from main: {e}")
 
@@ -30,8 +30,8 @@ class TestFlaskAppImport(unittest.TestCase):
         from main import create_app
 
         app = create_app()
-        self.assertIsNotNone(app, "create_app should return Flask app")
-        self.assertTrue(hasattr(app, "run"), "App should have run method")
+        assert app is not None, "create_app should return Flask app"
+        assert hasattr(app, "run"), "App should have run method"
 
 
 if __name__ == "__main__":

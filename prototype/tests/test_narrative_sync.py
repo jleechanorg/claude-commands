@@ -5,7 +5,7 @@ Tests against real desync scenarios from mock and Sariel campaigns
 
 import unittest
 
-from ..validators.narrative_sync_validator import (
+from prototype.validators.narrative_sync_validator import (
     EntityContext,
     EntityPresenceType,
     NarrativeSyncValidator,
@@ -53,9 +53,7 @@ class TestNarrativeSyncValidator(unittest.TestCase):
 
         # Should detect Cassian as present, Titus as mentioned-absent
         assert "Cassian" in result.entities_found
-        assert (
-            result.metadata["entity_analysis"]["Titus"] == "mentioned_absent"
-        )
+        assert result.metadata["entity_analysis"]["Titus"] == "mentioned_absent"
 
     def test_scene_transition_without_movement(self):
         """Test Case 3: Scene transition from Sariel campaign"""
@@ -114,9 +112,7 @@ class TestNarrativeSyncValidator(unittest.TestCase):
         # This is a complex inference case
         assert "Finn" in result.entities_found
         # Kira and Aldric should be detected as ambiguous or missing
-        self.assertTrue(
-            result.metadata["entity_analysis"]["Kira"] in ["missing", "ambiguous"]
-        )
+        assert result.metadata["entity_analysis"]["Kira"] in ["missing", "ambiguous"]
 
     def test_perfect_entity_tracking(self):
         """Test Case 6: Good entity tracking example"""

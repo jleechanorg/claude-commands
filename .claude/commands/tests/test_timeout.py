@@ -3,17 +3,18 @@
 Tests for timeout command
 """
 
-import unittest
-import sys
 import os
-import tempfile
 import shutil
+import sys
+import tempfile
+import unittest
 from pathlib import Path
 
 # Add commands directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from timeout import TimeoutOptimizer, TIMEOUT_MODES
+from timeout import TIMEOUT_MODES, TimeoutOptimizer
+
 
 class TestTimeoutCommand(unittest.TestCase):
     """Test timeout command functionality"""
@@ -22,7 +23,7 @@ class TestTimeoutCommand(unittest.TestCase):
         """Set up test environment"""
         # Create temporary directory for config
         self.temp_dir = tempfile.mkdtemp()
-        self.config_file = Path(self.temp_dir) / 'timeout_config.json'
+        self.config_file = Path(self.temp_dir) / "timeout_config.json"
 
     def tearDown(self):
         """Clean up test environment"""
@@ -31,15 +32,21 @@ class TestTimeoutCommand(unittest.TestCase):
 
     def test_mode_constants(self):
         """Test that all required modes are defined"""
-        required_modes = ['standard', 'strict', 'emergency']
+        required_modes = ["standard", "strict", "emergency"]
         for mode in required_modes:
             self.assertIn(mode, TIMEOUT_MODES)
 
         # Check required fields in each mode
         required_fields = [
-            'name', 'icon', 'thinking_limit', 'response_format',
-            'context_lines', 'tool_batching', 'multiedit_threshold',
-            'max_file_lines', 'explanation_level'
+            "name",
+            "icon",
+            "thinking_limit",
+            "response_format",
+            "context_lines",
+            "tool_batching",
+            "multiedit_threshold",
+            "max_file_lines",
+            "explanation_level",
         ]
 
         for mode, config in TIMEOUT_MODES.items():
@@ -51,41 +58,41 @@ class TestTimeoutCommand(unittest.TestCase):
         optimizer = TimeoutOptimizer()
         optimizer.config_file = self.config_file
 
-        result = optimizer.set_mode('standard')
+        result = optimizer.set_mode("standard")
 
-        self.assertIn('STANDARD', result)
-        self.assertIn('🚀', result)
-        self.assertIn('Think-limit 5', result)
+        self.assertIn("STANDARD", result)
+        self.assertIn("🚀", result)
+        self.assertIn("Think-limit 5", result)
 
     def test_set_mode_strict(self):
         """Test setting strict mode"""
         optimizer = TimeoutOptimizer()
         optimizer.config_file = self.config_file
 
-        result = optimizer.set_mode('strict')
+        result = optimizer.set_mode("strict")
 
-        self.assertIn('STRICT', result)
-        self.assertIn('⚡', result)
-        self.assertIn('Think-limit 3', result)
+        self.assertIn("STRICT", result)
+        self.assertIn("⚡", result)
+        self.assertIn("Think-limit 3", result)
 
     def test_set_mode_emergency(self):
         """Test setting emergency mode"""
         optimizer = TimeoutOptimizer()
         optimizer.config_file = self.config_file
 
-        result = optimizer.set_mode('emergency')
+        result = optimizer.set_mode("emergency")
 
-        self.assertIn('EMERGENCY', result)
-        self.assertIn('🚨', result)
-        self.assertIn('Think-limit 2', result)
-        self.assertIn('Crisis-mode', result)
+        self.assertIn("EMERGENCY", result)
+        self.assertIn("🚨", result)
+        self.assertIn("Think-limit 2", result)
+        self.assertIn("Crisis-mode", result)
 
     def test_set_mode_off(self):
         """Test disabling timeout mode"""
         optimizer = TimeoutOptimizer()
         optimizer.config_file = self.config_file
 
-        result = optimizer.set_mode('off')
+        result = optimizer.set_mode("off")
 
         self.assertEqual(result, "Timeout optimizations disabled")
 
@@ -94,10 +101,10 @@ class TestTimeoutCommand(unittest.TestCase):
         optimizer = TimeoutOptimizer()
         optimizer.config_file = self.config_file
 
-        result = optimizer.set_mode('invalid')
+        result = optimizer.set_mode("invalid")
 
-        self.assertIn('Invalid mode', result)
-        self.assertIn('standard, strict, emergency, off', result)
+        self.assertIn("Invalid mode", result)
+        self.assertIn("standard, strict, emergency, off", result)
 
     def test_behavior_prompt_generation(self):
         """Test behavior prompt generation for each mode"""
@@ -108,9 +115,9 @@ class TestTimeoutCommand(unittest.TestCase):
             optimizer.current_mode = mode
             prompt = optimizer.generate_behavior_prompt()
 
-            self.assertIn('TIMEOUT OPTIMIZATION MODE', prompt)
-            self.assertIn('MANDATORY BEHAVIOR MODIFICATIONS', prompt)
-            self.assertIn('TIMEOUT PREVENTION IS CRITICAL', prompt)
+            self.assertIn("TIMEOUT OPTIMIZATION MODE", prompt)
+            self.assertIn("MANDATORY BEHAVIOR MODIFICATIONS", prompt)
+            self.assertIn("TIMEOUT PREVENTION IS CRITICAL", prompt)
 
             # Check mode-specific content
             config = TIMEOUT_MODES[mode]
@@ -119,21 +126,22 @@ class TestTimeoutCommand(unittest.TestCase):
 
     def test_mode_progression(self):
         """Test that modes have appropriate progression of restrictions"""
-        standard = TIMEOUT_MODES['standard']
-        strict = TIMEOUT_MODES['strict']
-        emergency = TIMEOUT_MODES['emergency']
+        standard = TIMEOUT_MODES["standard"]
+        strict = TIMEOUT_MODES["strict"]
+        emergency = TIMEOUT_MODES["emergency"]
 
         # Thinking limits should decrease
-        self.assertGreater(standard['thinking_limit'], strict['thinking_limit'])
-        self.assertGreater(strict['thinking_limit'], emergency['thinking_limit'])
+        self.assertGreater(standard["thinking_limit"], strict["thinking_limit"])
+        self.assertGreater(strict["thinking_limit"], emergency["thinking_limit"])
 
         # File line limits should decrease
-        self.assertGreater(standard['max_file_lines'], strict['max_file_lines'])
-        self.assertGreater(strict['max_file_lines'], emergency['max_file_lines'])
+        self.assertGreater(standard["max_file_lines"], strict["max_file_lines"])
+        self.assertGreater(strict["max_file_lines"], emergency["max_file_lines"])
 
         # Context lines should decrease
-        self.assertGreaterEqual(standard['context_lines'], strict['context_lines'])
-        self.assertGreaterEqual(strict['context_lines'], emergency['context_lines'])
+        self.assertGreaterEqual(standard["context_lines"], strict["context_lines"])
+        self.assertGreaterEqual(strict["context_lines"], emergency["context_lines"])
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

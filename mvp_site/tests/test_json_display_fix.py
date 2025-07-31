@@ -49,16 +49,31 @@ class TestJSONDisplayFix(unittest.TestCase):
         assert isinstance(result_narrative, str), "Should return narrative as string"
 
         # Critical assertion: should return the extracted narrative, not raw JSON
-        assert "Scene #10" in result_narrative, "Should contain the actual narrative text"
+        assert (
+            "Scene #10" in result_narrative
+        ), "Should contain the actual narrative text"
         assert "DM MODE" in result_narrative, "Should contain the narrative content"
-        assert '"narrative":' not in result_narrative, "Should NOT contain raw JSON structure"
-        assert '"entities_mentioned":' not in result_narrative, "Should NOT contain raw JSON structure"
+        assert (
+            '"narrative":' not in result_narrative
+        ), "Should NOT contain raw JSON structure"
+        assert (
+            '"entities_mentioned":' not in result_narrative
+        ), "Should NOT contain raw JSON structure"
 
         # Response object should be valid fallback
-        assert isinstance(result_response, NarrativeResponse), "Should return NarrativeResponse object"
-        assert result_response.narrative == result_narrative, "Response narrative should match returned narrative"
-        assert result_response.entities_mentioned == ["Ser Caius of House Varrick", "Ser Bastion"]
-        assert result_response.location_confirmed == "Starfall Command Barracks, Aeterna"
+        assert isinstance(
+            result_response, NarrativeResponse
+        ), "Should return NarrativeResponse object"
+        assert (
+            result_response.narrative == result_narrative
+        ), "Response narrative should match returned narrative"
+        assert result_response.entities_mentioned == [
+            "Ser Caius of House Varrick",
+            "Ser Bastion",
+        ]
+        assert (
+            result_response.location_confirmed == "Starfall Command Barracks, Aeterna"
+        )
 
     def test_json_with_markdown_code_blocks(self):
         """
@@ -85,7 +100,9 @@ class TestJSONDisplayFix(unittest.TestCase):
         assert "DM MODE" in result_narrative
         assert "Understanding confirmed" in result_narrative
         assert "```json" not in result_narrative, "Should strip markdown formatting"
-        assert '"narrative":' not in result_narrative, "Should extract narrative, not return raw JSON"
+        assert (
+            '"narrative":' not in result_narrative
+        ), "Should extract narrative, not return raw JSON"
 
         # Response object should be properly constructed
         assert isinstance(result_response, NarrativeResponse)
@@ -152,10 +169,18 @@ class TestJSONDisplayFix(unittest.TestCase):
                 result_narrative, result_response = parse_structured_response(test_json)
 
                 # The core fix: narrative should never contain JSON structure
-                assert '"narrative":' not in result_narrative, f"Narrative should not contain JSON structure: {result_narrative}"
-                assert '"entities_mentioned":' not in result_narrative, f"Narrative should not contain JSON structure: {result_narrative}"
-                assert '"location_confirmed":' not in result_narrative, f"Narrative should not contain JSON structure: {result_narrative}"
-                assert '"state_updates":' not in result_narrative, f"Narrative should not contain JSON structure: {result_narrative}"
+                assert (
+                    '"narrative":' not in result_narrative
+                ), f"Narrative should not contain JSON structure: {result_narrative}"
+                assert (
+                    '"entities_mentioned":' not in result_narrative
+                ), f"Narrative should not contain JSON structure: {result_narrative}"
+                assert (
+                    '"location_confirmed":' not in result_narrative
+                ), f"Narrative should not contain JSON structure: {result_narrative}"
+                assert (
+                    '"state_updates":' not in result_narrative
+                ), f"Narrative should not contain JSON structure: {result_narrative}"
 
     def test_narrative_extraction_from_partial_json(self):
         """Test extracting narrative from JSON-like text when parsing fails"""

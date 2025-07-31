@@ -99,7 +99,7 @@ class CharacterManagementTest(BrowserTestBase):
 
             # Click through wizard
             print("   📝 Navigating wizard...")
-            for i in range(4):
+            for _i in range(4):
                 if page.is_visible("#wizard-next"):
                     page.click("#wizard-next")
                     page.wait_for_timeout(1000)

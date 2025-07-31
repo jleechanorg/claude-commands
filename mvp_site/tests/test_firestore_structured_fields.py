@@ -15,6 +15,7 @@ sys.path.insert(
 )
 
 import constants
+
 from firestore_service import add_story_entry
 
 
@@ -77,7 +78,10 @@ class TestFirestoreStructuredFields(unittest.TestCase):
 
         # Verify structured fields are included
         assert story_data[constants.FIELD_SESSION_HEADER] == "Session 1: The Beginning"
-        assert story_data[constants.FIELD_PLANNING_BLOCK] == "1. Explore\n2. Fight\n3. Rest"
+        assert (
+            story_data[constants.FIELD_PLANNING_BLOCK]
+            == "1. Explore\n2. Fight\n3. Rest"
+        )
         assert story_data[constants.FIELD_DICE_ROLLS] == ["Attack: 1d20+5 = 18"]
         assert story_data[constants.FIELD_RESOURCES] == "HP: 20/30 | Gold: 100"
         assert story_data[constants.FIELD_DEBUG_INFO] == {"turn": 1, "mode": "combat"}

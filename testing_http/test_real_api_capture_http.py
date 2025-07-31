@@ -229,7 +229,7 @@ def test_real_api_performance_comparison():
     if mock_response.status_code == 201:
         mock_campaign_id = mock_response.json().get("campaign_id")
         mock_get_start = time.time()
-        mock_get_response = mock_session.get(
+        mock_session.get(
             f"{mock_base_url}/api/campaigns/{mock_campaign_id}"
         )
         mock_retrieval_time = time.time() - mock_get_start
@@ -255,7 +255,7 @@ def test_real_api_performance_comparison():
         if real_response.status_code == 201:
             real_campaign_id = real_response.json().get("campaign_id")
             real_get_start = time.time()
-            real_get_response = real_session.get(
+            real_session.get(
                 f"{real_base_url}/api/campaigns/{real_campaign_id}"
             )
             real_retrieval_time = time.time() - real_get_start

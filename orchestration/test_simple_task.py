@@ -2,6 +2,7 @@
 """Simple test to verify task sending works"""
 
 import json
+import sys
 import time
 from dataclasses import asdict
 from datetime import datetime
@@ -25,15 +26,12 @@ def test_simple_flow():
         from_agent="test_sender",
         to_agent="test-worker-1",
         timestamp=datetime.now().isoformat(),
-        payload={
-            "description": "Simple test task",
-            "task_id": task_id
-        }
+        payload={"description": "Simple test task", "task_id": task_id},
     )
 
     # Send directly
     task_dict = asdict(task_message)
-    task_dict['type'] = task_message.type.value  # Convert enum
+    task_dict["type"] = task_message.type.value  # Convert enum
 
     broker.redis_client.lpush("queue:test-worker-1", json.dumps(task_dict))
     print(f"   Task {task_id} sent to queue:test-worker-1")
@@ -54,7 +52,7 @@ def test_simple_flow():
             print(f"   Payload: {json.dumps(msg.get('payload'), indent=2)}")
             return True
 
-        print(f"   Waiting... ({i+1}/10)")
+        print(f"   Waiting... ({i + 1}/10)")
 
     print("\n❌ No response received after 10 seconds")
 
@@ -71,6 +69,7 @@ def test_simple_flow():
 
     return False
 
+
 if __name__ == "__main__":
     success = test_simple_flow()
-    exit(0 if success else 1)
+    sys.exit(0 if success else 1)

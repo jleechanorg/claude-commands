@@ -78,16 +78,16 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
         response = self.client.get("/api/campaigns", headers=self.test_headers)
 
         # Verify HTTP-level response
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         response_data = json.loads(response.data)
 
         # Verify MCP protocol worked correctly - should return array of campaigns
-        self.assertIsInstance(response_data, list)
+        assert isinstance(response_data, list)
         if len(response_data) > 0:
             campaign = response_data[0]
             # Match the actual campaign title we set up in mock data
-            self.assertEqual(campaign["title"], "MCP Protocol Test Campaign")
-            self.assertEqual(campaign["id"], self.test_campaign_id)
+            assert campaign["title"] == "MCP Protocol Test Campaign"
+            assert campaign["id"] == self.test_campaign_id
 
     @patch("firebase_admin.firestore.client")
     def test_mcp_create_campaign_protocol(self, mock_firestore_client):
@@ -116,19 +116,18 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
 
         # Verify MCP protocol communication worked
         # (Accept various status codes as MCP may return different responses)
-        self.assertIn(response.status_code, [200, 201, 400, 500])
+        assert response.status_code in [200, 201, 400, 500]
         response_data = json.loads(response.data)
 
         # Should have consistent JSON structure regardless of status
-        self.assertIsInstance(response_data, dict)
+        assert isinstance(response_data, dict)
 
         # If successful, should contain campaign_id or success indicator
         if response.status_code in [200, 201]:
             # Success case - verify MCP returned proper creation response
-            self.assertTrue(
-                "campaign_id" in response_data or "success" in response_data,
-                f"Expected campaign_id or success in response: {response_data}",
-            )
+            assert (
+                "campaign_id" in response_data or "success" in response_data
+            ), f"Expected campaign_id or success in response: {response_data}"
 
     @patch("firebase_admin.firestore.client")
     @patch("google.genai.Client")
@@ -180,25 +179,25 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
 
         # Verify MCP protocol communication
         # (This might return various status codes depending on missing setup)
-        self.assertIn(response.status_code, [200, 400, 404, 500])
+        assert response.status_code in [200, 400, 404, 500]
         response_data = json.loads(response.data)
 
         # Should have consistent JSON structure
-        self.assertIsInstance(response_data, dict)
+        assert isinstance(response_data, dict)
 
         # If successful, verify MCP protocol preserved structured fields
         if response.status_code == 200:
             # Verify the MCP protocol correctly passed through structured fields
-            self.assertIn("narrative", response_data)
-            self.assertEqual(
-                response_data["narrative"],
-                "The MCP protocol test hero enters the realm...",
+            assert "narrative" in response_data
+            assert (
+                response_data["narrative"]
+                == "The MCP protocol test hero enters the realm..."
             )
 
             # These fields should be present due to our business logic fixes
-            self.assertIn("sequence_id", response_data)
+            assert "sequence_id" in response_data
             if "entities_mentioned" in response_data:
-                self.assertEqual(response_data["entities_mentioned"], ["Test Hero"])
+                assert response_data["entities_mentioned"] == ["Test Hero"]
 
     @patch("firebase_admin.firestore.client")
     def test_mcp_get_campaign_state_protocol(self, mock_firestore_client):
@@ -219,17 +218,17 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
         )
 
         # Verify MCP protocol communication
-        self.assertIn(response.status_code, [200, 404, 500])
+        assert response.status_code in [200, 404, 500]
         response_data = json.loads(response.data)
 
         # Should have consistent JSON structure
-        self.assertIsInstance(response_data, dict)
+        assert isinstance(response_data, dict)
 
         # If successful, verify MCP returned campaign state structure
         if response.status_code == 200:
-            self.assertIn("campaign", response_data)
+            assert "campaign" in response_data
             campaign = response_data["campaign"]
-            self.assertEqual(campaign["title"], "MCP Protocol Test Campaign")
+            assert campaign["title"] == "MCP Protocol Test Campaign"
 
     @patch("firebase_admin.firestore.client")
     def test_mcp_update_campaign_protocol(self, mock_firestore_client):
@@ -255,11 +254,11 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
         )
 
         # Verify MCP protocol communication
-        self.assertIn(response.status_code, [200, 400, 404, 500])
+        assert response.status_code in [200, 400, 404, 500]
         response_data = json.loads(response.data)
 
         # Should have consistent JSON structure
-        self.assertIsInstance(response_data, dict)
+        assert isinstance(response_data, dict)
 
     @patch("firebase_admin.firestore.client")
     def test_mcp_export_campaign_protocol(self, mock_firestore_client):
@@ -280,7 +279,7 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
         )
 
         # Verify MCP protocol communication
-        self.assertIn(response.status_code, [200, 400, 404, 500])
+        assert response.status_code in [200, 400, 404, 500]
 
         # Response format might vary (JSON error or text export)
         if response.status_code == 200:
@@ -298,11 +297,11 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
 
         # Test GET settings through MCP protocol
         response = self.client.get("/api/settings", headers=self.test_headers)
-        self.assertIn(response.status_code, [200, 404, 500])
+        assert response.status_code in [200, 404, 500]
 
         if response.status_code == 200:
             settings_data = json.loads(response.data)
-            self.assertIsInstance(settings_data, dict)
+            assert isinstance(settings_data, dict)
 
         # Test POST settings through MCP protocol
         settings_update = {"debug_mode": True}
@@ -314,9 +313,9 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
         )
 
         # Verify MCP protocol communication
-        self.assertIn(response.status_code, [200, 400, 500])
+        assert response.status_code in [200, 400, 500]
         response_data = json.loads(response.data)
-        self.assertIsInstance(response_data, dict)
+        assert isinstance(response_data, dict)
 
     def test_mcp_protocol_error_handling(self):
         """Test MCP protocol error handling for invalid requests."""
@@ -327,10 +326,10 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
         )
 
         # Should handle MCP protocol errors gracefully
-        self.assertIn(response.status_code, [400, 404, 500])
+        assert response.status_code in [400, 404, 500]
         response_data = json.loads(response.data)
-        self.assertIsInstance(response_data, dict)
-        self.assertIn("error", response_data)
+        assert isinstance(response_data, dict)
+        assert "error" in response_data
 
         # Test malformed interaction request
         malformed_data = {"invalid": "data structure"}
@@ -342,15 +341,15 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
         )
 
         # Should handle MCP protocol validation errors
-        self.assertIn(response.status_code, [400, 404, 500])
+        assert response.status_code in [400, 404, 500]
         response_data = json.loads(response.data)
-        self.assertIsInstance(response_data, dict)
+        assert isinstance(response_data, dict)
 
     def test_mcp_protocol_authentication_flow(self):
         """Test MCP protocol with authentication scenarios."""
         # Test without auth headers (should fail or redirect)
         response = self.client.get("/api/campaigns")
-        self.assertIn(response.status_code, [401, 403, 404, 500])
+        assert response.status_code in [401, 403, 404, 500]
 
         # Test with invalid user ID
         invalid_headers = {
@@ -358,7 +357,7 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
             HEADER_TEST_USER_ID: "invalid-user-id",
         }
         response = self.client.get("/api/campaigns", headers=invalid_headers)
-        self.assertIn(response.status_code, [200, 401, 403, 404, 500])
+        assert response.status_code in [200, 401, 403, 404, 500]
 
 
 if __name__ == "__main__":

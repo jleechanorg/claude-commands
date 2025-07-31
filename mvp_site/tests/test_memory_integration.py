@@ -19,16 +19,16 @@ class TestMemoryIntegration(unittest.TestCase):
         """Test query term extraction"""
         # Test entity extraction
         terms = self.memory.extract_query_terms("Fix the GitHub API integration")
-        self.assertIn("github", [t.lower() for t in terms])
-        self.assertIn("api", [t.lower() for t in terms])
+        assert "github" in [t.lower() for t in terms]
+        assert "api" in [t.lower() for t in terms]
 
         # Test PR extraction
         terms = self.memory.extract_query_terms("Review PR #609 changes")
-        self.assertIn("PR #609", terms)
+        assert "PR #609" in terms
 
         # Test stop word removal
         terms = self.memory.extract_query_terms("the is at which on")
-        self.assertEqual(len(terms), 0)
+        assert len(terms) == 0
 
     def test_relevance_scoring(self):
         """Test relevance score calculation"""
@@ -40,15 +40,15 @@ class TestMemoryIntegration(unittest.TestCase):
 
         # High relevance - name match
         score = self.memory.calculate_relevance_score(entity, "git workflow issues")
-        self.assertGreater(score, 0.35)  # Should get 0.4 for name match
+        assert score > 0.35  # Should get 0.4 for name match
 
         # Medium relevance - type match
         score = self.memory.calculate_relevance_score(entity, "coding patterns")
-        self.assertGreater(score, 0.1)
+        assert score > 0.1
 
         # Low relevance - no match
         score = self.memory.calculate_relevance_score(entity, "unrelated topic")
-        self.assertLess(score, 0.3)
+        assert score < 0.3
 
     def test_search_with_caching(self):
         """Test search with cache behavior"""
@@ -57,12 +57,12 @@ class TestMemoryIntegration(unittest.TestCase):
 
             # First search - cache miss
             results1 = self.memory.search_relevant_memory(["test"])
-            self.assertEqual(mock_search.call_count, 1)
+            assert mock_search.call_count == 1
 
             # Second search - cache hit
             results2 = self.memory.search_relevant_memory(["test"])
-            self.assertEqual(mock_search.call_count, 1)  # No additional call
-            self.assertEqual(results1, results2)
+            assert mock_search.call_count == 1  # No additional call
+            assert results1 == results2
 
     def test_context_enhancement(self):
         """Test context enhancement with memories"""
@@ -75,19 +75,19 @@ class TestMemoryIntegration(unittest.TestCase):
         ]
 
         enhanced = self.memory.enhance_context("Original context", memories)
-        self.assertIn("Relevant Memory Context", enhanced)
-        self.assertIn("urgent_pattern", enhanced)
-        self.assertIn("Use minimal changes", enhanced)
+        assert "Relevant Memory Context" in enhanced
+        assert "urgent_pattern" in enhanced
+        assert "Use minimal changes" in enhanced
 
     def test_slash_command_enhancement(self):
         """Test slash command enhancement"""
         # Should enhance memory commands
         context = enhance_slash_command("/learn", "test pattern")
-        self.assertIsInstance(context, str)
+        assert isinstance(context, str)
 
         # Should not enhance other commands
         context = enhance_slash_command("/push", "some args")
-        self.assertEqual(context, "")
+        assert context == ""
 
     def test_error_handling(self):
         """Test graceful error handling"""
@@ -96,7 +96,7 @@ class TestMemoryIntegration(unittest.TestCase):
 
             # Should return empty list on error
             results = self.memory.search_relevant_memory(["test"])
-            self.assertEqual(results, [])
+            assert results == []
 
     def test_metrics_tracking(self):
         """Test performance metrics"""

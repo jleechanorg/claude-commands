@@ -15,9 +15,10 @@ sys.path.insert(
 )
 
 import constants
+from narrative_response_schema import NarrativeResponse
+
 from game_state import GameState
 from gemini_service import _validate_and_enforce_planning_block
-from narrative_response_schema import NarrativeResponse
 
 
 class TestPlanningBlockJSON(unittest.TestCase):
@@ -231,10 +232,6 @@ How would you like to design Astarion:"""
         """Test that planning blocks in JSON don't have narrative markers"""
 
         # Planning block should NOT have these markers
-        bad_planning_block = """--- PLANNING BLOCK ---
-What would you like to do?
-1. **Option1**
-2. **Option2**"""
 
         # Should just have the content
         good_planning_block = """What would you like to do?

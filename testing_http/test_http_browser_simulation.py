@@ -11,7 +11,6 @@ import time
 from datetime import datetime
 
 import requests
-
 from bs4 import BeautifulSoup
 
 # Add parent directory to path for imports

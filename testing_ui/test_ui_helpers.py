@@ -341,7 +341,6 @@ def capture_structured_fields_sequence(
         Dictionary mapping field names to screenshot paths
     """
 
-
     screenshots = {}
 
     # Take initial screenshot

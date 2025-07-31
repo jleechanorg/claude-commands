@@ -11,6 +11,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import pytest
+
 # Add mvp_site directory to path for imports
 # Handle both running from project root and from mvp_site directory
 current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -95,10 +97,10 @@ def load_world_content_for_system_instruction():
             import world_loader
 
             # But loading should fail
-            with self.assertRaises(FileNotFoundError) as context:
+            with pytest.raises(FileNotFoundError) as context:
                 world_loader.load_world_content_for_system_instruction()
 
-            assert "World file not found" in str(context.exception)
+            assert "World file not found" in str(context.value)
         finally:
             sys.path.remove(self.mvp_site_dir)
 

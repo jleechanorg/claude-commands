@@ -76,7 +76,10 @@ class TestTimePressure(unittest.TestCase):
 
         # Verify event is tracked
         assert event_id in self.game_state.time_sensitive_events
-        assert self.game_state.time_sensitive_events[event_id]["description"] == event_data["description"]
+        assert (
+            self.game_state.time_sensitive_events[event_id]["description"]
+            == event_data["description"]
+        )
 
     def test_npc_agenda_progression(self):
         """Test that NPCs have agendas that progress over time"""
@@ -99,7 +102,10 @@ class TestTimePressure(unittest.TestCase):
 
         # Verify agenda is tracked
         assert npc_name in self.game_state.npc_agendas
-        assert self.game_state.npc_agendas[npc_name]["current_goal"] == agenda_data["current_goal"]
+        assert (
+            self.game_state.npc_agendas[npc_name]["current_goal"]
+            == agenda_data["current_goal"]
+        )
         assert self.game_state.npc_agendas[npc_name]["progress_percentage"] == 30
 
     def test_deadline_consequences(self):

@@ -306,9 +306,9 @@ def validate_test_environment():
         provider = get_service_provider()
 
         # Test basic provider functionality
-        firestore = provider.get_firestore()
-        gemini = provider.get_gemini()
-        auth = provider.get_auth()
+        provider.get_firestore()
+        provider.get_gemini()
+        provider.get_auth()
 
         print(
             f"✅ Test environment validated - Mode: {'REAL' if provider.is_real_service else 'MOCK'}"

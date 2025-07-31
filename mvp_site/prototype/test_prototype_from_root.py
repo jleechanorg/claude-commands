@@ -154,9 +154,9 @@ def test_performance():
         avg_time = (time.time() - start) / 100
 
         if avg_time < 0.05:  # 50ms
-            print(f"   ✅ Performance: {avg_time*1000:.2f}ms average (target: <50ms)")
+            print(f"   ✅ Performance: {avg_time * 1000:.2f}ms average (target: <50ms)")
             return True
-        print(f"   ❌ Performance: {avg_time*1000:.2f}ms average (too slow)")
+        print(f"   ❌ Performance: {avg_time * 1000:.2f}ms average (too slow)")
         return False
 
     except Exception as e:

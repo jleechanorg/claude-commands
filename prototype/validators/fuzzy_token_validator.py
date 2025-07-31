@@ -5,8 +5,8 @@ Handles name variations, partial matches, and complex references.
 
 import re
 
-from ..logging_config import setup_logging, with_metrics
-from ..validation_utils import (
+from prototype.logging_config import setup_logging, with_metrics
+from prototype.validation_utils import (
     check_narrative_coherence,
     detect_entity_states,
     extract_pronouns,
@@ -14,7 +14,7 @@ from ..validation_utils import (
     fuzzy_match_entity,
     merge_entity_references,
 )
-from ..validator import BaseValidator, EntityManifest, ValidationResult
+from prototype.validator import BaseValidator, EntityManifest, ValidationResult
 
 
 class FuzzyTokenValidator(BaseValidator):
@@ -61,7 +61,7 @@ class FuzzyTokenValidator(BaseValidator):
         name_lower = entity_name.lower()
 
         # Add patterns for each variation type
-        for pattern_type, pattern_list in self.name_patterns.items():
+        for _pattern_type, pattern_list in self.name_patterns.items():
             for pattern_template in pattern_list:
                 # Replace {name} with actual entity name
                 pattern = pattern_template.replace("{name}", re.escape(name_lower))
@@ -76,7 +76,7 @@ class FuzzyTokenValidator(BaseValidator):
     def _find_role_based_matches(self, text: str, entity_name: str) -> list[dict]:
         """Find matches based on character roles/classes."""
         matches = []
-        text_lower = text.lower()
+        text.lower()
 
         # Determine likely role based on entity name or known mappings
         likely_role = None
@@ -266,7 +266,7 @@ class FuzzyTokenValidator(BaseValidator):
             "narrative_length": len(narrative_text),
             "fuzzy_threshold": self.fuzzy_threshold,
             "match_types_used": list(
-                set(m.get("type", "unknown") for m in all_matches)
+                {m.get("type", "unknown") for m in all_matches}
             ),
             "total_matches": len(all_matches),
             "pronoun_count": len(pronouns),

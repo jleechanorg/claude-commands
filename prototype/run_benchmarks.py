@@ -20,9 +20,6 @@ def test_length_performance():
 
     # Import validators
 
-
-
-
     lengths = [100, 500, 1000, 2000, 5000]
     validators = {
         "SimpleToken": SimpleTokenValidator(),
@@ -82,7 +79,5 @@ def test_length_performance():
 
 
 if __name__ == "__main__":
-
-
     os.makedirs("benchmarks", exist_ok=True)
     test_length_performance()

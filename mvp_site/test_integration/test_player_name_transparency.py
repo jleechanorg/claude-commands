@@ -48,7 +48,6 @@ def test_player_name_transparency():
 
         try:
             # Initial setup - get to name selection step
-            initial_prompt = "I want to create a character"
             selected_prompts = ["mechanics"]
 
             # Simulate getting to the name step (simplified for test)

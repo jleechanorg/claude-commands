@@ -26,46 +26,79 @@ class OrchestrationDashboard:
 
         try:
             # Get list of sessions
-            result = subprocess.run(['tmux', 'list-sessions'],
-                                  check=False, capture_output=True, text=True)
+            result = subprocess.run(
+                ["tmux", "list-sessions"], check=False, capture_output=True, text=True
+            )
 
             if result.returncode == 0:
-                for line in result.stdout.strip().split('\n'):
-                    if line and ':' in line:
-                        session_name = line.split(':')[0]
+                for line in result.stdout.strip().split("\n"):
+                    if line and ":" in line:
+                        session_name = line.split(":")[0]
 
                         # Get session details
                         details = {}
 
                         # Get creation time
-                        create_result = subprocess.run([
-                            'tmux', 'display-message', '-t', session_name,
-                            '-p', '#{session_created}'
-                        ], check=False, capture_output=True, text=True)
+                        create_result = subprocess.run(
+                            [
+                                "tmux",
+                                "display-message",
+                                "-t",
+                                session_name,
+                                "-p",
+                                "#{session_created}",
+                            ],
+                            check=False,
+                            capture_output=True,
+                            text=True,
+                        )
 
                         if create_result.returncode == 0:
                             created_timestamp = int(create_result.stdout.strip())
-                            details['created'] = datetime.fromtimestamp(created_timestamp)
-                            details['uptime'] = datetime.now() - details['created']
+                            details["created"] = datetime.fromtimestamp(
+                                created_timestamp
+                            )
+                            details["uptime"] = datetime.now() - details["created"]
 
                         # Get recent activity
-                        activity_result = subprocess.run([
-                            'tmux', 'display-message', '-t', session_name,
-                            '-p', '#{session_activity}'
-                        ], check=False, capture_output=True, text=True)
+                        activity_result = subprocess.run(
+                            [
+                                "tmux",
+                                "display-message",
+                                "-t",
+                                session_name,
+                                "-p",
+                                "#{session_activity}",
+                            ],
+                            check=False,
+                            capture_output=True,
+                            text=True,
+                        )
 
                         if activity_result.returncode == 0:
                             activity_timestamp = int(activity_result.stdout.strip())
-                            details['last_activity'] = datetime.fromtimestamp(activity_timestamp)
+                            details["last_activity"] = datetime.fromtimestamp(
+                                activity_timestamp
+                            )
 
                         # Get recent output
-                        output_result = subprocess.run([
-                            'tmux', 'capture-pane', '-t', session_name,
-                            '-p', '-S', '-20'
-                        ], check=False, capture_output=True, text=True)
+                        output_result = subprocess.run(
+                            [
+                                "tmux",
+                                "capture-pane",
+                                "-t",
+                                session_name,
+                                "-p",
+                                "-S",
+                                "-20",
+                            ],
+                            check=False,
+                            capture_output=True,
+                            text=True,
+                        )
 
                         if output_result.returncode == 0:
-                            details['recent_output'] = output_result.stdout.strip()
+                            details["recent_output"] = output_result.stdout.strip()
 
                         sessions[session_name] = details
 
@@ -86,6 +119,7 @@ class OrchestrationDashboard:
                 print(f"Error loading health report: {e}")
 
         return {"system_status": "unknown", "agents": {}}
+
     def load_task_report(self) -> dict[str, Any]:
         """Load task report if available"""
         task_file = os.path.join(self.tasks_dir, "task_report.json")
@@ -98,6 +132,7 @@ class OrchestrationDashboard:
                 print(f"Error loading task report: {e}")
 
         return {"total_tasks": 0, "agent_workload": {}}
+
     def get_task_files_status(self) -> dict[str, int]:
         """Get status of task files"""
         # No static task files - check orchestration/results/ for completed tasks
@@ -122,10 +157,20 @@ class OrchestrationDashboard:
         """Get recent PR activity from agents"""
         try:
             # Get recent PRs
-            result = subprocess.run([
-                'gh', 'pr', 'list', '--limit', '5', '--json',
-                'number,title,author,createdAt,state'
-            ], check=False, capture_output=True, text=True)
+            result = subprocess.run(
+                [
+                    "gh",
+                    "pr",
+                    "list",
+                    "--limit",
+                    "5",
+                    "--json",
+                    "number,title,author,createdAt,state",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
 
             if result.returncode == 0:
                 return json.loads(result.stdout)
@@ -154,7 +199,7 @@ class OrchestrationDashboard:
     def render_dashboard(self):
         """Render the full dashboard"""
         # Clear screen
-        os.system('clear')
+        os.system("clear")
 
         # Header
         print("=" * 80)
@@ -170,10 +215,12 @@ class OrchestrationDashboard:
             "healthy": "🟢",
             "degraded": "🟡",
             "critical": "🔴",
-            "unknown": "⚪"
+            "unknown": "⚪",
         }
 
-        print(f"\n🏥 SYSTEM HEALTH: {status_emoji.get(system_status, '⚪')} {system_status.upper()}")
+        print(
+            f"\n🏥 SYSTEM HEALTH: {status_emoji.get(system_status, '⚪')} {system_status.upper()}"
+        )
 
         if "average_health_score" in health_report:
             print(f"   Health Score: {health_report['average_health_score']:.2f}/1.0")
@@ -187,20 +234,24 @@ class OrchestrationDashboard:
             ("task-coordinator", "🎯 Task Coordinator", "Task coordination")
         ]
 
-        for agent_name, display_name, description in expected_agents:
+        for agent_name, display_name, _description in expected_agents:
             if agent_name in sessions:
                 session_info = sessions[agent_name]
-                uptime = session_info.get('uptime', timedelta(0))
-                last_activity = session_info.get('last_activity', datetime.now())
+                uptime = session_info.get("uptime", timedelta(0))
+                last_activity = session_info.get("last_activity", datetime.now())
 
                 print(f"   {display_name}: ✅ ACTIVE (up {self.format_uptime(uptime)})")
                 print(f"      Last activity: {self.format_time_ago(last_activity)}")
 
                 # Show recent output snippet
-                recent_output = session_info.get('recent_output', '')
+                recent_output = session_info.get("recent_output", "")
                 if recent_output:
                     # Get last non-empty line
-                    lines = [line.strip() for line in recent_output.split('\n') if line.strip()]
+                    lines = [
+                        line.strip()
+                        for line in recent_output.split("\n")
+                        if line.strip()
+                    ]
                     if lines:
                         last_line = lines[-1][:60]  # Truncate long lines
                         print(f"      Recent: {last_line}")
@@ -236,9 +287,9 @@ class OrchestrationDashboard:
 
         if recent_prs:
             for pr in recent_prs[:3]:  # Show top 3
-                created = datetime.fromisoformat(pr['createdAt'].replace('Z', '+00:00'))
+                created = datetime.fromisoformat(pr["createdAt"].replace("Z", "+00:00"))
                 age = self.format_time_ago(created)
-                state_emoji = "🟢" if pr['state'] == 'OPEN' else "🔴"
+                state_emoji = "🟢" if pr["state"] == "OPEN" else "🔴"
                 print(f"   {state_emoji} PR #{pr['number']}: {pr['title'][:50]}...")
                 print(f"      By {pr['author']['login']} - {age}")
         else:
@@ -261,8 +312,9 @@ class OrchestrationDashboard:
 
         # Check Redis
         try:
-            redis_result = subprocess.run(['redis-cli', 'ping'],
-                                        check=False, capture_output=True, text=True)
+            redis_result = subprocess.run(
+                ["redis-cli", "ping"], check=False, capture_output=True, text=True
+            )
             redis_status = "🟢 ONLINE" if redis_result.returncode == 0 else "🔴 OFFLINE"
         except:
             redis_status = "🔴 OFFLINE"
@@ -271,16 +323,22 @@ class OrchestrationDashboard:
 
         # Check disk usage for tasks directory
         try:
-            disk_usage = subprocess.run(['du', '-sh', self.tasks_dir],
-                                      check=False, capture_output=True, text=True)
+            disk_usage = subprocess.run(
+                ["du", "-sh", self.tasks_dir],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
             if disk_usage.returncode == 0:
                 size = disk_usage.stdout.split()[0]
                 print(f"   Tasks directory: {size}")
         except:
             pass
 
-        print(f"\n{'='*80}")
-        print(f"Dashboard refreshes every {self.refresh_interval}s | Press Ctrl+C to exit")
+        print(f"\n{'=' * 80}")
+        print(
+            f"Dashboard refreshes every {self.refresh_interval}s | Press Ctrl+C to exit"
+        )
 
     def run_dashboard(self):
         """Run the dashboard in a loop"""
@@ -292,10 +350,12 @@ class OrchestrationDashboard:
             print("\n\n🛑 Dashboard stopped by user")
             print("Thanks for using the orchestration dashboard!")
 
+
 def main():
     """Main entry point"""
     dashboard = OrchestrationDashboard()
     dashboard.run_dashboard()
+
 
 if __name__ == "__main__":
     main()

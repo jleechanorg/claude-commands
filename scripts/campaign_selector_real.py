@@ -61,8 +61,8 @@ def analyze_campaign_stories(campaign_data):
         expected_entities.update(pc_data.keys())
 
     # NPCs in current location
-    current_location = game_state.get("world_data", {}).get("current_location", "")
-    npc_data = game_state.get("npc_data", {})
+    game_state.get("world_data", {}).get("current_location", "")
+    game_state.get("npc_data", {})
 
     # Combat participants
     combat_state = game_state.get("combat_state", {})

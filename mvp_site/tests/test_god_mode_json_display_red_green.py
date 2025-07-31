@@ -29,8 +29,12 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
 
         # The bug was that raw JSON would be displayed
         # With our fix, this should NOT happen:
-        assert '"action"' not in narrative, "Raw JSON key 'action' should not appear in output"
-        assert '"state_updates"' not in narrative, "Raw JSON key 'state_updates' should not appear in output"
+        assert (
+            '"action"' not in narrative
+        ), "Raw JSON key 'action' should not appear in output"
+        assert (
+            '"state_updates"' not in narrative
+        ), "Raw JSON key 'state_updates' should not appear in output"
         assert "{" not in narrative, "Raw JSON braces should not appear in output"
         assert "}" not in narrative, "Raw JSON braces should not appear in output"
 

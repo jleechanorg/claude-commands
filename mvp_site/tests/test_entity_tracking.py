@@ -219,7 +219,7 @@ class TestEntityTracking(unittest.TestCase):
             self.test_game_state, session_number=1, turn_number=5
         )
         expected_entities = manifest.get_expected_entities()
-        manifest_text = manifest.to_prompt_format()
+        manifest.to_prompt_format()
 
         # Simulate AI response that includes all entities
         ai_response = f"""

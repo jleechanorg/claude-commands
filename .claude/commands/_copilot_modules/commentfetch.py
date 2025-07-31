@@ -16,7 +16,7 @@ import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 from base import CopilotCommandBase
 
@@ -41,9 +41,10 @@ class CommentFetch(CopilotCommandBase):
         comments = []
         # Fetch all comments with pagination
         cmd = [
-            "gh", "api",
+            "gh",
+            "api",
             f"repos/{self.repo}/pulls/{self.pr_number}/comments",
-            "--paginate"
+            "--paginate",
         ]
 
         page_comments = self.run_gh_command(cmd)
@@ -53,18 +54,20 @@ class CommentFetch(CopilotCommandBase):
         # Standardize format
         standardized = []
         for comment in comments:
-            standardized.append({
-                'id': comment.get('id'),
-                'type': 'inline',
-                'body': comment.get('body', ''),
-                'author': comment.get('user', {}).get('login', 'unknown'),
-                'created_at': comment.get('created_at', ''),
-                'file': comment.get('path'),
-                'line': comment.get('line') or comment.get('original_line'),
-                'position': comment.get('position'),
-                'in_reply_to_id': comment.get('in_reply_to_id'),
-                'requires_response': self._requires_response(comment)
-            })
+            standardized.append(
+                {
+                    "id": comment.get("id"),
+                    "type": "inline",
+                    "body": comment.get("body", ""),
+                    "author": comment.get("user", {}).get("login", "unknown"),
+                    "created_at": comment.get("created_at", ""),
+                    "file": comment.get("path"),
+                    "line": comment.get("line") or comment.get("original_line"),
+                    "position": comment.get("position"),
+                    "in_reply_to_id": comment.get("in_reply_to_id"),
+                    "requires_response": self._requires_response(comment),
+                }
+            )
 
         return standardized
 
@@ -73,9 +76,10 @@ class CommentFetch(CopilotCommandBase):
         self.log("Fetching general PR comments...")
 
         cmd = [
-            "gh", "api",
+            "gh",
+            "api",
             f"repos/{self.repo}/issues/{self.pr_number}/comments",
-            "--paginate"
+            "--paginate",
         ]
 
         comments = self.run_gh_command(cmd)
@@ -85,14 +89,16 @@ class CommentFetch(CopilotCommandBase):
         # Standardize format
         standardized = []
         for comment in comments:
-            standardized.append({
-                'id': comment.get('id'),
-                'type': 'general',
-                'body': comment.get('body', ''),
-                'author': comment.get('user', {}).get('login', 'unknown'),
-                'created_at': comment.get('created_at', ''),
-                'requires_response': self._requires_response(comment)
-            })
+            standardized.append(
+                {
+                    "id": comment.get("id"),
+                    "type": "general",
+                    "body": comment.get("body", ""),
+                    "author": comment.get("user", {}).get("login", "unknown"),
+                    "created_at": comment.get("created_at", ""),
+                    "requires_response": self._requires_response(comment),
+                }
+            )
 
         return standardized
 
@@ -101,9 +107,10 @@ class CommentFetch(CopilotCommandBase):
         self.log("Fetching PR reviews...")
 
         cmd = [
-            "gh", "api",
+            "gh",
+            "api",
             f"repos/{self.repo}/pulls/{self.pr_number}/reviews",
-            "--paginate"
+            "--paginate",
         ]
 
         reviews = self.run_gh_command(cmd)
@@ -113,16 +120,18 @@ class CommentFetch(CopilotCommandBase):
         # Extract review body comments
         standardized = []
         for review in reviews:
-            if review.get('body'):
-                standardized.append({
-                    'id': review.get('id'),
-                    'type': 'review',
-                    'body': review.get('body', ''),
-                    'author': review.get('user', {}).get('login', 'unknown'),
-                    'created_at': review.get('submitted_at', ''),
-                    'state': review.get('state'),
-                    'requires_response': self._requires_response(review)
-                })
+            if review.get("body"):
+                standardized.append(
+                    {
+                        "id": review.get("id"),
+                        "type": "review",
+                        "body": review.get("body", ""),
+                        "author": review.get("user", {}).get("login", "unknown"),
+                        "created_at": review.get("submitted_at", ""),
+                        "state": review.get("state"),
+                        "requires_response": self._requires_response(review),
+                    }
+                )
 
         return standardized
 
@@ -132,9 +141,11 @@ class CommentFetch(CopilotCommandBase):
 
         # Try to get Copilot-specific comments using jq filtering
         cmd = [
-            "gh", "api",
+            "gh",
+            "api",
             f"repos/{self.repo}/pulls/{self.pr_number}/comments",
-            "--jq", '.[] | select(.user.login == "github-advanced-security[bot]" or .user.type == "Bot") | select(.body | contains("copilot"))'
+            "--jq",
+            '.[] | select(.user.login == "github-advanced-security[bot]" or .user.type == "Bot") | select(.body | contains("copilot"))',
         ]
 
         try:
@@ -142,7 +153,7 @@ class CommentFetch(CopilotCommandBase):
             if result.returncode == 0 and result.stdout.strip():
                 # Parse JSONL output
                 comments = []
-                for line in result.stdout.strip().split('\n'):
+                for line in result.stdout.strip().split("\n"):
                     try:
                         comments.append(json.loads(line))
                     except json.JSONDecodeError:
@@ -151,17 +162,19 @@ class CommentFetch(CopilotCommandBase):
                 # Standardize format
                 standardized = []
                 for comment in comments:
-                    standardized.append({
-                        'id': comment.get('id'),
-                        'type': 'copilot',
-                        'body': comment.get('body', ''),
-                        'author': 'copilot',
-                        'created_at': comment.get('created_at', ''),
-                        'file': comment.get('path'),
-                        'line': comment.get('line'),
-                        'suppressed': True,
-                        'requires_response': True  # Copilot comments usually need attention
-                    })
+                    standardized.append(
+                        {
+                            "id": comment.get("id"),
+                            "type": "copilot",
+                            "body": comment.get("body", ""),
+                            "author": "copilot",
+                            "created_at": comment.get("created_at", ""),
+                            "file": comment.get("path"),
+                            "line": comment.get("line"),
+                            "suppressed": True,
+                            "requires_response": True,  # Copilot comments usually need attention
+                        }
+                    )
 
                 return standardized
         except Exception as e:
@@ -191,10 +204,10 @@ class CommentFetch(CopilotCommandBase):
         # Fetch comments in parallel for speed
         with ThreadPoolExecutor(max_workers=4) as executor:
             futures = {
-                executor.submit(self._get_inline_comments): 'inline',
-                executor.submit(self._get_general_comments): 'general',
-                executor.submit(self._get_review_comments): 'review',
-                executor.submit(self._get_copilot_comments): 'copilot'
+                executor.submit(self._get_inline_comments): "inline",
+                executor.submit(self._get_general_comments): "general",
+                executor.submit(self._get_review_comments): "review",
+                executor.submit(self._get_copilot_comments): "copilot",
             }
 
             for future in as_completed(futures):
@@ -207,34 +220,39 @@ class CommentFetch(CopilotCommandBase):
                     self.log_error(f"Failed to fetch {comment_type} comments: {e}")
 
         # Sort by created_at (most recent first)
-        self.comments.sort(
-            key=lambda c: c.get('created_at', ''),
-            reverse=True
-        )
+        self.comments.sort(key=lambda c: c.get("created_at", ""), reverse=True)
 
         # Count comments needing responses
-        needs_response = sum(1 for c in self.comments if c.get('requires_response'))
+        needs_response = sum(1 for c in self.comments if c.get("requires_response"))
 
         # Prepare result
         result = {
-            'success': True,
-            'message': f"Fetched {len(self.comments)} comments ({needs_response} need responses)",
-            'data': {
-                'pr': self.pr_number,
-                'fetched_at': datetime.now().isoformat(),
-                'comments': self.comments,
-                'metadata': {
-                    'total': len(self.comments),
-                    'by_type': {
-                        'inline': len([c for c in self.comments if c['type'] == 'inline']),
-                        'general': len([c for c in self.comments if c['type'] == 'general']),
-                        'review': len([c for c in self.comments if c['type'] == 'review']),
-                        'copilot': len([c for c in self.comments if c['type'] == 'copilot'])
+            "success": True,
+            "message": f"Fetched {len(self.comments)} comments ({needs_response} need responses)",
+            "data": {
+                "pr": self.pr_number,
+                "fetched_at": datetime.now().isoformat(),
+                "comments": self.comments,
+                "metadata": {
+                    "total": len(self.comments),
+                    "by_type": {
+                        "inline": len(
+                            [c for c in self.comments if c["type"] == "inline"]
+                        ),
+                        "general": len(
+                            [c for c in self.comments if c["type"] == "general"]
+                        ),
+                        "review": len(
+                            [c for c in self.comments if c["type"] == "review"]
+                        ),
+                        "copilot": len(
+                            [c for c in self.comments if c["type"] == "copilot"]
+                        ),
                     },
-                    'needs_response': needs_response,
-                    'repo': self.repo
-                }
-            }
+                    "needs_response": needs_response,
+                    "repo": self.repo,
+                },
+            },
         }
 
         # No file saving - return data directly
@@ -246,14 +264,10 @@ def main():
     """Command line interface."""
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Fetch all comments from a GitHub PR"
-    )
-    parser.add_argument('pr_number', help='PR number to fetch comments from')
+    parser = argparse.ArgumentParser(description="Fetch all comments from a GitHub PR")
+    parser.add_argument("pr_number", help="PR number to fetch comments from")
     parser.add_argument(
-        '--output', '-o',
-        default=None,
-        help='No longer used - returns data directly'
+        "--output", "-o", default=None, help="No longer used - returns data directly"
     )
 
     args = parser.parse_args()
@@ -262,5 +276,5 @@ def main():
     return fetcher.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

@@ -42,20 +42,20 @@ class TestBasicFramework(unittest.TestCase):
     def test_service_provider_creation(self):
         """Test that service providers can be created."""
         provider = get_service_provider("mock")
-        self.assertIsNotNone(provider)
-        self.assertIsInstance(provider, TestServiceProvider)
+        assert provider is not None
+        assert isinstance(provider, TestServiceProvider)
 
         # Test that services are available
         firestore = provider.get_firestore()
         gemini = provider.get_gemini()
         auth = provider.get_auth()
 
-        self.assertIsNotNone(firestore)
-        self.assertIsNotNone(gemini)
-        self.assertIsNotNone(auth)
+        assert firestore is not None
+        assert gemini is not None
+        assert auth is not None
 
         # Test mode detection
-        self.assertFalse(provider.is_real_service)  # Should be mock mode
+        assert not provider.is_real_service  # Should be mock mode
 
         # Cleanup
         provider.cleanup()
@@ -65,13 +65,13 @@ class TestBasicFramework(unittest.TestCase):
         """Test switching between mock and real modes."""
         # Test mock mode
         mock_provider = get_service_provider("mock")
-        self.assertFalse(mock_provider.is_real_service)
+        assert not mock_provider.is_real_service
         mock_provider.cleanup()
 
         # Test real mode (should work even without real credentials)
         try:
             real_provider = get_service_provider("real")
-            self.assertTrue(real_provider.is_real_service)
+            assert real_provider.is_real_service
             real_provider.cleanup()
             print("✅ Real service provider creation working")
         except Exception as e:
@@ -88,14 +88,14 @@ class TestBasicFramework(unittest.TestCase):
         provider2 = get_current_provider()
 
         # Should get same instance (global)
-        self.assertIs(provider1, provider2)
+        assert provider1 is provider2
 
         # Reset and get new
         reset_global_provider()
         provider3 = get_current_provider()
 
         # Should be different instance
-        self.assertIsNot(provider1, provider3)
+        assert provider1 is not provider3
 
         # Cleanup
         provider3.cleanup()
@@ -118,8 +118,8 @@ class TestBackwardCompatibility(unittest.TestCase):
             # Should have all expected keys
             expected_keys = ["provider", "firestore", "gemini", "auth", "is_real"]
             for key in expected_keys:
-                self.assertIn(key, services)
-                self.assertIsNotNone(services[key])
+                assert key in services
+                assert services[key] is not None
 
             # Cleanup
             services["provider"].cleanup()
@@ -138,13 +138,13 @@ class TestBackwardCompatibility(unittest.TestCase):
 
             # Test validation function
             result = validate_test_environment()
-            self.assertIsInstance(result, bool)
+            assert isinstance(result, bool)
 
             # Test mode info
             info = get_test_mode_info()
-            self.assertIsInstance(info, dict)
-            self.assertIn("mode", info)
-            self.assertIn("is_real", info)
+            assert isinstance(info, dict)
+            assert "mode" in info
+            assert "is_real" in info
 
             print("✅ Integration utilities working")
 
@@ -181,7 +181,7 @@ class TestServiceOperations(unittest.TestCase):
             result = doc_ref.get()
 
             # Should not raise errors
-            self.assertIsNotNone(result)
+            assert result is not None
             print("✅ Mock Firestore operations working")
 
         except Exception as e:
@@ -194,7 +194,7 @@ class TestServiceOperations(unittest.TestCase):
         try:
             # Basic mock operation
             response = gemini.generate_content("test prompt")
-            self.assertIsNotNone(response)
+            assert response is not None
             print("✅ Mock Gemini operations working")
 
         except Exception as e:
@@ -206,7 +206,7 @@ class TestServiceOperations(unittest.TestCase):
 
         try:
             # Mock auth should be available
-            self.assertIsNotNone(auth)
+            assert auth is not None
             print("✅ Mock auth operations working")
 
         except Exception as e:

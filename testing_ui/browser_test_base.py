@@ -89,8 +89,6 @@ class FlaskServerManager:
 
         # Verify server is running
         try:
-
-
             response = requests.get(BASE_URL, timeout=5)
             if response.status_code == 200:
                 print("   ✅ Flask server started successfully")
@@ -125,7 +123,9 @@ class BrowserTestBase:
         """Set up Playwright browser with standard configuration."""
         playwright = sync_playwright().start()
         # FORCE headless mode for all browser tests
-        browser = playwright.chromium.launch(headless=True, args=['--no-sandbox', '--disable-dev-shm-usage'])
+        browser = playwright.chromium.launch(
+            headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"]
+        )
         context = browser.new_context()
         page = context.new_page()
 

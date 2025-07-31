@@ -195,26 +195,26 @@ if __name__ == "__main__":
             print(f"✅ Copied results to {local_path}")
 
             # Create summary
-            summary = f"""# Real Sariel LLM Responses - {datetime.now().strftime('%Y-%m-%d')}
+            summary = f"""# Real Sariel LLM Responses - {datetime.now().strftime("%Y-%m-%d")}
 
-**Campaign ID**: {data['campaign_id']}
-**Total Interactions**: {data['total_interactions']}
-**Capture Date**: {data['capture_date']}
+**Campaign ID**: {data["campaign_id"]}
+**Total Interactions**: {data["total_interactions"]}
+**Capture Date**: {data["capture_date"]}
 
 ## Complete AI Responses
 
 """
 
             for response in data["responses"]:
-                summary += f"""### Interaction {response['interaction']}
-**Player Input**: {response['input']}
-**Location**: {response['location']}
-**Expected Entities**: {', '.join(response['expected_entities'])}
-**Response Length**: {response['length']} characters
+                summary += f"""### Interaction {response["interaction"]}
+**Player Input**: {response["input"]}
+**Location**: {response["location"]}
+**Expected Entities**: {", ".join(response["expected_entities"])}
+**Response Length**: {response["length"]} characters
 
 **Complete LLM Response**:
 ```
-{response['narrative']}
+{response["narrative"]}
 ```
 
 """

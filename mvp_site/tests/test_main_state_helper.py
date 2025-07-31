@@ -82,14 +82,12 @@ class StateHelper:
         text = re.sub(
             r"\[DEBUG_STATE_START\].*?\[DEBUG_STATE_END\]", "", text, flags=re.DOTALL
         )
-        text = re.sub(
+        return re.sub(
             r"\[DEBUG_VALIDATION_START\].*?\[DEBUG_VALIDATION_END\]",
             "",
             text,
             flags=re.DOTALL,
         )
-
-        return text
 
 
 class TestStateHelper(unittest.TestCase):

@@ -52,7 +52,9 @@ class TestStructuredResponseExtraction(unittest.TestCase):
         ]
 
         for field in required_fields:
-            assert field in self.mock_gemini_response, f"Response should contain {field}"
+            assert (
+                field in self.mock_gemini_response
+            ), f"Response should contain {field}"
 
     def test_debug_info_structure(self):
         """Test that debug_info contains dice_rolls and resources"""
@@ -70,21 +72,33 @@ class TestStructuredResponseExtraction(unittest.TestCase):
 
         # Check other debug fields
         assert "dm_notes" in debug_info, "dm_notes should be in debug_info"
-        assert "state_rationale" in debug_info, "state_rationale should be in debug_info"
+        assert (
+            "state_rationale" in debug_info
+        ), "state_rationale should be in debug_info"
 
     def test_narrative_contains_structured_content(self):
         """Test that narrative contains session header and planning block"""
         narrative = self.mock_gemini_response["narrative"]
 
         # Check for session header
-        assert "[SESSION_HEADER]" in narrative, "Narrative should contain session header marker"
-        assert "Lvl 2 Fighter" in narrative, "Session header should contain character info"
+        assert (
+            "[SESSION_HEADER]" in narrative
+        ), "Narrative should contain session header marker"
+        assert (
+            "Lvl 2 Fighter" in narrative
+        ), "Session header should contain character info"
         assert "HP: 15/18" in narrative, "Session header should contain HP"
 
         # Check for planning block
-        assert "--- PLANNING BLOCK ---" in narrative, "Narrative should contain planning block marker"
-        assert "What would you like to do next?" in narrative, "Planning block should contain prompt"
-        assert "**Attack again:**" in narrative, "Planning block should contain formatted options"
+        assert (
+            "--- PLANNING BLOCK ---" in narrative
+        ), "Narrative should contain planning block marker"
+        assert (
+            "What would you like to do next?" in narrative
+        ), "Planning block should contain prompt"
+        assert (
+            "**Attack again:**" in narrative
+        ), "Planning block should contain formatted options"
 
     def test_state_updates_structure(self):
         """Test state_updates field structure"""
@@ -92,17 +106,27 @@ class TestStructuredResponseExtraction(unittest.TestCase):
 
         assert isinstance(state_updates, dict), "state_updates should be a dict"
         assert "npc_data" in state_updates, "state_updates should contain npc_data"
-        assert "goblin_1" in state_updates["npc_data"], "npc_data should contain goblin_1"
-        assert state_updates["npc_data"]["goblin_1"]["hp_current"] == 3, "Goblin HP should be 3"
+        assert (
+            "goblin_1" in state_updates["npc_data"]
+        ), "npc_data should contain goblin_1"
+        assert (
+            state_updates["npc_data"]["goblin_1"]["hp_current"] == 3
+        ), "Goblin HP should be 3"
 
     def test_god_mode_response_handling(self):
         """Test god_mode_response field handling"""
         # Normal response shouldn't have god_mode_response
-        assert "god_mode_response" not in self.mock_gemini_response, "Normal response should not have god_mode_response"
+        assert (
+            "god_mode_response" not in self.mock_gemini_response
+        ), "Normal response should not have god_mode_response"
 
         # God mode response should have the field
-        assert "god_mode_response" in self.mock_god_mode_response, "God mode response should have god_mode_response field"
-        assert self.mock_god_mode_response["narrative"] == "", "God mode response can have empty narrative"
+        assert (
+            "god_mode_response" in self.mock_god_mode_response
+        ), "God mode response should have god_mode_response field"
+        assert (
+            self.mock_god_mode_response["narrative"] == ""
+        ), "God mode response can have empty narrative"
 
     def test_entities_and_location_fields(self):
         """Test entities_mentioned and location_confirmed fields"""
@@ -128,8 +152,14 @@ class TestStructuredResponseExtraction(unittest.TestCase):
         mock_instance.debug_info = self.mock_gemini_response["debug_info"]
 
         # Test accessing nested fields
-        assert mock_instance.debug_info["dice_rolls"][0] == "Attack roll: 1d20+5 = 15+5 = 20 (Hit, AC 15)"
-        assert mock_instance.debug_info["resources"] == "HD: 2/2, Second Wind: 0/1, Action Surge: 1/1, Potions: 1"
+        assert (
+            mock_instance.debug_info["dice_rolls"][0]
+            == "Attack roll: 1d20+5 = 15+5 = 20 (Hit, AC 15)"
+        )
+        assert (
+            mock_instance.debug_info["resources"]
+            == "HD: 2/2, Second Wind: 0/1, Action Surge: 1/1, Potions: 1"
+        )
 
     def test_empty_state_updates_handling(self):
         """Test that empty state_updates is handled correctly"""

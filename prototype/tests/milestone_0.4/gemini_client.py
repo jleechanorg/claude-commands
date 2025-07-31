@@ -6,13 +6,13 @@ Gemini API client wrapper for real LLM testing
 import json
 import logging
 import os
+import re
 import time
 from datetime import datetime
 from typing import Any
 
 from google import genai
 from google.genai import types
-import re
 
 # Set up API key BEFORE importing SDK (following test_integration.py pattern)
 if not os.environ.get("GEMINI_API_KEY"):

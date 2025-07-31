@@ -251,7 +251,6 @@ def export_to_csv(
 ):
     """Export analytics data to CSV file."""
 
-
     # Sort by total activity
     sorted_users = sorted(
         user_analytics,
@@ -316,7 +315,6 @@ def main():
 
     except Exception as e:
         print(f"\n❌ Error: {e}")
-
 
         traceback.print_exc()
         sys.exit(1)

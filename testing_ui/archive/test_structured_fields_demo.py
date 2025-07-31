@@ -55,7 +55,7 @@ def test_structured_fields_demo():
                 )
 
             # Click through wizard quickly
-            for i in range(5):
+            for _i in range(5):
                 if page.is_visible("#wizard-next"):
                     page.click("#wizard-next")
                     page.wait_for_timeout(1000)

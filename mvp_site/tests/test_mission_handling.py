@@ -112,7 +112,9 @@ class TestMissionHandling(unittest.TestCase):
         assert mission["mission_id"] == "main_quest_1"
         assert mission["title"] == "Defeat the Dark Lord"  # Title preserved
         assert mission["status"] == "in_progress"  # Status updated
-        assert mission["objective"] == "Fight through the tower guards"  # Objective updated
+        assert (
+            mission["objective"] == "Fight through the tower guards"
+        )  # Objective updated
 
     def test_ai_provides_list_format_works_normally(self):
         """Test that if AI provides correct list format, it works without conversion."""

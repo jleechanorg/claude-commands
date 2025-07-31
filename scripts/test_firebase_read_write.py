@@ -135,9 +135,7 @@ def test_analytics_on_test_data(db, test_user_id):
 
     # Import our analytics functions
 
-
     sys.path.append(os.path.dirname(__file__))
-
 
     # Get all users (should include our test user)
     user_ids = firebase_user_analytics.get_all_users(db)
@@ -213,7 +211,6 @@ def main():
 
     except Exception as e:
         print(f"\n❌ ERROR: {e}")
-
 
         traceback.print_exc()
 

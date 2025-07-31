@@ -150,7 +150,7 @@ def create_visual_matrix(matrix_data: dict) -> str:
     """Create a text-based visual representation of the confusion matrix."""
     m = matrix_data["matrix"]
 
-    visual = f"""
+    return f"""
 Confusion Matrix for {matrix_data["validator"]}
 ===============================================
 
@@ -163,7 +163,6 @@ Accuracy: {matrix_data["statistics"]["accuracy"]:.1%}
 Sensitivity: {matrix_data["statistics"]["sensitivity"]:.1%}
 Specificity: {matrix_data["statistics"]["specificity"]:.1%}
 """
-    return visual
 
 
 def generate_all_confusion_matrices():

@@ -13,10 +13,9 @@ import json
 import os
 import subprocess
 import sys
-from abc import ABC, abstractmethod
 import time
+from abc import ABC, abstractmethod
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
@@ -40,36 +39,45 @@ class CopilotCommandBase(ABC):
         """Get repository info from GitHub CLI or git remote."""
         try:
             result = subprocess.run(
-                ['gh', 'repo', 'view', '--json', 'nameWithOwner'],
-                capture_output=True, text=True, check=True
+                ["gh", "repo", "view", "--json", "nameWithOwner"],
+                capture_output=True,
+                text=True,
+                check=True,
             )
             data = json.loads(result.stdout)
-            return data['nameWithOwner']
+            return data["nameWithOwner"]
         except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError):
             # Fallback to git remote parsing
             try:
                 result = subprocess.run(
-                    ['git', 'remote', 'get-url', 'origin'],
-                    capture_output=True, text=True, check=True
+                    ["git", "remote", "get-url", "origin"],
+                    capture_output=True,
+                    text=True,
+                    check=True,
                 )
                 url = result.stdout.strip()
-                if 'github.com' in url:
-                    if url.endswith('.git'):
+                if "github.com" in url:
+                    if url.endswith(".git"):
                         url = url[:-4]
-                    if ':' in url:
-                        return url.split(':')[-1]
+                    if ":" in url:
+                        return url.split(":")[-1]
                     else:
-                        return '/'.join(url.split('/')[-2:])
+                        return "/".join(url.split("/")[-2:])
             except subprocess.CalledProcessError:
                 pass
-            return os.environ.get("DEFAULT_REPO", "jleechanorg/worldarchitect.ai")  # Default fallback
+            return os.environ.get(
+                "DEFAULT_REPO", "jleechanorg/worldarchitect.ai"
+            )  # Default fallback
 
     def _get_current_branch(self) -> str:
         """Get current git branch for branch-specific file naming."""
         try:
             result = subprocess.run(
-                ['git', 'branch', '--show-current'],
-                capture_output=True, text=True, check=True, cwd=os.getcwd()
+                ["git", "branch", "--show-current"],
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=os.getcwd(),
             )
             branch_name = result.stdout.strip()
             return self._sanitize_branch_name(branch_name)
@@ -79,11 +87,12 @@ class CopilotCommandBase(ABC):
     def _sanitize_branch_name(self, branch_name: str) -> str:
         """Sanitize branch name using PR #941 standard pattern for consistency."""
         import re
+
         # PR #941 standard: Replace any non-alphanumeric, non-dot, non-underscore, non-dash with underscore
-        sanitized = re.sub(r'[^a-zA-Z0-9._-]', '_', branch_name)
+        sanitized = re.sub(r"[^a-zA-Z0-9._-]", "_", branch_name)
         # Remove leading dots/dashes for filesystem safety
-        sanitized = re.sub(r'^[.-]+', '', sanitized)
-        return sanitized or 'unknown-branch'
+        sanitized = re.sub(r"^[.-]+", "", sanitized)
+        return sanitized or "unknown-branch"
 
     def run_gh_command(self, command: List[str]) -> Dict[str, Any]:
         """Run GitHub CLI command and return parsed JSON.
@@ -110,17 +119,20 @@ class CopilotCommandBase(ABC):
 
     def log(self, message: str):
         """Log informational message with timestamp in CI environments."""
-        if os.environ.get('CI') or os.environ.get('GITHUB_ACTIONS'):
-            timestamp = datetime.now().strftime('%H:%M:%S')
+        if os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"):
+            timestamp = datetime.now().strftime("%H:%M:%S")
             print(f"[{timestamp}] [{self.__class__.__name__}] {message}")
         else:
             print(f"[{self.__class__.__name__}] {message}")
 
     def log_error(self, message: str):
         """Log error message to stderr with timestamp in CI environments."""
-        if os.environ.get('CI') or os.environ.get('GITHUB_ACTIONS'):
-            timestamp = datetime.now().strftime('%H:%M:%S')
-            print(f"[{timestamp}] [{self.__class__.__name__}] ERROR: {message}", file=sys.stderr)
+        if os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"):
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            print(
+                f"[{timestamp}] [{self.__class__.__name__}] ERROR: {message}",
+                file=sys.stderr,
+            )
         else:
             print(f"[{self.__class__.__name__}] ERROR: {message}", file=sys.stderr)
 
@@ -149,24 +161,24 @@ class CopilotCommandBase(ABC):
         """
         try:
             result = self.execute()
-            result['execution_time'] = self.get_execution_time()
+            result["execution_time"] = self.get_execution_time()
 
             # No file saving - stateless operation
 
             # Print summary
-            if result.get('success'):
+            if result.get("success"):
                 self.log(f"✅ Success: {result.get('message', 'Command completed')}")
             else:
                 self.log_error(f"❌ Failed: {result.get('message', 'Command failed')}")
 
-            return 0 if result.get('success') else 1
+            return 0 if result.get("success") else 1
 
         except Exception as e:
             self.log_error(f"Unexpected error: {e}")
-            error_result = {
-                'success': False,
-                'message': str(e),
-                'execution_time': self.get_execution_time()
+            {
+                "success": False,
+                "message": str(e),
+                "execution_time": self.get_execution_time(),
             }
             # No file saving - error logged to stderr
             return 1
@@ -189,7 +201,7 @@ class CopilotCommandBase(ABC):
                 f"./{script_path}",
                 f"../../{script_path}",
                 f"../../../{script_path}",
-                f"/home/jleechan/projects/worldarchitect.ai/worktree_human2/{script_path}"
+                f"/home/jleechan/projects/worldarchitect.ai/worktree_human2/{script_path}",
             ]
 
             result = None
@@ -199,43 +211,47 @@ class CopilotCommandBase(ABC):
                         [location],
                         capture_output=True,
                         text=True,
-                        timeout=300  # 5 minute timeout
+                        timeout=300,  # 5 minute timeout
                     )
                     break
 
             if result is None:
-                raise FileNotFoundError(f"CI replica script not found in any location: {script_path}")
+                raise FileNotFoundError(
+                    f"CI replica script not found in any location: {script_path}"
+                )
 
             return {
-                'success': result.returncode == 0,
-                'stdout': result.stdout,
-                'stderr': result.stderr,
-                'returncode': result.returncode,
-                'executed_at': datetime.now().isoformat()
+                "success": result.returncode == 0,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "returncode": result.returncode,
+                "executed_at": datetime.now().isoformat(),
             }
         except subprocess.TimeoutExpired:
             self.log_error("CI replica timed out after 5 minutes")
             return {
-                'success': False,
-                'error': 'Timeout after 5 minutes',
-                'executed_at': datetime.now().isoformat()
+                "success": False,
+                "error": "Timeout after 5 minutes",
+                "executed_at": datetime.now().isoformat(),
             }
         except FileNotFoundError:
             self.log_error(f"CI replica script not found: {script_path}")
             return {
-                'success': False,
-                'error': f'Script not found: {script_path}',
-                'executed_at': datetime.now().isoformat()
+                "success": False,
+                "error": f"Script not found: {script_path}",
+                "executed_at": datetime.now().isoformat(),
             }
         except Exception as e:
             self.log_error(f"CI replica failed: {e}")
             return {
-                'success': False,
-                'error': str(e),
-                'executed_at': datetime.now().isoformat()
+                "success": False,
+                "error": str(e),
+                "executed_at": datetime.now().isoformat(),
             }
 
-    def compare_ci_results(self, github_ci: Dict[str, Any], local_ci: Dict[str, Any]) -> Dict[str, Any]:
+    def compare_ci_results(
+        self, github_ci: Dict[str, Any], local_ci: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Compare GitHub CI results with local CI replica results.
 
         Args:
@@ -246,31 +262,35 @@ class CopilotCommandBase(ABC):
             Comparison dict with discrepancies highlighted
         """
         comparison = {
-            'timestamp': datetime.now().isoformat(),
-            'match': github_ci.get('success') == local_ci.get('success'),
-            'github_ci': github_ci,
-            'local_ci': local_ci,
-            'discrepancies': []
+            "timestamp": datetime.now().isoformat(),
+            "match": github_ci.get("success") == local_ci.get("success"),
+            "github_ci": github_ci,
+            "local_ci": local_ci,
+            "discrepancies": [],
         }
 
         # Check basic success/failure match
-        if github_ci.get('success') != local_ci.get('success'):
-            comparison['discrepancies'].append({
-                'type': 'status_mismatch',
-                'github': 'passing' if github_ci.get('success') else 'failing',
-                'local': 'passing' if local_ci.get('success') else 'failing'
-            })
+        if github_ci.get("success") != local_ci.get("success"):
+            comparison["discrepancies"].append(
+                {
+                    "type": "status_mismatch",
+                    "github": "passing" if github_ci.get("success") else "failing",
+                    "local": "passing" if local_ci.get("success") else "failing",
+                }
+            )
 
         # Extract test results if available
-        github_tests = self._extract_test_results(github_ci.get('stdout', ''))
-        local_tests = self._extract_test_results(local_ci.get('stdout', ''))
+        github_tests = self._extract_test_results(github_ci.get("stdout", ""))
+        local_tests = self._extract_test_results(local_ci.get("stdout", ""))
 
         if github_tests != local_tests:
-            comparison['discrepancies'].append({
-                'type': 'test_count_mismatch',
-                'github_tests': github_tests,
-                'local_tests': local_tests
-            })
+            comparison["discrepancies"].append(
+                {
+                    "type": "test_count_mismatch",
+                    "github_tests": github_tests,
+                    "local_tests": local_tests,
+                }
+            )
 
         return comparison
 
@@ -287,10 +307,10 @@ class CopilotCommandBase(ABC):
 
         # Common test result patterns
         patterns = {
-            'passed': r'(\d+) passed',
-            'failed': r'(\d+) failed',
-            'skipped': r'(\d+) skipped',
-            'errors': r'(\d+) error'
+            "passed": r"(\d+) passed",
+            "failed": r"(\d+) failed",
+            "skipped": r"(\d+) skipped",
+            "errors": r"(\d+) error",
         }
 
         results = {}
@@ -315,11 +335,9 @@ class VerificationMixin:
         """Log error for mixin - should be provided by base class."""
         print(f"[Verification] ERROR: {message}", file=sys.stderr)
 
-    def verify_with_retry(self,
-                         verify_func,
-                         expected_result,
-                         max_attempts: int = 3,
-                         backoff_base: int = 5) -> bool:
+    def verify_with_retry(
+        self, verify_func, expected_result, max_attempts: int = 3, backoff_base: int = 5
+    ) -> bool:
         """Verify with exponential backoff retry.
 
         Args:

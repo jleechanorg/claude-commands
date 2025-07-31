@@ -43,7 +43,9 @@ class TestGodModeJsonLoggingBug(unittest.TestCase):
         narrative_text, structured_response = parse_structured_response(raw_json_string)
 
         # Correct behavior: only narrative text, no JSON structure
-        assert narrative_text == "Test god mode response with\nnewlines and special chars."
+        assert (
+            narrative_text == "Test god mode response with\nnewlines and special chars."
+        )
         assert '"narrative":' not in narrative_text
         assert '"god_mode_response":' not in narrative_text
 
@@ -73,7 +75,9 @@ class TestGodModeJsonLoggingBug(unittest.TestCase):
             or logged_content.startswith("{")
         )
 
-        assert not contains_json_structure, f"Logged content should not contain JSON structure. Got: {logged_content}"
+        assert (
+            not contains_json_structure
+        ), f"Logged content should not contain JSON structure. Got: {logged_content}"
 
         # Correct behavior: logged content should be clean narrative
         assert logged_content == "Divine command executed successfully."

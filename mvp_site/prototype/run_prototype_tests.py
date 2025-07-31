@@ -105,7 +105,7 @@ def test_performance():
     duration = time.time() - start
     avg_time = duration / 10
 
-    print(f"\n   Average validation time: {avg_time*1000:.2f}ms")
+    print(f"\n   Average validation time: {avg_time * 1000:.2f}ms")
     print("   Target: <50ms")
 
     if avg_time < 0.05:

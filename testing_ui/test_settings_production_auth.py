@@ -38,7 +38,9 @@ def test_settings_button_navigation_with_production_auth(page: Page):
     # Look for either sign-in interface or user email
     try:
         # Try to find sign-in button (not authenticated)
-        sign_in_button = page.wait_for_selector("text=Sign in with Google", timeout=3000)
+        page.wait_for_selector(
+            "text=Sign in with Google", timeout=3000
+        )
 
         # In a real production test, we would:
         # 1. Click the sign-in button
@@ -113,7 +115,11 @@ def test_settings_api_functionality_with_production_auth(page: Page):
         time.sleep(2)
 
         # Verify no API authentication errors
-        api_errors = [msg for msg in console_messages if "401" in msg or "Unauthorized" in msg or "No token provided" in msg]
+        api_errors = [
+            msg
+            for msg in console_messages
+            if "401" in msg or "Unauthorized" in msg or "No token provided" in msg
+        ]
         assert len(api_errors) == 0, f"API authentication errors found: {api_errors}"
 
         # Test settings interaction (change debug mode)
@@ -127,11 +133,19 @@ def test_settings_api_functionality_with_production_auth(page: Page):
         time.sleep(1)
 
         # Verify no save errors occurred
-        save_errors = [msg for msg in console_messages if "Failed to save" in msg or "error" in msg.lower()]
+        save_errors = [
+            msg
+            for msg in console_messages
+            if "Failed to save" in msg or "error" in msg.lower()
+        ]
 
         # Filter out non-critical errors
-        critical_save_errors = [msg for msg in save_errors if "401" in msg or "Unauthorized" in msg]
-        assert len(critical_save_errors) == 0, f"Settings save errors found: {critical_save_errors}"
+        critical_save_errors = [
+            msg for msg in save_errors if "401" in msg or "Unauthorized" in msg
+        ]
+        assert len(critical_save_errors) == 0, (
+            f"Settings save errors found: {critical_save_errors}"
+        )
 
     except Exception as e:
         pytest.skip(f"Authentication setup required: {e}")

@@ -26,6 +26,7 @@ from .testing_config import TestConfig, TestMode, TestType
 @dataclass
 class ServerInstance:
     """Information about a running test server"""
+
     process: subprocess.Popen
     port: int
     test_type: TestType
@@ -45,11 +46,13 @@ class TestServerManager:
         """Set up logging for server manager"""
         logging.basicConfig(
             level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
         self.logger = logging.getLogger(__name__)
 
-    def find_available_port(self, test_type: TestType, preferred_port: int | None = None) -> int:
+    def find_available_port(
+        self, test_type: TestType, preferred_port: int | None = None
+    ) -> int:
         """Find an available port for the test server"""
         server_config = TestConfig.get_server_config(test_type)
 
@@ -67,29 +70,40 @@ class TestServerManager:
             if self._is_port_available(port):
                 return port
 
-        raise RuntimeError(f"No available ports found for {test_type} in range {server_config.port_range}")
+        raise RuntimeError(
+            f"No available ports found for {test_type} in range {server_config.port_range}"
+        )
 
     def _is_port_available(self, port: int) -> bool:
         """Check if a port is available"""
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                 sock.settimeout(1)
-                result = sock.connect_ex(('localhost', port))
+                result = sock.connect_ex(("localhost", port))
                 return result != 0
         except Exception:
             return False
 
-    def start_server(self, test_type: TestType, test_mode: TestMode = TestMode.MOCK,
-                    port: int | None = None, timeout: int = 30) -> ServerInstance:
+    def start_server(
+        self,
+        test_type: TestType,
+        test_mode: TestMode = TestMode.MOCK,
+        port: int | None = None,
+        timeout: int = 30,
+    ) -> ServerInstance:
         """Start a test server instance"""
 
         # Check if server is already running
         if test_type in self.running_servers:
             existing = self.running_servers[test_type]
             if self._is_server_healthy(existing):
-                self.logger.info(f"Server already running for {test_type} on port {existing.port}")
+                self.logger.info(
+                    f"Server already running for {test_type} on port {existing.port}"
+                )
                 return existing
-            self.logger.warning(f"Existing server for {test_type} is unhealthy, stopping...")
+            self.logger.warning(
+                f"Existing server for {test_type} is unhealthy, stopping..."
+            )
             self.stop_server(test_type)
 
         # Find available port
@@ -108,7 +122,7 @@ class TestServerManager:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 cwd=self._get_project_root(),
-                preexec_fn=os.setsid  # Create process group for easier cleanup
+                preexec_fn=os.setsid,  # Create process group for easier cleanup
             )
 
             # Wait for server to become healthy
@@ -124,7 +138,7 @@ class TestServerManager:
                 port=actual_port,
                 test_type=test_type,
                 base_url=base_url,
-                pid=process.pid
+                pid=process.pid,
             )
 
             self.running_servers[test_type] = server_instance
@@ -168,7 +182,9 @@ class TestServerManager:
         for test_type in list(self.running_servers.keys()):
             self.stop_server(test_type)
 
-    def _setup_server_environment(self, test_mode: TestMode, port: int) -> dict[str, str]:
+    def _setup_server_environment(
+        self, test_mode: TestMode, port: int
+    ) -> dict[str, str]:
         """Set up environment variables for server"""
         env = os.environ.copy()
         env["PORT"] = str(port)
@@ -181,9 +197,7 @@ class TestServerManager:
 
     def _build_server_command(self, port: int) -> list[str]:
         """Build command to start Flask server"""
-        return [
-            sys.executable, "-m", "mvp_site.main", "serve"
-        ]
+        return [sys.executable, "-m", "mvp_site.main", "serve"]
 
     def _get_project_root(self) -> str:
         """Get project root directory using hardcoded path for reliability"""
@@ -238,23 +252,32 @@ class TestServerManager:
 # Global server manager instance
 _server_manager = TestServerManager()
 
+
 # Convenience functions
-def start_test_server(test_type: TestType, test_mode: TestMode = TestMode.MOCK,
-                     port: int | None = None, timeout: int = 30) -> ServerInstance:
+def start_test_server(
+    test_type: TestType,
+    test_mode: TestMode = TestMode.MOCK,
+    port: int | None = None,
+    timeout: int = 30,
+) -> ServerInstance:
     """Start a test server - convenience function"""
     return _server_manager.start_server(test_type, test_mode, port, timeout)
+
 
 def stop_test_server(test_type: TestType) -> bool:
     """Stop a test server - convenience function"""
     return _server_manager.stop_server(test_type)
 
+
 def get_server_instance(test_type: TestType) -> ServerInstance | None:
     """Get running server instance"""
     return _server_manager.running_servers.get(test_type)
 
+
 @contextmanager
-def test_server(test_type: TestType, test_mode: TestMode = TestMode.MOCK,
-               port: int | None = None) -> Generator[ServerInstance, None, None]:
+def test_server(
+    test_type: TestType, test_mode: TestMode = TestMode.MOCK, port: int | None = None
+) -> Generator[ServerInstance, None, None]:
     """Context manager for test server lifecycle"""
     server = start_test_server(test_type, test_mode, port)
     try:
@@ -262,10 +285,12 @@ def test_server(test_type: TestType, test_mode: TestMode = TestMode.MOCK,
     finally:
         stop_test_server(test_type)
 
+
 # Backward compatibility functions
 def start_browser_server(port: int | None = None) -> ServerInstance:
     """Start browser test server - backward compatibility"""
     return start_test_server(TestType.BROWSER, TestMode.MOCK, port)
+
 
 def start_http_server(port: int | None = None) -> ServerInstance:
     """Start HTTP test server - backward compatibility"""

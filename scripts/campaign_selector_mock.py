@@ -12,7 +12,7 @@ from datetime import datetime
 def generate_mock_campaigns():
     """Generate mock campaign data with realistic desync patterns."""
 
-    campaigns = [
+    return [
         {
             "campaign_id": "sariel_v2_001",
             "campaign_name": "Sariel v2: The Awakening",
@@ -166,7 +166,6 @@ def generate_mock_campaigns():
         },
     ]
 
-    return campaigns
 
 
 def generate_report():

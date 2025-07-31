@@ -33,7 +33,7 @@ def get_remote_tracking_branch() -> Optional[str]:
             check=True,
         )
         return result.stdout.strip()
-    except:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return None
 
 
@@ -51,7 +51,7 @@ def check_pr_exists_for_branch(branch: Optional[str] = None) -> Optional[Dict]:
         )
         prs = json.loads(result.stdout)
         return prs[0] if prs else None
-    except:
+    except (subprocess.CalledProcessError, json.JSONDecodeError):
         return None
 
 
@@ -65,7 +65,7 @@ def get_git_log_summary(base_branch: str = "main", max_commits: int = 20) -> Lis
             check=True,
         )
         return result.stdout.strip().split("\n") if result.stdout.strip() else []
-    except:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return []
 
 
@@ -79,7 +79,7 @@ def get_files_changed(base_branch: str = "main") -> List[str]:
             check=True,
         )
         return result.stdout.strip().split("\n") if result.stdout.strip() else []
-    except:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return []
 
 

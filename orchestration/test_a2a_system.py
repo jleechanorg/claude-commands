@@ -10,9 +10,12 @@ import time
 
 # Set test A2A directory
 test_dir = tempfile.mkdtemp()
-os.environ['A2A_BASE_DIR'] = f"{test_dir}/a2a"
+os.environ["A2A_BASE_DIR"] = f"{test_dir}/a2a"
 
 # Import A2A components after setting environment
+import contextlib
+import sys
+
 from a2a_agent_wrapper import create_a2a_wrapper
 from a2a_integration import A2A_BASE_DIR, create_a2a_client, get_a2a_status
 from a2a_monitor import A2AMonitor
@@ -27,8 +30,12 @@ def test_basic_a2a_functionality():
         # Create two test agents with secure temporary directories
         agent1_workspace = tempfile.mkdtemp(prefix="test-agent-1-")
         agent2_workspace = tempfile.mkdtemp(prefix="test-agent-2-")
-        agent1 = create_a2a_client("test-agent-1", "frontend", ["javascript", "react"], agent1_workspace)
-        agent2 = create_a2a_client("test-agent-2", "backend", ["python", "api"], agent2_workspace)
+        agent1 = create_a2a_client(
+            "test-agent-1", "frontend", ["javascript", "react"], agent1_workspace
+        )
+        agent2 = create_a2a_client(
+            "test-agent-2", "backend", ["python", "api"], agent2_workspace
+        )
 
         # Test agent discovery
         agents = agent1.discover_agents()
@@ -46,7 +53,9 @@ def test_basic_a2a_functionality():
         assert len(available_tasks) >= 1, "Should find published task"
 
         # Test messaging
-        success = agent1.send_message("test-agent-2", "status", {"message": "Hello from agent 1"})
+        success = agent1.send_message(
+            "test-agent-2", "status", {"message": "Hello from agent 1"}
+        )
         print(f"✓ Messaging: Send success = {success}")
         assert success, "Message should be sent successfully"
 
@@ -56,7 +65,9 @@ def test_basic_a2a_functionality():
 
         # Test system status
         status = get_a2a_status()
-        print(f"✓ System status: {status['agents_online']} agents online, {status['available_tasks']} tasks available")
+        print(
+            f"✓ System status: {status['agents_online']} agents online, {status['available_tasks']} tasks available"
+        )
 
         print("✅ Basic A2A functionality test PASSED")
         return True
@@ -84,7 +95,7 @@ def test_a2a_wrapper():
             agent_id="wrapper-test-1",
             agent_type="testing",
             capabilities=["python", "testing"],
-            workspace=wrapper_workspace
+            workspace=wrapper_workspace,
         )
 
         # Start wrapper
@@ -113,10 +124,8 @@ def test_a2a_wrapper():
         return False
     finally:
         # Cleanup temporary workspace
-        try:
+        with contextlib.suppress(Exception):
             shutil.rmtree(wrapper_workspace, ignore_errors=True)
-        except Exception:
-            pass
 
 
 def test_a2a_monitor():
@@ -161,7 +170,9 @@ def test_task_dispatcher_integration():
 
         if dispatcher.a2a_enabled:
             # Test A2A task broadcasting
-            task_id = dispatcher.broadcast_task_to_a2a("Test orchestration task", ["orchestration"])
+            task_id = dispatcher.broadcast_task_to_a2a(
+                "Test orchestration task", ["orchestration"]
+            )
             print(f"✓ Task broadcast: {task_id}")
 
             # Test A2A status
@@ -188,7 +199,7 @@ def run_all_tests():
         test_basic_a2a_functionality,
         test_a2a_wrapper,
         test_a2a_monitor,
-        test_task_dispatcher_integration
+        test_task_dispatcher_integration,
     ]
 
     passed = 0
@@ -222,4 +233,4 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Warning: Could not clean up test directory: {e}")
 
-    exit(exit_code)
+    sys.exit(exit_code)

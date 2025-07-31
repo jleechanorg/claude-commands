@@ -12,6 +12,7 @@ from message_broker import MessageBroker, MessageType, TaskMessage
 
 try:
     from a2a_agent_wrapper import create_a2a_wrapper
+
     A2A_WRAPPER_AVAILABLE = True
 except ImportError:
     A2A_WRAPPER_AVAILABLE = False
@@ -19,6 +20,7 @@ except ImportError:
 # Keep legacy adapter for compatibility
 try:
     from a2a_adapter import A2AAdapter, A2AMessage
+
     LEGACY_A2A_AVAILABLE = True
 except ImportError:
     LEGACY_A2A_AVAILABLE = False
@@ -29,8 +31,14 @@ import sys
 class AgentBase:
     """Base class for all agents with A2A support."""
 
-    def __init__(self, agent_id: str, agent_type: str, broker: MessageBroker,
-                 enable_a2a: bool = True, capabilities: list = None):
+    def __init__(
+        self,
+        agent_id: str,
+        agent_type: str,
+        broker: MessageBroker,
+        enable_a2a: bool = True,
+        capabilities: list = None,
+    ):
         self.agent_id = agent_id
         self.agent_type = agent_type
         self.broker = broker
@@ -50,7 +58,7 @@ class AgentBase:
                     agent_id=agent_id,
                     agent_type=agent_type,
                     capabilities=self.capabilities,
-                    workspace=f"/tmp/orchestration/agents/{agent_id}"
+                    workspace=f"/tmp/orchestration/agents/{agent_id}",
                 )
                 print(f"Agent {agent_id} initialized with new A2A wrapper")
             elif LEGACY_A2A_AVAILABLE:
@@ -74,7 +82,9 @@ class AgentBase:
             self.a2a_wrapper.start()
         # Register with legacy A2A adapter if enabled
         elif self.enable_a2a and self.a2a_adapter:
-            self.a2a_adapter.register_agent(self.agent_id, self.agent_type, self.capabilities)
+            self.a2a_adapter.register_agent(
+                self.agent_id, self.agent_type, self.capabilities
+            )
 
         # Start message processing thread
         self.message_thread = threading.Thread(target=self._process_messages)
@@ -83,7 +93,9 @@ class AgentBase:
 
         # Start A2A message processing thread
         if self.enable_a2a:
-            self.a2a_message_thread = threading.Thread(target=self._process_a2a_messages)
+            self.a2a_message_thread = threading.Thread(
+                target=self._process_a2a_messages
+            )
             self.a2a_message_thread.daemon = True
             self.a2a_message_thread.start()
 
@@ -138,10 +150,14 @@ class AgentBase:
         print(f"Agent {self.agent_id} received A2A message: {message.payload}")
 
         # Basic protocol handling
-        if message.payload.get('action') == 'ping':
+        if message.payload.get("action") == "ping":
             # Respond to ping
-            response_data = {'action': 'pong', 'agent_id': self.agent_id, 'timestamp': time.time()}
-            if message.message_type.value == 'request':
+            response_data = {
+                "action": "pong",
+                "agent_id": self.agent_id,
+                "timestamp": time.time(),
+            }
+            if message.message_type.value == "request":
                 self.a2a_adapter.send_response(self.agent_id, message, response_data)
 
     def _heartbeat_loop(self):
@@ -155,7 +171,7 @@ class AgentBase:
                     "status": "healthy",
                     "uptime": time.time() - self.start_time,
                     "capabilities": self.capabilities,
-                    "last_task": getattr(self, 'last_task_time', None)
+                    "last_task": getattr(self, "last_task_time", None),
                 }
 
                 success = self.broker.heartbeat(self.agent_id, health_data)
@@ -165,7 +181,9 @@ class AgentBase:
                 else:
                     consecutive_failures += 1
                     if consecutive_failures >= 3:
-                        print(f"Agent {self.agent_id} heartbeat failed {consecutive_failures} times - may be disconnected")
+                        print(
+                            f"Agent {self.agent_id} heartbeat failed {consecutive_failures} times - may be disconnected"
+                        )
 
                 time.sleep(30)
             except Exception as e:
@@ -355,8 +373,9 @@ while True:
         if "analyze" in desc_lower:
             # Perform analysis
             components = description.split()
-            analysis = f"Analysis complete: Found {len(components)} components in request"
-            return analysis
+            return (
+                f"Analysis complete: Found {len(components)} components in request"
+            )
         if "validate" in desc_lower:
             # Perform validation
             return f"Validation passed: Task '{description}' meets requirements"
@@ -442,8 +461,6 @@ def list_tmux_sessions():
 
 
 if __name__ == "__main__":
-
-
     if len(sys.argv) > 1:
         agent_type = sys.argv[1]
 

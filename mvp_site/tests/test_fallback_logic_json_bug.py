@@ -34,14 +34,22 @@ class TestFallbackLogicJsonBug(unittest.TestCase):
 
         # CRITICAL BUG: The fallback logic may return JSON structure instead of clean text
         # Check that we don't get any JSON artifacts in the final output
-        assert '"god_mode_response":' not in narrative_text, "Fallback should not return JSON keys"
-        assert '"entities_mentioned":' not in narrative_text, "Fallback should not return JSON keys"
-        assert '"state_updates":' not in narrative_text, "Fallback should not return JSON keys"
+        assert (
+            '"god_mode_response":' not in narrative_text
+        ), "Fallback should not return JSON keys"
+        assert (
+            '"entities_mentioned":' not in narrative_text
+        ), "Fallback should not return JSON keys"
+        assert (
+            '"state_updates":' not in narrative_text
+        ), "Fallback should not return JSON keys"
         assert '{"' not in narrative_text, "Fallback should not return JSON structure"
         assert '"}' not in narrative_text, "Fallback should not return JSON structure"
 
         # Should return clean readable text
-        assert "The gods have spoken" in narrative_text, "Should extract the actual god mode response text"
+        assert (
+            "The gods have spoken" in narrative_text
+        ), "Should extract the actual god mode response text"
 
     def test_incomplete_json_with_quotes_in_content(self):
         """Test JSON with escaped quotes that breaks parsing."""
@@ -82,10 +90,18 @@ class TestFallbackLogicJsonBug(unittest.TestCase):
         )
 
         # This triggers the aggressive cleanup - should NOT leave JSON structure
-        assert '"god_mode_response":' not in narrative_text, "Aggressive cleanup should remove all JSON keys"
-        assert '"entities_mentioned":' not in narrative_text, "Aggressive cleanup should remove all JSON keys"
-        assert '"state_updates":' not in narrative_text, "Aggressive cleanup should remove all JSON keys"
-        assert "artifact_power" not in narrative_text, "Aggressive cleanup should remove nested JSON content"
+        assert (
+            '"god_mode_response":' not in narrative_text
+        ), "Aggressive cleanup should remove all JSON keys"
+        assert (
+            '"entities_mentioned":' not in narrative_text
+        ), "Aggressive cleanup should remove all JSON keys"
+        assert (
+            '"state_updates":' not in narrative_text
+        ), "Aggressive cleanup should remove all JSON keys"
+        assert (
+            "artifact_power" not in narrative_text
+        ), "Aggressive cleanup should remove nested JSON content"
 
         # Should contain readable text
         assert "Power flows through" in narrative_text

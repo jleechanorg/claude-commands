@@ -244,8 +244,7 @@ class MemoryIntegration:
                 memory_section += f"- {obs}\n"
 
         # Inject before the main content
-        enhanced = memory_section + "\n" + original_context
-        return enhanced
+        return memory_section + "\n" + original_context
 
     def get_enhanced_response_context(self, user_input: str) -> str:
         """Main entry point for memory enhancement"""

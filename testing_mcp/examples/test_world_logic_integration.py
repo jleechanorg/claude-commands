@@ -24,7 +24,7 @@ import sys
 import traceback
 import unittest
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'mvp_site'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "mvp_site"))
 
 import world_logic
 from world_logic import (
@@ -53,14 +53,14 @@ class TestUnifiedAPIIntegration(unittest.TestCase):
             "title": "Test Campaign",
             "character": "A brave knight",
             "setting": "Medieval fantasy",
-            "description": "An epic adventure"
+            "description": "An epic adventure",
         }
 
         self.sample_action_request = {
             "user_id": self.test_user_id,
             "campaign_id": self.test_campaign_id,
             "user_input": "I look around the room",
-            "mode": "character"
+            "mode": "character",
         }
 
     def test_world_logic_structure(self):
@@ -68,23 +68,22 @@ class TestUnifiedAPIIntegration(unittest.TestCase):
         print("\n=== Testing Unified API Structure ===")
 
         expected_functions = [
-            'create_campaign_unified',
-            'process_action_unified',
-            'get_campaign_state_unified',
-            'update_campaign_unified',
-            'export_campaign_unified',
-            'get_campaigns_list_unified',
-            'get_user_settings_unified',
-            'update_user_settings_unified',
-            'create_error_response',
-            'create_success_response'
+            "create_campaign_unified",
+            "process_action_unified",
+            "get_campaign_state_unified",
+            "update_campaign_unified",
+            "export_campaign_unified",
+            "get_campaigns_list_unified",
+            "get_user_settings_unified",
+            "update_user_settings_unified",
+            "create_error_response",
+            "create_success_response",
         ]
 
         for func_name in expected_functions:
-            self.assertTrue(hasattr(world_logic, func_name),
-                          f"Missing function: {func_name}")
+            assert hasattr(world_logic, func_name), f"Missing function: {func_name}"
             func = getattr(world_logic, func_name)
-            self.assertTrue(callable(func), f"Not callable: {func_name}")
+            assert callable(func), f"Not callable: {func_name}"
             print(f"✅ {func_name} - Present and callable")
 
     def test_flask_route_integration(self):
@@ -92,30 +91,28 @@ class TestUnifiedAPIIntegration(unittest.TestCase):
         print("\n=== Testing Flask Route Integration ===")
 
         # Read main.py to check for world_logic usage
-        main_py_path = os.path.join('mvp_site', 'main.py')
+        main_py_path = os.path.join("mvp_site", "main.py")
         with open(main_py_path) as f:
             main_py_content = f.read()
 
         # Check for world_logic import
-        self.assertIn('import world_logic', main_py_content,
-                     "main.py should import world_logic")
+        assert "import world_logic" in main_py_content, "main.py should import world_logic"
         print("✅ main.py imports world_logic")
 
         # Check for world_logic function calls in Flask routes
         expected_calls = [
-            'world_logic.get_campaigns_list_unified',
-            'world_logic.get_campaign_state_unified',
-            'world_logic.create_campaign_unified',
-            'world_logic.update_campaign_unified',
-            'world_logic.process_action_unified',
-            'world_logic.export_campaign_unified',
-            'world_logic.get_user_settings_unified',
-            'world_logic.update_user_settings_unified'
+            "world_logic.get_campaigns_list_unified",
+            "world_logic.get_campaign_state_unified",
+            "world_logic.create_campaign_unified",
+            "world_logic.update_campaign_unified",
+            "world_logic.process_action_unified",
+            "world_logic.export_campaign_unified",
+            "world_logic.get_user_settings_unified",
+            "world_logic.update_user_settings_unified",
         ]
 
         for call in expected_calls:
-            self.assertIn(call, main_py_content,
-                         f"main.py should call {call}")
+            assert call in main_py_content, f"main.py should call {call}"
             print(f"✅ Flask route calls {call}")
 
     def test_mcp_server_integration(self):
@@ -123,25 +120,28 @@ class TestUnifiedAPIIntegration(unittest.TestCase):
         print("\n=== Testing MCP Server Integration ===")
 
         # Read world_logic.py to check for world_logic usage
-        world_logic_path = os.path.join('mvp_site', 'world_logic.py')
+        world_logic_path = os.path.join("mvp_site", "world_logic.py")
         with open(world_logic_path) as f:
             world_logic_content = f.read()
 
         # Check for world_logic import
-        has_unified_import = 'import world_logic' in world_logic_content or 'from world_logic' in world_logic_content
+        has_unified_import = (
+            "import world_logic" in world_logic_content
+            or "from world_logic" in world_logic_content
+        )
 
         if has_unified_import:
             print("✅ world_logic.py imports world_logic")
 
             # Check for world_logic function calls in MCP tools
             expected_calls = [
-                'world_logic.create_campaign_unified',
-                'world_logic.process_action_unified',
-                'world_logic.get_campaign_state_unified',
-                'world_logic.update_campaign_unified',
-                'world_logic.export_campaign_unified',
-                'world_logic.get_user_settings_unified',
-                'world_logic.update_user_settings_unified'
+                "world_logic.create_campaign_unified",
+                "world_logic.process_action_unified",
+                "world_logic.get_campaign_state_unified",
+                "world_logic.update_campaign_unified",
+                "world_logic.export_campaign_unified",
+                "world_logic.get_user_settings_unified",
+                "world_logic.update_user_settings_unified",
             ]
 
             for call in expected_calls:
@@ -159,8 +159,8 @@ class TestUnifiedAPIIntegration(unittest.TestCase):
         print("\n=== Testing Business Logic Duplication ===")
 
         # Read both files
-        main_py_path = os.path.join('mvp_site', 'main.py')
-        world_logic_path = os.path.join('mvp_site', 'world_logic.py')
+        main_py_path = os.path.join("mvp_site", "main.py")
+        world_logic_path = os.path.join("mvp_site", "world_logic.py")
 
         with open(main_py_path) as f:
             main_py_content = f.read()
@@ -170,14 +170,14 @@ class TestUnifiedAPIIntegration(unittest.TestCase):
 
         # Check for duplicate business logic patterns
         duplicate_patterns = [
-            '_prepare_game_state',
-            '_cleanup_legacy_state',
-            '_build_campaign_prompt',
-            '_handle_debug_mode_command',
-            'gemini_service.get_initial_story',
-            'gemini_service.continue_story',
-            'firestore_service.create_campaign',
-            'firestore_service.update_campaign_game_state'
+            "_prepare_game_state",
+            "_cleanup_legacy_state",
+            "_build_campaign_prompt",
+            "_handle_debug_mode_command",
+            "gemini_service.get_initial_story",
+            "gemini_service.continue_story",
+            "firestore_service.create_campaign",
+            "firestore_service.update_campaign_game_state",
         ]
 
         duplicates_found = []
@@ -187,14 +187,20 @@ class TestUnifiedAPIIntegration(unittest.TestCase):
 
             if in_main and in_world_logic:
                 duplicates_found.append(pattern)
-                print(f"❌ DUPLICATE: {pattern} found in both main.py and world_logic.py")
+                print(
+                    f"❌ DUPLICATE: {pattern} found in both main.py and world_logic.py"
+                )
             elif in_main:
                 print(f"✅ {pattern} only in main.py (via world_logic)")
             elif in_world_logic:
-                print(f"⚠️  {pattern} only in world_logic.py (needs world_logic integration)")
+                print(
+                    f"⚠️  {pattern} only in world_logic.py (needs world_logic integration)"
+                )
 
         if duplicates_found:
-            print(f"\n❌ Found {len(duplicates_found)} duplicate business logic patterns")
+            print(
+                f"\n❌ Found {len(duplicates_found)} duplicate business logic patterns"
+            )
             print("❌ Business logic is NOT properly unified")
         else:
             print("\n✅ No duplicate business logic patterns detected")
@@ -206,9 +212,9 @@ class TestUnifiedAPIIntegration(unittest.TestCase):
         # Test success response format
         try:
             success_response = world_logic.create_success_response({"test": "data"})
-            self.assertIn("success", success_response)
-            self.assertTrue(success_response["success"])
-            self.assertIn("test", success_response)
+            assert "success" in success_response
+            assert success_response["success"]
+            assert "test" in success_response
             print("✅ Success response format is consistent")
         except Exception as e:
             print(f"❌ Success response format test failed: {e}")
@@ -216,10 +222,10 @@ class TestUnifiedAPIIntegration(unittest.TestCase):
         # Test error response format
         try:
             error_response = world_logic.create_error_response("Test error", 400)
-            self.assertIn("error", error_response)
-            self.assertIn("success", error_response)
-            self.assertFalse(error_response["success"])
-            self.assertIn("status_code", error_response)
+            assert "error" in error_response
+            assert "success" in error_response
+            assert not error_response["success"]
+            assert "status_code" in error_response
             print("✅ Error response format is consistent")
         except Exception as e:
             print(f"❌ Error response format test failed: {e}")
@@ -232,8 +238,8 @@ class TestUnifiedAPIIntegration(unittest.TestCase):
         try:
             # Test missing user_id
             result = await get_campaigns_list_unified({})
-            self.assertIn("error", result)
-            self.assertIn("User ID is required", result["error"])
+            assert "error" in result
+            assert "User ID is required" in result["error"]
             print("✅ Input validation works for missing user_id")
         except Exception as e:
             print(f"❌ Input validation test failed: {e}")
@@ -241,8 +247,8 @@ class TestUnifiedAPIIntegration(unittest.TestCase):
         try:
             # Test missing campaign_id
             result = await get_campaign_state_unified({"user_id": "test"})
-            self.assertIn("error", result)
-            self.assertIn("Campaign ID is required", result["error"])
+            assert "error" in result
+            assert "Campaign ID is required" in result["error"]
             print("✅ Input validation works for missing campaign_id")
         except Exception as e:
             print(f"❌ Input validation test failed: {e}")
@@ -265,8 +271,7 @@ class TestUnifiedAPIIntegration(unittest.TestCase):
 
         for func in unified_functions:
             # Check function signature (should be async)
-            self.assertTrue(asyncio.iscoroutinefunction(func),
-                          f"{func.__name__} should be async")
+            assert asyncio.iscoroutinefunction(func), f"{func.__name__} should be async"
             print(f"✅ {func.__name__} is async")
 
     def run_integration_tests(self):

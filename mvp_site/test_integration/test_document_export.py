@@ -63,7 +63,8 @@ class TestExportEndpoint(unittest.TestCase):
 
                 shutil.copy2(dummy_pdf_path, output_path)
                 # Use the parameters to avoid unused variable warnings
-                assert story_text and output_path
+                assert story_text
+                assert output_path
 
             mock_generate_pdf.side_effect = mock_pdf_generator
 
@@ -74,8 +75,8 @@ class TestExportEndpoint(unittest.TestCase):
             )
 
             # 3. Assert Results
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(response.mimetype, "application/pdf")
+            assert response.status_code == 200
+            assert response.mimetype == "application/pdf"
             mock_get_campaign_by_id.assert_called_once_with(
                 self.user_id, self.campaign_id
             )
@@ -101,9 +102,9 @@ class TestExportEndpoint(unittest.TestCase):
             headers={"X-Test-Bypass-Auth": "true", "X-Test-User-ID": self.user_id},
         )
 
-        self.assertEqual(response.status_code, 404)
+        assert response.status_code == 404
         response_data = response.get_json()
-        self.assertEqual(response_data["error"], "Campaign not found")
+        assert response_data["error"] == "Campaign not found"
         print("--- Test Finished Successfully ---")
 
     def tearDown(self):

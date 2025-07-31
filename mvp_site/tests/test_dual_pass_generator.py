@@ -145,7 +145,9 @@ class TestDualPassGenerator(unittest.TestCase):
         assert "Cassian" in prompt
         assert "Lady Cressida" in prompt
         assert "Throne Room" in prompt
-        assert "naturally present and contribute meaningfully" in prompt  # Generic instruction
+        assert (
+            "naturally present and contribute meaningfully" in prompt
+        )  # Generic instruction
 
     def test_combine_narratives_complete_rewrite(self):
         """Test narrative combination when second pass is complete rewrite"""

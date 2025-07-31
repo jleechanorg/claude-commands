@@ -66,7 +66,7 @@ def test_god_mode():
             print("  ✅ God command executed")
 
             # Check if response indicates god mode was used
-            response_text = result.get("text", "")
+            result.get("text", "")
             if "god_mode_response" in result:
                 print("  🔮 God response field present")
         else:

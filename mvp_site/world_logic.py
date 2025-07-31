@@ -92,7 +92,7 @@ def json_default_serializer(obj):
     import datetime
 
     # Handle datetime objects
-    if isinstance(obj, (datetime.datetime, datetime.date)):
+    if isinstance(obj, datetime.datetime | datetime.date):
         return obj.isoformat()
 
     # Handle objects with to_dict method (like GameState, entities)
@@ -317,8 +317,7 @@ def _handle_debug_mode_command(
         if user_input_stripped == "GOD_ASK_STATE":
             if debug_mode_enabled:
                 return {KEY_SUCCESS: True, "game_state": current_game_state.to_dict()}
-            else:
-                return {KEY_SUCCESS: True, KEY_RESPONSE: "Debug mode is not enabled"}
+            return {KEY_SUCCESS: True, KEY_RESPONSE: "Debug mode is not enabled"}
 
         # Simple SET command handling
         if user_input_stripped.startswith("GOD_MODE_SET:"):

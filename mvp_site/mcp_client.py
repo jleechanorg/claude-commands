@@ -335,7 +335,7 @@ class MCPClient:
         """
         # Check if we're already in an event loop
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
         except RuntimeError:
             # No event loop running, safe to use asyncio.run
             return asyncio.run(self.call_tool(tool_name, arguments))
@@ -361,7 +361,7 @@ class MCPClient:
         """
         # Check if we're already in an event loop
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
         except RuntimeError:
             # No event loop running, safe to use asyncio.run
             return asyncio.run(self.get_resource(uri))

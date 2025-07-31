@@ -14,14 +14,14 @@ class UnifiedAPIIntegrationAnalyzer:
     """Analyzes unified API integration across Flask and MCP interfaces."""
 
     def __init__(self):
-        self.mvp_site_path = os.path.join(os.path.dirname(__file__), 'mvp_site')
+        self.mvp_site_path = os.path.join(os.path.dirname(__file__), "mvp_site")
         self.results = {}
 
     def analyze_world_logic_structure(self) -> dict:
         """Analyze world_logic.py structure and available functions."""
         print("=== Analyzing Unified API Structure ===")
 
-        world_logic_path = os.path.join(self.mvp_site_path, 'world_logic.py')
+        world_logic_path = os.path.join(self.mvp_site_path, "world_logic.py")
 
         if not os.path.exists(world_logic_path):
             return {"error": "world_logic.py not found"}
@@ -30,11 +30,13 @@ class UnifiedAPIIntegrationAnalyzer:
             content = f.read()
 
         # Find async function definitions
-        async_functions = re.findall(r'async def (\w+)\(', content)
-        regular_functions = re.findall(r'^def (\w+)\(', content, re.MULTILINE)
+        async_functions = re.findall(r"async def (\w+)\(", content)
+        regular_functions = re.findall(r"^def (\w+)\(", content, re.MULTILINE)
 
         # Filter out private functions
-        public_functions = [f for f in async_functions + regular_functions if not f.startswith('_')]
+        public_functions = [
+            f for f in async_functions + regular_functions if not f.startswith("_")
+        ]
 
         print(f"✅ Found {len(public_functions)} public functions in world_logic.py:")
         for func in sorted(public_functions):
@@ -44,14 +46,14 @@ class UnifiedAPIIntegrationAnalyzer:
             "public_functions": public_functions,
             "async_functions": async_functions,
             "regular_functions": regular_functions,
-            "total_lines": len(content.split('\n'))
+            "total_lines": len(content.split("\n")),
         }
 
     def analyze_flask_integration(self) -> dict:
         """Analyze Flask routes integration with world_logic."""
         print("\n=== Analyzing Flask Integration ===")
 
-        main_py_path = os.path.join(self.mvp_site_path, 'main.py')
+        main_py_path = os.path.join(self.mvp_site_path, "main.py")
 
         if not os.path.exists(main_py_path):
             return {"error": "main.py not found"}
@@ -60,10 +62,10 @@ class UnifiedAPIIntegrationAnalyzer:
             content = f.read()
 
         # Check for world_logic import
-        has_import = 'import world_logic' in content
+        has_import = "import world_logic" in content
 
         # Find world_logic function calls
-        unified_calls = re.findall(r'world_logic\.(\w+)\(', content)
+        unified_calls = re.findall(r"world_logic\.(\w+)\(", content)
         unique_calls = list(set(unified_calls))
 
         # Count Flask routes
@@ -82,14 +84,14 @@ class UnifiedAPIIntegrationAnalyzer:
             "unified_calls": unique_calls,
             "call_counts": {call: unified_calls.count(call) for call in unique_calls},
             "routes_count": len(routes),
-            "routes": routes
+            "routes": routes,
         }
 
     def analyze_mcp_integration(self) -> dict:
         """Analyze MCP server integration with world_logic."""
         print("\n=== Analyzing MCP Server Integration ===")
 
-        world_logic_path = os.path.join(self.mvp_site_path, 'world_logic.py')
+        world_logic_path = os.path.join(self.mvp_site_path, "world_logic.py")
 
         if not os.path.exists(world_logic_path):
             return {"error": "world_logic.py not found"}
@@ -98,17 +100,17 @@ class UnifiedAPIIntegrationAnalyzer:
             content = f.read()
 
         # Check for world_logic import
-        has_import = 'import world_logic' in content or 'from world_logic' in content
+        has_import = "import world_logic" in content or "from world_logic" in content
 
         # Find world_logic function calls
-        unified_calls = re.findall(r'world_logic\.(\w+)\(', content)
+        unified_calls = re.findall(r"world_logic\.(\w+)\(", content)
         unique_calls = list(set(unified_calls))
 
         # Find MCP tool functions
-        tool_functions = re.findall(r'async def (_\w+_tool)\(', content)
+        tool_functions = re.findall(r"async def (_\w+_tool)\(", content)
 
         # Find regular async functions
-        async_functions = re.findall(r'async def (\w+)\(', content)
+        async_functions = re.findall(r"async def (\w+)\(", content)
 
         print(f"❌ world_logic import: {has_import}")
         print(f"❌ Found {len(unique_calls)} world_logic calls:")
@@ -128,37 +130,41 @@ class UnifiedAPIIntegrationAnalyzer:
             "unified_calls": unique_calls,
             "call_counts": {call: unified_calls.count(call) for call in unique_calls},
             "tool_functions": tool_functions,
-            "async_functions": async_functions
+            "async_functions": async_functions,
         }
 
     def analyze_business_logic_duplication(self) -> dict:
         """Analyze business logic duplication between Flask and MCP."""
         print("\n=== Analyzing Business Logic Duplication ===")
 
-        main_py_path = os.path.join(self.mvp_site_path, 'main.py')
-        world_logic_path = os.path.join(self.mvp_site_path, 'world_logic.py')
-        world_logic_path = os.path.join(self.mvp_site_path, 'world_logic.py')
+        main_py_path = os.path.join(self.mvp_site_path, "main.py")
+        world_logic_path = os.path.join(self.mvp_site_path, "world_logic.py")
+        world_logic_path = os.path.join(self.mvp_site_path, "world_logic.py")
 
         files_content = {}
-        for name, path in [("main.py", main_py_path), ("world_logic.py", world_logic_path), ("world_logic.py", world_logic_path)]:
+        for name, path in [
+            ("main.py", main_py_path),
+            ("world_logic.py", world_logic_path),
+            ("world_logic.py", world_logic_path),
+        ]:
             if os.path.exists(path):
                 with open(path) as f:
                     files_content[name] = f.read()
 
         # Business logic patterns to check for duplication
         patterns = [
-            '_prepare_game_state',
-            '_cleanup_legacy_state',
-            '_build_campaign_prompt',
-            '_handle_debug_mode_command',
-            'gemini_service.get_initial_story',
-            'gemini_service.continue_story',
-            'firestore_service.create_campaign',
-            'firestore_service.update_campaign_game_state',
-            'GameState.from_dict',
-            'process_story_for_display',
-            'get_user_settings',
-            'update_user_settings'
+            "_prepare_game_state",
+            "_cleanup_legacy_state",
+            "_build_campaign_prompt",
+            "_handle_debug_mode_command",
+            "gemini_service.get_initial_story",
+            "gemini_service.continue_story",
+            "firestore_service.create_campaign",
+            "firestore_service.update_campaign_game_state",
+            "GameState.from_dict",
+            "process_story_for_display",
+            "get_user_settings",
+            "update_user_settings",
         ]
 
         duplications = {}
@@ -181,14 +187,14 @@ class UnifiedAPIIntegrationAnalyzer:
         return {
             "duplicated_patterns": duplications,
             "patterns_checked": patterns,
-            "files_analyzed": list(files_content.keys())
+            "files_analyzed": list(files_content.keys()),
         }
 
     def analyze_json_response_consistency(self) -> dict:
         """Analyze JSON response format consistency."""
         print("\n=== Analyzing JSON Response Consistency ===")
 
-        world_logic_path = os.path.join(self.mvp_site_path, 'world_logic.py')
+        world_logic_path = os.path.join(self.mvp_site_path, "world_logic.py")
 
         if not os.path.exists(world_logic_path):
             return {"error": "world_logic.py not found"}
@@ -198,18 +204,18 @@ class UnifiedAPIIntegrationAnalyzer:
 
         # Check for standard response patterns
         success_patterns = [
-            'KEY_SUCCESS',
+            "KEY_SUCCESS",
             '"success": True',
             '"success": true',
-            'create_success_response'
+            "create_success_response",
         ]
 
         error_patterns = [
-            'KEY_ERROR',
+            "KEY_ERROR",
             '"error":',
             '"success": False',
             '"success": false',
-            'create_error_response'
+            "create_error_response",
         ]
 
         success_found = [p for p in success_patterns if p in content]
@@ -224,13 +230,15 @@ class UnifiedAPIIntegrationAnalyzer:
             print(f"   - {pattern}")
 
         # Check for response helper functions
-        has_helper_functions = 'create_error_response' in content and 'create_success_response' in content
+        has_helper_functions = (
+            "create_error_response" in content and "create_success_response" in content
+        )
         print(f"✅ Response helper functions: {has_helper_functions}")
 
         return {
             "success_patterns": success_found,
             "error_patterns": error_found,
-            "has_helper_functions": has_helper_functions
+            "has_helper_functions": has_helper_functions,
         }
 
     def run_complete_analysis(self) -> dict:
@@ -253,26 +261,48 @@ class UnifiedAPIIntegrationAnalyzer:
         print("INTEGRATION ASSESSMENT")
         print("=" * 70)
 
-        flask_integrated = results["flask"].get("has_unified_import", False) and len(results["flask"].get("unified_calls", [])) > 0
-        mcp_integrated = results["mcp"].get("has_unified_import", False) and len(results["mcp"].get("unified_calls", [])) > 0
+        flask_integrated = (
+            results["flask"].get("has_unified_import", False)
+            and len(results["flask"].get("unified_calls", [])) > 0
+        )
+        mcp_integrated = (
+            results["mcp"].get("has_unified_import", False)
+            and len(results["mcp"].get("unified_calls", [])) > 0
+        )
 
-        print(f"✅ Flask Integration Status: {'COMPLETE' if flask_integrated else 'INCOMPLETE'}")
-        print(f"❌ MCP Integration Status: {'COMPLETE' if mcp_integrated else 'INCOMPLETE'}")
+        print(
+            f"✅ Flask Integration Status: {'COMPLETE' if flask_integrated else 'INCOMPLETE'}"
+        )
+        print(
+            f"❌ MCP Integration Status: {'COMPLETE' if mcp_integrated else 'INCOMPLETE'}"
+        )
 
         duplication_count = len(results["duplication"].get("duplicated_patterns", {}))
-        print(f"{'❌' if duplication_count > 0 else '✅'} Business Logic Duplication: {duplication_count} patterns duplicated")
+        print(
+            f"{'❌' if duplication_count > 0 else '✅'} Business Logic Duplication: {duplication_count} patterns duplicated"
+        )
 
-        has_consistent_responses = results["json_consistency"].get("has_helper_functions", False)
-        print(f"✅ JSON Response Consistency: {'STANDARDIZED' if has_consistent_responses else 'NEEDS_WORK'}")
+        has_consistent_responses = results["json_consistency"].get(
+            "has_helper_functions", False
+        )
+        print(
+            f"✅ JSON Response Consistency: {'STANDARDIZED' if has_consistent_responses else 'NEEDS_WORK'}"
+        )
 
         # Overall assessment
         print("\n📊 OVERALL STATUS:")
         if flask_integrated and mcp_integrated and duplication_count == 0:
-            print("✅ FULLY INTEGRATED - Both Flask and MCP use unified API with no duplication")
+            print(
+                "✅ FULLY INTEGRATED - Both Flask and MCP use unified API with no duplication"
+            )
         elif flask_integrated and not mcp_integrated:
-            print("⚠️  PARTIALLY INTEGRATED - Flask uses unified API, MCP needs integration")
+            print(
+                "⚠️  PARTIALLY INTEGRATED - Flask uses unified API, MCP needs integration"
+            )
         elif not flask_integrated and mcp_integrated:
-            print("⚠️  PARTIALLY INTEGRATED - MCP uses unified API, Flask needs integration")
+            print(
+                "⚠️  PARTIALLY INTEGRATED - MCP uses unified API, Flask needs integration"
+            )
         else:
             print("❌ NOT INTEGRATED - Neither Flask nor MCP properly use unified API")
 
@@ -280,7 +310,7 @@ class UnifiedAPIIntegrationAnalyzer:
             "flask_integrated": flask_integrated,
             "mcp_integrated": mcp_integrated,
             "duplication_count": duplication_count,
-            "has_consistent_responses": has_consistent_responses
+            "has_consistent_responses": has_consistent_responses,
         }
 
         return results

@@ -42,11 +42,7 @@ def contains_debug_tags(text: str) -> bool:
         STATE_UPDATES_PATTERN,
     ]
 
-    for pattern in patterns:
-        if pattern.search(text):
-            return True
-
-    return False
+    return any(pattern.search(text) for pattern in patterns)
 
 
 def strip_debug_content(text: str) -> str:
@@ -67,9 +63,7 @@ def strip_debug_content(text: str) -> str:
     processed = DEBUG_STATE_PATTERN.sub("", processed)
     processed = DEBUG_ROLL_PATTERN.sub("", processed)
     processed = STATE_UPDATES_PATTERN.sub("", processed)
-    processed = STATE_UPDATES_MALFORMED_PATTERN.sub("", processed)
-
-    return processed
+    return STATE_UPDATES_MALFORMED_PATTERN.sub("", processed)
 
 
 def strip_state_updates_only(text: str) -> str:
@@ -87,9 +81,7 @@ def strip_state_updates_only(text: str) -> str:
 
     # Remove only STATE_UPDATES_PROPOSED blocks
     processed = STATE_UPDATES_PATTERN.sub("", text)
-    processed = STATE_UPDATES_MALFORMED_PATTERN.sub("", processed)
-
-    return processed
+    return STATE_UPDATES_MALFORMED_PATTERN.sub("", processed)
 
 
 def process_story_entry_for_display(

@@ -128,15 +128,15 @@ def test_field_format_mismatch_detection():
 
             for i, entry in enumerate(story_entries):
                 entry_text = entry.inner_text().strip()
-                print(f"Entry {i+1} length: {len(entry_text)} characters")
+                print(f"Entry {i + 1} length: {len(entry_text)} characters")
 
                 if len(entry_text) > 50:  # Meaningful narrative should be substantial
                     print(
-                        f"✓ Entry {i+1} has substantial content: {entry_text[:100]}..."
+                        f"✓ Entry {i + 1} has substantial content: {entry_text[:100]}..."
                     )
                 else:
                     empty_entries += 1
-                    print(f"⚠️  Entry {i+1} appears empty or minimal: '{entry_text}'")
+                    print(f"⚠️  Entry {i + 1} appears empty or minimal: '{entry_text}'")
 
             # Screenshot story content area
             page.screenshot(

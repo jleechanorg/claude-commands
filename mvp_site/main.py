@@ -304,7 +304,7 @@ def create_app() -> Flask:
             if asyncio.iscoroutinefunction(f):
                 # Check if we're already in an event loop
                 try:
-                    loop = asyncio.get_running_loop()
+                    asyncio.get_running_loop()
                 except RuntimeError:
                     # No event loop running, safe to use asyncio.run
                     return asyncio.run(f(*args, **kwargs))

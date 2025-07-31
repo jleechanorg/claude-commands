@@ -18,18 +18,18 @@ class FakeCodeExamples:
         """FAKE: Hardcoded responses masquerading as AI"""
         user_input_lower = user_input.lower()
 
-        if 'error' in user_input_lower or 'bug' in user_input_lower:
+        if "error" in user_input_lower or "bug" in user_input_lower:
             return "Thank you for identifying this issue! We'll look into it."
-        if 'suggestion' in user_input_lower:
+        if "suggestion" in user_input_lower:
             return "Excellent suggestion! We appreciate your feedback."
-        if 'help' in user_input_lower:
+        if "help" in user_input_lower:
             return "I'm here to help! What do you need assistance with?"
         return "I understand. Let me process that for you."
 
     def fake_sentiment_analyzer(self, text: str) -> dict:
         """FAKE: Keyword-based sentiment pretending to be ML"""
-        positive_words = ['good', 'great', 'excellent', 'love', 'amazing']
-        negative_words = ['bad', 'terrible', 'hate', 'awful', 'horrible']
+        positive_words = ["good", "great", "excellent", "love", "amazing"]
+        negative_words = ["bad", "terrible", "hate", "awful", "horrible"]
 
         text_lower = text.lower()
         positive_count = sum(1 for word in positive_words if word in text_lower)
@@ -47,22 +47,24 @@ class FakeCodeExamples:
         return [
             {"id": 1, "status": "processed", "result": "success"},
             {"id": 2, "status": "processed", "result": "success"},
-            {"id": 3, "status": "processed", "result": "success"}
+            {"id": 3, "status": "processed", "result": "success"},
         ]
 
     def fake_api_client(self, endpoint: str, params: dict) -> dict:
         """FAKE: Mock API responses without real network calls"""
         mock_responses = {
             "/users": {"users": [{"id": 1, "name": "Test User"}]},
-            "/products": {"products": [{"id": 1, "name": "Test Product", "price": 99.99}]},
-            "/orders": {"orders": [{"id": 1, "status": "completed", "total": 199.99}]}
+            "/products": {
+                "products": [{"id": 1, "name": "Test Product", "price": 99.99}]
+            },
+            "/orders": {"orders": [{"id": 1, "status": "completed", "total": 199.99}]},
         }
 
         return mock_responses.get(endpoint, {"error": "Not found"})
 
     def fake_complexity_analyzer(self, code: str) -> str:
         """FAKE: Trivial logic claiming to analyze complexity"""
-        line_count = len(code.split('\n'))
+        line_count = len(code.split("\n"))
 
         if line_count < 10:
             return "Low complexity"
@@ -86,7 +88,7 @@ class RealCodeExamples:
             return False, "Input cannot exceed 100 characters"
 
         # Check for SQL injection patterns
-        dangerous_patterns = ['DROP TABLE', 'DELETE FROM', '; --', 'UNION SELECT']
+        dangerous_patterns = ["DROP TABLE", "DELETE FROM", "; --", "UNION SELECT"]
         for pattern in dangerous_patterns:
             if pattern in user_input.upper():
                 return False, "Invalid input: contains dangerous pattern"
@@ -101,40 +103,40 @@ class RealCodeExamples:
         for key, value in data.items():
             if isinstance(value, str):
                 transformed[key] = value.strip().lower()
-            elif isinstance(value, (int, float)):
+            elif isinstance(value, int | float):
                 transformed[key] = round(value * 1.1, 2)  # Apply 10% increase
             elif isinstance(value, list):
-                transformed[key] = [self.real_data_transformer(item)
-                                  if isinstance(item, dict) else item
-                                  for item in value]
+                transformed[key] = [
+                    self.real_data_transformer(item) if isinstance(item, dict) else item
+                    for item in value
+                ]
             else:
                 transformed[key] = value
 
         # Add metadata
-        transformed['_processed_at'] = datetime.datetime.now().isoformat()
-        transformed['_version'] = '1.0'
+        transformed["_processed_at"] = datetime.datetime.now().isoformat()
+        transformed["_version"] = "1.0"
 
         return transformed
 
     def real_error_handler(self, exception: Exception) -> dict:
         """REAL: Proper error handling with logging and context"""
         error_context = {
-            'error_type': type(exception).__name__,
-            'error_message': str(exception),
-            'traceback': traceback.format_exc(),
-            'timestamp': datetime.datetime.now().isoformat()
+            "error_type": type(exception).__name__,
+            "error_message": str(exception),
+            "traceback": traceback.format_exc(),
+            "timestamp": datetime.datetime.now().isoformat(),
         }
 
         # Log the error
-        logging.error(f"Error occurred: {error_context['error_type']}",
-                     exc_info=True)
+        logging.error(f"Error occurred: {error_context['error_type']}", exc_info=True)
 
         # Return sanitized error for client
         if isinstance(exception, ValueError):
-            return {'error': 'Invalid input provided', 'code': 'VALIDATION_ERROR'}
+            return {"error": "Invalid input provided", "code": "VALIDATION_ERROR"}
         if isinstance(exception, KeyError):
-            return {'error': 'Required data missing', 'code': 'MISSING_DATA'}
-        return {'error': 'An unexpected error occurred', 'code': 'INTERNAL_ERROR'}
+            return {"error": "Required data missing", "code": "MISSING_DATA"}
+        return {"error": "An unexpected error occurred", "code": "INTERNAL_ERROR"}
 
 
 class TestFakeCodeDetection(unittest.TestCase):
@@ -153,13 +155,13 @@ class TestFakeCodeDetection(unittest.TestCase):
         # Test keyword-based sentiment
         sentiment1 = fake.fake_sentiment_analyzer("This is great!")
         sentiment2 = fake.fake_sentiment_analyzer("This is terrible!")
-        assert sentiment1['sentiment'] == 'positive'
-        assert sentiment2['sentiment'] == 'negative'
+        assert sentiment1["sentiment"] == "positive"
+        assert sentiment2["sentiment"] == "negative"
 
         # Test mock data processor
         result = fake.fake_data_processor([1, 2, 3, 4, 5])
         assert len(result) == 3  # Always returns 3 items
-        assert all(item['status'] == 'processed' for item in result)
+        assert all(item["status"] == "processed" for item in result)
 
     def test_real_patterns_work(self):
         """Verify that real code examples function properly"""
@@ -176,9 +178,9 @@ class TestFakeCodeDetection(unittest.TestCase):
         # Test real transformation
         data = {"name": "  TEST  ", "value": 100, "items": [{"x": 1}]}
         result = real.real_data_transformer(data)
-        assert result['name'] == 'test'
-        assert result['value'] == 110.0
-        assert '_processed_at' in result
+        assert result["name"] == "test"
+        assert result["value"] == 110.0
+        assert "_processed_at" in result
 
     def test_pattern_characteristics(self):
         """Test specific characteristics that identify fake code"""
@@ -193,24 +195,24 @@ class TestFakeCodeDetection(unittest.TestCase):
         # Characteristic 2: High confidence scores without actual analysis
         sentiments = [
             fake.fake_sentiment_analyzer("neutral text"),
-            fake.fake_sentiment_analyzer("mixed feelings")
+            fake.fake_sentiment_analyzer("mixed feelings"),
         ]
         # Fake code often has unrealistically high confidence
         for s in sentiments:
-            assert s['confidence'] > 0.85
+            assert s["confidence"] > 0.85
 
 
 class TestMockPatterns(unittest.TestCase):
     """Test patterns that use mocking (which might be legitimate in tests)"""
 
-    @patch('requests.get')
+    @patch("requests.get")
     def test_legitimate_mock_usage(self, mock_get):
         """LEGITIMATE: Using mocks in test code is acceptable"""
         mock_get.return_value.json.return_value = {"status": "ok"}
 
         # This is legitimate mock usage in a test
-        response = mock_get('http://api.example.com/status')
-        assert response.json()['status'] == 'ok'
+        response = mock_get("http://api.example.com/status")
+        assert response.json()["status"] == "ok"
 
     def test_mock_vs_fake_code(self):
         """Distinguish between legitimate mocks and fake implementations"""
@@ -227,13 +229,13 @@ class TestMockPatterns(unittest.TestCase):
         assert fake_service_process("data") == "processed"
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Run tests
     unittest.main(verbosity=2)
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("ANALYSIS NOTES FOR CODE AUTHENTICITY DETECTION:")
-    print("="*60)
+    print("=" * 60)
     print("""
     This file contains examples of FAKE CODE patterns that should be detected:
 

@@ -86,10 +86,7 @@ Options:
         buggy_pattern = r'"narrative"\s*:\s*"([^"]*)"'
 
         match = re.search(buggy_pattern, self.bug_triggering_json)
-        if match:
-            buggy_result = match.group(1)
-        else:
-            buggy_result = None
+        buggy_result = match.group(1) if match else None
 
         # The buggy pattern cuts off at the first unescaped quote
         assert buggy_result is not None
@@ -133,7 +130,9 @@ Options:
         # Verify specific nested quote patterns are preserved
         assert '\\"death\\"' in result  # Triple-nested quote (properly escaped)
         assert "'Beware the curse" in result  # Single quotes within doubles
-        assert "\"Tell me more about this 'sacrifice' you mentioned\"" in result  # Mixed quotes
+        assert (
+            "\"Tell me more about this 'sacrifice' you mentioned\"" in result
+        )  # Mixed quotes
 
     def test_incomplete_json_narrative(self):
         """Test that incomplete JSON (cut off mid-narrative) still extracts what's available."""

@@ -47,7 +47,7 @@ class TestStateUpdatesGeneration(unittest.TestCase):
             content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, 201)
+        assert response.status_code == 201
         result = response.get_json()
         print(f"\nCampaign creation response keys: {list(result.keys())}")
         campaign_id = result["campaign_id"]
@@ -88,12 +88,12 @@ class TestStateUpdatesGeneration(unittest.TestCase):
         print(f"\nState response status: {state_response.status_code}")
         if state_response.status_code != 200:
             print(f"State response error: {state_response.get_data(as_text=True)}")
-            self.assertEqual(state_response.status_code, 200)
+            assert state_response.status_code == 200
 
         campaign_data = state_response.get_json()
         if campaign_data is None:
             print("ERROR: campaign_data is None!")
-            self.assertIsNotNone(campaign_data, "Campaign response returned None")
+            assert campaign_data is not None, "Campaign response returned None"
 
         print(f"\nCampaign data keys: {list(campaign_data.keys())}")
 
@@ -115,10 +115,9 @@ class TestStateUpdatesGeneration(unittest.TestCase):
         print(f"- Has world data: {has_world_data}")
 
         # At least one should have data for a successful state generation
-        self.assertTrue(
-            has_pc_data or has_npc_data or has_world_data,
-            "No entity data was generated in the initial campaign state",
-        )
+        assert (
+            has_pc_data or has_npc_data or has_world_data
+        ), "No entity data was generated in the initial campaign state"
 
     def test_character_interaction_generates_state(self):
         """Test that character interactions can generate state updates"""
@@ -139,7 +138,7 @@ class TestStateUpdatesGeneration(unittest.TestCase):
             content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, 201)
+        assert response.status_code == 201
         campaign_id = response.get_json()["campaign_id"]
 
         # Send an interaction that should trigger state updates
@@ -157,7 +156,7 @@ class TestStateUpdatesGeneration(unittest.TestCase):
             content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         result = response.get_json()
         narrative = result.get("narrative", "")
 

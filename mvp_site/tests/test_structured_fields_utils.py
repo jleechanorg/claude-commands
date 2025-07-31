@@ -72,11 +72,26 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         result = structured_fields_utils.extract_structured_fields(mock_gemini_response)
 
         # Verify all fields are extracted correctly
-        assert result[constants.FIELD_SESSION_HEADER] == self.sample_structured_data["session_header"]
-        assert result[constants.FIELD_PLANNING_BLOCK] == self.sample_structured_data["planning_block"]
-        assert result[constants.FIELD_DICE_ROLLS] == self.sample_structured_data["dice_rolls"]
-        assert result[constants.FIELD_RESOURCES] == self.sample_structured_data["resources"]
-        assert result[constants.FIELD_DEBUG_INFO] == self.sample_structured_data["debug_info"]
+        assert (
+            result[constants.FIELD_SESSION_HEADER]
+            == self.sample_structured_data["session_header"]
+        )
+        assert (
+            result[constants.FIELD_PLANNING_BLOCK]
+            == self.sample_structured_data["planning_block"]
+        )
+        assert (
+            result[constants.FIELD_DICE_ROLLS]
+            == self.sample_structured_data["dice_rolls"]
+        )
+        assert (
+            result[constants.FIELD_RESOURCES]
+            == self.sample_structured_data["resources"]
+        )
+        assert (
+            result[constants.FIELD_DEBUG_INFO]
+            == self.sample_structured_data["debug_info"]
+        )
 
     def test_extract_structured_fields_with_empty_fields(self):
         """Test extraction with empty structured response fields."""
@@ -217,7 +232,10 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         # Verify complex debug info is preserved
         assert result[constants.FIELD_DEBUG_INFO] == complex_debug_info
         assert result[constants.FIELD_DEBUG_INFO]["enemy_status"]["goblin_1"]["hp"] == 8
-        assert result[constants.FIELD_DEBUG_INFO]["environmental_factors"] == ["heavy_rain", "difficult_terrain"]
+        assert result[constants.FIELD_DEBUG_INFO]["environmental_factors"] == [
+            "heavy_rain",
+            "difficult_terrain",
+        ]
 
     def test_extract_structured_fields_with_long_text_fields(self):
         """Test extraction with longer text content."""

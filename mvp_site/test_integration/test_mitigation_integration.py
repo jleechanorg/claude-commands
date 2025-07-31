@@ -72,14 +72,14 @@ class TestMitigationIntegration(unittest.TestCase):
             )
 
             # Verify both contain entity information
-            self.assertIn("Sariel", preload_text)
-            self.assertIn("Cassian", preload_text)
-            self.assertIn("Sariel", instructions)
-            self.assertIn("Cassian", instructions)
+            assert "Sariel" in preload_text
+            assert "Cassian" in preload_text
+            assert "Sariel" in instructions
+            assert "Cassian" in instructions
 
             # Verify complementary information
-            self.assertIn("ENTITY MANIFEST", preload_text)
-            self.assertIn("MANDATORY ENTITY REQUIREMENTS", instructions)
+            assert "ENTITY MANIFEST" in preload_text
+            assert "MANDATORY ENTITY REQUIREMENTS" in instructions
 
     def test_validator_with_retry_manager(self):
         """Test Option 2 (Validator) + Retry Manager integration"""
@@ -95,11 +95,11 @@ class TestMitigationIntegration(unittest.TestCase):
         )
 
         # Should have attempted retry
-        self.assertEqual(attempts, 1)
+        assert attempts == 1
         retry_callback.assert_called_once()
 
         # Final result should be better
-        self.assertGreater(len(result.found_entities), 0)
+        assert len(result.found_entities) > 0
 
     def test_dual_pass_with_validator(self):
         """Test Option 7 (Dual Pass) + Option 2 (Validator) integration"""
@@ -119,15 +119,15 @@ class TestMitigationIntegration(unittest.TestCase):
         )
 
         # Should have used both passes
-        self.assertIsNotNone(result.first_pass)
-        self.assertIsNotNone(result.second_pass)
+        assert result.first_pass is not None
+        assert result.second_pass is not None
 
         # Should show improvement
-        self.assertTrue(result.improvement_achieved)
+        assert result.improvement_achieved
 
         # Final narrative should contain both entities
-        self.assertIn("Sariel", result.final_narrative)
-        self.assertIn("Cassian", result.final_narrative)
+        assert "Sariel" in result.final_narrative
+        assert "Cassian" in result.final_narrative
 
     def test_full_pipeline_integration(self):
         """Test all 4 strategies working together in complete pipeline"""
@@ -167,8 +167,8 @@ class TestMitigationIntegration(unittest.TestCase):
             )
 
             # Should detect missing Cassian
-            self.assertFalse(validation.passed)
-            self.assertIn("Cassian", validation.missing_entities)
+            assert not validation.passed
+            assert "Cassian" in validation.missing_entities
 
             # Step 6: Use dual-pass for correction (Option 7)
             def mock_generation(prompt):
@@ -181,11 +181,11 @@ class TestMitigationIntegration(unittest.TestCase):
             )
 
             # Final result should include both entities
-            self.assertIn("Sariel", dual_pass_result.final_narrative)
-            self.assertIn("Cassian", dual_pass_result.final_narrative)
+            assert "Sariel" in dual_pass_result.final_narrative
+            assert "Cassian" in dual_pass_result.final_narrative
             # Should have attempted dual pass
-            self.assertIsNotNone(dual_pass_result.first_pass)
-            self.assertIsNotNone(dual_pass_result.second_pass)
+            assert dual_pass_result.first_pass is not None
+            assert dual_pass_result.second_pass is not None
 
     def test_cassian_problem_mitigation(self):
         """Test specific mitigation for The Cassian Problem"""
@@ -197,8 +197,8 @@ class TestMitigationIntegration(unittest.TestCase):
         )
 
         # Should have emotional handling
-        self.assertIn("CRITICAL", cassian_instruction)
-        self.assertIn("emotional appeal", cassian_instruction)
+        assert "CRITICAL" in cassian_instruction
+        assert "emotional appeal" in cassian_instruction
 
         # Generate entity instructions with emotional context
         instructions = self.instruction_gen.generate_entity_instructions(
@@ -206,8 +206,8 @@ class TestMitigationIntegration(unittest.TestCase):
         )
 
         # Should prioritize Cassian as referenced
-        self.assertIn("Cassian", instructions)
-        self.assertIn("MANDATORY", instructions)
+        assert "Cassian" in instructions
+        assert "MANDATORY" in instructions
 
         # Test validation of response that ignores Cassian
         bad_response = "Sariel stands alone in the throne room, feeling isolated."
@@ -216,14 +216,14 @@ class TestMitigationIntegration(unittest.TestCase):
         )
 
         # Should detect Cassian problem
-        self.assertFalse(validation.passed)
-        self.assertIn("Cassian", validation.missing_entities)
+        assert not validation.passed
+        assert "Cassian" in validation.missing_entities
 
         # Should have Cassian-specific retry suggestions
         cassian_suggestions = [
             s for s in validation.retry_suggestions if "Cassian" in s
         ]
-        self.assertGreater(len(cassian_suggestions), 0)
+        assert len(cassian_suggestions) > 0
 
     def test_location_enforcement_integration(self):
         """Test location-based entity enforcement across strategies"""
@@ -236,16 +236,16 @@ class TestMitigationIntegration(unittest.TestCase):
         )
 
         # Should require Lady Cressida in her chambers
-        self.assertIn("Lady Cressida", instructions)
-        self.assertIn("MANDATORY", instructions)
+        assert "Lady Cressida" in instructions
+        assert "MANDATORY" in instructions
 
         # Option 3: Should include location context
         location_specific = self.instruction_gen.create_location_specific_instructions(
             location, entities
         )
 
-        self.assertIn("Lady Cressida", location_specific)
-        self.assertIn("chambers", location_specific.lower())
+        assert "Lady Cressida" in location_specific
+        assert "chambers" in location_specific.lower()
 
         # Option 2: Should validate location appropriateness
         bad_response = "Sariel explores the empty chambers."
@@ -253,8 +253,8 @@ class TestMitigationIntegration(unittest.TestCase):
             bad_response, entities, location
         )
 
-        self.assertFalse(validation.passed)
-        self.assertIn("Lady Cressida", validation.missing_entities)
+        assert not validation.passed
+        assert "Lady Cressida" in validation.missing_entities
 
     def test_performance_optimized_pipeline(self):
         """Test optimized pipeline avoiding timeout issues"""
@@ -269,8 +269,8 @@ class TestMitigationIntegration(unittest.TestCase):
         )
 
         # Should pass quickly
-        self.assertTrue(validation.passed)
-        self.assertEqual(len(validation.found_entities), 2)
+        assert validation.passed
+        assert len(validation.found_entities) == 2
 
         # Quick instruction generation
         quick_instructions = self.instruction_gen.generate_entity_instructions(
@@ -278,9 +278,9 @@ class TestMitigationIntegration(unittest.TestCase):
         )
 
         # Should generate without timeout
-        self.assertIn("Sariel", quick_instructions)
-        self.assertIn("Cassian", quick_instructions)
-        self.assertLess(len(quick_instructions), 2000)  # Keep instructions concise
+        assert "Sariel" in quick_instructions
+        assert "Cassian" in quick_instructions
+        assert len(quick_instructions) < 2000  # Keep instructions concise
 
 
 class TestMitigationStatistics(unittest.TestCase):
@@ -302,18 +302,18 @@ class TestMitigationStatistics(unittest.TestCase):
             result = self.validator.validate_entity_presence(narrative, entities)
 
             if expected_min_score > 0.5:
-                self.assertGreaterEqual(result.confidence_score, expected_min_score)
+                assert result.confidence_score >= expected_min_score
             else:
-                self.assertLessEqual(result.confidence_score, expected_min_score + 0.2)
+                assert result.confidence_score <= expected_min_score + 0.2
 
     def test_retry_statistics_tracking(self):
         """Test retry statistics and performance tracking"""
         stats = self.retry_manager.get_retry_statistics()
 
-        self.assertIn("max_retries_configured", stats)
-        self.assertIn("validator_threshold", stats)
-        self.assertIsInstance(stats["max_retries_configured"], int)
-        self.assertIsInstance(stats["validator_threshold"], float)
+        assert "max_retries_configured" in stats
+        assert "validator_threshold" in stats
+        assert isinstance(stats["max_retries_configured"], int)
+        assert isinstance(stats["validator_threshold"], float)
 
 
 if __name__ == "__main__":

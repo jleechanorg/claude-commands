@@ -11,8 +11,6 @@ import jsonschema
 
 # Try to import jsonschema if available
 try:
-
-
     JSONSCHEMA_AVAILABLE = True
 except ImportError:
     JSONSCHEMA_AVAILABLE = False
@@ -79,7 +77,7 @@ class SchemaValidator:
 
         if "confidence" in result:
             conf = result["confidence"]
-            if not isinstance(conf, (int, float)) or conf < 0 or conf > 1:
+            if not isinstance(conf, int | float) or conf < 0 or conf > 1:
                 errors.append("confidence must be a number between 0 and 1")
 
         return errors

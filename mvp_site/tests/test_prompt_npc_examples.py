@@ -44,7 +44,10 @@ class TestPromptNPCExamples(unittest.TestCase):
         """Test that the mandatory rule about npc_data structure is present."""
         # Check for the specific rule about npc_data
         assert "npc_data` is ALWAYS a DICTIONARY" in self.prompt_content
-        assert "values are DICTIONARIES containing the NPC's data sheet" in self.prompt_content
+        assert (
+            "values are DICTIONARIES containing the NPC's data sheet"
+            in self.prompt_content
+        )
 
 
 if __name__ == "__main__":

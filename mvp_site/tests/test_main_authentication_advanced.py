@@ -48,7 +48,7 @@ class TestMainAuthenticationAdvanced(unittest.TestCase):
         # Should return valid JSON response
         if response.status_code == 200:
             data = response.get_json()
-            assert isinstance(data, (list, dict)), "Response should be valid JSON"
+            assert isinstance(data, list | dict), "Response should be valid JSON"
 
     def test_mcp_auth_without_headers(self):
         """Test MCP authentication without bypass headers"""
@@ -56,7 +56,9 @@ class TestMainAuthenticationAdvanced(unittest.TestCase):
         response = self.client.get("/api/campaigns")
 
         # Should require authentication without bypass headers
-        assert response.status_code == 401, "Should require authentication without bypass headers"
+        assert (
+            response.status_code == 401
+        ), "Should require authentication without bypass headers"
 
     def test_mcp_user_specific_requests(self):
         """Test MCP handles user-specific requests correctly"""
@@ -83,7 +85,9 @@ class TestMainAuthenticationAdvanced(unittest.TestCase):
         )
 
         # Should handle preflight requests appropriately
-        assert response.status_code == 200, "MCP gateway should handle preflight requests"
+        assert (
+            response.status_code == 200
+        ), "MCP gateway should handle preflight requests"
 
         # Check for CORS headers if present
         if "Access-Control-Allow-Origin" in response.headers:
@@ -97,7 +101,9 @@ class TestMainAuthenticationAdvanced(unittest.TestCase):
             response = self.client.get(endpoint, headers=self.auth_headers)
 
             # All endpoints should handle authentication consistently
-            assert response.status_code == 200, f"MCP gateway should handle {endpoint} consistently"
+            assert (
+                response.status_code == 200
+            ), f"MCP gateway should handle {endpoint} consistently"
 
 
 if __name__ == "__main__":

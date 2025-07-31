@@ -116,7 +116,10 @@ class TestRobustJSONParser(unittest.TestCase):
         assert was_incomplete
         if result:
             # Should extract at least some fields
-            assert any(field in result for field in ["narrative", "entities_mentioned", "location_confirmed"])
+            assert any(
+                field in result
+                for field in ["narrative", "entities_mentioned", "location_confirmed"]
+            )
 
 
 class TestParseSpecificFields(unittest.TestCase):

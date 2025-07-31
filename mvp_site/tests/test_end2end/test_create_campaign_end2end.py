@@ -178,19 +178,17 @@ class TestCreateCampaignEnd2EndV2(unittest.TestCase):
         }
 
     @patch("firebase_admin.firestore.client")
-    @patch("google.genai.Client")
-    def test_create_campaign_success(
-        self, mock_genai_client_class, mock_firestore_client
-    ):
+    @patch("gemini_service.get_client")
+    def test_create_campaign_success(self, mock_get_client, mock_firestore_client):
         """Test successful campaign creation with full flow."""
 
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
         mock_firestore_client.return_value = fake_firestore
 
-        # Set up fake Gemini client
+        # Set up fake Gemini client - mock the get_client function directly
         fake_genai_client = MagicMock()
-        mock_genai_client_class.return_value = fake_genai_client
+        mock_get_client.return_value = fake_genai_client
 
         # Mock token counting
         fake_genai_client.models.count_tokens.return_value = MagicMock(
@@ -224,40 +222,40 @@ class TestCreateCampaignEnd2EndV2(unittest.TestCase):
         )
 
         # Assert response
-        self.assertEqual(response.status_code, 201)
+        assert response.status_code == 201
         response_data = json.loads(response.data)
-        self.assertTrue(response_data["success"])
-        self.assertIn("campaign_id", response_data)
+        assert response_data["success"]
+        assert "campaign_id" in response_data
 
         # Verify Firestore operations
         # Check that campaign was created in users/{user_id}/campaigns
         users_collection = fake_firestore._collections.get("users")
-        self.assertIsNotNone(users_collection)
+        assert users_collection is not None
 
         user_doc = users_collection._docs.get(self.test_user_id)
-        self.assertIsNotNone(user_doc)
+        assert user_doc is not None
 
         campaigns_collection = user_doc._collections.get("campaigns")
-        self.assertIsNotNone(campaigns_collection)
+        assert campaigns_collection is not None
 
         # Should have one campaign
         campaign_docs = list(campaigns_collection._docs.values())
-        self.assertEqual(len(campaign_docs), 1)
+        assert len(campaign_docs) == 1
 
         # Check campaign data
         campaign_doc = campaign_docs[0]
         campaign_data = campaign_doc._data
         print(f"Campaign data keys: {list(campaign_data.keys())}")
-        self.assertEqual(campaign_data["title"], "Epic Dragon Quest")
+        assert campaign_data["title"] == "Epic Dragon Quest"
         # Note: user_id might not be stored in the document since it's in the path
 
         # Check that Gemini was called
         fake_genai_client.models.generate_content.assert_called_once()
 
     @patch("firebase_admin.firestore.client")
-    @patch("google.genai.Client")
+    @patch("gemini_service.get_client")
     def test_create_campaign_respects_debug_mode_setting(
-        self, mock_genai_client_class, mock_firestore_client
+        self, mock_get_client, mock_firestore_client
     ):
         """Test that campaign creation respects debug mode setting from user preferences."""
 
@@ -267,7 +265,7 @@ class TestCreateCampaignEnd2EndV2(unittest.TestCase):
 
         # Set up fake Gemini client
         fake_genai_client = MagicMock()
-        mock_genai_client_class.return_value = fake_genai_client
+        mock_get_client.return_value = fake_genai_client
 
         # Mock token counting
         fake_genai_client.models.count_tokens.return_value = MagicMock(
@@ -349,9 +347,9 @@ class TestCreateCampaignEnd2EndV2(unittest.TestCase):
         )
 
     @patch("firebase_admin.firestore.client")
-    @patch("google.genai.Client")
+    @patch("gemini_service.get_client")
     def test_create_campaign_uses_default_debug_mode_when_no_user_setting(
-        self, mock_genai_client_class, mock_firestore_client
+        self, mock_get_client, mock_firestore_client
     ):
         """Test that campaign creation uses default debug mode when user has no specific setting."""
 
@@ -361,7 +359,7 @@ class TestCreateCampaignEnd2EndV2(unittest.TestCase):
 
         # Set up fake Gemini client
         fake_genai_client = MagicMock()
-        mock_genai_client_class.return_value = fake_genai_client
+        mock_get_client.return_value = fake_genai_client
 
         # Mock token counting
         fake_genai_client.models.count_tokens.return_value = MagicMock(

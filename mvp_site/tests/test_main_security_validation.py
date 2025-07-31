@@ -14,6 +14,8 @@ import zipfile
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 # Mock firebase modules before imports
 mock_firebase_admin = MagicMock()
 mock_firestore = MagicMock()
@@ -100,7 +102,7 @@ class TestSQLInjectionPrevention(unittest.TestCase):
                 '{"$where": "this.password == null"}',  # MongoDB $where
             ]
 
-            for attempt in injection_attempts:
+            for _attempt in injection_attempts:
                 # Firestore doesn't support MongoDB-style operators
                 # It would ignore or reject these
                 mock_get.return_value = []
@@ -254,12 +256,12 @@ class TestRequestSizeLimits(unittest.TestCase):
             # Mock that the service would reject this
             mock_create.side_effect = ValueError("Request body too large")
 
-            with self.assertRaises(ValueError) as context:
+            with pytest.raises(ValueError) as context:
                 mock_create(
                     "test_user", "Test Campaign", oversized_description, "Story", {}
                 )
 
-            assert "too large" in str(context.exception)
+            assert "too large" in str(context.value)
 
     def test_header_size_limit(self):
         """Test that oversized headers are handled."""
@@ -278,10 +280,10 @@ class TestRequestSizeLimits(unittest.TestCase):
             # Simulate header size rejection
             mock_verify.side_effect = ValueError("Header too large")
 
-            with self.assertRaises(ValueError) as context:
+            with pytest.raises(ValueError) as context:
                 mock_verify(oversized_token)
 
-            assert "Header too large" in str(context.exception)
+            assert "Header too large" in str(context.value)
 
     def test_url_length_limit(self):
         """Test URL length limits."""
@@ -344,7 +346,7 @@ class TestRateLimitingEnforcement(unittest.TestCase):
         user_id = "test_user"
 
         # Simulate tracking requests
-        for i in range(RATE_LIMIT + 10):
+        for _i in range(RATE_LIMIT + 10):
             if user_id not in self.request_counts:
                 self.request_counts[user_id] = 0
 
@@ -399,7 +401,7 @@ class TestRateLimitingEnforcement(unittest.TestCase):
 
         # Test rate limiting
         allowed_count = 0
-        for i in range(MAX_REQUESTS + 20):
+        for _i in range(MAX_REQUESTS + 20):
             if check_rate_limit():
                 allowed_count += 1
 
@@ -560,15 +562,15 @@ class TestCSRFProtection(unittest.TestCase):
         # State-changing operations should require CSRF token
         state_changing_methods = ["POST", "PUT", "DELETE", "PATCH"]
 
-        for method in state_changing_methods:
+        for _method in state_changing_methods:
             with patch("firestore_service.create_campaign") as mock_create:
                 # Test without CSRF token - should fail
                 mock_create.side_effect = ValueError("CSRF token missing")
 
-                with self.assertRaises(ValueError) as context:
+                with pytest.raises(ValueError) as context:
                     mock_create("user", "campaign", "desc", "story", {})
 
-                assert "CSRF" in str(context.exception)
+                assert "CSRF" in str(context.value)
 
                 # Test with valid CSRF token - should succeed
                 mock_create.side_effect = None
@@ -602,7 +604,7 @@ class TestCSRFProtection(unittest.TestCase):
                 assert result
             else:
                 mock_add.side_effect = ValueError("CSRF token mismatch")
-                with self.assertRaises(ValueError):
+                with pytest.raises(ValueError):
                     mock_add("user", "campaign", "player", "action")
 
     def test_origin_header_validation(self):
@@ -648,7 +650,7 @@ class TestCSRFProtection(unittest.TestCase):
         with patch("firestore_service.get_campaigns_for_user") as mock_get:
             mock_get.return_value = []
 
-            for method in safe_methods:
+            for _method in safe_methods:
                 # Safe methods should work without CSRF token
                 result = mock_get("test_user")
 
@@ -678,14 +680,13 @@ class TestPathTraversalAndPayloadAttacks(unittest.TestCase):
         """Test prevention of path traversal attacks."""
 
         # Base directory for safe file operations
-        safe_base = "/tmp/worldarchitect/safe"
 
         for dangerous_path in self.dangerous_paths:
             # Check for dangerous patterns
             if dangerous_path.startswith("/"):
                 # Unix absolute paths should be rejected
                 assert os.path.isabs(dangerous_path)
-            elif dangerous_path.startswith("C:") or dangerous_path.startswith("c:"):
+            elif dangerous_path.startswith(("C:", "c:")):
                 # Windows absolute paths
                 assert ":" in dangerous_path
             else:
@@ -705,8 +706,7 @@ class TestPathTraversalAndPayloadAttacks(unittest.TestCase):
             # Verify dangerous patterns are present
             is_dangerous = (
                 ".." in dangerous_path
-                or dangerous_path.startswith("/")
-                or dangerous_path.startswith("C:")
+                or dangerous_path.startswith(("/", "C:"))
                 or "%2e" in dangerous_path.lower()
                 or "\\" in dangerous_path
             )

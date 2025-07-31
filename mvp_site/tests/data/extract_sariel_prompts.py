@@ -34,7 +34,7 @@ class SarielPromptExtractor:
     def extract_initial_prompt(self):
         """Extract the initial campaign setup prompt"""
         # Based on the campaign structure, create an initial prompt
-        initial_prompt = {
+        return {
             "type": "initial_setup",
             "mode": "god",
             "content": """Create a new D&D campaign with the following setup:
@@ -55,7 +55,6 @@ Begin the narrative with Sariel arriving at court for an important meeting.""",
                 "location": "Throne Room",
             },
         }
-        return initial_prompt
 
     def extract_player_prompts(self):
         """Extract the first 10 player interaction prompts"""

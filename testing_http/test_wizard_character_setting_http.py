@@ -81,7 +81,7 @@ def test_wizard_character_setting_display():
                     for entry in story_entries:
                         if isinstance(entry, dict):
                             # Look for various story fields
-                            for key, value in entry.items():
+                            for _key, value in entry.items():
                                 if isinstance(value, str):
                                     campaign_content += f" {value}"
 

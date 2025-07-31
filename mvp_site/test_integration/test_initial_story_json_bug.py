@@ -36,49 +36,33 @@ class TestInitialStoryJsonBug(unittest.TestCase):
             # Narrative text preview and raw response preview available for inspection
 
             # Check for JSON artifacts in the narrative_text
-            narrative_has_json = (
-                '"narrative":' in response.narrative_text
-                or '"god_mode_response":' in response.narrative_text
-                or '"entities_mentioned":' in response.narrative_text
-            )
 
             # Check for JSON artifacts in narrative
 
             # The critical test
-            self.assertNotIn(
-                '"narrative":',
-                response.narrative_text,
-                "Initial story narrative_text should not contain JSON keys",
-            )
-            self.assertNotIn(
-                '"god_mode_response":',
-                response.narrative_text,
-                "Initial story narrative_text should not contain JSON keys",
-            )
-            self.assertNotIn(
-                '"entities_mentioned":',
-                response.narrative_text,
-                "Initial story narrative_text should not contain JSON keys",
-            )
-            self.assertNotIn(
-                '{"',
-                response.narrative_text,
-                "Initial story narrative_text should not contain JSON structure",
-            )
+            assert (
+                '"narrative":' not in response.narrative_text
+            ), "Initial story narrative_text should not contain JSON keys"
+            assert (
+                '"god_mode_response":' not in response.narrative_text
+            ), "Initial story narrative_text should not contain JSON keys"
+            assert (
+                '"entities_mentioned":' not in response.narrative_text
+            ), "Initial story narrative_text should not contain JSON keys"
+            assert (
+                '{"' not in response.narrative_text
+            ), "Initial story narrative_text should not contain JSON structure"
 
             # Should contain actual story content
-            self.assertTrue(
-                len(response.narrative_text) > 50,
-                "Should have substantial narrative content",
-            )
+            assert (
+                len(response.narrative_text) > 50
+            ), "Should have substantial narrative content"
 
             # Check that it's not the entire raw JSON response
             if hasattr(response, "raw_response"):
-                self.assertNotEqual(
-                    response.narrative_text,
-                    response.raw_response,
-                    "narrative_text should be different from raw_response",
-                )
+                assert (
+                    response.narrative_text != response.raw_response
+                ), "narrative_text should be different from raw_response"
 
             print("✅ Initial story generation test passed!")
 
@@ -105,9 +89,9 @@ class TestInitialStoryJsonBug(unittest.TestCase):
             print(f"Simple response preview: {response.narrative_text[:100]}...")
 
             # Should not contain JSON structure (but allow legitimate content with braces)
-            self.assertNotIn('"narrative":', response.narrative_text)
-            self.assertNotIn('{"narrative":', response.narrative_text)
-            self.assertNotIn('"god_mode_response":', response.narrative_text)
+            assert '"narrative":' not in response.narrative_text
+            assert '{"narrative":' not in response.narrative_text
+            assert '"god_mode_response":' not in response.narrative_text
 
             print("✅ Simple initial story test passed!")
 

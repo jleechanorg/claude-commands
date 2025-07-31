@@ -243,7 +243,6 @@ def test_inline_editing_features():
         except Exception as e:
             print(f"\n[ERROR] Test failed: {e}")
 
-
             traceback.print_exc()
 
             # Take error screenshot

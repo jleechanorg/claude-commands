@@ -7,9 +7,11 @@ from unittest.mock import Mock, patch
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-import gemini_service
+import pytest
 from gemini_response import GeminiResponse
 from narrative_response_schema import NarrativeResponse
+
+import gemini_service
 
 
 class TestJSONOnlyComprehensive(unittest.TestCase):
@@ -78,7 +80,7 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
         assert not hasattr(gemini_service, "parse_llm_response_for_state_changes")
 
         # Attempting to access should raise AttributeError
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             gemini_service.parse_llm_response_for_state_changes
 
     def test_clean_markdown_helper_removed(self):

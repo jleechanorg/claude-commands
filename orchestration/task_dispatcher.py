@@ -16,6 +16,7 @@ from typing import Any
 try:
     from a2a_integration import TaskPool, get_a2a_status
     from a2a_monitor import get_monitor
+
     A2A_AVAILABLE = True
 except ImportError:
     A2A_AVAILABLE = False
@@ -28,6 +29,7 @@ AGENT_SESSION_TIMEOUT_SECONDS = 86400  # 24 hours
 
 # Production safety limits
 MAX_CONCURRENT_AGENTS = 5
+
 
 # Shared configuration paths
 def get_tmux_config_path():
@@ -66,20 +68,18 @@ class TaskDispatcher:
     def _discover_agent_capabilities(self) -> dict:
         """Discover agent capabilities dynamically from registered agents"""
         # Default capabilities that all agents should have
-        default_capabilities = {
+        return {
             "task_execution": "Execute assigned development tasks",
             "command_acceptance": "Accept and process commands",
             "status_reporting": "Report task progress and completion status",
             "git_operations": "Perform git operations (commit, push, PR creation)",
             "development": "General software development capabilities",
             "testing": "Run and debug tests",
-            "server_management": "Start/stop servers and services"
+            "server_management": "Start/stop servers and services",
         }
 
         # In production, this would query Redis for registered agents
         # and their self-reported capabilities, merged with defaults
-        return default_capabilities
-
 
     # =================== LLM-DRIVEN ENHANCEMENTS ===================
 
@@ -91,10 +91,12 @@ class TaskDispatcher:
         try:
             result = subprocess.run(
                 ["tmux", "list-sessions", "-F", "#{session_name}"],
-                check=False, capture_output=True, text=True
+                check=False,
+                capture_output=True,
+                text=True,
             )
             if result.returncode == 0:
-                existing.update(result.stdout.strip().split('\n'))
+                existing.update(result.stdout.strip().split("\n"))
         except subprocess.SubprocessError:
             pass
 
@@ -113,7 +115,9 @@ class TaskDispatcher:
     def _generate_unique_name(self, base_name: str, role_suffix: str = "") -> str:
         """Generate unique agent name with collision detection."""
         # Use microsecond precision for better uniqueness
-        timestamp = int(time.time() * 1000000) % TIMESTAMP_MODULO  # 8 digits from microseconds
+        timestamp = (
+            int(time.time() * 1000000) % TIMESTAMP_MODULO
+        )  # 8 digits from microseconds
 
         # Get existing agents
         existing = self._check_existing_agents()
@@ -142,13 +146,13 @@ class TaskDispatcher:
         # Patterns that indicate PR update mode
         pr_update_patterns = [
             # Action + anything + PR number
-            r'(?:fix|adjust|update|modify|enhance|improve)\s+.*?(?:PR|pull request)\s*#?(\d+)',
+            r"(?:fix|adjust|update|modify|enhance|improve)\s+.*?(?:PR|pull request)\s*#?(\d+)",
             # PR number + needs/should/must
-            r'PR\s*#?(\d+)\s+(?:needs|should|must)',
+            r"PR\s*#?(\d+)\s+(?:needs|should|must)",
             # Add/apply to PR number
-            r'(?:add|apply)\s+.*?to\s+(?:PR|pull request)\s*#?(\d+)',
+            r"(?:add|apply)\s+.*?to\s+(?:PR|pull request)\s*#?(\d+)",
             # Direct PR number reference
-            r'(?:PR|pull request)\s*#(\d+)',
+            r"(?:PR|pull request)\s*#(\d+)",
         ]
 
         # Check for explicit PR number
@@ -156,14 +160,14 @@ class TaskDispatcher:
             match = re.search(pattern, task_description, re.IGNORECASE)
             if match:
                 pr_number = match.group(1)
-                return pr_number, 'update'
+                return pr_number, "update"
 
         # Check for contextual PR reference without number
         contextual_patterns = [
-            r'(?:the|that|this)\s+PR',
-            r'(?:the|that)\s+pull\s+request',
-            r'existing\s+PR',
-            r'current\s+(?:PR|pull request)'
+            r"(?:the|that|this)\s+PR",
+            r"(?:the|that)\s+pull\s+request",
+            r"existing\s+PR",
+            r"current\s+(?:PR|pull request)",
         ]
 
         for pattern in contextual_patterns:
@@ -171,11 +175,13 @@ class TaskDispatcher:
                 # Try to find recent PR from current branch or user
                 recent_pr = self._find_recent_pr()
                 if recent_pr:
-                    return recent_pr, 'update'
-                print("🤔 Ambiguous PR reference detected. Agent will ask for clarification.")
-                return None, 'update'  # Signal update mode but need clarification
+                    return recent_pr, "update"
+                print(
+                    "🤔 Ambiguous PR reference detected. Agent will ask for clarification."
+                )
+                return None, "update"  # Signal update mode but need clarification
 
-        return None, 'create'
+        return None, "create"
 
     def _find_recent_pr(self) -> str | None:
         """Try to find a recent PR from current branch or user."""
@@ -183,37 +189,67 @@ class TaskDispatcher:
             # Try to get PR from current branch
             # Get current branch name first for better readability
             branch_result = subprocess.run(
-                ['git', 'branch', '--show-current'],
-                check=False, capture_output=True, text=True
+                ["git", "branch", "--show-current"],
+                check=False,
+                capture_output=True,
+                text=True,
             )
-            current_branch = branch_result.stdout.strip() if branch_result.returncode == 0 else None
+            current_branch = (
+                branch_result.stdout.strip() if branch_result.returncode == 0 else None
+            )
 
             if current_branch:
                 result = subprocess.run(
-                    ['gh', 'pr', 'list', '--head', current_branch, '--json', 'number', '--limit', '1'],
-                    check=False, capture_output=True, text=True
+                    [
+                        "gh",
+                        "pr",
+                        "list",
+                        "--head",
+                        current_branch,
+                        "--json",
+                        "number",
+                        "--limit",
+                        "1",
+                    ],
+                    check=False,
+                    capture_output=True,
+                    text=True,
                 )
                 if result.returncode == 0 and result.stdout.strip():
                     data = json.loads(result.stdout)
                     if data:
-                        return str(data[0]['number'])
+                        return str(data[0]["number"])
 
             # Fallback: get most recent PR by current user
             result = subprocess.run(
-                ['gh', 'pr', 'list', '--author', '@me', '--json', 'number', '--limit', '1'],
-                check=False, capture_output=True, text=True
+                [
+                    "gh",
+                    "pr",
+                    "list",
+                    "--author",
+                    "@me",
+                    "--json",
+                    "number",
+                    "--limit",
+                    "1",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
             )
             if result.returncode == 0 and result.stdout.strip():
                 data = json.loads(result.stdout)
                 if data:
-                    return str(data[0]['number'])
+                    return str(data[0]["number"])
         except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError):
             # Silently handle errors as this is a fallback mechanism
             pass
 
         return None
 
-    def broadcast_task_to_a2a(self, task_description: str, requirements: list[str] | None = None) -> str | None:
+    def broadcast_task_to_a2a(
+        self, task_description: str, requirements: list[str] | None = None
+    ) -> str | None:
         """Broadcast task to A2A system for agent claiming"""
         if not self.a2a_enabled:
             return None
@@ -222,7 +258,7 @@ class TaskDispatcher:
             task_id = self.task_pool.publish_task(
                 task_id=f"orch-{int(time.time() * 1000000) % TIMESTAMP_MODULO}",
                 task_description=task_description,
-                requirements=requirements or []
+                requirements=requirements or [],
             )
             if task_id:
                 print(f"Task broadcast to A2A system: {task_id}")
@@ -231,7 +267,6 @@ class TaskDispatcher:
             print(f"Error broadcasting task to A2A: {e}")
 
         return None
-
 
     def get_a2a_status(self) -> dict[str, Any]:
         """Get A2A system status including agents and tasks"""
@@ -250,14 +285,10 @@ class TaskDispatcher:
                 "a2a_enabled": True,
                 "system_status": status,
                 "health": health,
-                "timestamp": time.time()
+                "timestamp": time.time(),
             }
         except Exception as e:
-            return {
-                "a2a_enabled": True,
-                "error": str(e),
-                "timestamp": time.time()
-            }
+            return {"a2a_enabled": True, "error": str(e), "timestamp": time.time()}
 
     def analyze_task_and_create_agents(self, task_description: str) -> list[dict]:
         """Create appropriate agent for the given task with PR context awareness."""
@@ -267,14 +298,25 @@ class TaskDispatcher:
         pr_number, mode = self._detect_pr_context(task_description)
 
         # Show user what was detected
-        if mode == 'update':
+        if mode == "update":
             if pr_number:
-                print(f"\n🔍 Detected PR context: #{pr_number} - Agent will UPDATE existing PR")
+                print(
+                    f"\n🔍 Detected PR context: #{pr_number} - Agent will UPDATE existing PR"
+                )
                 # Get PR details for better context
                 try:
                     result = subprocess.run(
-                        ['gh', 'pr', 'view', pr_number, '--json', 'title,state,headRefName'],
-                        check=False, capture_output=True, text=True
+                        [
+                            "gh",
+                            "pr",
+                            "view",
+                            pr_number,
+                            "--json",
+                            "title,state,headRefName",
+                        ],
+                        check=False,
+                        capture_output=True,
+                        text=True,
                     )
                     if result.returncode == 0:
                         pr_data = json.loads(result.stdout)
@@ -284,7 +326,9 @@ class TaskDispatcher:
                     pass
             else:
                 print("\n🔍 Detected PR update request but no specific PR number")
-                print("   Agent will check for recent PRs and ask for clarification if needed")
+                print(
+                    "   Agent will check for recent PRs and ask for clarification if needed"
+                )
         else:
             print("\n🆕 No PR context detected - Agent will create NEW PR")
             print("   New branch will be created from main")
@@ -296,7 +340,7 @@ class TaskDispatcher:
         capabilities = list(self.agent_capabilities.keys())
 
         # Build appropriate prompt based on mode
-        if mode == 'update':
+        if mode == "update":
             if pr_number:
                 prompt = f"""Task: {task_description}
 
@@ -384,15 +428,18 @@ Execute the task exactly as requested. Key points:
 
 Complete the task, then use /pr to create a new pull request."""
 
-        return [{
-            "name": agent_name,
-            "type": "development",
-            "focus": task_description,
-            "capabilities": capabilities,
-            "pr_context": {"mode": mode, "pr_number": pr_number} if mode == 'update' else None,
-            "prompt": prompt
-        }]
-
+        return [
+            {
+                "name": agent_name,
+                "type": "development",
+                "focus": task_description,
+                "capabilities": capabilities,
+                "pr_context": {"mode": mode, "pr_number": pr_number}
+                if mode == "update"
+                else None,
+                "prompt": prompt,
+            }
+        ]
 
     def create_dynamic_agent(self, agent_spec: dict) -> bool:
         """Create agent with enhanced Redis coordination and worktree management."""
@@ -404,7 +451,9 @@ Complete the task, then use /pr to create a new pull request."""
 
         # Check concurrent agent limit
         if len(self.active_agents) >= MAX_CONCURRENT_AGENTS:
-            print(f"⚠️ Agent limit reached ({MAX_CONCURRENT_AGENTS} max). Cannot create {agent_name}")
+            print(
+                f"⚠️ Agent limit reached ({MAX_CONCURRENT_AGENTS} max). Cannot create {agent_name}"
+            )
             return False
 
         # Initialize A2A protocol integration if available
@@ -422,14 +471,15 @@ Complete the task, then use /pr to create a new pull request."""
             # Create worktree for agent (inherit from current branch)
             current_dir = os.getcwd()
             agent_dir = os.path.join(current_dir, f"agent_workspace_{agent_name}")
-            branch_name = f'{agent_name}-work'
+            branch_name = f"{agent_name}-work"
 
             # Always create fresh branch from main (equivalent to /nb)
             # This prevents inheriting unrelated changes from current branch
-            subprocess.run([
-                'git', 'worktree', 'add', '-b', branch_name,
-                agent_dir, 'main'
-            ], check=False, capture_output=True)
+            subprocess.run(
+                ["git", "worktree", "add", "-b", branch_name, agent_dir, "main"],
+                check=False,
+                capture_output=True,
+            )
 
             # Create result collection file
             result_file = os.path.join(self.result_dir, f"{agent_name}_results.json")
@@ -447,7 +497,7 @@ Complete the task, then use /pr to create a new pull request."""
 2. Commit and push your changes:
 
    git add -A
-   git commit -m "Update PR #{pr_context.get('pr_number', 'unknown')}: {agent_focus}
+   git commit -m "Update PR #{pr_context.get("pr_number", "unknown")}: {agent_focus}
 
    Agent: {agent_name}
    Task: {agent_focus}
@@ -459,15 +509,15 @@ Complete the task, then use /pr to create a new pull request."""
    git push
 
 3. Verify the PR was updated (if PR number exists):
-   {f"gh pr view {pr_context.get('pr_number')} --json state,mergeable" if pr_context.get('pr_number') else "echo 'No PR number provided, skipping verification'"}
+   {f"gh pr view {pr_context.get('pr_number')} --json state,mergeable" if pr_context.get("pr_number") else "echo 'No PR number provided, skipping verification'"}
 
 4. Create completion report:
-   echo '{{"agent": "{agent_name}", "status": "completed", "pr_updated": "{pr_context.get('pr_number', 'none')}"}}' > {result_file}
+   echo '{{"agent": "{agent_name}", "status": "completed", "pr_updated": "{pr_context.get("pr_number", "none")}"}}' > {result_file}
 
 🛑 EXIT CRITERIA - AGENT MUST NOT TERMINATE UNTIL:
 1. ✓ Task completed and tested
 2. ✓ All changes committed and pushed
-3. ✓ PR #{pr_context.get('pr_number', 'unknown')} successfully updated
+3. ✓ PR #{pr_context.get("pr_number", "unknown")} successfully updated
 4. ✓ Completion report written to {result_file}
 """
             else:
@@ -525,12 +575,12 @@ Agent Configuration:
 - Name: {agent_name}
 - Type: {agent_type}
 - Focus: {agent_focus}
-- Capabilities: {', '.join(capabilities)}
+- Capabilities: {", ".join(capabilities)}
 - Working Directory: {agent_dir}
-- Branch: {branch_name} {'(updating existing PR)' if is_update_mode else '(fresh from main)'}
+- Branch: {branch_name} {"(updating existing PR)" if is_update_mode else "(fresh from main)"}
 
-🚨 CRITICAL: {'You are updating an EXISTING PR' if is_update_mode else 'You are starting with a FRESH BRANCH from main'}
-- {'Work on the existing PR branch' if is_update_mode else 'Your branch contains ONLY the main branch code'}
+🚨 CRITICAL: {"You are updating an EXISTING PR" if is_update_mode else "You are starting with a FRESH BRANCH from main"}
+- {"Work on the existing PR branch" if is_update_mode else "Your branch contains ONLY the main branch code"}
 - Make ONLY the changes needed for this specific task
 - Do NOT include unrelated changes
 
@@ -564,14 +614,19 @@ Agent Configuration:
 
             # Determine if this is a restart or first run
             continue_flag = ""
-            conversation_file = f"{os.path.expanduser('~')}/.claude/conversations/{agent_name}.json"
-            if os.path.exists(conversation_file) or os.environ.get('CLAUDE_RESTART', 'false') == 'true':
+            conversation_file = (
+                f"{os.path.expanduser('~')}/.claude/conversations/{agent_name}.json"
+            )
+            if (
+                os.path.exists(conversation_file)
+                or os.environ.get("CLAUDE_RESTART", "false") == "true"
+            ):
                 continue_flag = "--continue"
                 print(f"🔄 {agent_name}: Continuing existing conversation")
             else:
                 print(f"🆕 {agent_name}: Starting new conversation")
 
-            claude_cmd = f'{claude_path} --model sonnet -p @{prompt_file} --output-format stream-json --verbose {continue_flag} --dangerously-skip-permissions'
+            claude_cmd = f"{claude_path} --model sonnet -p @{prompt_file} --output-format stream-json --verbose {continue_flag} --dangerously-skip-permissions"
 
             # Enhanced bash command with error handling and logging
             bash_cmd = f'''
@@ -613,14 +668,27 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
             if os.path.exists(tmux_config):
                 tmux_cmd.extend(["-f", tmux_config])
             else:
-                print(f"⚠️ Warning: tmux config file not found at {tmux_config}, using default config")
+                print(
+                    f"⚠️ Warning: tmux config file not found at {tmux_config}, using default config"
+                )
 
-            tmux_cmd.extend([
-                "new-session", "-d", "-s", agent_name,
-                "-c", agent_dir, "bash", "-c", bash_cmd
-            ])
+            tmux_cmd.extend(
+                [
+                    "new-session",
+                    "-d",
+                    "-s",
+                    agent_name,
+                    "-c",
+                    agent_dir,
+                    "bash",
+                    "-c",
+                    bash_cmd,
+                ]
+            )
 
-            result = subprocess.run(tmux_cmd, check=False, capture_output=True, text=True)
+            result = subprocess.run(
+                tmux_cmd, check=False, capture_output=True, text=True
+            )
             if result.returncode != 0:
                 print(f"⚠️ Error creating tmux session: {result.stderr}")
                 return False
@@ -634,7 +702,6 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
         except Exception as e:
             print(f"❌ Failed to create {agent_name}: {e}")
             return False
-
 
 
 if __name__ == "__main__":

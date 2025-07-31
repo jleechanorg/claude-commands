@@ -17,6 +17,8 @@ from gemini_service import _load_instruction_file, _loaded_instructions_cache
 # Ensure a dummy API key is set BEFORE we import the service.
 os.environ["GEMINI_API_KEY"] = "DUMMY_KEY_FOR_TESTING"
 
+import pytest
+
 import gemini_service
 
 
@@ -87,36 +89,28 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         # Check that all expected instruction types are present
         for instruction_type in expected_instruction_types:
             expected_content = self._create_realistic_mock_content(instruction_type)
-            self.assertIn(
-                expected_content,
-                actual_system_instruction,
-                f"Expected {instruction_type} instructions to be present",
-            )
+            assert (
+                expected_content in actual_system_instruction
+            ), f"Expected {instruction_type} instructions to be present"
 
         # Check order by finding positions of each instruction type
         positions = {}
         for instruction_type in expected_instruction_types:
             expected_content = self._create_realistic_mock_content(instruction_type)
             position = actual_system_instruction.find(expected_content)
-            self.assertNotEqual(
-                position, -1, f"{instruction_type} instructions not found"
-            )
+            assert position != -1, f"{instruction_type} instructions not found"
             positions[instruction_type] = position
 
         # Verify order is correct
         sorted_types = sorted(expected_instruction_types, key=lambda x: positions[x])
-        self.assertEqual(
-            sorted_types,
-            expected_instruction_types,
-            f"Instructions not in expected order. Found: {sorted_types}",
-        )
+        assert (
+            sorted_types == expected_instruction_types
+        ), f"Instructions not in expected order. Found: {sorted_types}"
 
         # Check that background summary instructions are included (but don't check exact content)
-        self.assertIn(
-            "BACKGROUND",
-            actual_system_instruction.upper(),
-            "Background summary instructions should be included",
-        )
+        assert (
+            "BACKGROUND" in actual_system_instruction.upper()
+        ), "Background summary instructions should be included"
 
     @patch("gemini_service.get_client")
     @patch("gemini_service._load_instruction_file")
@@ -315,7 +309,7 @@ class TestInitialStoryPromptAssembly(unittest.TestCase):
         else:
             actual_contents = actual_call_args.args[0]
         actual_prompt_text = actual_contents[0].parts[0].text
-        self.assertEqual(actual_prompt_text, expected_modified_prompt)
+        assert actual_prompt_text == expected_modified_prompt
 
 
 class TestStaticPromptParts(unittest.TestCase):
@@ -343,7 +337,7 @@ class TestStaticPromptParts(unittest.TestCase):
         )
 
         # --- Assert ---
-        self.assertEqual(core_memories_summary, expected_summary)
+        assert core_memories_summary == expected_summary
 
     def test_core_memories_formatting_no_memories(self):
         """
@@ -361,7 +355,7 @@ class TestStaticPromptParts(unittest.TestCase):
         )
 
         # --- Assert ---
-        self.assertEqual(core_memories_summary, "")
+        assert core_memories_summary == ""
 
 
 class TestContextTruncation(unittest.TestCase):
@@ -385,8 +379,8 @@ class TestContextTruncation(unittest.TestCase):
         )
 
         # --- Assert ---
-        self.assertEqual(len(truncated_context), 3)
-        self.assertEqual(story_context, truncated_context)
+        assert len(truncated_context) == 3
+        assert story_context == truncated_context
 
     @patch("gemini_service._get_context_stats")
     def test_context_over_limit_is_truncated(self, mock_get_stats):
@@ -412,13 +406,11 @@ class TestContextTruncation(unittest.TestCase):
         )
 
         # --- Assert ---
-        self.assertEqual(len(truncated_context), turns_start + turns_end + 1)
-        self.assertEqual(truncated_context[0], story_context[0])
-        self.assertEqual(
-            truncated_context[turns_start - 1], story_context[turns_start - 1]
-        )
-        self.assertEqual(truncated_context[turns_start]["actor"], "system")
-        self.assertEqual(truncated_context[-1], story_context[-1])
+        assert len(truncated_context) == turns_start + turns_end + 1
+        assert truncated_context[0] == story_context[0]
+        assert truncated_context[turns_start - 1] == story_context[turns_start - 1]
+        assert truncated_context[turns_start]["actor"] == "system"
+        assert truncated_context[-1] == story_context[-1]
 
 
 # The list of all known prompt types to test, using shared constants.
@@ -443,12 +435,10 @@ class TestPromptLoading(unittest.TestCase):
             "--- Running Test: test_all_prompts_are_loadable_via_service ---"
         )
 
-        for p_type in gemini_service.PATH_MAP.keys():
+        for p_type in gemini_service.PATH_MAP:
             content = _load_instruction_file(p_type)
-            self.assertIsInstance(content, str)
-            self.assertGreater(
-                len(content), 0, f"Prompt file for {p_type} should not be empty."
-            )
+            assert isinstance(content, str)
+            assert len(content) > 0, f"Prompt file for {p_type} should not be empty."
 
     def test_loading_unknown_prompt_raises_error(self):
         """
@@ -458,7 +448,7 @@ class TestPromptLoading(unittest.TestCase):
         logging_util.info(
             "--- Running Test: test_loading_unknown_prompt_raises_error ---"
         )
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             _load_instruction_file("this_is_not_a_real_prompt_type")
 
     @unittest.skip(
@@ -482,7 +472,7 @@ class TestPromptLoading(unittest.TestCase):
         try:
             # We need to handle subdirectories like 'archive'
             disk_files = set()
-            for root, dirs, files in os.walk(prompts_dir):
+            for _root, dirs, files in os.walk(prompts_dir):
                 # Exclude archive directory from this test
                 if "archive" in dirs:
                     dirs.remove("archive")
@@ -498,18 +488,14 @@ class TestPromptLoading(unittest.TestCase):
 
         # 3. Compare the sets
         unregistered_files = disk_files - service_files
-        self.assertEqual(
-            len(unregistered_files),
-            0,
-            f"Found .md files in prompts/ dir not registered in gemini_service.PATH_MAP: {unregistered_files}",
-        )
+        assert (
+            len(unregistered_files) == 0
+        ), f"Found .md files in prompts/ dir not registered in gemini_service.PATH_MAP: {unregistered_files}"
 
         missing_files = service_files - disk_files
-        self.assertEqual(
-            len(missing_files),
-            0,
-            f"Found files in gemini_service.PATH_MAP that do not exist in prompts/: {missing_files}",
-        )
+        assert (
+            len(missing_files) == 0
+        ), f"Found files in gemini_service.PATH_MAP that do not exist in prompts/: {missing_files}"
 
 
 class TestResourceTrackingInDebugOutput(unittest.TestCase):
@@ -548,18 +534,18 @@ class TestResourceTrackingInDebugOutput(unittest.TestCase):
         system_instruction = call_args.kwargs["system_instruction_text"]
 
         # Check for resource tracking tags
-        self.assertIn("[DEBUG_RESOURCES_START]", system_instruction)
-        self.assertIn("[DEBUG_RESOURCES_END]", system_instruction)
+        assert "[DEBUG_RESOURCES_START]" in system_instruction
+        assert "[DEBUG_RESOURCES_END]" in system_instruction
 
         # Check for resource examples
-        self.assertIn("EP used", system_instruction)
-        self.assertIn("spell slots", system_instruction)
-        self.assertIn("short rests", system_instruction)
+        assert "EP used" in system_instruction
+        assert "spell slots" in system_instruction
+        assert "short rests" in system_instruction
 
         # Check for specific examples
-        self.assertIn("2 EP used (6/8 remaining)", system_instruction)
-        self.assertIn("1 spell slot level 2 (2/3 remaining)", system_instruction)
-        self.assertIn("short rests: 1/2", system_instruction)
+        assert "2 EP used (6/8 remaining)" in system_instruction
+        assert "1 spell slot level 2 (2/3 remaining)" in system_instruction
+        assert "short rests: 1/2" in system_instruction
 
     @patch("gemini_service._call_gemini_api")
     @patch("gemini_service._load_instruction_file")
@@ -590,8 +576,8 @@ class TestResourceTrackingInDebugOutput(unittest.TestCase):
         system_instruction = call_args.kwargs["system_instruction_text"]
 
         # Debug instructions are always included for AI context
-        self.assertIn("[DEBUG_RESOURCES_START]", system_instruction)
-        self.assertIn("[DEBUG_RESOURCES_END]", system_instruction)
+        assert "[DEBUG_RESOURCES_START]" in system_instruction
+        assert "[DEBUG_RESOURCES_END]" in system_instruction
 
     @patch("gemini_service._call_gemini_api")
     @patch("gemini_service._load_instruction_file")
@@ -629,11 +615,9 @@ class TestResourceTrackingInDebugOutput(unittest.TestCase):
         ]
 
         for resource_type in resource_types:
-            self.assertIn(
-                resource_type,
-                system_instruction,
-                f"Debug instructions should mention {resource_type}",
-            )
+            assert (
+                resource_type in system_instruction
+            ), f"Debug instructions should mention {resource_type}"
 
 
 class TestUserInputCountAndModelSelection(unittest.TestCase):
@@ -717,11 +701,9 @@ class TestUserInputCountAndModelSelection(unittest.TestCase):
                 actual_model = call_args[0][
                     1
                 ]  # Second positional argument is the model
-                self.assertEqual(
-                    actual_model,
-                    expected_model,
-                    f"Input count {expected_count} should use {expected_model}",
-                )
+                assert (
+                    actual_model == expected_model
+                ), f"Input count {expected_count} should use {expected_model}"
 
                 mock_api_call.reset_mock()
 
@@ -760,7 +742,7 @@ class TestUserInputCountAndModelSelection(unittest.TestCase):
         mock_api_call.assert_called()
         call_args = mock_api_call.call_args
         actual_model = call_args[0][1]  # Second positional argument is the model
-        self.assertEqual(actual_model, gemini_service.TEST_MODEL)
+        assert actual_model == gemini_service.TEST_MODEL
 
     @patch("gemini_service._call_gemini_api")
     @patch("gemini_service._load_instruction_file")
@@ -811,11 +793,9 @@ class TestUserInputCountAndModelSelection(unittest.TestCase):
         mock_api_call.assert_called()
         call_args = mock_api_call.call_args
         actual_model = call_args[0][1]
-        self.assertEqual(
-            actual_model,
-            gemini_service.DEFAULT_MODEL,
-            "Should use default model for 4th user input (beyond the limit of 3)",
-        )
+        assert (
+            actual_model == gemini_service.DEFAULT_MODEL
+        ), "Should use default model for 4th user input (beyond the limit of 3)"
 
     @patch("gemini_service._call_gemini_api")
     @patch("gemini_service._load_instruction_file")
@@ -860,11 +840,9 @@ class TestUserInputCountAndModelSelection(unittest.TestCase):
                 mock_api_call.assert_called()
                 call_args = mock_api_call.call_args
                 actual_model = call_args[0][1]
-                self.assertEqual(
-                    actual_model,
-                    gemini_service.DEFAULT_MODEL,
-                    f"Should use default model for all inputs with context: {story_context}",
-                )
+                assert (
+                    actual_model == gemini_service.DEFAULT_MODEL
+                ), f"Should use default model for all inputs with context: {story_context}"
 
                 mock_api_call.reset_mock()
 

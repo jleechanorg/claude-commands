@@ -112,22 +112,22 @@ class TestPromptLoadingPermutations(unittest.TestCase):
         loaded_files = self._get_loaded_files(selected_prompts)
 
         # Core files always loaded
-        self.assertIn("master_directive", loaded_files)
-        self.assertIn("game_state", loaded_files)
-        self.assertIn("debug_instructions", loaded_files)
-        self.assertIn("dnd_srd", loaded_files)
+        assert "master_directive" in loaded_files
+        assert "game_state" in loaded_files
+        assert "debug_instructions" in loaded_files
+        assert "dnd_srd" in loaded_files
 
         # Selected prompt files
-        self.assertIn("narrative", loaded_files)
-        self.assertIn("mechanics", loaded_files)
+        assert "narrative" in loaded_files
+        assert "mechanics" in loaded_files
 
         # Character template loaded when narrative is selected
-        self.assertIn("character_template", loaded_files)
+        assert "character_template" in loaded_files
 
         # Verify order: master_directive and game_state come first
-        self.assertEqual(loaded_files[0], "master_directive")
-        self.assertEqual(loaded_files[1], "game_state")
-        self.assertEqual(loaded_files[2], "debug_instructions")
+        assert loaded_files[0] == "master_directive"
+        assert loaded_files[1] == "game_state"
+        assert loaded_files[2] == "debug_instructions"
 
     def test_only_narrative_selected(self):
         """Test Case 2: Only narrative checkbox selected."""
@@ -135,19 +135,19 @@ class TestPromptLoadingPermutations(unittest.TestCase):
         loaded_files = self._get_loaded_files(selected_prompts)
 
         # Core files always loaded
-        self.assertIn("master_directive", loaded_files)
-        self.assertIn("game_state", loaded_files)
-        self.assertIn("debug_instructions", loaded_files)
-        self.assertIn("dnd_srd", loaded_files)
+        assert "master_directive" in loaded_files
+        assert "game_state" in loaded_files
+        assert "debug_instructions" in loaded_files
+        assert "dnd_srd" in loaded_files
 
         # Narrative selected
-        self.assertIn("narrative", loaded_files)
+        assert "narrative" in loaded_files
 
         # Mechanics NOT selected
-        self.assertNotIn("mechanics", loaded_files)
+        assert "mechanics" not in loaded_files
 
         # Character template loaded when narrative is selected
-        self.assertIn("character_template", loaded_files)
+        assert "character_template" in loaded_files
 
     def test_only_mechanics_selected(self):
         """Test Case 3: Only mechanics checkbox selected."""
@@ -155,19 +155,19 @@ class TestPromptLoadingPermutations(unittest.TestCase):
         loaded_files = self._get_loaded_files(selected_prompts)
 
         # Core files always loaded
-        self.assertIn("master_directive", loaded_files)
-        self.assertIn("game_state", loaded_files)
-        self.assertIn("debug_instructions", loaded_files)
-        self.assertIn("dnd_srd", loaded_files)
+        assert "master_directive" in loaded_files
+        assert "game_state" in loaded_files
+        assert "debug_instructions" in loaded_files
+        assert "dnd_srd" in loaded_files
 
         # Mechanics selected
-        self.assertIn("mechanics", loaded_files)
+        assert "mechanics" in loaded_files
 
         # Narrative NOT selected
-        self.assertNotIn("narrative", loaded_files)
+        assert "narrative" not in loaded_files
 
         # Character template NOT loaded when only mechanics selected
-        self.assertNotIn("character_template", loaded_files)
+        assert "character_template" not in loaded_files
 
     def test_no_checkboxes_selected(self):
         """Test Case 4: No checkboxes selected."""
@@ -175,18 +175,18 @@ class TestPromptLoadingPermutations(unittest.TestCase):
         loaded_files = self._get_loaded_files(selected_prompts)
 
         # Core files always loaded
-        self.assertIn("master_directive", loaded_files)
-        self.assertIn("game_state", loaded_files)
-        self.assertIn("debug_instructions", loaded_files)
-        self.assertIn("dnd_srd", loaded_files)
+        assert "master_directive" in loaded_files
+        assert "game_state" in loaded_files
+        assert "debug_instructions" in loaded_files
+        assert "dnd_srd" in loaded_files
 
         # No optional files loaded
-        self.assertNotIn("narrative", loaded_files)
-        self.assertNotIn("mechanics", loaded_files)
-        self.assertNotIn("character_template", loaded_files)
+        assert "narrative" not in loaded_files
+        assert "mechanics" not in loaded_files
+        assert "character_template" not in loaded_files
 
         # Should have exactly 4 files loaded (3 core + dnd_srd)
-        self.assertEqual(len(loaded_files), 4)
+        assert len(loaded_files) == 4
 
     def test_character_creation_triggers_with_mechanics(self):
         """Test that character creation is mentioned when mechanics is loaded."""
@@ -204,7 +204,7 @@ class TestPromptLoadingPermutations(unittest.TestCase):
         full_content = "\n".join(parts)
 
         # Mechanics content should be loaded
-        self.assertIn("Mechanics content with character creation", full_content)
+        assert "Mechanics content with character creation" in full_content
 
         # When mechanics is enabled, character creation should be available
         # (The actual character creation trigger is in the mechanics file)
@@ -225,7 +225,7 @@ class TestPromptLoadingPermutations(unittest.TestCase):
         full_content = "\n".join(parts)
 
         # Mechanics content should NOT be loaded
-        self.assertNotIn("Mechanics content with character creation", full_content)
+        assert "Mechanics content with character creation" not in full_content
 
     def test_prompt_loading_order_consistency(self):
         """Test that files are always loaded in the correct order."""
@@ -250,15 +250,13 @@ class TestPromptLoadingPermutations(unittest.TestCase):
                 core_indices.append(loaded_files.index("debug_instructions"))
 
             # Verify core files are in order and at the beginning
-            self.assertEqual(core_indices, list(range(len(core_indices))))
+            assert core_indices == list(range(len(core_indices)))
 
             # If both narrative and mechanics are selected, narrative comes before mechanics
             if "narrative" in loaded_files and "mechanics" in loaded_files:
-                self.assertLess(
-                    loaded_files.index("narrative"),
-                    loaded_files.index("mechanics"),
-                    f"Narrative should come before mechanics for {selected_prompts}",
-                )
+                assert loaded_files.index("narrative") < loaded_files.index(
+                    "mechanics"
+                ), f"Narrative should come before mechanics for {selected_prompts}"
 
     def test_character_template_only_with_narrative(self):
         """Test that character_template is only loaded when narrative is selected."""
@@ -273,17 +271,13 @@ class TestPromptLoadingPermutations(unittest.TestCase):
             loaded_files = self._get_loaded_files(selected_prompts)
 
             if should_load_template:
-                self.assertIn(
-                    "character_template",
-                    loaded_files,
-                    f"Character template should be loaded for {selected_prompts}",
-                )
+                assert (
+                    "character_template" in loaded_files
+                ), f"Character template should be loaded for {selected_prompts}"
             else:
-                self.assertNotIn(
-                    "character_template",
-                    loaded_files,
-                    f"Character template should NOT be loaded for {selected_prompts}",
-                )
+                assert (
+                    "character_template" not in loaded_files
+                ), f"Character template should NOT be loaded for {selected_prompts}"
 
     def test_invalid_prompt_type_ignored(self):
         """Test that invalid prompt types are silently ignored."""
@@ -291,12 +285,12 @@ class TestPromptLoadingPermutations(unittest.TestCase):
         loaded_files = self._get_loaded_files(selected_prompts)
 
         # Should load valid prompts and ignore invalid ones
-        self.assertIn("narrative", loaded_files)
-        self.assertIn("mechanics", loaded_files)
+        assert "narrative" in loaded_files
+        assert "mechanics" in loaded_files
 
         # Invalid types should not appear
-        self.assertNotIn("invalid_type", loaded_files)
-        self.assertNotIn("another_invalid", loaded_files)
+        assert "invalid_type" not in loaded_files
+        assert "another_invalid" not in loaded_files
 
 
 if __name__ == "__main__":

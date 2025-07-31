@@ -10,6 +10,7 @@ from pydantic import ValidationError
 # Add the mvp_site directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+import pytest
 from schemas.defensive_numeric_converter import DefensiveNumericConverter
 from schemas.entities_pydantic import Character, EntityType, HealthStatus, Stats
 
@@ -158,7 +159,7 @@ class TestEntitiesWithDefensiveConverter(unittest.TestCase):
         """Test that HP validation works after defensive conversion"""
 
         # HP=10, HP_MAX=unknown (converts to 1) -> Should fail validation (hp > hp_max)
-        with self.assertRaises(ValidationError):
+        with pytest.raises(ValidationError):
             HealthStatus(hp=10, hp_max="unknown")  # hp=10 > hp_max=1 after conversion
 
         # HP=unknown (converts to 1), HP_MAX=5 -> HP should be 1

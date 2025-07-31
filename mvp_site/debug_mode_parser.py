@@ -184,11 +184,10 @@ class DebugModeParser:
         """
         if command_type == "enable" and new_state:
             return "[System Message: Debug mode enabled. You will now see DM commentary and game state changes.]"
-        elif command_type == "disable" and not new_state:
+        if command_type == "disable" and not new_state:
             return "[System Message: Debug mode disabled. DM commentary and state changes are now hidden.]"
-        elif command_type == "enable" and not new_state:
+        if command_type == "enable" and not new_state:
             return "[System Message: Debug mode is already enabled.]"
-        elif command_type == "disable" and new_state:
+        if command_type == "disable" and new_state:
             return "[System Message: Debug mode is already disabled.]"
-        else:
-            return "[System Message: Debug mode command processed.]"
+        return "[System Message: Debug mode command processed.]"

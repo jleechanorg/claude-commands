@@ -193,24 +193,24 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         )
 
         # Assert response
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         response_data = json.loads(response.data)
 
         # Verify response structure (robust assertions)
-        self.assertIn("narrative", response_data)
+        assert "narrative" in response_data
         # Basic structure validation
-        self.assertIsInstance(response_data, dict)
-        self.assertTrue(response_data["success"])
+        assert isinstance(response_data, dict)
+        assert response_data["success"]
 
         # Verify narrative
-        self.assertIn("dragon's eyes narrow", response_data["narrative"])
+        assert "dragon's eyes narrow" in response_data["narrative"]
 
         # Verify state update happened
-        self.assertIn("state_updates", response_data)
-        self.assertTrue(response_data["state_updates"]["combat_state"]["in_combat"])
+        assert "state_updates" in response_data
+        assert response_data["state_updates"]["combat_state"]["in_combat"]
 
         # Verify Gemini was called (may be called multiple times due to dual-pass generation)
-        self.assertTrue(fake_genai_client.models.generate_content.called)
+        assert fake_genai_client.models.generate_content.called
 
     @patch("firebase_admin.firestore.client")
     @patch("google.genai.Client")
@@ -331,72 +331,70 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         )
 
         # Assert response
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         response_data = json.loads(response.data)
 
         # Verify response structure
-        self.assertIsInstance(response_data, dict)
-        self.assertTrue(response_data["success"])
+        assert isinstance(response_data, dict)
+        assert response_data["success"]
 
         # Verify narrative contains thinking content
-        self.assertIn("think carefully", response_data["narrative"])
+        assert "think carefully" in response_data["narrative"]
 
         # Verify planning block structure
-        self.assertIn("planning_block", response_data)
+        assert "planning_block" in response_data
         planning_block = response_data["planning_block"]
-        self.assertIn("thinking", planning_block)
-        self.assertIn("choices", planning_block)
+        assert "thinking" in planning_block
+        assert "choices" in planning_block
 
         # Verify deep think analysis fields are present and in STRING format
         choices = planning_block["choices"]
 
         # Test attack_head_on choice analysis
         attack_choice = choices["attack_head_on"]
-        self.assertIn("analysis", attack_choice)
+        assert "analysis" in attack_choice
         attack_analysis = attack_choice["analysis"]
 
         # Assert pros/cons are ARRAYS (user wants bullet points)
-        self.assertIsInstance(attack_analysis["pros"], list)
-        self.assertIsInstance(attack_analysis["cons"], list)
-        self.assertIsInstance(attack_analysis["confidence"], str)
+        assert isinstance(attack_analysis["pros"], list)
+        assert isinstance(attack_analysis["cons"], list)
+        assert isinstance(attack_analysis["confidence"], str)
 
         # Verify content (case-sensitive)
-        self.assertIn("Quick resolution", attack_analysis["pros"])
-        self.assertIn("Shows courage", attack_analysis["pros"])
-        self.assertIn("High risk of injury", attack_analysis["cons"])
-        self.assertIn("Low - this seems reckless", attack_analysis["confidence"])
+        assert "Quick resolution" in attack_analysis["pros"]
+        assert "Shows courage" in attack_analysis["pros"]
+        assert "High risk of injury" in attack_analysis["cons"]
+        assert "Low - this seems reckless" in attack_analysis["confidence"]
 
         # Test defensive_approach choice analysis
         defensive_choice = choices["defensive_approach"]
         defensive_analysis = defensive_choice["analysis"]
 
         # Assert array format and content
-        self.assertIsInstance(defensive_analysis["pros"], list)
-        self.assertIsInstance(defensive_analysis["cons"], list)
-        self.assertIn("Safer approach", defensive_analysis["pros"])
-        self.assertIn("Takes longer", defensive_analysis["cons"])
-        self.assertIn("Moderate", defensive_analysis["confidence"])
+        assert isinstance(defensive_analysis["pros"], list)
+        assert isinstance(defensive_analysis["cons"], list)
+        assert "Safer approach" in defensive_analysis["pros"]
+        assert "Takes longer" in defensive_analysis["cons"]
+        assert "Moderate" in defensive_analysis["confidence"]
 
         # Test diplomacy choice analysis
         diplomacy_choice = choices["attempt_diplomacy"]
         diplomacy_analysis = diplomacy_choice["analysis"]
 
         # Assert array format and content
-        self.assertIsInstance(diplomacy_analysis["pros"], list)
-        self.assertIsInstance(diplomacy_analysis["cons"], list)
-        self.assertIn("Could avoid combat entirely", diplomacy_analysis["pros"])
-        self.assertIn("Dragon might not be intelligent", diplomacy_analysis["cons"])
-        self.assertIn("High - worth trying", diplomacy_analysis["confidence"])
+        assert isinstance(diplomacy_analysis["pros"], list)
+        assert isinstance(diplomacy_analysis["cons"], list)
+        assert "Could avoid combat entirely" in diplomacy_analysis["pros"]
+        assert "Dragon might not be intelligent" in diplomacy_analysis["cons"]
+        assert "High - worth trying" in diplomacy_analysis["confidence"]
 
         # Verify state updates
-        self.assertIn("state_updates", response_data)
-        self.assertTrue(response_data["state_updates"]["thinking_mode"]["active"])
-        self.assertEqual(
-            response_data["state_updates"]["thinking_mode"]["depth"], "deep"
-        )
+        assert "state_updates" in response_data
+        assert response_data["state_updates"]["thinking_mode"]["active"]
+        assert response_data["state_updates"]["thinking_mode"]["depth"] == "deep"
 
         # Verify Gemini was called
-        self.assertTrue(fake_genai_client.models.generate_content.called)
+        assert fake_genai_client.models.generate_content.called
 
     @patch("firebase_admin.firestore.client")
     def test_continue_story_unauthorized(self, mock_firestore_client):
@@ -428,9 +426,9 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         )
 
         # Assert forbidden
-        self.assertEqual(response.status_code, 404)
+        assert response.status_code == 404
         response_data = json.loads(response.data)
-        self.assertIn("error", response_data)
+        assert "error" in response_data
 
 
 if __name__ == "__main__":

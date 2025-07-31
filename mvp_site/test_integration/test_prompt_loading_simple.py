@@ -30,9 +30,11 @@ class TestPromptLoadingLogic(unittest.TestCase):
 
     def test_user_selectable_prompts_constant(self):
         """Test that USER_SELECTABLE_PROMPTS contains the expected prompts."""
-        self.assertEqual(
-            constants.USER_SELECTABLE_PROMPTS, ["narrative", "mechanics", "calibration"]
-        )
+        assert [
+            "narrative",
+            "mechanics",
+            "calibration",
+        ] == constants.USER_SELECTABLE_PROMPTS
 
     def test_calibration_filtering_in_continue_story(self):
         """Verify the filtering logic in continue_story by checking the code."""
@@ -48,8 +50,8 @@ class TestPromptLoadingLogic(unittest.TestCase):
             if p_type != constants.PROMPT_TYPE_CALIBRATION
         ]
 
-        self.assertEqual(selected_prompts_filtered, ["narrative", "mechanics"])
-        self.assertNotIn("calibration", selected_prompts_filtered)
+        assert selected_prompts_filtered == ["narrative", "mechanics"]
+        assert "calibration" not in selected_prompts_filtered
 
     def test_calibration_filtering_with_future_prompts(self):
         """Verify that filtering works correctly even with new prompt types."""
@@ -68,13 +70,15 @@ class TestPromptLoadingLogic(unittest.TestCase):
         ]
 
         # Should include everything except calibration
-        self.assertEqual(
-            selected_prompts_filtered,
-            ["narrative", "mechanics", "future_prompt_1", "future_prompt_2"],
-        )
-        self.assertNotIn("calibration", selected_prompts_filtered)
-        self.assertIn("future_prompt_1", selected_prompts_filtered)
-        self.assertIn("future_prompt_2", selected_prompts_filtered)
+        assert selected_prompts_filtered == [
+            "narrative",
+            "mechanics",
+            "future_prompt_1",
+            "future_prompt_2",
+        ]
+        assert "calibration" not in selected_prompts_filtered
+        assert "future_prompt_1" in selected_prompts_filtered
+        assert "future_prompt_2" in selected_prompts_filtered
 
     def test_calibration_included_in_get_initial_story(self):
         """Verify that get_initial_story would include calibration."""
@@ -87,8 +91,8 @@ class TestPromptLoadingLogic(unittest.TestCase):
             constants.PROMPT_TYPE_CALIBRATION,
         ]
 
-        self.assertIn(constants.PROMPT_TYPE_CALIBRATION, prompts_to_load)
-        self.assertEqual(len(prompts_to_load), 3)
+        assert constants.PROMPT_TYPE_CALIBRATION in prompts_to_load
+        assert len(prompts_to_load) == 3
 
     @patch("gemini_service._load_instruction_file")
     def test_prompt_loading_order_get_initial_story(self, mock_load):
@@ -157,7 +161,7 @@ class TestPromptLoadingLogic(unittest.TestCase):
 
         # Verify first 9 calls match expected
         actual_calls = mock_load.call_args_list[:9]
-        self.assertEqual(actual_calls, expected_calls)
+        assert actual_calls == expected_calls
 
     @patch("gemini_service._load_instruction_file")
     def test_prompt_loading_order_continue_story(self, mock_load):
@@ -227,17 +231,15 @@ class TestPromptLoadingLogic(unittest.TestCase):
         ]
 
         # Verify calls match expected (no calibration)
-        self.assertEqual(mock_load.call_args_list, expected_calls)
+        assert mock_load.call_args_list == expected_calls
 
         # Double-check calibration was not called
         calibration_calls = [
             c for c in mock_load.call_args_list if c == call("calibration")
         ]
-        self.assertEqual(
-            len(calibration_calls),
-            0,
-            "Calibration should not be loaded in continue_story",
-        )
+        assert (
+            len(calibration_calls) == 0
+        ), "Calibration should not be loaded in continue_story"
 
 
 if __name__ == "__main__":

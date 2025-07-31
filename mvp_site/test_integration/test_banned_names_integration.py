@@ -45,10 +45,10 @@ These names are overused by LLMs and cannot be used in any world content.
                 result = load_banned_names()
 
                 # The function strips the content, so compare stripped version
-                self.assertEqual(result, self.sample_banned_names.strip())
-                self.assertIn("Alaric", result)
-                self.assertIn("Corvus", result)
-                self.assertIn("Valerius", result)
+                assert result == self.sample_banned_names.strip()
+                assert "Alaric" in result
+                assert "Corvus" in result
+                assert "Valerius" in result
 
     def test_load_banned_names_file_not_found(self):
         """Test behavior when banned names file is not found"""
@@ -56,11 +56,9 @@ These names are overused by LLMs and cannot be used in any world content.
             with patch("logging.warning") as mock_warning:
                 result = load_banned_names()
 
-                self.assertEqual(result, "")
+                assert result == ""
                 mock_warning.assert_called_once()
-                self.assertIn(
-                    "Banned names file not found", mock_warning.call_args[0][0]
-                )
+                assert "Banned names file not found" in mock_warning.call_args[0][0]
 
     def test_load_banned_names_general_error(self):
         """Test behavior when general error occurs loading banned names"""
@@ -68,9 +66,9 @@ These names are overused by LLMs and cannot be used in any world content.
             with patch("logging.error") as mock_error:
                 result = load_banned_names()
 
-                self.assertEqual(result, "")
+                assert result == ""
                 mock_error.assert_called_once()
-                self.assertIn("Error loading banned names", mock_error.call_args[0][0])
+                assert "Error loading banned names" in mock_error.call_args[0][0]
 
     @patch("world_loader.load_banned_names")
     def test_world_content_includes_banned_names(self, mock_load_banned):
@@ -110,100 +108,100 @@ These names are overused by LLMs and cannot be used in any world content.
                 result = load_world_content_for_system_instruction()
 
                 # Check structure
-                self.assertIn("WORLD CONTENT FOR CAMPAIGN CONSISTENCY", result)
-                self.assertIn("PRIMARY CANON - CELESTIAL WARS ALEXIEL BOOK", result)
-                self.assertIn("SECONDARY CANON - WORLD OF ASSIAH DOCUMENTATION", result)
-                self.assertIn("CRITICAL NAMING RESTRICTIONS", result)
+                assert "WORLD CONTENT FOR CAMPAIGN CONSISTENCY" in result
+                assert "PRIMARY CANON - CELESTIAL WARS ALEXIEL BOOK" in result
+                assert "SECONDARY CANON - WORLD OF ASSIAH DOCUMENTATION" in result
+                assert "CRITICAL NAMING RESTRICTIONS" in result
 
                 # Check banned names content
-                self.assertIn("Banned Names", result)
-                self.assertIn("must NEVER be used", result)
+                assert "Banned Names" in result
+                assert "must NEVER be used" in result
 
                 # Check enforcement text
-                self.assertIn("Enforcement", result)
-                self.assertIn("New NPCs being introduced", result)
-                self.assertIn("Player character suggestions", result)
+                assert "Enforcement" in result
+                assert "New NPCs being introduced" in result
+                assert "Player character suggestions" in result
 
                 # Check world consistency rules
-                self.assertIn(
-                    "7. **Name Restrictions**: NEVER use any name from the banned names list",
-                    result,
+                assert (
+                    "7. **Name Restrictions**: NEVER use any name from the banned names list"
+                    in result
                 )
 
     def test_banned_names_in_critical_section(self):
         """Test that banned names appear in the critical naming restrictions section"""
-        with patch(
-            "world_loader.load_banned_names", return_value=self.sample_banned_names
+        with (
+            patch(
+                "world_loader.load_banned_names", return_value=self.sample_banned_names
+            ),
+            patch("builtins.open", mock_open(read_data="dummy content")),
         ):
-            with patch("builtins.open", mock_open(read_data="dummy content")):
-                with patch("os.path.join") as mock_join:
-                    mock_join.side_effect = lambda *args: "/".join(args)
+            with patch("os.path.join") as mock_join:
+                mock_join.side_effect = lambda *args: "/".join(args)
 
-                    result = load_world_content_for_system_instruction()
+                result = load_world_content_for_system_instruction()
 
-                    # Find the critical naming restrictions section
-                    critical_start = result.find("CRITICAL NAMING RESTRICTIONS")
-                    self.assertNotEqual(
-                        critical_start,
-                        -1,
-                        "CRITICAL NAMING RESTRICTIONS section not found",
-                    )
+                # Find the critical naming restrictions section
+                critical_start = result.find("CRITICAL NAMING RESTRICTIONS")
+                assert (
+                    critical_start != -1
+                ), "CRITICAL NAMING RESTRICTIONS section not found"
 
-                    # Find where it ends (next --- marker)
-                    critical_end = result.find("---", critical_start + 1)
-                    critical_section = result[critical_start:critical_end]
+                # Find where it ends (next --- marker)
+                critical_end = result.find("---", critical_start + 1)
+                critical_section = result[critical_start:critical_end]
 
-                    # Check that banned names are in this section
-                    self.assertIn("Alaric", critical_section)
-                    self.assertIn("Corvus", critical_section)
-                    self.assertIn("Elara", critical_section)
-                    self.assertIn("Valerius", critical_section)
+                # Check that banned names are in this section
+                assert "Alaric" in critical_section
+                assert "Corvus" in critical_section
+                assert "Elara" in critical_section
+                assert "Valerius" in critical_section
 
     def test_specific_banned_names_present(self):
         """Test that specific problematic names are included"""
         # Test only the names that are actually in our sample data
         names_to_test = ["Alaric", "Blackwood", "Corvus", "Elara", "Valerius"]
 
-        with patch(
-            "world_loader.load_banned_names", return_value=self.sample_banned_names
+        with (
+            patch(
+                "world_loader.load_banned_names", return_value=self.sample_banned_names
+            ),
+            patch("builtins.open", mock_open(read_data="dummy content")),
         ):
-            with patch("builtins.open", mock_open(read_data="dummy content")):
-                with patch("os.path.join") as mock_join:
-                    mock_join.side_effect = lambda *args: "/".join(args)
+            with patch("os.path.join") as mock_join:
+                mock_join.side_effect = lambda *args: "/".join(args)
 
-                    result = load_world_content_for_system_instruction()
+                result = load_world_content_for_system_instruction()
 
-                    for name in names_to_test:
-                        self.assertIn(
-                            name,
-                            result,
-                            f"Banned name '{name}' not found in world content",
-                        )
+                for name in names_to_test:
+                    assert (
+                        name in result
+                    ), f"Banned name '{name}' not found in world content"
 
     def test_enforcement_instructions_complete(self):
         """Test that enforcement instructions are complete"""
-        with patch(
-            "world_loader.load_banned_names", return_value=self.sample_banned_names
+        with (
+            patch(
+                "world_loader.load_banned_names", return_value=self.sample_banned_names
+            ),
+            patch("builtins.open", mock_open(read_data="dummy content")),
         ):
-            with patch("builtins.open", mock_open(read_data="dummy content")):
-                with patch("os.path.join") as mock_join:
-                    mock_join.side_effect = lambda *args: "/".join(args)
+            with patch("os.path.join") as mock_join:
+                mock_join.side_effect = lambda *args: "/".join(args)
 
-                    result = load_world_content_for_system_instruction()
+                result = load_world_content_for_system_instruction()
 
-                    # Check all enforcement categories
-                    enforcement_items = [
-                        "New NPCs being introduced",
-                        "Player character suggestions",
-                        "Location names",
-                        "Organization names",
-                        "Any other named entity",
-                    ]
+                # Check all enforcement categories
+                enforcement_items = [
+                    "New NPCs being introduced",
+                    "Player character suggestions",
+                    "Location names",
+                    "Organization names",
+                    "Any other named entity",
+                ]
 
-                    for item in enforcement_items:
-                        self.assertIn(
-                            item, result, f"Enforcement item '{item}' not found"
-                        )
+                for item in enforcement_items:
+                    assert item in result, f"Enforcement item '{item}' not found"
 
     def test_world_consistency_rules_updated(self):
         """Test that world consistency rules include name restrictions"""
@@ -217,9 +215,9 @@ These names are overused by LLMs and cannot be used in any world content.
                     result = load_world_content_for_system_instruction()
 
                     # Check that rule #7 exists
-                    self.assertIn(
-                        "7. **Name Restrictions**: NEVER use any name from the banned names list",
-                        result,
+                    assert (
+                        "7. **Name Restrictions**: NEVER use any name from the banned names list"
+                        in result
                     )
 
 
@@ -240,12 +238,12 @@ class TestBannedNamesRealFile(unittest.TestCase):
                 content = f.read()
 
             # Check file has substantial content
-            self.assertGreater(len(content), 500, "Banned names file seems too short")
+            assert len(content) > 500, "Banned names file seems too short"
 
             # Check for expected sections
-            self.assertIn("# Banned Names", content)
-            self.assertIn("Primary Banned Names", content)
-            self.assertIn("Extended Banned Names", content)
+            assert "# Banned Names" in content
+            assert "Primary Banned Names" in content
+            assert "Extended Banned Names" in content
 
             # Check for some specific names
             key_names = [
@@ -258,15 +256,13 @@ class TestBannedNamesRealFile(unittest.TestCase):
                 "Raven",
             ]
             for name in key_names:
-                self.assertIn(name, content, f"Expected banned name '{name}' not found")
+                assert name in content, f"Expected banned name '{name}' not found"
 
             # Check there are at least 50 names (rough count of lines with "- ")
             name_lines = [
                 line for line in content.split("\n") if line.strip().startswith("- ")
             ]
-            self.assertGreaterEqual(
-                len(name_lines), 50, "Expected at least 50 banned names"
-            )
+            assert len(name_lines) >= 50, "Expected at least 50 banned names"
 
 
 if __name__ == "__main__":

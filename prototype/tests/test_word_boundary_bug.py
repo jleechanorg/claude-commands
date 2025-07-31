@@ -34,8 +34,8 @@ class TestWordBoundaryBug(unittest.TestCase):
 
         # Current implementation will find "Gideon" in "Gideonville" (false positive)
         # This assertion should FAIL, demonstrating the bug
-        self.assertEqual(result["entities_found"], [])
-        self.assertFalse(result["all_entities_present"])
+        assert result["entities_found"] == []
+        assert not result["all_entities_present"]
 
     def test_compound_word_false_positive(self):
         """Test compound words causing false positives."""
@@ -47,8 +47,8 @@ class TestWordBoundaryBug(unittest.TestCase):
 
         # Current implementation will find "Rowan" in "Rowanwood" (false positive)
         # This assertion should FAIL
-        self.assertEqual(result["entities_found"], [])
-        self.assertFalse(result["all_entities_present"])
+        assert result["entities_found"] == []
+        assert not result["all_entities_present"]
 
     def test_possessive_false_positive(self):
         """Test possessive forms causing false positives."""
@@ -61,8 +61,8 @@ class TestWordBoundaryBug(unittest.TestCase):
         # Current implementation correctly finds "Marcus" in "Marcus's" (true positive)
         # But also incorrectly finds "Marcus" in "Marcusson" (false positive)
         # We need to check the actual mentions
-        self.assertEqual(result["entities_found"], ["Marcus"])
-        self.assertTrue(result["all_entities_present"])
+        assert result["entities_found"] == ["Marcus"]
+        assert result["all_entities_present"]
 
     def test_true_positive_whole_word(self):
         """Test that whole word matches work correctly (should pass)."""
@@ -73,8 +73,8 @@ class TestWordBoundaryBug(unittest.TestCase):
         result = self.validator.validate(narrative, expected_entities)
 
         # This should work correctly
-        self.assertEqual(result["entities_found"], ["Gideon"])
-        self.assertTrue(result["all_entities_present"])
+        assert result["entities_found"] == ["Gideon"]
+        assert result["all_entities_present"]
 
     def test_case_variations(self):
         """Test case variations are handled correctly."""
@@ -84,8 +84,8 @@ class TestWordBoundaryBug(unittest.TestCase):
 
         result = self.validator.validate(narrative, expected_entities)
 
-        self.assertEqual(result["entities_found"], ["Gideon"])
-        self.assertTrue(result["all_entities_present"])
+        assert result["entities_found"] == ["Gideon"]
+        assert result["all_entities_present"]
 
 
 if __name__ == "__main__":

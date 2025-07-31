@@ -10,6 +10,7 @@ from pydantic import ValidationError
 # Add the mvp_site directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+import pytest
 from schemas.entities_pydantic import HealthStatus
 
 
@@ -89,10 +90,10 @@ class TestHPUnknownValues(unittest.TestCase):
         """Test validation still works after conversion"""
 
         # HP=5 exceeds converted hp_max=1, should raise ValidationError
-        with self.assertRaises(ValidationError) as context:
+        with pytest.raises(ValidationError) as context:
             HealthStatus(hp=5, hp_max="unknown")
 
-        assert "cannot exceed max HP" in str(context.exception)
+        assert "cannot exceed max HP" in str(context.value)
 
     def test_negative_hp_values(self):
         """Test negative HP and HP_MAX values get converted by DefensiveNumericConverter"""

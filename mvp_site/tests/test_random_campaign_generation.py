@@ -34,7 +34,7 @@ class TestRandomCampaignGeneration(unittest.TestCase):
         result = _build_campaign_prompt(character, setting, description, old_prompt)
 
         expected = "Character: A brave warrior | Setting: The bustling city | Description: An epic adventure"
-        self.assertEqual(result, expected)
+        assert result == expected
 
     def test_build_campaign_prompt_uses_old_prompt(self):
         """Test that old_prompt is used when provided."""
@@ -42,7 +42,7 @@ class TestRandomCampaignGeneration(unittest.TestCase):
 
         result = _build_campaign_prompt("", "", "", old_prompt)
 
-        self.assertEqual(result, "This is an old prompt format")
+        assert result == "This is an old prompt format"
 
     def test_build_campaign_prompt_partial_inputs(self):
         """Test campaign prompt building with partial inputs."""
@@ -54,7 +54,7 @@ class TestRandomCampaignGeneration(unittest.TestCase):
         result = _build_campaign_prompt(character, setting, description, old_prompt)
 
         expected = "Character: A cunning rogue | Description: A mysterious quest"
-        self.assertEqual(result, expected)
+        assert result == expected
 
     def test_build_campaign_prompt_random_generation(self):
         """Test that empty inputs trigger random campaign generation using predefined arrays."""
@@ -62,13 +62,13 @@ class TestRandomCampaignGeneration(unittest.TestCase):
         result = _build_campaign_prompt("", "", "", "")
 
         # Verify result contains Character and Setting
-        self.assertIn("Character:", result)
-        self.assertIn("Setting:", result)
-        self.assertIn("|", result)  # Should be joined with separator
+        assert "Character:" in result
+        assert "Setting:" in result
+        assert "|" in result  # Should be joined with separator
 
         # Verify the result contains content from our predefined arrays
         parts = result.split(" | ")
-        self.assertEqual(len(parts), 2)
+        assert len(parts) == 2
 
         character_part = parts[0]
         setting_part = parts[1]
@@ -78,8 +78,8 @@ class TestRandomCampaignGeneration(unittest.TestCase):
         setting_content = setting_part.replace("Setting: ", "")
 
         # Verify they come from our predefined arrays
-        self.assertIn(character_content, RANDOM_CHARACTERS)
-        self.assertIn(setting_content, RANDOM_SETTINGS)
+        assert character_content in RANDOM_CHARACTERS
+        assert setting_content in RANDOM_SETTINGS
 
     def test_build_campaign_prompt_random_generation_deterministic(self):
         """Test random generation with mocked random choice for deterministic testing."""
@@ -95,30 +95,26 @@ class TestRandomCampaignGeneration(unittest.TestCase):
             expected = (
                 f"Character: {RANDOM_CHARACTERS[0]} | Setting: {RANDOM_SETTINGS[0]}"
             )
-            self.assertEqual(result, expected)
+            assert result == expected
 
             # Verify random.choice was called twice with correct arrays
-            self.assertEqual(mock_choice.call_count, 2)
+            assert mock_choice.call_count == 2
             mock_choice.assert_any_call(RANDOM_CHARACTERS)
             mock_choice.assert_any_call(RANDOM_SETTINGS)
 
     def test_build_campaign_prompt_random_arrays_not_empty(self):
         """Test that our random arrays are properly defined and not empty."""
-        self.assertGreater(
-            len(RANDOM_CHARACTERS), 0, "RANDOM_CHARACTERS should not be empty"
-        )
-        self.assertGreater(
-            len(RANDOM_SETTINGS), 0, "RANDOM_SETTINGS should not be empty"
-        )
+        assert len(RANDOM_CHARACTERS) > 0, "RANDOM_CHARACTERS should not be empty"
+        assert len(RANDOM_SETTINGS) > 0, "RANDOM_SETTINGS should not be empty"
 
         # Verify they contain meaningful content (not just empty strings)
         for character in RANDOM_CHARACTERS:
-            self.assertIsInstance(character, str)
-            self.assertGreater(len(character.strip()), 0)
+            assert isinstance(character, str)
+            assert len(character.strip()) > 0
 
         for setting in RANDOM_SETTINGS:
-            self.assertIsInstance(setting, str)
-            self.assertGreater(len(setting.strip()), 0)
+            assert isinstance(setting, str)
+            assert len(setting.strip()) > 0
 
     def test_build_campaign_prompt_random_generation_variability(self):
         """Test that random generation produces different results on multiple calls."""
@@ -131,20 +127,18 @@ class TestRandomCampaignGeneration(unittest.TestCase):
 
         # With 10 characters and 10 settings, we should get some variety
         # (This is probabilistic but very likely to pass)
-        self.assertGreater(
-            len(results), 1, "Random generation should produce varied results"
-        )
+        assert len(results) > 1, "Random generation should produce varied results"
 
     def test_build_campaign_prompt_whitespace_handling(self):
         """Test that whitespace-only inputs are treated as empty and trigger random generation."""
         result = _build_campaign_prompt("   ", "\t", "\n", "  ")
 
         # Should trigger random generation, not include whitespace
-        self.assertIn("Character:", result)
-        self.assertIn("Setting:", result)
-        self.assertNotIn("   ", result)
-        self.assertNotIn("\t", result)
-        self.assertNotIn("\n", result)
+        assert "Character:" in result
+        assert "Setting:" in result
+        assert "   " not in result
+        assert "\t" not in result
+        assert "\n" not in result
 
 
 if __name__ == "__main__":

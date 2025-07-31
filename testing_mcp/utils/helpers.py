@@ -12,7 +12,7 @@ import tempfile
 import time
 import uuid
 from collections.abc import Generator
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import asynccontextmanager, contextmanager, suppress
 from typing import Any
 from unittest.mock import patch
 
@@ -21,7 +21,9 @@ try:
 except ImportError:
     psutil = None
     logger = logging.getLogger(__name__)
-    logger.warning("psutil module not found. Port cleanup functionality may be limited.")
+    logger.warning(
+        "psutil module not found. Port cleanup functionality may be limited."
+    )
 
 import requests
 
@@ -62,6 +64,7 @@ class TestEnvironment:
         for temp_dir in self.temp_dirs:
             try:
                 import shutil
+
                 shutil.rmtree(temp_dir, ignore_errors=True)
             except Exception as e:
                 logger.warning(f"Error cleaning up temp dir {temp_dir}: {e}")
@@ -87,23 +90,27 @@ class TestEnvironment:
 
         raise RuntimeError(f"Mock MCP server failed to start on port {port}")
 
-    def start_real_mcp_server(self, script_path: str, port: int = 8000) -> subprocess.Popen:
+    def start_real_mcp_server(
+        self, script_path: str, port: int = 8000
+    ) -> subprocess.Popen:
         """Start a real MCP server process."""
         if not os.path.exists(script_path):
             raise FileNotFoundError(f"MCP server script not found: {script_path}")
 
         env = os.environ.copy()
-        env.update({
-            'MCP_SERVER_PORT': str(port),
-            'TESTING': 'true',
-            'FIRESTORE_EMULATOR_HOST': 'localhost:8080',  # Use emulator for testing
-        })
+        env.update(
+            {
+                "MCP_SERVER_PORT": str(port),
+                "TESTING": "true",
+                "FIRESTORE_EMULATOR_HOST": "localhost:8080",  # Use emulator for testing
+            }
+        )
 
         proc = subprocess.Popen(
-            ['python', script_path, '--port', str(port)],
+            ["python", script_path, "--port", str(port)],
             env=env,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
         )
 
         self.processes.append(proc)
@@ -116,37 +123,45 @@ class TestEnvironment:
         logger.info(f"Real MCP server started on port {port}")
         return proc
 
-    def start_translation_layer(self, script_path: str, port: int = 8080, mcp_url: str = "http://localhost:8000") -> subprocess.Popen:
+    def start_translation_layer(
+        self, script_path: str, port: int = 8080, mcp_url: str = "http://localhost:8000"
+    ) -> subprocess.Popen:
         """Start the translation layer (main.py) process."""
         if not os.path.exists(script_path):
-            raise FileNotFoundError(f"Translation layer script not found: {script_path}")
+            raise FileNotFoundError(
+                f"Translation layer script not found: {script_path}"
+            )
 
         env = os.environ.copy()
-        env.update({
-            'FLASK_PORT': str(port),
-            'MCP_SERVER_URL': mcp_url,
-            'TESTING': 'true',
-            'JWT_SECRET_KEY': 'test-secret-key',
-        })
+        env.update(
+            {
+                "FLASK_PORT": str(port),
+                "MCP_SERVER_URL": mcp_url,
+                "TESTING": "true",
+                "JWT_SECRET_KEY": "test-secret-key",
+            }
+        )
 
         proc = subprocess.Popen(
-            ['python', script_path, '--port', str(port)],
+            ["python", script_path, "--port", str(port)],
             env=env,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE
+            stderr=subprocess.PIPE,
         )
 
         self.processes.append(proc)
 
         # Wait for Flask server to be ready
-        if not self._wait_for_process_health(port, path='/api/health'):
+        if not self._wait_for_process_health(port, path="/api/health"):
             proc.kill()
             raise RuntimeError(f"Translation layer failed to start on port {port}")
 
         logger.info(f"Translation layer started on port {port}")
         return proc
 
-    def _wait_for_process_health(self, port: int, path: str = '/health', timeout: int = 30) -> bool:
+    def _wait_for_process_health(
+        self, port: int, path: str = "/health", timeout: int = 30
+    ) -> bool:
         """Wait for a process to respond to health checks."""
         for _ in range(timeout):
             try:
@@ -179,9 +194,9 @@ def mock_environment(mock_port: int = 8001) -> Generator[dict[str, Any], None, N
         mock_server = env.start_mock_server(mock_port)
 
         yield {
-            'mock_server': mock_server,
-            'client': WorldArchitectMCPClient(f"http://localhost:{mock_port}"),
-            'environment': env
+            "mock_server": mock_server,
+            "client": WorldArchitectMCPClient(f"http://localhost:{mock_port}"),
+            "environment": env,
         }
 
 
@@ -190,7 +205,7 @@ def integration_environment(
     mcp_script: str,
     translation_script: str,
     mcp_port: int = 8000,
-    translation_port: int = 8080
+    translation_port: int = 8080,
 ) -> Generator[dict[str, Any], None, None]:
     """
     Context manager for integration testing environment.
@@ -210,18 +225,16 @@ def integration_environment(
 
         # Start translation layer
         translation_proc = env.start_translation_layer(
-            translation_script,
-            translation_port,
-            f"http://localhost:{mcp_port}"
+            translation_script, translation_port, f"http://localhost:{mcp_port}"
         )
 
         yield {
-            'mcp_process': mcp_proc,
-            'translation_process': translation_proc,
-            'mcp_client': WorldArchitectMCPClient(f"http://localhost:{mcp_port}"),
-            'http_client': requests.Session(),
-            'translation_url': f"http://localhost:{translation_port}",
-            'environment': env
+            "mcp_process": mcp_proc,
+            "translation_process": translation_proc,
+            "mcp_client": WorldArchitectMCPClient(f"http://localhost:{mcp_port}"),
+            "http_client": requests.Session(),
+            "translation_url": f"http://localhost:{translation_port}",
+            "environment": env,
         }
 
 
@@ -283,7 +296,7 @@ class MockDocument:
     @property
     def id(self) -> str:
         """Get document ID."""
-        return self.path.split('/')[-1]
+        return self.path.split("/")[-1]
 
     def get(self):
         """Get document data."""
@@ -333,65 +346,67 @@ class MockGeminiClient:
         response_text = self.responses[self.call_count % len(self.responses)]
 
         return {
-            'text': response_text,
-            'candidates': [{'content': {'parts': [{'text': response_text}]}}],
-            'usage_metadata': {
-                'prompt_token_count': len(prompt.split()),
-                'candidates_token_count': len(response_text.split()),
-                'total_token_count': len(prompt.split()) + len(response_text.split())
-            }
+            "text": response_text,
+            "candidates": [{"content": {"parts": [{"text": response_text}]}}],
+            "usage_metadata": {
+                "prompt_token_count": len(prompt.split()),
+                "candidates_token_count": len(response_text.split()),
+                "total_token_count": len(prompt.split()) + len(response_text.split()),
+            },
         }
 
 
 def create_test_campaign_data() -> dict[str, Any]:
     """Create test campaign data."""
     return {
-        'name': 'Test Campaign',
-        'description': 'A test campaign for automated testing',
-        'dm_user_id': 'test-user-123',
-        'created_at': '2024-01-01T00:00:00',
-        'status': 'active'
+        "name": "Test Campaign",
+        "description": "A test campaign for automated testing",
+        "dm_user_id": "test-user-123",
+        "created_at": "2024-01-01T00:00:00",
+        "status": "active",
     }
 
 
 def create_test_character_data() -> dict[str, Any]:
     """Create test character data."""
     return {
-        'name': 'Test Character',
-        'class': 'Fighter',
-        'level': 1,
-        'user_id': 'test-user-123',
-        'attributes': {
-            'strength': 15,
-            'dexterity': 13,
-            'constitution': 14,
-            'intelligence': 12,
-            'wisdom': 10,
-            'charisma': 8
-        }
+        "name": "Test Character",
+        "class": "Fighter",
+        "level": 1,
+        "user_id": "test-user-123",
+        "attributes": {
+            "strength": 15,
+            "dexterity": 13,
+            "constitution": 14,
+            "intelligence": 12,
+            "wisdom": 10,
+            "charisma": 8,
+        },
     }
 
 
 def create_test_action_data() -> dict[str, Any]:
     """Create test action data."""
     return {
-        'action_type': 'attack',
-        'target': 'goblin',
-        'weapon': 'sword',
-        'description': 'Swing sword at the goblin'
+        "action_type": "attack",
+        "target": "goblin",
+        "weapon": "sword",
+        "description": "Swing sword at the goblin",
     }
 
 
 async def assert_mcp_response_format(response: dict[str, Any]):
     """Assert that an MCP response has the correct format."""
-    assert 'status' in response, "MCP response must have 'status' field"
-    assert response['status'] in ['success', 'error'], "Status must be 'success' or 'error'"
+    assert "status" in response, "MCP response must have 'status' field"
+    assert response["status"] in ["success", "error"], (
+        "Status must be 'success' or 'error'"
+    )
 
-    if response['status'] == 'success':
-        assert 'data' in response, "Success response must have 'data' field"
+    if response["status"] == "success":
+        assert "data" in response, "Success response must have 'data' field"
     else:
-        assert 'error' in response, "Error response must have 'error' field"
-        assert 'error_type' in response, "Error response must have 'error_type' field"
+        assert "error" in response, "Error response must have 'error' field"
+        assert "error_type" in response, "Error response must have 'error_type' field"
 
 
 def find_free_port(start_port: int = 8000) -> int:
@@ -401,7 +416,7 @@ def find_free_port(start_port: int = 8000) -> int:
     for port in range(start_port, start_port + 100):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             try:
-                sock.bind(('localhost', port))
+                sock.bind(("localhost", port))
                 return port
             except OSError:
                 continue
@@ -422,10 +437,8 @@ def kill_process_on_port(port: int):
                 process.terminate()
                 process.wait(timeout=5)
             except (psutil.NoSuchProcess, psutil.TimeoutExpired):
-                try:
+                with suppress(psutil.NoSuchProcess):
                     process.kill()
-                except psutil.NoSuchProcess:
-                    pass
 
 
 @asynccontextmanager
@@ -441,7 +454,7 @@ async def temporary_mcp_client(server_url: str):
 
 def load_test_data(filename: str) -> dict[str, Any]:
     """Load test data from JSON file."""
-    test_data_dir = os.path.join(os.path.dirname(__file__), '..', 'mock_data')
+    test_data_dir = os.path.join(os.path.dirname(__file__), "..", "mock_data")
     file_path = os.path.join(test_data_dir, filename)
 
     with open(file_path) as f:
@@ -450,9 +463,9 @@ def load_test_data(filename: str) -> dict[str, Any]:
 
 def patch_firestore():
     """Patch Firestore for testing."""
-    return patch('firebase_admin.firestore.client', return_value=MockFirestore())
+    return patch("firebase_admin.firestore.client", return_value=MockFirestore())
 
 
 def patch_gemini():
     """Patch Gemini client for testing."""
-    return patch('google.genai.Client', return_value=MockGeminiClient())
+    return patch("google.genai.Client", return_value=MockGeminiClient())

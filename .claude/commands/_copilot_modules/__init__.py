@@ -10,9 +10,10 @@ from .utils import GitHubAPI, JSONSchemas
 
 # Command registry - ONLY data collection commands
 COMMAND_REGISTRY = {
-    'commentfetch': CommentFetch,
+    "commentfetch": CommentFetch,
     # That's it! Claude handles everything else
 }
+
 
 def get_command(name: str):
     """Get command class by name.
@@ -25,6 +26,7 @@ def get_command(name: str):
     """
     return COMMAND_REGISTRY.get(name)
 
+
 def list_commands():
     """List all available commands.
 
@@ -33,13 +35,14 @@ def list_commands():
     """
     return list(COMMAND_REGISTRY.keys())
 
+
 # Export only what's needed for data collection
 __all__ = [
-    'CopilotCommandBase',
-    'CommentFetch',
-    'GitHubAPI',
-    'JSONSchemas',
-    'get_command',
-    'list_commands',
-    'COMMAND_REGISTRY'
+    "CopilotCommandBase",
+    "CommentFetch",
+    "GitHubAPI",
+    "JSONSchemas",
+    "get_command",
+    "list_commands",
+    "COMMAND_REGISTRY",
 ]

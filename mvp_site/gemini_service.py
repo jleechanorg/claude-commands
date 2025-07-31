@@ -1040,11 +1040,10 @@ def get_initial_story(
             return GeminiResponse.create_from_structured_response(
                 structured_response, "mock-model"
             )
-        else:
-            return GeminiResponse.create_legacy(
-                "Welcome to your adventure! You find yourself at the entrance of a mysterious dungeon, with stone walls covered in ancient runes. The air is thick with magic and possibility.",
-                "mock-model",
-            )
+        return GeminiResponse.create_legacy(
+            "Welcome to your adventure! You find yourself at the entrance of a mysterious dungeon, with stone walls covered in ancient runes. The air is thick with magic and possibility.",
+            "mock-model",
+        )
 
     if selected_prompts is None:
         selected_prompts = []
@@ -2109,7 +2108,7 @@ def _get_current_turn_prompt(user_input: str, mode: str) -> str:
         # Check for multiple "Main Character: think" patterns using regex
         think_pattern = r"Main Character:\s*think[^\n]*"
         think_matches = re.findall(think_pattern, user_input, re.IGNORECASE)
-        main_char_think_count = len(think_matches)
+        len(think_matches)
 
         if is_think_command:
             # Emphasize planning for think commands (planning block handled separately in JSON)

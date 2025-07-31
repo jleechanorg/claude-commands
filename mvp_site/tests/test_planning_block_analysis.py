@@ -213,7 +213,7 @@ class TestPlanningBlockAnalysis(unittest.TestCase):
         assert analysis["string_field"] == "Just a string"
         assert analysis["number_field"] == 42
         assert analysis["float_field"] == 3.14
-        assert analysis["boolean_field"] == True
+        assert analysis["boolean_field"]
         assert analysis["null_field"] is None
         assert len(analysis["list_field"]) == 5
         assert analysis["dict_field"]["nested"] == "value"

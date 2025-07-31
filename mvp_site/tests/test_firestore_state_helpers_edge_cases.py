@@ -152,9 +152,15 @@ class TestFirestoreStateHelpersEdgeCases(unittest.TestCase):
         # Forest items unchanged
         assert result["game"]["world"]["regions"]["forest"]["items"] == ["herb"]
         # Cave unchanged
-        assert result["game"]["world"]["regions"]["cave"] == {"enemies": ["bat"], "items": ["ore"]}
+        assert result["game"]["world"]["regions"]["cave"] == {
+            "enemies": ["bat"],
+            "items": ["ore"],
+        }
         # Desert added
-        assert result["game"]["world"]["regions"]["desert"] == {"enemies": ["scorpion"], "items": ["cactus"]}
+        assert result["game"]["world"]["regions"]["desert"] == {
+            "enemies": ["scorpion"],
+            "items": ["cactus"],
+        }
 
     def test_handle_dict_merge_with_delete_token_in_value(self):
         """Test dict merge where new dict contains DELETE_TOKEN"""

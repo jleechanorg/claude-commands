@@ -21,6 +21,7 @@ sys.path.insert(
 )
 
 import file_cache
+import pytest
 from token_utils import estimate_tokens, format_token_count, log_with_tokens
 
 
@@ -172,7 +173,9 @@ class TestTokenUtils(unittest.TestCase):
             # Extract token count from formatted string
             formatted_tokens = int(formatted_result.split("~")[1].split(" ")[0])
 
-            assert direct_estimate == formatted_tokens, f"Inconsistent token count for text: '{text}'"
+            assert (
+                direct_estimate == formatted_tokens
+            ), f"Inconsistent token count for text: '{text}'"
 
     def test_log_with_tokens_integration(self):
         """Integration test for log_with_tokens with various inputs."""
@@ -313,7 +316,9 @@ class TestFileCache(unittest.TestCase):
         # Verify all reads returned consistent content length
         expected_length = len(self.test_content_1)
         for worker_id, iteration, content_length in results:
-            assert content_length == expected_length, f"Inconsistent content length from worker {worker_id}, iteration {iteration}"
+            assert (
+                content_length == expected_length
+            ), f"Inconsistent content length from worker {worker_id}, iteration {iteration}"
 
         # Verify we got expected number of results (5 workers * 10 iterations each)
         assert len(results) == 50
@@ -400,7 +405,7 @@ class TestFileCache(unittest.TestCase):
     def test_error_handling_missing_files(self):
         """Test error handling for missing files."""
         # Test reading a nonexistent file
-        with self.assertRaises(FileNotFoundError):
+        with pytest.raises(FileNotFoundError):
             file_cache.read_file_cached(self.nonexistent_file)
 
         # Verify cache stats are not corrupted by the error
@@ -416,7 +421,7 @@ class TestFileCache(unittest.TestCase):
         ]
 
         for invalid_path in invalid_paths:
-            with self.assertRaises((FileNotFoundError, IOError, PermissionError)):
+            with pytest.raises((FileNotFoundError, IOError, PermissionError)):
                 file_cache.read_file_cached(invalid_path)
 
     def test_cache_invalidation_functionality(self):
@@ -439,7 +444,9 @@ class TestFileCache(unittest.TestCase):
 
         # Try to invalidate a file that wasn't cached
         result_not_cached = file_cache.invalidate_file(self.test_file_2)
-        assert not result_not_cached, "invalidate_file should return False when file wasn't cached"
+        assert (
+            not result_not_cached
+        ), "invalidate_file should return False when file wasn't cached"
 
         # Verify invalidating nonexistent file doesn't crash
         result_nonexistent = file_cache.invalidate_file(self.nonexistent_file)
@@ -466,7 +473,7 @@ class TestFileCache(unittest.TestCase):
         file_cache.clear_file_cache()
         start_time = time.time()
         cached_content_first = file_cache.read_file_cached(file_path)
-        first_cached_time = time.time() - start_time
+        time.time() - start_time
         assert cached_content_first == self.test_content_1
 
         # Time subsequent cached reads (should be faster)
@@ -485,7 +492,9 @@ class TestFileCache(unittest.TestCase):
         assert stats["hit_rate_percent"] == 83.3  # 5/6 * 100, rounded
 
         # Behavioral verification: cached reads should be consistent
-        assert all(time_val >= 0 for time_val in cached_read_times), "All cached read times should be non-negative"
+        assert all(
+            time_val >= 0 for time_val in cached_read_times
+        ), "All cached read times should be non-negative"
 
     def test_path_normalization(self):
         """Test that different path representations for the same file use the same cache entry."""
@@ -495,7 +504,7 @@ class TestFileCache(unittest.TestCase):
 
         # Read using absolute path
         content1 = file_cache.read_file_cached(absolute_path)
-        stats_after_abs = file_cache.get_cache_stats()
+        file_cache.get_cache_stats()
 
         # Read using relative path (should be cache hit if normalization works)
         content2 = file_cache.read_file_cached(relative_path)

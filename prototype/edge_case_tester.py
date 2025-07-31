@@ -243,7 +243,6 @@ if __name__ == "__main__":
 
     # Save report
 
-
     os.makedirs("benchmarks", exist_ok=True)
 
     with open("benchmarks/edge_case_report.json", "w") as f:

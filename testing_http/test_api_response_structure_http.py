@@ -52,7 +52,7 @@ def test_campaign_api_response_structure():
         print("📋 Response structure:")
         for key, value in creation_response.items():
             value_type = type(value).__name__
-            if isinstance(value, (str, int, bool)):
+            if isinstance(value, str | int | bool):
                 print(f"   {key}: {value_type} = {value}")
             else:
                 print(

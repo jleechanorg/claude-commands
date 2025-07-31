@@ -8,6 +8,7 @@ to prove we're using real SDK, not simulation.
 
 import asyncio
 import logging
+import sys
 from typing import Any
 
 import httpx
@@ -45,20 +46,33 @@ class RealA2AClientTester:
 
                     # Validate real A2A agent card structure
                     required_fields = [
-                        'name', 'description', 'version', 'url',
-                        'skills', 'capabilities', 'protocolVersion'
+                        "name",
+                        "description",
+                        "version",
+                        "url",
+                        "skills",
+                        "capabilities",
+                        "protocolVersion",
                     ]
 
-                    missing_fields = [field for field in required_fields if field not in agent_card]
+                    missing_fields = [
+                        field for field in required_fields if field not in agent_card
+                    ]
 
                     if missing_fields:
                         print(f"❌ Missing required A2A fields: {missing_fields}")
-                        return {"success": False, "error": f"Missing fields: {missing_fields}"}
+                        return {
+                            "success": False,
+                            "error": f"Missing fields: {missing_fields}",
+                        }
 
                     # Verify it's real A2A SDK generated (has protocolVersion)
                     if "protocolVersion" not in agent_card:
                         print("❌ No protocolVersion - likely fake implementation")
-                        return {"success": False, "error": "Missing SDK-generated protocolVersion"}
+                        return {
+                            "success": False,
+                            "error": "Missing SDK-generated protocolVersion",
+                        }
 
                     print(f"✅ Real A2A agent discovered: {agent_card['name']}")
                     print(f"✅ Protocol version: {agent_card['protocolVersion']}")
@@ -67,7 +81,7 @@ class RealA2AClientTester:
                     return {
                         "success": True,
                         "agent_card": agent_card,
-                        "is_real_sdk": True
+                        "is_real_sdk": True,
                     }
                 print(f"❌ Agent discovery failed: {response.status_code}")
                 return {"success": False, "error": f"HTTP {response.status_code}"}
@@ -83,12 +97,12 @@ class RealA2AClientTester:
 
         try:
             # Create real A2A message using SDK types
-            user_message = Message(
+            Message(
                 message_id="test_message_001",
                 role=Role.user,
                 parts=[TextPart(text="orchestrate a simple workflow")],
                 task_id=None,
-                context_id="test_context_001"
+                context_id="test_context_001",
             )
 
             # Test real A2A communication
@@ -105,13 +119,13 @@ class RealA2AClientTester:
                             "parts": [{"text": "orchestrate a simple workflow"}]
                         }
                     },
-                    "id": "test_request_001"
+                    "id": "test_request_001",
                 }
 
                 response = await http_client.post(
                     self.rpc_url,
                     json=payload,
-                    headers={"Content-Type": "application/json"}
+                    headers={"Content-Type": "application/json"},
                 )
 
                 if response.status_code in [200, 201]:
@@ -122,7 +136,7 @@ class RealA2AClientTester:
                     return {
                         "success": True,
                         "response": result,
-                        "endpoint_working": True
+                        "endpoint_working": True,
                     }
                 print(f"⚠️ RPC endpoint returned: {response.status_code}")
                 # This might be expected if authentication is required
@@ -130,7 +144,7 @@ class RealA2AClientTester:
                     "success": True,  # Server responding is success
                     "response": {"status_code": response.status_code},
                     "endpoint_working": True,
-                    "note": "Authentication may be required for full SDK client"
+                    "note": "Authentication may be required for full SDK client",
                 }
 
         except Exception as e:
@@ -145,13 +159,14 @@ class RealA2AClientTester:
         try:
             # Verify we can import and use real A2A SDK classes
 
-
-
-
             # Test that we can create real SDK objects
 
-            client = A2AClient(httpx_client=httpx.AsyncClient(), url="http://localhost:8000")
-            assert hasattr(client, '_httpx_client'), "Not real A2AClient - missing httpx client"
+            client = A2AClient(
+                httpx_client=httpx.AsyncClient(), url="http://localhost:8000"
+            )
+            assert hasattr(client, "_httpx_client"), (
+                "Not real A2AClient - missing httpx client"
+            )
 
             print("✅ Real A2A SDK imports successful")
             print("✅ Real A2AClient instance created")
@@ -159,9 +174,8 @@ class RealA2AClientTester:
 
             # Verify we're not using fake implementations
 
-
             agent_card = create_real_agent_card()
-            agent_executor = WorldArchitectA2AAgent()
+            WorldArchitectA2AAgent()
 
             # Verify these are real SDK types
             assert isinstance(agent_card, AgentCard), "Not using real AgentCard type"
@@ -171,7 +185,7 @@ class RealA2AClientTester:
                 "success": True,
                 "real_sdk_components": True,
                 "imports_working": True,
-                "objects_created": True
+                "objects_created": True,
             }
 
         except Exception as e:
@@ -193,22 +207,24 @@ class RealA2AClientTester:
                 # Check for real SDK markers
                 real_markers = {
                     "has_protocol_version": "protocolVersion" in agent_card,
-                    "proper_capabilities_format": isinstance(agent_card.get("capabilities"), dict),
+                    "proper_capabilities_format": isinstance(
+                        agent_card.get("capabilities"), dict
+                    ),
                     "sdk_generated_structure": all(
-                        field in agent_card for field in
-                        ["protocolVersion", "capabilities", "skills"]
+                        field in agent_card
+                        for field in ["protocolVersion", "capabilities", "skills"]
                     ),
                     "proper_skill_format": (
-                        isinstance(agent_card.get("skills"), list) and
-                        len(agent_card["skills"]) > 0 and
-                        "id" in agent_card["skills"][0]
-                    )
+                        isinstance(agent_card.get("skills"), list)
+                        and len(agent_card["skills"]) > 0
+                        and "id" in agent_card["skills"][0]
+                    ),
                 }
 
                 fake_markers = {
                     "manual_json_structure": False,  # We're not using manual JSON anymore
-                    "hardcoded_responses": False,     # Using real SDK response generation
-                    "custom_fastapi_routes": False   # Using A2AFastAPIApplication
+                    "hardcoded_responses": False,  # Using real SDK response generation
+                    "custom_fastapi_routes": False,  # Using A2AFastAPIApplication
                 }
 
                 print("✅ Real SDK Integration Markers:")
@@ -221,13 +237,15 @@ class RealA2AClientTester:
                     status = "✅" if not present else "❌"
                     print(f"  {status} {marker}: {present}")
 
-                is_real_integration = all(real_markers.values()) and not any(fake_markers.values())
+                is_real_integration = all(real_markers.values()) and not any(
+                    fake_markers.values()
+                )
 
                 return {
                     "success": True,
                     "is_real_integration": is_real_integration,
                     "real_markers": real_markers,
-                    "fake_markers": fake_markers
+                    "fake_markers": fake_markers,
                 }
             return {"success": False, "error": "Could not test real integration"}
 
@@ -264,7 +282,9 @@ async def run_real_a2a_integration_tests():
     print("🎉 REAL A2A INTEGRATION TEST RESULTS")
     print("=" * 70)
 
-    successful_tests = sum(1 for result in test_results.values() if result.get("success", False))
+    successful_tests = sum(
+        1 for result in test_results.values() if result.get("success", False)
+    )
     total_tests = len(test_results)
 
     print(f"✅ Successful tests: {successful_tests}/{total_tests}")
@@ -311,4 +331,4 @@ async def main():
 
 if __name__ == "__main__":
     success = asyncio.run(main())
-    exit(0 if success else 1)
+    sys.exit(0 if success else 1)

@@ -80,7 +80,10 @@ class TestPydanticValidation(unittest.TestCase):
         assert isinstance(manifest, entity_tracking.SceneManifest)
         assert isinstance(manifest.player_characters, list)
         assert isinstance(manifest.npcs, list)
-        assert isinstance(manifest.current_location, entity_tracking.SceneManifest.__annotations__["current_location"])
+        assert isinstance(
+            manifest.current_location,
+            entity_tracking.SceneManifest.__annotations__["current_location"],
+        )
 
     def test_invalid_data_handling(self):
         """Test that Pydantic validation handles invalid data gracefully"""

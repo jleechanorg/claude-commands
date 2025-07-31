@@ -10,7 +10,9 @@ class MockClaude:
     def __init__(self):
         self.call_history = []
         self.responses = {}
-        self.default_response = Mock(returncode=0, stdout='Task completed successfully', stderr='')
+        self.default_response = Mock(
+            returncode=0, stdout="Task completed successfully", stderr=""
+        )
 
     def set_response(self, task_pattern, response):
         """Set mock response for specific task patterns."""
@@ -18,19 +20,17 @@ class MockClaude:
 
     def mock_subprocess_run(self, cmd, **kwargs):
         """Mock subprocess.run for claude commands."""
-        self.call_history.append({
-            'cmd': cmd,
-            'kwargs': kwargs,
-            'cwd': kwargs.get('cwd', os.getcwd())
-        })
+        self.call_history.append(
+            {"cmd": cmd, "kwargs": kwargs, "cwd": kwargs.get("cwd", os.getcwd())}
+        )
 
-        if not cmd or 'claude' not in str(cmd[0]):
+        if not cmd or "claude" not in str(cmd[0]):
             # Not a claude command, pass through
-            return Mock(returncode=1, stdout='', stderr='command not found')
+            return Mock(returncode=1, stdout="", stderr="command not found")
 
         # Check for which command to mock 'which claude'
-        if len(cmd) == 2 and cmd[0] == 'which' and cmd[1] == 'claude':
-            return Mock(returncode=0, stdout='/usr/local/bin/claude', stderr='')
+        if len(cmd) == 2 and cmd[0] == "which" and cmd[1] == "claude":
+            return Mock(returncode=0, stdout="/usr/local/bin/claude", stderr="")
 
         # Mock claude execution
         return self._handle_claude_execution(cmd, **kwargs)
@@ -40,7 +40,7 @@ class MockClaude:
         # Extract prompt file if using @prompt_file syntax
         prompt_content = ""
         for arg in cmd:
-            if arg.startswith('@'):
+            if arg.startswith("@"):
                 prompt_file = arg[1:]
                 if os.path.exists(prompt_file):
                     with open(prompt_file) as f:
@@ -56,19 +56,19 @@ class MockClaude:
 
     def _simulate_successful_completion(self, cmd, **kwargs):
         """Simulate a successful Claude task completion."""
-        cwd = kwargs.get('cwd', os.getcwd())
+        cwd = kwargs.get("cwd", os.getcwd())
 
         # Simulate creating some files to show work was done
         if cwd and os.path.exists(cwd):
             # Create a simple test file to show agent worked
-            test_file = os.path.join(cwd, 'agent_work_completed.txt')
-            with open(test_file, 'w') as f:
-                f.write('Agent completed task successfully\n')
+            test_file = os.path.join(cwd, "agent_work_completed.txt")
+            with open(test_file, "w") as f:
+                f.write("Agent completed task successfully\n")
 
         return Mock(
             returncode=0,
-            stdout='Task completed. Changes committed and PR created.',
-            stderr=''
+            stdout="Task completed. Changes committed and PR created.",
+            stderr="",
         )
 
     def get_last_call(self):
@@ -79,16 +79,16 @@ class MockClaude:
         """Get all calls made for a specific agent."""
         agent_calls = []
         for call in self.call_history:
-            if agent_name in str(call['cmd']) or agent_name in call['cwd']:
+            if agent_name in str(call["cmd"]) or agent_name in call["cwd"]:
                 agent_calls.append(call)
         return agent_calls
 
-    def assert_called_with_model(self, model_name='sonnet'):
+    def assert_called_with_model(self, model_name="sonnet"):
         """Assert that claude was called with the specified model."""
         for call in self.call_history:
-            cmd = call['cmd']
-            if '--model' in cmd:
-                model_index = cmd.index('--model')
+            cmd = call["cmd"]
+            if "--model" in cmd:
+                model_index = cmd.index("--model")
                 if model_index + 1 < len(cmd) and cmd[model_index + 1] == model_name:
                     return True
         return False
@@ -96,9 +96,9 @@ class MockClaude:
     def assert_called_with_prompt_file(self):
         """Assert that claude was called with a prompt file."""
         for call in self.call_history:
-            cmd = call['cmd']
+            cmd = call["cmd"]
             for arg in cmd:
-                if arg.startswith('@'):
+                if arg.startswith("@"):
                     return True
         return False
 
@@ -111,7 +111,7 @@ def mock_claude_fixture():
     """Fixture that provides a mock Claude environment."""
     mock_claude = MockClaude()
 
-    with patch('subprocess.run', side_effect=mock_claude.mock_subprocess_run):
+    with patch("subprocess.run", side_effect=mock_claude.mock_subprocess_run):
         yield mock_claude
 
 
@@ -128,10 +128,10 @@ class MockClaudeAgent:
     def simulate_work(self, workspace_dir):
         """Simulate agent doing work in workspace."""
         # Create some files to show work was done
-        work_file = os.path.join(workspace_dir, f'{self.agent_name}_work.txt')
-        with open(work_file, 'w') as f:
-            f.write(f'Work completed for: {self.task_description}\n')
-            f.write(f'Agent: {self.agent_name}\n')
+        work_file = os.path.join(workspace_dir, f"{self.agent_name}_work.txt")
+        with open(work_file, "w") as f:
+            f.write(f"Work completed for: {self.task_description}\n")
+            f.write(f"Agent: {self.agent_name}\n")
 
         self.work_files.append(work_file)
         return work_file
@@ -140,9 +140,9 @@ class MockClaudeAgent:
         """Simulate PR creation."""
         self.pr_created = True
         return {
-            'number': 12345,
-            'url': 'https://github.com/test/repo/pull/12345',
-            'title': f'Agent {self.agent_name}: {self.task_description}'
+            "number": 12345,
+            "url": "https://github.com/test/repo/pull/12345",
+            "title": f"Agent {self.agent_name}: {self.task_description}",
         }
 
     def complete_task(self):

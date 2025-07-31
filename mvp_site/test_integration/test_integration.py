@@ -105,9 +105,7 @@ def run_god_command(test_instance, action, command_string=None):
         cwd=project_root,
         env=env,
     )
-    test_instance.assertEqual(
-        result.returncode, 0, f"god-command {action} failed: {result.stderr}"
-    )
+    assert result.returncode == 0, f"god-command {action} failed: {result.stderr}"
 
     # The god-command logs JSON to stderr (via logging_util.info), not stdout
     if action == "ask":
@@ -248,11 +246,9 @@ class BaseCampaignIntegrationTest(unittest.TestCase):
                 "X-Test-User-ID": self.user_id,
             },
         )
-        self.assertEqual(
-            response.status_code,
-            200,
-            f"Failed to get campaign state: {response.get_data(as_text=True)}",
-        )
+        assert (
+            response.status_code == 200
+        ), f"Failed to get campaign state: {response.get_data(as_text=True)}"
         data = response.get_json()
         # Extract game_state from the response
         return data.get("game_state", {})
@@ -262,43 +258,35 @@ class BaseCampaignIntegrationTest(unittest.TestCase):
     ):
         """Common assertion for character creation."""
         state = self.get_game_state()
-        self.assertIn("player_character_data", state)
+        assert "player_character_data" in state
         pc_data = state["player_character_data"]
 
         # Basic character data
-        self.assertEqual(
-            pc_data.get("name"),
-            expected_name,
-            f"Character should be named {expected_name}",
-        )
-        self.assertEqual(pc_data.get("level"), 1, "Character should be level 1")
+        assert (
+            pc_data.get("name") == expected_name
+        ), f"Character should be named {expected_name}"
+        assert pc_data.get("level") == 1, "Character should be level 1"
 
         if expected_class:
             if isinstance(expected_class, list):
-                self.assertIn(
-                    pc_data.get("class"),
-                    expected_class,
-                    f"Character should be one of {expected_class}",
-                )
+                assert (
+                    pc_data.get("class") in expected_class
+                ), f"Character should be one of {expected_class}"
             else:
-                self.assertEqual(
-                    pc_data.get("class"),
-                    expected_class,
-                    f"Character should be {expected_class}",
-                )
+                assert (
+                    pc_data.get("class") == expected_class
+                ), f"Character should be {expected_class}"
 
         if expected_alignment:
-            self.assertEqual(
-                pc_data.get("alignment"),
-                expected_alignment,
-                f"Character should be {expected_alignment}",
-            )
+            assert (
+                pc_data.get("alignment") == expected_alignment
+            ), f"Character should be {expected_alignment}"
 
         # Core fields - these may vary based on campaign type
         # For now, just verify the basic required fields
         required_fields = ["name", "level", "class"]
         for field in required_fields:
-            self.assertIn(field, pc_data, f"Character missing required field: {field}")
+            assert field in pc_data, f"Character missing required field: {field}"
 
         return pc_data
 
@@ -306,12 +294,10 @@ class BaseCampaignIntegrationTest(unittest.TestCase):
         """Common assertion for combat state."""
         state = self.get_game_state()
         combat_state = state.get("combat_state", {})
-        self.assertTrue(
-            combat_state.get("in_combat", False), "Combat state should be active"
-        )
+        assert combat_state.get("in_combat", False), "Combat state should be active"
 
         combatants = combat_state.get("combatants", [])
-        self.assertGreater(len(combatants), 1, "Should have multiple combatants")
+        assert len(combatants) > 1, "Should have multiple combatants"
 
         return combat_state, combatants
 
@@ -321,11 +307,9 @@ class BaseCampaignIntegrationTest(unittest.TestCase):
         custom_state = state.get("custom_campaign_state", {})
         core_memories = custom_state.get("core_memories", [])
 
-        self.assertGreater(
-            len(core_memories),
-            1,
-            "Should have multiple core memories tracking story progression",
-        )
+        assert (
+            len(core_memories) > 1
+        ), "Should have multiple core memories tracking story progression"
 
         # Check for expected story elements
         memory_text = " ".join(core_memories).lower()
@@ -333,11 +317,9 @@ class BaseCampaignIntegrationTest(unittest.TestCase):
             1 for element in expected_elements if element.lower() in memory_text
         )
 
-        self.assertGreater(
-            found_elements,
-            len(expected_elements) // 2,
-            f"Expected at least half of {expected_elements} in memories. Memories: {core_memories}",
-        )
+        assert (
+            found_elements > len(expected_elements) // 2
+        ), f"Expected at least half of {expected_elements} in memories. Memories: {core_memories}"
 
         return core_memories
 
@@ -365,12 +347,10 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
         """Test automatic character creation when starting the Dragon Knight campaign."""
         # Start the story - LLM automatically creates the character
         response = self.start_campaign_story()
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
 
         # Verify character creation using base class helper
-        pc_data = self.assert_character_created(
-            "Ser Arion", ["Knight", "Paladin"], "Lawful Good"
-        )
+        self.assert_character_created("Ser Arion", ["Knight", "Paladin"], "Lawful Good")
 
         print(
             "✅ Character auto-creation test passed - Ser Arion created with all required fields"
@@ -390,7 +370,7 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
             "I draw my sword and prepare to fight them in combat. I attack the lead guard!"
         )
         response = self.send_character_action(combat_prompt)
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
 
         # Verify combat using base class helper
         combat_state, combatants = self.assert_combat_active()
@@ -404,9 +384,9 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
             ),
             None,
         )
-        self.assertIsNotNone(player_combatant, "Ser Arion should be in combat")
-        self.assertIn("hp_current", player_combatant, "Player should have current HP")
-        self.assertIn("hp_max", player_combatant, "Player should have max HP")
+        assert player_combatant is not None, "Ser Arion should be in combat"
+        assert "hp_current" in player_combatant, "Player should have current HP"
+        assert "hp_max" in player_combatant, "Player should have max HP"
 
         print(
             f"✅ Combat test passed - Combat active with {len(combatants)} combatants"
@@ -435,7 +415,7 @@ You are now caught between two powerful and morally grey forces. Do you uphold y
 
         for choice in choices:
             response = self.send_character_action(choice)
-            self.assertEqual(response.status_code, 200)
+            assert response.status_code == 200
 
         # Verify story progression using base class helper
         expected_elements = ["arion", "choice", "dragon", "aurum", "refugees"]
@@ -469,7 +449,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
         """Test automatic character creation for Astarion campaign."""
         # Start the story - LLM automatically creates Astarion
         response = self.start_campaign_story()
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
 
         # Verify character creation - Astarion should be a Rogue or similar
         pc_data = self.assert_character_created(
@@ -484,10 +464,9 @@ As you struggle with your vampiric nature and the weight of your past, you must 
             + " "
             + str(pc_data.get("subrace", ""))
         )
-        self.assertTrue(
-            "vampire" in traits_text.lower() or "undead" in traits_text.lower(),
-            f"Astarion should have vampire/undead traits. Got: {traits_text}",
-        )
+        assert (
+            "vampire" in traits_text.lower() or "undead" in traits_text.lower()
+        ), f"Astarion should have vampire/undead traits. Got: {traits_text}"
 
         print("✅ Astarion character creation test passed")
 
@@ -503,7 +482,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
             "I retreat into the shadows, fighting the hunger."
         )
         response_1 = self.send_character_action(choice_1)
-        self.assertEqual(response_1.status_code, 200)
+        assert response_1.status_code == 200
 
         # Narrative Choice 2: Seek alternative sustenance
         choice_2 = (
@@ -512,7 +491,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
             "hating myself but refusing to harm innocents."
         )
         response_2 = self.send_character_action(choice_2)
-        self.assertEqual(response_2.status_code, 200)
+        assert response_2.status_code == 200
 
         # Narrative Choice 3: Trigger combat with vampire hunters or Cazador's minions
         choice_3 = (
@@ -521,7 +500,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
             "drawing my daggers. 'I'll die before I return to him!' I attack the nearest spawn!"
         )
         response_3 = self.send_character_action(choice_3)
-        self.assertEqual(response_3.status_code, 200)
+        assert response_3.status_code == 200
 
         # Verify story progression - check for key story beats
         expected_elements = ["astarion", "cazador", "hunger", "vampire", "siblings"]
@@ -532,7 +511,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
 
         # Check for Astarion in combat
         astarion = next((c for c in combatants if c.get("name") == "Astarion"), None)
-        self.assertIsNotNone(astarion, "Astarion should be in combat")
+        assert astarion is not None, "Astarion should be in combat"
 
         print(
             f"✅ Astarion full story progression test passed - {len(core_memories)} memories, combat with {len(combatants)} combatants"
@@ -553,25 +532,23 @@ As you struggle with your vampiric nature and the weight of your past, you must 
             "I draw my daggers and strike at the lead hunter!"
         )
         response = self.send_character_action(combat_trigger)
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
 
         # Verify combat state
         combat_state, combatants = self.assert_combat_active()
 
         # Check for Astarion in combat
         astarion = next((c for c in combatants if c.get("name") == "Astarion"), None)
-        self.assertIsNotNone(astarion, "Astarion should be in combat")
-        self.assertEqual(
-            astarion.get("side"), "player", "Astarion should be on player side"
-        )
+        assert astarion is not None, "Astarion should be in combat"
+        assert astarion.get("side") == "player", "Astarion should be on player side"
 
         # Check for enemy combatants (hunters)
         enemy_combatants = [c for c in combatants if c.get("side") == "enemy"]
-        self.assertGreater(len(enemy_combatants), 0, "Should have enemy combatants")
+        assert len(enemy_combatants) > 0, "Should have enemy combatants"
 
         # Verify Astarion has proper combat stats
-        self.assertIn("hp_current", astarion, "Astarion should have current HP")
-        self.assertIn("hp_max", astarion, "Astarion should have max HP")
+        assert "hp_current" in astarion, "Astarion should have current HP"
+        assert "hp_max" in astarion, "Astarion should have max HP"
 
         print(
             f"✅ Astarion combat mechanics test passed - Fighting {len(combatants)} combatants"
@@ -595,7 +572,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
                 }
             ),
         )
-        self.assertEqual(create_response.status_code, 201)
+        assert create_response.status_code == 201
         campaign_id = create_response.get_json()["campaign_id"]
 
         # First interaction should recognize Geralt and offer design options
@@ -608,27 +585,25 @@ As you struggle with your vampiric nature and the weight of your past, you must 
             },
             data=json.dumps({"input": "1"}),  # Select AIGenerated
         )
-        self.assertEqual(interact_response.status_code, 200)
+        assert interact_response.status_code == 200
         response_data = interact_response.get_json()
 
         # Verify character recognition
-        self.assertIn("Geralt", response_data["response"], "Should recognize Geralt")
+        assert "Geralt" in response_data["response"], "Should recognize Geralt"
 
         # Verify complete character sheet is shown
         response_text = response_data["response"]
-        self.assertIn("CHARACTER SHEET", response_text, "Should show character sheet")
-        self.assertIn("STR:", response_text, "Should show STR score")
-        self.assertIn("DEX:", response_text, "Should show DEX score")
-        self.assertIn("CON:", response_text, "Should show CON score")
-        self.assertIn("INT:", response_text, "Should show INT score")
-        self.assertIn("WIS:", response_text, "Should show WIS score")
-        self.assertIn("CHA:", response_text, "Should show CHA score")
-        self.assertIn("Equipment:", response_text, "Should show equipment")
+        assert "CHARACTER SHEET" in response_text, "Should show character sheet"
+        assert "STR:" in response_text, "Should show STR score"
+        assert "DEX:" in response_text, "Should show DEX score"
+        assert "CON:" in response_text, "Should show CON score"
+        assert "INT:" in response_text, "Should show INT score"
+        assert "WIS:" in response_text, "Should show WIS score"
+        assert "CHA:" in response_text, "Should show CHA score"
+        assert "Equipment:" in response_text, "Should show equipment"
 
         # Verify planning block
-        self.assertIn(
-            "--- PLANNING BLOCK ---", response_text, "Should have planning block"
-        )
+        assert "--- PLANNING BLOCK ---" in response_text, "Should have planning block"
 
         # Approve the character
         approve_response = self.client.post(
@@ -640,7 +615,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
             },
             data=json.dumps({"input": "1"}),  # Approve character
         )
-        self.assertEqual(approve_response.status_code, 200)
+        assert approve_response.status_code == 200
 
         # Verify character data is stored
         # Use the campaign API endpoint to get state
@@ -651,16 +626,14 @@ As you struggle with your vampiric nature and the weight of your past, you must 
                 "X-Test-User-ID": self.user_id,
             },
         )
-        self.assertEqual(state_response.status_code, 200)
+        assert state_response.status_code == 200
         state_data = state_response.get_json()
         final_state = state_data.get("game_state", {})
         pc_data = final_state.get("player_character_data", {})
 
-        self.assertEqual(
-            pc_data.get("name"), "Geralt", "Character name should be Geralt"
-        )
-        self.assertIn("class", pc_data, "Should have character class")
-        self.assertIn("hp_max", pc_data, "Should have max HP")
+        assert pc_data.get("name") == "Geralt", "Character name should be Geralt"
+        assert "class" in pc_data, "Should have character class"
+        assert "hp_max" in pc_data, "Should have max HP"
 
         print("✅ AIGenerated path with specified character test passed")
 
@@ -682,7 +655,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
                 }
             ),
         )
-        self.assertEqual(create_response.status_code, 201)
+        assert create_response.status_code == 201
         campaign_id = create_response.get_json()["campaign_id"]
 
         # First interaction should offer generic character creation
@@ -695,19 +668,19 @@ As you struggle with your vampiric nature and the weight of your past, you must 
             },
             data=json.dumps({"input": "1"}),  # Select AIGenerated
         )
-        self.assertEqual(interact_response.status_code, 200)
+        assert interact_response.status_code == 200
         response_data = interact_response.get_json()
 
         # Verify generic greeting
         response_text = response_data["response"]
-        self.assertIn("CHARACTER SHEET", response_text, "Should show character sheet")
+        assert "CHARACTER SHEET" in response_text, "Should show character sheet"
 
         # Verify all required character elements
-        self.assertIn("Race:", response_text, "Should show race")
-        self.assertIn("Class:", response_text, "Should show class")
-        self.assertIn("Level:", response_text, "Should show level")
-        self.assertIn("Background:", response_text, "Should show background")
-        self.assertIn("Why This Character:", response_text, "Should explain choices")
+        assert "Race:" in response_text, "Should show race"
+        assert "Class:" in response_text, "Should show class"
+        assert "Level:" in response_text, "Should show level"
+        assert "Background:" in response_text, "Should show background"
+        assert "Why This Character:" in response_text, "Should explain choices"
 
         print("✅ AIGenerated path without character test passed")
 
@@ -729,7 +702,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
                 }
             ),
         )
-        self.assertEqual(create_response.status_code, 201)
+        assert create_response.status_code == 201
         campaign_id = create_response.get_json()["campaign_id"]
 
         # Select StandardD&D option
@@ -742,14 +715,14 @@ As you struggle with your vampiric nature and the weight of your past, you must 
             },
             data=json.dumps({"input": "2"}),  # Select StandardD&D
         )
-        self.assertEqual(interact_response.status_code, 200)
+        assert interact_response.status_code == 200
         response_data = interact_response.get_json()
 
         # Should present race options
         response_text = response_data["response"]
-        self.assertIn("Human", response_text, "Should list Human race")
-        self.assertIn("Elf", response_text, "Should list Elf race")
-        self.assertIn("Dwarf", response_text, "Should list Dwarf race")
+        assert "Human" in response_text, "Should list Human race"
+        assert "Elf" in response_text, "Should list Elf race"
+        assert "Dwarf" in response_text, "Should list Dwarf race"
 
         # Select Human (option 1)
         race_response = self.client.post(
@@ -761,12 +734,12 @@ As you struggle with your vampiric nature and the weight of your past, you must 
             },
             data=json.dumps({"input": "1"}),  # Select Human
         )
-        self.assertEqual(race_response.status_code, 200)
+        assert race_response.status_code == 200
 
         # Should now present class options
         class_text = race_response.get_json()["response"]
-        self.assertIn("Fighter", class_text, "Should list Fighter class")
-        self.assertIn("Wizard", class_text, "Should list Wizard class")
+        assert "Fighter" in class_text, "Should list Fighter class"
+        assert "Wizard" in class_text, "Should list Wizard class"
 
         print("✅ StandardD&D path test passed")
 
@@ -788,7 +761,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
                 }
             ),
         )
-        self.assertEqual(create_response.status_code, 201)
+        assert create_response.status_code == 201
         campaign_id = create_response.get_json()["campaign_id"]
 
         # Select CustomClass option
@@ -801,21 +774,17 @@ As you struggle with your vampiric nature and the weight of your past, you must 
             },
             data=json.dumps({"input": "3"}),  # Select CustomClass
         )
-        self.assertEqual(interact_response.status_code, 200)
+        assert interact_response.status_code == 200
         response_data = interact_response.get_json()
 
         # Should acknowledge custom concept
         response_text = response_data["response"]
-        self.assertIn(
-            "chronomancer",
-            response_text.lower(),
-            "Should acknowledge chronomancer concept",
-        )
+        assert (
+            "chronomancer" in response_text.lower()
+        ), "Should acknowledge chronomancer concept"
 
         # Should ask for more details or present custom mechanics
-        self.assertIn(
-            "--- PLANNING BLOCK ---", response_text, "Should have planning block"
-        )
+        assert "--- PLANNING BLOCK ---" in response_text, "Should have planning block"
 
         print("✅ CustomClass path test passed")
 
@@ -837,7 +806,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
                 }
             ),
         )
-        self.assertEqual(create_response.status_code, 201)
+        assert create_response.status_code == 201
         campaign_id = create_response.get_json()["campaign_id"]
 
         # Send numeric input "2" - should select StandardD&D, not continue story
@@ -850,7 +819,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
             },
             data=json.dumps({"input": "2"}),
         )
-        self.assertEqual(interact_response.status_code, 200)
+        assert interact_response.status_code == 200
         response_data = interact_response.get_json()
 
         # Verify it interpreted as option selection, not story continuation
@@ -859,10 +828,9 @@ As you struggle with your vampiric nature and the weight of your past, you must 
         races_presented = any(
             race in response_text for race in ["Human", "Elf", "Dwarf", "Halfling"]
         )
-        self.assertTrue(
-            races_presented,
-            "Numeric input should trigger StandardD&D path, not story continuation",
-        )
+        assert (
+            races_presented
+        ), "Numeric input should trigger StandardD&D path, not story continuation"
 
         print("✅ Numeric input handling test passed")
 
@@ -884,7 +852,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
                 }
             ),
         )
-        self.assertEqual(create_response.status_code, 201)
+        assert create_response.status_code == 201
         campaign_id = create_response.get_json()["campaign_id"]
 
         # Select AIGenerated
@@ -897,15 +865,15 @@ As you struggle with your vampiric nature and the weight of your past, you must 
             },
             data=json.dumps({"input": "1"}),
         )
-        self.assertEqual(interact_response.status_code, 200)
+        assert interact_response.status_code == 200
         response_data = interact_response.get_json()
 
         # Verify final approval options are presented
         response_text = response_data["response"]
-        self.assertIn("Would you like to", response_text, "Should ask for approval")
+        assert "Would you like to" in response_text, "Should ask for approval"
         approval_options = ["Play as this character", "Make changes", "Start over"]
         for option in approval_options:
-            self.assertIn(option, response_text, f"Should include '{option}' option")
+            assert option in response_text, f"Should include '{option}' option"
 
         print("✅ Final approval enforcement test passed")
 
@@ -927,7 +895,7 @@ As you struggle with your vampiric nature and the weight of your past, you must 
                 }
             ),
         )
-        self.assertEqual(create_response.status_code, 201)
+        assert create_response.status_code == 201
         campaign_id = create_response.get_json()["campaign_id"]
 
         # First interaction should show campaign summary
@@ -940,26 +908,26 @@ As you struggle with your vampiric nature and the weight of your past, you must 
             },
             data=json.dumps({"input": ""}),  # Empty input to see initial response
         )
-        self.assertEqual(interact_response.status_code, 200)
+        assert interact_response.status_code == 200
         response_data = interact_response.get_json()
         response_text = response_data["response"]
 
         # Verify campaign summary is shown
-        self.assertIn(
-            "CAMPAIGN SUMMARY", response_text, "Should show campaign summary header"
-        )
-        self.assertIn("Title:", response_text, "Should show title field")
-        self.assertIn("Character:", response_text, "Should show character field")
-        self.assertIn("Setting:", response_text, "Should show setting field")
-        self.assertIn("Description:", response_text, "Should show description field")
-        self.assertIn("AI Personalities:", response_text, "Should show personalities")
-        self.assertIn("Options:", response_text, "Should show options")
+        assert (
+            "CAMPAIGN SUMMARY" in response_text
+        ), "Should show campaign summary header"
+        assert "Title:" in response_text, "Should show title field"
+        assert "Character:" in response_text, "Should show character field"
+        assert "Setting:" in response_text, "Should show setting field"
+        assert "Description:" in response_text, "Should show description field"
+        assert "AI Personalities:" in response_text, "Should show personalities"
+        assert "Options:" in response_text, "Should show options"
 
         # Verify specific content
-        self.assertIn("Drizzt", response_text, "Should show character name")
-        self.assertIn(
-            "Narrative, Mechanics", response_text, "Should list active personalities"
-        )
+        assert "Drizzt" in response_text, "Should show character name"
+        assert (
+            "Narrative, Mechanics" in response_text
+        ), "Should list active personalities"
 
         print("✅ Campaign summary display test passed")
 

@@ -43,15 +43,15 @@ class TestGameState(unittest.TestCase):
         # Should handle dict gracefully and not crash
         assert isinstance(discrepancies, list)
 
-    def test_debug_mode_default_false(self):
-        """Test that debug_mode defaults to False per updated DEFAULT_DEBUG_MODE."""
+    def test_debug_mode_default_true(self):
+        """Test that debug_mode defaults to True per updated DEFAULT_DEBUG_MODE."""
         gs = GameState()
-        assert not gs.debug_mode
+        assert gs.debug_mode
 
         # Also test it's included in serialization
         data = gs.to_dict()
         assert "debug_mode" in data
-        assert not data["debug_mode"]
+        assert data["debug_mode"]
 
     def test_debug_mode_can_be_set_false(self):
         """Test that debug_mode can be explicitly set to False."""
@@ -75,10 +75,10 @@ class TestGameState(unittest.TestCase):
         gs = GameState.from_dict(data)
         assert not gs.debug_mode
 
-        # Test missing debug_mode defaults to False
+        # Test missing debug_mode defaults to True
         data = {"game_state_version": 1}
         gs = GameState.from_dict(data)
-        assert not gs.debug_mode
+        assert gs.debug_mode
 
     def test_default_initialization(self):
         """Test GameState initialization with default values."""
@@ -96,8 +96,8 @@ class TestGameState(unittest.TestCase):
         time_diff = abs((now - gs.last_state_update_timestamp).total_seconds())
         assert time_diff < 5, "Timestamp should be within 5 seconds of now"
 
-        # Test debug_mode defaults to False (updated DEFAULT_DEBUG_MODE)
-        assert not gs.debug_mode, "debug_mode should default to False"
+        # Test debug_mode defaults to True (updated DEFAULT_DEBUG_MODE)
+        assert gs.debug_mode, "debug_mode should default to True"
 
     def test_initialization_with_kwargs(self):
         """Test GameState initialization with provided values."""
@@ -151,7 +151,7 @@ class TestGameState(unittest.TestCase):
             "npc_agendas": {},
             "world_resources": {},
             "time_pressure_warnings": {},
-            "debug_mode": False,  # Should default to False per updated DEFAULT_DEBUG_MODE
+            "debug_mode": True,  # Should default to True per updated DEFAULT_DEBUG_MODE
         }
 
         assert result == expected
@@ -314,15 +314,14 @@ class TestGameState(unittest.TestCase):
 
         # Test boolean values at 3rd level
         assert (
-            gs.player_character_data["personal_info"]["basic_stats"]["is_alive"] == True
+            gs.player_character_data["personal_info"]["basic_stats"]["is_alive"]
         )
-        assert gs.world_data["locations"]["current_area"]["is_safe"] == False
-        assert gs.npc_data["relationships"]["allies"]["all_trusted"] == True
-        assert (
+        assert not gs.world_data["locations"]["current_area"]["is_safe"]
+        assert gs.npc_data["relationships"]["allies"]["all_trusted"]
+        assert not (
             gs.custom_campaign_state["progression"]["chapter_data"][
                 "all_objectives_complete"
             ]
-            == False
         )
 
         # Test None values at 3rd level
@@ -406,7 +405,7 @@ class TestGameState(unittest.TestCase):
         combat_data = result["player_character_data"]["stats"]["combat"]
         assert combat_data["strength"] == 18  # int
         assert combat_data["dexterity"] == 14.5  # float
-        assert combat_data["is_veteran"] == True  # bool
+        assert combat_data["is_veteran"]  # bool
         assert combat_data["special_training"] is None  # None
         assert combat_data["weapon_proficiencies"] == ["sword", "bow"]  # list
         assert combat_data["combat_style"]["preferred"] == "aggressive"  # nested dict
@@ -446,7 +445,7 @@ class TestGameState(unittest.TestCase):
         region_data = gs.world_data["regions"]["northern_kingdoms"]
         assert region_data["population"] == 50000  # int
         assert region_data["tax_rate"] == 0.15  # float
-        assert region_data["is_at_war"] == False  # bool
+        assert not region_data["is_at_war"]  # bool
         assert region_data["ruler"] is None  # None
         assert region_data["major_cities"] == ["Northgate", "Frostholm"]  # list
         assert region_data["trade_routes"]["primary"] == "sea_route"  # nested dict
@@ -758,14 +757,13 @@ class TestUpdateStateWithChanges(unittest.TestCase):
         )
 
         # Test bool updates at 3rd level
-        assert (
-            result["game_data"]["player_info"]["character_sheet"]["is_active"] == False
+        assert not (
+            result["game_data"]["player_info"]["character_sheet"]["is_active"]
         )
-        assert (
+        assert not (
             result["world_state"]["environment"]["current_location"]["is_discovered"]
-            == False
         )
-        assert result["metadata"]["session_info"]["is_tutorial"] == False  # new
+        assert not result["metadata"]["session_info"]["is_tutorial"]  # new
 
         # Test None updates at 3rd level
         assert result["game_data"]["player_info"]["character_sheet"][
@@ -828,7 +826,7 @@ class TestUpdateStateWithChanges(unittest.TestCase):
             == "mountain"
         )  # new
         assert (
-            result["metadata"]["session_info"]["settings"]["auto_save"] == True
+            result["metadata"]["session_info"]["settings"]["auto_save"]
         )  # new nested
 
         # Test datetime at 3rd level
@@ -880,7 +878,7 @@ class TestUpdateStateWithChanges(unittest.TestCase):
         }
         assert result["container1"]["container2"]["container3"]["zero_int"] == 42
         assert result["container1"]["container2"]["container3"]["zero_float"] == 3.14
-        assert result["container1"]["container2"]["container3"]["false_bool"] == True
+        assert result["container1"]["container2"]["container3"]["false_bool"]
         assert (
             result["container1"]["container2"]["container3"]["empty_string"]
             == "now_has_content"
@@ -1224,9 +1222,9 @@ class TestMainStateFunctions(unittest.TestCase):
         assert result["world"]["regions"]["north"]["tax_rate"] == 0.15
 
         # Test bool values at 3rd level
-        assert result["player"]["stats"]["combat"]["is_veteran"] == True
-        assert result["world"]["regions"]["north"]["is_at_war"] == False
-        assert result["metadata"]["session"]["is_tutorial"] == False
+        assert result["player"]["stats"]["combat"]["is_veteran"]
+        assert not result["world"]["regions"]["north"]["is_at_war"]
+        assert not result["metadata"]["session"]["is_tutorial"]
 
         # Test None values at 3rd level
         assert result["player"]["stats"]["combat"]["special_training"] is None

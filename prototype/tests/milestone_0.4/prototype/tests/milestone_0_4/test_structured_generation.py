@@ -240,7 +240,7 @@ class TestHarness:
                 desync_pattern = "general_omission"
 
         # Create result
-        result = TestResult(
+        return TestResult(
             approach=TestApproach.VALIDATION_ONLY,
             campaign_id=campaign_id,
             scenario_id=scenario["scenario_id"],
@@ -262,7 +262,6 @@ class TestHarness:
             else narrative,
         )
 
-        return result
 
     def _run_pydantic_only(
         self, campaign_id: str, scenario: dict[str, Any]
@@ -302,7 +301,7 @@ class TestHarness:
         validation_time = (time.time() - validation_start) * 1000
 
         # Create result
-        result = TestResult(
+        return TestResult(
             approach=TestApproach.PYDANTIC_ONLY,
             campaign_id=campaign_id,
             scenario_id=scenario["scenario_id"],
@@ -325,7 +324,6 @@ class TestHarness:
             else narrative,
         )
 
-        return result
 
     def _generate_structured_narrative(
         self, manifest: SceneManifest, prompt: str
@@ -379,7 +377,7 @@ class TestHarness:
         validation_time = (time.time() - validation_start) * 1000
 
         # Create result
-        result = TestResult(
+        return TestResult(
             approach=TestApproach.COMBINED,
             campaign_id=campaign_id,
             scenario_id=scenario["scenario_id"],
@@ -404,7 +402,6 @@ class TestHarness:
             else narrative,
         )
 
-        return result
 
     def _generate_combined_narrative(self, manifest: SceneManifest, prompt: str) -> str:
         """Generate narrative with both structure and validation awareness (mock)"""

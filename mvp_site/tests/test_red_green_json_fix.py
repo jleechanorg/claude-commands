@@ -73,9 +73,15 @@ class TestRedGreenJSONFix(unittest.TestCase):
         print(f"Returned narrative: {narrative[:100]}...")
 
         # With the fix, these pass. Without it, they would fail.
-        assert '"narrative":' not in narrative, "BUG: Raw JSON structure visible to user!"
-        assert '"entities_mentioned":' not in narrative, "BUG: Raw JSON structure visible to user!"
-        assert '"state_updates":' not in narrative, "BUG: Raw JSON structure visible to user!"
+        assert (
+            '"narrative":' not in narrative
+        ), "BUG: Raw JSON structure visible to user!"
+        assert (
+            '"entities_mentioned":' not in narrative
+        ), "BUG: Raw JSON structure visible to user!"
+        assert (
+            '"state_updates":' not in narrative
+        ), "BUG: Raw JSON structure visible to user!"
 
         # The narrative should be extracted, not the whole JSON
         assert "Scene #14" in narrative

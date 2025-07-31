@@ -157,7 +157,7 @@ def query_relevant_patterns(current_context, _action_type=None):
     memory = load_memory()
     relevant_patterns = []
 
-    for entity_id, entity in memory["entities"].items():
+    for _entity_id, entity in memory["entities"].items():
         if entity["type"] == "user_correction":
             # Check context overlap
             entity_contexts = entity.get("context", [])
@@ -238,7 +238,7 @@ def get_memory_stats():
     """Get memory statistics"""
     memory = load_memory()
 
-    stats = {
+    return {
         "total_entities": len(memory["entities"]),
         "corrections": len(
             [e for e in memory["entities"].values() if e["type"] == "user_correction"]
@@ -253,7 +253,6 @@ def get_memory_stats():
         "relations": len(memory["relations"]),
     }
 
-    return stats
 
 
 if __name__ == "__main__":

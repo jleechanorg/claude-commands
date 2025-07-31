@@ -73,7 +73,7 @@ def capture_campaign_response(campaign_data, test_name, max_wait=60):
                     print(f"   📝 Preview: {narrative_text[:100]}...")
 
                     # Create capture data
-                    capture_data = {
+                    return {
                         "test_name": test_name,
                         "campaign_input": campaign_data,
                         "creation_response": result,
@@ -83,7 +83,6 @@ def capture_campaign_response(campaign_data, test_name, max_wait=60):
                         "capture_duration_seconds": attempt + 1,
                     }
 
-                    return capture_data
 
         print(f"   ⚠️  Timeout: No story generated after {max_wait} seconds")
         return None
@@ -146,7 +145,6 @@ def main():
     time.sleep(2)
 
     # Start server in background with real APIs
-
 
     env = os.environ.copy()
     env["TESTING"] = "true"

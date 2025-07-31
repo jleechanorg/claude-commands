@@ -11,6 +11,8 @@ from unittest.mock import Mock, patch
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import pytest
+
 from gemini_service import (
     DEFAULT_MODEL,
     MODEL_FALLBACK_CHAIN,
@@ -49,11 +51,11 @@ class TestGeminiModelFallback(unittest.TestCase):
         )
 
         # Verify primary model was used
-        self.assertEqual(result, mock_response)
+        assert result == mock_response
         mock_client.models.generate_content.assert_called_once()
         call_args = mock_client.models.generate_content.call_args
         # In TESTING mode, either TEST_MODEL or the requested model (DEFAULT_MODEL) could be used
-        self.assertIn(call_args[1]["model"], [DEFAULT_MODEL, TEST_MODEL])
+        assert call_args[1]["model"] in [DEFAULT_MODEL, TEST_MODEL]
 
     @patch("gemini_service.get_client")
     @patch("gemini_service._log_token_count")
@@ -78,8 +80,8 @@ class TestGeminiModelFallback(unittest.TestCase):
         )
 
         # Verify fallback was used
-        self.assertEqual(result, mock_response)
-        self.assertEqual(mock_client.models.generate_content.call_count, 2)
+        assert result == mock_response
+        assert mock_client.models.generate_content.call_count == 2
 
         # Check models used
         calls = mock_client.models.generate_content.call_args_list
@@ -87,7 +89,7 @@ class TestGeminiModelFallback(unittest.TestCase):
         first_model = calls[0][1]["model"]
         # Second call should be different (fallback)
         second_model = calls[1][1]["model"]
-        self.assertNotEqual(first_model, second_model)
+        assert first_model != second_model
 
     @patch("gemini_service.get_client")
     @patch("gemini_service._log_token_count")
@@ -112,8 +114,8 @@ class TestGeminiModelFallback(unittest.TestCase):
         )
 
         # Verify multiple fallbacks were attempted
-        self.assertEqual(result, mock_response)
-        self.assertEqual(mock_client.models.generate_content.call_count, 3)
+        assert result == mock_response
+        assert mock_client.models.generate_content.call_count == 3
 
     @patch("gemini_service.get_client")
     @patch("gemini_service._log_token_count")
@@ -139,8 +141,8 @@ class TestGeminiModelFallback(unittest.TestCase):
         )
 
         # Verify fallback was used
-        self.assertEqual(result, mock_response)
-        self.assertEqual(mock_client.models.generate_content.call_count, 2)
+        assert result == mock_response
+        assert mock_client.models.generate_content.call_count == 2
 
     @patch("gemini_service.get_client")
     @patch("gemini_service._log_token_count")
@@ -153,15 +155,15 @@ class TestGeminiModelFallback(unittest.TestCase):
         mock_client.models.generate_content.side_effect = Exception("503 UNAVAILABLE")
 
         # Call should raise the last exception
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as context:
             _call_gemini_api_with_model_cycling(
                 ["Test prompt"], DEFAULT_MODEL, current_prompt_text_for_logging="Test"
             )
 
         # Verify multiple models were tried (at least 2)
         # The exact count depends on test environment and model deduplication
-        self.assertGreaterEqual(mock_client.models.generate_content.call_count, 2)
-        self.assertIn("503", str(context.exception))
+        assert mock_client.models.generate_content.call_count >= 2
+        assert "503" in str(context.value)
 
     @patch("gemini_service.get_client")
     @patch("gemini_service._log_token_count")
@@ -174,14 +176,14 @@ class TestGeminiModelFallback(unittest.TestCase):
         mock_client.models.generate_content.side_effect = Exception("401 Unauthorized")
 
         # Call should fail immediately without trying fallbacks
-        with self.assertRaises(Exception) as context:
+        with pytest.raises(Exception) as context:
             _call_gemini_api_with_model_cycling(
                 ["Test prompt"], DEFAULT_MODEL, current_prompt_text_for_logging="Test"
             )
 
         # Verify only one attempt was made
-        self.assertEqual(mock_client.models.generate_content.call_count, 1)
-        self.assertIn("401", str(context.exception))
+        assert mock_client.models.generate_content.call_count == 1
+        assert "401" in str(context.value)
 
     @patch("gemini_service.get_client")
     @patch("gemini_service._log_token_count")
@@ -208,13 +210,13 @@ class TestGeminiModelFallback(unittest.TestCase):
         models_tried = [call[1]["model"] for call in calls]
 
         # First should be the requested model
-        self.assertEqual(models_tried[0], starting_model)
+        assert models_tried[0] == starting_model
 
         # Rest should follow fallback chain order (excluding duplicates)
-        remaining_models = [m for m in models_tried[1:]]
+        remaining_models = list(models_tried[1:])
         for i, model in enumerate(MODEL_FALLBACK_CHAIN):
             if model != starting_model and i < len(remaining_models):
-                self.assertIn(model, remaining_models)
+                assert model in remaining_models
 
     @patch("gemini_service.get_client")
     @patch("gemini_service._log_token_count")
@@ -233,7 +235,7 @@ class TestGeminiModelFallback(unittest.TestCase):
         ]
 
         # Call the function
-        result = _call_gemini_api_with_model_cycling(["Test prompt"], DEFAULT_MODEL)
+        _call_gemini_api_with_model_cycling(["Test prompt"], DEFAULT_MODEL)
 
         # Verify JSON mode was set on both attempts
         calls = mock_client.models.generate_content.call_args_list
@@ -241,15 +243,13 @@ class TestGeminiModelFallback(unittest.TestCase):
             config = call[1]["config"]
             # Config object may have attributes directly or via dict
             if hasattr(config, "response_mime_type"):
-                self.assertEqual(config.response_mime_type, "application/json")
+                assert config.response_mime_type == "application/json"
             elif hasattr(config, "_kwargs"):
-                self.assertIn("response_mime_type", config._kwargs)
-                self.assertEqual(
-                    config._kwargs["response_mime_type"], "application/json"
-                )
+                assert "response_mime_type" in config._kwargs
+                assert config._kwargs["response_mime_type"] == "application/json"
             else:
                 # Mock object case
-                self.assertTrue(True)  # Skip validation for mocks
+                assert True  # Skip validation for mocks
 
     @patch("gemini_service.get_client")
     @patch("gemini_service._log_token_count")
@@ -272,7 +272,7 @@ class TestGeminiModelFallback(unittest.TestCase):
         system_instruction = "Test system instruction"
 
         # Call with system instruction
-        result = _call_gemini_api_with_model_cycling(
+        _call_gemini_api_with_model_cycling(
             ["Test prompt"], DEFAULT_MODEL, system_instruction_text=system_instruction
         )
 
@@ -283,17 +283,15 @@ class TestGeminiModelFallback(unittest.TestCase):
             # Config object may have attributes directly or via dict
             if hasattr(config, "system_instruction"):
                 if hasattr(config.system_instruction, "text"):
-                    self.assertEqual(config.system_instruction.text, system_instruction)
+                    assert config.system_instruction.text == system_instruction
                 else:
-                    self.assertEqual(str(config.system_instruction), system_instruction)
+                    assert str(config.system_instruction) == system_instruction
             elif hasattr(config, "_kwargs"):
-                self.assertIn("system_instruction", config._kwargs)
-                self.assertEqual(
-                    config._kwargs["system_instruction"].text, system_instruction
-                )
+                assert "system_instruction" in config._kwargs
+                assert config._kwargs["system_instruction"].text == system_instruction
             else:
                 # Mock object case
-                self.assertTrue(True)  # Skip validation for mocks
+                assert True  # Skip validation for mocks
 
 
 if __name__ == "__main__":

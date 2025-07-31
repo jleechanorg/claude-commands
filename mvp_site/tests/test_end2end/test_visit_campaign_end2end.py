@@ -206,25 +206,25 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
         )
 
         # Assert response
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         response_data = json.loads(response.data)
 
         # Verify campaign data
-        self.assertIn("campaign", response_data)
+        assert "campaign" in response_data
         campaign = response_data["campaign"]
-        self.assertEqual(campaign["title"], "Epic Dragon Quest")
-        self.assertEqual(campaign["id"], self.test_campaign_id)
+        assert campaign["title"] == "Epic Dragon Quest"
+        assert campaign["id"] == self.test_campaign_id
 
         # Verify game state exists (basic assertion that works regardless of structure)
-        self.assertIn("game_state", response_data)
+        assert "game_state" in response_data
         game_state = response_data["game_state"]
         # Check if it's a dict (basic structure validation)
-        self.assertIsInstance(game_state, dict)
+        assert isinstance(game_state, dict)
 
         # Verify story entries exist
-        self.assertIn("story", response_data)
+        assert "story" in response_data
         story = response_data["story"]
-        self.assertIsInstance(story, list)
+        assert isinstance(story, list)
 
     @patch("firebase_admin.firestore.client")
     def test_visit_campaign_not_found(self, mock_firestore_client):
@@ -242,9 +242,9 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
         )
 
         # Assert not found
-        self.assertEqual(response.status_code, 404)
+        assert response.status_code == 404
         response_data = json.loads(response.data)
-        self.assertIn("error", response_data)
+        assert "error" in response_data
 
     @patch("firebase_admin.firestore.client")
     def test_visit_campaign_unauthorized(self, mock_firestore_client):
@@ -273,9 +273,9 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
         )
 
         # Assert forbidden (shows as 404 for security)
-        self.assertEqual(response.status_code, 404)
+        assert response.status_code == 404
         response_data = json.loads(response.data)
-        self.assertIn("error", response_data)
+        assert "error" in response_data
 
 
 if __name__ == "__main__":

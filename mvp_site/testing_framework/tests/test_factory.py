@@ -13,6 +13,8 @@ from mvp_site.testing_framework.simple_mock_provider import SimpleMockServicePro
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 # Import the same way the factory does to get consistent behavior
+import pytest
+
 from mvp_site.testing_framework import factory
 from mvp_site.testing_framework.factory import (
     get_current_provider,
@@ -73,38 +75,38 @@ class TestFactory(unittest.TestCase):
     def test_get_service_provider_default_mock(self):
         """Test that get_service_provider returns MockServiceProvider by default."""
         provider = get_service_provider()
-        self.assertIsInstance(provider, MockProviderClass)
-        self.assertFalse(provider.is_real_service)
+        assert isinstance(provider, MockProviderClass)
+        assert not provider.is_real_service
 
     def test_get_service_provider_explicit_mock(self):
         """Test that get_service_provider returns MockServiceProvider for 'mock' mode."""
         provider = get_service_provider("mock")
-        self.assertIsInstance(provider, MockProviderClass)
-        self.assertFalse(provider.is_real_service)
+        assert isinstance(provider, MockProviderClass)
+        assert not provider.is_real_service
 
     def test_get_service_provider_real_mode(self):
         """Test that get_service_provider returns RealServiceProvider for 'real' mode."""
         provider = get_service_provider("real")
-        self.assertIsInstance(provider, RealServiceProvider)
-        self.assertFalse(provider.capture_mode)
+        assert isinstance(provider, RealServiceProvider)
+        assert not provider.capture_mode
 
     def test_get_service_provider_capture_mode(self):
         """Test that get_service_provider returns RealServiceProvider with capture mode."""
         provider = get_service_provider("capture")
-        self.assertIsInstance(provider, RealServiceProvider)
-        self.assertTrue(provider.capture_mode)
+        assert isinstance(provider, RealServiceProvider)
+        assert provider.capture_mode
 
     def test_get_service_provider_invalid_mode(self):
         """Test that get_service_provider raises ValueError for invalid mode."""
-        with self.assertRaises(ValueError) as cm:
+        with pytest.raises(ValueError) as cm:
             get_service_provider("invalid")
-        self.assertIn("Invalid TEST_MODE", str(cm.exception))
+        assert "Invalid TEST_MODE" in str(cm.value)
 
     @patch.dict(os.environ, {"TEST_MODE": "real"})
     def test_get_service_provider_from_env(self):
         """Test that get_service_provider reads from TEST_MODE environment variable."""
         provider = get_service_provider()
-        self.assertIsInstance(provider, RealServiceProvider)
+        assert isinstance(provider, RealServiceProvider)
 
     def test_set_and_get_current_provider(self):
         """Test setting and getting the current provider."""
@@ -112,19 +114,19 @@ class TestFactory(unittest.TestCase):
         set_service_provider(mock_provider)
 
         current = get_current_provider()
-        self.assertIs(current, mock_provider)
+        assert current is mock_provider
 
     def test_get_current_provider_creates_default(self):
         """Test that get_current_provider creates default if none set."""
         current = get_current_provider()
-        self.assertIsInstance(current, MockProviderClass)
-        self.assertFalse(current.is_real_service)
+        assert isinstance(current, MockProviderClass)
+        assert not current.is_real_service
 
     def test_get_current_provider_consistent(self):
         """Test that get_current_provider returns same instance on multiple calls."""
         current1 = get_current_provider()
         current2 = get_current_provider()
-        self.assertIs(current1, current2)
+        assert current1 is current2
 
     def test_reset_global_provider(self):
         """Test that reset_global_provider clears the global state."""
@@ -134,14 +136,14 @@ class TestFactory(unittest.TestCase):
 
         # Verify it's set
         current = get_current_provider()
-        self.assertIs(current, mock_provider)
+        assert current is mock_provider
 
         # Reset
         reset_global_provider()
 
         # Verify new instance is created
         new_current = get_current_provider()
-        self.assertIsNot(new_current, mock_provider)
+        assert new_current is not mock_provider
 
 
 if __name__ == "__main__":

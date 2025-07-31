@@ -229,7 +229,6 @@ class TestEntityValidationComparison(unittest.TestCase):
         # Use Pydantic validation logic
         try:
             # Create validation data structure
-            validation_data = {"entities": expected_entities, "narrative": narrative}
             # Validate using Pydantic (simplified for testing)
             for entity in expected_entities:
                 if entity.lower() not in narrative.lower():
@@ -244,10 +243,7 @@ class TestEntityValidationComparison(unittest.TestCase):
         expected_entities = prompt["context"].get("expected_entities", [])
 
         # Use simple string matching
-        for entity in expected_entities:
-            if entity.lower() not in narrative.lower():
-                return False
-        return True
+        return all(entity.lower() in narrative.lower() for entity in expected_entities)
 
     def _save_metrics(self, metrics: ValidationMetrics, filename: str):
         """Save metrics to file"""
@@ -283,20 +279,16 @@ class TestEntityIDValidation(unittest.TestCase):
         for entity_id, entity_type, expected in test_cases:
             with self.subTest(entity_id=entity_id, entity_type=entity_type):
                 result = SimpleValidator.validate_entity_id(entity_id, entity_type)
-                self.assertEqual(
-                    result,
-                    expected,
-                    f"Expected {expected} for {entity_id} with type {entity_type}, got {result}",
-                )
+                assert (
+                    result == expected
+                ), f"Expected {expected} for {entity_id} with type {entity_type}, got {result}"
 
     def test_problematic_character_name_regression(self):
         """Regression test for the specific 'Torvin Drake-Bane' case that caused the error"""
         # This is the exact ID that was failing in production
         problematic_id = "pc_torvin_drake-bane_001"
         result = SimpleValidator.validate_entity_id(problematic_id, "pc")
-        self.assertTrue(
-            result, f"The ID '{problematic_id}' should be valid but was rejected"
-        )
+        assert result, f"The ID '{problematic_id}' should be valid but was rejected"
 
 
 if __name__ == "__main__":

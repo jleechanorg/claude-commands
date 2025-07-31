@@ -61,7 +61,9 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
         # Check that choice content is present (might be HTML-escaped for security)
         explore_choice = response.planning_block["choices"]["explore_town"]
         assert explore_choice["text"] == "Explore Town"
-        assert "Walk around" in explore_choice["description"]  # Check substring to avoid HTML escaping issues
+        assert (
+            "Walk around" in explore_choice["description"]
+        )  # Check substring to avoid HTML escaping issues
         assert "context" in response.planning_block  # Validation adds this field
         assert response.dice_rolls == ["Perception: 1d20+3 = 15"]
         assert response.resources == "HP: 10/10 | Gold: 50"
@@ -73,7 +75,9 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
 
         # Check defaults for structured fields
         assert response.session_header == ""
-        assert response.planning_block == {}  # Planning blocks are now JSON objects, empty by default
+        assert (
+            response.planning_block == {}
+        )  # Planning blocks are now JSON objects, empty by default
         assert response.dice_rolls == []
         assert response.resources == ""
         assert response.debug_info == {}

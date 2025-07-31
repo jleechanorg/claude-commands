@@ -10,6 +10,8 @@ from unittest.mock import MagicMock, patch
 # Add the project root to Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
+import pytest
+
 from mvp_site.testing_framework.real_provider import RealServiceProvider
 from mvp_site.testing_framework.service_provider import TestServiceProvider
 
@@ -36,29 +38,29 @@ class TestRealProvider(unittest.TestCase):
     def test_implements_interface(self):
         """Test that RealServiceProvider implements TestServiceProvider interface."""
         provider = RealServiceProvider()
-        self.assertIsInstance(provider, TestServiceProvider)
+        assert isinstance(provider, TestServiceProvider)
 
     def test_is_real_service_true(self):
         """Test that is_real_service returns True for real provider."""
         provider = RealServiceProvider()
-        self.assertTrue(provider.is_real_service)
+        assert provider.is_real_service
 
     def test_capture_mode_initialization(self):
         """Test that capture mode is properly initialized."""
         provider = RealServiceProvider(capture_mode=True)
-        self.assertTrue(provider.capture_mode)
+        assert provider.capture_mode
 
         provider = RealServiceProvider(capture_mode=False)
-        self.assertFalse(provider.capture_mode)
+        assert not provider.capture_mode
 
     def test_get_firestore_creates_client(self):
         """Test that get_firestore attempts to create real Firestore client."""
         provider = RealServiceProvider()
         # Test that it attempts to import and create the client
         # Since google-cloud-firestore isn't installed, this should raise ImportError
-        with self.assertRaises(ImportError) as cm:
+        with pytest.raises(ImportError) as cm:
             provider.get_firestore()
-        self.assertIn("google-cloud-firestore", str(cm.exception))
+        assert "google-cloud-firestore" in str(cm.value)
 
     def test_get_gemini_creates_client(self):
         """Test that get_gemini attempts to create real Gemini client."""
@@ -66,24 +68,24 @@ class TestRealProvider(unittest.TestCase):
         # Test that it attempts to import and create the client
         # Since google-generativeai isn't installed, this should raise ImportError
         # Note: We use 'from google import genai' but error message mentions google-generativeai
-        with self.assertRaises(ImportError) as cm:
+        with pytest.raises(ImportError) as cm:
             provider.get_gemini()
-        self.assertIn("google-generativeai", str(cm.exception))
+        assert "google-generativeai" in str(cm.value)
 
     def test_get_auth_creates_test_auth(self):
         """Test that get_auth creates test auth object."""
         provider = RealServiceProvider()
         auth = provider.get_auth()
 
-        self.assertEqual(auth.user_id, "test-user-123")
-        self.assertEqual(auth.session_id, "test-session-456")
+        assert auth.user_id == "test-user-123"
+        assert auth.session_id == "test-session-456"
 
     def test_track_test_collection(self):
         """Test that track_test_collection adds to cleanup list."""
         provider = RealServiceProvider()
         provider.track_test_collection("campaigns")
 
-        self.assertIn("test_campaigns", provider._test_collections)
+        assert "test_campaigns" in provider._test_collections
 
     def test_cleanup_calls_collection_cleanup(self):
         """Test that cleanup processes tracked collections."""
@@ -106,9 +108,9 @@ class TestRealProvider(unittest.TestCase):
     def test_missing_api_key_raises_error(self):
         """Test that missing API key raises ValueError."""
         with patch.dict(os.environ, {"TEST_GEMINI_API_KEY": ""}):
-            with self.assertRaises(ValueError) as cm:
+            with pytest.raises(ValueError) as cm:
                 RealServiceProvider()
-            self.assertIn("TEST_GEMINI_API_KEY", str(cm.exception))
+            assert "TEST_GEMINI_API_KEY" in str(cm.value)
 
 
 if __name__ == "__main__":

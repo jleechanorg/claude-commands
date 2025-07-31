@@ -21,23 +21,6 @@ def test_structured_fields_original_schema():
     print(f"Screenshots will be saved to: {SCREENSHOT_DIR}")
 
     # Expected response structure from game_state_instruction.md
-    expected_response = {
-        "narrative": "You swing your sword at the goblin! The blade cuts through the air...",
-        "session_header": "[SESSION_HEADER]\nTimestamp: 1492 DR, Ches 20, 10:00\nLocation: Goblin Cave\nStatus: Lvl 2 Fighter | HP: 15/18",
-        "planning_block": "--- PLANNING BLOCK ---\nWhat would you like to do next?\n1. Attack again\n2. Defend\n3. Retreat",
-        "dice_rolls": [
-            "Attack roll: 1d20+5 = 15+5 = 20 (Hit!)",
-            "Damage: 1d8+3 = 5+3 = 8",
-        ],
-        "resources": "HD: 2/2, Second Wind: 0/1, Action Surge: 1/1",
-        "entities_mentioned": ["goblin"],
-        "location_confirmed": "Goblin Cave",
-        "state_updates": {"npc_data": {"goblin_1": {"hp_current": 3}}},
-        "debug_info": {
-            "dm_notes": ["Goblin is wounded"],
-            "state_rationale": "Reduced goblin HP by 8",
-        },
-    }
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)

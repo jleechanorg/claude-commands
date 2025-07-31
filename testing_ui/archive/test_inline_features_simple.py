@@ -156,7 +156,6 @@ def run_test():
         except Exception as e:
             print(f"\n❌ Test failed: {e}")
 
-
             traceback.print_exc()
 
             # Emergency screenshot

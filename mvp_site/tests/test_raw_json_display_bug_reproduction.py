@@ -88,11 +88,17 @@ class TestRawJsonDisplayBugReproduction(unittest.TestCase):
         actual_user_display, _ = parse_structured_response(raw_json_that_user_sees)
 
         # This assertion SHOULD PASS - proving the bug is fixed
-        assert actual_user_display == expected_user_display, "FIX: User should see parsed narrative, not raw JSON!"
+        assert (
+            actual_user_display == expected_user_display
+        ), "FIX: User should see parsed narrative, not raw JSON!"
 
         # These should also fail if raw JSON is being displayed
-        assert '"narrative":' not in actual_user_display, "User should not see JSON keys"
-        assert '"entities_mentioned":' not in actual_user_display, "User should not see JSON keys"
+        assert (
+            '"narrative":' not in actual_user_display
+        ), "User should not see JSON keys"
+        assert (
+            '"entities_mentioned":' not in actual_user_display
+        ), "User should not see JSON keys"
 
 
 if __name__ == "__main__":

@@ -410,9 +410,7 @@ class EntityValidator:
 
         # Combine instructions
         retry_text = "\n".join(retry_instructions)
-        enhanced_prompt = f"{original_prompt}\n\n=== RETRY INSTRUCTIONS ===\n{retry_text}\n\nPlease revise your response to include all required characters."
-
-        return enhanced_prompt
+        return f"{original_prompt}\n\n=== RETRY INSTRUCTIONS ===\n{retry_text}\n\nPlease revise your response to include all required characters."
 
     def validate(
         self,

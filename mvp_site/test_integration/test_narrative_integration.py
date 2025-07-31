@@ -120,16 +120,13 @@ class TestNarrativeIntegration(unittest.TestCase):
         result = subprocess.run(
             base_command, check=False, capture_output=True, text=True, cwd=project_root
         )
-        self.assertEqual(
-            result.returncode, 0, f"god-command {action} failed: {result.stderr}"
-        )
+        assert result.returncode == 0, f"god-command {action} failed: {result.stderr}"
 
         # The god-command 'ask' prints an info line before the JSON. Extract the JSON block.
         output = result.stdout.strip()
         if action == "ask":
             json_start = output.find("{")
-            json_text = output[json_start:] if json_start != -1 else output
-            return json_text
+            return output[json_start:] if json_start != -1 else output
         return output
 
     def _get_game_state(self):
@@ -202,7 +199,7 @@ class TestNarrativeIntegration(unittest.TestCase):
                     }
                 ),
             )
-            self.assertEqual(warmup_response.status_code, 200)
+            assert warmup_response.status_code == 200
 
             # Get initial scene info
             initial_seq_id, initial_scene = self._get_current_scene_info()
@@ -230,7 +227,7 @@ class TestNarrativeIntegration(unittest.TestCase):
                     data=json.dumps(interaction_data),
                 )
 
-                self.assertEqual(response.status_code, 200)
+                assert response.status_code == 200
                 response_data = response.get_json()
                 response_text = response_data.get("response", "")
 
@@ -258,13 +255,13 @@ class TestNarrativeIntegration(unittest.TestCase):
                     break
 
             # Verify that narrative system is working (either NPC approach or valid response)
-            self.assertGreater(
-                interactions_tested, 0, "Should have completed at least one interaction"
-            )
+            assert (
+                interactions_tested > 0
+            ), "Should have completed at least one interaction"
 
             # If we found NPC approaches, verify they're within reasonable timeframe
             if len(npc_approaches) > 0:
-                earliest_approach = min(npc_approaches, key=lambda x: x["scene"])
+                min(npc_approaches, key=lambda x: x["scene"])
                 print(
                     f"✅ NPC initiative test passed: {len(npc_approaches)} approaches found within {interactions_tested} interactions"
                 )
@@ -308,7 +305,7 @@ class TestNarrativeIntegration(unittest.TestCase):
                     data=json.dumps(interaction_data),
                 )
 
-                self.assertEqual(response.status_code, 200)
+                assert response.status_code == 200
                 response_data = response.get_json()
                 response_text = response_data.get("response", "")
 
@@ -346,7 +343,7 @@ class TestNarrativeIntegration(unittest.TestCase):
                     data=json.dumps(interaction_data),
                 )
 
-                self.assertEqual(response.status_code, 200)
+                assert response.status_code == 200
                 response_data = response.get_json()
                 response_text = response_data.get("response", "")
 
@@ -376,9 +373,7 @@ class TestNarrativeIntegration(unittest.TestCase):
 
             # Test passes if system is responding to environment prompts
             total_interactions = len(populated_prompts) + len(wilderness_prompts)
-            self.assertGreater(
-                total_interactions, 0, "Should have completed interactions"
-            )
+            assert total_interactions > 0, "Should have completed interactions"
 
             # Log encounter patterns for analysis
             if populated_encounters or wilderness_encounters:

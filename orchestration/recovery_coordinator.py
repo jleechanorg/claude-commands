@@ -16,6 +16,7 @@ from typing import Any
 
 class RecoveryReason(Enum):
     """Reasons for agent failure"""
+
     SIGINT = "SIGINT (Ctrl-C interruption)"
     TIMEOUT = "Task timeout exceeded"
     API_ERROR = "Claude API error"
@@ -23,16 +24,20 @@ class RecoveryReason(Enum):
     PERMISSION_ERROR = "File permission denied"
     UNKNOWN = "Unknown failure reason"
 
+
 class RecoveryStrategy(Enum):
     """Recovery strategies for failed agents"""
+
     RESUME = "resume"  # Continue from checkpoint
     RESTART = "restart"  # Fresh start with same task
     REASSIGN = "reassign"  # Try different agent type
     ESCALATE = "escalate"  # Manual intervention needed
 
+
 @dataclass
 class RecoveryEvent:
     """Record of a recovery attempt"""
+
     agent_name: str
     task_description: str
     failure_time: str
@@ -44,6 +49,7 @@ class RecoveryEvent:
     recovery_success: bool
     recovery_duration_seconds: float
 
+
 class RecoveryCoordinator:
     """Coordinates recovery of failed agents"""
 
@@ -52,7 +58,9 @@ class RecoveryCoordinator:
         self.results_dir = "/tmp/orchestration_results"
         self.checkpoints_dir = "/tmp/orchestration_checkpoints"
         self.logs_dir = "/tmp/orchestration_logs"
-        self.metrics_file = os.path.join(self.orchestration_dir, "recovery_metrics.json")
+        self.metrics_file = os.path.join(
+            self.orchestration_dir, "recovery_metrics.json"
+        )
 
         # Create directories
         os.makedirs(self.checkpoints_dir, exist_ok=True)
@@ -77,12 +85,12 @@ class RecoveryCoordinator:
             "failed_after_recovery": 0,
             "recovery_events": [],
             "reason_counts": {},
-            "total_recovery_time": 0
+            "total_recovery_time": 0,
         }
 
     def _save_metrics(self):
         """Save metrics to file"""
-        with open(self.metrics_file, 'w') as f:
+        with open(self.metrics_file, "w") as f:
             json.dump(self.metrics, f, indent=2)
 
     def check_agent_failure(self, agent_name: str) -> dict[str, Any] | None:
@@ -131,40 +139,42 @@ class RecoveryCoordinator:
             return partial_work
 
         # Check for created files
-        for root, dirs, files in os.walk(workspace):
+        for root, _dirs, files in os.walk(workspace):
             # Skip .git directory
-            if '.git' in root:
+            if ".git" in root:
                 continue
 
             for file in files:
                 file_path = os.path.relpath(os.path.join(root, file), workspace)
                 # Check if file is new (not in git)
                 result = subprocess.run(
-                    ['git', 'ls-files', file_path],
-                    check=False, cwd=workspace,
+                    ["git", "ls-files", file_path],
+                    check=False,
+                    cwd=workspace,
                     capture_output=True,
-                    text=True
+                    text=True,
                 )
                 if not result.stdout.strip():
                     partial_work.append(f"Created: {file_path}")
 
         # Check git status for modifications
         result = subprocess.run(
-            ['git', 'status', '--porcelain'],
-            check=False, cwd=workspace,
+            ["git", "status", "--porcelain"],
+            check=False,
+            cwd=workspace,
             capture_output=True,
-            text=True
+            text=True,
         )
 
-        for line in result.stdout.strip().split('\n'):
-            if line.startswith('M '):
+        for line in result.stdout.strip().split("\n"):
+            if line.startswith("M "):
                 partial_work.append(f"Modified: {line[3:]}")
 
         return partial_work
 
-    def determine_recovery_strategy(self, reason: RecoveryReason,
-                                  partial_work: list[str],
-                                  attempt_count: int = 1) -> RecoveryStrategy:
+    def determine_recovery_strategy(
+        self, reason: RecoveryReason, partial_work: list[str], attempt_count: int = 1
+    ) -> RecoveryStrategy:
         """Decide how to recover from failure"""
         # If multiple attempts have failed, escalate
         if attempt_count >= 3:
@@ -185,12 +195,16 @@ class RecoveryCoordinator:
         # Default: resume if work done, restart if not
         return RecoveryStrategy.RESUME if partial_work else RecoveryStrategy.RESTART
 
-    def generate_recovery_prompt(self, agent_name: str, task_desc: str,
-                               partial_work: list[str],
-                               strategy: RecoveryStrategy) -> str:
+    def generate_recovery_prompt(
+        self,
+        agent_name: str,
+        task_desc: str,
+        partial_work: list[str],
+        strategy: RecoveryStrategy,
+    ) -> str:
         """Generate prompt for recovery agent"""
         if strategy == RecoveryStrategy.RESUME:
-            completed_items = '\n'.join(f"  - {work}" for work in partial_work)
+            completed_items = "\n".join(f"  - {work}" for work in partial_work)
             return f"""Continue the incomplete task. Previous agent completed:
 {completed_items}
 
@@ -234,8 +248,9 @@ Note: A previous attempt failed. Please ensure all steps are completed successfu
 
         # Record metrics
         self.metrics["required_recovery"] += 1
-        self.metrics["reason_counts"][reason.value] = \
+        self.metrics["reason_counts"][reason.value] = (
             self.metrics["reason_counts"].get(reason.value, 0) + 1
+        )
 
         # Log recovery attempt
         print(f"\n🔄 RECOVERY INITIATED for {agent_name}")
@@ -249,7 +264,7 @@ Note: A previous attempt failed. Please ensure all steps are completed successfu
             recovery_success = False
         else:
             # Create recovery agent
-            recovery_prompt = self.generate_recovery_prompt(
+            self.generate_recovery_prompt(
                 agent_name, task_desc, partial_work, strategy
             )
 
@@ -272,7 +287,7 @@ Note: A previous attempt failed. Please ensure all steps are completed successfu
             strategy=strategy,
             partial_work=partial_work,
             recovery_success=recovery_success,
-            recovery_duration_seconds=recovery_time
+            recovery_duration_seconds=recovery_time,
         )
 
         # Convert enum values to strings for JSON serialization
@@ -292,7 +307,7 @@ Note: A previous attempt failed. Please ensure all steps are completed successfu
             "reason": reason.value,
             "strategy": strategy.value,
             "partial_work": partial_work,
-            "recovery_agent": recovery_agent_name if recovery_success else None
+            "recovery_agent": recovery_agent_name if recovery_success else None,
         }
 
     def get_recovery_report(self) -> str:
@@ -315,14 +330,21 @@ Failed After Recovery: {self.metrics["failed_after_recovery"]}
 Recovery Reasons:
 """
         for reason, count in self.metrics["reason_counts"].items():
-            percentage = (count / self.metrics["required_recovery"]) * 100 if self.metrics["required_recovery"] > 0 else 0
+            percentage = (
+                (count / self.metrics["required_recovery"]) * 100
+                if self.metrics["required_recovery"] > 0
+                else 0
+            )
             report += f"  - {reason}: {count} ({percentage:.1f}%)\n"
 
         if self.metrics["required_recovery"] > 0:
-            avg_recovery_time = self.metrics["total_recovery_time"] / self.metrics["required_recovery"]
+            avg_recovery_time = (
+                self.metrics["total_recovery_time"] / self.metrics["required_recovery"]
+            )
             report += f"\nAverage Recovery Time: {avg_recovery_time:.2f} seconds"
 
         return report
+
 
 def main():
     """Test recovery coordinator"""
@@ -336,6 +358,7 @@ def main():
     print(json.dumps(result, indent=2))
 
     print("\n" + coordinator.get_recovery_report())
+
 
 if __name__ == "__main__":
     main()

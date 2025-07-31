@@ -54,8 +54,14 @@ class TestGodModePlanningBlocks(unittest.TestCase):
         narrative, response_obj = parse_structured_response(god_response_with_choices)
 
         # Should return the god_mode_response content
-        assert narrative == "As the omniscient game master, I present several plot directions for your campaign."
-        assert response_obj.god_mode_response == "As the omniscient game master, I present several plot directions for your campaign."
+        assert (
+            narrative
+            == "As the omniscient game master, I present several plot directions for your campaign."
+        )
+        assert (
+            response_obj.god_mode_response
+            == "As the omniscient game master, I present several plot directions for your campaign."
+        )
 
         # Should have planning block
         assert response_obj.planning_block is not None
@@ -65,10 +71,14 @@ class TestGodModePlanningBlocks(unittest.TestCase):
         # Verify all God mode choices have "god:" prefix
         choices = response_obj.planning_block.get("choices", {})
         for choice_key in choices:
-            assert choice_key.startswith("god:"), f"Choice key '{choice_key}' must start with 'god:' prefix"
+            assert choice_key.startswith(
+                "god:"
+            ), f"Choice key '{choice_key}' must start with 'god:' prefix"
 
         # Verify mandatory "god:return_story" choice exists
-        assert "god:return_story" in choices, "Must include 'god:return_story' as default choice"
+        assert (
+            "god:return_story" in choices
+        ), "Must include 'god:return_story' as default choice"
 
     def test_god_mode_choices_all_have_prefix(self):
         """Test that all God mode choices use the god: prefix."""
@@ -124,7 +134,10 @@ class TestGodModePlanningBlocks(unittest.TestCase):
         narrative, response_obj = parse_structured_response(god_response_no_choices)
 
         # Should work fine without planning block when no choices offered
-        assert narrative == "The ancient artifact has been placed in the dungeon as requested."
+        assert (
+            narrative
+            == "The ancient artifact has been placed in the dungeon as requested."
+        )
         # Planning block should be empty dict when not provided
         assert response_obj.planning_block == {}
 
@@ -201,7 +214,7 @@ class TestGodModePlanningBlocks(unittest.TestCase):
 
         # Verify choice structure
         choices = planning_block["choices"]
-        for choice_key, choice_data in choices.items():
+        for _choice_key, choice_data in choices.items():
             assert "text" in choice_data
             assert "description" in choice_data
             # risk_level is optional but if present should be valid

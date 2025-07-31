@@ -80,20 +80,20 @@ class TestStructuredResponseIntegration(unittest.TestCase):
         )
 
         # Verify response
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         data = json.loads(response.data)
 
         # Check all fields present
-        self.assertIn("response", data)
-        self.assertIn("debug_info", data)
-        self.assertIn("entities_mentioned", data)
-        self.assertIn("location_confirmed", data)
-        self.assertIn("state_updates", data)
+        assert "response" in data
+        assert "debug_info" in data
+        assert "entities_mentioned" in data
+        assert "location_confirmed" in data
+        assert "state_updates" in data
 
         # Verify nested structure
-        self.assertIn("dice_rolls", data["debug_info"])
-        self.assertIn("resources", data["debug_info"])
-        self.assertEqual(data["entities_mentioned"], ["goblin"])
+        assert "dice_rolls" in data["debug_info"]
+        assert "resources" in data["debug_info"]
+        assert data["entities_mentioned"] == ["goblin"]
 
     @patch("gemini_service.genai.Client")
     @patch("firestore_service.firestore")
@@ -192,55 +192,51 @@ class TestStructuredResponseIntegration(unittest.TestCase):
         )
 
         # Verify response
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         data = json.loads(response.data)
 
         # Verify God mode specific fields are present
-        self.assertIn("response", data)
-        self.assertIn("god_mode_response", data)
-        self.assertIn("planning_block", data)
+        assert "response" in data
+        assert "god_mode_response" in data
+        assert "planning_block" in data
 
         # Verify God mode response content
         god_response = data["god_mode_response"]
-        self.assertIn("Behind the scenes", god_response)
-        self.assertIn("AC 14", god_response)
-        self.assertIn("flank", god_response)
+        assert "Behind the scenes" in god_response
+        assert "AC 14" in god_response
+        assert "flank" in god_response
 
         # Verify planning block structure
         planning_block = data["planning_block"]
-        self.assertIn("thinking", planning_block)
-        self.assertIn("choices", planning_block)
+        assert "thinking" in planning_block
+        assert "choices" in planning_block
 
         # Verify God mode choice prefixes
         choices = planning_block["choices"]
         god_choices = [
-            choice_id for choice_id in choices.keys() if choice_id.startswith("god:")
+            choice_id for choice_id in choices if choice_id.startswith("god:")
         ]
-        self.assertGreaterEqual(
-            len(god_choices), 2, "Should have at least 2 God mode choices"
-        )
+        assert len(god_choices) >= 2, "Should have at least 2 God mode choices"
 
         # Verify choice structure
         for choice_id, choice_data in choices.items():
             if choice_id.startswith("god:"):
-                self.assertIn("text", choice_data)
-                self.assertIn("description", choice_data)
+                assert "text" in choice_data
+                assert "description" in choice_data
                 # God mode descriptions should contain mechanical details
-                self.assertRegex(
-                    choice_data["description"],
-                    r"(\+\d+|\d+d\d+|AC|damage|advantage)",
-                    f"God mode choice {choice_id} should contain mechanical details",
-                )
+                assert re.search(
+                    r"(\+\d+|\d+d\d+|AC|damage|advantage)", choice_data["description"]
+                ), f"God mode choice {choice_id} should contain mechanical details"
 
         # Verify other structured fields
-        self.assertIn("entities_mentioned", data)
-        self.assertIn("location_confirmed", data)
-        self.assertIn("state_updates", data)
-        self.assertIn("debug_info", data)
+        assert "entities_mentioned" in data
+        assert "location_confirmed" in data
+        assert "state_updates" in data
+        assert "debug_info" in data
 
         # Verify combat state update
-        self.assertIn("combat_state", data["state_updates"])
-        self.assertEqual(data["state_updates"]["combat_state"]["round_number"], 1)
+        assert "combat_state" in data["state_updates"]
+        assert data["state_updates"]["combat_state"]["round_number"] == 1
 
     @patch("gemini_service.genai.Client")
     @patch("firestore_service.firestore")
@@ -362,35 +358,35 @@ class TestStructuredResponseIntegration(unittest.TestCase):
         )
 
         # Verify response
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         data = json.loads(response.data)
 
         # Verify God mode DM advice fields are present
-        self.assertIn("response", data)
-        self.assertIn("god_mode_response", data)
-        self.assertIn("planning_block", data)
+        assert "response" in data
+        assert "god_mode_response" in data
+        assert "planning_block" in data
 
         # Verify God mode response contains DM strategy advice
         god_response = data["god_mode_response"]
-        self.assertIn("DM Strategy", god_response)
-        self.assertIn("backstory", god_response.lower())
-        self.assertIn("plot", god_response.lower())
-        self.assertIn("dramatic", god_response.lower())
+        assert "DM Strategy" in god_response
+        assert "backstory" in god_response.lower()
+        assert "plot" in god_response.lower()
+        assert "dramatic" in god_response.lower()
 
         # Verify planning block structure for DM advice
         planning_block = data["planning_block"]
-        self.assertIn("thinking", planning_block)
-        self.assertIn("plot advice", planning_block["thinking"].lower())
-        self.assertIn("meta-gaming", planning_block["thinking"].lower())
+        assert "thinking" in planning_block
+        assert "plot advice" in planning_block["thinking"].lower()
+        assert "meta-gaming" in planning_block["thinking"].lower()
 
         # Verify God mode choice prefixes for DM advice
         choices = planning_block["choices"]
         god_choices = [
-            choice_id for choice_id in choices.keys() if choice_id.startswith("god:")
+            choice_id for choice_id in choices if choice_id.startswith("god:")
         ]
-        self.assertGreaterEqual(
-            len(god_choices), 3, "Should have at least 3 God mode DM advice choices"
-        )
+        assert (
+            len(god_choices) >= 3
+        ), "Should have at least 3 God mode DM advice choices"
 
         # Verify DM advice choices contain narrative guidance
         dm_keywords = [
@@ -404,30 +400,27 @@ class TestStructuredResponseIntegration(unittest.TestCase):
         ]
         for choice_id, choice_data in choices.items():
             if choice_id.startswith("god:"):
-                self.assertIn("text", choice_data)
-                self.assertIn("description", choice_data)
+                assert "text" in choice_data
+                assert "description" in choice_data
                 # DM advice descriptions should contain storytelling terms
                 description_lower = choice_data["description"].lower()
                 keyword_found = any(
                     keyword in description_lower for keyword in dm_keywords
                 )
-                self.assertTrue(
-                    keyword_found,
-                    f"DM advice choice {choice_id} should contain narrative/storytelling keywords",
-                )
+                assert keyword_found, f"DM advice choice {choice_id} should contain narrative/storytelling keywords"
 
         # Verify story-focused state updates
-        self.assertIn("state_updates", data)
+        assert "state_updates" in data
         state_updates = data["state_updates"]
-        self.assertIn("story_threads", state_updates)
-        self.assertIn("dm_notes", state_updates)
+        assert "story_threads" in state_updates
+        assert "dm_notes" in state_updates
 
         # Verify debug info contains plot structure guidance
-        self.assertIn("debug_info", data)
+        assert "debug_info" in data
         debug_info = data["debug_info"]
-        self.assertIn("plot_structure", debug_info)
-        self.assertIn("character_development", debug_info)
-        self.assertIn("narrative_timing", debug_info)
+        assert "plot_structure" in debug_info
+        assert "character_development" in debug_info
+        assert "narrative_timing" in debug_info
 
     @patch.dict("os.environ", {"AUTH_SKIP_MODE": "true"}, clear=False)
     def test_real_god_mode_dm_advice_integration(self):
@@ -477,19 +470,17 @@ class TestStructuredResponseIntegration(unittest.TestCase):
         )
 
         # Verify successful response
-        self.assertEqual(
-            response.status_code, 200, f"God mode request failed: {response.data}"
-        )
+        assert response.status_code == 200, f"God mode request failed: {response.data}"
         data = response.json
 
         # CRITICAL: Verify God mode specific fields are present
-        self.assertIn("god_mode_response", data, "Missing god_mode_response field")
-        self.assertIn("planning_block", data, "Missing planning_block field")
+        assert "god_mode_response" in data, "Missing god_mode_response field"
+        assert "planning_block" in data, "Missing planning_block field"
 
         # Verify God mode response contains DM advice
         god_response = data["god_mode_response"]
-        self.assertIsInstance(god_response, str, "god_mode_response should be string")
-        self.assertGreater(len(god_response), 50, "God mode response too short")
+        assert isinstance(god_response, str), "god_mode_response should be string"
+        assert len(god_response) > 50, "God mode response too short"
 
         # Check for DM-specific advice content
         dm_advice_indicators = [
@@ -512,45 +503,35 @@ class TestStructuredResponseIntegration(unittest.TestCase):
             for indicator in dm_advice_indicators
             if indicator in god_response_lower
         ]
-        self.assertGreaterEqual(
-            len(advice_matches),
-            3,
-            f"God mode response should contain DM advice keywords. Found: {advice_matches}",
-        )
+        assert (
+            len(advice_matches) >= 3
+        ), f"God mode response should contain DM advice keywords. Found: {advice_matches}"
 
         # Verify planning block structure for meta-advice
         planning_block = data["planning_block"]
-        self.assertIn(
-            "thinking", planning_block, "Missing thinking field in planning block"
-        )
-        self.assertIn(
-            "choices", planning_block, "Missing choices field in planning block"
-        )
+        assert "thinking" in planning_block, "Missing thinking field in planning block"
+        assert "choices" in planning_block, "Missing choices field in planning block"
 
         # Verify choices have God mode structure
         choices = planning_block["choices"]
-        self.assertIsInstance(choices, dict, "Choices should be dictionary")
-        self.assertGreater(len(choices), 1, "Should have multiple choices")
+        assert isinstance(choices, dict), "Choices should be dictionary"
+        assert len(choices) > 1, "Should have multiple choices"
 
         # Check for God mode choice prefixes and DM-oriented options
         god_choices = [
-            choice_id for choice_id in choices.keys() if choice_id.startswith("god:")
+            choice_id for choice_id in choices if choice_id.startswith("god:")
         ]
-        self.assertGreaterEqual(
-            len(god_choices),
-            2,
-            f"Should have God mode choices with god: prefix. Got: {list(choices.keys())}",
-        )
+        assert (
+            len(god_choices) >= 2
+        ), f"Should have God mode choices with god: prefix. Got: {list(choices.keys())}"
 
         # Verify choice structure and DM-focused content
         for choice_id, choice_data in choices.items():
             if choice_id.startswith("god:"):
-                self.assertIn("text", choice_data, f"Choice {choice_id} missing text")
-                self.assertIn(
-                    "description",
-                    choice_data,
-                    f"Choice {choice_id} missing description",
-                )
+                assert "text" in choice_data, f"Choice {choice_id} missing text"
+                assert (
+                    "description" in choice_data
+                ), f"Choice {choice_id} missing description"
 
                 # Skip DM guidance check for return choices (they're for exiting God mode)
                 if "return" in choice_id.lower() or "exit" in choice_id.lower():
@@ -583,13 +564,10 @@ class TestStructuredResponseIntegration(unittest.TestCase):
                 has_dm_guidance = any(
                     term in choice_text_lower for term in dm_guidance_terms
                 )
-                self.assertTrue(
-                    has_dm_guidance,
-                    f"God choice {choice_id} should contain DM guidance terms: {choice_data}",
-                )
+                assert has_dm_guidance, f"God choice {choice_id} should contain DM guidance terms: {choice_data}"
 
         # Verify other structured fields work with God mode
-        self.assertIn("response", data, "Missing main response field")
+        assert "response" in data, "Missing main response field"
 
         # Log success for verification
         print("\n✅ REAL API GOD MODE TEST PASSED")

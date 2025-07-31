@@ -23,8 +23,6 @@ import requests
 # Try to load from .env file if it exists
 env_path = Path(__file__).parent / ".env"
 if env_path.exists():
-
-
     load_dotenv(env_path)
 
 # Configuration

@@ -124,7 +124,7 @@ class TestFunctionValidationFlow(unittest.TestCase):
             )
 
         # Verify AI response contains expected content
-        self.assertIn("unconscious", ai_response.lower())
+        assert "unconscious" in ai_response.lower()
 
         # 2. Test post-response validation (simulating main.py logic)
         proposed_changes = gemini_service.parse_llm_response_for_state_changes(
@@ -145,20 +145,18 @@ class TestFunctionValidationFlow(unittest.TestCase):
             )
 
             # Should detect HP/consciousness discrepancy
-            self.assertGreater(
-                len(post_update_discrepancies),
-                0,
-                "Should detect HP/consciousness discrepancy",
-            )
+            assert (
+                len(post_update_discrepancies) > 0
+            ), "Should detect HP/consciousness discrepancy"
 
             # Check that discrepancy mentions unconscious and HP
             found_hp_discrepancy = any(
                 "unconscious" in d.lower() and "hp" in d.lower()
                 for d in post_update_discrepancies
             )
-            self.assertTrue(
-                found_hp_discrepancy, "Should detect specific unconscious/HP mismatch"
-            )
+            assert (
+                found_hp_discrepancy
+            ), "Should detect specific unconscious/HP mismatch"
 
         # 3. Verify logging occurred (check our captured log messages)
         validation_logs = [
@@ -189,11 +187,11 @@ class TestFunctionValidationFlow(unittest.TestCase):
         discrepancies = test_state.validate_checkpoint_consistency(narrative)
 
         # Should detect location mismatch
-        self.assertGreater(len(discrepancies), 0, "Should detect location mismatch")
+        assert len(discrepancies) > 0, "Should detect location mismatch"
 
         # Check specific discrepancy content
         location_discrepancy = any("location" in d.lower() for d in discrepancies)
-        self.assertTrue(location_discrepancy, "Should mention location in discrepancy")
+        assert location_discrepancy, "Should mention location in discrepancy"
 
     @patch("gemini_service.get_client")
     def test_mission_completion_detection(self, mock_get_client):
@@ -214,40 +212,36 @@ class TestFunctionValidationFlow(unittest.TestCase):
         discrepancies = test_state.validate_checkpoint_consistency(narrative)
 
         # Should detect mission completion discrepancies
-        self.assertGreater(
-            len(discrepancies), 0, "Should detect mission completion discrepancies"
-        )
+        assert len(discrepancies) > 0, "Should detect mission completion discrepancies"
 
         # The validation may detect multiple aspects of each mission
         # Just verify we detected discrepancies related to both missions
         discrepancy_text = " ".join(discrepancies).lower()
-        self.assertIn(
-            "dragon", discrepancy_text, "Should detect dragon mission completion"
-        )
-        self.assertIn(
-            "treasure", discrepancy_text, "Should detect treasure mission completion"
-        )
+        assert "dragon" in discrepancy_text, "Should detect dragon mission completion"
+        assert (
+            "treasure" in discrepancy_text
+        ), "Should detect treasure mission completion"
 
     def test_mock_libraries_behavior(self):
         """Test that our mock libraries behave correctly."""
         # Test MockGeminiClient
         response = self.mock_gemini.generate_content("Test prompt")
-        self.assertIsNotNone(response.text)
-        self.assertEqual(self.mock_gemini.call_count, 1)
+        assert response.text is not None
+        assert self.mock_gemini.call_count == 1
 
         # Test MockFirestoreClient
         campaigns = self.mock_firestore.get_campaigns_for_user(self.test_user_id)
-        self.assertGreater(len(campaigns), 0)
+        assert len(campaigns) > 0
 
         campaign, story = self.mock_firestore.get_campaign_by_id(
             self.test_user_id, self.test_campaign_id
         )
-        self.assertIsNotNone(campaign)
-        self.assertIsNotNone(story)
+        assert campaign is not None
+        assert story is not None
 
         # Test operation tracking
         stats = self.mock_firestore.get_operation_stats()
-        self.assertGreater(stats["operation_count"], 0)
+        assert stats["operation_count"] > 0
 
     def test_state_update_integration(self):
         """Test state update functionality across modules."""
@@ -285,8 +279,8 @@ class TestFunctionValidationFlow(unittest.TestCase):
 
         # Verify changes were applied correctly
         updated_state = GameState.from_dict(updated_state_dict)
-        self.assertEqual(updated_state.player_character_data["hp_current"], 90)
-        self.assertEqual(updated_state.player_character_data["experience"], 3000)
+        assert updated_state.player_character_data["hp_current"] == 90
+        assert updated_state.player_character_data["experience"] == 3000
 
         # Verify core memory was appended (not overwritten)
         original_memories = len(
@@ -295,11 +289,9 @@ class TestFunctionValidationFlow(unittest.TestCase):
         new_memories = len(updated_state.custom_campaign_state["core_memories"])
 
         # The append should add 1 new memory
-        self.assertEqual(
-            new_memories,
-            original_memories + 1,
-            "Should have exactly 1 more memory after append",
-        )
+        assert (
+            new_memories == original_memories + 1
+        ), "Should have exactly 1 more memory after append"
 
     def test_validation_prompt_injection(self):
         """Test that validation prompts are properly injected when discrepancies are found."""
@@ -332,15 +324,15 @@ class TestFunctionValidationFlow(unittest.TestCase):
             )
 
             # Verify API was called
-            self.assertTrue(mock_api_call.called)
+            assert mock_api_call.called
 
             # Check that validation instruction was added to prompt
             call_args = mock_api_call.call_args[0]
             prompt_content = str(call_args[0])
 
             # Look for the actual validation instruction text, not just "validation"
-            self.assertIn(
-                "State validation detected potential inconsistencies", prompt_content
+            assert (
+                "State validation detected potential inconsistencies" in prompt_content
             )
 
 

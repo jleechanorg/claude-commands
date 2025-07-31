@@ -21,11 +21,7 @@ class TestWorkerAgent:
     def start(self):
         """Start the test agent"""
         # Register with broker
-        self.broker.register_agent(
-            self.agent_id,
-            "test",
-            ["task_execution", "testing"]
-        )
+        self.broker.register_agent(self.agent_id, "test", ["task_execution", "testing"])
 
         print(f"Test worker {self.agent_id} started")
         self.running = True
@@ -41,18 +37,19 @@ class TestWorkerAgent:
                     print(f"Message type: {message.type} (type: {type(message.type)})")
 
                     # Handle both enum and string types
-                    if (message.type == MessageType.TASK_ASSIGNMENT or
-                        message.type == MessageType.TASK_ASSIGNMENT.value):
+                    if (
+                        message.type in (MessageType.TASK_ASSIGNMENT, MessageType.TASK_ASSIGNMENT.value)
+                    ):
                         # Process the task
                         result = self._process_task(message)
 
                         # Send result back with proper task correlation
                         self.broker.send_result(
-                            self.agent_id,
-                            message.from_agent,
-                            result
+                            self.agent_id, message.from_agent, result
                         )
-                        print(f"Test worker sent result back to {message.from_agent}: {result}")
+                        print(
+                            f"Test worker sent result back to {message.from_agent}: {result}"
+                        )
 
                 # Send heartbeat
                 self.broker.heartbeat(self.agent_id)
@@ -80,12 +77,11 @@ class TestWorkerAgent:
             "status": "completed",
             "result": f"Processed: {task_data.get('description', 'Unknown task')}",
             "processed_by": self.agent_id,
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
 
+
 if __name__ == "__main__":
-
-
     agent_id = sys.argv[1] if len(sys.argv) > 1 else "test-worker"
     agent = TestWorkerAgent(agent_id)
 

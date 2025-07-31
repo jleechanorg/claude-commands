@@ -105,7 +105,7 @@ class TestPlanningBlockJsonFormat(unittest.TestCase):
         choices = narrative_resp.planning_block["choices"]
 
         # All choice keys should be valid identifiers (no spaces, special chars except underscore)
-        for choice_key in choices.keys():
+        for choice_key in choices:
             # Valid identifier: alphanumeric + underscore, not starting with digit
             assert re.search(
                 r"^[a-zA-Z_][a-zA-Z0-9_]*$", choice_key

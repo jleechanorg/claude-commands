@@ -31,14 +31,14 @@ class TestGameStateIntegration(unittest.TestCase):
         """Test that entity manifest is correctly generated."""
         manifest = self.game_state.get_active_entity_manifest()
 
-        self.assertEqual(manifest["location"], "Kaelan's Cell")
-        self.assertEqual(manifest["entity_count"], 2)
-        self.assertEqual(len(manifest["entities"]), 2)
+        assert manifest["location"] == "Kaelan's Cell"
+        assert manifest["entity_count"] == 2
+        assert len(manifest["entities"]) == 2
 
         # Check entity details
         gideon = next(e for e in manifest["entities"] if e["name"] == "Gideon")
-        self.assertIn("knight", gideon["descriptors"])
-        self.assertIn("conscious", gideon["status"])
+        assert "knight" in gideon["descriptors"]
+        assert "conscious" in gideon["status"]
 
     def test_manifest_caching(self):
         """Test that manifest caching works correctly."""
@@ -52,14 +52,14 @@ class TestGameStateIntegration(unittest.TestCase):
         manifest2 = self.game_state.get_active_entity_manifest()
 
         # Should be the same (cached)
-        self.assertEqual(manifest1["entity_count"], manifest2["entity_count"])
+        assert manifest1["entity_count"] == manifest2["entity_count"]
 
         # Clear cache by setting timestamp to None
         self.game_state._manifest_timestamp = None
 
         # Third call (should regenerate)
         manifest3 = self.game_state.get_active_entity_manifest()
-        self.assertEqual(manifest3["entity_count"], 3)  # Now includes Marcus
+        assert manifest3["entity_count"] == 3  # Now includes Marcus
 
     def test_validate_narrative_consistency(self):
         """Test narrative validation integration."""
@@ -68,17 +68,17 @@ class TestGameStateIntegration(unittest.TestCase):
             "Gideon stepped forward while Rowan prepared her spells."
         )
 
-        self.assertTrue(result["is_valid"])
-        self.assertEqual(result["missing_entities"], [])
-        self.assertGreater(result["confidence"], 0.8)
+        assert result["is_valid"]
+        assert result["missing_entities"] == []
+        assert result["confidence"] > 0.8
 
         # Test with missing entity
         result = self.game_state.validate_narrative_consistency(
             "The knight stood alone in the chamber."
         )
 
-        self.assertFalse(result["is_valid"])
-        self.assertIn("Rowan", result["missing_entities"])
+        assert not result["is_valid"]
+        assert "Rowan" in result["missing_entities"]
 
     def test_strictness_levels(self):
         """Test different strictness levels."""
@@ -88,14 +88,14 @@ class TestGameStateIntegration(unittest.TestCase):
         result_strict = self.game_state.validate_narrative_consistency(
             ambiguous_narrative, strictness="strict"
         )
-        self.assertFalse(result_strict["is_valid"])
+        assert not result_strict["is_valid"]
 
         # Lenient might be more forgiving
         result_lenient = self.game_state.validate_narrative_consistency(
             ambiguous_narrative, strictness="lenient"
         )
         # Lenient still won't accept completely ambiguous, but confidence differs
-        self.assertLess(result_lenient["confidence"], result_strict["confidence"])
+        assert result_lenient["confidence"] < result_strict["confidence"]
 
 
 class TestNarrativeServiceIntegration(unittest.TestCase):
@@ -112,12 +112,12 @@ class TestNarrativeServiceIntegration(unittest.TestCase):
             self.game_state, "Describe the party preparing for battle"
         )
 
-        self.assertIn("narrative", result)
-        self.assertIn("validation", result)
-        self.assertIn("manifest_used", result)
+        assert "narrative" in result
+        assert "validation" in result
+        assert "manifest_used" in result
 
         # Should generate valid narrative
-        self.assertTrue(result["validation"]["is_valid"])
+        assert result["validation"]["is_valid"]
 
     def test_validation_failure_retry(self):
         """Test retry logic on validation failure."""
@@ -139,8 +139,8 @@ class TestNarrativeServiceIntegration(unittest.TestCase):
         )
 
         # Should have retried and succeeded
-        self.assertEqual(call_count, 2)
-        self.assertTrue(result["validation"]["is_valid"])
+        assert call_count == 2
+        assert result["validation"]["is_valid"]
 
         # Restore original
         self.service._mock_generate_narrative = original_method
@@ -155,7 +155,7 @@ class TestNarrativeServiceIntegration(unittest.TestCase):
         )
 
         # Should not have SQL injection in narrative
-        self.assertNotIn("DROP TABLE", result["narrative"])
+        assert "DROP TABLE" not in result["narrative"]
 
 
 class TestValidatorIntegration(unittest.TestCase):
@@ -188,11 +188,9 @@ class TestValidatorIntegration(unittest.TestCase):
 
         # All should find both entities (via descriptors)
         for name, result in results.items():
-            self.assertEqual(
-                set(result.entities_found),
-                set(self.expected_entities),
-                f"{name} validator failed to find all entities",
-            )
+            assert set(result.entities_found) == set(
+                self.expected_entities
+            ), f"{name} validator failed to find all entities"
 
     def test_hybrid_combination_strategies(self):
         """Test different hybrid combination strategies."""
@@ -203,7 +201,7 @@ class TestValidatorIntegration(unittest.TestCase):
             result = hybrid.validate(self.test_narrative, self.expected_entities)
 
             # All strategies should work for clear case
-            self.assertTrue(result.all_entities_present, f"{strategy} strategy failed")
+            assert result.all_entities_present, f"{strategy} strategy failed"
 
 
 class TestEndToEndFlow(unittest.TestCase):
@@ -218,7 +216,7 @@ class TestEndToEndFlow(unittest.TestCase):
 
         # 2. Generate manifest
         manifest = game_state.get_active_entity_manifest()
-        self.assertEqual(manifest["entity_count"], 3)
+        assert manifest["entity_count"] == 3
 
         # 3. Create narrative
         narrative = "Gideon, Rowan, and Marcus faced the dragon together."
@@ -227,9 +225,9 @@ class TestEndToEndFlow(unittest.TestCase):
         result = game_state.validate_narrative_consistency(narrative)
 
         # 5. Verify result
-        self.assertTrue(result["is_valid"])
-        self.assertEqual(len(result["missing_entities"]), 0)
-        self.assertGreater(result["confidence"], 0.9)
+        assert result["is_valid"]
+        assert len(result["missing_entities"]) == 0
+        assert result["confidence"] > 0.9
 
     def test_performance_requirements(self):
         """Test that validation meets performance requirements."""
@@ -243,11 +241,11 @@ class TestEndToEndFlow(unittest.TestCase):
         # Time validation
         start = time.time()
         for _ in range(10):
-            result = game_state.validate_narrative_consistency(narrative)
+            game_state.validate_narrative_consistency(narrative)
         duration = (time.time() - start) / 10
 
         # Should be under 50ms (0.05s)
-        self.assertLess(duration, 0.05, f"Validation too slow: {duration*1000:.1f}ms")
+        assert duration < 0.05, f"Validation too slow: {duration * 1000:.1f}ms"
 
 
 class TestErrorHandling(unittest.TestCase):
@@ -266,9 +264,9 @@ class TestErrorHandling(unittest.TestCase):
             result = game_state.validate_narrative_consistency("Test narrative")
 
             # Should handle gracefully
-            self.assertFalse(result["is_valid"])
-            self.assertEqual(result["confidence"], 0.0)
-            self.assertIn("Validator error", result["validation_errors"][0])
+            assert not result["is_valid"]
+            assert result["confidence"] == 0.0
+            assert "Validator error" in result["validation_errors"][0]
 
     def test_empty_narrative_handling(self):
         """Test handling of empty narratives."""
@@ -276,8 +274,8 @@ class TestErrorHandling(unittest.TestCase):
 
         result = game_state.validate_narrative_consistency("")
 
-        self.assertFalse(result["is_valid"])
-        self.assertEqual(result["missing_entities"], ["Gideon", "Rowan"])
+        assert not result["is_valid"]
+        assert result["missing_entities"] == ["Gideon", "Rowan"]
 
     def test_empty_party_handling(self):
         """Test handling when no party members."""
@@ -287,8 +285,8 @@ class TestErrorHandling(unittest.TestCase):
         result = game_state.validate_narrative_consistency("The chamber was silent.")
 
         # Should be valid (no entities expected)
-        self.assertTrue(result["is_valid"])
-        self.assertEqual(result["missing_entities"], [])
+        assert result["is_valid"]
+        assert result["missing_entities"] == []
 
 
 if __name__ == "__main__":

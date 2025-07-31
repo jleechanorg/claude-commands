@@ -51,10 +51,7 @@ def run_git_command(cmd):
 
 def should_exclude_file(filepath):
     """Check if file should be excluded from stats."""
-    for pattern in EXCLUDE_PATTERNS:
-        if re.search(pattern, filepath):
-            return True
-    return False
+    return any(re.search(pattern, filepath) for pattern in EXCLUDE_PATTERNS)
 
 
 def analyze_commits(since_date):

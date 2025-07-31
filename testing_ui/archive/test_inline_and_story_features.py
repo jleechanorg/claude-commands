@@ -221,7 +221,6 @@ def test_features():
         except Exception as e:
             print(f"\n❌ Test failed with error: {e}")
 
-
             traceback.print_exc()
 
             # Error screenshot

@@ -15,6 +15,7 @@ sys.path.insert(
 from entity_instructions import EntityInstructionGenerator
 from entity_preloader import LocationEntityEnforcer
 from entity_tracking import create_from_game_state
+
 from game_state import GameState
 
 
@@ -173,7 +174,7 @@ class TestEntityTrackingGenericFixes(unittest.TestCase):
     def test_proposed_generic_player_character_detection(self):
         """Test how PC detection should work generically"""
         # This is how it SHOULD work - pass PC info to the generator
-        game_state = GameState(
+        GameState(
             player_character_data={"name": "Captain Rex"},
             world_data={},
             npc_data={},
@@ -189,16 +190,6 @@ class TestEntityTrackingGenericFixes(unittest.TestCase):
     def test_proposed_dynamic_location_rules(self):
         """Test how location rules should work dynamically"""
         # Location rules should come from the campaign data, not hardcoded
-        campaign_location_rules = {
-            "bridge": {
-                "required_roles": ["officer", "navigator"],
-                "suggested_npcs": ["Ship AI"],
-            },
-            "engineering": {
-                "required_roles": ["engineer", "technician"],
-                "suggested_items": ["Warp core", "Tools"],
-            },
-        }
 
         # This is how it SHOULD work
         # enforcer = LocationEntityEnforcer(location_rules=campaign_location_rules)

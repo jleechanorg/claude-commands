@@ -141,7 +141,6 @@ Narrative: {included[0]} surveyed the scene{f" while {included[1]} stood nearby"
         elif "<entity>" in prompt:
             # XML style
 
-
             entities = re.findall(r"<entity>(.*?)</entity>", prompt)
         elif '"entities_mentioned"' in prompt:
             # JSON style - extract from requirements
@@ -149,7 +148,6 @@ Narrative: {included[0]} surveyed the scene{f" while {included[1]} stood nearby"
                 entities = ["Lyra", "Theron", "Marcus", "Elara"]
         else:
             # Try to find character names (capitalized words)
-
 
             words = re.findall(r"\b[A-Z][a-z]+\b", prompt)
             # Filter common words

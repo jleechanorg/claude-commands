@@ -70,9 +70,9 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
         if response.status_code == 200:
             data = response.get_json()
             # Must be array directly for backward compatibility
-            self.assertIsInstance(
-                data, list, "GET /api/campaigns must return array directly"
-            )
+            assert isinstance(
+                data, list
+            ), "GET /api/campaigns must return array directly"
 
     def test_campaign_by_id_format(self):
         """Test GET /api/campaigns/<id> returns expected object format.
@@ -108,14 +108,14 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
                 data = get_response.get_json()
 
                 # Check response structure
-                self.assertIsInstance(data, dict)
-                self.assertIn("campaign", data, "Must have 'campaign' field")
-                self.assertIn("story", data, "Must have 'story' field")
-                self.assertIn("game_state", data, "Must have 'game_state' field")
+                assert isinstance(data, dict)
+                assert "campaign" in data, "Must have 'campaign' field"
+                assert "story" in data, "Must have 'story' field"
+                assert "game_state" in data, "Must have 'game_state' field"
 
                 # Frontend expects: data.campaign.title
-                self.assertIsInstance(data["campaign"], dict)
-                self.assertIn("title", data["campaign"])
+                assert isinstance(data["campaign"], dict)
+                assert "title" in data["campaign"]
 
     def test_campaign_creation_format(self):
         """Test POST /api/campaigns returns expected object format.
@@ -140,13 +140,13 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
             data = response.get_json()
 
             # Check response structure
-            self.assertIsInstance(data, dict)
-            self.assertIn("success", data, "Must have 'success' field")
-            self.assertIn("campaign_id", data, "Must have 'campaign_id' field")
+            assert isinstance(data, dict)
+            assert "success" in data, "Must have 'success' field"
+            assert "campaign_id" in data, "Must have 'campaign_id' field"
 
             # Frontend expects: data.campaign_id
-            self.assertTrue(data["success"])
-            self.assertIsInstance(data["campaign_id"], str)
+            assert data["success"]
+            assert isinstance(data["campaign_id"], str)
 
     def test_campaign_update_format(self):
         """Test PATCH /api/campaigns/<id> returns expected format."""
@@ -175,8 +175,8 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
                 data = update_response.get_json()
 
                 # Check response structure
-                self.assertIsInstance(data, dict)
-                self.assertIn("success", data, "Must have 'success' field")
+                assert isinstance(data, dict)
+                assert "success" in data, "Must have 'success' field"
 
     def test_interaction_response_format(self):
         """Test POST /api/campaigns/<id>/interaction returns expected format.
@@ -211,13 +211,11 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
                 data = interaction_response.get_json()
 
                 # Check response structure
-                self.assertIsInstance(data, dict)
+                assert isinstance(data, dict)
 
                 # Frontend expects: data.narrative || data.response
                 has_narrative = "narrative" in data or "response" in data
-                self.assertTrue(
-                    has_narrative, "Must have 'narrative' or 'response' field"
-                )
+                assert has_narrative, "Must have 'narrative' or 'response' field"
 
     def test_settings_get_format(self):
         """Test GET /api/settings returns expected format."""
@@ -227,7 +225,7 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
             data = response.get_json()
 
             # Check response structure
-            self.assertIsInstance(data, dict)
+            assert isinstance(data, dict)
             # Settings returns the settings object directly
             # or wrapped in success response
 
@@ -241,8 +239,8 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
             data = response.get_json()
 
             # Check response structure
-            self.assertIsInstance(data, dict)
-            self.assertIn("success", data, "Must have 'success' field")
+            assert isinstance(data, dict)
+            assert "success" in data, "Must have 'success' field"
 
     def test_export_format(self):
         """Test GET /api/campaigns/<id>/export returns expected format."""
@@ -267,7 +265,7 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
             )
 
             # Export returns file content, not JSON
-            self.assertEqual(export_response.status_code, 200)
+            assert export_response.status_code == 200
 
     def test_frontend_compatibility_summary(self):
         """Document all frontend expectations for API responses."""
@@ -313,12 +311,12 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
         for endpoint, info in expectations.items():
             with self.subTest(endpoint=endpoint):
                 if info["fixed"]:
-                    self.assertTrue(True, f"{endpoint} is backward compatible")
+                    assert True, f"{endpoint} is backward compatible"
                 else:
                     # These endpoints still use new format but frontend handles it
-                    self.assertTrue(
-                        True, f"{endpoint} uses new format but frontend is compatible"
-                    )
+                    assert (
+                        True
+                    ), f"{endpoint} uses new format but frontend is compatible"
 
 
 if __name__ == "__main__":

@@ -161,7 +161,7 @@ class EntityInstructionGenerator:
         story_context: str | None,
     ) -> EntityInstruction:
         """Create specific instruction for an individual entity"""
-        entity_lower = entity.lower()
+        entity.lower()
 
         # Determine entity category and priority
         if entity in player_references:
@@ -233,8 +233,8 @@ class EntityInstructionGenerator:
         if not location:
             return False
 
-        location_lower = location.lower()
-        entity_lower = entity.lower()
+        location.lower()
+        entity.lower()
 
         # Location mappings should come from game state, not hardcoded
         # For now, return False to avoid false positives
@@ -247,7 +247,7 @@ class EntityInstructionGenerator:
 
         # Simple keyword matching - could be enhanced
         story_lower = story_context.lower()
-        entity_lower = entity.lower()
+        entity.lower()
 
         critical_indicators = ["important", "key", "crucial", "main"]
         return any(indicator in story_lower for indicator in critical_indicators)

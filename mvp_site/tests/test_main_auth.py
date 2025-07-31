@@ -103,7 +103,9 @@ class TestAuthenticationMiddleware(unittest.TestCase):
         )
 
         # MCP gateway should handle authenticated interactions (may return 404 for nonexistent campaigns)
-        assert response.status_code in [400, 404], f"MCP gateway should handle authenticated interactions, got {response.status_code}"
+        assert (
+            response.status_code in [400, 404]
+        ), f"MCP gateway should handle authenticated interactions, got {response.status_code}"
 
     def test_mcp_different_user_isolation(self):
         """Test user isolation through MCP authentication."""

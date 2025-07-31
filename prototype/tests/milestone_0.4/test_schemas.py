@@ -132,13 +132,13 @@ def test_validation():
 
     # Test HP validation
     try:
-        invalid_health = HealthStatus(hp=20, hp_max=10)
+        HealthStatus(hp=20, hp_max=10)
     except ValueError as e:
         print(f"✓ HP validation works: {e}")
 
     # Test entity ID validation
     try:
-        invalid_pc = PlayerCharacter(
+        PlayerCharacter(
             entity_id="invalid_id",
             display_name="Invalid",
             health=HealthStatus(hp=10, hp_max=10),
@@ -149,7 +149,7 @@ def test_validation():
 
     # Test level validation
     try:
-        overlevel_pc = PlayerCharacter(
+        PlayerCharacter(
             entity_id="pc_test_001",
             display_name="Test",
             level=25,  # Max is 20

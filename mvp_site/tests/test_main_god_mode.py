@@ -389,7 +389,9 @@ class TestGodModeHelperFunctions(unittest.TestCase):
                 )
 
                 # MCP should handle error scenarios gracefully (may return 404 for nonexistent campaigns)
-                assert response.status_code in [200, 400, 401, 404], f"Expected 200, 400, 401, or 404 for invalid god command {i}, got {response.status_code}"
+                assert (
+                    response.status_code in [200, 400, 401, 404]
+                ), f"Expected 200, 400, 401, or 404 for invalid god command {i}, got {response.status_code}"
 
     def test_mcp_god_mode_large_payload_handling(self):
         """Test god mode commands with large payloads through MCP."""

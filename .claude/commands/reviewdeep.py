@@ -29,7 +29,9 @@ def get_pr_info(pr_number: str) -> Optional[Dict]:
         total_files_data = json.loads(total_files_result.stdout)
         total_files = total_files_data.get("changed_files", 0)
 
-        print(f"🔍 PR #{pr_number} has {total_files} files - checking pagination requirements...")
+        print(
+            f"🔍 PR #{pr_number} has {total_files} files - checking pagination requirements..."
+        )
 
         # Get PR metadata (without files first)
         result = subprocess.run(
@@ -42,14 +44,23 @@ def get_pr_info(pr_number: str) -> Optional[Dict]:
 
         # ALWAYS use pagination to ensure we get ALL files
         print(f"📥 Fetching all {total_files} files using GitHub API pagination...")
-        files_result = subprocess.run([
-            "gh", "api", f"repos/{{owner}}/{{repo}}/pulls/{pr_number}/files",
-            "--paginate", "--jq", ".[] | {filename, additions, deletions, status, patch}"
-        ], capture_output=True, text=True, check=True)
+        files_result = subprocess.run(
+            [
+                "gh",
+                "api",
+                f"repos/{{owner}}/{{repo}}/pulls/{pr_number}/files",
+                "--paginate",
+                "--jq",
+                ".[] | {filename, additions, deletions, status, patch}",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
 
         # Parse line-by-line JSON responses
         all_files = []
-        for line in files_result.stdout.strip().split('\n'):
+        for line in files_result.stdout.strip().split("\n"):
             if line.strip():
                 all_files.append(json.loads(line))
         pr_data["files"] = all_files
@@ -57,7 +68,9 @@ def get_pr_info(pr_number: str) -> Optional[Dict]:
 
         # Verify we got all files
         if len(pr_data.get("files", [])) != total_files:
-            print(f"⚠️ WARNING: Expected {total_files} files but got {len(pr_data.get('files', []))} - some files may be missing!")
+            print(
+                f"⚠️ WARNING: Expected {total_files} files but got {len(pr_data.get('files', []))} - some files may be missing!"
+            )
 
         return pr_data
 

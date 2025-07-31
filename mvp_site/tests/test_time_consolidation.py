@@ -89,7 +89,9 @@ class TestTimeConsolidation(unittest.TestCase):
                 state = GameState(
                     world_data={"world_time": {"hour": hour, "minute": 0, "second": 0}}
                 )
-                assert state.world_data["world_time"]["time_of_day"] == expected, f"Hour {hour} should map to '{expected}'"
+                assert (
+                    state.world_data["world_time"]["time_of_day"] == expected
+                ), f"Hour {hour} should map to '{expected}'"
 
     def test_missing_world_data(self):
         """Test handling of missing world_data."""

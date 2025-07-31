@@ -117,7 +117,7 @@ def test_campaign_continuation_workflow():
             # Alternative: Re-fetch campaign to see if it's been updated
             updated_response = session.get(f"{base_url}/api/campaigns/{campaign_id}")
             if updated_response.status_code == 200:
-                updated_details = updated_response.json()
+                updated_response.json()
                 print("✅ Campaign data accessible for continuation workflow")
 
         else:

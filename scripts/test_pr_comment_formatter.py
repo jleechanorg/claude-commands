@@ -23,15 +23,15 @@ class TestCommentStatus(unittest.TestCase):
 
     def test_from_string(self):
         """Test converting strings to CommentStatus."""
-        self.assertEqual(CommentStatus.from_string("resolved"), CommentStatus.RESOLVED)
-        self.assertEqual(CommentStatus.from_string("FIXED"), CommentStatus.FIXED)
-        self.assertEqual(CommentStatus.from_string("unknown"), CommentStatus.PENDING)
+        assert CommentStatus.from_string("resolved") == CommentStatus.RESOLVED
+        assert CommentStatus.from_string("FIXED") == CommentStatus.FIXED
+        assert CommentStatus.from_string("unknown") == CommentStatus.PENDING
 
     def test_status_values(self):
         """Test status values contain proper indicators."""
-        self.assertTrue(CommentStatus.RESOLVED.value.startswith("✅"))
-        self.assertTrue(CommentStatus.REJECTED.value.startswith("❌"))
-        self.assertTrue(CommentStatus.ACKNOWLEDGED.value.startswith("🔄"))
+        assert CommentStatus.RESOLVED.value.startswith("✅")
+        assert CommentStatus.REJECTED.value.startswith("❌")
+        assert CommentStatus.ACKNOWLEDGED.value.startswith("🔄")
 
 
 class TestUserComment(unittest.TestCase):
@@ -40,10 +40,10 @@ class TestUserComment(unittest.TestCase):
     def test_format_line_ref(self):
         """Test line reference formatting."""
         comment = UserComment(line_number=123, text="test", response="response")
-        self.assertEqual(comment.format_line_ref(), "Line 123")
+        assert comment.format_line_ref() == "Line 123"
 
         comment_no_line = UserComment(text="test", response="response")
-        self.assertEqual(comment_no_line.format_line_ref(), "General")
+        assert comment_no_line.format_line_ref() == "General"
 
 
 class TestCopilotComment(unittest.TestCase):
@@ -54,12 +54,12 @@ class TestCopilotComment(unittest.TestCase):
         comment = CopilotComment(
             description="test", status=CommentStatus.RESOLVED, reason="test reason"
         )
-        self.assertTrue(comment.is_positive_status())
+        assert comment.is_positive_status()
 
         comment_negative = CopilotComment(
             description="test", status=CommentStatus.REJECTED, reason="test reason"
         )
-        self.assertFalse(comment_negative.is_positive_status())
+        assert not comment_negative.is_positive_status()
 
 
 class TestTaskItem(unittest.TestCase):
@@ -74,14 +74,14 @@ class TestTaskItem(unittest.TestCase):
         )
 
         formatted = task.format_task()
-        self.assertIn("✅ RESOLVED Test task", formatted)
-        self.assertIn("- Detail 1", formatted)
-        self.assertIn("- Detail 2", formatted)
+        assert "✅ RESOLVED Test task" in formatted
+        assert "- Detail 1" in formatted
+        assert "- Detail 2" in formatted
 
         # Test task without details
         simple_task = TaskItem(description="Simple task")
         simple_formatted = simple_task.format_task()
-        self.assertEqual(simple_formatted, "✅ RESOLVED Simple task")
+        assert simple_formatted == "✅ RESOLVED Simple task"
 
 
 class TestPRCommentResponse(unittest.TestCase):
@@ -95,10 +95,10 @@ class TestPRCommentResponse(unittest.TestCase):
         """Test adding tasks."""
         self.response.add_task("Test task", ["detail1", "detail2"], CommentStatus.FIXED)
 
-        self.assertEqual(len(self.response.tasks), 1)
-        self.assertEqual(self.response.tasks[0].description, "Test task")
-        self.assertEqual(self.response.tasks[0].details, ["detail1", "detail2"])
-        self.assertEqual(self.response.tasks[0].status, CommentStatus.FIXED)
+        assert len(self.response.tasks) == 1
+        assert self.response.tasks[0].description == "Test task"
+        assert self.response.tasks[0].details == ["detail1", "detail2"]
+        assert self.response.tasks[0].status == CommentStatus.FIXED
 
     def test_add_user_comment(self):
         """Test adding user comments."""
@@ -106,11 +106,11 @@ class TestPRCommentResponse(unittest.TestCase):
             123, "Test comment", "Test response", CommentStatus.ADDRESSED
         )
 
-        self.assertEqual(len(self.response.user_comments), 1)
-        self.assertEqual(self.response.user_comments[0].line_number, 123)
-        self.assertEqual(self.response.user_comments[0].text, "Test comment")
-        self.assertEqual(self.response.user_comments[0].response, "Test response")
-        self.assertEqual(self.response.user_comments[0].status, CommentStatus.ADDRESSED)
+        assert len(self.response.user_comments) == 1
+        assert self.response.user_comments[0].line_number == 123
+        assert self.response.user_comments[0].text == "Test comment"
+        assert self.response.user_comments[0].response == "Test response"
+        assert self.response.user_comments[0].status == CommentStatus.ADDRESSED
 
     def test_add_copilot_comment(self):
         """Test adding Copilot comments."""
@@ -118,14 +118,10 @@ class TestPRCommentResponse(unittest.TestCase):
             "Test description", CommentStatus.VALIDATED, "Test reason"
         )
 
-        self.assertEqual(len(self.response.copilot_comments), 1)
-        self.assertEqual(
-            self.response.copilot_comments[0].description, "Test description"
-        )
-        self.assertEqual(
-            self.response.copilot_comments[0].status, CommentStatus.VALIDATED
-        )
-        self.assertEqual(self.response.copilot_comments[0].reason, "Test reason")
+        assert len(self.response.copilot_comments) == 1
+        assert self.response.copilot_comments[0].description == "Test description"
+        assert self.response.copilot_comments[0].status == CommentStatus.VALIDATED
+        assert self.response.copilot_comments[0].reason == "Test reason"
 
     def test_format_response(self):
         """Test complete response formatting."""
@@ -139,20 +135,20 @@ class TestPRCommentResponse(unittest.TestCase):
         formatted = self.response.format_response()
 
         # Check main components are present
-        self.assertIn("Summary: Test Summary", formatted)
-        self.assertIn("✅ RESOLVED Test task", formatted)
-        self.assertIn("✅ User Comments Addressed", formatted)
-        self.assertIn("Line 123", formatted)
-        self.assertIn("Test comment", formatted)
-        self.assertIn("✅ Copilot Comments Status", formatted)
-        self.assertIn("Test copilot", formatted)
-        self.assertIn("✅ Final Status", formatted)
-        self.assertIn("All done", formatted)
+        assert "Summary: Test Summary" in formatted
+        assert "✅ RESOLVED Test task" in formatted
+        assert "✅ User Comments Addressed" in formatted
+        assert "Line 123" in formatted
+        assert "Test comment" in formatted
+        assert "✅ Copilot Comments Status" in formatted
+        assert "Test copilot" in formatted
+        assert "✅ Final Status" in formatted
+        assert "All done" in formatted
 
         # Check table formatting
-        self.assertIn("| Comment", formatted)
-        self.assertIn("| Status", formatted)
-        self.assertIn("| Reason", formatted)
+        assert "| Comment" in formatted
+        assert "| Status" in formatted
+        assert "| Reason" in formatted
 
 
 class TestPRCommentFormatter(unittest.TestCase):
@@ -161,10 +157,10 @@ class TestPRCommentFormatter(unittest.TestCase):
     def test_create_response(self):
         """Test creating new response."""
         response = PRCommentFormatter.create_response("Test Title")
-        self.assertEqual(response.summary_title, "Test Title")
-        self.assertEqual(len(response.tasks), 0)
-        self.assertEqual(len(response.user_comments), 0)
-        self.assertEqual(len(response.copilot_comments), 0)
+        assert response.summary_title == "Test Title"
+        assert len(response.tasks) == 0
+        assert len(response.user_comments) == 0
+        assert len(response.copilot_comments) == 0
 
     def test_from_json_string(self):
         """Test creating response from JSON string."""
@@ -197,19 +193,19 @@ class TestPRCommentFormatter(unittest.TestCase):
 
         response = PRCommentFormatter.from_json(json_data)
 
-        self.assertEqual(response.summary_title, "JSON Test")
-        self.assertEqual(len(response.tasks), 1)
-        self.assertEqual(response.tasks[0].description, "JSON task")
-        self.assertEqual(response.tasks[0].status, CommentStatus.FIXED)
+        assert response.summary_title == "JSON Test"
+        assert len(response.tasks) == 1
+        assert response.tasks[0].description == "JSON task"
+        assert response.tasks[0].status == CommentStatus.FIXED
 
-        self.assertEqual(len(response.user_comments), 1)
-        self.assertEqual(response.user_comments[0].line_number, 456)
-        self.assertEqual(response.user_comments[0].status, CommentStatus.ADDRESSED)
+        assert len(response.user_comments) == 1
+        assert response.user_comments[0].line_number == 456
+        assert response.user_comments[0].status == CommentStatus.ADDRESSED
 
-        self.assertEqual(len(response.copilot_comments), 1)
-        self.assertEqual(response.copilot_comments[0].status, CommentStatus.VALIDATED)
+        assert len(response.copilot_comments) == 1
+        assert response.copilot_comments[0].status == CommentStatus.VALIDATED
 
-        self.assertEqual(response.final_status, "JSON final")
+        assert response.final_status == "JSON final"
 
     def test_from_json_file(self):
         """Test creating response from JSON file."""
@@ -231,8 +227,8 @@ class TestPRCommentFormatter(unittest.TestCase):
                 file_data = json.load(f)
 
             response = PRCommentFormatter.from_json(file_data)
-            self.assertEqual(response.summary_title, "File Test")
-            self.assertEqual(response.final_status, "File final")
+            assert response.summary_title == "File Test"
+            assert response.final_status == "File final"
         finally:
             os.unlink(temp_file)
 
@@ -241,17 +237,17 @@ class TestPRCommentFormatter(unittest.TestCase):
         template = PRCommentFormatter.generate_template()
 
         # Check template contains expected elements
-        self.assertIn("Summary: PR Updated & Comments Addressed", template)
-        self.assertIn("✅ RESOLVED GitHub PR Description Updated", template)
-        self.assertIn("✅ User Comments Addressed", template)
-        self.assertIn("Line 486", template)
-        self.assertIn("✅ Copilot Comments Status", template)
-        self.assertIn("✅ Final Status", template)
+        assert "Summary: PR Updated & Comments Addressed" in template
+        assert "✅ RESOLVED GitHub PR Description Updated" in template
+        assert "✅ User Comments Addressed" in template
+        assert "Line 486" in template
+        assert "✅ Copilot Comments Status" in template
+        assert "✅ Final Status" in template
 
         # Check table formatting
-        self.assertIn("| Comment", template)
-        self.assertIn("| Status", template)
-        self.assertIn("| Reason", template)
+        assert "| Comment" in template
+        assert "| Status" in template
+        assert "| Reason" in template
 
 
 class TestIntegration(unittest.TestCase):
@@ -288,13 +284,13 @@ class TestIntegration(unittest.TestCase):
         formatted = response.format_response()
 
         # Verify all components are present and properly formatted
-        self.assertIn("Summary: Integration Test", formatted)
-        self.assertIn("✅ FIXED Integration task", formatted)
-        self.assertIn("- Integration detail 1", formatted)
-        self.assertIn('1. Line 789 - "Integration user comment"', formatted)
-        self.assertIn("✅ RESOLVED Integration user response", formatted)
-        self.assertIn("| Integration copilot ... | VALIDATED", formatted)
-        self.assertIn("Integration complete", formatted)
+        assert "Summary: Integration Test" in formatted
+        assert "✅ FIXED Integration task" in formatted
+        assert "- Integration detail 1" in formatted
+        assert '1. Line 789 - "Integration user comment"' in formatted
+        assert "✅ RESOLVED Integration user response" in formatted
+        assert "| Integration copilot ... | VALIDATED" in formatted
+        assert "Integration complete" in formatted
 
         # Test round-trip through JSON
         json_data = {
@@ -331,7 +327,7 @@ class TestIntegration(unittest.TestCase):
         formatted_from_json = response_from_json.format_response()
 
         # Should be identical
-        self.assertEqual(formatted, formatted_from_json)
+        assert formatted == formatted_from_json
 
 
 if __name__ == "__main__":

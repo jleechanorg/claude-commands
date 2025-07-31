@@ -11,8 +11,9 @@ import unittest
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-from gemini_service import sanitize_entity_name_for_id
 from schemas.entities_pydantic import NPC, HealthStatus
+
+from gemini_service import sanitize_entity_name_for_id
 
 
 class TestGeminiEntitySanitization(unittest.TestCase):
@@ -32,7 +33,9 @@ class TestGeminiEntitySanitization(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            assert result == expected, f"Failed for '{input_name}': got '{result}', expected '{expected}'"
+            assert (
+                result == expected
+            ), f"Failed for '{input_name}': got '{result}', expected '{expected}'"
 
     def test_multiple_apostrophes_and_quotes(self):
         """Test handling of multiple apostrophes and quotes"""
@@ -78,7 +81,9 @@ class TestGeminiEntitySanitization(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            assert result == expected, f"Failed for '{input_name}': got '{result}', expected '{expected}'"
+            assert (
+                result == expected
+            ), f"Failed for '{input_name}': got '{result}', expected '{expected}'"
 
     def test_whitespace_handling(self):
         """Test various whitespace scenarios"""
@@ -145,7 +150,9 @@ class TestGeminiEntitySanitization(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            assert result == expected, f"Failed for '{input_name}': got '{result}', expected '{expected}'"
+            assert (
+                result == expected
+            ), f"Failed for '{input_name}': got '{result}', expected '{expected}'"
 
     def test_integration_with_entity_id_format(self):
         """Test that sanitized names work with the entity ID format"""

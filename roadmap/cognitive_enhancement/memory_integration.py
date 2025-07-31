@@ -267,13 +267,12 @@ This has been integrated into my knowledge base for future reference.
             for pattern in consultation_result.high_priority_patterns[:3]:
                 learning_notes += f"• {pattern.content[:100]}...\n"
 
-        enhanced_response = template.format(
+        return template.format(
             memory_guidance=consultation_result.memory_guidance,
             main_response=main_response,
             learning_notes=learning_notes or "No specific patterns applied.",
         )
 
-        return enhanced_response
 
     def generate_correction_response(
         self, context: ResponseContext, learned_patterns: list[LearningPattern]
@@ -288,14 +287,13 @@ This has been integrated into my knowledge base for future reference.
 
         template = self.templates["correction_detected"]
 
-        correction_response = template.format(
+        return template.format(
             previous_claim="[Previous response content]",
             corrected_info=main_pattern.content,
             learning_summary=f"I now understand: {main_pattern.content}",
             corrected_response="I'll apply this correction in my updated understanding.",
         )
 
-        return correction_response
 
 
 class ConversationMemoryManager:

@@ -178,7 +178,7 @@ class GeminiResponse:
             logging.error(
                 f"DEPRECATED TAGS DETECTED: Found {total_found} deprecated tags in response. "
                 "Update prompts to use proper JSON format. Details: "
-                f"{dict((k, len(v)) for k, v in old_tags_found.items() if v)}"
+                f"{ {k: len(v) for k, v in old_tags_found.items() if v} }"
             )
 
             # Store in processing metadata for tracking
@@ -209,10 +209,7 @@ class GeminiResponse:
     def has_debug_content(self) -> bool:
         """Check if response has any debug content."""
         # Check debug tags if present - this is what the tests check
-        if self.debug_tags_present and any(self.debug_tags_present.values()):
-            return True
-
-        return False
+        return bool(self.debug_tags_present and any(self.debug_tags_present.values()))
 
     def get_state_updates(self) -> dict[str, Any]:
         """Get state updates from structured response."""
@@ -281,13 +278,11 @@ class GeminiResponse:
             processed_text,
         )
         # Handle malformed STATE_UPDATES_PROPOSED blocks (missing opening characters)
-        processed_text = re.sub(
+        return re.sub(
             r"S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]",
             "",
             processed_text,
         )
-
-        return processed_text
 
     @staticmethod
     def _strip_state_updates_only(text: str) -> str:
@@ -311,12 +306,11 @@ class GeminiResponse:
             text,
         )
         # Also handle malformed blocks where the opening characters might be missing
-        processed_text = re.sub(
+        return re.sub(
             r"S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]",
             "",
             processed_text,
         )
-        return processed_text
 
     @staticmethod
     def _strip_all_debug_tags(text: str) -> str:
@@ -358,9 +352,7 @@ class GeminiResponse:
 
         # Clean up extra whitespace
         text = re.sub(r"\n\s*\n\s*\n", "\n\n", text)
-        text = text.strip()
-
-        return text
+        return text.strip()
 
     @staticmethod
     def _detect_debug_tags_static(text: str) -> dict[str, bool]:

@@ -4,6 +4,7 @@ Simplified Layer 3 test that combines API and basic UI verification
 """
 
 import os
+import sys
 import time
 
 import requests
@@ -154,4 +155,4 @@ def test_layer3_schema_and_ui():
 
 if __name__ == "__main__":
     success = test_layer3_schema_and_ui()
-    exit(0 if success else 1)
+    sys.exit(0 if success else 1)

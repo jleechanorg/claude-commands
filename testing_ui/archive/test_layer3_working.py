@@ -247,4 +247,4 @@ What would you like to do next?
 
 if __name__ == "__main__":
     success = test_layer3_working()
-    exit(0 if success else 1)
+    sys.exit(0 if success else 1)

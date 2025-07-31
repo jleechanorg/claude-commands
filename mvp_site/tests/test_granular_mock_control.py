@@ -69,10 +69,14 @@ class TestMCPEnvironmentControl(unittest.TestCase):
             # MCP client should handle all configurations without crashing
             try:
                 client = create_mcp_client()
-                assert client is not None, f"Client should be created with USE_MOCKS={use_mocks}"
+                assert (
+                    client is not None
+                ), f"Client should be created with USE_MOCKS={use_mocks}"
             except Exception as e:
                 # Connection errors are acceptable in testing, but crashes are not
-                assert not isinstance(e, (SyntaxError, ImportError, AttributeError)), f"Client should not crash with USE_MOCKS={use_mocks}: {e}"
+                assert not isinstance(
+                    e, SyntaxError | ImportError | AttributeError
+                ), f"Client should not crash with USE_MOCKS={use_mocks}: {e}"
 
     def test_mcp_environment_variables_respected(self):
         """Test that MCP architecture respects environment variables."""

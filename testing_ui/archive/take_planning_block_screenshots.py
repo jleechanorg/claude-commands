@@ -32,7 +32,6 @@ def take_screenshots():
             # Start test server
             print("🚀 Starting test server...")
 
-
             server = subprocess.Popen(
                 [sys.executable, "mvp_site/main.py", "serve"],
                 env={**os.environ, "TESTING": "true", "PORT": "6007"},
@@ -124,7 +123,6 @@ def take_screenshots():
 
         except Exception as e:
             print(f"❌ Error: {e}")
-
 
             traceback.print_exc()
 

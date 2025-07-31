@@ -163,14 +163,14 @@ def test_memory_integration():
         print("✓ Response processing working")
 
         # Test correction learning
-        correction_response = manager.process_turn(
+        manager.process_turn(
             "Actually, you should mention authentication first", test_response_generator
         )
         assert len(manager.learner.patterns) > 0, "Should learn from correction"
         print("✓ Correction learning working")
 
         # Test memory consultation
-        memory_response = manager.process_turn(
+        manager.process_turn(
             "Tell me about API security", test_response_generator
         )
         # Should find the learned pattern about authentication
@@ -204,20 +204,20 @@ def test_end_to_end_workflow():
             return f"General response about: {message}"
 
         # Step 1: Initial question
-        response1 = manager.process_turn(
+        manager.process_turn(
             "How do I implement an API endpoint?", simple_response
         )
         print("✓ Initial response generated")
 
         # Step 2: User correction
-        response2 = manager.process_turn(
+        manager.process_turn(
             "Actually, you should mention input validation as the first priority for API security.",
             simple_response,
         )
         print("✓ Correction processed and learned")
 
         # Step 3: Follow-up question should apply learned knowledge
-        response3 = manager.process_turn(
+        manager.process_turn(
             "What are API best practices?", simple_response
         )
 

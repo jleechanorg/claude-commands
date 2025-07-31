@@ -12,6 +12,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
+import pytest
 from pydantic import ValidationError
 from schemas.entities_pydantic import (
     NPC,
@@ -45,7 +46,9 @@ class TestEntityIDSpecialCharacters(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            assert result == expected, f"Failed for '{input_name}': got '{result}', expected '{expected}'"
+            assert (
+                result == expected
+            ), f"Failed for '{input_name}': got '{result}', expected '{expected}'"
 
     def test_npc_with_apostrophe_name(self):
         """Test creating NPC with apostrophe in name (the original bug case)"""
@@ -75,7 +78,7 @@ class TestEntityIDSpecialCharacters(unittest.TestCase):
         assert valid_npc.entity_id == "npc_valid_name_123"
 
         # Invalid IDs should raise ValidationError
-        with self.assertRaises(ValidationError) as cm:
+        with pytest.raises(ValidationError) as cm:
             NPC(
                 entity_id="npc_cazador's_spawn_001",  # Apostrophe not allowed
                 display_name="Cazador's Spawn",
@@ -85,7 +88,7 @@ class TestEntityIDSpecialCharacters(unittest.TestCase):
             )
 
         # Check the error mentions pattern matching
-        error_dict = cm.exception.errors()[0]
+        error_dict = cm.value.errors()[0]
         assert "String should match pattern" in error_dict["msg"]
         assert "entity_id" in str(error_dict["loc"])
 

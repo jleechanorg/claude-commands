@@ -109,10 +109,10 @@ class TestGeminiTokenManagement(unittest.TestCase):
                 token_log = next(
                     (msg for msg in log_calls if "tokens to API" in msg), None
                 )
-                self.assertIsNotNone(
-                    token_log, f"Expected token log not found. Log calls: {log_calls}"
-                )
-                self.assertIn(str(expected_tokens), token_log)
+                assert (
+                    token_log is not None
+                ), f"Expected token log not found. Log calls: {log_calls}"
+                assert str(expected_tokens) in token_log
 
     @patch("gemini_service.get_client")
     @patch("gemini_service.logging_util")
@@ -150,16 +150,14 @@ class TestGeminiTokenManagement(unittest.TestCase):
                 )
 
                 # Should call count_tokens twice (once for user content, once for system)
-                self.assertEqual(self.mock_models.count_tokens.call_count, 2)
+                assert self.mock_models.count_tokens.call_count == 2
 
                 # Verify both user and system content were counted
                 calls = self.mock_models.count_tokens.call_args_list
                 # First call should be for user content
-                self.assertEqual(calls[0][1]["contents"], [text])
+                assert calls[0][1]["contents"] == [text]
                 # Second call should be for system instruction
-                self.assertEqual(
-                    calls[1][1]["contents"], ["You are a helpful assistant."]
-                )
+                assert calls[1][1]["contents"] == ["You are a helpful assistant."]
 
     # Group 2 - Context Limits
 
@@ -189,7 +187,7 @@ class TestGeminiTokenManagement(unittest.TestCase):
         # Verify warning was logged about large token count
         log_calls = [call[0][0] for call in mock_logging.info.call_args_list]
         token_log = next((msg for msg in log_calls if "8750 tokens" in msg), None)
-        self.assertIsNotNone(token_log)
+        assert token_log is not None
 
     @patch("gemini_service.get_client")
     @patch("gemini_service.logging_util")
@@ -215,7 +213,7 @@ class TestGeminiTokenManagement(unittest.TestCase):
         # Verify it logs the large token count
         log_calls = [call[0][0] for call in mock_logging.info.call_args_list]
         token_log = next((msg for msg in log_calls if "30000 tokens" in msg), None)
-        self.assertIsNotNone(token_log)
+        assert token_log is not None
 
     @patch("gemini_service.get_client")
     @patch("gemini_service.logging_util")
@@ -242,7 +240,7 @@ class TestGeminiTokenManagement(unittest.TestCase):
         log_calls = [call[0][0] for call in mock_logging.info.call_args_list]
         # Should log the total tokens
         token_log = next((msg for msg in log_calls if "tokens to API" in msg), None)
-        self.assertIsNotNone(token_log)
+        assert token_log is not None
 
         # In a real scenario, the service would need to handle this overflow
         # by truncating or splitting the context
@@ -283,9 +281,9 @@ class TestGeminiTokenManagement(unittest.TestCase):
         )
 
         # Verify stats format includes turn count and tokens
-        self.assertIn("Turns:", stats)
-        self.assertIn("6", stats)  # 6 turns in history
-        self.assertIn("Tokens:", stats)
+        assert "Turns:" in stats
+        assert "6" in stats  # 6 turns in history
+        assert "Tokens:" in stats
 
     @patch("gemini_service.get_client")
     def test_context_pruning_strategy(self, mock_get_client):
@@ -314,13 +312,13 @@ class TestGeminiTokenManagement(unittest.TestCase):
         )
 
         # Should keep first 25 turns
-        self.assertEqual(
-            truncated[0]["text"],
-            "Turn 0: This is message number 0 in the conversation with much more text to ensure we exceed token limits.",
+        assert (
+            truncated[0]["text"]
+            == "Turn 0: This is message number 0 in the conversation with much more text to ensure we exceed token limits."
         )
-        self.assertEqual(
-            truncated[24]["text"],
-            "Turn 24: This is message number 24 in the conversation with much more text to ensure we exceed token limits.",
+        assert (
+            truncated[24]["text"]
+            == "Turn 24: This is message number 24 in the conversation with much more text to ensure we exceed token limits."
         )
 
         # Should have truncation marker
@@ -331,15 +329,15 @@ class TestGeminiTokenManagement(unittest.TestCase):
             ):
                 truncation_found = True
                 break
-        self.assertTrue(truncation_found, "Truncation marker not found")
+        assert truncation_found, "Truncation marker not found"
 
         # Should keep last 75 turns
         # The last entry should be from turn 149
         last_turn_text = truncated[-1]["text"]
-        self.assertIn("Turn 149", last_turn_text)
+        assert "Turn 149" in last_turn_text
 
         # Total turns should be 101 (25 start + 1 truncation + 75 end)
-        self.assertEqual(len(truncated), 101)
+        assert len(truncated) == 101
 
     @patch("gemini_service.get_client")
     def test_system_prompt_preservation(self, mock_get_client):
@@ -387,9 +385,9 @@ class TestGeminiTokenManagement(unittest.TestCase):
                 system_prompt_found = True
                 break
 
-        self.assertTrue(
-            system_prompt_found, "System prompt was not preserved in truncated context"
-        )
+        assert (
+            system_prompt_found
+        ), "System prompt was not preserved in truncated context"
 
         # Verify truncation occurred
         truncation_marker_found = False
@@ -399,7 +397,7 @@ class TestGeminiTokenManagement(unittest.TestCase):
             ):
                 truncation_marker_found = True
                 break
-        self.assertTrue(truncation_marker_found, "Truncation should have occurred")
+        assert truncation_marker_found, "Truncation should have occurred"
 
     # Group 4 - Token Estimation
 
@@ -429,7 +427,7 @@ class TestGeminiTokenManagement(unittest.TestCase):
                 # The estimation should be reasonably close (within 50% margin)
                 # Since estimate_tokens uses chars/4, let's verify the estimation logic
                 expected_estimate = len(text) // 4
-                self.assertEqual(estimated, expected_estimate)
+                assert estimated == expected_estimate
 
                 # Log the token count to verify API is called
                 gemini_service._log_token_count("gemini-2.5-flash", [text])
@@ -447,7 +445,7 @@ class TestGeminiTokenManagement(unittest.TestCase):
         self.mock_models.generate_content.return_value = self.mock_response
 
         # Test that JSON mode uses reduced token limit
-        response = gemini_service._call_gemini_api(
+        gemini_service._call_gemini_api(
             ["Test prompt"], "gemini-2.5-flash", "Test prompt for logging"
         )
 
@@ -456,16 +454,16 @@ class TestGeminiTokenManagement(unittest.TestCase):
         config = generate_call[1]["config"]
 
         # Check that max_output_tokens is set to JSON_MODE_MAX_TOKENS
-        self.assertEqual(config.max_output_tokens, gemini_service.JSON_MODE_MAX_TOKENS)
-        self.assertEqual(config.response_mime_type, "application/json")
+        assert config.max_output_tokens == gemini_service.JSON_MODE_MAX_TOKENS
+        assert config.response_mime_type == "application/json"
 
         # Verify logging mentions JSON mode
         log_calls = [call[0][0] for call in mock_logging.info.call_args_list]
         json_mode_log = next(
             (msg for msg in log_calls if "JSON response mode" in msg), None
         )
-        self.assertIsNotNone(json_mode_log)
-        self.assertIn(str(gemini_service.JSON_MODE_MAX_TOKENS), json_mode_log)
+        assert json_mode_log is not None
+        assert str(gemini_service.JSON_MODE_MAX_TOKENS) in json_mode_log
 
     @patch("gemini_service.get_client")
     @patch("gemini_service.log_with_tokens")
@@ -486,7 +484,7 @@ class TestGeminiTokenManagement(unittest.TestCase):
         system_instruction = "You are a helpful D&D game master"
 
         # Call the API
-        response = gemini_service._call_gemini_api_with_model_cycling(
+        gemini_service._call_gemini_api_with_model_cycling(
             [test_prompt], "gemini-2.5-flash", test_prompt, system_instruction
         )
 
@@ -495,12 +493,12 @@ class TestGeminiTokenManagement(unittest.TestCase):
 
         # Check that the combined text was logged
         call_args = mock_log_with_tokens.call_args
-        self.assertIn("Calling Gemini API", call_args[0][0])
+        assert "Calling Gemini API" in call_args[0][0]
 
         # Verify token counting was performed for both user and system prompts
         count_calls = self.mock_models.count_tokens.call_args_list
         # Should have at least 2 calls (user content and system instruction)
-        self.assertGreaterEqual(len(count_calls), 2)
+        assert len(count_calls) >= 2
 
 
 if __name__ == "__main__":

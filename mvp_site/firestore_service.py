@@ -411,7 +411,7 @@ def json_serial(obj: Any) -> str | None:
 
 def json_default_serializer(o: Any) -> str | None | dict[str, Any]:
     """Handles serialization of data types json doesn't know, like datetimes."""
-    if isinstance(o, (datetime.datetime, datetime.date)):
+    if isinstance(o, datetime.datetime | datetime.date):
         return o.isoformat()
     # Check for Firestore's special DELETE_FIELD sentinel.
     if o == firestore.DELETE_FIELD:
@@ -870,9 +870,8 @@ def verify_latest_entry(
     )
     story_docs = story_ref.stream()
 
-    entries_found = []
     # Check if our entry is among the latest entries
-    for i, doc in enumerate(story_docs):
+    for _i, doc in enumerate(story_docs):
         entry = doc.to_dict()
         entry_actor = entry.get("actor", constants.ACTOR_UNKNOWN)
         entry_text = entry.get("text", "NO_TEXT")

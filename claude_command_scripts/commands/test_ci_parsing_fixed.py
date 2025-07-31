@@ -5,6 +5,7 @@ Validates that error parsing correctly extracts different types of failures
 """
 
 import re
+import sys
 
 # Test log content with various error patterns
 TEST_LOG_CONTENT = """
@@ -53,68 +54,78 @@ TEST_LOG_CONTENT = """
 2025-07-20T04:24:47.5555555Z ##[endgroup]
 """
 
+
 def parse_test_failures(log_content):
     """Parse various types of test failures from CI logs"""
     failures = []
 
     # Pattern 1: Python unittest failures
-    unittest_pattern = r'FAIL: ([^\(]+)\(([^)]+)\)\s*\n.*?AssertionError: ([^\n]+)'
+    unittest_pattern = r"FAIL: ([^\(]+)\(([^)]+)\)\s*\n.*?AssertionError: ([^\n]+)"
     for match in re.finditer(unittest_pattern, log_content, re.MULTILINE | re.DOTALL):
         test_name, test_class, message = match.groups()
-        failures.append({
-            'type': 'unittest_failure',
-            'test_name': test_name.strip(),
-            'test_class': test_class.strip(),
-            'error_type': 'AssertionError',
-            'message': message.strip(),
-            'framework': 'unittest'
-        })
+        failures.append(
+            {
+                "type": "unittest_failure",
+                "test_name": test_name.strip(),
+                "test_class": test_class.strip(),
+                "error_type": "AssertionError",
+                "message": message.strip(),
+                "framework": "unittest",
+            }
+        )
 
     # Pattern 2: pytest failures
-    pytest_pattern = r'FAILED ([^:]+)::([^-]+) - ([^:]+): ([^\n]+)'
+    pytest_pattern = r"FAILED ([^:]+)::([^-]+) - ([^:]+): ([^\n]+)"
     for match in re.finditer(pytest_pattern, log_content, re.MULTILINE):
         test_file, test_name, error_type, message = match.groups()
-        failures.append({
-            'type': 'pytest_failure',
-            'test_file': test_file.strip(),
-            'test_name': test_name.strip(),
-            'error_type': error_type.strip(),
-            'message': message.strip(),
-            'framework': 'pytest'
-        })
+        failures.append(
+            {
+                "type": "pytest_failure",
+                "test_file": test_file.strip(),
+                "test_name": test_name.strip(),
+                "error_type": error_type.strip(),
+                "message": message.strip(),
+                "framework": "pytest",
+            }
+        )
 
     # Pattern 3: Import errors
-    import_pattern = r'(ModuleNotFoundError|ImportError): ([^\n]+)'
+    import_pattern = r"(ModuleNotFoundError|ImportError): ([^\n]+)"
     for match in re.finditer(import_pattern, log_content, re.MULTILINE):
         error_type, message = match.groups()
-        failures.append({
-            'type': 'import_error',
-            'error_type': error_type.strip(),
-            'message': message.strip(),
-            'severity': 'critical'
-        })
+        failures.append(
+            {
+                "type": "import_error",
+                "error_type": error_type.strip(),
+                "message": message.strip(),
+                "severity": "critical",
+            }
+        )
 
     # Pattern 4: Syntax errors
     syntax_pattern = r'SyntaxError: ([^\n]+).*?File "([^"]+)", line (\d+)'
     for match in re.finditer(syntax_pattern, log_content, re.MULTILINE | re.DOTALL):
         message, file_path, line_number = match.groups()
-        failures.append({
-            'type': 'syntax_error',
-            'error_type': 'SyntaxError',
-            'message': message.strip(),
-            'file_path': file_path.strip(),
-            'line_number': int(line_number),
-            'severity': 'critical'
-        })
+        failures.append(
+            {
+                "type": "syntax_error",
+                "error_type": "SyntaxError",
+                "message": message.strip(),
+                "file_path": file_path.strip(),
+                "line_number": int(line_number),
+                "severity": "critical",
+            }
+        )
 
     return failures
+
 
 def extract_stack_traces(log_content):
     """Extract Python stack traces from CI logs"""
     tracebacks = []
 
     # Pattern for Python tracebacks
-    traceback_pattern = r'Traceback \(most recent call last\):(.*?)(\w+Error): ([^\n]+)'
+    traceback_pattern = r"Traceback \(most recent call last\):(.*?)(\w+Error): ([^\n]+)"
     for match in re.finditer(traceback_pattern, log_content, re.MULTILINE | re.DOTALL):
         trace_content, error_type, error_message = match.groups()
 
@@ -123,20 +134,25 @@ def extract_stack_traces(log_content):
         files = []
         for file_match in re.finditer(file_pattern, trace_content):
             file_path, line_number, function_name = file_match.groups()
-            files.append({
-                'file_path': file_path.strip(),
-                'line_number': int(line_number),
-                'function_name': function_name.strip()
-            })
+            files.append(
+                {
+                    "file_path": file_path.strip(),
+                    "line_number": int(line_number),
+                    "function_name": function_name.strip(),
+                }
+            )
 
-        tracebacks.append({
-            'error_type': error_type.strip(),
-            'error_message': error_message.strip(),
-            'stack_frames': files,
-            'full_traceback': match.group(0).strip()
-        })
+        tracebacks.append(
+            {
+                "error_type": error_type.strip(),
+                "error_message": error_message.strip(),
+                "stack_frames": files,
+                "full_traceback": match.group(0).strip(),
+            }
+        )
 
     return tracebacks
+
 
 def test_parse_test_failures():
     """Test the parse_test_failures function"""
@@ -146,30 +162,40 @@ def test_parse_test_failures():
     print(f"Found {len(failures)} failures:")
 
     # Validate expected patterns
-    expected_types = {'pytest_failure', 'import_error', 'syntax_error', 'unittest_failure'}
-    found_types = {f['type'] for f in failures}
+    expected_types = {
+        "pytest_failure",
+        "import_error",
+        "syntax_error",
+        "unittest_failure",
+    }
+    found_types = {f["type"] for f in failures}
 
     print(f"Expected types: {expected_types}")
     print(f"Found types: {found_types}")
 
     # Check specific cases
-    pytest_failures = [f for f in failures if f['type'] == 'pytest_failure']
+    pytest_failures = [f for f in failures if f["type"] == "pytest_failure"]
     if pytest_failures:
-        print(f"✅ pytest failure detected: {pytest_failures[0]['test_file']}::{pytest_failures[0]['test_name']}")
+        print(
+            f"✅ pytest failure detected: {pytest_failures[0]['test_file']}::{pytest_failures[0]['test_name']}"
+        )
 
-    import_errors = [f for f in failures if f['type'] == 'import_error']
+    import_errors = [f for f in failures if f["type"] == "import_error"]
     if import_errors:
         print(f"✅ Import error detected: {import_errors[0]['message']}")
 
-    syntax_errors = [f for f in failures if f['type'] == 'syntax_error']
+    syntax_errors = [f for f in failures if f["type"] == "syntax_error"]
     if syntax_errors:
-        print(f"✅ Syntax error detected: {syntax_errors[0]['file_path']}:{syntax_errors[0]['line_number']}")
+        print(
+            f"✅ Syntax error detected: {syntax_errors[0]['file_path']}:{syntax_errors[0]['line_number']}"
+        )
 
-    unittest_failures = [f for f in failures if f['type'] == 'unittest_failure']
+    unittest_failures = [f for f in failures if f["type"] == "unittest_failure"]
     if unittest_failures:
         print(f"✅ Unittest failure detected: {unittest_failures[0]['test_name']}")
 
     return len(failures) >= 4  # Should find at least 4 different errors
+
 
 def test_stack_trace_extraction():
     """Test stack trace extraction"""
@@ -180,11 +206,14 @@ def test_stack_trace_extraction():
 
     for tb in tracebacks:
         print(f"  {tb['error_type']}: {tb['error_message']}")
-        if tb['stack_frames']:
-            main_frame = tb['stack_frames'][0]
-            print(f"    Main: {main_frame['file_path']}:{main_frame['line_number']} in {main_frame['function_name']}")
+        if tb["stack_frames"]:
+            main_frame = tb["stack_frames"][0]
+            print(
+                f"    Main: {main_frame['file_path']}:{main_frame['line_number']} in {main_frame['function_name']}"
+            )
 
     return len(tracebacks) >= 1  # Should find at least one stack trace
+
 
 def main():
     """Run all tests"""
@@ -217,5 +246,6 @@ def main():
     print("⚠️  Some tests failed. Check the error parsing implementation.")
     return 1
 
+
 if __name__ == "__main__":
-    exit(main())
+    sys.exit(main())

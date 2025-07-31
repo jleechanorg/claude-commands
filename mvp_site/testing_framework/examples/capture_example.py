@@ -52,10 +52,10 @@ def demo_capture_mode():
         firestore = provider.get_firestore()
 
         print("   - Getting Gemini client...")
-        gemini = provider.get_gemini()
+        provider.get_gemini()
 
         print("   - Getting auth service...")
-        auth = provider.get_auth()
+        provider.get_auth()
 
         print("✓ All services initialized")
 
@@ -64,7 +64,7 @@ def demo_capture_mode():
 
         try:
             # This would be captured if real services were configured
-            collection = firestore.collection("test_collection")
+            firestore.collection("test_collection")
             print("   - Created collection reference")
 
             # This would make a real API call and be captured
@@ -306,7 +306,7 @@ def main():
 
     try:
         # Try real capture mode first
-        capture_file = demo_capture_mode()
+        demo_capture_mode()
 
         # Always run mock analysis demo
         demo_mock_capture()

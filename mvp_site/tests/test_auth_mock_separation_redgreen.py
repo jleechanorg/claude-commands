@@ -15,7 +15,6 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import firestore_service
-
 from tests.fake_firestore import FakeFirestoreClient
 
 
@@ -48,7 +47,9 @@ class TestAuthMockSeparation(unittest.TestCase):
             )
 
             # GOOD: This returns None because MOCK_SERVICES_MODE=true bypasses verification for unit tests
-            assert result is None, "Mock services mode bypasses verification, returns None"
+            assert (
+                result is None
+            ), "Mock services mode bypasses verification, returns None"
 
             # This is appropriate for unit tests that need speed
 
@@ -78,7 +79,9 @@ class TestAuthMockSeparation(unittest.TestCase):
             )
 
             # Production mode runs verification and returns None after success
-            assert result is None, "Production mode should run verification and return None"
+            assert (
+                result is None
+            ), "Production mode should run verification and return None"
 
             # Verify that verification was attempted (this tests the production code path)
             # Check that the fake database contains the written entry

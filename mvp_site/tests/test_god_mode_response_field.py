@@ -9,8 +9,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from unittest.mock import MagicMock, patch
 
 import constants
-import firestore_service
 from narrative_response_schema import parse_structured_response
+
+import firestore_service
 
 
 class TestGodModeResponseField(unittest.TestCase):
@@ -46,8 +47,14 @@ class TestGodModeResponseField(unittest.TestCase):
         narrative, response_obj = parse_structured_response(god_response)
 
         # Should return the god_mode_response content
-        assert narrative == "A mystical fog rolls in from the mountains. The temperature drops suddenly."
-        assert response_obj.god_mode_response == "A mystical fog rolls in from the mountains. The temperature drops suddenly."
+        assert (
+            narrative
+            == "A mystical fog rolls in from the mountains. The temperature drops suddenly."
+        )
+        assert (
+            response_obj.god_mode_response
+            == "A mystical fog rolls in from the mountains. The temperature drops suddenly."
+        )
         assert response_obj.narrative == ""
 
     def test_normal_response_without_god_mode(self):
@@ -63,8 +70,13 @@ class TestGodModeResponseField(unittest.TestCase):
         narrative, response_obj = parse_structured_response(normal_response)
 
         # Should return the narrative content
-        assert narrative == "You enter the tavern and see a hooded figure in the corner."
-        assert response_obj.narrative == "You enter the tavern and see a hooded figure in the corner."
+        assert (
+            narrative == "You enter the tavern and see a hooded figure in the corner."
+        )
+        assert (
+            response_obj.narrative
+            == "You enter the tavern and see a hooded figure in the corner."
+        )
         assert response_obj.god_mode_response is None
 
     def test_god_mode_with_state_updates(self):
@@ -145,7 +157,10 @@ class TestGodModeResponseField(unittest.TestCase):
         narrative, response_obj = parse_structured_response(old_style_response)
 
         # Should use narrative field as before
-        assert narrative == "The ancient tome glows with an eerie light as you speak the command."
+        assert (
+            narrative
+            == "The ancient tome glows with an eerie light as you speak the command."
+        )
         assert response_obj.god_mode_response is None
 
     def test_god_mode_with_empty_narrative(self):
@@ -180,11 +195,19 @@ class TestGodModeResponseField(unittest.TestCase):
         narrative, response_obj = parse_structured_response(both_fields_response)
 
         # Should return only narrative - god_mode_response is passed separately to frontend
-        assert narrative == "Meanwhile, in the mortal realm, the players sense a change..."
+        assert (
+            narrative == "Meanwhile, in the mortal realm, the players sense a change..."
+        )
         assert "The deity grants your wish" not in narrative
         # Response object should have both fields separately
-        assert response_obj.god_mode_response == "The deity grants your wish. A shimmering portal opens."
-        assert response_obj.narrative == "Meanwhile, in the mortal realm, the players sense a change..."
+        assert (
+            response_obj.god_mode_response
+            == "The deity grants your wish. A shimmering portal opens."
+        )
+        assert (
+            response_obj.narrative
+            == "Meanwhile, in the mortal realm, the players sense a change..."
+        )
 
     def test_god_mode_response_saved_to_firestore(self):
         """Test that god_mode_response is saved to Firestore via add_story_entry."""
@@ -208,7 +231,10 @@ class TestGodModeResponseField(unittest.TestCase):
             )
             called_args, called_kwargs = mock_add_story_entry.call_args
             assert "god_mode_response" in called_kwargs["structured_fields"]
-            assert called_kwargs["structured_fields"]["god_mode_response"] == "A test god mode response for Firestore."
+            assert (
+                called_kwargs["structured_fields"]["god_mode_response"]
+                == "A test god mode response for Firestore."
+            )
 
 
 class TestGodModeResponseIntegration(unittest.TestCase):

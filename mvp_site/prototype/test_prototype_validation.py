@@ -39,20 +39,20 @@ class TestPrototypeValidation(unittest.TestCase):
         # Test SimpleTokenValidator
         simple = SimpleTokenValidator()
         result = simple.validate(narrative, expected_entities)
-        self.assertTrue(result["all_entities_present"])
-        self.assertEqual(set(result["entities_found"]), set(expected_entities))
+        assert result["all_entities_present"]
+        assert set(result["entities_found"]) == set(expected_entities)
 
         # Test TokenValidator with descriptors
         token = TokenValidator()
         narrative_desc = "The knight and the healer stood ready."
         result = token.validate(narrative_desc, expected_entities)
-        self.assertTrue(result["all_entities_present"])
+        assert result["all_entities_present"]
 
         # Test FuzzyTokenValidator
         fuzzy = FuzzyTokenValidator()
         narrative_fuzzy = "Gid-- was cut off while speaking to the healer."
         result = fuzzy.validate(narrative_fuzzy, expected_entities)
-        self.assertEqual(len(result["entities_found"]), 2)
+        assert len(result["entities_found"]) == 2
 
     @unittest.skipIf(not IMPORTS_SUCCESSFUL, "Prototype imports failed")
     def test_game_state_integration(self):
@@ -61,15 +61,15 @@ class TestPrototypeValidation(unittest.TestCase):
 
         # Test manifest generation
         manifest = game_state.get_active_entity_manifest()
-        self.assertEqual(manifest["entity_count"], 2)
-        self.assertEqual(manifest["location"], "Kaelan's Cell")
+        assert manifest["entity_count"] == 2
+        assert manifest["location"] == "Kaelan's Cell"
 
         # Test validation
         result = game_state.validate_narrative_consistency(
             "Gideon and Rowan entered the chamber."
         )
-        self.assertTrue(result["is_valid"])
-        self.assertEqual(result["missing_entities"], [])
+        assert result["is_valid"]
+        assert result["missing_entities"] == []
 
     @unittest.skipIf(not IMPORTS_SUCCESSFUL, "Prototype imports failed")
     def test_performance_requirement(self):
@@ -88,7 +88,7 @@ class TestPrototypeValidation(unittest.TestCase):
         avg_time = (time.time() - start) / 10
 
         # Should be under 50ms
-        self.assertLess(avg_time, 0.05, f"Validation too slow: {avg_time*1000:.1f}ms")
+        assert avg_time < 0.05, f"Validation too slow: {avg_time * 1000:.1f}ms"
 
     @unittest.skipIf(not IMPORTS_SUCCESSFUL, "Prototype imports failed")
     def test_hybrid_validator(self):
@@ -97,13 +97,13 @@ class TestPrototypeValidation(unittest.TestCase):
 
         # Test simple case
         result = hybrid.validate("Gideon and Rowan stood ready.", ["Gideon", "Rowan"])
-        self.assertTrue(result["all_entities_present"])
-        self.assertGreater(result["confidence"], 0.9)
+        assert result["all_entities_present"]
+        assert result["confidence"] > 0.9
 
         # Test confidence cascade
         result = hybrid.validate("Someone moved in the shadows.", ["Gideon", "Rowan"])
-        self.assertFalse(result["all_entities_present"])
-        self.assertLess(result["confidence"], 0.5)
+        assert not result["all_entities_present"]
+        assert result["confidence"] < 0.5
 
 
 if __name__ == "__main__":

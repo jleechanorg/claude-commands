@@ -21,10 +21,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
 
@@ -60,13 +58,15 @@ class AgentMonitor:
             # Get all tmux sessions
             result = subprocess.run(
                 ["tmux", "list-sessions", "-F", "#{session_name}"],
-                check=False, capture_output=True, text=True
+                check=False,
+                capture_output=True,
+                text=True,
             )
 
             if result.returncode == 0:
-                sessions = result.stdout.strip().split('\n')
+                sessions = result.stdout.strip().split("\n")
                 for session in sessions:
-                    if session.startswith('task-agent-'):
+                    if session.startswith("task-agent-"):
                         active_agents.add(session)
 
         except Exception as e:
@@ -81,7 +81,7 @@ class AgentMonitor:
         workspace_info = {
             "workspace_exists": os.path.exists(workspace_path),
             "workspace_path": workspace_path,
-            "last_modified": None
+            "last_modified": None,
         }
 
         if workspace_info["workspace_exists"]:
@@ -100,7 +100,7 @@ class AgentMonitor:
         result_info = {
             "result_file_exists": os.path.exists(result_file),
             "status": "unknown",
-            "completion_time": None
+            "completion_time": None,
         }
 
         if result_info["result_file_exists"]:
@@ -120,11 +120,13 @@ class AgentMonitor:
         try:
             result = subprocess.run(
                 ["tmux", "capture-pane", "-t", agent_name, "-p", "-S", f"-{lines}"],
-                check=False, capture_output=True, text=True
+                check=False,
+                capture_output=True,
+                text=True,
             )
 
             if result.returncode == 0:
-                return result.stdout.strip().split('\n')
+                return result.stdout.strip().split("\n")
         except Exception as e:
             self.logger.debug(f"Failed to capture pane for {agent_name}: {e}")
 
@@ -142,14 +144,15 @@ class AgentMonitor:
             "workspace_info": self.check_agent_workspace(agent_name),
             "result_info": self.check_agent_results(agent_name),
             "recent_output": [],
-            "uptime_estimate": None
+            "uptime_estimate": None,
         }
 
         # Check if tmux session is active
         try:
             result = subprocess.run(
                 ["tmux", "has-session", "-t", agent_name],
-                check=False, capture_output=True
+                check=False,
+                capture_output=True,
             )
             agent_status["tmux_active"] = result.returncode == 0
         except (subprocess.SubprocessError, OSError) as e:
@@ -177,7 +180,9 @@ class AgentMonitor:
             self.logger.info("📭 No active agents found")
             return
 
-        self.logger.info(f"👥 Found {len(active_agents)} active agents: {', '.join(active_agents)}")
+        self.logger.info(
+            f"👥 Found {len(active_agents)} active agents: {', '.join(active_agents)}"
+        )
 
         # Ping each agent
         for agent_name in active_agents:
@@ -217,7 +222,9 @@ class AgentMonitor:
 
         # Log completion info
         if status["result_info"]["status"] in ["completed", "failed"]:
-            self.logger.info(f"🏁 {agent_name} finished with status: {status['result_info']['status']}")
+            self.logger.info(
+                f"🏁 {agent_name} finished with status: {status['result_info']['status']}"
+            )
 
     def register_with_a2a(self):
         """A2A registration handled via file-based protocol only"""
@@ -228,11 +235,15 @@ class AgentMonitor:
         completed = []
         for agent_name, status in self.monitored_agents.items():
             if status.get("result_info", {}).get("status") == "completed":
-                if not status.get("tmux_active", True):  # Only cleanup if tmux is also done
+                if not status.get(
+                    "tmux_active", True
+                ):  # Only cleanup if tmux is also done
                     completed.append(agent_name)
 
         for agent_name in completed:
-            self.logger.info(f"🧹 Removing completed agent from monitoring: {agent_name}")
+            self.logger.info(
+                f"🧹 Removing completed agent from monitoring: {agent_name}"
+            )
             del self.monitored_agents[agent_name]
 
     def run(self):
@@ -241,7 +252,9 @@ class AgentMonitor:
         self.register_with_a2a()
 
         self.logger.info("🚀 Agent Monitor started - pinging every 2 minutes")
-        self.logger.info("📋 Monitor logs: tail -f /tmp/orchestration_logs/agent_monitor.log")
+        self.logger.info(
+            "📋 Monitor logs: tail -f /tmp/orchestration_logs/agent_monitor.log"
+        )
 
         try:
             while self.running:

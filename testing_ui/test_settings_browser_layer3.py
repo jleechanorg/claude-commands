@@ -38,12 +38,23 @@ class TestSettingsBrowserAutomation(unittest.TestCase):
 
     def wait_for_server(self, max_retries=5):
         """Wait for test server to be available"""
-        for i in range(max_retries):
+        for _i in range(max_retries):
             try:
-                result = subprocess.run([
-                    "curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
-                    f"{self.base_url}/"
-                ], check=False, capture_output=True, text=True, timeout=2)
+                result = subprocess.run(
+                    [
+                        "curl",
+                        "-s",
+                        "-o",
+                        "/dev/null",
+                        "-w",
+                        "%{http_code}",
+                        f"{self.base_url}/",
+                    ],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=2,
+                )
                 if result.stdout == "200":
                     return
             except:
@@ -69,12 +80,12 @@ class TestSettingsBrowserAutomation(unittest.TestCase):
             "gemini_pro_radio": "Gemini Pro 2.5 (Default) - initially checked",
             "gemini_flash_radio": "Gemini Flash 2.5 - initially unchecked",
             "back_to_home_button": "Back to Home (with arrow icon)",
-            "navigation_bar": "WorldArchitect.AI navbar with dice icon"
+            "navigation_bar": "WorldArchitect.AI navbar with dice icon",
         }
 
         # Verify all expected UI elements were found
         for element, description in test_results.items():
-            self.assertIsNotNone(description, f"Element {element} should be present")
+            assert description is not None, f"Element {element} should be present"
             print(f"  ✓ {element}: {description}")
 
     def test_radio_button_interaction_works(self):
@@ -90,12 +101,12 @@ class TestSettingsBrowserAutomation(unittest.TestCase):
             "click_target": "Gemini Flash 2.5 radio button",
             "final_state": "Gemini Pro 2.5 [], Gemini Flash 2.5 [checked] [active]",
             "click_successful": True,
-            "ui_responsive": True
+            "ui_responsive": True,
         }
 
         # Verify interaction worked correctly
-        self.assertTrue(interaction_results["click_successful"], "Radio button click should work")
-        self.assertTrue(interaction_results["ui_responsive"], "UI should respond to clicks")
+        assert interaction_results["click_successful"], "Radio button click should work"
+        assert interaction_results["ui_responsive"], "UI should respond to clicks"
         print(f"  ✓ Initial: {interaction_results['initial_state']}")
         print(f"  ✓ Target: {interaction_results['click_target']}")
         print(f"  ✓ Final: {interaction_results['final_state']}")
@@ -110,17 +121,17 @@ class TestSettingsBrowserAutomation(unittest.TestCase):
             "required_headers": {
                 "X-Test-Bypass-Auth": "true",
                 "X-Test-User-ID": "browser-test-layer3",
-                "Content-Type": "text/html"
+                "Content-Type": "text/html",
             },
             "implementation": "fetch('/settings', {headers: {...}}).then(response => response.text())",
             "dom_replacement": "document.documentElement.innerHTML = html",
-            "result": "Full page load with authentication bypass successful"
+            "result": "Full page load with authentication bypass successful",
         }
 
         # Verify method is well-documented
-        self.assertEqual(bypass_method["environment"], "AUTH_SKIP_MODE=true (server environment variable)")
-        self.assertIn("X-Test-Bypass-Auth", bypass_method["required_headers"])
-        self.assertEqual(bypass_method["required_headers"]["X-Test-Bypass-Auth"], "true")
+        assert bypass_method["environment"] == "AUTH_SKIP_MODE=true (server environment variable)"
+        assert "X-Test-Bypass-Auth" in bypass_method["required_headers"]
+        assert bypass_method["required_headers"]["X-Test-Bypass-Auth"] == "true"
 
         print("✅ Method documented for future browser automation tests")
         for key, value in bypass_method.items():

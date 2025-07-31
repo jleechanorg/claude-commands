@@ -45,7 +45,7 @@ class A2AMonitor:
             "cleanup_runs": 0,
             "agents_cleaned": 0,
             "tasks_cleaned": 0,
-            "last_cleanup": None
+            "last_cleanup": None,
         }
 
         logger.info("A2A Monitor initialized")
@@ -57,9 +57,7 @@ class A2AMonitor:
 
         self._running = True
         self._monitor_thread = threading.Thread(
-            target=self._monitor_loop,
-            name="A2A-Monitor",
-            daemon=True
+            target=self._monitor_loop, name="A2A-Monitor", daemon=True
         )
         self._monitor_thread.start()
         logger.info("A2A Monitor started")
@@ -129,7 +127,7 @@ class A2AMonitor:
 
             stale_agents = []
             for agent_id, agent_data in registry_data.items():
-                last_heartbeat = agent_data.get('last_heartbeat', 0)
+                last_heartbeat = agent_data.get("last_heartbeat", 0)
 
                 if current_time - last_heartbeat > self.stale_threshold:
                     stale_agents.append(agent_id)
@@ -152,7 +150,11 @@ class A2AMonitor:
             agent_dir = Path(A2A_BASE_DIR) / "agents" / agent_id
             if agent_dir.exists():
                 # Move to cleanup directory instead of deleting
-                cleanup_dir = Path(A2A_BASE_DIR) / "cleanup" / f"agent_{agent_id}_{int(time.time())}"
+                cleanup_dir = (
+                    Path(A2A_BASE_DIR)
+                    / "cleanup"
+                    / f"agent_{agent_id}_{int(time.time())}"
+                )
                 cleanup_dir.parent.mkdir(parents=True, exist_ok=True)
                 agent_dir.rename(cleanup_dir)
                 logger.info(f"Moved stale agent directory to cleanup: {cleanup_dir}")
@@ -175,21 +177,28 @@ class A2AMonitor:
                         with open(task_file) as f:
                             task_data = json.load(f)
 
-                        claimed_by = task_data.get('claimed_by')
+                        claimed_by = task_data.get("claimed_by")
                         if claimed_by and claimed_by not in active_agents:
                             # Move back to available tasks
-                            task_id = task_data['task_id']
-                            task_data['status'] = 'available'
-                            task_data.pop('claimed_by', None)
-                            task_data.pop('claimed_at', None)
+                            task_id = task_data["task_id"]
+                            task_data["status"] = "available"
+                            task_data.pop("claimed_by", None)
+                            task_data.pop("claimed_at", None)
 
-                            available_file = Path(A2A_BASE_DIR) / "tasks" / "available" / f"{task_id}.json"
-                            with open(available_file, 'w') as f:
+                            available_file = (
+                                Path(A2A_BASE_DIR)
+                                / "tasks"
+                                / "available"
+                                / f"{task_id}.json"
+                            )
+                            with open(available_file, "w") as f:
                                 json.dump(task_data, f, indent=2)
 
                             task_file.unlink()
                             tasks_cleaned += 1
-                            logger.info(f"Restored orphaned task to available pool: {task_id}")
+                            logger.info(
+                                f"Restored orphaned task to available pool: {task_id}"
+                            )
 
                     except Exception as e:
                         logger.error(f"Error processing task file {task_file}: {e}")
@@ -228,7 +237,7 @@ class A2AMonitor:
             stats_file = Path(A2A_BASE_DIR) / "logs" / "monitor_stats.json"
             stats_file.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(stats_file, 'w') as f:
+            with open(stats_file, "w") as f:
                 json.dump(self.stats, f, indent=2)
 
         except Exception as e:
@@ -245,33 +254,41 @@ class A2AMonitor:
             stale_agents = []
 
             for agent_id, agent_data in registry_data.items():
-                last_heartbeat = agent_data.get('last_heartbeat', 0)
+                last_heartbeat = agent_data.get("last_heartbeat", 0)
 
                 if current_time - last_heartbeat <= self.stale_threshold:
-                    active_agents.append({
-                        "agent_id": agent_id,
-                        "agent_type": agent_data.get('agent_type'),
-                        "status": agent_data.get('status'),
-                        "last_heartbeat": last_heartbeat,
-                        "heartbeat_age": current_time - last_heartbeat
-                    })
+                    active_agents.append(
+                        {
+                            "agent_id": agent_id,
+                            "agent_type": agent_data.get("agent_type"),
+                            "status": agent_data.get("status"),
+                            "last_heartbeat": last_heartbeat,
+                            "heartbeat_age": current_time - last_heartbeat,
+                        }
+                    )
                 else:
-                    stale_agents.append({
-                        "agent_id": agent_id,
-                        "last_heartbeat": last_heartbeat,
-                        "heartbeat_age": current_time - last_heartbeat
-                    })
+                    stale_agents.append(
+                        {
+                            "agent_id": agent_id,
+                            "last_heartbeat": last_heartbeat,
+                            "heartbeat_age": current_time - last_heartbeat,
+                        }
+                    )
 
             # Get task information
             available_tasks = self.task_pool.get_available_tasks()
 
             # Count claimed tasks
             claimed_dir = Path(A2A_BASE_DIR) / "tasks" / "claimed"
-            claimed_count = len(list(claimed_dir.glob("*.json"))) if claimed_dir.exists() else 0
+            claimed_count = (
+                len(list(claimed_dir.glob("*.json"))) if claimed_dir.exists() else 0
+            )
 
             # Count completed tasks
             completed_dir = Path(A2A_BASE_DIR) / "tasks" / "completed"
-            completed_count = len(list(completed_dir.glob("*.json"))) if completed_dir.exists() else 0
+            completed_count = (
+                len(list(completed_dir.glob("*.json"))) if completed_dir.exists() else 0
+            )
 
             return {
                 "timestamp": current_time,
@@ -280,26 +297,22 @@ class A2AMonitor:
                     "active": len(active_agents),
                     "stale": len(stale_agents),
                     "active_list": active_agents,
-                    "stale_list": stale_agents
+                    "stale_list": stale_agents,
                 },
                 "tasks": {
                     "available": len(available_tasks),
                     "claimed": claimed_count,
                     "completed": completed_count,
-                    "available_list": available_tasks
+                    "available_list": available_tasks,
                 },
                 "monitor_stats": self.stats.copy(),
                 "a2a_directory": A2A_BASE_DIR,
-                "health_status": "healthy" if len(stale_agents) == 0 else "warning"
+                "health_status": "healthy" if len(stale_agents) == 0 else "warning",
             }
 
         except Exception as e:
             logger.error(f"Error getting system health: {e}")
-            return {
-                "timestamp": time.time(),
-                "error": str(e),
-                "health_status": "error"
-            }
+            return {"timestamp": time.time(), "error": str(e), "health_status": "error"}
 
     def get_agent_status(self, agent_id: str) -> dict[str, Any | None]:
         """Get detailed status for specific agent"""
@@ -310,10 +323,10 @@ class A2AMonitor:
 
             agent_data = registry_data[agent_id].copy()
             current_time = time.time()
-            last_heartbeat = agent_data.get('last_heartbeat', 0)
+            last_heartbeat = agent_data.get("last_heartbeat", 0)
 
-            agent_data['heartbeat_age'] = current_time - last_heartbeat
-            agent_data['is_stale'] = agent_data['heartbeat_age'] > self.stale_threshold
+            agent_data["heartbeat_age"] = current_time - last_heartbeat
+            agent_data["is_stale"] = agent_data["heartbeat_age"] > self.stale_threshold
 
             # Check for agent's tasks
             claimed_dir = Path(A2A_BASE_DIR) / "tasks" / "claimed"
@@ -328,8 +341,8 @@ class A2AMonitor:
                     except Exception as e:
                         logger.error(f"Error reading task file {task_file}: {e}")
 
-            agent_data['current_tasks'] = agent_tasks
-            agent_data['task_count'] = len(agent_tasks)
+            agent_data["current_tasks"] = agent_tasks
+            agent_data["task_count"] = len(agent_tasks)
 
             return agent_data
 
@@ -348,7 +361,7 @@ class A2AMonitor:
         return {
             "agents_cleaned": agents_cleaned,
             "tasks_cleaned": tasks_cleaned,
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
 
 

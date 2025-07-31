@@ -68,14 +68,20 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
 
         # Verify all structured fields are parsed correctly
         structured = response.structured_response
-        assert structured.session_header == "Session 5: Into the Depths\nLevel 3 Rogue | HP: 25/30"
+        assert (
+            structured.session_header
+            == "Session 5: Into the Depths\nLevel 3 Rogue | HP: 25/30"
+        )
         # Check planning block is JSON with expected structure
         assert isinstance(structured.planning_block, dict)
         assert "thinking" in structured.planning_block
         assert "choices" in structured.planning_block
         assert "search_traps" in structured.planning_block["choices"]
         assert len(structured.planning_block["choices"]) == 3
-        assert structured.dice_rolls == ["Perception: 1d20+5 = 18", "Stealth: 1d20+8 = 22"]
+        assert structured.dice_rolls == [
+            "Perception: 1d20+5 = 18",
+            "Stealth: 1d20+8 = 22",
+        ]
         assert structured.resources == "HP: 25/30 | Spell Slots: 2/3 | Gold: 145"
         assert isinstance(structured.debug_info, dict)
         assert structured.debug_info["turn_number"] == 15
@@ -124,7 +130,11 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         # All fields should exist with empty values
         assert structured.session_header == ""
         # Empty planning block gets default structure
-        assert structured.planning_block == {"thinking": "", "context": "", "choices": {}}
+        assert structured.planning_block == {
+            "thinking": "",
+            "context": "",
+            "choices": {},
+        }
         assert structured.dice_rolls == []
         assert structured.resources == ""
         assert structured.debug_info == {}

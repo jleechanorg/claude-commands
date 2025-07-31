@@ -115,7 +115,7 @@ class TestSarielEntityDebug(unittest.TestCase):
             content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, 201)
+        assert response.status_code == 201
         campaign_id = response.get_json()["campaign_id"]
 
         # Get initial game state

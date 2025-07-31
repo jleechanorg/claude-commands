@@ -76,11 +76,11 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
 
         # Verify MCP error is properly translated to HTTP
-        self.assertEqual(response.status_code, 404)
+        assert response.status_code == 404
         response_data = json.loads(response.data)
-        self.assertIsInstance(response_data, dict)
-        self.assertIn("error", response_data)
-        self.assertIn("not found", response_data["error"].lower())
+        assert isinstance(response_data, dict)
+        assert "error" in response_data
+        assert "not found" in response_data["error"].lower()
 
     def test_mcp_missing_user_id_error(self):
         """Test MCP error handling for missing authentication."""
@@ -88,7 +88,7 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         response = self.client.get("/api/campaigns")
 
         # Should return authentication error through MCP
-        self.assertIn(response.status_code, [401, 403, 404, 500])
+        assert response.status_code in [401, 403, 404, 500]
 
     def test_mcp_invalid_request_format_error(self):
         """Test MCP error handling for invalid request format."""
@@ -101,7 +101,7 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
 
         # Should return error through MCP (400 or 500 acceptable)
-        self.assertIn(response.status_code, [400, 500])
+        assert response.status_code in [400, 500]
 
         # Try with missing required fields
         invalid_campaign_data = {"title": ""}  # Empty title should fail validation
@@ -113,9 +113,9 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
 
         # Should return validation error
-        self.assertIn(response.status_code, [400, 500])
+        assert response.status_code in [400, 500]
         response_data = json.loads(response.data)
-        self.assertIn("error", response_data)
+        assert "error" in response_data
 
     @patch("firebase_admin.firestore.client")
     def test_mcp_interaction_missing_campaign_error(self, mock_firestore_client):
@@ -138,9 +138,9 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
 
         # Should return campaign not found error through MCP
-        self.assertIn(response.status_code, [400, 404, 500])
+        assert response.status_code in [400, 404, 500]
         response_data = json.loads(response.data)
-        self.assertIn("error", response_data)
+        assert "error" in response_data
 
     @patch("firebase_admin.firestore.client")
     def test_mcp_interaction_invalid_mode_error(self, mock_firestore_client):
@@ -174,9 +174,9 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
 
         # Should handle invalid mode through MCP
-        self.assertIn(response.status_code, [200, 400, 404, 500])
+        assert response.status_code in [200, 400, 404, 500]
         response_data = json.loads(response.data)
-        self.assertIsInstance(response_data, dict)
+        assert isinstance(response_data, dict)
 
     @patch("firebase_admin.firestore.client")
     def test_mcp_update_campaign_not_found_error(self, mock_firestore_client):
@@ -195,9 +195,9 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
 
         # Should return not found error through MCP
-        self.assertIn(response.status_code, [400, 404, 500])
+        assert response.status_code in [400, 404, 500]
         response_data = json.loads(response.data)
-        self.assertIn("error", response_data)
+        assert "error" in response_data
 
     @patch("firebase_admin.firestore.client")
     def test_mcp_export_campaign_not_found_error(self, mock_firestore_client):
@@ -213,9 +213,9 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
 
         # Should return not found error through MCP
-        self.assertIn(response.status_code, [400, 404, 500])
+        assert response.status_code in [400, 404, 500]
         response_data = json.loads(response.data)
-        self.assertIn("error", response_data)
+        assert "error" in response_data
 
     @patch("firebase_admin.firestore.client")
     def test_mcp_export_invalid_format_error(self, mock_firestore_client):
@@ -241,9 +241,9 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
 
         # Should return validation error through MCP
-        self.assertIn(response.status_code, [400, 404, 500])
+        assert response.status_code in [400, 404, 500]
         response_data = json.loads(response.data)
-        self.assertIn("error", response_data)
+        assert "error" in response_data
 
     def test_mcp_http_method_not_allowed_error(self):
         """Test MCP error handling for unsupported HTTP methods."""
@@ -254,7 +254,7 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
 
         # Should return method not allowed
-        self.assertEqual(response.status_code, 405)
+        assert response.status_code == 405
 
         # Try PUT on interaction endpoint (not supported)
         response = self.client.put(
@@ -263,7 +263,7 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
 
         # Should return method not allowed
-        self.assertEqual(response.status_code, 405)
+        assert response.status_code == 405
 
     @patch("firebase_admin.firestore.client")
     def test_mcp_firestore_connection_error_simulation(self, mock_firestore_client):
@@ -275,11 +275,11 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         response = self.client.get("/api/campaigns", headers=self.test_headers)
 
         # Should return error through MCP (could be 200 with empty array or 500)
-        self.assertIn(response.status_code, [200, 500])
+        assert response.status_code in [200, 500]
         response_data = json.loads(response.data)
         if response.status_code == 500:
             # Check for error message in 500 case
-            self.assertTrue("error" in response_data or "message" in response_data)
+            assert "error" in response_data or "message" in response_data
 
     def test_mcp_missing_content_type_error(self):
         """Test MCP error handling for missing Content-Type header."""
@@ -293,7 +293,7 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
 
         # Should handle gracefully (Flask might auto-detect or return 400)
-        self.assertIn(response.status_code, [200, 201, 400, 415, 500])
+        assert response.status_code in [200, 201, 400, 415, 500]
 
     @patch("firebase_admin.firestore.client")
     def test_mcp_unauthorized_campaign_access_error(self, mock_firestore_client):
@@ -324,9 +324,9 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
 
         # Should return not found (for security - don't reveal existence)
-        self.assertEqual(response.status_code, 404)
+        assert response.status_code == 404
         response_data = json.loads(response.data)
-        self.assertIn("error", response_data)
+        assert "error" in response_data
 
     def test_mcp_error_response_format_consistency(self):
         """Test that all MCP error responses have consistent format."""
@@ -336,11 +336,11 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         response = self.client.get("/api/campaigns")
         if response.status_code >= 400:
             response_data = json.loads(response.data)
-            self.assertIsInstance(response_data, dict)
+            assert isinstance(response_data, dict)
             # Flask auth returns "message" field, not "error" field
-            self.assertTrue("error" in response_data or "message" in response_data)
+            assert "error" in response_data or "message" in response_data
             error_msg = response_data.get("error") or response_data.get("message")
-            self.assertIsInstance(error_msg, str)
+            assert isinstance(error_msg, str)
 
         # Invalid campaign ID
         response = self.client.get(
@@ -349,11 +349,11 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
         if response.status_code >= 400:
             response_data = json.loads(response.data)
-            self.assertIsInstance(response_data, dict)
+            assert isinstance(response_data, dict)
             # Either "error" or "message" field is acceptable
-            self.assertTrue("error" in response_data or "message" in response_data)
+            assert "error" in response_data or "message" in response_data
             error_msg = response_data.get("error") or response_data.get("message")
-            self.assertIsInstance(error_msg, str)
+            assert isinstance(error_msg, str)
 
         # Malformed JSON
         response = self.client.post(
@@ -364,11 +364,11 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
         if response.status_code >= 400:
             response_data = json.loads(response.data)
-            self.assertIsInstance(response_data, dict)
+            assert isinstance(response_data, dict)
             # Either "error" or "message" field is acceptable
-            self.assertTrue("error" in response_data or "message" in response_data)
+            assert "error" in response_data or "message" in response_data
             error_msg = response_data.get("error") or response_data.get("message")
-            self.assertIsInstance(error_msg, str)
+            assert isinstance(error_msg, str)
 
 
 if __name__ == "__main__":

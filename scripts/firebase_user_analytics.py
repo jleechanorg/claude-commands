@@ -205,7 +205,6 @@ def generate_report(user_analytics):
 def export_to_csv(user_analytics, filename="firebase_user_analytics.csv"):
     """Export analytics data to CSV file."""
 
-
     # Sort by total activity
     sorted_users = sorted(
         user_analytics,
@@ -280,7 +279,6 @@ def main():
 
     except Exception as e:
         print(f"❌ Error: {e}")
-
 
         traceback.print_exc()
         sys.exit(1)

@@ -69,9 +69,7 @@ class NarrativeResponse:
         if not isinstance(narrative, str):
             raise ValueError("Narrative must be a string")
 
-        cleaned = narrative.strip()
-
-        return cleaned
+        return narrative.strip()
 
     def _validate_entities(self, entities: list[str]) -> list[str]:
         """Validate and clean entity list"""
@@ -246,9 +244,7 @@ class NarrativeResponse:
         validated["choices"] = validated_choices
 
         # Security check - sanitize any HTML/script content
-        validated = self._sanitize_planning_block_content(validated)
-
-        return validated
+        return self._sanitize_planning_block_content(validated)
 
     def _sanitize_planning_block_content(
         self, planning_block: dict[str, Any]
@@ -722,8 +718,8 @@ def validate_entity_coverage(
     Returns:
         Dict with validation results
     """
-    mentioned_entities = set(entity.lower() for entity in response.entities_mentioned)
-    expected_entities_lower = set(entity.lower() for entity in expected_entities)
+    mentioned_entities = {entity.lower() for entity in response.entities_mentioned}
+    expected_entities_lower = {entity.lower() for entity in expected_entities}
 
     missing_entities = expected_entities_lower - mentioned_entities
     extra_entities = mentioned_entities - expected_entities_lower

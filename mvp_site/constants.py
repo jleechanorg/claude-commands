@@ -26,7 +26,7 @@ GEMINI_MODEL_MAPPING = {
 }
 
 # Debug mode settings
-DEFAULT_DEBUG_MODE = False
+DEFAULT_DEBUG_MODE = True
 ALLOWED_DEBUG_MODE_VALUES = [True, False]
 
 

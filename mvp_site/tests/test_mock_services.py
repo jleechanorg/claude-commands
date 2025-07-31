@@ -72,7 +72,7 @@ class TestMockServices(unittest.TestCase):
         # In MCP architecture, the response format depends on server availability
         # If successful, should be proper campaigns format
         if response.status_code == 200:
-            assert isinstance(data, (list, dict)), "Response should be list or dict"
+            assert isinstance(data, list | dict), "Response should be list or dict"
             # In the new MCP architecture, campaigns might be wrapped in a dict
 
     def test_create_campaign_with_mcp(self):

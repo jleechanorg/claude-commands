@@ -76,9 +76,8 @@ def main():
 
     # Check if test server is running
 
-
     try:
-        response = requests.get("http://localhost:8086", timeout=2)
+        requests.get("http://localhost:8086", timeout=2)
         print("✅ Test server is running on port 8086")
     except:
         print("⚠️  WARNING: Test server not responding at http://localhost:8086")

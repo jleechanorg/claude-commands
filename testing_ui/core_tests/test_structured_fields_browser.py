@@ -264,7 +264,7 @@ class StructuredFieldsTest(BrowserTestBase):
                         break
 
                 # Navigate wizard - try different approaches
-                for i in range(5):
+                for _i in range(5):
                     # Check for various next/continue buttons
                     next_selectors = [
                         "#wizard-next",

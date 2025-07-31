@@ -11,11 +11,11 @@ from datetime import datetime
 from message_broker import MessageBroker, MessageType, TaskMessage
 
 try:
-
     print("✅ Imports successful")
 except Exception as e:
     print(f"❌ Import failed: {e}")
     sys.exit(1)
+
 
 def main():
     agent_id = sys.argv[1] if len(sys.argv) > 1 else "debug-worker"
@@ -48,20 +48,27 @@ def main():
                     print(f"Task ID: {msg_dict.get('id')}")
 
                     # Process if it's a task
-                    if msg_dict.get('type') in ['task_assignment', MessageType.TASK_ASSIGNMENT.value]:
-                        payload = msg_dict.get('payload', {})
-                        task_desc = payload.get('description', 'unknown')
-                        task_id = msg_dict.get('id', 'no-id')
-                        print(f"Processing task '{task_desc}' (ID: {task_id}) from queue:queue:{agent_id}")
+                    if msg_dict.get("type") in [
+                        "task_assignment",
+                        MessageType.TASK_ASSIGNMENT.value,
+                    ]:
+                        payload = msg_dict.get("payload", {})
+                        task_desc = payload.get("description", "unknown")
+                        task_id = msg_dict.get("id", "no-id")
+                        print(
+                            f"Processing task '{task_desc}' (ID: {task_id}) from queue:queue:{agent_id}"
+                        )
 
                         # Create result
                         result = {
-                            "task_id": msg_dict.get('id'),
-                            "original_task_id": payload.get('task_id', msg_dict.get('id')),
+                            "task_id": msg_dict.get("id"),
+                            "original_task_id": payload.get(
+                                "task_id", msg_dict.get("id")
+                            ),
                             "status": "completed",
                             "result": f"Processed by {agent_id}: {payload.get('description')}",
                             "processed_by": agent_id,
-                            "timestamp": datetime.now().isoformat()
+                            "timestamp": datetime.now().isoformat(),
                         }
 
                         # Send result back
@@ -69,17 +76,17 @@ def main():
                             id=f"result_{int(time.time())}",
                             type=MessageType.TASK_RESULT,
                             from_agent=agent_id,
-                            to_agent=msg_dict.get('from_agent'),
+                            to_agent=msg_dict.get("from_agent"),
                             timestamp=datetime.now().isoformat(),
-                            payload=result
+                            payload=result,
                         )
 
                         result_dict = asdict(result_msg)
-                        result_dict['type'] = result_msg.type.value
+                        result_dict["type"] = result_msg.type.value
 
                         broker.redis_client.lpush(
                             f"queue:{msg_dict.get('from_agent')}",
-                            json.dumps(result_dict)
+                            json.dumps(result_dict),
                         )
 
                         print(f"✅ Sent result back to {msg_dict.get('from_agent')}")
@@ -100,6 +107,7 @@ def main():
         print(f"\n❌ Fatal error: {e}")
 
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     main()

@@ -167,7 +167,7 @@ class NarrativeSyncValidator:
         issues = []
 
         # Extract current physical states
-        current_physical = self._extract_physical_states(narrative)
+        self._extract_physical_states(narrative)
 
         # Check if previously noted physical states are maintained
         for entity, context in previous_states.items():

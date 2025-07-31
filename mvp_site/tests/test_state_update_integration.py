@@ -136,7 +136,7 @@ class TestStateUpdateIntegration(unittest.TestCase):
 
         # Should handle malformed state updates gracefully
         state_updates = parsed_response.get("state_updates", {})
-        assert isinstance(state_updates, (dict, type(None)))
+        assert isinstance(state_updates, dict | type(None))
 
     def test_gemini_service_state_update_processing(self):
         """Test that Gemini service properly processes state updates"""
@@ -190,14 +190,23 @@ class TestStateUpdateIntegration(unittest.TestCase):
 
         # Parse first response
         parsed_first = parse_structured_response(json.dumps(first_response))
-        assert parsed_first["state_updates"]["npc_data"]["orc_warrior"]["status"] == "wounded"
+        assert (
+            parsed_first["state_updates"]["npc_data"]["orc_warrior"]["status"]
+            == "wounded"
+        )
 
         # Parse second response
         parsed_second = parse_structured_response(json.dumps(second_response))
-        assert parsed_second["state_updates"]["npc_data"]["orc_warrior"]["status"] == "dead"
+        assert (
+            parsed_second["state_updates"]["npc_data"]["orc_warrior"]["status"]
+            == "dead"
+        )
 
         # Verify states are different (proving progression)
-        assert parsed_first["state_updates"]["npc_data"]["orc_warrior"]["status"] != parsed_second["state_updates"]["npc_data"]["orc_warrior"]["status"]
+        assert (
+            parsed_first["state_updates"]["npc_data"]["orc_warrior"]["status"]
+            != parsed_second["state_updates"]["npc_data"]["orc_warrior"]["status"]
+        )
 
     def test_state_update_field_completeness(self):
         """Test that all expected state update fields are present"""

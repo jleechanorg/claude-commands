@@ -31,15 +31,25 @@ class TestUserScenarioFixValidation(unittest.TestCase):
         )
 
         # PRIMARY VALIDATION: No raw JSON in output
-        assert '"god_mode_response":' not in narrative_text, "User should never see raw JSON keys"
-        assert '"narrative":' not in narrative_text, "User should never see raw JSON keys"
-        assert '"state_updates":' not in narrative_text, "User should never see raw JSON keys"
+        assert (
+            '"god_mode_response":' not in narrative_text
+        ), "User should never see raw JSON keys"
+        assert (
+            '"narrative":' not in narrative_text
+        ), "User should never see raw JSON keys"
+        assert (
+            '"state_updates":' not in narrative_text
+        ), "User should never see raw JSON keys"
         assert '{"' not in narrative_text, "User should never see JSON structure"
 
         # SECONDARY VALIDATION: Should get clean, readable content
         expected_content = "The ancient artifact pulses with power as you grasp it"
-        assert expected_content in narrative_text, "User should see the actual god mode response content"
-        assert "Reality bends to your will" in narrative_text, "User should see complete god mode response"
+        assert (
+            expected_content in narrative_text
+        ), "User should see the actual god mode response content"
+        assert (
+            "Reality bends to your will" in narrative_text
+        ), "User should see complete god mode response"
 
         # TERTIARY VALIDATION: Structured data should be preserved
         assert structured_response is not None
@@ -84,14 +94,22 @@ class TestUserScenarioFixValidation(unittest.TestCase):
                 )
 
                 # Should never return raw JSON structure
-                assert '"god_mode_response":' not in narrative_text, f"Scenario '{scenario_name}' returned raw JSON"
-                assert '"narrative":' not in narrative_text, f"Scenario '{scenario_name}' returned raw JSON"
+                assert (
+                    '"god_mode_response":' not in narrative_text
+                ), f"Scenario '{scenario_name}' returned raw JSON"
+                assert (
+                    '"narrative":' not in narrative_text
+                ), f"Scenario '{scenario_name}' returned raw JSON"
 
                 # Should have some readable content (not empty)
-                assert len(narrative_text.strip()) > 0, f"Scenario '{scenario_name}' returned empty result"
+                assert (
+                    len(narrative_text.strip()) > 0
+                ), f"Scenario '{scenario_name}' returned empty result"
 
                 # Content should be readable text, not JSON
-                assert not narrative_text.strip().startswith("{"), f"Scenario '{scenario_name}' starts with JSON brace"
+                assert not narrative_text.strip().startswith(
+                    "{"
+                ), f"Scenario '{scenario_name}' starts with JSON brace"
 
     def test_normal_god_mode_still_works(self):
         """Ensure normal god mode responses still work correctly."""

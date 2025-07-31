@@ -60,7 +60,7 @@ class MultiCampaignTest(BrowserTestBase):
 
                         # Click through wizard
                         print(f"   📝 Navigating wizard for {campaign_name}...")
-                        for j in range(4):
+                        for _j in range(4):
                             if page.is_visible("#wizard-next"):
                                 page.click("#wizard-next")
                                 page.wait_for_timeout(1000)

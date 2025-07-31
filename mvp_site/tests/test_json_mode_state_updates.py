@@ -39,7 +39,6 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         }
 
         raw_response = json.dumps(json_response)
-        expected_entities = ["Drake", "goblin"]
 
         # Process the response using new API
         gemini_response = GeminiResponse.create(raw_response)
@@ -58,8 +57,14 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         # Check that state updates are in the structured response
         assert structured_response is not None
         assert structured_response.state_updates is not None
-        assert structured_response.state_updates["npc_data"]["goblin_001"]["hp_current"] == 0
-        assert structured_response.state_updates["player_character_data"]["xp_current"] == 150
+        assert (
+            structured_response.state_updates["npc_data"]["goblin_001"]["hp_current"]
+            == 0
+        )
+        assert (
+            structured_response.state_updates["player_character_data"]["xp_current"]
+            == 150
+        )
 
         print("✅ JSON response with state updates properly converted")
 
@@ -73,12 +78,10 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         }
 
         raw_response = json.dumps(json_response)
-        expected_entities = ["Drake"]
 
         # Process the response using new API
         gemini_response = GeminiResponse.create(raw_response)
         result = gemini_response.narrative_text
-        structured_response = gemini_response.structured_response
 
         # Check that narrative is included
         assert "Drake explores the peaceful forest" in result
@@ -99,12 +102,10 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         }
 
         raw_response = json.dumps(json_response)
-        expected_entities = []
 
         # Process the response using new API
         gemini_response = GeminiResponse.create(raw_response)
         result = gemini_response.narrative_text
-        structured_response = gemini_response.structured_response
 
         # Check that narrative is included
         assert "The scene is quiet" in result

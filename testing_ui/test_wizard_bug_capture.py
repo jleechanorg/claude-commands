@@ -40,7 +40,7 @@ def main():
 
             # Navigate to preview (step 4)
             print("📍 Navigating to preview step...")
-            for i in range(3):
+            for _i in range(3):
                 page.click("button:has-text('Next')")
                 page.wait_for_timeout(500)
 

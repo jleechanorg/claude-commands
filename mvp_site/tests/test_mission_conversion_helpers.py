@@ -9,6 +9,7 @@ sys.path.insert(
 import unittest
 
 import logging_util
+
 from firestore_service import update_state_with_changes
 
 
@@ -93,7 +94,9 @@ class TestMissionConversionHelpers(unittest.TestCase):
         assert mission["progress"] == 100  # Updated
 
         # Check logging
-        assert any("Updating existing mission: quest_1" in msg for msg in self.log_messages)
+        assert any(
+            "Updating existing mission: quest_1" in msg for msg in self.log_messages
+        )
 
     def test_missions_dict_with_invalid_mission_data(self):
         """Test handling invalid mission data (non-dict values)."""
@@ -156,7 +159,9 @@ class TestMissionConversionHelpers(unittest.TestCase):
         assert len(missions) == 0
 
         # Check error logging
-        assert any("Cannot convert str to mission list" in msg for msg in self.log_messages)
+        assert any(
+            "Cannot convert str to mission list" in msg for msg in self.log_messages
+        )
 
     def test_missions_initialization_when_missing(self):
         """Test that active_missions is initialized when missing."""

@@ -305,11 +305,6 @@ class CampaignTimingAutomatedTests(unittest.TestCase):
         print("🎯 Verifying timing threshold enforcement...")
 
         # This test ensures our thresholds are correctly configured
-        expected_thresholds = {
-            "form_submission_max_ms": 10,
-            "critical_path_max_ms": 50,
-            "backend_call_max_ms": 100,
-        }
 
         # Read the JavaScript test file to verify thresholds are set correctly
         test_file_path = (
@@ -319,24 +314,21 @@ class CampaignTimingAutomatedTests(unittest.TestCase):
             / "test_campaign_wizard_timing.js"
         )
 
-        self.assertTrue(
-            test_file_path.exists(),
-            f"JavaScript timing test file not found: {test_file_path}",
-        )
+        assert (
+            test_file_path.exists()
+        ), f"JavaScript timing test file not found: {test_file_path}"
 
         with open(test_file_path) as f:
             test_content = f.read()
 
         # Verify critical timing thresholds are defined
-        self.assertIn(
-            "maxAllowedDelay = 10",
-            test_content,
-            "Form submission 10ms threshold not found",
-        )
+        assert (
+            "maxAllowedDelay = 10" in test_content
+        ), "Form submission 10ms threshold not found"
 
-        self.assertIn("50", test_content, "Critical path timing threshold missing")
+        assert "50" in test_content, "Critical path timing threshold missing"
 
-        self.assertIn("100", test_content, "Backend call timing threshold missing")
+        assert "100" in test_content, "Backend call timing threshold missing"
 
         print("✅ Timing thresholds correctly configured")
 

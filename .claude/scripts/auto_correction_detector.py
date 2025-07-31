@@ -305,7 +305,7 @@ class AutoCorrectionPipeline:
 
 def test_correction_detection():
     """Test the correction detection system"""
-    detector = CorrectionDetector()
+    CorrectionDetector()
     pipeline = AutoCorrectionPipeline()
 
     test_messages = [

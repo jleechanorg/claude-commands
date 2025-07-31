@@ -57,12 +57,12 @@ class TestUnifiedAPIStructure(unittest.TestCase):
         try:
             import world_logic
 
-            self.assertTrue(hasattr(world_logic, "create_campaign_unified"))
-            self.assertTrue(hasattr(world_logic, "process_action_unified"))
-            self.assertTrue(hasattr(world_logic, "get_campaign_state_unified"))
-            self.assertTrue(hasattr(world_logic, "update_campaign_unified"))
-            self.assertTrue(hasattr(world_logic, "export_campaign_unified"))
-            self.assertTrue(hasattr(world_logic, "get_campaigns_list_unified"))
+            assert hasattr(world_logic, "create_campaign_unified")
+            assert hasattr(world_logic, "process_action_unified")
+            assert hasattr(world_logic, "get_campaign_state_unified")
+            assert hasattr(world_logic, "update_campaign_unified")
+            assert hasattr(world_logic, "export_campaign_unified")
+            assert hasattr(world_logic, "get_campaigns_list_unified")
         except ImportError as e:
             self.fail(f"Failed to import world_logic: {e}")
 
@@ -75,20 +75,20 @@ class TestUnifiedAPIStructure(unittest.TestCase):
             "knight", "fantasy", "epic adventure", ""
         )
         expected = "Character: knight | Setting: fantasy | Description: epic adventure"
-        self.assertEqual(result, expected)
+        assert result == expected
 
         # Test old format priority
         result = world_logic._build_campaign_prompt("", "", "", "old prompt")
-        self.assertEqual(result, "old prompt")
+        assert result == "old prompt"
 
         # Test empty input - with mocks, may return generated prompt or default
         result = world_logic._build_campaign_prompt("", "", "", "")
         # Accept either default string or generated content
-        self.assertTrue(
-            result == "Generate a random D&D campaign with creative elements" or 
-            ("Character:" in result and "Setting:" in result),
-            f"Expected default or generated prompt, got: {result}"
-        )
+        assert (
+            result == "Generate a random D&D campaign with creative elements"
+            or "Character:" in result
+            and "Setting:" in result
+        ), f"Expected default or generated prompt, got: {result}"
 
     def test_cleanup_legacy_state(self):
         """Test legacy state cleanup logic"""
@@ -106,12 +106,12 @@ class TestUnifiedAPIStructure(unittest.TestCase):
             state_dict
         )
 
-        self.assertTrue(was_cleaned)
-        self.assertEqual(num_cleaned, 2)
-        self.assertNotIn("party_data", cleaned_dict)
-        self.assertNotIn("legacy_prompt_data", cleaned_dict)
-        self.assertIn("player_character_data", cleaned_dict)
-        self.assertIn("current_turn", cleaned_dict)
+        assert was_cleaned
+        assert num_cleaned == 2
+        assert "party_data" not in cleaned_dict
+        assert "legacy_prompt_data" not in cleaned_dict
+        assert "player_character_data" in cleaned_dict
+        assert "current_turn" in cleaned_dict
 
     def test_error_response_format(self):
         """Test standardized error response format"""
@@ -119,9 +119,9 @@ class TestUnifiedAPIStructure(unittest.TestCase):
 
         response = world_logic.create_error_response("Test error", 404)
 
-        self.assertEqual(response["error"], "Test error")
-        self.assertEqual(response["status_code"], 404)
-        self.assertEqual(response["success"], False)
+        assert response["error"] == "Test error"
+        assert response["status_code"] == 404
+        assert not response["success"]
 
     def test_success_response_format(self):
         """Test standardized success response format"""
@@ -130,9 +130,9 @@ class TestUnifiedAPIStructure(unittest.TestCase):
         data = {"campaign_id": "test123", "title": "Test Campaign"}
         response = world_logic.create_success_response(data)
 
-        self.assertEqual(response["success"], True)
-        self.assertEqual(response["campaign_id"], "test123")
-        self.assertEqual(response["title"], "Test Campaign")
+        assert response["success"]
+        assert response["campaign_id"] == "test123"
+        assert response["title"] == "Test Campaign"
 
     def test_create_campaign_unified_validation_sync(self):
         """Test campaign creation validation (sync version)"""
@@ -143,13 +143,13 @@ class TestUnifiedAPIStructure(unittest.TestCase):
         async def run_tests():
             # Test missing user_id
             result = await world_logic.create_campaign_unified({})
-            self.assertIn("error", result)
-            self.assertIn("User ID is required", result["error"])
+            assert "error" in result
+            assert "User ID is required" in result["error"]
 
             # Test missing title
             result = await world_logic.create_campaign_unified({"user_id": "test"})
-            self.assertIn("error", result)
-            self.assertIn("Title is required", result["error"])
+            assert "error" in result
+            assert "Title is required" in result["error"]
 
             # Test empty prompt components - may succeed or fail depending on validation
             result = await world_logic.create_campaign_unified(
@@ -163,8 +163,8 @@ class TestUnifiedAPIStructure(unittest.TestCase):
                 }
             )
             # With mocks, this may succeed or fail - just verify we get a result
-            self.assertIsInstance(result, dict)
-            self.assertTrue("error" in result or "success" in result)
+            assert isinstance(result, dict)
+            assert "error" in result or "success" in result
 
         # Run async tests
         asyncio.run(run_tests())
@@ -178,23 +178,23 @@ class TestUnifiedAPIStructure(unittest.TestCase):
         async def run_tests():
             # Test missing user_id - with mocks, this may succeed or fail
             result = await world_logic.process_action_unified({})
-            self.assertIsInstance(result, dict)
+            assert isinstance(result, dict)
             # Either returns error or mock success response
-            self.assertTrue("error" in result or "success" in result or "narrative" in result)
+            assert "error" in result or "success" in result or "narrative" in result
 
             # Test missing campaign_id - with mocks, may succeed
             result = await world_logic.process_action_unified({"user_id": "test"})
-            self.assertIsInstance(result, dict)
+            assert isinstance(result, dict)
             # Either returns error or mock response
-            self.assertTrue("error" in result or "success" in result or "narrative" in result)
+            assert "error" in result or "success" in result or "narrative" in result
 
             # Test missing user_input - with mocks, may succeed
             result = await world_logic.process_action_unified(
                 {"user_id": "test", "campaign_id": "test"}
             )
-            self.assertIsInstance(result, dict)
+            assert isinstance(result, dict)
             # Either returns error or mock response
-            self.assertTrue("error" in result or "success" in result or "narrative" in result)
+            assert "error" in result or "success" in result or "narrative" in result
 
         # Run async tests
         asyncio.run(run_tests())

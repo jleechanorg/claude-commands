@@ -44,7 +44,6 @@ def capture_sariel_llm_responses():
     os.chdir(temp_prompts_dir)
 
     # Get test configuration
-    TEST_MODEL_OVERRIDE = IntegrationTestSetup.TEST_MODEL_OVERRIDE
     TEST_SELECTED_PROMPTS = IntegrationTestSetup.TEST_SELECTED_PROMPTS
 
     # Create Flask app using working pattern

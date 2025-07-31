@@ -7,10 +7,12 @@ from unittest.mock import Mock, patch
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-import gemini_service
-from game_state import GameState
+import pytest
 from gemini_response import GeminiResponse
 from narrative_response_schema import parse_structured_response
+
+import gemini_service
+from game_state import GameState
 
 
 class TestJSONOnlyMode(unittest.TestCase):
@@ -19,14 +21,14 @@ class TestJSONOnlyMode(unittest.TestCase):
     def test_parse_llm_response_for_state_changes_should_not_exist(self):
         """Test that the regex parsing function should not exist"""
         # This function should be removed
-        with self.assertRaises(AttributeError):
+        with pytest.raises(AttributeError):
             gemini_service.parse_llm_response_for_state_changes("any text")
 
     def test_all_gemini_calls_must_use_json_mode(self):
         """Test that all Gemini API calls enforce JSON mode"""
         with patch("gemini_service.get_client") as mock_get_client:
             mock_client = Mock()
-            mock_model = Mock()
+            Mock()
             mock_get_client.return_value = mock_client
             mock_client.models = Mock()
             mock_client.models.generate_content = Mock(
@@ -128,7 +130,9 @@ class TestJSONOnlyMode(unittest.TestCase):
                         call_args = mock_client.models.generate_content.call_args
                         if "generation_config" in call_args[1]:
                             config = call_args[1]["generation_config"]
-                            assert config.response_mime_type == "application/json", f"{test_name} should use JSON mode"
+                            assert (
+                                config.response_mime_type == "application/json"
+                            ), f"{test_name} should use JSON mode"
 
     def test_robust_json_parser_is_only_fallback(self):
         """Test that robust JSON parser is the only fallback for malformed JSON"""
@@ -145,7 +149,6 @@ class TestJSONOnlyMode(unittest.TestCase):
     def test_strip_functions_dont_affect_state_parsing(self):
         """Test that strip functions are only for display, not state extraction"""
 
-        strip_debug_content = GeminiResponse._strip_debug_content
         strip_state_updates_only = GeminiResponse._strip_state_updates_only
 
         text_with_state_block = """Story text.
@@ -162,15 +165,14 @@ class TestJSONOnlyMode(unittest.TestCase):
 
     def test_error_on_missing_structured_response(self):
         """Test that system logs error when structured response is missing"""
-        with patch("logging.error") as mock_log_error:
-            response = GeminiResponse(
+        with patch("logging.error"):
+            GeminiResponse(
                 narrative_text="Story without JSON",
                 structured_response=None,
                 debug_tags_present={},
             )
 
             # Accessing state_updates on response without structured_response
-            state_updates = response.state_updates
 
             # Should log error or warning about missing structured response
             # (This test will fail until we implement the logging)

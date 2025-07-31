@@ -82,7 +82,7 @@ def get_memory_summary():
         return "Error reading memory file."
 
     entities = memory.get("entities", {})
-    stats = memory.get("stats", {})
+    memory.get("stats", {})
 
     corrections = [e for e in entities.values() if e.get("type") == "user_correction"]
     observations = [

@@ -81,7 +81,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         response_text = "Normal story response without planning block"
 
         # Call the function
-        result = _validate_and_enforce_planning_block(
+        _validate_and_enforce_planning_block(
             response_text,
             "test input",
             self.game_state,
@@ -96,7 +96,10 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         )
 
         # Verify API response logging was called
-        assert any("🔍 PLANNING_BLOCK_PROMPT:" in str(call) for call in mock_logging.info.call_args_list)
+        assert any(
+            "🔍 PLANNING_BLOCK_PROMPT:" in str(call)
+            for call in mock_logging.info.call_args_list
+        )
 
     @patch("gemini_service.logging_util")
     @patch("gemini_service._call_gemini_api")
@@ -149,7 +152,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         response_text = "Story without planning block"
 
         # Call the function
-        result = _validate_and_enforce_planning_block(
+        _validate_and_enforce_planning_block(
             response_text,
             "test input",
             self.game_state,
@@ -182,7 +185,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         response_text = "Story without planning block"
 
         # Call the function
-        result = _validate_and_enforce_planning_block(
+        _validate_and_enforce_planning_block(
             response_text,
             "test input",
             self.game_state,
@@ -216,7 +219,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         response_text = "Story without planning block"
 
         # Call the function - should handle exception gracefully
-        result = _validate_and_enforce_planning_block(
+        _validate_and_enforce_planning_block(
             response_text,
             "test input",
             self.game_state,
@@ -262,7 +265,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         response_text = "Story without planning block"
 
         # Call the function
-        result = _validate_and_enforce_planning_block(
+        _validate_and_enforce_planning_block(
             response_text,
             "test input",
             self.game_state,
@@ -298,7 +301,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         response_text = "Story without planning block"
 
         # Call the function
-        result = _validate_and_enforce_planning_block(
+        _validate_and_enforce_planning_block(
             response_text,
             "test input",
             self.game_state,

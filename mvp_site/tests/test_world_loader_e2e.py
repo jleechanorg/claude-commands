@@ -157,7 +157,7 @@ class TestWorldLoaderE2E(unittest.TestCase):
     def test_world_loader_handles_missing_files_gracefully(self):
         """Test that world_loader handles missing files without breaking cache."""
         # This tests the error handling path
-        initial_stats = get_cache_stats()
+        get_cache_stats()
 
         # load_banned_names should handle missing file gracefully
         try:
@@ -196,7 +196,9 @@ class TestWorldLoaderE2E(unittest.TestCase):
 
         # Check cache is working effectively
         final_stats = get_cache_stats()
-        assert final_stats["cache_hits"] >= 2  # At least 2 hits for content2 and content3
+        assert (
+            final_stats["cache_hits"] >= 2
+        )  # At least 2 hits for content2 and content3
 
 
 class TestWorldLoaderCacheIntegration(unittest.TestCase):

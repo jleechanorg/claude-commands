@@ -3,6 +3,8 @@
 Test script to create some sample data in Firebase and then run analytics.
 """
 
+import builtins
+import contextlib
 import os
 import sys
 import traceback
@@ -152,10 +154,8 @@ def cleanup_test_data(db):
             campaign.reference.delete()
 
         # User document might not exist, but try to delete anyway
-        try:
+        with contextlib.suppress(builtins.BaseException):
             user_ref.delete()
-        except:
-            pass
 
     print("✅ Test data cleaned up!")
 
@@ -177,7 +177,6 @@ def main():
         # Import and run the analytics
         sys.path.append(os.path.dirname(__file__))
 
-
         # Run the analytics
         firebase_user_analytics.main()
 
@@ -190,7 +189,6 @@ def main():
 
     except Exception as e:
         print(f"❌ Error: {e}")
-
 
         traceback.print_exc()
 

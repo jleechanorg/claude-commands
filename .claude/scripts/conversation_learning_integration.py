@@ -54,7 +54,7 @@ class ConversationLearningSystem:
         from auto_correction_detector import CorrectionDetector
         from memory_auto_integration import AutoCorrectionProcessor
 
-        detector = CorrectionDetector()
+        CorrectionDetector()
         processor = AutoCorrectionProcessor()
 
         # Update session

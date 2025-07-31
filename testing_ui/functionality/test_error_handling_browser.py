@@ -143,7 +143,7 @@ class ErrorHandlingTest(BrowserTestBase):
 
             # Complete campaign creation to get to game view
             if page.is_visible("#wizard-next"):
-                for i in range(4):
+                for _i in range(4):
                     if page.is_visible("#wizard-next"):
                         page.click("#wizard-next")
                         page.wait_for_timeout(1000)

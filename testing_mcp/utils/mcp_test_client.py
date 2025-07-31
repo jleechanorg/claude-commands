@@ -20,7 +20,9 @@ class MCPTestClient:
     """Test client for MCP protocol communication."""
 
     def __init__(self, server_url: str = None, timeout: int = 30):
-        self.server_url = server_url or os.environ.get("MCP_SERVER_URL", "http://localhost:8000")
+        self.server_url = server_url or os.environ.get(
+            "MCP_SERVER_URL", "http://localhost:8000"
+        )
         self.timeout = timeout
         self.session = None
         self.call_id = 0
@@ -66,7 +68,9 @@ class MCPTestClient:
             self.call_id += 1
             return self.call_id
 
-    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    async def call_tool(
+        self, tool_name: str, arguments: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Call an MCP tool using JSON-RPC 2.0 protocol.
 
@@ -80,18 +84,15 @@ class MCPTestClient:
         payload = {
             "jsonrpc": "2.0",
             "method": "tools/call",
-            "params": {
-                "name": tool_name,
-                "arguments": arguments
-            },
-            "id": self._next_call_id()
+            "params": {"name": tool_name, "arguments": arguments},
+            "id": self._next_call_id(),
         }
 
         try:
             response = await self.session.post(
                 f"{self.server_url}/mcp",
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             )
             response.raise_for_status()
 
@@ -103,7 +104,7 @@ class MCPTestClient:
                 raise MCPError(
                     error.get("code", -1),
                     error.get("message", "Unknown error"),
-                    error.get("data")
+                    error.get("data"),
                 )
 
             return data.get("result", {})
@@ -131,17 +132,15 @@ class MCPTestClient:
         payload = {
             "jsonrpc": "2.0",
             "method": "resources/read",
-            "params": {
-                "uri": resource_uri
-            },
-            "id": self._next_call_id()
+            "params": {"uri": resource_uri},
+            "id": self._next_call_id(),
         }
 
         try:
             response = await self.session.post(
                 f"{self.server_url}/mcp",
                 json=payload,
-                headers={"Content-Type": "application/json"}
+                headers={"Content-Type": "application/json"},
             )
             response.raise_for_status()
 
@@ -152,7 +151,7 @@ class MCPTestClient:
                 raise MCPError(
                     error.get("code", -1),
                     error.get("message", "Unknown error"),
-                    error.get("data")
+                    error.get("data"),
                 )
 
             return data.get("result", {})
@@ -173,13 +172,10 @@ class MCPTestClient:
             "jsonrpc": "2.0",
             "method": "tools/list",
             "params": {},
-            "id": self._next_call_id()
+            "id": self._next_call_id(),
         }
 
-        response = await self.session.post(
-            f"{self.server_url}/mcp",
-            json=payload
-        )
+        response = await self.session.post(f"{self.server_url}/mcp", json=payload)
         response.raise_for_status()
 
         data = response.json()
@@ -191,13 +187,10 @@ class MCPTestClient:
             "jsonrpc": "2.0",
             "method": "resources/list",
             "params": {},
-            "id": self._next_call_id()
+            "id": self._next_call_id(),
         }
 
-        response = await self.session.post(
-            f"{self.server_url}/mcp",
-            json=payload
-        )
+        response = await self.session.post(f"{self.server_url}/mcp", json=payload)
         response.raise_for_status()
 
         data = response.json()
@@ -220,74 +213,82 @@ class WorldArchitectMCPClient(MCPTestClient):
     Provides convenience methods for common game operations.
     """
 
-    async def create_campaign(self, name: str, description: str, user_id: str) -> dict[str, Any]:
+    async def create_campaign(
+        self, name: str, description: str, user_id: str
+    ) -> dict[str, Any]:
         """Create a new campaign."""
-        return await self.call_tool("create_campaign", {
-            "name": name,
-            "description": description,
-            "user_id": user_id
-        })
+        return await self.call_tool(
+            "create_campaign",
+            {"name": name, "description": description, "user_id": user_id},
+        )
 
     async def get_campaigns(self, user_id: str) -> dict[str, Any]:
         """Get all campaigns for a user."""
-        return await self.call_tool("get_campaigns", {
-            "user_id": user_id
-        })
+        return await self.call_tool("get_campaigns", {"user_id": user_id})
 
     async def get_campaign(self, campaign_id: str, user_id: str) -> dict[str, Any]:
         """Get a specific campaign."""
-        return await self.call_tool("get_campaign", {
-            "campaign_id": campaign_id,
-            "user_id": user_id
-        })
+        return await self.call_tool(
+            "get_campaign", {"campaign_id": campaign_id, "user_id": user_id}
+        )
 
-    async def create_character(self, campaign_id: str, character_data: dict[str, Any]) -> dict[str, Any]:
+    async def create_character(
+        self, campaign_id: str, character_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Create a character in a campaign."""
-        return await self.call_tool("create_character", {
-            "campaign_id": campaign_id,
-            "character_data": character_data
-        })
+        return await self.call_tool(
+            "create_character",
+            {"campaign_id": campaign_id, "character_data": character_data},
+        )
 
-    async def process_action(self, session_id: str, action_type: str, action_data: dict[str, Any]) -> dict[str, Any]:
+    async def process_action(
+        self, session_id: str, action_type: str, action_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Process a game action."""
-        return await self.call_tool("process_action", {
-            "session_id": session_id,
-            "action_type": action_type,
-            "action_data": action_data
-        })
+        return await self.call_tool(
+            "process_action",
+            {
+                "session_id": session_id,
+                "action_type": action_type,
+                "action_data": action_data,
+            },
+        )
 
-    async def get_campaign_state(self, campaign_id: str, user_id: str) -> dict[str, Any]:
+    async def get_campaign_state(
+        self, campaign_id: str, user_id: str
+    ) -> dict[str, Any]:
         """Get campaign state resource."""
         # For testing, we'll use the tool call instead of resource access
         # since the mock server doesn't have user context for resource URIs
-        return await self.call_tool("get_campaign_state", {
-            "campaign_id": campaign_id,
-            "user_id": user_id
-        })
+        return await self.call_tool(
+            "get_campaign_state", {"campaign_id": campaign_id, "user_id": user_id}
+        )
 
     async def get_user_settings(self, user_id: str) -> dict[str, Any]:
         """Get user settings."""
-        return await self.call_tool("get_user_settings", {
-            "user_id": user_id
-        })
+        return await self.call_tool("get_user_settings", {"user_id": user_id})
 
-    async def update_user_settings(self, user_id: str, settings: dict[str, Any]) -> dict[str, Any]:
+    async def update_user_settings(
+        self, user_id: str, settings: dict[str, Any]
+    ) -> dict[str, Any]:
         """Update user settings."""
-        return await self.call_tool("update_user_settings", {
-            "user_id": user_id,
-            "settings": settings
-        })
+        return await self.call_tool(
+            "update_user_settings", {"user_id": user_id, "settings": settings}
+        )
 
-    async def export_campaign(self, campaign_id: str, export_format: str, user_id: str) -> dict[str, Any]:
+    async def export_campaign(
+        self, campaign_id: str, export_format: str, user_id: str
+    ) -> dict[str, Any]:
         """Export a campaign."""
-        return await self.call_tool("export_campaign", {
-            "campaign_id": campaign_id,
-            "format": export_format,
-            "user_id": user_id
-        })
+        return await self.call_tool(
+            "export_campaign",
+            {"campaign_id": campaign_id, "format": export_format, "user_id": user_id},
+        )
 
 
-def create_test_client(server_url: str = None, mode: str = "mock") -> WorldArchitectMCPClient:
+def create_test_client(
+    server_url: str = None, mode: str = "mock"
+) -> WorldArchitectMCPClient:
     """
     Create a test client for the appropriate environment.
 

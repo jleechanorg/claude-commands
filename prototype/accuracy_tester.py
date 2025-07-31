@@ -17,7 +17,6 @@ def calculate_accuracy_metrics():
 
     # Import test data
 
-
     # Sample validator results (would normally run actual validators)
     # Format: test_id -> validator_name -> result
     sample_results = {
@@ -114,7 +113,7 @@ def calculate_accuracy_metrics():
         }
 
     # Create report
-    report = {
+    return {
         "accuracy_test_report": {
             "timestamp": datetime.now().isoformat(),
             "test_count": len(sample_results),
@@ -141,12 +140,11 @@ def calculate_accuracy_metrics():
         }
     }
 
-    return report
 
 
 def create_confusion_matrix(validator_name: str, results: dict) -> dict:
     """Create confusion matrix for a validator."""
-    matrix = {
+    return {
         "validator": validator_name,
         "matrix": {
             "entity_present": {
@@ -161,7 +159,6 @@ def create_confusion_matrix(validator_name: str, results: dict) -> dict:
     }
 
     # This would be populated with actual test results
-    return matrix
 
 
 if __name__ == "__main__":
@@ -169,7 +166,6 @@ if __name__ == "__main__":
     report = calculate_accuracy_metrics()
 
     # Save report
-
 
     os.makedirs("benchmarks", exist_ok=True)
 

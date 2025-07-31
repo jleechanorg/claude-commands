@@ -27,7 +27,7 @@ class TestSettingsHttpIntegration(unittest.TestCase):
         self.headers = {
             "X-Test-Bypass-Auth": "true",
             "X-Test-User-ID": self.test_user_id,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
         # Ensure server is ready
@@ -35,7 +35,7 @@ class TestSettingsHttpIntegration(unittest.TestCase):
 
     def wait_for_server(self, max_retries=5):
         """Wait for test server to be available"""
-        for i in range(max_retries):
+        for _i in range(max_retries):
             try:
                 response = requests.get(f"{self.base_url}/", timeout=2)
                 if response.status_code == 200:
@@ -49,39 +49,35 @@ class TestSettingsHttpIntegration(unittest.TestCase):
         """✅ GET /api/settings returns empty dict for new user"""
         response = requests.get(f"{self.base_url}/api/settings", headers=self.headers)
 
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         data = response.json()
-        self.assertEqual(data, {}, "New user should have empty settings")
+        assert data == {}, "New user should have empty settings"
 
     def test_post_settings_valid_model(self):
         """✅ POST /api/settings accepts valid Gemini model"""
         payload = {"gemini_model": "flash-2.5"}
 
         response = requests.post(
-            f"{self.base_url}/api/settings",
-            headers=self.headers,
-            json=payload
+            f"{self.base_url}/api/settings", headers=self.headers, json=payload
         )
 
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         data = response.json()
-        self.assertTrue(data.get('success'), f"Should return success, got: {data}")
-        self.assertEqual(data.get('message'), 'Settings saved')
+        assert data.get("success"), f"Should return success, got: {data}"
+        assert data.get("message") == "Settings saved"
 
     def test_post_settings_invalid_model(self):
         """✅ POST /api/settings rejects invalid model"""
         payload = {"gemini_model": "invalid-model"}
 
         response = requests.post(
-            f"{self.base_url}/api/settings",
-            headers=self.headers,
-            json=payload
+            f"{self.base_url}/api/settings", headers=self.headers, json=payload
         )
 
-        self.assertEqual(response.status_code, 400)
+        assert response.status_code == 400
         data = response.json()
-        self.assertIn('error', data)
-        self.assertIn('Invalid model selection', data['error'])
+        assert "error" in data
+        assert "Invalid model selection" in data["error"]
 
     def test_settings_persistence_round_trip(self):
         """✅ Settings persist across requests (real Firestore test)"""
@@ -89,19 +85,16 @@ class TestSettingsHttpIntegration(unittest.TestCase):
         payload = {"gemini_model": "pro-2.5"}
 
         response = requests.post(
-            f"{self.base_url}/api/settings",
-            headers=self.headers,
-            json=payload
+            f"{self.base_url}/api/settings", headers=self.headers, json=payload
         )
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
 
         # Verify it persisted by retrieving it
         response = requests.get(f"{self.base_url}/api/settings", headers=self.headers)
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
 
         data = response.json()
-        self.assertEqual(data.get('gemini_model'), 'pro-2.5',
-                        f"Settings should persist in Firestore, got: {data}")
+        assert data.get("gemini_model") == "pro-2.5", f"Settings should persist in Firestore, got: {data}"
 
     def test_settings_overwrite_existing(self):
         """✅ New settings overwrite existing ones"""
@@ -109,46 +102,43 @@ class TestSettingsHttpIntegration(unittest.TestCase):
         requests.post(
             f"{self.base_url}/api/settings",
             headers=self.headers,
-            json={"gemini_model": "pro-2.5"}
+            json={"gemini_model": "pro-2.5"},
         )
 
         # Change to different setting
         requests.post(
             f"{self.base_url}/api/settings",
             headers=self.headers,
-            json={"gemini_model": "flash-2.5"}
+            json={"gemini_model": "flash-2.5"},
         )
 
         # Verify change persisted
         response = requests.get(f"{self.base_url}/api/settings", headers=self.headers)
         data = response.json()
-        self.assertEqual(data.get('gemini_model'), 'flash-2.5',
-                        "Settings should be updated, not appended")
+        assert data.get("gemini_model") == "flash-2.5", "Settings should be updated, not appended"
 
     def test_missing_gemini_model_parameter(self):
         """✅ POST /api/settings rejects missing parameters"""
         payload = {"wrong_field": "value"}
 
         response = requests.post(
-            f"{self.base_url}/api/settings",
-            headers=self.headers,
-            json=payload
+            f"{self.base_url}/api/settings", headers=self.headers, json=payload
         )
 
-        self.assertEqual(response.status_code, 400)
+        assert response.status_code == 400
         data = response.json()
-        self.assertIn('Missing gemini_model parameter', data['error'])
+        assert "Missing gemini_model parameter" in data["error"]
 
     def test_settings_page_loads_with_auth_bypass(self):
         """✅ /settings page loads successfully with auth bypass"""
         response = requests.get(f"{self.base_url}/settings", headers=self.headers)
 
-        self.assertEqual(response.status_code, 200)
-        self.assertIn("Settings", response.text)
-        self.assertIn("AI Model Selection", response.text)
-        self.assertIn("Gemini Pro 2.5", response.text)
-        self.assertIn("Gemini Flash 2.5", response.text)
-        self.assertIn("settings.js", response.text)
+        assert response.status_code == 200
+        assert "Settings" in response.text
+        assert "AI Model Selection" in response.text
+        assert "Gemini Pro 2.5" in response.text
+        assert "Gemini Flash 2.5" in response.text
+        assert "settings.js" in response.text
 
     def test_unauthorized_access_without_headers(self):
         """✅ Endpoints require auth when bypass headers missing"""
@@ -157,18 +147,20 @@ class TestSettingsHttpIntegration(unittest.TestCase):
 
         # Settings page should require auth
         response = requests.get(f"{self.base_url}/settings", headers=headers_no_auth)
-        self.assertEqual(response.status_code, 401)
+        assert response.status_code == 401
 
         # Settings API should require auth
-        response = requests.get(f"{self.base_url}/api/settings", headers=headers_no_auth)
-        self.assertEqual(response.status_code, 401)
+        response = requests.get(
+            f"{self.base_url}/api/settings", headers=headers_no_auth
+        )
+        assert response.status_code == 401
 
         response = requests.post(
             f"{self.base_url}/api/settings",
             headers=headers_no_auth,
-            json={"gemini_model": "pro-2.5"}
+            json={"gemini_model": "pro-2.5"},
         )
-        self.assertEqual(response.status_code, 401)
+        assert response.status_code == 401
 
 
 if __name__ == "__main__":

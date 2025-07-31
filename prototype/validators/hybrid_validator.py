@@ -5,8 +5,9 @@ Uses both token-based and LLM-based validation for best accuracy.
 
 import statistics
 
-from ..logging_config import setup_logging, with_metrics
-from ..validator import BaseValidator, ValidationResult
+from prototype.logging_config import setup_logging, with_metrics
+from prototype.validator import BaseValidator, ValidationResult
+
 from .fuzzy_token_validator import FuzzyTokenValidator
 from .llm_validator import LLMValidator
 from .token_validator import TokenValidator

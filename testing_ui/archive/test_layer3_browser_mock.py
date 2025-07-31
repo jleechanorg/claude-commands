@@ -176,4 +176,4 @@ def test_layer3_structured_fields_mock():
 
 if __name__ == "__main__":
     success = test_layer3_structured_fields_mock()
-    exit(0 if success else 1)
+    sys.exit(0 if success else 1)

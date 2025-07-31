@@ -253,7 +253,7 @@ class RealModeSafetyExample(BaseTestCase):
             max_calls = 3
             call_count = 0
 
-            for i in range(max_calls):
+            for _i in range(max_calls):
                 result = self.gemini.generate_simple_response("test prompt")
                 call_count += 1
                 assert result is not None
@@ -261,7 +261,7 @@ class RealModeSafetyExample(BaseTestCase):
             print(f"Real mode test completed with {call_count} API calls")
         else:
             # Mock mode - no limits needed
-            for i in range(10):  # Can test more iterations
+            for _i in range(10):  # Can test more iterations
                 result = self.gemini.generate_simple_response("test prompt")
                 assert result is not None
 

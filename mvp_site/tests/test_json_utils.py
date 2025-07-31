@@ -60,7 +60,9 @@ class TestCountUnmatchedQuotes(unittest.TestCase):
         """Test with various escape sequences"""
         assert count_unmatched_quotes(r'"\n\t\r"') == 2
         assert count_unmatched_quotes(r'"line1\nline2"') == 2
-        assert count_unmatched_quotes(r'"\\"\\"\\"') == 4  # Fixed: escape_next algorithm counts 4
+        assert (
+            count_unmatched_quotes(r'"\\"\\"\\"') == 4
+        )  # Fixed: escape_next algorithm counts 4
 
     def test_complex_json_strings(self):
         """Test with complex JSON-like strings"""
@@ -68,7 +70,9 @@ class TestCountUnmatchedQuotes(unittest.TestCase):
         assert count_unmatched_quotes(json_str) == 8
 
         incomplete_json = '{"name": "John \\"Doe\\"", "path": "C:\\\\Users'
-        assert count_unmatched_quotes(incomplete_json) == 7  # Fixed: escape_next algorithm counts 7
+        assert (
+            count_unmatched_quotes(incomplete_json) == 7
+        )  # Fixed: escape_next algorithm counts 7
 
 
 class TestCountUnmatchedBraces(unittest.TestCase):
@@ -123,7 +127,10 @@ class TestCountUnmatchedBraces(unittest.TestCase):
     def test_escaped_quotes_in_strings(self):
         """Test with escaped quotes in strings"""
         assert count_unmatched_braces(r'{"key": "val\"ue}"}') == (0, 0)
-        assert count_unmatched_braces(r'{"key": "val\\"}') == (0, 0)  # Fixed: String ends at quote, braces match
+        assert count_unmatched_braces(r'{"key": "val\\"}') == (
+            0,
+            0,
+        )  # Fixed: String ends at quote, braces match
         assert count_unmatched_braces(r'["item\"1]", "item2"]') == (0, 0)
 
 
@@ -169,8 +176,13 @@ class TestUnescapeJsonString(unittest.TestCase):
 
     def test_multiple_escapes(self):
         """Test unescaping multiple different escape sequences"""
-        assert unescape_json_string(r"line1\nline2\ttab\r\n\"quote\"") == 'line1\nline2\ttab\r\n"quote"'
-        assert unescape_json_string(r"\\path\\to\\file.txt\n") == "\\path\\to\\file.txt\n"
+        assert (
+            unescape_json_string(r"line1\nline2\ttab\r\n\"quote\"")
+            == 'line1\nline2\ttab\r\n"quote"'
+        )
+        assert (
+            unescape_json_string(r"\\path\\to\\file.txt\n") == "\\path\\to\\file.txt\n"
+        )
 
     def test_unicode_preserved(self):
         """Test that Unicode characters are preserved"""
@@ -244,11 +256,11 @@ class TestTryParseJson(unittest.TestCase):
         """Test parsing JSON with boolean values"""
         result, success = try_parse_json("true")
         assert success
-        assert result == True
+        assert result
 
         result, success = try_parse_json("false")
         assert success
-        assert result == False
+        assert not result
 
         result, success = try_parse_json('{"active": true, "deleted": false}')
         assert success
@@ -267,7 +279,10 @@ class TestExtractJsonBoundaries(unittest.TestCase):
     def test_simple_json_object(self):
         """Test extracting simple JSON objects"""
         assert extract_json_boundaries('{"key": "value"}') == '{"key": "value"}'
-        assert extract_json_boundaries('prefix {"key": "value"} suffix') == '{"key": "value"}'
+        assert (
+            extract_json_boundaries('prefix {"key": "value"} suffix')
+            == '{"key": "value"}'
+        )
         assert extract_json_boundaries("{}") == "{}"
 
     def test_simple_json_array(self):
@@ -354,7 +369,10 @@ class TestCompleteTruncatedJson(unittest.TestCase):
     def test_unclosed_string_with_closing_brace(self):
         """Test special case of unclosed string with closing brace"""
         assert complete_truncated_json('{"key": "value}') == '{"key": "value"}'
-        assert complete_truncated_json('{"text": "has } in it}') == '{"text": "has } in it"}'
+        assert (
+            complete_truncated_json('{"text": "has } in it}')
+            == '{"text": "has } in it"}'
+        )
 
     def test_mixed_brackets_and_braces(self):
         """Test completing JSON with mixed brackets and braces"""
@@ -413,7 +431,10 @@ class TestExtractFieldValue(unittest.TestCase):
 
         # Incomplete narrative (truncated)
         json_str = '{"narrative": "This is a very long story that'
-        assert extract_field_value(json_str, "narrative") == "This is a very long story that"
+        assert (
+            extract_field_value(json_str, "narrative")
+            == "This is a very long story that"
+        )
 
     def test_extract_from_malformed_json(self):
         """Test extracting from malformed JSON"""

@@ -15,6 +15,9 @@ import firestore_service
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, project_root)
 
+import builtins
+import contextlib
+
 from integration_test_lib import (
     IntegrationTestSetup,
     setup_integration_test_environment,
@@ -63,7 +66,7 @@ class TestGeminiJSONFormat(unittest.TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 201)
+        assert response.status_code == 201
         data = json.loads(response.data)
         campaign_id = data["campaign_id"]
 
@@ -108,10 +111,8 @@ class TestGeminiJSONFormat(unittest.TestCase):
                         print(f"Found tags in text: {found_tags}")
 
         # Clean up
-        try:
+        with contextlib.suppress(builtins.BaseException):
             firestore_service.delete_campaign(TEST_USER_ID, campaign_id)
-        except:
-            pass
 
     def test_interaction_response_format(self):
         """Test the format of interaction responses."""
@@ -130,7 +131,7 @@ class TestGeminiJSONFormat(unittest.TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 201)
+        assert response.status_code == 201
         campaign_id = json.loads(response.data)["campaign_id"]
 
         # Make an interaction
@@ -140,7 +141,7 @@ class TestGeminiJSONFormat(unittest.TestCase):
             json={"input": "I look around.", "mode": "character"},
         )
 
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         interaction_data = json.loads(response.data)
 
         print(f"\nInteraction response keys: {list(interaction_data.keys())}")
@@ -168,10 +169,8 @@ class TestGeminiJSONFormat(unittest.TestCase):
                 print("\n❌ Interaction response is plain text")
 
         # Clean up
-        try:
+        with contextlib.suppress(builtins.BaseException):
             firestore_service.delete_campaign(TEST_USER_ID, campaign_id)
-        except:
-            pass
 
 
 if __name__ == "__main__":

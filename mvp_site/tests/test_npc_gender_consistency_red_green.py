@@ -8,6 +8,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
+import pytest
 from pydantic import ValidationError
 from schemas.entities_pydantic import NPC, HealthStatus
 
@@ -20,8 +21,8 @@ class TestNPCGenderConsistencyRedGreen(unittest.TestCase):
         # Attempting to create an NPC without gender field should raise ValueError
         health = HealthStatus(hp=50, hp_max=50)
 
-        with self.assertRaises(ValidationError) as context:
-            npc = NPC(
+        with pytest.raises(ValidationError) as context:
+            NPC(
                 entity_id="npc_jedi_master_001",
                 display_name="Jedi Master",
                 health=health,
@@ -32,7 +33,7 @@ class TestNPCGenderConsistencyRedGreen(unittest.TestCase):
             )
 
         # Verify the error message mentions gender requirement
-        assert "Gender is required for NPCs" in str(context.exception)
+        assert "Gender is required for NPCs" in str(context.value)
 
     def test_green_npc_with_mandatory_gender_field(self):
         """GREEN TEST: NPC class should have mandatory gender field."""

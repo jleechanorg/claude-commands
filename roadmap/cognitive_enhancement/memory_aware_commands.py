@@ -291,10 +291,7 @@ class MemoryAwareCommandProcessor:
             return True
 
         # Consult for learning commands
-        if command == "learn":
-            return True
-
-        return False
+        return command == "learn"
 
     def consult_memory(self, context: CommandContext) -> MemoryGuidance | None:
         """Consult memory patterns for the given command context."""

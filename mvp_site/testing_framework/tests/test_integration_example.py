@@ -37,20 +37,20 @@ class TestIntegrationExample(unittest.TestCase):
         # Use services through the provider interface
         firestore = provider.get_firestore()
         gemini = provider.get_gemini()
-        auth = provider.get_auth()
+        provider.get_auth()
 
         # Verify we got mock services (since TEST_MODE=mock)
-        self.assertFalse(provider.is_real_service)
-        self.assertIsNotNone(firestore)
-        self.assertIsNotNone(gemini)
+        assert not provider.is_real_service
+        assert firestore is not None
+        assert gemini is not None
 
         # Test firestore operations
         campaigns = firestore.get_campaigns_for_user("test_user")
-        self.assertIsInstance(campaigns, list)
+        assert isinstance(campaigns, list)
 
         # Test gemini operations
         response = gemini.generate_content("test prompt")
-        self.assertIsNotNone(response)
+        assert response is not None
 
         # Cleanup after test
         provider.cleanup()
@@ -59,7 +59,7 @@ class TestIntegrationExample(unittest.TestCase):
         """Test that mode switching works without changing test code."""
         # Test with mock mode
         provider = get_current_provider()
-        self.assertFalse(provider.is_real_service)
+        assert not provider.is_real_service
 
         # The same test could run with real services by just setting:
         # os.environ['TEST_MODE'] = 'real'
@@ -71,10 +71,10 @@ class TestIntegrationExample(unittest.TestCase):
         gemini = provider.get_gemini()
 
         # Both mock and real providers support these methods
-        self.assertTrue(hasattr(firestore, "get_campaigns_for_user"))
-        self.assertTrue(hasattr(gemini, "generate_content"))
-        self.assertTrue(hasattr(provider, "cleanup"))
-        self.assertTrue(hasattr(provider, "is_real_service"))
+        assert hasattr(firestore, "get_campaigns_for_user")
+        assert hasattr(gemini, "generate_content")
+        assert hasattr(provider, "cleanup")
+        assert hasattr(provider, "is_real_service")
 
 
 if __name__ == "__main__":

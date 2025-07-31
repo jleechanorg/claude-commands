@@ -83,8 +83,6 @@ class MockGameState:
         """
         # Import our validators
 
-
-
         # Get current manifest
         manifest = self.get_active_entity_manifest()
         expected_entities = [e["name"] for e in manifest["entities"]]

@@ -156,9 +156,8 @@ class PatternQueryEngine:
         words = re.findall(r"\b\w+\b", query.lower())
 
         # Filter stop words and short words
-        keywords = {word for word in words if len(word) > 2 and word not in stop_words}
+        return {word for word in words if len(word) > 2 and word not in stop_words}
 
-        return keywords
 
     def calculate_pattern_relevance(
         self,
@@ -426,10 +425,7 @@ class MemoryConsciousResponseGenerator:
 
         # Consult for preference queries
         preference_indicators = ["prefer", "like", "style", "format", "way"]
-        if any(indicator in query.lower() for indicator in preference_indicators):
-            return True
-
-        return False
+        return bool(any(indicator in query.lower() for indicator in preference_indicators))
 
     def consult_memory(self, query: str) -> QueryResult | None:
         """Consult memory patterns for relevant information."""
@@ -458,7 +454,6 @@ def main():
     query_engine = PatternQueryEngine(learner)
 
     # Add some example patterns for testing
-
 
     example_patterns = [
         LearningPattern(

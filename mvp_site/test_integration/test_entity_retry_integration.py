@@ -86,13 +86,13 @@ class TestEntityRetryIntegration(unittest.TestCase):
         )
 
         # Verify retry was triggered
-        self.assertEqual(retry_count, 1)
+        assert retry_count == 1
         retry_callback.assert_called_once()
 
         # Verify final result passes
-        self.assertTrue(result.passed)
-        self.assertEqual(result.missing_entities, [])
-        self.assertEqual(set(result.found_entities), {"Sariel", "Cassian", "Valerius"})
+        assert result.passed
+        assert result.missing_entities == []
+        assert set(result.found_entities) == {"Sariel", "Cassian", "Valerius"}
 
     def test_validation_retry_flow_max_retries(self):
         """Test retry flow hits max retries when entities remain missing"""
@@ -117,12 +117,12 @@ class TestEntityRetryIntegration(unittest.TestCase):
         )
 
         # Verify max retries reached
-        self.assertEqual(retry_count, 2)
-        self.assertEqual(retry_callback.call_count, 2)
+        assert retry_count == 2
+        assert retry_callback.call_count == 2
 
         # Verify final result still fails
-        self.assertFalse(result.passed)
-        self.assertIn("Cassian", result.missing_entities)
+        assert not result.passed
+        assert "Cassian" in result.missing_entities
 
     @patch("gemini_service._call_gemini_api")
     def test_gemini_integration_with_retry(self, mock_call_api):
@@ -165,7 +165,7 @@ class TestEntityRetryIntegration(unittest.TestCase):
             {"actor": "gemini", "text": "Previous narrative..."},
         ]
 
-        result = gemini_service.continue_story(
+        gemini_service.continue_story(
             "I greet everyone present",
             "character",
             story_context,
@@ -175,8 +175,8 @@ class TestEntityRetryIntegration(unittest.TestCase):
 
         # Verify dual-pass generation was used (2 calls when validation fails)
         # First call for initial generation, second for retry if needed
-        self.assertGreaterEqual(mock_call_api.call_count, 1)
-        self.assertLessEqual(mock_call_api.call_count, 2)
+        assert mock_call_api.call_count >= 1
+        assert mock_call_api.call_count <= 2
 
         # The dual-pass logic is now integrated into gemini_service.continue_story
 
@@ -203,12 +203,12 @@ class TestEntityRetryIntegration(unittest.TestCase):
         )
 
         # Verify retry prompt contains key elements
-        self.assertIn("IMPORTANT: The following characters are missing", retry_prompt)
-        self.assertIn("Cassian", retry_prompt)
-        self.assertIn("Marcus", retry_prompt)
-        self.assertIn("The Grand Library", retry_prompt)
-        self.assertIn("Brother", retry_prompt)
-        self.assertIn("Guard", retry_prompt)
+        assert "IMPORTANT: The following characters are missing" in retry_prompt
+        assert "Cassian" in retry_prompt
+        assert "Marcus" in retry_prompt
+        assert "The Grand Library" in retry_prompt
+        assert "Brother" in retry_prompt
+        assert "Guard" in retry_prompt
 
     def test_structured_response_validation_integration(self):
         """Test integration between structured response parsing and validation"""
@@ -231,9 +231,9 @@ class TestEntityRetryIntegration(unittest.TestCase):
         # Parse structured response
         narrative_text, structured_response = parse_structured_response(json_response)
 
-        self.assertIsInstance(structured_response, NarrativeResponse)
+        assert isinstance(structured_response, NarrativeResponse)
         # parse_structured_response returns full JSON when it can't extract narrative
-        self.assertEqual(narrative_text, json_response)
+        assert narrative_text == json_response
 
         # Validate entity coverage
         expected_entities = ["Sariel", "Cassian", "Valerius"]
@@ -246,7 +246,7 @@ class TestEntityRetryIntegration(unittest.TestCase):
         # Let's check what we actually get
         if coverage_result["coverage_rate"] == 1.0:
             # Implementation counts all expected entities as covered
-            self.assertEqual(coverage_result["coverage_rate"], 1.0)
+            assert coverage_result["coverage_rate"] == 1.0
         else:
             # Original expectation
             self.assertAlmostEqual(coverage_result["coverage_rate"], 0.67, places=2)
@@ -266,11 +266,11 @@ class TestEntityRetryIntegration(unittest.TestCase):
         )
 
         # Verify retry was attempted but failed gracefully
-        self.assertEqual(retry_count, 1)
+        assert retry_count == 1
         retry_callback.assert_called_once()
 
         # Original validation result should be returned
-        self.assertFalse(result.passed)
+        assert not result.passed
 
     def test_location_aware_validation(self):
         """Test that validation considers location context"""
@@ -287,13 +287,11 @@ class TestEntityRetryIntegration(unittest.TestCase):
         )
 
         # Should detect Cassian is mentioned but possibly not in the right location
-        self.assertIn("Cassian", result.found_entities)
+        assert "Cassian" in result.found_entities
 
         # Retry suggestions should mention location
-        self.assertTrue(
-            any(
-                "Grand Library" in suggestion for suggestion in result.retry_suggestions
-            )
+        assert any(
+            "Grand Library" in suggestion for suggestion in result.retry_suggestions
         )
 
     def test_confidence_threshold_adjustment(self):
@@ -318,10 +316,10 @@ class TestEntityRetryIntegration(unittest.TestCase):
 
         # Low threshold should find entities, high threshold might not
         # depending on confidence scoring implementation
-        self.assertEqual(len(low_result.found_entities), 3)
-        self.assertEqual(len(high_result.found_entities), 0)
-        self.assertFalse(low_result.retry_needed)
-        self.assertTrue(high_result.retry_needed)
+        assert len(low_result.found_entities) == 3
+        assert len(high_result.found_entities) == 0
+        assert not low_result.retry_needed
+        assert high_result.retry_needed
 
 
 if __name__ == "__main__":

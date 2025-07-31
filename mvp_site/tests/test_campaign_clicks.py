@@ -45,9 +45,7 @@ class TestCampaignClicks(unittest.TestCase):
     def test_javascript_click_handler_structure(self):
         """Test that JavaScript has proper click handler structure"""
 
-        js_path = os.path.join(
-            os.path.dirname(__file__), "..", "frontend_v1", "app.js"
-        )
+        js_path = os.path.join(os.path.dirname(__file__), "..", "frontend_v1", "app.js")
 
         with open(js_path) as f:
             js_content = f.read()

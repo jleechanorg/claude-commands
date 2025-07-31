@@ -24,8 +24,7 @@ def load_banned_names():
         str: Banned names content or empty string if not found.
     """
     try:
-        banned_content = read_file_cached(BANNED_NAMES_PATH).strip()
-        return banned_content
+        return read_file_cached(BANNED_NAMES_PATH).strip()
 
     except FileNotFoundError:
         logging_util.warning(f"Banned names file not found at {BANNED_NAMES_PATH}")
@@ -109,9 +108,7 @@ def load_world_content_for_system_instruction():
             ]
         )
 
-        combined_content = "\n".join(combined_parts)
-
-        return combined_content
+        return "\n".join(combined_parts)
 
     except FileNotFoundError as e:
         logging_util.error(f"CRITICAL: World file not found: {e}")

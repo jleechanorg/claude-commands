@@ -82,11 +82,9 @@ class TestSarielConsolidated(unittest.TestCase):
                 content_type="application/json",
             )
 
-            self.assertEqual(
-                response.status_code,
-                201,
-                f"Failed to create campaign: {response.get_data(as_text=True)}",
-            )
+            assert (
+                response.status_code == 201
+            ), f"Failed to create campaign: {response.get_data(as_text=True)}"
             campaign_id = response.get_json()["campaign_id"]
 
             # Run interactions
@@ -121,11 +119,9 @@ class TestSarielConsolidated(unittest.TestCase):
                     data=json.dumps(interaction_data),
                     content_type="application/json",
                 )
-                self.assertEqual(
-                    response.status_code,
-                    200,
-                    f"Failed at interaction {interaction_num}",
-                )
+                assert (
+                    response.status_code == 200
+                ), f"Failed at interaction {interaction_num}"
 
                 # Parse response
                 response_data = response.get_json()
@@ -239,14 +235,12 @@ class TestSarielConsolidated(unittest.TestCase):
             print(f"\nDetailed results saved to: {results_file}")
 
         # Assert minimum success thresholds
-        self.assertGreaterEqual(
-            success_rate, 50.0, f"Success rate {success_rate:.1f}% below 50% threshold"
-        )
-        self.assertGreaterEqual(
-            entity_rate,
-            60.0,
-            f"Entity tracking rate {entity_rate:.1f}% below 60% threshold",
-        )
+        assert (
+            success_rate >= 50.0
+        ), f"Success rate {success_rate:.1f}% below 50% threshold"
+        assert (
+            entity_rate >= 60.0
+        ), f"Entity tracking rate {entity_rate:.1f}% below 60% threshold"
 
     def _validate_entities(self, narrative, expected_entities):
         """Validate that expected entities appear in the narrative"""
@@ -280,7 +274,7 @@ class TestSarielConsolidated(unittest.TestCase):
         if "npc_data" in game_state:
             npc_data = game_state["npc_data"]
             if isinstance(npc_data, dict):
-                for npc_id, npc_info in npc_data.items():
+                for _npc_id, npc_info in npc_data.items():
                     if isinstance(npc_info, dict):
                         validation_result["field_count"] += len(npc_info)
 

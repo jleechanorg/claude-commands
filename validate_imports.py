@@ -20,6 +20,7 @@ from typing import NamedTuple
 
 class ImportViolation(NamedTuple):
     """Represents an import validation violation."""
+
     file: Path
     line: int
     message: str
@@ -47,13 +48,15 @@ class ImportValidator(ast.NodeVisitor):
 
         # Check if try block contains imports
         for child in ast.walk(node):
-            if isinstance(child, (ast.Import, ast.ImportFrom)):
-                self.violations.append(ImportViolation(
-                    file=self.file_path,
-                    line=child.lineno,
-                    message="Import statement inside try/except block",
-                    code="IMP001"
-                ))
+            if isinstance(child, ast.Import | ast.ImportFrom):
+                self.violations.append(
+                    ImportViolation(
+                        file=self.file_path,
+                        line=child.lineno,
+                        message="Import statement inside try/except block",
+                        code="IMP001",
+                    )
+                )
 
         self.generic_visit(node)
 
@@ -65,12 +68,14 @@ class ImportValidator(ast.NodeVisitor):
         self.import_seen = True
 
         if self.non_import_seen:
-            self.violations.append(ImportViolation(
-                file=self.file_path,
-                line=node.lineno,
-                message="Import statement not at top of file (inline import)",
-                code="IMP002"
-            ))
+            self.violations.append(
+                ImportViolation(
+                    file=self.file_path,
+                    line=node.lineno,
+                    message="Import statement not at top of file (inline import)",
+                    code="IMP002",
+                )
+            )
 
         self.generic_visit(node)
 
@@ -79,12 +84,14 @@ class ImportValidator(ast.NodeVisitor):
         self.import_seen = True
 
         if self.non_import_seen:
-            self.violations.append(ImportViolation(
-                file=self.file_path,
-                line=node.lineno,
-                message="Import statement not at top of file (inline import)",
-                code="IMP002"
-            ))
+            self.violations.append(
+                ImportViolation(
+                    file=self.file_path,
+                    line=node.lineno,
+                    message="Import statement not at top of file (inline import)",
+                    code="IMP002",
+                )
+            )
 
         self.generic_visit(node)
 
@@ -109,9 +116,11 @@ class ImportValidator(ast.NodeVisitor):
     def visit_Expr(self, node: ast.Expr) -> None:
         """Mark non-import code (excluding docstrings)."""
         # Skip docstrings at module level
-        if (isinstance(node.value, ast.Constant) and
-            isinstance(node.value.value, str) and
-            not self.non_import_seen):
+        if (
+            isinstance(node.value, ast.Constant)
+            and isinstance(node.value.value, str)
+            and not self.non_import_seen
+        ):
             self.generic_visit(node)
             return
 
@@ -123,7 +132,7 @@ class ImportValidator(ast.NodeVisitor):
 def validate_file(file_path: Path) -> list[ImportViolation]:
     """Validate imports in a single Python file."""
     try:
-        with open(file_path, encoding='utf-8') as f:
+        with open(file_path, encoding="utf-8") as f:
             content = f.read()
 
         tree = ast.parse(content, filename=str(file_path))
@@ -133,19 +142,20 @@ def validate_file(file_path: Path) -> list[ImportViolation]:
         return validator.violations
 
     except SyntaxError as e:
-        return [ImportViolation(
-            file=file_path,
-            line=e.lineno or 0,
-            message=f"Syntax error: {e.msg}",
-            code="SYN001"
-        )]
+        return [
+            ImportViolation(
+                file=file_path,
+                line=e.lineno or 0,
+                message=f"Syntax error: {e.msg}",
+                code="SYN001",
+            )
+        ]
     except Exception as e:
-        return [ImportViolation(
-            file=file_path,
-            line=0,
-            message=f"Validation error: {e}",
-            code="ERR001"
-        )]
+        return [
+            ImportViolation(
+                file=file_path, line=0, message=f"Validation error: {e}", code="ERR001"
+            )
+        ]
 
 
 def validate_directory(directory: Path) -> list[ImportViolation]:
@@ -154,7 +164,7 @@ def validate_directory(directory: Path) -> list[ImportViolation]:
 
     for py_file in directory.rglob("*.py"):
         # Skip certain directories
-        if any(part in str(py_file) for part in ['.venv', '__pycache__', '.git']):
+        if any(part in str(py_file) for part in [".venv", "__pycache__", ".git"]):
             continue
 
         file_violations = validate_file(py_file)

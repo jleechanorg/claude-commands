@@ -100,7 +100,7 @@ class CampaignAnalyzer:
         )
 
         # Generate report
-        report = {
+        return {
             "campaign_id": campaign_id,
             "campaign_name": campaign_name,
             "analysis_timestamp": datetime.now().isoformat(),
@@ -114,10 +114,9 @@ class CampaignAnalyzer:
             },
             "pattern_breakdown": dict(self.metrics["pattern_counts"]),
             "desync_patterns": [p.to_dict() for p in self.desync_patterns],
-            "entity_list": sorted(list(self.metrics["entities_tracked"])),
+            "entity_list": sorted(self.metrics["entities_tracked"]),
         }
 
-        return report
 
     def _analyze_session(self, session_data: dict[str, Any]):
         """Analyze a single session for desyncs"""
@@ -256,7 +255,6 @@ class CampaignAnalyzer:
 
         # Only include turns with desyncs
         for pattern in self.desync_patterns:
-            turn_key = f"session_{pattern.session}_turn_{pattern.turn}"
 
             # Find the original turn data
             for session in campaign_data.get("sessions", []):

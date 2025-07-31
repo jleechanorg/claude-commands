@@ -71,8 +71,8 @@ class TestEndToEndEntityTracking(unittest.TestCase):
         )
 
         # Verify model fallback occurred (may include dual-pass)
-        self.assertGreaterEqual(mock_client.models.generate_content.call_count, 2)
-        self.assertLessEqual(mock_client.models.generate_content.call_count, 3)
+        assert mock_client.models.generate_content.call_count >= 2
+        assert mock_client.models.generate_content.call_count <= 3
 
         # First attempt with primary model failed
         first_call = mock_client.models.generate_content.call_args_list[0]
@@ -82,16 +82,14 @@ class TestEndToEndEntityTracking(unittest.TestCase):
             if os.environ.get("TESTING") == "true"
             else gemini_service.DEFAULT_MODEL
         )
-        self.assertEqual(first_call[1]["model"], expected_model)
+        assert first_call[1]["model"] == expected_model
 
         # Second attempt with fallback model succeeded
         second_call = mock_client.models.generate_content.call_args_list[1]
-        self.assertEqual(
-            second_call[1]["model"], gemini_service.MODEL_FALLBACK_CHAIN[0]
-        )
+        assert second_call[1]["model"] == gemini_service.MODEL_FALLBACK_CHAIN[0]
 
         # Result should mention Cassian (even though retry isn't integrated yet)
-        self.assertIn("Sariel", result)
+        assert "Sariel" in result
 
     @patch("gemini_service.get_client")
     def test_multiple_api_failures_before_success(self, mock_get_client):
@@ -116,9 +114,9 @@ class TestEndToEndEntityTracking(unittest.TestCase):
         )
 
         # Should try 4 models before success
-        self.assertEqual(mock_client.models.generate_content.call_count, 4)
-        self.assertIn("Sariel", result)
-        self.assertIn("Cassian", result)
+        assert mock_client.models.generate_content.call_count == 4
+        assert "Sariel" in result
+        assert "Cassian" in result
 
     def test_entity_manifest_creation_and_validation(self):
         """Test entity manifest creation and validation for any campaign"""
@@ -128,12 +126,12 @@ class TestEndToEndEntityTracking(unittest.TestCase):
         )
 
         # Verify manifest contains expected entities
-        self.assertEqual(len(manifest.player_characters), 1)
-        self.assertEqual(manifest.player_characters[0].display_name, "Sariel")
+        assert len(manifest.player_characters) == 1
+        assert manifest.player_characters[0].display_name == "Sariel"
 
-        self.assertEqual(len(manifest.npcs), 1)
+        assert len(manifest.npcs) == 1
         # Entity ID should follow the standard format
-        self.assertTrue(
+        assert (
             manifest.npcs[0].entity_id.startswith("npc_cassian")
             or manifest.npcs[0].entity_id == "cassian"
         )
@@ -141,13 +139,13 @@ class TestEndToEndEntityTracking(unittest.TestCase):
         # Check that both entities are in the manifest
         # Since get_entities_at_location doesn't exist, check manually
         total_entities = len(manifest.player_characters) + len(manifest.npcs)
-        self.assertEqual(total_entities, 2)  # Sariel and Cassian
+        assert total_entities == 2  # Sariel and Cassian
 
         # Test prompt format
         prompt_text = manifest.to_prompt_format()
-        self.assertIn("SCENE MANIFEST", prompt_text)
-        self.assertIn("Sariel", prompt_text)
-        self.assertIn("Cassian", prompt_text)
+        assert "SCENE MANIFEST" in prompt_text
+        assert "Sariel" in prompt_text
+        assert "Cassian" in prompt_text
 
     @patch("gemini_service._call_gemini_api")
     def test_structured_generation_with_entity_tracking(self, mock_call_api):
@@ -170,7 +168,7 @@ class TestEndToEndEntityTracking(unittest.TestCase):
         mock_call_api.return_value = mock_response
 
         # Call with entity tracking enabled
-        result = gemini_service.continue_story(
+        gemini_service.continue_story(
             "I search for Cassian",
             "character",
             [],
@@ -180,19 +178,19 @@ class TestEndToEndEntityTracking(unittest.TestCase):
 
         # Verify that the API was called
         call_args = mock_call_api.call_args
-        self.assertIsNotNone(call_args)
+        assert call_args is not None
 
         # Verify structured prompt injection
         prompt = call_args[0][0]
         # Check for entity tracking elements in the prompt
         # The prompt could contain different entity tracking formats
         prompt_str = str(prompt)
-        self.assertTrue(
+        assert (
             "CRITICAL ENTITY TRACKING REQUIREMENT" in prompt_str
             or "ENTITY MANIFEST" in prompt_str
             or "MANDATORY ENTITY REQUIREMENTS" in prompt_str
         )
-        self.assertIn("Cassian", prompt_str)
+        assert "Cassian" in prompt_str
 
     def test_validation_result_in_debug_mode(self):
         """Test that validation results appear in debug mode"""
@@ -216,8 +214,8 @@ class TestEndToEndEntityTracking(unittest.TestCase):
         # Debug mode should include validation info
         if self.game_state.debug_mode:
             enhanced_narrative = narrative + debug_validation
-            self.assertIn("DEBUG_VALIDATION", enhanced_narrative)
-            self.assertIn("Missing entities: ['Cassian']", enhanced_narrative)
+            assert "DEBUG_VALIDATION" in enhanced_narrative
+            assert "Missing entities: ['Cassian']" in enhanced_narrative
 
 
 if __name__ == "__main__":

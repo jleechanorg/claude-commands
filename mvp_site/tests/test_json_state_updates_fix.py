@@ -52,7 +52,9 @@ class TestMCPJsonStateUpdates(unittest.TestCase):
         )
 
         # MCP gateway should handle state update interactions (may return 404 for nonexistent campaigns)
-        assert response.status_code in [400, 404], f"Expected 400 or 404 for state update validation, got {response.status_code}"
+        assert (
+            response.status_code in [400, 404]
+        ), f"Expected 400 or 404 for state update validation, got {response.status_code}"
 
         # If successful, should return valid response
         if response.status_code == 200:
@@ -73,7 +75,9 @@ class TestMCPJsonStateUpdates(unittest.TestCase):
         )
 
         # MCP should handle combat interactions with state updates (may return 404 for nonexistent campaigns)
-        assert response.status_code in [400, 404], f"Expected 400 or 404 for combat state validation, got {response.status_code}"
+        assert (
+            response.status_code in [400, 404]
+        ), f"Expected 400 or 404 for combat state validation, got {response.status_code}"
 
     def test_mcp_json_response_format(self):
         """Test JSON response format through MCP."""
@@ -86,7 +90,10 @@ class TestMCPJsonStateUpdates(unittest.TestCase):
         )
 
         # MCP should handle JSON format requests (may return 404 for nonexistent campaigns)
-        assert response.status_code in [400, 404], f"Expected 400 or 404 for JSON format validation, got {response.status_code}"
+        assert response.status_code in [
+            400,
+            404,
+        ], f"Expected 400 or 404 for JSON format validation, got {response.status_code}"
 
         # If successful, response should be valid JSON
         if response.status_code == 200:
@@ -110,7 +117,9 @@ class TestMCPJsonStateUpdates(unittest.TestCase):
         )
 
         # MCP should handle narrative interactions (may return 404 for nonexistent campaigns)
-        assert response.status_code in [400, 404], f"Expected 400 or 404 for narrative state validation, got {response.status_code}"
+        assert (
+            response.status_code in [400, 404]
+        ), f"Expected 400 or 404 for narrative state validation, got {response.status_code}"
 
     def test_mcp_state_error_handling(self):
         """Test state error handling through MCP."""
@@ -127,7 +136,10 @@ class TestMCPJsonStateUpdates(unittest.TestCase):
         )
 
         # MCP should handle state errors gracefully (may return 404 for nonexistent campaigns)
-        assert response.status_code in [400, 404], f"Expected 400 or 404 for invalid state data, got {response.status_code}"
+        assert response.status_code in [
+            400,
+            404,
+        ], f"Expected 400 or 404 for invalid state data, got {response.status_code}"
 
     def test_mcp_structured_response_handling(self):
         """Test structured response handling through MCP."""
@@ -143,7 +155,9 @@ class TestMCPJsonStateUpdates(unittest.TestCase):
         )
 
         # MCP should handle requests for structured information (may return 404 for nonexistent campaigns)
-        assert response.status_code in [400, 404], f"Expected 400 or 404 for structured response with invalid campaign data, got {response.status_code}"
+        assert (
+            response.status_code in [400, 404]
+        ), f"Expected 400 or 404 for structured response with invalid campaign data, got {response.status_code}"
 
 
 if __name__ == "__main__":

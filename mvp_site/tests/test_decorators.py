@@ -10,6 +10,7 @@ sys.path.insert(
 )
 
 import logging_util
+import pytest
 from decorators import log_exceptions
 
 
@@ -68,10 +69,10 @@ class TestLogExceptionsDecorator(unittest.TestCase):
             return x * 2
 
         # Test that exception is logged and re-raised
-        with self.assertRaises(ValueError) as context:
+        with pytest.raises(ValueError) as context:
             failing_function(-1)
 
-        assert str(context.exception) == "Negative values not allowed"
+        assert str(context.value) == "Negative values not allowed"
 
         # Check that error was logged
         log_output = self.log_stream.getvalue()
@@ -89,7 +90,7 @@ class TestLogExceptionsDecorator(unittest.TestCase):
         def function_with_args(a, b, c=None, d="default"):
             raise RuntimeError("Test error")
 
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             function_with_args("arg1", "arg2", c="kwarg1", d="kwarg2")
 
         log_output = self.log_stream.getvalue()
@@ -110,19 +111,19 @@ class TestLogExceptionsDecorator(unittest.TestCase):
             raise Exception("Generic error occurred")
 
         # Test ValueError
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             multi_exception_function("value")
 
         # Test TypeError
-        with self.assertRaises(TypeError):
+        with pytest.raises(TypeError):
             multi_exception_function("type")
 
         # Test RuntimeError
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             multi_exception_function("runtime")
 
         # Test generic Exception
-        with self.assertRaises(Exception):
+        with pytest.raises(Exception):
             multi_exception_function("other")
 
         # Verify all exceptions were logged
@@ -167,7 +168,7 @@ class TestLogExceptionsDecorator(unittest.TestCase):
         test_list = [1, 2, {"nested": "dict"}]
         test_dict = {"key1": "value1", "key2": [1, 2, 3]}
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             complex_args_function(test_list, test_dict, extra_kwarg="test")
 
         log_output = self.log_stream.getvalue()
@@ -185,7 +186,7 @@ class TestLogExceptionsDecorator(unittest.TestCase):
         def function_that_fails():
             raise Exception("Test exception")
 
-        with self.assertRaises(Exception):
+        with pytest.raises(Exception):
             function_that_fails()
 
         # Verify that the module logger's error method was called
@@ -207,7 +208,7 @@ class TestLogExceptionsDecorator(unittest.TestCase):
         def outer_function():
             inner_function()
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             outer_function()
 
         log_output = self.log_stream.getvalue()

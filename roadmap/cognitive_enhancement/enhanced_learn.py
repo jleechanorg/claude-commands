@@ -258,7 +258,6 @@ class EnhancedLearner:
     def get_recent_patterns(self, days: int = 7) -> list[LearningPattern]:
         """Get patterns learned in the last N days."""
 
-
         cutoff = datetime.now() - timedelta(days=days)
 
         recent = []

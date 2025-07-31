@@ -9,7 +9,6 @@ Playwright MCP usage instead of direct playwright imports for testing_ui/ direct
 
 import os
 import sys
-import time
 
 # Use Playwright MCP instead of direct playwright import per coding guidelines
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 def test_format_mismatch():
     """Test that should FAIL due to field format mismatch.
-    
+
     This test has been updated to remove direct Playwright usage in favor of
     Playwright MCP functions available in Claude Code CLI environment.
     """
@@ -34,10 +33,10 @@ def test_format_mismatch():
     # - mcp__playwright-mcp__browser_type()
     # - mcp__playwright-mcp__browser_take_screenshot()
     # - mcp__playwright-mcp__browser_snapshot()
-    
+
     print("⚠️ Test converted to use Playwright MCP - implementation pending")
     print("✓ Test structure updated per coding guidelines")
-    
+
     # For now, return success to indicate the structural fix is complete
     return True
 

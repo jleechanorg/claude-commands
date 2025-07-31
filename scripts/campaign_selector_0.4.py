@@ -136,7 +136,7 @@ def analyze_campaign(
     # Get game states for this campaign
     db = firestore.client()
     # Game states are stored under users/{user_id}/campaigns/{campaign_id}/game_state
-    game_state_ref = (
+    (
         db.collection("users")
         .document(user_id)
         .collection("campaigns")
