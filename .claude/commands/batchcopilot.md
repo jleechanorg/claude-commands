@@ -11,7 +11,8 @@
 **Token Efficiency**:
 - **Individual runs**: 72 × 4M tokens = 288M tokens ($288/week)
 - **Batch processing**: 15 sessions × 8M tokens = 120M tokens ($120/week)
-- **Savings**: 58% reduction ($168/week saved)
+- **With optimization**: Additional 20-40% savings for clean PRs
+- **Combined savings**: 65-75% reduction ($186-216/week saved)
 
 ## Usage Examples
 
@@ -45,8 +46,8 @@
 ### Phase 3: Batch Processing
 For each PR in the batch:
 1. **Load PR-specific context**: Only incremental context for this PR
-2. **Run standard copilot workflow**: 6-phase analysis
-3. **Track results**: Success/failure status per PR
+2. **Run intelligent copilot workflow**: 6-phase analysis with stage optimization
+3. **Track results**: Success/failure status per PR + optimization metrics
 4. **Context preservation**: Keep loaded patterns for next PR
 
 ### Phase 4: Batch Summary

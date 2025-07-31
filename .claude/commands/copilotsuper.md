@@ -14,6 +14,7 @@
 - **Option 3 Architecture**: Uses integrated `copilot.py` with parallel data collection
 - **Comprehensive Analysis**: Full GitHub comment extraction, test fixing, and CI resolution
 - **Automatic Fixes**: Each agent commits and pushes changes to make PRs mergeable
+- **Intelligent Optimization**: Skip unnecessary stages when PRs are already clean
 - **Real-time Monitoring**: Track all agents' progress and aggregate results
 
 ## 🔧 Implementation Approach
@@ -25,8 +26,8 @@
    - Checkouts PR branch in isolated worktree
    - Pulls latest from origin/main
    - Resolves any merge conflicts
-   - Runs `/copilot` for comprehensive analysis
-   - Commits and pushes fixes
+   - Runs `/copilot` with intelligent stage optimization
+   - Commits and pushes fixes (only when changes made)
 4. **Monitor Progress**: Track all agents in real-time
 5. **Aggregate Results**: Compile summary from all agent results
 
