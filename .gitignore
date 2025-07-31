@@ -62,7 +62,9 @@ yarn-error.log*
 dist/
 build/
 *.min.js
-*.min.css
+
+# Frontend v2 build artifacts
+mvp_site/static/v2/assets/
 
 # Temp files
 tmp/

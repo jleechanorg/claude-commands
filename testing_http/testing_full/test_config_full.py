@@ -1,5 +1,3 @@
-from dotenv import load_dotenv
-
 """
 Configuration for FULL API browser tests using real Firebase and Gemini.
 
@@ -19,6 +17,7 @@ import os
 from pathlib import Path
 
 import requests
+from dotenv import load_dotenv
 
 # Try to load from .env file if it exists
 env_path = Path(__file__).parent / ".env"
@@ -46,8 +45,8 @@ def get_test_session():
     """Get a session configured for full API testing."""
     session = requests.Session()
 
-    # For now, still use test bypass headers
-    # TODO: Implement real Firebase auth flow
+    # Use test bypass headers for automated testing
+    # This intentionally bypasses Firebase auth for test automation
     session.headers.update(
         {"X-Test-Bypass-Auth": "true", "X-Test-User-ID": "test-full-api-user"}
     )

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mock Mode Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        .test-result { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Frontend v2 Mock Mode Test</h1>
+    <p>This page tests if the mock mode integration works correctly.</p>
+
+    <div id="test-results"></div>
+
+    <script type="module">
+        const results = document.getElementById('test-results');
+
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = message;
+            results.appendChild(div);
+        }
+
+        async function runTests() {
+            addResult('🧪 Starting Mock Mode Tests', 'info');
+
+            // Test 1: Check if we're in test mode
+            const urlParams = new URLSearchParams(window.location.search);
+            const testMode = urlParams.get('test_mode');
+            if (testMode === 'true') {
+                addResult('✅ Test mode URL parameter detected', 'success');
+            } else {
+                addResult('⚠️ Test mode not enabled via URL. Add ?test_mode=true to URL', 'error');
+                return;
+            }
+
+            // Test 2: Try to import mock service
+            try {
+                const { apiWithMock } = await import('./src/services/api-with-mock.service.ts');
+                addResult('✅ Mock service imported successfully', 'success');
+
+                // Test 3: Check if mock mode is active
+                if (apiWithMock.isMockMode()) {
+                    addResult('✅ Mock mode is active', 'success');
+                } else {
+                    addResult('❌ Mock mode is not active', 'error');
+                    return;
+                }
+
+                // Test 4: Test authentication
+                try {
+                    const user = await apiWithMock.getCurrentUser();
+                    if (user) {
+                        addResult(`✅ Mock user retrieved: ${user.displayName} (${user.email})`, 'success');
+                    } else {
+                        addResult('❌ No mock user found', 'error');
+                    }
+                } catch (error) {
+                    addResult(`❌ Auth test failed: ${error.message}`, 'error');
+                }
+
+                // Test 5: Test campaign fetching
+                try {
+                    const campaigns = await apiWithMock.getCampaigns();
+                    if (campaigns && campaigns.length > 0) {
+                        addResult(`✅ Mock campaigns retrieved: ${campaigns.length} campaigns`, 'success');
+                        addResult(`📋 First campaign: "${campaigns[0].title}"`, 'info');
+                    } else {
+                        addResult('❌ No mock campaigns found', 'error');
+                    }
+                } catch (error) {
+                    addResult(`❌ Campaign test failed: ${error.message}`, 'error');
+                }
+
+                addResult('🎉 Mock mode tests completed!', 'success');
+
+            } catch (error) {
+                addResult(`❌ Failed to import mock service: ${error.message}`, 'error');
+            }
+        }
+
+        // Run tests when page loads
+        runTests();
+    </script>
+</body>
+</html>
