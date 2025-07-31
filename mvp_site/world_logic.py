@@ -420,9 +420,14 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         # Always use D&D system
         attribute_system = constants.ATTRIBUTE_SYSTEM_DND
 
-        # Create initial game state
+        # Get user settings to apply debug mode during campaign creation
+        user_settings = get_user_settings(user_id)
+        debug_mode = user_settings.get("debug_mode", constants.DEFAULT_DEBUG_MODE) if user_settings else constants.DEFAULT_DEBUG_MODE
+
+        # Create initial game state with user's debug mode preference
         initial_game_state = GameState(
-            custom_campaign_state={"attribute_system": attribute_system}
+            custom_campaign_state={"attribute_system": attribute_system},
+            debug_mode=debug_mode,
         ).to_dict()
 
         generate_companions = "companions" in custom_options

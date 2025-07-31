@@ -254,6 +254,183 @@ class TestCreateCampaignEnd2EndV2(unittest.TestCase):
         # Check that Gemini was called
         fake_genai_client.models.generate_content.assert_called_once()
 
+    @patch("firebase_admin.firestore.client")
+    @patch("google.genai.Client")
+    def test_create_campaign_respects_debug_mode_setting(
+        self, mock_genai_client_class, mock_firestore_client
+    ):
+        """Test that campaign creation respects debug mode setting from user preferences."""
+
+        # Set up fake Firestore
+        fake_firestore = FakeFirestoreClient()
+        mock_firestore_client.return_value = fake_firestore
+
+        # Set up fake Gemini client
+        fake_genai_client = MagicMock()
+        mock_genai_client_class.return_value = fake_genai_client
+
+        # Mock token counting
+        fake_genai_client.models.count_tokens.return_value = MagicMock(
+            total_tokens=1000
+        )
+
+        # Mock Gemini response
+        gemini_response_data = {
+            "narrative": "The mountain winds howled as Thorin the Bold stood at the gates...",
+            "entities_mentioned": ["Thorin the Bold"],
+            "location_confirmed": "Mountain Kingdom Gates",
+            "state_updates": {
+                "player_character_data": {
+                    "name": "Thorin the Bold",
+                    "level": 1,
+                    "hp_current": 10,
+                    "hp_max": 10,
+                }
+            },
+        }
+        fake_genai_client.models.generate_content.return_value = FakeGeminiResponse(
+            json.dumps(gemini_response_data)
+        )
+
+        # First, create user settings with debug_mode=False
+        user_settings_doc = fake_firestore.collection("users").document(
+            self.test_user_id
+        )
+        user_settings_doc.set(
+            {
+                "settings": {
+                    "model_preference": "gemini-2.5-flash",
+                    "debug_mode": False,  # Explicitly set to False (non-default)
+                }
+            }
+        )
+
+        # Make the API request to create campaign
+        response = self.client.post(
+            "/api/campaigns",
+            data=json.dumps(self.test_campaign_data),
+            content_type="application/json",
+            headers=self.test_headers,
+        )
+
+        # Assert response
+        self.assertEqual(response.status_code, 201)
+        response_data = json.loads(response.data)
+        self.assertTrue(response_data["success"])
+        self.assertIn("campaign_id", response_data)
+
+        # Get the created campaign to verify debug mode was applied correctly
+        campaigns_collection = (
+            fake_firestore.collection("users")
+            .document(self.test_user_id)
+            .collection("campaigns")
+        )
+        campaign_docs = list(campaigns_collection._docs.values())
+        self.assertEqual(len(campaign_docs), 1)
+
+        # Check that the campaign's game state has debug_mode=False as specified in user settings
+        campaign_doc = campaign_docs[0]
+        campaign_data = campaign_doc._data
+
+        # Game state is stored in a subcollection: campaigns/{id}/game_states/current_state
+        game_states_collection = campaign_doc.collection("game_states")
+        current_state_doc = game_states_collection.document("current_state")
+
+        # Verify that the game state document exists and has data
+        self.assertTrue(current_state_doc.exists())
+        game_state = current_state_doc.to_dict()
+
+        # The key test: debug_mode should be False (from user settings), not True (default)
+        self.assertIn("debug_mode", game_state)
+        self.assertEqual(
+            game_state["debug_mode"],
+            False,
+            "Campaign should respect user's debug_mode=False setting, not use default True",
+        )
+
+    @patch("firebase_admin.firestore.client")
+    @patch("google.genai.Client")
+    def test_create_campaign_uses_default_debug_mode_when_no_user_setting(
+        self, mock_genai_client_class, mock_firestore_client
+    ):
+        """Test that campaign creation uses default debug mode when user has no specific setting."""
+
+        # Set up fake Firestore
+        fake_firestore = FakeFirestoreClient()
+        mock_firestore_client.return_value = fake_firestore
+
+        # Set up fake Gemini client
+        fake_genai_client = MagicMock()
+        mock_genai_client_class.return_value = fake_genai_client
+
+        # Mock token counting
+        fake_genai_client.models.count_tokens.return_value = MagicMock(
+            total_tokens=1000
+        )
+
+        # Mock Gemini response
+        gemini_response_data = {
+            "narrative": "The mountain winds howled as Thorin the Bold stood at the gates...",
+            "entities_mentioned": ["Thorin the Bold"],
+            "location_confirmed": "Mountain Kingdom Gates",
+            "state_updates": {
+                "player_character_data": {
+                    "name": "Thorin the Bold",
+                    "level": 1,
+                    "hp_current": 10,
+                    "hp_max": 10,
+                }
+            },
+        }
+        fake_genai_client.models.generate_content.return_value = FakeGeminiResponse(
+            json.dumps(gemini_response_data)
+        )
+
+        # Don't create any user settings - this should use defaults
+
+        # Make the API request to create campaign
+        response = self.client.post(
+            "/api/campaigns",
+            data=json.dumps(self.test_campaign_data),
+            content_type="application/json",
+            headers=self.test_headers,
+        )
+
+        # Assert response
+        self.assertEqual(response.status_code, 201)
+        response_data = json.loads(response.data)
+        self.assertTrue(response_data["success"])
+        self.assertIn("campaign_id", response_data)
+
+        # Get the created campaign to verify default debug mode was used
+        campaigns_collection = (
+            fake_firestore.collection("users")
+            .document(self.test_user_id)
+            .collection("campaigns")
+        )
+        campaign_docs = list(campaigns_collection._docs.values())
+        self.assertEqual(len(campaign_docs), 1)
+
+        # Check that the campaign's game state has default debug_mode=True
+        campaign_doc = campaign_docs[0]
+        campaign_data = campaign_doc._data
+
+        # Game state is stored in a subcollection: campaigns/{id}/game_states/current_state
+        game_states_collection = campaign_doc.collection("game_states")
+        current_state_doc = game_states_collection.document("current_state")
+
+        # Verify that the game state document exists and has data
+        self.assertTrue(current_state_doc.exists())
+        game_state = current_state_doc.to_dict()
+
+        # The key test: debug_mode should be True (default) when no user setting exists
+        self.assertIn("debug_mode", game_state)
+        self.assertEqual(
+            game_state["debug_mode"],
+            True,
+            "Campaign should use default debug_mode=True when no user setting exists",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -41,7 +41,7 @@ class GameState:
         self.time_pressure_warnings = kwargs.get("time_pressure_warnings", {})
 
         # Debug mode flag
-        self.debug_mode = kwargs.get("debug_mode", True)
+        self.debug_mode = kwargs.get("debug_mode", constants.DEFAULT_DEBUG_MODE)
 
         # Dynamically set any other attributes from kwargs
         for key, value in kwargs.items():

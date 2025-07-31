@@ -12,6 +12,7 @@ sys.path.insert(
 )
 import constants
 from entity_tracking import create_from_game_state
+
 from game_state import GameState
 
 
@@ -21,12 +22,12 @@ def run_pr_change_tests():
     # Test debug mode default change
     print("\n=== Testing Debug Mode Default Change ===")
     try:
-        # Test 1: Default to True
+        # Test 1: Default to constants.DEFAULT_DEBUG_MODE
         gs = GameState()
         assert (
-            gs.debug_mode == True
-        ), f"Expected debug_mode=True by default, got {gs.debug_mode}"
-        print("✓ GameState defaults to debug_mode=True")
+            gs.debug_mode == constants.DEFAULT_DEBUG_MODE
+        ), f"Expected debug_mode={constants.DEFAULT_DEBUG_MODE} by default, got {gs.debug_mode}"
+        print(f"✓ GameState defaults to debug_mode={constants.DEFAULT_DEBUG_MODE}")
 
         # Test 2: Can be set to False
         gs = GameState(debug_mode=False)
@@ -46,6 +47,15 @@ def run_pr_change_tests():
             gs2.debug_mode == True
         ), f"Expected debug_mode=True from dict, got {gs2.debug_mode}"
         print("✓ debug_mode is preserved in deserialization")
+
+        # Test 5: Deserialization defaults to constants.DEFAULT_DEBUG_MODE when missing
+        gs3 = GameState.from_dict({"game_state_version": 1})
+        assert (
+            gs3.debug_mode == constants.DEFAULT_DEBUG_MODE
+        ), f"Expected debug_mode={constants.DEFAULT_DEBUG_MODE} when missing from dict, got {gs3.debug_mode}"
+        print(
+            f"✓ debug_mode defaults to {constants.DEFAULT_DEBUG_MODE} when missing from deserialization"
+        )
 
     except Exception as e:
         print(f"✗ Debug mode tests failed: {e}")

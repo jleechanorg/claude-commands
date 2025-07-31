@@ -14,9 +14,10 @@ sys.path.insert(
 import datetime
 import unittest
 
+from world_logic import _cleanup_legacy_state, format_state_changes, parse_set_command
+
 from firestore_service import _perform_append, update_state_with_changes
 from game_state import GameState
-from world_logic import _cleanup_legacy_state, format_state_changes, parse_set_command
 
 
 class TestGameState(unittest.TestCase):
@@ -42,15 +43,15 @@ class TestGameState(unittest.TestCase):
         # Should handle dict gracefully and not crash
         assert isinstance(discrepancies, list)
 
-    def test_debug_mode_default_true(self):
-        """Test that debug_mode defaults to True per PR changes."""
+    def test_debug_mode_default_false(self):
+        """Test that debug_mode defaults to False per updated DEFAULT_DEBUG_MODE."""
         gs = GameState()
-        assert gs.debug_mode
+        assert not gs.debug_mode
 
         # Also test it's included in serialization
         data = gs.to_dict()
         assert "debug_mode" in data
-        assert data["debug_mode"]
+        assert not data["debug_mode"]
 
     def test_debug_mode_can_be_set_false(self):
         """Test that debug_mode can be explicitly set to False."""
@@ -74,10 +75,10 @@ class TestGameState(unittest.TestCase):
         gs = GameState.from_dict(data)
         assert not gs.debug_mode
 
-        # Test missing debug_mode defaults to True
+        # Test missing debug_mode defaults to False
         data = {"game_state_version": 1}
         gs = GameState.from_dict(data)
-        assert gs.debug_mode
+        assert not gs.debug_mode
 
     def test_default_initialization(self):
         """Test GameState initialization with default values."""
@@ -95,8 +96,8 @@ class TestGameState(unittest.TestCase):
         time_diff = abs((now - gs.last_state_update_timestamp).total_seconds())
         assert time_diff < 5, "Timestamp should be within 5 seconds of now"
 
-        # Test debug_mode defaults to True (PR change)
-        assert gs.debug_mode, "debug_mode should default to True"
+        # Test debug_mode defaults to False (updated DEFAULT_DEBUG_MODE)
+        assert not gs.debug_mode, "debug_mode should default to False"
 
     def test_initialization_with_kwargs(self):
         """Test GameState initialization with provided values."""
@@ -117,7 +118,10 @@ class TestGameState(unittest.TestCase):
         assert gs.player_character_data == {"name": "Hero", "level": 5}
         assert gs.world_data == {"location": "Forest"}
         assert gs.npc_data == {"npc1": {"name": "Villager"}}
-        assert gs.custom_campaign_state == {"quest_active": True, "attribute_system": "D&D"}
+        assert gs.custom_campaign_state == {
+            "quest_active": True,
+            "attribute_system": "D&D",
+        }
         assert gs.last_state_update_timestamp == custom_time
         assert gs.extra_field == "extra_value"
 
@@ -147,7 +151,7 @@ class TestGameState(unittest.TestCase):
             "npc_agendas": {},
             "world_resources": {},
             "time_pressure_warnings": {},
-            "debug_mode": True,  # Should default to True per PR changes
+            "debug_mode": False,  # Should default to False per updated DEFAULT_DEBUG_MODE
         }
 
         assert result == expected
@@ -270,45 +274,103 @@ class TestGameState(unittest.TestCase):
         gs = GameState(**complex_data)
 
         # Test string values at 3rd level
-        assert gs.player_character_data["personal_info"]["basic_stats"]["name"] == "TestHero"
-        assert gs.world_data["locations"]["current_area"]["area_name"] == "Enchanted Forest"
+        assert (
+            gs.player_character_data["personal_info"]["basic_stats"]["name"]
+            == "TestHero"
+        )
+        assert (
+            gs.world_data["locations"]["current_area"]["area_name"]
+            == "Enchanted Forest"
+        )
         assert gs.npc_data["relationships"]["allies"]["leader_info"]["name"] == "Alice"
-        assert gs.custom_campaign_state["progression"]["chapter_data"]["chapter_metadata"]["title"] == "The Dark Tower"
+        assert (
+            gs.custom_campaign_state["progression"]["chapter_data"]["chapter_metadata"][
+                "title"
+            ]
+            == "The Dark Tower"
+        )
 
         # Test integer values at 3rd level
         assert gs.player_character_data["personal_info"]["basic_stats"]["level"] == 42
         assert gs.npc_data["relationships"]["allies"]["count"] == 3
-        assert gs.custom_campaign_state["progression"]["chapter_data"]["current_chapter"] == 5
+        assert (
+            gs.custom_campaign_state["progression"]["chapter_data"]["current_chapter"]
+            == 5
+        )
 
         # Test float values at 3rd level
-        assert gs.player_character_data["personal_info"]["basic_stats"]["experience_ratio"] == 0.75
+        assert (
+            gs.player_character_data["personal_info"]["basic_stats"]["experience_ratio"]
+            == 0.75
+        )
         assert gs.world_data["locations"]["current_area"]["temperature"] == 22.5
         assert gs.npc_data["relationships"]["allies"]["average_trust"] == 0.8
-        assert gs.custom_campaign_state["progression"]["chapter_data"]["completion_percentage"] == 67.8
+        assert (
+            gs.custom_campaign_state["progression"]["chapter_data"][
+                "completion_percentage"
+            ]
+            == 67.8
+        )
 
         # Test boolean values at 3rd level
-        assert gs.player_character_data["personal_info"]["basic_stats"]["is_alive"] == True
+        assert (
+            gs.player_character_data["personal_info"]["basic_stats"]["is_alive"] == True
+        )
         assert gs.world_data["locations"]["current_area"]["is_safe"] == False
         assert gs.npc_data["relationships"]["allies"]["all_trusted"] == True
-        assert gs.custom_campaign_state["progression"]["chapter_data"]["all_objectives_complete"] == False
+        assert (
+            gs.custom_campaign_state["progression"]["chapter_data"][
+                "all_objectives_complete"
+            ]
+            == False
+        )
 
         # Test None values at 3rd level
-        assert gs.player_character_data["personal_info"]["basic_stats"]["special_abilities"] is None
+        assert (
+            gs.player_character_data["personal_info"]["basic_stats"][
+                "special_abilities"
+            ]
+            is None
+        )
         assert gs.world_data["locations"]["current_area"]["discovered_secrets"] is None
         assert gs.npc_data["relationships"]["allies"]["special_ally"] is None
-        assert gs.custom_campaign_state["progression"]["chapter_data"]["bonus_content"] is None
+        assert (
+            gs.custom_campaign_state["progression"]["chapter_data"]["bonus_content"]
+            is None
+        )
 
         # Test list values at 3rd level
-        assert gs.player_character_data["personal_info"]["basic_stats"]["inventory"] == ["sword", "potion"]
+        assert gs.player_character_data["personal_info"]["basic_stats"][
+            "inventory"
+        ] == ["sword", "potion"]
         assert gs.world_data["locations"]["current_area"]["coordinates"] == [100, 250]
         assert gs.npc_data["relationships"]["allies"]["trust_levels"] == [0.8, 0.9, 0.7]
-        assert gs.custom_campaign_state["progression"]["chapter_data"]["completed_objectives"] == ["find_key", "defeat_boss"]
+        assert gs.custom_campaign_state["progression"]["chapter_data"][
+            "completed_objectives"
+        ] == ["find_key", "defeat_boss"]
 
         # Test nested dict values at 3rd level
-        assert gs.player_character_data["personal_info"]["basic_stats"]["equipped_gear"]["weapon"] == "magic_sword"
-        assert gs.world_data["locations"]["current_area"]["environmental_effects"]["weather"] == "misty"
-        assert gs.npc_data["relationships"]["allies"]["leader_info"]["rank"] == "Captain"
-        assert gs.custom_campaign_state["progression"]["chapter_data"]["chapter_metadata"]["difficulty"] == "hard"
+        assert (
+            gs.player_character_data["personal_info"]["basic_stats"]["equipped_gear"][
+                "weapon"
+            ]
+            == "magic_sword"
+        )
+        assert (
+            gs.world_data["locations"]["current_area"]["environmental_effects"][
+                "weather"
+            ]
+            == "misty"
+        )
+        assert (
+            gs.npc_data["relationships"]["allies"]["leader_info"]["rank"] == "Captain"
+        )
+        assert (
+            gs.custom_campaign_state["progression"]["chapter_data"]["chapter_metadata"][
+                "difficulty"
+            ]
+            == "hard"
+        )
 
         # Test datetime
         assert gs.last_state_update_timestamp == test_datetime
@@ -425,9 +487,15 @@ class TestGameState(unittest.TestCase):
 
         # RED phase assertions - these should fail without the fix
         # Verify cache attributes are NOT in the serialized data
-        assert "_manifest_cache" not in state_dict, "_manifest_cache should be excluded from serialization"
-        assert "_internal_temp" not in state_dict, "Internal attributes starting with _ should be considered for exclusion"
-        assert "_another_cache" not in state_dict, "Internal cache attributes should be excluded"
+        assert (
+            "_manifest_cache" not in state_dict
+        ), "_manifest_cache should be excluded from serialization"
+        assert (
+            "_internal_temp" not in state_dict
+        ), "Internal attributes starting with _ should be considered for exclusion"
+        assert (
+            "_another_cache" not in state_dict
+        ), "Internal cache attributes should be excluded"
 
         # GREEN phase assertions - these should always pass
         # Verify normal attributes ARE in the serialized data
@@ -660,42 +728,108 @@ class TestUpdateStateWithChanges(unittest.TestCase):
         result = update_state_with_changes(state, changes)
 
         # Test string updates at 3rd level
-        assert result["game_data"]["player_info"]["character_sheet"]["name"] == "UpdatedHero"
-        assert result["world_state"]["environment"]["current_location"]["name"] == "Starting Village"  # unchanged
-        assert result["metadata"]["session_info"]["settings"]["difficulty"] == "normal"  # new
+        assert (
+            result["game_data"]["player_info"]["character_sheet"]["name"]
+            == "UpdatedHero"
+        )
+        assert (
+            result["world_state"]["environment"]["current_location"]["name"]
+            == "Starting Village"
+        )  # unchanged
+        assert (
+            result["metadata"]["session_info"]["settings"]["difficulty"] == "normal"
+        )  # new
 
         # Test int updates at 3rd level
         assert result["game_data"]["player_info"]["character_sheet"]["level"] == 5
-        assert result["world_state"]["environment"]["current_location"]["danger_level"] == 2
+        assert (
+            result["world_state"]["environment"]["current_location"]["danger_level"]
+            == 2
+        )
         assert result["metadata"]["session_info"]["session_id"] == 12345  # new
 
         # Test float updates at 3rd level
-        assert result["game_data"]["player_info"]["character_sheet"]["health_ratio"] == 0.8
-        assert result["world_state"]["environment"]["current_location"]["weather_factor"] == 0.3
+        assert (
+            result["game_data"]["player_info"]["character_sheet"]["health_ratio"] == 0.8
+        )
+        assert (
+            result["world_state"]["environment"]["current_location"]["weather_factor"]
+            == 0.3
+        )
 
         # Test bool updates at 3rd level
-        assert result["game_data"]["player_info"]["character_sheet"]["is_active"] == False
-        assert result["world_state"]["environment"]["current_location"]["is_discovered"] == False
+        assert (
+            result["game_data"]["player_info"]["character_sheet"]["is_active"] == False
+        )
+        assert (
+            result["world_state"]["environment"]["current_location"]["is_discovered"]
+            == False
+        )
         assert result["metadata"]["session_info"]["is_tutorial"] == False  # new
 
         # Test None updates at 3rd level
-        assert result["game_data"]["player_info"]["character_sheet"]["special_items"] == ["magic_ring"]  # None -> list
-        assert result["world_state"]["environment"]["current_location"]["hidden_treasure"] == "gold_coins"  # None -> string
+        assert result["game_data"]["player_info"]["character_sheet"][
+            "special_items"
+        ] == ["magic_ring"]  # None -> list
+        assert (
+            result["world_state"]["environment"]["current_location"]["hidden_treasure"]
+            == "gold_coins"
+        )  # None -> string
         assert result["metadata"]["session_info"]["notes"] is None  # new None
-        assert result["world_state"]["environment"]["current_location"]["connections"]["west"] is None  # new nested None
+        assert (
+            result["world_state"]["environment"]["current_location"]["connections"][
+                "west"
+            ]
+            is None
+        )  # new nested None
 
         # Test list updates at 3rd level (append operations)
-        assert result["game_data"]["player_info"]["character_sheet"]["skills"] == ["basic_attack", "fireball", "heal"]
-        assert result["world_state"]["environment"]["current_location"]["npcs"] == ["village_elder", "merchant", "guard"]
+        assert result["game_data"]["player_info"]["character_sheet"]["skills"] == [
+            "basic_attack",
+            "fireball",
+            "heal",
+        ]
+        assert result["world_state"]["environment"]["current_location"]["npcs"] == [
+            "village_elder",
+            "merchant",
+            "guard",
+        ]
         assert result["metadata"]["session_info"]["participants"] == ["player1"]  # new
 
         # Test nested dict updates at 3rd level
-        assert result["game_data"]["player_info"]["character_sheet"]["attributes"]["strength"] == 15  # updated
-        assert result["game_data"]["player_info"]["character_sheet"]["attributes"]["intelligence"] == 12  # preserved
-        assert result["game_data"]["player_info"]["character_sheet"]["attributes"]["wisdom"] == 14  # new
-        assert result["world_state"]["environment"]["current_location"]["connections"]["north"] == "forest"  # preserved
-        assert result["world_state"]["environment"]["current_location"]["connections"]["east"] == "mountain"  # new
-        assert result["metadata"]["session_info"]["settings"]["auto_save"] == True  # new nested
+        assert (
+            result["game_data"]["player_info"]["character_sheet"]["attributes"][
+                "strength"
+            ]
+            == 15
+        )  # updated
+        assert (
+            result["game_data"]["player_info"]["character_sheet"]["attributes"][
+                "intelligence"
+            ]
+            == 12
+        )  # preserved
+        assert (
+            result["game_data"]["player_info"]["character_sheet"]["attributes"][
+                "wisdom"
+            ]
+            == 14
+        )  # new
+        assert (
+            result["world_state"]["environment"]["current_location"]["connections"][
+                "north"
+            ]
+            == "forest"
+        )  # preserved
+        assert (
+            result["world_state"]["environment"]["current_location"]["connections"][
+                "east"
+            ]
+            == "mountain"
+        )  # new
+        assert (
+            result["metadata"]["session_info"]["settings"]["auto_save"] == True
+        )  # new nested
 
         # Test datetime at 3rd level
         assert result["metadata"]["session_info"]["start_time"] == test_datetime
@@ -738,13 +872,23 @@ class TestUpdateStateWithChanges(unittest.TestCase):
         result = update_state_with_changes(state, changes)
 
         # Test updates to "falsy" values
-        assert result["container1"]["container2"]["container3"]["empty_list"] == ["first_item"]
-        assert result["container1"]["container2"]["container3"]["empty_dict"] == {"new_key": "new_value"}
+        assert result["container1"]["container2"]["container3"]["empty_list"] == [
+            "first_item"
+        ]
+        assert result["container1"]["container2"]["container3"]["empty_dict"] == {
+            "new_key": "new_value"
+        }
         assert result["container1"]["container2"]["container3"]["zero_int"] == 42
         assert result["container1"]["container2"]["container3"]["zero_float"] == 3.14
         assert result["container1"]["container2"]["container3"]["false_bool"] == True
-        assert result["container1"]["container2"]["container3"]["empty_string"] == "now_has_content"
-        assert result["container1"]["container2"]["container3"]["completely_new"] == "brand_new_value"
+        assert (
+            result["container1"]["container2"]["container3"]["empty_string"]
+            == "now_has_content"
+        )
+        assert (
+            result["container1"]["container2"]["container3"]["completely_new"]
+            == "brand_new_value"
+        )
 
 
 class TestPerformAppend(unittest.TestCase):
@@ -837,7 +981,9 @@ class TestGameStateValidation(unittest.TestCase):
 
         # We expect to find at least one discrepancy
         assert len(discrepancies) > 0, "Should detect HP/consciousness discrepancy"
-        assert any("unconscious" in d.lower() and "hp" in d.lower() for d in discrepancies), "Should specifically mention unconscious/HP mismatch"
+        assert any(
+            "unconscious" in d.lower() and "hp" in d.lower() for d in discrepancies
+        ), "Should specifically mention unconscious/HP mismatch"
 
     def test_validate_checkpoint_consistency_location_mismatch_fails_without_implementation(
         self,
@@ -856,7 +1002,9 @@ class TestGameStateValidation(unittest.TestCase):
 
         # We expect to find at least one discrepancy
         assert len(discrepancies) > 0, "Should detect location discrepancy"
-        assert any("location" in d.lower() for d in discrepancies), "Should specifically mention location mismatch"
+        assert any(
+            "location" in d.lower() for d in discrepancies
+        ), "Should specifically mention location mismatch"
 
     def test_validate_checkpoint_consistency_mission_completion_fails_without_implementation(
         self,
@@ -876,8 +1024,12 @@ class TestGameStateValidation(unittest.TestCase):
         discrepancies = gs.validate_checkpoint_consistency(narrative)
 
         # We expect to find at least one discrepancy
-        assert len(discrepancies) > 0, "Should detect completed mission still marked active"
-        assert any("mission" in d.lower() or "quest" in d.lower() for d in discrepancies), "Should specifically mention mission/quest discrepancy"
+        assert (
+            len(discrepancies) > 0
+        ), "Should detect completed mission still marked active"
+        assert any(
+            "mission" in d.lower() or "quest" in d.lower() for d in discrepancies
+        ), "Should specifically mention mission/quest discrepancy"
 
 
 class TestMainStateFunctions(unittest.TestCase):
@@ -908,7 +1060,11 @@ class TestMainStateFunctions(unittest.TestCase):
 
     def test_cleanup_legacy_state_with_world_time(self):
         """Test cleanup of legacy world_time key."""
-        state_dict = {"world_time": "12:00", "normal_key": "value", "legacy_prompt_data": "old"}
+        state_dict = {
+            "world_time": "12:00",
+            "normal_key": "value",
+            "legacy_prompt_data": "old",
+        }
 
         cleaned, was_changed, num_deleted = _cleanup_legacy_state(state_dict)
 
@@ -1081,8 +1237,14 @@ class TestMainStateFunctions(unittest.TestCase):
         assert result["metadata"]["session"]["start_time"] == test_datetime_str
 
         # Test append operations at 3rd level - MCP architecture returns lists directly
-        assert result["player"]["stats"]["combat"]["weapon_proficiencies"] == ["sword", "bow"]
-        assert result["world"]["regions"]["north"]["major_cities"] == ["Northgate", "Frostholm"]
+        assert result["player"]["stats"]["combat"]["weapon_proficiencies"] == [
+            "sword",
+            "bow",
+        ]
+        assert result["world"]["regions"]["north"]["major_cities"] == [
+            "Northgate",
+            "Frostholm",
+        ]
         assert result["metadata"]["session"]["participants"] == ["player1", "player2"]
 
 
