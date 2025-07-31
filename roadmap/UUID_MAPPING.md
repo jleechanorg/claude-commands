@@ -102,6 +102,19 @@
 - **TASK-169**: Planning block missing campaign fix - Fix missing planning block in campaign creation
 - **TASK-170**: Fix fake code patterns and individual comment reply - Address fake code and comment issues
 
+### Handoff Tasks (HANDOFF series)
+- **HANDOFF-ARCH**: Real AST-based /arch implementation - Ready for handoff
+- **HANDOFF-MEMORY-CLEANUP**: Memory system cleanup and migration - Ready for handoff
+- **HANDOFF-SELF-CRITICAL**: Self-critical Claude Code CLI - Ready for handoff
+- **HANDOFF-SLASH-COMMANDS**: Enhance /handoff + create /commentreply - Ready for handoff
+- **HANDOFF-COPILOT-ENHANCEMENTS**: Advanced copilot command features - Ready for handoff
+- **HANDOFF-SETTINGS-PAGE**: Settings page with Gemini model selection - Ready for handoff
+- **HANDOFF-PUSHL_FIX**: Fix /pushl command context isolation and add branch awareness - Ready for handoff
+
+### Critical Priority Tasks (Additional TASK series)
+- **TASK-140**: Hard stop for integrity failures - Critical priority task
+- **TASK-142**: Fix send button unclickable - Critical priority task
+
 ## Cross-Reference Notes
 
 1. All three roadmap files should use these UUIDs consistently
