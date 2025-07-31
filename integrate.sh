@@ -144,31 +144,77 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
         fi
     fi
 
-    # Check if current branch has unmerged commits (against origin/main) - HARD STOP
-    commit_count=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
-    if [[ $commit_count -gt 0 ]]; then
-        echo -e "${RED}❌ HARD STOP: Branch '$current_branch' has $commit_count commit(s) not in origin/main:${NC}"
-        echo ""
-        echo "   📋 COMMIT SUMMARY:"
-        git log --oneline origin/main..HEAD | head -10 | sed 's/^/     /'
-        echo ""
-        echo "   📊 FILES CHANGED:"
-        git diff --name-only origin/main..HEAD | head -10 | sed 's/^/     /'
-        echo ""
-        if [ "$FORCE_MODE" = true ]; then
-            echo -e "${RED}🚨 FORCE MODE: Proceeding anyway (commits not in origin/main will be abandoned)${NC}"
+    # Check if current branch has unmerged commits - HARD STOP
+    # First check: Compare local branch to its remote tracking branch (preferred)
+    if git_upstream=$(git rev-parse --abbrev-ref @{upstream} 2>/dev/null); then
+        echo "   Checking sync status with remote tracking branch: $git_upstream"
+        if [[ "$(git rev-parse HEAD)" == "$(git rev-parse "$git_upstream" 2>/dev/null)" ]]; then
+            # Local branch has same commit hash as remote tracking branch - safe to delete
+            should_delete_branch=true
+            echo -e "${GREEN}✅ Branch '$current_branch' is synced with remote and will be deleted after integration${NC}"
         else
-            echo "   These commits are not in origin/main. Options:"
-            echo "   • If already merged via PR: Changes were likely squash-merged, safe to proceed with --force"
-            echo "   • If not merged: Push changes first: git push origin HEAD:$current_branch"
-            echo "   • Create PR: gh pr create"
-            echo "   • Force proceed: ./integrate.sh --force (abandons commits)"
-            exit 1
+            # Local branch differs from remote tracking branch
+            local_commits=$(git rev-list --count "$git_upstream"..HEAD 2>/dev/null || echo "0")
+            remote_commits=$(git rev-list --count HEAD.."$git_upstream" 2>/dev/null || echo "0")
+            echo -e "${RED}❌ HARD STOP: Branch '$current_branch' is not synced with remote '$git_upstream':${NC}"
+            echo "   • Local commits ahead: $local_commits"
+            echo "   • Remote commits ahead: $remote_commits"
+            echo ""
+            if [ "$local_commits" -gt 0 ]; then
+                echo "   📋 LOCAL-ONLY COMMITS:"
+                git log --oneline "$git_upstream"..HEAD | head -5 | sed 's/^/     /'
+                [ "$local_commits" -gt 5 ] && echo "     ...and $((local_commits - 5)) more commits"
+                echo ""
+            fi
+            if [ "$remote_commits" -gt 0 ]; then
+                echo "   📋 REMOTE-ONLY COMMITS:"
+                git log --oneline HEAD.."$git_upstream" | head -5 | sed 's/^/     /'
+                [ "$remote_commits" -gt 5 ] && echo "     ...and $((remote_commits - 5)) more commits"
+                echo ""
+            fi
+            if [ "$FORCE_MODE" = true ]; then
+                echo -e "${RED}🚨 FORCE MODE: Proceeding anyway (unsync will be ignored)${NC}"
+                # Initialize should_delete_branch in FORCE_MODE to prevent uninitialized variable
+                should_delete_branch=false
+            else
+                echo "   Options to sync branch:"
+                echo "   • If PR merged: Branch is likely safe to delete with --force"
+                echo "   • Pull latest: git pull origin $current_branch"
+                echo "   • Push changes: git push origin HEAD:$current_branch"
+                echo "   • Force proceed: ./integrate.sh --force (ignores sync status)"
+                exit 1
+            fi
         fi
     else
-        # Branch is clean (no uncommitted changes, no commits not in origin/main)
-        should_delete_branch=true
-        echo -e "${GREEN}✅ Branch '$current_branch' is clean and will be deleted after integration${NC}"
+        # Fallback: No remote tracking branch - use origin/main comparison (current logic)
+        echo "   No remote tracking branch found, checking against origin/main"
+        commit_count=$(git rev-list --count origin/main..HEAD 2>/dev/null || echo "0")
+        if [[ $commit_count -gt 0 ]]; then
+            echo -e "${RED}❌ HARD STOP: Branch '$current_branch' has $commit_count commit(s) not in origin/main:${NC}"
+            echo ""
+            echo "   📋 COMMIT SUMMARY:"
+            git log --oneline origin/main..HEAD | head -10 | sed 's/^/     /'
+            echo ""
+            echo "   📊 FILES CHANGED:"
+            git diff --name-only origin/main..HEAD | head -10 | sed 's/^/     /'
+            echo ""
+            if [ "$FORCE_MODE" = true ]; then
+                echo -e "${RED}🚨 FORCE MODE: Proceeding anyway (commits not in origin/main will be abandoned)${NC}"
+                # Initialize should_delete_branch in FORCE_MODE to prevent uninitialized variable
+                should_delete_branch=false
+            else
+                echo "   These commits are not in origin/main. Options:"
+                echo "   • If already merged via PR: Changes were likely squash-merged, safe to proceed with --force"
+                echo "   • If not merged: Push changes first: git push origin HEAD:$current_branch"
+                echo "   • Create PR: gh pr create"
+                echo "   • Force proceed: ./integrate.sh --force (abandons commits)"
+                exit 1
+            fi
+        else
+            # Branch is clean (no uncommitted changes, no commits not in origin/main)
+            should_delete_branch=true
+            echo -e "${GREEN}✅ Branch '$current_branch' is clean and will be deleted after integration${NC}"
+        fi
     fi
 fi
 

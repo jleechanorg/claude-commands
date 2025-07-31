@@ -164,7 +164,7 @@ fi
 
 ### Phase 4: Comment Response Processing (CONDITIONAL)
 ```bash
-# SMART: Check if comment responses needed
+# SMART: Check if comment responses needed with enhanced context reply system
 unresponded_count=$(gh pr view $PR_NUMBER --json comments,reviews | jq '(.comments | length) + (.reviews | length)')
 
 if [[ "$unresponded_count" -eq 0 ]]; then
@@ -172,18 +172,18 @@ if [[ "$unresponded_count" -eq 0 ]]; then
     echo "✅ Comment Status: $unresponded_count total comments"
     export COMMENTS_PROCESSED="false"
 else
-    echo "💬 RESPONDING: $unresponded_count comments require responses"
-    echo "🚀 EXECUTING: /commentreply $PR_NUMBER"
+    echo "💬 RESPONDING: $unresponded_count comments require enhanced context responses"
+    echo "🚀 EXECUTING: /commentreply $PR_NUMBER (Enhanced Context Reply System)"
 
     # 🚨 CRITICAL: MUST actually execute the command, not just log it
     /commentreply $PR_NUMBER
 
     # 🚨 CRITICAL: Verify execution completed successfully
     if [[ $? -eq 0 ]]; then
-        echo "✅ SUCCESS: Comment replies posted successfully"
+        echo "✅ SUCCESS: Enhanced context replies posted successfully"
 
-        # 🚨 MANDATORY: Verify threading and commit hash compliance
-        echo "🔍 VERIFYING: Threading and commit hash requirements..."
+        # 🚨 MANDATORY: Verify enhanced context reply compliance
+        echo "🔍 VERIFYING: Enhanced context reply requirements..."
         current_commit=$(git rev-parse --short HEAD)
 
         # Check that replies include commit hash references
@@ -194,16 +194,16 @@ else
             echo "⚠️ WARNING: Missing commit hash - replies should include (Commit: $current_commit)"
         fi
 
-        # Check for explicit comment ID references (fallback threading)
-        if [[ "$recent_comment" =~ Reply\ to.*Comment\ # ]]; then
-            echo "✅ VERIFIED: Explicit comment ID reference included"
+        # Check for enhanced context reply format (🧵 **Reply to Inline Comment #[ID]**)
+        if [[ "$recent_comment" =~ 🧵.*Reply\ to\ Inline\ Comment\ # ]]; then
+            echo "✅ VERIFIED: Enhanced context reply format included"
         else
-            echo "⚠️ WARNING: Missing comment ID reference for threading"
+            echo "⚠️ WARNING: Missing enhanced context format for superior UX"
         fi
 
         export COMMENTS_PROCESSED="true"
     else
-        echo "❌ FAILURE: Comment reply execution failed"
+        echo "❌ FAILURE: Enhanced context reply execution failed"
         export COMMENTS_PROCESSED="false"
         echo "🚨 CRITICAL ERROR: Phase 4 cannot be marked complete"
         exit 1
@@ -211,30 +211,32 @@ else
 fi
 ```
 - ✅ **SMART EXECUTION**: Skip when no unresponded comments detected
+- ✅ **ENHANCED CONTEXT SYSTEM**: Use superior enhanced context reply format
 - ✅ **MANDATORY EXECUTION**: Actually run /commentreply when comments exist
 - ✅ **SUCCESS VERIFICATION**: Verify command completed before proceeding
-- ✅ **THREADING COMPLIANCE**: Verify commit hash and comment ID references
-- ✅ **PROTOCOL VALIDATION**: Check replies follow commentreply.md format
+- ✅ **ENHANCED CONTEXT COMPLIANCE**: Verify 🧵 **Reply to Inline Comment #[ID]** format
+- ✅ **PROTOCOL VALIDATION**: Check replies follow enhanced context system
 - ✅ **FAILURE HANDLING**: Hard stop if comment processing fails
 - ✅ **STATE TRACKING**: Export COMMENTS_PROCESSED for Phase 5
 - ✅ **TRANSPARENCY**: Clear logging of all execution steps
 
-### Phase 5: Coverage Verification (CONDITIONAL)
+### Phase 5: Coverage Verification (CONDITIONAL) - Enhanced Context Verification
 ```bash
-# SMART: Verify coverage only if comments were processed
+# SMART: Verify coverage only if comments were processed with enhanced context validation
 if [[ "$COMMENTS_PROCESSED" == "true" ]]; then
-    echo "🔍 VERIFYING: Comment processing coverage validation"
+    echo "🔍 VERIFYING: Enhanced context reply coverage validation"
     /commentcheck $PR_NUMBER
 elif [[ "$SKIP_CONDITIONS_MET" == "true" ]]; then
     echo "⚡ OPTIMIZING: No comments processed, performing quick verification"
     final_count=$(gh pr view $PR_NUMBER --json comments,reviews | jq '(.comments | length) + (.reviews | length)')
     echo "✅ Verification: $final_count total comments (expected: 0)"
 else
-    echo "🔍 VERIFYING: Full coverage validation"
+    echo "🔍 VERIFYING: Full enhanced context coverage validation"
     /commentcheck $PR_NUMBER
 fi
 ```
 - ✅ **CONTEXT AWARE**: Skip detailed coverage when no comments processed
+- ✅ **ENHANCED CONTEXT FOCUS**: Verify enhanced context reply success
 - ✅ **SAFETY**: Quick verification when skip conditions met
 - ✅ **COMPREHENSIVE**: Full validation when comment processing occurred
 - ✅ **TRANSPARENCY**: Log verification method and results

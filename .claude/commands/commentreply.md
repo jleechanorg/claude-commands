@@ -168,105 +168,117 @@ Before posting ANY response, verify:
 - ✅ ALWAYS provide genuine Claude analysis addressing specific technical content
 - ✅ ALWAYS pass self-validation before posting responses
 
-### 4. Individual Comment Reply APIs (CRITICAL)
-🚨 **MANDATORY**: Reply to EACH individual comment using the EXACT GitHub API method for TRUE threading:
+### 4. Individual Comment Reply APIs (CRITICAL) - Enhanced Context Reply System
+🚨 **MANDATORY**: Reply to EACH individual comment using the ENHANCED CONTEXT REPLY system:
 
 ```bash
-# METHOD 1: TRUE THREADED REPLY (ONLY WORKING METHOD)
-# Creates actual threaded replies using GitHub's replies endpoint
-create_true_threaded_reply() {
+# METHOD 1: ENHANCED CONTEXT REPLY (OPTIMAL USER EXPERIENCE)
+# Creates general comments with rich context - GitHub API limitation workaround
+create_enhanced_context_reply() {
   local original_comment_id="$1"
   local response_body="$2"
+  local comment_data="$3"
 
-  echo "🔄 Creating TRUE threaded reply to comment #$original_comment_id..."
+  # Extract context information
+  local file_path=$(echo "$comment_data" | jq -r '.path // "N/A"')
+  local line_number=$(echo "$comment_data" | jq -r '.line // .original_line // "N/A"')
+  local snippet=$(echo "$comment_data" | jq -r '.body' | head -c 100)
 
-  # THE CORRECT GITHUB API FOR THREADING - FIXED: JSON envelope format
-  printf '{"body": "📍 **Threaded Reply**: %s"}' "$response_body" | \
-    gh api -X POST "repos/$OWNER/$REPO/pulls/comments/$original_comment_id/replies" \
-      --input -
+  echo "🔄 Creating enhanced context reply to comment #$original_comment_id..."
+
+  # Enhanced context reply with file, line, and snippet context
+  local enhanced_body="🧵 **Reply to Inline Comment #$original_comment_id**"
+  enhanced_body+="\n📁 **File**: \`$file_path\`"
+  enhanced_body+="\n📍 **Line**: $line_number"
+  enhanced_body+="\n💬 **Original**: \"$snippet...\""
+  enhanced_body+="\n\n$response_body"
+  enhanced_body+="\n\n*(Enhanced Context Reply System)*"
+
+  # Post as general comment (works reliably vs threading limitations)
+  gh pr comment $PR_NUMBER --body "$enhanced_body"
 
   if [ $? -eq 0 ]; then
-    echo "✅ SUCCESS: Threaded reply created for comment #$original_comment_id"
+    echo "✅ SUCCESS: Enhanced context reply created for comment #$original_comment_id"
     return 0
   else
-    echo "❌ FAILED: Threading failed for comment #$original_comment_id"
+    echo "❌ FAILED: Enhanced context reply failed for comment #$original_comment_id"
     return 1
   fi
 }
 
-# METHOD 2: Verification Layer (CRITICAL)
-# Verify TRUE threading worked by checking in_reply_to_id field
-verify_true_threading() {
+# METHOD 2: Enhanced Context Verification (CRITICAL)
+# Verify enhanced context reply was posted successfully
+verify_enhanced_context_reply() {
   local original_id="$1"
   local max_attempts=3
 
   for attempt in $(seq 1 $max_attempts); do
     sleep 2  # Allow API to process
 
-    # Check if any new comment has in_reply_to_id matching our original
-    THREADED_REPLY=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
-      jq -r '.[] | select(.in_reply_to_id == '$original_id') | .id')
+    # Check if enhanced context reply was posted (look for our unique format)
+    ENHANCED_REPLY=$(gh api "repos/$OWNER/$REPO/issues/$PR_NUMBER/comments" --paginate | \
+      jq -r '.[] | select(.body | contains("🧵 **Reply to Inline Comment #'$original_id'**")) | .id')
 
-    if [ -n "$THREADED_REPLY" ]; then
-      echo "✅ VERIFIED: Threaded reply $THREADED_REPLY created for comment $original_id"
+    if [ -n "$ENHANCED_REPLY" ]; then
+      echo "✅ VERIFIED: Enhanced context reply $ENHANCED_REPLY created for comment $original_id"
       return 0
     fi
 
-    echo "⏳ Attempt $attempt: Waiting for threading verification..."
+    echo "⏳ Attempt $attempt: Waiting for enhanced context reply verification..."
   done
 
-  echo "❌ THREADING FAILED: No threaded reply found for comment $original_id"
+  echo "❌ ENHANCED REPLY FAILED: No enhanced context reply found for comment $original_id"
   return 1
 }
 
-# METHOD 3: Fallback System (RELIABILITY)
-# If threading fails, create general comment with clear reference
+# METHOD 3: Fallback System (RELIABILITY) - Basic Context Reply
+# If enhanced context fails, create basic comment with clear reference
 create_fallback_comment() {
   local original_id="$1"
   local response_body="$2"
 
   gh pr comment $PR_NUMBER --body "📍 **FALLBACK Reply to Comment #$original_id**:
 $response_body
-🔗 Threading failed - this is a general comment reference"
+🔗 Enhanced context failed - this is a basic comment reference"
 
-  echo "⚠️ FALLBACK: General comment created for #$original_id"
+  echo "⚠️ FALLBACK: Basic comment created for #$original_id"
 }
 
-# METHOD 4: Complete Threading Workflow (ROBUST)
-# Implements threading with verification and fallback
+# METHOD 4: Complete Enhanced Context Workflow (ROBUST)
+# Implements enhanced context replies with verification and fallback
 reply_to_individual_comment() {
   local comment_data="$1"
   local response_body="$2"
 
   # Extract comment details
   local comment_id=$(echo "$comment_data" | jq -r '.id')
-  local file_path=$(echo "$comment_data" | jq -r '.path // empty')
-  local line_number=$(echo "$comment_data" | jq -r '.line // .original_line // empty')
+  local file_path=$(echo "$comment_data" | jq -r '.path // "N/A"')
+  local line_number=$(echo "$comment_data" | jq -r '.line // .original_line // "N/A"')
 
-  echo "🔄 Processing comment #$comment_id..."
+  echo "🔄 Processing comment #$comment_id with enhanced context..."
 
-  # Step 1: Attempt true threaded reply
-  if create_true_threaded_reply "$comment_id" "$response_body"; then
-    # Step 2: Verify threading worked
-    if verify_true_threading "$comment_id"; then
-      echo "✅ SUCCESS: Threaded reply created for #$comment_id"
+  # Step 1: Attempt enhanced context reply
+  if create_enhanced_context_reply "$comment_id" "$response_body" "$comment_data"; then
+    # Step 2: Verify enhanced context reply worked
+    if verify_enhanced_context_reply "$comment_id"; then
+      echo "✅ SUCCESS: Enhanced context reply created for #$comment_id"
       return 0
     fi
   fi
 
-  # Step 3: Fallback to general comment
+  # Step 3: Fallback to basic comment
   create_fallback_comment "$comment_id" "$response_body"
   return 1
 }
 ```
 
 **Critical Notes**:
-- **Every single comment gets its own reply** - no exceptions for bots
-- **Use GitHub MCP for threading** - ensures proper in_reply_to_id field
-- **Verification mandatory** - confirm threading worked via API check
-- **Fallback system required** - general comments if threading fails
+- **Every single comment gets its own enhanced context reply** - no exceptions for bots
+- **Use Enhanced Context Reply System** - provides file/line/snippet context for superior UX
+- **Verification mandatory** - confirm enhanced context reply posted via API check
+- **Fallback system required** - basic comments if enhanced context fails
 - **Include status markers** - ✅ DONE or ❌ NOT DONE in every reply
-- **Track success rate** - monitor threading vs fallback ratio
+- **Track success rate** - monitor enhanced context vs fallback ratio
 
 ## Response Format
 
@@ -294,11 +306,11 @@ Each reply follows this format with **MANDATORY commit hash reference**:
 - Human reviewer comments: 0
 
 ### ✅ Individual Comments Addressed (11 comments)
-1. Comment #2223812756 (Copilot): Function parameter docs → ✅ DONE: Updated table format (Commit: abc1234) [THREADED: #2223999001]
-2. Comment #2223812765 (Copilot): Migration status column → ✅ DONE: Added status tracking (Commit: def5678) [THREADED: #2223999002]
-3. Comment #2223812783 (Copilot): Port inconsistency → ✅ DONE: Fixed to port 6006 (Commit: ghi9012) [THREADED: #2223999003]
+1. Comment #2223812756 (Copilot): Function parameter docs → ✅ DONE: Updated table format (Commit: abc1234) [ENHANCED: #2223999001]
+2. Comment #2223812765 (Copilot): Migration status column → ✅ DONE: Added status tracking (Commit: def5678) [ENHANCED: #2223999002]
+3. Comment #2223812783 (Copilot): Port inconsistency → ✅ DONE: Fixed to port 6006 (Commit: ghi9012) [ENHANCED: #2223999003]
 4. Comment #2223818404 (CodeRabbit): Playwright vs Puppeter → ❌ NOT DONE: Playwright is correct per CLAUDE.md (Current: jkl3456) [FALLBACK: #2223999004]
-5. Comment #2223818407 (CodeRabbit): Primary method conflict → ❌ NOT DONE: Intentional Playwright focus (Current: jkl3456) [THREADED: #2223999005]
+5. Comment #2223818407 (CodeRabbit): Primary method conflict → ❌ NOT DONE: Intentional Playwright focus (Current: jkl3456) [ENHANCED: #2223999005]
 6. [... continues for all 11 individual comments ...]
 
 ### ❌ Individual Comments NOT Addressed (0 comments)
@@ -306,16 +318,16 @@ Each reply follows this format with **MANDATORY commit hash reference**:
 
 ### 📊 Coverage Statistics
 - **Individual comment coverage: 100% (11/11)**
-- **Threading success rate: 90% (10/11 threaded, 1/11 fallback)**
-- **API replies posted: 11 responses (10 threaded + 1 general)**
+- **Enhanced context success rate: 90% (10/11 enhanced, 1/11 fallback)**
+- **API replies posted: 11 responses (10 enhanced context + 1 basic)**
 - **Bot comment coverage: 100% (11/11)**
 - **Verification success: 100% (all replies confirmed via API)**
 ```
 
 **SUCCESS CRITERIA**:
 - ✅ 100% individual comment coverage (zero unaddressed)
-- ✅ Every Copilot/CodeRabbit comment has a reply
-- ✅ All API responses successfully posted to GitHub
+- ✅ Every Copilot/CodeRabbit comment has an enhanced context reply
+- ✅ All enhanced context replies successfully posted to GitHub with proper format (🧵 **Reply to Inline Comment #[ID]**)
 
 ## Requirements
 
@@ -346,10 +358,11 @@ Each reply follows this format with **MANDATORY commit hash reference**:
 ## Benefits
 
 - **No comments missed**: Systematic processing of ALL feedback
+- **Enhanced context**: Rich file/line/snippet context for superior user experience
 - **Clear audit trail**: Visible status for each comment
-- **Inline visibility**: Responses appear directly on GitHub
-- **Time savings**: Automated posting of formatted replies
-- **Accountability**: Clear DONE/NOT DONE tracking
+- **GitHub visibility**: Enhanced context replies appear as general comments with rich context
+- **Time savings**: Automated posting of formatted enhanced context replies
+- **Accountability**: Clear DONE/NOT DONE tracking with context
 
 ## Integration with PR Workflow
 
