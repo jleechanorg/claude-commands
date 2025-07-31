@@ -7,7 +7,6 @@ Uses the shared browser_test_helpers library for standardized screenshot managem
 
 import os
 import sys
-
 import traceback
 
 # Add project root to path for imports

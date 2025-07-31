@@ -4,6 +4,7 @@ Test script for entity tracking production implementation
 """
 
 import os
+import re
 import sys
 import unittest
 
@@ -33,16 +34,16 @@ class TestEntityTracking(unittest.TestCase):
         )
 
         # Check PC ID format
-        self.assertEqual(len(manifest.player_characters), 1)
+        assert len(manifest.player_characters) == 1
         pc = manifest.player_characters[0]
-        self.assertRegex(pc.entity_id, r"^pc_[a-z_]+_\d{3}$")
-        self.assertIn("test_hero", pc.entity_id.lower())
+        assert re.search(r"^pc_[a-z_]+_\d{3}$", pc.entity_id)
+        assert "test_hero" in pc.entity_id.lower()
 
         # Check NPC ID format
-        self.assertEqual(len(manifest.npcs), 1)
+        assert len(manifest.npcs) == 1
         npc = manifest.npcs[0]
-        self.assertRegex(npc.entity_id, r"^npc_[a-z_]+_\d{3}$")
-        self.assertIn("guard_captain", npc.entity_id.lower())
+        assert re.search(r"^npc_[a-z_]+_\d{3}$", npc.entity_id)
+        assert "guard_captain" in npc.entity_id.lower()
 
     def test_existing_string_ids_preserved(self):
         """Test that existing string_ids from game state are preserved"""
@@ -61,8 +62,8 @@ class TestEntityTracking(unittest.TestCase):
         )
 
         # Verify IDs are preserved
-        self.assertEqual(manifest.player_characters[0].entity_id, "pc_custom_hero_999")
-        self.assertEqual(manifest.npcs[0].entity_id, "npc_special_villain_042")
+        assert manifest.player_characters[0].entity_id == "pc_custom_hero_999"
+        assert manifest.npcs[0].entity_id == "npc_special_villain_042"
 
     def setUp(self):
         """Set up test data"""
@@ -109,15 +110,15 @@ class TestEntityTracking(unittest.TestCase):
             self.test_game_state, session_number=1, turn_number=5
         )
 
-        self.assertRegex(
-            manifest.scene_id, r"^scene_s1_t5(_\d+)?$"
+        assert re.search(
+            r"^scene_s1_t5(_\d+)?$", manifest.scene_id
         )  # May have optional suffix
-        self.assertEqual(manifest.session_number, 1)
-        self.assertEqual(manifest.turn_number, 5)
-        self.assertEqual(manifest.current_location.display_name, "Thornhaven Inn")
-        self.assertEqual(len(manifest.player_characters), 1)
-        self.assertEqual(
-            len(manifest.npcs), 3
+        assert manifest.session_number == 1
+        assert manifest.turn_number == 5
+        assert manifest.current_location.display_name == "Thornhaven Inn"
+        assert len(manifest.player_characters) == 1
+        assert (
+            len(manifest.npcs) == 3
         )  # All NPCs included, filtering happens in get_expected_entities
 
     def test_expected_entities_filtering(self):
@@ -128,9 +129,9 @@ class TestEntityTracking(unittest.TestCase):
         expected = manifest.get_expected_entities()
 
         # Should include PC and visible NPCs
-        self.assertIn("Gideon", expected)
-        self.assertIn("Sariel", expected)
-        self.assertIn("Rowan", expected)
+        assert "Gideon" in expected
+        assert "Sariel" in expected
+        assert "Rowan" in expected
 
         # Hidden guard should still be included (present but hidden)
         # Note: The current implementation includes all present entities regardless of visibility
@@ -143,14 +144,14 @@ class TestEntityTracking(unittest.TestCase):
         )
         prompt_text = manifest.to_prompt_format()
 
-        self.assertIn("=== SCENE MANIFEST ===", prompt_text)
-        self.assertIn("Location: Thornhaven Inn", prompt_text)
-        self.assertIn("Session: 1, Turn: 5", prompt_text)
-        self.assertIn("PRESENT CHARACTERS:", prompt_text)
-        self.assertIn("Gideon (PC)", prompt_text)
-        self.assertIn("Sariel (NPC)", prompt_text)
-        self.assertIn("Rowan (NPC)", prompt_text)
-        self.assertIn("=== END MANIFEST ===", prompt_text)
+        assert "=== SCENE MANIFEST ===" in prompt_text
+        assert "Location: Thornhaven Inn" in prompt_text
+        assert "Session: 1, Turn: 5" in prompt_text
+        assert "PRESENT CHARACTERS:" in prompt_text
+        assert "Gideon (PC)" in prompt_text
+        assert "Sariel (NPC)" in prompt_text
+        assert "Rowan (NPC)" in prompt_text
+        assert "=== END MANIFEST ===" in prompt_text
 
     def test_narrative_sync_validator(self):
         """Test NarrativeSyncValidator functionality"""
@@ -168,9 +169,9 @@ class TestEntityTracking(unittest.TestCase):
             good_narrative, expected_entities, location="Thornhaven Inn"
         )
 
-        self.assertTrue(result.all_entities_present)
-        self.assertEqual(len(result.entities_missing), 0)
-        self.assertGreater(result.confidence, 0.8)
+        assert result.all_entities_present
+        assert len(result.entities_missing) == 0
+        assert result.confidence > 0.8
 
         # Test narrative missing an entity
         bad_narrative = """
@@ -182,9 +183,9 @@ class TestEntityTracking(unittest.TestCase):
             bad_narrative, expected_entities, location="Thornhaven Inn"
         )
 
-        self.assertFalse(result.all_entities_present)
-        self.assertIn("Rowan", result.entities_missing)
-        self.assertLess(result.confidence, 0.8)
+        assert not result.all_entities_present
+        assert "Rowan" in result.entities_missing
+        assert result.confidence < 0.8
 
     def test_validator_presence_detection(self):
         """Test validator's presence detection logic (REFACTORED: uses EntityValidator)"""
@@ -195,21 +196,21 @@ class TestEntityTracking(unittest.TestCase):
         presence = validator.entity_validator.analyze_entity_presence(
             narrative, "Gideon"
         )
-        self.assertEqual(presence.value, "physically_present")
+        assert presence.value == "physically_present"
 
         # Test mentioned absent detection via delegated EntityValidator
         narrative = "They thought of Rowan, who was still in the village."
         presence = validator.entity_validator.analyze_entity_presence(
             narrative, "Rowan"
         )
-        self.assertEqual(presence.value, "mentioned_absent")
+        assert presence.value == "mentioned_absent"
 
         # Test not found
         narrative = "The room was empty except for furniture."
         presence = validator.entity_validator.analyze_entity_presence(
             narrative, "Gideon"
         )
-        self.assertIsNone(presence)
+        assert presence is None
 
     def test_integration_flow(self):
         """Test the complete entity tracking flow"""
@@ -236,11 +237,11 @@ class TestEntityTracking(unittest.TestCase):
         )
 
         # Check results
-        self.assertTrue(result.all_entities_present)
-        self.assertEqual(len(result.entities_missing), 0)
-        self.assertIn("Gideon", result.entities_found)
-        self.assertIn("Sariel", result.entities_found)
-        self.assertIn("Rowan", result.entities_found)
+        assert result.all_entities_present
+        assert len(result.entities_missing) == 0
+        assert "Gideon" in result.entities_found
+        assert "Sariel" in result.entities_found
+        assert "Rowan" in result.entities_found
 
         print("✅ Integration test passed!")
         print(f"   Expected entities: {expected_entities}")
@@ -252,15 +253,15 @@ class TestEntityTracking(unittest.TestCase):
         info = get_validation_info()
 
         # Verify the function returns a dictionary
-        self.assertIsInstance(info, dict)
+        assert isinstance(info, dict)
 
         # Verify expected keys are present
-        self.assertIn("validation_type", info)
-        self.assertIn("pydantic_available", info)
+        assert "validation_type" in info
+        assert "pydantic_available" in info
 
         # Verify expected values
-        self.assertEqual(info["validation_type"], "Pydantic")
-        self.assertEqual(info["pydantic_available"], "true")
+        assert info["validation_type"] == "Pydantic"
+        assert info["pydantic_available"] == "true"
 
     def test_unknown_entity_filtering_comprehensive(self):
         """Test comprehensive Unknown entity filtering across all validators"""
@@ -272,29 +273,29 @@ class TestEntityTracking(unittest.TestCase):
         entity_validator = EntityValidator()
         result = entity_validator.validate(narrative, expected_entities)
 
-        self.assertNotIn("Unknown", result.found_entities)
-        self.assertNotIn("Unknown", result.missing_entities)
-        self.assertIn("Gideon", result.found_entities)
-        self.assertIn("Sariel", result.found_entities)
-        self.assertEqual(result.confidence, 1.0)
-        self.assertTrue(result.passed)
+        assert "Unknown" not in result.found_entities
+        assert "Unknown" not in result.missing_entities
+        assert "Gideon" in result.found_entities
+        assert "Sariel" in result.found_entities
+        assert result.confidence == 1.0
+        assert result.passed
 
         # Test NarrativeSyncValidator delegation
         narrative_validator = NarrativeSyncValidator()
         result = narrative_validator.validate(narrative, expected_entities)
 
-        self.assertNotIn("Unknown", result.found_entities)
-        self.assertNotIn("Unknown", result.missing_entities)
-        self.assertIn("Gideon", result.found_entities)
-        self.assertIn("Sariel", result.found_entities)
-        self.assertTrue(result.all_entities_present)
+        assert "Unknown" not in result.found_entities
+        assert "Unknown" not in result.missing_entities
+        assert "Gideon" in result.found_entities
+        assert "Sariel" in result.found_entities
+        assert result.all_entities_present
 
         # Test backward compatibility with old interface
         result = entity_validator.validate_entity_presence(narrative, expected_entities)
 
-        self.assertNotIn("Unknown", result.found_entities)
-        self.assertNotIn("Unknown", result.missing_entities)
-        self.assertTrue(result.passed)
+        assert "Unknown" not in result.found_entities
+        assert "Unknown" not in result.missing_entities
+        assert result.passed
 
     def test_entity_validator_comprehensive_validation(self):
         """Test EntityValidator's comprehensive validation method"""
@@ -306,25 +307,25 @@ class TestEntityTracking(unittest.TestCase):
 
         result = entity_validator.validate(narrative, expected_entities)
 
-        self.assertTrue(result.passed)
-        self.assertTrue(result.all_entities_present)
-        self.assertEqual(len(result.missing_entities), 0)
-        self.assertEqual(len(result.found_entities), 3)
-        self.assertGreater(result.confidence, 0.8)
-        self.assertIn("validator_name", result.metadata)
-        self.assertEqual(result.metadata["validator_name"], "EntityValidator")
+        assert result.passed
+        assert result.all_entities_present
+        assert len(result.missing_entities) == 0
+        assert len(result.found_entities) == 3
+        assert result.confidence > 0.8
+        assert "validator_name" in result.metadata
+        assert result.metadata["validator_name"] == "EntityValidator"
 
         # Test with missing entities
         narrative = "Gideon spoke quietly."
         result = entity_validator.validate(narrative, expected_entities)
 
-        self.assertFalse(result.passed)
-        self.assertFalse(result.all_entities_present)
-        self.assertIn("Sariel", result.missing_entities)
-        self.assertIn("Rowan", result.missing_entities)
-        self.assertIn("Gideon", result.found_entities)
-        self.assertTrue(result.retry_needed)
-        self.assertGreater(len(result.retry_suggestions), 0)
+        assert not result.passed
+        assert not result.all_entities_present
+        assert "Sariel" in result.missing_entities
+        assert "Rowan" in result.missing_entities
+        assert "Gideon" in result.found_entities
+        assert result.retry_needed
+        assert len(result.retry_suggestions) > 0
 
     def test_entity_presence_type_detection(self):
         """Test EntityPresenceType detection in EntityValidator"""
@@ -333,17 +334,17 @@ class TestEntityTracking(unittest.TestCase):
         # Test physically present
         narrative = "Gideon swung his sword at the orc."
         presence = entity_validator.analyze_entity_presence(narrative, "Gideon")
-        self.assertEqual(presence.value, "physically_present")
+        assert presence.value == "physically_present"
 
         # Test mentioned absent
         narrative = "They thought of Rowan, who was still in the village."
         presence = entity_validator.analyze_entity_presence(narrative, "Rowan")
-        self.assertEqual(presence.value, "mentioned_absent")
+        assert presence.value == "mentioned_absent"
 
         # Test not found
         narrative = "The room was empty except for furniture."
         presence = entity_validator.analyze_entity_presence(narrative, "Gideon")
-        self.assertIsNone(presence)
+        assert presence is None
 
     def test_physical_state_extraction(self):
         """Test physical state extraction from EntityValidator"""
@@ -352,7 +353,7 @@ class TestEntityTracking(unittest.TestCase):
         narrative = "Gideon stood trembling, his bandaged arm hanging at his side. Sariel was exhausted."
         states = entity_validator.extract_physical_states(narrative)
 
-        self.assertIsInstance(states, dict)
+        assert isinstance(states, dict)
         # Note: Physical state extraction associates states with nearby entities
         # The exact association depends on the regex patterns
 
@@ -365,8 +366,8 @@ class TestEntityTracking(unittest.TestCase):
         )
         transitions = entity_validator.detect_scene_transitions(narrative)
 
-        self.assertIsInstance(transitions, list)
-        self.assertGreater(len(transitions), 0)
+        assert isinstance(transitions, list)
+        assert len(transitions) > 0
 
     def test_injection_template_creation(self):
         """Test entity injection template creation"""
@@ -375,19 +376,19 @@ class TestEntityTracking(unittest.TestCase):
         missing_entities = ["Gideon", "Sariel"]
         templates = entity_validator.create_injection_templates(missing_entities)
 
-        self.assertIsInstance(templates, dict)
-        self.assertIn("Gideon", templates)
-        self.assertIn("Sariel", templates)
-        self.assertIsInstance(templates["Gideon"], list)
-        self.assertGreater(len(templates["Gideon"]), 0)
+        assert isinstance(templates, dict)
+        assert "Gideon" in templates
+        assert "Sariel" in templates
+        assert isinstance(templates["Gideon"], list)
+        assert len(templates["Gideon"]) > 0
 
     def test_narrative_sync_validator_delegation(self):
         """Test that NarrativeSyncValidator properly delegates to EntityValidator"""
         narrative_validator = NarrativeSyncValidator()
 
         # Verify delegation is set up
-        self.assertIsNotNone(narrative_validator.entity_validator)
-        self.assertIsInstance(narrative_validator.entity_validator, EntityValidator)
+        assert narrative_validator.entity_validator is not None
+        assert isinstance(narrative_validator.entity_validator, EntityValidator)
 
         # Test delegation works
         narrative = "Gideon and Sariel explored the dungeon."
@@ -396,10 +397,10 @@ class TestEntityTracking(unittest.TestCase):
         result = narrative_validator.validate(narrative, expected_entities)
 
         # Should use EntityValidator's comprehensive validation
-        self.assertIn("Gideon", result.found_entities)
-        self.assertIn("Sariel", result.found_entities)
-        self.assertIn("Rowan", result.missing_entities)
-        self.assertFalse(result.all_entities_present)
+        assert "Gideon" in result.found_entities
+        assert "Sariel" in result.found_entities
+        assert "Rowan" in result.missing_entities
+        assert not result.all_entities_present
 
     def test_dual_pass_generator_integration(self):
         """Test DualPassGenerator uses EntityValidator properly"""
@@ -407,14 +408,14 @@ class TestEntityTracking(unittest.TestCase):
         dual_pass = DualPassGenerator()
 
         # Verify it uses EntityValidator
-        self.assertIsInstance(dual_pass.validator, EntityValidator)
+        assert isinstance(dual_pass.validator, EntityValidator)
 
         # Test injection snippet creation
         snippet = dual_pass.create_entity_injection_snippet(
             "Gideon", "tavern", "speaks up"
         )
-        self.assertIsInstance(snippet, str)
-        self.assertIn("Gideon", snippet)
+        assert isinstance(snippet, str)
+        assert "Gideon" in snippet
 
     def test_validation_result_compatibility(self):
         """Test ValidationResult supports both old and new interfaces"""
@@ -426,26 +427,26 @@ class TestEntityTracking(unittest.TestCase):
         result = entity_validator.validate(narrative, expected_entities)
 
         # Test old interface fields
-        self.assertTrue(hasattr(result, "passed"))
-        self.assertTrue(hasattr(result, "missing_entities"))
-        self.assertTrue(hasattr(result, "found_entities"))
-        self.assertTrue(hasattr(result, "confidence_score"))
-        self.assertTrue(hasattr(result, "retry_needed"))
-        self.assertTrue(hasattr(result, "retry_suggestions"))
+        assert hasattr(result, "passed")
+        assert hasattr(result, "missing_entities")
+        assert hasattr(result, "found_entities")
+        assert hasattr(result, "confidence_score")
+        assert hasattr(result, "retry_needed")
+        assert hasattr(result, "retry_suggestions")
 
         # Test new interface fields
-        self.assertTrue(hasattr(result, "entities_found"))
-        self.assertTrue(hasattr(result, "entities_missing"))
-        self.assertTrue(hasattr(result, "all_entities_present"))
-        self.assertTrue(hasattr(result, "confidence"))
-        self.assertTrue(hasattr(result, "warnings"))
-        self.assertTrue(hasattr(result, "metadata"))
-        self.assertTrue(hasattr(result, "validation_details"))
+        assert hasattr(result, "entities_found")
+        assert hasattr(result, "entities_missing")
+        assert hasattr(result, "all_entities_present")
+        assert hasattr(result, "confidence")
+        assert hasattr(result, "warnings")
+        assert hasattr(result, "metadata")
+        assert hasattr(result, "validation_details")
 
         # Test field synchronization
-        self.assertEqual(result.found_entities, result.entities_found)
-        self.assertEqual(result.missing_entities, result.entities_missing)
-        self.assertEqual(result.confidence_score, result.confidence)
+        assert result.found_entities == result.entities_found
+        assert result.missing_entities == result.entities_missing
+        assert result.confidence_score == result.confidence
 
     def test_multiple_unknown_entities(self):
         """Test filtering multiple Unknown entities and variations"""
@@ -459,14 +460,14 @@ class TestEntityTracking(unittest.TestCase):
 
         # All Unknown variants should be filtered out
         combined_entities = result.found_entities + result.missing_entities
-        self.assertNotIn("Unknown", combined_entities)
-        self.assertNotIn("unknown", combined_entities)
-        self.assertNotIn("UNKNOWN", combined_entities)
+        assert "Unknown" not in combined_entities
+        assert "unknown" not in combined_entities
+        assert "UNKNOWN" not in combined_entities
 
         # Real entities should be found
-        self.assertIn("Gideon", result.found_entities)
-        self.assertIn("Sariel", result.found_entities)
-        self.assertTrue(result.all_entities_present)
+        assert "Gideon" in result.found_entities
+        assert "Sariel" in result.found_entities
+        assert result.all_entities_present
 
     def test_edge_cases_and_robustness(self):
         """Test edge cases for robustness"""
@@ -474,19 +475,19 @@ class TestEntityTracking(unittest.TestCase):
 
         # Test with empty entities list
         result = entity_validator.validate("Some narrative", [])
-        self.assertTrue(result.passed)
-        self.assertEqual(result.confidence, 1.0)
+        assert result.passed
+        assert result.confidence == 1.0
 
         # Test with only Unknown entities
         result = entity_validator.validate("Some narrative", ["Unknown", "unknown"])
-        self.assertTrue(result.passed)
-        self.assertEqual(len(result.found_entities), 0)
-        self.assertEqual(len(result.missing_entities), 0)
+        assert result.passed
+        assert len(result.found_entities) == 0
+        assert len(result.missing_entities) == 0
 
         # Test with empty narrative
         result = entity_validator.validate("", ["Gideon"])
-        self.assertFalse(result.passed)
-        self.assertIn("Gideon", result.missing_entities)
+        assert not result.passed
+        assert "Gideon" in result.missing_entities
 
     def test_end_to_end_missing_entity_red_green_workflow(self):
         """
@@ -511,29 +512,23 @@ class TestEntityTracking(unittest.TestCase):
         red_result = entity_validator.validate(incomplete_narrative, expected_entities)
 
         # RED: Verify missing entities are detected
-        self.assertFalse(red_result.passed, "RED: Should detect missing entities")
-        self.assertTrue(
-            red_result.retry_needed, "RED: Should need retry for missing entities"
-        )
-        self.assertIn(
-            "Gideon", red_result.found_entities, "RED: Should find mentioned entity"
-        )
-        self.assertIn(
-            "Sariel", red_result.missing_entities, "RED: Should detect missing entity"
-        )
-        self.assertIn(
-            "Rowan", red_result.missing_entities, "RED: Should detect missing entity"
-        )
-        self.assertIn(
-            "Tavern Keeper",
-            red_result.missing_entities,
-            "RED: Should detect missing entity",
-        )
-        self.assertGreater(
-            len(red_result.retry_suggestions),
-            0,
-            "RED: Should provide retry suggestions",
-        )
+        assert not red_result.passed, "RED: Should detect missing entities"
+        assert red_result.retry_needed, "RED: Should need retry for missing entities"
+        assert (
+            "Gideon" in red_result.found_entities
+        ), "RED: Should find mentioned entity"
+        assert (
+            "Sariel" in red_result.missing_entities
+        ), "RED: Should detect missing entity"
+        assert (
+            "Rowan" in red_result.missing_entities
+        ), "RED: Should detect missing entity"
+        assert (
+            "Tavern Keeper" in red_result.missing_entities
+        ), "RED: Should detect missing entity"
+        assert (
+            len(red_result.retry_suggestions) > 0
+        ), "RED: Should provide retry suggestions"
 
         print(f"   ❌ DETECTED MISSING: {red_result.missing_entities}")
         print(f"   ✅ FOUND: {red_result.found_entities}")
@@ -551,19 +546,13 @@ class TestEntityTracking(unittest.TestCase):
             red_result_with_unknown.found_entities
             + red_result_with_unknown.missing_entities
         )
-        self.assertNotIn(
-            "Unknown", all_entities, "RED: Should filter out Unknown entities"
-        )
-        self.assertIn(
-            "Gideon",
-            red_result_with_unknown.found_entities,
-            "RED: Should still find real entities",
-        )
-        self.assertIn(
-            "Sariel",
-            red_result_with_unknown.missing_entities,
-            "RED: Should still detect missing real entities",
-        )
+        assert "Unknown" not in all_entities, "RED: Should filter out Unknown entities"
+        assert (
+            "Gideon" in red_result_with_unknown.found_entities
+        ), "RED: Should still find real entities"
+        assert (
+            "Sariel" in red_result_with_unknown.missing_entities
+        ), "RED: Should still detect missing real entities"
 
         print("   🚫 FILTERED UNKNOWN: Unknown entities properly excluded")
 
@@ -583,29 +572,19 @@ class TestEntityTracking(unittest.TestCase):
         green_result = entity_validator.validate(complete_narrative, expected_entities)
 
         # GREEN: Verify all entities are found
-        self.assertTrue(
-            green_result.passed, "GREEN: Should pass with all entities present"
-        )
-        self.assertFalse(green_result.retry_needed, "GREEN: Should not need retry")
-        self.assertEqual(
-            len(green_result.missing_entities),
-            0,
-            "GREEN: Should have no missing entities",
-        )
-        self.assertEqual(
-            len(green_result.found_entities),
-            len(expected_entities),
-            "GREEN: Should find all entities",
-        )
-        self.assertGreater(
-            green_result.confidence, 0.8, "GREEN: Should have high confidence"
-        )
+        assert green_result.passed, "GREEN: Should pass with all entities present"
+        assert not green_result.retry_needed, "GREEN: Should not need retry"
+        assert (
+            len(green_result.missing_entities) == 0
+        ), "GREEN: Should have no missing entities"
+        assert len(green_result.found_entities) == len(
+            expected_entities
+        ), "GREEN: Should find all entities"
+        assert green_result.confidence > 0.8, "GREEN: Should have high confidence"
 
         # GREEN: Verify specific entities are found
         for entity in expected_entities:
-            self.assertIn(
-                entity, green_result.found_entities, f"GREEN: Should find {entity}"
-            )
+            assert entity in green_result.found_entities, f"GREEN: Should find {entity}"
 
         print(f"   ✅ ALL ENTITIES FOUND: {green_result.found_entities}")
         print(f"   📊 CONFIDENCE: {green_result.confidence:.2f}")
@@ -617,17 +596,16 @@ class TestEntityTracking(unittest.TestCase):
         )
 
         # GREEN: Verify Unknown filtering doesn't break success case
-        self.assertTrue(
-            green_result_with_unknown.passed,
-            "GREEN: Should pass even with Unknown in input",
-        )
+        assert (
+            green_result_with_unknown.passed
+        ), "GREEN: Should pass even with Unknown in input"
         all_entities_green = (
             green_result_with_unknown.found_entities
             + green_result_with_unknown.missing_entities
         )
-        self.assertNotIn(
-            "Unknown", all_entities_green, "GREEN: Should filter out Unknown entities"
-        )
+        assert (
+            "Unknown" not in all_entities_green
+        ), "GREEN: Should filter out Unknown entities"
 
         print("   🚫 UNKNOWN FILTERED: Still properly excluded in success case")
 
@@ -639,10 +617,10 @@ class TestEntityTracking(unittest.TestCase):
         )
 
         # Verify retry prompt contains guidance
-        self.assertIn("RETRY INSTRUCTIONS", retry_prompt)
-        self.assertIn("Sariel", retry_prompt)
-        self.assertIn("Rowan", retry_prompt)
-        self.assertIn("Tavern Keeper", retry_prompt)
+        assert "RETRY INSTRUCTIONS" in retry_prompt
+        assert "Sariel" in retry_prompt
+        assert "Rowan" in retry_prompt
+        assert "Tavern Keeper" in retry_prompt
 
         print("   📝 RETRY PROMPT GENERATED: Contains guidance for missing entities")
 
@@ -651,18 +629,14 @@ class TestEntityTracking(unittest.TestCase):
         )
 
         # Summary assertions
-        self.assertFalse(red_result.passed, "RED phase should fail")
-        self.assertTrue(green_result.passed, "GREEN phase should pass")
-        self.assertLess(
-            len(red_result.found_entities),
-            len(green_result.found_entities),
-            "GREEN should find more entities than RED",
-        )
-        self.assertGreater(
-            len(red_result.missing_entities),
-            len(green_result.missing_entities),
-            "RED should have more missing entities than GREEN",
-        )
+        assert not red_result.passed, "RED phase should fail"
+        assert green_result.passed, "GREEN phase should pass"
+        assert len(red_result.found_entities) < len(
+            green_result.found_entities
+        ), "GREEN should find more entities than RED"
+        assert len(red_result.missing_entities) > len(
+            green_result.missing_entities
+        ), "RED should have more missing entities than GREEN"
 
 
 if __name__ == "__main__":

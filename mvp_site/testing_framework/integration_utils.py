@@ -9,7 +9,7 @@ import time
 from typing import Any
 from unittest.mock import patch
 
-from testing_framework.integration_utils import update_test_imports
+# Removed circular import - update_test_imports is defined in this file
 
 # Add the project root to the path for imports
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

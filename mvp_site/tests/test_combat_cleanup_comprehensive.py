@@ -15,10 +15,9 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from main import apply_automatic_combat_cleanup
-
 from firestore_service import update_state_with_changes
 from game_state import GameState
+from world_logic import apply_automatic_combat_cleanup
 
 
 class TestCombatCleanupComprehensive(unittest.TestCase):
@@ -83,11 +82,9 @@ class TestCombatCleanupComprehensive(unittest.TestCase):
         }
 
         # Verify initial state
-        self.assertIn("Orc Warrior", game_state.combat_state["combatants"])
-        self.assertIn("Goblin", game_state.combat_state["combatants"])
-        self.assertEqual(
-            game_state.combat_state["combatants"]["Orc Warrior"]["hp_current"], 30
-        )
+        assert "Orc Warrior" in game_state.combat_state["combatants"]
+        assert "Goblin" in game_state.combat_state["combatants"]
+        assert game_state.combat_state["combatants"]["Orc Warrior"]["hp_current"] == 30
 
         print(
             f"Initial combatants: {list(game_state.combat_state['combatants'].keys())}"
@@ -129,46 +126,22 @@ class TestCombatCleanupComprehensive(unittest.TestCase):
         # Verify the fix is working
 
         # The defeated enemy should be completely removed from combat
-        self.assertNotIn(
-            "Orc Warrior",
-            final_state_dict["combat_state"]["combatants"],
-            "Defeated enemy should be removed from combatants after HP=0 update",
-        )
+        assert "Orc Warrior" not in final_state_dict["combat_state"]["combatants"], "Defeated enemy should be removed from combatants after HP=0 update"
 
         # The defeated enemy should be removed from initiative order
         initiative_names = [
             entry["name"]
             for entry in final_state_dict["combat_state"]["initiative_order"]
         ]
-        self.assertNotIn(
-            "Orc Warrior",
-            initiative_names,
-            "Defeated enemy should be removed from initiative order",
-        )
+        assert "Orc Warrior" not in initiative_names, "Defeated enemy should be removed from initiative order"
 
         # The defeated enemy should be removed from NPC data
-        self.assertNotIn(
-            "Orc Warrior",
-            final_state_dict["npc_data"],
-            "Defeated enemy should be removed from NPC data",
-        )
+        assert "Orc Warrior" not in final_state_dict["npc_data"], "Defeated enemy should be removed from NPC data"
 
         # Living entities should remain
-        self.assertIn(
-            "Hero",
-            final_state_dict["combat_state"]["combatants"],
-            "Hero should remain in combat",
-        )
-        self.assertIn(
-            "Goblin",
-            final_state_dict["combat_state"]["combatants"],
-            "Living enemy should remain in combat",
-        )
-        self.assertIn(
-            "Merchant",
-            final_state_dict["npc_data"],
-            "Non-combat NPC should remain in NPC data",
-        )
+        assert "Hero" in final_state_dict["combat_state"]["combatants"], "Hero should remain in combat"
+        assert "Goblin" in final_state_dict["combat_state"]["combatants"], "Living enemy should remain in combat"
+        assert "Merchant" in final_state_dict["npc_data"], "Non-combat NPC should remain in NPC data"
 
     def test_combat_end_with_pre_defeated_enemies(self):
         """
@@ -214,10 +187,8 @@ class TestCombatCleanupComprehensive(unittest.TestCase):
         }
 
         # Verify the defeated enemy is present initially (bug scenario)
-        self.assertIn("Dead Orc", game_state.combat_state["combatants"])
-        self.assertEqual(
-            game_state.combat_state["combatants"]["Dead Orc"]["hp_current"], 0
-        )
+        assert "Dead Orc" in game_state.combat_state["combatants"]
+        assert game_state.combat_state["combatants"]["Dead Orc"]["hp_current"] == 0
 
         print(
             f"Before combat end - Combatants: {list(game_state.combat_state['combatants'].keys())}"
@@ -248,34 +219,16 @@ class TestCombatCleanupComprehensive(unittest.TestCase):
         # Verify expectations
 
         # Combat should be properly ended
-        self.assertFalse(
-            final_state_dict["combat_state"]["in_combat"], "Combat should be ended"
-        )
+        assert not final_state_dict["combat_state"]["in_combat"], "Combat should be ended"
 
         # The pre-defeated enemy should be cleaned up when combat ends
-        self.assertNotIn(
-            "Dead Orc",
-            final_state_dict["combat_state"]["combatants"],
-            "Pre-defeated enemies should be cleaned up when combat ends",
-        )
+        assert "Dead Orc" not in final_state_dict["combat_state"]["combatants"], "Pre-defeated enemies should be cleaned up when combat ends"
 
-        self.assertNotIn(
-            "Dead Orc",
-            final_state_dict["npc_data"],
-            "Pre-defeated enemies should be removed from NPC data",
-        )
+        assert "Dead Orc" not in final_state_dict["npc_data"], "Pre-defeated enemies should be removed from NPC data"
 
         # Living entities should remain
-        self.assertIn(
-            "Player",
-            final_state_dict["combat_state"]["combatants"],
-            "Player should remain",
-        )
-        self.assertIn(
-            "Living Wolf",
-            final_state_dict["combat_state"]["combatants"],
-            "Living companion should remain",
-        )
+        assert "Player" in final_state_dict["combat_state"]["combatants"], "Player should remain"
+        assert "Living Wolf" in final_state_dict["combat_state"]["combatants"], "Living companion should remain"
 
     def test_multiple_enemies_defeated_same_turn(self):
         """
@@ -367,49 +320,19 @@ class TestCombatCleanupComprehensive(unittest.TestCase):
         # Verify cleanup worked correctly
 
         # Both goblins should be removed
-        self.assertNotIn(
-            "Goblin A",
-            final_state_dict["combat_state"]["combatants"],
-            "First defeated enemy should be removed",
-        )
-        self.assertNotIn(
-            "Goblin B",
-            final_state_dict["combat_state"]["combatants"],
-            "Second defeated enemy should be removed",
-        )
+        assert "Goblin A" not in final_state_dict["combat_state"]["combatants"], "First defeated enemy should be removed"
+        assert "Goblin B" not in final_state_dict["combat_state"]["combatants"], "Second defeated enemy should be removed"
 
-        self.assertNotIn(
-            "Goblin A",
-            final_state_dict["npc_data"],
-            "First defeated enemy should be removed from NPCs",
-        )
-        self.assertNotIn(
-            "Goblin B",
-            final_state_dict["npc_data"],
-            "Second defeated enemy should be removed from NPCs",
-        )
+        assert "Goblin A" not in final_state_dict["npc_data"], "First defeated enemy should be removed from NPCs"
+        assert "Goblin B" not in final_state_dict["npc_data"], "Second defeated enemy should be removed from NPCs"
 
         # Survivors should remain
-        self.assertIn(
-            "Wizard", final_state_dict["combat_state"]["combatants"], "PC should remain"
-        )
-        self.assertIn(
-            "Orc Chief",
-            final_state_dict["combat_state"]["combatants"],
-            "Wounded but living enemy should remain",
-        )
-        self.assertIn(
-            "Village Elder",
-            final_state_dict["npc_data"],
-            "Non-combat NPC should remain",
-        )
+        assert "Wizard" in final_state_dict["combat_state"]["combatants"], "PC should remain"
+        assert "Orc Chief" in final_state_dict["combat_state"]["combatants"], "Wounded but living enemy should remain"
+        assert "Village Elder" in final_state_dict["npc_data"], "Non-combat NPC should remain"
 
         # Verify wounded enemy has correct HP
-        self.assertEqual(
-            final_state_dict["combat_state"]["combatants"]["Orc Chief"]["hp_current"],
-            5,
-            "Wounded enemy should have reduced HP",
-        )
+        assert final_state_dict["combat_state"]["combatants"]["Orc Chief"]["hp_current"] == 5, "Wounded enemy should have reduced HP"
 
     def test_cleanup_without_explicit_combat_state_changes(self):
         """
@@ -443,9 +366,7 @@ class TestCombatCleanupComprehensive(unittest.TestCase):
         game_state.npc_data = {"Troll": {"name": "Cave Troll", "type": "enemy"}}
 
         # Verify defeated enemy is present (bug scenario)
-        self.assertEqual(
-            game_state.combat_state["combatants"]["Troll"]["hp_current"], 0
-        )
+        assert game_state.combat_state["combatants"]["Troll"]["hp_current"] == 0
 
         print(
             f"Before update - Troll HP: {game_state.combat_state['combatants']['Troll']['hp_current']}"
@@ -477,24 +398,16 @@ class TestCombatCleanupComprehensive(unittest.TestCase):
 
         # Even though we didn't explicitly change combatants, the cleanup should still
         # notice the defeated enemy and remove it
-        self.assertNotIn(
-            "Troll",
-            final_state_dict["combat_state"]["combatants"],
-            "Pre-defeated enemies should be cleaned up even without explicit combatant changes",
-        )
+        assert "Troll" not in final_state_dict["combat_state"]["combatants"], "Pre-defeated enemies should be cleaned up even without explicit combatant changes"
 
-        self.assertNotIn(
-            "Troll",
-            final_state_dict["npc_data"],
-            "Pre-defeated enemies should be removed from NPCs",
-        )
+        assert "Troll" not in final_state_dict["npc_data"], "Pre-defeated enemies should be removed from NPCs"
 
         # Turn progression should work normally
-        self.assertEqual(final_state_dict["combat_state"]["current_turn_index"], 1)
-        self.assertEqual(final_state_dict["combat_state"]["current_round"], 3)
+        assert final_state_dict["combat_state"]["current_turn_index"] == 1
+        assert final_state_dict["combat_state"]["current_round"] == 3
 
         # Living entities should remain
-        self.assertIn("Ranger", final_state_dict["combat_state"]["combatants"])
+        assert "Ranger" in final_state_dict["combat_state"]["combatants"]
 
 
 if __name__ == "__main__":

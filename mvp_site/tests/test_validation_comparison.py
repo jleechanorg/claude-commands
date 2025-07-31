@@ -44,7 +44,7 @@ class TestPydanticValidation(unittest.TestCase):
             manifest = entity_tracking.create_from_game_state(
                 self.sample_game_state, session_number=1, turn_number=i + 1
             )
-            self.assertIsNotNone(manifest)
+            assert manifest is not None
 
         duration = time.time() - start_time
         rate = iterations / duration
@@ -58,17 +58,17 @@ class TestPydanticValidation(unittest.TestCase):
             self.sample_game_state, session_number=1, turn_number=1
         )
 
-        self.assertEqual(entity_tracking.VALIDATION_TYPE, "Pydantic")
-        self.assertEqual(len(manifest.player_characters), 1)
-        self.assertEqual(manifest.player_characters[0].display_name, "Sariel")
-        self.assertGreater(len(manifest.npcs), 0)
+        assert entity_tracking.VALIDATION_TYPE == "Pydantic"
+        assert len(manifest.player_characters) == 1
+        assert manifest.player_characters[0].display_name == "Sariel"
+        assert len(manifest.npcs) > 0
 
     def test_validation_info(self):
         """Test that validation info returns correct Pydantic settings"""
         info = entity_tracking.get_validation_info()
 
-        self.assertEqual(info["validation_type"], "Pydantic")
-        self.assertEqual(info["pydantic_available"], "true")
+        assert info["validation_type"] == "Pydantic"
+        assert info["pydantic_available"] == "true"
 
     def test_entity_creation_with_validation(self):
         """Test that entities are created with proper validation"""
@@ -77,13 +77,10 @@ class TestPydanticValidation(unittest.TestCase):
         )
 
         # Test that SceneManifest has expected structure
-        self.assertIsInstance(manifest, entity_tracking.SceneManifest)
-        self.assertIsInstance(manifest.player_characters, list)
-        self.assertIsInstance(manifest.npcs, list)
-        self.assertIsInstance(
-            manifest.current_location,
-            entity_tracking.SceneManifest.__annotations__["current_location"],
-        )
+        assert isinstance(manifest, entity_tracking.SceneManifest)
+        assert isinstance(manifest.player_characters, list)
+        assert isinstance(manifest.npcs, list)
+        assert isinstance(manifest.current_location, entity_tracking.SceneManifest.__annotations__["current_location"])
 
     def test_invalid_data_handling(self):
         """Test that Pydantic validation handles invalid data gracefully"""
@@ -102,7 +99,7 @@ class TestPydanticValidation(unittest.TestCase):
             manifest = entity_tracking.create_from_game_state(
                 invalid_game_state, session_number=1, turn_number=1
             )
-            self.assertIsNotNone(manifest)
+            assert manifest is not None
             print("Pydantic: Handled invalid data gracefully")
         except Exception as e:
             self.fail(f"Pydantic validation failed to handle invalid data: {e}")

@@ -29,11 +29,9 @@ class TestTimeConsolidation(unittest.TestCase):
         )
 
         # Verify consolidation
-        self.assertNotIn("time_of_day", legacy_state.world_data)
-        self.assertIn("world_time", legacy_state.world_data)
-        self.assertEqual(
-            legacy_state.world_data["world_time"]["time_of_day"], "Evening"
-        )
+        assert "time_of_day" not in legacy_state.world_data
+        assert "world_time" in legacy_state.world_data
+        assert legacy_state.world_data["world_time"]["time_of_day"] == "Evening"
 
     def test_time_of_day_calculation(self):
         """Test automatic calculation of time_of_day from hour."""
@@ -46,7 +44,7 @@ class TestTimeConsolidation(unittest.TestCase):
         )
 
         # Verify calculation
-        self.assertEqual(state.world_data["world_time"]["time_of_day"], "Dawn")
+        assert state.world_data["world_time"]["time_of_day"] == "Dawn"
 
     def test_already_consolidated_data(self):
         """Test that already consolidated data is not modified."""
@@ -64,7 +62,7 @@ class TestTimeConsolidation(unittest.TestCase):
         )
 
         # Verify unchanged
-        self.assertEqual(modern_state.world_data["world_time"]["time_of_day"], "Midday")
+        assert modern_state.world_data["world_time"]["time_of_day"] == "Midday"
 
     def test_hour_to_time_of_day_mappings(self):
         """Test all hour-to-description mappings."""
@@ -91,32 +89,28 @@ class TestTimeConsolidation(unittest.TestCase):
                 state = GameState(
                     world_data={"world_time": {"hour": hour, "minute": 0, "second": 0}}
                 )
-                self.assertEqual(
-                    state.world_data["world_time"]["time_of_day"],
-                    expected,
-                    f"Hour {hour} should map to '{expected}'",
-                )
+                assert state.world_data["world_time"]["time_of_day"] == expected, f"Hour {hour} should map to '{expected}'"
 
     def test_missing_world_data(self):
         """Test handling of missing world_data."""
         # Empty state
         empty_state = GameState()
         # Should not raise error
-        self.assertIsInstance(empty_state, GameState)
+        assert isinstance(empty_state, GameState)
 
         # State without world_data
         no_world_state = GameState(player_character_data={"name": "Test"})
         # Should not raise error
-        self.assertIsInstance(no_world_state, GameState)
+        assert isinstance(no_world_state, GameState)
 
     def test_no_time_data_unchanged(self):
         """Test that world_data without any time fields remains unchanged."""
         state = GameState(world_data={"current_location": "Town Square"})
 
         # Should NOT create world_time when no time data exists
-        self.assertNotIn("world_time", state.world_data)
+        assert "world_time" not in state.world_data
         # Should only have the original data
-        self.assertEqual(state.world_data, {"current_location": "Town Square"})
+        assert state.world_data == {"current_location": "Town Square"}
 
     def test_invalid_world_time_format(self):
         """Test handling of invalid world_time format."""
@@ -126,8 +120,8 @@ class TestTimeConsolidation(unittest.TestCase):
         )
 
         # Should convert to proper dict
-        self.assertIsInstance(state.world_data["world_time"], dict)
-        self.assertEqual(state.world_data["world_time"]["time_of_day"], "Evening")
+        assert isinstance(state.world_data["world_time"], dict)
+        assert state.world_data["world_time"]["time_of_day"] == "Evening"
 
     def test_edge_case_hours(self):
         """Test edge cases for hour values."""
@@ -150,9 +144,7 @@ class TestTimeConsolidation(unittest.TestCase):
                         "world_time": {"hour": hour, "minute": 59, "second": 59}
                     }
                 )
-                self.assertEqual(
-                    state.world_data["world_time"]["time_of_day"], expected
-                )
+                assert state.world_data["world_time"]["time_of_day"] == expected
 
     def test_time_of_day_without_world_time(self):
         """Test migration of time_of_day when world_time doesn't exist."""
@@ -164,14 +156,12 @@ class TestTimeConsolidation(unittest.TestCase):
         )
 
         # Should create world_time with estimated hour
-        self.assertIn("world_time", state.world_data)
-        self.assertNotIn("time_of_day", state.world_data)
-        self.assertEqual(state.world_data["world_time"]["time_of_day"], "Morning")
-        self.assertEqual(
-            state.world_data["world_time"]["hour"], 9
-        )  # Estimated hour for morning
-        self.assertEqual(state.world_data["world_time"]["minute"], 0)
-        self.assertEqual(state.world_data["world_time"]["second"], 0)
+        assert "world_time" in state.world_data
+        assert "time_of_day" not in state.world_data
+        assert state.world_data["world_time"]["time_of_day"] == "Morning"
+        assert state.world_data["world_time"]["hour"] == 9  # Estimated hour for morning
+        assert state.world_data["world_time"]["minute"] == 0
+        assert state.world_data["world_time"]["second"] == 0
 
 
 if __name__ == "__main__":

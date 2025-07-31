@@ -18,42 +18,45 @@ class TestCampaignClicks(unittest.TestCase):
         }
 
         # Verify the campaign item would have correct data attributes
-        self.assertIsNotNone(campaign["id"])
-        self.assertIsNotNone(campaign["title"])
+        assert campaign["id"] is not None
+        assert campaign["title"] is not None
 
     def test_css_classes_present(self):
         """Test that required CSS classes are defined"""
         # This test verifies the CSS file exists and can be loaded
 
         css_path = os.path.join(
-            os.path.dirname(__file__), "..", "frontend_v1", "campaign-click-fix.css"
+            os.path.dirname(__file__),
+            "..",
+            "frontend_v1",
+            "campaign-click-fix.css",
         )
-        self.assertTrue(
-            os.path.exists(css_path), "Campaign click fix CSS file should exist"
-        )
+        assert os.path.exists(css_path), "Campaign click fix CSS file should exist"
 
         # Read CSS content to verify key classes
         with open(css_path) as f:
             css_content = f.read()
 
         # Check for essential CSS rules
-        self.assertIn(".campaign-title-link", css_content)
-        self.assertIn("cursor: pointer", css_content)
-        self.assertIn(".list-group-item[data-campaign-id]", css_content)
+        assert ".campaign-title-link" in css_content
+        assert "cursor: pointer" in css_content
+        assert ".list-group-item[data-campaign-id]" in css_content
 
     def test_javascript_click_handler_structure(self):
         """Test that JavaScript has proper click handler structure"""
 
-        js_path = os.path.join(os.path.dirname(__file__), "..", "frontend_v1", "app.js")
+        js_path = os.path.join(
+            os.path.dirname(__file__), "..", "frontend_v1", "app.js"
+        )
 
         with open(js_path) as f:
             js_content = f.read()
 
         # Verify click handler improvements are present
-        self.assertIn("campaign-list').addEventListener('click'", js_content)
-        self.assertIn("e.stopPropagation()", js_content)
-        self.assertIn("campaignItem.style.opacity", js_content)
-        self.assertIn("handleRouteChange()", js_content)
+        assert "campaign-list').addEventListener('click'" in js_content
+        assert "e.stopPropagation()" in js_content
+        assert "campaignItem.style.opacity" in js_content
+        assert "handleRouteChange()" in js_content
 
     def test_index_html_includes_css(self):
         """Test that index.html includes the campaign click fix CSS"""
@@ -66,8 +69,8 @@ class TestCampaignClicks(unittest.TestCase):
             html_content = f.read()
 
         # Verify CSS is included
-        self.assertIn("campaign-click-fix.css", html_content)
-        self.assertIn("<!-- Campaign Click Fix - TASK-005a -->", html_content)
+        assert "campaign-click-fix.css" in html_content
+        assert "<!-- Campaign Click Fix - TASK-005a -->" in html_content
 
 
 if __name__ == "__main__":

@@ -30,62 +30,62 @@ class TestTokenUtils(unittest.TestCase):
     def test_estimate_tokens_with_string(self):
         """Test token estimation with string input."""
         # Test empty string
-        self.assertEqual(estimate_tokens(""), 0)
+        assert estimate_tokens("") == 0
 
         # Test single character (should round down to 0)
-        self.assertEqual(estimate_tokens("a"), 0)
+        assert estimate_tokens("a") == 0
 
         # Test 4 characters (should be 1 token)
-        self.assertEqual(estimate_tokens("test"), 1)
+        assert estimate_tokens("test") == 1
 
         # Test 8 characters (should be 2 tokens)
-        self.assertEqual(estimate_tokens("testing!"), 2)
+        assert estimate_tokens("testing!") == 2
 
         # Test longer text
         text = "This is a longer text for testing token estimation."
         expected_tokens = len(text) // 4  # 51 chars = 12 tokens
-        self.assertEqual(estimate_tokens(text), expected_tokens)
+        assert estimate_tokens(text) == expected_tokens
 
     def test_estimate_tokens_with_list(self):
         """Test token estimation with list input."""
         # Test empty list
-        self.assertEqual(estimate_tokens([]), 0)
+        assert estimate_tokens([]) == 0
 
         # Test list with empty strings
-        self.assertEqual(estimate_tokens(["", ""]), 0)
+        assert estimate_tokens(["", ""]) == 0
 
         # Test list with strings
         text_list = ["hello", "world", "test"]
         total_chars = len("hello") + len("world") + len("test")  # 14 chars
         expected_tokens = total_chars // 4  # 3 tokens
-        self.assertEqual(estimate_tokens(text_list), expected_tokens)
+        assert estimate_tokens(text_list) == expected_tokens
 
         # Test list with mixed content (should ignore non-strings)
         mixed_list = ["hello", 123, "world", None, "test"]
         expected_chars = len("hello") + len("world") + len("test")  # 14 chars
         expected_tokens = expected_chars // 4  # 3 tokens
-        self.assertEqual(estimate_tokens(mixed_list), expected_tokens)
+        assert estimate_tokens(mixed_list) == expected_tokens
 
     def test_estimate_tokens_with_none(self):
         """Test token estimation with None input."""
-        self.assertEqual(estimate_tokens(None), 0)
+        assert estimate_tokens(None) == 0
 
     def test_estimate_tokens_edge_cases(self):
         """Test edge cases for token estimation."""
         # Test very large text
         large_text = "a" * 10000
         expected_tokens = 10000 // 4  # 2500 tokens
-        self.assertEqual(estimate_tokens(large_text), expected_tokens)
+        assert estimate_tokens(large_text) == expected_tokens
 
         # Test unicode characters
         unicode_text = "café ñoño 你好"
         expected_tokens = len(unicode_text) // 4
-        self.assertEqual(estimate_tokens(unicode_text), expected_tokens)
+        assert estimate_tokens(unicode_text) == expected_tokens
 
         # Test text with newlines and special characters
         special_text = "line1\nline2\t\r\n!@#$%^&*()"
         expected_tokens = len(special_text) // 4
-        self.assertEqual(estimate_tokens(special_text), expected_tokens)
+        assert estimate_tokens(special_text) == expected_tokens
 
     @patch("token_utils.logging_util.info")
     def test_log_with_tokens_default_logger(self, mock_log):
@@ -135,23 +135,23 @@ class TestTokenUtils(unittest.TestCase):
         """Test format_token_count function."""
         # Test zero characters
         result = format_token_count(0)
-        self.assertEqual(result, "0 characters (~0 tokens)")
+        assert result == "0 characters (~0 tokens)"
 
         # Test small count
         result = format_token_count(4)
-        self.assertEqual(result, "4 characters (~1 token)")
+        assert result == "4 characters (~1 token)"
 
         # Test larger count
         result = format_token_count(100)
-        self.assertEqual(result, "100 characters (~25 tokens)")
+        assert result == "100 characters (~25 tokens)"
 
         # Test odd number (should round down)
         result = format_token_count(17)
-        self.assertEqual(result, "17 characters (~4 tokens)")
+        assert result == "17 characters (~4 tokens)"
 
         # Test large count
         result = format_token_count(10000)
-        self.assertEqual(result, "10000 characters (~2500 tokens)")
+        assert result == "10000 characters (~2500 tokens)"
 
     def test_token_estimation_consistency(self):
         """Test that token estimation is consistent across functions."""
@@ -172,11 +172,7 @@ class TestTokenUtils(unittest.TestCase):
             # Extract token count from formatted string
             formatted_tokens = int(formatted_result.split("~")[1].split(" ")[0])
 
-            self.assertEqual(
-                direct_estimate,
-                formatted_tokens,
-                f"Inconsistent token count for text: '{text}'",
-            )
+            assert direct_estimate == formatted_tokens, f"Inconsistent token count for text: '{text}'"
 
     def test_log_with_tokens_integration(self):
         """Integration test for log_with_tokens with various inputs."""
@@ -239,49 +235,49 @@ class TestFileCache(unittest.TestCase):
         """Test basic read_file_cached functionality."""
         # Test reading a file for the first time
         content = file_cache.read_file_cached(self.test_file_1)
-        self.assertEqual(content, self.test_content_1)
+        assert content == self.test_content_1
 
         # Test reading the same file again (should be cached)
         content_cached = file_cache.read_file_cached(self.test_file_1)
-        self.assertEqual(content_cached, self.test_content_1)
+        assert content_cached == self.test_content_1
 
         # Test reading a different file
         content_2 = file_cache.read_file_cached(self.test_file_2)
-        self.assertEqual(content_2, self.test_content_2)
+        assert content_2 == self.test_content_2
 
     def test_cache_hit_and_miss_behavior(self):
         """Test cache hit and miss statistics tracking."""
         # Clear cache and get initial stats
         file_cache.clear_file_cache()
         initial_stats = file_cache.get_cache_stats()
-        self.assertEqual(initial_stats["cache_hits"], 0)
-        self.assertEqual(initial_stats["cache_misses"], 0)
+        assert initial_stats["cache_hits"] == 0
+        assert initial_stats["cache_misses"] == 0
 
         # First read should be a cache miss
         file_cache.read_file_cached(self.test_file_1)
         stats_after_miss = file_cache.get_cache_stats()
-        self.assertEqual(stats_after_miss["cache_hits"], 0)
-        self.assertEqual(stats_after_miss["cache_misses"], 1)
-        self.assertEqual(stats_after_miss["total_requests"], 1)
-        self.assertEqual(stats_after_miss["hit_rate_percent"], 0.0)
+        assert stats_after_miss["cache_hits"] == 0
+        assert stats_after_miss["cache_misses"] == 1
+        assert stats_after_miss["total_requests"] == 1
+        assert stats_after_miss["hit_rate_percent"] == 0.0
 
         # Second read should be a cache hit
         file_cache.read_file_cached(self.test_file_1)
         stats_after_hit = file_cache.get_cache_stats()
-        self.assertEqual(stats_after_hit["cache_hits"], 1)
-        self.assertEqual(stats_after_hit["cache_misses"], 1)
-        self.assertEqual(stats_after_hit["total_requests"], 2)
-        self.assertEqual(stats_after_hit["hit_rate_percent"], 50.0)
+        assert stats_after_hit["cache_hits"] == 1
+        assert stats_after_hit["cache_misses"] == 1
+        assert stats_after_hit["total_requests"] == 2
+        assert stats_after_hit["hit_rate_percent"] == 50.0
 
         # Multiple hits should increase hit rate
         for _ in range(3):
             file_cache.read_file_cached(self.test_file_1)
 
         final_stats = file_cache.get_cache_stats()
-        self.assertEqual(final_stats["cache_hits"], 4)
-        self.assertEqual(final_stats["cache_misses"], 1)
-        self.assertEqual(final_stats["total_requests"], 5)
-        self.assertEqual(final_stats["hit_rate_percent"], 80.0)
+        assert final_stats["cache_hits"] == 4
+        assert final_stats["cache_misses"] == 1
+        assert final_stats["total_requests"] == 5
+        assert final_stats["hit_rate_percent"] == 80.0
 
     def test_thread_safety_concurrent_access(self):
         """Test thread safety with concurrent file access."""
@@ -312,28 +308,20 @@ class TestFileCache(unittest.TestCase):
             thread.join()
 
         # Verify no errors occurred
-        self.assertEqual(
-            len(errors), 0, f"Errors occurred during concurrent access: {errors}"
-        )
+        assert len(errors) == 0, f"Errors occurred during concurrent access: {errors}"
 
         # Verify all reads returned consistent content length
         expected_length = len(self.test_content_1)
         for worker_id, iteration, content_length in results:
-            self.assertEqual(
-                content_length,
-                expected_length,
-                f"Inconsistent content length from worker {worker_id}, iteration {iteration}",
-            )
+            assert content_length == expected_length, f"Inconsistent content length from worker {worker_id}, iteration {iteration}"
 
         # Verify we got expected number of results (5 workers * 10 iterations each)
-        self.assertEqual(len(results), 50)
+        assert len(results) == 50
 
         # Verify cache stats make sense (should have hits and misses due to concurrency)
         stats = file_cache.get_cache_stats()
-        self.assertGreater(stats["total_requests"], 0)
-        self.assertEqual(
-            stats["total_requests"], stats["cache_hits"] + stats["cache_misses"]
-        )
+        assert stats["total_requests"] > 0
+        assert stats["total_requests"] == stats["cache_hits"] + stats["cache_misses"]
 
     def test_ttl_expiration_testing(self):
         """Test TTL expiration functionality (mocked for speed)."""
@@ -350,16 +338,16 @@ class TestFileCache(unittest.TestCase):
             # First read - cache miss
             with patch("builtins.open", mock_open_read(self.test_content_1)):
                 content1 = file_cache.read_file_cached(self.test_file_1)
-                self.assertEqual(content1, self.test_content_1)
+                assert content1 == self.test_content_1
 
             # Second read - cache hit
             content2 = file_cache.read_file_cached(self.test_file_1)
-            self.assertEqual(content2, self.test_content_1)
+            assert content2 == self.test_content_1
 
             # Third read - cache expired, miss again
             with patch("builtins.open", mock_open_read(self.test_content_1)):
                 content3 = file_cache.read_file_cached(self.test_file_1)
-                self.assertEqual(content3, self.test_content_1)
+                assert content3 == self.test_content_1
 
     def test_cache_statistics_tracking(self):
         """Test comprehensive cache statistics tracking."""
@@ -378,42 +366,36 @@ class TestFileCache(unittest.TestCase):
             "cached_files",
             "uptime_seconds",
         }
-        self.assertEqual(set(stats.keys()), expected_keys)
+        assert set(stats.keys()) == expected_keys
 
         # Verify initial values
-        self.assertEqual(stats["cache_hits"], 0)
-        self.assertEqual(stats["cache_misses"], 0)
-        self.assertEqual(stats["total_requests"], 0)
-        self.assertEqual(stats["hit_rate_percent"], 0)
-        self.assertEqual(stats["total_cached_chars"], 0)
-        self.assertEqual(stats["total_cached_tokens"], 0)
-        self.assertEqual(stats["cached_files"], 0)
-        self.assertGreaterEqual(stats["uptime_seconds"], 0)
+        assert stats["cache_hits"] == 0
+        assert stats["cache_misses"] == 0
+        assert stats["total_requests"] == 0
+        assert stats["hit_rate_percent"] == 0
+        assert stats["total_cached_chars"] == 0
+        assert stats["total_cached_tokens"] == 0
+        assert stats["cached_files"] == 0
+        assert stats["uptime_seconds"] >= 0
 
         # Read a file and verify stats update
         file_cache.read_file_cached(self.test_file_1)
         stats_after_read = file_cache.get_cache_stats()
 
-        self.assertEqual(stats_after_read["cache_misses"], 1)
-        self.assertEqual(stats_after_read["total_requests"], 1)
-        self.assertEqual(stats_after_read["cached_files"], 1)
-        self.assertEqual(
-            stats_after_read["total_cached_chars"], len(self.test_content_1)
-        )
-        self.assertEqual(
-            stats_after_read["total_cached_tokens"], len(self.test_content_1) // 4
-        )
+        assert stats_after_read["cache_misses"] == 1
+        assert stats_after_read["total_requests"] == 1
+        assert stats_after_read["cached_files"] == 1
+        assert stats_after_read["total_cached_chars"] == len(self.test_content_1)
+        assert stats_after_read["total_cached_tokens"] == len(self.test_content_1) // 4
 
         # Read another file
         file_cache.read_file_cached(self.test_file_2)
         stats_after_two_files = file_cache.get_cache_stats()
 
-        self.assertEqual(stats_after_two_files["cache_misses"], 2)
-        self.assertEqual(stats_after_two_files["cached_files"], 2)
+        assert stats_after_two_files["cache_misses"] == 2
+        assert stats_after_two_files["cached_files"] == 2
         expected_total_chars = len(self.test_content_1) + len(self.test_content_2)
-        self.assertEqual(
-            stats_after_two_files["total_cached_chars"], expected_total_chars
-        )
+        assert stats_after_two_files["total_cached_chars"] == expected_total_chars
 
     def test_error_handling_missing_files(self):
         """Test error handling for missing files."""
@@ -423,8 +405,8 @@ class TestFileCache(unittest.TestCase):
 
         # Verify cache stats are not corrupted by the error
         stats = file_cache.get_cache_stats()
-        self.assertEqual(stats["cache_hits"], 0)
-        self.assertEqual(stats["cache_misses"], 1)  # Should count as miss attempt
+        assert stats["cache_hits"] == 0
+        assert stats["cache_misses"] == 1  # Should count as miss attempt
 
         # Test with various invalid paths
         invalid_paths = [
@@ -441,32 +423,27 @@ class TestFileCache(unittest.TestCase):
         """Test cache invalidation functionality."""
         # Read a file to cache it
         content = file_cache.read_file_cached(self.test_file_1)
-        self.assertEqual(content, self.test_content_1)
+        assert content == self.test_content_1
 
         # Verify file is cached
         stats_before = file_cache.get_cache_stats()
-        self.assertEqual(stats_before["cached_files"], 1)
+        assert stats_before["cached_files"] == 1
 
         # Invalidate the file
         result = file_cache.invalidate_file(self.test_file_1)
-        self.assertTrue(
-            result, "invalidate_file should return True when file was cached"
-        )
+        assert result, "invalidate_file should return True when file was cached"
 
         # Verify file is no longer cached
         stats_after = file_cache.get_cache_stats()
-        self.assertEqual(stats_after["cached_files"], 0)
+        assert stats_after["cached_files"] == 0
 
         # Try to invalidate a file that wasn't cached
         result_not_cached = file_cache.invalidate_file(self.test_file_2)
-        self.assertFalse(
-            result_not_cached,
-            "invalidate_file should return False when file wasn't cached",
-        )
+        assert not result_not_cached, "invalidate_file should return False when file wasn't cached"
 
         # Verify invalidating nonexistent file doesn't crash
         result_nonexistent = file_cache.invalidate_file(self.nonexistent_file)
-        self.assertFalse(result_nonexistent)
+        assert not result_nonexistent
 
     def test_performance_comparison_vs_direct_reads(self):
         """Test performance comparison between cached and direct file reads."""
@@ -483,14 +460,14 @@ class TestFileCache(unittest.TestCase):
                 content = f.read()
             end_time = time.time()
             direct_read_times.append(end_time - start_time)
-            self.assertEqual(content, self.test_content_1)
+            assert content == self.test_content_1
 
         # Clear cache and do first cached read (should be similar to direct read)
         file_cache.clear_file_cache()
         start_time = time.time()
         cached_content_first = file_cache.read_file_cached(file_path)
         first_cached_time = time.time() - start_time
-        self.assertEqual(cached_content_first, self.test_content_1)
+        assert cached_content_first == self.test_content_1
 
         # Time subsequent cached reads (should be faster)
         cached_read_times = []
@@ -499,19 +476,16 @@ class TestFileCache(unittest.TestCase):
             cached_content = file_cache.read_file_cached(file_path)
             end_time = time.time()
             cached_read_times.append(end_time - start_time)
-            self.assertEqual(cached_content, self.test_content_1)
+            assert cached_content == self.test_content_1
 
         # Verify cache behavior (hits should outnumber misses)
         stats = file_cache.get_cache_stats()
-        self.assertEqual(stats["cache_misses"], 1)  # Only first read
-        self.assertEqual(stats["cache_hits"], 5)  # Subsequent reads
-        self.assertEqual(stats["hit_rate_percent"], 83.3)  # 5/6 * 100, rounded
+        assert stats["cache_misses"] == 1  # Only first read
+        assert stats["cache_hits"] == 5  # Subsequent reads
+        assert stats["hit_rate_percent"] == 83.3  # 5/6 * 100, rounded
 
         # Behavioral verification: cached reads should be consistent
-        self.assertTrue(
-            all(time_val >= 0 for time_val in cached_read_times),
-            "All cached read times should be non-negative",
-        )
+        assert all(time_val >= 0 for time_val in cached_read_times), "All cached read times should be non-negative"
 
     def test_path_normalization(self):
         """Test that different path representations for the same file use the same cache entry."""
@@ -528,12 +502,12 @@ class TestFileCache(unittest.TestCase):
         stats_after_rel = file_cache.get_cache_stats()
 
         # Both should return same content
-        self.assertEqual(content1, content2)
-        self.assertEqual(content1, self.test_content_1)
+        assert content1 == content2
+        assert content1 == self.test_content_1
 
         # Should have gotten at least one cache hit if normalization is working
         # (Note: This test may vary based on current working directory)
-        self.assertGreaterEqual(stats_after_rel["total_requests"], 1)
+        assert stats_after_rel["total_requests"] >= 1
 
     def test_encoding_parameter(self):
         """Test different file encodings."""
@@ -546,16 +520,16 @@ class TestFileCache(unittest.TestCase):
 
         # Test reading with explicit UTF-8 encoding
         content_utf8 = file_cache.read_file_cached(utf8_file, encoding="utf-8")
-        self.assertEqual(content_utf8, utf8_content)
+        assert content_utf8 == utf8_content
 
         # Test reading with default encoding (should also be UTF-8)
         content_default = file_cache.read_file_cached(utf8_file)
-        self.assertEqual(content_default, utf8_content)
+        assert content_default == utf8_content
 
         # Both reads should refer to the same cached content
         stats = file_cache.get_cache_stats()
-        self.assertEqual(stats["cache_misses"], 1)  # Only first read was miss
-        self.assertGreater(stats["cache_hits"], 0)  # At least one hit
+        assert stats["cache_misses"] == 1  # Only first read was miss
+        assert stats["cache_hits"] > 0  # At least one hit
 
 
 def mock_open_read(content):

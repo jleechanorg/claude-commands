@@ -4,12 +4,11 @@ Create sample user data in Firebase for testing analytics.
 """
 
 import os
+import traceback
 from datetime import UTC, datetime
 
 import firebase_admin
 from firebase_admin import credentials, firestore
-
-import traceback
 
 
 def initialize_firebase():

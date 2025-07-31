@@ -3,15 +3,15 @@ LLM-based validator using Gemini API for narrative validation.
 Uses natural language understanding to detect entity presence.
 """
 
+import concurrent.futures
 import json
 import time
 from typing import Any
 
+import google.generativeai as genai
+
 from ..logging_config import setup_logging, with_metrics
 from ..validator import BaseValidator, ValidationResult
-
-import concurrent.futures
-import google.generativeai as genai
 
 # Prompt templates for LLM validation
 VALIDATION_PROMPT_TEMPLATE = """You are a narrative analyzer for a role-playing game. Your task is to identify which characters are present or mentioned in a given narrative text.

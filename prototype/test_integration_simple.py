@@ -4,10 +4,11 @@ Simple integration test to verify the validation system works end-to-end.
 Run from the prototype directory.
 """
 
+import time
+
 from game_state_integration import MockGameState
 from validators.fuzzy_token_validator import FuzzyTokenValidator
 from validators.token_validator import SimpleTokenValidator, TokenValidator
-import time
 
 
 def test_basic_integration():

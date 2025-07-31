@@ -1,0 +1,557 @@
+"""
+World Logic MCP Server - D&D Game Mechanics
+
+This MCP server exposes WorldArchitect.AI's D&D 5e game mechanics as tools and resources.
+Extracted from the monolithic main.py to provide clean API boundaries via MCP protocol.
+Tests verified passing locally on mcp_redesign branch.
+
+Architecture:
+- MCP server exposing D&D game logic as tools
+- Clean separation from HTTP handling (translation layer)
+- Maintains all existing functionality through MCP tools
+- Supports real-time gaming with stateful sessions
+
+Key MCP Tools:
+- create_campaign: Initialize new D&D campaigns
+- create_character: Generate player/NPC characters
+- process_action: Handle game actions and story progression
+- get_campaign_state: Retrieve current game state
+- update_campaign: Modify campaign data
+- export_campaign: Generate campaign documents
+"""
+
+import json
+import logging
+import traceback
+from typing import Any
+
+# WorldArchitect imports
+import logging_util
+import world_logic
+
+# MCP imports
+from mcp.server import Server
+from mcp.types import Resource, TextContent, Tool
+
+from firestore_service import json_default_serializer
+
+# Initialize MCP server
+server = Server("world-logic")
+
+# Global constants from main.py
+KEY_ERROR = "error"
+KEY_PROMPT = "prompt"
+KEY_SELECTED_PROMPTS = "selected_prompts"
+KEY_USER_INPUT = "user_input"
+
+
+@server.list_tools()
+async def handle_list_tools() -> list[Tool]:
+    """List available MCP tools for D&D game mechanics."""
+    return [
+        Tool(
+            name="create_campaign",
+            description="Create a new D&D campaign with character, setting, and story generation",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "user_id": {"type": "string", "description": "Firebase user ID"},
+                    "title": {"type": "string", "description": "Campaign title"},
+                    "character": {
+                        "type": "string",
+                        "description": "Character description",
+                    },
+                    "setting": {"type": "string", "description": "Campaign setting"},
+                    "description": {
+                        "type": "string",
+                        "description": "Campaign description",
+                    },
+                    "selected_prompts": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Selected prompt templates",
+                    },
+                    "custom_options": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Custom options (companions, defaultWorld)",
+                    },
+                },
+                "required": ["user_id", "title"],
+            },
+        ),
+        Tool(
+            name="get_campaign_state",
+            description="Retrieve current campaign state and metadata",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "user_id": {"type": "string", "description": "Firebase user ID"},
+                    "campaign_id": {
+                        "type": "string",
+                        "description": "Campaign identifier",
+                    },
+                },
+                "required": ["user_id", "campaign_id"],
+            },
+        ),
+        Tool(
+            name="process_action",
+            description="Process user action and generate AI response for story progression",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "user_id": {"type": "string", "description": "Firebase user ID"},
+                    "campaign_id": {
+                        "type": "string",
+                        "description": "Campaign identifier",
+                    },
+                    "user_input": {
+                        "type": "string",
+                        "description": "User's action or dialogue",
+                    },
+                    "mode": {
+                        "type": "string",
+                        "description": "Interaction mode (character/narrator)",
+                        "default": "character",
+                    },
+                },
+                "required": ["user_id", "campaign_id", "user_input"],
+            },
+        ),
+        Tool(
+            name="update_campaign",
+            description="Update campaign metadata and settings",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "user_id": {"type": "string", "description": "Firebase user ID"},
+                    "campaign_id": {
+                        "type": "string",
+                        "description": "Campaign identifier",
+                    },
+                    "updates": {"type": "object", "description": "Fields to update"},
+                },
+                "required": ["user_id", "campaign_id", "updates"],
+            },
+        ),
+        Tool(
+            name="export_campaign",
+            description="Export campaign to document format (PDF/DOCX/TXT)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "user_id": {"type": "string", "description": "Firebase user ID"},
+                    "campaign_id": {
+                        "type": "string",
+                        "description": "Campaign identifier",
+                    },
+                    "format": {
+                        "type": "string",
+                        "enum": ["pdf", "docx", "txt"],
+                        "description": "Export format",
+                    },
+                },
+                "required": ["user_id", "campaign_id", "format"],
+            },
+        ),
+        Tool(
+            name="get_campaigns_list",
+            description="Retrieve list of user campaigns",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "user_id": {"type": "string", "description": "Firebase user ID"}
+                },
+                "required": ["user_id"],
+            },
+        ),
+        Tool(
+            name="get_user_settings",
+            description="Retrieve user settings and preferences",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "user_id": {"type": "string", "description": "Firebase user ID"}
+                },
+                "required": ["user_id"],
+            },
+        ),
+        Tool(
+            name="update_user_settings",
+            description="Update user settings and preferences",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "user_id": {"type": "string", "description": "Firebase user ID"},
+                    "settings": {"type": "object", "description": "Settings to update"},
+                },
+                "required": ["user_id", "settings"],
+            },
+        ),
+    ]
+
+
+@server.call_tool()
+async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:  # noqa: PLR0911
+    """Handle MCP tool calls for D&D game mechanics."""
+    try:
+        if name == "create_campaign":
+            return await _create_campaign_tool(arguments)
+        if name == "get_campaign_state":
+            return await _get_campaign_state_tool(arguments)
+        if name == "process_action":
+            return await _process_action_tool(arguments)
+        if name == "update_campaign":
+            return await _update_campaign_tool(arguments)
+        if name == "export_campaign":
+            return await _export_campaign_tool(arguments)
+        if name == "get_campaigns_list":
+            return await _get_campaigns_list_tool(arguments)
+        if name == "get_user_settings":
+            return await _get_user_settings_tool(arguments)
+        if name == "update_user_settings":
+            return await _update_user_settings_tool(arguments)
+        raise ValueError(f"Unknown tool: {name}")
+
+    except Exception as e:
+        logging_util.error(f"Tool {name} failed: {e}")
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "error": str(e),
+                        "tool": name,
+                        "traceback": traceback.format_exc(),
+                    },
+                    default=json_default_serializer,
+                ),
+            )
+        ]
+
+
+async def _create_campaign_tool(args: dict[str, Any]) -> list[TextContent]:
+    """Create new D&D campaign using unified API."""
+    try:
+        result = await world_logic.create_campaign_unified(args)
+        return [
+            TextContent(
+                type="text", text=json.dumps(result, default=json_default_serializer)
+            )
+        ]
+    except Exception as e:
+        logging_util.error(f"Campaign creation failed: {e}")
+        error_response = world_logic.create_error_response(
+            f"Failed to create campaign: {str(e)}"
+        )
+        return [TextContent(type="text", text=json.dumps(error_response))]
+
+
+async def _get_campaign_state_tool(args: dict[str, Any]) -> list[TextContent]:
+    """Get campaign state using unified API."""
+    try:
+        result = await world_logic.get_campaign_state_unified(args)
+        return [
+            TextContent(
+                type="text", text=json.dumps(result, default=json_default_serializer)
+            )
+        ]
+    except Exception as e:
+        logging_util.error(f"Get campaign state failed: {e}")
+        error_response = world_logic.create_error_response(
+            f"Failed to get campaign state: {str(e)}"
+        )
+        return [TextContent(type="text", text=json.dumps(error_response))]
+
+
+async def _process_action_tool(args: dict[str, Any]) -> list[TextContent]:
+    """Process user action using unified API."""
+    try:
+        result = await world_logic.process_action_unified(args)
+        return [
+            TextContent(
+                type="text", text=json.dumps(result, default=json_default_serializer)
+            )
+        ]
+    except Exception as e:
+        logging_util.error(f"Process action failed: {e}")
+        error_response = world_logic.create_error_response(
+            f"Failed to process action: {str(e)}"
+        )
+        return [TextContent(type="text", text=json.dumps(error_response))]
+
+
+async def _update_campaign_tool(args: dict[str, Any]) -> list[TextContent]:
+    """Update campaign using unified API."""
+    try:
+        result = await world_logic.update_campaign_unified(args)
+        return [
+            TextContent(
+                type="text", text=json.dumps(result, default=json_default_serializer)
+            )
+        ]
+    except Exception as e:
+        logging_util.error(f"Update campaign failed: {e}")
+        error_response = world_logic.create_error_response(
+            f"Failed to update campaign: {str(e)}"
+        )
+        return [TextContent(type="text", text=json.dumps(error_response))]
+
+
+async def _export_campaign_tool(args: dict[str, Any]) -> list[TextContent]:
+    """Export campaign using unified API."""
+    try:
+        result = await world_logic.export_campaign_unified(args)
+        return [
+            TextContent(
+                type="text", text=json.dumps(result, default=json_default_serializer)
+            )
+        ]
+    except Exception as e:
+        logging_util.error(f"Export campaign failed: {e}")
+        error_response = world_logic.create_error_response(
+            f"Failed to export campaign: {str(e)}"
+        )
+        return [TextContent(type="text", text=json.dumps(error_response))]
+
+
+async def _get_user_settings_tool(args: dict[str, Any]) -> list[TextContent]:
+    """Get user settings using unified API."""
+    try:
+        result = await world_logic.get_user_settings_unified(args)
+        return [
+            TextContent(
+                type="text", text=json.dumps(result, default=json_default_serializer)
+            )
+        ]
+    except Exception as e:
+        logging_util.error(f"Get user settings failed: {e}")
+        error_response = world_logic.create_error_response(
+            f"Failed to get user settings: {str(e)}"
+        )
+        return [TextContent(type="text", text=json.dumps(error_response))]
+
+
+async def _get_campaigns_list_tool(args: dict[str, Any]) -> list[TextContent]:
+    """Get campaigns list using unified API."""
+    try:
+        result = await world_logic.get_campaigns_list_unified(args)
+        return [
+            TextContent(
+                type="text", text=json.dumps(result, default=json_default_serializer)
+            )
+        ]
+    except Exception as e:
+        logging_util.error(f"Get campaigns list failed: {e}")
+        error_response = world_logic.create_error_response(
+            f"Failed to get campaigns list: {str(e)}"
+        )
+        return [TextContent(type="text", text=json.dumps(error_response))]
+
+
+async def _update_user_settings_tool(args: dict[str, Any]) -> list[TextContent]:
+    """Update user settings using unified API."""
+    try:
+        result = await world_logic.update_user_settings_unified(args)
+        return [
+            TextContent(
+                type="text", text=json.dumps(result, default=json_default_serializer)
+            )
+        ]
+    except Exception as e:
+        logging_util.error(f"Update user settings failed: {e}")
+        error_response = world_logic.create_error_response(
+            f"Failed to update user settings: {str(e)}"
+        )
+        return [TextContent(type="text", text=json.dumps(error_response))]
+
+
+@server.list_resources()
+async def handle_list_resources() -> list[Resource]:
+    """List available MCP resources for D&D content."""
+    return [
+        Resource(
+            uri="worldarchitect://campaigns",
+            name="Campaign List",
+            description="List of all user campaigns",
+            mimeType="application/json",
+        ),
+        Resource(
+            uri="worldarchitect://game-rules",
+            name="D&D 5e Rules",
+            description="Core D&D 5e rules and mechanics",
+            mimeType="text/plain",
+        ),
+        Resource(
+            uri="worldarchitect://prompts",
+            name="Story Prompts",
+            description="Available story prompt templates",
+            mimeType="application/json",
+        ),
+    ]
+
+
+@server.read_resource()
+async def handle_read_resource(uri: str) -> str:
+    """Read MCP resources for D&D content."""
+    if uri == "worldarchitect://campaigns":
+        # This would require user context, return schema for now
+        return json.dumps(
+            {
+                "schema": "campaigns",
+                "description": "User-specific campaign list requires authentication",
+            }
+        )
+    if uri == "worldarchitect://game-rules":
+        return "D&D 5e Core Rules: Character attributes, dice mechanics, combat system"
+    if uri == "worldarchitect://prompts":
+        return json.dumps(
+            {
+                "available_prompts": ["fantasy", "sci-fi", "horror", "mystery"],
+                "custom_options": ["companions", "defaultWorld"],
+            }
+        )
+    raise ValueError(f"Unknown resource: {uri}")
+
+
+def run_server():
+    """Run the World Logic MCP server."""
+    import argparse  # noqa: PLC0415
+
+    parser = argparse.ArgumentParser(description="WorldArchitect.AI MCP Server")
+    parser.add_argument("--port", type=int, default=8000, help="Port to run on")
+    parser.add_argument("--host", default="localhost", help="Host to bind to")
+    args = parser.parse_args()
+
+    logging_util.info(f"Starting World Logic MCP server on {args.host}:{args.port}")
+
+    # Configure logging
+    logging.basicConfig(level=logging.INFO)
+
+    # Run HTTP server with JSON-RPC support
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    class MCPHandler(BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            if self.path == "/health":
+                self.send_response(200)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(b'{"status": "healthy", "server": "world-logic"}')
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def do_POST(self):  # noqa: N802
+            if self.path == "/rpc":
+                try:
+                    # Parse JSON-RPC request
+                    content_length = int(self.headers.get("Content-Length", 0))
+                    post_data = self.rfile.read(content_length)
+                    request_data = json.loads(post_data.decode("utf-8"))
+
+                    # Handle JSON-RPC request
+                    response_data = self._handle_jsonrpc(request_data)
+
+                    # Send response
+                    response_json = json.dumps(
+                        response_data, default=json_default_serializer
+                    )
+                    self.send_response(200)
+                    self.send_header("Content-type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(response_json.encode("utf-8"))
+
+                except Exception as e:
+                    logging_util.error(f"JSON-RPC error: {e}")
+                    error_response = {
+                        "jsonrpc": "2.0",
+                        "error": {
+                            "code": -32603,
+                            "message": str(e),
+                            "data": traceback.format_exc(),
+                        },
+                        "id": request_data.get("id")
+                        if "request_data" in locals()
+                        else None,
+                    }
+                    response_json = json.dumps(error_response)
+                    self.send_response(500)
+                    self.send_header("Content-type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(response_json.encode("utf-8"))
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+        def _handle_jsonrpc(self, request_data):
+            """Handle JSON-RPC 2.0 request"""
+            method = request_data.get("method")
+            params = request_data.get("params", {})
+            request_id = request_data.get("id")
+
+            logging_util.info(f"JSON-RPC call: {method} with params: {params}")
+
+            if method == "tools/call":
+                # Handle tool call
+                tool_name = params.get("name")
+                arguments = params.get("arguments", {})
+
+                # Convert to async and call tool
+                import asyncio
+
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    result = loop.run_until_complete(
+                        handle_call_tool(tool_name, arguments)
+                    )
+                    # Extract text content from result
+                    if result and len(result) > 0 and hasattr(result[0], "text"):
+                        result_data = json.loads(result[0].text)
+                    else:
+                        result_data = {"error": "No result returned"}
+
+                    return {"jsonrpc": "2.0", "result": result_data, "id": request_id}
+                finally:
+                    loop.close()
+
+            elif method == "resources/read":
+                # Handle resource read
+                uri = params.get("uri")
+
+                # Convert to async and call resource handler
+                import asyncio
+
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    result = loop.run_until_complete(handle_read_resource(uri))
+                    return {"jsonrpc": "2.0", "result": result, "id": request_id}
+                finally:
+                    loop.close()
+            else:
+                return {
+                    "jsonrpc": "2.0",
+                    "error": {"code": -32601, "message": f"Method not found: {method}"},
+                    "id": request_id,
+                }
+
+        def log_message(self, format, *args):
+            # Suppress default logging for cleaner output
+            pass
+
+    httpd = HTTPServer((args.host, args.port), MCPHandler)
+    logging_util.info(f"MCP JSON-RPC server running on http://{args.host}:{args.port}")
+    logging_util.info("Endpoints: /health (GET), /rpc (POST)")
+
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        logging_util.info("Server shutdown requested")
+        httpd.shutdown()
+
+
+if __name__ == "__main__":
+    run_server()

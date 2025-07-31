@@ -465,6 +465,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Process debug content - backend now handles stripping based on debug_mode
+    // Defensive check: ensure text is not null/undefined
+    if (!text) {
+      console.error('appendToStory called with null/undefined text:', { actor, text, mode, debugMode, sequenceId });
+      text = '[Error: Empty response from server]';
+    }
+
     let processedText = text;
     if (actor === 'gemini') {
       processedText = text
@@ -770,7 +776,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let renderCampaignList = async () => {
     showSpinner('loading');
     try {
-      const { data: campaigns } = await fetchApi('/api/campaigns');
+      const { data } = await fetchApi('/api/campaigns');
+      const campaigns = data.campaigns || data;
 
       // RESILIENCE: Cache successful campaign data for offline viewing
       localStorage.setItem('cachedCampaigns', JSON.stringify(campaigns));
@@ -1139,7 +1146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         // Use user_scene_number from backend response
         // Use 'narrative' field if available (per schema), fall back to 'response' for compatibility
-        const narrativeText = data.narrative || data.response;
+        const narrativeText = data.narrative || data.response || '[Error: No response from server]';
         appendToStory(
           'gemini',
           narrativeText,

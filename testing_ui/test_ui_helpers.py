@@ -8,7 +8,6 @@ import time
 from typing import Any
 
 from playwright.sync_api import Page
-
 from screenshot_utils import take_screenshot
 
 

@@ -41,8 +41,8 @@ class TestLogExceptionsDecorator(unittest.TestCase):
             return "success"
 
         # Test that function metadata is preserved
-        self.assertEqual(sample_function.__name__, "sample_function")
-        self.assertEqual(sample_function.__doc__, "Sample docstring.")
+        assert sample_function.__name__ == "sample_function"
+        assert sample_function.__doc__ == "Sample docstring."
 
     def test_decorator_successful_execution(self):
         """Test decorator with successful function execution."""
@@ -52,11 +52,11 @@ class TestLogExceptionsDecorator(unittest.TestCase):
             return x + y
 
         result = successful_function(2, 3)
-        self.assertEqual(result, 5)
+        assert result == 5
 
         # No error should be logged for successful execution
         log_output = self.log_stream.getvalue()
-        self.assertEqual(log_output, "")
+        assert log_output == ""
 
     def test_decorator_logs_exception_and_reraises(self):
         """Test that decorator logs exceptions and re-raises them."""
@@ -71,16 +71,16 @@ class TestLogExceptionsDecorator(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             failing_function(-1)
 
-        self.assertEqual(str(context.exception), "Negative values not allowed")
+        assert str(context.exception) == "Negative values not allowed"
 
         # Check that error was logged
         log_output = self.log_stream.getvalue()
-        self.assertIn("EXCEPTION IN: failing_function", log_output)
-        self.assertIn("Args: (-1,)", log_output)
-        self.assertIn("Kwargs: {}", log_output)
-        self.assertIn("Error: Negative values not allowed", log_output)
-        self.assertIn("Traceback:", log_output)
-        self.assertIn("END EXCEPTION", log_output)
+        assert "EXCEPTION IN: failing_function" in log_output
+        assert "Args: (-1,)" in log_output
+        assert "Kwargs: {}" in log_output
+        assert "Error: Negative values not allowed" in log_output
+        assert "Traceback:" in log_output
+        assert "END EXCEPTION" in log_output
 
     def test_decorator_logs_function_arguments(self):
         """Test that decorator logs function arguments in error messages."""
@@ -93,8 +93,8 @@ class TestLogExceptionsDecorator(unittest.TestCase):
             function_with_args("arg1", "arg2", c="kwarg1", d="kwarg2")
 
         log_output = self.log_stream.getvalue()
-        self.assertIn("Args: ('arg1', 'arg2')", log_output)
-        self.assertIn("Kwargs: {'c': 'kwarg1', 'd': 'kwarg2'}", log_output)
+        assert "Args: ('arg1', 'arg2')" in log_output
+        assert "Kwargs: {'c': 'kwarg1', 'd': 'kwarg2'}" in log_output
 
     def test_decorator_with_different_exception_types(self):
         """Test decorator behavior with different exception types."""
@@ -127,10 +127,10 @@ class TestLogExceptionsDecorator(unittest.TestCase):
 
         # Verify all exceptions were logged
         log_output = self.log_stream.getvalue()
-        self.assertIn("Value error occurred", log_output)
-        self.assertIn("Type error occurred", log_output)
-        self.assertIn("Runtime error occurred", log_output)
-        self.assertIn("Generic error occurred", log_output)
+        assert "Value error occurred" in log_output
+        assert "Type error occurred" in log_output
+        assert "Runtime error occurred" in log_output
+        assert "Generic error occurred" in log_output
 
     def test_decorator_preserves_return_values(self):
         """Test that decorator preserves various return value types."""
@@ -152,10 +152,10 @@ class TestLogExceptionsDecorator(unittest.TestCase):
             return True
 
         # Test that return values are preserved
-        self.assertEqual(return_dict(), {"key": "value", "number": 42})
-        self.assertEqual(return_list(), [1, 2, 3, "four"])
-        self.assertIsNone(return_none())
-        self.assertTrue(return_boolean())
+        assert return_dict() == {"key": "value", "number": 42}
+        assert return_list() == [1, 2, 3, "four"]
+        assert return_none() is None
+        assert return_boolean()
 
     def test_decorator_with_complex_arguments(self):
         """Test decorator with complex argument types."""
@@ -172,10 +172,10 @@ class TestLogExceptionsDecorator(unittest.TestCase):
 
         log_output = self.log_stream.getvalue()
         # Verify that complex arguments are logged (exact format may vary)
-        self.assertIn("EXCEPTION IN: complex_args_function", log_output)
-        self.assertIn("Args:", log_output)
-        self.assertIn("Kwargs:", log_output)
-        self.assertIn("extra_kwarg", log_output)
+        assert "EXCEPTION IN: complex_args_function" in log_output
+        assert "Args:" in log_output
+        assert "Kwargs:" in log_output
+        assert "extra_kwarg" in log_output
 
     @patch("decorators.logger")
     def test_decorator_uses_module_logger(self, mock_logger):
@@ -193,8 +193,8 @@ class TestLogExceptionsDecorator(unittest.TestCase):
 
         # Get the logged message
         logged_message = mock_logger.error.call_args[0][0]
-        self.assertIn("EXCEPTION IN: function_that_fails", logged_message)
-        self.assertIn("Test exception", logged_message)
+        assert "EXCEPTION IN: function_that_fails" in logged_message
+        assert "Test exception" in logged_message
 
     def test_nested_decorated_functions(self):
         """Test behavior when decorated functions call other decorated functions."""
@@ -212,9 +212,9 @@ class TestLogExceptionsDecorator(unittest.TestCase):
 
         log_output = self.log_stream.getvalue()
         # Both functions should log their exceptions
-        self.assertIn("EXCEPTION IN: inner_function", log_output)
-        self.assertIn("EXCEPTION IN: outer_function", log_output)
-        self.assertIn("Inner function error", log_output)
+        assert "EXCEPTION IN: inner_function" in log_output
+        assert "EXCEPTION IN: outer_function" in log_output
+        assert "Inner function error" in log_output
 
 
 if __name__ == "__main__":

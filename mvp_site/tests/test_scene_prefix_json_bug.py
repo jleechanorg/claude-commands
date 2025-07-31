@@ -46,18 +46,16 @@ class TestScenePrefixJSONBug(unittest.TestCase):
         narrative_text, structured_response = parse_structured_response(raw_response)
 
         # Verify the narrative was extracted correctly
-        self.assertIsNotNone(narrative_text)
-        self.assertIn("[Mode: STORY MODE]", narrative_text)
-        self.assertIn("Mark Grayson", narrative_text)
-        self.assertNotIn('"narrative":', narrative_text)  # No JSON artifacts
-        self.assertNotIn("Scene #2:", narrative_text)  # No Scene prefix
+        assert narrative_text is not None
+        assert "[Mode: STORY MODE]" in narrative_text
+        assert "Mark Grayson" in narrative_text
+        assert '"narrative":' not in narrative_text  # No JSON artifacts
+        assert "Scene #2:" not in narrative_text  # No Scene prefix
 
         # Verify structured response was created
-        self.assertIsNotNone(structured_response)
-        self.assertEqual(
-            structured_response.location_confirmed, "Grayson family living room"
-        )
-        self.assertIn("Mark Grayson", structured_response.entities_mentioned)
+        assert structured_response is not None
+        assert structured_response.location_confirmed == "Grayson family living room"
+        assert "Mark Grayson" in structured_response.entities_mentioned
 
     def test_scene_prefix_variations(self):
         """Test different variations of Scene prefix"""
@@ -73,9 +71,9 @@ class TestScenePrefixJSONBug(unittest.TestCase):
                 narrative_text, structured_response = parse_structured_response(
                     raw_response
                 )
-                self.assertEqual(narrative_text, "Test story")
-                self.assertNotIn("Scene", narrative_text)
-                self.assertNotIn("{", narrative_text)
+                assert narrative_text == "Test story"
+                assert "Scene" not in narrative_text
+                assert "{" not in narrative_text
 
     def test_no_scene_prefix(self):
         """Test that responses without Scene prefix still work"""
@@ -84,8 +82,8 @@ class TestScenePrefixJSONBug(unittest.TestCase):
         )
 
         narrative_text, structured_response = parse_structured_response(raw_response)
-        self.assertEqual(narrative_text, "Direct JSON response")
-        self.assertIsNotNone(structured_response)
+        assert narrative_text == "Direct JSON response"
+        assert structured_response is not None
 
     def test_scene_prefix_in_markdown(self):
         """Test Scene prefix inside markdown blocks"""
@@ -98,9 +96,9 @@ Scene #3: {
 ```"""
 
         narrative_text, structured_response = parse_structured_response(raw_response)
-        self.assertEqual(narrative_text, "Markdown wrapped response")
-        self.assertNotIn("Scene #3:", narrative_text)
-        self.assertIsNotNone(structured_response)
+        assert narrative_text == "Markdown wrapped response"
+        assert "Scene #3:" not in narrative_text
+        assert structured_response is not None
 
     def test_malformed_json_with_scene_prefix(self):
         """Test that malformed JSON with Scene prefix still extracts narrative"""
@@ -110,9 +108,9 @@ Scene #3: {
     "location_confirmed": "Battle"""  # Truncated JSON
 
         narrative_text, structured_response = parse_structured_response(raw_response)
-        self.assertIsNotNone(narrative_text)
-        self.assertIn("This is a long story", narrative_text)
-        self.assertNotIn("Scene #4:", narrative_text)
+        assert narrative_text is not None
+        assert "This is a long story" in narrative_text
+        assert "Scene #4:" not in narrative_text
 
 
 if __name__ == "__main__":

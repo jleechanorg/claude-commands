@@ -39,8 +39,8 @@ class TestFirestoreStateHelpersEdgeCases(unittest.TestCase):
             result = update_state_with_changes(state, changes)
 
         # Both lists should have appended items
-        self.assertEqual(result["quests"]["active"], ["quest1", "quest3"])
-        self.assertEqual(result["quests"]["completed"], ["quest2", "quest4"])
+        assert result["quests"]["active"] == ["quest1", "quest3"]
+        assert result["quests"]["completed"] == ["quest2", "quest4"]
 
     def test_update_state_delete_nested_keys(self):
         """Test DELETE_TOKEN on nested dictionary keys"""
@@ -58,13 +58,13 @@ class TestFirestoreStateHelpersEdgeCases(unittest.TestCase):
             result = update_state_with_changes(state, changes)
 
         # temp_buff should be deleted
-        self.assertNotIn("temp_buff", result["player"])
+        assert "temp_buff" not in result["player"]
         # mp should be deleted from stats
-        self.assertNotIn("mp", result["player"]["stats"])
+        assert "mp" not in result["player"]["stats"]
         # hp should remain
-        self.assertEqual(result["player"]["stats"]["hp"], 100)
+        assert result["player"]["stats"]["hp"] == 100
         # inventory untouched
-        self.assertEqual(result["player"]["inventory"], ["sword"])
+        assert result["player"]["inventory"] == ["sword"]
 
     def test_update_state_empty_changes(self):
         """Test update_state_with_changes with empty changes dict"""
@@ -73,7 +73,7 @@ class TestFirestoreStateHelpersEdgeCases(unittest.TestCase):
 
         result = update_state_with_changes(state, changes)
 
-        self.assertEqual(result, state)
+        assert result == state
 
     def test_update_state_none_values(self):
         """Test update_state_with_changes with None values"""
@@ -82,8 +82,8 @@ class TestFirestoreStateHelpersEdgeCases(unittest.TestCase):
 
         result = update_state_with_changes(state, changes)
 
-        self.assertIsNone(result["key1"])
-        self.assertIsNone(result["key2"])
+        assert result["key1"] is None
+        assert result["key2"] is None
 
     @patch("firestore_service._perform_append")
     def test_handle_append_syntax_nested_append_structure(self, mock_append):
@@ -95,7 +95,7 @@ class TestFirestoreStateHelpersEdgeCases(unittest.TestCase):
         with patch("logging_util.info"):
             result = _handle_append_syntax(state, "items", value)
 
-        self.assertTrue(result)
+        assert result
         # Should append the entire nested structure
         mock_append.assert_called_once_with(
             state["items"], {"append": "nested"}, "items", deduplicate=False
@@ -114,9 +114,9 @@ class TestFirestoreStateHelpersEdgeCases(unittest.TestCase):
             result = update_state_with_changes(state, changes)
 
         # Should have all memories due to safeguard
-        self.assertIn("memory1", result["core_memories"])
-        self.assertIn("memory2", result["core_memories"])
-        self.assertIn("memory3", result["core_memories"])
+        assert "memory1" in result["core_memories"]
+        assert "memory2" in result["core_memories"]
+        assert "memory3" in result["core_memories"]
         mock_warning.assert_called_once()
 
     def test_update_state_complex_nested_structure(self):
@@ -148,21 +148,13 @@ class TestFirestoreStateHelpersEdgeCases(unittest.TestCase):
 
         # Forest enemies should have bear appended
         forest_enemies = result["game"]["world"]["regions"]["forest"]["enemies"]
-        self.assertEqual(forest_enemies, ["wolf", "bear"])
+        assert forest_enemies == ["wolf", "bear"]
         # Forest items unchanged
-        self.assertEqual(
-            result["game"]["world"]["regions"]["forest"]["items"], ["herb"]
-        )
+        assert result["game"]["world"]["regions"]["forest"]["items"] == ["herb"]
         # Cave unchanged
-        self.assertEqual(
-            result["game"]["world"]["regions"]["cave"],
-            {"enemies": ["bat"], "items": ["ore"]},
-        )
+        assert result["game"]["world"]["regions"]["cave"] == {"enemies": ["bat"], "items": ["ore"]}
         # Desert added
-        self.assertEqual(
-            result["game"]["world"]["regions"]["desert"],
-            {"enemies": ["scorpion"], "items": ["cactus"]},
-        )
+        assert result["game"]["world"]["regions"]["desert"] == {"enemies": ["scorpion"], "items": ["cactus"]}
 
     def test_handle_dict_merge_with_delete_token_in_value(self):
         """Test dict merge where new dict contains DELETE_TOKEN"""
@@ -173,8 +165,8 @@ class TestFirestoreStateHelpersEdgeCases(unittest.TestCase):
             # The DELETE_TOKEN handling happens in update_state_with_changes
             result = update_state_with_changes(state, {"config": value})
 
-        self.assertEqual(result["config"], {"a": 1, "c": 3, "d": 4})
-        self.assertNotIn("b", result["config"])
+        assert result["config"] == {"a": 1, "c": 3, "d": 4}
+        assert "b" not in result["config"]
 
     def test_update_state_list_overwrite(self):
         """Test that non-append list updates do overwrite"""
@@ -184,7 +176,7 @@ class TestFirestoreStateHelpersEdgeCases(unittest.TestCase):
         result = update_state_with_changes(state, changes)
 
         # Should be completely replaced
-        self.assertEqual(result["items"], ["bow", "arrow"])
+        assert result["items"] == ["bow", "arrow"]
 
     def test_update_state_preserve_unchanged_keys(self):
         """Test that unchanged keys are preserved"""
@@ -198,9 +190,9 @@ class TestFirestoreStateHelpersEdgeCases(unittest.TestCase):
 
         result = update_state_with_changes(state, changes)
 
-        self.assertEqual(result["unchanged1"], "value1")
-        self.assertEqual(result["unchanged2"], {"nested": "value"})
-        self.assertEqual(result["changed"], "new_value")
+        assert result["unchanged1"] == "value1"
+        assert result["unchanged2"] == {"nested": "value"}
+        assert result["changed"] == "new_value"
 
 
 if __name__ == "__main__":

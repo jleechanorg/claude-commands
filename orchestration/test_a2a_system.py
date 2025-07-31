@@ -4,17 +4,17 @@ Test suite for A2A system integration
 """
 
 import os
-import time
-import tempfile
 import shutil
+import tempfile
+import time
 
 # Set test A2A directory
 test_dir = tempfile.mkdtemp()
 os.environ['A2A_BASE_DIR'] = f"{test_dir}/a2a"
 
 # Import A2A components after setting environment
-from a2a_integration import create_a2a_client, get_a2a_status, A2A_BASE_DIR
 from a2a_agent_wrapper import create_a2a_wrapper
+from a2a_integration import A2A_BASE_DIR, create_a2a_client, get_a2a_status
 from a2a_monitor import A2AMonitor
 from task_dispatcher import TaskDispatcher
 
@@ -203,9 +203,8 @@ def run_all_tests():
     if passed == total:
         print("🎉 All A2A tests PASSED!")
         return True
-    else:
-        print("💥 Some A2A tests FAILED!")
-        return False
+    print("💥 Some A2A tests FAILED!")
+    return False
 
 
 if __name__ == "__main__":

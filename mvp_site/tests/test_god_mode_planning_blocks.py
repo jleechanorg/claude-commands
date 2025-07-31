@@ -54,34 +54,21 @@ class TestGodModePlanningBlocks(unittest.TestCase):
         narrative, response_obj = parse_structured_response(god_response_with_choices)
 
         # Should return the god_mode_response content
-        self.assertEqual(
-            narrative,
-            "As the omniscient game master, I present several plot directions for your campaign.",
-        )
-        self.assertEqual(
-            response_obj.god_mode_response,
-            "As the omniscient game master, I present several plot directions for your campaign.",
-        )
+        assert narrative == "As the omniscient game master, I present several plot directions for your campaign."
+        assert response_obj.god_mode_response == "As the omniscient game master, I present several plot directions for your campaign."
 
         # Should have planning block
-        self.assertIsNotNone(response_obj.planning_block)
-        self.assertIn("thinking", response_obj.planning_block)
-        self.assertIn("choices", response_obj.planning_block)
+        assert response_obj.planning_block is not None
+        assert "thinking" in response_obj.planning_block
+        assert "choices" in response_obj.planning_block
 
         # Verify all God mode choices have "god:" prefix
         choices = response_obj.planning_block.get("choices", {})
         for choice_key in choices:
-            self.assertTrue(
-                choice_key.startswith("god:"),
-                f"Choice key '{choice_key}' must start with 'god:' prefix",
-            )
+            assert choice_key.startswith("god:"), f"Choice key '{choice_key}' must start with 'god:' prefix"
 
         # Verify mandatory "god:return_story" choice exists
-        self.assertIn(
-            "god:return_story",
-            choices,
-            "Must include 'god:return_story' as default choice",
-        )
+        assert "god:return_story" in choices, "Must include 'god:return_story' as default choice"
 
     def test_god_mode_choices_all_have_prefix(self):
         """Test that all God mode choices use the god: prefix."""
@@ -115,7 +102,7 @@ class TestGodModePlanningBlocks(unittest.TestCase):
 
         # All choices should have god: prefix
         choices = response_obj.planning_block.get("choices", {})
-        self.assertTrue(all(key.startswith("god:") for key in choices))
+        assert all(key.startswith("god:") for key in choices)
 
     def test_god_mode_without_planning_block(self):
         """Test that God mode responses without choices don't require planning blocks."""
@@ -137,12 +124,9 @@ class TestGodModePlanningBlocks(unittest.TestCase):
         narrative, response_obj = parse_structured_response(god_response_no_choices)
 
         # Should work fine without planning block when no choices offered
-        self.assertEqual(
-            narrative,
-            "The ancient artifact has been placed in the dungeon as requested.",
-        )
+        assert narrative == "The ancient artifact has been placed in the dungeon as requested."
         # Planning block should be empty dict when not provided
-        self.assertEqual(response_obj.planning_block, {})
+        assert response_obj.planning_block == {}
 
     def test_missing_return_story_choice(self):
         """Test detection of missing god:return_story choice."""
@@ -173,11 +157,11 @@ class TestGodModePlanningBlocks(unittest.TestCase):
         )
 
         # Should still parse successfully
-        self.assertIsNotNone(response_obj.planning_block)
+        assert response_obj.planning_block is not None
         choices = response_obj.planning_block.get("choices", {})
 
         # But we can detect the missing default choice
-        self.assertNotIn("god:return_story", choices)
+        assert "god:return_story" not in choices
 
     def test_planning_block_structure(self):
         """Test that God mode planning blocks follow the correct structure."""
@@ -210,21 +194,19 @@ class TestGodModePlanningBlocks(unittest.TestCase):
 
         # Verify planning block structure
         planning_block = response_obj.planning_block
-        self.assertIsNotNone(planning_block)
-        self.assertIn("thinking", planning_block)
-        self.assertIn("context", planning_block)
-        self.assertIn("choices", planning_block)
+        assert planning_block is not None
+        assert "thinking" in planning_block
+        assert "context" in planning_block
+        assert "choices" in planning_block
 
         # Verify choice structure
         choices = planning_block["choices"]
         for choice_key, choice_data in choices.items():
-            self.assertIn("text", choice_data)
-            self.assertIn("description", choice_data)
+            assert "text" in choice_data
+            assert "description" in choice_data
             # risk_level is optional but if present should be valid
             if "risk_level" in choice_data:
-                self.assertIn(
-                    choice_data["risk_level"], ["safe", "low", "medium", "high"]
-                )
+                assert choice_data["risk_level"] in ["safe", "low", "medium", "high"]
 
 
 if __name__ == "__main__":

@@ -20,12 +20,11 @@ class FakeCodeExamples:
 
         if 'error' in user_input_lower or 'bug' in user_input_lower:
             return "Thank you for identifying this issue! We'll look into it."
-        elif 'suggestion' in user_input_lower:
+        if 'suggestion' in user_input_lower:
             return "Excellent suggestion! We appreciate your feedback."
-        elif 'help' in user_input_lower:
+        if 'help' in user_input_lower:
             return "I'm here to help! What do you need assistance with?"
-        else:
-            return "I understand. Let me process that for you."
+        return "I understand. Let me process that for you."
 
     def fake_sentiment_analyzer(self, text: str) -> dict:
         """FAKE: Keyword-based sentiment pretending to be ML"""
@@ -38,10 +37,9 @@ class FakeCodeExamples:
 
         if positive_count > negative_count:
             return {"sentiment": "positive", "confidence": 0.95}
-        elif negative_count > positive_count:
+        if negative_count > positive_count:
             return {"sentiment": "negative", "confidence": 0.92}
-        else:
-            return {"sentiment": "neutral", "confidence": 0.88}
+        return {"sentiment": "neutral", "confidence": 0.88}
 
     def fake_data_processor(self, data: list) -> list:
         """FAKE: Returns mock data instead of processing"""
@@ -68,10 +66,9 @@ class FakeCodeExamples:
 
         if line_count < 10:
             return "Low complexity"
-        elif line_count < 50:
+        if line_count < 50:
             return "Medium complexity"
-        else:
-            return "High complexity"
+        return "High complexity"
 
 
 class RealCodeExamples:
@@ -92,7 +89,7 @@ class RealCodeExamples:
         dangerous_patterns = ['DROP TABLE', 'DELETE FROM', '; --', 'UNION SELECT']
         for pattern in dangerous_patterns:
             if pattern in user_input.upper():
-                return False, f"Invalid input: contains dangerous pattern"
+                return False, "Invalid input: contains dangerous pattern"
 
         return True, "Valid input"
 
@@ -135,10 +132,9 @@ class RealCodeExamples:
         # Return sanitized error for client
         if isinstance(exception, ValueError):
             return {'error': 'Invalid input provided', 'code': 'VALIDATION_ERROR'}
-        elif isinstance(exception, KeyError):
+        if isinstance(exception, KeyError):
             return {'error': 'Required data missing', 'code': 'MISSING_DATA'}
-        else:
-            return {'error': 'An unexpected error occurred', 'code': 'INTERNAL_ERROR'}
+        return {'error': 'An unexpected error occurred', 'code': 'INTERNAL_ERROR'}
 
 
 class TestFakeCodeDetection(unittest.TestCase):

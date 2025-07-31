@@ -51,7 +51,7 @@ class TestFileCache(unittest.TestCase):
         """Test basic file reading functionality."""
         # This should fail initially since we haven't implemented the cache yet
         content = read_file_cached(self.test_file_path)
-        self.assertEqual(content, self.test_content)
+        assert content == self.test_content
 
     def test_cache_hit_behavior(self):
         """Test that subsequent reads use cache (cache hits)."""
@@ -64,13 +64,11 @@ class TestFileCache(unittest.TestCase):
         stats_after_second = get_cache_stats()
 
         # Content should be identical
-        self.assertEqual(content1, content2)
-        self.assertEqual(content1, self.test_content)
+        assert content1 == content2
+        assert content1 == self.test_content
 
         # Cache hits should increase
-        self.assertGreater(
-            stats_after_second["cache_hits"], stats_after_first["cache_hits"]
-        )
+        assert stats_after_second["cache_hits"] > stats_after_first["cache_hits"]
 
     def test_cache_miss_behavior(self):
         """Test cache miss statistics."""
@@ -80,9 +78,7 @@ class TestFileCache(unittest.TestCase):
         read_file_cached(self.test_file_path)
         stats_after_read = get_cache_stats()
 
-        self.assertGreater(
-            stats_after_read["cache_misses"], stats_initial["cache_misses"]
-        )
+        assert stats_after_read["cache_misses"] > stats_initial["cache_misses"]
 
     def test_file_not_found_error(self):
         """Test error handling for non-existent files."""
@@ -102,29 +98,29 @@ class TestFileCache(unittest.TestCase):
         stats_after_clear = get_cache_stats()
 
         # Cache size should be 0 after clearing
-        self.assertEqual(stats_after_clear["cached_files"], 0)
+        assert stats_after_clear["cached_files"] == 0
 
         # Read again should be cache miss (not hit)
         read_file_cached(self.test_file_path)
         stats_after_read = get_cache_stats()
 
         # After clearing and re-reading, we should have 1 miss and 1 cached file
-        self.assertEqual(stats_after_read["cache_misses"], 1)
-        self.assertEqual(stats_after_read["cached_files"], 1)
+        assert stats_after_read["cache_misses"] == 1
+        assert stats_after_read["cached_files"] == 1
 
     def test_cache_statistics_tracking(self):
         """Test that cache statistics are properly tracked."""
         stats_initial = get_cache_stats()
 
         # Verify initial stats structure
-        self.assertIn("cache_hits", stats_initial)
-        self.assertIn("cache_misses", stats_initial)
-        self.assertIn("cached_files", stats_initial)
+        assert "cache_hits" in stats_initial
+        assert "cache_misses" in stats_initial
+        assert "cached_files" in stats_initial
 
         # All should be 0 initially
-        self.assertEqual(stats_initial["cache_hits"], 0)
-        self.assertEqual(stats_initial["cache_misses"], 0)
-        self.assertEqual(stats_initial["cached_files"], 0)
+        assert stats_initial["cache_hits"] == 0
+        assert stats_initial["cache_misses"] == 0
+        assert stats_initial["cached_files"] == 0
 
     def test_thread_safety(self):
         """Test that cache is thread-safe."""
@@ -150,12 +146,12 @@ class TestFileCache(unittest.TestCase):
             thread.join()
 
         # All reads should succeed
-        self.assertEqual(len(errors), 0)
-        self.assertEqual(len(results), 10)
+        assert len(errors) == 0
+        assert len(results) == 10
 
         # All results should be identical
         for result in results:
-            self.assertEqual(result, self.test_content)
+            assert result == self.test_content
 
     def test_performance_improvement(self):
         """Test that cached reads are faster than file I/O."""
@@ -171,8 +167,8 @@ class TestFileCache(unittest.TestCase):
 
         # Cache hit should be faster (though this might be flaky in CI)
         # At minimum, both should complete successfully
-        self.assertIsNotNone(first_read_time)
-        self.assertIsNotNone(second_read_time)
+        assert first_read_time is not None
+        assert second_read_time is not None
 
     def test_ttl_expiration_simulation(self):
         """Test TTL expiration behavior (simulated since 1 hour is too long)."""
@@ -184,43 +180,38 @@ class TestFileCache(unittest.TestCase):
         initial_stats = get_cache_stats()
 
         # Verify file is cached
-        self.assertEqual(initial_stats["cached_files"], 1)
+        assert initial_stats["cached_files"] == 1
 
         # For now, just verify the cache contains the file
         # In a full implementation, we'd mock time or use a shorter TTL for testing
-        self.assertGreater(initial_stats["cached_files"], 0)
+        assert initial_stats["cached_files"] > 0
 
     def test_cache_invalidation_functionality(self):
         """Test cache invalidation functionality."""
         # Read a file to cache it
         content = read_file_cached(self.test_file_path)
-        self.assertEqual(content, self.test_content)
+        assert content == self.test_content
 
         # Verify file is cached
         stats_before = get_cache_stats()
-        self.assertEqual(stats_before["cached_files"], 1)
+        assert stats_before["cached_files"] == 1
 
         # Invalidate the file
         result = invalidate_file(self.test_file_path)
-        self.assertTrue(
-            result, "invalidate_file should return True when file was cached"
-        )
+        assert result, "invalidate_file should return True when file was cached"
 
         # Verify file is no longer cached
         stats_after = get_cache_stats()
-        self.assertEqual(stats_after["cached_files"], 0)
+        assert stats_after["cached_files"] == 0
 
         # Try to invalidate a file that wasn't cached
         result_not_cached = invalidate_file(self.test_file_path)
-        self.assertFalse(
-            result_not_cached,
-            "invalidate_file should return False when file wasn't cached",
-        )
+        assert not result_not_cached, "invalidate_file should return False when file wasn't cached"
 
         # Verify invalidating nonexistent file doesn't crash
         nonexistent_file = os.path.join(self.temp_dir, "nonexistent.txt")
         result_nonexistent = invalidate_file(nonexistent_file)
-        self.assertFalse(result_nonexistent)
+        assert not result_nonexistent
 
 
 class TestFileCacheIntegration(unittest.TestCase):
@@ -255,19 +246,19 @@ class TestFileCacheIntegration(unittest.TestCase):
             # Read all files - should be cache misses
             for i, file_path in enumerate(file_paths):
                 content = read_file_cached(file_path)
-                self.assertEqual(content, file_contents[i])
+                assert content == file_contents[i]
 
             stats_after_first_reads = get_cache_stats()
-            self.assertEqual(stats_after_first_reads["cached_files"], 3)
-            self.assertEqual(stats_after_first_reads["cache_misses"], 3)
+            assert stats_after_first_reads["cached_files"] == 3
+            assert stats_after_first_reads["cache_misses"] == 3
 
             # Read all files again - should be cache hits
             for i, file_path in enumerate(file_paths):
                 content = read_file_cached(file_path)
-                self.assertEqual(content, file_contents[i])
+                assert content == file_contents[i]
 
             stats_after_second_reads = get_cache_stats()
-            self.assertEqual(stats_after_second_reads["cache_hits"], 3)
+            assert stats_after_second_reads["cache_hits"] == 3
 
         finally:
             # Clean up

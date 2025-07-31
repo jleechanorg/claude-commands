@@ -25,8 +25,8 @@ sys.path.insert(
 )
 
 import constants
-
 from firestore_service import add_story_entry
+
 from tests.fake_firestore import FakeFirestoreClient
 
 
@@ -96,10 +96,7 @@ class TestFirestoreEmptyNarrativeBug(unittest.TestCase):
         # Assert: Story should be saved despite empty narrative
         # GREEN: After fix, this should work
         # RED: Before fix, this would fail due to chunks=0 logic
-        self.assertTrue(
-            story_saved,
-            "Empty narrative with structured fields should be saved to Firestore",
-        )
+        assert story_saved, "Empty narrative with structured fields should be saved to Firestore"
 
         # Verify the story was actually written to fake Firestore
         # This simulates what would happen on page reload
@@ -114,31 +111,19 @@ class TestFirestoreEmptyNarrativeBug(unittest.TestCase):
         story_collection = campaign_doc.collection("story")
         story_docs = story_collection._docs  # Access internal storage
 
-        self.assertGreater(
-            len(story_docs), 0, "Story entry should exist despite empty narrative"
-        )
+        assert len(story_docs) > 0, "Story entry should exist despite empty narrative"
 
         # Verify structured fields were preserved in the story entry
         story_entry = list(story_docs.values())[0]  # Get first story entry
         entry_data = story_entry._data
 
         # Verify structured fields were preserved (they're flattened into the entry)
-        self.assertIn(
-            "planning_block", entry_data, "Planning block should be preserved"
-        )
-        self.assertIn("state_changes", entry_data, "State changes should be preserved")
+        assert "planning_block" in entry_data, "Planning block should be preserved"
+        assert "state_changes" in entry_data, "State changes should be preserved"
 
         # Verify empty narrative was handled properly
-        self.assertNotEqual(
-            entry_data["text"],
-            "",
-            "Empty narrative should be replaced with placeholder text",
-        )
-        self.assertIn(
-            "Internal thoughts",
-            entry_data["text"],
-            "Empty narrative should have meaningful placeholder",
-        )
+        assert entry_data["text"] != "", "Empty narrative should be replaced with placeholder text"
+        assert "Internal thoughts" in entry_data["text"], "Empty narrative should have meaningful placeholder"
 
     def test_bug_reproduction_scenario(self):
         """
@@ -164,19 +149,13 @@ class TestFirestoreEmptyNarrativeBug(unittest.TestCase):
         would_save_with_original_logic = len(chunks) > 0
 
         # Document the bug scenario
-        self.assertFalse(
-            would_save_with_original_logic,
-            "Original logic would NOT save empty narrative + structured fields",
-        )
+        assert not would_save_with_original_logic, "Original logic would NOT save empty narrative + structured fields"
 
         # The fix should save structured fields even with empty narrative
         should_save_with_fix = (
             structured_fields is not None and len(structured_fields) > 0
         )
-        self.assertTrue(
-            should_save_with_fix,
-            "Fixed logic SHOULD save empty narrative + structured fields",
-        )
+        assert should_save_with_fix, "Fixed logic SHOULD save empty narrative + structured fields"
 
 
 if __name__ == "__main__":

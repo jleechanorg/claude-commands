@@ -327,11 +327,10 @@ class MockFirestoreClient:
 
         if include_all:
             return copy.deepcopy(story_log)
-        else:
-            # Return last max_turns entries
-            return copy.deepcopy(
-                story_log[-max_turns:] if len(story_log) > max_turns else story_log
-            )
+        # Return last max_turns entries
+        return copy.deepcopy(
+            story_log[-max_turns:] if len(story_log) > max_turns else story_log
+        )
 
     def reset(self):
         """Reset the mock to initial state."""

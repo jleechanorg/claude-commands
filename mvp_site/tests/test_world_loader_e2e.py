@@ -49,26 +49,22 @@ class TestWorldLoaderE2E(unittest.TestCase):
         stats_after_first = get_cache_stats()
 
         # Verify content is not empty
-        self.assertIsInstance(content1, str)
-        self.assertGreater(len(content1), 0)
+        assert isinstance(content1, str)
+        assert len(content1) > 0
 
         # Should have cache misses from loading world and banned names files
-        self.assertGreater(
-            stats_after_first["cache_misses"], initial_stats["cache_misses"]
-        )
-        self.assertGreater(stats_after_first["cached_files"], 0)
+        assert stats_after_first["cache_misses"] > initial_stats["cache_misses"]
+        assert stats_after_first["cached_files"] > 0
 
         # Second load - should use cache
         content2 = load_world_content_for_system_instruction()
         stats_after_second = get_cache_stats()
 
         # Content should be identical
-        self.assertEqual(content1, content2)
+        assert content1 == content2
 
         # Should have cache hits
-        self.assertGreater(
-            stats_after_second["cache_hits"], stats_after_first["cache_hits"]
-        )
+        assert stats_after_second["cache_hits"] > stats_after_first["cache_hits"]
 
     def test_banned_names_loading_uses_cache(self):
         """Test that load_banned_names uses the file cache."""
@@ -84,25 +80,21 @@ class TestWorldLoaderE2E(unittest.TestCase):
         stats_after_first = get_cache_stats()
 
         # Verify content is string (may be empty)
-        self.assertIsInstance(banned1, str)
+        assert isinstance(banned1, str)
 
         # Should have a cache miss
-        self.assertGreater(
-            stats_after_first["cache_misses"], initial_stats["cache_misses"]
-        )
-        self.assertGreaterEqual(stats_after_first["cached_files"], 1)
+        assert stats_after_first["cache_misses"] > initial_stats["cache_misses"]
+        assert stats_after_first["cached_files"] >= 1
 
         # Second load - should use cache
         banned2 = load_banned_names()
         stats_after_second = get_cache_stats()
 
         # Content should be identical
-        self.assertEqual(banned1, banned2)
+        assert banned1 == banned2
 
         # Should have cache hits
-        self.assertGreater(
-            stats_after_second["cache_hits"], stats_after_first["cache_hits"]
-        )
+        assert stats_after_second["cache_hits"] > stats_after_first["cache_hits"]
 
     def test_world_loader_performance_with_cache(self):
         """Test that repeated world loader calls show performance improvement."""
@@ -124,12 +116,12 @@ class TestWorldLoaderE2E(unittest.TestCase):
         second_load_time = time.time() - start_time
 
         # Content should be identical
-        self.assertEqual(content1, content2)
+        assert content1 == content2
 
         # Both should complete successfully (performance comparison may be flaky in CI)
-        self.assertIsNotNone(first_load_time)
-        self.assertIsNotNone(second_load_time)
-        self.assertGreater(len(content1), 0)
+        assert first_load_time is not None
+        assert second_load_time is not None
+        assert len(content1) > 0
 
     def test_world_loader_cache_persistence_across_calls(self):
         """Test that cache persists across multiple function calls."""
@@ -152,15 +144,15 @@ class TestWorldLoaderE2E(unittest.TestCase):
         final_stats = get_cache_stats()
 
         # Should have some cached files
-        self.assertGreater(final_stats["cached_files"], 0)
+        assert final_stats["cached_files"] > 0
 
         # Should have both hits and misses
-        self.assertGreater(final_stats["cache_misses"], 0)  # Initial loads
-        self.assertGreater(final_stats["cache_hits"], 0)  # Subsequent loads
+        assert final_stats["cache_misses"] > 0  # Initial loads
+        assert final_stats["cache_hits"] > 0  # Subsequent loads
 
         # Content should be consistent
-        self.assertEqual(world_content, world_content2)
-        self.assertIsInstance(banned_names, str)
+        assert world_content == world_content2
+        assert isinstance(banned_names, str)
 
     def test_world_loader_handles_missing_files_gracefully(self):
         """Test that world_loader handles missing files without breaking cache."""
@@ -171,15 +163,15 @@ class TestWorldLoaderE2E(unittest.TestCase):
         try:
             banned_names = load_banned_names()
             # If file exists, should be string
-            self.assertIsInstance(banned_names, str)
+            assert isinstance(banned_names, str)
         except FileNotFoundError:
             # If file doesn't exist, should raise FileNotFoundError
             pass
 
         # Cache should still be functional
         stats_after_attempt = get_cache_stats()
-        self.assertIsInstance(stats_after_attempt, dict)
-        self.assertIn("cache_hits", stats_after_attempt)
+        assert isinstance(stats_after_attempt, dict)
+        assert "cache_hits" in stats_after_attempt
 
     def test_world_content_format_and_structure(self):
         """Test that world content maintains expected format through caching."""
@@ -195,18 +187,16 @@ class TestWorldLoaderE2E(unittest.TestCase):
         content3 = load_world_content_for_system_instruction()
 
         # All should be identical
-        self.assertEqual(content1, content2)
-        self.assertEqual(content2, content3)
+        assert content1 == content2
+        assert content2 == content3
 
         # Should contain world content and banned names section
-        self.assertIsInstance(content1, str)
-        self.assertGreater(len(content1), 100)  # Should be substantial content
+        assert isinstance(content1, str)
+        assert len(content1) > 100  # Should be substantial content
 
         # Check cache is working effectively
         final_stats = get_cache_stats()
-        self.assertGreaterEqual(
-            final_stats["cache_hits"], 2
-        )  # At least 2 hits for content2 and content3
+        assert final_stats["cache_hits"] >= 2  # At least 2 hits for content2 and content3
 
 
 class TestWorldLoaderCacheIntegration(unittest.TestCase):
@@ -246,7 +236,7 @@ class TestWorldLoaderCacheIntegration(unittest.TestCase):
 
         # Verify all operations succeeded
         for i, result in enumerate(operations):
-            self.assertIsInstance(result, str, f"Operation {i} failed")
+            assert isinstance(result, str), f"Operation {i} failed"
 
         # Check cache performance
         final_stats = get_cache_stats()
@@ -255,11 +245,11 @@ class TestWorldLoaderCacheIntegration(unittest.TestCase):
         total_requests = final_stats["total_requests"]
         hit_rate = final_stats["hit_rate_percent"]
 
-        self.assertGreater(total_requests, 5)  # Multiple file reads
-        self.assertGreater(hit_rate, 50)  # At least 50% hit rate
+        assert total_requests > 5  # Multiple file reads
+        assert hit_rate > 50  # At least 50% hit rate
 
         # Should have cached the world files
-        self.assertGreaterEqual(final_stats["cached_files"], 1)
+        assert final_stats["cached_files"] >= 1
 
 
 if __name__ == "__main__":

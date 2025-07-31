@@ -4,11 +4,10 @@ Show top 10 users with campaign details and story snippets.
 """
 
 import os
+import traceback
 
 import firebase_admin
 from firebase_admin import credentials, firestore
-
-import traceback
 
 
 def initialize_firebase():

@@ -50,8 +50,8 @@ class TestUnknownEntityFixSummary(unittest.TestCase):
         print(f"   Retry needed: {result.retry_needed}\n")
 
         # Verify the fix
-        self.assertNotIn("Unknown", result.missing_entities)
-        self.assertFalse(result.retry_needed)
+        assert "Unknown" not in result.missing_entities
+        assert not result.retry_needed
 
         # Also test dual-pass generator
         def mock_callback(prompt):
@@ -70,8 +70,8 @@ class TestUnknownEntityFixSummary(unittest.TestCase):
         print(f"   Success on first pass: {dual_result.success}")
         print("\n✅ Fix verified: No unnecessary dual-pass for 'Unknown' entity!")
 
-        self.assertIsNone(dual_result.second_pass)
-        self.assertTrue(dual_result.success)
+        assert dual_result.second_pass is None
+        assert dual_result.success
 
     def test_real_entities_still_validated(self):
         """Ensure real entities are still properly validated"""
@@ -82,9 +82,9 @@ class TestUnknownEntityFixSummary(unittest.TestCase):
         result = entity_validator.validate_entity_presence(narrative, expected)
 
         # Unknown filtered out, but Villain still missing
-        self.assertNotIn("Unknown", result.missing_entities)
-        self.assertIn("Villain", result.missing_entities)
-        self.assertTrue(result.retry_needed)  # Because Villain is missing
+        assert "Unknown" not in result.missing_entities
+        assert "Villain" in result.missing_entities
+        assert result.retry_needed  # Because Villain is missing
 
         print("\n✅ Real entity validation still works correctly!")
 

@@ -8,7 +8,6 @@ import re
 import sys
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional, Set, Tuple
 
 try:
     from ..logging_config import setup_logging, with_metrics
@@ -18,7 +17,6 @@ except ImportError:
     # Handle both relative and absolute imports
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from logging_config import setup_logging, with_metrics
-    from validation_utils import find_entity_mentions, normalize_text
     from validator import BaseValidator, ValidationResult
 
 

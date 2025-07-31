@@ -26,7 +26,7 @@ class TestNarrativeResponseLegacyFallback(unittest.TestCase):
         narrative, response = parse_structured_response(response_text)
 
         # Should extract what it can
-        self.assertIn("player enters", narrative)
+        assert "player enters" in narrative
 
     def test_json_artifacts_in_text(self):
         """Test cleanup of JSON artifacts in narrative text"""
@@ -39,9 +39,9 @@ class TestNarrativeResponseLegacyFallback(unittest.TestCase):
         narrative, response = parse_structured_response(response_text)
 
         # Should clean up JSON structure
-        self.assertIn("player walks in", narrative)
-        self.assertNotIn('"narrative":', narrative)
-        self.assertNotIn('"entities_mentioned":', narrative)
+        assert "player walks in" in narrative
+        assert '"narrative":' not in narrative
+        assert '"entities_mentioned":' not in narrative
 
     def test_nested_json_string_escapes(self):
         """Test handling of nested JSON string escapes"""
@@ -54,8 +54,8 @@ class TestNarrativeResponseLegacyFallback(unittest.TestCase):
         narrative, response = parse_structured_response(response_text)
 
         # Should properly unescape
-        self.assertIn('"Hello!"', narrative)
-        self.assertIn("\n", narrative)
+        assert '"Hello!"' in narrative
+        assert "\n" in narrative
 
     def test_json_with_no_narrative_field(self):
         """Test fallback when JSON has no narrative field"""
@@ -72,7 +72,7 @@ class TestNarrativeResponseLegacyFallback(unittest.TestCase):
         narrative, response = parse_structured_response(response_text)
 
         # Should apply minimal cleanup
-        self.assertIsNotNone(narrative)
+        assert narrative is not None
 
     def test_multiple_narrative_patterns(self):
         """Test extraction with multiple narrative patterns in text"""
@@ -87,7 +87,7 @@ class TestNarrativeResponseLegacyFallback(unittest.TestCase):
         narrative, response = parse_structured_response(response_text)
 
         # Should extract the first narrative match
-        self.assertIn("First narrative", narrative)
+        assert "First narrative" in narrative
 
     def test_json_comma_separator_cleanup(self):
         """Test JSON comma separator replacement"""
@@ -100,7 +100,7 @@ class TestNarrativeResponseLegacyFallback(unittest.TestCase):
 
         # Commas should be replaced with periods in final cleanup
         # when JSON structure is removed
-        self.assertIsNotNone(narrative)
+        assert narrative is not None
 
     def test_whitespace_normalization(self):
         """Test whitespace pattern normalization"""
@@ -115,9 +115,9 @@ class TestNarrativeResponseLegacyFallback(unittest.TestCase):
 
         # Should extract narrative content (current behavior)
         # Note: whitespace normalization only applies in aggressive cleanup scenarios
-        self.assertIn("Too", narrative)
-        self.assertIn("spaces", narrative)
-        self.assertIn("newlines", narrative)
+        assert "Too" in narrative
+        assert "spaces" in narrative
+        assert "newlines" in narrative
 
     def test_final_json_artifact_check(self):
         """Test the final JSON artifact check and cleanup"""
@@ -131,8 +131,8 @@ class TestNarrativeResponseLegacyFallback(unittest.TestCase):
 
         # Should extract the narrative text as-is (current behavior)
         # Note: JSON artifact cleanup is not currently implemented
-        self.assertIn("actual narrative text", narrative)
-        self.assertIn("markers", narrative)
+        assert "actual narrative text" in narrative
+        assert "markers" in narrative
 
     def test_deeply_broken_json_with_narrative_hint(self):
         """Test extraction from deeply broken JSON with narrative hint"""
@@ -148,7 +148,7 @@ class TestNarrativeResponseLegacyFallback(unittest.TestCase):
         narrative, response = parse_structured_response(response_text)
 
         # Should still extract the narrative content
-        self.assertIn("actual story content", narrative)
+        assert "actual story content" in narrative
 
     def test_mixed_valid_and_invalid_json(self):
         """Test handling of mixed valid and invalid JSON"""
@@ -164,7 +164,7 @@ class TestNarrativeResponseLegacyFallback(unittest.TestCase):
         narrative, response = parse_structured_response(response_text)
 
         # Should extract what it can
-        self.assertIn("Valid part", narrative)
+        assert "Valid part" in narrative
 
     def test_escaped_quotes_in_narrative(self):
         """Test handling of escaped quotes in narrative"""
@@ -178,7 +178,7 @@ class TestNarrativeResponseLegacyFallback(unittest.TestCase):
         narrative, response = parse_structured_response(response_text)
 
         # Should properly handle escaped quotes
-        self.assertIn('"Welcome to my shop!"', narrative)
+        assert '"Welcome to my shop!"' in narrative
 
     def test_partial_json_at_end_of_response(self):
         """Test handling when JSON is cut off at the end"""
@@ -192,8 +192,8 @@ class TestNarrativeResponseLegacyFallback(unittest.TestCase):
         narrative, response = parse_structured_response(response_text)
 
         # Should extract complete narrative even with truncated JSON
-        self.assertIn("adventure begins", narrative)
-        self.assertIn("enter the dungeon", narrative)
+        assert "adventure begins" in narrative
+        assert "enter the dungeon" in narrative
 
     def test_json_with_unicode_characters(self):
         """Test handling of Unicode characters in JSON"""
@@ -207,9 +207,9 @@ class TestNarrativeResponseLegacyFallback(unittest.TestCase):
         narrative, response = parse_structured_response(response_text)
 
         # Should preserve Unicode characters
-        self.assertIn("☕", narrative)
-        self.assertIn("🌙", narrative)
-        self.assertIn("Café", narrative)
+        assert "☕" in narrative
+        assert "🌙" in narrative
+        assert "Café" in narrative
 
     def test_completely_non_json_response(self):
         """Test handling of completely non-JSON response"""
@@ -218,7 +218,7 @@ class TestNarrativeResponseLegacyFallback(unittest.TestCase):
         narrative, response = parse_structured_response(response_text)
 
         # Should return the text as-is
-        self.assertEqual(narrative, response_text)
+        assert narrative == response_text
 
 
 if __name__ == "__main__":

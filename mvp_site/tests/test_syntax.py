@@ -45,7 +45,7 @@ class TestModuleSyntax(unittest.TestCase):
 
             # If we get here, the import was successful.
             print("SUCCESS: gemini_service.py was imported without a syntax error.")
-            self.assertTrue(True)
+            assert True
         except (SyntaxError, IndentationError) as e:
             # If we get here, the import failed due to a syntax error.
             print(f"FAILURE: A syntax error was found in gemini_service.py: {e}")

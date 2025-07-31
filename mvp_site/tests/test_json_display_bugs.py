@@ -86,14 +86,9 @@ class TestStateUpdateBugs(unittest.TestCase):
         narrative_text, parsed_response = self._parse_response(response_text)
 
         # Verify state updates are captured
-        self.assertIn("state_updates", parsed_response.to_dict())
-        self.assertEqual(
-            parsed_response.state_updates["player_character_data"]["hp_current"], "18"
-        )
-        self.assertEqual(
-            parsed_response.state_updates["npc_data"]["orc_warrior"]["status"],
-            "wounded",
-        )
+        assert "state_updates" in parsed_response.to_dict()
+        assert parsed_response.state_updates["player_character_data"]["hp_current"] == "18"
+        assert parsed_response.state_updates["npc_data"]["orc_warrior"]["status"] == "wounded"
 
     def test_state_updates_not_in_narrative(self):
         """Test that state updates don't leak into narrative text"""
@@ -102,9 +97,9 @@ class TestStateUpdateBugs(unittest.TestCase):
         narrative_text, parsed_response = self._parse_response(response_text)
 
         # Verify narrative is clean
-        self.assertNotIn("state_updates", narrative_text)
-        self.assertNotIn("player_character_data", narrative_text)
-        self.assertNotIn("hp_current", narrative_text)
+        assert "state_updates" not in narrative_text
+        assert "player_character_data" not in narrative_text
+        assert "hp_current" not in narrative_text
 
     def test_markdown_state_updates_deprecated(self):
         """Test that old markdown state updates are handled gracefully"""
@@ -113,13 +108,11 @@ class TestStateUpdateBugs(unittest.TestCase):
         )
 
         # Should not have JSON-style state updates (or should be empty)
-        self.assertTrue(
-            not parsed_response.state_updates or parsed_response.state_updates == {}
-        )
+        assert not parsed_response.state_updates or parsed_response.state_updates == {}
 
         # Should clean up markdown syntax from narrative
-        self.assertNotIn("[STATE_UPDATES_PROPOSED]", narrative_text)
-        self.assertNotIn("[END_STATE_UPDATES_PROPOSED]", narrative_text)
+        assert "[STATE_UPDATES_PROPOSED]" not in narrative_text
+        assert "[END_STATE_UPDATES_PROPOSED]" not in narrative_text
 
     def test_mixed_format_handling(self):
         """Test handling of responses with both JSON and markdown formats"""
@@ -128,10 +121,10 @@ class TestStateUpdateBugs(unittest.TestCase):
         )
 
         # Should prioritize JSON format
-        self.assertIn("state_updates", parsed_response.to_dict())
+        assert "state_updates" in parsed_response.to_dict()
 
         # Should clean up markdown artifacts
-        self.assertNotIn("[STATE_UPDATES_PROPOSED]", narrative_text)
+        assert "[STATE_UPDATES_PROPOSED]" not in narrative_text
 
     def test_empty_state_updates(self):
         """Test handling of responses with empty state updates"""
@@ -144,8 +137,8 @@ class TestStateUpdateBugs(unittest.TestCase):
         narrative_text, parsed_response = self._parse_response(response_text)
 
         # Should handle empty state updates gracefully
-        self.assertIn("state_updates", parsed_response.to_dict())
-        self.assertEqual(parsed_response.state_updates, {})
+        assert "state_updates" in parsed_response.to_dict()
+        assert parsed_response.state_updates == {}
 
     def test_malformed_state_updates(self):
         """Test handling of malformed state updates"""
@@ -159,12 +152,12 @@ class TestStateUpdateBugs(unittest.TestCase):
         narrative_text, parsed_response = self._parse_response(malformed_response)
 
         # Should handle malformed state updates gracefully
-        self.assertEqual(narrative_text, "You swing your sword.")
+        assert narrative_text == "You swing your sword."
         # State updates should be converted to empty dict when malformed
         # The validation should prevent malformed state_updates from causing runtime errors
         state_updates = parsed_response.state_updates
-        self.assertIsInstance(state_updates, dict)
-        self.assertEqual(state_updates, {})
+        assert isinstance(state_updates, dict)
+        assert state_updates == {}
 
 
 class TestRawJsonDisplayBugs(unittest.TestCase):
@@ -207,13 +200,13 @@ class TestRawJsonDisplayBugs(unittest.TestCase):
         narrative_text, parsed_obj = parse_structured_response(self.valid_json)
 
         # Should extract narrative cleanly
-        self.assertIsNotNone(parsed_obj.narrative)
-        self.assertEqual(parsed_obj.narrative, "You enter the tavern.")
+        assert parsed_obj.narrative is not None
+        assert parsed_obj.narrative == "You enter the tavern."
 
         # Should not contain raw JSON artifacts
-        self.assertNotIn("{", parsed_obj.narrative)
-        self.assertNotIn("}", parsed_obj.narrative)
-        self.assertNotIn('"', parsed_obj.narrative)
+        assert "{" not in parsed_obj.narrative
+        assert "}" not in parsed_obj.narrative
+        assert '"' not in parsed_obj.narrative
 
     def test_malformed_json_fallback(self):
         """Test that malformed JSON falls back to cleaned text"""
@@ -222,28 +215,26 @@ class TestRawJsonDisplayBugs(unittest.TestCase):
                 narrative_text, parsed_obj = parse_structured_response(malformed_json)
 
                 # Should have some narrative content
-                self.assertIsNotNone(parsed_obj.narrative)
+                assert parsed_obj.narrative is not None
 
                 # Should not contain raw JSON artifacts in narrative
                 narrative = parsed_obj.narrative
-                self.assertNotIn("```json", narrative)
-                self.assertNotIn("```", narrative)
+                assert "```json" not in narrative
+                assert "```" not in narrative
 
     def test_narrative_field_extraction(self):
         """Test extraction of narrative field from complex JSON"""
         narrative_text, parsed_obj = parse_structured_response(self.raw_json_response)
 
         # Should extract narrative field
-        self.assertIsNotNone(parsed_obj.narrative)
-        self.assertEqual(
-            parsed_obj.narrative, "You swing your sword at the orc warrior."
-        )
+        assert parsed_obj.narrative is not None
+        assert parsed_obj.narrative == "You swing your sword at the orc warrior."
 
         # Should not leak other fields into narrative
         narrative = parsed_obj.narrative
-        self.assertNotIn("reasoning", narrative)
-        self.assertNotIn("metadata", narrative)
-        self.assertNotIn("model", narrative)
+        assert "reasoning" not in narrative
+        assert "metadata" not in narrative
+        assert "model" not in narrative
 
     def test_json_artifact_cleaning(self):
         """Test that JSON artifacts are cleaned from narrative"""
@@ -253,7 +244,7 @@ class TestRawJsonDisplayBugs(unittest.TestCase):
 
         # Narrative should be extracted properly
         narrative = parsed_obj.narrative
-        self.assertIn("tavern", narrative)
+        assert "tavern" in narrative
         # Note: The {tavern} is actually part of the narrative content, not JSON artifacts
         # So we just verify the narrative was extracted correctly
 
@@ -271,8 +262,8 @@ class TestRawJsonDisplayBugs(unittest.TestCase):
         narrative_text, parsed_obj = parse_structured_response(code_block_response)
 
         # Should extract narrative from code block
-        self.assertIsNotNone(parsed_obj.narrative)
-        self.assertEqual(parsed_obj.narrative, "You cast a spell.")
+        assert parsed_obj.narrative is not None
+        assert parsed_obj.narrative == "You cast a spell."
 
     def test_debug_mode_content_stripping(self):
         """Test that debug mode content is properly stripped"""
@@ -288,9 +279,9 @@ class TestRawJsonDisplayBugs(unittest.TestCase):
         narrative_text, parsed_obj = parse_structured_response(debug_response)
 
         # Should only have user-facing content
-        self.assertIsNotNone(parsed_obj.narrative)
-        self.assertNotIn("reasoning", parsed_obj.narrative)
-        self.assertNotIn("debug_info", parsed_obj.narrative)
+        assert parsed_obj.narrative is not None
+        assert "reasoning" not in parsed_obj.narrative
+        assert "debug_info" not in parsed_obj.narrative
 
     def test_robust_json_parser_fallback(self):
         """Test the robust JSON parser as fallback"""
@@ -300,8 +291,8 @@ class TestRawJsonDisplayBugs(unittest.TestCase):
         try:
             parsed, was_incomplete = robust_parse(malformed_json)
             # Should return some usable content
-            self.assertIsInstance(parsed, dict)
-            self.assertIn("narrative", parsed)
+            assert isinstance(parsed, dict)
+            assert "narrative" in parsed
         except Exception as e:
             self.fail(f"Robust parser should not crash on malformed JSON: {e}")
 
@@ -315,13 +306,13 @@ class TestRawJsonDisplayBugs(unittest.TestCase):
 
         # Test direct extraction
         narrative = extract_narrative_from_json(json_with_narrative)
-        self.assertEqual(narrative, "You swing your sword.")
+        assert narrative == "You swing your sword."
 
         # Test string input
         narrative_from_string = extract_narrative_from_json(
             json.dumps(json_with_narrative)
         )
-        self.assertEqual(narrative_from_string, "You swing your sword.")
+        assert narrative_from_string == "You swing your sword."
 
 
 class TestIntegrationBugs(unittest.TestCase):
@@ -342,10 +333,10 @@ class TestIntegrationBugs(unittest.TestCase):
         narrative_text, parsed_obj = parse_structured_response(malformed_but_parseable)
 
         # Should still extract state updates if possible
-        self.assertIsNotNone(parsed_obj.narrative)
+        assert parsed_obj.narrative is not None
         # State updates should be present if parseable
         if hasattr(parsed_obj, "state_updates") and parsed_obj.state_updates:
-            self.assertIsInstance(parsed_obj.state_updates, dict)
+            assert isinstance(parsed_obj.state_updates, dict)
 
     def test_empty_response_handling(self):
         """Test handling of empty or null responses"""
@@ -356,8 +347,8 @@ class TestIntegrationBugs(unittest.TestCase):
                 narrative_text, parsed_obj = parse_structured_response(empty_response)
 
                 # Should not crash and should provide some structure
-                self.assertIsNotNone(parsed_obj)
-                self.assertIsNotNone(parsed_obj.narrative)
+                assert parsed_obj is not None
+                assert parsed_obj.narrative is not None
 
     def test_very_long_json_response(self):
         """Test handling of very long JSON responses"""
@@ -374,8 +365,8 @@ class TestIntegrationBugs(unittest.TestCase):
         narrative_text, parsed_obj = parse_structured_response(long_json)
 
         # Should handle long responses without truncation
-        self.assertIsNotNone(parsed_obj.narrative)
-        self.assertEqual(len(parsed_obj.narrative), 5000)
+        assert parsed_obj.narrative is not None
+        assert len(parsed_obj.narrative) == 5000
 
     def test_unicode_and_special_characters(self):
         """Test handling of unicode and special characters"""
@@ -389,10 +380,10 @@ class TestIntegrationBugs(unittest.TestCase):
         narrative_text, parsed_obj = parse_structured_response(unicode_json)
 
         # Should preserve unicode characters
-        self.assertIsNotNone(parsed_obj.narrative)
-        self.assertIn("🗡️", parsed_obj.narrative)
-        self.assertIn("José", parsed_obj.narrative)
-        self.assertIn("Hola!", parsed_obj.narrative)
+        assert parsed_obj.narrative is not None
+        assert "🗡️" in parsed_obj.narrative
+        assert "José" in parsed_obj.narrative
+        assert "Hola!" in parsed_obj.narrative
 
 
 if __name__ == "__main__":

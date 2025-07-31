@@ -45,14 +45,12 @@ def run_single_sariel_test() -> dict[str, Any]:
                 test_results = json.load(f)
             test_results["test_duration"] = duration
             return test_results
-        else:
-            print("⚠️ Results file not found, test may have failed to save results")
-            return None
-    else:
-        print(f"❌ Test failed in {duration:.1f}s")
-        print(f"STDOUT: {result.stdout}")
-        print(f"STDERR: {result.stderr}")
+        print("⚠️ Results file not found, test may have failed to save results")
         return None
+    print(f"❌ Test failed in {duration:.1f}s")
+    print(f"STDOUT: {result.stdout}")
+    print(f"STDERR: {result.stderr}")
+    return None
 
 
 def analyze_replay_results(all_results: list[dict[str, Any]]) -> dict[str, Any]:

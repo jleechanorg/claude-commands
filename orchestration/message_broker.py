@@ -5,9 +5,7 @@ Maintains interface compatibility but operates without Redis.
 All coordination now handled via file-based A2A protocol.
 """
 
-import json
-import uuid
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Any

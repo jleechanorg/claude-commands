@@ -277,11 +277,10 @@ class EntityInstructionGenerator:
                 f"{entity_name} MUST appear and respond appropriately to this vulnerable moment. "
                 "Do not let this character disappear or ignore this direct emotional reference."
             )
-        else:
-            return (
-                f"IMPORTANT: {entity_name} has been directly mentioned and must be present "
-                "or respond in some way to acknowledge the reference."
-            )
+        return (
+            f"IMPORTANT: {entity_name} has been directly mentioned and must be present "
+            "or respond in some way to acknowledge the reference."
+        )
 
     def create_location_specific_instructions(
         self, location: str, expected_entities: list[str]

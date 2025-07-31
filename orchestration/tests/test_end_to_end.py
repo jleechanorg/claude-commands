@@ -5,16 +5,14 @@ import os
 import shutil
 import sys
 import tempfile
-import time
 import unittest
 from unittest.mock import Mock, patch
 
 # Add orchestration directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-import logging_util
+from fixtures import mock_claude_fixture, mock_redis_fixture, mock_tmux_fixture
 from orchestrate_unified import UnifiedOrchestration
-from fixtures import mock_tmux_fixture, mock_claude_fixture, mock_redis_fixture
 
 
 class TestOrchestrationEndToEnd(unittest.TestCase):
@@ -280,7 +278,7 @@ class TestOrchestrationEndToEnd(unittest.TestCase):
                     self.assertTrue(os.path.exists(result_file),
                                   "Agent result file should exist")
 
-                    with open(result_file, 'r') as f:
+                    with open(result_file) as f:
                         result_data = json.load(f)
                         self.assertEqual(result_data['status'], 'completed')
                         self.assertEqual(result_data['agent'], agent_name)

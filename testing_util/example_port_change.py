@@ -8,6 +8,7 @@ instead of 26+ files like we had to do before.
 
 from .testing_config import TestConfig, TestType
 
+
 def show_current_ports():
     """Show current port configuration"""
     print("Current Test Server Ports:")

@@ -7,6 +7,7 @@ This test proves our fix works by testing the navigation mechanism directly.
 import pytest
 from playwright.sync_api import Page, expect
 
+
 def test_settings_button_navigation_fix_works(page: Page):
     """
     PROOF that our fix works: Settings button successfully navigates to /settings

@@ -951,7 +951,13 @@ def get_campaign_game_state(
     game_state_doc = game_state_ref.get()
     if not game_state_doc.exists:
         return None
-    return GameState.from_dict(game_state_doc.to_dict())
+    game_state = GameState.from_dict(game_state_doc.to_dict())
+    if game_state is None:
+        logging_util.warning(
+            "GET_CAMPAIGN_GAME_STATE: GameState.from_dict returned None, returning empty GameState"
+        )
+        return GameState()
+    return game_state
 
 
 @log_exceptions
@@ -1011,6 +1017,21 @@ def update_campaign_title(
         .document(campaign_id)
     )
     campaign_ref.update({"title": new_title})
+    return True
+
+
+def update_campaign(
+    user_id: UserId, campaign_id: CampaignId, updates: dict[str, Any]
+) -> bool:
+    """Updates a campaign with arbitrary updates."""
+    db = get_db()
+    campaign_ref = (
+        db.collection("users")
+        .document(user_id)
+        .collection("campaigns")
+        .document(campaign_id)
+    )
+    campaign_ref.update(updates)
     return True
 
 

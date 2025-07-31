@@ -7,10 +7,9 @@ from unittest.mock import Mock, patch
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
+import gemini_service
 from gemini_response import GeminiResponse
 from narrative_response_schema import NarrativeResponse
-
-import gemini_service
 
 
 class TestJSONOnlyComprehensive(unittest.TestCase):
@@ -29,7 +28,7 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
         proposed_changes = mock_response.state_updates
 
         # Should be empty, not parsed from text
-        self.assertEqual(proposed_changes, {})
+        assert proposed_changes == {}
 
     def test_gemini_response_logs_error_without_structured(self):
         """Test that GeminiResponse logs error when no structured response"""
@@ -47,7 +46,7 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
             mock_log_error.assert_called_once_with(
                 "ERROR: No structured response available for state updates. JSON mode is required."
             )
-            self.assertEqual(updates, {})
+            assert updates == {}
 
     def test_json_mode_always_enabled(self):
         """Test that all API calls use JSON mode"""
@@ -70,17 +69,13 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
             config_obj = call_args[1]["config"]
 
             # Check the generation config object attributes
-            self.assertEqual(config_obj.response_mime_type, "application/json")
-            self.assertEqual(
-                config_obj.max_output_tokens, gemini_service.JSON_MODE_MAX_TOKENS
-            )
+            assert config_obj.response_mime_type == "application/json"
+            assert config_obj.max_output_tokens == gemini_service.JSON_MODE_MAX_TOKENS
 
     def test_parse_function_removed(self):
         """Test that parse_llm_response_for_state_changes is removed"""
         # Should not exist
-        self.assertFalse(
-            hasattr(gemini_service, "parse_llm_response_for_state_changes")
-        )
+        assert not hasattr(gemini_service, "parse_llm_response_for_state_changes")
 
         # Attempting to access should raise AttributeError
         with self.assertRaises(AttributeError):
@@ -89,7 +84,7 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
     def test_clean_markdown_helper_removed(self):
         """Test that _clean_markdown_from_json helper is removed"""
         # Should not exist
-        self.assertFalse(hasattr(gemini_service, "_clean_markdown_from_json"))
+        assert not hasattr(gemini_service, "_clean_markdown_from_json")
 
     def test_state_updates_only_from_json(self):
         """Test that state updates come ONLY from JSON response"""
@@ -107,7 +102,7 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
         )
 
         # Should use JSON value, not parsed from text
-        self.assertEqual(response.state_updates["pc_data"]["gold"], 500)
+        assert response.state_updates["pc_data"]["gold"] == 500
 
     def test_no_state_updates_without_json(self):
         """Test that no state updates are available without JSON response"""
@@ -118,7 +113,7 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
         )
 
         # Should be empty
-        self.assertEqual(response.state_updates, {})
+        assert response.state_updates == {}
 
     def test_strip_functions_only_for_display(self):
         """Test that strip functions don't affect state parsing"""
@@ -133,7 +128,7 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
 
         # Strip removes for display
         stripped = strip_debug_content(text)
-        self.assertNotIn("STATE_UPDATES_PROPOSED", stripped)
+        assert "STATE_UPDATES_PROPOSED" not in stripped
 
         # But this has NO effect on state parsing - states come from JSON only
 

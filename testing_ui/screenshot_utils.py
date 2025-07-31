@@ -5,7 +5,6 @@ Ensures all screenshots are saved to the standard location.
 """
 
 import os
-
 import time
 
 # Standard screenshot directory as per project conventions

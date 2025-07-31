@@ -8,6 +8,7 @@ RED PHASE: These tests will FAIL initially and drive the implementation.
 
 import json
 import os
+import re
 import sys
 import unittest
 
@@ -71,21 +72,19 @@ class TestPlanningBlockJsonFormat(unittest.TestCase):
         narrative_resp = response.structured_response
 
         # Should parse planning block as structured JSON, not string
-        self.assertIsInstance(narrative_resp.planning_block, dict)
-        self.assertIn("thinking", narrative_resp.planning_block)
-        self.assertIn("choices", narrative_resp.planning_block)
+        assert isinstance(narrative_resp.planning_block, dict)
+        assert "thinking" in narrative_resp.planning_block
+        assert "choices" in narrative_resp.planning_block
 
         # Validate choices structure
         choices = narrative_resp.planning_block["choices"]
-        self.assertIsInstance(choices, dict)
+        assert isinstance(choices, dict)
 
         # Check specific choice structure
         examine_choice = choices["examine_door"]
-        self.assertEqual(examine_choice["text"], "Examine Door")
-        self.assertEqual(
-            examine_choice["description"], "Look carefully for traps or mechanisms"
-        )
-        self.assertEqual(examine_choice["risk_level"], "low")
+        assert examine_choice["text"] == "Examine Door"
+        assert examine_choice["description"] == "Look carefully for traps or mechanisms"
+        assert examine_choice["risk_level"] == "low"
 
     def test_planning_block_choice_keys_are_valid_identifiers(self):
         """Test that choice keys are valid JavaScript identifiers"""
@@ -108,11 +107,9 @@ class TestPlanningBlockJsonFormat(unittest.TestCase):
         # All choice keys should be valid identifiers (no spaces, special chars except underscore)
         for choice_key in choices.keys():
             # Valid identifier: alphanumeric + underscore, not starting with digit
-            self.assertRegex(
-                choice_key,
-                r"^[a-zA-Z_][a-zA-Z0-9_]*$",
-                f"Choice key '{choice_key}' is not a valid identifier",
-            )
+            assert re.search(
+                r"^[a-zA-Z_][a-zA-Z0-9_]*$", choice_key
+            ), f"Choice key '{choice_key}' is not a valid identifier"
 
     def test_planning_block_empty_choices_handled(self):
         """Test that planning blocks with no choices are handled gracefully"""
@@ -137,9 +134,9 @@ class TestPlanningBlockJsonFormat(unittest.TestCase):
         narrative_resp = response.structured_response
 
         # Should handle empty choices gracefully
-        self.assertIsInstance(narrative_resp.planning_block, dict)
-        self.assertEqual(len(narrative_resp.planning_block["choices"]), 0)
-        self.assertIn("thinking", narrative_resp.planning_block)
+        assert isinstance(narrative_resp.planning_block, dict)
+        assert len(narrative_resp.planning_block["choices"]) == 0
+        assert "thinking" in narrative_resp.planning_block
 
     def test_planning_block_malformed_json_fallback(self):
         """Test fallback behavior for malformed planning block JSON"""
@@ -170,7 +167,7 @@ class TestPlanningBlockJsonFormat(unittest.TestCase):
 
         # Should either fix the structure or fall back gracefully
         # Implementation will determine exact behavior
-        self.assertIsNotNone(narrative_resp.planning_block)
+        assert narrative_resp.planning_block is not None
 
     def test_planning_block_choice_text_sanitization(self):
         """Test that choice text is properly sanitized for XSS prevention"""
@@ -202,18 +199,18 @@ class TestPlanningBlockJsonFormat(unittest.TestCase):
         # Should sanitize dangerous content by removing script tags completely
         choice = narrative_resp.planning_block["choices"]["xss_test"]
         # Script tags and their content should be completely removed
-        self.assertNotIn("<script>", choice["text"])
-        self.assertNotIn("</script>", choice["text"])
-        self.assertNotIn("alert", choice["text"])  # Entire script content removed
+        assert "<script>" not in choice["text"]
+        assert "</script>" not in choice["text"]
+        assert "alert" not in choice["text"]  # Entire script content removed
         # Only the safe content should remain
-        self.assertEqual(choice["text"], "Examine Door")  # Just the safe part
+        assert choice["text"] == "Examine Door"  # Just the safe part
 
         # Description should preserve normal characters but without dangerous HTML
         description = choice["description"]
-        self.assertIn("&", description)  # Normal ampersand preserved
-        self.assertIn("<", description)  # Normal brackets preserved
-        self.assertIn('"', description)  # Normal quotes preserved
-        self.assertIn("'", description)  # Normal apostrophes preserved
+        assert "&" in description  # Normal ampersand preserved
+        assert "<" in description  # Normal brackets preserved
+        assert '"' in description  # Normal quotes preserved
+        assert "'" in description  # Normal apostrophes preserved
 
     def test_planning_block_unicode_support(self):
         """Test that planning blocks support unicode characters properly"""
@@ -250,11 +247,11 @@ class TestPlanningBlockJsonFormat(unittest.TestCase):
 
         # Should preserve unicode characters
         magic_choice = narrative_resp.planning_block["choices"]["magic_spell"]
-        self.assertIn("🔮", magic_choice["text"])
-        self.assertIn("✨", magic_choice["description"])
+        assert "🔮" in magic_choice["text"]
+        assert "✨" in magic_choice["description"]
 
         chinese_choice = narrative_resp.planning_block["choices"]["chinese_option"]
-        self.assertEqual(chinese_choice["text"], "检查门")
+        assert chinese_choice["text"] == "检查门"
 
     def test_planning_block_backwards_compatibility_string_format(self):
         """Test that old string format is still supported during transition"""
@@ -281,7 +278,7 @@ class TestPlanningBlockJsonFormat(unittest.TestCase):
 
         # During transition, should still handle string format
         # (This behavior will be removed in Phase 4)
-        self.assertIsNotNone(narrative_resp.planning_block)
+        assert narrative_resp.planning_block is not None
 
 
 if __name__ == "__main__":

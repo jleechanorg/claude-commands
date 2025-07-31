@@ -75,22 +75,22 @@ class TestStateUpdateIntegration(unittest.TestCase):
         parsed_response = parse_structured_response(json_response)
 
         # Verify state updates are present
-        self.assertIn("state_updates", parsed_response)
-        self.assertIn("player_character_data", parsed_response["state_updates"])
-        self.assertIn("npc_data", parsed_response["state_updates"])
-        self.assertIn("world_data", parsed_response["state_updates"])
-        self.assertIn("custom_campaign_state", parsed_response["state_updates"])
+        assert "state_updates" in parsed_response
+        assert "player_character_data" in parsed_response["state_updates"]
+        assert "npc_data" in parsed_response["state_updates"]
+        assert "world_data" in parsed_response["state_updates"]
+        assert "custom_campaign_state" in parsed_response["state_updates"]
 
         # Verify specific state update values
         player_data = parsed_response["state_updates"]["player_character_data"]
-        self.assertEqual(player_data["hp_current"], "20")
+        assert player_data["hp_current"] == "20"
 
         orc_data = parsed_response["state_updates"]["npc_data"]["orc_warrior"]
-        self.assertEqual(orc_data["hp_current"], "5")
-        self.assertEqual(orc_data["status"], "wounded")
+        assert orc_data["hp_current"] == "5"
+        assert orc_data["status"] == "wounded"
 
         campaign_state = parsed_response["state_updates"]["custom_campaign_state"]
-        self.assertEqual(campaign_state["combat_round"], "2")
+        assert campaign_state["combat_round"] == "2"
 
     def test_state_updates_separated_from_narrative(self):
         """Test that state updates don't leak into narrative text"""
@@ -100,15 +100,15 @@ class TestStateUpdateIntegration(unittest.TestCase):
 
         # Verify narrative is clean
         narrative = parsed_response["narrative"]
-        self.assertNotIn("state_updates", narrative)
-        self.assertNotIn("player_character_data", narrative)
-        self.assertNotIn("hp_current", narrative)
-        self.assertNotIn("combat_round", narrative)
+        assert "state_updates" not in narrative
+        assert "player_character_data" not in narrative
+        assert "hp_current" not in narrative
+        assert "combat_round" not in narrative
 
         # Verify narrative contains expected content
-        self.assertIn("swing your sword", narrative)
-        self.assertIn("orc warrior", narrative)
-        self.assertIn("wounded", narrative)
+        assert "swing your sword" in narrative
+        assert "orc warrior" in narrative
+        assert "wounded" in narrative
 
     def test_response_without_state_updates(self):
         """Test handling of responses without state updates"""
@@ -117,12 +117,12 @@ class TestStateUpdateIntegration(unittest.TestCase):
         parsed_response = parse_structured_response(json_response)
 
         # Should have narrative
-        self.assertIn("narrative", parsed_response)
-        self.assertIn("peaceful meadow", parsed_response["narrative"])
+        assert "narrative" in parsed_response
+        assert "peaceful meadow" in parsed_response["narrative"]
 
         # State updates should be empty or None
         state_updates = parsed_response.get("state_updates", {})
-        self.assertIn(state_updates, [{}, None])
+        assert state_updates in [{}, None]
 
     def test_malformed_state_updates_handling(self):
         """Test graceful handling of malformed state updates"""
@@ -131,12 +131,12 @@ class TestStateUpdateIntegration(unittest.TestCase):
         parsed_response = parse_structured_response(json_response)
 
         # Should still extract narrative
-        self.assertIn("narrative", parsed_response)
-        self.assertEqual(parsed_response["narrative"], "You attack the orc.")
+        assert "narrative" in parsed_response
+        assert parsed_response["narrative"] == "You attack the orc."
 
         # Should handle malformed state updates gracefully
         state_updates = parsed_response.get("state_updates", {})
-        self.assertIsInstance(state_updates, (dict, type(None)))
+        assert isinstance(state_updates, (dict, type(None)))
 
     def test_gemini_service_state_update_processing(self):
         """Test that Gemini service properly processes state updates"""
@@ -155,18 +155,18 @@ class TestStateUpdateIntegration(unittest.TestCase):
         # Verify the updates would be applied correctly
         if "player_character_data" in state_updates:
             player_updates = state_updates["player_character_data"]
-            self.assertEqual(player_updates.get("hp_current"), "20")
+            assert player_updates.get("hp_current") == "20"
 
         if "npc_data" in state_updates:
             npc_updates = state_updates["npc_data"]
             if "orc_warrior" in npc_updates:
                 orc_updates = npc_updates["orc_warrior"]
-                self.assertEqual(orc_updates.get("hp_current"), "5")
-                self.assertEqual(orc_updates.get("status"), "wounded")
+                assert orc_updates.get("hp_current") == "5"
+                assert orc_updates.get("status") == "wounded"
 
         if "custom_campaign_state" in state_updates:
             campaign_updates = state_updates["custom_campaign_state"]
-            self.assertEqual(campaign_updates.get("combat_round"), "2")
+            assert campaign_updates.get("combat_round") == "2"
 
     def test_consecutive_state_updates(self):
         """Test that consecutive actions properly update state"""
@@ -190,22 +190,14 @@ class TestStateUpdateIntegration(unittest.TestCase):
 
         # Parse first response
         parsed_first = parse_structured_response(json.dumps(first_response))
-        self.assertEqual(
-            parsed_first["state_updates"]["npc_data"]["orc_warrior"]["status"],
-            "wounded",
-        )
+        assert parsed_first["state_updates"]["npc_data"]["orc_warrior"]["status"] == "wounded"
 
         # Parse second response
         parsed_second = parse_structured_response(json.dumps(second_response))
-        self.assertEqual(
-            parsed_second["state_updates"]["npc_data"]["orc_warrior"]["status"], "dead"
-        )
+        assert parsed_second["state_updates"]["npc_data"]["orc_warrior"]["status"] == "dead"
 
         # Verify states are different (proving progression)
-        self.assertNotEqual(
-            parsed_first["state_updates"]["npc_data"]["orc_warrior"]["status"],
-            parsed_second["state_updates"]["npc_data"]["orc_warrior"]["status"],
-        )
+        assert parsed_first["state_updates"]["npc_data"]["orc_warrior"]["status"] != parsed_second["state_updates"]["npc_data"]["orc_warrior"]["status"]
 
     def test_state_update_field_completeness(self):
         """Test that all expected state update fields are present"""
@@ -223,7 +215,7 @@ class TestStateUpdateIntegration(unittest.TestCase):
         ]
 
         for field in expected_fields:
-            self.assertIn(field, state_updates, f"Missing required field: {field}")
+            assert field in state_updates, f"Missing required field: {field}"
 
     def test_state_update_data_types(self):
         """Test that state update fields have correct data types"""
@@ -233,11 +225,11 @@ class TestStateUpdateIntegration(unittest.TestCase):
         state_updates = parsed_response.get("state_updates", {})
 
         # Verify data types
-        self.assertIsInstance(state_updates, dict)
-        self.assertIsInstance(state_updates.get("player_character_data", {}), dict)
-        self.assertIsInstance(state_updates.get("npc_data", {}), dict)
-        self.assertIsInstance(state_updates.get("world_data", {}), dict)
-        self.assertIsInstance(state_updates.get("custom_campaign_state", {}), dict)
+        assert isinstance(state_updates, dict)
+        assert isinstance(state_updates.get("player_character_data", {}), dict)
+        assert isinstance(state_updates.get("npc_data", {}), dict)
+        assert isinstance(state_updates.get("world_data", {}), dict)
+        assert isinstance(state_updates.get("custom_campaign_state", {}), dict)
 
     def test_empty_state_updates_handling(self):
         """Test handling of empty state updates"""
@@ -256,7 +248,7 @@ class TestStateUpdateIntegration(unittest.TestCase):
 
         # Should handle empty updates gracefully
         state_updates = parsed_response.get("state_updates", {})
-        self.assertIsInstance(state_updates, dict)
+        assert isinstance(state_updates, dict)
 
         # Empty sections should still be dictionaries
         for section in [
@@ -265,7 +257,7 @@ class TestStateUpdateIntegration(unittest.TestCase):
             "world_data",
             "custom_campaign_state",
         ]:
-            self.assertIsInstance(state_updates.get(section, {}), dict)
+            assert isinstance(state_updates.get(section, {}), dict)
 
 
 class TestStateUpdatePersistence(unittest.TestCase):
@@ -289,14 +281,12 @@ class TestStateUpdatePersistence(unittest.TestCase):
 
         # Verify state updates are accessible for logging
         state_updates = parsed_response.get("state_updates", {})
-        self.assertIn("player_character_data", state_updates)
-        self.assertIn("world_data", state_updates)
+        assert "player_character_data" in state_updates
+        assert "world_data" in state_updates
 
         # Verify specific updates
-        self.assertEqual(
-            state_updates["player_character_data"]["spell_slots_level_1"], "2"
-        )
-        self.assertEqual(state_updates["world_data"]["magical_energy"], "increased")
+        assert state_updates["player_character_data"]["spell_slots_level_1"] == "2"
+        assert state_updates["world_data"]["magical_energy"] == "increased"
 
 
 if __name__ == "__main__":

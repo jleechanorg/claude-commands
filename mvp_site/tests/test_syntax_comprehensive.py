@@ -61,7 +61,7 @@ class TestComprehensiveSyntax(unittest.TestCase):
         try:
             # Test basic instantiation
             gs = GameState()
-            self.assertIsNotNone(gs)
+            assert gs is not None
         except Exception as e:
             self.fail(f"Failed to import or instantiate GameState: {e}")
 
@@ -107,10 +107,10 @@ class TestComprehensiveSyntax(unittest.TestCase):
             gs = GameState()
 
             # Test basic instantiation and core attributes
-            self.assertIsNotNone(gs)
-            self.assertIsNotNone(gs.player_character_data)
-            self.assertIsNotNone(gs.world_data)
-            self.assertIsNotNone(gs.npc_data)
+            assert gs is not None
+            assert gs.player_character_data is not None
+            assert gs.world_data is not None
+            assert gs.npc_data is not None
 
         except SyntaxError as e:
             self.fail(f"Syntax error in GameState instantiation: {e}")

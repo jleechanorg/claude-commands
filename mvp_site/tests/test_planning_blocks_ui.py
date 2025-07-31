@@ -39,7 +39,7 @@ His warriors shift nervously, hands on their crude weapons.
                 "description": "Look for an alternate route around the goblin encampment.",
             },
         ]
-        self.assertEqual(len(expected_choices), 3)
+        assert len(expected_choices) == 3
 
     def test_deep_think_block_format(self):
         """Test deep think block with pros and cons"""
@@ -74,7 +74,7 @@ but you've discovered the "thief" is actually the artifact's rightful owner.
                 "description": "Attempt to broker a compromise between both parties.",
             },
         ]
-        self.assertEqual(len(expected_choices), 3)
+        assert len(expected_choices) == 3
 
     def test_choice_text_extraction(self):
         """Test that the full choice text is properly extracted"""
@@ -82,16 +82,16 @@ but you've discovered the "thief" is actually the artifact's rightful owner.
 
         # The button should have data-choice-text="Investigate_1: Search the mysterious room for hidden clues and secret passages."
         expected_data = "Investigate_1: Search the mysterious room for hidden clues and secret passages."
-        self.assertIn("Investigate_1", expected_data)
-        self.assertIn("Search the mysterious room", expected_data)
+        assert "Investigate_1" in expected_data
+        assert "Search the mysterious room" in expected_data
 
     def test_special_characters_preserved(self):
         """Test that normal special characters are preserved (not HTML escaped)"""
         choice_with_quotes = 'Say "Hello there, friend!" to the stranger.'
 
         # Should preserve normal quotes without HTML escaping
-        self.assertIn('"', choice_with_quotes)
-        self.assertNotIn("&quot;", choice_with_quotes)  # Should NOT be HTML escaped
+        assert '"' in choice_with_quotes
+        assert "&quot;" not in choice_with_quotes  # Should NOT be HTML escaped
 
 
 if __name__ == "__main__":

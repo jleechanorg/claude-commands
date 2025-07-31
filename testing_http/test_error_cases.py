@@ -3,12 +3,11 @@
 Test error cases and edge conditions.
 """
 
+import concurrent.futures
 import os
 import sys
 
 import requests
-
-import concurrent.futures
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

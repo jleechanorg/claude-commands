@@ -4,15 +4,14 @@ Test Firebase read/write operations by inserting data and reading it back.
 """
 
 import os
+import sys
+import traceback
 import uuid
 from datetime import UTC, datetime
 
 import firebase_admin
-from firebase_admin import credentials, firestore
-
 import firebase_user_analytics
-import sys
-import traceback
+from firebase_admin import credentials, firestore
 
 
 def initialize_firebase():

@@ -15,7 +15,6 @@ sys.path.insert(
 from entity_instructions import EntityInstructionGenerator
 from entity_preloader import LocationEntityEnforcer
 from entity_tracking import create_from_game_state
-
 from game_state import GameState
 
 
@@ -38,23 +37,23 @@ class TestEntityTrackingGeneric(unittest.TestCase):
         )
 
         # Should not contain any Sariel-specific references
-        self.assertNotIn("sariel", instructions.lower())
-        self.assertNotIn("cassian", instructions.lower())
-        self.assertNotIn("valerius", instructions.lower())
-        self.assertNotIn("cressida", instructions.lower())
+        assert "sariel" not in instructions.lower()
+        assert "cassian" not in instructions.lower()
+        assert "valerius" not in instructions.lower()
+        assert "cressida" not in instructions.lower()
 
         # Should contain our actual entities
-        self.assertIn("Bob the Merchant", instructions)
-        self.assertIn("Alice the Warrior", instructions)
+        assert "Bob the Merchant" in instructions
+        assert "Alice the Warrior" in instructions
 
     def test_player_character_detection_is_generic(self):
         """Test that PC detection isn't hardcoded to Sariel"""
         generator = EntityInstructionGenerator()
 
         # After fix, should return False for all (not hardcoded)
-        self.assertFalse(generator._is_player_character("Sariel"))
-        self.assertFalse(generator._is_player_character("Gandalf"))
-        self.assertFalse(generator._is_player_character("PlayerCharacter"))
+        assert not generator._is_player_character("Sariel")
+        assert not generator._is_player_character("Gandalf")
+        assert not generator._is_player_character("PlayerCharacter")
 
     def test_location_enforcer_not_hardcoded(self):
         """Test that location enforcer doesn't have hardcoded locations"""
@@ -63,49 +62,43 @@ class TestEntityTrackingGeneric(unittest.TestCase):
         # After fix, should return empty for all locations
         generic_location = "The Tavern"
         rules = enforcer.get_required_entities_for_location(generic_location)
-        self.assertEqual(rules, {})
+        assert rules == {}
 
         # Even Sariel locations should now return empty
         sariel_rules = enforcer.get_required_entities_for_location("valerius's study")
-        self.assertEqual(sariel_rules, {})
+        assert sariel_rules == {}
 
     def test_location_mappings_are_generic(self):
         """Test that location owner mappings are not campaign-specific"""
         generator = EntityInstructionGenerator()
 
         # After fix, should return False for all (not hardcoded)
-        self.assertFalse(generator._is_location_owner("Valerius", "valerius's study"))
-        self.assertFalse(
-            generator._is_location_owner("Lady Cressida", "cressida's chamber")
-        )
-        self.assertFalse(
-            generator._is_location_owner("Innkeeper John", "John's Tavern")
-        )
-        self.assertFalse(
-            generator._is_location_owner("Wizard Merlin", "Merlin's Tower")
-        )
+        assert not generator._is_location_owner("Valerius", "valerius's study")
+        assert not generator._is_location_owner("Lady Cressida", "cressida's chamber")
+        assert not generator._is_location_owner("Innkeeper John", "John's Tavern")
+        assert not generator._is_location_owner("Wizard Merlin", "Merlin's Tower")
 
     def test_entity_specific_instruction_is_generic(self):
         """Test that entity-specific methods are generic"""
         generator = EntityInstructionGenerator()
 
         # Old method should be gone
-        self.assertFalse(hasattr(generator, "create_cassian_specific_instruction"))
+        assert not hasattr(generator, "create_cassian_specific_instruction")
 
         # New generic method should exist
-        self.assertTrue(hasattr(generator, "create_entity_specific_instruction"))
+        assert hasattr(generator, "create_entity_specific_instruction")
 
         # Test it works for any entity
         cassian_instruction = generator.create_entity_specific_instruction(
             "Cassian", "I'm scared, Cassian help me"
         )
-        self.assertIn("Cassian", cassian_instruction)
+        assert "Cassian" in cassian_instruction
 
         # And also works for other characters
         bob_instruction = generator.create_entity_specific_instruction(
             "Bob", "I'm scared, Bob help me"
         )
-        self.assertIn("Bob", bob_instruction)
+        assert "Bob" in bob_instruction
 
     def test_entity_tracking_with_different_campaign(self):
         """Test full entity tracking with a non-Sariel campaign"""
@@ -142,13 +135,13 @@ class TestEntityTrackingGeneric(unittest.TestCase):
         )
 
         # Should work with any campaign
-        self.assertEqual(len(manifest.player_characters), 1)
-        self.assertEqual(manifest.player_characters[0].display_name, "Captain Rex")
+        assert len(manifest.player_characters) == 1
+        assert manifest.player_characters[0].display_name == "Captain Rex"
 
         # Check NPCs by entity_id
         npc_names = [npc.display_name for npc in manifest.npcs]
-        self.assertIn("Lieutenant Sarah Chen", npc_names)
-        self.assertIn("ARIA", npc_names)
+        assert "Lieutenant Sarah Chen" in npc_names
+        assert "ARIA" in npc_names
 
     def test_hardcoded_location_instructions(self):
         """Test that location instructions are hardcoded"""
@@ -160,8 +153,8 @@ class TestEntityTrackingGeneric(unittest.TestCase):
             sariel_location, ["Guard Captain", "Royal Advisor"]
         )
 
-        self.assertIn("Court setting", instructions)
-        self.assertIn("nobles, guards, or advisors", instructions)
+        assert "Court setting" in instructions
+        assert "nobles, guards, or advisors" in instructions
 
         # But generic locations get generic instructions
         generic_location = "The Spaceship Bridge"
@@ -170,10 +163,8 @@ class TestEntityTrackingGeneric(unittest.TestCase):
         )
 
         # Only gets generic instruction
-        self.assertIn(
-            "Ensure entities appropriate to this setting", generic_instructions
-        )
-        self.assertNotIn("Court setting", generic_instructions)
+        assert "Ensure entities appropriate to this setting" in generic_instructions
+        assert "Court setting" not in generic_instructions
 
 
 class TestEntityTrackingGenericFixes(unittest.TestCase):

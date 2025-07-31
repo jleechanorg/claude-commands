@@ -31,37 +31,21 @@ class TestUserScenarioFixValidation(unittest.TestCase):
         )
 
         # PRIMARY VALIDATION: No raw JSON in output
-        self.assertNotIn(
-            '"god_mode_response":',
-            narrative_text,
-            "User should never see raw JSON keys",
-        )
-        self.assertNotIn(
-            '"narrative":', narrative_text, "User should never see raw JSON keys"
-        )
-        self.assertNotIn(
-            '"state_updates":', narrative_text, "User should never see raw JSON keys"
-        )
-        self.assertNotIn('{"', narrative_text, "User should never see JSON structure")
+        assert '"god_mode_response":' not in narrative_text, "User should never see raw JSON keys"
+        assert '"narrative":' not in narrative_text, "User should never see raw JSON keys"
+        assert '"state_updates":' not in narrative_text, "User should never see raw JSON keys"
+        assert '{"' not in narrative_text, "User should never see JSON structure"
 
         # SECONDARY VALIDATION: Should get clean, readable content
         expected_content = "The ancient artifact pulses with power as you grasp it"
-        self.assertIn(
-            expected_content,
-            narrative_text,
-            "User should see the actual god mode response content",
-        )
-        self.assertIn(
-            "Reality bends to your will",
-            narrative_text,
-            "User should see complete god mode response",
-        )
+        assert expected_content in narrative_text, "User should see the actual god mode response content"
+        assert "Reality bends to your will" in narrative_text, "User should see complete god mode response"
 
         # TERTIARY VALIDATION: Structured data should be preserved
-        self.assertIsNotNone(structured_response)
-        self.assertIn("ancient artifact", structured_response.entities_mentioned)
+        assert structured_response is not None
+        assert "ancient artifact" in structured_response.entities_mentioned
         if hasattr(structured_response, "god_mode_response"):
-            self.assertIn("ancient artifact", structured_response.god_mode_response)
+            assert "ancient artifact" in structured_response.god_mode_response
 
     def test_various_malformation_scenarios(self):
         """Test different types of JSON malformation that could occur."""
@@ -100,28 +84,14 @@ class TestUserScenarioFixValidation(unittest.TestCase):
                 )
 
                 # Should never return raw JSON structure
-                self.assertNotIn(
-                    '"god_mode_response":',
-                    narrative_text,
-                    f"Scenario '{scenario_name}' returned raw JSON",
-                )
-                self.assertNotIn(
-                    '"narrative":',
-                    narrative_text,
-                    f"Scenario '{scenario_name}' returned raw JSON",
-                )
+                assert '"god_mode_response":' not in narrative_text, f"Scenario '{scenario_name}' returned raw JSON"
+                assert '"narrative":' not in narrative_text, f"Scenario '{scenario_name}' returned raw JSON"
 
                 # Should have some readable content (not empty)
-                self.assertTrue(
-                    len(narrative_text.strip()) > 0,
-                    f"Scenario '{scenario_name}' returned empty result",
-                )
+                assert len(narrative_text.strip()) > 0, f"Scenario '{scenario_name}' returned empty result"
 
                 # Content should be readable text, not JSON
-                self.assertFalse(
-                    narrative_text.strip().startswith("{"),
-                    f"Scenario '{scenario_name}' starts with JSON brace",
-                )
+                assert not narrative_text.strip().startswith("{"), f"Scenario '{scenario_name}' starts with JSON brace"
 
     def test_normal_god_mode_still_works(self):
         """Ensure normal god mode responses still work correctly."""
@@ -137,9 +107,9 @@ class TestUserScenarioFixValidation(unittest.TestCase):
         narrative_text, structured_response = parse_structured_response(normal_god_mode)
 
         # Should work perfectly for valid JSON
-        self.assertEqual(narrative_text, "The cosmic force acknowledges your command.")
-        self.assertIn("cosmic force", structured_response.entities_mentioned)
-        self.assertEqual(structured_response.location_confirmed, "Void of Space")
+        assert narrative_text == "The cosmic force acknowledges your command."
+        assert "cosmic force" in structured_response.entities_mentioned
+        assert structured_response.location_confirmed == "Void of Space"
 
     def test_edge_case_empty_god_mode_response(self):
         """Test edge case where god_mode_response exists but is empty."""
@@ -155,7 +125,7 @@ class TestUserScenarioFixValidation(unittest.TestCase):
         narrative_text, structured_response = parse_structured_response(empty_god_mode)
 
         # Should fall back to narrative when god_mode_response is empty
-        self.assertEqual(narrative_text, "The story continues with normal narrative.")
+        assert narrative_text == "The story continues with normal narrative."
 
 
 if __name__ == "__main__":

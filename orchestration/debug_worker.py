@@ -2,13 +2,13 @@
 """Debug worker to test message flow"""
 
 import json
-import time
 import sys
-from datetime import datetime
+import time
+import traceback
 from dataclasses import asdict
+from datetime import datetime
 
 from message_broker import MessageBroker, MessageType, TaskMessage
-import traceback
 
 try:
 

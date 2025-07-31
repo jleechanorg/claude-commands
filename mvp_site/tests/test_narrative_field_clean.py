@@ -39,9 +39,7 @@ class TestNarrativeFieldClean(unittest.TestCase):
                 found_patterns.append(pattern)
 
         # We expect to find some patterns in this bad example
-        self.assertGreater(
-            len(found_patterns), 0, "Should detect debug tags in bad narrative example"
-        )
+        assert len(found_patterns) > 0, "Should detect debug tags in bad narrative example"
 
     def test_clean_narrative_passes(self):
         """Test that clean narrative passes validation."""
@@ -58,10 +56,7 @@ class TestNarrativeFieldClean(unittest.TestCase):
         # Check narrative is clean
         narrative = good_response.get("narrative", "")
         for pattern in self.FORBIDDEN_PATTERNS:
-            self.assertIsNone(
-                re.search(pattern, narrative),
-                f"Narrative field should not contain: {pattern}",
-            )
+            assert re.search(pattern, narrative) is None, f"Narrative field should not contain: {pattern}"
 
     def test_state_updates_in_correct_field(self):
         """Test that state updates are in state_updates field, not narrative."""
@@ -76,12 +71,12 @@ class TestNarrativeFieldClean(unittest.TestCase):
 
         # Narrative should not contain state update blocks
         narrative = correct_response.get("narrative", "")
-        self.assertNotIn("[STATE_UPDATES_PROPOSED]", narrative)
-        self.assertNotIn("player_character_data", narrative)
+        assert "[STATE_UPDATES_PROPOSED]" not in narrative
+        assert "player_character_data" not in narrative
 
         # State updates should be in correct field
-        self.assertIn("state_updates", correct_response)
-        self.assertIsInstance(correct_response["state_updates"], dict)
+        assert "state_updates" in correct_response
+        assert isinstance(correct_response["state_updates"], dict)
 
 
 if __name__ == "__main__":

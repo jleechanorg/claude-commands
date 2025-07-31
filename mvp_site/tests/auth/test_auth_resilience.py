@@ -5,8 +5,20 @@ Red/Green Test: Authentication Resilience
 Tests that JWT clock skew errors are automatically handled with retry logic
 """
 
+import os
+import sys
 import unittest
 from pathlib import Path
+
+# Add parent directory to path for imports
+sys.path.insert(
+    0,
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    ),
+)
+
+from config.paths import PATHS
 
 
 class AuthResilienceTest(unittest.TestCase):
@@ -14,8 +26,8 @@ class AuthResilienceTest(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment"""
-        # Go up two levels from tests/auth/ to get to mvp_site/
-        self.test_dir = Path(__file__).parent.parent.parent
+        # Use centralized path configuration - no more manual calculations!
+        self.test_dir = PATHS.base_dir
 
     def test_clock_skew_auto_retry_mechanism(self):
         """
@@ -33,46 +45,26 @@ class AuthResilienceTest(unittest.TestCase):
         api_js_content = api_js_file.read_text()
 
         # 🔴 RED: Check that auto-retry logic exists
-        self.assertIn(
-            "retryCount",
-            api_js_content,
-            "FAIL: No retry count parameter found - auto-retry not implemented",
-        )
+        assert "retryCount" in api_js_content, "FAIL: No retry count parameter found - auto-retry not implemented"
 
-        self.assertIn(
-            "Token used too early",
-            api_js_content,
-            "FAIL: No clock skew detection found",
-        )
+        assert "Token used too early" in api_js_content, "FAIL: No clock skew detection found"
 
-        self.assertIn(
-            "isClockSkewError",
-            api_js_content,
-            "FAIL: No clock skew error detection logic found",
-        )
+        assert "isClockSkewError" in api_js_content, "FAIL: No clock skew error detection logic found"
 
-        self.assertIn(
-            "forceRefresh", api_js_content, "FAIL: No token refresh forcing found"
-        )
+        assert "forceRefresh" in api_js_content, "FAIL: No token refresh forcing found"
 
         # 🔴 RED: Check that retry happens for 401 errors
         retry_pattern_found = (
             "response.status === 401" in api_js_content
             and "retryCount < 2" in api_js_content
         )
-        self.assertTrue(
-            retry_pattern_found,
-            "FAIL: No 401 retry logic found - won't auto-recover from auth failures",
-        )
+        assert retry_pattern_found, "FAIL: No 401 retry logic found - won't auto-recover from auth failures"
 
         # 🔴 RED: Check that recursive retry call exists
         recursive_retry_found = (
             "fetchApi(path, options, retryCount + 1)" in api_js_content
         )
-        self.assertTrue(
-            recursive_retry_found,
-            "FAIL: No recursive retry call found - won't actually retry",
-        )
+        assert recursive_retry_found, "FAIL: No recursive retry call found - won't actually retry"
 
         print("✅ Auto-retry mechanism implementation found")
 
@@ -82,42 +74,45 @@ class AuthResilienceTest(unittest.TestCase):
         """
         print("🔴 RED TEST: Testing user-friendly error messaging")
 
-        # Read the updated app.js file
-        app_js_file = self.test_dir / "frontend_v1/app.js"
+        # Read the updated app.js file with robust path resolution
+        frontend_dir = self.test_dir / "frontend_v1"
+        app_js_file = frontend_dir / "app.js"
+
+        # Comprehensive debugging for CI issues
         if not app_js_file.exists():
+            print("🔍 PATH DEBUG INFORMATION:")
+            print(f"  Current working dir: {os.getcwd()}")
+            print(f"  Test file location: {Path(__file__).resolve()}")
+            print(f"  Calculated test_dir: {self.test_dir}")
+            print(f"  Looking for app.js at: {app_js_file}")
+            print(f"  frontend_v1 dir exists: {frontend_dir.exists()}")
+            print(
+                f"  mvp_site contents: {list(self.test_dir.iterdir()) if self.test_dir.exists() else 'DIR_NOT_FOUND'}"
+            )
+            if frontend_dir.exists():
+                print(f"  frontend_v1 contents: {list(frontend_dir.iterdir())}")
+
+            # Try alternate locations as diagnostic
+            alt_static = self.test_dir / "static" / "app.js"
+            alt_root = self.test_dir / "app.js"
+            print(f"  static/app.js exists: {alt_static.exists()}")
+            print(f"  root app.js exists: {alt_root.exists()}")
+
             self.fail("app.js file not found - cannot test error messaging")
 
         app_js_content = app_js_file.read_text()
 
         # 🔴 RED: Check for specific error message improvements
-        self.assertIn(
-            "Authentication timing issue detected",
-            app_js_content,
-            "FAIL: No user-friendly clock skew message found",
-        )
+        assert "Authentication timing issue detected" in app_js_content, "FAIL: No user-friendly clock skew message found"
 
-        self.assertIn(
-            "Would you like to try again?",
-            app_js_content,
-            "FAIL: No retry option offered to user",
-        )
+        assert "Would you like to try again?" in app_js_content, "FAIL: No retry option offered to user"
 
-        self.assertIn(
-            "showRetryOption", app_js_content, "FAIL: No retry option logic found"
-        )
+        assert "showRetryOption" in app_js_content, "FAIL: No retry option logic found"
 
         # 🔴 RED: Check for different error categories
-        self.assertIn(
-            "Network connection issue",
-            app_js_content,
-            "FAIL: No network error categorization found",
-        )
+        assert "Network connection issue" in app_js_content, "FAIL: No network error categorization found"
 
-        self.assertIn(
-            "Authentication issue",
-            app_js_content,
-            "FAIL: No auth error categorization found",
-        )
+        assert "Authentication issue" in app_js_content, "FAIL: No auth error categorization found"
 
         print("✅ User-friendly error messaging implementation found")
 
@@ -131,30 +126,14 @@ class AuthResilienceTest(unittest.TestCase):
         app_js_content = app_js_file.read_text()
 
         # 🔴 RED: Check for localStorage caching implementation
-        self.assertIn(
-            "localStorage.setItem('cachedCampaigns'",
-            app_js_content,
-            "FAIL: No campaign caching found",
-        )
+        assert "localStorage.setItem('cachedCampaigns'" in app_js_content, "FAIL: No campaign caching found"
 
-        self.assertIn(
-            "localStorage.getItem('cachedCampaigns')",
-            app_js_content,
-            "FAIL: No cached campaign retrieval found",
-        )
+        assert "localStorage.getItem('cachedCampaigns')" in app_js_content, "FAIL: No cached campaign retrieval found"
 
-        self.assertIn(
-            "Offline Mode:",
-            app_js_content,
-            "FAIL: No offline mode user notification found",
-        )
+        assert "Offline Mode:" in app_js_content, "FAIL: No offline mode user notification found"
 
         # 🔴 RED: Check for cache fallback logic
-        self.assertIn(
-            "cachedCampaigns",
-            app_js_content,
-            "FAIL: No cache fallback implementation found",
-        )
+        assert "cachedCampaigns" in app_js_content, "FAIL: No cache fallback implementation found"
 
         print("✅ Offline campaign caching implementation found")
 
@@ -168,36 +147,16 @@ class AuthResilienceTest(unittest.TestCase):
         api_js_content = api_js_file.read_text()
 
         # 🔴 RED: Check for connection monitoring
-        self.assertIn(
-            "navigator.onLine",
-            api_js_content,
-            "FAIL: No online status monitoring found",
-        )
+        assert "navigator.onLine" in api_js_content, "FAIL: No online status monitoring found"
 
-        self.assertIn(
-            "connectionStatus",
-            api_js_content,
-            "FAIL: No connection status tracking found",
-        )
+        assert "connectionStatus" in api_js_content, "FAIL: No connection status tracking found"
 
-        self.assertIn(
-            "getConnectionStatus",
-            api_js_content,
-            "FAIL: No connection status getter function found",
-        )
+        assert "getConnectionStatus" in api_js_content, "FAIL: No connection status getter function found"
 
         # 🔴 RED: Check for network event listeners
-        self.assertIn(
-            "addEventListener('online'",
-            api_js_content,
-            "FAIL: No online event listener found",
-        )
+        assert "addEventListener('online'" in api_js_content, "FAIL: No online event listener found"
 
-        self.assertIn(
-            "addEventListener('offline'",
-            api_js_content,
-            "FAIL: No offline event listener found",
-        )
+        assert "addEventListener('offline'" in api_js_content, "FAIL: No offline event listener found"
 
         print("✅ Connection status monitoring implementation found")
 

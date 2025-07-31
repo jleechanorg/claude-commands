@@ -4,12 +4,12 @@ Local Claude endpoint server for GitHub slash commands.
 Runs a simple HTTP server that accepts prompts and forwards them to Claude Code CLI.
 """
 
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import subprocess
 import json
-import urllib.parse
 import logging
 import os
+import subprocess
+import urllib.parse
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # Node.js environment variables that can cause EBADF errors
 NODE_VARS_TO_REMOVE = [
@@ -87,7 +87,7 @@ class ClaudeHandler(BaseHTTPRequestHandler):
                         try:
                             # Test if command exists
                             result = subprocess.run([cmd_path, '--version'],
-                                                  capture_output=True, text=True, timeout=5)
+                                                  check=False, capture_output=True, text=True, timeout=5)
                             if result.returncode == 0:
                                 claude_cmd = cmd_path
                                 logger.info(f"Found Claude CLI: {cmd_path}")
@@ -146,7 +146,7 @@ class ClaudeHandler(BaseHTTPRequestHandler):
                 self.send_response(500)
                 self.send_header('Content-Type', 'text/plain')
                 self.end_headers()
-                self.wfile.write(f"Internal server error: {str(e)}".encode('utf-8'))
+                self.wfile.write(f"Internal server error: {str(e)}".encode())
         else:
             self.send_response(404)
             self.end_headers()
@@ -169,7 +169,7 @@ if __name__ == '__main__':
     port = int(os.getenv('CLAUDE_ENDPOINT_PORT', '5001'))
     server = HTTPServer(('127.0.0.1', port), ClaudeHandler)
     logger.info(f"Starting Claude endpoint server on http://127.0.0.1:{port}")
-    logger.info("Health check available at http://127.0.0.1:{}/health".format(port))
+    logger.info(f"Health check available at http://127.0.0.1:{port}/health")
 
     try:
         server.serve_forever()

@@ -5,10 +5,10 @@ Calculates precision, recall, and F1 scores for each validator.
 """
 
 import json
+import os
 from datetime import datetime
 
 from tests.ground_truth import ground_truth_labels
-import os
 
 
 # Simplified test runner for accuracy metrics

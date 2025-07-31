@@ -171,5 +171,4 @@ def get_narrative_for_display(story_text: str, debug_mode: bool) -> str:
     # Old campaign - apply appropriate stripping
     if debug_mode:
         return strip_state_updates_only(story_text)
-    else:
-        return strip_debug_content(story_text)
+    return strip_debug_content(story_text)

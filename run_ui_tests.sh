@@ -52,6 +52,7 @@ case "$MODE" in
         echo "📌 Both Firebase and Gemini will be mocked - no API costs!"
         export USE_MOCK_FIREBASE=true
         export USE_MOCK_GEMINI=true
+        export MOCK_SERVICES_MODE=true
         export TEST_MODE="${TEST_MODE:-mock}"
         ;;
     "mock-gemini")
@@ -61,6 +62,7 @@ case "$MODE" in
         echo "🔥 Firebase will be REAL (database operations will persist)"
         export USE_MOCK_FIREBASE=false
         export USE_MOCK_GEMINI=true
+        export MOCK_SERVICES_MODE=true
         export TEST_MODE="${TEST_MODE:-mock}"
         ;;
     "real")
@@ -71,6 +73,7 @@ case "$MODE" in
         echo "🤖 Gemini: REAL (costs per API call)"
         export USE_MOCK_FIREBASE=false
         export USE_MOCK_GEMINI=false
+        export MOCK_SERVICES_MODE=false
         export TEST_MODE="${TEST_MODE:-real}"
         ;;
     *)
@@ -132,8 +135,8 @@ SCREENSHOT_DIR="/tmp/worldarchitectai/browser"
 mkdir -p "$SCREENSHOT_DIR"
 echo "✅ Screenshots will be saved to: $SCREENSHOT_DIR"
 
-# 5. Start test server in background
-echo "🏃 Starting test server..."
+# 5. Start MCP server and Flask app in background
+echo "🏃 Starting MCP server and Flask app..."
 echo "   Configuration:"
 if [[ "$USE_MOCK_FIREBASE" == "true" ]]; then
     echo "   ✓ Firebase: Using in-memory mock"
@@ -147,18 +150,49 @@ else
 fi
 
 TEST_PORT=8088
+MCP_PORT=8000
 export TESTING=true
 export PORT=$TEST_PORT
+export MCP_SERVER_URL="http://localhost:$MCP_PORT"
 
-# Kill any existing server on the port
+# Kill any existing servers on the ports
 lsof -ti:$TEST_PORT | xargs kill -9 2>/dev/null || true
+lsof -ti:$MCP_PORT | xargs kill -9 2>/dev/null || true
 sleep 1
 
-# Start the server
-python3 mvp_site/main.py serve &
-SERVER_PID=$!
+# Start MCP server first
+echo "🔧 Starting MCP server on port $MCP_PORT..."
+cd mvp_site && python3 mcp_api.py --port $MCP_PORT --host 0.0.0.0 &
+MCP_PID=$!
+cd ..
 
-echo "📍 Test server started (PID: $SERVER_PID) on port $TEST_PORT"
+# Wait for MCP server to be ready
+echo "⏳ Waiting for MCP server to be ready..."
+for i in {1..15}; do
+    if curl -s "http://localhost:$MCP_PORT" > /dev/null 2>&1; then
+        echo "✅ MCP server is ready"
+        break
+    fi
+    if [ $i -eq 15 ]; then
+        echo "❌ MCP server failed to start within 15 seconds"
+        kill $MCP_PID 2>/dev/null || true
+        exit 1
+    fi
+    sleep 1
+done
+
+# Start Flask app after MCP server is ready
+echo "🌐 Starting Flask app on port $TEST_PORT..."
+# Use absolute path and execute from correct directory
+FLASK_SCRIPT="/home/jleechan/projects/worldarchitect.ai/worktree_human/mvp_site/start_flask.py"
+cd /home/jleechan/projects/worldarchitect.ai/worktree_human/mvp_site
+TESTING=true PORT=$TEST_PORT MCP_SERVER_URL="http://localhost:$MCP_PORT" SKIP_MCP_HTTP=true FLASK_DEBUG=False python3 start_flask.py &
+SERVER_PID=$!
+cd /home/jleechan/projects/worldarchitect.ai/worktree_human
+
+echo "📍 Both servers started:"
+echo "   📊 MCP server: http://localhost:$MCP_PORT (PID: $MCP_PID)"
+echo "   🌐 Flask app: http://localhost:$TEST_PORT (PID: $SERVER_PID)"
 echo "   Mode: $MODE"
 
 # Wait for server to be ready
@@ -180,6 +214,7 @@ done
 cleanup() {
     echo "🧹 Cleaning up..."
     kill $SERVER_PID 2>/dev/null || true
+    kill $MCP_PID 2>/dev/null || true
     echo "✅ Cleanup complete"
 }
 # trap cleanup EXIT
@@ -206,21 +241,51 @@ if [[ "$USE_PUPPETEER" == "true" ]]; then
     wait $SERVER_PID
     exit 0
 else
-    echo "🧪 Running Playwright browser tests in parallel..."
+    echo "🧪 Running comprehensive UI and MCP tests..."
     echo "=================================================="
 
     # Automatically discover all test files in testing_ui/ directory
     BROWSER_TESTS=()
     if [ -d "testing_ui/core_tests/" ]; then
-        echo "🔍 Discovering test files in testing_ui/core_tests/ directory..."
+        echo "🔍 Discovering browser test files in testing_ui/core_tests/ directory..."
         while IFS= read -r -d '' test_file; do
             BROWSER_TESTS+=("$test_file")
         done < <(find testing_ui/core_tests -name "test_*.py" -type f -print0 | sort -z)
-        echo "✅ Found ${#BROWSER_TESTS[@]} test files"
+        echo "✅ Found ${#BROWSER_TESTS[@]} browser test files"
     else
         echo "❌ testing_ui/core_tests/ directory not found"
         exit 1
     fi
+
+    # Add comprehensive MCP end2end test
+    MCP_END2END_TEST="mvp_site/tests/test_end2end/test_mcp_integration_comprehensive.py"
+    if [ -f "$MCP_END2END_TEST" ]; then
+        echo "🔍 Adding comprehensive MCP integration test..."
+        BROWSER_TESTS+=("$MCP_END2END_TEST")
+        echo "✅ Added MCP integration test"
+    else
+        echo "⚠️  MCP integration test not found: $MCP_END2END_TEST"
+    fi
+
+    # Add dedicated MCP architecture tests if available
+    if [ -d "testing_mcp/" ] && [ -f "testing_mcp/run_mcp_tests.sh" ]; then
+        echo "🔍 Discovering dedicated MCP architecture tests..."
+        MCP_INTEGRATION_TESTS=()
+        while IFS= read -r -d '' test_file; do
+            MCP_INTEGRATION_TESTS+=("$test_file")
+        done < <(find testing_mcp/integration -name "test_*.py" -type f -print0 2>/dev/null | sort -z)
+
+        if [ ${#MCP_INTEGRATION_TESTS[@]} -gt 0 ]; then
+            echo "✅ Found ${#MCP_INTEGRATION_TESTS[@]} dedicated MCP tests"
+            BROWSER_TESTS+=("${MCP_INTEGRATION_TESTS[@]}")
+        else
+            echo "ℹ️  No dedicated MCP integration tests found"
+        fi
+    else
+        echo "ℹ️  Dedicated MCP test directory not available"
+    fi
+
+    echo "📊 Total tests to run: ${#BROWSER_TESTS[@]} (Browser + MCP Integration)"
 fi
 
 # Create parallel execution with limited concurrency
@@ -327,6 +392,26 @@ echo "======================="
 echo "✅ Passed: $PASSED"
 echo "❌ Failed: $FAILED"
 echo "📸 Screenshots: $SCREENSHOT_DIR"
+
+# List all screenshot files with full paths
+echo ""
+echo "📸 Generated Screenshots (Full Paths):"
+echo "======================================"
+if [ -d "$SCREENSHOT_DIR" ]; then
+    screenshot_count=0
+    while IFS= read -r -d '' screenshot; do
+        echo "   📄 $screenshot"
+        ((screenshot_count++))
+    done < <(find "$SCREENSHOT_DIR" -name "*.png" -type f -printf '%p\0' 2>/dev/null | sort -z)
+
+    if [ $screenshot_count -eq 0 ]; then
+        echo "   ⚠️  No PNG screenshots found in $SCREENSHOT_DIR"
+    else
+        echo "   📊 Total screenshots: $screenshot_count files"
+    fi
+else
+    echo "   ❌ Screenshot directory not found: $SCREENSHOT_DIR"
+fi
 
 if [ ${#FAILED_TESTS[@]} -gt 0 ]; then
     echo ""

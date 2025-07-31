@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import Mock
 
+
 class TestUserService(unittest.TestCase):
 
     def setUp(self):

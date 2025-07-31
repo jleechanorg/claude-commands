@@ -37,17 +37,15 @@ class TestGodModeJsonLoggingBug(unittest.TestCase):
         else:
             bug_detected = False
 
-        self.assertTrue(bug_detected, "Should detect the raw JSON logging bug")
+        assert bug_detected, "Should detect the raw JSON logging bug"
 
         # Test 2: Correct processing should extract just the narrative
         narrative_text, structured_response = parse_structured_response(raw_json_string)
 
         # Correct behavior: only narrative text, no JSON structure
-        self.assertEqual(
-            narrative_text, "Test god mode response with\nnewlines and special chars."
-        )
-        self.assertNotIn('"narrative":', narrative_text)
-        self.assertNotIn('"god_mode_response":', narrative_text)
+        assert narrative_text == "Test god mode response with\nnewlines and special chars."
+        assert '"narrative":' not in narrative_text
+        assert '"god_mode_response":' not in narrative_text
 
     def test_identify_logging_vs_parsing_issue(self):
         """Identify if the issue is in logging or parsing."""
@@ -75,13 +73,10 @@ class TestGodModeJsonLoggingBug(unittest.TestCase):
             or logged_content.startswith("{")
         )
 
-        self.assertFalse(
-            contains_json_structure,
-            f"Logged content should not contain JSON structure. Got: {logged_content}",
-        )
+        assert not contains_json_structure, f"Logged content should not contain JSON structure. Got: {logged_content}"
 
         # Correct behavior: logged content should be clean narrative
-        self.assertEqual(logged_content, "Divine command executed successfully.")
+        assert logged_content == "Divine command executed successfully."
 
     def test_potential_double_json_encoding_issue(self):
         """Test if the issue might be double JSON encoding."""
@@ -103,8 +98,8 @@ class TestGodModeJsonLoggingBug(unittest.TestCase):
         double_encoded = json.dumps(json_string)  # This would cause the bug
 
         # Test: double encoded would show up as escaped JSON in logs
-        self.assertIn('\\"narrative\\":', double_encoded)
-        self.assertIn('\\"god_mode_response\\":', double_encoded)
+        assert '\\"narrative\\":' in double_encoded
+        assert '\\"god_mode_response\\":' in double_encoded
 
         # This might be what's happening in the logging pipeline
         if double_encoded.startswith('"'):  # String-encoded JSON
@@ -142,12 +137,12 @@ class TestGodModeJsonLoggingBug(unittest.TestCase):
         incorrect_logging = luke_scene_pattern
 
         # Verify the difference
-        self.assertNotEqual(correct_logging, incorrect_logging)
-        self.assertIn("That's another excellent point", correct_logging)
-        self.assertNotIn('"god_mode_response":', correct_logging)
+        assert correct_logging != incorrect_logging
+        assert "That's another excellent point" in correct_logging
+        assert '"god_mode_response":' not in correct_logging
 
         # The bug: incorrect_logging contains JSON structure
-        self.assertIn('"god_mode_response":', incorrect_logging)
+        assert '"god_mode_response":' in incorrect_logging
 
 
 if __name__ == "__main__":

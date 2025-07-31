@@ -35,15 +35,15 @@ class TestDualPassGenerator(unittest.TestCase):
         templates = entity_validator.create_injection_templates(missing_entities)
 
         # Should have templates for each missing entity
-        self.assertIn("Gideon", templates)
-        self.assertIn("Sariel", templates)
-        self.assertIsInstance(templates["Gideon"], list)
-        self.assertGreater(len(templates["Gideon"]), 0)
+        assert "Gideon" in templates
+        assert "Sariel" in templates
+        assert isinstance(templates["Gideon"], list)
+        assert len(templates["Gideon"]) > 0
 
         # Check that templates have placeholders
         generic_template = templates["Gideon"][0]
-        self.assertIn("{entity}", generic_template)
-        self.assertIn("{action}", generic_template)
+        assert "{entity}" in generic_template
+        assert "{action}" in generic_template
 
     @patch("dual_pass_generator.EntityValidator")
     def test_generate_with_dual_pass_success_first_pass(self, mock_validator_class):
@@ -74,12 +74,10 @@ class TestDualPassGenerator(unittest.TestCase):
             generation_callback=generation_callback,
         )
 
-        self.assertTrue(result.success)
-        self.assertFalse(result.improvement_achieved)
-        self.assertIsNone(result.second_pass)
-        self.assertEqual(
-            result.final_narrative, "Sariel and Cassian discuss the matter."
-        )
+        assert result.success
+        assert not result.improvement_achieved
+        assert result.second_pass is None
+        assert result.final_narrative == "Sariel and Cassian discuss the matter."
         generation_callback.assert_called_once()
 
     @patch("dual_pass_generator.EntityValidator")
@@ -125,13 +123,13 @@ class TestDualPassGenerator(unittest.TestCase):
             generation_callback=generation_callback,
         )
 
-        self.assertTrue(result.success)
-        self.assertTrue(result.improvement_achieved)
-        self.assertIsNotNone(result.second_pass)
-        self.assertEqual(generation_callback.call_count, 2)
+        assert result.success
+        assert result.improvement_achieved
+        assert result.second_pass is not None
+        assert generation_callback.call_count == 2
 
         # Check that final narrative was enhanced (since second pass is much shorter, it gets appended)
-        self.assertIn("Cassian", result.final_narrative)
+        assert "Cassian" in result.final_narrative
 
     def test_create_injection_prompt(self):
         """Test injection prompt creation for second pass"""
@@ -142,14 +140,12 @@ class TestDualPassGenerator(unittest.TestCase):
             original_narrative, missing_entities, "Throne Room"
         )
 
-        self.assertIn("enhance the following narrative", prompt)
-        self.assertIn("Sariel enters the throne room", prompt)
-        self.assertIn("Cassian", prompt)
-        self.assertIn("Lady Cressida", prompt)
-        self.assertIn("Throne Room", prompt)
-        self.assertIn(
-            "naturally present and contribute meaningfully", prompt
-        )  # Generic instruction
+        assert "enhance the following narrative" in prompt
+        assert "Sariel enters the throne room" in prompt
+        assert "Cassian" in prompt
+        assert "Lady Cressida" in prompt
+        assert "Throne Room" in prompt
+        assert "naturally present and contribute meaningfully" in prompt  # Generic instruction
 
     def test_combine_narratives_complete_rewrite(self):
         """Test narrative combination when second pass is complete rewrite"""
@@ -159,7 +155,7 @@ class TestDualPassGenerator(unittest.TestCase):
         combined = self.generator._combine_narratives(first_pass, second_pass)
 
         # Should use second pass since it's much longer (complete rewrite)
-        self.assertEqual(combined, second_pass)
+        assert combined == second_pass
 
     def test_combine_narratives_append_enhancement(self):
         """Test narrative combination when second pass is enhancement"""
@@ -169,8 +165,8 @@ class TestDualPassGenerator(unittest.TestCase):
         combined = self.generator._combine_narratives(first_pass, second_pass)
 
         # Should append since second pass is much shorter
-        self.assertIn("Sariel enters the throne room", combined)
-        self.assertIn("Cassian appears", combined)
+        assert "Sariel enters the throne room" in combined
+        assert "Cassian appears" in combined
 
     def test_create_entity_injection_snippet_cassian(self):
         """Test entity injection snippet creation for specific entities"""
@@ -178,8 +174,8 @@ class TestDualPassGenerator(unittest.TestCase):
             "Cassian", "Throne Room", "responds nervously"
         )
 
-        self.assertIn("Cassian", snippet)
-        self.assertIn("responds nervously", snippet)
+        assert "Cassian" in snippet
+        assert "responds nervously" in snippet
 
     def test_create_entity_injection_snippet_generic(self):
         """Test entity injection snippet creation for generic entities"""
@@ -187,8 +183,8 @@ class TestDualPassGenerator(unittest.TestCase):
             "Unknown Character", "Location", "speaks up"
         )
 
-        self.assertIn("Unknown Character", snippet)
-        self.assertIn("speaks up", snippet)
+        assert "Unknown Character" in snippet
+        assert "speaks up" in snippet
 
 
 class TestAdaptiveEntityInjector(unittest.TestCase):
@@ -201,7 +197,7 @@ class TestAdaptiveEntityInjector(unittest.TestCase):
 
         strategy = self.injector._choose_injection_strategy(narrative, "Cassian")
 
-        self.assertEqual(strategy, "dialogue_based")
+        assert strategy == "dialogue_based"
 
     def test_choose_injection_strategy_action(self):
         """Test strategy selection for action-heavy narratives"""
@@ -209,7 +205,7 @@ class TestAdaptiveEntityInjector(unittest.TestCase):
 
         strategy = self.injector._choose_injection_strategy(narrative, "Cassian")
 
-        self.assertEqual(strategy, "action_based")
+        assert strategy == "action_based"
 
     def test_choose_injection_strategy_emotional(self):
         """Test strategy selection for emotional narratives"""
@@ -217,7 +213,7 @@ class TestAdaptiveEntityInjector(unittest.TestCase):
 
         strategy = self.injector._choose_injection_strategy(narrative, "Cassian")
 
-        self.assertEqual(strategy, "reaction_based")
+        assert strategy == "reaction_based"
 
     def test_choose_injection_strategy_default(self):
         """Test default strategy selection"""
@@ -225,7 +221,7 @@ class TestAdaptiveEntityInjector(unittest.TestCase):
 
         strategy = self.injector._choose_injection_strategy(narrative, "Cassian")
 
-        self.assertEqual(strategy, "presence_based")
+        assert strategy == "presence_based"
 
     def test_inject_via_dialogue(self):
         """Test dialogue-based entity injection"""
@@ -233,9 +229,9 @@ class TestAdaptiveEntityInjector(unittest.TestCase):
 
         result = self.injector._inject_via_dialogue(original, "Cassian", "Throne Room")
 
-        self.assertIn("Sariel looks around the room", result)
-        self.assertIn("Cassian speaks up", result)
-        self.assertIn("understand the gravity", result)
+        assert "Sariel looks around the room" in result
+        assert "Cassian speaks up" in result
+        assert "understand the gravity" in result
 
     def test_inject_via_action(self):
         """Test action-based entity injection"""
@@ -243,8 +239,8 @@ class TestAdaptiveEntityInjector(unittest.TestCase):
 
         result = self.injector._inject_via_action(original, "Cassian", "Throne Room")
 
-        self.assertIn("The tension builds", result)
-        self.assertIn("Cassian steps forward", result)
+        assert "The tension builds" in result
+        assert "Cassian steps forward" in result
 
     def test_inject_via_presence(self):
         """Test presence-based entity injection"""
@@ -252,8 +248,8 @@ class TestAdaptiveEntityInjector(unittest.TestCase):
 
         result = self.injector._inject_via_presence(original, "Cassian", "Throne Room")
 
-        self.assertIn("The scene unfolds", result)
-        self.assertIn("Cassian remains nearby", result)
+        assert "The scene unfolds" in result
+        assert "Cassian remains nearby" in result
 
     def test_inject_via_reaction(self):
         """Test reaction-based entity injection"""
@@ -261,8 +257,8 @@ class TestAdaptiveEntityInjector(unittest.TestCase):
 
         result = self.injector._inject_via_reaction(original, "Cassian", "Throne Room")
 
-        self.assertIn("emotional moment reaches", result)
-        self.assertIn("Cassian shows clear concern", result)
+        assert "emotional moment reaches" in result
+        assert "Cassian shows clear concern" in result
 
     def test_inject_entities_adaptively(self):
         """Test full adaptive injection process"""
@@ -271,9 +267,9 @@ class TestAdaptiveEntityInjector(unittest.TestCase):
 
         result = self.injector.inject_entities_adaptively(narrative, missing_entities)
 
-        self.assertIn("Sariel speaks about her fears", result)
-        self.assertIn("Cassian", result)
-        self.assertIn("Lady Cressida", result)
+        assert "Sariel speaks about her fears" in result
+        assert "Cassian" in result
+        assert "Lady Cressida" in result
 
 
 class TestDataClasses(unittest.TestCase):
@@ -296,11 +292,11 @@ class TestDataClasses(unittest.TestCase):
             validation_result=validation_result,
         )
 
-        self.assertEqual(pass_obj.pass_number, 1)
-        self.assertEqual(pass_obj.prompt, "Test prompt")
-        self.assertEqual(pass_obj.response, "Test response")
-        self.assertIn("Sariel", pass_obj.entities_found)
-        self.assertEqual(pass_obj.validation_result, validation_result)
+        assert pass_obj.pass_number == 1
+        assert pass_obj.prompt == "Test prompt"
+        assert pass_obj.response == "Test response"
+        assert "Sariel" in pass_obj.entities_found
+        assert pass_obj.validation_result == validation_result
 
     def test_dual_pass_result_creation(self):
         """Test DualPassResult dataclass creation"""
@@ -315,21 +311,21 @@ class TestDataClasses(unittest.TestCase):
             improvement_achieved=False,
         )
 
-        self.assertEqual(result.first_pass, first_pass)
-        self.assertIsNone(result.second_pass)
-        self.assertEqual(result.final_narrative, "Final narrative")
-        self.assertTrue(result.success)
-        self.assertFalse(result.improvement_achieved)
+        assert result.first_pass == first_pass
+        assert result.second_pass is None
+        assert result.final_narrative == "Final narrative"
+        assert result.success
+        assert not result.improvement_achieved
 
 
 class TestGlobalInstances(unittest.TestCase):
     def test_global_dual_pass_generator_exists(self):
         """Test that global dual pass generator instance exists"""
-        self.assertIsInstance(dual_pass_generator, DualPassGenerator)
+        assert isinstance(dual_pass_generator, DualPassGenerator)
 
     def test_global_adaptive_injector_exists(self):
         """Test that global adaptive injector instance exists"""
-        self.assertIsInstance(adaptive_injector, AdaptiveEntityInjector)
+        assert isinstance(adaptive_injector, AdaptiveEntityInjector)
 
 
 if __name__ == "__main__":

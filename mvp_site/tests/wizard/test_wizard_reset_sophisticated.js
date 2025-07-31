@@ -92,7 +92,7 @@ class SophisticatedWizardTest {
 
     try {
       // Load campaign wizard JavaScript
-      const wizardPath = path.join(__dirname, 'static', 'js', 'campaign-wizard.js');
+      const wizardPath = path.join(__dirname, '../../frontend_v1', 'js', 'campaign-wizard.js');
       const wizardJs = fs.readFileSync(wizardPath, 'utf8');
 
       // Execute in jsdom context
@@ -101,7 +101,7 @@ class SophisticatedWizardTest {
       this.document.head.appendChild(script);
 
       // Load app.js for form reset logic
-      const appPath = path.join(__dirname, 'static', 'app.js');
+      const appPath = path.join(__dirname, '../../frontend_v1', 'app.js');
       const appJs = fs.readFileSync(appPath, 'utf8');
 
       const appScript = this.document.createElement('script');

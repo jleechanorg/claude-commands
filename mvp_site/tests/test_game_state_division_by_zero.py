@@ -32,7 +32,7 @@ class TestGameStateDivisionByZero(unittest.TestCase):
         discrepancies = game_state.validate_checkpoint_consistency(narrative)
 
         # Should return empty list (no validation during character creation)
-        self.assertEqual(discrepancies, [])
+        assert discrepancies == []
 
     def test_validate_with_zero_hp_max_outside_character_creation(self):
         """Test that validation detects invalid hp_max=0 outside character creation."""
@@ -44,9 +44,9 @@ class TestGameStateDivisionByZero(unittest.TestCase):
         discrepancies = game_state.validate_checkpoint_consistency(narrative)
 
         # Should return a discrepancy about invalid HP state
-        self.assertEqual(len(discrepancies), 1)
-        self.assertIn("invalid HP state", discrepancies[0])
-        self.assertIn("hp_max should not be 0", discrepancies[0])
+        assert len(discrepancies) == 1
+        assert "invalid HP state" in discrepancies[0]
+        assert "hp_max should not be 0" in discrepancies[0]
 
     def test_validate_with_none_hp_values(self):
         """Test that validation handles None HP values gracefully."""
@@ -58,7 +58,7 @@ class TestGameStateDivisionByZero(unittest.TestCase):
         discrepancies = game_state.validate_checkpoint_consistency(narrative)
 
         # Should not crash and return empty list
-        self.assertEqual(discrepancies, [])
+        assert discrepancies == []
 
     def test_validate_with_normal_hp_values(self):
         """Test that validation works correctly with normal HP values."""
@@ -69,7 +69,7 @@ class TestGameStateDivisionByZero(unittest.TestCase):
         discrepancies = game_state.validate_checkpoint_consistency(narrative)
 
         # Should not find discrepancies (low HP matches wounded narrative)
-        self.assertEqual(discrepancies, [])
+        assert discrepancies == []
 
     def test_validate_detects_hp_narrative_mismatch(self):
         """Test that validation correctly detects HP/narrative mismatches."""
@@ -80,17 +80,14 @@ class TestGameStateDivisionByZero(unittest.TestCase):
         discrepancies = game_state.validate_checkpoint_consistency(narrative)
 
         # Should detect the mismatch (may detect multiple related issues)
-        self.assertGreaterEqual(len(discrepancies), 1)
+        assert len(discrepancies) >= 1
         # Check that at least one discrepancy mentions unconsciousness
         unconscious_discrepancy_found = False
         for discrepancy in discrepancies:
             if "unconscious" in discrepancy and "20/20" in discrepancy:
                 unconscious_discrepancy_found = True
                 break
-        self.assertTrue(
-            unconscious_discrepancy_found,
-            f"Expected unconsciousness discrepancy not found in: {discrepancies}",
-        )
+        assert unconscious_discrepancy_found, f"Expected unconsciousness discrepancy not found in: {discrepancies}"
 
     def test_validate_with_partial_character_data(self):
         """Test validation with incomplete character data (only hp_current)."""
@@ -105,7 +102,7 @@ class TestGameStateDivisionByZero(unittest.TestCase):
         discrepancies = game_state.validate_checkpoint_consistency(narrative)
 
         # Should not crash when hp_max is missing
-        self.assertEqual(discrepancies, [])
+        assert discrepancies == []
 
     def test_validate_character_creation_scenario(self):
         """Test the exact scenario from the error: character creation with hp_max=0."""
@@ -129,7 +126,7 @@ class TestGameStateDivisionByZero(unittest.TestCase):
         try:
             discrepancies = game_state.validate_checkpoint_consistency(narrative)
             # Test passes if no exception raised
-            self.assertIsInstance(discrepancies, list)
+            assert isinstance(discrepancies, list)
         except ZeroDivisionError:
             self.fail(
                 "validate_checkpoint_consistency raised ZeroDivisionError with hp_max=0"

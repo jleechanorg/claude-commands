@@ -98,7 +98,7 @@ def load_world_content_for_system_instruction():
             with self.assertRaises(FileNotFoundError) as context:
                 world_loader.load_world_content_for_system_instruction()
 
-            self.assertIn("World file not found", str(context.exception))
+            assert "World file not found" in str(context.exception)
         finally:
             sys.path.remove(self.mvp_site_dir)
 
@@ -131,13 +131,13 @@ def load_world_content_for_system_instruction():
             result = world_loader.load_world_content_for_system_instruction()
 
             # Verify content was loaded (mock returns char counts)
-            self.assertIn("Book:", result)
-            self.assertIn("World:", result)
-            self.assertIn("chars", result)
+            assert "Book:" in result
+            assert "World:" in result
+            assert "chars" in result
 
             # Verify world files exist in the copied location
-            self.assertTrue(os.path.exists("world/celestial_wars_alexiel_book.md"))
-            self.assertTrue(os.path.exists("world/world_assiah.md"))
+            assert os.path.exists("world/celestial_wars_alexiel_book.md")
+            assert os.path.exists("world/world_assiah.md")
 
         finally:
             sys.path.remove(self.mvp_site_dir)
@@ -163,8 +163,8 @@ def load_world_content_for_system_instruction():
             shutil.copytree("world", os.path.join(TARGET_DIR, "world"))
 
         # Verify the copy worked
-        self.assertTrue(os.path.exists("mvp_site/world/celestial_wars_alexiel_book.md"))
-        self.assertTrue(os.path.exists("mvp_site/world/world_assiah.md"))
+        assert os.path.exists("mvp_site/world/celestial_wars_alexiel_book.md")
+        assert os.path.exists("mvp_site/world/world_assiah.md")
 
 
 if __name__ == "__main__":

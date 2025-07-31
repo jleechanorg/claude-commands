@@ -156,9 +156,8 @@ def test_performance():
         if avg_time < 0.05:  # 50ms
             print(f"   ✅ Performance: {avg_time*1000:.2f}ms average (target: <50ms)")
             return True
-        else:
-            print(f"   ❌ Performance: {avg_time*1000:.2f}ms average (too slow)")
-            return False
+        print(f"   ❌ Performance: {avg_time*1000:.2f}ms average (too slow)")
+        return False
 
     except Exception as e:
         print(f"   ❌ Performance test error: {e}")
@@ -241,11 +240,10 @@ def main():
         print("- Handles edge cases correctly")
         print("- Reduces narrative desynchronization from 68% to <5%")
         return 0
-    else:
-        print("\n❌ SOME TESTS FAILED")
-        print("\nNote: Import issues may be due to running from wrong directory.")
-        print("Always run from project root: python3 test_prototype_from_root.py")
-        return 1
+    print("\n❌ SOME TESTS FAILED")
+    print("\nNote: Import issues may be due to running from wrong directory.")
+    print("Always run from project root: python3 test_prototype_from_root.py")
+    return 1
 
 
 if __name__ == "__main__":

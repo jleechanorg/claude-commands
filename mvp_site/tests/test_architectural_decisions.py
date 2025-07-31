@@ -34,11 +34,7 @@ class TestArchitecturalDecisions(unittest.TestCase):
         from schemas import entities_pydantic
 
         # Verify we're using Pydantic
-        self.assertIn(
-            "pydantic",
-            str(entities_pydantic.SceneManifest.__module__),
-            "SceneManifest should be using Pydantic implementation",
-        )
+        assert "pydantic" in str(entities_pydantic.SceneManifest.__module__), "SceneManifest should be using Pydantic implementation"
 
         # Verify Pydantic is in requirements since it's now the default
         req_path = os.path.join(os.path.dirname(__file__), "..", "requirements.txt")
@@ -55,17 +51,9 @@ class TestArchitecturalDecisions(unittest.TestCase):
             if f.startswith("entities") and f.endswith(".py")
         ]
 
-        self.assertEqual(
-            len(entity_files),
-            1,
-            f"Should have only Pydantic implementation, found: {entity_files}",
-        )
-        self.assertIn(
-            "entities_pydantic.py", entity_files, "Only Pydantic version should exist"
-        )
-        self.assertNotIn(
-            "entities_simple.py", entity_files, "Simple version should be removed"
-        )
+        assert len(entity_files) == 1, f"Should have only Pydantic implementation, found: {entity_files}"
+        assert "entities_pydantic.py" in entity_files, "Only Pydantic version should exist"
+        assert "entities_simple.py" not in entity_files, "Simple version should be removed"
 
     def test_adt_003_entity_tracking_imports_pydantic_module(self):
         """ADT-003: entity_tracking.py imports from Pydantic module"""
@@ -73,14 +61,10 @@ class TestArchitecturalDecisions(unittest.TestCase):
 
         # Check what module is actually imported
         manifest_module = entity_tracking.SceneManifest.__module__
-        self.assertEqual(
-            manifest_module,
-            "schemas.entities_pydantic",
-            "entity_tracking should import from schemas.entities_pydantic",
-        )
+        assert manifest_module == "schemas.entities_pydantic", "entity_tracking should import from schemas.entities_pydantic"
 
         # Verify validation type is set correctly
-        self.assertEqual(entity_tracking.VALIDATION_TYPE, "Pydantic")
+        assert entity_tracking.VALIDATION_TYPE == "Pydantic"
 
     def test_adt_004_pydantic_validation_actually_rejects_bad_data(self):
         """ADT-004: Pydantic validation actually rejects invalid data"""
@@ -97,7 +81,7 @@ class TestArchitecturalDecisions(unittest.TestCase):
             )
 
         # Verify the error is about gender validation
-        self.assertIn("Gender is required for NPCs", str(context.exception))
+        assert "Gender is required for NPCs" in str(context.exception)
 
     def test_adt_005_defensive_numeric_conversion_works(self):
         """ADT-005: DefensiveNumericConverter handles 'unknown' values gracefully"""
@@ -105,15 +89,15 @@ class TestArchitecturalDecisions(unittest.TestCase):
 
         # Test conversion of 'unknown' values
         result = DefensiveNumericConverter.convert_value("hp", "unknown")
-        self.assertEqual(result, 1, "Should convert 'unknown' to default value 1")
+        assert result == 1, "Should convert 'unknown' to default value 1"
 
         # Test conversion of valid numeric strings
         result = DefensiveNumericConverter.convert_value("hp", "25")
-        self.assertEqual(result, 25, "Should convert valid numeric string")
+        assert result == 25, "Should convert valid numeric string"
 
         # Test conversion of actual numbers
         result = DefensiveNumericConverter.convert_value("hp", 30)
-        self.assertEqual(result, 30, "Should pass through actual numbers")
+        assert result == 30, "Should pass through actual numbers"
 
     def test_adt_006_no_environment_variable_switching(self):
         """ADT-006: No environment variable switching - Pydantic is always used"""
@@ -121,8 +105,8 @@ class TestArchitecturalDecisions(unittest.TestCase):
 
         # Verify that validation type is always Pydantic regardless of environment
         info = entity_tracking.get_validation_info()
-        self.assertEqual(info["validation_type"], "Pydantic")
-        self.assertEqual(info["pydantic_available"], "true")
+        assert info["validation_type"] == "Pydantic"
+        assert info["pydantic_available"] == "true"
 
         # Verify no environment variable dependency
         import os
@@ -139,7 +123,7 @@ class TestArchitecturalDecisions(unittest.TestCase):
             import entity_tracking
 
             # Should still be Pydantic
-            self.assertEqual(entity_tracking.VALIDATION_TYPE, "Pydantic")
+            assert entity_tracking.VALIDATION_TYPE == "Pydantic"
 
         finally:
             if old_env is not None:
@@ -241,63 +225,45 @@ def broken_function(:
         result = self.arch.analyze_file_architecture(self.simple_file)
 
         # Analysis should succeed (not have 'error' key)
-        self.assertNotIn(
-            "error", result, "Should successfully analyze valid Python file"
-        )
-        self.assertEqual(result["filepath"], self.simple_file)
-        self.assertIn("size_chars", result)
-        self.assertIn("fake_patterns", result)
-        self.assertIn("fake_details", result)
-        self.assertIn("content_preview", result)
-        self.assertIn("analysis_scope", result)
+        assert "error" not in result, "Should successfully analyze valid Python file"
+        assert result["filepath"] == self.simple_file
+        assert "size_chars" in result
+        assert "fake_patterns" in result
+        assert "fake_details" in result
+        assert "content_preview" in result
+        assert "analysis_scope" in result
 
         # Verify file content is captured
-        self.assertGreater(result["size_chars"], 0, "Should have file content")
-        self.assertEqual(result["analysis_scope"], "single_file")
-        self.assertIn(
-            "def hello():",
-            result["content_preview"],
-            "Should contain function definition",
-        )
+        assert result["size_chars"] > 0, "Should have file content"
+        assert result["analysis_scope"] == "single_file"
+        assert "def hello():" in result["content_preview"], "Should contain function definition"
 
     def test_adt_008_analyze_file_architecture_syntax_error(self):
         """ADT-008: File analysis processes syntax error files as text"""
         result = self.arch.analyze_file_architecture(self.syntax_error_file)
 
         # Analysis should succeed even with syntax errors (it treats file as text)
-        self.assertNotIn(
-            "error", result, "Analysis should not fail on syntax error files"
-        )
-        self.assertGreater(result["size_chars"], 0, "Should have file content")
-        self.assertIn(
-            "def broken_function(:",
-            result["content_preview"],
-            "Should contain the broken code",
-        )
+        assert "error" not in result, "Analysis should not fail on syntax error files"
+        assert result["size_chars"] > 0, "Should have file content"
+        assert "def broken_function(:" in result["content_preview"], "Should contain the broken code"
 
     def test_adt_009_analyze_file_architecture_missing_file(self):
         """ADT-009: AST analysis handles missing files gracefully"""
         missing_file = os.path.join(self.test_dir, "nonexistent.py")
         result = self.arch.analyze_file_architecture(missing_file)
 
-        self.assertIn("error", result)
-        self.assertIn("File not found", result["error"])
+        assert "error" in result
+        assert "File not found" in result["error"]
 
     def test_adt_010_analyze_file_architecture_empty_file(self):
         """ADT-010: AST analysis handles empty files gracefully"""
         result = self.arch.analyze_file_architecture(self.empty_file)
 
         # Empty files should be processed successfully with zero content
-        self.assertNotIn("error", result, "Empty file should not cause errors")
-        self.assertEqual(result["size_chars"], 0, "Empty file should have 0 characters")
-        self.assertEqual(
-            result["fake_patterns"], 0, "Empty file should have 0 fake patterns"
-        )
-        self.assertEqual(
-            result["content_preview"],
-            "",
-            "Empty file should have empty content preview",
-        )
+        assert "error" not in result, "Empty file should not cause errors"
+        assert result["size_chars"] == 0, "Empty file should have 0 characters"
+        assert result["fake_patterns"] == 0, "Empty file should have 0 fake patterns"
+        assert result["content_preview"] == "", "Empty file should have empty content preview"
 
     def test_adt_011_calculate_cyclomatic_complexity_simple(self):
         """ADT-011: Cyclomatic complexity calculation for simple code"""
@@ -361,11 +327,9 @@ def broken_function(:
 
         formatted = self.arch.format_architecture_report(scope_data, dual_analysis)
 
-        self.assertIsInstance(formatted, str, "Should return a string")
-        self.assertGreater(len(formatted), 0, "Should have content")
-        self.assertIn(
-            "ARCHITECTURE REVIEW REPORT", formatted, "Should include analysis header"
-        )
+        assert isinstance(formatted, str), "Should return a string"
+        assert len(formatted) > 0, "Should have content"
+        assert "ARCHITECTURE REVIEW REPORT" in formatted, "Should include analysis header"
 
     def test_adt_019_analyze_project_files_multiple_files(self):
         """ADT-019: Analysis of multiple files"""
@@ -378,13 +342,13 @@ def broken_function(:
             results.append(result)
 
         # Both files should be analyzed successfully
-        self.assertEqual(len(results), 2, "Should analyze both files")
+        assert len(results) == 2, "Should analyze both files"
 
         for result in results:
-            self.assertNotIn("error", result, "Analysis should not have errors")
-            self.assertIn("filepath", result, "Should have filepath")
-            self.assertIn("size_chars", result, "Should have size info")
-            self.assertIn("fake_patterns", result, "Should have fake pattern count")
+            assert "error" not in result, "Analysis should not have errors"
+            assert "filepath" in result, "Should have filepath"
+            assert "size_chars" in result, "Should have size info"
+            assert "fake_patterns" in result, "Should have fake pattern count"
 
     def test_adt_020_variance_validation_different_outputs(self):
         """ADT-020: Variance validation - different files produce different analysis"""
@@ -392,12 +356,8 @@ def broken_function(:
         complex_result = self.arch.analyze_file_architecture(self.complex_file)
 
         # Both should succeed (not have 'error' key)
-        self.assertNotIn(
-            "error", simple_result, "Simple file analysis should not have errors"
-        )
-        self.assertNotIn(
-            "error", complex_result, "Complex file analysis should not have errors"
-        )
+        assert "error" not in simple_result, "Simple file analysis should not have errors"
+        assert "error" not in complex_result, "Complex file analysis should not have errors"
 
         # Both should have expected keys
         expected_keys = [
@@ -409,20 +369,16 @@ def broken_function(:
             "analysis_scope",
         ]
         for key in expected_keys:
-            self.assertIn(key, simple_result, f"Simple result should contain '{key}'")
-            self.assertIn(key, complex_result, f"Complex result should contain '{key}'")
+            assert key in simple_result, f"Simple result should contain '{key}'"
+            assert key in complex_result, f"Complex result should contain '{key}'"
 
         # Should have different file sizes (complexity proxy)
         simple_size = simple_result["size_chars"]
         complex_size = complex_result["size_chars"]
-        self.assertNotEqual(
-            simple_size, complex_size, "Different files should have different sizes"
-        )
+        assert simple_size != complex_size, "Different files should have different sizes"
 
         # Complex file should be larger than simple file
-        self.assertGreater(
-            complex_size, simple_size, "Complex file should be larger than simple file"
-        )
+        assert complex_size > simple_size, "Complex file should be larger than simple file"
 
 
 if __name__ == "__main__":

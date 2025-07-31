@@ -65,16 +65,10 @@ class TestSimpleJsonBugCheck(unittest.TestCase):
             print(f"Contains JSON artifacts: {has_json_artifacts}")
 
             # Test assertions
-            self.assertNotIn(
-                '"narrative":', result_text, "Should not contain JSON keys"
-            )
-            self.assertNotIn(
-                '"god_mode_response":', result_text, "Should not contain JSON keys"
-            )
-            self.assertIn(
-                "CHARACTER CREATION", result_text, "Should contain actual content"
-            )
-            self.assertIsNotNone(result_obj, "Should return valid structured response")
+            assert '"narrative":' not in result_text, "Should not contain JSON keys"
+            assert '"god_mode_response":' not in result_text, "Should not contain JSON keys"
+            assert "CHARACTER CREATION" in result_text, "Should contain actual content"
+            assert result_obj is not None, "Should return valid structured response"
 
             return True
 
@@ -111,11 +105,7 @@ class TestSimpleJsonBugCheck(unittest.TestCase):
             print(f"Contains original JSON: {malformed_json[:50] in result_text}")
 
             # Even with malformed JSON, we should not get the original JSON back
-            self.assertNotIn(
-                'malformed": "missing closing brace',
-                result_text,
-                "Should not return malformed JSON content",
-            )
+            assert 'malformed": "missing closing brace' not in result_text, "Should not return malformed JSON content"
 
         except Exception as e:
             print(f"Exception during malformed JSON parsing: {e}")

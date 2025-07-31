@@ -10,11 +10,10 @@ import sys
 import time
 
 import psutil
+import requests
 from playwright.sync_api import Browser, BrowserContext, Page, sync_playwright
 
 from testing_ui.config import BASE_URL, SCREENSHOT_DIR
-
-import requests
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -125,7 +124,8 @@ class BrowserTestBase:
     def setup_browser(self) -> tuple[Browser, BrowserContext, Page]:
         """Set up Playwright browser with standard configuration."""
         playwright = sync_playwright().start()
-        browser = playwright.chromium.launch(headless=True)
+        # FORCE headless mode for all browser tests
+        browser = playwright.chromium.launch(headless=True, args=['--no-sandbox', '--disable-dev-shm-usage'])
         context = browser.new_context()
         page = context.new_page()
 

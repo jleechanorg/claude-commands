@@ -6,10 +6,9 @@ import unittest
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
+import gemini_service
 from gemini_response import GeminiResponse
 from narrative_response_schema import NarrativeResponse, parse_structured_response
-
-import gemini_service
 
 
 class TestJSONModePreference(unittest.TestCase):
@@ -52,15 +51,13 @@ class TestJSONModePreference(unittest.TestCase):
         )
 
         # Verify JSON is preferred
-        self.assertEqual(gemini_response.state_updates["pc_data"]["gold"], 500)
-        self.assertNotEqual(gemini_response.state_updates["pc_data"]["gold"], 100)
+        assert gemini_response.state_updates["pc_data"]["gold"] == 500
+        assert gemini_response.state_updates["pc_data"]["gold"] != 100
 
     def test_no_fallback_parsing_exists(self):
         """Test that parse_llm_response_for_state_changes no longer exists"""
         # Function should not exist
-        self.assertFalse(
-            hasattr(gemini_service, "parse_llm_response_for_state_changes")
-        )
+        assert not hasattr(gemini_service, "parse_llm_response_for_state_changes")
 
         # Create response with JSON state updates
         narrative_response = NarrativeResponse(
@@ -79,7 +76,7 @@ class TestJSONModePreference(unittest.TestCase):
         proposed_changes = gemini_response.state_updates
 
         # Verify we get state updates from JSON
-        self.assertEqual(proposed_changes, self.sample_state_updates)
+        assert proposed_changes == self.sample_state_updates
 
     def test_no_state_updates_when_no_json(self):
         """Test that no state updates are available when no JSON response"""
@@ -94,7 +91,7 @@ class TestJSONModePreference(unittest.TestCase):
         proposed_changes = gemini_response.state_updates
 
         # Should be empty since there's no structured response
-        self.assertEqual(proposed_changes, {})
+        assert proposed_changes == {}
 
     def test_strip_debug_content_preserves_json_state_updates(self):
         """Test that strip_debug_content doesn't interfere with JSON state updates"""
@@ -115,10 +112,10 @@ More story."""
         stripped = strip_debug_content(text_with_debug)
 
         # Verify story is preserved but debug is removed
-        self.assertIn("Story text here", stripped)
-        self.assertIn("More story", stripped)
-        self.assertNotIn("[DEBUG_START]", stripped)
-        self.assertNotIn("Debug info", stripped)
+        assert "Story text here" in stripped
+        assert "More story" in stripped
+        assert "[DEBUG_START]" not in stripped
+        assert "Debug info" not in stripped
 
     def test_json_extraction_from_code_blocks(self):
         """Test JSON extraction from markdown code blocks"""
@@ -134,8 +131,8 @@ More story."""
 ```"""
 
         narrative, response = parse_structured_response(json_block)
-        self.assertEqual(narrative, "The story continues")
-        self.assertEqual(response.state_updates["pc_data"]["level"], 2)
+        assert narrative == "The story continues"
+        assert response.state_updates["pc_data"]["level"] == 2
 
         # Test with generic code block
         generic_block = """```
@@ -147,8 +144,8 @@ More story."""
 ```"""
 
         narrative2, response2 = parse_structured_response(generic_block)
-        self.assertEqual(narrative2, "Another story")
-        self.assertEqual(response2.state_updates["pc_data"]["mana"], 50)
+        assert narrative2 == "Another story"
+        assert response2.state_updates["pc_data"]["mana"] == 50
 
     def test_no_double_parsing(self):
         """Test that state updates aren't parsed twice"""
@@ -173,7 +170,7 @@ More story."""
         )
 
         # The JSON value should win
-        self.assertEqual(response.state_updates["pc_data"]["exp"], 200)
+        assert response.state_updates["pc_data"]["exp"] == 200
 
 
 if __name__ == "__main__":

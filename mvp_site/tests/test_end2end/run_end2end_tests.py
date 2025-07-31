@@ -17,7 +17,11 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 # Import all test modules using fully qualified imports
 from mvp_site.mvp_site.tests.test_end2end import (
     test_continue_story_end2end_fixed as test_continue_story_end2end,
+)
+from mvp_site.mvp_site.tests.test_end2end import (
     test_create_campaign_end2end_fixed as test_create_campaign_end2end,
+)
+from mvp_site.mvp_site.tests.test_end2end import (
     test_visit_campaign_end2end_fixed as test_visit_campaign_end2end,
 )
 

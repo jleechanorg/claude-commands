@@ -24,21 +24,17 @@ class TestPlanningBlockRobustness(unittest.TestCase):
     def test_null_planning_block(self):
         """Test handling of null planning block"""
         response = NarrativeResponse(narrative="Test narrative", planning_block=None)
-        self.assertEqual(response.planning_block, {})
-        self.assertIsInstance(response.planning_block, dict)
+        assert response.planning_block == {}
+        assert isinstance(response.planning_block, dict)
 
     def test_empty_string_planning_block(self):
         """Test handling of empty string planning block"""
         with self.assertLogs(level="ERROR") as cm:
             response = NarrativeResponse(narrative="Test narrative", planning_block="")
         # Empty strings are rejected and converted to empty dict
-        self.assertEqual(response.planning_block, {})
+        assert response.planning_block == {}
         # Should log error about string format no longer supported
-        self.assertTrue(
-            any(
-                "STRING PLANNING BLOCKS NO LONGER SUPPORTED" in log for log in cm.output
-            )
-        )
+        assert any("STRING PLANNING BLOCKS NO LONGER SUPPORTED" in log for log in cm.output)
 
     def test_whitespace_only_planning_block(self):
         """Test handling of whitespace-only planning block"""
@@ -47,28 +43,24 @@ class TestPlanningBlockRobustness(unittest.TestCase):
                 narrative="Test narrative", planning_block="   \n\t   "
             )
         # Whitespace-only strings are rejected and converted to empty dict
-        self.assertEqual(response.planning_block, {})
-        self.assertTrue(
-            any(
-                "STRING PLANNING BLOCKS NO LONGER SUPPORTED" in log for log in cm.output
-            )
-        )
+        assert response.planning_block == {}
+        assert any("STRING PLANNING BLOCKS NO LONGER SUPPORTED" in log for log in cm.output)
 
     def test_non_string_planning_block(self):
         """Test handling of non-string/dict planning block values"""
         # Test with integer - rejected and converted to empty dict
         with self.assertLogs(level="ERROR") as cm:
             response = NarrativeResponse(narrative="Test narrative", planning_block=123)
-        self.assertEqual(response.planning_block, {})
-        self.assertTrue(any("INVALID PLANNING BLOCK TYPE" in log for log in cm.output))
+        assert response.planning_block == {}
+        assert any("INVALID PLANNING BLOCK TYPE" in log for log in cm.output)
 
         # Test with list - rejected and converted to empty dict
         with self.assertLogs(level="ERROR") as cm:
             response = NarrativeResponse(
                 narrative="Test narrative", planning_block=["option1", "option2"]
             )
-        self.assertEqual(response.planning_block, {})
-        self.assertTrue(any("INVALID PLANNING BLOCK TYPE" in log for log in cm.output))
+        assert response.planning_block == {}
+        assert any("INVALID PLANNING BLOCK TYPE" in log for log in cm.output)
 
         # Test with valid dict - should be accepted
         valid_block = {
@@ -78,8 +70,8 @@ class TestPlanningBlockRobustness(unittest.TestCase):
         response = NarrativeResponse(
             narrative="Test narrative", planning_block=valid_block
         )
-        self.assertIsInstance(response.planning_block, dict)
-        self.assertEqual(response.planning_block["thinking"], "Test thinking")
+        assert isinstance(response.planning_block, dict)
+        assert response.planning_block["thinking"] == "Test thinking"
 
     def test_json_like_planning_block(self):
         """Test detection of JSON-like string planning blocks"""
@@ -90,13 +82,9 @@ class TestPlanningBlockRobustness(unittest.TestCase):
             )
 
         # String format is rejected
-        self.assertTrue(
-            any(
-                "STRING PLANNING BLOCKS NO LONGER SUPPORTED" in log for log in cm.output
-            )
-        )
+        assert any("STRING PLANNING BLOCKS NO LONGER SUPPORTED" in log for log in cm.output)
         # Should convert to empty dict
-        self.assertEqual(response.planning_block, {})
+        assert response.planning_block == {}
 
     def test_extremely_long_planning_block(self):
         """Test handling of very long planning blocks"""
@@ -113,8 +101,8 @@ class TestPlanningBlockRobustness(unittest.TestCase):
         )
 
         # Should preserve all choices
-        self.assertEqual(len(response.planning_block["choices"]), 100)
-        self.assertIn("choice_99", response.planning_block["choices"])
+        assert len(response.planning_block["choices"]) == 100
+        assert "choice_99" in response.planning_block["choices"]
 
     def test_null_bytes_in_planning_block(self):
         """Test handling of null bytes in planning block"""
@@ -135,25 +123,25 @@ class TestPlanningBlockRobustness(unittest.TestCase):
 
         # HTML escaping should handle null bytes
         # They get sanitized during validation
-        self.assertIsInstance(response.planning_block, dict)
+        assert isinstance(response.planning_block, dict)
 
     def test_other_structured_fields_validation(self):
         """Test validation of other structured fields"""
         # Test null session_header
         response = NarrativeResponse(narrative="Test", session_header=None)
-        self.assertEqual(response.session_header, "")
+        assert response.session_header == ""
 
         # Test non-list dice_rolls
         response = NarrativeResponse(narrative="Test", dice_rolls="not a list")
-        self.assertEqual(response.dice_rolls, [])
+        assert response.dice_rolls == []
 
         # Test list with mixed types
         response = NarrativeResponse(
             narrative="Test", dice_rolls=[1, "roll", None, {"die": 6}]
         )
-        self.assertEqual(len(response.dice_rolls), 3)  # None is filtered out
-        self.assertIn("1", response.dice_rolls)
-        self.assertIn("roll", response.dice_rolls)
+        assert len(response.dice_rolls) == 3  # None is filtered out
+        assert "1" in response.dice_rolls
+        assert "roll" in response.dice_rolls
 
     def test_to_dict_with_edge_cases(self):
         """Test to_dict method with edge case values"""
@@ -171,15 +159,15 @@ class TestPlanningBlockRobustness(unittest.TestCase):
         result = response.to_dict()
 
         # All fields should be present with safe defaults
-        self.assertEqual(result["narrative"], "Test narrative")
-        self.assertEqual(result["planning_block"], {})  # Empty dict for JSON format
-        self.assertEqual(result["session_header"], "")
-        self.assertEqual(result["dice_rolls"], [])
-        self.assertEqual(result["resources"], "")
-        self.assertEqual(result["entities_mentioned"], [])
-        self.assertEqual(result["location_confirmed"], "Unknown")
-        self.assertEqual(result["state_updates"], {})
-        self.assertEqual(result["debug_info"], {})
+        assert result["narrative"] == "Test narrative"
+        assert result["planning_block"] == {}  # Empty dict for JSON format
+        assert result["session_header"] == ""
+        assert result["dice_rolls"] == []
+        assert result["resources"] == ""
+        assert result["entities_mentioned"] == []
+        assert result["location_confirmed"] == "Unknown"
+        assert result["state_updates"] == {}
+        assert result["debug_info"] == {}
 
     def test_special_characters_in_planning_block(self):
         """Test handling of special characters"""
@@ -203,10 +191,10 @@ class TestPlanningBlockRobustness(unittest.TestCase):
 
         # Special characters should be HTML-escaped for security
         # Check that the structure is preserved
-        self.assertIn("action_script", response.planning_block["choices"])
-        self.assertIn("action_amp", response.planning_block["choices"])
+        assert "action_script" in response.planning_block["choices"]
+        assert "action_amp" in response.planning_block["choices"]
         # The actual escaping happens during validation
-        self.assertIsInstance(response.planning_block, dict)
+        assert isinstance(response.planning_block, dict)
 
     def test_valid_planning_block_structure(self):
         """Test valid JSON planning block structure"""
@@ -237,14 +225,10 @@ class TestPlanningBlockRobustness(unittest.TestCase):
         )
 
         # Should preserve the full structure
-        self.assertEqual(
-            response.planning_block["thinking"], "The player is at a crossroads"
-        )
-        self.assertEqual(len(response.planning_block["choices"]), 3)
-        self.assertIn("go_left", response.planning_block["choices"])
-        self.assertEqual(
-            response.planning_block["choices"]["go_left"]["risk_level"], "low"
-        )
+        assert response.planning_block["thinking"] == "The player is at a crossroads"
+        assert len(response.planning_block["choices"]) == 3
+        assert "go_left" in response.planning_block["choices"]
+        assert response.planning_block["choices"]["go_left"]["risk_level"] == "low"
 
 
 if __name__ == "__main__":

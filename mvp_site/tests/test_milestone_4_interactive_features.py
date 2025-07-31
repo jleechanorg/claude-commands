@@ -38,15 +38,12 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
     def test_interface_manager_js_exists(self):
         """Test that interface manager JavaScript file exists"""
         interface_manager_path = mvp_site_path / "frontend_v1/js/interface-manager.js"
-        self.assertTrue(
-            interface_manager_path.exists(),
-            "Interface manager JavaScript file should exist",
-        )
+        assert interface_manager_path.exists(), "Interface manager JavaScript file should exist"
 
         # Check file has meaningful content
         content = interface_manager_path.read_text()
-        self.assertIn("class InterfaceManager", content)
-        self.assertIn("enableModernMode", content)
+        assert "class InterfaceManager" in content
+        assert "enableModernMode" in content
         print(
             "✅ Interface Manager JavaScript file exists and contains core functionality"
         )
@@ -54,17 +51,15 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
     def test_campaign_wizard_js_exists(self):
         """Test that campaign wizard JavaScript file exists"""
         wizard_path = mvp_site_path / "frontend_v1/js/campaign-wizard.js"
-        self.assertTrue(
-            wizard_path.exists(), "Campaign wizard JavaScript file should exist"
-        )
+        assert wizard_path.exists(), "Campaign wizard JavaScript file should exist"
 
         # Check file has meaningful content
         content = wizard_path.read_text()
-        self.assertIn("class CampaignWizard", content)
-        self.assertIn("generateWizardHTML", content)
-        self.assertIn("setupStepNavigation", content)
-        self.assertIn("nextStep", content)
-        self.assertIn("previousStep", content)
+        assert "class CampaignWizard" in content
+        assert "generateWizardHTML" in content
+        assert "setupStepNavigation" in content
+        assert "nextStep" in content
+        assert "previousStep" in content
         print(
             "✅ Campaign Wizard JavaScript file exists and contains core functionality"
         )
@@ -72,16 +67,14 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
     def test_enhanced_search_js_exists(self):
         """Test that enhanced search JavaScript file exists"""
         search_path = mvp_site_path / "frontend_v1/js/enhanced-search.js"
-        self.assertTrue(
-            search_path.exists(), "Enhanced search JavaScript file should exist"
-        )
+        assert search_path.exists(), "Enhanced search JavaScript file should exist"
 
         # Check file has meaningful content
         content = search_path.read_text()
-        self.assertIn("class EnhancedSearch", content)
-        self.assertIn("setupSearchInterface", content)
-        self.assertIn("applyFilters", content)
-        self.assertIn("generateSearchHTML", content)
+        assert "class EnhancedSearch" in content
+        assert "setupSearchInterface" in content
+        assert "applyFilters" in content
+        assert "generateSearchHTML" in content
         print(
             "✅ Enhanced Search JavaScript file exists and contains core functionality"
         )
@@ -89,30 +82,30 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
     def test_interactive_features_css_exists(self):
         """Test that interactive features CSS file exists"""
         css_path = mvp_site_path / "frontend_v1/styles/interactive-features.css"
-        self.assertTrue(css_path.exists(), "Interactive features CSS file should exist")
+        assert css_path.exists(), "Interactive features CSS file should exist"
 
         # Check CSS has meaningful content
         content = css_path.read_text()
-        self.assertIn(".campaign-wizard", content)
-        self.assertIn(".search-filter-container", content)
-        self.assertIn(".personality-card", content)
-        self.assertIn(".modern-mode", content)
+        assert ".campaign-wizard" in content
+        assert ".search-filter-container" in content
+        assert ".personality-card" in content
+        assert ".modern-mode" in content
         print("✅ Interactive Features CSS file exists and contains styling rules")
 
     def test_index_html_includes_scripts(self):
         """Test that index.html includes all necessary script files"""
         index_path = mvp_site_path / "frontend_v1/index.html"
-        self.assertTrue(index_path.exists(), "index.html should exist")
+        assert index_path.exists(), "index.html should exist"
 
         content = index_path.read_text()
 
         # Check for script includes
-        self.assertIn("interface-manager.js", content)
-        self.assertIn("campaign-wizard.js", content)
-        self.assertIn("enhanced-search.js", content)
+        assert "interface-manager.js" in content
+        assert "campaign-wizard.js" in content
+        assert "enhanced-search.js" in content
 
         # Check for CSS includes
-        self.assertIn("interactive-features.css", content)
+        assert "interactive-features.css" in content
 
         print("✅ index.html includes all interactive features scripts and CSS")
 
@@ -122,9 +115,9 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         content = index_path.read_text()
 
         # Check for modern interface elements (no longer toggle, just modern)
-        self.assertIn("current-mode-icon", content)
-        self.assertIn("Settings", content)
-        self.assertIn("interface-manager.js", content)
+        assert "current-mode-icon" in content
+        assert "Settings" in content
+        assert "interface-manager.js" in content
 
         print("✅ index.html supports modern interface system")
 
@@ -137,24 +130,16 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
             content = file_path.read_text()
 
             # Check for proper class structure
-            self.assertIn(
-                "constructor()", content, f"{js_file} should have constructor"
-            )
-            self.assertIn("init()", content, f"{js_file} should have init method")
+            assert "constructor()" in content, f"{js_file} should have constructor"
+            assert "init()" in content, f"{js_file} should have init method"
 
             # Check for enabled checking (different files may implement differently)
             if js_file != "interface-manager.js":
-                self.assertIn(
-                    "checkIfEnabled", content, f"{js_file} should check if enabled"
-                )
+                assert "checkIfEnabled" in content, f"{js_file} should check if enabled"
 
             # Check for modern mode integration (interface manager might not reference itself)
             if js_file != "interface-manager.js":
-                self.assertIn(
-                    "interfaceManager",
-                    content,
-                    f"{js_file} should integrate with interface manager",
-                )
+                assert "interfaceManager" in content, f"{js_file} should integrate with interface manager"
 
         print("✅ All JavaScript files have proper structure and integration")
 
@@ -164,18 +149,18 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         content = css_path.read_text()
 
         # Check for modern mode specific selectors
-        self.assertIn(".modern-mode", content)
-        self.assertIn("body[data-interface-mode='modern']", content)
-        self.assertIn(".interactive-features-enabled", content)
+        assert ".modern-mode" in content
+        assert "body[data-interface-mode='modern']" in content
+        assert ".interactive-features-enabled" in content
 
         # Check for responsive design
-        self.assertIn("@media", content)
-        self.assertIn("max-width: 768px", content)
+        assert "@media" in content
+        assert "max-width: 768px" in content
 
         # Check for theme-specific styles
-        self.assertIn("[data-theme='dark']", content)
-        self.assertIn("[data-theme='fantasy']", content)
-        self.assertIn("[data-theme='cyberpunk']", content)
+        assert "[data-theme='dark']" in content
+        assert "[data-theme='fantasy']" in content
+        assert "[data-theme='cyberpunk']" in content
 
         print("✅ CSS has proper modern mode selectors and responsive design")
 
@@ -185,16 +170,16 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         content = wizard_path.read_text()
 
         # Check for wizard HTML elements
-        self.assertIn("campaign-wizard", content)
-        self.assertIn("wizard-progress", content)
-        self.assertIn("step-indicators", content)
-        self.assertIn("wizard-step", content)
-        self.assertIn("wizard-navigation", content)
+        assert "campaign-wizard" in content
+        assert "wizard-progress" in content
+        assert "step-indicators" in content
+        assert "wizard-step" in content
+        assert "wizard-navigation" in content
 
         # Check for step content
-        self.assertIn("Campaign Basics", content)
-        self.assertIn("AI's Expertise", content)
-        self.assertIn("Ready to Launch", content)
+        assert "Campaign Basics" in content
+        assert "AI's Expertise" in content
+        assert "Ready to Launch" in content
 
         print("✅ Campaign wizard generates proper HTML structure")
 
@@ -204,20 +189,20 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         content = search_path.read_text()
 
         # Check for search functionality
-        self.assertIn("search-filter-container", content)
-        self.assertIn("campaign-search", content)
-        self.assertIn("filter-controls", content)
-        self.assertIn("applyFilters", content)
+        assert "search-filter-container" in content
+        assert "campaign-search" in content
+        assert "filter-controls" in content
+        assert "applyFilters" in content
 
         # Check for filter types
-        self.assertIn("sort-by", content)
-        self.assertIn("theme-filter", content)
-        self.assertIn("status-filter", content)
+        assert "sort-by" in content
+        assert "theme-filter" in content
+        assert "status-filter" in content
 
         # Check for real-time features
-        self.assertIn("addEventListener", content)
-        self.assertIn("debounce", content)
-        self.assertIn("updateDisplay", content)
+        assert "addEventListener" in content
+        assert "debounce" in content
+        assert "updateDisplay" in content
 
         print("✅ Enhanced search has all required features")
 
@@ -227,16 +212,16 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         content = manager_path.read_text()
 
         # Check for feature control methods
-        self.assertIn("disableAnimations", content)
-        self.assertIn("enableAnimations", content)
-        self.assertIn("disableEnhancedComponents", content)
-        self.assertIn("enableEnhancedComponents", content)
-        self.assertIn("disableInteractiveFeatures", content)
-        self.assertIn("enableInteractiveFeatures", content)
+        assert "disableAnimations" in content
+        assert "enableAnimations" in content
+        assert "disableEnhancedComponents" in content
+        assert "enableEnhancedComponents" in content
+        assert "disableInteractiveFeatures" in content
+        assert "enableInteractiveFeatures" in content
 
         # Check for safety mechanisms
-        self.assertIn("localStorage", content)
-        self.assertIn("feature_", content)
+        assert "localStorage" in content
+        assert "feature_" in content
 
         print("✅ Interface manager has proper feature control methods")
 
@@ -250,25 +235,15 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
             content = file_path.read_text()
 
             # Check for backward compatibility checks
-            self.assertIn(
-                "checkIfEnabled", content, f"{js_file} should check if enabled"
-            )
+            assert "checkIfEnabled" in content, f"{js_file} should check if enabled"
 
             # Check that it doesn't break if interface manager isn't available
-            self.assertIn(
-                "window.interfaceManager",
-                content,
-                f"{js_file} should check for interface manager",
-            )
+            assert "window.interfaceManager" in content, f"{js_file} should check for interface manager"
 
         # Test interface manager itself has safe defaults
         manager_path = mvp_site_path / "frontend_v1/js/interface-manager.js"
         manager_content = manager_path.read_text()
-        self.assertIn(
-            "modern",
-            manager_content.lower(),
-            "Interface manager should have safe defaults",
-        )
+        assert "modern" in manager_content.lower(), "Interface manager should have safe defaults"
 
         print("✅ All features maintain backward compatibility")
 
@@ -279,20 +254,16 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         content = manager_path.read_text()
 
         # Check for safe defaults and feature control
-        self.assertIn("enableModernMode", content)
-        self.assertIn("localStorage", content)
+        assert "enableModernMode" in content
+        assert "localStorage" in content
 
         # Test features only activate in modern mode
         for js_file in ["campaign-wizard.js", "enhanced-search.js"]:
             file_path = mvp_site_path / f"frontend_v1/js/{js_file}"
             content = file_path.read_text()
 
-            self.assertIn(
-                "isModernMode", content, f"{js_file} should check for modern mode"
-            )
-            self.assertIn(
-                "disable", content, f"{js_file} should have disable functionality"
-            )
+            assert "isModernMode" in content, f"{js_file} should check for modern mode"
+            assert "disable" in content, f"{js_file} should have disable functionality"
 
         print("✅ Features use progressive enhancement and modern interface system")
 
@@ -307,12 +278,8 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         search_pos = content.find("enhanced-search.js")
 
         # Interface manager should load first
-        self.assertLess(
-            interface_pos, wizard_pos, "Interface manager should load before wizard"
-        )
-        self.assertLess(
-            interface_pos, search_pos, "Interface manager should load before search"
-        )
+        assert interface_pos < wizard_pos, "Interface manager should load before wizard"
+        assert interface_pos < search_pos, "Interface manager should load before search"
 
         print("✅ JavaScript files are loaded in correct dependency order")
 
@@ -324,14 +291,10 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         # Check for theme support (light theme is default, doesn't need explicit selectors)
         required_themes = ["dark", "fantasy", "cyberpunk"]
         for theme in required_themes:
-            self.assertIn(
-                f"[data-theme='{theme}']", content, f"Should support {theme} theme"
-            )
+            assert f"[data-theme='{theme}']" in content, f"Should support {theme} theme"
 
         # Check for no conflicts with existing classes
-        self.assertNotIn(
-            "!important", content.lower(), "Should not use !important declarations"
-        )
+        assert "!important" not in content.lower(), "Should not use !important declarations"
 
         print("✅ CSS integrates properly with existing theme system")
 
@@ -345,15 +308,11 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
 
             # Check for performance optimizations
             if "search" in js_file:
-                self.assertIn(
-                    "debounce", content.lower(), "Search should debounce input"
-                )
-                self.assertIn(
-                    "setTimeout", content, "Should use timeout for debouncing"
-                )
+                assert "debounce" in content.lower(), "Search should debounce input"
+                assert "setTimeout" in content, "Should use timeout for debouncing"
 
             # Check for efficient DOM manipulation
-            self.assertIn("querySelector", content, "Should use efficient DOM queries")
+            assert "querySelector" in content, "Should use efficient DOM queries"
 
         print("✅ Features include performance optimizations")
 
@@ -367,17 +326,17 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
         has_accessibility = (
             "role=" in content or "aria-" in content or "label" in content
         )
-        self.assertTrue(has_accessibility, "Should have some accessibility attributes")
+        assert has_accessibility, "Should have some accessibility attributes"
 
         # Check for keyboard navigation
-        self.assertIn("addEventListener", content)
+        assert "addEventListener" in content
 
         # Test CSS respects accessibility preferences
         css_path = mvp_site_path / "frontend_v1/styles/interactive-features.css"
         css_content = css_path.read_text()
 
         # Should have smooth transitions but respect reduced motion
-        self.assertIn("transition", css_content)
+        assert "transition" in css_content
 
         print("✅ Interactive features maintain accessibility standards")
 
@@ -390,7 +349,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
             content = file_path.read_text()
 
             # Check for defensive programming
-            self.assertIn("if (", content, f"{js_file} should have conditional checks")
+            assert "if (" in content, f"{js_file} should have conditional checks"
 
             # Check for safe DOM access (either getElementById or querySelector)
             has_safe_dom = (
@@ -398,9 +357,7 @@ class TestMilestone4InteractiveFeatures(unittest.TestCase):
                 or "document.querySelector" in content
                 or "?.querySelector" in content
             )
-            self.assertTrue(
-                has_safe_dom, f"{js_file} should safely access DOM elements"
-            )
+            assert has_safe_dom, f"{js_file} should safely access DOM elements"
 
         print("✅ Features include proper error handling")
 

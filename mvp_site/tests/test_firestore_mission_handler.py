@@ -27,15 +27,15 @@ class TestMissionHandler(unittest.TestCase):
         state = {"other_key": "value"}
         MissionHandler.initialize_missions_list(state, "active_missions")
 
-        self.assertIn("active_missions", state)
-        self.assertEqual(state["active_missions"], [])
+        assert "active_missions" in state
+        assert state["active_missions"] == []
 
     def test_initialize_missions_list_non_list_value(self):
         """Test initialize_missions_list when key exists but isn't a list"""
         state = {"active_missions": "not a list"}
         MissionHandler.initialize_missions_list(state, "active_missions")
 
-        self.assertEqual(state["active_missions"], [])
+        assert state["active_missions"] == []
 
     def test_initialize_missions_list_already_list(self):
         """Test initialize_missions_list when key already has a list"""
@@ -44,14 +44,14 @@ class TestMissionHandler(unittest.TestCase):
         MissionHandler.initialize_missions_list(state, "active_missions")
 
         # Should not modify existing list
-        self.assertEqual(state["active_missions"], existing_missions)
+        assert state["active_missions"] == existing_missions
 
     def test_initialize_missions_list_none_value(self):
         """Test initialize_missions_list when key has None value"""
         state = {"active_missions": None}
         MissionHandler.initialize_missions_list(state, "active_missions")
 
-        self.assertEqual(state["active_missions"], [])
+        assert state["active_missions"] == []
 
     def test_find_existing_mission_index_found(self):
         """Test find_existing_mission_index when mission exists"""
@@ -62,7 +62,7 @@ class TestMissionHandler(unittest.TestCase):
         ]
 
         index = MissionHandler.find_existing_mission_index(missions, "quest2")
-        self.assertEqual(index, 1)
+        assert index == 1
 
     def test_find_existing_mission_index_not_found(self):
         """Test find_existing_mission_index when mission doesn't exist"""
@@ -72,14 +72,14 @@ class TestMissionHandler(unittest.TestCase):
         ]
 
         index = MissionHandler.find_existing_mission_index(missions, "quest99")
-        self.assertEqual(index, -1)
+        assert index == -1
 
     def test_find_existing_mission_index_empty_list(self):
         """Test find_existing_mission_index with empty list"""
         missions = []
 
         index = MissionHandler.find_existing_mission_index(missions, "quest1")
-        self.assertEqual(index, -1)
+        assert index == -1
 
     def test_find_existing_mission_index_invalid_mission_objects(self):
         """Test find_existing_mission_index with non-dict items in list"""
@@ -92,11 +92,11 @@ class TestMissionHandler(unittest.TestCase):
 
         # Should still find valid missions
         index = MissionHandler.find_existing_mission_index(missions, "quest2")
-        self.assertEqual(index, 3)
+        assert index == 3
 
         # Invalid items are skipped
         index = MissionHandler.find_existing_mission_index(missions, "not a dict")
-        self.assertEqual(index, -1)
+        assert index == -1
 
     def test_find_existing_mission_index_missing_mission_id(self):
         """Test find_existing_mission_index when dicts lack mission_id"""
@@ -106,7 +106,7 @@ class TestMissionHandler(unittest.TestCase):
         ]
 
         index = MissionHandler.find_existing_mission_index(missions, "quest2")
-        self.assertEqual(index, 1)
+        assert index == 1
 
     @patch("logging_util.info")
     def test_process_mission_data_new_mission(self, mock_log):
@@ -119,10 +119,10 @@ class TestMissionHandler(unittest.TestCase):
         )
 
         # Mission should be added
-        self.assertEqual(len(state["active_missions"]), 1)
-        self.assertEqual(state["active_missions"][0]["mission_id"], "quest1")
-        self.assertEqual(state["active_missions"][0]["name"], "Save the Princess")
-        self.assertEqual(state["active_missions"][0]["reward"], 100)
+        assert len(state["active_missions"]) == 1
+        assert state["active_missions"][0]["mission_id"] == "quest1"
+        assert state["active_missions"][0]["name"] == "Save the Princess"
+        assert state["active_missions"][0]["reward"] == 100
 
         # Should log the addition
         mock_log.assert_called_with("Adding new mission: quest1")
@@ -142,11 +142,11 @@ class TestMissionHandler(unittest.TestCase):
         )
 
         # Mission should be updated
-        self.assertEqual(len(state["active_missions"]), 1)
-        self.assertEqual(state["active_missions"][0]["mission_id"], "quest1")
-        self.assertEqual(state["active_missions"][0]["name"], "New Name")
-        self.assertEqual(state["active_missions"][0]["status"], "active")  # Kept
-        self.assertEqual(state["active_missions"][0]["progress"], 50)  # Added
+        assert len(state["active_missions"]) == 1
+        assert state["active_missions"][0]["mission_id"] == "quest1"
+        assert state["active_missions"][0]["name"] == "New Name"
+        assert state["active_missions"][0]["status"] == "active"  # Kept
+        assert state["active_missions"][0]["progress"] == 50  # Added
 
         # Should log the update
         mock_log.assert_called_with("Updating existing mission: quest1")
@@ -162,7 +162,7 @@ class TestMissionHandler(unittest.TestCase):
         )
 
         # Should add mission_id
-        self.assertEqual(state["active_missions"][0]["mission_id"], "quest1")
+        assert state["active_missions"][0]["mission_id"] == "quest1"
 
     @patch("logging_util.warning")
     def test_handle_missions_dict_conversion(self, mock_warning):
@@ -179,9 +179,9 @@ class TestMissionHandler(unittest.TestCase):
         )
 
         # Valid missions should be added
-        self.assertEqual(len(state["active_missions"]), 2)
-        self.assertEqual(state["active_missions"][0]["mission_id"], "quest1")
-        self.assertEqual(state["active_missions"][1]["mission_id"], "quest2")
+        assert len(state["active_missions"]) == 2
+        assert state["active_missions"][0]["mission_id"] == "quest1"
+        assert state["active_missions"][1]["mission_id"] == "quest2"
 
         # Should warn about invalid data
         mock_warning.assert_called_once_with(
@@ -203,14 +203,14 @@ class TestMissionHandler(unittest.TestCase):
         )
 
         # Should convert dict to list
-        self.assertIn("active_missions", state)
-        self.assertEqual(len(state["active_missions"]), 2)
-        self.assertEqual(state["active_missions"][0]["mission_id"], "main_quest")
-        self.assertEqual(state["active_missions"][1]["mission_id"], "side_quest")
+        assert "active_missions" in state
+        assert len(state["active_missions"]) == 2
+        assert state["active_missions"][0]["mission_id"] == "main_quest"
+        assert state["active_missions"][1]["mission_id"] == "side_quest"
 
         # Should log conversion warning
         mock_warning.assert_called()
-        self.assertIn("SMART CONVERSION", mock_warning.call_args[0][0])
+        assert "SMART CONVERSION" in mock_warning.call_args[0][0]
 
         # Should not log error for dict type
         mock_error.assert_not_called()
@@ -229,7 +229,7 @@ class TestMissionHandler(unittest.TestCase):
         )
 
         # Should create empty list
-        self.assertEqual(state["active_missions"], [])
+        assert state["active_missions"] == []
 
         # Should log conversion warning and error
         mock_warning.assert_called()
@@ -242,8 +242,8 @@ class TestMissionHandler(unittest.TestCase):
         MissionHandler.handle_missions_dict_conversion(state, "active_missions", {})
 
         # Should not modify existing missions
-        self.assertEqual(len(state["active_missions"]), 1)
-        self.assertEqual(state["active_missions"][0]["mission_id"], "existing")
+        assert len(state["active_missions"]) == 1
+        assert state["active_missions"][0]["mission_id"] == "existing"
 
     @patch("logging_util.warning")
     def test_handle_missions_dict_conversion_mixed_types(self, mock_warning):
@@ -262,11 +262,11 @@ class TestMissionHandler(unittest.TestCase):
         )
 
         # Only valid mission should be added
-        self.assertEqual(len(state["active_missions"]), 1)
-        self.assertEqual(state["active_missions"][0]["mission_id"], "valid")
+        assert len(state["active_missions"]) == 1
+        assert state["active_missions"][0]["mission_id"] == "valid"
 
         # Should warn about each invalid type
-        self.assertEqual(mock_warning.call_count, 4)  # 4 invalid types
+        assert mock_warning.call_count == 4  # 4 invalid types
 
 
 if __name__ == "__main__":

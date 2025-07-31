@@ -79,10 +79,10 @@ class TestCompleteCombinedApproach(unittest.TestCase):
         manifest_text = manifest.to_prompt_format()
 
         # Should exclude hidden entities
-        self.assertIn("Gideon", expected_entities)
-        self.assertIn("Sariel", expected_entities)
-        self.assertIn("Rowan", expected_entities)
-        self.assertNotIn("Hidden Assassin", expected_entities)
+        assert "Gideon" in expected_entities
+        assert "Sariel" in expected_entities
+        assert "Rowan" in expected_entities
+        assert "Hidden Assassin" not in expected_entities
 
         # Create structured prompt injection
         structured_prompt = create_structured_prompt_injection(
@@ -90,10 +90,10 @@ class TestCompleteCombinedApproach(unittest.TestCase):
         )
 
         # Verify prompt contains all required components
-        self.assertIn("=== SCENE MANIFEST ===", structured_prompt)
-        self.assertIn("CRITICAL ENTITY TRACKING REQUIREMENT", structured_prompt)
+        assert "=== SCENE MANIFEST ===" in structured_prompt
+        assert "CRITICAL ENTITY TRACKING REQUIREMENT" in structured_prompt
         # JSON format instructions are now handled automatically by always-JSON mode
-        self.assertIn("Gideon, Sariel, Rowan", structured_prompt)
+        assert "Gideon, Sariel, Rowan" in structured_prompt
 
         print(f"   ✅ Expected entities: {expected_entities}")
         print(f"   ✅ Prompt injection created ({len(structured_prompt)} chars)")
@@ -118,16 +118,10 @@ class TestCompleteCombinedApproach(unittest.TestCase):
         narrative, structured_response = parse_structured_response(response_text)
 
         # Validate parsing
-        self.assertEqual(narrative, mock_llm_response["narrative"])
-        self.assertIsInstance(structured_response, NarrativeResponse)
-        self.assertEqual(
-            structured_response.entities_mentioned,
-            mock_llm_response["entities_mentioned"],
-        )
-        self.assertEqual(
-            structured_response.location_confirmed,
-            mock_llm_response["location_confirmed"],
-        )
+        assert narrative == mock_llm_response["narrative"]
+        assert isinstance(structured_response, NarrativeResponse)
+        assert structured_response.entities_mentioned == mock_llm_response["entities_mentioned"]
+        assert structured_response.location_confirmed == mock_llm_response["location_confirmed"]
 
         print("   ✅ JSON parsed successfully")
         print(f"   ✅ Narrative extracted ({len(narrative)} chars)")
@@ -158,11 +152,11 @@ class TestCompleteCombinedApproach(unittest.TestCase):
         )
 
         # Check validation results
-        self.assertTrue(coverage_validation["schema_valid"])
-        self.assertTrue(coverage_validation["narrative_valid"])
-        self.assertEqual(coverage_validation["coverage_rate"], 1.0)
-        self.assertEqual(len(coverage_validation["missing_from_schema"]), 0)
-        self.assertEqual(len(coverage_validation["missing_from_narrative"]), 0)
+        assert coverage_validation["schema_valid"]
+        assert coverage_validation["narrative_valid"]
+        assert coverage_validation["coverage_rate"] == 1.0
+        assert len(coverage_validation["missing_from_schema"]) == 0
+        assert len(coverage_validation["missing_from_narrative"]) == 0
 
         print(f"   ✅ Schema validation: {coverage_validation['schema_valid']}")
         print(f"   ✅ Narrative validation: {coverage_validation['narrative_valid']}")
@@ -192,9 +186,9 @@ class TestCompleteCombinedApproach(unittest.TestCase):
         )
 
         # Check validation
-        self.assertTrue(validation_result.all_entities_present)
-        self.assertEqual(len(validation_result.entities_missing), 0)
-        self.assertGreaterEqual(validation_result.confidence, 0.9)
+        assert validation_result.all_entities_present
+        assert len(validation_result.entities_missing) == 0
+        assert validation_result.confidence >= 0.9
 
         print(f"   ✅ All entities present: {validation_result.all_entities_present}")
         print(f"   ✅ Entities found: {validation_result.entities_found}")
@@ -232,9 +226,9 @@ class TestCompleteCombinedApproach(unittest.TestCase):
         print("   🎯 Overall: ✅ 100% SUCCESS")
 
         # Assert final success
-        self.assertTrue(coverage_validation["schema_valid"])
-        self.assertTrue(sync_validation.all_entities_present)
-        self.assertEqual(coverage_validation["coverage_rate"], 1.0)
+        assert coverage_validation["schema_valid"]
+        assert sync_validation.all_entities_present
+        assert coverage_validation["coverage_rate"] == 1.0
 
         print("\n🎉 Combined Approach Implementation VERIFIED!")
         print("   The Cassian Problem is SOLVED!")
@@ -249,11 +243,9 @@ class TestCompleteCombinedApproach(unittest.TestCase):
         # Parse should fall back gracefully
         narrative, structured_response = parse_structured_response(plain_text_response)
 
-        self.assertEqual(narrative, plain_text_response)
-        self.assertIsInstance(structured_response, NarrativeResponse)
-        self.assertEqual(
-            structured_response.entities_mentioned, []
-        )  # Empty for fallback
+        assert narrative == plain_text_response
+        assert isinstance(structured_response, NarrativeResponse)
+        assert structured_response.entities_mentioned == []  # Empty for fallback
 
         # Validation should still work on the narrative text
         expected_entities = ["Gideon", "Sariel", "Rowan"]
@@ -261,8 +253,8 @@ class TestCompleteCombinedApproach(unittest.TestCase):
         result = validator.validate(narrative, expected_entities)
 
         # Should detect missing entities (all entities missing in this case)
-        self.assertFalse(result.all_entities_present)
-        self.assertGreater(len(result.entities_missing), 0)
+        assert not result.all_entities_present
+        assert len(result.entities_missing) > 0
 
         print("   ✅ Graceful fallback for non-JSON response")
         print(

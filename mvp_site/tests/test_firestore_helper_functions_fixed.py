@@ -29,9 +29,9 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
         result = _truncate_log_json(data, max_lines=10)
 
         # Small data should not be truncated
-        self.assertIn("key1", result)
-        self.assertIn("key2", result)
-        self.assertNotIn("truncated", result.lower())
+        assert "key1" in result
+        assert "key2" in result
+        assert "truncated" not in result.lower()
 
     def test_truncate_log_json_large_data(self):
         """Test _truncate_log_json with data exceeding max_lines"""
@@ -45,8 +45,8 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
 
         # Result should be truncated
         lines = result.strip().split("\n")
-        self.assertEqual(len(lines), 5)
-        self.assertIn("truncated", lines[-1].lower())
+        assert len(lines) == 5
+        assert "truncated" in lines[-1].lower()
 
     def test_truncate_log_json_exact_boundary(self):
         """Test _truncate_log_json with exactly max_lines"""
@@ -57,7 +57,7 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
         result = _truncate_log_json(data, max_lines=line_count)
 
         # Should not truncate when exactly at boundary
-        self.assertNotIn("truncated", result.lower())
+        assert "truncated" not in result.lower()
 
     def test_truncate_log_json_invalid_json(self):
         """Test _truncate_log_json exception handling with non-serializable data"""
@@ -72,7 +72,7 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
         result = _truncate_log_json(data, max_lines=10)
 
         # Should contain string representation
-        self.assertIn("NonSerializable", result)
+        assert "NonSerializable" in result
 
     def test_truncate_log_json_circular_reference(self):
         """Test _truncate_log_json with circular reference"""
@@ -81,17 +81,17 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
 
         # Should handle without crashing
         result = _truncate_log_json(data, max_lines=10)
-        self.assertIsInstance(result, str)
+        assert isinstance(result, str)
 
     def test_truncate_log_json_empty_data(self):
         """Test _truncate_log_json with empty data"""
         result = _truncate_log_json({}, max_lines=10)
-        self.assertEqual(result.strip(), "{}")
+        assert result.strip() == "{}"
 
     def test_truncate_log_json_none_data(self):
         """Test _truncate_log_json with None"""
         result = _truncate_log_json(None, max_lines=10)
-        self.assertEqual(result.strip(), "null")
+        assert result.strip() == "null"
 
     # Tests for _perform_append
     @patch("logging_util.info")
@@ -101,9 +101,9 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
 
         _perform_append(target_list, "new_item", "test_key", deduplicate=False)
 
-        self.assertEqual(target_list, ["existing1", "existing2", "new_item"])
+        assert target_list == ["existing1", "existing2", "new_item"]
         mock_log.assert_called_once()
-        self.assertIn("Added 1 new items", mock_log.call_args[0][0])
+        assert "Added 1 new items" in mock_log.call_args[0][0]
 
     @patch("logging_util.info")
     def test_perform_append_list_items(self, mock_log):
@@ -113,9 +113,9 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
 
         _perform_append(target_list, items, "test_key", deduplicate=False)
 
-        self.assertEqual(target_list, ["existing", "item1", "item2", "item3"])
+        assert target_list == ["existing", "item1", "item2", "item3"]
         mock_log.assert_called_once()
-        self.assertIn("Added 3 new items", mock_log.call_args[0][0])
+        assert "Added 3 new items" in mock_log.call_args[0][0]
 
     @patch("logging_util.info")
     def test_perform_append_empty_list(self, mock_log):
@@ -124,9 +124,9 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
 
         _perform_append(target_list, [], "test_key", deduplicate=False)
 
-        self.assertEqual(target_list, ["existing"])  # Unchanged
+        assert target_list == ["existing"]  # Unchanged
         mock_log.assert_called_once()
-        self.assertIn("No new items were added", mock_log.call_args[0][0])
+        assert "No new items were added" in mock_log.call_args[0][0]
 
     @patch("logging_util.info")
     def test_perform_append_deduplicate_true(self, mock_log):
@@ -137,9 +137,9 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
         _perform_append(target_list, items, "test_key", deduplicate=True)
 
         # Only new items should be added
-        self.assertEqual(target_list, ["item1", "item2", "item3", "item4"])
+        assert target_list == ["item1", "item2", "item3", "item4"]
         mock_log.assert_called_once()
-        self.assertIn("Added 2 new items", mock_log.call_args[0][0])
+        assert "Added 2 new items" in mock_log.call_args[0][0]
 
     @patch("logging_util.info")
     def test_perform_append_deduplicate_false(self, mock_log):
@@ -150,9 +150,9 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
         _perform_append(target_list, items, "test_key", deduplicate=False)
 
         # All items added regardless of duplicates
-        self.assertEqual(target_list, ["item1", "item2", "item2", "item3", "item1"])
+        assert target_list == ["item1", "item2", "item2", "item3", "item1"]
         mock_log.assert_called_once()
-        self.assertIn("Added 3 new items", mock_log.call_args[0][0])
+        assert "Added 3 new items" in mock_log.call_args[0][0]
 
     @patch("logging_util.info")
     def test_perform_append_none_item(self, mock_log):
@@ -161,7 +161,7 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
 
         _perform_append(target_list, None, "test_key", deduplicate=False)
 
-        self.assertEqual(target_list, ["existing", None])
+        assert target_list == ["existing", None]
         mock_log.assert_called_once()
 
     @patch("logging_util.info")
@@ -172,9 +172,9 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
 
         _perform_append(target_list, items, "test_key", deduplicate=False)
 
-        self.assertEqual(len(target_list), 3)
-        self.assertEqual(target_list[1]["id"], 2)
-        self.assertEqual(target_list[2]["data"]["nested"], True)
+        assert len(target_list) == 3
+        assert target_list[1]["id"] == 2
+        assert target_list[2]["data"]["nested"] == True
 
     @patch("logging_util.info")
     def test_perform_append_deduplicate_complex_objects(self, mock_log):
@@ -189,10 +189,10 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
         _perform_append(target_list, items, "test_key", deduplicate=True)
 
         # Only obj3 should be added
-        self.assertEqual(len(target_list), 3)
-        self.assertEqual(target_list[2]["id"], 3)
+        assert len(target_list) == 3
+        assert target_list[2]["id"] == 3
         mock_log.assert_called_once()
-        self.assertIn("Added 1 new items", mock_log.call_args[0][0])
+        assert "Added 1 new items" in mock_log.call_args[0][0]
 
     def test_truncate_log_json_max_lines_parameter(self):
         """Test _truncate_log_json respects max_lines parameter"""
@@ -201,8 +201,8 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
 
         result = _truncate_log_json(data, max_lines=3)
         lines = result.strip().split("\n")
-        self.assertEqual(len(lines), 3)
-        self.assertIn("truncated", lines[-1].lower())
+        assert len(lines) == 3
+        assert "truncated" in lines[-1].lower()
 
     @patch("logging_util.info")
     def test_perform_append_all_duplicates(self, mock_log):
@@ -213,10 +213,10 @@ class TestFirestoreHelperFunctions(unittest.TestCase):
         _perform_append(target_list, items, "test_key", deduplicate=True)
 
         # No items should be added
-        self.assertEqual(target_list, ["item1", "item2", "item3"])
+        assert target_list == ["item1", "item2", "item3"]
         mock_log.assert_called_once()
-        self.assertIn("No new items were added", mock_log.call_args[0][0])
-        self.assertIn("duplicates may have been found", mock_log.call_args[0][0])
+        assert "No new items were added" in mock_log.call_args[0][0]
+        assert "duplicates may have been found" in mock_log.call_args[0][0]
 
 
 if __name__ == "__main__":

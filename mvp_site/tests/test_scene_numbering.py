@@ -62,20 +62,20 @@ class TestSceneNumbering(unittest.TestCase):
             entry["timestamp"] = entry["timestamp"].isoformat()
 
         # Verify sequence_ids increment for all entries
-        self.assertEqual(mock_story_entries[0]["sequence_id"], 1)  # user
-        self.assertEqual(mock_story_entries[1]["sequence_id"], 2)  # gemini
-        self.assertEqual(mock_story_entries[2]["sequence_id"], 3)  # user
-        self.assertEqual(mock_story_entries[3]["sequence_id"], 4)  # gemini
-        self.assertEqual(mock_story_entries[4]["sequence_id"], 5)  # user
-        self.assertEqual(mock_story_entries[5]["sequence_id"], 6)  # gemini
+        assert mock_story_entries[0]["sequence_id"] == 1  # user
+        assert mock_story_entries[1]["sequence_id"] == 2  # gemini
+        assert mock_story_entries[2]["sequence_id"] == 3  # user
+        assert mock_story_entries[3]["sequence_id"] == 4  # gemini
+        assert mock_story_entries[4]["sequence_id"] == 5  # user
+        assert mock_story_entries[5]["sequence_id"] == 6  # gemini
 
         # Verify user_scene_number only increments for gemini responses
-        self.assertIsNone(mock_story_entries[0]["user_scene_number"])  # user - None
-        self.assertEqual(mock_story_entries[1]["user_scene_number"], 1)  # gemini - 1
-        self.assertIsNone(mock_story_entries[2]["user_scene_number"])  # user - None
-        self.assertEqual(mock_story_entries[3]["user_scene_number"], 2)  # gemini - 2
-        self.assertIsNone(mock_story_entries[4]["user_scene_number"])  # user - None
-        self.assertEqual(mock_story_entries[5]["user_scene_number"], 3)  # gemini - 3
+        assert mock_story_entries[0]["user_scene_number"] is None  # user - None
+        assert mock_story_entries[1]["user_scene_number"] == 1  # gemini - 1
+        assert mock_story_entries[2]["user_scene_number"] is None  # user - None
+        assert mock_story_entries[3]["user_scene_number"] == 2  # gemini - 2
+        assert mock_story_entries[4]["user_scene_number"] is None  # user - None
+        assert mock_story_entries[5]["user_scene_number"] == 3  # gemini - 3
 
         print("✓ User scene numbers correctly increment only for AI responses")
         print("✓ Sequence IDs increment for all entries")

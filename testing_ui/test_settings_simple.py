@@ -3,8 +3,10 @@
 Simple browser test to debug settings page loading
 """
 
-from playwright.sync_api import sync_playwright
 import os
+
+from playwright.sync_api import sync_playwright
+
 
 def test_settings_simple():
     with sync_playwright() as p:

@@ -5,44 +5,29 @@ This will show us exactly where fields are located.
 """
 
 import json
-import os
-import signal
-import subprocess
-import sys
 import time
+import traceback
 
 import requests
 
 from testing_ui.config import BASE_URL
 
-import traceback
-
 
 def test_api_structure():
-    # Start test server
-    print("Starting test server on port 8088...")
-    env = os.environ.copy()
-    env["TESTING"] = "true"
-    env["PORT"] = "8088"
-    server = subprocess.Popen(
-        ["python", "mvp_site/main.py", "serve"],
-        env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
-    # Wait for server
-    time.sleep(5)
+    # Use existing server (started by run_ui_tests.sh)
+    print("Using existing test server...")
 
     # Verify server is up
     for i in range(10):
         try:
-            requests.get(f"{BASE_URL}/health")
-            break
+            response = requests.get(f"{BASE_URL}")
+            if response.status_code == 200:
+                print("✅ Server is responding")
+                break
         except:
             if i == 9:
-                print("Server failed to start!")
-                sys.exit(1)
+                print("❌ Server not responding!")
+                return False
             time.sleep(1)
 
     try:
@@ -64,7 +49,7 @@ def test_api_structure():
         print(f"Campaign creation response: {campaign_data}")
         if "error" in campaign_data:
             print(f"Error creating campaign: {campaign_data['error']}")
-            return
+            return None
         campaign_id = campaign_data.get("campaign_id")
 
         # Test interaction
@@ -152,13 +137,7 @@ def test_api_structure():
 
     except Exception as e:
         print(f"Error: {e}")
-
-
         traceback.print_exc()
-    finally:
-        # Cleanup
-        os.kill(server.pid, signal.SIGTERM)
-        server.wait()
 
 
 if __name__ == "__main__":

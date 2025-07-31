@@ -48,10 +48,10 @@ class TestTimePressure(unittest.TestCase):
     def test_time_sensitive_events_tracked(self):
         """Test that events with deadlines are properly tracked in game state"""
         # Verify time pressure structures exist in game state
-        self.assertTrue(hasattr(self.game_state, "time_sensitive_events"))
-        self.assertTrue(hasattr(self.game_state, "npc_agendas"))
-        self.assertTrue(hasattr(self.game_state, "world_resources"))
-        self.assertTrue(hasattr(self.game_state, "time_pressure_warnings"))
+        assert hasattr(self.game_state, "time_sensitive_events")
+        assert hasattr(self.game_state, "npc_agendas")
+        assert hasattr(self.game_state, "world_resources")
+        assert hasattr(self.game_state, "time_pressure_warnings")
 
         # Add a time-sensitive event
         event_id = "rescue_merchant"
@@ -75,11 +75,8 @@ class TestTimePressure(unittest.TestCase):
         self.game_state.time_sensitive_events[event_id] = event_data
 
         # Verify event is tracked
-        self.assertIn(event_id, self.game_state.time_sensitive_events)
-        self.assertEqual(
-            self.game_state.time_sensitive_events[event_id]["description"],
-            event_data["description"],
-        )
+        assert event_id in self.game_state.time_sensitive_events
+        assert self.game_state.time_sensitive_events[event_id]["description"] == event_data["description"]
 
     def test_npc_agenda_progression(self):
         """Test that NPCs have agendas that progress over time"""
@@ -101,14 +98,9 @@ class TestTimePressure(unittest.TestCase):
         self.game_state.npc_agendas[npc_name] = agenda_data
 
         # Verify agenda is tracked
-        self.assertIn(npc_name, self.game_state.npc_agendas)
-        self.assertEqual(
-            self.game_state.npc_agendas[npc_name]["current_goal"],
-            agenda_data["current_goal"],
-        )
-        self.assertEqual(
-            self.game_state.npc_agendas[npc_name]["progress_percentage"], 30
-        )
+        assert npc_name in self.game_state.npc_agendas
+        assert self.game_state.npc_agendas[npc_name]["current_goal"] == agenda_data["current_goal"]
+        assert self.game_state.npc_agendas[npc_name]["progress_percentage"] == 30
 
     def test_deadline_consequences(self):
         """Test that missing a deadline triggers consequences"""
@@ -135,7 +127,7 @@ class TestTimePressure(unittest.TestCase):
         deadline_day = past_event["deadline"]["day"]
 
         # Verify deadline is in the past
-        self.assertGreater(current_day, deadline_day)
+        assert current_day > deadline_day
 
     def test_warning_generation(self):
         """Test warning generation at different urgency levels"""
@@ -166,10 +158,8 @@ class TestTimePressure(unittest.TestCase):
         }
 
         # Verify warning structure exists
-        self.assertIn(event_id, self.game_state.time_pressure_warnings)
-        self.assertFalse(
-            self.game_state.time_pressure_warnings[event_id]["subtle_given"]
-        )
+        assert event_id in self.game_state.time_pressure_warnings
+        assert not self.game_state.time_pressure_warnings[event_id]["subtle_given"]
 
     def test_world_resource_depletion(self):
         """Test that world resources deplete at specified rates"""
@@ -188,26 +178,22 @@ class TestTimePressure(unittest.TestCase):
         self.game_state.world_resources[resource_id] = resource_data
 
         # Verify resource is tracked
-        self.assertIn(resource_id, self.game_state.world_resources)
-        self.assertEqual(
-            self.game_state.world_resources[resource_id]["current_amount"], 100
-        )
-        self.assertEqual(
-            self.game_state.world_resources[resource_id]["depletion_rate"], 5
-        )
+        assert resource_id in self.game_state.world_resources
+        assert self.game_state.world_resources[resource_id]["current_amount"] == 100
+        assert self.game_state.world_resources[resource_id]["depletion_rate"] == 5
 
     def test_time_advancement(self):
         """Test that different actions advance time appropriately"""
         # Verify world time structure exists
-        self.assertIn("world_time", self.game_state.world_data)
+        assert "world_time" in self.game_state.world_data
 
         initial_time = self.game_state.world_data["world_time"].copy()
 
         # Verify initial time
-        self.assertEqual(initial_time["year"], 1492)
-        self.assertEqual(initial_time["month"], "Ches")
-        self.assertEqual(initial_time["day"], 20)
-        self.assertEqual(initial_time["hour"], 12)
+        assert initial_time["year"] == 1492
+        assert initial_time["month"] == "Ches"
+        assert initial_time["day"] == 20
+        assert initial_time["hour"] == 12
 
         # Test time cost constants from narrative system instruction
         # Combat: 6 seconds per round
@@ -218,9 +204,9 @@ class TestTimePressure(unittest.TestCase):
         long_rest_hours = 8
 
         # Verify these are the expected values
-        self.assertEqual(combat_seconds_per_round, 6)
-        self.assertEqual(short_rest_hours, 1)
-        self.assertEqual(long_rest_hours, 8)
+        assert combat_seconds_per_round == 6
+        assert short_rest_hours == 1
+        assert long_rest_hours == 8
 
     def test_initial_game_state_has_time_pressure_structures(self):
         """Test that new game states are created with time pressure structures"""
@@ -231,16 +217,16 @@ class TestTimePressure(unittest.TestCase):
         state_dict = new_game_state.to_dict()
 
         # Verify time pressure structures are initialized
-        self.assertIn("time_sensitive_events", state_dict)
-        self.assertIn("npc_agendas", state_dict)
-        self.assertIn("world_resources", state_dict)
-        self.assertIn("time_pressure_warnings", state_dict)
+        assert "time_sensitive_events" in state_dict
+        assert "npc_agendas" in state_dict
+        assert "world_resources" in state_dict
+        assert "time_pressure_warnings" in state_dict
 
         # Verify they are initialized as empty dicts
-        self.assertEqual(state_dict["time_sensitive_events"], {})
-        self.assertEqual(state_dict["npc_agendas"], {})
-        self.assertEqual(state_dict["world_resources"], {})
-        self.assertEqual(state_dict["time_pressure_warnings"], {})
+        assert state_dict["time_sensitive_events"] == {}
+        assert state_dict["npc_agendas"] == {}
+        assert state_dict["world_resources"] == {}
+        assert state_dict["time_pressure_warnings"] == {}
 
 
 if __name__ == "__main__":

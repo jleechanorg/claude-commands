@@ -1,17 +1,16 @@
 """Tests for the task dispatcher system."""
 
 import os
+import sys
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
-import sys
-import json
 
 # Add orchestration directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+from fixtures import mock_claude_fixture, mock_tmux_fixture
 from task_dispatcher import TaskDispatcher
-from fixtures import mock_tmux_fixture, mock_claude_fixture
 
 
 class TestTaskDispatcher(unittest.TestCase):

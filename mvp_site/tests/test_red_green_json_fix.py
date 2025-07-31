@@ -73,21 +73,13 @@ class TestRedGreenJSONFix(unittest.TestCase):
         print(f"Returned narrative: {narrative[:100]}...")
 
         # With the fix, these pass. Without it, they would fail.
-        self.assertNotIn(
-            '"narrative":', narrative, "BUG: Raw JSON structure visible to user!"
-        )
-        self.assertNotIn(
-            '"entities_mentioned":',
-            narrative,
-            "BUG: Raw JSON structure visible to user!",
-        )
-        self.assertNotIn(
-            '"state_updates":', narrative, "BUG: Raw JSON structure visible to user!"
-        )
+        assert '"narrative":' not in narrative, "BUG: Raw JSON structure visible to user!"
+        assert '"entities_mentioned":' not in narrative, "BUG: Raw JSON structure visible to user!"
+        assert '"state_updates":' not in narrative, "BUG: Raw JSON structure visible to user!"
 
         # The narrative should be extracted, not the whole JSON
-        self.assertIn("Scene #14", narrative)
-        self.assertIn("DM MODE", narrative)
+        assert "Scene #14" in narrative
+        assert "DM MODE" in narrative
 
         print("✓ GREEN: JSON properly parsed, narrative extracted")
 
@@ -104,17 +96,13 @@ class TestRedGreenJSONFix(unittest.TestCase):
         print(f"Returned narrative: {narrative[:100]}...")
 
         # These would fail without the fix
-        self.assertNotIn(
-            "```json", narrative, "BUG: Markdown formatting visible to user!"
-        )
-        self.assertNotIn("```", narrative, "BUG: Code block markers visible to user!")
-        self.assertNotIn(
-            '"narrative":', narrative, "BUG: JSON structure visible to user!"
-        )
+        assert "```json" not in narrative, "BUG: Markdown formatting visible to user!"
+        assert "```" not in narrative, "BUG: Code block markers visible to user!"
+        assert '"narrative":' not in narrative, "BUG: JSON structure visible to user!"
 
         # Should extract the actual narrative
-        self.assertIn("Understanding confirmed", narrative)
-        self.assertIn("DM MODE", narrative)
+        assert "Understanding confirmed" in narrative
+        assert "DM MODE" in narrative
 
         print("✓ GREEN: Markdown unwrapped, JSON parsed correctly")
 
@@ -131,14 +119,12 @@ class TestRedGreenJSONFix(unittest.TestCase):
         print(f"Returned narrative: {narrative[:100]}...")
 
         # Without the fix, would show the broken JSON
-        self.assertNotIn(
-            "Some text before", narrative, "BUG: Non-narrative text visible!"
-        )
-        self.assertNotIn('{"narrative":', narrative, "BUG: JSON syntax visible!")
-        self.assertNotIn('"entities_', narrative, "BUG: Broken JSON visible!")
+        assert "Some text before" not in narrative, "BUG: Non-narrative text visible!"
+        assert '{"narrative":' not in narrative, "BUG: JSON syntax visible!"
+        assert '"entities_' not in narrative, "BUG: Broken JSON visible!"
 
         # Should extract just the narrative part
-        self.assertEqual(narrative, "The story continues")
+        assert narrative == "The story continues"
 
         print("✓ GREEN: Narrative extracted from partial JSON")
 
@@ -155,13 +141,13 @@ class TestRedGreenJSONFix(unittest.TestCase):
         print(f"Returned narrative: {repr(narrative[:100])}...")
 
         # Without proper handling, would show escape sequences
-        self.assertNotIn("\\n", narrative, "BUG: Escape sequences visible!")
-        self.assertNotIn('\\"', narrative, "BUG: Escaped quotes visible!")
+        assert "\\n" not in narrative, "BUG: Escape sequences visible!"
+        assert '\\"' not in narrative, "BUG: Escaped quotes visible!"
 
         # Should have actual newlines and quotes
-        self.assertIn("\n", narrative)
-        self.assertIn('"Hello!"', narrative)
-        self.assertEqual(narrative.count("\n"), 2)
+        assert "\n" in narrative
+        assert '"Hello!"' in narrative
+        assert narrative.count("\n") == 2
 
         print("✓ GREEN: Escape sequences properly converted")
 
@@ -187,18 +173,18 @@ class TestRedGreenJSONFix(unittest.TestCase):
                 narrative, response = parse_structured_response(test_input)
 
                 # Core fix validation: NO JSON VISIBLE TO USER
-                self.assertNotIn('"narrative":', narrative)
-                self.assertNotIn('"entities_mentioned":', narrative)
-                self.assertNotIn('"location_confirmed":', narrative)
-                self.assertNotIn('"state_updates":', narrative)
-                self.assertNotIn("```", narrative)
-                self.assertNotIn("{", narrative)
-                self.assertNotIn("}", narrative)
+                assert '"narrative":' not in narrative
+                assert '"entities_mentioned":' not in narrative
+                assert '"location_confirmed":' not in narrative
+                assert '"state_updates":' not in narrative
+                assert "```" not in narrative
+                assert "{" not in narrative
+                assert "}" not in narrative
 
                 # Response object is valid
-                self.assertIsInstance(response, NarrativeResponse)
-                self.assertIsInstance(narrative, str)
-                self.assertTrue(len(narrative) > 0)
+                assert isinstance(response, NarrativeResponse)
+                assert isinstance(narrative, str)
+                assert len(narrative) > 0
 
                 print(f"  ✓ {name}: Clean narrative extracted")
 
@@ -229,16 +215,16 @@ class TestRedGreenJSONFix(unittest.TestCase):
         print(f"\nBUG OUTPUT (what users saw):\n{bug_output}\n")
 
         # This is what caused the bug report
-        self.assertIn("```json", bug_output, "This is the bug!")
-        self.assertIn('"narrative":', bug_output, "Raw JSON visible!")
+        assert "```json" in bug_output, "This is the bug!"
+        assert '"narrative":' in bug_output, "Raw JSON visible!"
 
         # Now show the fix
         fixed_narrative, _ = parse_structured_response(self.markdown_wrapped_json)
         print(f"\nFIXED OUTPUT (what users see now):\n{fixed_narrative}\n")
 
         # No JSON visible with the fix
-        self.assertNotIn("```json", fixed_narrative)
-        self.assertNotIn('"narrative":', fixed_narrative)
+        assert "```json" not in fixed_narrative
+        assert '"narrative":' not in fixed_narrative
 
         print("✓ Bug fixed: Users only see narrative text!")
 

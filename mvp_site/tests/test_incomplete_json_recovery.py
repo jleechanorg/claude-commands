@@ -28,12 +28,10 @@ class TestIncompleteJsonRecovery(unittest.TestCase):
 
         narrative, response_obj = parse_structured_response(complete_json)
 
-        self.assertEqual(
-            narrative, "The knight entered the throne room.\nThe king awaited."
-        )
-        self.assertIsInstance(response_obj, NarrativeResponse)
-        self.assertEqual(response_obj.entities_mentioned, ["knight", "king"])
-        self.assertEqual(response_obj.location_confirmed, "throne room")
+        assert narrative == "The knight entered the throne room.\nThe king awaited."
+        assert isinstance(response_obj, NarrativeResponse)
+        assert response_obj.entities_mentioned == ["knight", "king"]
+        assert response_obj.location_confirmed == "throne room"
 
     def test_parse_incomplete_json_missing_closing_quote(self):
         """Test recovering from JSON with missing closing quote on narrative"""
@@ -44,9 +42,9 @@ class TestIncompleteJsonRecovery(unittest.TestCase):
             narrative, response_obj = parse_structured_response(incomplete_json)
 
         # Should recover the narrative
-        self.assertIn("The knight entered the throne room", narrative)
-        self.assertIn("The king awaited", narrative)
-        self.assertIn("Suddenly, a loud crash", narrative)
+        assert "The knight entered the throne room" in narrative
+        assert "The king awaited" in narrative
+        assert "Suddenly, a loud crash" in narrative
 
         # Verify that incomplete JSON was successfully recovered
         # (The actual logging happens in RobustJSONParser, not this module)
@@ -60,10 +58,10 @@ class TestIncompleteJsonRecovery(unittest.TestCase):
         with patch("narrative_response_schema.logging_util") as mock_logging:
             narrative, response_obj = parse_structured_response(incomplete_json)
 
-        self.assertEqual(narrative, "The adventure begins here.")
-        self.assertIsInstance(response_obj, NarrativeResponse)
+        assert narrative == "The adventure begins here."
+        assert isinstance(response_obj, NarrativeResponse)
         # Entities might not be recovered from incomplete JSON
-        self.assertEqual(response_obj.location_confirmed, "Unknown")
+        assert response_obj.location_confirmed == "Unknown"
 
     def test_parse_truncated_in_middle_of_narrative(self):
         """Test recovering from JSON truncated in the middle of narrative text"""
@@ -74,17 +72,17 @@ class TestIncompleteJsonRecovery(unittest.TestCase):
             narrative, response_obj = parse_structured_response(truncated_json)
 
         # Should recover all the narrative content
-        self.assertIn("SESSION_HEADER", narrative)
-        self.assertIn("Sir Andrew ignored Gareth's probing question", narrative)
-        self.assertIn("Kiera spat on the ground", narrative)
-        self.assertIn("She squinted at the mountains.", narrative)
+        assert "SESSION_HEADER" in narrative
+        assert "Sir Andrew ignored Gareth's probing question" in narrative
+        assert "Kiera spat on the ground" in narrative
+        assert "She squinted at the mountains." in narrative
 
         # Check that newlines are properly unescaped
-        self.assertIn("\n", narrative)
-        self.assertNotIn("\\n", narrative)
+        assert "\n" in narrative
+        assert "\\n" not in narrative
 
         # Check that quotes are properly unescaped
-        self.assertIn('"Report,"', narrative)
+        assert '"Report,"' in narrative
 
         # Logging happens in the RobustJSONParser, not in narrative_response_schema
         # The test should verify functionality, not internal logging
@@ -95,19 +93,19 @@ class TestIncompleteJsonRecovery(unittest.TestCase):
 
         narrative, response_obj = parse_structured_response(plain_text)
 
-        self.assertEqual(narrative, plain_text)
-        self.assertIsInstance(response_obj, NarrativeResponse)
-        self.assertEqual(response_obj.entities_mentioned, [])
-        self.assertEqual(response_obj.location_confirmed, "Unknown")
+        assert narrative == plain_text
+        assert isinstance(response_obj, NarrativeResponse)
+        assert response_obj.entities_mentioned == []
+        assert response_obj.location_confirmed == "Unknown"
 
     def test_parse_empty_response(self):
         """Test handling empty response"""
         narrative, response_obj = parse_structured_response("")
 
         # Empty response should return a default narrative
-        self.assertTrue(len(narrative) >= 20)  # Should meet minimum length
-        self.assertIsInstance(response_obj, NarrativeResponse)
-        self.assertEqual(response_obj.entities_mentioned, [])
+        assert len(narrative) >= 20  # Should meet minimum length
+        assert isinstance(response_obj, NarrativeResponse)
+        assert response_obj.entities_mentioned == []
 
     def test_parse_json_with_entities_partial(self):
         """Test recovering entities from partially complete JSON"""
@@ -119,7 +117,7 @@ class TestIncompleteJsonRecovery(unittest.TestCase):
         with patch("narrative_response_schema.logging_util") as mock_logging:
             narrative, response_obj = parse_structured_response(partial_json)
 
-        self.assertEqual(narrative, "The hero met the wizard.")
+        assert narrative == "The hero met the wizard."
         # Current implementation may not recover entities from incomplete JSON
         # This is acceptable as narrative recovery is the priority
 
@@ -132,12 +130,12 @@ class TestIncompleteJsonRecovery(unittest.TestCase):
         narrative, response_obj = parse_structured_response(json_with_escapes)
 
         # Check proper unescaping
-        self.assertIn('"Hello!"', narrative)  # Escaped quotes
-        self.assertIn("\n", narrative)  # Newline
-        self.assertIn("\t", narrative)  # Tab
-        self.assertIn("\\", narrative)  # Backslash
-        self.assertNotIn('\\"', narrative)  # Should not have escaped quotes
-        self.assertNotIn("\\n", narrative)  # Should not have escaped newline
+        assert '"Hello!"' in narrative  # Escaped quotes
+        assert "\n" in narrative  # Newline
+        assert "\t" in narrative  # Tab
+        assert "\\" in narrative  # Backslash
+        assert '\\"' not in narrative  # Should not have escaped quotes
+        assert "\\n" not in narrative  # Should not have escaped newline
 
     def test_malformed_json_with_syntax_errors(self):
         """Test handling malformed JSON with syntax errors"""
@@ -148,7 +146,7 @@ class TestIncompleteJsonRecovery(unittest.TestCase):
             narrative, response_obj = parse_structured_response(malformed)
 
         # Should at least extract the narrative part
-        self.assertEqual(narrative, "Test malformed JSON with syntax errors")
+        assert narrative == "Test malformed JSON with syntax errors"
 
     def test_json_with_extra_text_around_it(self):
         """Test parsing JSON with extra text before/after"""
@@ -163,9 +161,9 @@ class TestIncompleteJsonRecovery(unittest.TestCase):
         narrative, response_obj = parse_structured_response(wrapped_json)
 
         # Should extract the JSON part
-        self.assertEqual(narrative, "The story begins here.")
-        self.assertEqual(response_obj.entities_mentioned, ["protagonist"])
-        self.assertEqual(response_obj.location_confirmed, "village")
+        assert narrative == "The story begins here."
+        assert response_obj.entities_mentioned == ["protagonist"]
+        assert response_obj.location_confirmed == "village"
 
 
 if __name__ == "__main__":

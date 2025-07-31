@@ -6,19 +6,15 @@ Monitors agent health, handles failures, and provides auto-recovery
 
 import json
 import os
+import shutil
 import subprocess
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-# Redis removed - using file-based health monitoring
-
-import shutil
-
 # Import shared utilities from task_dispatcher
 from task_dispatcher import get_tmux_config_path
-
 
 @dataclass
 class AgentStatus:

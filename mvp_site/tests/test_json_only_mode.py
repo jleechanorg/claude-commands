@@ -7,11 +7,10 @@ from unittest.mock import Mock, patch
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-from gemini_response import GeminiResponse
-from narrative_response_schema import parse_structured_response
-
 import gemini_service
 from game_state import GameState
+from gemini_response import GeminiResponse
+from narrative_response_schema import parse_structured_response
 
 
 class TestJSONOnlyMode(unittest.TestCase):
@@ -44,10 +43,10 @@ class TestJSONOnlyMode(unittest.TestCase):
             # Verify JSON mode was used
             call_args = mock_client.models.generate_content.call_args
             # The config is passed under 'config' key
-            self.assertIn("config", call_args[1])
+            assert "config" in call_args[1]
             config_obj = call_args[1]["config"]
             # Check the config object attributes
-            self.assertEqual(config_obj.response_mime_type, "application/json")
+            assert config_obj.response_mime_type == "application/json"
 
     def test_main_py_no_fallback_parsing(self):
         """Test that main.py doesn't have fallback regex parsing"""
@@ -67,17 +66,15 @@ class TestJSONOnlyMode(unittest.TestCase):
         proposed_changes = mock_response.state_updates
 
         # Should be empty since there's no structured response
-        self.assertEqual(proposed_changes, {})
+        assert proposed_changes == {}
 
     def test_no_regex_state_update_extraction(self):
         """Test that STATE_UPDATES_PROPOSED regex extraction is removed"""
         # The parse_llm_response_for_state_changes function should not exist
-        self.assertFalse(
-            hasattr(gemini_service, "parse_llm_response_for_state_changes")
-        )
+        assert not hasattr(gemini_service, "parse_llm_response_for_state_changes")
 
         # The helper function should also not exist
-        self.assertFalse(hasattr(gemini_service, "_clean_markdown_from_json"))
+        assert not hasattr(gemini_service, "_clean_markdown_from_json")
 
     def test_always_structured_response_required(self):
         """Test that a structured response is always required"""
@@ -89,7 +86,7 @@ class TestJSONOnlyMode(unittest.TestCase):
         )
 
         # Should return empty dict, not parse from text
-        self.assertEqual(response.state_updates, {})
+        assert response.state_updates == {}
 
     def test_generation_config_always_includes_json(self):
         """Test that generation config always includes JSON response format"""
@@ -131,11 +128,7 @@ class TestJSONOnlyMode(unittest.TestCase):
                         call_args = mock_client.models.generate_content.call_args
                         if "generation_config" in call_args[1]:
                             config = call_args[1]["generation_config"]
-                            self.assertEqual(
-                                config.response_mime_type,
-                                "application/json",
-                                f"{test_name} should use JSON mode",
-                            )
+                            assert config.response_mime_type == "application/json", f"{test_name} should use JSON mode"
 
     def test_robust_json_parser_is_only_fallback(self):
         """Test that robust JSON parser is the only fallback for malformed JSON"""
@@ -147,7 +140,7 @@ class TestJSONOnlyMode(unittest.TestCase):
         narrative, response = parse_structured_response(malformed)
 
         # Should extract narrative but NOT try to parse STATE_UPDATES_PROPOSED blocks
-        self.assertEqual(narrative, "test")
+        assert narrative == "test"
 
     def test_strip_functions_dont_affect_state_parsing(self):
         """Test that strip functions are only for display, not state extraction"""
@@ -162,7 +155,7 @@ class TestJSONOnlyMode(unittest.TestCase):
 
         # Stripping should only affect display
         stripped = strip_state_updates_only(text_with_state_block)
-        self.assertNotIn("STATE_UPDATES_PROPOSED", stripped)
+        assert "STATE_UPDATES_PROPOSED" not in stripped
 
         # But this should NOT be used for parsing state updates
         # State updates come ONLY from JSON response

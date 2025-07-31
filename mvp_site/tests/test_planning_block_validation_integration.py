@@ -54,7 +54,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
                         self.structured_response,
                     )
                     # Should not crash and should detect character creation
-                    self.assertTrue(True)  # If we get here, it didn't crash
+                    assert True  # If we get here, it didn't crash
                 except Exception as e:
                     self.fail(
                         f"Character creation detection crashed with case variation: {e}"
@@ -96,12 +96,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         )
 
         # Verify API response logging was called
-        self.assertTrue(
-            any(
-                "🔍 PLANNING_BLOCK_PROMPT:" in str(call)
-                for call in mock_logging.info.call_args_list
-            )
-        )
+        assert any("🔍 PLANNING_BLOCK_PROMPT:" in str(call) for call in mock_logging.info.call_args_list)
 
     @patch("gemini_service.logging_util")
     @patch("gemini_service._call_gemini_api")
@@ -133,7 +128,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         mock_call_api.assert_not_called()
 
         # Verify response_text is returned unchanged
-        self.assertEqual(result, response_text)
+        assert result == response_text
 
     @patch("gemini_service.logging_util")
     @patch("gemini_service._call_gemini_api")
@@ -169,7 +164,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             in str(call)
             for call in mock_logging.info.call_args_list
         )
-        self.assertTrue(success_log_found, "Should log validation success")
+        assert success_log_found, "Should log validation success"
 
     @patch("gemini_service.logging_util")
     @patch("gemini_service._call_gemini_api")
@@ -209,9 +204,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
                 expected_log in str(call)
                 for call in mock_logging.warning.call_args_list
             )
-            self.assertTrue(
-                failure_log_found, f"Should log validation failure: {expected_log}"
-            )
+            assert failure_log_found, f"Should log validation failure: {expected_log}"
 
     @patch("gemini_service.logging_util")
     @patch("gemini_service._call_gemini_api")
@@ -244,9 +237,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             exception_log_found = any(
                 expected_log in str(call) for call in mock_logging.error.call_args_list
             )
-            self.assertTrue(
-                exception_log_found, f"Should log exception: {expected_log}"
-            )
+            assert exception_log_found, f"Should log exception: {expected_log}"
 
     @patch("gemini_service.logging_util")
     @patch("gemini_service._call_gemini_api")
@@ -286,7 +277,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             in str(call)
             for call in mock_logging.info.call_args_list
         )
-        self.assertTrue(source_log_found, "Should log structured response usage")
+        assert source_log_found, "Should log structured response usage"
 
     @patch("gemini_service.logging_util")
     @patch("gemini_service._call_gemini_api")
@@ -327,9 +318,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             parsing_log_found = any(
                 expected_log in str(call) for call in mock_logging.info.call_args_list
             )
-            self.assertTrue(
-                parsing_log_found, f"Should log parsing step: {expected_log}"
-            )
+            assert parsing_log_found, f"Should log parsing step: {expected_log}"
 
     @patch("gemini_service.logging_util")
     def test_fallback_logging(self, mock_logging):
@@ -354,7 +343,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         )
 
         # Should return original response without modification
-        self.assertEqual(result, response_text)
+        assert result == response_text
 
     def test_crash_safety_with_malformed_inputs(self):
         """Test that the function doesn't crash with malformed inputs."""
@@ -369,7 +358,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
                 self.structured_response,
             )
             # Should handle gracefully and return None or empty string
-            self.assertIn(result, [None, "", "None"])
+            assert result in [None, "", "None"]
         except Exception as e:
             self.fail(f"Function crashed with None response_text: {e}")
 
@@ -388,7 +377,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
                 self.structured_response,
             )
             # Should handle gracefully
-            self.assertIsNotNone(result)
+            assert result is not None
         except Exception as e:
             self.fail(f"Function crashed with malformed game state: {e}")
 
@@ -407,7 +396,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
                 self.structured_response,
             )
             # Should handle gracefully
-            self.assertIsNotNone(result)
+            assert result is not None
         except Exception as e:
             self.fail(f"Function crashed with unicode: {e}")
 

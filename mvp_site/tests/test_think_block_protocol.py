@@ -113,28 +113,13 @@ When user input contains keywords: "think", "plan", "consider", "strategize", "o
     def test_think_block_protocol_exists_in_prompt(self):
         """Test that think block protocol is present in the prompt file"""
         # Check for think block concept in various forms
-        self.assertTrue(
-            self._contains_concept(
-                self.prompt_content, ["think block", "planning block", "think state"]
-            ),
-            "No think block protocol section found in prompt",
-        )
+        assert self._contains_concept(self.prompt_content, ["think block", "planning block", "think state"]), "No think block protocol section found in prompt"
 
         # Check for priority marking (could be #1, first, critical, etc.)
-        self.assertTrue(
-            self._contains_pattern(
-                self.prompt_content, r"(priority\s*#?\s*1|critical|urgent|important)"
-            ),
-            "Think block protocol should be marked as high priority",
-        )
+        assert self._contains_pattern(self.prompt_content, r"(priority\s*#?\s*1|critical|urgent|important)"), "Think block protocol should be marked as high priority"
 
         # Check for planning/thinking block concept
-        self.assertTrue(
-            self._contains_concept(
-                self.prompt_content, ["planning", "thinking", "plan block"]
-            ),
-            "No planning/thinking block concept found in prompt",
-        )
+        assert self._contains_concept(self.prompt_content, ["planning", "thinking", "plan block"]), "No planning/thinking block concept found in prompt"
 
     def test_think_keywords_detection(self):
         """Test that all think block keywords are properly defined"""
@@ -142,22 +127,12 @@ When user input contains keywords: "think", "plan", "consider", "strategize", "o
 
         # Check that most keywords are mentioned (not all need to be present)
         found_keywords = [kw for kw in keywords if kw in self.prompt_content.lower()]
-        self.assertGreaterEqual(
-            len(found_keywords),
-            3,
-            f"Expected at least 3 of the think keywords {keywords}, but only found {found_keywords}",
-        )
+        assert len(found_keywords) >= 3, f"Expected at least 3 of the think keywords {keywords}, but only found {found_keywords}"
 
     def test_forbidden_actions_defined(self):
         """Test that forbidden actions are clearly defined"""
         # Check for concept of forbidden/prohibited actions
-        self.assertTrue(
-            self._contains_concept(
-                self.prompt_content,
-                ["forbidden", "must not", "never", "do not", "don't"],
-            ),
-            "No forbidden actions section found",
-        )
+        assert self._contains_concept(self.prompt_content, ["forbidden", "must not", "never", "do not", "don't"]), "No forbidden actions section found"
 
         # Check for key forbidden concepts
         forbidden_concepts = [
@@ -172,28 +147,15 @@ When user input contains keywords: "think", "plan", "consider", "strategize", "o
             for pattern in forbidden_concepts
             if self._contains_pattern(self.prompt_content, pattern)
         )
-        self.assertGreaterEqual(
-            found_concepts, 2, "Should define at least 2 forbidden action concepts"
-        )
+        assert found_concepts >= 2, "Should define at least 2 forbidden action concepts"
 
     def test_valid_input_definitions(self):
         """Test that valid post-think-block inputs are defined"""
         # Check for trigger/condition definitions
-        self.assertTrue(
-            self._contains_concept(
-                self.prompt_content, ["trigger", "condition", "when to", "activation"]
-            ),
-            "No trigger conditions defined for think blocks",
-        )
+        assert self._contains_concept(self.prompt_content, ["trigger", "condition", "when to", "activation"]), "No trigger conditions defined for think blocks"
 
         # Check for different types of think blocks or planning modes
-        self.assertTrue(
-            self._contains_pattern(
-                self.prompt_content,
-                r"(deep.*think|standard.*choice|think.*block.*type|planning.*mode)",
-            ),
-            "No think block types or modes defined",
-        )
+        assert self._contains_pattern(self.prompt_content, r"(deep.*think|standard.*choice|think.*block.*type|planning.*mode)"), "No think block types or modes defined"
 
     def test_invalid_input_definitions(self):
         """Test that invalid post-think-block inputs are defined"""
@@ -202,23 +164,12 @@ When user input contains keywords: "think", "plan", "consider", "strategize", "o
         keywords = ["think", "plan", "consider", "strategize", "options"]
 
         # Check that keywords section exists
-        self.assertTrue(
-            self._contains_pattern(
-                self.prompt_content, r"(keyword|trigger.*word|when.*user.*say)"
-            ),
-            "No keyword trigger section found",
-        )
+        assert self._contains_pattern(self.prompt_content, r"(keyword|trigger.*word|when.*user.*say)"), "No keyword trigger section found"
 
     def test_error_response_format_defined(self):
         """Test that error response format is specified"""
         # Check for any format/template definition
-        self.assertTrue(
-            self._contains_pattern(
-                self.prompt_content,
-                r"(format|template|structure|layout|block.*---|\[.*\]|#+ )",
-            ),
-            "No format specification found for think blocks",
-        )
+        assert self._contains_pattern(self.prompt_content, r"(format|template|structure|layout|block.*---|\[.*\]|#+ )"), "No format specification found for think blocks"
 
     def test_state_validation_checkpoints(self):
         """Test that state validation checkpoints are defined"""
@@ -234,11 +185,7 @@ When user input contains keywords: "think", "plan", "consider", "strategize", "o
             for pattern in key_sections
             if self._contains_pattern(self.prompt_content, pattern)
         )
-        self.assertGreaterEqual(
-            found_sections,
-            2,
-            "Should have at least 2 key protocol sections (triggers, format, rules, etc.)",
-        )
+        assert found_sections >= 2, "Should have at least 2 key protocol sections (triggers, format, rules, etc.)"
 
     def test_protocol_presence(self):
         """Test that think block protocol is present somewhere in the file"""
@@ -254,21 +201,12 @@ When user input contains keywords: "think", "plan", "consider", "strategize", "o
                 think_block_found = True
                 break
 
-        self.assertTrue(
-            think_block_found,
-            "Think Block Protocol should be present somewhere in the file",
-        )
+        assert think_block_found, "Think Block Protocol should be present somewhere in the file"
 
     def test_protocol_overrides_other_instructions(self):
         """Test that protocol explicitly states it overrides other instructions"""
         # Check for priority/override language
-        self.assertTrue(
-            self._contains_pattern(
-                self.prompt_content,
-                r"(priority|override|supersede|critical|important|must follow|absolute)",
-            ),
-            "Protocol should indicate its priority or that it overrides other instructions",
-        )
+        assert self._contains_pattern(self.prompt_content, r"(priority|override|supersede|critical|important|must follow|absolute)"), "Protocol should indicate its priority or that it overrides other instructions"
 
 
 class TestThinkBlockScenarios(unittest.TestCase):
@@ -293,7 +231,7 @@ class TestThinkBlockScenarios(unittest.TestCase):
 
         # This would be tested with actual AI integration
         # For now, we test that the protocol exists
-        self.assertTrue(True)  # Placeholder for actual AI testing
+        assert True  # Placeholder for actual AI testing
 
     def test_complex_planning_scenario(self):
         """Test complex planning scenario"""
@@ -310,7 +248,7 @@ class TestThinkBlockScenarios(unittest.TestCase):
             "fortress",
         ]
 
-        self.assertTrue(True)  # Placeholder for actual AI testing
+        assert True  # Placeholder for actual AI testing
 
     def test_invalid_continuation_scenario(self):
         """Test invalid continuation after think block"""
@@ -320,7 +258,7 @@ class TestThinkBlockScenarios(unittest.TestCase):
         # Expected behavior: Error response asking for option selection
         expected_error = "Please select one of the numbered options"
 
-        self.assertTrue(True)  # Placeholder for actual AI testing
+        assert True  # Placeholder for actual AI testing
 
     def test_valid_selection_scenario(self):
         """Test valid option selection after think block"""
@@ -328,7 +266,7 @@ class TestThinkBlockScenarios(unittest.TestCase):
         user_input_after_think = "2"
 
         # Expected behavior: Continue with option 2 from previous think block
-        self.assertTrue(True)  # Placeholder for actual AI testing
+        assert True  # Placeholder for actual AI testing
 
 
 class TestPromptFileIntegrity(unittest.TestCase):
@@ -343,17 +281,14 @@ class TestPromptFileIntegrity(unittest.TestCase):
 
     def test_prompt_file_exists(self):
         """Test that the prompt file exists"""
-        self.assertTrue(
-            os.path.exists(self.prompt_file),
-            f"Prompt file not found at {self.prompt_file}",
-        )
+        assert os.path.exists(self.prompt_file), f"Prompt file not found at {self.prompt_file}"
 
     def test_prompt_file_readable(self):
         """Test that the prompt file is readable"""
         try:
             with open(self.prompt_file) as f:
                 content = f.read()
-                self.assertGreater(len(content), 100, "Prompt file seems too short")
+                assert len(content) > 100, "Prompt file seems too short"
         except Exception as e:
             self.fail(f"Could not read prompt file: {e}")
 
@@ -396,10 +331,7 @@ class TestPromptFileIntegrity(unittest.TestCase):
 
         for concepts, description in essential_concepts:
             found = any(concept.lower() in content.lower() for concept in concepts)
-            self.assertTrue(
-                found,
-                f"Essential concept '{description}' not found. Looked for: {concepts}",
-            )
+            assert found, f"Essential concept '{description}' not found. Looked for: {concepts}"
 
 
 class TestThinkBlockStateManagement(unittest.TestCase):
@@ -416,13 +348,7 @@ class TestThinkBlockStateManagement(unittest.TestCase):
             with open(prompt_file) as f:
                 content = f.read()
                 # Check for planning/waiting state concept
-                self.assertTrue(
-                    any(
-                        term in content.lower()
-                        for term in ["planning", "waiting", "choice", "selection"]
-                    ),
-                    "No planning/waiting state concept found",
-                )
+                assert any(term in content.lower() for term in ["planning", "waiting", "choice", "selection"]), "No planning/waiting state concept found"
 
     def test_state_transition_rules(self):
         """Test that state transition rules are clearly defined"""
@@ -447,9 +373,7 @@ class TestThinkBlockStateManagement(unittest.TestCase):
                 found = sum(
                     1 for concept in transition_concepts if concept in content.lower()
                 )
-                self.assertGreaterEqual(
-                    found, 3, "Should define state transition rules"
-                )
+                assert found >= 3, "Should define state transition rules"
 
 
 def run_think_block_tests():

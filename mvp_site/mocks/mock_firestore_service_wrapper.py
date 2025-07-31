@@ -127,20 +127,39 @@ def update_campaign_game_state(user_id, campaign_id, state_dict):
 # --- Story Management Functions ---
 
 
-def add_story_entry(user_id, campaign_id, story_entry, structured_fields=None):
-    """Add a story entry to the log."""
+def add_story_entry(
+    user_id,
+    campaign_id,
+    story_entry=None,
+    *,
+    actor=None,
+    text=None,
+    mode=None,
+    structured_fields=None,
+):
+    """Add a story entry to the log. Supports both legacy and new calling patterns."""
     client = get_client()
-    # If story_entry is a dict, extract fields; else treat as text
-    if isinstance(story_entry, dict):
-        actor = story_entry.get("actor", "user")
-        text = story_entry.get("text", "")
-        mode = story_entry.get("mode", "character")
-    else:
-        actor = "user"
-        text = story_entry if story_entry is not None else ""
+
+    # Backward compatibility: handle legacy story_entry parameter
+    if story_entry is not None:
+        if isinstance(story_entry, dict):
+            actor = story_entry.get("actor", actor or "Player")
+            text = story_entry.get("text", text or str(story_entry))
+            mode = story_entry.get("mode", mode or "character")
+            structured_fields = story_entry.get(
+                "structured_fields", structured_fields or {}
+            )
+        else:
+            # story_entry is a string
+            text = str(story_entry)
+            actor = actor or "Player"
+
+    # Set defaults
+    if mode is None:
         mode = "character"
     if structured_fields is None:
         structured_fields = {}
+
     return client.add_story_entry(
         user_id, campaign_id, actor, text, mode, structured_fields
     )
@@ -159,10 +178,9 @@ def json_default_serializer(obj):
     """JSON serializer for objects not serializable by default json code."""
     if hasattr(obj, "isoformat"):
         return obj.isoformat()
-    elif hasattr(obj, "__dict__"):
+    if hasattr(obj, "__dict__"):
         return obj.__dict__
-    else:
-        return str(obj)
+    return str(obj)
 
 
 def _truncate_log_json(state_dict, max_length=1000):

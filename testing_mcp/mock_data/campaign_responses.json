@@ -1,0 +1,97 @@
+{
+  "create_campaign_success": {
+    "status": "success",
+    "data": {
+      "campaign_id": "test-campaign-123",
+      "name": "Test Campaign",
+      "description": "A test campaign for MCP testing",
+      "dm_user_id": "test-user-123",
+      "created_at": "2024-01-01T00:00:00Z",
+      "status": "active",
+      "player_count": 0
+    }
+  },
+  "get_campaigns_success": {
+    "status": "success",
+    "data": {
+      "campaigns": [
+        {
+          "id": "campaign-1",
+          "name": "The Dragon's Lair",
+          "description": "A classic dungeon adventure",
+          "dm_user_id": "test-user-123",
+          "created_at": "2024-01-01T00:00:00Z",
+          "status": "active",
+          "player_count": 3
+        },
+        {
+          "id": "campaign-2",
+          "name": "City of Shadows",
+          "description": "Urban fantasy campaign",
+          "dm_user_id": "test-user-123",
+          "created_at": "2024-01-15T00:00:00Z",
+          "status": "active",
+          "player_count": 2
+        }
+      ]
+    }
+  },
+  "get_campaign_success": {
+    "status": "success",
+    "data": {
+      "id": "campaign-1",
+      "name": "The Dragon's Lair",
+      "description": "A classic dungeon adventure",
+      "dm_user_id": "test-user-123",
+      "created_at": "2024-01-01T00:00:00Z",
+      "status": "active",
+      "player_count": 3,
+      "story_content": "The party approaches the ancient dragon's lair. The massive stone entrance is carved with draconic runes that glow faintly in the dim light. Your characters stand at the threshold of adventure...",
+      "characters": [
+        {
+          "id": "char-1",
+          "name": "Thorin Ironshield",
+          "class": "Fighter",
+          "level": 5
+        },
+        {
+          "id": "char-2",
+          "name": "Elara Moonwhisper",
+          "class": "Wizard",
+          "level": 4
+        },
+        {
+          "id": "char-3",
+          "name": "Finn Lightfoot",
+          "class": "Rogue",
+          "level": 5
+        }
+      ]
+    }
+  },
+  "update_campaign_success": {
+    "status": "success",
+    "data": {
+      "id": "campaign-1",
+      "name": "The Dragon's Lair - Updated",
+      "description": "An updated classic dungeon adventure",
+      "dm_user_id": "test-user-123",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-02T00:00:00Z",
+      "status": "active",
+      "player_count": 3
+    }
+  },
+  "export_campaign_success": {
+    "status": "success",
+    "data": {
+      "export_id": "export-123",
+      "campaign_id": "campaign-1",
+      "format": "pdf",
+      "download_url": "/api/exports/export-123.pdf",
+      "expires_at": "2024-01-02T00:00:00Z",
+      "size_bytes": 2048576,
+      "created_at": "2024-01-01T12:00:00Z"
+    }
+  }
+}

@@ -1,16 +1,16 @@
 """Simple integration test for the orchestration system."""
 
 import os
+import sys
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
-import sys
 
 # Add orchestration directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+from fixtures import mock_claude_fixture, mock_redis_fixture, mock_tmux_fixture
 from orchestrate_unified import UnifiedOrchestration
-from fixtures import mock_tmux_fixture, mock_claude_fixture, mock_redis_fixture
 
 
 class TestSimpleOrchestrationFlow(unittest.TestCase):

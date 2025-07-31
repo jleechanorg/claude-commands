@@ -42,49 +42,29 @@ class TestLukeCampaignGodModeJsonBug(unittest.TestCase):
         # Our fix should return clean narrative text, not raw JSON
 
         # Test 1: Should NOT contain raw JSON structure
-        self.assertNotIn(
-            '"narrative":',
-            narrative_text,
-            "Processed narrative should not contain raw JSON keys",
-        )
-        self.assertNotIn(
-            '"god_mode_response":',
-            narrative_text,
-            "Processed narrative should not contain raw JSON keys",
-        )
-        self.assertNotIn(
-            '"entities_mentioned":',
-            narrative_text,
-            "Processed narrative should not contain raw JSON keys",
-        )
-        self.assertNotIn(
-            "{", narrative_text, "Processed narrative should not contain JSON braces"
-        )
-        self.assertNotIn(
-            "}", narrative_text, "Processed narrative should not contain JSON braces"
-        )
+        assert '"narrative":' not in narrative_text, "Processed narrative should not contain raw JSON keys"
+        assert '"god_mode_response":' not in narrative_text, "Processed narrative should not contain raw JSON keys"
+        assert '"entities_mentioned":' not in narrative_text, "Processed narrative should not contain raw JSON keys"
+        assert "{" not in narrative_text, "Processed narrative should not contain JSON braces"
+        assert "}" not in narrative_text, "Processed narrative should not contain JSON braces"
 
         # Test 2: Should contain the actual god mode response text
         expected_content = (
             "That's another excellent point, and I understand why you'd expect EXP"
         )
-        self.assertIn(
-            expected_content,
-            narrative_text,
-            "Should contain the actual god mode response text",
-        )
+        assert expected_content in narrative_text, "Should contain the actual god mode response text"
 
         # Test 3: Should properly parse structured response
-        self.assertIsNotNone(structured_response)
-        self.assertEqual(len(structured_response.entities_mentioned), 3)
-        self.assertIn("Luke Skywalker", structured_response.entities_mentioned)
+        assert structured_response is not None
+        assert len(structured_response.entities_mentioned) == 3
+        assert "Luke Skywalker" in structured_response.entities_mentioned
 
         # Test 4: Create GeminiResponse object as it would be in the real system
         gemini_response = GeminiResponse.create(luke_campaign_raw_response)
 
         # Test 5: GeminiResponse.narrative_text should be clean (no JSON)
-        self.assertNotIn('"god_mode_response":', gemini_response.narrative_text)
-        self.assertIn(expected_content, gemini_response.narrative_text)
+        assert '"god_mode_response":' not in gemini_response.narrative_text
+        assert expected_content in gemini_response.narrative_text
 
     def test_luke_campaign_scene_56_reproduction(self):
         """Reproduce Scene #56 god mode response bug."""
@@ -109,10 +89,10 @@ class TestLukeCampaignGodModeJsonBug(unittest.TestCase):
         )
 
         # Should return clean narrative, not raw JSON
-        self.assertNotIn('{"narrative":', narrative_text)
-        self.assertNotIn('"god_mode_response":', narrative_text)
-        self.assertIn("You are absolutely right that corrupting", narrative_text)
-        self.assertIn("200 Experience Points", narrative_text)
+        assert '{"narrative":' not in narrative_text
+        assert '"god_mode_response":' not in narrative_text
+        assert "You are absolutely right that corrupting" in narrative_text
+        assert "200 Experience Points" in narrative_text
 
     def test_empty_narrative_with_god_mode_response(self):
         """Test the specific pattern from Luke's campaign: empty narrative + god_mode_response."""
@@ -131,9 +111,9 @@ class TestLukeCampaignGodModeJsonBug(unittest.TestCase):
         )
 
         # Should return just the god mode response text, not the JSON structure
-        self.assertEqual(narrative_text, "Divine intervention occurs as requested.")
-        self.assertNotIn('"narrative"', narrative_text)
-        self.assertNotIn('""', narrative_text)  # Empty string artifacts
+        assert narrative_text == "Divine intervention occurs as requested."
+        assert '"narrative"' not in narrative_text
+        assert '""' not in narrative_text  # Empty string artifacts
 
     def test_integration_with_gemini_service_flow(self):
         """Test that the god mode response flows correctly through the service layer."""
@@ -151,16 +131,12 @@ class TestLukeCampaignGodModeJsonBug(unittest.TestCase):
         gemini_response = GeminiResponse.create(raw_ai_response)
 
         # Step 3: Check that narrative_text is clean (this is what gets displayed)
-        self.assertEqual(
-            gemini_response.narrative_text, "The force is strong with this one."
-        )
-        self.assertNotIn('"god_mode_response":', gemini_response.narrative_text)
+        assert gemini_response.narrative_text == "The force is strong with this one."
+        assert '"god_mode_response":' not in gemini_response.narrative_text
 
         # Step 4: Check that structured data is preserved
-        self.assertEqual(
-            gemini_response.state_updates, {"luke": {"alignment": "chaotic_evil"}}
-        )
-        self.assertIn("Luke Skywalker", gemini_response.entities_mentioned)
+        assert gemini_response.state_updates == {"luke": {"alignment": "chaotic_evil"}}
+        assert "Luke Skywalker" in gemini_response.entities_mentioned
 
 
 if __name__ == "__main__":

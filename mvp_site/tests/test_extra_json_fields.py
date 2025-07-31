@@ -45,29 +45,27 @@ class TestExtraJSONFields(unittest.TestCase):
         narrative, response = parse_structured_response(test_json)
 
         # Should extract just the narrative, not the full JSON
-        self.assertIsNotNone(narrative)
-        self.assertIn("Welcome, adventurer!", narrative)
+        assert narrative is not None
+        assert "Welcome, adventurer!" in narrative
         # Planning blocks are no longer extracted from narrative - they must come from JSON
         # The entire narrative including choices should be preserved
-        self.assertIn("Which option would you prefer?", narrative)
+        assert "Which option would you prefer?" in narrative
 
         # Should NOT contain JSON structure
-        self.assertNotIn('"narrative":', narrative)
-        self.assertNotIn('"entities_mentioned":', narrative)
-        self.assertNotIn('"debug_info":', narrative)
+        assert '"narrative":' not in narrative
+        assert '"entities_mentioned":' not in narrative
+        assert '"debug_info":' not in narrative
 
         # Response object should be valid
-        self.assertIsInstance(response, NarrativeResponse)
-        self.assertEqual(response.entities_mentioned, [])
-        self.assertEqual(
-            response.location_confirmed, "Unknown"
-        )  # null becomes "Unknown"
-        self.assertIsNotNone(response.state_updates)
-        self.assertIsNotNone(response.debug_info)
-        self.assertIn("dm_notes", response.debug_info)
+        assert isinstance(response, NarrativeResponse)
+        assert response.entities_mentioned == []
+        assert response.location_confirmed == "Unknown"  # null becomes "Unknown"
+        assert response.state_updates is not None
+        assert response.debug_info is not None
+        assert "dm_notes" in response.debug_info
         # Planning block should be empty since it's not in the JSON
         # Planning block should be empty dict since it's not in the JSON
-        self.assertEqual(response.planning_block, {})
+        assert response.planning_block == {}
 
     def test_narrative_response_with_debug_info(self):
         """Test that NarrativeResponse properly handles debug_info field"""
@@ -85,13 +83,13 @@ class TestExtraJSONFields(unittest.TestCase):
         )
 
         # Core fields should work
-        self.assertEqual(response.narrative, "Test narrative")
-        self.assertEqual(response.entities_mentioned, ["Entity1"])
+        assert response.narrative == "Test narrative"
+        assert response.entities_mentioned == ["Entity1"]
 
         # Debug info should be properly stored
-        self.assertIsNotNone(response.debug_info)
-        self.assertEqual(response.debug_info["dm_notes"], ["Test note"])
-        self.assertEqual(response.debug_info["dice_rolls"], ["1d20+3 = 18"])
+        assert response.debug_info is not None
+        assert response.debug_info["dm_notes"] == ["Test note"]
+        assert response.debug_info["dice_rolls"] == ["1d20+3 = 18"]
 
 
 if __name__ == "__main__":

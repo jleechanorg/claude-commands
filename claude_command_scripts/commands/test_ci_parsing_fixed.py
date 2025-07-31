@@ -4,9 +4,6 @@ Test script for CI log parsing functions - Fixed version
 Validates that error parsing correctly extracts different types of failures
 """
 
-import json
-import tempfile
-import os
 import re
 
 # Test log content with various error patterns
@@ -217,9 +214,8 @@ def main():
     if passed == total:
         print("🎉 All tests passed! CI log parsing functions are working correctly.")
         return 0
-    else:
-        print("⚠️  Some tests failed. Check the error parsing implementation.")
-        return 1
+    print("⚠️  Some tests failed. Check the error parsing implementation.")
+    return 1
 
 if __name__ == "__main__":
     exit(main())

@@ -10,10 +10,11 @@ These tests verify the settings API works end-to-end with:
 - Real data persistence
 """
 
-import unittest
-import requests
-import json
 import time
+import unittest
+
+import requests
+
 
 class TestSettingsHttpIntegration(unittest.TestCase):
     """Layer 2: HTTP integration tests for settings functionality"""

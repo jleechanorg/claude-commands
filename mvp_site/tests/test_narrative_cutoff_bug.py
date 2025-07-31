@@ -92,10 +92,10 @@ Options:
             buggy_result = None
 
         # The buggy pattern cuts off at the first unescaped quote
-        self.assertIsNotNone(buggy_result)
-        self.assertNotEqual(buggy_result, self.expected_narrative)
+        assert buggy_result is not None
+        assert buggy_result != self.expected_narrative
         # It would cut off much earlier, at the first quote
-        self.assertTrue(len(buggy_result) < len(self.expected_narrative) // 2)
+        assert len(buggy_result) < len(self.expected_narrative) // 2
 
         print(
             f"\n🔴 RED PHASE: Buggy extraction got only {len(buggy_result)} chars instead of {len(self.expected_narrative)}"
@@ -113,8 +113,8 @@ Options:
         result = extract_field_value(self.bug_triggering_json, "narrative")
 
         # The fixed version should extract the complete narrative
-        self.assertIsNotNone(result)
-        self.assertEqual(result, self.expected_narrative)
+        assert result is not None
+        assert result == self.expected_narrative
 
         print(
             f"\n🟢 GREEN PHASE: Fixed extraction successfully got all {len(result)} chars"
@@ -125,17 +125,15 @@ Options:
         """Test extraction with complex nested quotes and escape sequences."""
         result = extract_field_value(self.complex_json, "narrative")
 
-        self.assertIsNotNone(result)
+        assert result is not None
         print(f"\nActual result: {repr(result)}")
         print(f"\nExpected result: {repr(self.expected_complex_narrative)}")
-        self.assertEqual(result, self.expected_complex_narrative)
+        assert result == self.expected_complex_narrative
 
         # Verify specific nested quote patterns are preserved
-        self.assertIn('\\"death\\"', result)  # Triple-nested quote (properly escaped)
-        self.assertIn("'Beware the curse", result)  # Single quotes within doubles
-        self.assertIn(
-            "\"Tell me more about this 'sacrifice' you mentioned\"", result
-        )  # Mixed quotes
+        assert '\\"death\\"' in result  # Triple-nested quote (properly escaped)
+        assert "'Beware the curse" in result  # Single quotes within doubles
+        assert "\"Tell me more about this 'sacrifice' you mentioned\"" in result  # Mixed quotes
 
     def test_incomplete_json_narrative(self):
         """Test that incomplete JSON (cut off mid-narrative) still extracts what's available."""
@@ -144,11 +142,11 @@ Options:
 
         result = extract_field_value(incomplete_json, "narrative")
 
-        self.assertIsNotNone(result)
+        assert result is not None
         # Should extract everything up to the truncation
-        self.assertIn("The adventure begins", result)
-        self.assertIn('"Help me!"', result)
-        self.assertIn("Who's there", result)  # Even partial option extracted
+        assert "The adventure begins" in result
+        assert '"Help me!"' in result
+        assert "Who's there" in result  # Even partial option extracted
 
     def test_narrative_with_json_special_chars(self):
         """Test narratives containing JSON special characters."""
@@ -158,10 +156,10 @@ Options:
 
         result = extract_field_value(json_with_special, "narrative")
 
-        self.assertIsNotNone(result)
-        self.assertIn("Price: 100gp per night (includes breakfast)", result)
-        self.assertIn("stay 3 nights, get 10% off!", result)
-        self.assertIn('"How about 80gp?"', result)
+        assert result is not None
+        assert "Price: 100gp per night (includes breakfast)" in result
+        assert "stay 3 nights, get 10% off!" in result
+        assert '"How about 80gp?"' in result
 
     def test_extraction_performance(self):
         """Test that the fix handles very long narratives efficiently."""
@@ -178,10 +176,10 @@ Options:
 
         result = extract_field_value(long_json, "narrative")
 
-        self.assertIsNotNone(result)
+        assert result is not None
         # Verify all 100 dialogues were extracted
         for i in range(100):
-            self.assertIn(f"This is dialogue number {i}!", result)
+            assert f"This is dialogue number {i}!" in result
 
 
 if __name__ == "__main__":

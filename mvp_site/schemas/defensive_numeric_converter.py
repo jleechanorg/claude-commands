@@ -103,14 +103,13 @@ class DefensiveNumericConverter:
             if key in cls.HP_FIELDS:
                 # These fields should never be less than 1
                 return max(1, converted)
-            elif key in cls.NON_NEGATIVE_FIELDS:
+            if key in cls.NON_NEGATIVE_FIELDS:
                 # These fields should never be negative
                 return max(0, converted)
-            elif key in cls.ABILITY_SCORE_FIELDS:
+            if key in cls.ABILITY_SCORE_FIELDS:
                 # Ability scores should be 1-30
                 return max(1, min(30, converted))
-            else:
-                return converted
+            return converted
 
         except (ValueError, TypeError):
             # If conversion fails, return the default

@@ -15,7 +15,6 @@ sys.path.insert(
 )
 
 import constants
-
 from firestore_service import add_story_entry
 
 
@@ -71,31 +70,23 @@ class TestFirestoreStructuredFields(unittest.TestCase):
         story_add_calls = mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value.collection.return_value.add.call_args_list
 
         # Should have exactly one call (content fits in one chunk)
-        self.assertEqual(len(story_add_calls), 1)
+        assert len(story_add_calls) == 1
 
         # Get the story data from the call
         story_data = story_add_calls[0][0][0]
 
         # Verify structured fields are included
-        self.assertEqual(
-            story_data[constants.FIELD_SESSION_HEADER], "Session 1: The Beginning"
-        )
-        self.assertEqual(
-            story_data[constants.FIELD_PLANNING_BLOCK], "1. Explore\n2. Fight\n3. Rest"
-        )
-        self.assertEqual(
-            story_data[constants.FIELD_DICE_ROLLS], ["Attack: 1d20+5 = 18"]
-        )
-        self.assertEqual(story_data[constants.FIELD_RESOURCES], "HP: 20/30 | Gold: 100")
-        self.assertEqual(
-            story_data[constants.FIELD_DEBUG_INFO], {"turn": 1, "mode": "combat"}
-        )
+        assert story_data[constants.FIELD_SESSION_HEADER] == "Session 1: The Beginning"
+        assert story_data[constants.FIELD_PLANNING_BLOCK] == "1. Explore\n2. Fight\n3. Rest"
+        assert story_data[constants.FIELD_DICE_ROLLS] == ["Attack: 1d20+5 = 18"]
+        assert story_data[constants.FIELD_RESOURCES] == "HP: 20/30 | Gold: 100"
+        assert story_data[constants.FIELD_DEBUG_INFO] == {"turn": 1, "mode": "combat"}
 
         # Verify basic fields
-        self.assertEqual(story_data["text"], content)
-        self.assertEqual(story_data["actor"], story_type)
-        self.assertIn("timestamp", story_data)
-        self.assertEqual(story_data["part"], 1)
+        assert story_data["text"] == content
+        assert story_data["actor"] == story_type
+        assert "timestamp" in story_data
+        assert story_data["part"] == 1
 
     @patch("firestore_service.get_db")
     def test_add_story_entry_without_structured_fields(self, mock_get_db):
@@ -109,19 +100,19 @@ class TestFirestoreStructuredFields(unittest.TestCase):
 
         # Get the story data
         story_add_calls = mock_db.collection.return_value.document.return_value.collection.return_value.document.return_value.collection.return_value.add.call_args_list
-        self.assertEqual(len(story_add_calls), 1)
+        assert len(story_add_calls) == 1
         story_data = story_add_calls[0][0][0]
 
         # Verify no structured fields are added
-        self.assertNotIn(constants.FIELD_SESSION_HEADER, story_data)
-        self.assertNotIn(constants.FIELD_PLANNING_BLOCK, story_data)
-        self.assertNotIn(constants.FIELD_DICE_ROLLS, story_data)
-        self.assertNotIn(constants.FIELD_RESOURCES, story_data)
-        self.assertNotIn(constants.FIELD_DEBUG_INFO, story_data)
+        assert constants.FIELD_SESSION_HEADER not in story_data
+        assert constants.FIELD_PLANNING_BLOCK not in story_data
+        assert constants.FIELD_DICE_ROLLS not in story_data
+        assert constants.FIELD_RESOURCES not in story_data
+        assert constants.FIELD_DEBUG_INFO not in story_data
 
         # But basic fields should exist
-        self.assertEqual(story_data["text"], "Simple story")
-        self.assertEqual(story_data["actor"], "gemini")
+        assert story_data["text"] == "Simple story"
+        assert story_data["actor"] == "gemini"
 
     @patch("firestore_service.get_db")
     def test_add_story_entry_with_partial_structured_fields(self, mock_get_db):
@@ -151,15 +142,13 @@ class TestFirestoreStructuredFields(unittest.TestCase):
         story_data = story_add_calls[0][0][0]
 
         # Verify only provided fields are included
-        self.assertEqual(story_data[constants.FIELD_SESSION_HEADER], "Session 2")
-        self.assertEqual(
-            story_data[constants.FIELD_DICE_ROLLS], ["Initiative: 1d20+2 = 14"]
-        )
+        assert story_data[constants.FIELD_SESSION_HEADER] == "Session 2"
+        assert story_data[constants.FIELD_DICE_ROLLS] == ["Initiative: 1d20+2 = 14"]
 
         # Missing fields should not be included
-        self.assertNotIn(constants.FIELD_PLANNING_BLOCK, story_data)
-        self.assertNotIn(constants.FIELD_RESOURCES, story_data)
-        self.assertNotIn(constants.FIELD_DEBUG_INFO, story_data)
+        assert constants.FIELD_PLANNING_BLOCK not in story_data
+        assert constants.FIELD_RESOURCES not in story_data
+        assert constants.FIELD_DEBUG_INFO not in story_data
 
     @patch("firestore_service.get_db")
     def test_add_story_entry_with_empty_structured_fields(self, mock_get_db):
@@ -182,14 +171,14 @@ class TestFirestoreStructuredFields(unittest.TestCase):
         story_data = story_add_calls[0][0][0]
 
         # Verify no structured fields are added
-        self.assertNotIn(constants.FIELD_SESSION_HEADER, story_data)
-        self.assertNotIn(constants.FIELD_PLANNING_BLOCK, story_data)
-        self.assertNotIn(constants.FIELD_DICE_ROLLS, story_data)
-        self.assertNotIn(constants.FIELD_RESOURCES, story_data)
-        self.assertNotIn(constants.FIELD_DEBUG_INFO, story_data)
+        assert constants.FIELD_SESSION_HEADER not in story_data
+        assert constants.FIELD_PLANNING_BLOCK not in story_data
+        assert constants.FIELD_DICE_ROLLS not in story_data
+        assert constants.FIELD_RESOURCES not in story_data
+        assert constants.FIELD_DEBUG_INFO not in story_data
 
         # Basic fields should still exist
-        self.assertEqual(story_data["text"], "Test action")
+        assert story_data["text"] == "Test action"
 
     @patch("firestore_service.get_db")
     def test_add_story_entry_with_none_values_in_structured_fields(self, mock_get_db):
@@ -221,17 +210,13 @@ class TestFirestoreStructuredFields(unittest.TestCase):
         story_data = story_add_calls[0][0][0]
 
         # Non-None fields should be included
-        self.assertEqual(story_data[constants.FIELD_SESSION_HEADER], "Valid header")
-        self.assertEqual(
-            story_data[constants.FIELD_DICE_ROLLS], []
-        )  # Empty list is saved
-        self.assertEqual(
-            story_data[constants.FIELD_RESOURCES], ""
-        )  # Empty string is saved
+        assert story_data[constants.FIELD_SESSION_HEADER] == "Valid header"
+        assert story_data[constants.FIELD_DICE_ROLLS] == []  # Empty list is saved
+        assert story_data[constants.FIELD_RESOURCES] == ""  # Empty string is saved
 
         # Only None fields should be excluded
-        self.assertNotIn(constants.FIELD_PLANNING_BLOCK, story_data)  # None
-        self.assertNotIn(constants.FIELD_DEBUG_INFO, story_data)  # None
+        assert constants.FIELD_PLANNING_BLOCK not in story_data  # None
+        assert constants.FIELD_DEBUG_INFO not in story_data  # None
 
 
 if __name__ == "__main__":

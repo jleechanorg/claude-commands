@@ -29,19 +29,13 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
 
         # The bug was that raw JSON would be displayed
         # With our fix, this should NOT happen:
-        self.assertNotIn(
-            '"action"', narrative, "Raw JSON key 'action' should not appear in output"
-        )
-        self.assertNotIn(
-            '"state_updates"',
-            narrative,
-            "Raw JSON key 'state_updates' should not appear in output",
-        )
-        self.assertNotIn("{", narrative, "Raw JSON braces should not appear in output")
-        self.assertNotIn("}", narrative, "Raw JSON braces should not appear in output")
+        assert '"action"' not in narrative, "Raw JSON key 'action' should not appear in output"
+        assert '"state_updates"' not in narrative, "Raw JSON key 'state_updates' should not appear in output"
+        assert "{" not in narrative, "Raw JSON braces should not appear in output"
+        assert "}" not in narrative, "Raw JSON braces should not appear in output"
 
         # Should have some readable content (empty string from our current implementation)
-        self.assertIsNotNone(narrative)
+        assert narrative is not None
 
     def test_original_bug_partial_json(self):
         """RED TEST: God mode returns incomplete/malformed JSON."""
@@ -52,8 +46,8 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
         narrative, response_obj = parse_structured_response(malformed_response)
 
         # Should not display raw JSON even when malformed
-        self.assertNotIn('"action"', narrative)
-        self.assertNotIn("spawn_dragon", narrative)
+        assert '"action"' not in narrative
+        assert "spawn_dragon" not in narrative
 
     def test_green_solution_with_god_mode_response_field(self):
         """GREEN TEST: Proper solution using god_mode_response field."""
@@ -71,10 +65,8 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
         narrative, response_obj = parse_structured_response(proper_response)
 
         # Should get clean god mode response
-        self.assertEqual(
-            narrative, "A thick fog descends upon the forest as you command."
-        )
-        self.assertIn("thick fog", response_obj.entities_mentioned)
+        assert narrative == "A thick fog descends upon the forest as you command."
+        assert "thick fog" in response_obj.entities_mentioned
 
     def test_all_code_paths_coverage(self):
         """Ensure all new code paths are tested."""
@@ -89,7 +81,7 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
             "debug_info": {}
         }"""
         narrative1, obj1 = parse_structured_response(response1)
-        self.assertEqual(narrative1, "The gods have spoken.")
+        assert narrative1 == "The gods have spoken."
 
         # Path 2: god_mode_response with narrative
         response2 = """{
@@ -102,10 +94,10 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
         }"""
         narrative2, obj2 = parse_structured_response(response2)
         # Should return only narrative when both are present
-        self.assertEqual(narrative2, "The mortal realm trembles.")
+        assert narrative2 == "The mortal realm trembles."
         # Response object should have both fields separately
-        self.assertEqual(obj2.god_mode_response, "Lightning strikes!")
-        self.assertEqual(obj2.narrative, "The mortal realm trembles.")
+        assert obj2.god_mode_response == "Lightning strikes!"
+        assert obj2.narrative == "The mortal realm trembles."
 
         # Path 3: god_mode_response with whitespace-only narrative
         response3 = """{
@@ -117,7 +109,7 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
             "debug_info": {}
         }"""
         narrative3, obj3 = parse_structured_response(response3)
-        self.assertEqual(narrative3, "Silence falls.")  # No extra newlines
+        assert narrative3 == "Silence falls."  # No extra newlines
 
         # Path 4: Fallback path with ValueError/TypeError
         # Force the exception path by using invalid data
@@ -131,7 +123,7 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
         }"""
         narrative4, obj4 = parse_structured_response(response4)
         # narrative being null will cause ValueError, triggering fallback path
-        self.assertEqual(narrative4, "Error handled gracefully")
+        assert narrative4 == "Error handled gracefully"
 
         # Path 5: Normal path with narrative=null but valid other fields
         response5 = """{
@@ -144,7 +136,7 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
         }"""
         # This will trigger the fallback path but we handle it
         narrative5, obj5 = parse_structured_response(response5)
-        self.assertEqual(narrative5, "Divine intervention occurs")
+        assert narrative5 == "Divine intervention occurs"
 
         # Path 6: No god_mode_response field (normal gameplay)
         response6 = """{
@@ -155,8 +147,8 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
             "debug_info": {}
         }"""
         narrative6, obj6 = parse_structured_response(response6)
-        self.assertEqual(narrative6, "You walk into the tavern.")
-        self.assertIsNone(obj6.god_mode_response)
+        assert narrative6 == "You walk into the tavern."
+        assert obj6.god_mode_response is None
 
         # Path 7: god_mode_response is None
         response7 = """{
@@ -168,7 +160,7 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
             "debug_info": {}
         }"""
         narrative7, obj7 = parse_structured_response(response7)
-        self.assertEqual(narrative7, "Normal narrative")
+        assert narrative7 == "Normal narrative"
 
     def test_edge_cases(self):
         """Test edge cases for complete coverage."""
@@ -184,7 +176,7 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
         }"""
         narrative1, obj1 = parse_structured_response(response1)
         # Empty god_mode_response should fall back to narrative
-        self.assertEqual(narrative1, "Should use narrative")
+        assert narrative1 == "Should use narrative"
 
         # Edge case 2: Both fields have content
         response2 = """{
@@ -197,11 +189,11 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
         }"""
         narrative2, obj2 = parse_structured_response(response2)
         # Should return only narrative - god_mode_response is passed separately to frontend
-        self.assertEqual(narrative2, "The mortal realm responds to your will.")
-        self.assertNotIn("Divine power flows through you.", narrative2)
+        assert narrative2 == "The mortal realm responds to your will."
+        assert "Divine power flows through you." not in narrative2
         # Response object should have both fields separately
-        self.assertEqual(obj2.god_mode_response, "Divine power flows through you.")
-        self.assertEqual(obj2.narrative, "The mortal realm responds to your will.")
+        assert obj2.god_mode_response == "Divine power flows through you."
+        assert obj2.narrative == "The mortal realm responds to your will."
 
         # Edge case 3: Very long content in both fields
         long_text = "A" * 1000
@@ -215,11 +207,11 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
         }}"""
         narrative3, obj3 = parse_structured_response(response3)
         # Should return only narrative when both are present
-        self.assertEqual(len(narrative3), 1000)  # Only narrative, not combined
-        self.assertEqual(narrative3, long_text)
+        assert len(narrative3) == 1000  # Only narrative, not combined
+        assert narrative3 == long_text
         # Response object should have both fields separately
-        self.assertEqual(obj3.god_mode_response, long_text)
-        self.assertEqual(obj3.narrative, long_text)
+        assert obj3.god_mode_response == long_text
+        assert obj3.narrative == long_text
 
     def test_hasattr_safety(self):
         """Test the hasattr checks work correctly."""
@@ -240,31 +232,31 @@ class TestGodModeJsonDisplayRedGreen(unittest.TestCase):
         # Branch: god_mode_response exists and is truthy
         test1 = '{"narrative": "", "god_mode_response": "God speaks", "entities_mentioned": [], "location_confirmed": "Unknown", "state_updates": {}, "debug_info": {}}'
         n1, _ = parse_structured_response(test1)
-        self.assertEqual(n1, "God speaks")
+        assert n1 == "God speaks"
 
         # Branch: god_mode_response exists but is falsy (empty string)
         test2 = '{"narrative": "Normal text", "god_mode_response": "", "entities_mentioned": [], "location_confirmed": "Unknown", "state_updates": {}, "debug_info": {}}'
         n2, _ = parse_structured_response(test2)
-        self.assertEqual(n2, "Normal text")
+        assert n2 == "Normal text"
 
         # Branch: god_mode_response is None (JSON null)
         test3 = '{"narrative": "Normal text", "god_mode_response": null, "entities_mentioned": [], "location_confirmed": "Unknown", "state_updates": {}, "debug_info": {}}'
         n3, _ = parse_structured_response(test3)
-        self.assertEqual(n3, "Normal text")
+        assert n3 == "Normal text"
 
         # Branch: narrative is None in fallback with god_mode_response
         test4 = '{"narrative": null, "god_mode_response": "Fallback god", "entities_mentioned": [], "location_confirmed": "Unknown", "state_updates": {}, "debug_info": {}}'
         n4, _ = parse_structured_response(test4)
-        self.assertEqual(n4, "Fallback god")
+        assert n4 == "Fallback god"
 
         # Branch: Both narrative and god_mode_response with content
         test5 = '{"narrative": "Story continues", "god_mode_response": "God acts", "entities_mentioned": [], "location_confirmed": "Unknown", "state_updates": {}, "debug_info": {}}'
         n5, obj5 = parse_structured_response(test5)
         # Should return only narrative when both are present
-        self.assertEqual(n5, "Story continues")
+        assert n5 == "Story continues"
         # Response object should have both fields separately
-        self.assertEqual(obj5.god_mode_response, "God acts")
-        self.assertEqual(obj5.narrative, "Story continues")
+        assert obj5.god_mode_response == "God acts"
+        assert obj5.narrative == "Story continues"
 
 
 if __name__ == "__main__":

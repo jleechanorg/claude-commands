@@ -6,15 +6,14 @@ Analyzes Firebase database to count campaigns and entries per user.
 Generates a report sorted by user activity (most active first).
 """
 
+import csv
 import os
 import sys
+import traceback
 from datetime import datetime
 
 import firebase_admin
 from firebase_admin import credentials, firestore
-
-import csv
-import traceback
 
 
 def initialize_firebase():

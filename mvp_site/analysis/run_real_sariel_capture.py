@@ -227,9 +227,8 @@ if __name__ == "__main__":
 
             print("📄 Created detailed summary")
             return data
-        else:
-            print("❌ No results file created")
-            return None
+        print("❌ No results file created")
+        return None
 
     except Exception as e:
         print(f"💥 Error running capture: {e}")

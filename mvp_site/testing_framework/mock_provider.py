@@ -14,8 +14,8 @@ project_root = os.path.dirname(
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from ..mocks.mock_firestore_service import MockFirestoreClient
-from ..mocks.mock_gemini_service import MockGeminiClient
+from mocks.mock_firestore_service import MockFirestoreClient
+from mocks.mock_gemini_service import MockGeminiClient
 from .service_provider import TestServiceProvider
 
 

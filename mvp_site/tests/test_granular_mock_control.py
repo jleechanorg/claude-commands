@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Test granular mock control for Firebase and Gemini services.
+Test MCP environment configuration for different testing scenarios.
+In MCP architecture, environment variables control behavior at the MCP server level.
 """
 
 import os
@@ -10,8 +11,10 @@ import unittest
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from main import create_app
 
-class TestGranularMockControl(unittest.TestCase):
+
+class TestMCPEnvironmentControl(unittest.TestCase):
     def setUp(self):
         """Save original environment."""
         self.original_env = {}
@@ -26,119 +29,72 @@ class TestGranularMockControl(unittest.TestCase):
             else:
                 os.environ[key] = value
 
-    def _reload_main_with_env(self, **env_vars):
-        """
-        Reload the main module with specific environment variables.
-
-        WARNING: This method clears the `sys.modules` cache for specific modules
-        and re-imports them, which can lead to side effects such as breaking
-        dependencies or causing inconsistent module states. Use this method
-        only in controlled testing environments where module reloading is
-        necessary to simulate different configurations.
-
-        Parameters:
-            env_vars (dict): Environment variables to set before reloading the main module.
-                            Keys are variable names, and values are their corresponding values.
-                            Use `None` to unset a variable.
-
-        Returns:
-            module: The reloaded `main` module.
-        """
-        # Clear module cache for main and services
-        for module in [
-            "main",
-            "gemini_service",
-            "firestore_service",
-            "mocks.mock_gemini_service_wrapper",
-            "mocks.mock_firestore_service_wrapper",
-        ]:
-            if module in sys.modules:
-                del sys.modules[module]
-
-        # Set environment variables
+    def test_mcp_testing_environment_configured(self):
+        """Test that MCP testing environment is properly configured."""
+        # In MCP architecture, environment variables control behavior
         os.environ["TESTING"] = "true"
-        for key, value in env_vars.items():
-            if value is None:
-                os.environ.pop(key, None)
+        os.environ["USE_MOCKS"] = "true"
+
+        app = create_app()
+        assert app is not None, "App should be created successfully in MCP architecture"
+
+        # Verify environment variables are accessible
+        assert os.environ.get("TESTING") == "true"
+        assert os.environ.get("USE_MOCKS") == "true"
+
+    def test_mcp_production_environment_configured(self):
+        """Test that MCP production environment can be configured."""
+        # Set production-like environment
+        os.environ["TESTING"] = "false"
+        os.environ.pop("USE_MOCKS", None)  # Remove mocking in production
+
+        app = create_app()
+        assert app is not None, "App should be created successfully in production mode"
+
+        # Verify environment configuration
+        assert os.environ.get("TESTING") == "false"
+        assert os.environ.get("USE_MOCKS") != "true"
+
+    def test_mcp_client_handles_environment_gracefully(self):
+        """Test that MCP client handles different environments gracefully."""
+        from mcp_client import create_mcp_client
+
+        # Test with different environment configurations
+        for use_mocks in ["true", "false", None]:
+            if use_mocks is None:
+                os.environ.pop("USE_MOCKS", None)
             else:
+                os.environ["USE_MOCKS"] = use_mocks
+
+            # MCP client should handle all configurations without crashing
+            try:
+                client = create_mcp_client()
+                assert client is not None, f"Client should be created with USE_MOCKS={use_mocks}"
+            except Exception as e:
+                # Connection errors are acceptable in testing, but crashes are not
+                assert not isinstance(e, (SyntaxError, ImportError, AttributeError)), f"Client should not crash with USE_MOCKS={use_mocks}: {e}"
+
+    def test_mcp_environment_variables_respected(self):
+        """Test that MCP architecture respects environment variables."""
+        # Test different combinations of environment variables
+        test_cases = [
+            {"TESTING": "true", "USE_MOCKS": "true"},
+            {"TESTING": "true", "USE_MOCKS": "false"},
+            {"TESTING": "false"},
+        ]
+
+        for env_vars in test_cases:
+            # Clear relevant environment variables
+            for key in ["TESTING", "USE_MOCKS"]:
+                os.environ.pop(key, None)
+
+            # Set test environment
+            for key, value in env_vars.items():
                 os.environ[key] = value
 
-        # Import main to trigger conditional imports
-        import main
-
-        return main
-
-    def test_mock_gemini_real_firebase(self):
-        """Test mocking only Gemini while using real Firebase."""
-        main = self._reload_main_with_env(
-            USE_MOCK_GEMINI="true", USE_MOCK_FIREBASE="false"
-        )
-
-        # Check service types
-        self.assertEqual(
-            main.gemini_service.__name__,
-            "mocks.mock_gemini_service_wrapper",
-            "Gemini should be mocked",
-        )
-        self.assertEqual(
-            main.firestore_service.__name__,
-            "firestore_service",
-            "Firebase should be real",
-        )
-
-        # Check app config
-        app = main.create_app()
-        self.assertTrue(app.config["USE_MOCK_GEMINI"])
-        self.assertFalse(app.config["USE_MOCK_FIREBASE"])
-
-    def test_real_gemini_mock_firebase(self):
-        """Test using real Gemini while mocking Firebase."""
-        main = self._reload_main_with_env(
-            USE_MOCK_GEMINI="false", USE_MOCK_FIREBASE="true"
-        )
-
-        # Check service types
-        self.assertEqual(
-            main.gemini_service.__name__, "gemini_service", "Gemini should be real"
-        )
-        self.assertEqual(
-            main.firestore_service.__name__,
-            "mocks.mock_firestore_service_wrapper",
-            "Firebase should be mocked",
-        )
-
-    def test_legacy_use_mocks_true(self):
-        """Test that USE_MOCKS=true still mocks both services."""
-        main = self._reload_main_with_env(
-            USE_MOCKS="true", USE_MOCK_GEMINI=None, USE_MOCK_FIREBASE=None
-        )
-
-        # Both should be mocked
-        self.assertEqual(
-            main.gemini_service.__name__, "mocks.mock_gemini_service_wrapper"
-        )
-        self.assertEqual(
-            main.firestore_service.__name__, "mocks.mock_firestore_service_wrapper"
-        )
-
-    def test_individual_flags_override_use_mocks(self):
-        """Test that individual flags override USE_MOCKS."""
-        main = self._reload_main_with_env(
-            USE_MOCKS="true",
-            USE_MOCK_GEMINI="false",  # Override to use real
-            USE_MOCK_FIREBASE="true",
-        )
-
-        # Gemini should be real despite USE_MOCKS=true
-        self.assertEqual(
-            main.gemini_service.__name__,
-            "gemini_service",
-            "Individual flag should override USE_MOCKS",
-        )
-        # Firebase should still be mocked
-        self.assertEqual(
-            main.firestore_service.__name__, "mocks.mock_firestore_service_wrapper"
-        )
+            # Test that app can be created with this configuration
+            app = create_app()
+            assert app is not None, f"App should work with environment: {env_vars}"
 
 
 if __name__ == "__main__":

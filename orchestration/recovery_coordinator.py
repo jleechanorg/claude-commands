@@ -6,13 +6,13 @@ Handles agent failures, implements recovery strategies, and tracks metrics
 
 import json
 import os
-import time
 import subprocess
+import time
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from pathlib import Path
-from typing import Dict, Any, Optional, List
-from dataclasses import dataclass, asdict, field
 from enum import Enum
+from typing import Any
+
 
 class RecoveryReason(Enum):
     """Reasons for agent failure"""
@@ -40,7 +40,7 @@ class RecoveryEvent:
     exit_code: int
     reason: RecoveryReason
     strategy: RecoveryStrategy
-    partial_work: List[str]
+    partial_work: list[str]
     recovery_success: bool
     recovery_duration_seconds: float
 
@@ -60,13 +60,13 @@ class RecoveryCoordinator:
         # Load existing metrics
         self.metrics = self._load_metrics()
 
-    def _load_metrics(self) -> Dict[str, Any]:
+    def _load_metrics(self) -> dict[str, Any]:
         """Load recovery metrics from file"""
         if os.path.exists(self.metrics_file):
             try:
-                with open(self.metrics_file, 'r') as f:
+                with open(self.metrics_file) as f:
                     return json.load(f)
-            except (json.JSONDecodeError, IOError, OSError):
+            except (json.JSONDecodeError, OSError):
                 pass
 
         # Initialize metrics
@@ -85,14 +85,14 @@ class RecoveryCoordinator:
         with open(self.metrics_file, 'w') as f:
             json.dump(self.metrics, f, indent=2)
 
-    def check_agent_failure(self, agent_name: str) -> Optional[Dict[str, Any]]:
+    def check_agent_failure(self, agent_name: str) -> dict[str, Any] | None:
         """Check if an agent has failed"""
         result_file = os.path.join(self.results_dir, f"{agent_name}_results.json")
 
         if not os.path.exists(result_file):
             return None
 
-        with open(result_file, 'r') as f:
+        with open(result_file) as f:
             result = json.load(f)
 
         if result.get("status") == "failed":
@@ -104,25 +104,25 @@ class RecoveryCoordinator:
         """Determine why an agent failed"""
         if exit_code == 130:
             return RecoveryReason.SIGINT
-        elif exit_code == 124:  # Common timeout exit code
+        if exit_code == 124:  # Common timeout exit code
             return RecoveryReason.TIMEOUT
 
         # Check logs for specific errors
         log_file = os.path.join(self.logs_dir, f"{agent_name}.log")
         if os.path.exists(log_file):
-            with open(log_file, 'r') as f:
+            with open(log_file) as f:
                 log_content = f.read()
 
             if "permission denied" in log_content.lower():
                 return RecoveryReason.PERMISSION_ERROR
-            elif "api" in log_content.lower() and "error" in log_content.lower():
+            if "api" in log_content.lower() and "error" in log_content.lower():
                 return RecoveryReason.API_ERROR
-            elif "git" in log_content.lower() and "error" in log_content.lower():
+            if "git" in log_content.lower() and "error" in log_content.lower():
                 return RecoveryReason.GIT_ERROR
 
         return RecoveryReason.UNKNOWN
 
-    def analyze_partial_work(self, agent_name: str) -> List[str]:
+    def analyze_partial_work(self, agent_name: str) -> list[str]:
         """Analyze what work was completed before failure"""
         workspace = f"/home/jleechan/projects/worldarchitect.ai/worktree_roadmap/agent_workspace_{agent_name}"
         partial_work = []
@@ -141,7 +141,7 @@ class RecoveryCoordinator:
                 # Check if file is new (not in git)
                 result = subprocess.run(
                     ['git', 'ls-files', file_path],
-                    cwd=workspace,
+                    check=False, cwd=workspace,
                     capture_output=True,
                     text=True
                 )
@@ -151,7 +151,7 @@ class RecoveryCoordinator:
         # Check git status for modifications
         result = subprocess.run(
             ['git', 'status', '--porcelain'],
-            cwd=workspace,
+            check=False, cwd=workspace,
             capture_output=True,
             text=True
         )
@@ -163,7 +163,7 @@ class RecoveryCoordinator:
         return partial_work
 
     def determine_recovery_strategy(self, reason: RecoveryReason,
-                                  partial_work: List[str],
+                                  partial_work: list[str],
                                   attempt_count: int = 1) -> RecoveryStrategy:
         """Decide how to recover from failure"""
         # If multiple attempts have failed, escalate
@@ -186,7 +186,7 @@ class RecoveryCoordinator:
         return RecoveryStrategy.RESUME if partial_work else RecoveryStrategy.RESTART
 
     def generate_recovery_prompt(self, agent_name: str, task_desc: str,
-                               partial_work: List[str],
+                               partial_work: list[str],
                                strategy: RecoveryStrategy) -> str:
         """Generate prompt for recovery agent"""
         if strategy == RecoveryStrategy.RESUME:
@@ -198,15 +198,14 @@ Original task: {task_desc}
 
 Please complete the remaining work, ensuring you don't duplicate what's already done."""
 
-        elif strategy == RecoveryStrategy.RESTART:
+        if strategy == RecoveryStrategy.RESTART:
             return f"""Complete this task from the beginning: {task_desc}
 
 Note: A previous attempt failed. Please ensure all steps are completed successfully."""
 
-        else:
-            return task_desc
+        return task_desc
 
-    def recover_agent(self, agent_name: str) -> Dict[str, Any]:
+    def recover_agent(self, agent_name: str) -> dict[str, Any]:
         """Attempt to recover a failed agent"""
         start_time = time.time()
 
@@ -224,7 +223,7 @@ Note: A previous attempt failed. Please ensure all steps are completed successfu
         prompt_file = f"/tmp/agent_prompt_{agent_name}.txt"
         task_desc = "Unknown task"
         if os.path.exists(prompt_file):
-            with open(prompt_file, 'r') as f:
+            with open(prompt_file) as f:
                 content = f.read()
                 # Extract task description from prompt
                 if "Task:" in content:

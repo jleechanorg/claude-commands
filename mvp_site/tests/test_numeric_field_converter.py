@@ -16,23 +16,23 @@ class TestNumericFieldConverter(unittest.TestCase):
 
     def test_try_convert_to_int_success(self):
         """Test successful string to int conversion"""
-        self.assertEqual(NumericFieldConverter.try_convert_to_int("123"), 123)
-        self.assertEqual(NumericFieldConverter.try_convert_to_int("0"), 0)
-        self.assertEqual(NumericFieldConverter.try_convert_to_int("-42"), -42)
+        assert NumericFieldConverter.try_convert_to_int("123") == 123
+        assert NumericFieldConverter.try_convert_to_int("0") == 0
+        assert NumericFieldConverter.try_convert_to_int("-42") == -42
 
     def test_try_convert_to_int_failure(self):
         """Test failed conversion returns original value"""
-        self.assertEqual(NumericFieldConverter.try_convert_to_int("abc"), "abc")
-        self.assertEqual(NumericFieldConverter.try_convert_to_int("12.5"), "12.5")
-        self.assertEqual(NumericFieldConverter.try_convert_to_int(""), "")
-        self.assertEqual(NumericFieldConverter.try_convert_to_int("unknown"), "unknown")
+        assert NumericFieldConverter.try_convert_to_int("abc") == "abc"
+        assert NumericFieldConverter.try_convert_to_int("12.5") == "12.5"
+        assert NumericFieldConverter.try_convert_to_int("") == ""
+        assert NumericFieldConverter.try_convert_to_int("unknown") == "unknown"
 
     def test_try_convert_to_int_non_string(self):
         """Test non-string values are returned unchanged"""
-        self.assertEqual(NumericFieldConverter.try_convert_to_int(123), 123)
-        self.assertEqual(NumericFieldConverter.try_convert_to_int(None), None)
-        self.assertEqual(NumericFieldConverter.try_convert_to_int([1, 2, 3]), [1, 2, 3])
-        self.assertEqual(NumericFieldConverter.try_convert_to_int({"a": 1}), {"a": 1})
+        assert NumericFieldConverter.try_convert_to_int(123) == 123
+        assert NumericFieldConverter.try_convert_to_int(None) == None
+        assert NumericFieldConverter.try_convert_to_int([1, 2, 3]) == [1, 2, 3]
+        assert NumericFieldConverter.try_convert_to_int({"a": 1}) == {"a": 1}
 
     def test_convert_dict_with_fields(self):
         """Test dictionary conversion with specified numeric fields"""
@@ -49,13 +49,11 @@ class TestNumericFieldConverter(unittest.TestCase):
             test_dict, numeric_fields
         )
 
-        self.assertEqual(result["hp"], 25)
-        self.assertEqual(result["level"], 5)
-        self.assertEqual(result["strength"], 18)
-        self.assertEqual(result["name"], "Aragorn")  # Non-numeric field unchanged
-        self.assertEqual(
-            result["description"], "A ranger"
-        )  # Non-numeric field unchanged
+        assert result["hp"] == 25
+        assert result["level"] == 5
+        assert result["strength"] == 18
+        assert result["name"] == "Aragorn"  # Non-numeric field unchanged
+        assert result["description"] == "A ranger"  # Non-numeric field unchanged
 
     def test_convert_dict_with_fields_nested(self):
         """Test nested dictionary conversion"""
@@ -69,10 +67,10 @@ class TestNumericFieldConverter(unittest.TestCase):
             test_dict, numeric_fields
         )
 
-        self.assertEqual(result["character"]["hp"], 50)
-        self.assertEqual(result["character"]["name"], "Legolas")
-        self.assertEqual(result["weapon"]["damage"], 8)
-        self.assertEqual(result["weapon"]["type"], "bow")
+        assert result["character"]["hp"] == 50
+        assert result["character"]["name"] == "Legolas"
+        assert result["weapon"]["damage"] == 8
+        assert result["weapon"]["type"] == "bow"
 
     def test_convert_dict_with_fields_list(self):
         """Test list processing in dictionary conversion"""
@@ -92,11 +90,11 @@ class TestNumericFieldConverter(unittest.TestCase):
             test_dict, numeric_fields
         )
 
-        self.assertEqual(result["items"][0]["count"], 5)
-        self.assertEqual(result["items"][1]["count"], 3)
-        self.assertEqual(result["characters"][0]["level"], 3)
-        self.assertEqual(result["characters"][1]["level"], 4)
-        self.assertEqual(result["items"][0]["name"], "potion")
+        assert result["items"][0]["count"] == 5
+        assert result["items"][1]["count"] == 3
+        assert result["characters"][0]["level"] == 3
+        assert result["characters"][1]["level"] == 4
+        assert result["items"][0]["name"] == "potion"
 
     def test_convert_all_possible_ints(self):
         """Test converting all possible integer strings"""
@@ -112,13 +110,13 @@ class TestNumericFieldConverter(unittest.TestCase):
 
         result = NumericFieldConverter.convert_all_possible_ints(test_dict)
 
-        self.assertEqual(result["numeric_string"], 42)
-        self.assertEqual(result["text_string"], "hello")  # Unchanged
-        self.assertEqual(result["mixed"], "abc123")  # Unchanged
-        self.assertEqual(result["negative"], -15)
-        self.assertEqual(result["zero"], 0)
-        self.assertEqual(result["already_int"], 99)  # Unchanged
-        self.assertEqual(result["float_string"], "12.5")  # Unchanged
+        assert result["numeric_string"] == 42
+        assert result["text_string"] == "hello"  # Unchanged
+        assert result["mixed"] == "abc123"  # Unchanged
+        assert result["negative"] == -15
+        assert result["zero"] == 0
+        assert result["already_int"] == 99  # Unchanged
+        assert result["float_string"] == "12.5"  # Unchanged
 
     def test_convert_all_possible_ints_nested(self):
         """Test convert_all_possible_ints with nested structures"""
@@ -133,16 +131,16 @@ class TestNumericFieldConverter(unittest.TestCase):
 
         result = NumericFieldConverter.convert_all_possible_ints(test_dict)
 
-        self.assertEqual(result["level1"]["numeric"], 123)
-        self.assertEqual(result["level1"]["text"], "abc")
-        self.assertEqual(result["level1"]["level2"]["deep_numeric"], 456)
-        self.assertEqual(result["list_field"], [789, "text", 0])
+        assert result["level1"]["numeric"] == 123
+        assert result["level1"]["text"] == "abc"
+        assert result["level1"]["level2"]["deep_numeric"] == 456
+        assert result["list_field"] == [789, "text", 0]
 
     def test_legacy_convert_value(self):
         """Test legacy convert_value method for backward compatibility"""
         # Should ignore the key and just try to convert the value
-        self.assertEqual(NumericFieldConverter.convert_value("any_key", "123"), 123)
-        self.assertEqual(NumericFieldConverter.convert_value("any_key", "text"), "text")
+        assert NumericFieldConverter.convert_value("any_key", "123") == 123
+        assert NumericFieldConverter.convert_value("any_key", "text") == "text"
 
     def test_legacy_convert_dict(self):
         """Test legacy convert_dict method for backward compatibility"""
@@ -151,19 +149,16 @@ class TestNumericFieldConverter(unittest.TestCase):
         result = NumericFieldConverter.convert_dict(test_dict)
 
         # Should convert all possible integers regardless of field name
-        self.assertEqual(result["hp"], 25)
-        self.assertEqual(result["name"], "Test")
-        self.assertEqual(result["unknown_field"], 42)
+        assert result["hp"] == 25
+        assert result["name"] == "Test"
+        assert result["unknown_field"] == 42
 
     def test_invalid_data_handling(self):
         """Test handling of invalid data types"""
         # Non-dict input to dict methods should return unchanged
-        self.assertEqual(
-            NumericFieldConverter.convert_dict_with_fields("not_a_dict", set()),
-            "not_a_dict",
-        )
-        self.assertEqual(NumericFieldConverter.convert_all_possible_ints(None), None)
-        self.assertEqual(NumericFieldConverter.convert_dict([1, 2, 3]), [1, 2, 3])
+        assert NumericFieldConverter.convert_dict_with_fields("not_a_dict", set()) == "not_a_dict"
+        assert NumericFieldConverter.convert_all_possible_ints(None) == None
+        assert NumericFieldConverter.convert_dict([1, 2, 3]) == [1, 2, 3]
 
 
 if __name__ == "__main__":

@@ -9,7 +9,6 @@ sys.path.insert(
 import unittest
 
 import logging_util
-
 from firestore_service import update_state_with_changes
 
 
@@ -48,19 +47,17 @@ class TestMissionConversionHelpers(unittest.TestCase):
         missions = result["custom_campaign_state"]["active_missions"]
 
         # Should convert to list with 2 missions
-        self.assertIsInstance(missions, list)
-        self.assertEqual(len(missions), 2)
+        assert isinstance(missions, list)
+        assert len(missions) == 2
 
         # Check mission_ids were auto-generated
         mission_ids = [m.get("mission_id") for m in missions]
-        self.assertIn("quest_1", mission_ids)
-        self.assertIn("quest_2", mission_ids)
+        assert "quest_1" in mission_ids
+        assert "quest_2" in mission_ids
 
         # Check logging
-        self.assertTrue(any("SMART CONVERSION" in msg for msg in self.log_messages))
-        self.assertTrue(
-            any("Adding new mission: quest_1" in msg for msg in self.log_messages)
-        )
+        assert any("SMART CONVERSION" in msg for msg in self.log_messages)
+        assert any("Adding new mission: quest_1" in msg for msg in self.log_messages)
 
     def test_missions_dict_with_existing_mission_update(self):
         """Test updating existing mission when mission_id matches."""
@@ -87,20 +84,16 @@ class TestMissionConversionHelpers(unittest.TestCase):
         missions = result["custom_campaign_state"]["active_missions"]
 
         # Should still have 1 mission (updated, not duplicated)
-        self.assertEqual(len(missions), 1)
+        assert len(missions) == 1
 
         mission = missions[0]
-        self.assertEqual(mission["mission_id"], "quest_1")
-        self.assertEqual(mission["title"], "Find the Sword")  # Preserved
-        self.assertEqual(mission["status"], "completed")  # Updated
-        self.assertEqual(mission["progress"], 100)  # Updated
+        assert mission["mission_id"] == "quest_1"
+        assert mission["title"] == "Find the Sword"  # Preserved
+        assert mission["status"] == "completed"  # Updated
+        assert mission["progress"] == 100  # Updated
 
         # Check logging
-        self.assertTrue(
-            any(
-                "Updating existing mission: quest_1" in msg for msg in self.log_messages
-            )
-        )
+        assert any("Updating existing mission: quest_1" in msg for msg in self.log_messages)
 
     def test_missions_dict_with_invalid_mission_data(self):
         """Test handling invalid mission data (non-dict values)."""
@@ -120,14 +113,14 @@ class TestMissionConversionHelpers(unittest.TestCase):
         missions = result["custom_campaign_state"]["active_missions"]
 
         # Should only have 1 valid mission
-        self.assertEqual(len(missions), 1)
-        self.assertEqual(missions[0]["mission_id"], "quest_1")
+        assert len(missions) == 1
+        assert missions[0]["mission_id"] == "quest_1"
 
         # Check warning logs for invalid data
         warning_messages = [
             msg for msg in self.log_messages if "Skipping invalid mission data" in msg
         ]
-        self.assertEqual(len(warning_messages), 3)  # For quest_2, quest_3, quest_4
+        assert len(warning_messages) == 3  # For quest_2, quest_3, quest_4
 
     def test_missions_dict_with_existing_mission_id_in_data(self):
         """Test that existing mission_id in data is preserved."""
@@ -147,8 +140,8 @@ class TestMissionConversionHelpers(unittest.TestCase):
         missions = result["custom_campaign_state"]["active_missions"]
 
         # Should preserve the custom mission_id, not use the key
-        self.assertEqual(missions[0]["mission_id"], "custom_id")
-        self.assertEqual(missions[0]["title"], "Custom Mission")
+        assert missions[0]["mission_id"] == "custom_id"
+        assert missions[0]["title"] == "Custom Mission"
 
     def test_missions_non_dict_non_list_value(self):
         """Test handling non-dict, non-list values for active_missions."""
@@ -159,15 +152,11 @@ class TestMissionConversionHelpers(unittest.TestCase):
         missions = result["custom_campaign_state"]["active_missions"]
 
         # Should preserve original empty list
-        self.assertIsInstance(missions, list)
-        self.assertEqual(len(missions), 0)
+        assert isinstance(missions, list)
+        assert len(missions) == 0
 
         # Check error logging
-        self.assertTrue(
-            any(
-                "Cannot convert str to mission list" in msg for msg in self.log_messages
-            )
-        )
+        assert any("Cannot convert str to mission list" in msg for msg in self.log_messages)
 
     def test_missions_initialization_when_missing(self):
         """Test that active_missions is initialized when missing."""
@@ -182,9 +171,9 @@ class TestMissionConversionHelpers(unittest.TestCase):
         missions = result["custom_campaign_state"]["active_missions"]
 
         # Should initialize as list and add mission
-        self.assertIsInstance(missions, list)
-        self.assertEqual(len(missions), 1)
-        self.assertEqual(missions[0]["mission_id"], "quest_1")
+        assert isinstance(missions, list)
+        assert len(missions) == 1
+        assert missions[0]["mission_id"] == "quest_1"
 
     def test_missions_initialization_when_wrong_type(self):
         """Test that active_missions is reinitialized when wrong type."""
@@ -203,9 +192,9 @@ class TestMissionConversionHelpers(unittest.TestCase):
         missions = result["custom_campaign_state"]["active_missions"]
 
         # Should reinitialize as list and add mission
-        self.assertIsInstance(missions, list)
-        self.assertEqual(len(missions), 1)
-        self.assertEqual(missions[0]["mission_id"], "quest_1")
+        assert isinstance(missions, list)
+        assert len(missions) == 1
+        assert missions[0]["mission_id"] == "quest_1"
 
     def test_mixed_valid_and_invalid_missions(self):
         """Test handling mix of valid and invalid mission data."""
@@ -226,18 +215,18 @@ class TestMissionConversionHelpers(unittest.TestCase):
         missions = result["custom_campaign_state"]["active_missions"]
 
         # Should have 3 valid missions, 2 invalid skipped
-        self.assertEqual(len(missions), 3)
+        assert len(missions) == 3
 
         titles = [m["title"] for m in missions]
-        self.assertIn("Valid Quest 1", titles)
-        self.assertIn("Valid Quest 2", titles)
-        self.assertIn("Valid Quest 3", titles)
+        assert "Valid Quest 1" in titles
+        assert "Valid Quest 2" in titles
+        assert "Valid Quest 3" in titles
 
         # Should have 2 warning messages for invalid data
         warning_messages = [
             msg for msg in self.log_messages if "Skipping invalid mission data" in msg
         ]
-        self.assertEqual(len(warning_messages), 2)
+        assert len(warning_messages) == 2
 
     def test_update_mission_preserves_other_fields(self):
         """Test that updating mission preserves fields not in the update."""
@@ -266,13 +255,13 @@ class TestMissionConversionHelpers(unittest.TestCase):
         mission = result["custom_campaign_state"]["active_missions"][0]
 
         # Updated fields
-        self.assertEqual(mission["status"], "completed")
-        self.assertEqual(mission["progress"], 100)
+        assert mission["status"] == "completed"
+        assert mission["progress"] == 100
 
         # Preserved fields
-        self.assertEqual(mission["title"], "Original Title")
-        self.assertEqual(mission["rewards"], ["gold", "xp"])
-        self.assertEqual(mission["notes"], "Important quest")
+        assert mission["title"] == "Original Title"
+        assert mission["rewards"] == ["gold", "xp"]
+        assert mission["notes"] == "Important quest"
 
 
 if __name__ == "__main__":

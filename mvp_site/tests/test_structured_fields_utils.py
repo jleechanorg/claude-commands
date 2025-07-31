@@ -72,25 +72,11 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         result = structured_fields_utils.extract_structured_fields(mock_gemini_response)
 
         # Verify all fields are extracted correctly
-        self.assertEqual(
-            result[constants.FIELD_SESSION_HEADER],
-            self.sample_structured_data["session_header"],
-        )
-        self.assertEqual(
-            result[constants.FIELD_PLANNING_BLOCK],
-            self.sample_structured_data["planning_block"],
-        )
-        self.assertEqual(
-            result[constants.FIELD_DICE_ROLLS],
-            self.sample_structured_data["dice_rolls"],
-        )
-        self.assertEqual(
-            result[constants.FIELD_RESOURCES], self.sample_structured_data["resources"]
-        )
-        self.assertEqual(
-            result[constants.FIELD_DEBUG_INFO],
-            self.sample_structured_data["debug_info"],
-        )
+        assert result[constants.FIELD_SESSION_HEADER] == self.sample_structured_data["session_header"]
+        assert result[constants.FIELD_PLANNING_BLOCK] == self.sample_structured_data["planning_block"]
+        assert result[constants.FIELD_DICE_ROLLS] == self.sample_structured_data["dice_rolls"]
+        assert result[constants.FIELD_RESOURCES] == self.sample_structured_data["resources"]
+        assert result[constants.FIELD_DEBUG_INFO] == self.sample_structured_data["debug_info"]
 
     def test_extract_structured_fields_with_empty_fields(self):
         """Test extraction with empty structured response fields."""
@@ -109,11 +95,11 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         result = structured_fields_utils.extract_structured_fields(mock_gemini_response)
 
         # Verify all fields are empty but present
-        self.assertEqual(result[constants.FIELD_SESSION_HEADER], "")
-        self.assertEqual(result[constants.FIELD_PLANNING_BLOCK], "")
-        self.assertEqual(result[constants.FIELD_DICE_ROLLS], [])
-        self.assertEqual(result[constants.FIELD_RESOURCES], "")
-        self.assertEqual(result[constants.FIELD_DEBUG_INFO], {})
+        assert result[constants.FIELD_SESSION_HEADER] == ""
+        assert result[constants.FIELD_PLANNING_BLOCK] == ""
+        assert result[constants.FIELD_DICE_ROLLS] == []
+        assert result[constants.FIELD_RESOURCES] == ""
+        assert result[constants.FIELD_DEBUG_INFO] == {}
 
     def test_extract_structured_fields_with_missing_attributes(self):
         """Test extraction when structured response lacks some attributes."""
@@ -130,11 +116,11 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         result = structured_fields_utils.extract_structured_fields(mock_gemini_response)
 
         # Verify available fields are extracted, missing ones default to empty
-        self.assertEqual(result[constants.FIELD_SESSION_HEADER], "Available header")
-        self.assertEqual(result[constants.FIELD_PLANNING_BLOCK], "Available planning")
-        self.assertEqual(result[constants.FIELD_DICE_ROLLS], [])  # Default empty list
-        self.assertEqual(result[constants.FIELD_RESOURCES], "")  # Default empty string
-        self.assertEqual(result[constants.FIELD_DEBUG_INFO], {})  # Default empty dict
+        assert result[constants.FIELD_SESSION_HEADER] == "Available header"
+        assert result[constants.FIELD_PLANNING_BLOCK] == "Available planning"
+        assert result[constants.FIELD_DICE_ROLLS] == []  # Default empty list
+        assert result[constants.FIELD_RESOURCES] == ""  # Default empty string
+        assert result[constants.FIELD_DEBUG_INFO] == {}  # Default empty dict
 
     def test_extract_structured_fields_with_no_structured_response(self):
         """Test extraction when GeminiResponse has no structured_response."""
@@ -146,7 +132,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         result = structured_fields_utils.extract_structured_fields(mock_gemini_response)
 
         # Verify result is empty dict
-        self.assertEqual(result, {})
+        assert result == {}
 
     def test_extract_structured_fields_with_none_values(self):
         """Test extraction when structured response has None values."""
@@ -165,11 +151,11 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         result = structured_fields_utils.extract_structured_fields(mock_gemini_response)
 
         # Verify all fields use defaults when None
-        self.assertEqual(result[constants.FIELD_SESSION_HEADER], "")
-        self.assertEqual(result[constants.FIELD_PLANNING_BLOCK], "")
-        self.assertEqual(result[constants.FIELD_DICE_ROLLS], [])
-        self.assertEqual(result[constants.FIELD_RESOURCES], "")
-        self.assertEqual(result[constants.FIELD_DEBUG_INFO], {})
+        assert result[constants.FIELD_SESSION_HEADER] == ""
+        assert result[constants.FIELD_PLANNING_BLOCK] == ""
+        assert result[constants.FIELD_DICE_ROLLS] == []
+        assert result[constants.FIELD_RESOURCES] == ""
+        assert result[constants.FIELD_DEBUG_INFO] == {}
 
     def test_extract_structured_fields_constants_mapping(self):
         """Test that function uses correct constants for field names."""
@@ -196,7 +182,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
             constants.FIELD_DEBUG_INFO,
             constants.FIELD_GOD_MODE_RESPONSE,
         }
-        self.assertEqual(set(result.keys()), expected_keys)
+        assert set(result.keys()) == expected_keys
 
     def test_extract_structured_fields_with_complex_debug_info(self):
         """Test extraction with complex debug info structure."""
@@ -229,14 +215,9 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         result = structured_fields_utils.extract_structured_fields(mock_gemini_response)
 
         # Verify complex debug info is preserved
-        self.assertEqual(result[constants.FIELD_DEBUG_INFO], complex_debug_info)
-        self.assertEqual(
-            result[constants.FIELD_DEBUG_INFO]["enemy_status"]["goblin_1"]["hp"], 8
-        )
-        self.assertEqual(
-            result[constants.FIELD_DEBUG_INFO]["environmental_factors"],
-            ["heavy_rain", "difficult_terrain"],
-        )
+        assert result[constants.FIELD_DEBUG_INFO] == complex_debug_info
+        assert result[constants.FIELD_DEBUG_INFO]["enemy_status"]["goblin_1"]["hp"] == 8
+        assert result[constants.FIELD_DEBUG_INFO]["environmental_factors"] == ["heavy_rain", "difficult_terrain"]
 
     def test_extract_structured_fields_with_long_text_fields(self):
         """Test extraction with longer text content."""
@@ -280,12 +261,10 @@ Next Objective: Investigate the glowing altar"""
         result = structured_fields_utils.extract_structured_fields(mock_gemini_response)
 
         # Verify long text fields are preserved
-        self.assertEqual(result[constants.FIELD_SESSION_HEADER], long_session_header)
-        self.assertEqual(result[constants.FIELD_PLANNING_BLOCK], long_planning_block)
-        self.assertIn(
-            "Ancient Temple - Main Chamber", result[constants.FIELD_SESSION_HEADER]
-        )
-        self.assertIn("different approach", result[constants.FIELD_PLANNING_BLOCK])
+        assert result[constants.FIELD_SESSION_HEADER] == long_session_header
+        assert result[constants.FIELD_PLANNING_BLOCK] == long_planning_block
+        assert "Ancient Temple - Main Chamber" in result[constants.FIELD_SESSION_HEADER]
+        assert "different approach" in result[constants.FIELD_PLANNING_BLOCK]
 
 
 def run_tests():

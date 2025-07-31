@@ -70,36 +70,18 @@ class TestRealJsonBugReproduction(unittest.TestCase):
         print(f"Result preview: {narrative_text[:200]}...")
 
         # The critical test: should NOT return raw JSON
-        self.assertNotIn(
-            '"narrative":',
-            narrative_text,
-            "Parsed result should not contain raw JSON keys",
-        )
-        self.assertNotIn(
-            '"god_mode_response":',
-            narrative_text,
-            "Parsed result should not contain raw JSON keys",
-        )
-        self.assertNotIn(
-            '"entities_mentioned":',
-            narrative_text,
-            "Parsed result should not contain raw JSON keys",
-        )
+        assert '"narrative":' not in narrative_text, "Parsed result should not contain raw JSON keys"
+        assert '"god_mode_response":' not in narrative_text, "Parsed result should not contain raw JSON keys"
+        assert '"entities_mentioned":' not in narrative_text, "Parsed result should not contain raw JSON keys"
 
         # Should contain the actual narrative content
-        self.assertIn(
-            "CHARACTER CREATION - Step 2 of 7",
-            narrative_text,
-            "Should contain the actual narrative content",
-        )
-        self.assertIn(
-            "Mark Grayson", narrative_text, "Should contain character information"
-        )
+        assert "CHARACTER CREATION - Step 2 of 7" in narrative_text, "Should contain the actual narrative content"
+        assert "Mark Grayson" in narrative_text, "Should contain character information"
 
         # Structured response should be valid
-        self.assertIsNotNone(structured_response)
-        self.assertIn("Mark Grayson", structured_response.entities_mentioned)
-        self.assertEqual(structured_response.location_confirmed, "Character Creation")
+        assert structured_response is not None
+        assert "Mark Grayson" in structured_response.entities_mentioned
+        assert structured_response.location_confirmed == "Character Creation"
 
     def test_user_simplified_version(self):
         """Test a simplified version to isolate the issue."""
@@ -115,10 +97,8 @@ class TestRealJsonBugReproduction(unittest.TestCase):
         narrative_text, structured_response = parse_structured_response(simple_json)
 
         # Should return clean narrative
-        self.assertEqual(
-            narrative_text, "This is the story content that should be displayed."
-        )
-        self.assertNotIn('"narrative":', narrative_text)
+        assert narrative_text == "This is the story content that should be displayed."
+        assert '"narrative":' not in narrative_text
 
 
 if __name__ == "__main__":

@@ -1,16 +1,16 @@
 """Tests for the unified orchestration system."""
 
 import os
+import sys
 import tempfile
 import unittest
-from unittest.mock import Mock, patch, call
-import sys
+from unittest.mock import Mock, patch
 
 # Add orchestration directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+from fixtures import mock_claude_fixture, mock_redis_fixture, mock_tmux_fixture
 from orchestrate_unified import UnifiedOrchestration
-from fixtures import mock_tmux_fixture, mock_claude_fixture, mock_redis_fixture
 
 
 class TestUnifiedOrchestration(unittest.TestCase):
@@ -219,7 +219,7 @@ class TestUnifiedOrchestration(unittest.TestCase):
                     if arg.startswith('@'):
                         prompt_file = arg[1:]
                         if os.path.exists(prompt_file):
-                            with open(prompt_file, 'r') as f:
+                            with open(prompt_file) as f:
                                 prompt_content = f.read()
                                 prompt_file_calls.append(prompt_content)
 

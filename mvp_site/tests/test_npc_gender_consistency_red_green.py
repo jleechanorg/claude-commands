@@ -32,7 +32,7 @@ class TestNPCGenderConsistencyRedGreen(unittest.TestCase):
             )
 
         # Verify the error message mentions gender requirement
-        self.assertIn("Gender is required for NPCs", str(context.exception))
+        assert "Gender is required for NPCs" in str(context.exception)
 
     def test_green_npc_with_mandatory_gender_field(self):
         """GREEN TEST: NPC class should have mandatory gender field."""
@@ -52,7 +52,7 @@ class TestNPCGenderConsistencyRedGreen(unittest.TestCase):
 
         # After fix, gender should be accessible
         if hasattr(npc, "gender"):
-            self.assertEqual(npc.gender, "female")
+            assert npc.gender == "female"
         else:
             self.fail("NPC should have gender field after fix (GREEN test)")
 
@@ -72,7 +72,7 @@ class TestNPCGenderConsistencyRedGreen(unittest.TestCase):
                 gender=gender,
             )
             if hasattr(npc, "gender"):
-                self.assertEqual(npc.gender, gender)
+                assert npc.gender == gender
 
     def test_green_npc_gender_prevents_inconsistency(self):
         """GREEN TEST: Gender field should prevent narrative inconsistency."""
@@ -91,7 +91,7 @@ class TestNPCGenderConsistencyRedGreen(unittest.TestCase):
 
         # Verify gender is stored and accessible
         if hasattr(jedi_master, "gender"):
-            self.assertEqual(jedi_master.gender, "female")
+            assert jedi_master.gender == "female"
 
             # This ensures narrative generation can check:
             # if npc.gender == "female": use "she/her" pronouns
@@ -114,7 +114,7 @@ class TestNPCGenderConsistencyRedGreen(unittest.TestCase):
             )
             # If gender field exists, empty string might need validation
             if hasattr(npc_empty, "gender"):
-                self.assertIsNotNone(npc_empty.gender)
+                assert npc_empty.gender is not None
         except ValueError:
             # It's okay if empty string raises validation error
             pass
@@ -129,7 +129,7 @@ class TestNPCGenderConsistencyRedGreen(unittest.TestCase):
                 gender=None,  # Edge case: None
             )
             if hasattr(npc_none, "gender"):
-                self.assertIsNotNone(npc_none.gender)
+                assert npc_none.gender is not None
         except (ValueError, TypeError):
             # It's okay if None raises validation error
             pass

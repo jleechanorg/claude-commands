@@ -35,8 +35,8 @@ class TestPydanticEntityIntegration(unittest.TestCase):
             # In that case, we need to examine what's happening
             self.fail("NPC creation should have failed due to missing gender")
         except ValueError as e:
-            self.assertIn("Gender is required for NPCs", str(e))
-            self.assertIn("narrative consistency", str(e))
+            assert "Gender is required for NPCs" in str(e)
+            assert "narrative consistency" in str(e)
         except Exception as e:
             # If a different error occurs, let's see what it is
             self.fail(f"Unexpected error type: {type(e).__name__}: {e}")
@@ -53,7 +53,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 current_location="loc_test_001",
                 gender=gender,
             )
-            self.assertEqual(npc.gender, gender.lower())
+            assert npc.gender == gender.lower()
 
     def test_npc_creative_gender_accepted(self):
         """Test that creative gender values are accepted (updated for permissive validation)"""
@@ -64,7 +64,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
             current_location="loc_test_001",
             gender="creative_gender",  # Now accepted
         )
-        self.assertEqual(npc.gender, "creative_gender")
+        assert npc.gender == "creative_gender"
 
     def test_pc_gender_optional(self):
         """Test that gender is optional for PCs"""
@@ -76,7 +76,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
             current_location="loc_test_001",
             gender=None,  # Explicitly optional for PCs
         )
-        self.assertIsNone(pc.gender)
+        assert pc.gender is None
 
     def test_age_validation_fantasy_ranges(self):
         """Test age validation with fantasy-appropriate ranges"""
@@ -92,7 +92,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 gender="male",
                 age=age,
             )
-            self.assertEqual(npc.age, age)
+            assert npc.age == age
 
     def test_age_validation_invalid_ranges(self):
         """Test age validation rejects invalid ranges"""
@@ -106,7 +106,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 gender="female",
                 age=-1,
             )
-        self.assertIn("greater than or equal to 0", str(context.exception))
+        assert "greater than or equal to 0" in str(context.exception)
 
         # Test unreasonably high age
         with self.assertRaises(ValueError) as context:
@@ -118,7 +118,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 gender="male",
                 age=100000,  # Exceeds 50,000 limit
             )
-        self.assertIn("less than or equal to 50000", str(context.exception))
+        assert "less than or equal to 50000" in str(context.exception)
 
     def test_mbti_validation(self):
         """Test MBTI personality type validation"""
@@ -151,9 +151,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 gender="male",
                 mbti=mbti.lower(),  # Test case insensitivity
             )
-            self.assertEqual(
-                npc.mbti, mbti.lower().strip()
-            )  # We passed mbti.lower(), validation strips whitespace
+            assert npc.mbti == mbti.lower().strip()  # We passed mbti.lower(), validation strips whitespace
 
         # Test creative personality description (now accepted)
         npc2 = NPC(
@@ -164,7 +162,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
             gender="female",
             mbti="analytical and methodical thinker",  # Now accepted
         )
-        self.assertEqual(npc2.mbti, "analytical and methodical thinker")
+        assert npc2.mbti == "analytical and methodical thinker"
 
     def test_alignment_validation(self):
         """Test D&D alignment validation"""
@@ -190,7 +188,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 gender="male",
                 alignment=alignment,
             )
-            self.assertEqual(npc.alignment, alignment)
+            assert npc.alignment == alignment
 
         # Test creative alignment (now accepted)
         npc2 = NPC(
@@ -201,7 +199,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
             gender="female",
             alignment="Chaotic Awesome",  # Now accepted
         )
-        self.assertEqual(npc2.alignment, "Chaotic Awesome")
+        assert npc2.alignment == "Chaotic Awesome"
 
     def test_dnd_fundamentals_integration(self):
         """Test D&D fundamental fields integration"""
@@ -219,12 +217,12 @@ class TestPydanticEntityIntegration(unittest.TestCase):
         )
 
         # Verify all D&D fields are set correctly
-        self.assertEqual(npc.gender, "male")
-        self.assertEqual(npc.age, 30)
-        self.assertEqual(npc.mbti, "INTJ")
-        self.assertEqual(npc.alignment, "Lawful Good")
-        self.assertEqual(npc.class_name, "Fighter")
-        self.assertEqual(npc.background, "Soldier")
+        assert npc.gender == "male"
+        assert npc.age == 30
+        assert npc.mbti == "INTJ"
+        assert npc.alignment == "Lawful Good"
+        assert npc.class_name == "Fighter"
+        assert npc.background == "Soldier"
 
     def test_defensive_numeric_conversion_stats(self):
         """Test defensive numeric conversion for stats"""
@@ -233,18 +231,18 @@ class TestPydanticEntityIntegration(unittest.TestCase):
         stats = Stats(strength=15, dexterity=14, constitution=13)
 
         # Verify stats are set correctly and modifier calculation works
-        self.assertEqual(stats.strength, 15)
-        self.assertEqual(stats.get_modifier("strength"), 2)  # (15-10)//2 = 2
-        self.assertEqual(stats.get_modifier("dexterity"), 2)  # (14-10)//2 = 2
-        self.assertEqual(stats.get_modifier("constitution"), 1)  # (13-10)//2 = 1
+        assert stats.strength == 15
+        assert stats.get_modifier("strength") == 2  # (15-10)//2 = 2
+        assert stats.get_modifier("dexterity") == 2  # (14-10)//2 = 2
+        assert stats.get_modifier("constitution") == 1  # (13-10)//2 = 1
 
     def test_defensive_numeric_conversion_health(self):
         """Test defensive numeric conversion for health values"""
         health = HealthStatus(hp=25, hp_max=30, temp_hp=5)
 
-        self.assertEqual(health.hp, 25)
-        self.assertEqual(health.hp_max, 30)
-        self.assertEqual(health.temp_hp, 5)
+        assert health.hp == 25
+        assert health.hp_max == 30
+        assert health.temp_hp == 5
 
     def test_npc_creative_gender_values(self):
         """Test that creative gender values are now accepted"""
@@ -264,7 +262,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 current_location="loc_test_001",
                 gender=gender,
             )
-            self.assertEqual(npc.gender, gender)
+            assert npc.gender == gender
 
     def test_npc_invalid_gender_types_still_fail(self):
         """Test that non-string gender values still fail validation"""
@@ -277,7 +275,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 gender=123,  # Wrong type - should fail
             )
         # Check that the error message indicates type validation failure
-        self.assertIn("string_type", str(context.exception))
+        assert "string_type" in str(context.exception)
 
     def test_creative_alignment_values(self):
         """Test that creative alignment values are accepted"""
@@ -297,7 +295,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 gender="test",
                 alignment=alignment,
             )
-            self.assertEqual(npc.alignment, alignment)
+            assert npc.alignment == alignment
 
     def test_creative_mbti_values(self):
         """Test that creative personality descriptions are accepted"""
@@ -317,7 +315,7 @@ class TestPydanticEntityIntegration(unittest.TestCase):
                 gender="test",
                 mbti=mbti,
             )
-            self.assertEqual(npc.mbti, mbti)
+            assert npc.mbti == mbti
 
     def test_comprehensive_npc_creation(self):
         """Test creating a comprehensive NPC with all enhanced fields"""
@@ -343,19 +341,19 @@ class TestPydanticEntityIntegration(unittest.TestCase):
         )
 
         # Verify comprehensive integration
-        self.assertEqual(npc.display_name, "Comprehensive Test NPC")
-        self.assertEqual(npc.gender, "female")
-        self.assertEqual(npc.age, 35)
-        self.assertEqual(npc.mbti, "ENFJ")
-        self.assertEqual(npc.alignment, "Neutral Good")
-        self.assertEqual(npc.class_name, "Cleric")
-        self.assertEqual(npc.background, "Acolyte")
-        self.assertEqual(npc.faction, "Temple of Light")
-        self.assertEqual(npc.role, "High Priestess")
-        self.assertEqual(npc.attitude_to_party, "friendly")
-        self.assertEqual(npc.level, 5)
-        self.assertEqual(npc.stats.wisdom, 16)
-        self.assertEqual(npc.stats.charisma, 15)
+        assert npc.display_name == "Comprehensive Test NPC"
+        assert npc.gender == "female"
+        assert npc.age == 35
+        assert npc.mbti == "ENFJ"
+        assert npc.alignment == "Neutral Good"
+        assert npc.class_name == "Cleric"
+        assert npc.background == "Acolyte"
+        assert npc.faction == "Temple of Light"
+        assert npc.role == "High Priestess"
+        assert npc.attitude_to_party == "friendly"
+        assert npc.level == 5
+        assert npc.stats.wisdom == 16
+        assert npc.stats.charisma == 15
 
     def test_backward_compatibility(self):
         """Test that existing NPC creation still works (backward compatibility)"""
@@ -368,11 +366,11 @@ class TestPydanticEntityIntegration(unittest.TestCase):
             gender="male",  # Minimum required for NPCs
         )
 
-        self.assertEqual(npc.display_name, "Backward Compat NPC")
-        self.assertEqual(npc.gender, "male")
-        self.assertIsNone(npc.age)  # Optional fields default to None
-        self.assertIsNone(npc.mbti)
-        self.assertIsNone(npc.alignment)
+        assert npc.display_name == "Backward Compat NPC"
+        assert npc.gender == "male"
+        assert npc.age is None  # Optional fields default to None
+        assert npc.mbti is None
+        assert npc.alignment is None
 
 
 if __name__ == "__main__":

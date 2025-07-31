@@ -66,7 +66,7 @@ class TestEntityPreloader(unittest.TestCase):
 
         # create_from_game_state should only be called once due to caching
         mock_create.assert_called_once()
-        self.assertEqual(result1, result2)
+        assert result1 == result2
 
     @patch("entity_preloader.create_from_game_state")
     def test_create_entity_preload_text_basic(self, mock_create):
@@ -95,15 +95,15 @@ class TestEntityPreloader(unittest.TestCase):
         result = self.preloader.create_entity_preload_text(self.sample_game_state, 1, 1)
 
         # Check structure
-        self.assertIn("=== ENTITY MANIFEST ===", result)
-        self.assertIn("PLAYER CHARACTERS PRESENT:", result)
-        self.assertIn("NPCS PRESENT:", result)
-        self.assertIn("Sariel", result)
-        self.assertIn("Cassian", result)
-        self.assertIn("HP: 25/30", result)
-        self.assertIn("HP: 20/20", result)
-        self.assertIn("Location: Throne Room", result)
-        self.assertIn("Do not let any of these entities disappear", result)
+        assert "=== ENTITY MANIFEST ===" in result
+        assert "PLAYER CHARACTERS PRESENT:" in result
+        assert "NPCS PRESENT:" in result
+        assert "Sariel" in result
+        assert "Cassian" in result
+        assert "HP: 25/30" in result
+        assert "HP: 20/20" in result
+        assert "Location: Throne Room" in result
+        assert "Do not let any of these entities disappear" in result
 
     @patch("entity_preloader.create_from_game_state")
     def test_create_entity_preload_text_with_location(self, mock_create):
@@ -122,9 +122,9 @@ class TestEntityPreloader(unittest.TestCase):
             self.sample_game_state, 1, 1, location="Lady Cressida's Chambers"
         )
 
-        self.assertIn("ENTITIES IN LADY CRESSIDA'S CHAMBERS:", result)
-        self.assertIn("Lady Cressida (resident)", result)
-        self.assertIn("Personal furnishings", result)
+        assert "ENTITIES IN LADY CRESSIDA'S CHAMBERS:" in result
+        assert "Lady Cressida (resident)" in result
+        assert "Personal furnishings" in result
 
     @patch("entity_preloader.create_from_game_state")
     def test_get_entity_count(self, mock_create):
@@ -137,7 +137,7 @@ class TestEntityPreloader(unittest.TestCase):
         result = self.preloader.get_entity_count(self.sample_game_state, 1, 1)
 
         expected = {"player_characters": 2, "npcs": 3, "total_entities": 5}
-        self.assertEqual(result, expected)
+        assert result == expected
 
     def test_get_location_entities_throne_room(self):
         """Test location entity detection for throne room"""
@@ -146,17 +146,17 @@ class TestEntityPreloader(unittest.TestCase):
 
         result = self.preloader._get_location_entities(mock_manifest, "Throne Room")
 
-        self.assertIn("Court guards (background)", result)
+        assert "Court guards (background)" in result
 
     def test_clear_cache(self):
         """Test cache clearing functionality"""
         # Add something to cache
         self.preloader.manifest_cache["test"] = Mock()
-        self.assertIn("test", self.preloader.manifest_cache)
+        assert "test" in self.preloader.manifest_cache
 
         # Clear cache
         self.preloader.clear_cache()
-        self.assertEqual(len(self.preloader.manifest_cache), 0)
+        assert len(self.preloader.manifest_cache) == 0
 
 
 class TestLocationEntityEnforcer(unittest.TestCase):
@@ -168,7 +168,7 @@ class TestLocationEntityEnforcer(unittest.TestCase):
         result = self.enforcer.get_required_entities_for_location("Valerius's Study")
 
         # No hardcoded rules anymore
-        self.assertEqual(result, {})
+        assert result == {}
 
     def test_get_required_entities_cressida_chambers(self):
         """Test location rules for Lady Cressida's chambers"""
@@ -177,7 +177,7 @@ class TestLocationEntityEnforcer(unittest.TestCase):
         )
 
         # No hardcoded rules anymore
-        self.assertEqual(result, {})
+        assert result == {}
 
     def test_validate_location_entities_success(self):
         """Test successful location entity validation"""
@@ -187,8 +187,8 @@ class TestLocationEntityEnforcer(unittest.TestCase):
         )
 
         # No location rules, so validation always passes
-        self.assertTrue(result["validation_passed"])
-        self.assertEqual(len(result["missing_entities"]), 0)
+        assert result["validation_passed"]
+        assert len(result["missing_entities"]) == 0
 
     def test_validate_location_entities_failure(self):
         """Test location entity validation with no rules"""
@@ -198,8 +198,8 @@ class TestLocationEntityEnforcer(unittest.TestCase):
         )
 
         # No location rules, so validation always passes
-        self.assertTrue(result["validation_passed"])
-        self.assertEqual(result["missing_entities"], [])
+        assert result["validation_passed"]
+        assert result["missing_entities"] == []
 
     def test_generate_location_enforcement_text(self):
         """Test location enforcement text generation"""
@@ -207,19 +207,19 @@ class TestLocationEntityEnforcer(unittest.TestCase):
             "Lady Cressida's Chambers"
         )
 
-        self.assertIn("LOCATION: Lady Cressida's Chambers", result)
+        assert "LOCATION: Lady Cressida's Chambers" in result
         # No specific requirements anymore
-        self.assertIn("no specific entity requirements", result)
+        assert "no specific entity requirements" in result
 
 
 class TestGlobalInstances(unittest.TestCase):
     def test_global_entity_preloader_exists(self):
         """Test that global entity preloader instance exists"""
-        self.assertIsInstance(entity_preloader, EntityPreloader)
+        assert isinstance(entity_preloader, EntityPreloader)
 
     def test_global_location_enforcer_exists(self):
         """Test that global location enforcer instance exists"""
-        self.assertIsInstance(location_enforcer, LocationEntityEnforcer)
+        assert isinstance(location_enforcer, LocationEntityEnforcer)
 
 
 if __name__ == "__main__":

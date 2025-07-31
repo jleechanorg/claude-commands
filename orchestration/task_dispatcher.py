@@ -10,7 +10,6 @@ import os
 import re
 import subprocess
 import time
-from datetime import datetime
 from typing import Any
 
 # Import A2A components
@@ -92,7 +91,7 @@ class TaskDispatcher:
         try:
             result = subprocess.run(
                 ["tmux", "list-sessions", "-F", "#{session_name}"],
-                capture_output=True, text=True
+                check=False, capture_output=True, text=True
             )
             if result.returncode == 0:
                 existing.update(result.stdout.strip().split('\n'))
@@ -173,9 +172,8 @@ class TaskDispatcher:
                 recent_pr = self._find_recent_pr()
                 if recent_pr:
                     return recent_pr, 'update'
-                else:
-                    print("🤔 Ambiguous PR reference detected. Agent will ask for clarification.")
-                    return None, 'update'  # Signal update mode but need clarification
+                print("🤔 Ambiguous PR reference detected. Agent will ask for clarification.")
+                return None, 'update'  # Signal update mode but need clarification
 
         return None, 'create'
 
@@ -186,14 +184,14 @@ class TaskDispatcher:
             # Get current branch name first for better readability
             branch_result = subprocess.run(
                 ['git', 'branch', '--show-current'],
-                capture_output=True, text=True
+                check=False, capture_output=True, text=True
             )
             current_branch = branch_result.stdout.strip() if branch_result.returncode == 0 else None
 
             if current_branch:
                 result = subprocess.run(
                     ['gh', 'pr', 'list', '--head', current_branch, '--json', 'number', '--limit', '1'],
-                    capture_output=True, text=True
+                    check=False, capture_output=True, text=True
                 )
                 if result.returncode == 0 and result.stdout.strip():
                     data = json.loads(result.stdout)
@@ -203,13 +201,13 @@ class TaskDispatcher:
             # Fallback: get most recent PR by current user
             result = subprocess.run(
                 ['gh', 'pr', 'list', '--author', '@me', '--json', 'number', '--limit', '1'],
-                capture_output=True, text=True
+                check=False, capture_output=True, text=True
             )
             if result.returncode == 0 and result.stdout.strip():
                 data = json.loads(result.stdout)
                 if data:
                     return str(data[0]['number'])
-        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError) as e:
+        except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError):
             # Silently handle errors as this is a fallback mechanism
             pass
 
@@ -276,7 +274,7 @@ class TaskDispatcher:
                 try:
                     result = subprocess.run(
                         ['gh', 'pr', 'view', pr_number, '--json', 'title,state,headRefName'],
-                        capture_output=True, text=True
+                        check=False, capture_output=True, text=True
                     )
                     if result.returncode == 0:
                         pr_data = json.loads(result.stdout)
@@ -416,7 +414,7 @@ Complete the task, then use /pr to create a new pull request."""
         try:
             # Find Claude
             claude_path = subprocess.run(
-                ["which", "claude"], capture_output=True, text=True
+                ["which", "claude"], check=False, capture_output=True, text=True
             ).stdout.strip()
             if not claude_path:
                 return False
@@ -431,7 +429,7 @@ Complete the task, then use /pr to create a new pull request."""
             subprocess.run([
                 'git', 'worktree', 'add', '-b', branch_name,
                 agent_dir, 'main'
-            ], capture_output=True)
+            ], check=False, capture_output=True)
 
             # Create result collection file
             result_file = os.path.join(self.result_dir, f"{agent_name}_results.json")
@@ -622,7 +620,7 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
                 "-c", agent_dir, "bash", "-c", bash_cmd
             ])
 
-            result = subprocess.run(tmux_cmd, capture_output=True, text=True)
+            result = subprocess.run(tmux_cmd, check=False, capture_output=True, text=True)
             if result.returncode != 0:
                 print(f"⚠️ Error creating tmux session: {result.stderr}")
                 return False

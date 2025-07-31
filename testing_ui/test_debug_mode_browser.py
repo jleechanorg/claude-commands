@@ -14,8 +14,6 @@ Coverage:
 """
 
 import unittest
-import os
-import time
 
 
 class TestDebugModeBrowser(unittest.TestCase):
@@ -29,7 +27,7 @@ class TestDebugModeBrowser(unittest.TestCase):
         # URL with test mode parameters for auth bypass
         self.test_url = f"{self.base_url}/settings?test_mode=true&test_user_id={self.test_user_id}"
 
-        print(f"🌐 Browser test setup for debug mode")
+        print("🌐 Browser test setup for debug mode")
         print(f"📡 Test URL: {self.test_url}")
 
     def test_debug_mode_checkbox_interaction(self):

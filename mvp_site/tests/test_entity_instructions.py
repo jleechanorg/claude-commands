@@ -37,25 +37,25 @@ class TestEntityInstructionGenerator(unittest.TestCase):
             "background",
         ]
         for category in expected_categories:
-            self.assertIn(category, templates)
-            self.assertIsInstance(templates[category], dict)
-            self.assertGreater(len(templates[category]), 0)
+            assert category in templates
+            assert isinstance(templates[category], dict)
+            assert len(templates[category]) > 0
 
     def test_build_entity_priorities(self):
         """Test that entity priorities are properly configured"""
         priorities = self.generator._build_entity_priorities()
 
-        self.assertEqual(priorities["player_character"], 1)
-        self.assertEqual(priorities["npc_referenced"], 1)
-        self.assertEqual(priorities["location_owner"], 1)
-        self.assertEqual(priorities["story_critical"], 2)
-        self.assertEqual(priorities["background"], 3)
+        assert priorities["player_character"] == 1
+        assert priorities["npc_referenced"] == 1
+        assert priorities["location_owner"] == 1
+        assert priorities["story_critical"] == 2
+        assert priorities["background"] == 3
 
     def test_generate_entity_instructions_empty_entities(self):
         """Test instruction generation with empty entity list"""
         result = self.generator.generate_entity_instructions([], [])
 
-        self.assertEqual(result, "")
+        assert result == ""
 
     def test_generate_entity_instructions_basic(self):
         """Test basic entity instruction generation"""
@@ -66,12 +66,12 @@ class TestEntityInstructionGenerator(unittest.TestCase):
             entities, player_references
         )
 
-        self.assertIn("=== MANDATORY ENTITY REQUIREMENTS ===", result)
-        self.assertIn("REQUIRED and MUST appear", result)
-        self.assertIn("Sariel", result)
-        self.assertIn("Cassian", result)
-        self.assertIn("DO NOT complete your response without including", result)
-        self.assertIn("The player specifically mentioned Cassian", result)
+        assert "=== MANDATORY ENTITY REQUIREMENTS ===" in result
+        assert "REQUIRED and MUST appear" in result
+        assert "Sariel" in result
+        assert "Cassian" in result
+        assert "DO NOT complete your response without including" in result
+        assert "The player specifically mentioned Cassian" in result
 
     def test_generate_entity_instructions_with_location(self):
         """Test entity instruction generation with location"""
@@ -80,9 +80,9 @@ class TestEntityInstructionGenerator(unittest.TestCase):
             entities, [], location="Valerius's Study"
         )
 
-        self.assertIn("Valerius", result)
+        assert "Valerius" in result
         # Valerius should be mandatory in his own study
-        self.assertIn("MANDATORY ENTITY REQUIREMENTS", result)
+        assert "MANDATORY ENTITY REQUIREMENTS" in result
 
     def test_create_entity_instruction_player_character(self):
         """Test entity instruction creation for player characters"""
@@ -90,10 +90,10 @@ class TestEntityInstructionGenerator(unittest.TestCase):
             "Sariel", [], None, None
         )
 
-        self.assertEqual(instruction.entity_name, "Sariel")
-        self.assertEqual(instruction.instruction_type, "background")
-        self.assertEqual(instruction.priority, 3)
-        self.assertIn("should be acknowledged", instruction.specific_instruction)
+        assert instruction.entity_name == "Sariel"
+        assert instruction.instruction_type == "background"
+        assert instruction.priority == 3
+        assert "should be acknowledged" in instruction.specific_instruction
 
     def test_create_entity_instruction_npc_referenced(self):
         """Test entity instruction creation for referenced NPCs"""
@@ -101,11 +101,11 @@ class TestEntityInstructionGenerator(unittest.TestCase):
             "Cassian", ["Cassian"], None, None
         )
 
-        self.assertEqual(instruction.entity_name, "Cassian")
-        self.assertEqual(instruction.instruction_type, "mandatory")
-        self.assertEqual(instruction.priority, 1)
-        self.assertIn("directly referenced", instruction.specific_instruction)
-        self.assertIn("narrative continuity", instruction.specific_instruction)
+        assert instruction.entity_name == "Cassian"
+        assert instruction.instruction_type == "mandatory"
+        assert instruction.priority == 1
+        assert "directly referenced" in instruction.specific_instruction
+        assert "narrative continuity" in instruction.specific_instruction
 
     def test_create_entity_instruction_location_owner(self):
         """Test entity instruction creation for location owners"""
@@ -113,10 +113,10 @@ class TestEntityInstructionGenerator(unittest.TestCase):
             "Valerius", [], "Valerius's Study", None
         )
 
-        self.assertEqual(instruction.entity_name, "Valerius")
-        self.assertEqual(instruction.instruction_type, "background")
-        self.assertEqual(instruction.priority, 3)
-        self.assertIn("should be acknowledged", instruction.specific_instruction)
+        assert instruction.entity_name == "Valerius"
+        assert instruction.instruction_type == "background"
+        assert instruction.priority == 3
+        assert "should be acknowledged" in instruction.specific_instruction
 
     def test_create_entity_instruction_background(self):
         """Test entity instruction creation for background entities"""
@@ -124,9 +124,9 @@ class TestEntityInstructionGenerator(unittest.TestCase):
             "Random Guard", [], None, None
         )
 
-        self.assertEqual(instruction.entity_name, "Random Guard")
-        self.assertEqual(instruction.instruction_type, "background")
-        self.assertEqual(instruction.priority, 3)
+        assert instruction.entity_name == "Random Guard"
+        assert instruction.instruction_type == "background"
+        assert instruction.priority == 3
 
     def test_create_entity_instruction_cassian_emotional(self):
         """Test special Cassian emotional handling"""
@@ -135,39 +135,29 @@ class TestEntityInstructionGenerator(unittest.TestCase):
         )
 
         # No special Cassian handling - falls to background
-        self.assertEqual(instruction.instruction_type, "background")
-        self.assertEqual(instruction.priority, 3)
+        assert instruction.instruction_type == "background"
+        assert instruction.priority == 3
 
     def test_is_player_character(self):
         """Test player character detection"""
         # Method now returns False for all entities (no hardcoding)
-        self.assertFalse(self.generator._is_player_character("Sariel"))
-        self.assertFalse(self.generator._is_player_character("SARIEL"))
-        self.assertFalse(self.generator._is_player_character("Cassian"))
+        assert not self.generator._is_player_character("Sariel")
+        assert not self.generator._is_player_character("SARIEL")
+        assert not self.generator._is_player_character("Cassian")
 
     def test_is_location_owner_valerius(self):
         """Test location owner detection for Valerius"""
         # Method now returns False for all (no hardcoding)
-        self.assertFalse(
-            self.generator._is_location_owner("Valerius", "Valerius's Study")
-        )
-        self.assertFalse(
-            self.generator._is_location_owner("Valerius", "The Grand Study")
-        )
-        self.assertFalse(self.generator._is_location_owner("Valerius", "Throne Room"))
+        assert not self.generator._is_location_owner("Valerius", "Valerius's Study")
+        assert not self.generator._is_location_owner("Valerius", "The Grand Study")
+        assert not self.generator._is_location_owner("Valerius", "Throne Room")
 
     def test_is_location_owner_cressida(self):
         """Test location owner detection for Lady Cressida"""
         # Method now returns False for all (no hardcoding)
-        self.assertFalse(
-            self.generator._is_location_owner(
-                "Lady Cressida", "Lady Cressida's Chambers"
-            )
-        )
-        self.assertFalse(
-            self.generator._is_location_owner("Cressida", "Private Chambers")
-        )
-        self.assertFalse(self.generator._is_location_owner("Cressida", "Throne Room"))
+        assert not self.generator._is_location_owner("Lady Cressida", "Lady Cressida's Chambers")
+        assert not self.generator._is_location_owner("Cressida", "Private Chambers")
+        assert not self.generator._is_location_owner("Cressida", "Throne Room")
 
     def test_create_cassian_specific_instruction_emotional(self):
         """Test Cassian-specific instruction for emotional context"""
@@ -175,10 +165,10 @@ class TestEntityInstructionGenerator(unittest.TestCase):
             "Cassian", "Tell Cassian I was scared and helpless"
         )
 
-        self.assertIn("CRITICAL", result)
-        self.assertIn("emotional appeal", result)
-        self.assertIn("vulnerable moment", result)
-        self.assertIn("MUST appear and respond", result)
+        assert "CRITICAL" in result
+        assert "emotional appeal" in result
+        assert "vulnerable moment" in result
+        assert "MUST appear and respond" in result
 
     def test_create_cassian_specific_instruction_normal(self):
         """Test Cassian-specific instruction for normal reference"""
@@ -186,9 +176,9 @@ class TestEntityInstructionGenerator(unittest.TestCase):
             "Cassian", "Where is Cassian?"
         )
 
-        self.assertIn("IMPORTANT", result)
-        self.assertIn("directly mentioned", result)
-        self.assertNotIn("CRITICAL", result)
+        assert "IMPORTANT" in result
+        assert "directly mentioned" in result
+        assert "CRITICAL" not in result
 
     def test_create_cassian_specific_instruction_no_reference(self):
         """Test Cassian-specific instruction when not referenced"""
@@ -196,7 +186,7 @@ class TestEntityInstructionGenerator(unittest.TestCase):
             "Cassian", "Look around the room"
         )
 
-        self.assertEqual(result, "")
+        assert result == ""
 
     def test_create_location_specific_instructions(self):
         """Test location-specific instruction generation"""
@@ -204,8 +194,8 @@ class TestEntityInstructionGenerator(unittest.TestCase):
             "Throne Room", ["Sariel", "Guard Captain"]
         )
 
-        self.assertIn("LOCATION REQUIREMENT for Throne Room", result)
-        self.assertIn("court setting", result.lower())
+        assert "LOCATION REQUIREMENT for Throne Room" in result
+        assert "court setting" in result.lower()
 
     def test_create_location_specific_instructions_valerius_study(self):
         """Test location-specific instructions for Valerius's study"""
@@ -214,8 +204,8 @@ class TestEntityInstructionGenerator(unittest.TestCase):
         )
 
         # Generic location instructions now
-        self.assertIn("LOCATION REQUIREMENT", result)
-        self.assertIn("Valerius's Study", result)
+        assert "LOCATION REQUIREMENT" in result
+        assert "Valerius's Study" in result
 
 
 class TestEntityEnforcementChecker(unittest.TestCase):
@@ -232,9 +222,9 @@ class TestEntityEnforcementChecker(unittest.TestCase):
             "dialogue_indicators",
         ]
         for category in expected_categories:
-            self.assertIn(category, patterns)
-            self.assertIsInstance(patterns[category], list)
-            self.assertGreater(len(patterns[category]), 0)
+            assert category in patterns
+            assert isinstance(patterns[category], list)
+            assert len(patterns[category]) > 0
 
     def test_check_instruction_compliance_success(self):
         """Test successful instruction compliance checking"""
@@ -245,9 +235,9 @@ class TestEntityEnforcementChecker(unittest.TestCase):
             narrative, mandatory_entities
         )
 
-        self.assertTrue(result["overall_compliance"])
-        self.assertEqual(set(result["compliant_entities"]), set(mandatory_entities))
-        self.assertEqual(len(result["non_compliant_entities"]), 0)
+        assert result["overall_compliance"]
+        assert set(result["compliant_entities"]) == set(mandatory_entities)
+        assert len(result["non_compliant_entities"]) == 0
 
     def test_check_instruction_compliance_failure(self):
         """Test failed instruction compliance checking"""
@@ -258,10 +248,10 @@ class TestEntityEnforcementChecker(unittest.TestCase):
             narrative, mandatory_entities
         )
 
-        self.assertFalse(result["overall_compliance"])
-        self.assertIn("Sariel", result["compliant_entities"])
-        self.assertIn("Cassian", result["non_compliant_entities"])
-        self.assertIn("Lady Cressida", result["non_compliant_entities"])
+        assert not result["overall_compliance"]
+        assert "Sariel" in result["compliant_entities"]
+        assert "Cassian" in result["non_compliant_entities"]
+        assert "Lady Cressida" in result["non_compliant_entities"]
 
     def test_check_entity_compliance_present_with_dialogue(self):
         """Test entity compliance detection with dialogue"""
@@ -269,9 +259,9 @@ class TestEntityEnforcementChecker(unittest.TestCase):
 
         compliance = self.checker._check_entity_compliance(narrative, "Cassian")
 
-        self.assertTrue(compliance["present"])
-        self.assertTrue(compliance["has_dialogue"])
-        self.assertEqual(compliance["mention_count"], 1)
+        assert compliance["present"]
+        assert compliance["has_dialogue"]
+        assert compliance["mention_count"] == 1
 
     def test_check_entity_compliance_present_with_action(self):
         """Test entity compliance detection with action"""
@@ -279,9 +269,9 @@ class TestEntityEnforcementChecker(unittest.TestCase):
 
         compliance = self.checker._check_entity_compliance(narrative, "Cassian")
 
-        self.assertTrue(compliance["present"])
-        self.assertTrue(compliance["has_action"])
-        self.assertEqual(compliance["mention_count"], 1)
+        assert compliance["present"]
+        assert compliance["has_action"]
+        assert compliance["mention_count"] == 1
 
     def test_check_entity_compliance_not_present(self):
         """Test entity compliance when entity is not present"""
@@ -289,10 +279,10 @@ class TestEntityEnforcementChecker(unittest.TestCase):
 
         compliance = self.checker._check_entity_compliance(narrative, "Cassian")
 
-        self.assertFalse(compliance["present"])
-        self.assertFalse(compliance["has_dialogue"])
-        self.assertFalse(compliance["has_action"])
-        self.assertEqual(compliance["mention_count"], 0)
+        assert not compliance["present"]
+        assert not compliance["has_dialogue"]
+        assert not compliance["has_action"]
+        assert compliance["mention_count"] == 0
 
     def test_check_entity_compliance_multiple_mentions(self):
         """Test entity compliance with multiple mentions"""
@@ -300,8 +290,8 @@ class TestEntityEnforcementChecker(unittest.TestCase):
 
         compliance = self.checker._check_entity_compliance(narrative, "Cassian")
 
-        self.assertTrue(compliance["present"])
-        self.assertEqual(compliance["mention_count"], 2)
+        assert compliance["present"]
+        assert compliance["mention_count"] == 2
 
 
 class TestEntityInstructionDataClass(unittest.TestCase):
@@ -314,22 +304,20 @@ class TestEntityInstructionDataClass(unittest.TestCase):
             priority=1,
         )
 
-        self.assertEqual(instruction.entity_name, "Sariel")
-        self.assertEqual(instruction.instruction_type, "mandatory")
-        self.assertEqual(
-            instruction.specific_instruction, "Player character must be present"
-        )
-        self.assertEqual(instruction.priority, 1)
+        assert instruction.entity_name == "Sariel"
+        assert instruction.instruction_type == "mandatory"
+        assert instruction.specific_instruction == "Player character must be present"
+        assert instruction.priority == 1
 
 
 class TestGlobalInstances(unittest.TestCase):
     def test_global_entity_instruction_generator_exists(self):
         """Test that global entity instruction generator instance exists"""
-        self.assertIsInstance(entity_instruction_generator, EntityInstructionGenerator)
+        assert isinstance(entity_instruction_generator, EntityInstructionGenerator)
 
     def test_global_entity_enforcement_checker_exists(self):
         """Test that global entity enforcement checker instance exists"""
-        self.assertIsInstance(entity_enforcement_checker, EntityEnforcementChecker)
+        assert isinstance(entity_enforcement_checker, EntityEnforcementChecker)
 
 
 if __name__ == "__main__":

@@ -10,8 +10,10 @@ it used window.location.href (server navigation) instead of client-side routing.
 """
 
 import time
+
 import pytest
 from playwright.sync_api import Page, expect
+
 
 def test_settings_button_navigation_with_production_auth(page: Page):
     """

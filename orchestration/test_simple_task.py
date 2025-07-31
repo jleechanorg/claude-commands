@@ -4,8 +4,10 @@
 import json
 import time
 from dataclasses import asdict
-from message_broker import MessageBroker, TaskMessage, MessageType
 from datetime import datetime
+
+from message_broker import MessageBroker, MessageType, TaskMessage
+
 
 def test_simple_flow():
     """Test basic task flow"""
@@ -46,7 +48,7 @@ def test_simple_flow():
         if response:
             _, msg_data = response
             msg = json.loads(msg_data)
-            print(f"\n✅ Got response!")
+            print("\n✅ Got response!")
             print(f"   Type: {msg.get('type')}")
             print(f"   From: {msg.get('from_agent')}")
             print(f"   Payload: {json.dumps(msg.get('payload'), indent=2)}")

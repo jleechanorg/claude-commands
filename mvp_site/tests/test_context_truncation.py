@@ -55,9 +55,9 @@ class TestContextTruncation(unittest.TestCase):
         )
 
         # We expect all 6 entries since we're under the char limit
-        self.assertEqual(len(truncated_context), 6)
-        self.assertEqual(truncated_context[0]["text"], "Entry 1 (Oldest)")
-        self.assertEqual(truncated_context[-1]["text"], "Entry 6 (Newest)")
+        assert len(truncated_context) == 6
+        assert truncated_context[0]["text"] == "Entry 1 (Oldest)"
+        assert truncated_context[-1]["text"] == "Entry 6 (Newest)"
 
         print("--- Test Finished Successfully ---")
 
@@ -97,11 +97,11 @@ class TestContextTruncation(unittest.TestCase):
 
         # Current implementation: 4 > 3 so uses full truncation with marker
         # Result: [] + [marker] + last 3 entries = 4 total
-        self.assertEqual(len(truncated_context), 4)
-        self.assertEqual(truncated_context[0]["actor"], "system")  # Truncation marker
-        self.assertEqual(truncated_context[1]["text"], "B" * 50)  # Entry 2
-        self.assertEqual(truncated_context[2]["text"], "C" * 50)  # Entry 3
-        self.assertEqual(truncated_context[3]["text"], "D" * 50)  # Entry 4
+        assert len(truncated_context) == 4
+        assert truncated_context[0]["actor"] == "system"  # Truncation marker
+        assert truncated_context[1]["text"] == "B" * 50  # Entry 2
+        assert truncated_context[2]["text"] == "C" * 50  # Entry 3
+        assert truncated_context[3]["text"] == "D" * 50  # Entry 4
 
         print("--- Test Finished Successfully ---")
 
@@ -132,8 +132,8 @@ class TestContextTruncation(unittest.TestCase):
         )
 
         # The context should be returned unchanged
-        self.assertEqual(len(truncated_context), 2)
-        self.assertEqual(truncated_context, short_context)
+        assert len(truncated_context) == 2
+        assert truncated_context == short_context
 
         print("--- Test Finished Successfully ---")
 

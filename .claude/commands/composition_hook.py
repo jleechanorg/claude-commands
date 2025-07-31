@@ -3,7 +3,6 @@ Command Composition Hook for Claude Code CLI.
 Uses Claude's LLM to interpret command compositions naturally.
 """
 import json
-import os
 
 def is_composition_command(command_line):
     """
@@ -249,7 +248,6 @@ def fallback_interpretation(command_line, commands_context):
 
     # Find protocol command
     protocol_commands = set(commands_context["protocol_commands"])
-    natural_modifiers = set(commands_context["natural_modifiers"])
 
     protocol_command = None
     context_flags = {}

@@ -64,21 +64,21 @@ class TestPlanningBlockAnalysis(unittest.TestCase):
         narrative, response = parse_structured_response(response_text)
 
         # Check narrative
-        self.assertIn("consider your options", narrative)
+        assert "consider your options" in narrative
 
         # Check planning block structure
-        self.assertIsNotNone(response.planning_block)
+        assert response.planning_block is not None
         choices = response.planning_block.get("choices", {})
 
         # Verify analysis fields are preserved
         attack_analysis = choices["attack_goblin"]["analysis"]
-        self.assertEqual(len(attack_analysis["pros"]), 3)
-        self.assertEqual(len(attack_analysis["cons"]), 3)
-        self.assertEqual(attack_analysis["confidence"], "moderate")
+        assert len(attack_analysis["pros"]) == 3
+        assert len(attack_analysis["cons"]) == 3
+        assert attack_analysis["confidence"] == "moderate"
 
         sneak_analysis = choices["sneak_past"]["analysis"]
-        self.assertEqual(len(sneak_analysis["pros"]), 2)
-        self.assertEqual(len(sneak_analysis["cons"]), 2)
+        assert len(sneak_analysis["pros"]) == 2
+        assert len(sneak_analysis["cons"]) == 2
 
     def test_analysis_field_with_xss_attempts(self):
         """Test that analysis fields are properly sanitized against XSS"""
@@ -115,22 +115,20 @@ class TestPlanningBlockAnalysis(unittest.TestCase):
         analysis = choices["test_choice"]["analysis"]
 
         # Verify XSS attempts are removed (not escaped)
-        self.assertEqual(
-            analysis["pros"][0], "Safe option"
-        )  # Script tag completely removed
-        self.assertNotIn("<script>", analysis["pros"][0])
-        self.assertNotIn("alert", analysis["pros"][0])  # Script content removed
+        assert analysis["pros"][0] == "Safe option"  # Script tag completely removed
+        assert "<script>" not in analysis["pros"][0]
+        assert "alert" not in analysis["pros"][0]  # Script content removed
 
-        self.assertEqual(analysis["pros"][1], "No danger")  # Img tag removed
-        self.assertNotIn("<img", analysis["pros"][1])
-        self.assertNotIn("onerror", analysis["pros"][1])  # Event handler removed
+        assert analysis["pros"][1] == "No danger"  # Img tag removed
+        assert "<img" not in analysis["pros"][1]
+        assert "onerror" not in analysis["pros"][1]  # Event handler removed
 
-        self.assertEqual(analysis["cons"][0], "Might be boring")  # Script tag removed
-        self.assertNotIn("<script>", analysis["cons"][0])
+        assert analysis["cons"][0] == "Might be boring"  # Script tag removed
+        assert "<script>" not in analysis["cons"][0]
 
         # Bold tags should remain (not dangerous)
-        self.assertIn("<b>", analysis["notes"])
-        self.assertIn("Bold text", analysis["notes"])
+        assert "<b>" in analysis["notes"]
+        assert "Bold text" in analysis["notes"]
 
     def test_analysis_with_nested_structures(self):
         """Test analysis field with deeply nested data structures"""
@@ -172,14 +170,12 @@ class TestPlanningBlockAnalysis(unittest.TestCase):
         analysis = choices["complex_choice"]["analysis"]
 
         # Check nested dictionaries
-        self.assertIn("detailed_breakdown", analysis)
-        self.assertIn("combat_factors", analysis["detailed_breakdown"])
-        self.assertEqual(
-            len(analysis["detailed_breakdown"]["combat_factors"]["advantages"]), 2
-        )
+        assert "detailed_breakdown" in analysis
+        assert "combat_factors" in analysis["detailed_breakdown"]
+        assert len(analysis["detailed_breakdown"]["combat_factors"]["advantages"]) == 2
 
         # Check non-string values are preserved
-        self.assertEqual(analysis["success_rate"], 75)
+        assert analysis["success_rate"] == 75
 
     def test_analysis_field_type_variations(self):
         """Test analysis field with various data types"""
@@ -214,13 +210,13 @@ class TestPlanningBlockAnalysis(unittest.TestCase):
         choices = response.planning_block.get("choices", {})
         analysis = choices["type_test"]["analysis"]
 
-        self.assertEqual(analysis["string_field"], "Just a string")
-        self.assertEqual(analysis["number_field"], 42)
-        self.assertEqual(analysis["float_field"], 3.14)
-        self.assertEqual(analysis["boolean_field"], True)
-        self.assertIsNone(analysis["null_field"])
-        self.assertEqual(len(analysis["list_field"]), 5)
-        self.assertEqual(analysis["dict_field"]["nested"], "value")
+        assert analysis["string_field"] == "Just a string"
+        assert analysis["number_field"] == 42
+        assert analysis["float_field"] == 3.14
+        assert analysis["boolean_field"] == True
+        assert analysis["null_field"] is None
+        assert len(analysis["list_field"]) == 5
+        assert analysis["dict_field"]["nested"] == "value"
 
     def test_missing_analysis_field(self):
         """Test planning blocks without analysis field work correctly"""
@@ -244,8 +240,8 @@ class TestPlanningBlockAnalysis(unittest.TestCase):
 
         # Verify choice works without analysis field
         choices = response.planning_block.get("choices", {})
-        self.assertIn("simple_choice", choices)
-        self.assertNotIn("analysis", choices["simple_choice"])
+        assert "simple_choice" in choices
+        assert "analysis" not in choices["simple_choice"]
 
 
 if __name__ == "__main__":

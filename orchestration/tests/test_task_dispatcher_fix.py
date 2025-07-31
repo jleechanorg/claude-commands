@@ -4,9 +4,9 @@ Red-Green test for orchestration task dispatcher fix.
 Verifies that the system creates general task agents instead of hardcoded test agents.
 """
 
-import unittest
-import sys
 import os
+import sys
+import unittest
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

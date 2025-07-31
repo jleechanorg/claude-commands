@@ -50,13 +50,13 @@ class TestDeleteTokenProcessing(unittest.TestCase):
         result = update_state_with_changes(state, changes)
 
         # Verify defeated enemies are removed
-        self.assertNotIn("Drake 1", result["npc_data"])
-        self.assertNotIn("Drake 2", result["npc_data"])
+        assert "Drake 1" not in result["npc_data"]
+        assert "Drake 2" not in result["npc_data"]
         # Verify ally remains
-        self.assertIn("Lyra", result["npc_data"])
-        self.assertEqual(result["npc_data"]["Lyra"]["status"], "ally")
+        assert "Lyra" in result["npc_data"]
+        assert result["npc_data"]["Lyra"]["status"] == "ally"
         # Verify other state unchanged
-        self.assertTrue(result["combat_active"])
+        assert result["combat_active"]
 
     def test_top_level_deletion(self):
         """Test deleting top-level keys."""
@@ -71,10 +71,10 @@ class TestDeleteTokenProcessing(unittest.TestCase):
         result = update_state_with_changes(state, changes)
 
         # Verify temporary effect is removed
-        self.assertNotIn("temporary_effect", result)
+        assert "temporary_effect" not in result
         # Verify other data remains
-        self.assertIn("player_data", result)
-        self.assertIn("world_data", result)
+        assert "player_data" in result
+        assert "world_data" in result
 
     def test_delete_non_dict_value(self):
         """Test deleting keys that have non-dict values (strings, numbers, etc)."""
@@ -94,10 +94,10 @@ class TestDeleteTokenProcessing(unittest.TestCase):
         result = update_state_with_changes(state, changes)
 
         # DELETE token now properly handles all value types
-        self.assertNotIn("counter", result, "Should delete numeric values")
-        self.assertNotIn("status_message", result, "Should delete string values")
-        self.assertNotIn("flags", result, "Should delete list values")
-        self.assertIn("data", result, "Should preserve untouched data")
+        assert "counter" not in result, "Should delete numeric values"
+        assert "status_message" not in result, "Should delete string values"
+        assert "flags" not in result, "Should delete list values"
+        assert "data" in result, "Should preserve untouched data"
 
     def test_deeply_nested_deletion(self):
         """Test deletion in deeply nested structures."""
@@ -129,10 +129,10 @@ class TestDeleteTokenProcessing(unittest.TestCase):
 
         # Verify goblins are removed
         forest_npcs = result["world"]["regions"]["forest"]["npcs"]
-        self.assertNotIn("goblin1", forest_npcs)
-        self.assertNotIn("goblin2", forest_npcs)
+        assert "goblin1" not in forest_npcs
+        assert "goblin2" not in forest_npcs
         # Verify merchant remains
-        self.assertIn("merchant", forest_npcs)
+        assert "merchant" in forest_npcs
 
     def test_mixed_updates_and_deletions(self):
         """Test mixing regular updates with deletions in same operation."""
@@ -157,12 +157,12 @@ class TestDeleteTokenProcessing(unittest.TestCase):
         result = update_state_with_changes(state, changes)
 
         # Verify deletion
-        self.assertNotIn("enemy1", result["npc_data"])
+        assert "enemy1" not in result["npc_data"]
         # Verify updates
-        self.assertEqual(result["npc_data"]["enemy2"]["hp"], 10)
-        self.assertEqual(result["npc_data"]["enemy2"]["status"], "wounded")
-        self.assertEqual(result["npc_data"]["ally1"]["hp"], 60)
-        self.assertEqual(result["combat_round"], 6)
+        assert result["npc_data"]["enemy2"]["hp"] == 10
+        assert result["npc_data"]["enemy2"]["status"] == "wounded"
+        assert result["npc_data"]["ally1"]["hp"] == 60
+        assert result["combat_round"] == 6
 
 
 if __name__ == "__main__":

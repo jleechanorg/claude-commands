@@ -30,7 +30,7 @@ class TestCharacterExtractionRegex(unittest.TestCase):
         # This should fail initially if import re is missing
         try:
             # Access the re module within gemini_service scope
-            self.assertTrue(hasattr(gemini_service, "re"))
+            assert hasattr(gemini_service, "re")
         except NameError as e:
             if "is not defined" in str(e):
                 self.fail(f"re module not properly imported: {e}")
@@ -70,9 +70,9 @@ class TestCharacterExtractionRegex(unittest.TestCase):
                             expected_entities.append(npc)
 
             # Verify we extracted the expected NPCs
-            self.assertIn("Elena", expected_entities)
-            self.assertIn("Marcus", expected_entities)
-            self.assertIn("Gandalf", expected_entities)
+            assert "Elena" in expected_entities
+            assert "Marcus" in expected_entities
+            assert "Gandalf" in expected_entities
 
         except NameError as e:
             if "'re' is not defined" in str(e):
@@ -88,7 +88,7 @@ class TestCharacterExtractionRegex(unittest.TestCase):
         # but we can test the import and basic functionality
 
         # Just verify the module loads and re is available
-        self.assertTrue(hasattr(gemini_service, "re"))
+        assert hasattr(gemini_service, "re")
 
         # Test the patterns are defined (they're local to the function, so we'll copy them)
         test_prompt = "Adventure with NPCs including Alice and Bob"
@@ -105,7 +105,7 @@ class TestCharacterExtractionRegex(unittest.TestCase):
             matches = re.findall(pattern, test_prompt)
             # Should find the NPCs
             if matches:
-                self.assertIn("Alice", matches[0])
+                assert "Alice" in matches[0]
 
     def test_planning_block_character_creation_check(self):
         """GREEN: Test the actual re.search usage in planning block logic"""
@@ -115,12 +115,12 @@ class TestCharacterExtractionRegex(unittest.TestCase):
 
         # This is the actual usage from line 1044 in gemini_service.py
         result = re.search(r"\[CHARACTER CREATION", test_text, re.IGNORECASE)
-        self.assertIsNotNone(result)
+        assert result is not None
 
         # Test negative case
         normal_text = "The adventure continues..."
         result2 = re.search(r"\[CHARACTER CREATION", normal_text, re.IGNORECASE)
-        self.assertIsNone(result2)
+        assert result2 is None
 
     def test_all_re_usage_in_gemini_service(self):
         """GREEN: Comprehensive test of all regex usage in gemini_service"""
@@ -143,13 +143,13 @@ class TestCharacterExtractionRegex(unittest.TestCase):
                 found_entities.extend([n.strip() for n in match.split(",")])
 
         # Should find NPCs without errors
-        self.assertIn("Elena", found_entities)
-        self.assertIn("Gandalf", found_entities)
+        assert "Elena" in found_entities
+        assert "Gandalf" in found_entities
 
         # Test 2: Character creation check (line 1044)
         char_creation_text = "[CHARACTER CREATION] Enter your stats"
         result = re.search(r"\[CHARACTER CREATION", char_creation_text, re.IGNORECASE)
-        self.assertIsNotNone(result)
+        assert result is not None
 
         # If we get here without NameError, re is properly imported and working
 

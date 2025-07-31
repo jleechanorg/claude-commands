@@ -103,12 +103,10 @@ class RealBrowserSettingsGameTest:
             if result.get("success"):
                 print(f"✅ Model set successfully: {model}")
                 return True
-            else:
-                print(f"❌ Model setting failed: {result}")
-                return False
-        else:
-            print(f"❌ API error {response.status_code}: {response.text}")
+            print(f"❌ Model setting failed: {result}")
             return False
+        print(f"❌ API error {response.status_code}: {response.text}")
+        return False
 
     def verify_model_setting(self, expected_model):
         """Verify model setting persisted"""
@@ -122,14 +120,10 @@ class RealBrowserSettingsGameTest:
             if actual_model == expected_model:
                 print(f"✅ Model verified: {actual_model}")
                 return True
-            else:
-                print(
-                    f"❌ Model mismatch: expected {expected_model}, got {actual_model}"
-                )
-                return False
-        else:
-            print(f"❌ Settings verification failed: {response.status_code}")
+            print(f"❌ Model mismatch: expected {expected_model}, got {actual_model}")
             return False
+        print(f"❌ Settings verification failed: {response.status_code}")
+        return False
 
     def create_test_campaign(self):
         """Create a test campaign for game requests"""
@@ -155,11 +149,8 @@ class RealBrowserSettingsGameTest:
             print(f"✅ Campaign created: {campaign_id}")
             print(f"   Title: {campaign.get('title')}")
             return campaign_id
-        else:
-            print(
-                f"❌ Campaign creation failed: {response.status_code} - {response.text}"
-            )
-            return None
+        print(f"❌ Campaign creation failed: {response.status_code} - {response.text}")
+        return None
 
     def make_game_request(self, campaign_id, user_input, expected_model):
         """Make a game request and verify model usage in logs"""
@@ -192,14 +183,12 @@ class RealBrowserSettingsGameTest:
             if model_found:
                 print(f"✅ {expected_model} usage confirmed in logs!")
                 return True
-            else:
-                print(
-                    f"⚠️ {expected_model} not clearly found in logs (but request succeeded)"
-                )
-                return True  # Request worked even if log parsing didn't catch it
-        else:
-            print(f"❌ Game request failed: {response.status_code} - {response.text}")
-            return False
+            print(
+                f"⚠️ {expected_model} not clearly found in logs (but request succeeded)"
+            )
+            return True  # Request worked even if log parsing didn't catch it
+        print(f"❌ Game request failed: {response.status_code} - {response.text}")
+        return False
 
     def append_to_log(self, message):
         """Append marker to log file"""

@@ -4,13 +4,12 @@ Take screenshots of the planning block JSON system in action.
 """
 
 import os
+import subprocess
 import sys
 import time
+import traceback
 
 from playwright.sync_api import sync_playwright
-
-import subprocess
-import traceback
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

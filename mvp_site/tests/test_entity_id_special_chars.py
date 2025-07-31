@@ -45,11 +45,7 @@ class TestEntityIDSpecialCharacters(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            self.assertEqual(
-                result,
-                expected,
-                f"Failed for '{input_name}': got '{result}', expected '{expected}'",
-            )
+            assert result == expected, f"Failed for '{input_name}': got '{result}', expected '{expected}'"
 
     def test_npc_with_apostrophe_name(self):
         """Test creating NPC with apostrophe in name (the original bug case)"""
@@ -62,9 +58,9 @@ class TestEntityIDSpecialCharacters(unittest.TestCase):
             gender="male",
         )
 
-        self.assertEqual(npc.entity_id, "npc_cazadors_spawn_001")
-        self.assertEqual(npc.display_name, "Cazador's Spawn")
-        self.assertEqual(npc.entity_type, EntityType.NPC)
+        assert npc.entity_id == "npc_cazadors_spawn_001"
+        assert npc.display_name == "Cazador's Spawn"
+        assert npc.entity_type == EntityType.NPC
 
     def test_entity_id_validation_patterns(self):
         """Test that entity ID patterns reject invalid IDs"""
@@ -76,7 +72,7 @@ class TestEntityIDSpecialCharacters(unittest.TestCase):
             current_location="loc_test_001",
             gender="female",
         )
-        self.assertEqual(valid_npc.entity_id, "npc_valid_name_123")
+        assert valid_npc.entity_id == "npc_valid_name_123"
 
         # Invalid IDs should raise ValidationError
         with self.assertRaises(ValidationError) as cm:
@@ -90,8 +86,8 @@ class TestEntityIDSpecialCharacters(unittest.TestCase):
 
         # Check the error mentions pattern matching
         error_dict = cm.exception.errors()[0]
-        self.assertIn("String should match pattern", error_dict["msg"])
-        self.assertIn("entity_id", str(error_dict["loc"]))
+        assert "String should match pattern" in error_dict["msg"]
+        assert "entity_id" in str(error_dict["loc"])
 
     def test_create_from_game_state_with_special_chars(self):
         """Test the full pipeline with create_from_game_state"""
@@ -131,45 +127,45 @@ class TestEntityIDSpecialCharacters(unittest.TestCase):
         manifest = create_from_game_state(game_state, session_number=2, turn_number=5)
 
         # Verify PC
-        self.assertEqual(len(manifest.player_characters), 1)
+        assert len(manifest.player_characters) == 1
         pc = manifest.player_characters[0]
-        self.assertEqual(pc.display_name, "D'Artagnan")
-        self.assertEqual(pc.entity_id, "pc_dartagnan_001")
+        assert pc.display_name == "D'Artagnan"
+        assert pc.entity_id == "pc_dartagnan_001"
 
         # Verify NPCs
-        self.assertEqual(len(manifest.npcs), 3)
+        assert len(manifest.npcs) == 3
 
         # Find each NPC and verify
         npc_map = {npc.display_name: npc for npc in manifest.npcs}
 
         # Cazador's Spawn
         cazador_spawn = npc_map.get("Cazador's Spawn")
-        self.assertIsNotNone(cazador_spawn)
-        self.assertEqual(cazador_spawn.entity_id, "npc_cazadors_spawn_001")
+        assert cazador_spawn is not None
+        assert cazador_spawn.entity_id == "npc_cazadors_spawn_001"
 
         # Jean-Baptiste
         jean_baptiste = npc_map.get("Jean-Baptiste Maunier")
-        self.assertIsNotNone(jean_baptiste)
-        self.assertEqual(jean_baptiste.entity_id, "npc_jean_baptiste_maunier_002")
+        assert jean_baptiste is not None
+        assert jean_baptiste.entity_id == "npc_jean_baptiste_maunier_002"
 
         # Dr. Moreau
         dr_moreau = npc_map.get("Dr. Moreau")
-        self.assertIsNotNone(dr_moreau)
-        self.assertEqual(dr_moreau.entity_id, "npc_dr_moreau_003")
+        assert dr_moreau is not None
+        assert dr_moreau.entity_id == "npc_dr_moreau_003"
 
     def test_edge_cases(self):
         """Test edge cases for entity ID generation"""
         # All special characters
-        self.assertEqual(sanitize_entity_name_for_id("!@#$%^&*()"), "")
+        assert sanitize_entity_name_for_id("!@#$%^&*()") == ""
 
         # Mixed case and numbers
-        self.assertEqual(sanitize_entity_name_for_id("Agent007"), "agent007")
+        assert sanitize_entity_name_for_id("Agent007") == "agent007"
 
         # Unicode characters
-        self.assertEqual(sanitize_entity_name_for_id("Björk"), "bj_rk")
+        assert sanitize_entity_name_for_id("Björk") == "bj_rk"
 
         # Multiple consecutive spaces/special chars
-        self.assertEqual(sanitize_entity_name_for_id("A    B----C"), "a_b_c")
+        assert sanitize_entity_name_for_id("A    B----C") == "a_b_c"
 
 
 if __name__ == "__main__":

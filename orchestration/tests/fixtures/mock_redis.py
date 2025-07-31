@@ -1,8 +1,8 @@
 """Mock fixtures for Redis operations in orchestration tests."""
 
-from unittest.mock import Mock, patch
 import json
 from datetime import datetime
+from unittest.mock import patch
 
 
 class MockRedisClient:
@@ -126,7 +126,6 @@ class MockRedisPubSub:
 
     def close(self):
         """Mock close."""
-        pass
 
 
 class MockMessageBroker:
@@ -178,6 +177,7 @@ class MockMessageBroker:
 
 
 from contextlib import contextmanager
+
 
 @contextmanager
 def mock_redis_fixture(should_fail=False):

@@ -6,16 +6,15 @@ Uses collection group queries to analyze all campaigns and story entries
 across all users in the Firebase database.
 """
 
+import csv
 import os
 import sys
+import traceback
 from collections import defaultdict
 from datetime import datetime
 
 import firebase_admin
 from firebase_admin import credentials, firestore
-
-import csv
-import traceback
 
 
 def initialize_firebase():

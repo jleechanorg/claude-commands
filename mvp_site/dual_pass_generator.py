@@ -227,9 +227,8 @@ class DualPassGenerator:
             return template.format(
                 entity=entity, action=context, dialogue="responds appropriately"
             )
-        else:
-            # Fallback if no templates found
-            return f"{entity} {context}."
+        # Fallback if no templates found
+        return f"{entity} {context}."
 
 
 class AdaptiveEntityInjector:

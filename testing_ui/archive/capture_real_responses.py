@@ -5,13 +5,12 @@ Capture real Gemini API responses for key test scenarios
 
 import json
 import os
+import subprocess
 import sys
 import time
 from datetime import datetime
 
 import requests
-
-import subprocess
 
 # Add project root to path
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))

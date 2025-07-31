@@ -709,9 +709,8 @@ def create_structured_prompt_injection(
             manifest_text, expected_entities
         )
         return instruction.to_prompt_injection()
-    else:
-        # Use generic JSON response format when no entities (e.g., character creation)
-        return create_generic_json_instruction()
+    # Use generic JSON response format when no entities (e.g., character creation)
+    return create_generic_json_instruction()
 
 
 def validate_entity_coverage(

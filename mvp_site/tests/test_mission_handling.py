@@ -55,21 +55,21 @@ class TestMissionHandling(unittest.TestCase):
         missions = updated_state["custom_campaign_state"]["active_missions"]
 
         # Should still be a list
-        self.assertIsInstance(missions, list)
+        assert isinstance(missions, list)
 
         # Should have 3 missions now (1 original + 2 new)
-        self.assertEqual(len(missions), 3)
+        assert len(missions) == 3
 
         # Check that mission_ids were auto-generated
         mission_ids = [m.get("mission_id") for m in missions]
-        self.assertIn("rescue_merchant", mission_ids)
-        self.assertIn("main_quest_1", mission_ids)
-        self.assertIn("side_quest_1", mission_ids)
+        assert "rescue_merchant" in mission_ids
+        assert "main_quest_1" in mission_ids
+        assert "side_quest_1" in mission_ids
 
         # Verify the new missions have correct data
         main_quest = next(m for m in missions if m.get("mission_id") == "main_quest_1")
-        self.assertEqual(main_quest["title"], "Defeat the Dark Lord")
-        self.assertEqual(main_quest["status"], "accepted")
+        assert main_quest["title"] == "Defeat the Dark Lord"
+        assert main_quest["status"] == "accepted"
 
     def test_updating_existing_mission_by_id(self):
         """Test that providing a mission with existing ID updates rather than duplicates."""
@@ -105,16 +105,14 @@ class TestMissionHandling(unittest.TestCase):
         missions = updated_state["custom_campaign_state"]["active_missions"]
 
         # Should still have just 1 mission
-        self.assertEqual(len(missions), 1)
+        assert len(missions) == 1
 
         # Mission should be updated
         mission = missions[0]
-        self.assertEqual(mission["mission_id"], "main_quest_1")
-        self.assertEqual(mission["title"], "Defeat the Dark Lord")  # Title preserved
-        self.assertEqual(mission["status"], "in_progress")  # Status updated
-        self.assertEqual(
-            mission["objective"], "Fight through the tower guards"
-        )  # Objective updated
+        assert mission["mission_id"] == "main_quest_1"
+        assert mission["title"] == "Defeat the Dark Lord"  # Title preserved
+        assert mission["status"] == "in_progress"  # Status updated
+        assert mission["objective"] == "Fight through the tower guards"  # Objective updated
 
     def test_ai_provides_list_format_works_normally(self):
         """Test that if AI provides correct list format, it works without conversion."""
@@ -139,8 +137,8 @@ class TestMissionHandling(unittest.TestCase):
         missions = updated_state["custom_campaign_state"]["active_missions"]
 
         # Should work normally as a list replacement
-        self.assertEqual(len(missions), 1)
-        self.assertEqual(missions[0]["mission_id"], "tutorial_1")
+        assert len(missions) == 1
+        assert missions[0]["mission_id"] == "tutorial_1"
 
 
 if __name__ == "__main__":

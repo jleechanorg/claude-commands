@@ -6,10 +6,9 @@ Simple test to verify inline editing and story reader features are accessible.
 import os
 import sys
 import time
+import traceback
 
 from playwright.sync_api import sync_playwright
-
-import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

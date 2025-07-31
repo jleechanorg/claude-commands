@@ -5,9 +5,8 @@ Tests validators with challenging scenarios like hidden/unconscious characters.
 """
 
 import json
-from datetime import datetime
-
 import os
+from datetime import datetime
 
 
 def test_edge_cases():

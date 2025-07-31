@@ -34,32 +34,14 @@ class TestFallbackLogicJsonBug(unittest.TestCase):
 
         # CRITICAL BUG: The fallback logic may return JSON structure instead of clean text
         # Check that we don't get any JSON artifacts in the final output
-        self.assertNotIn(
-            '"god_mode_response":',
-            narrative_text,
-            "Fallback should not return JSON keys",
-        )
-        self.assertNotIn(
-            '"entities_mentioned":',
-            narrative_text,
-            "Fallback should not return JSON keys",
-        )
-        self.assertNotIn(
-            '"state_updates":', narrative_text, "Fallback should not return JSON keys"
-        )
-        self.assertNotIn(
-            '{"', narrative_text, "Fallback should not return JSON structure"
-        )
-        self.assertNotIn(
-            '"}', narrative_text, "Fallback should not return JSON structure"
-        )
+        assert '"god_mode_response":' not in narrative_text, "Fallback should not return JSON keys"
+        assert '"entities_mentioned":' not in narrative_text, "Fallback should not return JSON keys"
+        assert '"state_updates":' not in narrative_text, "Fallback should not return JSON keys"
+        assert '{"' not in narrative_text, "Fallback should not return JSON structure"
+        assert '"}' not in narrative_text, "Fallback should not return JSON structure"
 
         # Should return clean readable text
-        self.assertIn(
-            "The gods have spoken",
-            narrative_text,
-            "Should extract the actual god mode response text",
-        )
+        assert "The gods have spoken" in narrative_text, "Should extract the actual god mode response text"
 
     def test_incomplete_json_with_quotes_in_content(self):
         """Test JSON with escaped quotes that breaks parsing."""
@@ -76,13 +58,13 @@ class TestFallbackLogicJsonBug(unittest.TestCase):
         )
 
         # Should NOT contain JSON structure
-        self.assertNotIn('"god_mode_response":', narrative_text)
-        self.assertNotIn('"entities_mentioned":', narrative_text)
-        self.assertNotIn('{"', narrative_text)
+        assert '"god_mode_response":' not in narrative_text
+        assert '"entities_mentioned":' not in narrative_text
+        assert '{"' not in narrative_text
 
         # Should contain the actual content with properly unescaped quotes
-        self.assertIn('He said "I will not yield"', narrative_text)
-        self.assertIn("darkness falls", narrative_text)
+        assert 'He said "I will not yield"' in narrative_text
+        assert "darkness falls" in narrative_text
 
     def test_fallback_with_aggressive_cleanup_scenario(self):
         """Test the aggressive cleanup path that could leave JSON artifacts."""
@@ -100,30 +82,14 @@ class TestFallbackLogicJsonBug(unittest.TestCase):
         )
 
         # This triggers the aggressive cleanup - should NOT leave JSON structure
-        self.assertNotIn(
-            '"god_mode_response":',
-            narrative_text,
-            "Aggressive cleanup should remove all JSON keys",
-        )
-        self.assertNotIn(
-            '"entities_mentioned":',
-            narrative_text,
-            "Aggressive cleanup should remove all JSON keys",
-        )
-        self.assertNotIn(
-            '"state_updates":',
-            narrative_text,
-            "Aggressive cleanup should remove all JSON keys",
-        )
-        self.assertNotIn(
-            "artifact_power",
-            narrative_text,  # This might be left by current cleanup
-            "Aggressive cleanup should remove nested JSON content",
-        )
+        assert '"god_mode_response":' not in narrative_text, "Aggressive cleanup should remove all JSON keys"
+        assert '"entities_mentioned":' not in narrative_text, "Aggressive cleanup should remove all JSON keys"
+        assert '"state_updates":' not in narrative_text, "Aggressive cleanup should remove all JSON keys"
+        assert "artifact_power" not in narrative_text, "Aggressive cleanup should remove nested JSON content"
 
         # Should contain readable text
-        self.assertIn("Power flows through", narrative_text)
-        self.assertIn("ancient artifact", narrative_text)
+        assert "Power flows through" in narrative_text
+        assert "ancient artifact" in narrative_text
 
     def test_mixed_content_json_structure(self):
         """Test mixed content that current fallback might not handle well."""
@@ -138,15 +104,11 @@ class TestFallbackLogicJsonBug(unittest.TestCase):
         narrative_text, structured_response = parse_structured_response(mixed_content)
 
         # Should parse correctly and return the god mode response
-        self.assertEqual(
-            narrative_text, 'The wizard casts a spell with "mana_cost": 50 points.'
-        )
+        assert narrative_text == 'The wizard casts a spell with "mana_cost": 50 points.'
 
         # The content should preserve the internal JSON-like text but not have structure artifacts
-        self.assertNotIn('"god_mode_response":', narrative_text)
-        self.assertIn(
-            '"mana_cost":', narrative_text
-        )  # This should be preserved as content
+        assert '"god_mode_response":' not in narrative_text
+        assert '"mana_cost":' in narrative_text  # This should be preserved as content
 
 
 if __name__ == "__main__":

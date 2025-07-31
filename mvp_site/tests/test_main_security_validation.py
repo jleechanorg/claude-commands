@@ -56,7 +56,7 @@ class TestSQLInjectionPrevention(unittest.TestCase):
 
             # Verify that Firestore (NoSQL) doesn't execute SQL
             # In a real app, this would be handled by input validation
-            self.assertIn("DROP TABLE", campaign_name)
+            assert "DROP TABLE" in campaign_name
 
             # Mock that the service handles it safely
             mock_create.return_value = {"campaign_id": "test123", "name": campaign_name}
@@ -70,7 +70,7 @@ class TestSQLInjectionPrevention(unittest.TestCase):
             )
 
             # NoSQL databases like Firestore are inherently safe from SQL injection
-            self.assertIsNotNone(result)
+            assert result is not None
 
     def test_sql_injection_in_user_input(self):
         """Test SQL injection attempts in various user inputs."""
@@ -84,7 +84,7 @@ class TestSQLInjectionPrevention(unittest.TestCase):
             # Test that the service accepts the input (NoSQL is safe from SQL injection)
             result = mock_add("test_user", "test_campaign", "player", malicious_text)
 
-            self.assertTrue(result)
+            assert result
             mock_add.assert_called_once_with(
                 "test_user", "test_campaign", "player", malicious_text
             )
@@ -109,7 +109,7 @@ class TestSQLInjectionPrevention(unittest.TestCase):
                 result = mock_get("test_user")
 
                 # Should return empty list, not execute injection
-                self.assertEqual(result, [])
+                assert result == []
 
     def test_parameterized_query_usage(self):
         """Test that queries use parameterized/safe patterns."""
@@ -124,7 +124,7 @@ class TestSQLInjectionPrevention(unittest.TestCase):
             result = mock_get("test_user", campaign_id)
 
             # Should handle safely without executing injection
-            self.assertIsNone(result)
+            assert result is None
             mock_get.assert_called_with("test_user", campaign_id)
 
 
@@ -156,12 +156,12 @@ class TestXSSPrevention(unittest.TestCase):
                 )
 
                 # Verify the script is stored (escaping happens on display)
-                self.assertEqual(result["description"], script)
+                assert result["description"] == script
 
                 # In a real app, the frontend would escape this when displaying
                 escaped = html.escape(script)
-                self.assertNotIn("<script>", escaped)
-                self.assertNotIn("<img", escaped)
+                assert "<script>" not in escaped
+                assert "<img" not in escaped
 
     def test_script_tag_sanitization(self):
         """Test that script tags are properly handled."""
@@ -175,12 +175,12 @@ class TestXSSPrevention(unittest.TestCase):
 
             result = mock_add("test_user", "test_campaign", "player", malicious_story)
 
-            self.assertTrue(result)
+            assert result
 
             # Frontend should escape when displaying
             safe_display = html.escape(malicious_story)
-            self.assertIn("&lt;script&gt;", safe_display)
-            self.assertNotIn("<script>", safe_display)
+            assert "&lt;script&gt;" in safe_display
+            assert "<script>" not in safe_display
 
     def test_event_handler_removal(self):
         """Test that event handlers are neutralized."""
@@ -198,16 +198,16 @@ class TestXSSPrevention(unittest.TestCase):
                 result = mock_add(
                     "test_user", "test_campaign", "player", dangerous_input
                 )
-                self.assertTrue(result)
+                assert result
 
                 # Check that event handlers would be escaped on display
                 safe_html = html.escape(dangerous_input)
                 # html.escape converts < and > to &lt; and &gt;
-                self.assertIn("&lt;", safe_html)
-                self.assertIn("&gt;", safe_html)
+                assert "&lt;" in safe_html
+                assert "&gt;" in safe_html
                 # The dangerous HTML can't be executed
-                self.assertNotIn("<button", safe_html)
-                self.assertNotIn("<div", safe_html)
+                assert "<button" not in safe_html
+                assert "<div" not in safe_html
 
     def test_xss_in_json_responses(self):
         """Test XSS prevention in JSON API responses."""
@@ -227,11 +227,11 @@ class TestXSSPrevention(unittest.TestCase):
             json_str = json.dumps(campaign)
 
             # Verify JSON encoding prevents XSS
-            self.assertIn('\\"', json_str)  # Quotes are escaped
+            assert '\\"' in json_str  # Quotes are escaped
             # The dangerous string is properly contained within JSON string
-            self.assertIn('\\"><script>', json_str)  # Properly escaped in JSON
+            assert '\\"><script>' in json_str  # Properly escaped in JSON
             # Verify it's within a quoted string context
-            self.assertIn('"created_by": "\\"><script>', json_str)
+            assert '"created_by": "\\"><script>' in json_str
 
 
 class TestRequestSizeLimits(unittest.TestCase):
@@ -259,7 +259,7 @@ class TestRequestSizeLimits(unittest.TestCase):
                     "test_user", "Test Campaign", oversized_description, "Story", {}
                 )
 
-            self.assertIn("too large", str(context.exception))
+            assert "too large" in str(context.exception)
 
     def test_header_size_limit(self):
         """Test that oversized headers are handled."""
@@ -271,7 +271,7 @@ class TestRequestSizeLimits(unittest.TestCase):
 
         # In a real Flask app, oversized headers would be rejected by the server
         # Most web servers (nginx, Apache) reject headers > 8KB
-        self.assertGreater(len(oversized_token), MAX_HEADER_SIZE)
+        assert len(oversized_token) > MAX_HEADER_SIZE
 
         # Mock that the web server would reject this before reaching the app
         with patch("firebase_auth.verify_id_token") as mock_verify:
@@ -281,7 +281,7 @@ class TestRequestSizeLimits(unittest.TestCase):
             with self.assertRaises(ValueError) as context:
                 mock_verify(oversized_token)
 
-            self.assertIn("Header too large", str(context.exception))
+            assert "Header too large" in str(context.exception)
 
     def test_url_length_limit(self):
         """Test URL length limits."""
@@ -297,7 +297,7 @@ class TestRequestSizeLimits(unittest.TestCase):
 
             result = mock_get("test_user", oversized_id)
 
-            self.assertIsNone(result)
+            assert result is None
             mock_get.assert_called_once()
 
     def test_array_size_limits(self):
@@ -322,11 +322,11 @@ class TestRequestSizeLimits(unittest.TestCase):
                 json.dumps(story_with_huge_metadata),
             )
 
-            self.assertTrue(result)
+            assert result
 
             # In production, Firestore would reject documents > 1MB
             doc_size = len(json.dumps(story_with_huge_metadata))
-            self.assertGreater(doc_size, 50000)  # Verify it's actually large
+            assert doc_size > 50000  # Verify it's actually large
 
 
 class TestRateLimitingEnforcement(unittest.TestCase):
@@ -352,11 +352,11 @@ class TestRateLimitingEnforcement(unittest.TestCase):
 
             if self.request_counts[user_id] > RATE_LIMIT:
                 # Should be rate limited
-                self.assertGreater(self.request_counts[user_id], RATE_LIMIT)
+                assert self.request_counts[user_id] > RATE_LIMIT
                 break
 
         # Verify rate limit was exceeded
-        self.assertEqual(self.request_counts[user_id], RATE_LIMIT + 1)
+        assert self.request_counts[user_id] == RATE_LIMIT + 1
 
     def test_rate_limit_headers(self):
         """Test rate limit headers are properly set."""
@@ -371,9 +371,9 @@ class TestRateLimitingEnforcement(unittest.TestCase):
             }
 
             # Verify headers contain rate limit info
-            self.assertEqual(rate_limit_headers["X-RateLimit-Limit"], "100")
-            self.assertIn("X-RateLimit-Remaining", rate_limit_headers)
-            self.assertIn("X-RateLimit-Reset", rate_limit_headers)
+            assert rate_limit_headers["X-RateLimit-Limit"] == "100"
+            assert "X-RateLimit-Remaining" in rate_limit_headers
+            assert "X-RateLimit-Reset" in rate_limit_headers
 
     def test_distributed_rate_limiting(self):
         """Test distributed rate limiting across multiple instances."""
@@ -404,7 +404,7 @@ class TestRateLimitingEnforcement(unittest.TestCase):
                 allowed_count += 1
 
         # Should allow exactly MAX_REQUESTS
-        self.assertEqual(allowed_count, MAX_REQUESTS)
+        assert allowed_count == MAX_REQUESTS
 
     def test_rate_limit_by_endpoint(self):
         """Test different rate limits for different endpoints."""
@@ -430,10 +430,10 @@ class TestRateLimitingEnforcement(unittest.TestCase):
             endpoint_counters[endpoint] = allowed
 
             # Verify appropriate limits
-            self.assertLessEqual(endpoint_counters[endpoint], limit)
+            assert endpoint_counters[endpoint] <= limit
 
         # Verify AI endpoint was limited more strictly
-        self.assertEqual(endpoint_counters["/api/ai/generate"], 10)
+        assert endpoint_counters["/api/ai/generate"] == 10
 
 
 class TestInputSanitization(unittest.TestCase):
@@ -462,16 +462,16 @@ class TestInputSanitization(unittest.TestCase):
 
         for char, encoded in special_chars.items():
             result = html.escape(char)
-            self.assertEqual(result, encoded)
+            assert result == encoded
 
         # Test complex string
         dangerous_string = '<script>alert("XSS & more")</script>'
         safe_string = html.escape(dangerous_string)
 
-        self.assertNotIn("<script>", safe_string)
-        self.assertIn("&lt;script&gt;", safe_string)
-        self.assertIn("&amp;", safe_string)
-        self.assertIn("&quot;", safe_string)
+        assert "<script>" not in safe_string
+        assert "&lt;script&gt;" in safe_string
+        assert "&amp;" in safe_string
+        assert "&quot;" in safe_string
 
     def test_unicode_normalization(self):
         """Test Unicode normalization to prevent homograph attacks."""
@@ -489,15 +489,15 @@ class TestInputSanitization(unittest.TestCase):
             normalized = unicodedata.normalize("NFKD", unicode_str)
 
             # For display purposes, these would be normalized
-            self.assertIsInstance(normalized, str)
+            assert isinstance(normalized, str)
 
             # Check if normalization changed the string
             if should_change:
                 # These special Unicode forms should normalize to simpler forms
-                self.assertNotEqual(unicode_str, normalized)
+                assert unicode_str != normalized
             else:
                 # Regular ASCII should stay the same
-                self.assertEqual(unicode_str, normalized)
+                assert unicode_str == normalized
 
     def test_control_character_removal(self):
         """Test removal of control characters."""
@@ -519,8 +519,8 @@ class TestInputSanitization(unittest.TestCase):
                 c for c in test_string if c.isprintable() or c in "\n\r\t"
             )
 
-            self.assertNotIn(char, sanitized)
-            self.assertEqual(sanitized, "HelloWorld")
+            assert char not in sanitized
+            assert sanitized == "HelloWorld"
 
     def test_nested_encoding_prevention(self):
         """Test prevention of nested/double encoding attacks."""
@@ -538,13 +538,13 @@ class TestInputSanitization(unittest.TestCase):
                 # Store the attack as-is (encoding happens on display)
                 result = mock_add("test_user", "test_campaign", "player", attack)
 
-                self.assertTrue(result)
+                assert result
 
                 # When displaying, avoid double-encoding
                 # If it's already encoded, don't encode again
                 if "&lt;" in attack or "&#" in attack:
                     # Already contains encoded entities
-                    self.assertIn("&", attack)
+                    assert "&" in attack
 
 
 class TestCSRFProtection(unittest.TestCase):
@@ -568,7 +568,7 @@ class TestCSRFProtection(unittest.TestCase):
                 with self.assertRaises(ValueError) as context:
                     mock_create("user", "campaign", "desc", "story", {})
 
-                self.assertIn("CSRF", str(context.exception))
+                assert "CSRF" in str(context.exception)
 
                 # Test with valid CSRF token - should succeed
                 mock_create.side_effect = None
@@ -578,7 +578,7 @@ class TestCSRFProtection(unittest.TestCase):
                     "user", "campaign", "desc", "story", {}, csrf_token=self.csrf_token
                 )
 
-                self.assertEqual(result["campaign_id"], "123")
+                assert result["campaign_id"] == "123"
 
     def test_double_submit_cookie(self):
         """Test double-submit cookie pattern for CSRF protection."""
@@ -587,11 +587,11 @@ class TestCSRFProtection(unittest.TestCase):
         header_token = "cookie_csrf_123"
 
         # Valid case: cookie and header match
-        self.assertEqual(cookie_token, header_token)
+        assert cookie_token == header_token
 
         # Invalid case: tokens don't match
         bad_header_token = "different_token"
-        self.assertNotEqual(cookie_token, bad_header_token)
+        assert cookie_token != bad_header_token
 
         # Test with mock request
         with patch("firestore_service.add_story_entry") as mock_add:
@@ -599,7 +599,7 @@ class TestCSRFProtection(unittest.TestCase):
             if cookie_token == header_token:
                 mock_add.return_value = True
                 result = mock_add("user", "campaign", "player", "action")
-                self.assertTrue(result)
+                assert result
             else:
                 mock_add.side_effect = ValueError("CSRF token mismatch")
                 with self.assertRaises(ValueError):
@@ -631,14 +631,14 @@ class TestCSRFProtection(unittest.TestCase):
                 or "localhost" in origin.lower()
                 or "127.0.0.1" in origin
             )
-            self.assertTrue(is_valid, f"Origin {origin} should be valid")
+            assert is_valid, f"Origin {origin} should be valid"
 
         # Test invalid origins
         for origin in invalid_origins:
             # These should be rejected
-            self.assertNotIn("worldarchitect.ai", origin.lower())
-            self.assertNotIn("localhost", origin.lower())
-            self.assertNotIn("127.0.0.1", origin)
+            assert "worldarchitect.ai" not in origin.lower()
+            assert "localhost" not in origin.lower()
+            assert "127.0.0.1" not in origin
 
     def test_safe_methods_exempt(self):
         """Test that safe methods don't require CSRF protection."""
@@ -652,11 +652,11 @@ class TestCSRFProtection(unittest.TestCase):
                 # Safe methods should work without CSRF token
                 result = mock_get("test_user")
 
-                self.assertEqual(result, [])
+                assert result == []
                 mock_get.assert_called_with("test_user")
 
                 # No CSRF token needed for safe methods
-                self.assertIsInstance(result, list)
+                assert isinstance(result, list)
 
 
 class TestPathTraversalAndPayloadAttacks(unittest.TestCase):
@@ -684,19 +684,18 @@ class TestPathTraversalAndPayloadAttacks(unittest.TestCase):
             # Check for dangerous patterns
             if dangerous_path.startswith("/"):
                 # Unix absolute paths should be rejected
-                self.assertTrue(os.path.isabs(dangerous_path))
+                assert os.path.isabs(dangerous_path)
             elif dangerous_path.startswith("C:") or dangerous_path.startswith("c:"):
                 # Windows absolute paths
-                self.assertIn(":", dangerous_path)
+                assert ":" in dangerous_path
             else:
                 # Relative paths with .. should be caught
                 has_traversal = (
                     ".." in dangerous_path or "%2e" in dangerous_path.lower()
                 )
-                self.assertTrue(
-                    has_traversal,
-                    f"Path {dangerous_path} should contain traversal pattern",
-                )
+                assert (
+                    has_traversal
+                ), f"Path {dangerous_path} should contain traversal pattern"
 
             # In production, path validation would:
             # 1. Resolve to absolute path
@@ -712,9 +711,9 @@ class TestPathTraversalAndPayloadAttacks(unittest.TestCase):
                 or "\\" in dangerous_path
             )
 
-            self.assertTrue(
-                is_dangerous, f"Path {dangerous_path} should be recognized as dangerous"
-            )
+            assert (
+                is_dangerous
+            ), f"Path {dangerous_path} should be recognized as dangerous"
 
     def test_json_bomb_protection(self):
         """Test protection against JSON bomb/billion laughs attacks."""
@@ -748,8 +747,8 @@ class TestPathTraversalAndPayloadAttacks(unittest.TestCase):
             if isinstance(v, list)
         )
 
-        self.assertLess(total_elements, MAX_ARRAY_LENGTH)
-        self.assertLess(json_size, MAX_JSON_SIZE)
+        assert total_elements < MAX_ARRAY_LENGTH
+        assert json_size < MAX_JSON_SIZE
 
     def test_zip_bomb_prevention(self):
         """Test prevention of zip bomb attacks."""
@@ -777,7 +776,7 @@ class TestPathTraversalAndPayloadAttacks(unittest.TestCase):
         # Normal files rarely exceed 10:1
         MAX_COMPRESSION_RATIO = 100
 
-        self.assertLess(compression_ratio, MAX_COMPRESSION_RATIO)
+        assert compression_ratio < MAX_COMPRESSION_RATIO
 
         # Additional checks for zip bomb prevention:
         # 1. Maximum extracted size limit
@@ -787,8 +786,8 @@ class TestPathTraversalAndPayloadAttacks(unittest.TestCase):
         MAX_EXTRACTED_SIZE = 100 * 1024 * 1024  # 100MB
         MAX_FILES = 1000
 
-        self.assertLess(uncompressed_size, MAX_EXTRACTED_SIZE)
-        self.assertLess(6, MAX_FILES)  # We created 6 files
+        assert uncompressed_size < MAX_EXTRACTED_SIZE
+        assert MAX_FILES > 6  # We created 6 files
 
     def test_xml_entity_expansion_prevention(self):
         """Test prevention of XML entity expansion attacks (XXE)."""
@@ -807,18 +806,16 @@ class TestPathTraversalAndPayloadAttacks(unittest.TestCase):
         # 3. Use safe XML parsers
 
         # Check for dangerous patterns
-        self.assertIn("<!DOCTYPE", malicious_xml)
-        self.assertIn("<!ENTITY", malicious_xml)
-        self.assertIn("&lol", malicious_xml)
+        assert "<!DOCTYPE" in malicious_xml
+        assert "<!ENTITY" in malicious_xml
+        assert "&lol" in malicious_xml
 
         # Safe XML parsing would reject this
         # Example: defusedxml library prevents XXE attacks
         has_entities = "<!ENTITY" in malicious_xml
         has_doctype = "<!DOCTYPE" in malicious_xml
 
-        self.assertTrue(
-            has_entities and has_doctype, "Should detect potential XXE attack"
-        )
+        assert has_entities and has_doctype, "Should detect potential XXE attack"
 
 
 if __name__ == "__main__":

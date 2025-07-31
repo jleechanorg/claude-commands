@@ -45,43 +45,20 @@ class TestJSONDisplayFix(unittest.TestCase):
         result_narrative, result_response = parse_structured_response(test_json)
 
         # Validate the fix works correctly
-        self.assertIsNotNone(result_narrative, "Should return narrative text, not None")
-        self.assertIsInstance(
-            result_narrative, str, "Should return narrative as string"
-        )
+        assert result_narrative is not None, "Should return narrative text, not None"
+        assert isinstance(result_narrative, str), "Should return narrative as string"
 
         # Critical assertion: should return the extracted narrative, not raw JSON
-        self.assertIn(
-            "Scene #10", result_narrative, "Should contain the actual narrative text"
-        )
-        self.assertIn(
-            "DM MODE", result_narrative, "Should contain the narrative content"
-        )
-        self.assertNotIn(
-            '"narrative":', result_narrative, "Should NOT contain raw JSON structure"
-        )
-        self.assertNotIn(
-            '"entities_mentioned":',
-            result_narrative,
-            "Should NOT contain raw JSON structure",
-        )
+        assert "Scene #10" in result_narrative, "Should contain the actual narrative text"
+        assert "DM MODE" in result_narrative, "Should contain the narrative content"
+        assert '"narrative":' not in result_narrative, "Should NOT contain raw JSON structure"
+        assert '"entities_mentioned":' not in result_narrative, "Should NOT contain raw JSON structure"
 
         # Response object should be valid fallback
-        self.assertIsInstance(
-            result_response, NarrativeResponse, "Should return NarrativeResponse object"
-        )
-        self.assertEqual(
-            result_response.narrative,
-            result_narrative,
-            "Response narrative should match returned narrative",
-        )
-        self.assertEqual(
-            result_response.entities_mentioned,
-            ["Ser Caius of House Varrick", "Ser Bastion"],
-        )
-        self.assertEqual(
-            result_response.location_confirmed, "Starfall Command Barracks, Aeterna"
-        )
+        assert isinstance(result_response, NarrativeResponse), "Should return NarrativeResponse object"
+        assert result_response.narrative == result_narrative, "Response narrative should match returned narrative"
+        assert result_response.entities_mentioned == ["Ser Caius of House Varrick", "Ser Bastion"]
+        assert result_response.location_confirmed == "Starfall Command Barracks, Aeterna"
 
     def test_json_with_markdown_code_blocks(self):
         """
@@ -104,21 +81,15 @@ class TestJSONDisplayFix(unittest.TestCase):
         )
 
         # Should extract narrative from markdown-wrapped JSON
-        self.assertIsNotNone(result_narrative)
-        self.assertIn("DM MODE", result_narrative)
-        self.assertIn("Understanding confirmed", result_narrative)
-        self.assertNotIn(
-            "```json", result_narrative, "Should strip markdown formatting"
-        )
-        self.assertNotIn(
-            '"narrative":',
-            result_narrative,
-            "Should extract narrative, not return raw JSON",
-        )
+        assert result_narrative is not None
+        assert "DM MODE" in result_narrative
+        assert "Understanding confirmed" in result_narrative
+        assert "```json" not in result_narrative, "Should strip markdown formatting"
+        assert '"narrative":' not in result_narrative, "Should extract narrative, not return raw JSON"
 
         # Response object should be properly constructed
-        self.assertIsInstance(result_response, NarrativeResponse)
-        self.assertEqual(result_response.entities_mentioned, ["Test Entity"])
+        assert isinstance(result_response, NarrativeResponse)
+        assert result_response.entities_mentioned == ["Test Entity"]
 
     def test_plain_text_fallback(self):
         """
@@ -132,11 +103,11 @@ class TestJSONDisplayFix(unittest.TestCase):
         result_narrative, result_response = parse_structured_response(plain_text)
 
         # Should return original text as-is
-        self.assertEqual(result_narrative, plain_text)
-        self.assertIsInstance(result_response, NarrativeResponse)
-        self.assertEqual(result_response.narrative, plain_text)
-        self.assertEqual(result_response.entities_mentioned, [])
-        self.assertEqual(result_response.location_confirmed, "Unknown")
+        assert result_narrative == plain_text
+        assert isinstance(result_response, NarrativeResponse)
+        assert result_response.narrative == plain_text
+        assert result_response.entities_mentioned == []
+        assert result_response.location_confirmed == "Unknown"
 
     def test_successful_json_parsing(self):
         """
@@ -156,13 +127,11 @@ class TestJSONDisplayFix(unittest.TestCase):
         result_narrative, result_response = parse_structured_response(valid_json)
 
         # Should parse successfully
-        self.assertEqual(result_narrative, "The knight approaches the dragon's lair.")
-        self.assertIsInstance(result_response, NarrativeResponse)
-        self.assertEqual(
-            result_response.entities_mentioned, ["Sir Knight", "Ancient Dragon"]
-        )
-        self.assertEqual(result_response.location_confirmed, "Dragon's Lair")
-        self.assertEqual(result_response.state_updates, {"dragon_encountered": True})
+        assert result_narrative == "The knight approaches the dragon's lair."
+        assert isinstance(result_response, NarrativeResponse)
+        assert result_response.entities_mentioned == ["Sir Knight", "Ancient Dragon"]
+        assert result_response.location_confirmed == "Dragon's Lair"
+        assert result_response.state_updates == {"dragon_encountered": True}
 
     def test_regression_no_raw_json_in_narrative(self):
         """
@@ -183,26 +152,10 @@ class TestJSONDisplayFix(unittest.TestCase):
                 result_narrative, result_response = parse_structured_response(test_json)
 
                 # The core fix: narrative should never contain JSON structure
-                self.assertNotIn(
-                    '"narrative":',
-                    result_narrative,
-                    f"Narrative should not contain JSON structure: {result_narrative}",
-                )
-                self.assertNotIn(
-                    '"entities_mentioned":',
-                    result_narrative,
-                    f"Narrative should not contain JSON structure: {result_narrative}",
-                )
-                self.assertNotIn(
-                    '"location_confirmed":',
-                    result_narrative,
-                    f"Narrative should not contain JSON structure: {result_narrative}",
-                )
-                self.assertNotIn(
-                    '"state_updates":',
-                    result_narrative,
-                    f"Narrative should not contain JSON structure: {result_narrative}",
-                )
+                assert '"narrative":' not in result_narrative, f"Narrative should not contain JSON structure: {result_narrative}"
+                assert '"entities_mentioned":' not in result_narrative, f"Narrative should not contain JSON structure: {result_narrative}"
+                assert '"location_confirmed":' not in result_narrative, f"Narrative should not contain JSON structure: {result_narrative}"
+                assert '"state_updates":' not in result_narrative, f"Narrative should not contain JSON structure: {result_narrative}"
 
     def test_narrative_extraction_from_partial_json(self):
         """Test extracting narrative from JSON-like text when parsing fails"""
@@ -211,9 +164,9 @@ class TestJSONDisplayFix(unittest.TestCase):
         result_narrative, result_response = parse_structured_response(partial_json)
 
         # Should extract just the narrative
-        self.assertEqual(result_narrative, "The story continues with action")
-        self.assertNotIn("Some prefix", result_narrative)
-        self.assertNotIn("other", result_narrative)
+        assert result_narrative == "The story continues with action"
+        assert "Some prefix" not in result_narrative
+        assert "other" not in result_narrative
 
     def test_generic_code_block_extraction(self):
         """Test JSON extraction from generic code blocks without 'json' language identifier"""
@@ -231,10 +184,10 @@ class TestJSONDisplayFix(unittest.TestCase):
         )
 
         # Should extract narrative from generic code block
-        self.assertEqual(result_narrative, "Story text from generic code block")
-        self.assertIsNotNone(result_response)
-        self.assertEqual(result_response.entities_mentioned, ["Entity1"])
-        self.assertEqual(result_response.location_confirmed, "TestLocation")
+        assert result_narrative == "Story text from generic code block"
+        assert result_response is not None
+        assert result_response.entities_mentioned == ["Entity1"]
+        assert result_response.location_confirmed == "TestLocation"
 
     def test_escaped_character_handling(self):
         """Test proper handling of escaped characters in narrative"""
@@ -245,9 +198,9 @@ class TestJSONDisplayFix(unittest.TestCase):
         result_narrative, result_response = parse_structured_response(escaped_json)
 
         # Should properly unescape characters
-        self.assertIn('She said "Hello!"', result_narrative)
-        self.assertIn("\n", result_narrative)  # Should have actual newlines
-        self.assertEqual(result_narrative.count("\n"), 2)
+        assert 'She said "Hello!"' in result_narrative
+        assert "\n" in result_narrative  # Should have actual newlines
+        assert result_narrative.count("\n") == 2
 
     def test_json_cleanup_fallback(self):
         """Test the final cleanup fallback for malformed JSON"""
@@ -258,10 +211,10 @@ class TestJSONDisplayFix(unittest.TestCase):
         result_narrative, result_response = parse_structured_response(malformed_json)
 
         # Should clean up JSON syntax
-        self.assertNotIn("{", result_narrative)
-        self.assertNotIn('"narrative":', result_narrative)
-        self.assertNotIn('["Hero"]', result_narrative)
-        self.assertIn("Story text", result_narrative)
+        assert "{" not in result_narrative
+        assert '"narrative":' not in result_narrative
+        assert '["Hero"]' not in result_narrative
+        assert "Story text" in result_narrative
 
 
 if __name__ == "__main__":

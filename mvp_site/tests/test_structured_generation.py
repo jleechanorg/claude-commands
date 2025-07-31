@@ -53,9 +53,9 @@ PRESENT CHARACTERS:
             location_confirmed=location,
         )
 
-        self.assertEqual(response.narrative, narrative)
-        self.assertEqual(response.entities_mentioned, entities)
-        self.assertEqual(response.location_confirmed, location)
+        assert response.narrative == narrative
+        assert response.entities_mentioned == entities
+        assert response.location_confirmed == location
 
     def test_entity_tracking_instruction(self):
         """Test EntityTrackingInstruction creation"""
@@ -63,10 +63,10 @@ PRESENT CHARACTERS:
             self.test_manifest, self.test_entities
         )
 
-        self.assertEqual(instruction.expected_entities, self.test_entities)
-        self.assertIn("Gideon", instruction.response_format)
-        self.assertIn("Sariel", instruction.response_format)
-        self.assertIn("Rowan", instruction.response_format)
+        assert instruction.expected_entities == self.test_entities
+        assert "Gideon" in instruction.response_format
+        assert "Sariel" in instruction.response_format
+        assert "Rowan" in instruction.response_format
 
     def test_structured_prompt_injection(self):
         """Test prompt injection creation"""
@@ -75,17 +75,17 @@ PRESENT CHARACTERS:
         )
 
         # Should contain manifest
-        self.assertIn("=== SCENE MANIFEST ===", injection)
-        self.assertIn("The Silver Stag Tavern", injection)
+        assert "=== SCENE MANIFEST ===" in injection
+        assert "The Silver Stag Tavern" in injection
 
         # Should contain entity requirements
-        self.assertIn("You MUST mention ALL characters", injection)
-        self.assertIn("Gideon, Sariel, Rowan", injection)
+        assert "You MUST mention ALL characters" in injection
+        assert "Gideon, Sariel, Rowan" in injection
 
         # JSON format is now handled automatically by always-JSON mode
         # Should contain entity tracking instructions
-        self.assertIn("entities_mentioned array", injection)
-        self.assertIn("location_confirmed", injection)
+        assert "entities_mentioned array" in injection
+        assert "location_confirmed" in injection
 
     def test_parse_structured_response_valid_json(self):
         """Test parsing valid JSON response"""
@@ -98,9 +98,9 @@ PRESENT CHARACTERS:
         response_text = json.dumps(json_response)
         narrative, parsed = parse_structured_response(response_text)
 
-        self.assertEqual(narrative, json_response["narrative"])
-        self.assertIsInstance(parsed, NarrativeResponse)
-        self.assertEqual(parsed.entities_mentioned, json_response["entities_mentioned"])
+        assert narrative == json_response["narrative"]
+        assert isinstance(parsed, NarrativeResponse)
+        assert parsed.entities_mentioned == json_response["entities_mentioned"]
 
     def test_parse_structured_response_with_extra_text(self):
         """Test parsing JSON with extra text around it"""
@@ -115,18 +115,18 @@ PRESENT CHARACTERS:
         )
         narrative, parsed = parse_structured_response(response_text)
 
-        self.assertEqual(narrative, json_response["narrative"])
-        self.assertIsInstance(parsed, NarrativeResponse)
+        assert narrative == json_response["narrative"]
+        assert isinstance(parsed, NarrativeResponse)
 
     def test_parse_structured_response_fallback(self):
         """Test fallback for invalid JSON"""
         plain_text = "This is just plain text that mentions Gideon, Sariel, and Rowan in the tavern."
         narrative, parsed = parse_structured_response(plain_text)
 
-        self.assertEqual(narrative, plain_text)
-        self.assertIsInstance(parsed, NarrativeResponse)
-        self.assertEqual(parsed.narrative, plain_text)
-        self.assertEqual(parsed.entities_mentioned, [])  # Should be empty for fallback
+        assert narrative == plain_text
+        assert isinstance(parsed, NarrativeResponse)
+        assert parsed.narrative == plain_text
+        assert parsed.entities_mentioned == []  # Should be empty for fallback
 
     def test_validate_entity_coverage_perfect(self):
         """Test entity coverage validation with perfect coverage"""
@@ -138,11 +138,11 @@ PRESENT CHARACTERS:
 
         validation = validate_entity_coverage(response, self.test_entities)
 
-        self.assertTrue(validation["schema_valid"])
-        self.assertTrue(validation["narrative_valid"])
-        self.assertEqual(validation["coverage_rate"], 1.0)
-        self.assertEqual(len(validation["missing_from_schema"]), 0)
-        self.assertEqual(len(validation["missing_from_narrative"]), 0)
+        assert validation["schema_valid"]
+        assert validation["narrative_valid"]
+        assert validation["coverage_rate"] == 1.0
+        assert len(validation["missing_from_schema"]) == 0
+        assert len(validation["missing_from_narrative"]) == 0
 
     def test_validate_entity_coverage_missing(self):
         """Test entity coverage validation with missing entities"""
@@ -154,11 +154,11 @@ PRESENT CHARACTERS:
 
         validation = validate_entity_coverage(response, self.test_entities)
 
-        self.assertFalse(validation["schema_valid"])
-        self.assertFalse(validation["narrative_valid"])
-        self.assertLess(validation["coverage_rate"], 1.0)
-        self.assertIn("sariel", validation["missing_from_schema"])
-        self.assertIn("rowan", validation["missing_from_schema"])
+        assert not validation["schema_valid"]
+        assert not validation["narrative_valid"]
+        assert validation["coverage_rate"] < 1.0
+        assert "sariel" in validation["missing_from_schema"]
+        assert "rowan" in validation["missing_from_schema"]
 
     def test_integration_with_entity_tracking(self):
         """Test integration with existing entity tracking system"""
@@ -196,12 +196,12 @@ PRESENT CHARACTERS:
         )
 
         # Should contain all expected components
-        self.assertIn("=== SCENE MANIFEST ===", prompt_injection)
-        self.assertIn("TestPlayer", prompt_injection)
-        self.assertIn("NPC1", prompt_injection)
-        self.assertIn("NPC2", prompt_injection)
+        assert "=== SCENE MANIFEST ===" in prompt_injection
+        assert "TestPlayer" in prompt_injection
+        assert "NPC1" in prompt_injection
+        assert "NPC2" in prompt_injection
         # JSON format is now handled automatically by always-JSON mode
-        self.assertIn("CRITICAL ENTITY TRACKING REQUIREMENT", prompt_injection)
+        assert "CRITICAL ENTITY TRACKING REQUIREMENT" in prompt_injection
 
         print("✅ Integration test: Structured generation works with entity tracking")
 

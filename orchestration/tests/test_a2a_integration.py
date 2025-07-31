@@ -16,10 +16,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
 # Add fixtures directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'fixtures'))
 
-import logging_util
-from orchestrate_unified import UnifiedOrchestration
 from message_broker import MessageBroker, MessageType, TaskMessage
-from .fixtures import mock_tmux_fixture, mock_claude_fixture, mock_message_broker_fixture
+from orchestrate_unified import UnifiedOrchestration
+
+from .fixtures import (
+    mock_claude_fixture,
+    mock_message_broker_fixture,
+    mock_tmux_fixture,
+)
 
 
 class TestA2AIntegration(unittest.TestCase):

@@ -73,23 +73,21 @@ class TestMainStructuredResponseBuilding(unittest.TestCase):
                 response_data["debug_info"] = self.mock_structured_response.debug_info
 
         # Verify all fields are present
-        self.assertIn("state_updates", response_data)
-        self.assertIn("entities_mentioned", response_data)
-        self.assertIn("location_confirmed", response_data)
-        self.assertIn("debug_info", response_data)
+        assert "state_updates" in response_data
+        assert "entities_mentioned" in response_data
+        assert "location_confirmed" in response_data
+        assert "debug_info" in response_data
 
         # Verify correct values
-        self.assertEqual(response_data["entities_mentioned"], ["goblin", "dragon"])
-        self.assertEqual(response_data["location_confirmed"], "Dungeon")
-        self.assertEqual(
-            response_data["state_updates"]["npc_data"]["goblin_1"]["hp_current"], 5
-        )
+        assert response_data["entities_mentioned"] == ["goblin", "dragon"]
+        assert response_data["location_confirmed"] == "Dungeon"
+        assert response_data["state_updates"]["npc_data"]["goblin_1"]["hp_current"] == 5
 
         # Verify debug_info structure
-        self.assertIn("dice_rolls", response_data["debug_info"])
-        self.assertIn("resources", response_data["debug_info"])
-        self.assertIn("dm_notes", response_data["debug_info"])
-        self.assertIn("state_rationale", response_data["debug_info"])
+        assert "dice_rolls" in response_data["debug_info"]
+        assert "resources" in response_data["debug_info"]
+        assert "dm_notes" in response_data["debug_info"]
+        assert "state_rationale" in response_data["debug_info"]
 
     def test_response_handles_missing_fields_gracefully(self):
         """Test that response handles missing optional fields"""
@@ -110,10 +108,10 @@ class TestMainStructuredResponseBuilding(unittest.TestCase):
             response_data["state_updates"] = {}  # This won't execute
 
         # Response should still be valid
-        self.assertIn("success", response_data)
-        self.assertIn("response", response_data)
-        self.assertNotIn("state_updates", response_data)
-        self.assertNotIn("debug_info", response_data)
+        assert "success" in response_data
+        assert "response" in response_data
+        assert "state_updates" not in response_data
+        assert "debug_info" not in response_data
 
     def test_debug_info_only_in_debug_mode(self):
         """Test that debug_info is included based on debug mode"""
@@ -132,14 +130,12 @@ class TestMainStructuredResponseBuilding(unittest.TestCase):
         }
 
         # With debug mode on
-        self.assertIn("debug_info", response_data_debug_on)
-        self.assertEqual(
-            response_data_debug_on["debug_info"]["dice_rolls"], ["1d20+5 = 18"]
-        )
+        assert "debug_info" in response_data_debug_on
+        assert response_data_debug_on["debug_info"]["dice_rolls"] == ["1d20+5 = 18"]
 
         # Debug mode flag tells frontend whether to display
-        self.assertTrue(response_data_debug_on["debug_mode"])
-        self.assertFalse(response_data_debug_off["debug_mode"])
+        assert response_data_debug_on["debug_mode"]
+        assert not response_data_debug_off["debug_mode"]
 
     def test_nested_field_extraction(self):
         """Test extraction of fields from nested structure"""
@@ -147,15 +143,15 @@ class TestMainStructuredResponseBuilding(unittest.TestCase):
         debug_info = self.mock_structured_response.debug_info
 
         # Frontend should extract from debug_info
-        self.assertIn("dice_rolls", debug_info)
-        self.assertIsInstance(debug_info["dice_rolls"], list)
+        assert "dice_rolls" in debug_info
+        assert isinstance(debug_info["dice_rolls"], list)
 
-        self.assertIn("resources", debug_info)
-        self.assertIsInstance(debug_info["resources"], str)
+        assert "resources" in debug_info
+        assert isinstance(debug_info["resources"], str)
 
         # These fields should be in debug_info, not at top level
-        self.assertNotIn("dice_rolls", {"response": "test", "debug_info": debug_info})
-        self.assertNotIn("resources", {"response": "test", "debug_info": debug_info})
+        assert "dice_rolls" not in {"response": "test", "debug_info": debug_info}
+        assert "resources" not in {"response": "test", "debug_info": debug_info}
 
 
 if __name__ == "__main__":

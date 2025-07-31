@@ -5,12 +5,12 @@ This version simulates Claude responses without requiring the actual Claude Code
 Use this for testing the GitHub integration workflow.
 """
 
-from http.server import HTTPServer, BaseHTTPRequestHandler
 import json
-import urllib.parse
 import logging
-import time
 import os
+import time
+import urllib.parse
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -71,7 +71,7 @@ Timestamp: {time.strftime('%Y-%m-%d %H:%M:%S')}"""
                 self.send_response(500)
                 self.send_header('Content-Type', 'text/plain')
                 self.end_headers()
-                self.wfile.write(f"Internal server error: {str(e)}".encode('utf-8'))
+                self.wfile.write(f"Internal server error: {str(e)}".encode())
         else:
             self.send_response(404)
             self.end_headers()
@@ -95,7 +95,7 @@ if __name__ == '__main__':
     server = HTTPServer(('127.0.0.1', port), ClaudeTestHandler)
     logger.info(f"Starting Claude TEST endpoint server on http://127.0.0.1:{port}")
     logger.info("🧪 TEST MODE: This server simulates Claude responses")
-    logger.info("Health check available at http://127.0.0.1:{}/health".format(port))
+    logger.info(f"Health check available at http://127.0.0.1:{port}/health")
 
     try:
         server.serve_forever()

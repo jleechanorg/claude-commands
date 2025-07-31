@@ -63,29 +63,22 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         response = GeminiResponse.create(raw_response)
 
         # Verify GeminiResponse has the structured_response
-        self.assertIsNotNone(response.structured_response)
-        self.assertIsInstance(response.structured_response, NarrativeResponse)
+        assert response.structured_response is not None
+        assert isinstance(response.structured_response, NarrativeResponse)
 
         # Verify all structured fields are parsed correctly
         structured = response.structured_response
-        self.assertEqual(
-            structured.session_header,
-            "Session 5: Into the Depths\nLevel 3 Rogue | HP: 25/30",
-        )
+        assert structured.session_header == "Session 5: Into the Depths\nLevel 3 Rogue | HP: 25/30"
         # Check planning block is JSON with expected structure
-        self.assertIsInstance(structured.planning_block, dict)
-        self.assertIn("thinking", structured.planning_block)
-        self.assertIn("choices", structured.planning_block)
-        self.assertIn("search_traps", structured.planning_block["choices"])
-        self.assertEqual(len(structured.planning_block["choices"]), 3)
-        self.assertEqual(
-            structured.dice_rolls, ["Perception: 1d20+5 = 18", "Stealth: 1d20+8 = 22"]
-        )
-        self.assertEqual(
-            structured.resources, "HP: 25/30 | Spell Slots: 2/3 | Gold: 145"
-        )
-        self.assertIsInstance(structured.debug_info, dict)
-        self.assertEqual(structured.debug_info["turn_number"], 15)
+        assert isinstance(structured.planning_block, dict)
+        assert "thinking" in structured.planning_block
+        assert "choices" in structured.planning_block
+        assert "search_traps" in structured.planning_block["choices"]
+        assert len(structured.planning_block["choices"]) == 3
+        assert structured.dice_rolls == ["Perception: 1d20+5 = 18", "Stealth: 1d20+8 = 22"]
+        assert structured.resources == "HP: 25/30 | Spell Slots: 2/3 | Gold: 145"
+        assert isinstance(structured.debug_info, dict)
+        assert structured.debug_info["turn_number"] == 15
 
     def test_parse_missing_structured_fields(self):
         """Test parsing when some structured fields are missing"""
@@ -104,13 +97,13 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         structured = response.structured_response
 
         # Present fields should have values
-        self.assertEqual(structured.session_header, "Session 3: The Quest Begins")
-        self.assertEqual(structured.dice_rolls, ["Initiative: 1d20+2 = 14"])
+        assert structured.session_header == "Session 3: The Quest Begins"
+        assert structured.dice_rolls == ["Initiative: 1d20+2 = 14"]
 
         # Missing fields should have defaults
-        self.assertEqual(structured.planning_block, {})
-        self.assertEqual(structured.resources, "")
-        self.assertEqual(structured.debug_info, {})
+        assert structured.planning_block == {}
+        assert structured.resources == ""
+        assert structured.debug_info == {}
 
     def test_parse_empty_structured_fields(self):
         """Test parsing when structured fields are present but empty"""
@@ -129,14 +122,12 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         structured = response.structured_response
 
         # All fields should exist with empty values
-        self.assertEqual(structured.session_header, "")
+        assert structured.session_header == ""
         # Empty planning block gets default structure
-        self.assertEqual(
-            structured.planning_block, {"thinking": "", "context": "", "choices": {}}
-        )
-        self.assertEqual(structured.dice_rolls, [])
-        self.assertEqual(structured.resources, "")
-        self.assertEqual(structured.debug_info, {})
+        assert structured.planning_block == {"thinking": "", "context": "", "choices": {}}
+        assert structured.dice_rolls == []
+        assert structured.resources == ""
+        assert structured.debug_info == {}
 
     def test_parse_null_structured_fields(self):
         """Test parsing when structured fields are null"""
@@ -155,11 +146,11 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         structured = response.structured_response
 
         # Null fields should be converted to appropriate defaults
-        self.assertEqual(structured.session_header, "")
-        self.assertEqual(structured.planning_block, {})
-        self.assertEqual(structured.dice_rolls, [])
-        self.assertEqual(structured.resources, "")
-        self.assertEqual(structured.debug_info, {})
+        assert structured.session_header == ""
+        assert structured.planning_block == {}
+        assert structured.dice_rolls == []
+        assert structured.resources == ""
+        assert structured.debug_info == {}
 
     def test_parse_malformed_dice_rolls(self):
         """Test parsing when dice_rolls is not a list"""
@@ -174,7 +165,7 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         structured = response.structured_response
 
         # The implementation now converts invalid types to empty list
-        self.assertEqual(structured.dice_rolls, [])
+        assert structured.dice_rolls == []
 
     def test_parse_complex_debug_info(self):
         """Test parsing complex nested debug_info"""
@@ -203,11 +194,11 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         structured = response.structured_response
 
         # Complex debug info should be preserved
-        self.assertIsInstance(structured.debug_info, dict)
-        self.assertIn("dm_notes", structured.debug_info)
-        self.assertIn("combat_state", structured.debug_info)
-        self.assertEqual(structured.debug_info["combat_state"]["round"], 3)
-        self.assertIsInstance(structured.debug_info["combat_state"]["conditions"], dict)
+        assert isinstance(structured.debug_info, dict)
+        assert "dm_notes" in structured.debug_info
+        assert "combat_state" in structured.debug_info
+        assert structured.debug_info["combat_state"]["round"] == 3
+        assert isinstance(structured.debug_info["combat_state"]["conditions"], dict)
 
     def test_parse_special_characters_in_fields(self):
         """Test parsing fields with special characters"""
@@ -244,15 +235,15 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
         structured = response.structured_response
 
         # Special characters should be preserved
-        self.assertIn("🐉", structured.session_header)
+        assert "🐉" in structured.session_header
         # Check that special characters are preserved in JSON
-        self.assertIsInstance(structured.planning_block, dict)
-        self.assertIn("choices", structured.planning_block)
+        assert isinstance(structured.planning_block, dict)
+        assert "choices" in structured.planning_block
         # Check that emoji is preserved in choice text
         attack_choice = structured.planning_block["choices"]["attack_sword"]
-        self.assertIn("⚔️", attack_choice["text"])
-        self.assertIn("→", structured.dice_rolls[0])
-        self.assertIn("♥️", structured.resources)
+        assert "⚔️" in attack_choice["text"]
+        assert "→" in structured.dice_rolls[0]
+        assert "♥️" in structured.resources
 
     def test_parse_very_long_fields(self):
         """Test parsing fields with very long content"""
@@ -283,14 +274,12 @@ class TestGeminiResponseStructuredFields(unittest.TestCase):
 
         # Long content should be preserved
         # Check that long content is preserved in JSON
-        self.assertIsInstance(structured.planning_block, dict)
-        self.assertIn("choices", structured.planning_block)
-        self.assertIn("option_50", structured.planning_block["choices"])
-        self.assertEqual(
-            structured.planning_block["choices"]["option_50"]["text"], "Option 50"
-        )
-        self.assertIn("Resource20: 200", structured.resources)
-        self.assertEqual(len(structured.dice_rolls), 10)
+        assert isinstance(structured.planning_block, dict)
+        assert "choices" in structured.planning_block
+        assert "option_50" in structured.planning_block["choices"]
+        assert structured.planning_block["choices"]["option_50"]["text"] == "Option 50"
+        assert "Resource20: 200" in structured.resources
+        assert len(structured.dice_rolls) == 10
 
 
 if __name__ == "__main__":

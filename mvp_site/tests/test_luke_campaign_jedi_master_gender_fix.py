@@ -32,8 +32,8 @@ class TestLukeCampaignJediMasterGenderFix(unittest.TestCase):
         )
 
         # Verify gender is properly set
-        self.assertEqual(jedi_master.gender, "female")
-        self.assertEqual(jedi_master.display_name, "Jedi Master")
+        assert jedi_master.gender == "female"
+        assert jedi_master.display_name == "Jedi Master"
 
         # This ensures that any narrative generation system can check:
         # if jedi_master.gender == "female":
@@ -42,9 +42,9 @@ class TestLukeCampaignJediMasterGenderFix(unittest.TestCase):
 
         # Verify narrative consistency helper methods could work
         pronouns = self._get_pronouns_for_gender(jedi_master.gender)
-        self.assertEqual(pronouns["subject"], "she")
-        self.assertEqual(pronouns["object"], "her")
-        self.assertEqual(pronouns["possessive"], "her")
+        assert pronouns["subject"] == "she"
+        assert pronouns["object"] == "her"
+        assert pronouns["possessive"] == "her"
 
     def test_prevent_luke_campaign_bug_scenario(self):
         """Test that the specific Luke campaign bug scenario is prevented."""
@@ -65,7 +65,7 @@ class TestLukeCampaignJediMasterGenderFix(unittest.TestCase):
         # With our fix, the gender field prevents this:
 
         # 1. Gender is explicitly stored
-        self.assertEqual(jedi_master.gender, "female")
+        assert jedi_master.gender == "female"
 
         # 2. Narrative generation should check this field
         # 3. Any male name/pronoun generation would be inconsistent with gender="female"
@@ -77,7 +77,7 @@ class TestLukeCampaignJediMasterGenderFix(unittest.TestCase):
         else:
             narrative_safe = False
 
-        self.assertTrue(narrative_safe, "Narrative should respect gender field")
+        assert narrative_safe, "Narrative should respect gender field"
 
     def test_creative_gender_acceptance(self):
         """Test that creative gender values are accepted for LLM flexibility."""
@@ -93,7 +93,7 @@ class TestLukeCampaignJediMasterGenderFix(unittest.TestCase):
         )
 
         # Verify creative gender is stored
-        self.assertEqual(creative_npc.gender, "shapeshifter")
+        assert creative_npc.gender == "shapeshifter"
 
         # Test that type validation still works
 

@@ -15,7 +15,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from main import parse_set_command
+from world_logic import parse_set_command
 
 
 class TestParseSetCommandErrorHandling(unittest.TestCase):
@@ -34,17 +34,17 @@ valid_array=[1, 2, 3]"""
             result = parse_set_command(command)
 
             # Valid values should be parsed
-            self.assertEqual(result["hp"], 100)
-            self.assertEqual(result["str"], 18)
-            self.assertEqual(result["valid_array"], [1, 2, 3])
+            assert result["hp"] == 100
+            assert result["str"] == 18
+            assert result["valid_array"] == [1, 2, 3]
 
             # Invalid JSON should be skipped
-            self.assertNotIn("name", result)
-            self.assertNotIn("broken", result)
-            self.assertNotIn("array", result)
+            assert "name" not in result
+            assert "broken" not in result
+            assert "array" not in result
 
             # Should log warnings for invalid JSON
-            self.assertEqual(mock_warning.call_count, 3)
+            assert mock_warning.call_count == 3
 
     def test_empty_values_and_whitespace(self):
         """Test handling of empty values and whitespace"""
@@ -55,7 +55,7 @@ valid_array=[1, 2, 3]"""
         """
 
         result = parse_set_command(command)
-        self.assertEqual(result, {"hp": 50, "name": "Hero"})
+        assert result == {"hp": 50, "name": "Hero"}
 
     def test_lines_without_equals(self):
         """Test lines that don't contain equals sign are ignored"""
@@ -66,7 +66,7 @@ another line without it
 wis=12"""
 
         result = parse_set_command(command)
-        self.assertEqual(result, {"hp": 100, "str": 15, "wis": 12})
+        assert result == {"hp": 100, "str": 15, "wis": 12}
 
     def test_special_characters_in_values(self):
         """Test values containing special characters"""
@@ -75,10 +75,10 @@ formula="damage = str * 2"
 description="Line 1\\nLine 2"'''
 
         result = parse_set_command(command)
-        self.assertEqual(result["name"], "Hero = 'Strong'")
-        self.assertEqual(result["formula"], "damage = str * 2")
+        assert result["name"] == "Hero = 'Strong'"
+        assert result["formula"] == "damage = str * 2"
         # JSON parsing converts \\n to actual newline
-        self.assertEqual(result["description"], "Line 1\nLine 2")
+        assert result["description"] == "Line 1\nLine 2"
 
     def test_numeric_boolean_null_values(self):
         """Test various value types"""
@@ -89,11 +89,11 @@ bool_false=false
 null_value=null"""
 
         result = parse_set_command(command)
-        self.assertEqual(result["int"], 42)
-        self.assertEqual(result["float"], 3.14)
-        self.assertEqual(result["bool_true"], True)
-        self.assertEqual(result["bool_false"], False)
-        self.assertIsNone(result["null_value"])
+        assert result["int"] == 42
+        assert result["float"] == 3.14
+        assert result["bool_true"] == True
+        assert result["bool_false"] == False
+        assert result["null_value"] is None
 
     def test_arrays_and_objects(self):
         """Test complex JSON structures"""
@@ -102,9 +102,9 @@ stats={"str": 18, "dex": 14}
 nested={"player": {"level": 5}}"""
 
         result = parse_set_command(command)
-        self.assertEqual(result["items"], ["sword", "shield"])
-        self.assertEqual(result["stats"], {"str": 18, "dex": 14})
-        self.assertEqual(result["nested"], {"player": {"level": 5}})
+        assert result["items"] == ["sword", "shield"]
+        assert result["stats"] == {"str": 18, "dex": 14}
+        assert result["nested"] == {"player": {"level": 5}}
 
     def test_edge_cases(self):
         """Test various edge cases"""
@@ -117,13 +117,13 @@ multiple=equals=signs"""
             result = parse_set_command(command)
 
             # Valid line
-            self.assertEqual(result["valid"], 100)
+            assert result["valid"] == 100
 
             # Lines with empty key or value are skipped
-            self.assertEqual(len(result), 1)  # Only 'valid' was parsed
+            assert len(result) == 1  # Only 'valid' was parsed
 
             # All invalid lines should generate warnings
-            self.assertTrue(mock_warning.call_count >= 2)
+            assert mock_warning.call_count >= 2
 
     def test_unicode_and_emoji(self):
         """Test unicode characters and emoji"""
@@ -132,9 +132,9 @@ title="龍 Slayer"
 items=["⚔️", "🛡️"]"""
 
         result = parse_set_command(command)
-        self.assertEqual(result["name"], "Hero 🗡️")
-        self.assertEqual(result["title"], "龍 Slayer")
-        self.assertEqual(result["items"], ["⚔️", "🛡️"])
+        assert result["name"] == "Hero 🗡️"
+        assert result["title"] == "龍 Slayer"
+        assert result["items"] == ["⚔️", "🛡️"]
 
     def test_very_long_values(self):
         """Test handling of very long values"""
@@ -144,9 +144,9 @@ long="{long_string}"
 after=456"""
 
         result = parse_set_command(command)
-        self.assertEqual(result["short"], 123)
-        self.assertEqual(result["long"], long_string)
-        self.assertEqual(result["after"], 456)
+        assert result["short"] == 123
+        assert result["long"] == long_string
+        assert result["after"] == 456
 
     def test_escaped_characters(self):
         """Test escaped characters in JSON strings"""
@@ -156,10 +156,10 @@ tab="Col1\tCol2"
 backslash="Path\\to\\file"'''
 
         result = parse_set_command(command)
-        self.assertEqual(result["quote"], 'She said "Hello"')
-        self.assertEqual(result["newline"], "First\nSecond")
-        self.assertEqual(result["tab"], "Col1\tCol2")
-        self.assertEqual(result["backslash"], "Path\\to\\file")
+        assert result["quote"] == 'She said "Hello"'
+        assert result["newline"] == "First\nSecond"
+        assert result["tab"] == "Col1\tCol2"
+        assert result["backslash"] == "Path\\to\\file"
 
 
 if __name__ == "__main__":

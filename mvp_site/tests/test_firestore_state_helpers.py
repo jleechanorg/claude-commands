@@ -40,7 +40,7 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_append_syntax(state, "items", value)
 
-        self.assertTrue(result)
+        assert result
         mock_log.assert_called_with(
             "update_state: Detected explicit append for 'items'."
         )
@@ -55,7 +55,7 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_append_syntax(state, "key", value)
 
-        self.assertFalse(result)
+        assert not result
 
     def test_handle_append_syntax_no_append_key(self):
         """Test _handle_append_syntax with dict missing 'append' key"""
@@ -64,7 +64,7 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_append_syntax(state, "key", value)
 
-        self.assertFalse(result)
+        assert not result
 
     @patch("firestore_service._perform_append")
     @patch("logging_util.info")
@@ -75,8 +75,8 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_append_syntax(state, "new_key", value)
 
-        self.assertTrue(result)
-        self.assertEqual(state["new_key"], [])
+        assert result
+        assert state["new_key"] == []
         mock_append.assert_called_once()
 
     @patch("firestore_service._perform_append")
@@ -88,7 +88,7 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_append_syntax(state, "core_memories", value)
 
-        self.assertTrue(result)
+        assert result
         # Verify deduplicate=True for core_memories
         mock_append.assert_called_once_with(
             state["core_memories"],
@@ -107,9 +107,9 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_core_memories_safeguard(state, "core_memories", value)
 
-        self.assertTrue(result)
+        assert result
         mock_warning.assert_called_once()
-        self.assertIn("CRITICAL SAFEGUARD", mock_warning.call_args[0][0])
+        assert "CRITICAL SAFEGUARD" in mock_warning.call_args[0][0]
         mock_append.assert_called_once_with(
             state["core_memories"], value, "core_memories", deduplicate=True
         )
@@ -120,7 +120,7 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_core_memories_safeguard(state, "other_key", ["new"])
 
-        self.assertFalse(result)
+        assert not result
 
     @patch("firestore_service._perform_append")
     @patch("logging_util.warning")
@@ -133,8 +133,8 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_core_memories_safeguard(state, "core_memories", value)
 
-        self.assertTrue(result)
-        self.assertEqual(state["core_memories"], [])
+        assert result
+        assert state["core_memories"] == []
         mock_append.assert_called_once()
 
     # Tests for _handle_dict_merge
@@ -144,7 +144,7 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_dict_merge(state, "key", "not a dict")
 
-        self.assertFalse(result)
+        assert not result
 
     @patch("firestore_service.update_state_with_changes")
     def test_handle_dict_merge_existing_dict(self, mock_update):
@@ -155,9 +155,9 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_dict_merge(state, "config", value)
 
-        self.assertTrue(result)
+        assert result
         mock_update.assert_called_once_with({"a": 1, "b": 2}, value)
-        self.assertEqual(state["config"], {"a": 1, "b": 3, "c": 4})
+        assert state["config"] == {"a": 1, "b": 3, "c": 4}
 
     @patch("firestore_service.update_state_with_changes")
     def test_handle_dict_merge_new_dict(self, mock_update):
@@ -168,9 +168,9 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_dict_merge(state, "new_key", value)
 
-        self.assertTrue(result)
+        assert result
         mock_update.assert_called_once_with({}, value)
-        self.assertEqual(state["new_key"], {"a": 1})
+        assert state["new_key"] == {"a": 1}
 
     @patch("firestore_service.update_state_with_changes")
     def test_handle_dict_merge_overwrite_non_dict(self, mock_update):
@@ -181,10 +181,10 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_dict_merge(state, "key", value)
 
-        self.assertTrue(result)
+        assert result
         # Should create new dict, not merge with string
         mock_update.assert_called_once_with({}, value)
-        self.assertEqual(state["key"], {"a": 1})
+        assert state["key"] == {"a": 1}
 
     # Tests for _handle_delete_token
     @patch("logging_util.info")
@@ -194,9 +194,9 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_delete_token(state, "key1", DELETE_TOKEN)
 
-        self.assertTrue(result)
-        self.assertNotIn("key1", state)
-        self.assertIn("key2", state)
+        assert result
+        assert "key1" not in state
+        assert "key2" in state
         mock_log.assert_called_with(
             "update_state: Deleting key 'key1' due to DELETE_TOKEN."
         )
@@ -208,8 +208,8 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_delete_token(state, "missing", DELETE_TOKEN)
 
-        self.assertTrue(result)
-        self.assertEqual(state, {"other": "value"})
+        assert result
+        assert state == {"other": "value"}
         mock_log.assert_called_with(
             "update_state: Attempted to delete key 'missing' but it doesn't exist."
         )
@@ -220,8 +220,8 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_delete_token(state, "key", "not_delete_token")
 
-        self.assertFalse(result)
-        self.assertIn("key", state)  # Key not deleted
+        assert not result
+        assert "key" in state  # Key not deleted
 
     # Tests for _handle_string_to_dict_update
     @patch("logging_util.info")
@@ -232,10 +232,8 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_string_to_dict_update(state, "quest", value)
 
-        self.assertTrue(result)
-        self.assertEqual(
-            state["quest"], {"name": "Main Quest", "level": 5, "status": "completed"}
-        )
+        assert result
+        assert state["quest"] == {"name": "Main Quest", "level": 5, "status": "completed"}
         mock_log.assert_called_once()
 
     def test_handle_string_to_dict_update_non_dict_existing(self):
@@ -244,7 +242,7 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_string_to_dict_update(state, "key", "new_value")
 
-        self.assertFalse(result)
+        assert not result
 
     def test_handle_string_to_dict_update_missing_key(self):
         """Test _handle_string_to_dict_update with missing key"""
@@ -252,7 +250,7 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_string_to_dict_update(state, "missing", "value")
 
-        self.assertFalse(result)
+        assert not result
 
     @patch("logging_util.info")
     def test_handle_string_to_dict_update_overwrites_status(self, mock_log):
@@ -262,9 +260,9 @@ class TestFirestoreStateHelpers(unittest.TestCase):
 
         result = _handle_string_to_dict_update(state, "quest", value)
 
-        self.assertTrue(result)
-        self.assertEqual(state["quest"]["status"], "completed")
-        self.assertEqual(state["quest"]["name"], "Quest")
+        assert result
+        assert state["quest"]["status"] == "completed"
+        assert state["quest"]["name"] == "Quest"
 
     # Integration test for update_state_with_changes
     def test_update_state_with_changes_integration(self):
@@ -290,13 +288,13 @@ class TestFirestoreStateHelpers(unittest.TestCase):
             result = update_state_with_changes(state, changes)
 
         # Verify results
-        self.assertEqual(result["hp"], 80)
-        self.assertIn("potion", result["inventory"])
-        self.assertEqual(result["stats"], {"str": 18, "dex": 14, "con": 16})
-        self.assertIn("memory1", result["core_memories"])  # Original preserved
-        self.assertIn("memory2", result["core_memories"])  # New added
-        self.assertNotIn("to_delete", result)
-        self.assertEqual(result["new_key"], "new_value")
+        assert result["hp"] == 80
+        assert "potion" in result["inventory"]
+        assert result["stats"] == {"str": 18, "dex": 14, "con": 16}
+        assert "memory1" in result["core_memories"]  # Original preserved
+        assert "memory2" in result["core_memories"]  # New added
+        assert "to_delete" not in result
+        assert result["new_key"] == "new_value"
 
 
 if __name__ == "__main__":

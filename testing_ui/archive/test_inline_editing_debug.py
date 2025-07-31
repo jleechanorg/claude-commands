@@ -7,10 +7,9 @@ This script navigates to a campaign and attempts to interact with inline editing
 import os
 import sys
 import time
+import traceback
 
 from playwright.sync_api import sync_playwright
-
-import traceback
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

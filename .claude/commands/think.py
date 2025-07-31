@@ -46,8 +46,6 @@ def parse_think_level(args: List[str]) -> tuple[str, str]:
 
 def detect_fake_in_problem(problem: str) -> List[FakePattern]:
     """Detect if the problem mentions fake implementations"""
-    detector = FakeDetector()
-
     # Check for mentions of fake/demo patterns in the problem description
     fake_keywords = [
         "fake",

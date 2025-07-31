@@ -5,12 +5,11 @@ Simulates full browser behavior with proper headers and session management
 """
 
 import time
+import traceback
 from collections import OrderedDict
 from datetime import datetime
 
 import requests
-
-import traceback
 
 BASE_URL = "http://localhost:8080"
 

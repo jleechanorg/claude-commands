@@ -17,6 +17,12 @@ WorldArchitect.AI is a revolutionary AI-powered platform that serves as your dig
 
 ## 🛠️ Technologies
 
+### **MCP Architecture (Model Context Protocol)**
+- **MCP Server** (world_logic.py) - JSON-RPC 2.0 protocol exposing D&D game mechanics as AI tools
+- **API Gateway** (main.py) - Pure HTTP ↔ MCP translation layer
+- **Unified API Functions** - Consistent interface for both HTTP and MCP access
+- **Performance Options** - Direct function calls or network-based MCP communication
+
 ### Backend
 - **Python 3.11** with Flask framework
 - **Google Gemini AI** (2.5-flash model)
@@ -28,8 +34,10 @@ WorldArchitect.AI is a revolutionary AI-powered platform that serves as your dig
 - **Vanilla JavaScript** (ES6+)
 - **Bootstrap 5.3.2** responsive UI
 - **Multiple theme support** (Light, Dark, Fantasy, Cyberpunk)
+- **Reorganized Assets** - Clean `frontend_v1/` structure with backward compatibility
 
 ### AI & Game Logic
+- **MCP Tool Integration** - 7 specialized tools for campaign management, story generation, and settings
 - **Pydantic** structured generation for improved consistency
 - **MBTI personality system** for deep character interactions
 - **Entity tracking** for narrative consistency
@@ -59,8 +67,15 @@ pip install -r mvp_site/requirements.txt
 cp .env.example .env
 # Edit .env with your API keys
 
-# Run locally using vpython script
+# Run locally using vpython script (includes MCP server auto-start)
 ./vpython mvp_site/main.py serve
+
+# Alternative: Run MCP server separately for development
+# Terminal 1: Start MCP server
+./vpython mvp_site/world_logic.py --port 8000
+
+# Terminal 2: Start API gateway
+MCP_SERVER_URL=http://localhost:8000 ./vpython mvp_site/main.py serve
 ```
 
 ### Docker Deployment
@@ -80,6 +95,17 @@ docker run -p 8080:8080 \
 
 For a comprehensive understanding of the platform, including detailed architecture, game mechanics, and development guidelines, see our [Product Specification](product_spec.md).
 
+### **🏗️ MCP Architecture Transformation**
+
+WorldArchitect.AI has undergone a complete architectural transformation to implement the Model Context Protocol (MCP), representing the largest change in the project's history:
+
+- **Before**: Monolithic 1885-line main.py handling everything from HTTP routing to D&D game mechanics
+- **After**: Clean separation with 735-line MCP server (`world_logic.py`) and 477-line API gateway (`main.py`)
+- **Benefits**: 75% code reduction in request handling, improved testability, AI tool integration ready, microservices foundation
+- **Compatibility**: 100% backward compatible - all existing APIs work identically
+
+The MCP server exposes 7 specialized tools for campaign management, story generation, and user settings, enabling future AI assistant integrations while maintaining the same user experience.
+
 ## 🎮 Features
 
 - **Campaign Management**: Create and manage multiple campaigns
@@ -92,8 +118,9 @@ For a comprehensive understanding of the platform, including detailed architectu
 
 ## 🧪 Testing
 
+### **Core Testing**
 ```bash
-# Run all tests
+# Run all tests (includes MCP integration tests)
 ./run_tests.sh
 
 # Run with coverage
@@ -104,6 +131,33 @@ For a comprehensive understanding of the platform, including detailed architectu
 
 # Run specific test with vpython
 TESTING=true ./vpython mvp_site/test_file.py
+```
+
+### **MCP Architecture Testing**
+```bash
+# Run MCP-specific tests
+./testing_mcp/run_mcp_tests.sh
+
+# Test MCP server integration
+./vpython testing_mcp/integration/test_end_to_end.py
+
+# Performance benchmarks (MCP vs direct calls)
+./vpython testing_mcp/performance/benchmark_mcp_vs_direct.py
+
+# Docker-based deployment testing
+cd testing_mcp && docker-compose up --build
+```
+
+### **Browser & API Testing**
+```bash
+# Browser tests (using real browser automation)
+./run_ui_tests.sh mock
+
+# HTTP API tests
+./run_http_tests.sh mock
+
+# Full end-to-end tests with real APIs (costs money)
+./run_ui_tests.sh real
 ```
 
 ## 🤝 Contributing

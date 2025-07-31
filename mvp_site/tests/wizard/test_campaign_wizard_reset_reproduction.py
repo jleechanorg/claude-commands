@@ -342,7 +342,7 @@ class CampaignWizardResetReproductionTest(unittest.TestCase):
         print("=" * 50)
 
         # For debugging purposes, don't fail the test - just report findings
-        self.assertTrue(True, f"Bug reproduction test completed. Result: {test_result}")
+        assert True, f"Bug reproduction test completed. Result: {test_result}"
 
         return {
             "wizard_present": wizard_present,

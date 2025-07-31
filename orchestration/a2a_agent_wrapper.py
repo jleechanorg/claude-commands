@@ -6,12 +6,11 @@ Enhances existing agents with A2A capabilities while preserving
 all existing tmux-based orchestration functionality.
 """
 
+import logging
 import threading
 import time
-import logging
-import subprocess
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from a2a_integration import A2AClient, A2AMessage, get_a2a_status
 
@@ -230,7 +229,7 @@ class A2AAgentWrapper:
                 "status": "online"
             }
 
-        elif message_type == "status":
+        if message_type == "status":
             # Handle status requests
             return {
                 "agent_id": self.agent_id,
@@ -239,7 +238,7 @@ class A2AAgentWrapper:
                 "message": f"Agent {self.agent_id} is operational"
             }
 
-        elif message_type == "delegate":
+        if message_type == "delegate":
             # Handle task delegation from other agents
             task_description = payload.get("task_description", "")
             requirements = payload.get("requirements", [])
@@ -252,26 +251,24 @@ class A2AAgentWrapper:
                     "task_id": task_id,
                     "message": f"Task delegated and published as {task_id}"
                 }
-            else:
-                return {
-                    "status": "declined",
-                    "message": f"Agent {self.agent_id} cannot handle this task"
-                }
+            return {
+                "status": "declined",
+                "message": f"Agent {self.agent_id} cannot handle this task"
+            }
 
-        elif message_type == "collaborate":
+        if message_type == "collaborate":
             # Handle collaboration requests
             return {
                 "status": "ready",
                 "message": f"Agent {self.agent_id} ready to collaborate"
             }
 
-        else:
-            # Unknown message type
-            logger.warning(f"Unknown message type: {message_type}")
-            return {
-                "status": "unknown_message_type",
-                "message": f"Agent {self.agent_id} doesn't handle '{message_type}' messages"
-            }
+        # Unknown message type
+        logger.warning(f"Unknown message type: {message_type}")
+        return {
+            "status": "unknown_message_type",
+            "message": f"Agent {self.agent_id} doesn't handle '{message_type}' messages"
+        }
 
     # Public API methods for agent interaction
 

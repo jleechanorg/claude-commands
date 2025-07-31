@@ -47,24 +47,19 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         structured_response = gemini_response.structured_response
 
         # Check that narrative is included
-        self.assertIn("Drake swings his sword", result)
+        assert "Drake swings his sword" in result
 
         # Check that state updates are NOT in the narrative text (bug fix)
-        self.assertNotIn("[STATE_UPDATES_PROPOSED]", result)
-        self.assertNotIn("[END_STATE_UPDATES_PROPOSED]", result)
-        self.assertNotIn('"npc_data"', result)
-        self.assertNotIn('"goblin_001"', result)
+        assert "[STATE_UPDATES_PROPOSED]" not in result
+        assert "[END_STATE_UPDATES_PROPOSED]" not in result
+        assert '"npc_data"' not in result
+        assert '"goblin_001"' not in result
 
         # Check that state updates are in the structured response
-        self.assertIsNotNone(structured_response)
-        self.assertIsNotNone(structured_response.state_updates)
-        self.assertEqual(
-            structured_response.state_updates["npc_data"]["goblin_001"]["hp_current"], 0
-        )
-        self.assertEqual(
-            structured_response.state_updates["player_character_data"]["xp_current"],
-            150,
-        )
+        assert structured_response is not None
+        assert structured_response.state_updates is not None
+        assert structured_response.state_updates["npc_data"]["goblin_001"]["hp_current"] == 0
+        assert structured_response.state_updates["player_character_data"]["xp_current"] == 150
 
         print("✅ JSON response with state updates properly converted")
 
@@ -86,10 +81,10 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         structured_response = gemini_response.structured_response
 
         # Check that narrative is included
-        self.assertIn("Drake explores the peaceful forest", result)
+        assert "Drake explores the peaceful forest" in result
 
         # Check that no STATE_UPDATES_PROPOSED block is added
-        self.assertNotIn("[STATE_UPDATES_PROPOSED]", result)
+        assert "[STATE_UPDATES_PROPOSED]" not in result
 
         print("✅ JSON response without state updates handled correctly")
 
@@ -112,10 +107,10 @@ class TestJsonModeStateUpdates(unittest.TestCase):
         structured_response = gemini_response.structured_response
 
         # Check that narrative is included
-        self.assertIn("The scene is quiet", result)
+        assert "The scene is quiet" in result
 
         # Check that no STATE_UPDATES_PROPOSED block is added for empty updates
-        self.assertNotIn("[STATE_UPDATES_PROPOSED]", result)
+        assert "[STATE_UPDATES_PROPOSED]" not in result
 
         print("✅ Empty state updates handled correctly")
 

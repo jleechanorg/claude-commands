@@ -111,9 +111,8 @@ def test_performance():
     if avg_time < 0.05:
         print("\n✅ Performance test passed!")
         return True
-    else:
-        print("\n❌ Performance test failed - too slow!")
-        return False
+    print("\n❌ Performance test failed - too slow!")
+    return False
 
 
 def test_hybrid():

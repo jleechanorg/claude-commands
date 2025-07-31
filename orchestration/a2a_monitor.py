@@ -7,14 +7,13 @@ and provides system status reporting.
 """
 
 import json
-import time
 import logging
 import threading
+import time
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-from dataclasses import asdict
+from typing import Any
 
-from a2a_integration import AgentRegistry, TaskPool, A2A_BASE_DIR
+from a2a_integration import A2A_BASE_DIR, AgentRegistry, TaskPool
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +172,7 @@ class A2AMonitor:
             if claimed_dir.exists():
                 for task_file in claimed_dir.glob("*.json"):
                     try:
-                        with open(task_file, 'r') as f:
+                        with open(task_file) as f:
                             task_data = json.load(f)
 
                         claimed_by = task_data.get('claimed_by')
@@ -323,7 +322,7 @@ class A2AMonitor:
             if claimed_dir.exists():
                 for task_file in claimed_dir.glob(f"*_{agent_id}.json"):
                     try:
-                        with open(task_file, 'r') as f:
+                        with open(task_file) as f:
                             task_data = json.load(f)
                             agent_tasks.append(task_data)
                     except Exception as e:

@@ -4,18 +4,18 @@ Common utilities for UI tests using Playwright.
 Provides reusable functions for browser setup, navigation, and common test patterns.
 """
 
+import json
 import os
 import sys
 from collections.abc import Callable
+from screenshot_utils import take_screenshot
 from typing import Any
 
 from playwright.sync_api import Browser, Page, sync_playwright
 
-import json
-
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(__file__))
-from screenshot_utils import take_screenshot
+import os
 
 # Import centralized configuration
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))

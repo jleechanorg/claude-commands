@@ -47,20 +47,18 @@ class TestNPCDataHandling(unittest.TestCase):
         updated_state = update_state_with_changes(current_state, ai_proposed_changes)
 
         # Verify the NPCs are still dictionaries
-        self.assertIsInstance(updated_state["npc_data"]["Goblin_Leader"], dict)
-        self.assertIsInstance(updated_state["npc_data"]["Merchant_Tim"], dict)
+        assert isinstance(updated_state["npc_data"]["Goblin_Leader"], dict)
+        assert isinstance(updated_state["npc_data"]["Merchant_Tim"], dict)
 
         # Verify original data is preserved
         goblin = updated_state["npc_data"]["Goblin_Leader"]
-        self.assertEqual(goblin["name"], "Grishnak")
-        self.assertEqual(goblin["hp_current"], 15)
-        self.assertEqual(goblin["role"], "Goblin Warband Leader")
+        assert goblin["name"] == "Grishnak"
+        assert goblin["hp_current"] == 15
+        assert goblin["role"] == "Goblin Warband Leader"
 
         # Verify status was updated with the string value
-        self.assertEqual(goblin["status"], "defeated")
-        self.assertEqual(
-            updated_state["npc_data"]["Merchant_Tim"]["status"], "grateful for rescue"
-        )
+        assert goblin["status"] == "defeated"
+        assert updated_state["npc_data"]["Merchant_Tim"]["status"] == "grateful for rescue"
 
     def test_ai_updates_specific_npc_fields(self):
         """Test that AI can update specific fields of an NPC normally."""
@@ -89,12 +87,12 @@ class TestNPCDataHandling(unittest.TestCase):
         guard = updated_state["npc_data"]["Guard_Captain"]
 
         # Original fields preserved
-        self.assertEqual(guard["name"], "Captain Marcus")
-        self.assertEqual(guard["hp_max"], 45)
+        assert guard["name"] == "Captain Marcus"
+        assert guard["hp_max"] == 45
 
         # Updated fields changed
-        self.assertEqual(guard["hp_current"], 20)
-        self.assertEqual(guard["status"], "wounded but allied")
+        assert guard["hp_current"] == 20
+        assert guard["status"] == "wounded but allied"
 
     def test_ai_delete_npc_with_delete_token(self):
         """Test that AI can properly delete an NPC using __DELETE__ token."""
@@ -117,11 +115,11 @@ class TestNPCDataHandling(unittest.TestCase):
         updated_state = update_state_with_changes(current_state, ai_proposed_changes)
 
         # Verify NPC was deleted
-        self.assertNotIn("Bandit_1", updated_state["npc_data"])
+        assert "Bandit_1" not in updated_state["npc_data"]
 
         # Verify other NPC remains
-        self.assertIn("Bandit_2", updated_state["npc_data"])
-        self.assertEqual(updated_state["npc_data"]["Bandit_2"]["name"], "Bandit Archer")
+        assert "Bandit_2" in updated_state["npc_data"]
+        assert updated_state["npc_data"]["Bandit_2"]["name"] == "Bandit Archer"
 
     def test_ai_creates_new_npc_correctly(self):
         """Test that AI can create a new NPC with proper dictionary structure."""
@@ -144,10 +142,10 @@ class TestNPCDataHandling(unittest.TestCase):
         updated_state = update_state_with_changes(current_state, ai_proposed_changes)
 
         # Verify NPC was created correctly
-        self.assertIn("Mysterious_Stranger", updated_state["npc_data"])
+        assert "Mysterious_Stranger" in updated_state["npc_data"]
         stranger = updated_state["npc_data"]["Mysterious_Stranger"]
-        self.assertEqual(stranger["name"], "Hooded Figure")
-        self.assertEqual(stranger["status"], "watching from shadows")
+        assert stranger["name"] == "Hooded Figure"
+        assert stranger["status"] == "watching from shadows"
 
     def test_mixed_updates_in_single_change(self):
         """Test handling mixed updates - some NPCs get strings, others get dicts."""
@@ -174,18 +172,18 @@ class TestNPCDataHandling(unittest.TestCase):
 
         # Check Enemy_1 - should have string converted to status
         enemy1 = updated_state["npc_data"]["Enemy_1"]
-        self.assertIsInstance(enemy1, dict)
-        self.assertEqual(enemy1["name"], "Orc Warrior")
-        self.assertEqual(enemy1["status"], "slain in battle")
+        assert isinstance(enemy1, dict)
+        assert enemy1["name"] == "Orc Warrior"
+        assert enemy1["status"] == "slain in battle"
 
         # Check Enemy_2 - should have normal dict merge
         enemy2 = updated_state["npc_data"]["Enemy_2"]
-        self.assertEqual(enemy2["hp_current"], 5)
-        self.assertEqual(enemy2["status"], "badly wounded")
+        assert enemy2["hp_current"] == 5
+        assert enemy2["status"] == "badly wounded"
 
         # Check Ally_1 - should have normal update
         ally1 = updated_state["npc_data"]["Ally_1"]
-        self.assertEqual(ally1["hp_current"], 45)
+        assert ally1["hp_current"] == 45
 
 
 if __name__ == "__main__":

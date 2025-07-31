@@ -9,7 +9,6 @@ This script tests the two main bugs identified in PR #278:
 import json
 import os
 import sys
-
 import traceback
 
 # Add the mvp_site directory to path

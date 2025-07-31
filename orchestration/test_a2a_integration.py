@@ -8,16 +8,12 @@ to prove we're using real SDK, not simulation.
 
 import asyncio
 import logging
-from typing import Dict, Any, List
+from typing import Any
 
-from a2a.client.client import A2AClient
-from a2a.types import Message, TextPart, Role
 import httpx
-
 from a2a.client.client import A2AClient
-from a2a.types import AgentCard, Message
-from a2a_integration import create_real_agent_card, WorldArchitectA2AAgent
-import httpx
+from a2a.types import AgentCard, Message, Role, TextPart
+from a2a_integration import WorldArchitectA2AAgent, create_real_agent_card
 
 
 class RealA2AClientTester:
@@ -35,7 +31,7 @@ class RealA2AClientTester:
 
         self.logger = logging.getLogger(__name__)
 
-    async def test_real_agent_discovery(self) -> Dict[str, Any]:
+    async def test_real_agent_discovery(self) -> dict[str, Any]:
         """Test real A2A agent discovery using authentic SDK client"""
 
         print("🔍 Testing Real A2A Agent Discovery...")
@@ -73,15 +69,14 @@ class RealA2AClientTester:
                         "agent_card": agent_card,
                         "is_real_sdk": True
                     }
-                else:
-                    print(f"❌ Agent discovery failed: {response.status_code}")
-                    return {"success": False, "error": f"HTTP {response.status_code}"}
+                print(f"❌ Agent discovery failed: {response.status_code}")
+                return {"success": False, "error": f"HTTP {response.status_code}"}
 
         except Exception as e:
             print(f"❌ Agent discovery error: {e}")
             return {"success": False, "error": str(e)}
 
-    async def test_real_a2a_task_execution(self) -> Dict[str, Any]:
+    async def test_real_a2a_task_execution(self) -> dict[str, Any]:
         """Test real A2A task execution using authentic SDK patterns"""
 
         print("🎯 Testing Real A2A Task Execution...")
@@ -129,21 +124,20 @@ class RealA2AClientTester:
                         "response": result,
                         "endpoint_working": True
                     }
-                else:
-                    print(f"⚠️ RPC endpoint returned: {response.status_code}")
-                    # This might be expected if authentication is required
-                    return {
-                        "success": True,  # Server responding is success
-                        "response": {"status_code": response.status_code},
-                        "endpoint_working": True,
-                        "note": "Authentication may be required for full SDK client"
-                    }
+                print(f"⚠️ RPC endpoint returned: {response.status_code}")
+                # This might be expected if authentication is required
+                return {
+                    "success": True,  # Server responding is success
+                    "response": {"status_code": response.status_code},
+                    "endpoint_working": True,
+                    "note": "Authentication may be required for full SDK client"
+                }
 
         except Exception as e:
             print(f"❌ A2A task execution error: {e}")
             return {"success": False, "error": str(e)}
 
-    async def test_real_sdk_components(self) -> Dict[str, Any]:
+    async def test_real_sdk_components(self) -> dict[str, Any]:
         """Test that we're using real A2A SDK components, not simulation"""
 
         print("🔬 Testing Real SDK Component Usage...")
@@ -184,7 +178,7 @@ class RealA2AClientTester:
             print(f"❌ SDK component test error: {e}")
             return {"success": False, "error": str(e)}
 
-    async def test_integration_comparison(self) -> Dict[str, Any]:
+    async def test_integration_comparison(self) -> dict[str, Any]:
         """Compare real integration vs our previous fake implementation"""
 
         print("⚖️ Testing Real vs Fake Implementation Comparison...")
@@ -235,8 +229,7 @@ class RealA2AClientTester:
                     "real_markers": real_markers,
                     "fake_markers": fake_markers
                 }
-            else:
-                return {"success": False, "error": "Could not test real integration"}
+            return {"success": False, "error": "Could not test real integration"}
 
         except Exception as e:
             print(f"❌ Integration comparison error: {e}")
@@ -306,7 +299,7 @@ async def main():
     results = await run_real_a2a_integration_tests()
 
     # Print detailed results
-    print(f"\n📊 Detailed Test Results:")
+    print("\n📊 Detailed Test Results:")
     for test_name, result in results.items():
         success = "✅ PASS" if result.get("success", False) else "❌ FAIL"
         print(f"  {test_name}: {success}")

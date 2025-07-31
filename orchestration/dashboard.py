@@ -9,8 +9,7 @@ import os
 import subprocess
 import time
 from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 
 class OrchestrationDashboard:
@@ -21,14 +20,14 @@ class OrchestrationDashboard:
         self.tasks_dir = os.path.join(self.orchestration_dir, "tasks")
         self.refresh_interval = 5  # seconds
 
-    def get_tmux_session_info(self) -> Dict[str, Any]:
+    def get_tmux_session_info(self) -> dict[str, Any]:
         """Get detailed tmux session information"""
         sessions = {}
 
         try:
             # Get list of sessions
             result = subprocess.run(['tmux', 'list-sessions'],
-                                  capture_output=True, text=True)
+                                  check=False, capture_output=True, text=True)
 
             if result.returncode == 0:
                 for line in result.stdout.strip().split('\n'):
@@ -42,7 +41,7 @@ class OrchestrationDashboard:
                         create_result = subprocess.run([
                             'tmux', 'display-message', '-t', session_name,
                             '-p', '#{session_created}'
-                        ], capture_output=True, text=True)
+                        ], check=False, capture_output=True, text=True)
 
                         if create_result.returncode == 0:
                             created_timestamp = int(create_result.stdout.strip())
@@ -53,7 +52,7 @@ class OrchestrationDashboard:
                         activity_result = subprocess.run([
                             'tmux', 'display-message', '-t', session_name,
                             '-p', '#{session_activity}'
-                        ], capture_output=True, text=True)
+                        ], check=False, capture_output=True, text=True)
 
                         if activity_result.returncode == 0:
                             activity_timestamp = int(activity_result.stdout.strip())
@@ -63,7 +62,7 @@ class OrchestrationDashboard:
                         output_result = subprocess.run([
                             'tmux', 'capture-pane', '-t', session_name,
                             '-p', '-S', '-20'
-                        ], capture_output=True, text=True)
+                        ], check=False, capture_output=True, text=True)
 
                         if output_result.returncode == 0:
                             details['recent_output'] = output_result.stdout.strip()
@@ -75,31 +74,31 @@ class OrchestrationDashboard:
 
         return sessions
 
-    def load_health_report(self) -> Dict[str, Any]:
+    def load_health_report(self) -> dict[str, Any]:
         """Load health report if available"""
         health_file = os.path.join(self.tasks_dir, "health_report.json")
 
         if os.path.exists(health_file):
             try:
-                with open(health_file, 'r') as f:
+                with open(health_file) as f:
                     return json.load(f)
             except Exception as e:
                 print(f"Error loading health report: {e}")
 
         return {"system_status": "unknown", "agents": {}}
-    def load_task_report(self) -> Dict[str, Any]:
+    def load_task_report(self) -> dict[str, Any]:
         """Load task report if available"""
         task_file = os.path.join(self.tasks_dir, "task_report.json")
 
         if os.path.exists(task_file):
             try:
-                with open(task_file, 'r') as f:
+                with open(task_file) as f:
                     return json.load(f)
             except Exception as e:
                 print(f"Error loading task report: {e}")
 
         return {"total_tasks": 0, "agent_workload": {}}
-    def get_task_files_status(self) -> Dict[str, int]:
+    def get_task_files_status(self) -> dict[str, int]:
         """Get status of task files"""
         # No static task files - check orchestration/results/ for completed tasks
         task_files = []
@@ -109,7 +108,7 @@ class OrchestrationDashboard:
             filepath = os.path.join(self.tasks_dir, filename)
             if os.path.exists(filepath):
                 try:
-                    with open(filepath, 'r') as f:
+                    with open(filepath) as f:
                         lines = f.readlines()
                         status[filename] = len([line for line in lines if line.strip()])
                 except Exception:
@@ -119,14 +118,14 @@ class OrchestrationDashboard:
 
         return status
 
-    def get_recent_pr_activity(self) -> List[Dict[str, Any]]:
+    def get_recent_pr_activity(self) -> list[dict[str, Any]]:
         """Get recent PR activity from agents"""
         try:
             # Get recent PRs
             result = subprocess.run([
                 'gh', 'pr', 'list', '--limit', '5', '--json',
                 'number,title,author,createdAt,state'
-            ], capture_output=True, text=True)
+            ], check=False, capture_output=True, text=True)
 
             if result.returncode == 0:
                 return json.loads(result.stdout)
@@ -143,10 +142,9 @@ class OrchestrationDashboard:
 
         if hours > 0:
             return f"{hours}h {minutes}m"
-        elif minutes > 0:
+        if minutes > 0:
             return f"{minutes}m {seconds}s"
-        else:
-            return f"{seconds}s"
+        return f"{seconds}s"
 
     def format_time_ago(self, timestamp: datetime) -> str:
         """Format time since timestamp"""
@@ -181,7 +179,7 @@ class OrchestrationDashboard:
             print(f"   Health Score: {health_report['average_health_score']:.2f}/1.0")
 
         # Agent Status
-        print(f"\n🤖 AGENT STATUS:")
+        print("\n🤖 AGENT STATUS:")
         sessions = self.get_tmux_session_info()
 
         # Only task-coordinator is predefined - all others are dynamic
@@ -215,7 +213,7 @@ class OrchestrationDashboard:
                 print(f"   {display_name}: ❌ STOPPED")
 
         # Task Status
-        print(f"\n📋 TASK STATUS:")
+        print("\n📋 TASK STATUS:")
         task_report = self.load_task_report()
         task_files = self.get_task_files_status()
 
@@ -227,13 +225,13 @@ class OrchestrationDashboard:
             print(f"   Completion rate: {task_report.get('completion_rate', 0):.1%}")
 
         # Agent workload
-        print(f"\n⚖️  AGENT WORKLOAD:")
+        print("\n⚖️  AGENT WORKLOAD:")
         for filename, count in task_files.items():
             agent_type = filename.replace("_tasks.txt", "").title()
             print(f"   {agent_type}: {count} pending tasks")
 
         # Recent PR Activity
-        print(f"\n🔀 RECENT PR ACTIVITY:")
+        print("\n🔀 RECENT PR ACTIVITY:")
         recent_prs = self.get_recent_pr_activity()
 
         if recent_prs:
@@ -247,24 +245,24 @@ class OrchestrationDashboard:
             print("   No recent PR activity")
 
         # Quick Commands
-        print(f"\n🎮 QUICK COMMANDS:")
-        print(f"   Agent connections:")
+        print("\n🎮 QUICK COMMANDS:")
+        print("   Agent connections:")
         for agent_name, display_name, _ in expected_agents:
             if agent_name in sessions:
                 print(f"      tmux attach -t {agent_name}")
 
-        print(f"   System control:")
-        print(f"      ./orchestration/start_system.sh status")
-        print(f"      ./orchestration/start_system.sh stop")
-        print(f"      ./orchestration/monitor_agents.sh")
+        print("   System control:")
+        print("      ./orchestration/start_system.sh status")
+        print("      ./orchestration/start_system.sh stop")
+        print("      ./orchestration/monitor_agents.sh")
 
         # System Resources
-        print(f"\n💾 SYSTEM RESOURCES:")
+        print("\n💾 SYSTEM RESOURCES:")
 
         # Check Redis
         try:
             redis_result = subprocess.run(['redis-cli', 'ping'],
-                                        capture_output=True, text=True)
+                                        check=False, capture_output=True, text=True)
             redis_status = "🟢 ONLINE" if redis_result.returncode == 0 else "🔴 OFFLINE"
         except:
             redis_status = "🔴 OFFLINE"
@@ -274,7 +272,7 @@ class OrchestrationDashboard:
         # Check disk usage for tasks directory
         try:
             disk_usage = subprocess.run(['du', '-sh', self.tasks_dir],
-                                      capture_output=True, text=True)
+                                      check=False, capture_output=True, text=True)
             if disk_usage.returncode == 0:
                 size = disk_usage.stdout.split()[0]
                 print(f"   Tasks directory: {size}")

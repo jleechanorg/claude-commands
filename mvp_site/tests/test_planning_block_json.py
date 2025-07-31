@@ -15,10 +15,9 @@ sys.path.insert(
 )
 
 import constants
-from narrative_response_schema import NarrativeResponse
-
 from game_state import GameState
 from gemini_service import _validate_and_enforce_planning_block
+from narrative_response_schema import NarrativeResponse
 
 
 class TestPlanningBlockJSON(unittest.TestCase):
@@ -78,16 +77,16 @@ How would you like to design Astarion:"""
         )
 
         # Verify planning block content is NOT in narrative
-        self.assertNotIn("**AIGenerated**", structured_response.narrative)
-        self.assertNotIn("**StandardDND**", structured_response.narrative)
-        self.assertNotIn("**CustomClass**", structured_response.narrative)
+        assert "**AIGenerated**" not in structured_response.narrative
+        assert "**StandardDND**" not in structured_response.narrative
+        assert "**CustomClass**" not in structured_response.narrative
 
         # Verify planning block content IS in planning_block field as JSON
-        self.assertIsInstance(structured_response.planning_block, dict)
-        self.assertIn("choices", structured_response.planning_block)
-        self.assertIn("ai_generated", structured_response.planning_block["choices"])
-        self.assertIn("standard_dnd", structured_response.planning_block["choices"])
-        self.assertIn("custom_class", structured_response.planning_block["choices"])
+        assert isinstance(structured_response.planning_block, dict)
+        assert "choices" in structured_response.planning_block
+        assert "ai_generated" in structured_response.planning_block["choices"]
+        assert "standard_dnd" in structured_response.planning_block["choices"]
+        assert "custom_class" in structured_response.planning_block["choices"]
 
     def test_api_response_structure(self):
         """Test that API response has planning block in correct field"""
@@ -118,14 +117,12 @@ How would you like to design Astarion:"""
         }
 
         # Verify narrative doesn't contain planning block choices
-        self.assertNotIn("AIGenerated", api_response["narrative"])
+        assert "AIGenerated" not in api_response["narrative"]
 
         # Verify planning block field contains choices as JSON
-        self.assertIsInstance(api_response[constants.FIELD_PLANNING_BLOCK], dict)
-        self.assertIn("choices", api_response[constants.FIELD_PLANNING_BLOCK])
-        self.assertIn(
-            "ai_generated", api_response[constants.FIELD_PLANNING_BLOCK]["choices"]
-        )
+        assert isinstance(api_response[constants.FIELD_PLANNING_BLOCK], dict)
+        assert "choices" in api_response[constants.FIELD_PLANNING_BLOCK]
+        assert "ai_generated" in api_response[constants.FIELD_PLANNING_BLOCK]["choices"]
 
     @patch("gemini_service._call_gemini_api")
     @patch("gemini_service._get_text_from_response")
@@ -154,14 +151,14 @@ How would you like to design Astarion:"""
         )
 
         # Verify JSON was parsed correctly
-        self.assertIn("You enter the chamber", result)
-        self.assertIn("What would you like to do next?", result)
-        self.assertIn("Investigate", result)
+        assert "You enter the chamber" in result
+        assert "What would you like to do next?" in result
+        assert "Investigate" in result
 
         # Verify no raw JSON in result
-        self.assertNotIn('"narrative":', result)
-        self.assertNotIn('"entities_mentioned":', result)
-        self.assertNotIn("\\n", result)  # Escape sequences should be converted
+        assert '"narrative":' not in result
+        assert '"entities_mentioned":' not in result
+        assert "\\n" not in result  # Escape sequences should be converted
 
     @patch("gemini_service._call_gemini_api")
     @patch("gemini_service._get_text_from_response")
@@ -189,9 +186,9 @@ How would you like to design Astarion:"""
         )
 
         # Verify plain text works correctly
-        self.assertIn("You enter the chamber", result)
-        self.assertIn("What would you like to do next?", result)
-        self.assertIn("Investigate", result)
+        assert "You enter the chamber" in result
+        assert "What would you like to do next?" in result
+        assert "Investigate" in result
 
     @patch("gemini_service._call_gemini_api")
     def test_api_failure_fallback(self, mock_call_api):
@@ -210,8 +207,8 @@ How would you like to design Astarion:"""
         )
 
         # Verify fallback works
-        self.assertIn("You enter the chamber", result)
-        self.assertIn("What would you like to do next?", result)
+        assert "You enter the chamber" in result
+        assert "What would you like to do next?" in result
 
     def test_empty_planning_block_handling(self):
         """Test handling of empty or null planning blocks"""
@@ -221,14 +218,14 @@ How would you like to design Astarion:"""
             narrative="Some narrative text", planning_block=""
         )
         # Empty string planning blocks are rejected and return empty dict
-        self.assertEqual(response1.planning_block, {})
+        assert response1.planning_block == {}
 
         # Test None value (gets converted to empty string)
         response2 = NarrativeResponse(
             narrative="Some narrative text", planning_block=None
         )
         # None is converted to empty dict
-        self.assertEqual(response2.planning_block, {})
+        assert response2.planning_block == {}
 
     def test_no_narrative_markers_in_json(self):
         """Test that planning blocks in JSON don't have narrative markers"""
@@ -249,7 +246,7 @@ What would you like to do?
         )
 
         # Verify no narrative markers in planning block
-        self.assertNotIn("--- PLANNING BLOCK ---", response.planning_block)
+        assert "--- PLANNING BLOCK ---" not in response.planning_block
 
 
 if __name__ == "__main__":

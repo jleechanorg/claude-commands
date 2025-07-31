@@ -52,15 +52,9 @@ class TestBannedNamesVisibilityBehavior(unittest.TestCase):
         try:
             content = world_loader.load_world_content_for_system_instruction()
 
-            self.assertTrue(
-                self._has_naming_restrictions_section(content),
-                "World content should have identifiable naming restrictions section",
-            )
+            assert self._has_naming_restrictions_section(content), "World content should have identifiable naming restrictions section"
 
-            self.assertTrue(
-                self._has_source_identification(content),
-                "Should identify the source of naming restrictions",
-            )
+            assert self._has_source_identification(content), "Should identify the source of naming restrictions"
 
         except FileNotFoundError:
             self.skipTest("World files not found - skipping visibility test")
@@ -70,14 +64,11 @@ class TestBannedNamesVisibilityBehavior(unittest.TestCase):
         content = world_loader.load_banned_names()
 
         # Basic structural checks
-        self.assertIsInstance(content, str, "Should return string content")
-        self.assertGreater(len(content), 100, "Should have substantial content")
+        assert isinstance(content, str), "Should return string content"
+        assert len(content) > 100, "Should have substantial content"
 
         # Check for directive structure
-        self.assertTrue(
-            self._has_enforcement_directive(content),
-            "Banned names should include enforcement directive",
-        )
+        assert self._has_enforcement_directive(content), "Banned names should include enforcement directive"
 
     def test_world_content_structure_includes_all_sections(self):
         """Test that world content has proper structure with all expected sections."""
@@ -88,17 +79,11 @@ class TestBannedNamesVisibilityBehavior(unittest.TestCase):
             has_world_content_header = "world content" in content.lower()
             has_section_dividers = "---" in content or "##" in content
 
-            self.assertTrue(
-                has_world_content_header, "Should have world content header"
-            )
-            self.assertTrue(
-                has_section_dividers, "Should have section dividers for organization"
-            )
+            assert has_world_content_header, "Should have world content header"
+            assert has_section_dividers, "Should have section dividers for organization"
 
             # Verify it's a substantial document
-            self.assertGreater(
-                len(content), 1000, "Combined world content should be substantial"
-            )
+            assert len(content) > 1000, "Combined world content should be substantial"
 
         except FileNotFoundError:
             self.skipTest("World files not found - skipping structure test")

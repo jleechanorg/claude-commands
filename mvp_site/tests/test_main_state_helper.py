@@ -44,7 +44,8 @@ sys.modules["firebase_admin.auth"] = mock_auth
 
 # Import after mocking
 from gemini_response import GeminiResponse
-from main import create_app, format_state_changes
+from main import create_app
+from world_logic import format_state_changes
 
 
 # Create StateHelper wrapper for test compatibility
@@ -101,7 +102,7 @@ class TestStateHelper(unittest.TestCase):
         result = StateHelper.strip_debug_content(test_text)
 
         # The expected output should have debug content removed
-        self.assertEqual(result, "Regular content  more content")
+        assert result == "Regular content  more content"
 
     def test_strip_state_updates_only_basic(self):
         """Test stripping only state updates."""
@@ -112,7 +113,7 @@ class TestStateHelper(unittest.TestCase):
         result = StateHelper.strip_state_updates_only(test_text)
 
         # Should remove state updates but keep other content
-        self.assertEqual(result, "Content  more")
+        assert result == "Content  more"
 
     def test_strip_other_debug_content_basic(self):
         """Test stripping debug content except state updates."""
@@ -121,9 +122,7 @@ class TestStateHelper(unittest.TestCase):
         result = StateHelper.strip_other_debug_content(test_text)
 
         # Should strip debug content but keep state updates
-        self.assertEqual(
-            result, " [STATE_UPDATES_PROPOSED]keep[/STATE_UPDATES_PROPOSED]"
-        )
+        assert result == " [STATE_UPDATES_PROPOSED]keep[/STATE_UPDATES_PROPOSED]"
 
     def test_apply_automatic_combat_cleanup_basic(self):
         """Test automatic combat cleanup."""
@@ -145,11 +144,11 @@ class TestUtilityFunctions(unittest.TestCase):
         result = format_state_changes(changes, for_html=True)
 
         # Should return a formatted string with HTML line breaks
-        self.assertIsInstance(result, str)
-        self.assertIn("current_scene", result)
-        self.assertIn("2", result)
+        assert isinstance(result, str)
+        assert "current_scene" in result
+        assert "2" in result
         if "<br>" in result:  # HTML formatting
-            self.assertIn("<br>", result)
+            assert "<br>" in result
 
     def test_format_state_changes_for_text(self):
         """Test format_state_changes with text formatting."""
@@ -158,18 +157,18 @@ class TestUtilityFunctions(unittest.TestCase):
         result = format_state_changes(changes, for_html=False)
 
         # Should return a formatted string with text line breaks
-        self.assertIsInstance(result, str)
-        self.assertIn("current_scene", result)
-        self.assertIn("3", result)
+        assert isinstance(result, str)
+        assert "current_scene" in result
+        assert "3" in result
         # Should not contain HTML
-        self.assertNotIn("<br>", result)
+        assert "<br>" not in result
 
     def test_format_state_changes_empty_dict(self):
         """Test format_state_changes with empty changes."""
         result = format_state_changes({}, for_html=True)
 
         # Should handle empty changes gracefully
-        self.assertIsInstance(result, str)
+        assert isinstance(result, str)
 
     def test_format_state_changes_complex_nested(self):
         """Test format_state_changes with complex nested data."""
@@ -190,9 +189,9 @@ class TestUtilityFunctions(unittest.TestCase):
 
         result = format_state_changes(changes, for_html=True)
 
-        self.assertIsInstance(result, str)
-        self.assertIn("Wizard", result)
-        self.assertIn("Dark Forest", result)
+        assert isinstance(result, str)
+        assert "Wizard" in result
+        assert "Dark Forest" in result
 
 
 class TestApplicationConfiguration(unittest.TestCase):
@@ -203,16 +202,16 @@ class TestApplicationConfiguration(unittest.TestCase):
         app = create_app()
 
         # Test basic Flask app properties
-        self.assertIsNotNone(app)
-        self.assertTrue(hasattr(app, "config"))
-        self.assertTrue(hasattr(app, "route"))
+        assert app is not None
+        assert hasattr(app, "config")
+        assert hasattr(app, "route")
 
     def test_create_app_testing_mode(self):
         """Test app creation in testing mode."""
         app = create_app()
         app.config["TESTING"] = True
 
-        self.assertTrue(app.config["TESTING"])
+        assert app.config["TESTING"]
 
     def test_cors_configuration(self):
         """Test CORS configuration is applied."""
@@ -220,7 +219,7 @@ class TestApplicationConfiguration(unittest.TestCase):
 
         # CORS should be configured for the app
         # This test verifies the app can be created with CORS
-        self.assertIsNotNone(app)
+        assert app is not None
 
     def test_app_route_registration(self):
         """Test that routes are properly registered."""
@@ -230,9 +229,9 @@ class TestApplicationConfiguration(unittest.TestCase):
         route_rules = [rule.rule for rule in app.url_map.iter_rules()]
 
         # Should have our API routes
-        self.assertIn("/api/campaigns", route_rules)
-        self.assertIn("/api/campaigns/<campaign_id>", route_rules)
-        self.assertIn("/api/campaigns/<campaign_id>/interaction", route_rules)
+        assert "/api/campaigns" in route_rules
+        assert "/api/campaigns/<campaign_id>" in route_rules
+        assert "/api/campaigns/<campaign_id>/interaction" in route_rules
 
     def test_error_handler_registration(self):
         """Test that error handlers are registered if they exist."""
@@ -240,7 +239,7 @@ class TestApplicationConfiguration(unittest.TestCase):
 
         # App should have error handlers
         # This is mainly testing that create_app completes without errors
-        self.assertIsNotNone(app)
+        assert app is not None
 
 
 class TestConstants(unittest.TestCase):
@@ -249,28 +248,28 @@ class TestConstants(unittest.TestCase):
     def test_header_constants(self):
         """Test that header constants are properly defined."""
 
-        self.assertEqual(HEADER_AUTH, "Authorization")
-        self.assertEqual(HEADER_TEST_BYPASS, "X-Test-Bypass-Auth")
-        self.assertEqual(HEADER_TEST_USER_ID, "X-Test-User-ID")
+        assert HEADER_AUTH == "Authorization"
+        assert HEADER_TEST_BYPASS == "X-Test-Bypass-Auth"
+        assert HEADER_TEST_USER_ID == "X-Test-User-ID"
 
     def test_key_constants(self):
         """Test that response key constants are properly defined."""
 
-        self.assertEqual(KEY_SUCCESS, "success")
-        self.assertEqual(KEY_ERROR, "error")
-        self.assertEqual(KEY_MESSAGE, "message")
-        self.assertEqual(KEY_CAMPAIGN_ID, "campaign_id")
+        assert KEY_SUCCESS == "success"
+        assert KEY_ERROR == "error"
+        assert KEY_MESSAGE == "message"
+        assert KEY_CAMPAIGN_ID == "campaign_id"
 
     def test_default_test_user(self):
         """Test default test user constant."""
 
-        self.assertEqual(DEFAULT_TEST_USER, "test-user")
+        assert DEFAULT_TEST_USER == "test-user"
 
     def test_cors_resources_configuration(self):
         """Test CORS resources configuration."""
 
-        self.assertIn(r"/api/*", CORS_RESOURCES)
-        self.assertEqual(CORS_RESOURCES[r"/api/*"]["origins"], "*")
+        assert r"/api/*" in CORS_RESOURCES
+        assert CORS_RESOURCES[r"/api/*"]["origins"] == "*"
 
 
 if __name__ == "__main__":

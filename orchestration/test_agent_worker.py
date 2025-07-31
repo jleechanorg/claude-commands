@@ -4,11 +4,11 @@ Simple test agent that processes tasks and returns results.
 Used to verify A2A integration functionality.
 """
 
+import sys
 import time
-import json
+
 from message_broker import MessageBroker, MessageType
 
-import sys
 
 class TestWorkerAgent:
     """Test agent that processes tasks and returns results"""

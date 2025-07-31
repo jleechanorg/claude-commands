@@ -18,11 +18,10 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from gemini_response import GeminiResponse
-from narrative_response_schema import NarrativeResponse
-
 from game_state import GameState
+from gemini_response import GeminiResponse
 from gemini_service import continue_story, get_initial_story
+from narrative_response_schema import NarrativeResponse
 
 
 class TestGeminiResponse(unittest.TestCase):
@@ -54,14 +53,14 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(self.sample_raw_response)
 
         # Core fields should be set
-        self.assertEqual(response.narrative_text, self.sample_narrative)
-        self.assertIsNotNone(response.structured_response)
+        assert response.narrative_text == self.sample_narrative
+        assert response.structured_response is not None
 
         # Should have debug tags detection
-        self.assertIsInstance(response.debug_tags_present, dict)
-        self.assertIn("dm_notes", response.debug_tags_present)
-        self.assertIn("dice_rolls", response.debug_tags_present)
-        self.assertIn("state_changes", response.debug_tags_present)
+        assert isinstance(response.debug_tags_present, dict)
+        assert "dm_notes" in response.debug_tags_present
+        assert "dice_rolls" in response.debug_tags_present
+        assert "state_changes" in response.debug_tags_present
 
     def test_debug_tags_detection_with_content(self):
         """Test debug tags are properly detected when content exists."""
@@ -69,11 +68,11 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(self.sample_raw_response)
 
         # Should detect dm_notes and dice_rolls from structured response
-        self.assertTrue(response.debug_tags_present["dm_notes"])
-        self.assertTrue(response.debug_tags_present["dice_rolls"])
+        assert response.debug_tags_present["dm_notes"]
+        assert response.debug_tags_present["dice_rolls"]
 
         # has_debug_content should be True
-        self.assertTrue(response.has_debug_content)
+        assert response.has_debug_content
 
     def test_debug_tags_detection_no_content(self):
         """Test debug tags detection when no debug content exists."""
@@ -96,11 +95,11 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(clean_raw_response)
 
         # Should detect no debug content
-        self.assertFalse(response.debug_tags_present["dm_notes"])
-        self.assertFalse(response.debug_tags_present["dice_rolls"])
+        assert not response.debug_tags_present["dm_notes"]
+        assert not response.debug_tags_present["dice_rolls"]
 
         # has_debug_content should be False
-        self.assertFalse(response.has_debug_content)
+        assert not response.has_debug_content
 
     def test_state_updates_property(self):
         """Test state_updates property returns correct data."""
@@ -108,9 +107,7 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(self.sample_raw_response)
 
         # Should return state updates from structured response
-        self.assertEqual(
-            response.state_updates, {"player_character_data": {"hp_current": 18}}
-        )
+        assert response.state_updates == {"player_character_data": {"hp_current": 18}}
 
     def test_entities_mentioned_property(self):
         """Test entities_mentioned property returns correct data."""
@@ -118,7 +115,7 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(self.sample_raw_response)
 
         # Should return entities from structured response
-        self.assertEqual(response.entities_mentioned, ["knight", "tavern"])
+        assert response.entities_mentioned == ["knight", "tavern"]
 
     def test_location_confirmed_property(self):
         """Test location_confirmed property returns correct data."""
@@ -126,7 +123,7 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(self.sample_raw_response)
 
         # Should return location from structured response
-        self.assertEqual(response.location_confirmed, "Silver Stag Tavern")
+        assert response.location_confirmed == "Silver Stag Tavern"
 
     def test_debug_info_property(self):
         """Test debug_info property returns correct data."""
@@ -134,9 +131,9 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(self.sample_raw_response)
 
         # Should return debug_info from structured response
-        self.assertIsNotNone(response.debug_info)
-        self.assertIn("dm_notes", response.debug_info)
-        self.assertEqual(response.debug_info["dm_notes"], ["Player seems cautious"])
+        assert response.debug_info is not None
+        assert "dm_notes" in response.debug_info
+        assert response.debug_info["dm_notes"] == ["Player seems cautious"]
 
     def test_none_structured_response_handling(self):
         """Test GeminiResponse handles plain text gracefully."""
@@ -146,16 +143,16 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(plain_response)
 
         # Should extract the narrative
-        self.assertEqual(response.narrative_text, self.sample_narrative)
+        assert response.narrative_text == self.sample_narrative
 
         # Should have a structured response (even if empty)
-        self.assertIsNotNone(response.structured_response)
+        assert response.structured_response is not None
 
         # Properties should return empty/default values gracefully
-        self.assertEqual(response.state_updates, {})
-        self.assertEqual(response.entities_mentioned, [])
-        self.assertEqual(response.location_confirmed, "Unknown")  # Default value
-        self.assertEqual(response.debug_info, {})
+        assert response.state_updates == {}
+        assert response.entities_mentioned == []
+        assert response.location_confirmed == "Unknown"  # Default value
+        assert response.debug_info == {}
 
     @patch("gemini_service._call_gemini_api")
     @patch("gemini_service._get_text_from_response")
@@ -172,8 +169,8 @@ class TestGeminiResponse(unittest.TestCase):
         )
 
         # Should return a GeminiResponse object
-        self.assertEqual(type(result).__name__, "GeminiResponse")
-        self.assertEqual(result.narrative_text, self.sample_narrative)
+        assert type(result).__name__ == "GeminiResponse"
+        assert result.narrative_text == self.sample_narrative
 
     @patch("gemini_service._call_gemini_api")
     @patch("gemini_service._get_text_from_response")
@@ -196,8 +193,8 @@ class TestGeminiResponse(unittest.TestCase):
         )
 
         # Should return a GeminiResponse object
-        self.assertEqual(type(result).__name__, "GeminiResponse")
-        self.assertEqual(result.narrative_text, self.sample_narrative)
+        assert type(result).__name__ == "GeminiResponse"
+        assert result.narrative_text == self.sample_narrative
 
     def test_main_py_handles_gemini_response_object(self):
         """Test that main.py properly handles GeminiResponse objects."""
@@ -206,17 +203,17 @@ class TestGeminiResponse(unittest.TestCase):
         response = GeminiResponse.create(self.sample_raw_response)
 
         # Main.py expects these attributes/methods
-        self.assertTrue(hasattr(response, "narrative_text"))
-        self.assertTrue(hasattr(response, "state_updates"))
-        self.assertTrue(hasattr(response, "debug_tags_present"))
-        self.assertTrue(hasattr(response, "has_debug_content"))
+        assert hasattr(response, "narrative_text")
+        assert hasattr(response, "state_updates")
+        assert hasattr(response, "debug_tags_present")
+        assert hasattr(response, "has_debug_content")
 
         # Should be able to access all necessary data
         narrative = response.narrative_text
         updates = response.state_updates
 
-        self.assertIsInstance(narrative, str)
-        self.assertIsInstance(updates, dict)
+        assert isinstance(narrative, str)
+        assert isinstance(updates, dict)
 
     def test_legacy_create_method(self):
         """Test that the legacy create method still works for backwards compatibility."""
@@ -234,9 +231,9 @@ class TestGeminiResponse(unittest.TestCase):
         )
 
         # Should work correctly
-        self.assertEqual(response.narrative_text, "The dragon roars!")
-        self.assertEqual(response.state_updates, {"hp": 10})
-        self.assertEqual(response.entities_mentioned, ["dragon"])
+        assert response.narrative_text == "The dragon roars!"
+        assert response.state_updates == {"hp": 10}
+        assert response.entities_mentioned == ["dragon"]
 
 
 if __name__ == "__main__":

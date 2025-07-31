@@ -7,10 +7,9 @@ Simulates API behavior without actual calls
 import asyncio
 import json
 import random
+import re
 from dataclasses import dataclass
 from typing import Any
-
-import re
 
 
 @dataclass

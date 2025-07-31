@@ -3,11 +3,11 @@
 Safe Agent Monitor - Read-only monitoring without accidental input
 Prevents SIGINT and other keyboard interruptions during agent monitoring
 """
-import subprocess
-import sys
-import time
 import argparse
+import subprocess
+import time
 from datetime import datetime
+
 
 class SafeAgentMonitor:
     """Monitor agent progress without risk of keyboard input interference"""
@@ -18,7 +18,7 @@ class SafeAgentMonitor:
     def list_agents(self):
         """List all running agent tmux sessions"""
         try:
-            result = subprocess.run(['tmux', 'ls'], capture_output=True, text=True)
+            result = subprocess.run(['tmux', 'ls'], check=False, capture_output=True, text=True)
             if result.returncode == 0:
                 sessions = []
                 for line in result.stdout.strip().split('\n'):
@@ -35,13 +35,12 @@ class SafeAgentMonitor:
         try:
             # ONLY use capture-pane, NEVER send-keys
             cmd = ['tmux', 'capture-pane', '-t', session_name, '-p']
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, check=False, capture_output=True, text=True)
 
             if result.returncode == 0:
                 output = result.stdout.strip().split('\n')
                 return output[-lines:] if len(output) > lines else output
-            else:
-                return [f"Error: Could not capture pane for {session_name}"]
+            return [f"Error: Could not capture pane for {session_name}"]
         except Exception as e:
             return [f"Error: {str(e)}"]
 

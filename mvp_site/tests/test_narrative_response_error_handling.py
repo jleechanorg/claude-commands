@@ -47,32 +47,32 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
     def test_validate_string_field_with_none(self):
         """Test _validate_string_field handles None values"""
         result = self._validate_string_field(None, "test_field")
-        self.assertEqual(result, "")
+        assert result == ""
 
     def test_validate_string_field_with_integer(self):
         """Test _validate_string_field converts integers"""
         result = self._validate_string_field(42, "test_field")
-        self.assertEqual(result, "42")
+        assert result == "42"
 
     def test_validate_string_field_with_float(self):
         """Test _validate_string_field converts floats"""
         result = self._validate_string_field(3.14, "test_field")
-        self.assertEqual(result, "3.14")
+        assert result == "3.14"
 
     def test_validate_string_field_with_boolean(self):
         """Test _validate_string_field converts booleans"""
         result = self._validate_string_field(True, "test_field")
-        self.assertEqual(result, "True")
+        assert result == "True"
 
     def test_validate_string_field_with_dict(self):
         """Test _validate_string_field converts dictionaries"""
         result = self._validate_string_field({"key": "value"}, "test_field")
-        self.assertEqual(result, "{'key': 'value'}")
+        assert result == "{'key': 'value'}"
 
     def test_validate_string_field_with_list(self):
         """Test _validate_string_field converts lists"""
         result = self._validate_string_field([1, 2, 3], "test_field")
-        self.assertEqual(result, "[1, 2, 3]")
+        assert result == "[1, 2, 3]"
 
     @patch("logging_util.error")
     def test_validate_string_field_conversion_error(self, mock_logging_error):
@@ -87,24 +87,24 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
         result = self._validate_string_field(bad_obj, "test_field")
 
         # Should return empty string on conversion error
-        self.assertEqual(result, "")
+        assert result == ""
         # Should log the error
         mock_logging_error.assert_called()
 
     def test_validate_list_field_with_none(self):
         """Test _validate_list_field handles None values"""
         result = self._validate_list_field(None, "test_field")
-        self.assertEqual(result, [])
+        assert result == []
 
     def test_validate_list_field_with_non_list(self):
         """Test _validate_list_field handles non-list values"""
         # String should be wrapped in a list
         result = self._validate_list_field("single_value", "test_field")
-        self.assertEqual(result, ["single_value"])
+        assert result == ["single_value"]
 
         # Dict should be wrapped in a list
         result = self._validate_list_field({"key": "value"}, "test_field")
-        self.assertEqual(result, [{"key": "value"}])
+        assert result == [{"key": "value"}]
 
     def test_god_mode_fallback_on_narrative_response_error(self):
         """Test fallback when NarrativeResponse creation fails but god_mode_response exists"""
@@ -136,17 +136,17 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
             narrative, response = parse_structured_response(response_text)
 
             # Should combine god_mode_response with narrative
-            self.assertIn("The player enters the tavern", narrative)
+            assert "The player enters the tavern" in narrative
 
     def test_combine_god_mode_and_narrative_with_none(self):
         """Test _combine_god_mode_and_narrative handles None narrative"""
         result = _combine_god_mode_and_narrative("GM: Test response", None)
-        self.assertIn("Test response", result)
+        assert "Test response" in result
 
     def test_combine_god_mode_and_narrative_with_empty(self):
         """Test _combine_god_mode_and_narrative handles empty narrative"""
         result = _combine_god_mode_and_narrative("GM: Test response", "")
-        self.assertIn("Test response", result)
+        assert "Test response" in result
 
     def test_malformed_json_with_narrative_field(self):
         """Test extraction from malformed JSON with narrative field"""
@@ -161,8 +161,8 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
         narrative, response = parse_structured_response(response_text)
 
         # Should extract narrative even from malformed JSON
-        self.assertIn("player walks into the tavern", narrative)
-        self.assertIn("sees many patrons", narrative)
+        assert "player walks into the tavern" in narrative
+        assert "sees many patrons" in narrative
 
     def test_deeply_nested_malformed_json(self):
         """Test extraction from deeply nested malformed JSON"""
@@ -180,7 +180,7 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
         narrative, response = parse_structured_response(response_text)
 
         # Should find narrative even in nested structure
-        self.assertIn("Nested narrative", narrative)
+        assert "Nested narrative" in narrative
 
     def test_json_with_escaped_characters(self):
         """Test handling of JSON with escaped characters"""
@@ -195,8 +195,8 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
 
         # Should properly handle the escaped characters as they are
         # JSON dumps will escape the quotes, so we check for the escaped form
-        self.assertIn("Hello there!", narrative)
-        self.assertIn("NPC responds", narrative)
+        assert "Hello there!" in narrative
+        assert "NPC responds" in narrative
 
     def test_type_validation_in_structured_fields(self):
         """Test type validation in structured fields"""
@@ -216,11 +216,11 @@ class TestNarrativeResponseErrorHandling(unittest.TestCase):
         narrative, response = parse_structured_response(response_text)
 
         # Should handle valid types correctly
-        self.assertEqual(narrative, "Test narrative")
-        self.assertEqual(response.entities_mentioned, ["valid", "list"])
-        self.assertIsInstance(response.entities_mentioned, list)
+        assert narrative == "Test narrative"
+        assert response.entities_mentioned == ["valid", "list"]
+        assert isinstance(response.entities_mentioned, list)
         # location_confirmed should be converted to string
-        self.assertIsInstance(response.location_confirmed, str)
+        assert isinstance(response.location_confirmed, str)
 
 
 if __name__ == "__main__":

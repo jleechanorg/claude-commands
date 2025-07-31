@@ -12,7 +12,6 @@ import subprocess
 import sys
 import time
 from datetime import datetime
-from typing import Dict, List, Set
 
 # Add orchestration directory to path
 sys.path.insert(0, os.path.dirname(__file__))
@@ -35,7 +34,7 @@ class AgentMonitor:
 
     def __init__(self):
         self.running = False
-        self.monitored_agents: Dict[str, Dict] = {}
+        self.monitored_agents: dict[str, dict] = {}
         self.last_ping_time = 0
         self.ping_interval = 120  # 2 minutes
 
@@ -53,7 +52,7 @@ class AgentMonitor:
 
     # Redis/MessageBroker functionality removed - using file-based A2A only
 
-    def discover_active_agents(self) -> Set[str]:
+    def discover_active_agents(self) -> set[str]:
         """Discover currently active agents from tmux sessions"""
         active_agents = set()
 
@@ -61,7 +60,7 @@ class AgentMonitor:
             # Get all tmux sessions
             result = subprocess.run(
                 ["tmux", "list-sessions", "-F", "#{session_name}"],
-                capture_output=True, text=True
+                check=False, capture_output=True, text=True
             )
 
             if result.returncode == 0:
@@ -75,7 +74,7 @@ class AgentMonitor:
 
         return active_agents
 
-    def check_agent_workspace(self, agent_name: str) -> Dict:
+    def check_agent_workspace(self, agent_name: str) -> dict:
         """Check if agent workspace exists and get basic info"""
         workspace_path = f"agent_workspace_{agent_name}"
 
@@ -89,12 +88,12 @@ class AgentMonitor:
             try:
                 stat = os.stat(workspace_path)
                 workspace_info["last_modified"] = datetime.fromtimestamp(stat.st_mtime)
-            except (OSError, IOError) as e:
+            except OSError as e:
                 self.logger.debug(f"Failed to stat workspace {workspace_path}: {e}")
 
         return workspace_info
 
-    def check_agent_results(self, agent_name: str) -> Dict:
+    def check_agent_results(self, agent_name: str) -> dict:
         """Check agent completion status from result files"""
         result_file = f"/tmp/orchestration_results/{agent_name}_results.json"
 
@@ -106,7 +105,7 @@ class AgentMonitor:
 
         if result_info["result_file_exists"]:
             try:
-                with open(result_file, 'r') as f:
+                with open(result_file) as f:
                     result_data = json.load(f)
                     result_info["status"] = result_data.get("status", "unknown")
                     if "completion_time" in result_data:
@@ -116,12 +115,12 @@ class AgentMonitor:
 
         return result_info
 
-    def get_agent_output_tail(self, agent_name: str, lines: int = 5) -> List[str]:
+    def get_agent_output_tail(self, agent_name: str, lines: int = 5) -> list[str]:
         """Get last few lines of agent tmux output"""
         try:
             result = subprocess.run(
                 ["tmux", "capture-pane", "-t", agent_name, "-p", "-S", f"-{lines}"],
-                capture_output=True, text=True
+                check=False, capture_output=True, text=True
             )
 
             if result.returncode == 0:
@@ -131,7 +130,7 @@ class AgentMonitor:
 
         return []
 
-    def ping_agent(self, agent_name: str) -> Dict:
+    def ping_agent(self, agent_name: str) -> dict:
         """Ping an agent and collect comprehensive status"""
         ping_time = datetime.now()
 
@@ -150,7 +149,7 @@ class AgentMonitor:
         try:
             result = subprocess.run(
                 ["tmux", "has-session", "-t", agent_name],
-                capture_output=True
+                check=False, capture_output=True
             )
             agent_status["tmux_active"] = result.returncode == 0
         except (subprocess.SubprocessError, OSError) as e:
@@ -192,7 +191,7 @@ class AgentMonitor:
             except Exception as e:
                 self.logger.error(f"❌ Failed to ping {agent_name}: {e}")
 
-    def log_agent_status(self, status: Dict):
+    def log_agent_status(self, status: dict):
         """Log detailed agent status"""
         agent_name = status["agent_name"]
         tmux_status = "🟢 Active" if status["tmux_active"] else "🔴 Inactive"

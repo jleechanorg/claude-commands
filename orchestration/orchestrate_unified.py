@@ -4,16 +4,17 @@ Unified Orchestration System - LLM-Driven with File-based Coordination
 Pure file-based A2A protocol without Redis dependencies
 """
 
-import sys
-import os
-import time
-import subprocess
 import json
+import os
+import subprocess
+import sys
+import time
 
 # Add orchestration directory to path
 sys.path.insert(0, os.path.dirname(__file__))
 
 from task_dispatcher import TaskDispatcher
+
 # Constraint system removed - using simple safety boundaries only
 
 class UnifiedOrchestration:
@@ -42,7 +43,7 @@ class UnifiedOrchestration:
             try:
                 result = subprocess.run(
                     ['which', command],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True
                 )
                 if result.returncode != 0:
@@ -159,17 +160,17 @@ class UnifiedOrchestration:
             for agent in created_agents:
                 print(f"   tmux attach -t {agent['name']}")
 
-            print(f"\n📂 Agent working directories:")
+            print("\n📂 Agent working directories:")
             for agent in created_agents:
                 workspace_path = os.path.join(os.getcwd(), f"agent_workspace_{agent['name']}")
                 print(f"   {workspace_path}")
 
-            print(f"\n📋 Monitor agent logs:")
+            print("\n📋 Monitor agent logs:")
             for agent in created_agents:
                 print(f"   tail -f /tmp/orchestration_logs/{agent['name']}.log")
 
             print(f"\n🏠 You remain in: {os.getcwd()}")
-            print(f"\n📁 File-based A2A coordination - check orchestration/results/")
+            print("\n📁 File-based A2A coordination - check orchestration/results/")
 
             # Wait briefly and check for PR creation
             self._check_and_display_prs(created_agents)
@@ -208,7 +209,7 @@ class UnifiedOrchestration:
                             # Try to get PR info from the agent's branch
                             result = subprocess.run(
                                 ['gh', 'pr', 'list', '--head', branch_pattern, '--json', 'number,url,title,state'],
-                                cwd=workspace_path,
+                                check=False, cwd=workspace_path,
                                 capture_output=True,
                                 text=True
                             )
@@ -237,16 +238,16 @@ class UnifiedOrchestration:
 
         # Display results
         if prs_found:
-            print(f"\n✅ **PR(s) Created:**")
+            print("\n✅ **PR(s) Created:**")
             for pr in prs_found:
                 print(f"\n🔗 **Agent**: {pr['agent']}")
                 print(f"   **PR #{pr['number']}**: {pr['title']}")
                 print(f"   **URL**: {pr['url']}")
                 print(f"   **Status**: {pr['state']}")
         else:
-            print(f"\n⏳ No PRs detected yet. Agents may still be working.")
-            print(f"   Check agent progress with: tmux attach -t [agent-name]")
-            print(f"   Or wait and check manually: gh pr list --author @me")
+            print("\n⏳ No PRs detected yet. Agents may still be working.")
+            print("   Check agent progress with: tmux attach -t [agent-name]")
+            print("   Or wait and check manually: gh pr list --author @me")
 
 def main():
     """Main entry point for unified orchestration."""

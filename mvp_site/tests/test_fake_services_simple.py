@@ -34,8 +34,8 @@ class TestFakeServicesSimple(unittest.TestCase):
 
         # Verify data was stored
         retrieved = doc.get().to_dict()
-        self.assertEqual(retrieved["title"], "Test Campaign")
-        self.assertEqual(retrieved["character"], "Test Hero")
+        assert retrieved["title"] == "Test Campaign"
+        assert retrieved["character"] == "Test Hero"
 
         # Test subcollections
         story_doc = doc.collection("story").document("scene-1")
@@ -43,11 +43,11 @@ class TestFakeServicesSimple(unittest.TestCase):
         story_doc.set(story_data)
 
         story_retrieved = story_doc.get().to_dict()
-        self.assertEqual(story_retrieved["narrative"], "The adventure begins...")
+        assert story_retrieved["narrative"] == "The adventure begins..."
 
         # Test that data is JSON serializable (no Mock objects)
         json_str = json.dumps(retrieved)
-        self.assertIn("Test Campaign", json_str)
+        assert "Test Campaign" in json_str
 
     def test_fake_gemini_response_generation(self):
         """Test that fake Gemini generates realistic responses."""
@@ -64,16 +64,16 @@ class TestFakeServicesSimple(unittest.TestCase):
         response = model.generate_content(prompt)
 
         # Response should be valid JSON string
-        self.assertIsInstance(response.text, str)
+        assert isinstance(response.text, str)
         response_data = json.loads(response.text)
 
         # Should contain expected structure
-        self.assertIn("narrative", response_data)
-        self.assertIn("mechanics", response_data)
-        self.assertIn("scene", response_data)
+        assert "narrative" in response_data
+        assert "mechanics" in response_data
+        assert "scene" in response_data
 
         # Should contain context from prompt
-        self.assertIn("Brave Knight", response_data["narrative"])
+        assert "Brave Knight" in response_data["narrative"]
 
         # Test story continuation
         continue_prompt = """
@@ -84,7 +84,7 @@ class TestFakeServicesSimple(unittest.TestCase):
         continue_response = model.generate_content(continue_prompt)
         continue_data = json.loads(continue_response.text)
 
-        self.assertIn("approaches the castle gate", continue_data["narrative"])
+        assert "approaches the castle gate" in continue_data["narrative"]
 
     def test_fake_auth_user_management(self):
         """Test that fake Auth manages users realistically."""
@@ -92,27 +92,27 @@ class TestFakeServicesSimple(unittest.TestCase):
 
         # Test getting default users
         user = auth.get_user("test-user-123")
-        self.assertEqual(user.uid, "test-user-123")
-        self.assertEqual(user.email, "test@example.com")
+        assert user.uid == "test-user-123"
+        assert user.email == "test@example.com"
 
         # Test creating new user
         new_user = auth.create_user(
             uid="new-user", email="new@test.com", display_name="New User"
         )
-        self.assertEqual(new_user.uid, "new-user")
-        self.assertEqual(new_user.email, "new@test.com")
+        assert new_user.uid == "new-user"
+        assert new_user.email == "new@test.com"
 
         # Test token creation and verification
         token = auth.create_custom_token("test-user-123")
-        self.assertIsInstance(token, str)
+        assert isinstance(token, str)
 
         decoded = auth.verify_id_token(token)
-        self.assertEqual(decoded.uid, "test-user-123")
+        assert decoded.uid == "test-user-123"
 
         # Test user data is JSON serializable
         user_dict = user.to_dict()
         json_str = json.dumps(user_dict)
-        self.assertIn("test-user-123", json_str)
+        assert "test-user-123" in json_str
 
     def test_fake_services_integration(self):
         """Test that all fake services work together."""
@@ -150,8 +150,8 @@ class TestFakeServicesSimple(unittest.TestCase):
         stored_campaign = campaign_doc.get().to_dict()
         stored_story = story_doc.get().to_dict()
 
-        self.assertEqual(stored_campaign["user_id"], user.uid)
-        self.assertIn("Test Warrior", stored_story["narrative"])
+        assert stored_campaign["user_id"] == user.uid
+        assert "Test Warrior" in stored_story["narrative"]
 
         # Verify no Mock objects in the data
         full_data = {
@@ -162,7 +162,7 @@ class TestFakeServicesSimple(unittest.TestCase):
 
         # Should serialize without issues
         json_output = json.dumps(full_data, indent=2)
-        self.assertGreater(len(json_output), 500)  # Should have substantial content
+        assert len(json_output) > 500  # Should have substantial content
 
         print("✅ Integration test passed - all fake services working together")
         print(f"Data size: {len(json_output)} characters")

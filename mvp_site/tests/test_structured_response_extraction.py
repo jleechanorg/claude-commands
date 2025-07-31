@@ -52,114 +52,66 @@ class TestStructuredResponseExtraction(unittest.TestCase):
         ]
 
         for field in required_fields:
-            self.assertIn(
-                field, self.mock_gemini_response, f"Response should contain {field}"
-            )
+            assert field in self.mock_gemini_response, f"Response should contain {field}"
 
     def test_debug_info_structure(self):
         """Test that debug_info contains dice_rolls and resources"""
         debug_info = self.mock_gemini_response["debug_info"]
 
         # Check dice_rolls is in debug_info
-        self.assertIn("dice_rolls", debug_info, "dice_rolls should be in debug_info")
-        self.assertIsInstance(
-            debug_info["dice_rolls"], list, "dice_rolls should be a list"
-        )
-        self.assertEqual(len(debug_info["dice_rolls"]), 2, "Should have 2 dice rolls")
+        assert "dice_rolls" in debug_info, "dice_rolls should be in debug_info"
+        assert isinstance(debug_info["dice_rolls"], list), "dice_rolls should be a list"
+        assert len(debug_info["dice_rolls"]) == 2, "Should have 2 dice rolls"
 
         # Check resources is in debug_info
-        self.assertIn("resources", debug_info, "resources should be in debug_info")
-        self.assertIsInstance(
-            debug_info["resources"], str, "resources should be a string"
-        )
-        self.assertIn(
-            "HD: 2/2", debug_info["resources"], "Resources should contain hit dice"
-        )
+        assert "resources" in debug_info, "resources should be in debug_info"
+        assert isinstance(debug_info["resources"], str), "resources should be a string"
+        assert "HD: 2/2" in debug_info["resources"], "Resources should contain hit dice"
 
         # Check other debug fields
-        self.assertIn("dm_notes", debug_info, "dm_notes should be in debug_info")
-        self.assertIn(
-            "state_rationale", debug_info, "state_rationale should be in debug_info"
-        )
+        assert "dm_notes" in debug_info, "dm_notes should be in debug_info"
+        assert "state_rationale" in debug_info, "state_rationale should be in debug_info"
 
     def test_narrative_contains_structured_content(self):
         """Test that narrative contains session header and planning block"""
         narrative = self.mock_gemini_response["narrative"]
 
         # Check for session header
-        self.assertIn(
-            "[SESSION_HEADER]",
-            narrative,
-            "Narrative should contain session header marker",
-        )
-        self.assertIn(
-            "Lvl 2 Fighter", narrative, "Session header should contain character info"
-        )
-        self.assertIn("HP: 15/18", narrative, "Session header should contain HP")
+        assert "[SESSION_HEADER]" in narrative, "Narrative should contain session header marker"
+        assert "Lvl 2 Fighter" in narrative, "Session header should contain character info"
+        assert "HP: 15/18" in narrative, "Session header should contain HP"
 
         # Check for planning block
-        self.assertIn(
-            "--- PLANNING BLOCK ---",
-            narrative,
-            "Narrative should contain planning block marker",
-        )
-        self.assertIn(
-            "What would you like to do next?",
-            narrative,
-            "Planning block should contain prompt",
-        )
-        self.assertIn(
-            "**Attack again:**",
-            narrative,
-            "Planning block should contain formatted options",
-        )
+        assert "--- PLANNING BLOCK ---" in narrative, "Narrative should contain planning block marker"
+        assert "What would you like to do next?" in narrative, "Planning block should contain prompt"
+        assert "**Attack again:**" in narrative, "Planning block should contain formatted options"
 
     def test_state_updates_structure(self):
         """Test state_updates field structure"""
         state_updates = self.mock_gemini_response["state_updates"]
 
-        self.assertIsInstance(state_updates, dict, "state_updates should be a dict")
-        self.assertIn(
-            "npc_data", state_updates, "state_updates should contain npc_data"
-        )
-        self.assertIn(
-            "goblin_1", state_updates["npc_data"], "npc_data should contain goblin_1"
-        )
-        self.assertEqual(
-            state_updates["npc_data"]["goblin_1"]["hp_current"],
-            3,
-            "Goblin HP should be 3",
-        )
+        assert isinstance(state_updates, dict), "state_updates should be a dict"
+        assert "npc_data" in state_updates, "state_updates should contain npc_data"
+        assert "goblin_1" in state_updates["npc_data"], "npc_data should contain goblin_1"
+        assert state_updates["npc_data"]["goblin_1"]["hp_current"] == 3, "Goblin HP should be 3"
 
     def test_god_mode_response_handling(self):
         """Test god_mode_response field handling"""
         # Normal response shouldn't have god_mode_response
-        self.assertNotIn(
-            "god_mode_response",
-            self.mock_gemini_response,
-            "Normal response should not have god_mode_response",
-        )
+        assert "god_mode_response" not in self.mock_gemini_response, "Normal response should not have god_mode_response"
 
         # God mode response should have the field
-        self.assertIn(
-            "god_mode_response",
-            self.mock_god_mode_response,
-            "God mode response should have god_mode_response field",
-        )
-        self.assertEqual(
-            self.mock_god_mode_response["narrative"],
-            "",
-            "God mode response can have empty narrative",
-        )
+        assert "god_mode_response" in self.mock_god_mode_response, "God mode response should have god_mode_response field"
+        assert self.mock_god_mode_response["narrative"] == "", "God mode response can have empty narrative"
 
     def test_entities_and_location_fields(self):
         """Test entities_mentioned and location_confirmed fields"""
-        self.assertIn("entities_mentioned", self.mock_gemini_response)
-        self.assertIsInstance(self.mock_gemini_response["entities_mentioned"], list)
-        self.assertIn("goblin", self.mock_gemini_response["entities_mentioned"])
+        assert "entities_mentioned" in self.mock_gemini_response
+        assert isinstance(self.mock_gemini_response["entities_mentioned"], list)
+        assert "goblin" in self.mock_gemini_response["entities_mentioned"]
 
-        self.assertIn("location_confirmed", self.mock_gemini_response)
-        self.assertEqual(self.mock_gemini_response["location_confirmed"], "Goblin Cave")
+        assert "location_confirmed" in self.mock_gemini_response
+        assert self.mock_gemini_response["location_confirmed"] == "Goblin Cave"
 
     def test_narrative_response_object_mapping(self):
         """Test that NarrativeResponse object maps fields correctly"""
@@ -176,21 +128,15 @@ class TestStructuredResponseExtraction(unittest.TestCase):
         mock_instance.debug_info = self.mock_gemini_response["debug_info"]
 
         # Test accessing nested fields
-        self.assertEqual(
-            mock_instance.debug_info["dice_rolls"][0],
-            "Attack roll: 1d20+5 = 15+5 = 20 (Hit, AC 15)",
-        )
-        self.assertEqual(
-            mock_instance.debug_info["resources"],
-            "HD: 2/2, Second Wind: 0/1, Action Surge: 1/1, Potions: 1",
-        )
+        assert mock_instance.debug_info["dice_rolls"][0] == "Attack roll: 1d20+5 = 15+5 = 20 (Hit, AC 15)"
+        assert mock_instance.debug_info["resources"] == "HD: 2/2, Second Wind: 0/1, Action Surge: 1/1, Potions: 1"
 
     def test_empty_state_updates_handling(self):
         """Test that empty state_updates is handled correctly"""
         response_with_empty_updates = {**self.mock_gemini_response, "state_updates": {}}
 
-        self.assertIsInstance(response_with_empty_updates["state_updates"], dict)
-        self.assertEqual(len(response_with_empty_updates["state_updates"]), 0)
+        assert isinstance(response_with_empty_updates["state_updates"], dict)
+        assert len(response_with_empty_updates["state_updates"]) == 0
 
 
 if __name__ == "__main__":

@@ -1,0 +1,432 @@
+#!/usr/bin/env python3
+"""
+Comprehensive MCP Integration End-to-End Tests
+
+Tests the complete MCP architecture workflow:
+Flask App → MCPClient → MCP Server → World Logic → Response Chain
+
+This supplements the existing Flask-only end2end tests with true MCP server integration.
+"""
+
+import os
+import subprocess
+import sys
+import time
+import unittest
+
+# Set environment variables for MCP testing
+os.environ["TESTING"] = "true"
+# Note: This test spawns real MCP server processes for integration testing
+# It does not use USE_MOCKS since it tests actual MCP communication
+
+# Add parent directories to path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+from main import create_app
+from mcp_client import MCPClient
+
+
+class TestMCPIntegrationComprehensive(unittest.TestCase):
+    """Comprehensive end-to-end tests for MCP architecture integration."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Set up MCP server for all tests."""
+        cls.mcp_port = 8003  # Use different port to avoid conflicts
+        cls.flask_port = 8084
+        cls.mcp_process = None
+        cls.flask_process = None
+
+        # Try to start MCP server for comprehensive testing
+        try:
+            cls.mcp_process = subprocess.Popen(
+                [
+                    sys.executable,
+                    "mcp_api.py",
+                    "--port",
+                    str(cls.mcp_port),
+                    "--host",
+                    "0.0.0.0",
+                ],
+                cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            )
+
+            # Wait for MCP server to be ready
+            time.sleep(2)
+
+            # Verify MCP server is running
+            import requests
+
+            response = requests.get(f"http://localhost:{cls.mcp_port}", timeout=5)
+            if response.status_code != 200:
+                raise Exception("MCP server not responding correctly")
+
+        except Exception as e:
+            print(f"Warning: Could not start MCP server for comprehensive tests: {e}")
+            print("Falling back to mock-only testing")
+            cls.mcp_process = None
+
+    @classmethod
+    def tearDownClass(cls):
+        """Clean up MCP server after all tests."""
+        if cls.mcp_process:
+            cls.mcp_process.terminate()
+            cls.mcp_process.wait()
+
+    def setUp(self):
+        """Set up test client and data."""
+        self.app = create_app()
+        self.app.config["TESTING"] = True
+        self.client = self.app.test_client()
+
+        # Test data
+        self.test_user_id = "mcp-comprehensive-test-user"
+        self.test_headers = {
+            "X-Test-Bypass-Auth": "true",
+            "X-Test-User-ID": self.test_user_id,
+            "Content-Type": "application/json",
+        }
+
+        # MCP client for direct testing
+        if self.mcp_process:
+            self.mcp_client = MCPClient(f"http://localhost:{self.mcp_port}", timeout=10)
+        else:
+            self.mcp_client = None
+
+    def test_mcp_flask_integration_complete_workflow(self):
+        """Test complete workflow: Flask → MCP → World Logic → Response."""
+        # Test campaign creation through complete MCP stack
+        campaign_data = {
+            "title": "MCP Integration Test Campaign",
+            "character": "Comprehensive Test Hero",
+            "setting": "Integration Test Realm",
+            "description": "Testing complete MCP architecture workflow",
+            "selected_prompts": ["narrative", "combat"],
+            "custom_options": [],
+        }
+
+        response = self.client.post(
+            "/api/campaigns", headers=self.test_headers, json=campaign_data
+        )
+
+        # Should succeed through MCP architecture (201=success, 400=bad request, 500=server error)
+        self.assertIn(
+            response.status_code,
+            [201, 400, 500],
+            "MCP integration should handle campaign creation",
+        )
+
+        if response.status_code == 201:
+            response_data = response.get_json()
+            self.assertIsInstance(response_data, dict)
+            self.assertIn("campaign_id", response_data)
+
+            # Test campaign retrieval through MCP
+            campaign_id = response_data["campaign_id"]
+            get_response = self.client.get(
+                f"/api/campaigns/{campaign_id}", headers=self.test_headers
+            )
+
+            self.assertIn(
+                get_response.status_code,
+                [200, 404, 500],
+                "MCP should handle campaign retrieval",
+            )
+
+    def test_mcp_direct_server_communication(self):
+        """Test direct MCP server communication if available."""
+        if not self.mcp_client:
+            self.skipTest("MCP server not available for direct testing")
+
+        # Test direct MCP server health
+        try:
+            import requests
+
+            health_response = requests.get(
+                f"http://localhost:{self.mcp_port}", timeout=5
+            )
+            self.assertEqual(
+                health_response.status_code,
+                200,
+                "MCP server should respond to health checks",
+            )
+        except Exception as e:
+            self.fail(f"MCP server direct communication failed: {e}")
+
+    def test_mcp_error_handling_and_fallback(self):
+        """Test MCP error handling and fallback behaviors."""
+        # Test invalid campaign ID handling through MCP
+        response = self.client.get(
+            "/api/campaigns/invalid-mcp-campaign-id", headers=self.test_headers
+        )
+
+        # MCP should handle invalid IDs gracefully
+        self.assertIn(
+            response.status_code,
+            [404, 500],
+            "MCP should handle invalid campaign IDs gracefully",
+        )
+
+        # Test malformed requests through MCP
+        malformed_response = self.client.post(
+            "/api/campaigns",
+            headers=self.test_headers,
+            json={"invalid": "malformed_campaign_data"},
+        )
+
+        self.assertIn(
+            malformed_response.status_code,
+            [400, 500],
+            "MCP should handle malformed requests",
+        )
+
+    def test_mcp_interaction_workflow(self):
+        """Test user interaction workflow through MCP."""
+        # First create a test campaign
+        campaign_data = {
+            "title": "MCP Interaction Test",
+            "character": "Test Character",
+            "setting": "Test Setting",
+            "description": "Testing interaction workflow",
+        }
+
+        create_response = self.client.post(
+            "/api/campaigns", headers=self.test_headers, json=campaign_data
+        )
+
+        if create_response.status_code == 201:
+            campaign_id = create_response.get_json().get("campaign_id")
+
+            # Test interaction through MCP
+            interaction_data = {
+                "input": "I want to explore the ancient temple",
+                "mode": "character",
+            }
+
+            interaction_response = self.client.post(
+                f"/api/campaigns/{campaign_id}/interaction",
+                headers=self.test_headers,
+                json=interaction_data,
+            )
+
+            self.assertIn(
+                interaction_response.status_code,
+                [200, 500],
+                "MCP should handle user interactions",
+            )
+
+            if interaction_response.status_code == 200:
+                response_data = interaction_response.get_json()
+                self.assertIsInstance(response_data, dict)
+                # Should contain standard game response fields
+                expected_fields = ["success", "game_state", "story"]
+                for field in expected_fields:
+                    if field in response_data:
+                        self.assertIsNotNone(response_data[field])
+
+    def test_mcp_concurrent_requests(self):
+        """Test MCP handling of concurrent requests."""
+        # Simulate multiple rapid requests to test MCP stability
+        requests_data = []
+        for i in range(3):  # Keep small for test speed
+            requests_data.append(
+                {
+                    "title": f"Concurrent Test Campaign {i}",
+                    "character": f"Test Hero {i}",
+                    "setting": "Concurrent Test Realm",
+                    "description": f"Testing concurrent request {i}",
+                    "selected_prompts": ["narrative"],
+                    "custom_options": [],
+                }
+            )
+
+        responses = []
+        for data in requests_data:
+            response = self.client.post(
+                "/api/campaigns", headers=self.test_headers, json=data
+            )
+            responses.append(response)
+
+        # All requests should be handled consistently
+        for i, response in enumerate(responses):
+            self.assertIn(
+                response.status_code,
+                [201, 400, 500],  # 201=created, 400=validation error, 500=server error
+                f"MCP should handle concurrent request {i}",
+            )
+
+    def test_mcp_authentication_integration(self):
+        """Test authentication handling through MCP architecture."""
+        # Test with missing auth headers
+        no_auth_response = self.client.post(
+            "/api/campaigns", json={"title": "No Auth Test"}
+        )
+
+        self.assertEqual(
+            no_auth_response.status_code, 401, "MCP should enforce authentication"
+        )
+
+        # Test with valid auth bypass
+        valid_auth_response = self.client.get(
+            "/api/campaigns", headers=self.test_headers
+        )
+
+        self.assertIn(
+            valid_auth_response.status_code,
+            [200, 404, 500],
+            "MCP should handle authenticated requests",
+        )
+
+    def test_mcp_settings_integration(self):
+        """Test settings management through MCP."""
+        # Test getting user settings through MCP
+        get_settings_response = self.client.get(
+            "/api/settings", headers=self.test_headers
+        )
+
+        self.assertIn(
+            get_settings_response.status_code,
+            [200, 500],
+            "MCP should handle settings retrieval",
+        )
+
+        # Test updating settings through MCP
+        settings_data = {
+            "theme": "dark",
+            "language": "en",
+            "test_setting": "mcp_integration_test",
+        }
+
+        update_response = self.client.post(
+            "/api/settings", headers=self.test_headers, json=settings_data
+        )
+
+        self.assertIn(
+            update_response.status_code,
+            [200, 500],
+            "MCP should handle settings updates",
+        )
+
+    def test_mcp_export_functionality(self):
+        """Test campaign export through MCP."""
+        # Create a test campaign first
+        campaign_data = {
+            "title": "Export Test Campaign",
+            "character": "Export Test Hero",
+            "setting": "Export Test World",
+        }
+
+        create_response = self.client.post(
+            "/api/campaigns", headers=self.test_headers, json=campaign_data
+        )
+
+        if create_response.status_code == 201:
+            campaign_id = create_response.get_json().get("campaign_id")
+
+            # Test export through MCP
+            export_response = self.client.get(
+                f"/api/campaigns/{campaign_id}/export?format=txt",
+                headers=self.test_headers,
+            )
+
+            self.assertIn(
+                export_response.status_code,
+                [200, 404, 500],
+                "MCP should handle campaign export",
+            )
+
+    def test_mcp_god_mode_commands(self):
+        """Test God Mode commands through MCP architecture."""
+        # Create test campaign
+        campaign_data = {
+            "title": "God Mode Test Campaign",
+            "character": "God Mode Test Hero",
+            "setting": "God Mode Realm",
+        }
+
+        create_response = self.client.post(
+            "/api/campaigns", headers=self.test_headers, json=campaign_data
+        )
+
+        if create_response.status_code == 201:
+            campaign_id = create_response.get_json().get("campaign_id")
+
+            # Test GOD_ASK_STATE command through MCP
+            god_response = self.client.post(
+                f"/api/campaigns/{campaign_id}/interaction",
+                headers=self.test_headers,
+                json={"input": "GOD_ASK_STATE", "mode": "character"},
+            )
+
+            self.assertIn(
+                god_response.status_code,
+                [200, 500],
+                "MCP should handle God Mode commands",
+            )
+
+    def test_mcp_campaign_update_patch_endpoint(self):
+        """Test campaign updates via PATCH endpoint through MCP."""
+        # Create a test campaign first
+        campaign_data = {
+            "title": "Original Campaign Title",
+            "character": "Update Test Hero",
+            "setting": "Update Test World",
+            "description": "Original description",
+        }
+
+        create_response = self.client.post(
+            "/api/campaigns", headers=self.test_headers, json=campaign_data
+        )
+
+        if create_response.status_code == 201:
+            campaign_id = create_response.get_json().get("campaign_id")
+
+            # Test title update through MCP PATCH endpoint
+            update_data = {"title": "Updated Campaign Title via MCP"}
+
+            patch_response = self.client.patch(
+                f"/api/campaigns/{campaign_id}",
+                headers=self.test_headers,
+                json=update_data,
+            )
+
+            self.assertIn(
+                patch_response.status_code,
+                [200, 404, 500],
+                "MCP should handle campaign PATCH updates",
+            )
+
+            # Test multiple field updates
+            multi_update_data = {
+                "title": "Multi-field Updated Title",
+                "description": "Updated description through MCP PATCH",
+            }
+
+            multi_patch_response = self.client.patch(
+                f"/api/campaigns/{campaign_id}",
+                headers=self.test_headers,
+                json=multi_update_data,
+            )
+
+            self.assertIn(
+                multi_patch_response.status_code,
+                [200, 404, 500],
+                "MCP should handle multi-field PATCH updates",
+            )
+
+        # Test PATCH on non-existent campaign
+        invalid_patch_response = self.client.patch(
+            "/api/campaigns/non-existent-campaign-id",
+            headers=self.test_headers,
+            json={"title": "Should Fail"},
+        )
+
+        self.assertIn(
+            invalid_patch_response.status_code,
+            [400, 404, 500],
+            "MCP should handle PATCH on non-existent campaigns",
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

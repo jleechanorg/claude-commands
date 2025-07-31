@@ -18,38 +18,33 @@ class TestPromptNPCExamples(unittest.TestCase):
     def test_preferred_npc_update_method_exists(self):
         """Test that the prompt contains the preferred NPC update method."""
         # Check for the preferred method marker
-        self.assertIn("PREFERRED METHOD - Update specific fields", self.prompt_content)
+        assert "PREFERRED METHOD - Update specific fields" in self.prompt_content
 
         # Check that it shows proper dictionary updates
-        self.assertIn('"Goblin_Leader": {', self.prompt_content)
-        self.assertIn('"hp_current": 0,', self.prompt_content)
-        self.assertIn('"status": "defeated in battle"', self.prompt_content)
+        assert '"Goblin_Leader": {' in self.prompt_content
+        assert '"hp_current": 0,' in self.prompt_content
+        assert '"status": "defeated in battle"' in self.prompt_content
 
     def test_string_update_warning_exists(self):
         """Test that the prompt warns about string updates but explains they're tolerated."""
         # Check for the warning marker
-        self.assertIn(
-            "TOLERATED BUT NOT RECOMMENDED - String updates", self.prompt_content
-        )
+        assert "TOLERATED BUT NOT RECOMMENDED - String updates" in self.prompt_content
 
         # Check that it explains the conversion
-        self.assertIn('This becomes: `{"status": "defeated"}`', self.prompt_content)
-        self.assertIn("while preserving other NPC data", self.prompt_content)
+        assert 'This becomes: `{"status": "defeated"}`' in self.prompt_content
+        assert "while preserving other NPC data" in self.prompt_content
 
     def test_delete_guidance_exists(self):
         """Test that the prompt explains how to delete NPCs."""
         # Check for delete guidance
-        self.assertIn("To remove an NPC entirely", self.prompt_content)
-        self.assertIn('"Dead_Enemy": "__DELETE__"', self.prompt_content)
+        assert "To remove an NPC entirely" in self.prompt_content
+        assert '"Dead_Enemy": "__DELETE__"' in self.prompt_content
 
     def test_npc_data_dictionary_rule_exists(self):
         """Test that the mandatory rule about npc_data structure is present."""
         # Check for the specific rule about npc_data
-        self.assertIn("npc_data` is ALWAYS a DICTIONARY", self.prompt_content)
-        self.assertIn(
-            "values are DICTIONARIES containing the NPC's data sheet",
-            self.prompt_content,
-        )
+        assert "npc_data` is ALWAYS a DICTIONARY" in self.prompt_content
+        assert "values are DICTIONARIES containing the NPC's data sheet" in self.prompt_content
 
 
 if __name__ == "__main__":

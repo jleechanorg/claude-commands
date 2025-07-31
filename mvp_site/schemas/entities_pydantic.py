@@ -258,7 +258,7 @@ class Character(BaseModel):
             return v.lower().strip()
 
         # For PCs, gender is optional but must be a string if provided
-        elif v is not None and v != "":
+        if v is not None and v != "":
             if not isinstance(v, str):
                 raise ValueError(f"Gender must be a string_type, got: {type(v)}")
             return v.lower().strip()
@@ -304,7 +304,7 @@ class Character(BaseModel):
         if "entity_id" in values:
             if values["entity_id"].startswith("pc_"):
                 return EntityType.PLAYER_CHARACTER
-            elif values["entity_id"].startswith("npc_"):
+            if values["entity_id"].startswith("npc_"):
                 return EntityType.NPC
         return v
 

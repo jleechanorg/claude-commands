@@ -6,7 +6,8 @@ Tests the specific settings page implementation with model selection.
 
 import os
 import sys
-from playwright.sync_api import sync_playwright, Page
+
+from playwright.sync_api import sync_playwright
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

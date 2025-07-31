@@ -29,12 +29,12 @@ class TestUnknownEntityFiltering(unittest.TestCase):
         )
 
         # Unknown should not be in missing entities
-        self.assertNotIn("Unknown", result.missing_entities)
-        self.assertNotIn("unknown", result.missing_entities)
+        assert "Unknown" not in result.missing_entities
+        assert "unknown" not in result.missing_entities
 
         # Should only report real missing entities
-        self.assertIn("Sir Galahad", result.missing_entities)
-        self.assertIn("Dragon", result.missing_entities)
+        assert "Sir Galahad" in result.missing_entities
+        assert "Dragon" in result.missing_entities
 
     def test_dual_pass_filters_unknown(self):
         """Test that dual pass generation filters Unknown from expected entities"""
@@ -50,12 +50,8 @@ class TestUnknownEntityFiltering(unittest.TestCase):
         )
 
         # First pass should not fail due to Unknown
-        self.assertNotIn(
-            "Unknown", result.first_pass.validation_result.missing_entities
-        )
-        self.assertNotIn(
-            "unknown", result.first_pass.validation_result.missing_entities
-        )
+        assert "Unknown" not in result.first_pass.validation_result.missing_entities
+        assert "unknown" not in result.first_pass.validation_result.missing_entities
 
     def test_empty_expected_entities_after_filtering(self):
         """Test behavior when only Unknown is in expected entities"""
@@ -65,9 +61,9 @@ class TestUnknownEntityFiltering(unittest.TestCase):
         result = self.validator.validate_entity_presence(narrative, expected_entities)
 
         # Should pass validation since no real entities expected
-        self.assertTrue(result.passed)
-        self.assertFalse(result.retry_needed)
-        self.assertEqual(result.missing_entities, [])
+        assert result.passed
+        assert not result.retry_needed
+        assert result.missing_entities == []
 
 
 if __name__ == "__main__":

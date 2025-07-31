@@ -5,13 +5,13 @@ Run from the prototype directory.
 """
 
 import json
+import os
 import time
 from datetime import datetime
 
 from validators.fuzzy_token_validator import FuzzyTokenValidator
 from validators.llm_validator import LLMValidator
 from validators.token_validator import SimpleTokenValidator, TokenValidator
-import os
 
 
 # Test with different narrative lengths

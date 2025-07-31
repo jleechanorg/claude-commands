@@ -116,9 +116,7 @@ class TestDataIntegrity(unittest.TestCase):
 
         # Test with valid data - should return no issues
         issues = _validate_npc_data_integrity_test(self.valid_npc_data)
-        self.assertEqual(
-            len(issues), 0, f"Valid NPC data should have no issues: {issues}"
-        )
+        assert len(issues) == 0, f"Valid NPC data should have no issues: {issues}"
 
         # Test with corrupted data - should detect issues
         corrupted_npc_data = {
@@ -127,8 +125,8 @@ class TestDataIntegrity(unittest.TestCase):
         }
 
         issues = _validate_npc_data_integrity_test(corrupted_npc_data)
-        self.assertGreater(len(issues), 0, "Corrupted NPC data should be detected")
-        self.assertTrue(any("dragon_boss" in issue for issue in issues))
+        assert len(issues) > 0, "Corrupted NPC data should be detected"
+        assert any("dragon_boss" in issue for issue in issues)
 
     def test_state_update_preserves_npc_structure(self):
         """Test that state updates don't corrupt NPC data structure."""
@@ -150,17 +148,11 @@ class TestDataIntegrity(unittest.TestCase):
 
         # Verify NPC data is still dictionaries
         for npc_id, npc_data in updated_state["npc_data"].items():
-            self.assertIsInstance(
-                npc_data,
-                dict,
-                f"NPC '{npc_id}' should be dict, got {type(npc_data)}: {npc_data}",
-            )
+            assert isinstance(npc_data, dict), f"NPC '{npc_id}' should be dict, got {type(npc_data)}: {npc_data}"
 
         # Verify specific NPC was updated correctly
-        self.assertEqual(updated_state["npc_data"]["dragon_boss"]["hp_current"], 150)
-        self.assertEqual(
-            updated_state["npc_data"]["dragon_boss"]["name"], "Ancient Red Dragon"
-        )
+        assert updated_state["npc_data"]["dragon_boss"]["hp_current"] == 150
+        assert updated_state["npc_data"]["dragon_boss"]["name"] == "Ancient Red Dragon"
 
     def test_delete_token_processing(self):
         """Test that __DELETE__ tokens work without corrupting other data."""
@@ -175,14 +167,14 @@ class TestDataIntegrity(unittest.TestCase):
         updated_state = update_state_with_changes_test(initial_state, changes)
 
         # Verify deletion worked
-        self.assertNotIn("dragon_boss", updated_state["npc_data"])
+        assert "dragon_boss" not in updated_state["npc_data"]
 
         # Verify other NPC is still a dict
-        self.assertIn("friendly_merchant", updated_state["npc_data"])
-        self.assertIsInstance(updated_state["npc_data"]["friendly_merchant"], dict)
+        assert "friendly_merchant" in updated_state["npc_data"]
+        assert isinstance(updated_state["npc_data"]["friendly_merchant"], dict)
 
         # Verify other data unchanged
-        self.assertEqual(updated_state["other_data"]["some_key"], "some_value")
+        assert updated_state["other_data"]["some_key"] == "some_value"
 
     def test_mission_processing_doesnt_corrupt_npcs(self):
         """Test that mission processing safely handles different data types."""
@@ -193,11 +185,7 @@ class TestDataIntegrity(unittest.TestCase):
 
         # Verify NPCs are still dictionaries after GameState initialization
         for npc_id, npc_data in game_state.npc_data.items():
-            self.assertIsInstance(
-                npc_data,
-                dict,
-                f"NPC '{npc_id}' should be dict after GameState init, got {type(npc_data)}",
-            )
+            assert isinstance(npc_data, dict), f"NPC '{npc_id}' should be dict after GameState init, got {type(npc_data)}"
 
     def test_combat_cleanup_preserves_data_types(self):
         """Test that combat cleanup doesn't corrupt NPC data types."""
@@ -254,19 +242,13 @@ class TestDataIntegrity(unittest.TestCase):
 
         # Verify all remaining NPCs are still dictionaries
         for npc_id, npc_data in game_state.npc_data.items():
-            self.assertIsInstance(
-                npc_data,
-                dict,
-                f"NPC '{npc_id}' should be dict after cleanup, got {type(npc_data)}: {npc_data}",
-            )
+            assert isinstance(npc_data, dict), f"NPC '{npc_id}' should be dict after cleanup, got {type(npc_data)}: {npc_data}"
 
         # Verify expected cleanup happened
-        self.assertIn("Dragon Boss", defeated)
-        self.assertNotIn("Dragon Boss", game_state.npc_data)
-        self.assertIn("Friendly Wolf", game_state.npc_data)  # Ally should remain
-        self.assertIn(
-            "Village Merchant", game_state.npc_data
-        )  # Non-combat NPC should remain
+        assert "Dragon Boss" in defeated
+        assert "Dragon Boss" not in game_state.npc_data
+        assert "Friendly Wolf" in game_state.npc_data  # Ally should remain
+        assert "Village Merchant" in game_state.npc_data  # Non-combat NPC should remain
 
     def test_mixed_mission_data_handling(self):
         """Test handling of missions that might contain mixed data types."""
@@ -291,11 +273,7 @@ class TestDataIntegrity(unittest.TestCase):
 
         # Verify NPCs are still dictionaries even with suspicious mission data
         for npc_id, npc_data in game_state.npc_data.items():
-            self.assertIsInstance(
-                npc_data,
-                dict,
-                f"NPC '{npc_id}' should be dict despite mixed mission data, got {type(npc_data)}",
-            )
+            assert isinstance(npc_data, dict), f"NPC '{npc_id}' should be dict despite mixed mission data, got {type(npc_data)}"
 
     def test_state_consistency_after_multiple_updates(self):
         """Test that multiple state updates maintain data integrity."""
@@ -336,11 +314,7 @@ class TestDataIntegrity(unittest.TestCase):
 
             # After each update, verify NPC data integrity
             for npc_id, npc_data in current_state["npc_data"].items():
-                self.assertIsInstance(
-                    npc_data,
-                    dict,
-                    f"After update, NPC '{npc_id}' should be dict, got {type(npc_data)}: {npc_data}",
-                )
+                assert isinstance(npc_data, dict), f"After update, NPC '{npc_id}' should be dict, got {type(npc_data)}: {npc_data}"
 
     def test_npc_string_update_preservation(self):
         """
@@ -371,19 +345,15 @@ class TestDataIntegrity(unittest.TestCase):
 
         # Verify the NPC data structure is preserved
         npc_data = updated_state["npc_data"]["goblin_skirmisher_1"]
-        self.assertIsInstance(
-            npc_data,
-            dict,
-            f"NPC data was corrupted! Expected dict but got {type(npc_data)}: {npc_data}",
-        )
+        assert isinstance(npc_data, dict), f"NPC data was corrupted! Expected dict but got {type(npc_data)}: {npc_data}"
 
         # Original data should be preserved
-        self.assertEqual(npc_data.get("hp_current"), 7)
-        self.assertEqual(npc_data.get("ac"), 13)
-        self.assertEqual(npc_data.get("alignment"), "chaotic evil")
+        assert npc_data.get("hp_current") == 7
+        assert npc_data.get("ac") == 13
+        assert npc_data.get("alignment") == "chaotic evil"
 
         # String value should be intelligently merged as status
-        self.assertEqual(npc_data.get("status"), "defeated")
+        assert npc_data.get("status") == "defeated"
 
     def test_multiple_npc_string_updates_isolation(self):
         """
@@ -402,16 +372,16 @@ class TestDataIntegrity(unittest.TestCase):
         final_state = update_state_with_changes_test(initial_state, changes)
 
         # Both NPCs should remain as dictionaries
-        self.assertIsInstance(final_state["npc_data"]["goblin_1"], dict)
-        self.assertIsInstance(final_state["npc_data"]["goblin_2"], dict)
+        assert isinstance(final_state["npc_data"]["goblin_1"], dict)
+        assert isinstance(final_state["npc_data"]["goblin_2"], dict)
 
         # goblin_2 should be completely unchanged
-        self.assertEqual(final_state["npc_data"]["goblin_2"]["hp"], 5)
-        self.assertEqual(final_state["npc_data"]["goblin_2"]["status"], "active")
+        assert final_state["npc_data"]["goblin_2"]["hp"] == 5
+        assert final_state["npc_data"]["goblin_2"]["status"] == "active"
 
         # goblin_1 should have preserved hp but updated status
-        self.assertEqual(final_state["npc_data"]["goblin_1"]["hp"], 7)
-        self.assertEqual(final_state["npc_data"]["goblin_1"]["status"], "defeated")
+        assert final_state["npc_data"]["goblin_1"]["hp"] == 7
+        assert final_state["npc_data"]["goblin_1"]["status"] == "defeated"
 
     def test_string_overwrite_on_npc_dict_is_converted(self):
         """
@@ -436,24 +406,18 @@ class TestDataIntegrity(unittest.TestCase):
 
         # VERIFY: The smart conversion should have converted string to status update.
         # The NPC should still be a dict with the string converted to status field.
-        self.assertIn("Grishnak", updated_state["npc_data"])
-        self.assertIsInstance(
-            updated_state["npc_data"]["Grishnak"],
-            dict,
-            "NPC data should remain a dictionary!",
-        )
+        assert "Grishnak" in updated_state["npc_data"]
+        assert isinstance(updated_state["npc_data"]["Grishnak"], dict), "NPC data should remain a dictionary!"
 
         # Check that the original data is preserved
         npc_data = updated_state["npc_data"]["Grishnak"]
-        self.assertEqual(npc_data["name"], "Grishnak")
-        self.assertEqual(npc_data["hp_current"], 15)
-        self.assertEqual(npc_data["hp_max"], 15)
-        self.assertEqual(npc_data["role"], "Goblin Warband Leader")
+        assert npc_data["name"] == "Grishnak"
+        assert npc_data["hp_current"] == 15
+        assert npc_data["hp_max"] == 15
+        assert npc_data["role"] == "Goblin Warband Leader"
 
         # Check that the string was converted to status
-        self.assertEqual(
-            npc_data["status"], "defeated", "String should be converted to status field"
-        )
+        assert npc_data["status"] == "defeated", "String should be converted to status field"
 
     def test_list_overwrite_on_missions_is_converted(self):
         """
@@ -486,18 +450,10 @@ class TestDataIntegrity(unittest.TestCase):
         active_missions = updated_state.get("custom_campaign_state", {}).get(
             "active_missions"
         )
-        self.assertIsInstance(
-            active_missions,
-            list,
-            "active_missions should remain a list after smart conversion!",
-        )
+        assert isinstance(active_missions, list), "active_missions should remain a list after smart conversion!"
 
         # Should now have 3 missions: the 2 original plus the converted one
-        self.assertEqual(
-            len(active_missions),
-            3,
-            "Should have 2 original missions plus 1 converted mission",
-        )
+        assert len(active_missions) == 3, "Should have 2 original missions plus 1 converted mission"
 
         # Check that the converted mission has proper structure
         converted_mission = None
@@ -506,8 +462,8 @@ class TestDataIntegrity(unittest.TestCase):
                 converted_mission = mission
                 break
 
-        self.assertIsNotNone(converted_mission, "Converted mission should be present")
-        self.assertEqual(converted_mission["title"], "This shouldn't be here")
+        assert converted_mission is not None, "Converted mission should be present"
+        assert converted_mission["title"] == "This shouldn't be here"
 
 
 if __name__ == "__main__":

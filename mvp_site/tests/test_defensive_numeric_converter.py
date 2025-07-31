@@ -20,23 +20,19 @@ class TestDefensiveNumericConverter(unittest.TestCase):
     def test_hp_unknown_values(self):
         """Test HP fields with unknown values"""
         # Test HP conversion (case-insensitive)
-        self.assertEqual(DefensiveNumericConverter.convert_value("hp", "unknown"), 1)
-        self.assertEqual(DefensiveNumericConverter.convert_value("hp", "Unknown"), 1)
-        self.assertEqual(DefensiveNumericConverter.convert_value("hp", "UNKNOWN"), 1)
-        self.assertEqual(DefensiveNumericConverter.convert_value("hp", None), 1)
-        self.assertEqual(DefensiveNumericConverter.convert_value("hp", "invalid"), 1)
+        assert DefensiveNumericConverter.convert_value("hp", "unknown") == 1
+        assert DefensiveNumericConverter.convert_value("hp", "Unknown") == 1
+        assert DefensiveNumericConverter.convert_value("hp", "UNKNOWN") == 1
+        assert DefensiveNumericConverter.convert_value("hp", None) == 1
+        assert DefensiveNumericConverter.convert_value("hp", "invalid") == 1
 
         # Test HP_MAX conversion
-        self.assertEqual(
-            DefensiveNumericConverter.convert_value("hp_max", "unknown"), 1
-        )
-        self.assertEqual(DefensiveNumericConverter.convert_value("hp_max", None), 1)
+        assert DefensiveNumericConverter.convert_value("hp_max", "unknown") == 1
+        assert DefensiveNumericConverter.convert_value("hp_max", None) == 1
 
         # Test temp_hp conversion
-        self.assertEqual(
-            DefensiveNumericConverter.convert_value("temp_hp", "unknown"), 0
-        )
-        self.assertEqual(DefensiveNumericConverter.convert_value("temp_hp", None), 0)
+        assert DefensiveNumericConverter.convert_value("temp_hp", "unknown") == 0
+        assert DefensiveNumericConverter.convert_value("temp_hp", None) == 0
 
     def test_stats_unknown_values(self):
         """Test ability score fields with unknown values"""
@@ -48,60 +44,50 @@ class TestDefensiveNumericConverter(unittest.TestCase):
             "wisdom",
             "charisma",
         ]:
-            self.assertEqual(
-                DefensiveNumericConverter.convert_value(stat, "unknown"), 10
-            )
-            self.assertEqual(DefensiveNumericConverter.convert_value(stat, None), 10)
-            self.assertEqual(
-                DefensiveNumericConverter.convert_value(stat, "invalid"), 10
-            )
+            assert DefensiveNumericConverter.convert_value(stat, "unknown") == 10
+            assert DefensiveNumericConverter.convert_value(stat, None) == 10
+            assert DefensiveNumericConverter.convert_value(stat, "invalid") == 10
 
     def test_level_unknown_values(self):
         """Test level field with unknown values"""
-        self.assertEqual(DefensiveNumericConverter.convert_value("level", "unknown"), 1)
-        self.assertEqual(DefensiveNumericConverter.convert_value("level", None), 1)
-        self.assertEqual(DefensiveNumericConverter.convert_value("level", "invalid"), 1)
+        assert DefensiveNumericConverter.convert_value("level", "unknown") == 1
+        assert DefensiveNumericConverter.convert_value("level", None) == 1
+        assert DefensiveNumericConverter.convert_value("level", "invalid") == 1
 
     def test_non_hp_defaults(self):
         """Test non-HP field defaults (gold, initiative, etc.)"""
         # Test gold (resource field)
-        self.assertEqual(DefensiveNumericConverter.convert_value("gold", "unknown"), 0)
-        self.assertEqual(DefensiveNumericConverter.convert_value("gold", None), 0)
+        assert DefensiveNumericConverter.convert_value("gold", "unknown") == 0
+        assert DefensiveNumericConverter.convert_value("gold", None) == 0
 
         # Test initiative (combat field)
-        self.assertEqual(
-            DefensiveNumericConverter.convert_value("initiative", "unknown"), 0
-        )
-        self.assertEqual(DefensiveNumericConverter.convert_value("initiative", None), 0)
+        assert DefensiveNumericConverter.convert_value("initiative", "unknown") == 0
+        assert DefensiveNumericConverter.convert_value("initiative", None) == 0
 
     def test_numeric_string_conversion(self):
         """Test valid numeric strings get converted properly"""
-        self.assertEqual(DefensiveNumericConverter.convert_value("hp", "5"), 5)
-        self.assertEqual(DefensiveNumericConverter.convert_value("strength", "15"), 15)
-        self.assertEqual(DefensiveNumericConverter.convert_value("level", "3"), 3)
+        assert DefensiveNumericConverter.convert_value("hp", "5") == 5
+        assert DefensiveNumericConverter.convert_value("strength", "15") == 15
+        assert DefensiveNumericConverter.convert_value("level", "3") == 3
 
     def test_range_validation(self):
         """Test range validation for different field types"""
         # HP fields should never be less than 1
-        self.assertEqual(DefensiveNumericConverter.convert_value("hp", 0), 1)
-        self.assertEqual(DefensiveNumericConverter.convert_value("hp", -5), 1)
+        assert DefensiveNumericConverter.convert_value("hp", 0) == 1
+        assert DefensiveNumericConverter.convert_value("hp", -5) == 1
 
         # Temp HP should never be negative
-        self.assertEqual(DefensiveNumericConverter.convert_value("temp_hp", -5), 0)
+        assert DefensiveNumericConverter.convert_value("temp_hp", -5) == 0
 
         # Ability scores should be clamped to 1-30
-        self.assertEqual(DefensiveNumericConverter.convert_value("strength", 0), 1)
-        self.assertEqual(DefensiveNumericConverter.convert_value("strength", 35), 30)
-        self.assertEqual(DefensiveNumericConverter.convert_value("dexterity", -10), 1)
+        assert DefensiveNumericConverter.convert_value("strength", 0) == 1
+        assert DefensiveNumericConverter.convert_value("strength", 35) == 30
+        assert DefensiveNumericConverter.convert_value("dexterity", -10) == 1
 
     def test_non_numeric_fields_unchanged(self):
         """Test that non-numeric fields are not converted"""
-        self.assertEqual(
-            DefensiveNumericConverter.convert_value("name", "unknown"), "unknown"
-        )
-        self.assertEqual(
-            DefensiveNumericConverter.convert_value("description", "test"), "test"
-        )
+        assert DefensiveNumericConverter.convert_value("name", "unknown") == "unknown"
+        assert DefensiveNumericConverter.convert_value("description", "test") == "test"
 
     def test_dict_conversion(self):
         """Test dictionary conversion functionality"""
@@ -116,13 +102,13 @@ class TestDefensiveNumericConverter(unittest.TestCase):
 
         result = DefensiveNumericConverter.convert_dict(test_dict)
 
-        self.assertEqual(result["hp"], 1)
-        self.assertEqual(result["hp_max"], 1)
-        self.assertEqual(result["strength"], 10)
-        self.assertEqual(result["level"], 3)
-        self.assertEqual(result["name"], "Test Character")
-        self.assertEqual(result["nested"]["dexterity"], 10)
-        self.assertEqual(result["nested"]["constitution"], 25)
+        assert result["hp"] == 1
+        assert result["hp_max"] == 1
+        assert result["strength"] == 10
+        assert result["level"] == 3
+        assert result["name"] == "Test Character"
+        assert result["nested"]["dexterity"] == 10
+        assert result["nested"]["constitution"] == 25
 
 
 class TestEntitiesWithDefensiveConverter(unittest.TestCase):
@@ -131,9 +117,9 @@ class TestEntitiesWithDefensiveConverter(unittest.TestCase):
     def test_health_status_with_unknown_values(self):
         """Test HealthStatus with various unknown values"""
         health = HealthStatus(hp="unknown", hp_max=None, temp_hp="invalid")
-        self.assertEqual(health.hp, 1)
-        self.assertEqual(health.hp_max, 1)
-        self.assertEqual(health.temp_hp, 0)
+        assert health.hp == 1
+        assert health.hp_max == 1
+        assert health.temp_hp == 0
 
     def test_stats_with_unknown_values(self):
         """Test Stats with various unknown values"""
@@ -145,12 +131,12 @@ class TestEntitiesWithDefensiveConverter(unittest.TestCase):
             wisdom="12",
             charisma=0,
         )
-        self.assertEqual(stats.strength, 10)
-        self.assertEqual(stats.dexterity, 10)
-        self.assertEqual(stats.constitution, 10)
-        self.assertEqual(stats.intelligence, 15)
-        self.assertEqual(stats.wisdom, 12)
-        self.assertEqual(stats.charisma, 1)  # Clamped to minimum
+        assert stats.strength == 10
+        assert stats.dexterity == 10
+        assert stats.constitution == 10
+        assert stats.intelligence == 15
+        assert stats.wisdom == 12
+        assert stats.charisma == 1  # Clamped to minimum
 
     def test_character_with_unknown_level(self):
         """Test Character with unknown level"""
@@ -166,7 +152,7 @@ class TestEntitiesWithDefensiveConverter(unittest.TestCase):
             level="unknown",
         )
 
-        self.assertEqual(character.level, 1)
+        assert character.level == 1
 
     def test_hp_validation_after_conversion(self):
         """Test that HP validation works after defensive conversion"""
@@ -177,8 +163,8 @@ class TestEntitiesWithDefensiveConverter(unittest.TestCase):
 
         # HP=unknown (converts to 1), HP_MAX=5 -> HP should be 1
         health = HealthStatus(hp="unknown", hp_max=5)
-        self.assertEqual(health.hp, 1)
-        self.assertEqual(health.hp_max, 5)
+        assert health.hp == 1
+        assert health.hp_max == 5
 
 
 if __name__ == "__main__":

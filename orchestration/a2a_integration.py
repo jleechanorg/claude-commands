@@ -6,16 +6,16 @@ Lightweight file-based Agent-to-Agent protocol wrapper that enables
 direct agent communication while preserving existing tmux orchestration.
 """
 
+import fcntl
 import json
+import logging
 import os
+import tempfile
 import time
 import uuid
-import logging
-import fcntl
-import tempfile
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Union
-from dataclasses import dataclass, asdict
+from typing import Any
 
 # Use project logging utility
 try:
@@ -37,9 +37,9 @@ class A2AMessage:
     from_agent: str
     to_agent: str  # or "broadcast" for all agents
     message_type: str  # discover, claim, delegate, status, result
-    payload: Dict[str, Any]
+    payload: dict[str, Any]
     timestamp: float
-    reply_to: Optional[str] = None
+    reply_to: str | None = None
 
     def to_json(self) -> str:
         """Serialize to JSON string"""
@@ -57,7 +57,7 @@ class AgentInfo:
     """Agent capabilities and status information"""
     agent_id: str
     agent_type: str  # frontend, backend, testing, opus-master
-    capabilities: List[str]
+    capabilities: list[str]
     status: str  # idle, busy, offline
     current_task: str | None
     created_at: float
@@ -93,8 +93,7 @@ class FileBasedMessaging:
         try:
             if message.to_agent == "broadcast":
                 return self._broadcast_message(message)
-            else:
-                return self._send_direct_message(message)
+            return self._send_direct_message(message)
         except Exception as e:
             logger.error(f"Failed to send message: {e}")
             return False
@@ -137,7 +136,7 @@ class FileBasedMessaging:
         logger.info(f"Broadcast message {message.id} to {success_count} agents")
         return success_count > 0
 
-    def receive_messages(self) -> List[A2AMessage]:
+    def receive_messages(self) -> list[A2AMessage]:
         """Retrieve all messages from inbox"""
         messages = []
 
@@ -146,7 +145,7 @@ class FileBasedMessaging:
 
         for message_file in self.inbox_dir.glob("*.json"):
             try:
-                with open(message_file, 'r') as f:
+                with open(message_file) as f:
                     message = A2AMessage.from_json(f.read())
                     messages.append(message)
 
@@ -202,7 +201,7 @@ class AgentRegistry:
             logger.error(f"Failed to unregister agent: {e}")
             return False
 
-    def discover_agents(self, capability_filter: Optional[List[str]] = None) -> List[AgentInfo]:
+    def discover_agents(self, capability_filter: list[str] | None = None) -> list[AgentInfo]:
         """Discover available agents, optionally filtered by capabilities"""
         try:
             registry = self._load_registry()
@@ -245,14 +244,14 @@ class AgentRegistry:
             logger.error(f"Failed to update heartbeat: {e}")
             return False
 
-    def _load_registry(self) -> Dict[str, Any]:
+    def _load_registry(self) -> dict[str, Any]:
         """Load registry from file"""
         if self.registry_file.exists():
-            with open(self.registry_file, 'r') as f:
+            with open(self.registry_file) as f:
                 return json.load(f)
         return {}
 
-    def _save_registry(self, registry: Dict[str, Any]) -> None:
+    def _save_registry(self, registry: dict[str, Any]) -> None:
         """Save registry to file"""
         with open(self.registry_file, 'w') as f:
             json.dump(registry, f, indent=2)
@@ -272,8 +271,8 @@ class TaskPool:
             dir_path.mkdir(parents=True, exist_ok=True)
 
     def publish_task(self, task_id: str, task_description: str,
-                    requirements: Optional[List[str]] = None,
-                    constraints: Optional[Dict[str, Any]] = None) -> bool:
+                    requirements: list[str] | None = None,
+                    constraints: dict[str, Any] | None = None) -> bool:
         """Publish a task to the available pool with optional constraints
 
         Args:
@@ -310,7 +309,7 @@ class TaskPool:
             logger.error(f"Failed to publish task: {e}")
             return False
 
-    def claim_task(self, task_id: str, agent_id: str, timeout: float = 10.0) -> Dict[str, Any]:
+    def claim_task(self, task_id: str, agent_id: str, timeout: float = 10.0) -> dict[str, Any]:
         """Claim a task from the available pool and return task data with constraints
 
         Uses atomic file locking to prevent race conditions when multiple agents
@@ -354,7 +353,7 @@ class TaskPool:
                 return {}
 
             # Load and validate task data
-            with open(available_file, 'r') as f:
+            with open(available_file) as f:
                 task_data = json.load(f)
 
             # Add claiming timestamp for conflict detection
@@ -399,7 +398,7 @@ class TaskPool:
 
             return task_data
 
-        except (OSError, IOError) as e:
+        except OSError as e:
             logger.error(f"File operation failed during task claim for {task_id}: {e}")
             return {}
         except json.JSONDecodeError as e:
@@ -414,16 +413,16 @@ class TaskPool:
                 try:
                     fcntl.flock(lock_fd, fcntl.LOCK_UN)
                     os.close(lock_fd)
-                except (OSError, IOError):
+                except OSError:
                     pass  # Ignore cleanup errors
 
             if lock_file and lock_file.exists():
                 try:
                     lock_file.unlink()
-                except (OSError, IOError):
+                except OSError:
                     pass  # Ignore cleanup errors
 
-    def complete_task(self, task_id: str, agent_id: str, result: Dict[str, Any]) -> bool:
+    def complete_task(self, task_id: str, agent_id: str, result: dict[str, Any]) -> bool:
         """Mark a task as completed"""
         try:
             claimed_file = self.claimed_dir / f"{task_id}_{agent_id}.json"
@@ -431,7 +430,7 @@ class TaskPool:
                 return False
 
             # Load task data
-            with open(claimed_file, 'r') as f:
+            with open(claimed_file) as f:
                 task_data = json.load(f)
 
             # Update task status and result
@@ -454,13 +453,13 @@ class TaskPool:
             logger.error(f"Failed to complete task: {e}")
             return False
 
-    def get_available_tasks(self, capability_filter: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    def get_available_tasks(self, capability_filter: list[str] | None = None) -> list[dict[str, Any]]:
         """Get list of available tasks, optionally filtered by requirements"""
         tasks = []
 
         for task_file in self.available_dir.glob("*.json"):
             try:
-                with open(task_file, 'r') as f:
+                with open(task_file) as f:
                     task_data = json.load(f)
 
                 # Filter by capabilities if specified
@@ -475,8 +474,8 @@ class TaskPool:
 
         return tasks
 
-    def validate_task_constraints(self, task_data: Dict[str, Any],
-                                agent_capabilities: List[str]) -> bool:
+    def validate_task_constraints(self, task_data: dict[str, Any],
+                                agent_capabilities: list[str]) -> bool:
         """Validate if an agent can handle task constraints
 
         Args:
@@ -512,7 +511,7 @@ class TaskPool:
             # Could be extended with specific validation logic
             # For now, assume agent can handle if it has validation capability
             if 'validation' not in agent_capabilities:
-                logger.warning(f"Task requires validation but agent lacks validation capability")
+                logger.warning("Task requires validation but agent lacks validation capability")
 
         return True
 
@@ -520,7 +519,7 @@ class TaskPool:
 class A2AClient:
     """Main A2A client for agent integration"""
 
-    def __init__(self, agent_id: str, agent_type: str, capabilities: List[str],
+    def __init__(self, agent_id: str, agent_type: str, capabilities: list[str],
                  workspace: str):
         self.agent_id = agent_id
         self.agent_type = agent_type
@@ -545,7 +544,7 @@ class A2AClient:
         )
         self.registry.register_agent(self.agent_info)
 
-    def send_message(self, to_agent: str, message_type: str, payload: Dict[str, Any]) -> bool:
+    def send_message(self, to_agent: str, message_type: str, payload: dict[str, Any]) -> bool:
         """Send message to another agent"""
         message = A2AMessage(
             id=str(uuid.uuid4()),
@@ -557,16 +556,16 @@ class A2AClient:
         )
         return self.messaging.send_message(message)
 
-    def receive_messages(self) -> List[A2AMessage]:
+    def receive_messages(self) -> list[A2AMessage]:
         """Receive all pending messages"""
         return self.messaging.receive_messages()
 
-    def discover_agents(self) -> List[AgentInfo]:
+    def discover_agents(self) -> list[AgentInfo]:
         """Discover other available agents"""
         return self.registry.discover_agents()
 
-    def publish_task(self, task_description: str, requirements: Optional[List[str]] = None,
-                    constraints: Optional[Dict[str, Any]] = None) -> str:
+    def publish_task(self, task_description: str, requirements: list[str] | None = None,
+                    constraints: dict[str, Any] | None = None) -> str:
         """Publish a new task with optional constraints
 
         Args:
@@ -579,7 +578,7 @@ class A2AClient:
             return task_id
         return None
 
-    def claim_task(self, task_id: str, timeout: float = 10.0) -> Dict[str, Any]:
+    def claim_task(self, task_id: str, timeout: float = 10.0) -> dict[str, Any]:
         """Claim an available task and return task data with constraints
 
         Args:
@@ -592,15 +591,15 @@ class A2AClient:
         """
         return self.task_pool.claim_task(task_id, self.agent_id, timeout)
 
-    def complete_task(self, task_id: str, result: Dict[str, Any]) -> bool:
+    def complete_task(self, task_id: str, result: dict[str, Any]) -> bool:
         """Complete a claimed task"""
         return self.task_pool.complete_task(task_id, self.agent_id, result)
 
-    def get_available_tasks(self) -> List[Dict[str, Any]]:
+    def get_available_tasks(self) -> list[dict[str, Any]]:
         """Get available tasks matching this agent's capabilities"""
         return self.task_pool.get_available_tasks(self.capabilities)
 
-    def get_compatible_tasks(self) -> List[Dict[str, Any]]:
+    def get_compatible_tasks(self) -> list[dict[str, Any]]:
         """Get available tasks that are compatible with agent capabilities and constraints
 
         Returns:
@@ -617,7 +616,7 @@ class A2AClient:
 
         return compatible_tasks
 
-    def can_handle_task(self, task_data: Dict[str, Any]) -> bool:
+    def can_handle_task(self, task_data: dict[str, Any]) -> bool:
         """Check if this agent can handle a specific task including constraints
 
         Args:
@@ -645,13 +644,13 @@ class A2AClient:
 
 
 # Utility functions for orchestration integration
-def create_a2a_client(agent_id: str, agent_type: str, capabilities: List[str],
+def create_a2a_client(agent_id: str, agent_type: str, capabilities: list[str],
                      workspace: str) -> A2AClient:
     """Factory function to create A2A client for agents"""
     return A2AClient(agent_id, agent_type, capabilities, workspace)
 
 
-def get_a2a_status() -> Dict[str, Any]:
+def get_a2a_status() -> dict[str, Any]:
     """Get overall A2A system status"""
     registry = AgentRegistry()
     task_pool = TaskPool()
@@ -670,8 +669,8 @@ def get_a2a_status() -> Dict[str, Any]:
 
 if __name__ == "__main__":
     # Test the A2A system
-    import tempfile
     import shutil
+    import tempfile
 
     # Use temp directory for testing
     test_dir = tempfile.mkdtemp()

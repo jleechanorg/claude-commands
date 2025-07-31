@@ -4,7 +4,6 @@ Test that ensures all commands defined in .claude/commands/ are properly
 categorized as protocol or natural language modifiers in composition_hook.py
 """
 
-import os
 import sys
 import unittest
 from pathlib import Path

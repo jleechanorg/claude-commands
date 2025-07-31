@@ -5,13 +5,12 @@ Test script to create some sample data in Firebase and then run analytics.
 
 import os
 import sys
+import traceback
 from datetime import UTC, datetime
 
 import firebase_admin
-from firebase_admin import credentials, firestore
-
 import firebase_user_analytics
-import traceback
+from firebase_admin import credentials, firestore
 
 
 def initialize_firebase():

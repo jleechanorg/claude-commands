@@ -35,11 +35,11 @@ class TestEntityValidator(unittest.TestCase):
 
         result = self.validator.validate_entity_presence(narrative, expected_entities)
 
-        self.assertTrue(result.passed)
-        self.assertFalse(result.retry_needed)
-        self.assertEqual(set(result.found_entities), set(expected_entities))
-        self.assertEqual(len(result.missing_entities), 0)
-        self.assertGreater(result.confidence_score, 0.7)
+        assert result.passed
+        assert not result.retry_needed
+        assert set(result.found_entities) == set(expected_entities)
+        assert len(result.missing_entities) == 0
+        assert result.confidence_score > 0.7
 
     def test_validate_entity_presence_missing_entities(self):
         """Test validation with missing entities"""
@@ -48,11 +48,11 @@ class TestEntityValidator(unittest.TestCase):
 
         result = self.validator.validate_entity_presence(narrative, expected_entities)
 
-        self.assertFalse(result.passed)
-        self.assertTrue(result.retry_needed)
-        self.assertIn("Sariel", result.found_entities)
-        self.assertIn("Cassian", result.missing_entities)
-        self.assertIn("Lady Cressida", result.missing_entities)
+        assert not result.passed
+        assert result.retry_needed
+        assert "Sariel" in result.found_entities
+        assert "Cassian" in result.missing_entities
+        assert "Lady Cressida" in result.missing_entities
 
     def test_calculate_entity_presence_score_direct_mention(self):
         """Test scoring for direct entity mentions"""
@@ -61,7 +61,7 @@ class TestEntityValidator(unittest.TestCase):
         score = self.validator._calculate_entity_presence_score(narrative, "Cassian")
 
         # Direct mention should score high (0.8+)
-        self.assertGreater(score, 0.8)
+        assert score > 0.8
 
     def test_calculate_entity_presence_score_action_attribution(self):
         """Test scoring for action attribution patterns"""
@@ -70,7 +70,7 @@ class TestEntityValidator(unittest.TestCase):
         score = self.validator._calculate_entity_presence_score(narrative, "Cassian")
 
         # Direct mention + action attribution should score very high (capped at 1.0)
-        self.assertEqual(score, 1.0)
+        assert score == 1.0
 
     def test_calculate_entity_presence_score_partial_match(self):
         """Test scoring for partial name matches"""
@@ -81,8 +81,8 @@ class TestEntityValidator(unittest.TestCase):
         )
 
         # Partial match should give some score (2/3 of name parts match)
-        self.assertGreater(score, 0.3)
-        self.assertLess(score, 0.8)
+        assert score > 0.3
+        assert score < 0.8
 
     def test_generate_retry_suggestions_cassian(self):
         """Test retry suggestions for Cassian specifically"""
@@ -93,11 +93,11 @@ class TestEntityValidator(unittest.TestCase):
 
         # Should have Cassian-specific suggestion
         cassian_suggestion = next((s for s in suggestions if "Cassian" in s), None)
-        self.assertIsNotNone(cassian_suggestion)
+        assert cassian_suggestion is not None
         # Verify the suggestion content
         if cassian_suggestion:
-            self.assertIn("cassian", cassian_suggestion.lower())
-            self.assertIn("dialogue, actions, or reactions", cassian_suggestion.lower())
+            assert "cassian" in cassian_suggestion.lower()
+            assert "dialogue, actions, or reactions" in cassian_suggestion.lower()
 
     def test_generate_retry_suggestions_location_specific(self):
         """Test location-specific retry suggestions"""
@@ -110,7 +110,7 @@ class TestEntityValidator(unittest.TestCase):
         location_suggestion = next(
             (s for s in suggestions if "chambers" in s.lower()), None
         )
-        self.assertIsNotNone(location_suggestion)
+        assert location_suggestion is not None
 
     def test_create_retry_prompt(self):
         """Test retry prompt creation"""
@@ -131,11 +131,11 @@ class TestEntityValidator(unittest.TestCase):
             original_prompt, validation_result, "Throne Room"
         )
 
-        self.assertIn("RETRY INSTRUCTIONS", retry_prompt)
-        self.assertIn("Cassian", retry_prompt)
-        self.assertIn("Lady Cressida", retry_prompt)
-        self.assertIn("Throne Room", retry_prompt)
-        self.assertIn("Continue the story.", retry_prompt)
+        assert "RETRY INSTRUCTIONS" in retry_prompt
+        assert "Cassian" in retry_prompt
+        assert "Lady Cressida" in retry_prompt
+        assert "Throne Room" in retry_prompt
+        assert "Continue the story." in retry_prompt
 
     def test_create_retry_prompt_no_retry_needed(self):
         """Test retry prompt when no retry is needed"""
@@ -154,7 +154,7 @@ class TestEntityValidator(unittest.TestCase):
         )
 
         # Should return original prompt unchanged
-        self.assertEqual(retry_prompt, original_prompt)
+        assert retry_prompt == original_prompt
 
 
 class TestEntityRetryManager(unittest.TestCase):
@@ -170,8 +170,8 @@ class TestEntityRetryManager(unittest.TestCase):
             narrative, expected_entities
         )
 
-        self.assertTrue(result.passed)
-        self.assertEqual(attempts, 0)  # No retries needed
+        assert result.passed
+        assert attempts == 0  # No retries needed
 
     @patch("entity_validator.EntityValidator.validate_entity_presence")
     def test_validate_with_retry_success_after_retry(self, mock_validate):
@@ -202,8 +202,8 @@ class TestEntityRetryManager(unittest.TestCase):
             "Original narrative", ["Sariel", "Cassian"], retry_callback=retry_callback
         )
 
-        self.assertTrue(result.passed)
-        self.assertEqual(attempts, 1)
+        assert result.passed
+        assert attempts == 1
         retry_callback.assert_called_once()
 
     @patch("entity_validator.EntityValidator.validate_entity_presence")
@@ -226,9 +226,9 @@ class TestEntityRetryManager(unittest.TestCase):
             "Original narrative", ["Sariel", "Cassian"], retry_callback=retry_callback
         )
 
-        self.assertFalse(result.passed)
-        self.assertEqual(attempts, 2)  # Max retries
-        self.assertEqual(retry_callback.call_count, 2)
+        assert not result.passed
+        assert attempts == 2  # Max retries
+        assert retry_callback.call_count == 2
 
     def test_validate_with_retry_no_callback(self):
         """Test validation without retry callback"""
@@ -240,16 +240,16 @@ class TestEntityRetryManager(unittest.TestCase):
         )
 
         # Should fail but not attempt retries without callback
-        self.assertFalse(result.passed)
-        self.assertEqual(attempts, 0)
+        assert not result.passed
+        assert attempts == 0
 
     def test_get_retry_statistics(self):
         """Test retry statistics retrieval"""
         stats = self.retry_manager.get_retry_statistics()
 
-        self.assertIn("max_retries_configured", stats)
-        self.assertIn("validator_threshold", stats)
-        self.assertEqual(stats["max_retries_configured"], 2)
+        assert "max_retries_configured" in stats
+        assert "validator_threshold" in stats
+        assert stats["max_retries_configured"] == 2
 
 
 class TestValidationResultDataClass(unittest.TestCase):
@@ -264,21 +264,21 @@ class TestValidationResultDataClass(unittest.TestCase):
             retry_suggestions=[],
         )
 
-        self.assertTrue(result.passed)
-        self.assertEqual(len(result.missing_entities), 0)
-        self.assertIn("Sariel", result.found_entities)
-        self.assertEqual(result.confidence_score, 0.9)
-        self.assertFalse(result.retry_needed)
+        assert result.passed
+        assert len(result.missing_entities) == 0
+        assert "Sariel" in result.found_entities
+        assert result.confidence_score == 0.9
+        assert not result.retry_needed
 
 
 class TestGlobalInstances(unittest.TestCase):
     def test_global_entity_validator_exists(self):
         """Test that global entity validator instance exists"""
-        self.assertIsInstance(entity_validator, EntityValidator)
+        assert isinstance(entity_validator, EntityValidator)
 
     def test_global_entity_retry_manager_exists(self):
         """Test that global entity retry manager instance exists"""
-        self.assertIsInstance(entity_retry_manager, EntityRetryManager)
+        assert isinstance(entity_retry_manager, EntityRetryManager)
 
 
 if __name__ == "__main__":

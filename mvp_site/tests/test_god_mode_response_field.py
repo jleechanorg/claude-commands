@@ -9,9 +9,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from unittest.mock import MagicMock, patch
 
 import constants
-from narrative_response_schema import parse_structured_response
-
 import firestore_service
+from narrative_response_schema import parse_structured_response
 
 
 class TestGodModeResponseField(unittest.TestCase):
@@ -47,15 +46,9 @@ class TestGodModeResponseField(unittest.TestCase):
         narrative, response_obj = parse_structured_response(god_response)
 
         # Should return the god_mode_response content
-        self.assertEqual(
-            narrative,
-            "A mystical fog rolls in from the mountains. The temperature drops suddenly.",
-        )
-        self.assertEqual(
-            response_obj.god_mode_response,
-            "A mystical fog rolls in from the mountains. The temperature drops suddenly.",
-        )
-        self.assertEqual(response_obj.narrative, "")
+        assert narrative == "A mystical fog rolls in from the mountains. The temperature drops suddenly."
+        assert response_obj.god_mode_response == "A mystical fog rolls in from the mountains. The temperature drops suddenly."
+        assert response_obj.narrative == ""
 
     def test_normal_response_without_god_mode(self):
         """Test that normal responses work without god_mode_response field."""
@@ -70,14 +63,9 @@ class TestGodModeResponseField(unittest.TestCase):
         narrative, response_obj = parse_structured_response(normal_response)
 
         # Should return the narrative content
-        self.assertEqual(
-            narrative, "You enter the tavern and see a hooded figure in the corner."
-        )
-        self.assertEqual(
-            response_obj.narrative,
-            "You enter the tavern and see a hooded figure in the corner.",
-        )
-        self.assertIsNone(response_obj.god_mode_response)
+        assert narrative == "You enter the tavern and see a hooded figure in the corner."
+        assert response_obj.narrative == "You enter the tavern and see a hooded figure in the corner."
+        assert response_obj.god_mode_response is None
 
     def test_god_mode_with_state_updates(self):
         """Test god mode response with complex state updates."""
@@ -105,10 +93,10 @@ class TestGodModeResponseField(unittest.TestCase):
         narrative, response_obj = parse_structured_response(god_response)
 
         # Should use god_mode_response
-        self.assertIn("ancient dragon Vermithrax", narrative)
-        self.assertEqual(response_obj.entities_mentioned, ["Vermithrax"])
-        self.assertIsNotNone(response_obj.state_updates)
-        self.assertIn("npc_data", response_obj.state_updates)
+        assert "ancient dragon Vermithrax" in narrative
+        assert response_obj.entities_mentioned == ["Vermithrax"]
+        assert response_obj.state_updates is not None
+        assert "npc_data" in response_obj.state_updates
 
     def test_god_mode_empty_response(self):
         """Test god mode with empty god_mode_response field."""
@@ -124,8 +112,8 @@ class TestGodModeResponseField(unittest.TestCase):
         narrative, response_obj = parse_structured_response(empty_response)
 
         # Should return empty string, not try to extract from elsewhere
-        self.assertEqual(narrative, "")
-        self.assertEqual(response_obj.god_mode_response, "")
+        assert narrative == ""
+        assert response_obj.god_mode_response == ""
 
     def test_malformed_god_mode_response(self):
         """Test handling of malformed JSON with god_mode_response."""
@@ -136,7 +124,7 @@ class TestGodModeResponseField(unittest.TestCase):
         narrative, response_obj = parse_structured_response(malformed)
 
         # Should extract the god_mode_response even from incomplete JSON
-        self.assertIn("world shifts", narrative)
+        assert "world shifts" in narrative
 
     def test_backward_compatibility(self):
         """Test that old god mode responses without god_mode_response field still work."""
@@ -157,11 +145,8 @@ class TestGodModeResponseField(unittest.TestCase):
         narrative, response_obj = parse_structured_response(old_style_response)
 
         # Should use narrative field as before
-        self.assertEqual(
-            narrative,
-            "The ancient tome glows with an eerie light as you speak the command.",
-        )
-        self.assertIsNone(response_obj.god_mode_response)
+        assert narrative == "The ancient tome glows with an eerie light as you speak the command."
+        assert response_obj.god_mode_response is None
 
     def test_god_mode_with_empty_narrative(self):
         """Test god mode response when narrative is empty string."""
@@ -177,11 +162,9 @@ class TestGodModeResponseField(unittest.TestCase):
         narrative, response_obj = parse_structured_response(response)
 
         # Should return god_mode_response when only god_mode_response is present
-        self.assertEqual(narrative, "The world trembles at your command.")
+        assert narrative == "The world trembles at your command."
         # Response object should also have god_mode_response
-        self.assertEqual(
-            response_obj.god_mode_response, "The world trembles at your command."
-        )
+        assert response_obj.god_mode_response == "The world trembles at your command."
 
     def test_combined_god_mode_and_narrative(self):
         """Test that only narrative is returned when both god_mode_response and narrative are present."""
@@ -197,19 +180,11 @@ class TestGodModeResponseField(unittest.TestCase):
         narrative, response_obj = parse_structured_response(both_fields_response)
 
         # Should return only narrative - god_mode_response is passed separately to frontend
-        self.assertEqual(
-            narrative, "Meanwhile, in the mortal realm, the players sense a change..."
-        )
-        self.assertNotIn("The deity grants your wish", narrative)
+        assert narrative == "Meanwhile, in the mortal realm, the players sense a change..."
+        assert "The deity grants your wish" not in narrative
         # Response object should have both fields separately
-        self.assertEqual(
-            response_obj.god_mode_response,
-            "The deity grants your wish. A shimmering portal opens.",
-        )
-        self.assertEqual(
-            response_obj.narrative,
-            "Meanwhile, in the mortal realm, the players sense a change...",
-        )
+        assert response_obj.god_mode_response == "The deity grants your wish. A shimmering portal opens."
+        assert response_obj.narrative == "Meanwhile, in the mortal realm, the players sense a change..."
 
     def test_god_mode_response_saved_to_firestore(self):
         """Test that god_mode_response is saved to Firestore via add_story_entry."""
@@ -232,11 +207,8 @@ class TestGodModeResponseField(unittest.TestCase):
                 structured_fields=god_response,
             )
             called_args, called_kwargs = mock_add_story_entry.call_args
-            self.assertIn("god_mode_response", called_kwargs["structured_fields"])
-            self.assertEqual(
-                called_kwargs["structured_fields"]["god_mode_response"],
-                "A test god mode response for Firestore.",
-            )
+            assert "god_mode_response" in called_kwargs["structured_fields"]
+            assert called_kwargs["structured_fields"]["god_mode_response"] == "A test god mode response for Firestore."
 
 
 class TestGodModeResponseIntegration(unittest.TestCase):
@@ -285,12 +257,12 @@ class TestGodModeResponseIntegration(unittest.TestCase):
             )
 
             # Check that add() was called with all structured fields present
-            self.assertTrue(mock_story_collection.add.called)
+            assert mock_story_collection.add.called
             add_call_args, add_call_kwargs = mock_story_collection.add.call_args
             written_data = add_call_args[0]
             for field, value in structured_fields.items():
-                self.assertIn(field, written_data)
-                self.assertEqual(written_data[field], value)
+                assert field in written_data
+                assert written_data[field] == value
 
 
 if __name__ == "__main__":

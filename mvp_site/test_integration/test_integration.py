@@ -1,3 +1,4 @@
+import atexit
 import json
 import os
 import subprocess
@@ -6,14 +7,19 @@ import unittest
 
 # Add the project root to the Python path to allow for imports
 project_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-
-
 sys.path.insert(0, project_root)
 
+# Add current directory for local imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+# Import create_app function
+from main import create_app
 
 # Handle missing dependencies gracefully
 try:
-    from testing_framework.integration_utils import (
+    from integration_test_lib import (
         IntegrationTestSetup,
         setup_integration_test_environment,
     )
@@ -234,8 +240,22 @@ class BaseCampaignIntegrationTest(unittest.TestCase):
 
     def get_game_state(self):
         """Get the current game state as a parsed JSON object."""
-        state_json = run_god_command(self, "ask")
-        return json.loads(state_json)
+        # Use the campaign API endpoint to get state
+        response = self.client.get(
+            f"/api/campaigns/{self.campaign_id}",
+            headers={
+                "X-Test-Bypass-Auth": "true",
+                "X-Test-User-ID": self.user_id,
+            },
+        )
+        self.assertEqual(
+            response.status_code,
+            200,
+            f"Failed to get campaign state: {response.get_data(as_text=True)}",
+        )
+        data = response.get_json()
+        # Extract game_state from the response
+        return data.get("game_state", {})
 
     def assert_character_created(
         self, expected_name, expected_class=None, expected_alignment=None
@@ -623,8 +643,17 @@ As you struggle with your vampiric nature and the weight of your past, you must 
         self.assertEqual(approve_response.status_code, 200)
 
         # Verify character data is stored
-        final_state_json = run_god_command(self, "ask", campaign_id=campaign_id)
-        final_state = json.loads(final_state_json)
+        # Use the campaign API endpoint to get state
+        state_response = self.client.get(
+            f"/api/campaigns/{campaign_id}",
+            headers={
+                "X-Test-Bypass-Auth": "true",
+                "X-Test-User-ID": self.user_id,
+            },
+        )
+        self.assertEqual(state_response.status_code, 200)
+        state_data = state_response.get_json()
+        final_state = state_data.get("game_state", {})
         pc_data = final_state.get("player_character_data", {})
 
         self.assertEqual(

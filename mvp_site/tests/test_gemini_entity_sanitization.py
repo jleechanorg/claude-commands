@@ -11,9 +11,8 @@ import unittest
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-from schemas.entities_pydantic import NPC, HealthStatus
-
 from gemini_service import sanitize_entity_name_for_id
+from schemas.entities_pydantic import NPC, HealthStatus
 
 
 class TestGeminiEntitySanitization(unittest.TestCase):
@@ -33,11 +32,7 @@ class TestGeminiEntitySanitization(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            self.assertEqual(
-                result,
-                expected,
-                f"Failed for '{input_name}': got '{result}', expected '{expected}'",
-            )
+            assert result == expected, f"Failed for '{input_name}': got '{result}', expected '{expected}'"
 
     def test_multiple_apostrophes_and_quotes(self):
         """Test handling of multiple apostrophes and quotes"""
@@ -50,7 +45,7 @@ class TestGeminiEntitySanitization(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            self.assertEqual(result, expected)
+            assert result == expected
 
     def test_special_characters(self):
         """Test various special characters"""
@@ -66,7 +61,7 @@ class TestGeminiEntitySanitization(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            self.assertEqual(result, expected)
+            assert result == expected
 
     def test_unicode_and_accents(self):
         """Test unicode characters and accented letters"""
@@ -83,11 +78,7 @@ class TestGeminiEntitySanitization(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            self.assertEqual(
-                result,
-                expected,
-                f"Failed for '{input_name}': got '{result}', expected '{expected}'",
-            )
+            assert result == expected, f"Failed for '{input_name}': got '{result}', expected '{expected}'"
 
     def test_whitespace_handling(self):
         """Test various whitespace scenarios"""
@@ -103,7 +94,7 @@ class TestGeminiEntitySanitization(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            self.assertEqual(result, expected)
+            assert result == expected
 
     def test_consecutive_special_chars(self):
         """Test multiple consecutive special characters"""
@@ -117,26 +108,26 @@ class TestGeminiEntitySanitization(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            self.assertEqual(result, expected)
+            assert result == expected
 
     def test_edge_cases(self):
         """Test edge cases"""
         # Empty string
-        self.assertEqual(sanitize_entity_name_for_id(""), "")
+        assert sanitize_entity_name_for_id("") == ""
 
         # Only special characters
-        self.assertEqual(sanitize_entity_name_for_id("!@#$%^&*()"), "")
+        assert sanitize_entity_name_for_id("!@#$%^&*()") == ""
 
         # Very long name
         long_name = "A" * 100 + " " + "B" * 100
         expected = "a" * 100 + "_" + "b" * 100
-        self.assertEqual(sanitize_entity_name_for_id(long_name), expected)
+        assert sanitize_entity_name_for_id(long_name) == expected
 
         # Numbers and underscores (valid chars)
-        self.assertEqual(sanitize_entity_name_for_id("Agent_007"), "agent_007")
+        assert sanitize_entity_name_for_id("Agent_007") == "agent_007"
 
         # Mixed case
-        self.assertEqual(sanitize_entity_name_for_id("CamelCaseNAME"), "camelcasename")
+        assert sanitize_entity_name_for_id("CamelCaseNAME") == "camelcasename"
 
     def test_real_world_npc_names(self):
         """Test with actual NPC names that might appear in games"""
@@ -154,11 +145,7 @@ class TestGeminiEntitySanitization(unittest.TestCase):
 
         for input_name, expected in test_cases:
             result = sanitize_entity_name_for_id(input_name)
-            self.assertEqual(
-                result,
-                expected,
-                f"Failed for '{input_name}': got '{result}', expected '{expected}'",
-            )
+            assert result == expected, f"Failed for '{input_name}': got '{result}', expected '{expected}'"
 
     def test_integration_with_entity_id_format(self):
         """Test that sanitized names work with the entity ID format"""
@@ -185,8 +172,8 @@ class TestGeminiEntitySanitization(unittest.TestCase):
                 gender="other",
             )
 
-            self.assertEqual(npc.entity_id, entity_id)
-            self.assertEqual(npc.display_name, name)
+            assert npc.entity_id == entity_id
+            assert npc.display_name == name
 
 
 if __name__ == "__main__":

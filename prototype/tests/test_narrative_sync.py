@@ -9,7 +9,6 @@ from ..validators.narrative_sync_validator import (
     EntityContext,
     EntityPresenceType,
     NarrativeSyncValidator,
-    ValidationResult
 )
 
 

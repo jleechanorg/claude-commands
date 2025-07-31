@@ -9,6 +9,7 @@ import time
 from typing import Any
 
 from message_broker import MessageBroker, MessageType, TaskMessage
+
 try:
     from a2a_agent_wrapper import create_a2a_wrapper
     A2A_WRAPPER_AVAILABLE = True
@@ -356,16 +357,15 @@ while True:
             components = description.split()
             analysis = f"Analysis complete: Found {len(components)} components in request"
             return analysis
-        elif "validate" in desc_lower:
+        if "validate" in desc_lower:
             # Perform validation
             return f"Validation passed: Task '{description}' meets requirements"
-        elif "optimize" in desc_lower:
+        if "optimize" in desc_lower:
             # Perform optimization
             return f"Optimization complete: Improved performance by analyzing '{description}'"
-        else:
-            # General task execution
-            words = len(description.split())
-            return f"Processed {words}-word task: Completed requested operation"
+        # General task execution
+        words = len(description.split())
+        return f"Processed {words}-word task: Completed requested operation"
 
 
 class SubAgent(AgentBase):
@@ -411,17 +411,16 @@ class SubAgent(AgentBase):
             # Handle complex tasks
             segments = description.split(".")
             return f"Complex analysis complete: Processed {len(segments)} segments with specialized logic"
-        elif "critical" in desc_lower or "urgent" in desc_lower:
+        if "critical" in desc_lower or "urgent" in desc_lower:
             # Handle high-priority tasks
             return f"Critical task handled: Expedited processing for '{description}' from {parent_agent}"
-        elif "research" in desc_lower:
+        if "research" in desc_lower:
             # Handle research tasks
             keywords = [w for w in description.split() if len(w) > 4]
             return f"Research complete: Investigated {len(keywords)} key concepts"
-        else:
-            # Default specialized processing
-            complexity_score = len(description) // 10
-            return f"Specialized processing complete: Handled task with complexity level {complexity_score}"
+        # Default specialized processing
+        complexity_score = len(description) // 10
+        return f"Specialized processing complete: Handled task with complexity level {complexity_score}"
 
 
 def create_tmux_session(session_name: str, command: str):

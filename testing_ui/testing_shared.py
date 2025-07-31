@@ -81,6 +81,7 @@ CAMPAIGN_TEST_DATA = {
 
 # Import centralized configuration
 import sys
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from testing_util import TestConfig, TestType, get_browser_base_url, get_http_base_url
 
@@ -238,7 +239,9 @@ TEST_SCENARIOS = {
 
 
 # Server management utilities (now using centralized server manager)
-from testing_util import TestMode, setup_test_environment as setup_centralized_env
+from testing_util import TestMode
+from testing_util import setup_test_environment as setup_centralized_env
+
 
 def setup_test_environment(use_real_api=False, port=None):
     """Set up environment variables for testing (backward compatibility wrapper)"""

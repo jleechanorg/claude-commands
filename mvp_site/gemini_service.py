@@ -35,7 +35,6 @@ Dependencies:
 - Token utilities for cost management
 """
 
-import datetime
 import json
 import os
 import re
@@ -71,7 +70,7 @@ from schemas.entities_pydantic import sanitize_entity_name_for_id
 from token_utils import estimate_tokens, log_with_tokens
 from world_loader import load_world_content_for_system_instruction
 
-from firestore_service import get_user_settings
+from firestore_service import get_user_settings, json_default_serializer
 from game_state import GameState
 
 logging_util.basicConfig(
@@ -85,11 +84,8 @@ entity_validator = EntityValidator()
 dual_pass_generator = DualPassGenerator()
 
 
-def json_datetime_serializer(obj: Any) -> str:
-    """JSON serializer for datetime objects."""
-    if isinstance(obj, (datetime.datetime, datetime.date)):
-        return obj.isoformat()
-    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+# Remove redundant json_datetime_serializer - use json_default_serializer instead
+# which properly handles Firestore Sentinels, datetime objects, and other special types
 
 
 # --- CONSTANTS ---
@@ -1029,6 +1025,26 @@ def get_initial_story(
             - narrative_text: Clean text for display (guaranteed to be clean narrative)
             - structured_response: Parsed JSON with state updates, entities, etc.
     """
+    # Check for mock mode and return mock response immediately
+    mock_mode = os.environ.get("MOCK_SERVICES_MODE") == "true"
+    if mock_mode:
+        logging_util.info("Using mock mode - returning mock initial story response")
+        mock_response_text = """{"narrative": "Welcome to your adventure! You find yourself at the entrance of a mysterious dungeon, with stone walls covered in ancient runes. The air is thick with magic and possibility.", "entities_mentioned": ["dungeon", "runes"], "location_confirmed": "Dungeon Entrance", "characters": [{"name": "Aria Moonwhisper", "class": "Elf Ranger", "background": "A skilled archer from the Silverleaf Forest"}], "setting": {"location": "Dungeon Entrance", "atmosphere": "mysterious"}, "mechanics": {"initiative_rolled": false, "characters_need_setup": true}}"""
+
+        # Parse the mock response to get structured data
+        narrative_text, structured_response = parse_structured_response(
+            mock_response_text
+        )
+
+        if structured_response:
+            return GeminiResponse.create_from_structured_response(
+                structured_response, "mock-model"
+            )
+        else:
+            return GeminiResponse.create_legacy(
+                "Welcome to your adventure! You find yourself at the entrance of a mysterious dungeon, with stone walls covered in ancient runes. The air is thick with magic and possibility.",
+                "mock-model",
+            )
 
     if selected_prompts is None:
         selected_prompts = []
@@ -1747,7 +1763,7 @@ def continue_story(
     # --- NEW: Budget-based Truncation ---
     # 1. Calculate the size of the "prompt scaffold" (everything except the timeline log)
     serialized_game_state = json.dumps(
-        current_game_state.to_dict(), indent=2, default=json_datetime_serializer
+        current_game_state.to_dict(), indent=2, default=json_default_serializer
     )
 
     # Temporarily generate other prompt parts to measure them.
@@ -1782,7 +1798,7 @@ def continue_story(
 
     # Serialize the game state for inclusion in the prompt
     serialized_game_state: str = json.dumps(
-        current_game_state.to_dict(), indent=2, default=json_datetime_serializer
+        current_game_state.to_dict(), indent=2, default=json_default_serializer
     )
 
     # --- ENTITY TRACKING: Create scene manifest for entity tracking ---

@@ -10,9 +10,8 @@ sys.path.insert(
 
 
 import constants
-import logging_util
-
 import gemini_service
+import logging_util
 from gemini_service import _load_instruction_file, _loaded_instructions_cache
 
 # The list of all known prompt types to test, using shared constants.
@@ -39,10 +38,8 @@ class TestPromptLoading(unittest.TestCase):
 
         for p_type in gemini_service.PATH_MAP.keys():
             content = _load_instruction_file(p_type)
-            self.assertIsInstance(content, str)
-            self.assertGreater(
-                len(content), 0, f"Prompt file for {p_type} should not be empty."
-            )
+            assert isinstance(content, str)
+            assert len(content) > 0, f"Prompt file for {p_type} should not be empty."
 
     def test_loading_unknown_prompt_raises_error(self):
         """
@@ -84,18 +81,10 @@ class TestPromptLoading(unittest.TestCase):
 
         # 3. Compare the sets
         unregistered_files = disk_files - service_files
-        self.assertEqual(
-            len(unregistered_files),
-            0,
-            f"Found .md files in prompts/ dir not registered in gemini_service.path_map: {unregistered_files}",
-        )
+        assert len(unregistered_files) == 0, f"Found .md files in prompts/ dir not registered in gemini_service.path_map: {unregistered_files}"
 
         missing_files = service_files - disk_files
-        self.assertEqual(
-            len(missing_files),
-            0,
-            f"Found files in gemini_service.path_map that do not exist in prompts/: {missing_files}",
-        )
+        assert len(missing_files) == 0, f"Found files in gemini_service.path_map that do not exist in prompts/: {missing_files}"
 
     def test_all_registered_prompts_are_actually_used(self):
         """
@@ -161,11 +150,7 @@ class TestPromptLoading(unittest.TestCase):
                 unused_prompts.add(prompt_type)
 
         # This test should pass now that we're looking for the right patterns
-        self.assertEqual(
-            len(unused_prompts),
-            0,
-            f"Found prompt types registered in PATH_MAP but not used in codebase: {unused_prompts}",
-        )
+        assert len(unused_prompts) == 0, f"Found prompt types registered in PATH_MAP but not used in codebase: {unused_prompts}"
 
         # Also verify that prompt types are actually called via _load_instruction_file
         # This is a more specific check for actual loading via constants
@@ -247,11 +232,7 @@ class TestPromptLoading(unittest.TestCase):
         not_loaded_always = always_loaded_prompts - used_in_loading
 
         # All always-loaded prompts should be found
-        self.assertEqual(
-            len(not_loaded_always),
-            0,
-            f"Found always-loaded prompt types that are never loaded: {not_loaded_always}",
-        )
+        assert len(not_loaded_always) == 0, f"Found always-loaded prompt types that are never loaded: {not_loaded_always}"
 
         # Conditional prompts should be loaded when conditions are met
         conditional_not_loaded = conditional_prompts - used_in_loading
@@ -304,11 +285,7 @@ class TestPromptLoading(unittest.TestCase):
                         continue
 
         unreferenced_conditionals = conditional_prompts - conditional_referenced
-        self.assertEqual(
-            len(unreferenced_conditionals),
-            0,
-            f"Found conditional prompt types that are not referenced in conditional logic: {unreferenced_conditionals}",
-        )
+        assert len(unreferenced_conditionals) == 0, f"Found conditional prompt types that are not referenced in conditional logic: {unreferenced_conditionals}"
 
         print(
             f"✓ Always-loaded prompts: {len(always_loaded_prompts - not_loaded_always)}/{len(always_loaded_prompts)} verified"

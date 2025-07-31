@@ -20,10 +20,9 @@ Note: JavaScript auto-save testing requires additional implementation
 to handle auth headers in AJAX requests.
 """
 
-import unittest
-import time
 import subprocess
-import os
+import time
+import unittest
 
 
 class TestSettingsBrowserAutomation(unittest.TestCase):
@@ -44,7 +43,7 @@ class TestSettingsBrowserAutomation(unittest.TestCase):
                 result = subprocess.run([
                     "curl", "-s", "-o", "/dev/null", "-w", "%{http_code}",
                     f"{self.base_url}/"
-                ], capture_output=True, text=True, timeout=2)
+                ], check=False, capture_output=True, text=True, timeout=2)
                 if result.stdout == "200":
                     return
             except:

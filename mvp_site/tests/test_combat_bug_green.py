@@ -53,14 +53,14 @@ class TestCombatBugGreen(unittest.TestCase):
         defeated = game_state.cleanup_defeated_enemies()
 
         # Verify it worked correctly
-        self.assertIsInstance(defeated, list)
-        self.assertIn("Dragon", defeated)
+        assert isinstance(defeated, list)
+        assert "Dragon" in defeated
         print(f"✅ Successfully cleaned up defeated enemies: {defeated}")
 
         # Verify the combatants was normalized to dict format
-        self.assertIsInstance(game_state.combat_state["combatants"], dict)
-        self.assertNotIn("Dragon", game_state.combat_state["combatants"])
-        self.assertIn("Player Character", game_state.combat_state["combatants"])
+        assert isinstance(game_state.combat_state["combatants"], dict)
+        assert "Dragon" not in game_state.combat_state["combatants"]
+        assert "Player Character" in game_state.combat_state["combatants"]
         print("✅ Combatants normalized to dict format and Dragon removed")
 
     def test_cleanup_defeated_enemies_preserves_dict_combatants(self):
@@ -90,14 +90,14 @@ class TestCombatBugGreen(unittest.TestCase):
         defeated = game_state.cleanup_defeated_enemies()
 
         # Verify it worked correctly
-        self.assertIsInstance(defeated, list)
-        self.assertIn("Goblin", defeated)
-        self.assertNotIn("Orc", defeated)
+        assert isinstance(defeated, list)
+        assert "Goblin" in defeated
+        assert "Orc" not in defeated
 
         # Verify combatants remains a dict
-        self.assertIsInstance(game_state.combat_state["combatants"], dict)
-        self.assertNotIn("Goblin", game_state.combat_state["combatants"])
-        self.assertIn("Orc", game_state.combat_state["combatants"])
+        assert isinstance(game_state.combat_state["combatants"], dict)
+        assert "Goblin" not in game_state.combat_state["combatants"]
+        assert "Orc" in game_state.combat_state["combatants"]
         print("\n✅ Dict format still works correctly (no regression)")
 
     def test_cleanup_with_complex_list_structure(self):
@@ -126,17 +126,17 @@ class TestCombatBugGreen(unittest.TestCase):
         defeated = game_state.cleanup_defeated_enemies()
 
         # Should clean up both defeated bandits
-        self.assertEqual(len(defeated), 2)
-        self.assertIn("Bandit Leader", defeated)
-        self.assertIn("Bandit 1", defeated)
-        self.assertNotIn("Bandit 2", defeated)
-        self.assertNotIn("Player", defeated)
+        assert len(defeated) == 2
+        assert "Bandit Leader" in defeated
+        assert "Bandit 1" in defeated
+        assert "Bandit 2" not in defeated
+        assert "Player" not in defeated
 
         # Verify remaining combatants
         remaining = game_state.combat_state["combatants"]
-        self.assertEqual(len(remaining), 2)
-        self.assertIn("Bandit 2", remaining)
-        self.assertIn("Player", remaining)
+        assert len(remaining) == 2
+        assert "Bandit 2" in remaining
+        assert "Player" in remaining
         print("\n✅ Complex list structure handled correctly")
 
 

@@ -1,8 +1,7 @@
 """Mock fixtures for Claude CLI operations in orchestration tests."""
 
-from unittest.mock import Mock, patch
 import os
-import tempfile
+from unittest.mock import Mock, patch
 
 
 class MockClaude:
@@ -44,7 +43,7 @@ class MockClaude:
             if arg.startswith('@'):
                 prompt_file = arg[1:]
                 if os.path.exists(prompt_file):
-                    with open(prompt_file, 'r') as f:
+                    with open(prompt_file) as f:
                         prompt_content = f.read()
 
         # Check for matching response patterns
@@ -106,6 +105,7 @@ class MockClaude:
 
 from contextlib import contextmanager
 
+
 @contextmanager
 def mock_claude_fixture():
     """Fixture that provides a mock Claude environment."""
@@ -141,7 +141,7 @@ class MockClaudeAgent:
         self.pr_created = True
         return {
             'number': 12345,
-            'url': f'https://github.com/test/repo/pull/12345',
+            'url': 'https://github.com/test/repo/pull/12345',
             'title': f'Agent {self.agent_name}: {self.task_description}'
         }
 

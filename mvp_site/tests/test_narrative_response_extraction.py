@@ -51,40 +51,34 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
         )
 
         # Verify all fields are set correctly
-        self.assertEqual(response.narrative, "The adventure begins...")
-        self.assertEqual(response.session_header, "Session 1: A New Beginning")
+        assert response.narrative == "The adventure begins..."
+        assert response.session_header == "Session 1: A New Beginning"
         # Check that the planning block has the same content (validation adds 'context' field)
-        self.assertEqual(
-            response.planning_block["thinking"], planning_block_json["thinking"]
-        )
+        assert response.planning_block["thinking"] == planning_block_json["thinking"]
         # Check choices exist and have the expected keys
-        self.assertIn("explore_town", response.planning_block["choices"])
-        self.assertIn("visit_merchant", response.planning_block["choices"])
+        assert "explore_town" in response.planning_block["choices"]
+        assert "visit_merchant" in response.planning_block["choices"]
         # Check that choice content is present (might be HTML-escaped for security)
         explore_choice = response.planning_block["choices"]["explore_town"]
-        self.assertEqual(explore_choice["text"], "Explore Town")
-        self.assertIn(
-            "Walk around", explore_choice["description"]
-        )  # Check substring to avoid HTML escaping issues
-        self.assertIn("context", response.planning_block)  # Validation adds this field
-        self.assertEqual(response.dice_rolls, ["Perception: 1d20+3 = 15"])
-        self.assertEqual(response.resources, "HP: 10/10 | Gold: 50")
-        self.assertEqual(response.debug_info, {"turn": 1})
+        assert explore_choice["text"] == "Explore Town"
+        assert "Walk around" in explore_choice["description"]  # Check substring to avoid HTML escaping issues
+        assert "context" in response.planning_block  # Validation adds this field
+        assert response.dice_rolls == ["Perception: 1d20+3 = 15"]
+        assert response.resources == "HP: 10/10 | Gold: 50"
+        assert response.debug_info == {"turn": 1}
 
     def test_narrative_response_defaults(self):
         """Test NarrativeResponse with minimal required fields"""
         response = NarrativeResponse(narrative="A minimal response")
 
         # Check defaults for structured fields
-        self.assertEqual(response.session_header, "")
-        self.assertEqual(
-            response.planning_block, {}
-        )  # Planning blocks are now JSON objects, empty by default
-        self.assertEqual(response.dice_rolls, [])
-        self.assertEqual(response.resources, "")
-        self.assertEqual(response.debug_info, {})
-        self.assertEqual(response.entities_mentioned, [])
-        self.assertEqual(response.location_confirmed, "Unknown")
+        assert response.session_header == ""
+        assert response.planning_block == {}  # Planning blocks are now JSON objects, empty by default
+        assert response.dice_rolls == []
+        assert response.resources == ""
+        assert response.debug_info == {}
+        assert response.entities_mentioned == []
+        assert response.location_confirmed == "Unknown"
 
     def test_narrative_response_none_handling(self):
         """Test NarrativeResponse handles None values correctly"""
@@ -98,17 +92,17 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
         )
 
         # None values should convert to appropriate defaults
-        self.assertEqual(response.session_header, "")
-        self.assertEqual(response.planning_block, {})
-        self.assertEqual(response.dice_rolls, [])
-        self.assertEqual(response.resources, "")
-        self.assertEqual(response.debug_info, {})
+        assert response.session_header == ""
+        assert response.planning_block == {}
+        assert response.dice_rolls == []
+        assert response.resources == ""
+        assert response.debug_info == {}
 
     def test_type_validation_dice_rolls(self):
         """Test dice_rolls type validation"""
         # Should accept list
         response = NarrativeResponse(narrative="Test", dice_rolls=["Roll 1", "Roll 2"])
-        self.assertEqual(response.dice_rolls, ["Roll 1", "Roll 2"])
+        assert response.dice_rolls == ["Roll 1", "Roll 2"]
 
         # Implementation now converts non-list values to empty list
         response2 = NarrativeResponse(
@@ -116,13 +110,13 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
             dice_rolls="Single roll",  # Wrong type
         )
         # The implementation validates type and converts to empty list
-        self.assertEqual(response2.dice_rolls, [])
+        assert response2.dice_rolls == []
 
     def test_type_validation_debug_info(self):
         """Test debug_info type validation"""
         # Should accept dict
         response = NarrativeResponse(narrative="Test", debug_info={"key": "value"})
-        self.assertEqual(response.debug_info, {"key": "value"})
+        assert response.debug_info == {"key": "value"}
 
         # Should handle non-dict gracefully
         response2 = NarrativeResponse(
@@ -130,7 +124,7 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
             debug_info="not a dict",  # Wrong type
         )
         # Should convert to empty dict
-        self.assertEqual(response2.debug_info, {})
+        assert response2.debug_info == {}
 
     def test_string_field_stripping(self):
         """Test that string fields are properly stripped of whitespace"""
@@ -150,11 +144,11 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
         )
 
         # Strings should be stripped
-        self.assertEqual(response.narrative, "Test narrative")
+        assert response.narrative == "Test narrative"
         # Other fields may or may not strip - check actual behavior
-        self.assertIsInstance(response.session_header, str)
-        self.assertIsInstance(response.planning_block, dict)
-        self.assertIsInstance(response.resources, str)
+        assert isinstance(response.session_header, str)
+        assert isinstance(response.planning_block, dict)
+        assert isinstance(response.resources, str)
 
     def test_extra_fields_handling(self):
         """Test handling of unexpected extra fields"""
@@ -163,9 +157,9 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
         )
 
         # Extra fields should be stored
-        self.assertIn("extra_field_1", response.extra_fields)
-        self.assertIn("extra_field_2", response.extra_fields)
-        self.assertEqual(response.extra_fields["extra_field_1"], "value1")
+        assert "extra_field_1" in response.extra_fields
+        assert "extra_field_2" in response.extra_fields
+        assert response.extra_fields["extra_field_1"] == "value1"
 
     def test_to_dict_method(self):
         """Test conversion to dictionary if method exists"""
@@ -181,10 +175,10 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
         # Check if to_dict method exists
         if hasattr(response, "to_dict"):
             result = response.to_dict()
-            self.assertIsInstance(result, dict)
-            self.assertEqual(result.get("narrative"), "Test narrative")
-            self.assertEqual(result.get("session_header"), "Header")
-            self.assertEqual(result.get("dice_rolls"), ["Roll 1"])
+            assert isinstance(result, dict)
+            assert result.get("narrative") == "Test narrative"
+            assert result.get("session_header") == "Header"
+            assert result.get("dice_rolls") == ["Roll 1"]
 
     def test_gemini_response_to_narrative_response_mapping(self):
         """Test that GeminiResponse correctly maps to NarrativeResponse fields"""
@@ -208,30 +202,28 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
         narrative_response = gemini_response.structured_response
 
         # Verify mapping
-        self.assertEqual(narrative_response.narrative, "Mapped narrative")
-        self.assertEqual(narrative_response.session_header, "Mapped header")
+        assert narrative_response.narrative == "Mapped narrative"
+        assert narrative_response.session_header == "Mapped header"
         # Check that the planning block content matches (validation might add fields)
-        self.assertEqual(
-            narrative_response.planning_block["thinking"], "Mapped thinking"
-        )
+        assert narrative_response.planning_block["thinking"] == "Mapped thinking"
         # Note: The choice validation might filter out incomplete choices
-        self.assertIsInstance(narrative_response.planning_block["choices"], dict)
-        self.assertEqual(narrative_response.dice_rolls, ["Mapped roll"])
-        self.assertEqual(narrative_response.resources, "Mapped resources")
-        self.assertEqual(narrative_response.debug_info, {"mapped": True})
-        self.assertEqual(narrative_response.entities_mentioned, ["entity1"])
-        self.assertEqual(narrative_response.location_confirmed, "Mapped location")
+        assert isinstance(narrative_response.planning_block["choices"], dict)
+        assert narrative_response.dice_rolls == ["Mapped roll"]
+        assert narrative_response.resources == "Mapped resources"
+        assert narrative_response.debug_info == {"mapped": True}
+        assert narrative_response.entities_mentioned == ["entity1"]
+        assert narrative_response.location_confirmed == "Mapped location"
 
     def test_empty_narrative_validation(self):
         """Test that empty narrative is handled appropriately"""
         # Narrative is required, but what if it's empty?
         response = NarrativeResponse(narrative="")
-        self.assertEqual(response.narrative, "")
+        assert response.narrative == ""
 
         # Test with whitespace-only narrative
         response2 = NarrativeResponse(narrative="   ")
         # Should be stripped to empty
-        self.assertEqual(response2.narrative, "")
+        assert response2.narrative == ""
 
     def test_complex_planning_block_formatting(self):
         """Test complex formatting in planning_block field"""
@@ -270,11 +262,11 @@ class TestNarrativeResponseExtraction(unittest.TestCase):
         response = NarrativeResponse(narrative="Test", planning_block=complex_planning)
 
         # Complex JSON structure should be valid
-        self.assertIn("thinking", response.planning_block)
-        self.assertIn("choices", response.planning_block)
-        self.assertIn("attack_sword", response.planning_block["choices"])
-        self.assertIn("negotiate", response.planning_block["choices"])
-        self.assertEqual(len(response.planning_block["choices"]), 5)
+        assert "thinking" in response.planning_block
+        assert "choices" in response.planning_block
+        assert "attack_sword" in response.planning_block["choices"]
+        assert "negotiate" in response.planning_block["choices"]
+        assert len(response.planning_block["choices"]) == 5
 
 
 if __name__ == "__main__":

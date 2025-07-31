@@ -77,9 +77,8 @@ def add_parallel_dual_pass_routes(app, get_campaign_info):
                         "success": True,
                     }
                 )
-            else:
-                logging_util.warning("PARALLEL_DUAL_PASS: Entity enhancement failed")
-                return jsonify({"success": False, "error": "Enhancement failed"})
+            logging_util.warning("PARALLEL_DUAL_PASS: Entity enhancement failed")
+            return jsonify({"success": False, "error": "Enhancement failed"})
 
         except Exception as e:
             logging_util.error(

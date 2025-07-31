@@ -1,7 +1,6 @@
 """Mock fixtures for tmux operations in orchestration tests."""
 
 from unittest.mock import Mock, patch
-import subprocess
 
 
 class MockTmuxSession:
@@ -38,11 +37,11 @@ class MockTmux:
 
         if 'new-session' in cmd:
             return self._handle_new_session(cmd)
-        elif 'list-sessions' in cmd:
+        if 'list-sessions' in cmd:
             return self._handle_list_sessions(cmd)
-        elif 'capture-pane' in cmd:
+        if 'capture-pane' in cmd:
             return self._handle_capture_pane(cmd)
-        elif 'has-session' in cmd:
+        if 'has-session' in cmd:
             return self._handle_has_session(cmd)
 
         return Mock(returncode=0, stdout='', stderr='')
@@ -118,6 +117,7 @@ class MockTmux:
 
 
 from contextlib import contextmanager
+
 
 @contextmanager
 def mock_tmux_fixture():

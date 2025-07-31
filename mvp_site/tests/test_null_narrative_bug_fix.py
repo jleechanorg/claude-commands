@@ -29,22 +29,20 @@ class TestNullNarrativeBugFix(unittest.TestCase):
         narrative, response_obj = parse_structured_response(null_narrative_response)
 
         # The fix ensures we get an empty string instead of raw JSON
-        self.assertEqual(narrative, "", "Null narrative should result in empty string")
+        assert narrative == "", "Null narrative should result in empty string"
 
         # Verify NO raw JSON appears in the output
-        self.assertNotIn('"narrative"', narrative, "Raw JSON key should not appear")
-        self.assertNotIn(
-            '"entities_mentioned"', narrative, "Raw JSON key should not appear"
-        )
-        self.assertNotIn('"state_updates"', narrative, "Raw JSON key should not appear")
-        self.assertNotIn("{", narrative, "Raw JSON braces should not appear")
-        self.assertNotIn("}", narrative, "Raw JSON braces should not appear")
-        self.assertNotIn("null", narrative, "Raw null value should not appear")
+        assert '"narrative"' not in narrative, "Raw JSON key should not appear"
+        assert '"entities_mentioned"' not in narrative, "Raw JSON key should not appear"
+        assert '"state_updates"' not in narrative, "Raw JSON key should not appear"
+        assert "{" not in narrative, "Raw JSON braces should not appear"
+        assert "}" not in narrative, "Raw JSON braces should not appear"
+        assert "null" not in narrative, "Raw null value should not appear"
 
         # Verify the response object is still properly created
-        self.assertIsInstance(response_obj, NarrativeResponse)
-        self.assertEqual(response_obj.entities_mentioned, ["dragon"])
-        self.assertEqual(response_obj.location_confirmed, "Forest")
+        assert isinstance(response_obj, NarrativeResponse)
+        assert response_obj.entities_mentioned == ["dragon"]
+        assert response_obj.location_confirmed == "Forest"
 
     def test_missing_narrative_field_no_raw_json(self):
         """Test that missing narrative field doesn't show raw JSON."""
@@ -59,22 +57,18 @@ class TestNullNarrativeBugFix(unittest.TestCase):
         narrative, response_obj = parse_structured_response(missing_narrative_response)
 
         # Should get empty string instead of raw JSON
-        self.assertEqual(
-            narrative, "", "Missing narrative should result in empty string"
-        )
+        assert narrative == "", "Missing narrative should result in empty string"
 
         # Verify NO raw JSON appears in the output
-        self.assertNotIn(
-            '"entities_mentioned"', narrative, "Raw JSON key should not appear"
-        )
-        self.assertNotIn('"state_updates"', narrative, "Raw JSON key should not appear")
-        self.assertNotIn("{", narrative, "Raw JSON braces should not appear")
-        self.assertNotIn("}", narrative, "Raw JSON braces should not appear")
+        assert '"entities_mentioned"' not in narrative, "Raw JSON key should not appear"
+        assert '"state_updates"' not in narrative, "Raw JSON key should not appear"
+        assert "{" not in narrative, "Raw JSON braces should not appear"
+        assert "}" not in narrative, "Raw JSON braces should not appear"
 
         # Verify the response object is still properly created
-        self.assertIsInstance(response_obj, NarrativeResponse)
-        self.assertEqual(response_obj.entities_mentioned, ["dragon"])
-        self.assertEqual(response_obj.location_confirmed, "Forest")
+        assert isinstance(response_obj, NarrativeResponse)
+        assert response_obj.entities_mentioned == ["dragon"]
+        assert response_obj.location_confirmed == "Forest"
 
     def test_empty_string_narrative_works(self):
         """Test that empty string narrative works correctly."""
@@ -89,9 +83,9 @@ class TestNullNarrativeBugFix(unittest.TestCase):
         narrative, response_obj = parse_structured_response(empty_narrative_response)
 
         # Should get empty string (same as input)
-        self.assertEqual(narrative, "")
-        self.assertIsInstance(response_obj, NarrativeResponse)
-        self.assertEqual(response_obj.narrative, "")
+        assert narrative == ""
+        assert isinstance(response_obj, NarrativeResponse)
+        assert response_obj.narrative == ""
 
     def test_normal_narrative_still_works(self):
         """Test that normal narrative processing still works."""
@@ -106,9 +100,9 @@ class TestNullNarrativeBugFix(unittest.TestCase):
         narrative, response_obj = parse_structured_response(normal_response)
 
         # Should get the normal narrative
-        self.assertEqual(narrative, "A dragon appears!")
-        self.assertIsInstance(response_obj, NarrativeResponse)
-        self.assertEqual(response_obj.narrative, "A dragon appears!")
+        assert narrative == "A dragon appears!"
+        assert isinstance(response_obj, NarrativeResponse)
+        assert response_obj.narrative == "A dragon appears!"
 
     def test_god_mode_response_with_null_narrative(self):
         """Test god mode response handling with null narrative."""
@@ -124,13 +118,13 @@ class TestNullNarrativeBugFix(unittest.TestCase):
         narrative, response_obj = parse_structured_response(god_mode_null_narrative)
 
         # Should get the god mode response, not raw JSON
-        self.assertEqual(narrative, "Divine intervention occurs")
-        self.assertIsInstance(response_obj, NarrativeResponse)
-        self.assertEqual(response_obj.god_mode_response, "Divine intervention occurs")
+        assert narrative == "Divine intervention occurs"
+        assert isinstance(response_obj, NarrativeResponse)
+        assert response_obj.god_mode_response == "Divine intervention occurs"
 
         # Verify NO raw JSON appears
-        self.assertNotIn('"narrative"', narrative, "Raw JSON should not appear")
-        self.assertNotIn("null", narrative, "Raw null should not appear")
+        assert '"narrative"' not in narrative, "Raw JSON should not appear"
+        assert "null" not in narrative, "Raw null should not appear"
 
 
 if __name__ == "__main__":

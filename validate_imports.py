@@ -15,7 +15,7 @@ Usage:
 import ast
 import sys
 from pathlib import Path
-from typing import List, NamedTuple
+from typing import NamedTuple
 
 
 class ImportViolation(NamedTuple):
@@ -31,7 +31,7 @@ class ImportValidator(ast.NodeVisitor):
 
     def __init__(self, file_path: Path):
         self.file_path = file_path
-        self.violations: List[ImportViolation] = []
+        self.violations: list[ImportViolation] = []
         self.import_seen = False
         self.non_import_seen = False
         self.in_try_except = False
@@ -120,10 +120,10 @@ class ImportValidator(ast.NodeVisitor):
         self.generic_visit(node)
 
 
-def validate_file(file_path: Path) -> List[ImportViolation]:
+def validate_file(file_path: Path) -> list[ImportViolation]:
     """Validate imports in a single Python file."""
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, encoding='utf-8') as f:
             content = f.read()
 
         tree = ast.parse(content, filename=str(file_path))
@@ -148,7 +148,7 @@ def validate_file(file_path: Path) -> List[ImportViolation]:
         )]
 
 
-def validate_directory(directory: Path) -> List[ImportViolation]:
+def validate_directory(directory: Path) -> list[ImportViolation]:
     """Validate all Python files in a directory."""
     violations = []
 

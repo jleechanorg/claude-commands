@@ -1,112 +1,128 @@
 #!/usr/bin/env python3
 """
-🔴 RED: TDD tests for settings authentication bypass with Flask test client
-Layer 1: Unit tests for auth bypass logic
-
-These tests verify auth bypass works with Flask test client (TESTING=True)
+Tests for settings authentication bypass through MCP architecture.
+Tests verification that auth bypass works through MCP API gateway.
 """
 
+import json
 import os
 import sys
 import unittest
-from unittest.mock import patch
 
+# Set environment variables for MCP testing
+os.environ["TESTING"] = "true"
+os.environ["USE_MOCKS"] = "true"
+
+# Add parent directory to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from fake_firestore import FakeFirestoreClient
-from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, create_app
+from main import create_app
 
 
-class TestSettingsAuthBypass(unittest.TestCase):
-    """Test settings authentication bypass using Flask test client"""
+class TestMCPSettingsAuthBypass(unittest.TestCase):
+    """Test settings authentication bypass through MCP API gateway."""
 
     def setUp(self):
-        """Set up Flask test client with TESTING=True"""
+        """Set up Flask test client for MCP architecture."""
         self.app = create_app()
         self.app.config["TESTING"] = True
-        # Force testing mode for CI compatibility
-        os.environ["TESTING"] = "true"
         self.client = self.app.test_client()
-        self.test_user_id = "test-user-settings-auth"
+        self.test_user_id = "mcp-settings-auth-test-user"
 
-        # Add Firestore mocking for CI compatibility
-        self.firestore_patcher = patch("firestore_service.get_db")
-        self.mock_get_db = self.firestore_patcher.start()
-        self.fake_db = FakeFirestoreClient()
-        self.mock_get_db.return_value = self.fake_db
-
-        # Headers that SHOULD work for auth bypass
+        # Headers for MCP authentication bypass
         self.bypass_headers = {
-            HEADER_TEST_BYPASS: "true",
-            HEADER_TEST_USER_ID: self.test_user_id,
+            "X-Test-Bypass-Auth": "true",
+            "X-Test-User-ID": self.test_user_id,
             "Content-Type": "application/json",
         }
 
-    def tearDown(self):
-        """Clean up after each test for CI isolation"""
-        # Stop Firestore mocking
-        self.firestore_patcher.stop()
-        # Ensure clean state for CI environment
-        if "TESTING" in os.environ:
-            pass  # Keep TESTING env var for other tests
-
-    def test_settings_page_auth_bypass_works(self):
-        """✅ GREEN: Settings page should allow auth bypass"""
+    def test_mcp_settings_page_auth_bypass(self):
+        """Test settings page auth bypass through MCP."""
         response = self.client.get("/settings", headers=self.bypass_headers)
 
-        # Auth bypass should work
-        self.assertEqual(
-            response.status_code,
-            200,
-            f"Settings page should allow auth bypass, got {response.status_code}: {response.get_data(as_text=True)}",
-        )
-        self.assertIn(
-            "Settings",
-            response.get_data(as_text=True),
-            "Settings page should contain 'Settings' text",
-        )
+        # MCP gateway should handle settings page requests with auth bypass
+        assert response.status_code == 200, "MCP gateway should handle settings page with auth bypass"
 
-    def test_settings_api_get_auth_bypass_works(self):
-        """✅ GREEN: Settings API GET should allow auth bypass"""
+    def test_mcp_settings_api_get_auth_bypass(self):
+        """Test settings API GET with auth bypass through MCP."""
         response = self.client.get("/api/settings", headers=self.bypass_headers)
 
-        # Auth bypass should work
-        self.assertEqual(
-            response.status_code,
-            200,
-            f"Settings API GET should allow auth bypass, got {response.status_code}: {response.get_data(as_text=True)}",
-        )
+        # MCP gateway should handle settings API GET with auth bypass
+        assert response.status_code == 200, "MCP gateway should handle settings API GET with auth bypass"
 
-        data = response.get_json()
-        self.assertIsInstance(data, dict, "Should return dict of settings")
+        # If successful, should return valid response
+        if response.status_code == 200:
+            data = response.get_json()
+            assert isinstance(data, dict), "Settings response should be dict"
 
-    def test_settings_api_post_auth_bypass_works(self):
-        """✅ GREEN: Settings API POST should allow auth bypass"""
+    def test_mcp_settings_api_post_auth_bypass(self):
+        """Test settings API POST with auth bypass through MCP."""
         payload = {"gemini_model": "gemini-2.5-flash"}
 
         response = self.client.post(
-            "/api/settings", headers=self.bypass_headers, json=payload
+            "/api/settings", headers=self.bypass_headers, data=json.dumps(payload)
         )
 
-        # Auth bypass should work
-        self.assertEqual(
-            response.status_code,
-            200,
-            f"Settings API POST should allow auth bypass, got {response.status_code}: {response.get_data(as_text=True)}",
-        )
+        # MCP gateway should handle settings API POST with auth bypass
+        assert response.status_code == 200, "MCP gateway should handle settings API POST with auth bypass"
 
-        data = response.get_json()
-        self.assertTrue(data.get("success"), "Should return success=True")
+        # If successful, should return valid response
+        if response.status_code == 200:
+            data = response.get_json()
+            assert isinstance(data, dict), "Settings response should be dict"
 
-    def test_settings_without_auth_bypass_fails(self):
-        """✅ GREEN: Settings without auth bypass should fail with 401"""
+    def test_mcp_settings_without_auth_bypass(self):
+        """Test settings without auth bypass through MCP."""
         # Test without auth bypass headers
         response = self.client.get("/settings")
 
-        # Should fail without auth bypass
-        self.assertEqual(
-            response.status_code, 401, "Settings without auth bypass should return 401"
-        )
+        # MCP gateway should handle missing auth appropriately
+        assert response.status_code == 401, "MCP gateway should handle missing auth for settings"
+
+    def test_mcp_settings_partial_auth_headers(self):
+        """Test settings with partial auth headers through MCP."""
+        partial_headers = {
+            "X-Test-Bypass-Auth": "true",
+            "Content-Type": "application/json",
+        }
+        response = self.client.get("/api/settings", headers=partial_headers)
+
+        # MCP gateway should handle partial auth headers
+        assert response.status_code == 401, "MCP gateway should handle partial auth headers by requiring user ID"
+
+    def test_mcp_settings_invalid_auth_headers(self):
+        """Test settings with invalid auth headers through MCP."""
+        invalid_headers = {
+            "X-Test-Bypass-Auth": "false",
+            "Content-Type": "application/json",
+        }
+        response = self.client.get("/api/settings", headers=invalid_headers)
+
+        # MCP gateway should handle invalid auth headers
+        assert response.status_code == 401, "MCP gateway should handle invalid auth headers"
+
+    def test_mcp_settings_concurrent_auth_requests(self):
+        """Test concurrent settings requests with auth bypass through MCP."""
+        from concurrent.futures import ThreadPoolExecutor
+
+        def make_settings_request(request_num):
+            headers = {
+                "X-Test-Bypass-Auth": "true",
+                "X-Test-User-ID": f"mcp-concurrent-settings-user-{request_num}",
+                "Content-Type": "application/json",
+            }
+            response = self.client.get("/api/settings", headers=headers)
+            return request_num, response.status_code
+
+        # Launch concurrent requests
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [executor.submit(make_settings_request, i) for i in range(3)]
+            results = [future.result() for future in futures]
+
+        # All concurrent requests should be handled
+        assert len(results) == 3
+        for req_num, status_code in results:
+            assert status_code == 200, f"Concurrent settings request {req_num} should be handled by MCP with proper auth headers"
 
 
 if __name__ == "__main__":

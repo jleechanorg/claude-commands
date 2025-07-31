@@ -5,10 +5,11 @@ Simulates the GitHub Actions workflow steps to identify where the prompt is gett
 """
 
 import json
-import requests
 import subprocess
-import sys
 import urllib.parse
+
+import requests
+
 
 def simulate_github_event():
     """Simulate a GitHub event payload for /claude hello!"""
@@ -37,7 +38,7 @@ def test_jq_extraction(event_data):
         # Simulate the jq command
         result = subprocess.run([
             'jq', '-r', '.slash_command.args.all', '/tmp/test_event.json'
-        ], capture_output=True, text=True)
+        ], check=False, capture_output=True, text=True)
 
         prompt = result.stdout.strip()
         print(f"jq extraction result: '{prompt}'")

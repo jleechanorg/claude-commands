@@ -5,9 +5,11 @@ This script shows how memory integration enhances LLM responses.
 """
 
 import sys
+
 sys.path.insert(0, 'mvp_site')
 
-from memory_integration import memory_integration, enhance_slash_command
+from memory_integration import enhance_slash_command, memory_integration
+
 
 def demo_query_extraction():
     """Show query term extraction"""

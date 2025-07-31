@@ -37,11 +37,11 @@ class WizardCodeAnalysisTest {
 
     try {
       // Read campaign wizard code
-      const wizardPath = path.join(__dirname, 'static', 'js', 'campaign-wizard.js');
+      const wizardPath = path.join(__dirname, 'frontend_v1', 'js', 'campaign-wizard.js');
       const wizardCode = fs.readFileSync(wizardPath, 'utf8');
 
       // Read app.js code
-      const appPath = path.join(__dirname, 'static', 'app.js');
+      const appPath = path.join(__dirname, 'frontend_v1', 'app.js');
       const appCode = fs.readFileSync(appPath, 'utf8');
 
       this.log('✅ Code files read successfully');

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Test orchestration system works without Redis dependencies."""
-import unittest
+import json
 import os
 import sys
 import tempfile
-import json
+import unittest
+
 # time import removed - not used
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -81,6 +82,7 @@ class TestOrchestrationNoRedis(unittest.TestCase):
             try:
                 # Reimport to test without message_broker module
                 import importlib
+
                 import orchestrate_unified
                 importlib.reload(orchestrate_unified)
 
@@ -92,7 +94,7 @@ class TestOrchestrationNoRedis(unittest.TestCase):
                     success = False
                 else:
                     raise
-            except Exception as e:
+            except Exception:
                 # Any other exception means test failed
                 success = False
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Test runner for orchestration system tests."""
 
+import argparse
 import os
 import sys
 import unittest
 from unittest import TextTestRunner
-import argparse
 
 # Add orchestration directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))

@@ -4,13 +4,12 @@ Proper TDD tests for Claude bot server response quality.
 Tests that would have caught the branch-header-only bug.
 """
 
-import unittest
-import requests
+import os
 import subprocess
 import time
-import os
-import signal
-from unittest.mock import patch
+import unittest
+
+import requests
 
 
 class TestClaudeBotServer(unittest.TestCase):

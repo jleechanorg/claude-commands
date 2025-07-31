@@ -83,24 +83,23 @@ class MockGeminiClient:
         # Check for forced response mode first
         if self.response_mode == "hp_discrepancy":
             return "hp_discrepancy"
-        elif self.response_mode == "location_mismatch":
+        if self.response_mode == "location_mismatch":
             return "location_mismatch"
-        elif self.response_mode == "mission_completion":
+        if self.response_mode == "mission_completion":
             return "mission_completion"
 
         # Pattern matching for different scenarios
         if "start a story" in prompt_lower or "initial story" in prompt_lower:
             return "initial_story"
-        elif "validation" in prompt_lower and "inconsistencies" in prompt_lower:
+        if "validation" in prompt_lower and "inconsistencies" in prompt_lower:
             return "validation_prompt"
-        elif "unconscious" in prompt_lower or "hp" in prompt_lower:
+        if "unconscious" in prompt_lower or "hp" in prompt_lower:
             return "hp_discrepancy"
-        elif "forest" in prompt_lower and "tavern" in prompt_lower:
+        if "forest" in prompt_lower and "tavern" in prompt_lower:
             return "location_mismatch"
-        elif "dragon" in prompt_lower and "treasure" in prompt_lower:
+        if "dragon" in prompt_lower and "treasure" in prompt_lower:
             return "mission_completion"
-        else:
-            return "continue_story"
+        return "continue_story"
 
     def _generate_initial_story(self, prompt: str) -> str:
         """Generate an initial story response."""
@@ -177,8 +176,7 @@ Which option would you prefer? (1, 2, or 3)""",
             # Check for god mode
             if "god mode:" in prompt.lower() or "god:" in prompt.lower():
                 return json.dumps(GOD_MODE_RESPONSE, indent=2)
-            else:
-                return json.dumps(FULL_STRUCTURED_RESPONSE, indent=2)
+            return json.dumps(FULL_STRUCTURED_RESPONSE, indent=2)
         return SAMPLE_AI_RESPONSES["normal_response"]
 
     def _generate_hp_discrepancy(self, prompt: str) -> str:

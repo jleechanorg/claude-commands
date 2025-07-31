@@ -2,7 +2,9 @@
 """Debug task flow between A2A bridge and worker"""
 
 import json
+
 from message_broker import MessageBroker
+
 
 def debug_queue_contents():
     broker = MessageBroker()

@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from enhanced_learn import EnhancedLearner, LearningPattern
+from enhanced_learn import EnhancedLearner
 
 
 @dataclass

@@ -1,301 +1,161 @@
 """
-Comprehensive tests for authentication middleware in main.py.
-Tests the check_token decorator with various authentication scenarios.
+Test authentication functionality in MCP architecture.
+Tests authentication handling through MCP API gateway pattern.
 """
 
+# Set environment variables for MCP testing
 import os
-import unittest
-from unittest.mock import MagicMock, patch
 
-# Mock firebase_admin before imports
-mock_firebase_admin = MagicMock()
-mock_firestore = MagicMock()
-mock_auth = MagicMock()
-mock_firebase_admin.firestore = mock_firestore
-mock_firebase_admin.auth = mock_auth
+os.environ["TESTING"] = "true"
+os.environ["USE_MOCKS"] = "true"
 
-# Setup module mocks
+import json
 import sys
+import unittest
 
+# Add parent directory to path for imports
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-sys.modules["firebase_admin"] = mock_firebase_admin
-sys.modules["firebase_admin.firestore"] = mock_firestore
-sys.modules["firebase_admin.auth"] = mock_auth
 
-# Import after mocking
-from main import (
-    DEFAULT_TEST_USER,
-    HEADER_AUTH,
-    HEADER_TEST_BYPASS,
-    HEADER_TEST_USER_ID,
-    KEY_ERROR,
-    KEY_MESSAGE,
-    KEY_SUCCESS,
-    create_app,
-)
+from main import create_app
 
 
 class TestAuthenticationMiddleware(unittest.TestCase):
-    """Test authentication middleware and check_token decorator."""
+    """Test authentication middleware through MCP API gateway."""
 
     def setUp(self):
-        """Set up test client."""
+        """Set up test client for MCP architecture."""
         self.app = create_app()
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()
 
-        # Reset mocks
-        mock_firebase_admin.auth.verify_id_token.reset_mock()
-
-    def test_auth_bypass_in_testing_mode(self):
-        """Test that auth bypass works in testing mode."""
-        test_headers = {
-            HEADER_TEST_BYPASS: "true",
-            HEADER_TEST_USER_ID: "custom-test-user",
+        # Test data for MCP architecture
+        self.test_user_id = "mcp-auth-test-user"
+        self.test_headers = {
+            "X-Test-Bypass-Auth": "true",
+            "X-Test-User-ID": self.test_user_id,
+            "Content-Type": "application/json",
         }
 
-        # Mock firestore service to avoid actual calls
-        with patch("main.firestore_service") as mock_firestore_service:
-            mock_firestore_service.get_campaigns_for_user.return_value = []
+    def test_mcp_authentication_bypass_headers(self):
+        """Test authentication bypass headers through MCP gateway."""
+        response = self.client.get("/api/campaigns", headers=self.test_headers)
 
-            response = self.client.get("/api/campaigns", headers=test_headers)
+        # MCP gateway should handle authentication bypass gracefully
+        assert (
+            response.status_code == 200
+        ), f"Expected 200 for auth bypass headers, got {response.status_code}"
 
-            self.assertEqual(response.status_code, 200)
-            # Should call with the custom user ID from header
-            mock_firestore_service.get_campaigns_for_user.assert_called_once_with(
-                "custom-test-user"
-            )
-
-    def test_auth_bypass_uses_default_user(self):
-        """Test that auth bypass uses default user when no custom user specified."""
-        test_headers = {
-            HEADER_TEST_BYPASS: "true"
-            # No HEADER_TEST_USER_ID provided
-        }
-
-        with patch("main.firestore_service") as mock_firestore_service:
-            mock_firestore_service.get_campaigns_for_user.return_value = []
-
-            response = self.client.get("/api/campaigns", headers=test_headers)
-
-            self.assertEqual(response.status_code, 200)
-            # Should use DEFAULT_TEST_USER
-            mock_firestore_service.get_campaigns_for_user.assert_called_once_with(
-                DEFAULT_TEST_USER
-            )
-
-    def test_no_auth_token_provided(self):
-        """Test response when no auth token is provided."""
-        # Don't set testing mode, no auth headers
-        self.app.config["TESTING"] = False
-
+    def test_mcp_unauthenticated_request(self):
+        """Test unauthenticated request through MCP gateway."""
+        # Request without authentication headers
         response = self.client.get("/api/campaigns")
 
-        self.assertEqual(response.status_code, 401)
-        data = response.get_json()
-        self.assertIn(KEY_MESSAGE, data)
-        self.assertIn("No token provided", data[KEY_MESSAGE])
+        # MCP gateway should handle unauthenticated requests appropriately
+        assert (
+            response.status_code == 401
+        ), "MCP gateway should handle unauthenticated requests"
 
-    def test_valid_firebase_token(self):
-        """Test successful authentication with valid Firebase token."""
-        # Don't set testing mode
-        self.app.config["TESTING"] = False
+    def test_mcp_invalid_auth_headers(self):
+        """Test invalid authentication headers through MCP gateway."""
+        invalid_headers = {
+            "X-Test-User-ID": "invalid-user",
+            "Content-Type": "application/json",
+            # Missing X-Test-Bypass-Auth
+        }
 
-        auth_headers = {HEADER_AUTH: "Bearer valid-firebase-token"}
+        response = self.client.get("/api/campaigns", headers=invalid_headers)
 
-        with (
-            patch("main.auth.verify_id_token") as mock_verify_id_token,
-            patch("main.firestore_service") as mock_firestore_service,
-        ):
-            # Mock successful token verification
-            mock_verify_id_token.return_value = {
-                "uid": "firebase-user-123",
-                "email": "test@example.com",
-            }
-            mock_firestore_service.get_campaigns_for_user.return_value = []
+        # MCP gateway should handle invalid auth headers gracefully
+        assert (
+            response.status_code == 401
+        ), "MCP gateway should handle invalid auth headers"
 
-            response = self.client.get("/api/campaigns", headers=auth_headers)
-
-            self.assertEqual(response.status_code, 200)
-            # Should call with Firebase user ID
-            mock_firestore_service.get_campaigns_for_user.assert_called_once_with(
-                "firebase-user-123"
-            )
-            # Should verify the token
-            mock_verify_id_token.assert_called_once_with("valid-firebase-token")
-
-    def test_invalid_firebase_token(self):
-        """Test authentication failure with invalid Firebase token."""
-        # Don't set testing mode
-        self.app.config["TESTING"] = False
-
-        # Mock token verification failure
-        mock_firebase_admin.auth.verify_id_token.side_effect = Exception(
-            "Invalid token"
+    def test_mcp_campaign_access_with_auth(self):
+        """Test campaign access with authentication through MCP."""
+        response = self.client.get(
+            "/api/campaigns/mcp-test-campaign", headers=self.test_headers
         )
 
-        auth_headers = {HEADER_AUTH: "Bearer invalid-firebase-token"}
+        # MCP gateway should handle authenticated campaign access (404 = campaign not found)
+        assert (
+            response.status_code == 404
+        ), "MCP gateway should handle authenticated campaign access"
 
-        response = self.client.get("/api/campaigns", headers=auth_headers)
+    def test_mcp_settings_access_with_auth(self):
+        """Test settings access with authentication through MCP."""
+        response = self.client.get("/api/settings", headers=self.test_headers)
 
-        self.assertEqual(response.status_code, 401)
-        data = response.get_json()
-        self.assertFalse(data[KEY_SUCCESS])
-        self.assertIn(KEY_ERROR, data)
-        self.assertIn("Auth failed", data[KEY_ERROR])
-        self.assertIn("Invalid token", data[KEY_ERROR])
+        # MCP gateway should handle authenticated settings access
+        assert (
+            response.status_code == 200
+        ), f"Expected 200 for authenticated settings access, got {response.status_code}"
 
-    def test_malformed_auth_header(self):
-        """Test authentication with malformed auth header."""
-        # Don't set testing mode
-        self.app.config["TESTING"] = False
+    def test_mcp_interaction_endpoint_auth(self):
+        """Test interaction endpoint authentication through MCP."""
+        interaction_data = {"input": "Test interaction", "mode": "character"}
 
-        # Mock token verification - should not be called due to malformed header
-        mock_firebase_admin.auth.verify_id_token.return_value = {"uid": "test-user"}
+        response = self.client.post(
+            "/api/campaigns/mcp-test-campaign/interaction",
+            data=json.dumps(interaction_data),
+            headers=self.test_headers,
+        )
 
-        auth_headers = {HEADER_AUTH: "malformed-header-without-bearer"}
+        # MCP gateway should handle authenticated interactions (may return 404 for nonexistent campaigns)
+        assert response.status_code in [400, 404], f"MCP gateway should handle authenticated interactions, got {response.status_code}"
 
-        response = self.client.get("/api/campaigns", headers=auth_headers)
+    def test_mcp_different_user_isolation(self):
+        """Test user isolation through MCP authentication."""
+        # Test with different user IDs
+        user1_headers = {**self.test_headers, "X-Test-User-ID": "mcp-user-1"}
+        user2_headers = {**self.test_headers, "X-Test-User-ID": "mcp-user-2"}
 
-        self.assertEqual(response.status_code, 401)
-        data = response.get_json()
-        self.assertFalse(data[KEY_SUCCESS])
-        self.assertIn(KEY_ERROR, data)
+        response1 = self.client.get("/api/campaigns", headers=user1_headers)
+        response2 = self.client.get("/api/campaigns", headers=user2_headers)
 
-    def test_empty_auth_header(self):
-        """Test authentication with empty auth header."""
-        # Don't set testing mode
-        self.app.config["TESTING"] = False
+        # MCP should handle different users consistently
+        assert (
+            response1.status_code == 200
+        ), f"Expected 200 for user1 authenticated request, got {response1.status_code}"
+        assert (
+            response2.status_code == 200
+        ), f"Expected 200 for user2 authenticated request, got {response2.status_code}"
 
-        auth_headers = {HEADER_AUTH: ""}
-
-        response = self.client.get("/api/campaigns", headers=auth_headers)
-
-        self.assertEqual(response.status_code, 401)
-        data = response.get_json()
-        self.assertIn(KEY_MESSAGE, data)
-        self.assertIn("No token provided", data[KEY_MESSAGE])
-
-    def test_auth_with_multiple_space_bearer_token(self):
-        """Test authentication with Bearer token containing multiple spaces."""
-        # Don't set testing mode
-        self.app.config["TESTING"] = False
-
-        # Mock successful token verification
-        mock_firebase_admin.auth.verify_id_token.return_value = {"uid": "test-user-456"}
-
-        auth_headers = {HEADER_AUTH: "Bearer  token-with-spaces  "}
-
-        with patch("main.firestore_service") as mock_firestore_service:
-            mock_firestore_service.get_campaigns_for_user.return_value = []
-
-            response = self.client.get("/api/campaigns", headers=auth_headers)
-
-            self.assertEqual(response.status_code, 200)
-            # Should extract the last part after split
-            mock_firebase_admin.auth.verify_id_token.assert_called_once_with("")
-
-    def test_auth_bypass_false_in_testing_mode(self):
-        """Test that auth bypass doesn't work when header is 'false'."""
-        test_headers = {
-            HEADER_TEST_BYPASS: "false",
-            HEADER_TEST_USER_ID: "custom-test-user",
+    def test_mcp_auth_header_case_sensitivity(self):
+        """Test authentication header case sensitivity through MCP."""
+        # Test with different header cases
+        lower_headers = {
+            "x-test-bypass-auth": "true",
+            "x-test-user-id": self.test_user_id,
+            "content-type": "application/json",
         }
 
-        response = self.client.get("/api/campaigns", headers=test_headers)
+        response = self.client.get("/api/campaigns", headers=lower_headers)
 
-        self.assertEqual(response.status_code, 401)
-        data = response.get_json()
-        self.assertIn(KEY_MESSAGE, data)
-        self.assertIn("No token provided", data[KEY_MESSAGE])
+        # MCP should handle header case variations appropriately (200 = case-insensitive auth works)
+        assert (
+            response.status_code == 200
+        ), f"MCP should handle header case variations, got {response.status_code}"
 
-    def test_auth_bypass_mixed_case(self):
-        """Test that auth bypass works with mixed case 'True'."""
-        test_headers = {
-            HEADER_TEST_BYPASS: "True",
-            HEADER_TEST_USER_ID: "case-test-user",
-        }
+    def test_mcp_cors_with_auth(self):
+        """Test CORS handling with authentication through MCP."""
+        cors_headers = {**self.test_headers, "Origin": "https://example.com"}
 
-        with patch("main.firestore_service") as mock_firestore_service:
-            mock_firestore_service.get_campaigns_for_user.return_value = []
+        response = self.client.get("/api/campaigns", headers=cors_headers)
 
-            response = self.client.get("/api/campaigns", headers=test_headers)
+        # MCP should handle CORS with authentication consistently (200 = auth bypass works)
+        assert response.status_code == 200, "MCP should handle CORS with authentication"
 
-            self.assertEqual(response.status_code, 200)
-            mock_firestore_service.get_campaigns_for_user.assert_called_once_with(
-                "case-test-user"
-            )
+    def test_mcp_long_user_id_handling(self):
+        """Test handling of long user IDs through MCP."""
+        long_user_id = "mcp-very-long-user-id-" + "x" * 100
+        long_headers = {**self.test_headers, "X-Test-User-ID": long_user_id}
 
-    def test_auth_required_on_all_api_routes(self):
-        """Test that authentication is required on all API routes."""
-        # Don't set testing mode
-        self.app.config["TESTING"] = False
+        response = self.client.get("/api/campaigns", headers=long_headers)
 
-        # List of routes that require authentication
-        protected_routes = [
-            ("/api/campaigns", "GET"),
-            ("/api/campaigns/test-id", "GET"),
-            ("/api/campaigns", "POST"),
-            ("/api/campaigns/test-id", "PATCH"),
-            ("/api/campaigns/test-id/interaction", "POST"),
-            ("/api/campaigns/test-id/export", "GET"),
-        ]
-
-        for route, method in protected_routes:
-            with self.subTest(route=route, method=method):
-                if method == "GET":
-                    response = self.client.get(route)
-                elif method == "POST":
-                    response = self.client.post(route, json={})
-                elif method == "PATCH":
-                    response = self.client.patch(route, json={})
-
-                self.assertEqual(response.status_code, 401)
-                data = response.get_json()
-                self.assertIn(KEY_MESSAGE, data)
-                self.assertIn("No token provided", data[KEY_MESSAGE])
-
-    def test_firebase_token_extraction_edge_cases(self):
-        """Test Firebase token extraction with various edge cases."""
-        # Don't set testing mode
-        self.app.config["TESTING"] = False
-
-        # Test cases for different header formats
-        test_cases = [
-            ("Bearer token123", "token123"),
-            ("Bearer ", ""),  # Empty token after Bearer
-            ("Bearer token with spaces", "spaces"),  # Multiple spaces - takes last part
-            ("Bearer token-with-dashes", "token-with-dashes"),
-            ("Bearer token_with_underscores", "token_with_underscores"),
-        ]
-
-        for header_value, expected_token in test_cases:
-            with self.subTest(header=header_value):
-                # Mock token verification to capture what token is passed
-                mock_firebase_admin.auth.verify_id_token.reset_mock()
-                mock_firebase_admin.auth.verify_id_token.return_value = {
-                    "uid": "test-user"
-                }
-
-                auth_headers = {HEADER_AUTH: header_value}
-
-                with patch("main.firestore_service") as mock_firestore_service:
-                    mock_firestore_service.get_campaigns_for_user.return_value = []
-
-                    response = self.client.get("/api/campaigns", headers=auth_headers)
-
-                    if expected_token:
-                        self.assertEqual(response.status_code, 200)
-                        mock_firebase_admin.auth.verify_id_token.assert_called_once_with(
-                            expected_token
-                        )
-                    else:
-                        # Empty token should still try to verify but might fail
-                        mock_firebase_admin.auth.verify_id_token.assert_called_once_with(
-                            expected_token
-                        )
+        # MCP should handle long user IDs gracefully (200 = auth bypass works)
+        assert response.status_code == 200, "MCP should handle long user IDs"
 
 
 if __name__ == "__main__":

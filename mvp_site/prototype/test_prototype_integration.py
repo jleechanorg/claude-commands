@@ -130,8 +130,7 @@ class TestNarrativeServiceIntegration(unittest.TestCase):
             call_count += 1
             if call_count == 1:
                 return "The chamber was empty."  # Missing entities
-            else:
-                return "Gideon and Rowan prepared for battle."
+            return "Gideon and Rowan prepared for battle."
 
         self.service._mock_generate_narrative = mock_fail_then_succeed
 

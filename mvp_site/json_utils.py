@@ -294,9 +294,8 @@ def extract_field_value(text: str, field_name: str) -> str | None:
             if has_trailing_backslash:
                 # Don't unescape - preserve raw content for incomplete JSON
                 return value
-            else:
-                # No trailing backslash - safe to unescape
-                return unescape_json_string(value)
+            # No trailing backslash - safe to unescape
+            return unescape_json_string(value)
 
     # For other fields, find the rightmost occurrence to avoid nested fields
     # Use negative lookahead to ensure we're not inside another object

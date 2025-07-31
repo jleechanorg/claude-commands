@@ -4,11 +4,10 @@ Debug Firebase connection to see what's actually in the database.
 """
 
 import os
+import traceback
 
 import firebase_admin
 from firebase_admin import credentials, firestore
-
-import traceback
 
 
 def initialize_firebase():

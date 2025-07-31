@@ -8,9 +8,8 @@ Replaces scattered configuration across multiple test files.
 
 import os
 import time
-from enum import Enum
 from dataclasses import dataclass
-from typing import Dict, Any, Optional
+from enum import Enum
 
 
 class TestMode(Enum):
@@ -36,12 +35,12 @@ class ServerConfig:
     host: str = "localhost"
     protocol: str = "http"
 
-    def get_base_url(self, port: Optional[int] = None) -> str:
+    def get_base_url(self, port: int | None = None) -> str:
         """Get base URL for server"""
         actual_port = port or self.base_port
         return f"{self.protocol}://{self.host}:{actual_port}"
 
-    def get_test_url(self, port: Optional[int] = None, **params) -> str:
+    def get_test_url(self, port: int | None = None, **params) -> str:
         """Get test URL with parameters"""
         base_url = self.get_base_url(port)
         if not params:
@@ -60,7 +59,7 @@ class TestConfig:
     """Centralized test configuration manager"""
 
     # Server configurations by test type
-    SERVERS: Dict[TestType, ServerConfig] = {
+    SERVERS: dict[TestType, ServerConfig] = {
         TestType.BROWSER: ServerConfig(
             base_port=8081,
             port_range=(8080, 8090)
@@ -109,13 +108,13 @@ class TestConfig:
         return cls.SERVERS[test_type]
 
     @classmethod
-    def get_base_url(cls, test_type: TestType, port: Optional[int] = None) -> str:
+    def get_base_url(cls, test_type: TestType, port: int | None = None) -> str:
         """Get base URL for test type"""
         server_config = cls.get_server_config(test_type)
         return server_config.get_base_url(port)
 
     @classmethod
-    def get_test_url(cls, test_type: TestType, port: Optional[int] = None,
+    def get_test_url(cls, test_type: TestType, port: int | None = None,
                      with_test_params: bool = True, **extra_params) -> str:
         """Get test URL with standard test parameters"""
         server_config = cls.get_server_config(test_type)
@@ -150,19 +149,19 @@ class TestConfig:
 
 
 # Convenience functions for backward compatibility
-def get_browser_base_url(port: Optional[int] = None) -> str:
+def get_browser_base_url(port: int | None = None) -> str:
     """Get browser test base URL"""
     return TestConfig.get_base_url(TestType.BROWSER, port)
 
-def get_http_base_url(port: Optional[int] = None) -> str:
+def get_http_base_url(port: int | None = None) -> str:
     """Get HTTP test base URL"""
     return TestConfig.get_base_url(TestType.HTTP, port)
 
-def get_browser_test_url(port: Optional[int] = None, **params) -> str:
+def get_browser_test_url(port: int | None = None, **params) -> str:
     """Get browser test URL with test mode parameters"""
     return TestConfig.get_test_url(TestType.BROWSER, port, **params)
 
-def get_http_test_url(port: Optional[int] = None, **params) -> str:
+def get_http_test_url(port: int | None = None, **params) -> str:
     """Get HTTP test URL"""
     return TestConfig.get_test_url(TestType.HTTP, port, with_test_params=False, **params)
 

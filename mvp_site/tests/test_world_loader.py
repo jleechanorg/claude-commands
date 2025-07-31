@@ -60,10 +60,10 @@ class TestWorldLoader(unittest.TestCase):
 
             if should_join_with_dirname:
                 # This was the old relative path case
-                self.assertTrue(world_dir.startswith(".."))
+                assert world_dir.startswith("..")
             else:
                 # This was the old local path case
-                self.assertFalse(world_dir.startswith(".."))
+                assert not world_dir.startswith("..")
 
     def test_production_scenario_local_world(self):
         """Test current world_loader path resolution."""
@@ -88,11 +88,7 @@ class TestWorldLoader(unittest.TestCase):
 
                 # Test the logic
                 should_join = world_dir.startswith("..")
-                self.assertEqual(
-                    should_join,
-                    expected_join,
-                    f"Failed for {world_dir}: {test_case['description']}",
-                )
+                assert should_join == expected_join, f"Failed for {world_dir}: {test_case['description']}"
 
     def test_path_construction_logic(self):
         """Test the path construction logic for both scenarios."""
@@ -122,11 +118,7 @@ class TestWorldLoader(unittest.TestCase):
 
                 # Test the logic
                 should_join = world_dir.startswith("..")
-                self.assertEqual(
-                    should_join,
-                    expected_join,
-                    f"Failed for {world_dir}: {test_case['description']}",
-                )
+                assert should_join == expected_join, f"Failed for {world_dir}: {test_case['description']}"
 
     def test_missing_world_files_error_handling(self):
         """Test error handling when world files are missing."""
@@ -184,7 +176,7 @@ def load_world_content_for_system_instruction():
         with self.assertRaises(FileNotFoundError) as context:
             world_loader.load_world_content_for_system_instruction()
 
-        self.assertIn("World file not found", str(context.exception))
+        assert "World file not found" in str(context.exception)
 
 
 class TestWorldLoaderEnd2EndCache(unittest.TestCase):
@@ -259,9 +251,9 @@ Long ago, the Great War shaped this world..."""
         result1 = world_loader.load_world_content_for_system_instruction()
 
         # Verify world content is included
-        self.assertIn("Test World of Assiah", result1)
-        self.assertIn("Central City", result1)
-        self.assertIn("WORLD CONTENT FOR CAMPAIGN CONSISTENCY", result1)
+        assert "Test World of Assiah" in result1
+        assert "Central City" in result1
+        assert "WORLD CONTENT FOR CAMPAIGN CONSISTENCY" in result1
 
         # Get initial cache stats
         stats1 = file_cache.get_cache_stats()
@@ -271,24 +263,16 @@ Long ago, the Great War shaped this world..."""
         result2 = world_loader.load_world_content_for_system_instruction()
 
         # Results should be identical
-        self.assertEqual(result1, result2)
+        assert result1 == result2
 
         # Check cache statistics - Should show cache hits on second load
         stats2 = file_cache.get_cache_stats()
 
         # We expect exactly 2 cache hits (world file + banned names file)
-        self.assertEqual(
-            stats2["cache_hits"],
-            2,
-            f"Expected 2 cache hits on second load but got {stats2['cache_hits']}",
-        )
+        assert stats2["cache_hits"] == 2, f"Expected 2 cache hits on second load but got {stats2['cache_hits']}"
 
         # Cache misses should not increase on second call
-        self.assertEqual(
-            stats2["cache_misses"],
-            initial_misses,
-            "Cache misses increased unexpectedly on second load",
-        )
+        assert stats2["cache_misses"] == initial_misses, "Cache misses increased unexpectedly on second load"
 
     def test_banned_names_loading_and_caching_behavior(self):
         """Test banned names loading and caching behavior - PASSING TEST."""
@@ -300,8 +284,8 @@ Long ago, the Great War shaped this world..."""
         banned1 = world_loader.load_banned_names()
 
         # Verify content
-        self.assertIn("Voldemort", banned1)
-        self.assertIn("Sauron", banned1)
+        assert "Voldemort" in banned1
+        assert "Sauron" in banned1
 
         # Get cache stats after first load
         stats1 = file_cache.get_cache_stats()
@@ -312,24 +296,16 @@ Long ago, the Great War shaped this world..."""
         banned2 = world_loader.load_banned_names()
 
         # Content should be identical
-        self.assertEqual(banned1, banned2)
+        assert banned1 == banned2
 
         # Check cache behavior - Should show cache hit on second load
         stats2 = file_cache.get_cache_stats()
 
         # Should have one more cache hit
-        self.assertEqual(
-            stats2["cache_hits"],
-            initial_hits + 1,
-            "Expected exactly one more cache hit for banned names",
-        )
+        assert stats2["cache_hits"] == initial_hits + 1, "Expected exactly one more cache hit for banned names"
 
         # Misses should not increase
-        self.assertEqual(
-            stats2["cache_misses"],
-            initial_misses,
-            "Cache misses should not increase on second banned names load",
-        )
+        assert stats2["cache_misses"] == initial_misses, "Cache misses should not increase on second banned names load"
 
     def test_cache_hit_miss_scenarios_for_system_instructions(self):
         """Test cache hit/miss scenarios for world content system instructions - PASSING TEST."""
@@ -345,7 +321,7 @@ Long ago, the Great War shaped this world..."""
 
             # All results should be identical
             if i > 0:
-                self.assertEqual(results[i], results[0])
+                assert results[i] == results[0]
 
         # Check final cache statistics
         final_stats = file_cache.get_cache_stats()
@@ -355,21 +331,13 @@ Long ago, the Great War shaped this world..."""
         expected_hits = 4  # 2 files × 2 subsequent loads
         expected_misses = 2  # Initial load of 2 files
 
-        self.assertEqual(
-            final_stats["cache_hits"],
-            expected_hits,
-            f"Expected {expected_hits} cache hits but got {final_stats['cache_hits']}",
-        )
+        assert final_stats["cache_hits"] == expected_hits, f"Expected {expected_hits} cache hits but got {final_stats['cache_hits']}"
 
-        self.assertEqual(
-            final_stats["cache_misses"],
-            expected_misses,
-            f"Expected {expected_misses} cache misses but got {final_stats['cache_misses']}",
-        )
+        assert final_stats["cache_misses"] == expected_misses, f"Expected {expected_misses} cache misses but got {final_stats['cache_misses']}"
 
         # Total requests should equal hits + misses
         expected_total = expected_hits + expected_misses
-        self.assertEqual(final_stats["total_requests"], expected_total)
+        assert final_stats["total_requests"] == expected_total
 
     def test_performance_improvement_verification(self):
         """Test cache functionality verification - focuses on behavior not timing."""
@@ -383,32 +351,20 @@ Long ago, the Great War shaped this world..."""
         after_first_stats = file_cache.get_cache_stats()
 
         # Verify cache miss occurred on first load
-        self.assertGreater(
-            after_first_stats["cache_misses"],
-            initial_stats["cache_misses"],
-            "Expected cache miss on first load",
-        )
+        assert after_first_stats["cache_misses"] > initial_stats["cache_misses"], "Expected cache miss on first load"
 
         # Second load should result in cache hit
         result2 = world_loader.load_world_content_for_system_instruction()
         after_second_stats = file_cache.get_cache_stats()
 
         # Results should be identical
-        self.assertEqual(result1, result2)
+        assert result1 == result2
 
         # Verify cache hit occurred on second load
-        self.assertGreater(
-            after_second_stats["cache_hits"],
-            after_first_stats["cache_hits"],
-            "Expected cache hit on second load",
-        )
+        assert after_second_stats["cache_hits"] > after_first_stats["cache_hits"], "Expected cache hit on second load"
 
         # Cache should have logged the improvement
-        self.assertGreater(
-            after_second_stats["cache_hits"],
-            0,
-            "Expected cache hits to demonstrate cache functionality",
-        )
+        assert after_second_stats["cache_hits"] > 0, "Expected cache hits to demonstrate cache functionality"
 
     def test_cache_statistics_tracking_during_world_loading(self):
         """Test cache statistics tracking during world loading - PASSING TEST."""
@@ -418,9 +374,9 @@ Long ago, the Great War shaped this world..."""
 
         # Verify initial clean state
         initial_stats = file_cache.get_cache_stats()
-        self.assertEqual(initial_stats["cache_hits"], 0)
-        self.assertEqual(initial_stats["cache_misses"], 0)
-        self.assertEqual(initial_stats["cached_files"], 0)
+        assert initial_stats["cache_hits"] == 0
+        assert initial_stats["cache_misses"] == 0
+        assert initial_stats["cached_files"] == 0
 
         # Load world content multiple times
         for i in range(3):
@@ -431,43 +387,25 @@ Long ago, the Great War shaped this world..."""
 
             if i == 0:
                 # First load - should have misses but no hits yet
-                self.assertGreater(
-                    stats["cache_misses"], 0, "Expected cache misses on first load"
-                )
-                self.assertEqual(
-                    stats["cache_hits"], 0, "Should have no cache hits on first load"
-                )
+                assert stats["cache_misses"] > 0, "Expected cache misses on first load"
+                assert stats["cache_hits"] == 0, "Should have no cache hits on first load"
             else:
                 # Subsequent loads - should have hits
                 expected_hits = i * 2  # 2 files per load after first
-                self.assertGreaterEqual(
-                    stats["cache_hits"],
-                    expected_hits,
-                    f"Expected at least {expected_hits} cache hits on load {i + 1}",
-                )
+                assert stats["cache_hits"] >= expected_hits, f"Expected at least {expected_hits} cache hits on load {i + 1}"
 
         # Final verification
         final_stats = file_cache.get_cache_stats()
 
         # Should have cached files
-        self.assertGreater(
-            final_stats["cached_files"], 0, "Expected cached files to be tracked"
-        )
+        assert final_stats["cached_files"] > 0, "Expected cached files to be tracked"
 
         # Should have character count tracking
-        self.assertGreater(
-            final_stats["total_cached_chars"],
-            0,
-            "Expected cached character count tracking",
-        )
+        assert final_stats["total_cached_chars"] > 0, "Expected cached character count tracking"
 
         # Hit rate should be reasonable after multiple loads
         expected_hit_rate = 66.7  # 4 hits out of 6 total requests (2 misses + 4 hits)
-        self.assertGreaterEqual(
-            final_stats["hit_rate_percent"],
-            expected_hit_rate,
-            f"Expected hit rate >= {expected_hit_rate}% but got {final_stats['hit_rate_percent']}%",
-        )
+        assert final_stats["hit_rate_percent"] >= expected_hit_rate, f"Expected hit rate >= {expected_hit_rate}% but got {final_stats['hit_rate_percent']}%"
 
     def test_error_handling_with_missing_world_files(self):
         """Test error handling with missing world files - PASSING TEST."""
@@ -481,15 +419,11 @@ Long ago, the Great War shaped this world..."""
 
         # Error should mention the specific file
         error_msg = str(context.exception)
-        self.assertIn("world_assiah_compressed.md", error_msg)
+        assert "world_assiah_compressed.md" in error_msg
 
         # Cache stats should still be tracked even for errors
         stats = file_cache.get_cache_stats()
-        self.assertGreater(
-            stats["cache_misses"],
-            0,
-            "Expected cache miss attempt even for missing file",
-        )
+        assert stats["cache_misses"] > 0, "Expected cache miss attempt even for missing file"
 
         # Remove banned names file too
         os.remove(self.banned_file)
@@ -511,30 +445,26 @@ Long ago, the Great War shaped this world..."""
         instruction = world_loader.load_world_content_for_system_instruction()
 
         # Verify all expected sections are present
-        self.assertIn("WORLD CONTENT FOR CAMPAIGN CONSISTENCY", instruction)
-        self.assertIn("WORLD CANON - INTEGRATED CAMPAIGN GUIDE", instruction)
-        self.assertIn("CRITICAL NAMING RESTRICTIONS", instruction)
-        self.assertIn("WORLD CONSISTENCY RULES", instruction)
+        assert "WORLD CONTENT FOR CAMPAIGN CONSISTENCY" in instruction
+        assert "WORLD CANON - INTEGRATED CAMPAIGN GUIDE" in instruction
+        assert "CRITICAL NAMING RESTRICTIONS" in instruction
+        assert "WORLD CONSISTENCY RULES" in instruction
 
         # Verify world content is included
-        self.assertIn("Test World of Assiah", instruction)
-        self.assertIn("Central City", instruction)
+        assert "Test World of Assiah" in instruction
+        assert "Central City" in instruction
 
         # Verify banned names are included
-        self.assertIn("Voldemort", instruction)
-        self.assertIn("NEVER be used", instruction)
+        assert "Voldemort" in instruction
+        assert "NEVER be used" in instruction
 
         # Test caching works for the full integrated content
         instruction2 = world_loader.load_world_content_for_system_instruction()
-        self.assertEqual(instruction, instruction2)
+        assert instruction == instruction2
 
         # Verify cache was used
         stats = file_cache.get_cache_stats()
-        self.assertGreater(
-            stats["cache_hits"],
-            0,
-            "Expected cache hits when loading full system instruction twice",
-        )
+        assert stats["cache_hits"] > 0, "Expected cache hits when loading full system instruction twice"
 
     def test_memory_efficiency_validation(self):
         """Test memory efficiency validation - PASSING TEST."""
@@ -553,39 +483,23 @@ Long ago, the Great War shaped this world..."""
 
         # All results should be identical (same object reference from cache)
         for i in range(1, len(results)):
-            self.assertEqual(results[i], results[0])
+            assert results[i] == results[0]
 
         # Check final cache statistics
         final_stats = file_cache.get_cache_stats()
 
         # Should have exactly 2 cached files (world + banned names)
-        self.assertEqual(
-            final_stats["cached_files"],
-            2,
-            "Expected exactly 2 cached files for memory efficiency",
-        )
+        assert final_stats["cached_files"] == 2, "Expected exactly 2 cached files for memory efficiency"
 
         # Should have reasonable character count (not duplicated)
         expected_chars = len(self.world_content) + len(self.banned_content)
-        self.assertLessEqual(
-            final_stats["total_cached_chars"],
-            expected_chars * 1.1,
-            "Cached character count suggests memory inefficiency",
-        )
+        assert final_stats["total_cached_chars"] <= expected_chars * 1.1, "Cached character count suggests memory inefficiency"
 
         # After 5 loads, should have 2 misses (initial) + 8 hits (4 loads × 2 files)
         expected_hits = 8
         expected_misses = 2
-        self.assertEqual(
-            final_stats["cache_hits"],
-            expected_hits,
-            f"Expected {expected_hits} cache hits for memory efficiency test",
-        )
-        self.assertEqual(
-            final_stats["cache_misses"],
-            expected_misses,
-            f"Expected {expected_misses} cache misses for memory efficiency test",
-        )
+        assert final_stats["cache_hits"] == expected_hits, f"Expected {expected_hits} cache hits for memory efficiency test"
+        assert final_stats["cache_misses"] == expected_misses, f"Expected {expected_misses} cache misses for memory efficiency test"
 
 
 if __name__ == "__main__":

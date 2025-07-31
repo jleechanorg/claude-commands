@@ -49,16 +49,14 @@ class TestOldTagDetection(unittest.TestCase):
             )
 
             # Check that warnings were logged
-            self.assertTrue(mock_warning.called)
+            assert mock_warning.called
             warning_messages = [call[0][0] for call in mock_warning.call_args_list]
-            self.assertTrue(
-                any("STATE_UPDATES_PROPOSED" in msg for msg in warning_messages)
-            )
+            assert any("STATE_UPDATES_PROPOSED" in msg for msg in warning_messages)
 
             # Check that error summary was logged
-            self.assertTrue(mock_error.called)
+            assert mock_error.called
             error_msg = mock_error.call_args[0][0]
-            self.assertIn("DEPRECATED TAGS DETECTED", error_msg)
+            assert "DEPRECATED TAGS DETECTED" in error_msg
 
     def test_detect_debug_blocks_in_narrative(self):
         """Test detection of debug blocks in narrative."""
@@ -79,8 +77,8 @@ class TestOldTagDetection(unittest.TestCase):
 
             # Check warnings for debug tags
             warning_messages = [call[0][0] for call in mock_warning.call_args_list]
-            self.assertTrue(any("DEBUG_START" in msg for msg in warning_messages))
-            self.assertTrue(any("DEBUG_END" in msg for msg in warning_messages))
+            assert any("DEBUG_START" in msg for msg in warning_messages)
+            assert any("DEBUG_END" in msg for msg in warning_messages)
 
     def test_clean_narrative_no_warnings(self):
         """Test that clean narrative produces no warnings."""
@@ -98,8 +96,8 @@ class TestOldTagDetection(unittest.TestCase):
             )
 
             # No warnings or errors should be logged
-            self.assertFalse(mock_warning.called)
-            self.assertFalse(mock_error.called)
+            assert not mock_warning.called
+            assert not mock_error.called
 
     def test_metadata_includes_deprecated_tags(self):
         """Test that deprecated tags are stored in processing metadata."""
@@ -120,12 +118,12 @@ class TestOldTagDetection(unittest.TestCase):
         )
 
         # Check metadata
-        self.assertIn("deprecated_tags_found", response.processing_metadata)
+        assert "deprecated_tags_found" in response.processing_metadata
         tags_found = response.processing_metadata["deprecated_tags_found"]
 
         # Should have found state updates and debug blocks
-        self.assertTrue(len(tags_found["state_updates_proposed"]) > 0)
-        self.assertTrue(len(tags_found["debug_blocks"]) > 0)
+        assert len(tags_found["state_updates_proposed"]) > 0
+        assert len(tags_found["debug_blocks"]) > 0
 
     def test_detect_tags_in_structured_response(self):
         """Test detection of old tags within structured response fields."""
@@ -156,11 +154,9 @@ class TestOldTagDetection(unittest.TestCase):
             )
 
             # Should detect tag in structured response
-            self.assertTrue(mock_warning.called)
+            assert mock_warning.called
             warning_messages = [call[0][0] for call in mock_warning.call_args_list]
-            self.assertTrue(
-                any("structured response" in msg for msg in warning_messages)
-            )
+            assert any("structured response" in msg for msg in warning_messages)
 
 
 if __name__ == "__main__":

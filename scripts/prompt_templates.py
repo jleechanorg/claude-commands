@@ -5,9 +5,8 @@ Prompt templates for different approaches in Milestone 0.4
 
 from typing import Any
 
-from schemas.entities_simple import SceneManifest
+from schemas.entities_simple import SceneManifest, create_from_game_state
 
-from schemas.entities_simple import create_from_game_state
 from scripts.test_scenarios import get_scenario
 
 
