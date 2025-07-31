@@ -89,6 +89,18 @@
 - **TASK-156**: Planning Block Choice Buttons (COMPLETED)
 - **TASK-157**: AI Realm Evaluation - Research platform for integration/inspiration
 - **TASK-158**: MCP Instruction Compliance Tracking - Fork Invariant MCP-scan for automatic CLAUDE.md rule enforcement
+- **TASK-159**: Python test audit and redundancy reduction - Analyze 240+ test files and optimize test suite
+- **TASK-160**: Hardcoded worktree cleanup implementation - Remove hardcoded paths and implement dynamic resolution
+- **TASK-161**: String matching audit and LLM validation replacement - Replace string matching with LLM-based solutions
+- **TASK-162**: Main.py world logic diff analysis - Identify critical missing functions in MCP migration
+- **TASK-163**: Character creation choices display enhancement - Show user choices after character creation
+- **TASK-164**: Memory MCP improvements from PR #1016 - Implement Memory MCP enhancements and 4-phase plan
+- **TASK-165**: Roadmap execution summary - Complete project overview and next action priorities
+- **TASK-166**: Comment reply system enhancement with commit hash - Include commit hash and handle threaded replies
+- **TASK-167**: Schedule branch work script parameter enhancement - Add time, prompt, branch parameters
+- **TASK-168**: API compatibility followups documentation - Document compatibility requirements
+- **TASK-169**: Planning block missing campaign fix - Fix missing planning block in campaign creation
+- **TASK-170**: Fix fake code patterns and individual comment reply - Address fake code and comment issues
 
 ## Cross-Reference Notes
 

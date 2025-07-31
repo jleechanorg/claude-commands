@@ -5,6 +5,8 @@
 
 ## 🎯 WHAT TO DO NOW (Quick Navigation)
 
+
+
 ### 🚨 CRITICAL PRIORITY: Memory MCP Header Compliance MVP
 **Status**: Ready for Implementation
 **Branch**: handoff-memory_impl
@@ -30,6 +32,60 @@
 - **TASK-142** 🔴 Fix send button unclickable - PR #338 OPEN
 
 ### Next Priority Tasks (Ready to Start)
+- **TASK-159** 🟡 Python test audit and redundancy reduction (3 hrs)
+  - [ ] Analyze 240+ test files for redundancy patterns
+  - [ ] Identify 15-20% reduction opportunities while maintaining coverage
+  - [ ] Document test coverage analysis and recommendations
+  - [ ] Implement test suite optimization without losing coverage
+- **TASK-160** 🔴 Hardcoded worktree cleanup implementation (3 hrs)
+  - [ ] Search codebase for hardcoded worktree paths like f"/home/jleechan/projects/worldarchitect.ai/worktree_human2/{script_path}"
+  - [ ] Document 8+ files with hardcoded paths causing portability issues
+  - [ ] Create 3-phase cleanup plan for path abstraction and dynamic resolution
+  - [ ] Test all affected functionality after cleanup
+- **TASK-161** 🔴 String matching audit and LLM validation replacement (4 hrs)
+  - [ ] Identify 6+ CLAUDE.md rule violations in string matching
+  - [ ] Refactor _validate_and_enforce_planning_block to use LLM state tracking
+  - [ ] Search mvp_site for "simulated" or demo code using simple string matching
+  - [ ] Replace string matching with LLM-based solutions (keep as fallback only)
+  - [ ] Document implementation plan and test campaign creation flow
+- **TASK-162** 🔴 Main.py world logic diff analysis (1.5 hrs)
+  - [ ] Identify critical missing functions in MCP migration
+  - [ ] Analyze `_apply_state_changes_and_respond()` function gaps
+  - [ ] Document in main_py_world_logic_diff_analysis.md
+- **TASK-163** 🟡 Character creation choices display enhancement (1 hr)
+  - [ ] Show user choices for mechanics, default world, companions after character creation
+  - [ ] Replace current display (character name, campaign setting) with choice summary
+  - [ ] Improve post-creation user experience and transparency
+- **TASK-164** 🟡 Memory MCP improvements from PR #1016 (3 hrs)
+  - [ ] Analyze Memory MCP improvements from https://github.com/jleechanorg/worldarchitect.ai/pull/1016
+  - [ ] Create 4-phase implementation plan for Memory MCP
+  - [ ] Implement recommended enhancements and test integration
+- **TASK-165** 🟡 Roadmap execution summary (1 hr)
+  - [ ] Complete comprehensive project overview
+  - [ ] Define next action priorities across all workstreams
+  - [ ] Document in roadmap_execution_summary.md
+- **TASK-166** 🟡 Comment reply system enhancement with commit hash (1.5 hrs)
+  - [ ] Make copilot always include commit hash in comment replies
+  - [ ] Ensure replies target individual comments in threads
+  - [ ] Enhance commentreply.md with mandatory commit hash tracking
+  - [ ] Update comment reply templates and processing logic
+- **TASK-167** 🟡 Schedule branch work script parameter enhancement (30 min)
+  - [ ] Update schedule_branch_work.sh to accept parameters in order: time, prompt (optional), branch (optional)
+  - [ ] Implement proper argument parsing and validation
+  - [ ] Update documentation and usage examples
+- **TASK-168** 🟡 API compatibility followups documentation (45 min)
+  - [ ] Create roadmap/scratchpad_api_compatibility_followups.md
+  - [ ] Document API compatibility requirements and issues
+  - [ ] Plan implementation strategy for compatibility improvements
+- **TASK-169** 🔴 Planning block missing campaign fix (1.5 hrs)
+  - [ ] Investigate missing planning block issue: https://gist.github.com/jleechan2015/2c24134e5bec20374bd8cc2c5e7fa9b5
+  - [ ] Identify root cause and implement fix
+  - [ ] Test campaign creation flow thoroughly
+- **TASK-170** 🔴 Fix fake code patterns and individual comment reply (2 hrs)
+  - [ ] Address issues in roadmap/scratchpad_fix-individual-comment-reply-requirements.md
+  - [ ] Fix fake code patterns from roadmap/scratchpad_fake_pattern_followup.md
+  - [ ] Ensure comment reply system handles individual comments properly
+  - [ ] Remove any simulated or placeholder implementations
 - **TASK-133** 🟡 Universal calendar system (2 hrs) - PR #403 OPEN
 - **TASK-139** 🟡 Restore Dragon Knight character start (1.5 hrs)
 - **TASK-137** 🟡 Move download/share story buttons (30 min) - PR #396 OPEN

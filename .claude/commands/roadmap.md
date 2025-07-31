@@ -6,8 +6,14 @@
 
 **Usage**:
 - `/roadmap` or `/r` - Single task (traditional mode)
-- `/roadmap task1, task2, task3` - Multi-task parallel processing
-- `/roadmap "complex task 1" "simple task 2"` - Multiple quoted tasks
+- `/roadmap task1, task2, task3` - **Multi-task parallel processing** (comma-separated)
+- `/roadmap "complex task 1" "simple task 2"` - **Multiple quoted tasks** for complex descriptions
+- `/roadmap task1 task2 task3` - **Space-separated multiple tasks** (alternative format)
+
+**Multi-Task Support**: The `/roadmap` command can process **multiple tasks simultaneously**. This is especially useful for:
+- Breaking down large analysis work into focused individual tasks
+- Creating parallel development streams
+- Organizing related work items with proper task IDs and tracking
 
 **MANDATORY**: When using `/roadmap` command, follow this exact sequence:
 

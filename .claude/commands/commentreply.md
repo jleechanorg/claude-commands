@@ -83,6 +83,14 @@ PR_NUMBER=$(gh pr view --json number -q .number)
 # Get repository info
 OWNER=$(gh repo view --json owner -q .owner.login)
 REPO=$(gh repo view --json name -q .name)
+
+# Get current commit hash for all replies
+CURRENT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null)
+if [ $? -ne 0 ] || [ -z "$CURRENT_COMMIT" ]; then
+  echo "❌ Error: Failed to retrieve the current commit hash. Ensure the repository is in a valid state and not in a detached HEAD state." >&2
+  exit 1
+fi
+echo "Using commit hash for replies: $CURRENT_COMMIT"
 ```
 
 ### 2. Individual Comment Fetching (CRITICAL)
@@ -262,9 +270,15 @@ reply_to_individual_comment() {
 
 ## Response Format
 
-Each reply follows this format:
-- **✅ DONE**: `✅ DONE: [explanation of fix/change made]`
-- **❌ NOT DONE**: `❌ NOT DONE: [reason why not addressed]`
+Each reply follows this format with **MANDATORY commit hash reference**:
+- **✅ DONE**: `✅ DONE: [explanation of fix/change made] (Commit: [short-hash])`
+- **❌ NOT DONE**: `❌ NOT DONE: [reason why not addressed] (Current: [short-hash])`
+
+**Commit Hash Requirements**:
+- **ALWAYS include current commit hash** in every comment reply
+- Use `git rev-parse --short HEAD` to get 7-character short hash
+- Format: `(Commit: abc1234)` for completed changes
+- Format: `(Current: abc1234)` for unchanged/declined items
 
 ## Individual Comment Summary (MANDATORY)
 
@@ -280,11 +294,11 @@ Each reply follows this format:
 - Human reviewer comments: 0
 
 ### ✅ Individual Comments Addressed (11 comments)
-1. Comment #2223812756 (Copilot): Function parameter docs → ✅ DONE: Updated table format [THREADED: #2223999001]
-2. Comment #2223812765 (Copilot): Migration status column → ✅ DONE: Added status tracking [THREADED: #2223999002]
-3. Comment #2223812783 (Copilot): Port inconsistency → ✅ DONE: Fixed to port 6006 [THREADED: #2223999003]
-4. Comment #2223818404 (CodeRabbit): Playwright vs Puppeter → ❌ NOT DONE: Playwright is correct per CLAUDE.md [FALLBACK: #2223999004]
-5. Comment #2223818407 (CodeRabbit): Primary method conflict → ❌ NOT DONE: Intentional Playwright focus [THREADED: #2223999005]
+1. Comment #2223812756 (Copilot): Function parameter docs → ✅ DONE: Updated table format (Commit: abc1234) [THREADED: #2223999001]
+2. Comment #2223812765 (Copilot): Migration status column → ✅ DONE: Added status tracking (Commit: def5678) [THREADED: #2223999002]
+3. Comment #2223812783 (Copilot): Port inconsistency → ✅ DONE: Fixed to port 6006 (Commit: ghi9012) [THREADED: #2223999003]
+4. Comment #2223818404 (CodeRabbit): Playwright vs Puppeter → ❌ NOT DONE: Playwright is correct per CLAUDE.md (Current: jkl3456) [FALLBACK: #2223999004]
+5. Comment #2223818407 (CodeRabbit): Primary method conflict → ❌ NOT DONE: Intentional Playwright focus (Current: jkl3456) [THREADED: #2223999005]
 6. [... continues for all 11 individual comments ...]
 
 ### ❌ Individual Comments NOT Addressed (0 comments)
