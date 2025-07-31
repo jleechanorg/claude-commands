@@ -1,8 +1,4 @@
 #!/bin/bash
-# ⚠️ ORCHESTRATION SYSTEM - WIP PROTOTYPE
-# Requires Redis, tmux, and agent workspace setup
-
-#!/bin/bash
 # Simple agent orchestration system startup script
 
 set -e

@@ -180,10 +180,10 @@ def test_agent_creation(self):
     with mock_tmux_fixture() as mock_tmux:
         # Run orchestration
         orchestration.orchestrate("test task")
-        
+
         # Verify tmux session created
         self.assertGreater(len(mock_tmux.sessions), 0)
-        
+
         # Check session details
         session_name = list(mock_tmux.sessions.keys())[0]
         self.assertTrue(session_name.startswith('task-agent-'))
@@ -195,7 +195,7 @@ def test_claude_execution(self):
     with mock_claude_fixture() as mock_claude:
         # Run orchestration
         orchestration.orchestrate("test task")
-        
+
         # Verify Claude called with correct model
         self.assertTrue(mock_claude.assert_called_with_model('sonnet'))
 ```
@@ -206,7 +206,7 @@ def test_redis_coordination(self):
     with mock_redis_fixture() as mock_redis:
         # Run orchestration
         orchestration.orchestrate("test task")
-        
+
         # Verify agent registered in Redis
         agent_keys = [k for k in mock_redis.hashes.keys() if k.startswith('agent:')]
         self.assertGreater(len(agent_keys), 0)

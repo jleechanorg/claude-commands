@@ -43,6 +43,7 @@ When combined with protocol commands:
 4. **Test**: Validate hypotheses with evidence
 5. **Fix**: Apply targeted solution
 6. **Verify**: Confirm fix resolves issue
+7. **Learn**: Auto-capture debugging insights and patterns (triggered on successful resolution)
 
 ## Examples
 
@@ -70,6 +71,12 @@ Runs tests with verbose output to catch intermittent issues.
 ```
 Deep analysis + systematic debugging + instrumented implementation.
 
+### Debug with Automatic Learning
+```
+/debug "intermittent database connection failures"
+```
+When the debugging session successfully identifies and resolves the root cause, `/learn` automatically captures the debugging methodology, solution, and reusable patterns for future similar issues.
+
 ## Debug Output Characteristics
 
 - **Stack traces**: Full traces with line numbers
@@ -94,3 +101,37 @@ When `/debug` is active, ensure:
 - [ ] Hypotheses are explicitly stated
 - [ ] Evidence supports conclusions
 - [ ] Fix is validated with tests
+- [ ] Learning captured (automatic `/learn` trigger when debugging succeeds)
+
+## Automatic Learning Integration
+
+When debugging successfully resolves an issue, `/debug` automatically triggers `/learn` to capture:
+
+**Learning Categories**:
+- **🚨 Critical Debugging Patterns**: Root causes that prevent major failures
+- **⚠️ Mandatory Debug Steps**: Required validation steps discovered during debugging
+- **✅ Successful Debug Techniques**: Effective hypothesis testing and isolation methods
+- **❌ Debug Anti-Patterns**: Investigation approaches that led to dead ends
+
+**Success Detection**:
+- ✅ Original problem no longer reproduces after fix
+- ✅ Fix validated through testing
+- ✅ Root cause clearly identified with evidence
+- ✅ Solution applied and verified
+
+**Learning Content Captured**:
+- **Debug Session Context**: Original problem description and symptoms
+- **Investigation Process**: Hypotheses tested and evidence gathered
+- **Root Cause Analysis**: Identified cause with supporting evidence
+- **Solution Applied**: Specific fix implemented with file:line references
+- **Verification Results**: Test outcomes and confirmation methods
+- **Reusable Patterns**: How debugging approach applies to similar issues
+
+**Memory MCP Integration**:
+Debugging learnings are automatically stored in the knowledge graph as `debug_session` entities with relations to:
+- Technical solutions (`fixes` relationship)
+- Code locations (`implemented_in` relationship)
+- Problem patterns (`prevents` relationship)
+- Debugging techniques (`optimizes` relationship)
+
+This ensures debugging knowledge accumulates and improves future debugging efficiency through pattern recognition and technique refinement.

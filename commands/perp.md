@@ -2,14 +2,15 @@
 
 **Purpose**: Combine multiple search engines for comprehensive results
 
-**Usage**: `/perp <query>` - Search across Claude, DuckDuckGo, and Perplexity simultaneously
+**Usage**: `/perp <query>` - Search across Claude, DuckDuckGo, Perplexity, and Gemini simultaneously
 
 ## 🔍 MULTI-ENGINE SEARCH PROTOCOL
 
-This command combines three powerful search capabilities:
+This command combines four powerful search capabilities:
 1. **Claude Default Search** (WebSearch) - Claude's built-in web search
 2. **DuckDuckGo MCP** - Privacy-focused web search with content fetching
 3. **Perplexity MCP** - AI-powered search with conversation capabilities
+4. **Gemini MCP** - AI development consultation and code assistance
 
 ### Search Engine Details
 
@@ -34,10 +35,17 @@ This command combines three powerful search capabilities:
 - Context-aware responses
 - Academic and research focus
 
+#### 4. Gemini MCP
+**Capabilities**:
+- AI development consultation and code assistance
+- Technical problem-solving perspective
+- Alternative AI analysis approach
+- Development-focused insights
+
 ## Search Combination Strategy
 
 **Parallel Execution**:
-- All three searches run simultaneously
+- All four searches run simultaneously
 - Results are compared and synthesized
 - Unique insights from each engine are highlighted
 - Comprehensive answer combines all sources
@@ -65,20 +73,26 @@ This command combines three powerful search capabilities:
 🧠 Perplexity Analysis:
 [AI-synthesized answer with current best practices]
 
+💎 Gemini Consultation:
+[Development-focused technical analysis and code guidance]
+
 🎯 Synthesized Answer:
-[Combined insights from all three sources with attribution]
+[Combined insights from all four sources with attribution]
 ```
 
 ## Protocol Implementation
 
 **Search Execution**:
 1. Parse user query from `/perp` command
-2. Execute all three searches in parallel:
+2. Execute all four searches in parallel:
    - `WebSearch(query=user_query)`
    - `mcp__ddg-search__web-search(query=user_query)`
    - `mcp__perplexity-ask__perplexity_ask(messages=[{role: "user", content: user_query}])`
-3. Wait for all results
-4. Synthesize and combine findings
+   - Gemini MCP with fallback:
+     - Try `mcp__gemini-cli-mcp__gemini_chat_pro(message=user_query)`
+     - If quota exceeded, fallback to `mcp__gemini-cli-mcp__gemini_chat_flash(message=user_query)`
+3. Wait for all results (handle any individual engine failures gracefully)
+4. Synthesize and combine findings from successful engines
 
 **Result Processing**:
 - Compare information accuracy across sources
@@ -88,10 +102,11 @@ This command combines three powerful search capabilities:
 
 ## Key Benefits
 
-- ✅ **Comprehensive Coverage** - Three different search approaches
+- ✅ **Comprehensive Coverage** - Four different search approaches
 - ✅ **Real-time Information** - Latest data from multiple sources
-- ✅ **AI Synthesis** - Perplexity provides intelligent analysis
+- ✅ **Dual AI Analysis** - Perplexity and Gemini provide intelligent synthesis
 - ✅ **Privacy Option** - DuckDuckGo for privacy-conscious searches
+- ✅ **Development Focus** - Gemini specializes in technical consultation
 - ✅ **Source Diversity** - Different algorithms and data sources
 - ✅ **Conflict Detection** - Identifies contradictory information
 
@@ -113,7 +128,7 @@ This command combines three powerful search capabilities:
 ## Search Quality Features
 
 **Information Validation**:
-- Cross-reference facts across all three sources
+- Cross-reference facts across all four sources
 - Highlight consensus vs. conflicting information
 - Note recency of information from each source
 - Provide confidence levels based on source agreement

@@ -1,7 +1,3 @@
-#!/bin/bash
-# ⚠️ ORCHESTRATION SYSTEM - WIP PROTOTYPE
-# Requires Redis, tmux, and agent workspace setup
-
 #!/usr/bin/env python3
 """Debug task flow between A2A bridge and worker"""
 
