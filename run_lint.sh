@@ -20,7 +20,7 @@ echo -e "${BLUE}🔍 Running comprehensive Python linting on: ${TARGET_DIR}${NC}
 echo "=================================================="
 
 # Ensure we're in virtual environment
-if [[ "$VIRTUAL_ENV" == "" ]]; then
+if [[ "${VIRTUAL_ENV:-}" == "" ]]; then
     echo -e "${YELLOW}⚠️  Activating virtual environment...${NC}"
     source venv/bin/activate
 fi
