@@ -242,3 +242,130 @@ for PR in $RECENT_PRS; do
 done
 
 log "🏁 Simplified PR batch processing complete (processed: $PROCESSED_COUNT)"
+
+# Define workspace base directory if not already set
+WORKSPACE_BASE_DIR="${WORKSPACE_BASE_DIR:-/tmp/pr-automation-workspace}"
+
+# Function to create isolated workspace for PR processing
+create_isolated_workspace() {
+    local pr_number="$1"
+    local workspace_dir="$WORKSPACE_BASE_DIR-$pr_number"
+
+    log "🏗️  Creating isolated workspace for PR #$pr_number at $workspace_dir"
+
+    # Clean up any existing workspace (with safety validation)
+    if [ -z "$workspace_dir" ] || [ "$workspace_dir" = "/" ] || [ "$workspace_dir" = "/tmp" ]; then
+        log "❌ Invalid workspace directory: $workspace_dir"
+        return 1
+    fi
+    rm -rf "$workspace_dir"
+    mkdir -p "$workspace_dir"
+
+    # Get PR branch info
+    local pr_info=$(gh pr view "$pr_number" --json headRefName,headRepository 2>/dev/null || echo "")
+    if [ -z "$pr_info" ]; then
+        log "❌ Failed to get PR #$pr_number information"
+        return 1
+    fi
+
+    local branch_name=$(echo "$pr_info" | jq -r '.headRefName // "unknown"')
+    local repo_owner=$(echo "$pr_info" | jq -r '.headRepository.owner.login // "unknown"')
+
+    if [ "$branch_name" = "unknown" ] || [ "$repo_owner" = "unknown" ]; then
+        log "❌ Could not extract branch info for PR #$pr_number"
+        return 1
+    fi
+
+    # Clone the PR branch to isolated workspace
+    cd "$workspace_dir" || return 1
+    local repo_url="https://github.com/$repo_owner/worldarchitect.ai.git"
+
+    if \! git clone --depth 1 --single-branch --branch "$branch_name" "$repo_url" . 2>/dev/null; then
+        log "❌ Failed to clone PR #$pr_number branch $branch_name from $repo_url"
+        cd - >/dev/null
+        rm -rf "$workspace_dir"
+        return 1
+    fi
+
+    log "✅ Isolated workspace created for PR #$pr_number"
+    cd - >/dev/null
+    echo "$workspace_dir"
+}
+
+# Function to post threaded comment replies with AI Cron Responder prefix
+post_threaded_comment() {
+    local pr_number="$1"
+    local message="$2"
+    local in_reply_to="$3"  # Optional: comment ID to reply to
+
+    local prefixed_message="[AI Cron Responder] $message"
+
+    if [ -n "$in_reply_to" ]; then
+        # Reply to specific comment thread
+        if \! gh pr comment "$pr_number" --body "$prefixed_message" --reply-to "$in_reply_to" 2>/dev/null; then
+            log "❌ Failed to post threaded reply for PR #$pr_number"
+            return 1
+        fi
+        log "💬 Posted threaded reply to PR #$pr_number (reply to: $in_reply_to)"
+    else
+        # Post general comment
+        if \! gh pr comment "$pr_number" --body "$prefixed_message" 2>/dev/null; then
+            log "❌ Failed to post comment for PR #$pr_number"
+            return 1
+        fi
+        log "💬 Posted comment to PR #$pr_number"
+    fi
+
+    return 0
+}
+
+# Function to cleanup isolated workspace
+cleanup_isolated_workspace() {
+    local pr_number="$1"
+    local workspace_dir="$WORKSPACE_BASE_DIR-$pr_number"
+
+    if [ -d "$workspace_dir" ]; then
+        rm -rf "$workspace_dir"
+        log "🧹 Cleaned up workspace for PR #$pr_number"
+    fi
+}
+
+# Function to push changes from isolated workspace to remote PR branch
+push_to_remote_pr_branch() {
+    local pr_number="$1"
+    local workspace_dir="$2"
+    local original_dir="$(pwd)"
+
+    cd "$workspace_dir" || return 1
+
+    # Check if there are any changes to commit
+    if git diff --quiet && git diff --cached --quiet; then
+        log "📝 No changes to push for PR #$pr_number"
+        cd "$original_dir" || true
+        return 0
+    fi
+
+    # Configure git if needed
+    git config user.email "automation@worldarchitect.ai" 2>/dev/null || true
+    git config user.name "PR Automation" 2>/dev/null || true
+
+    # Commit and push changes
+    git add -A
+    if \! git commit -m "🤖 Automated fixes via copilot for PR #$pr_number
+
+Co-Authored-By: Claude <noreply@anthropic.com>"; then
+        log "❌ Failed to commit changes for PR #$pr_number"
+        cd "$original_dir" || true
+        return 1
+    fi
+
+    if \! git push origin HEAD; then
+        log "❌ Failed to push changes for PR #$pr_number"
+        cd "$original_dir" || true
+        return 1
+    fi
+
+    log "✅ Successfully pushed automated fixes for PR #$pr_number"
+    cd "$original_dir" || true
+    return 0
+}
