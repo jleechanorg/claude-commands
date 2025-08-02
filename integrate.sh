@@ -134,7 +134,14 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
         git diff --name-only | sed 's/^/     /'
         echo ""
         if [ "$FORCE_MODE" = true ]; then
-            echo -e "${RED}🚨 FORCE MODE: Proceeding anyway (changes will be lost)${NC}"
+            echo -e "${RED}🚨 FORCE MODE: Stashing uncommitted changes to proceed${NC}"
+            if git stash push -m "integrate.sh --force: auto-stash on $(date -u +"%Y-%m-%d %H:%M:%S UTC")"; then
+                echo "   ✅ Changes stashed successfully"
+                echo "   To recover: git stash pop"
+            else
+                echo "   ❌ Failed to stash changes"
+                exit 1
+            fi
         else
             echo "   Please commit or stash your changes before integrating."
             echo "   Use: git add -A && git commit -m \"your message\""
